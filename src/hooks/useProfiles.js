@@ -23,7 +23,7 @@ export function useAllProfiles() {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .order('role')
+        .order('created_at', { ascending: true })
       if (error) throw error
       return data
     },
@@ -52,6 +52,22 @@ export function useToggleUserActive() {
     mutationFn: async ({ userId, isActive }) => {
       const { data, error } = await supabase.functions.invoke('admin-toggle-user', {
         body: { user_id: userId, is_active: isActive },
+      })
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['profiles'] })
+    },
+  })
+}
+
+export function useDeleteUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ userId }) => {
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { user_id: userId },
       })
       if (error) throw error
       return data
@@ -105,8 +121,8 @@ export function useRepStats(repId, period = 'week') {
 
 function getPeriodCutoff(period) {
   const d = new Date()
-  if (period === 'day') d.setDate(d.getDate() - 1)
-  else if (period === 'week') d.setDate(d.getDate() - 7)
+  if (period === 'day')   d.setDate(d.getDate() - 1)
+  else if (period === 'week')  d.setDate(d.getDate() - 7)
   else if (period === 'month') d.setMonth(d.getMonth() - 1)
   return d.toISOString()
 }

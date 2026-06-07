@@ -1,32 +1,66 @@
-import { useState } from 'react'
-import { useAllProfiles, useCreateProfile, useToggleUserActive } from '../../hooks/useProfiles'
+import { useState, useMemo } from 'react'
+import { useAllProfiles, useCreateProfile, useToggleUserActive, useDeleteUser } from '../../hooks/useProfiles'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Input, Select } from '../../components/ui/Input'
 import { Card } from '../../components/ui/Card'
-import { UserPlus, X, CheckCircle, Copy, Check } from 'lucide-react'
+import { UserPlus, X, CheckCircle, Copy, Check, Search, Trash2, AlertTriangle } from 'lucide-react'
+
+function formatDate(iso) {
+  if (!iso) return <span className="text-[var(--text-muted)] opacity-40">Never</span>
+  const d = new Date(iso)
+  const now = new Date()
+  const diff = now - d
+  if (diff < 60000)       return 'Just now'
+  if (diff < 3600000)     return `${Math.floor(diff / 60000)}m ago`
+  if (diff < 86400000)    return `${Math.floor(diff / 3600000)}h ago`
+  if (diff < 7 * 86400000) return `${Math.floor(diff / 86400000)}d ago`
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined })
+}
 
 export default function Users() {
   const { data: profiles, isLoading } = useAllProfiles()
   const createProfile = useCreateProfile()
-  const toggleActive = useToggleUserActive()
+  const toggleActive  = useToggleUserActive()
+  const deleteUser    = useDeleteUser()
 
-  const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ username: '', password: '', full_name: '', role: 'rep' })
-  const [error, setError] = useState('')
-  const [createdCreds, setCreatedCreds] = useState(null) // { username, password, full_name }
-  const [copied, setCopied] = useState(false)
+  const [showForm,     setShowForm]     = useState(false)
+  const [form,         setForm]         = useState({ username: '', password: '', full_name: '', role: 'rep' })
+  const [formError,    setFormError]    = useState('')
+  const [createdCreds, setCreatedCreds] = useState(null)
+  const [copied,       setCopied]       = useState(false)
+
+  const [search,       setSearch]       = useState('')
+  const [roleFilter,   setRoleFilter]   = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
+
+  const [confirmDelete, setConfirmDelete] = useState(null) // profile object
+
+  // Filtered profiles
+  const filtered = useMemo(() => {
+    if (!profiles) return []
+    return profiles.filter(p => {
+      const matchSearch = !search ||
+        p.full_name.toLowerCase().includes(search.toLowerCase()) ||
+        (p.username || '').toLowerCase().includes(search.toLowerCase())
+      const matchRole = roleFilter === 'all' || p.role === roleFilter
+      const matchStatus = statusFilter === 'all'
+        || (statusFilter === 'active' && p.is_active)
+        || (statusFilter === 'inactive' && !p.is_active)
+      return matchSearch && matchRole && matchStatus
+    })
+  }, [profiles, search, roleFilter, statusFilter])
 
   async function handleCreate(e) {
     e.preventDefault()
-    setError('')
+    setFormError('')
     try {
       await createProfile.mutateAsync(form)
       setCreatedCreds({ username: form.username, password: form.password, full_name: form.full_name })
       setShowForm(false)
       setForm({ username: '', password: '', full_name: '', role: 'rep' })
     } catch (err) {
-      setError(err.message || 'Failed to create user')
+      setFormError(err.message || 'Failed to create user')
     }
   }
 
@@ -42,13 +76,20 @@ export default function Users() {
     await toggleActive.mutateAsync({ userId: profile.id, isActive: !profile.is_active })
   }
 
+  async function handleDelete() {
+    if (!confirmDelete) return
+    await deleteUser.mutateAsync({ userId: confirmDelete.id })
+    setConfirmDelete(null)
+  }
+
   return (
     <div>
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-[var(--text-primary)]">Users</h1>
-          <p className="text-[var(--text-muted)] text-sm mt-0.5">
-            Create and manage reps, closers, and admins
+          <h1>Users</h1>
+          <p className="text-[var(--text-muted)] text-sm mt-1">
+            {profiles?.length ?? '…'} accounts · {profiles?.filter(p => p.is_active).length ?? '…'} active
           </p>
         </div>
         <Button onClick={() => { setShowForm(v => !v); setCreatedCreds(null) }} size="sm">
@@ -57,13 +98,13 @@ export default function Users() {
         </Button>
       </div>
 
-      {/* Credential handoff card — shown after successful creation */}
+      {/* Credential handoff */}
       {createdCreds && (
-        <div className="flex items-start justify-between gap-3 bg-green-900/15 border border-green-800 rounded-lg px-4 py-3 mb-4">
+        <div className="flex items-start justify-between gap-3 bg-[#22C55E]/8 border border-[#22C55E]/20 rounded-xl px-4 py-3 mb-4">
           <div className="flex items-start gap-2.5">
-            <CheckCircle size={15} className="text-green-400 flex-shrink-0 mt-0.5" />
+            <CheckCircle size={15} className="text-[#22C55E] flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-green-300">{createdCreds.full_name} — account ready</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">{createdCreds.full_name} — account ready</p>
               <p className="text-xs text-[var(--text-muted)] mt-1">
                 Username: <span className="font-mono text-[var(--text-secondary)]">{createdCreds.username}</span>
                 <span className="mx-2 opacity-40">·</span>
@@ -82,7 +123,7 @@ export default function Users() {
         <Card className="mb-5">
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm font-semibold text-[var(--text-primary)]">Create New User</p>
-            <button onClick={() => setShowForm(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+            <button onClick={() => setShowForm(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-1">
               <X size={16} />
             </button>
           </div>
@@ -121,16 +162,16 @@ export default function Users() {
               <option value="closer">Closer</option>
               <option value="admin">Admin</option>
             </Select>
-            {error && (
+            {formError && (
               <div className="col-span-2">
-                <p className="text-xs text-red-400">{error}</p>
+                <p className="text-xs text-[#EF4444]">{formError}</p>
               </div>
             )}
             <div className="col-span-2 flex items-center gap-2 pt-1">
-              <Button type="submit" disabled={createProfile.isPending}>
+              <Button type="submit" size="sm" disabled={createProfile.isPending}>
                 {createProfile.isPending ? 'Creating…' : 'Create User'}
               </Button>
-              <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
+              <Button type="button" variant="secondary" size="sm" onClick={() => setShowForm(false)}>
                 Cancel
               </Button>
             </div>
@@ -138,57 +179,112 @@ export default function Users() {
         </Card>
       )}
 
+      {/* Filters */}
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+          <input
+            className="w-full bg-[var(--bg-1)] border border-[var(--border)] rounded-lg pl-8 pr-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/30 transition-all"
+            placeholder="Search name or username…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        <select
+          className="bg-[var(--bg-1)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
+          value={roleFilter}
+          onChange={e => setRoleFilter(e.target.value)}
+        >
+          <option value="all">All roles</option>
+          <option value="rep">Rep</option>
+          <option value="closer">Closer</option>
+          <option value="admin">Admin</option>
+        </select>
+        <select
+          className="bg-[var(--bg-1)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+        >
+          <option value="all">All statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+
       {/* User table */}
       <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-xl overflow-hidden">
         {isLoading ? (
           <div className="p-8 flex justify-center">
-            <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="p-10 text-center">
+            <p className="text-[var(--text-muted)] text-sm">No users match this filter</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--border)]">
-                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium text-left">Name</th>
-                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium text-left">Username</th>
-                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium text-left">Role</th>
-                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium text-left">Status</th>
-                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium text-left">Joined</th>
-                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium text-left">Actions</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] font-medium">User</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] font-medium">Role</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] font-medium">Status</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] font-medium">Joined</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] font-medium">Last Login</th>
+                <th className="px-4 py-3 text-right text-xs text-[var(--text-muted)] font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {(profiles || []).map(p => (
-                <tr key={p.id} className="border-b border-[var(--border)]/50 hover:bg-[var(--bg-2)] transition-colors">
+              {filtered.map(p => (
+                <tr key={p.id} className="border-b border-[var(--border)]/40 hover:bg-[var(--bg-2)] transition-colors">
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-indigo-900/30 flex items-center justify-center text-xs font-semibold text-indigo-300 flex-shrink-0">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
+                        ${p.is_active ? 'bg-[var(--accent-subtle)] text-[var(--accent)]' : 'bg-[var(--bg-3)] text-[var(--text-muted)]'}`}>
                         {p.full_name.charAt(0).toUpperCase()}
                       </div>
-                      <p className="text-[var(--text-secondary)] font-medium">{p.full_name}</p>
+                      <div>
+                        <p className={`font-semibold text-[var(--text-primary)] text-sm leading-tight ${!p.is_active ? 'opacity-60' : ''}`}>
+                          {p.full_name}
+                        </p>
+                        <p className="font-mono text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">
+                          {p.username ? `@${p.username}` : <span className="opacity-40">no username</span>}
+                        </p>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-[var(--text-muted)]">
-                    {p.username ?? <span className="opacity-40">—</span>}
-                  </td>
-                  <td className="px-4 py-3"><Badge label={p.role} /></td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1 text-xs font-medium ${p.is_active ? 'text-green-400' : 'text-red-400'}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${p.is_active ? 'bg-green-400' : 'bg-red-400'}`} />
+                    <Badge label={p.role} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${p.is_active ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${p.is_active ? 'bg-[#22C55E]' : 'bg-[#EF4444]'}`} />
                       {p.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-[var(--text-muted)] text-xs">
-                    {new Date(p.created_at).toLocaleDateString()}
+                    {formatDate(p.created_at)}
+                  </td>
+                  <td className="px-4 py-3 text-[var(--text-muted)] text-xs">
+                    {formatDate(p.last_login_at)}
                   </td>
                   <td className="px-4 py-3">
-                    <Button
-                      variant={p.is_active ? 'secondary' : 'ghost'}
-                      size="sm"
-                      onClick={() => handleToggle(p)}
-                      disabled={toggleActive.isPending}
-                    >
-                      {p.is_active ? 'Deactivate' : 'Reactivate'}
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant={p.is_active ? 'secondary' : 'ghost'}
+                        size="sm"
+                        onClick={() => handleToggle(p)}
+                        disabled={toggleActive.isPending}
+                      >
+                        {p.is_active ? 'Deactivate' : 'Reactivate'}
+                      </Button>
+                      <button
+                        onClick={() => setConfirmDelete(p)}
+                        className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-all"
+                        title="Delete account"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -196,6 +292,35 @@ export default function Users() {
           </table>
         )}
       </div>
+
+      {/* Delete confirmation modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmDelete(null)} />
+          <div className="relative bg-[var(--bg-1)] border border-[var(--border)] rounded-2xl p-6 w-full max-w-sm shadow-[var(--shadow-panel)] page-enter">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-[#EF4444]/10 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle size={18} className="text-[#EF4444]" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[var(--text-primary)]">Delete account permanently?</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">
+                  <span className="text-[var(--text-secondary)] font-medium">{confirmDelete.full_name}</span>
+                  {confirmDelete.username ? ` (@${confirmDelete.username})` : ''} will be permanently removed from auth and profiles. This cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 justify-end">
+              <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(null)}>
+                Cancel
+              </Button>
+              <Button variant="danger" size="sm" onClick={handleDelete} disabled={deleteUser.isPending}>
+                {deleteUser.isPending ? 'Deleting…' : 'Delete Account'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

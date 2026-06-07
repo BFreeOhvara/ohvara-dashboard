@@ -25,7 +25,7 @@ export default {
         // Keeping Tailwind's indigo/slate/green etc for compatibility
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         sm: 'var(--radius-sm)',
