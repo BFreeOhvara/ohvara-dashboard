@@ -184,7 +184,7 @@ export default function Users() {
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
           <input
-            className="w-full bg-[var(--bg-1)] border border-[var(--border)] rounded-lg pl-8 pr-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/30 transition-all"
+            className="w-full bg-[var(--bg-1)] border border-[var(--border)] rounded-lg pl-8 pr-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[#6C63FF]/30 transition-all"
             placeholder="Search name or username…"
             value={search}
             onChange={e => setSearch(e.target.value)}

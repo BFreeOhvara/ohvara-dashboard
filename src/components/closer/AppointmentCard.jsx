@@ -10,7 +10,7 @@ import { supabase } from '../../lib/supabase'
 // Tier badge colors — updated to match design system
 const TIER_STYLES = {
   'Starter':    'bg-blue-950/60 text-blue-300 border border-blue-800/50',
-  'Growth':     'bg-[var(--accent-subtle)] text-[var(--accent)] border border-[var(--accent)]/20',
+  'Growth':     'bg-[var(--accent-subtle)] text-[var(--accent)] border border-[#6C63FF]/20',
   'Full Stack': 'bg-purple-950/60 text-purple-300 border border-purple-800/50',
 }
 

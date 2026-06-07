@@ -3,7 +3,7 @@ import { clsx } from 'clsx'
 const baseInput = [
   'w-full bg-[var(--bg-2)] border border-[var(--border)] rounded-lg',
   'px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)]',
-  'focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/30',
+  'focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[#6C63FF]/30',
   'hover:border-[var(--bg-3)]',
   'transition-all duration-150',
 ].join(' ')

@@ -8,7 +8,7 @@ const STATUS_STYLES = {
   'Voicemail':      'bg-amber-950/60 text-amber-300 border border-amber-800/50',
   'No Answer':      'bg-orange-950/60 text-orange-300 border border-orange-800/50',
   'Interested':     'bg-emerald-950/60 text-emerald-300 border border-emerald-800/50',
-  'Booked':         'bg-[var(--accent-subtle)] text-[var(--accent)] border border-[var(--accent)]/20',
+  'Booked':         'bg-[var(--accent-subtle)] text-[var(--accent)] border border-[#6C63FF]/20',
   'Not Interested': 'bg-red-950/60 text-red-400 border border-red-900/50',
   // Appointment outcomes
   'closed':    'bg-emerald-950/60 text-emerald-300 border border-emerald-800/50',
@@ -24,7 +24,7 @@ const STATUS_STYLES = {
   'failed':    'bg-red-950/60 text-red-400 border border-red-900/50',
   // Roles
   'rep':     'bg-[var(--bg-3)] text-[var(--text-secondary)] border border-[var(--border)]',
-  'closer':  'bg-[var(--accent-subtle)] text-[var(--accent)] border border-[var(--accent)]/20',
+  'closer':  'bg-[var(--accent-subtle)] text-[var(--accent)] border border-[#6C63FF]/20',
   'admin':   'bg-purple-950/60 text-purple-300 border border-purple-800/50',
   // User active status
   'active':   'bg-emerald-950/60 text-emerald-300 border border-emerald-800/50',
