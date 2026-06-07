@@ -31,7 +31,10 @@ export function AuthProvider({ children }) {
     setProfile(data)
   }
 
-  async function signIn(email, password) {
+  async function signIn(username, password) {
+    // If input looks like a real email (contains @) use it directly — supports
+    // the admin bootstrap account. Otherwise convert username → internal email.
+    const email = username.includes('@') ? username : `${username}@ohvara.internal`
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
   }

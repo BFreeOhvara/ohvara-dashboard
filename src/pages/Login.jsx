@@ -7,7 +7,7 @@ import { Input } from '../components/ui/Input'
 export default function Login() {
   const { signIn } = useAuth()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -17,10 +17,10 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      await signIn(email, password)
+      await signIn(username.trim(), password)
       // Role-based redirect is handled by RoleRedirect in App.jsx via onAuthStateChange
     } catch (err) {
-      setError(err.message || 'Invalid email or password')
+      setError('Invalid username or password')
     } finally {
       setLoading(false)
     }
@@ -39,12 +39,13 @@ export default function Login() {
         <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-xl p-6 shadow-card">
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
-              label="Email"
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="you@ohvara.com"
+              label="Username"
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              placeholder="jsmith"
               autoFocus
+              autoComplete="username"
               required
             />
             <Input
@@ -53,6 +54,7 @@ export default function Login() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
+              autoComplete="current-password"
               required
             />
 

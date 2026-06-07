@@ -33,10 +33,9 @@ export function useAllProfiles() {
 export function useCreateProfile() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ email, password, full_name, role, phone }) => {
-      // Create auth user via admin API (requires service role — call via Edge Function)
+    mutationFn: async ({ username, password, full_name, role }) => {
       const { data, error } = await supabase.functions.invoke('admin-create-user', {
-        body: { email, password, full_name, role, phone },
+        body: { username, password, full_name, role },
       })
       if (error) throw error
       return data

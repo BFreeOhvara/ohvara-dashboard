@@ -4,32 +4,38 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Input, Select } from '../../components/ui/Input'
 import { Card } from '../../components/ui/Card'
-import { UserPlus, X, CheckCircle, Mail } from 'lucide-react'
+import { UserPlus, X, CheckCircle, Copy, Check } from 'lucide-react'
 
 export default function Users() {
   const { data: profiles, isLoading } = useAllProfiles()
   const createProfile = useCreateProfile()
   const toggleActive = useToggleUserActive()
+
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ email: '', password: '', full_name: '', role: 'rep', phone: '' })
+  const [form, setForm] = useState({ username: '', password: '', full_name: '', role: 'rep' })
   const [error, setError] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
+  const [createdCreds, setCreatedCreds] = useState(null) // { username, password, full_name }
+  const [copied, setCopied] = useState(false)
 
   async function handleCreate(e) {
     e.preventDefault()
     setError('')
-    setSuccessMsg('')
     try {
-      const result = await createProfile.mutateAsync(form)
-      const emailNote = result?.email_sent
-        ? `Welcome email sent to ${form.email}.`
-        : `Account created. No welcome email sent — add SENDGRID_API_KEY to Edge Function secrets to enable.`
-      setSuccessMsg(emailNote)
+      await createProfile.mutateAsync(form)
+      setCreatedCreds({ username: form.username, password: form.password, full_name: form.full_name })
       setShowForm(false)
-      setForm({ email: '', password: '', full_name: '', role: 'rep', phone: '' })
+      setForm({ username: '', password: '', full_name: '', role: 'rep' })
     } catch (err) {
       setError(err.message || 'Failed to create user')
     }
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(
+      `Username: ${createdCreds.username}\nPassword: ${createdCreds.password}`
+    )
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   async function handleToggle(profile) {
@@ -45,17 +51,29 @@ export default function Users() {
             Create and manage reps, closers, and admins
           </p>
         </div>
-        <Button onClick={() => { setShowForm(v => !v); setSuccessMsg('') }} size="sm">
+        <Button onClick={() => { setShowForm(v => !v); setCreatedCreds(null) }} size="sm">
           <UserPlus size={14} />
           New User
         </Button>
       </div>
 
-      {/* Success message */}
-      {successMsg && (
-        <div className="flex items-start gap-2 bg-green-900/20 border border-green-800 rounded-lg px-4 py-3 mb-4">
-          <CheckCircle size={15} className="text-green-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-green-300">{successMsg}</p>
+      {/* Credential handoff card — shown after successful creation */}
+      {createdCreds && (
+        <div className="flex items-start justify-between gap-3 bg-green-900/15 border border-green-800 rounded-lg px-4 py-3 mb-4">
+          <div className="flex items-start gap-2.5">
+            <CheckCircle size={15} className="text-green-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-green-300">{createdCreds.full_name} — account ready</p>
+              <p className="text-xs text-[var(--text-muted)] mt-1">
+                Username: <span className="font-mono text-[var(--text-secondary)]">{createdCreds.username}</span>
+                <span className="mx-2 opacity-40">·</span>
+                Password: <span className="font-mono text-[var(--text-secondary)]">{createdCreds.password}</span>
+              </p>
+            </div>
+          </div>
+          <Button variant="secondary" size="sm" onClick={handleCopy} className="flex-shrink-0">
+            {copied ? <><Check size={12} />Copied</> : <><Copy size={12} />Copy</>}
+          </Button>
         </div>
       )}
 
@@ -77,27 +95,22 @@ export default function Users() {
               required
             />
             <Input
-              label="Email"
-              type="email"
-              value={form.email}
-              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-              placeholder="jordan@ohvara.com"
+              label="Username"
+              value={form.username}
+              onChange={e => setForm(f => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') }))}
+              placeholder="jsmith"
+              autoComplete="off"
               required
             />
             <Input
-              label="Temporary Password"
+              label="Password"
               type="password"
               value={form.password}
               onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
               placeholder="Min 8 characters"
+              autoComplete="new-password"
               required
               minLength={8}
-            />
-            <Input
-              label="Phone (optional)"
-              value={form.phone}
-              onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-              placeholder="+1 555 000 0000"
             />
             <Select
               label="Role"
@@ -108,9 +121,11 @@ export default function Users() {
               <option value="closer">Closer</option>
               <option value="admin">Admin</option>
             </Select>
-            <div className="flex items-end">
-              {error && <p className="text-xs text-red-400">{error}</p>}
-            </div>
+            {error && (
+              <div className="col-span-2">
+                <p className="text-xs text-red-400">{error}</p>
+              </div>
+            )}
             <div className="col-span-2 flex items-center gap-2 pt-1">
               <Button type="submit" disabled={createProfile.isPending}>
                 {createProfile.isPending ? 'Creating…' : 'Create User'}
@@ -118,10 +133,6 @@ export default function Users() {
               <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
                 Cancel
               </Button>
-              <p className="text-xs text-[var(--text-muted)] ml-2 flex items-center gap-1">
-                <Mail size={11} />
-                Welcome email sent automatically if SendGrid is configured
-              </p>
             </div>
           </form>
         </Card>
@@ -138,7 +149,7 @@ export default function Users() {
             <thead>
               <tr className="border-b border-[var(--border)]">
                 <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium text-left">Name</th>
-                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium text-left">Email</th>
+                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium text-left">Username</th>
                 <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium text-left">Role</th>
                 <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium text-left">Status</th>
                 <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium text-left">Joined</th>
@@ -156,7 +167,9 @@ export default function Users() {
                       <p className="text-[var(--text-secondary)] font-medium">{p.full_name}</p>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-[var(--text-muted)]">{p.email}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-[var(--text-muted)]">
+                    {p.username ?? <span className="opacity-40">—</span>}
+                  </td>
                   <td className="px-4 py-3"><Badge label={p.role} /></td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center gap-1 text-xs font-medium ${p.is_active ? 'text-green-400' : 'text-red-400'}`}>
