@@ -1,0 +1,87 @@
+import { useState } from 'react'
+import { useReps, useRepStats } from '../../hooks/useProfiles'
+import { Button } from '../../components/ui/Button'
+import { Badge } from '../../components/ui/Badge'
+import { Card } from '../../components/ui/Card'
+import { Phone, Calendar, TrendingUp, Clock } from 'lucide-react'
+
+const PERIODS = ['day', 'week', 'month']
+
+export default function RepPerformance() {
+  const { data: reps, isLoading } = useReps()
+  const [period, setPeriod] = useState('week')
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-bold text-slate-100">Rep Performance</h1>
+          <p className="text-slate-500 text-sm mt-0.5">Per-rep analytics filterable by period</p>
+        </div>
+        <div className="flex gap-1">
+          {PERIODS.map(p => (
+            <Button key={p} variant={period === p ? 'primary' : 'ghost'} size="sm" onClick={() => setPeriod(p)}>
+              {p.charAt(0).toUpperCase() + p.slice(1)}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-28 bg-[#161b24] border border-[#2a3347] rounded-xl animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {(reps || []).map(rep => (
+            <RepPerformanceRow key={rep.id} rep={rep} period={period} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function RepPerformanceRow({ rep, period }) {
+  const { data: stats } = useRepStats(rep.id, period)
+
+  return (
+    <Card>
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-8 h-8 rounded-full bg-indigo-900/30 flex items-center justify-center text-sm font-medium text-indigo-300">
+          {rep.full_name.charAt(0)}
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-slate-100">{rep.full_name}</p>
+          <p className="text-xs text-slate-500">{rep.email}</p>
+        </div>
+        <Badge label={rep.is_active ? 'active' : 'inactive'} variant={rep.is_active ? 'green' : 'red'} />
+      </div>
+      <div className="grid grid-cols-4 gap-3">
+        <Metric icon={Phone} label="Dials" value={stats?.totalDials ?? '—'} color="text-indigo-400" />
+        <Metric icon={Calendar} label="Booked" value={stats?.bookedCount ?? '—'} color="text-green-400" />
+        <Metric icon={TrendingUp} label="Book Rate" value={stats ? `${stats.bookingRate}%` : '—'} color="text-blue-400" />
+        <Metric icon={Clock} label="Avg Duration" value={stats ? formatDuration(stats.avgCallDuration) : '—'} color="text-yellow-400" />
+      </div>
+    </Card>
+  )
+}
+
+function Metric({ icon: Icon, label, value, color }) {
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 mb-1">
+        <Icon size={12} className={color} />
+        <p className="text-xs text-slate-500">{label}</p>
+      </div>
+      <p className="text-lg font-bold text-slate-100">{value}</p>
+    </div>
+  )
+}
+
+function formatDuration(s) {
+  if (!s) return '0s'
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`
+}
