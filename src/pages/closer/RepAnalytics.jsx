@@ -15,8 +15,8 @@ export default function RepAnalytics() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">Rep Analytics</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Read-only view of all appointment setter performance</p>
+          <h1 className="text-xl font-bold text-[var(--text-primary)]">Rep Analytics</h1>
+          <p className="text-[var(--text-muted)] text-sm mt-0.5">Read-only view of all appointment setter performance</p>
         </div>
         <div className="flex gap-1">
           {PERIODS.map(p => (
@@ -30,11 +30,11 @@ export default function RepAnalytics() {
       {isLoading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-24 bg-[#161b24] border border-[#2a3347] rounded-xl animate-pulse" />
+            <div key={i} className="h-24 bg-[var(--bg-1)] border border-[var(--border)] rounded-xl animate-pulse" />
           ))}
         </div>
       ) : !reps?.length ? (
-        <p className="text-slate-500 text-sm">No reps found.</p>
+        <p className="text-[var(--text-muted)] text-sm">No reps found.</p>
       ) : (
         <div className="space-y-4">
           {reps.map(rep => (
@@ -50,8 +50,8 @@ function RepRow({ rep, period }) {
   const { data: stats } = useRepStats(rep.id, period)
 
   return (
-    <div className="bg-[#161b24] border border-[#2a3347] rounded-xl p-4">
-      <p className="text-sm font-semibold text-slate-100 mb-3">{rep.full_name}</p>
+    <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-xl p-4">
+      <p className="text-sm font-semibold text-[var(--text-primary)] mb-3">{rep.full_name}</p>
       <div className="grid grid-cols-3 gap-3">
         <StatCard label="Dials" value={stats?.totalDials ?? '—'} icon={Phone} color="indigo" />
         <StatCard label="Booked" value={stats?.bookedCount ?? '—'} icon={Calendar} color="green" />

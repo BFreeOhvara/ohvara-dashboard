@@ -47,17 +47,17 @@ export default function AllLeads() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">All Leads</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{leads?.length ?? '…'} leads</p>
+          <h1 className="text-xl font-bold text-[var(--text-primary)]">All Leads</h1>
+          <p className="text-[var(--text-muted)] text-sm mt-0.5">{leads?.length ?? '…'} leads</p>
         </div>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-4">
         <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
           <input
-            className="pl-8 pr-3 py-2 bg-[#1e2433] border border-[#2a3347] rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-56"
+            className="pl-8 pr-3 py-2 bg-[var(--bg-2)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-56"
             placeholder="Search business name…"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -84,14 +84,14 @@ export default function AllLeads() {
             <UserPlus size={13} />
             {bulkAssign.isPending ? 'Assigning…' : 'Assign'}
           </Button>
-          <button onClick={() => setSelected(new Set())} className="text-slate-500 hover:text-slate-300 text-sm ml-auto">
+          <button onClick={() => setSelected(new Set())} className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] text-sm ml-auto">
             Clear
           </button>
         </div>
       )}
 
       {/* Table */}
-      <div className="bg-[#161b24] border border-[#2a3347] rounded-xl overflow-hidden">
+      <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-xl overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center">
             <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
@@ -99,7 +99,7 @@ export default function AllLeads() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[#2a3347]">
+              <tr className="border-b border-[var(--border)]">
                 <th className="px-4 py-3 w-8">
                   <input
                     type="checkbox"
@@ -108,16 +108,16 @@ export default function AllLeads() {
                     onChange={toggleAll}
                   />
                 </th>
-                <th className="px-4 py-3 text-xs text-slate-500 font-medium text-left">Business</th>
-                <th className="px-4 py-3 text-xs text-slate-500 font-medium text-left">Status</th>
-                <th className="px-4 py-3 text-xs text-slate-500 font-medium text-left">Rep</th>
-                <th className="px-4 py-3 text-xs text-slate-500 font-medium text-left">Source</th>
-                <th className="px-4 py-3 text-xs text-slate-500 font-medium text-left">Added</th>
+                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium text-left">Business</th>
+                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium text-left">Status</th>
+                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium text-left">Rep</th>
+                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium text-left">Source</th>
+                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium text-left">Added</th>
               </tr>
             </thead>
             <tbody>
               {(leads || []).map(lead => (
-                <tr key={lead.id} className="border-b border-[#2a3347]/50 hover:bg-[#1e2433]">
+                <tr key={lead.id} className="border-b border-[var(--border)]/50 hover:bg-[var(--bg-2)]">
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
@@ -127,15 +127,15 @@ export default function AllLeads() {
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <p className="text-slate-200 font-medium">{lead.business_name}</p>
-                    <p className="text-xs text-slate-500">{lead.city}, {lead.state}</p>
+                    <p className="text-[var(--text-primary)] font-medium">{lead.business_name}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{lead.city}, {lead.state}</p>
                   </td>
                   <td className="px-4 py-3"><Badge label={lead.status} /></td>
-                  <td className="px-4 py-3 text-slate-400">{lead.assigned_rep?.full_name || '—'}</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">{lead.assigned_rep?.full_name || '—'}</td>
                   <td className="px-4 py-3">
-                    <span className="text-xs text-slate-500 capitalize">{lead.source?.replace('_', ' ')}</span>
+                    <span className="text-xs text-[var(--text-muted)] capitalize">{lead.source?.replace('_', ' ')}</span>
                   </td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">
+                  <td className="px-4 py-3 text-[var(--text-muted)] text-xs">
                     {new Date(lead.created_at).toLocaleDateString()}
                   </td>
                 </tr>

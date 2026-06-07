@@ -16,8 +16,8 @@ export default function MyStats() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">My Stats</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Your personal performance metrics</p>
+          <h1 className="text-xl font-bold text-[var(--text-primary)]">My Stats</h1>
+          <p className="text-[var(--text-muted)] text-sm mt-0.5">Your personal performance metrics</p>
         </div>
         <div className="flex gap-1">
           {PERIODS.map(p => (
@@ -36,7 +36,7 @@ export default function MyStats() {
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-24 rounded-xl bg-[#161b24] border border-[#2a3347] animate-pulse" />
+            <div key={i} className="h-24 rounded-xl bg-[var(--bg-1)] border border-[var(--border)] animate-pulse" />
           ))}
         </div>
       ) : (

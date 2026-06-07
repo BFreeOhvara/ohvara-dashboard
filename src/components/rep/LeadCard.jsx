@@ -15,6 +15,7 @@ export function LeadCard({ lead, onScriptOpen }) {
   const [saving, setSaving] = useState(false)
   const updateStatus = useUpdateLeadStatus()
 
+  // When the closer books the lead, the assign-closer Edge Function fires via DB trigger
   async function handleSave() {
     setSaving(true)
     await updateStatus.mutateAsync({ leadId: lead.id, status, notes })
@@ -22,26 +23,27 @@ export function LeadCard({ lead, onScriptOpen }) {
   }
 
   return (
-    <div className="bg-[#161b24] border border-[#2a3347] rounded-xl overflow-hidden">
-      {/* Main row */}
-      <div className="flex items-center gap-4 px-4 py-3">
+    <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-xl overflow-hidden transition-colors hover:border-[var(--bg-3)]">
+      {/* Header row — information density over decoration */}
+      <div className="flex items-center gap-3 px-4 py-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-slate-100 truncate">{lead.business_name}</p>
-          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+          <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{lead.business_name}</p>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             {lead.contact_name && (
-              <span className="text-xs text-slate-400">{lead.contact_name}</span>
+              <span className="text-xs text-[var(--text-secondary)]">{lead.contact_name}</span>
             )}
             {lead.city && (
-              <span className="flex items-center gap-1 text-xs text-slate-500">
-                <MapPin size={10} /> {lead.city}, {lead.state}
+              <span className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
+                <MapPin size={9} /> {lead.city}{lead.state && `, ${lead.state}`}
               </span>
             )}
             {lead.niche && (
-              <span className="text-xs text-slate-500">{lead.niche}</span>
+              <span className="text-xs text-[var(--text-muted)]">{lead.niche}</span>
             )}
           </div>
         </div>
 
+        {/* Actions — primary call button must dominate */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <Badge label={lead.status} />
           <CallButton
@@ -51,61 +53,55 @@ export function LeadCard({ lead, onScriptOpen }) {
           />
           <button
             onClick={() => setExpanded(v => !v)}
-            className="text-slate-500 hover:text-slate-300 p-1"
+            className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 transition-colors"
           >
-            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
           </button>
         </div>
       </div>
 
-      {/* Expanded details */}
+      {/* Expanded — note-taking + status update */}
       {expanded && (
-        <div className="border-t border-[#2a3347] px-4 py-4 space-y-4">
-          <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="border-t border-[var(--border)] px-4 py-4 space-y-3">
+          {/* Contact links */}
+          <div className="flex gap-4 flex-wrap text-xs">
             {lead.phone && (
-              <a href={`tel:${lead.phone}`} className="flex items-center gap-2 text-slate-400 hover:text-slate-200">
-                <Phone size={13} /> {lead.phone}
+              <a href={`tel:${lead.phone}`} className="flex items-center gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+                <Phone size={11} /> {lead.phone}
               </a>
             )}
             {lead.email && (
-              <a href={`mailto:${lead.email}`} className="flex items-center gap-2 text-slate-400 hover:text-slate-200">
-                <Mail size={13} /> {lead.email}
+              <a href={`mailto:${lead.email}`} className="flex items-center gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+                <Mail size={11} /> {lead.email}
               </a>
             )}
           </div>
 
           {lead.pain_points && (
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Pain Points</p>
-              <p className="text-sm text-slate-300">{lead.pain_points}</p>
+            <div className="bg-[var(--bg-2)] rounded-lg px-3 py-2">
+              <p className="section-label mb-1">Pain Points</p>
+              <p className="text-xs text-[var(--text-secondary)]">{lead.pain_points}</p>
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <Select
-              label="Update Status"
-              value={status}
-              onChange={e => setStatus(e.target.value)}
-            >
-              {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-            </Select>
-          </div>
+          <Select
+            label="Status"
+            value={status}
+            onChange={e => setStatus(e.target.value)}
+          >
+            {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </Select>
 
           <Textarea
-            label="Notes"
+            label="Call Notes"
             value={notes}
             onChange={e => setNotes(e.target.value)}
             rows={3}
-            placeholder="Add call notes…"
+            placeholder="What happened on this call?"
           />
 
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleSave}
-            disabled={saving}
-          >
-            <Save size={13} />
+          <Button variant="secondary" size="sm" onClick={handleSave} disabled={saving}>
+            <Save size={11} />
             {saving ? 'Saving…' : 'Save'}
           </Button>
         </div>

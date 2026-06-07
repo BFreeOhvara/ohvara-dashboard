@@ -24,39 +24,39 @@ export default function LeadPipeline() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-100">Lead Pipeline</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Kanban view across all 7 status stages</p>
+        <h1 className="text-xl font-bold text-[var(--text-primary)]">Lead Pipeline</h1>
+        <p className="text-[var(--text-muted)] text-sm mt-0.5">Kanban view across all 7 status stages</p>
       </div>
 
       {isLoading ? (
         <div className="flex gap-3 overflow-x-auto pb-4">
           {STAGES.map(s => (
-            <div key={s} className="w-56 flex-shrink-0 h-64 bg-[#161b24] border border-[#2a3347] rounded-xl animate-pulse" />
+            <div key={s} className="w-56 flex-shrink-0 h-64 bg-[var(--bg-1)] border border-[var(--border)] rounded-xl animate-pulse" />
           ))}
         </div>
       ) : (
         <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-thin">
           {STAGES.map(stage => (
             <div key={stage} className="w-56 flex-shrink-0">
-              <div className={`border-t-2 ${STAGE_COLORS[stage]} bg-[#161b24] border border-[#2a3347] rounded-xl overflow-hidden`}>
-                <div className="px-3 py-2.5 border-b border-[#2a3347] flex items-center justify-between">
-                  <p className="text-xs font-semibold text-slate-300">{stage}</p>
-                  <span className="text-xs text-slate-500 bg-[#1e2433] rounded px-1.5 py-0.5">
+              <div className={`border-t-2 ${STAGE_COLORS[stage]} bg-[var(--bg-1)] border border-[var(--border)] rounded-xl overflow-hidden`}>
+                <div className="px-3 py-2.5 border-b border-[var(--border)] flex items-center justify-between">
+                  <p className="text-xs font-semibold text-[var(--text-secondary)]">{stage}</p>
+                  <span className="text-xs text-[var(--text-muted)] bg-[var(--bg-2)] rounded px-1.5 py-0.5">
                     {grouped[stage].length}
                   </span>
                 </div>
                 <div className="p-2 space-y-1.5 max-h-[calc(100vh-220px)] overflow-y-auto scrollbar-thin">
                   {grouped[stage].length === 0 ? (
-                    <p className="text-xs text-slate-600 text-center py-4">Empty</p>
+                    <p className="text-xs text-[var(--text-muted)] text-center py-4">Empty</p>
                   ) : (
                     grouped[stage].map(lead => (
-                      <div key={lead.id} className="bg-[#1e2433] rounded-lg p-2.5 border border-[#2a3347]">
-                        <p className="text-xs font-medium text-slate-200 truncate">{lead.business_name}</p>
+                      <div key={lead.id} className="bg-[var(--bg-2)] rounded-lg p-2.5 border border-[var(--border)]">
+                        <p className="text-xs font-medium text-[var(--text-primary)] truncate">{lead.business_name}</p>
                         {lead.assigned_rep && (
-                          <p className="text-xs text-slate-500 mt-0.5 truncate">{lead.assigned_rep.full_name}</p>
+                          <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">{lead.assigned_rep.full_name}</p>
                         )}
                         {lead.niche && (
-                          <p className="text-xs text-slate-600 mt-0.5 truncate">{lead.niche}</p>
+                          <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">{lead.niche}</p>
                         )}
                       </div>
                     ))

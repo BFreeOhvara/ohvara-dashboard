@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 
 export default function Login() {
-  const { signIn, profile } = useAuth()
+  const { signIn } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -18,10 +18,7 @@ export default function Login() {
     setLoading(true)
     try {
       await signIn(email, password)
-      // onAuthStateChange fires and updates profile — wait a tick then redirect
-      setTimeout(() => {
-        // Role-based redirect handled in App.jsx via ProtectedRoute
-      }, 100)
+      // Role-based redirect is handled by RoleRedirect in App.jsx via onAuthStateChange
     } catch (err) {
       setError(err.message || 'Invalid email or password')
     } finally {
@@ -30,14 +27,16 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0f1117] px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center bg-[var(--bg-base)] px-4">
+      <div className="w-full max-w-[360px]">
+        {/* Brand mark */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-slate-100">Ohvara</h1>
-          <p className="text-slate-500 text-sm mt-1">Outreach Dashboard</p>
+          <p className="text-xl font-bold text-[var(--text-primary)] tracking-tight">Ohvara</p>
+          <p className="text-xs text-[var(--text-muted)] mt-1">Outreach Dashboard</p>
         </div>
 
-        <div className="bg-[#161b24] border border-[#2a3347] rounded-xl p-6">
+        {/* Login card */}
+        <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-xl p-6 shadow-card">
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               label="Email"
@@ -58,12 +57,12 @@ export default function Login() {
             />
 
             {error && (
-              <p className="text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-3 py-2">
+              <p className="text-xs text-red-400 bg-red-500/10 border border-red-900 rounded-md px-3 py-2">
                 {error}
               </p>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" size="md" disabled={loading}>
               {loading ? 'Signing in…' : 'Sign In'}
             </Button>
           </form>

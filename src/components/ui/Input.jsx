@@ -1,18 +1,19 @@
 import { clsx } from 'clsx'
 
+const baseInput = [
+  'w-full bg-[var(--bg-2)] border border-[var(--border)] rounded-md',
+  'px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)]',
+  'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent',
+  'transition-colors',
+].join(' ')
+
 export function Input({ className, label, error, ...props }) {
   return (
     <div className="flex flex-col gap-1">
-      {label && <label className="text-sm text-slate-400">{label}</label>}
-      <input
-        className={clsx(
-          'bg-[#1e2433] border border-[#2a3347] rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500',
-          'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent',
-          error && 'border-red-500',
-          className
-        )}
-        {...props}
-      />
+      {label && (
+        <label className="section-label">{label}</label>
+      )}
+      <input className={clsx(baseInput, error && 'border-red-500', className)} {...props} />
       {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
   )
@@ -21,11 +22,13 @@ export function Input({ className, label, error, ...props }) {
 export function Select({ className, label, children, ...props }) {
   return (
     <div className="flex flex-col gap-1">
-      {label && <label className="text-sm text-slate-400">{label}</label>}
+      {label && (
+        <label className="section-label">{label}</label>
+      )}
       <select
         className={clsx(
-          'bg-[#1e2433] border border-[#2a3347] rounded-lg px-3 py-2 text-sm text-slate-100',
-          'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent',
+          baseInput,
+          'cursor-pointer',
           className
         )}
         {...props}
@@ -39,13 +42,11 @@ export function Select({ className, label, children, ...props }) {
 export function Textarea({ className, label, ...props }) {
   return (
     <div className="flex flex-col gap-1">
-      {label && <label className="text-sm text-slate-400">{label}</label>}
+      {label && (
+        <label className="section-label">{label}</label>
+      )}
       <textarea
-        className={clsx(
-          'bg-[#1e2433] border border-[#2a3347] rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 resize-none',
-          'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent',
-          className
-        )}
+        className={clsx(baseInput, 'resize-none', className)}
         {...props}
       />
     </div>

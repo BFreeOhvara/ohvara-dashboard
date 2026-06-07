@@ -10,27 +10,29 @@ import { useAuth } from '../../hooks/useAuth'
 const NAV = {
   rep: [
     { to: '/rep',          label: 'My Leads',       icon: Phone },
-    { to: '/rep/training', label: 'Training Center', icon: BookOpen },
+    { to: '/rep/training', label: 'Training',        icon: BookOpen },
     { to: '/rep/stats',    label: 'My Stats',        icon: BarChart2 },
     { to: '/rep/goals',    label: 'My Goals',        icon: Target },
-    { to: '/rep/feed',     label: 'Activity Feed',   icon: Bell },
+    { to: '/rep/feed',     label: 'Activity',        icon: Bell },
   ],
   closer: [
-    { to: '/closer',          label: 'My Appointments', icon: Calendar },
-    { to: '/closer/deals',    label: 'Past Deals',       icon: DollarSign },
-    { to: '/closer/revenue',  label: 'Revenue Tracker',  icon: TrendingUp },
-    { to: '/closer/reps',     label: 'Rep Analytics',    icon: Users },
+    { to: '/closer',          label: 'Appointments', icon: Calendar },
+    { to: '/closer/deals',    label: 'Past Deals',   icon: DollarSign },
+    { to: '/closer/revenue',  label: 'Revenue',      icon: TrendingUp },
+    { to: '/closer/reps',     label: 'Rep Stats',    icon: Users },
   ],
   admin: [
-    { to: '/admin',            label: 'Overview',        icon: LayoutDashboard },
-    { to: '/admin/reps',       label: 'Rep Performance', icon: BarChart2 },
-    { to: '/admin/leads',      label: 'All Leads',       icon: List },
-    { to: '/admin/pipeline',   label: 'Lead Pipeline',   icon: Columns },
+    { to: '/admin',              label: 'Overview',      icon: LayoutDashboard },
+    { to: '/admin/reps',         label: 'Rep Performance', icon: BarChart2 },
+    { to: '/admin/leads',        label: 'All Leads',     icon: List },
+    { to: '/admin/pipeline',     label: 'Pipeline',      icon: Columns },
     { to: '/admin/reengagement', label: 'Re-Engagement', icon: RefreshCw },
-    { to: '/admin/sources',    label: 'Lead Sources',    icon: Database },
-    { to: '/admin/users',      label: 'Users',           icon: Users },
+    { to: '/admin/sources',      label: 'Lead Sources',  icon: Database },
+    { to: '/admin/users',        label: 'Users',         icon: Users },
   ],
 }
+
+const ROLE_LABELS = { rep: 'Rep Portal', closer: 'Closer Portal', admin: 'Admin' }
 
 export function Sidebar() {
   const { profile, signOut } = useAuth()
@@ -43,13 +45,15 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-56 flex-shrink-0 bg-[#0c0f16] border-r border-[#2a3347] flex flex-col min-h-screen">
-      <div className="px-4 py-5 border-b border-[#2a3347]">
-        <p className="text-lg font-bold text-slate-100 tracking-tight">Ohvara</p>
-        <p className="text-xs text-slate-500 mt-0.5 capitalize">{profile?.role} Portal</p>
+    <aside className="w-52 flex-shrink-0 flex flex-col min-h-screen bg-[var(--bg-deep)] border-r border-[var(--border)]">
+      {/* Brand */}
+      <div className="px-4 py-5 border-b border-[var(--border)]">
+        <p className="text-base font-bold text-[var(--text-primary)] tracking-tight leading-none">Ohvara</p>
+        <p className="text-xs text-[var(--text-muted)] mt-1">{ROLE_LABELS[profile?.role] || ''}</p>
       </div>
 
-      <nav className="flex-1 px-2 py-4 space-y-0.5">
+      {/* Nav */}
+      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto scrollbar-thin">
         {links.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
@@ -57,29 +61,30 @@ export function Sidebar() {
             end={to === '/rep' || to === '/closer' || to === '/admin'}
             className={({ isActive }) =>
               clsx(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
+                'flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors',
                 isActive
-                  ? 'bg-indigo-600/20 text-indigo-300 font-medium'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#161b24]'
+                  ? 'bg-[var(--accent-subtle)] text-indigo-300 font-medium'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-1)]'
               )
             }
           >
-            <Icon size={16} />
+            <Icon size={14} className="flex-shrink-0" />
             {label}
           </NavLink>
         ))}
       </nav>
 
-      <div className="px-2 py-4 border-t border-[#2a3347]">
+      {/* User + sign out */}
+      <div className="px-2 py-3 border-t border-[var(--border)]">
         <div className="px-3 mb-2">
-          <p className="text-sm text-slate-300 font-medium truncate">{profile?.full_name}</p>
-          <p className="text-xs text-slate-500 truncate">{profile?.email}</p>
+          <p className="text-xs font-semibold text-[var(--text-secondary)] truncate">{profile?.full_name}</p>
+          <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">{profile?.email}</p>
         </div>
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-slate-200 hover:bg-[#161b24] transition-colors"
+          className="flex items-center gap-2.5 w-full px-3 py-2 rounded-md text-sm text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-1)] transition-colors"
         >
-          <LogOut size={16} />
+          <LogOut size={14} />
           Sign Out
         </button>
       </div>

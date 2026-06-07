@@ -58,8 +58,8 @@ export default function RevenueTracker() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-100">Revenue Tracker</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Your closed revenue across all time</p>
+        <h1 className="text-xl font-bold text-[var(--text-primary)]">Revenue Tracker</h1>
+        <p className="text-[var(--text-muted)] text-sm mt-0.5">Your closed revenue across all time</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -70,9 +70,9 @@ export default function RevenueTracker() {
       </div>
 
       <Card>
-        <p className="text-sm font-semibold text-slate-200 mb-4">Weekly Revenue (last 8 weeks)</p>
+        <p className="text-sm font-semibold text-[var(--text-primary)] mb-4">Weekly Revenue (last 8 weeks)</p>
         {!revenue?.weeklyChart?.length ? (
-          <p className="text-slate-500 text-sm text-center py-8">No closed deals yet</p>
+          <p className="text-[var(--text-muted)] text-sm text-center py-8">No closed deals yet</p>
         ) : (
           <div className="flex items-end gap-2 h-40">
             {revenue.weeklyChart.map((w, i) => (
@@ -81,7 +81,7 @@ export default function RevenueTracker() {
                   className="w-full bg-indigo-600 rounded-t-sm transition-all"
                   style={{ height: `${(w.value / maxVal) * 120}px`, minHeight: w.value > 0 ? '4px' : '0' }}
                 />
-                <p className="text-xs text-slate-600">{w.label}</p>
+                <p className="text-xs text-[var(--text-muted)]">{w.label}</p>
               </div>
             ))}
           </div>

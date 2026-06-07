@@ -17,8 +17,8 @@ export default function PastDeals() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">Past Deals</h1>
-          <p className="text-slate-500 text-sm mt-0.5">
+          <h1 className="text-xl font-bold text-[var(--text-primary)]">Past Deals</h1>
+          <p className="text-[var(--text-muted)] text-sm mt-0.5">
             ${totalClosed.toLocaleString()} total closed revenue
           </p>
         </div>
@@ -34,41 +34,41 @@ export default function PastDeals() {
       {isLoading ? (
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-14 bg-[#161b24] border border-[#2a3347] rounded-xl animate-pulse" />
+            <div key={i} className="h-14 bg-[var(--bg-1)] border border-[var(--border)] rounded-xl animate-pulse" />
           ))}
         </div>
       ) : !filtered.length ? (
         <div className="text-center py-20">
-          <DollarSign className="text-slate-600 mx-auto mb-2" size={24} />
-          <p className="text-slate-500 text-sm">No deals match this filter</p>
+          <DollarSign className="text-[var(--text-muted)] mx-auto mb-2" size={24} />
+          <p className="text-[var(--text-muted)] text-sm">No deals match this filter</p>
         </div>
       ) : (
-        <div className="bg-[#161b24] border border-[#2a3347] rounded-xl overflow-hidden">
+        <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[#2a3347] text-left">
-                <th className="px-4 py-3 text-xs text-slate-500 font-medium">Business</th>
-                <th className="px-4 py-3 text-xs text-slate-500 font-medium">Rep</th>
-                <th className="px-4 py-3 text-xs text-slate-500 font-medium">Outcome</th>
-                <th className="px-4 py-3 text-xs text-slate-500 font-medium">Deal Value</th>
-                <th className="px-4 py-3 text-xs text-slate-500 font-medium">Date</th>
+              <tr className="border-b border-[var(--border)] text-left">
+                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium">Business</th>
+                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium">Rep</th>
+                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium">Outcome</th>
+                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium">Deal Value</th>
+                <th className="px-4 py-3 text-xs text-[var(--text-muted)] font-medium">Date</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map(d => (
-                <tr key={d.id} className="border-b border-[#2a3347]/50 hover:bg-[#1e2433]">
+                <tr key={d.id} className="border-b border-[var(--border)]/50 hover:bg-[var(--bg-2)]">
                   <td className="px-4 py-3">
-                    <p className="text-slate-200 font-medium">{d.lead?.business_name}</p>
-                    {d.loss_reason && <p className="text-xs text-slate-500">{d.loss_reason}</p>}
+                    <p className="text-[var(--text-primary)] font-medium">{d.lead?.business_name}</p>
+                    {d.loss_reason && <p className="text-xs text-[var(--text-muted)]">{d.loss_reason}</p>}
                   </td>
-                  <td className="px-4 py-3 text-slate-400">{d.rep?.full_name || '—'}</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">{d.rep?.full_name || '—'}</td>
                   <td className="px-4 py-3">
                     <Badge label={d.outcome} />
                   </td>
-                  <td className="px-4 py-3 text-slate-200">
+                  <td className="px-4 py-3 text-[var(--text-primary)]">
                     {d.deal_value ? `$${Number(d.deal_value).toLocaleString()}` : '—'}
                   </td>
-                  <td className="px-4 py-3 text-slate-500">
+                  <td className="px-4 py-3 text-[var(--text-muted)]">
                     {new Date(d.updated_at).toLocaleDateString()}
                   </td>
                 </tr>

@@ -19,6 +19,11 @@ Deno.serve(async (req) => {
     city,
     pain_points,
     notes,
+    // pitch_anchor extras
+    job_title,
+    monthly_labor_cost,
+    recommended_tier,
+    recommended_price,
   } = body
 
   const anthropic = new Anthropic({
@@ -26,8 +31,39 @@ Deno.serve(async (req) => {
   })
 
   let prompt: string
-  let schema: string
 
+  // ---- PITCH ANCHOR mode ----
+  if (mode === 'pitch_anchor') {
+    const costDisplay = monthly_labor_cost ? `$${Number(monthly_labor_cost).toLocaleString()}/month` : 'unknown'
+    const saving = monthly_labor_cost && recommended_price
+      ? `$${Math.round(Number(monthly_labor_cost) - Number(recommended_price)).toLocaleString()}/month`
+      : null
+
+    prompt = `You are a sales strategist. Write ONE sentence — a pitch anchor — for a closer about to call ${business_name}.
+
+Facts:
+- Business niche: ${niche || 'unknown'}
+- Job title being replaced/augmented: ${job_title || 'staff'}
+- Current monthly labor cost: ${costDisplay}
+- Recommended Ohvara tier: ${recommended_tier || 'unknown'} at $${recommended_price || 'unknown'}/month
+- Monthly savings if they sign: ${saving || 'significant'}
+- Pain points: ${pain_points || 'none noted'}
+
+Write exactly one confident, specific, punchy sentence the closer can use to open with financial framing. Use the actual numbers. No fluff, no "I" subject — start with the business name or the cost angle.`
+
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 120,
+      messages: [{ role: 'user', content: prompt }],
+    })
+
+    return new Response(
+      JSON.stringify({ pitch_anchor: message.content[0].type === 'text' ? message.content[0].text.trim() : '' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
+  // ---- BRIEFING mode ----
   if (mode === 'briefing') {
     prompt = `You are a sales coach preparing a closer for a discovery/sales call.
 

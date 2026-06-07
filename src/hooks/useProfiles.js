@@ -47,6 +47,22 @@ export function useCreateProfile() {
   })
 }
 
+export function useToggleUserActive() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ userId, isActive }) => {
+      const { data, error } = await supabase.functions.invoke('admin-toggle-user', {
+        body: { user_id: userId, is_active: isActive },
+      })
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['profiles'] })
+    },
+  })
+}
+
 export function useRepStats(repId, period = 'week') {
   return useQuery({
     queryKey: ['stats', repId, period],

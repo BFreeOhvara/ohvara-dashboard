@@ -25,8 +25,8 @@ export default function MyGoals() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-100">My Goals</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Weekly targets and milestone badges</p>
+        <h1 className="text-xl font-bold text-[var(--text-primary)]">My Goals</h1>
+        <p className="text-[var(--text-muted)] text-sm mt-0.5">Weekly targets and milestone badges</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4 mb-6">
@@ -51,7 +51,7 @@ export default function MyGoals() {
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <Trophy size={16} className="text-yellow-400" />
-          <h2 className="text-sm font-semibold text-slate-100">Milestone Badges</h2>
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Milestone Badges</h2>
         </div>
         <div className="grid grid-cols-3 gap-3">
           {BADGES.map(badge => {
@@ -63,11 +63,11 @@ export default function MyGoals() {
                   'flex flex-col items-center gap-2 p-3 rounded-lg border text-center',
                   earned
                     ? 'border-yellow-700 bg-yellow-900/20'
-                    : 'border-[#2a3347] bg-[#1e2433] opacity-40 grayscale'
+                    : 'border-[var(--border)] bg-[var(--bg-2)] opacity-40 grayscale'
                 )}
               >
                 <span className="text-2xl">{badge.icon}</span>
-                <p className="text-xs text-slate-300 font-medium">{badge.label}</p>
+                <p className="text-xs text-[var(--text-secondary)] font-medium">{badge.label}</p>
               </div>
             )
           })}
@@ -87,16 +87,16 @@ function GoalCard({ label, current, target, pct, icon: Icon, color }) {
   return (
     <Card>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-medium text-slate-200">{label}</p>
+        <p className="text-sm font-medium text-[var(--text-primary)]">{label}</p>
         <span className={clsx('text-sm font-bold', c.text)}>{pct}%</span>
       </div>
-      <div className="h-2 bg-[#2a3347] rounded-full overflow-hidden mb-2">
+      <div className="h-2 bg-[var(--bg-3)] rounded-full overflow-hidden mb-2">
         <div
           className={clsx('h-full rounded-full transition-all duration-500', c.bar)}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-[var(--text-muted)]">
         {current} / {target} {label.split(' ')[1].toLowerCase()}
       </p>
     </Card>

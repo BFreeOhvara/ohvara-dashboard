@@ -15,8 +15,8 @@ export default function RepPerformance() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">Rep Performance</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Per-rep analytics filterable by period</p>
+          <h1 className="text-xl font-bold text-[var(--text-primary)]">Rep Performance</h1>
+          <p className="text-[var(--text-muted)] text-sm mt-0.5">Per-rep analytics filterable by period</p>
         </div>
         <div className="flex gap-1">
           {PERIODS.map(p => (
@@ -30,7 +30,7 @@ export default function RepPerformance() {
       {isLoading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-28 bg-[#161b24] border border-[#2a3347] rounded-xl animate-pulse" />
+            <div key={i} className="h-28 bg-[var(--bg-1)] border border-[var(--border)] rounded-xl animate-pulse" />
           ))}
         </div>
       ) : (
@@ -54,8 +54,8 @@ function RepPerformanceRow({ rep, period }) {
           {rep.full_name.charAt(0)}
         </div>
         <div>
-          <p className="text-sm font-semibold text-slate-100">{rep.full_name}</p>
-          <p className="text-xs text-slate-500">{rep.email}</p>
+          <p className="text-sm font-semibold text-[var(--text-primary)]">{rep.full_name}</p>
+          <p className="text-xs text-[var(--text-muted)]">{rep.email}</p>
         </div>
         <Badge label={rep.is_active ? 'active' : 'inactive'} variant={rep.is_active ? 'green' : 'red'} />
       </div>
@@ -74,9 +74,9 @@ function Metric({ icon: Icon, label, value, color }) {
     <div>
       <div className="flex items-center gap-1.5 mb-1">
         <Icon size={12} className={color} />
-        <p className="text-xs text-slate-500">{label}</p>
+        <p className="text-xs text-[var(--text-muted)]">{label}</p>
       </div>
-      <p className="text-lg font-bold text-slate-100">{value}</p>
+      <p className="text-lg font-bold text-[var(--text-primary)]">{value}</p>
     </div>
   )
 }

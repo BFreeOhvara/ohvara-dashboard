@@ -3,7 +3,10 @@ import { clsx } from 'clsx'
 export function Card({ className, children, ...props }) {
   return (
     <div
-      className={clsx('bg-[#161b24] border border-[#2a3347] rounded-xl p-4', className)}
+      className={clsx(
+        'bg-[var(--bg-1)] border border-[var(--border)] rounded-xl p-4 shadow-card',
+        className
+      )}
       {...props}
     >
       {children}
@@ -21,7 +24,7 @@ export function CardHeader({ className, children }) {
 
 export function CardTitle({ children, className }) {
   return (
-    <h2 className={clsx('text-base font-semibold text-slate-100', className)}>
+    <h2 className={clsx('text-sm font-semibold text-[var(--text-primary)]', className)}>
       {children}
     </h2>
   )

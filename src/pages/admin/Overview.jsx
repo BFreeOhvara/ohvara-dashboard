@@ -40,8 +40,8 @@ export default function Overview() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-100">Overview</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Top-level KPIs across all reps and closers</p>
+        <h1 className="text-xl font-bold text-[var(--text-primary)]">Overview</h1>
+        <p className="text-[var(--text-muted)] text-sm mt-0.5">Top-level KPIs across all reps and closers</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
@@ -54,17 +54,17 @@ export default function Overview() {
 
       {stats?.statusBreakdown && (
         <Card>
-          <p className="text-sm font-semibold text-slate-200 mb-4">Lead Status Breakdown</p>
+          <p className="text-sm font-semibold text-[var(--text-primary)] mb-4">Lead Status Breakdown</p>
           <div className="space-y-2">
             {Object.entries(stats.statusBreakdown).map(([status, count]) => {
               const pct = stats.totalLeads ? Math.round((count / stats.totalLeads) * 100) : 0
               return (
                 <div key={status} className="flex items-center gap-3">
-                  <p className="text-sm text-slate-400 w-32 flex-shrink-0">{status}</p>
-                  <div className="flex-1 h-2 bg-[#2a3347] rounded-full overflow-hidden">
+                  <p className="text-sm text-[var(--text-secondary)] w-32 flex-shrink-0">{status}</p>
+                  <div className="flex-1 h-2 bg-[var(--bg-3)] rounded-full overflow-hidden">
                     <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${pct}%` }} />
                   </div>
-                  <p className="text-sm text-slate-300 w-10 text-right">{count}</p>
+                  <p className="text-sm text-[var(--text-secondary)] w-10 text-right">{count}</p>
                 </div>
               )
             })}

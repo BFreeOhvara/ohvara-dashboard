@@ -57,21 +57,21 @@ export default function ActivityFeed() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-100">Activity Feed</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Recent calls, assignments, and replies</p>
+        <h1 className="text-xl font-bold text-[var(--text-primary)]">Activity Feed</h1>
+        <p className="text-[var(--text-muted)] text-sm mt-0.5">Recent calls, assignments, and replies</p>
       </div>
 
       <Card>
         {isLoading ? (
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 bg-[#1e2433] rounded-lg animate-pulse" />
+              <div key={i} className="h-12 bg-[var(--bg-2)] rounded-lg animate-pulse" />
             ))}
           </div>
         ) : !items.length ? (
           <div className="text-center py-10">
-            <Bell className="text-slate-600 mx-auto mb-2" size={24} />
-            <p className="text-slate-500 text-sm">No activity yet</p>
+            <Bell className="text-[var(--text-muted)] mx-auto mb-2" size={24} />
+            <p className="text-[var(--text-muted)] text-sm">No activity yet</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -93,15 +93,15 @@ function FeedItem({ item }) {
   }
 
   return (
-    <div className="flex items-start gap-3 px-2 py-2.5 rounded-lg hover:bg-[#1e2433] transition-colors">
-      <div className="w-7 h-7 rounded-full bg-[#252d3d] flex items-center justify-center flex-shrink-0 mt-0.5">
-        {icons[item.type] || <Bell size={14} className="text-slate-400" />}
+    <div className="flex items-start gap-3 px-2 py-2.5 rounded-lg hover:bg-[var(--bg-2)] transition-colors">
+      <div className="w-7 h-7 rounded-full bg-[var(--bg-3)] flex items-center justify-center flex-shrink-0 mt-0.5">
+        {icons[item.type] || <Bell size={14} className="text-[var(--text-secondary)]" />}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-slate-200">{item.label}</p>
-        {item.sub && <p className="text-xs text-slate-500">{item.sub}</p>}
+        <p className="text-sm text-[var(--text-primary)]">{item.label}</p>
+        {item.sub && <p className="text-xs text-[var(--text-muted)]">{item.sub}</p>}
       </div>
-      <p className="text-xs text-slate-600 flex-shrink-0">{formatTime(item.time)}</p>
+      <p className="text-xs text-[var(--text-muted)] flex-shrink-0">{formatTime(item.time)}</p>
     </div>
   )
 }
