@@ -49,7 +49,7 @@ export function AIScriptPanel({ lead, onClose }) {
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[var(--border)]">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{lead.business_name}</p>
+          <p className="text-sm font-medium text-[var(--text-primary)] truncate">{lead.business_name}</p>
           <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">
             {lead.contact_name || 'Unknown contact'}
             {lead.niche && ` · ${lead.niche}`}
@@ -87,11 +87,11 @@ export function AIScriptPanel({ lead, onClose }) {
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         {!script && !loading && (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-6">
-            <div className="w-10 h-10 rounded-xl bg-[var(--accent-subtle)] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-[10px] bg-[var(--accent-subtle)] flex items-center justify-center">
               <FileText className="text-indigo-400" size={18} />
             </div>
             <div>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">AI Call Script</p>
+              <p className="text-sm font-medium text-[var(--text-primary)]">AI Call Script</p>
               <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
                 Generate a personalized script for {lead.business_name} before you dial.
               </p>

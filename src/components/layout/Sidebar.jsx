@@ -58,7 +58,7 @@ export function Sidebar() {
             <Zap size={14} className="text-white" fill="white" />
           </div>
           <div>
-            <p className="text-sm font-bold text-[var(--text-primary)] tracking-tight leading-none">Ohvara</p>
+            <p className="text-sm font-medium text-[var(--text-primary)] tracking-tight leading-none">Ohvara</p>
             <p className="text-[10px] text-[var(--text-muted)] mt-0.5 leading-none">{ROLE_LABELS[profile?.role] || ''}</p>
           </div>
         </div>
@@ -75,7 +75,7 @@ export function Sidebar() {
               clsx(
                 'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm tab-transition',
                 isActive
-                  ? 'bg-[var(--accent-subtle)] text-[var(--accent)] font-semibold'
+                  ? 'bg-[var(--accent-subtle)] text-[var(--accent)] font-medium'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-2)]'
               )
             }
@@ -94,10 +94,10 @@ export function Sidebar() {
       <div className="px-2 py-3 border-t border-[var(--border)]">
         <div className="flex items-center gap-2.5 px-3 mb-2">
           <div className="w-7 h-7 rounded-full bg-[var(--accent-subtle)] border border-[var(--accent)]/20 flex items-center justify-center flex-shrink-0">
-            <span className="text-xs font-bold text-[var(--accent)]">{initials}</span>
+            <span className="text-xs font-medium text-[var(--accent)]">{initials}</span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-[var(--text-secondary)] truncate leading-tight">{profile?.full_name}</p>
+            <p className="text-xs font-medium text-[var(--text-secondary)] truncate leading-tight">{profile?.full_name}</p>
             <p className="text-[10px] text-[var(--text-muted)] truncate leading-tight mt-0.5">{profile?.username || profile?.email}</p>
           </div>
         </div>

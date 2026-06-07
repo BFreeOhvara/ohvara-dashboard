@@ -100,11 +100,11 @@ export default function Users() {
 
       {/* Credential handoff */}
       {createdCreds && (
-        <div className="flex items-start justify-between gap-3 bg-[#22C55E]/8 border border-[#22C55E]/20 rounded-xl px-4 py-3 mb-4">
+        <div className="flex items-start justify-between gap-3 bg-[#22C55E]/8 border border-[#22C55E]/20 rounded-[10px] px-4 py-3 mb-4">
           <div className="flex items-start gap-2.5">
             <CheckCircle size={15} className="text-[#22C55E] flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">{createdCreds.full_name} — account ready</p>
+              <p className="text-sm font-medium text-[var(--text-primary)]">{createdCreds.full_name} — account ready</p>
               <p className="text-xs text-[var(--text-muted)] mt-1">
                 Username: <span className="font-mono text-[var(--text-secondary)]">{createdCreds.username}</span>
                 <span className="mx-2 opacity-40">·</span>
@@ -122,7 +122,7 @@ export default function Users() {
       {showForm && (
         <Card className="mb-5">
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-semibold text-[var(--text-primary)]">Create New User</p>
+            <p className="text-sm font-medium text-[var(--text-primary)]">Create New User</p>
             <button onClick={() => setShowForm(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-1">
               <X size={16} />
             </button>
@@ -212,7 +212,7 @@ export default function Users() {
       </div>
 
       {/* User table */}
-      <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-xl overflow-hidden">
+      <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] overflow-hidden">
         {isLoading ? (
           <div className="p-8 flex justify-center">
             <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
@@ -238,12 +238,12 @@ export default function Users() {
                 <tr key={p.id} className="border-b border-[var(--border)]/40 hover:bg-[var(--bg-2)] transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0
                         ${p.is_active ? 'bg-[var(--accent-subtle)] text-[var(--accent)]' : 'bg-[var(--bg-3)] text-[var(--text-muted)]'}`}>
                         {p.full_name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p className={`font-semibold text-[var(--text-primary)] text-sm leading-tight ${!p.is_active ? 'opacity-60' : ''}`}>
+                        <p className={`font-medium text-[var(--text-primary)] text-sm leading-tight ${!p.is_active ? 'opacity-60' : ''}`}>
                           {p.full_name}
                         </p>
                         <p className="font-mono text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">
@@ -297,13 +297,13 @@ export default function Users() {
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmDelete(null)} />
-          <div className="relative bg-[var(--bg-1)] border border-[var(--border)] rounded-2xl p-6 w-full max-w-sm shadow-[var(--shadow-panel)] page-enter">
+          <div className="relative bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] p-6 w-full max-w-sm page-enter">
             <div className="flex items-start gap-3 mb-4">
-              <div className="w-9 h-9 rounded-xl bg-[#EF4444]/10 flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 rounded-[10px] bg-[#EF4444]/10 flex items-center justify-center flex-shrink-0">
                 <AlertTriangle size={18} className="text-[#EF4444]" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">Delete account permanently?</p>
+                <p className="text-sm font-medium text-[var(--text-primary)]">Delete account permanently?</p>
                 <p className="text-xs text-[var(--text-muted)] mt-1">
                   <span className="text-[var(--text-secondary)] font-medium">{confirmDelete.full_name}</span>
                   {confirmDelete.username ? ` (@${confirmDelete.username})` : ''} will be permanently removed from auth and profiles. This cannot be undone.

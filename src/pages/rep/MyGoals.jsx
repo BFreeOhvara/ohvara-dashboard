@@ -25,7 +25,7 @@ export default function MyGoals() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-[var(--text-primary)]">My Goals</h1>
+        <h1 className="text-xl font-medium text-[var(--text-primary)]">My Goals</h1>
         <p className="text-[var(--text-muted)] text-sm mt-0.5">Weekly targets and milestone badges</p>
       </div>
 
@@ -51,7 +51,7 @@ export default function MyGoals() {
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <Trophy size={16} className="text-yellow-400" />
-          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Milestone Badges</h2>
+          <h2 className="text-sm font-medium text-[var(--text-primary)]">Milestone Badges</h2>
         </div>
         <div className="grid grid-cols-3 gap-3">
           {BADGES.map(badge => {
@@ -88,7 +88,7 @@ function GoalCard({ label, current, target, pct, icon: Icon, color }) {
     <Card>
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm font-medium text-[var(--text-primary)]">{label}</p>
-        <span className={clsx('text-sm font-bold', c.text)}>{pct}%</span>
+        <span className={clsx('text-sm font-medium', c.text)}>{pct}%</span>
       </div>
       <div className="h-2 bg-[var(--bg-3)] rounded-full overflow-hidden mb-2">
         <div

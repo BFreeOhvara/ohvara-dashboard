@@ -28,7 +28,7 @@ export default function ReEngagement() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-[var(--text-primary)]">Re-Engagement</h1>
+        <h1 className="text-xl font-medium text-[var(--text-primary)]">Re-Engagement</h1>
         <p className="text-[var(--text-muted)] text-sm mt-0.5">Twilio sequence tracking for Voicemail and No Answer leads</p>
       </div>
 
@@ -39,7 +39,7 @@ export default function ReEngagement() {
       </div>
 
       <Card>
-        <p className="text-sm font-semibold text-[var(--text-primary)] mb-4">Sequence Log</p>
+        <p className="text-sm font-medium text-[var(--text-primary)] mb-4">Sequence Log</p>
 
         {isLoading ? (
           <div className="space-y-2">

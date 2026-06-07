@@ -15,7 +15,7 @@ export default function RepPerformance() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-[var(--text-primary)]">Rep Performance</h1>
+          <h1 className="text-xl font-medium text-[var(--text-primary)]">Rep Performance</h1>
           <p className="text-[var(--text-muted)] text-sm mt-0.5">Per-rep analytics filterable by period</p>
         </div>
         <div className="flex gap-1">
@@ -30,7 +30,7 @@ export default function RepPerformance() {
       {isLoading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-28 bg-[var(--bg-1)] border border-[var(--border)] rounded-xl animate-pulse" />
+            <div key={i} className="h-28 bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] animate-pulse" />
           ))}
         </div>
       ) : (
@@ -54,7 +54,7 @@ function RepPerformanceRow({ rep, period }) {
           {rep.full_name.charAt(0)}
         </div>
         <div>
-          <p className="text-sm font-semibold text-[var(--text-primary)]">{rep.full_name}</p>
+          <p className="text-sm font-medium text-[var(--text-primary)]">{rep.full_name}</p>
           <p className="text-xs text-[var(--text-muted)]">{rep.email}</p>
         </div>
         <Badge label={rep.is_active ? 'active' : 'inactive'} variant={rep.is_active ? 'green' : 'red'} />
@@ -76,7 +76,7 @@ function Metric({ icon: Icon, label, value, color }) {
         <Icon size={12} className={color} />
         <p className="text-xs text-[var(--text-muted)]">{label}</p>
       </div>
-      <p className="text-lg font-bold text-[var(--text-primary)]">{value}</p>
+      <p className="text-lg font-medium text-[var(--text-primary)]">{value}</p>
     </div>
   )
 }

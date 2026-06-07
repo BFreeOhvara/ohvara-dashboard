@@ -24,23 +24,23 @@ export default function LeadPipeline() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-[var(--text-primary)]">Lead Pipeline</h1>
+        <h1 className="text-xl font-medium text-[var(--text-primary)]">Lead Pipeline</h1>
         <p className="text-[var(--text-muted)] text-sm mt-0.5">Kanban view across all 7 status stages</p>
       </div>
 
       {isLoading ? (
         <div className="flex gap-3 overflow-x-auto pb-4">
           {STAGES.map(s => (
-            <div key={s} className="w-56 flex-shrink-0 h-64 bg-[var(--bg-1)] border border-[var(--border)] rounded-xl animate-pulse" />
+            <div key={s} className="w-56 flex-shrink-0 h-64 bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] animate-pulse" />
           ))}
         </div>
       ) : (
         <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-thin">
           {STAGES.map(stage => (
             <div key={stage} className="w-56 flex-shrink-0">
-              <div className={`border-t-2 ${STAGE_COLORS[stage]} bg-[var(--bg-1)] border border-[var(--border)] rounded-xl overflow-hidden`}>
+              <div className={`border-t-2 ${STAGE_COLORS[stage]} bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] overflow-hidden`}>
                 <div className="px-3 py-2.5 border-b border-[var(--border)] flex items-center justify-between">
-                  <p className="text-xs font-semibold text-[var(--text-secondary)]">{stage}</p>
+                  <p className="text-xs font-medium text-[var(--text-secondary)]">{stage}</p>
                   <span className="text-xs text-[var(--text-muted)] bg-[var(--bg-2)] rounded px-1.5 py-0.5">
                     {grouped[stage].length}
                   </span>

@@ -120,14 +120,14 @@ export function AppointmentCard({ appt }) {
     : null
 
   return (
-    <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-xl overflow-hidden transition-all">
+    <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] overflow-hidden transition-all">
       {/* Card header */}
       <div className="flex items-center gap-3 px-4 py-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{lead.business_name}</p>
+            <p className="text-sm font-medium text-[var(--text-primary)] truncate">{lead.business_name}</p>
             {displayTier && (
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${TIER_STYLES[displayTier.name] || TIER_STYLES['Growth']}`}>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-xs font-medium ${TIER_STYLES[displayTier.name] || TIER_STYLES['Growth']}`}>
                 {displayTier.name} · ${displayTier.price?.toLocaleString()}/mo
               </span>
             )}
@@ -190,11 +190,11 @@ export function AppointmentCard({ appt }) {
           )}
 
           {/* ── AI Stack Analysis ── */}
-          <div className="bg-[var(--bg-2)] border border-[var(--border)] rounded-xl overflow-hidden">
+          <div className="bg-[var(--bg-2)] border border-[var(--border)] rounded-[10px] overflow-hidden">
             {/* Section header */}
             <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[var(--border)]">
               <Zap size={13} className="text-[var(--accent)]" />
-              <p className="text-xs font-semibold text-[var(--text-primary)]">AI Stack Recommendation</p>
+              <p className="text-xs font-medium text-[var(--text-primary)]">AI Stack Recommendation</p>
               {stackLoading && <Loader2 size={12} className="animate-spin text-[var(--text-muted)] ml-auto" />}
             </div>
 
@@ -213,13 +213,13 @@ export function AppointmentCard({ appt }) {
                     <div>
                       <p className="section-label mb-1">Recommended Tier</p>
                       <div className="flex items-baseline gap-2">
-                        <span className={`text-lg font-bold tracking-tight ${TIER_COLORS[stackAnalysis.tier] || 'text-[var(--accent)]'}`}>
+                        <span className={`text-lg font-medium tracking-tight ${TIER_COLORS[stackAnalysis.tier] || 'text-[var(--accent)]'}`}>
                           {stackAnalysis.tier}
                         </span>
                         <span className="text-sm text-[var(--text-muted)]">${stackAnalysis.price?.toLocaleString()}/month</span>
                       </div>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${TIER_STYLES[stackAnalysis.tier] || TIER_STYLES['Growth']}`}>
+                    <span className={`px-3 py-1 rounded-sm text-xs font-medium ${TIER_STYLES[stackAnalysis.tier] || TIER_STYLES['Growth']}`}>
                       {stackAnalysis.tier}
                     </span>
                   </div>
@@ -247,7 +247,7 @@ export function AppointmentCard({ appt }) {
                     <div className="bg-[var(--accent-subtle)] border border-[var(--accent)]/15 rounded-lg px-3 py-2.5">
                       <div className="flex items-center gap-1.5 mb-1">
                         <Target size={11} className="text-[var(--accent)]" />
-                        <p className="text-xs font-semibold text-[var(--accent)]">Lead with this</p>
+                        <p className="text-xs font-medium text-[var(--accent)]">Lead with this</p>
                       </div>
                       <p className="text-sm text-[var(--text-primary)] font-medium leading-snug">
                         {stackAnalysis.pitch_first}
@@ -310,7 +310,7 @@ export function AppointmentCard({ appt }) {
               </Button>
             ) : (
               <div className="bg-[var(--bg-2)] rounded-lg p-3">
-                <p className="text-xs font-semibold text-[var(--accent)] mb-2">AI Prep Briefing</p>
+                <p className="text-xs font-medium text-[var(--accent)] mb-2">AI Prep Briefing</p>
                 <p className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap leading-relaxed">{briefing}</p>
               </div>
             )}

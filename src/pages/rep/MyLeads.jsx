@@ -22,7 +22,7 @@ export default function MyLeads() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-[var(--text-primary)]">My Leads</h1>
+            <h1 className="text-xl font-medium text-[var(--text-primary)]">My Leads</h1>
             <p className="text-[var(--text-muted)] text-sm mt-0.5">
               Today's batch · {leads?.length ?? '…'} leads
             </p>
@@ -37,7 +37,7 @@ export default function MyLeads() {
         {leads && leads.length > 0 && (
           <div className="flex gap-2 flex-wrap mb-5">
             {Object.entries(counts).map(([status, count]) => (
-              <span key={status} className="px-2.5 py-1 rounded-full bg-[var(--bg-2)] text-xs text-[var(--text-secondary)] border border-[var(--border)]">
+              <span key={status} className="px-2.5 py-1 rounded-sm bg-[var(--bg-2)] text-xs text-[var(--text-secondary)] border border-[var(--border)]">
                 {status} <span className="text-[var(--text-muted)]">{count}</span>
               </span>
             ))}
@@ -48,7 +48,7 @@ export default function MyLeads() {
         {isLoading ? (
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-16 rounded-xl bg-[var(--bg-1)] border border-[var(--border)] animate-pulse" />
+              <div key={i} className="h-16 rounded-[10px] bg-[var(--bg-1)] border border-[var(--border)] animate-pulse" />
             ))}
           </div>
         ) : !leads?.length ? (

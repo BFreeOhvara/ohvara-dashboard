@@ -47,7 +47,7 @@ export default function AllLeads() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-[var(--text-primary)]">All Leads</h1>
+          <h1 className="text-xl font-medium text-[var(--text-primary)]">All Leads</h1>
           <p className="text-[var(--text-muted)] text-sm mt-0.5">{leads?.length ?? '…'} leads</p>
         </div>
       </div>
@@ -91,7 +91,7 @@ export default function AllLeads() {
       )}
 
       {/* Table */}
-      <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-xl overflow-hidden">
+      <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center">
             <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />

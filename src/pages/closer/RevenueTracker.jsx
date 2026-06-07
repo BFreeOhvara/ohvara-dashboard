@@ -58,7 +58,7 @@ export default function RevenueTracker() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-[var(--text-primary)]">Revenue Tracker</h1>
+        <h1 className="text-xl font-medium text-[var(--text-primary)]">Revenue Tracker</h1>
         <p className="text-[var(--text-muted)] text-sm mt-0.5">Your closed revenue across all time</p>
       </div>
 
@@ -70,7 +70,7 @@ export default function RevenueTracker() {
       </div>
 
       <Card>
-        <p className="text-sm font-semibold text-[var(--text-primary)] mb-4">Weekly Revenue (last 8 weeks)</p>
+        <p className="text-sm font-medium text-[var(--text-primary)] mb-4">Weekly Revenue (last 8 weeks)</p>
         {!revenue?.weeklyChart?.length ? (
           <p className="text-[var(--text-muted)] text-sm text-center py-8">No closed deals yet</p>
         ) : (

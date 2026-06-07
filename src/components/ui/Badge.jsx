@@ -1,44 +1,44 @@
 import { clsx } from 'clsx'
 
-// Every status has its own pill style
+// Pill styles: subtle background tint + matching border. NOT rounded-full — max 4px radius.
 const STATUS_STYLES = {
   // Lead statuses
-  'New':            'bg-[var(--bg-3)] text-[var(--text-secondary)] border border-[var(--border)]',
-  'Contacted':      'bg-blue-950/60 text-blue-300 border border-blue-800/50',
-  'Voicemail':      'bg-amber-950/60 text-amber-300 border border-amber-800/50',
-  'No Answer':      'bg-orange-950/60 text-orange-300 border border-orange-800/50',
-  'Interested':     'bg-emerald-950/60 text-emerald-300 border border-emerald-800/50',
+  'New':            'bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border)]',
+  'Contacted':      'bg-[#3B82F6]/10 text-[#3B82F6] border border-[#3B82F6]/20',
+  'Voicemail':      'bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20',
+  'No Answer':      'bg-orange-400/10 text-orange-400 border border-orange-400/20',
+  'Interested':     'bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20',
   'Booked':         'bg-[var(--accent-subtle)] text-[var(--accent)] border border-[#6C63FF]/20',
-  'Not Interested': 'bg-red-950/60 text-red-400 border border-red-900/50',
+  'Not Interested': 'bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/20',
   // Appointment outcomes
-  'closed':    'bg-emerald-950/60 text-emerald-300 border border-emerald-800/50',
-  'lost':      'bg-red-950/60 text-red-400 border border-red-900/50',
-  'no_show':   'bg-[var(--bg-3)] text-[var(--text-muted)] border border-[var(--border)]',
+  'closed':    'bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20',
+  'lost':      'bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/20',
+  'no_show':   'bg-[var(--bg-elevated)] text-[var(--text-muted)] border border-[var(--border)]',
   // Appointment status
-  'pending':      'bg-amber-950/60 text-amber-300 border border-amber-800/50',
-  'completed':    'bg-emerald-950/60 text-emerald-300 border border-emerald-800/50',
-  'rescheduled':  'bg-blue-950/60 text-blue-300 border border-blue-800/50',
+  'pending':      'bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20',
+  'completed':    'bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20',
+  'rescheduled':  'bg-[#3B82F6]/10 text-[#3B82F6] border border-[#3B82F6]/20',
   // Reminder status
-  'sent':      'bg-emerald-950/60 text-emerald-300 border border-emerald-800/50',
-  'cancelled': 'bg-[var(--bg-3)] text-[var(--text-muted)] border border-[var(--border)]',
-  'failed':    'bg-red-950/60 text-red-400 border border-red-900/50',
+  'sent':      'bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20',
+  'cancelled': 'bg-[var(--bg-elevated)] text-[var(--text-muted)] border border-[var(--border)]',
+  'failed':    'bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/20',
   // Roles
-  'rep':     'bg-[var(--bg-3)] text-[var(--text-secondary)] border border-[var(--border)]',
+  'rep':     'bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border)]',
   'closer':  'bg-[var(--accent-subtle)] text-[var(--accent)] border border-[#6C63FF]/20',
-  'admin':   'bg-purple-950/60 text-purple-300 border border-purple-800/50',
+  'admin':   'bg-purple-500/10 text-purple-400 border border-purple-500/20',
   // User active status
-  'active':   'bg-emerald-950/60 text-emerald-300 border border-emerald-800/50',
-  'inactive': 'bg-red-950/60 text-red-400 border border-red-900/50',
+  'active':   'bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20',
+  'inactive': 'bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/20',
 }
 
-const FALLBACK = 'bg-[var(--bg-3)] text-[var(--text-secondary)] border border-[var(--border)]'
+const FALLBACK = 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border)]'
 
 export function Badge({ label, variant }) {
   const key = label ?? variant
   const style = STATUS_STYLES[key] || FALLBACK
   return (
     <span className={clsx(
-      'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
+      'inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium',
       style
     )}>
       {label}

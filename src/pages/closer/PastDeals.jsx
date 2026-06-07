@@ -17,7 +17,7 @@ export default function PastDeals() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-[var(--text-primary)]">Past Deals</h1>
+          <h1 className="text-xl font-medium text-[var(--text-primary)]">Past Deals</h1>
           <p className="text-[var(--text-muted)] text-sm mt-0.5">
             ${totalClosed.toLocaleString()} total closed revenue
           </p>
@@ -34,7 +34,7 @@ export default function PastDeals() {
       {isLoading ? (
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-14 bg-[var(--bg-1)] border border-[var(--border)] rounded-xl animate-pulse" />
+            <div key={i} className="h-14 bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] animate-pulse" />
           ))}
         </div>
       ) : !filtered.length ? (
@@ -43,7 +43,7 @@ export default function PastDeals() {
           <p className="text-[var(--text-muted)] text-sm">No deals match this filter</p>
         </div>
       ) : (
-        <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-xl overflow-hidden">
+        <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] text-left">

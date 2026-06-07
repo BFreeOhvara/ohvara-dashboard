@@ -40,31 +40,22 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
-      style={{ background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(108,99,255,0.12) 0%, var(--bg-base) 70%)' }}
+    <div
+      className="min-h-screen flex items-center justify-center px-4"
+      style={{ background: 'var(--bg-base)' }}
     >
-      {/* Subtle grid overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: 'linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)',
-          backgroundSize: '64px 64px',
-          opacity: 0.3,
-        }}
-      />
-
-      <div className="w-full max-w-[380px] relative z-10 page-enter">
+      <div className="w-full max-w-[380px] page-enter">
         {/* Brand mark */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--accent)] mb-4 shadow-[0_0_32px_var(--accent-glow)]">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-[10px] bg-[var(--accent)] mb-4">
             <Zap size={22} className="text-white" fill="white" />
           </div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight">Ohvara</h1>
+          <h1 className="text-2xl font-medium text-[var(--text-primary)] tracking-tight">Ohvara</h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">Outreach Dashboard</p>
         </div>
 
         {/* Login card */}
-        <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-2xl p-6 shadow-[var(--shadow-panel)]">
+        <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-[10px] p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               label="Username"

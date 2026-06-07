@@ -28,15 +28,11 @@ export default {
         sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
-        sm: 'var(--radius-sm)',
-        md: 'var(--radius-md)',
-        lg: 'var(--radius-lg)',
-        xl: '16px',
-        '2xl': '20px',
-      },
-      boxShadow: {
-        card:  'var(--shadow-card)',
-        panel: 'var(--shadow-panel)',
+        sm:  '4px',   /* badges, small chips */
+        md:  '6px',   /* buttons, inputs */
+        lg:  '8px',   /* cards, panels */
+        xl:  '10px',  /* max allowed — modals */
+        '2xl': '10px',/* capped at max */
       },
     },
   },

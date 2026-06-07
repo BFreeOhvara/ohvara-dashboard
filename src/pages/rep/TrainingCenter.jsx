@@ -19,14 +19,14 @@ export default function TrainingCenter() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-[var(--text-primary)]">Training Center</h1>
+        <h1 className="text-xl font-medium text-[var(--text-primary)]">Training Center</h1>
         <p className="text-[var(--text-muted)] text-sm mt-0.5">Videos, AI roleplay, and objection flashcards</p>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-5">
         {/* Videos */}
         <div className="lg:col-span-2">
-          <h2 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-3">Training Videos</h2>
+          <h2 className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-3">Training Videos</h2>
           <div className="space-y-2">
             {PLACEHOLDER_VIDEOS.map(v => (
               <Card key={v.id} className="flex items-center gap-4 hover:border-indigo-800 transition-colors cursor-pointer">
@@ -42,7 +42,7 @@ export default function TrainingCenter() {
           </div>
 
           {/* AI Roleplay stub */}
-          <h2 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-3 mt-6">AI Roleplay</h2>
+          <h2 className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-3 mt-6">AI Roleplay</h2>
           <Card className="flex items-center gap-4 opacity-60 cursor-not-allowed">
             <div className="w-10 h-10 rounded-lg bg-purple-900/30 flex items-center justify-center flex-shrink-0">
               <MessageSquare size={16} className="text-purple-400" />
@@ -56,7 +56,7 @@ export default function TrainingCenter() {
 
         {/* Objection Flashcards */}
         <div>
-          <h2 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-3">
+          <h2 className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-3">
             <BookOpen size={13} className="inline mr-1.5" />
             Objection Flashcards
           </h2>
@@ -73,7 +73,7 @@ export default function TrainingCenter() {
 
 function FlashCard({ q, a }) {
   return (
-    <details className="bg-[var(--bg-1)] border border-[var(--border)] rounded-xl overflow-hidden group">
+    <details className="bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] overflow-hidden group">
       <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-[var(--text-primary)] select-none list-none flex items-center justify-between">
         {q}
         <span className="text-[var(--text-muted)] text-xs group-open:rotate-180 transition-transform inline-block">▼</span>

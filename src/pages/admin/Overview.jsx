@@ -40,7 +40,7 @@ export default function Overview() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-[var(--text-primary)]">Overview</h1>
+        <h1 className="text-xl font-medium text-[var(--text-primary)]">Overview</h1>
         <p className="text-[var(--text-muted)] text-sm mt-0.5">Top-level KPIs across all reps and closers</p>
       </div>
 
@@ -54,7 +54,7 @@ export default function Overview() {
 
       {stats?.statusBreakdown && (
         <Card>
-          <p className="text-sm font-semibold text-[var(--text-primary)] mb-4">Lead Status Breakdown</p>
+          <p className="text-sm font-medium text-[var(--text-primary)] mb-4">Lead Status Breakdown</p>
           <div className="space-y-2">
             {Object.entries(stats.statusBreakdown).map(([status, count]) => {
               const pct = stats.totalLeads ? Math.round((count / stats.totalLeads) * 100) : 0

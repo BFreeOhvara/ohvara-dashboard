@@ -79,7 +79,7 @@ export function CallButton({ lead, onCallEnd, onScriptOpen }) {
       disabled={isBusy || isEnded}
       className={clsx(
         // Base — unmissable primary action: larger touch target, bold contrast
-        'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold',
+        'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium',
         'transition-all focus-visible:outline-none focus-visible:ring-2',
         'focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg-1)]',
         // States
@@ -90,7 +90,7 @@ export function CallButton({ lead, onCallEnd, onScriptOpen }) {
           : isEnded
           ? 'bg-[var(--bg-3)] text-[var(--text-muted)] cursor-not-allowed opacity-50'
           : // idle — unmissable green
-            'bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-white focus-visible:ring-emerald-400 shadow-sm shadow-emerald-900/50'
+            'bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-white focus-visible:ring-emerald-400 shadow-emerald-900/50'
       )}
     >
       {isActive

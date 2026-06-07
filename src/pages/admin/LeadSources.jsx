@@ -26,7 +26,7 @@ export default function LeadSources() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-[var(--text-primary)]">Lead Sources</h1>
+        <h1 className="text-xl font-medium text-[var(--text-primary)]">Lead Sources</h1>
         <p className="text-[var(--text-muted)] text-sm mt-0.5">Indeed vs Google Maps split and scraper controls</p>
       </div>
 
@@ -37,7 +37,7 @@ export default function LeadSources() {
       </div>
 
       <Card className="mb-4">
-        <p className="text-sm font-semibold text-[var(--text-primary)] mb-4">Source Split</p>
+        <p className="text-sm font-medium text-[var(--text-primary)] mb-4">Source Split</p>
         <div className="space-y-3">
           <SourceBar label="Google Maps" count={counts?.google_maps || 0} pct={gmPct} color="bg-blue-500" />
           <SourceBar label="Indeed" count={counts?.indeed || 0} pct={indeedPct} color="bg-green-500" />
@@ -46,7 +46,7 @@ export default function LeadSources() {
 
       {/* Scraper controls — stubbed */}
       <Card>
-        <p className="text-sm font-semibold text-[var(--text-primary)] mb-1">Scraper Controls</p>
+        <p className="text-sm font-medium text-[var(--text-primary)] mb-1">Scraper Controls</p>
         <p className="text-xs text-[var(--text-muted)] mb-4">Live scraper connection — coming in a future session</p>
         <div className="grid md:grid-cols-2 gap-3">
           <ScraperStub label="Google Maps Scraper" status="Not connected" color="blue" />

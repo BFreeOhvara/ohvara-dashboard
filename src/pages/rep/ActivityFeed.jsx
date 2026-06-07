@@ -57,7 +57,7 @@ export default function ActivityFeed() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-[var(--text-primary)]">Activity Feed</h1>
+        <h1 className="text-xl font-medium text-[var(--text-primary)]">Activity Feed</h1>
         <p className="text-[var(--text-muted)] text-sm mt-0.5">Recent calls, assignments, and replies</p>
       </div>
 

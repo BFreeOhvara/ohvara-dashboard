@@ -23,11 +23,11 @@ export function LeadCard({ lead, onScriptOpen }) {
   }
 
   return (
-    <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-xl overflow-hidden transition-colors hover:border-[var(--bg-3)]">
+    <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] overflow-hidden transition-colors hover:border-[var(--bg-3)]">
       {/* Header row — information density over decoration */}
       <div className="flex items-center gap-3 px-4 py-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{lead.business_name}</p>
+          <p className="text-sm font-medium text-[var(--text-primary)] truncate">{lead.business_name}</p>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             {lead.contact_name && (
               <span className="text-xs text-[var(--text-secondary)]">{lead.contact_name}</span>
