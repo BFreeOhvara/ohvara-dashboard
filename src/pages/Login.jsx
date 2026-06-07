@@ -1,28 +1,44 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 
 export default function Login() {
-  const { signIn } = useAuth()
+  const { signIn, session, profile, loading } = useAuth()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [error, setError]       = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  // Once profile loads after a successful sign-in, route to the right dashboard.
+  // Also handles the case where the user lands on /login while already authenticated.
+  useEffect(() => {
+    if (loading || !profile) return
+    if (profile.role === 'admin')  navigate('/admin',  { replace: true })
+    else if (profile.role === 'closer') navigate('/closer', { replace: true })
+    else navigate('/rep', { replace: true })
+  }, [profile, loading, navigate])
+
+  // If authenticated but profile failed to load, surface the error instead of hanging.
+  useEffect(() => {
+    if (!loading && session && !profile && !submitting) {
+      setError('Signed in but profile failed to load — check the browser console for details.')
+    }
+  }, [loading, session, profile, submitting])
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
-    setLoading(true)
+    setSubmitting(true)
     try {
       await signIn(username.trim(), password)
-      // Role-based redirect is handled by RoleRedirect in App.jsx via onAuthStateChange
+      // Navigation is handled by the useEffect above once profile loads
     } catch (err) {
       setError('Invalid username or password')
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
@@ -64,8 +80,15 @@ export default function Login() {
               </p>
             )}
 
-            <Button type="submit" className="w-full" size="md" disabled={loading}>
-              {loading ? 'Signing in…' : 'Sign In'}
+            {/* Profile loading state after successful sign-in */}
+            {!error && submitting === false && session && loading && (
+              <p className="text-xs text-[var(--text-muted)] text-center">
+                Loading profile…
+              </p>
+            )}
+
+            <Button type="submit" className="w-full" size="md" disabled={submitting || loading}>
+              {submitting ? 'Signing in…' : loading && session ? 'Loading…' : 'Sign In'}
             </Button>
           </form>
         </div>
