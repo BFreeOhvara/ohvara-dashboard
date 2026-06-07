@@ -26,6 +26,9 @@ const STATUS_STYLES = {
   'rep':     'bg-slate-800 text-[var(--text-secondary)] border border-slate-700',
   'closer':  'bg-indigo-950 text-indigo-300 border border-indigo-800',
   'admin':   'bg-purple-950 text-purple-300 border border-purple-800',
+  // User active status
+  'active':   'bg-emerald-950 text-emerald-300 border border-emerald-800',
+  'inactive': 'bg-red-950 text-red-400 border border-red-900',
 }
 
 const FALLBACK = 'bg-slate-800 text-[var(--text-secondary)] border border-slate-700'
