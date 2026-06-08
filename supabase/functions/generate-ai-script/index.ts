@@ -10,6 +10,8 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  try {
+
   const body = await req.json()
   const {
     mode = 'script',
@@ -77,7 +79,7 @@ Respond with ONLY valid JSON — no markdown, no code blocks, no extra text:
 Use the actual numbers. Be specific to THIS lead — not generic. The 'why' array should have 2-4 items.`
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5',
+      model: 'claude-sonnet-4-6',
       max_tokens: 600,
       messages: [{ role: 'user', content: prompt }],
     })
@@ -132,7 +134,7 @@ Facts:
 Write exactly one confident, specific, punchy sentence the closer can use to open with financial framing. Use the actual numbers. No fluff, no "I" subject — start with the business name or the cost angle.`
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5',
+      model: 'claude-sonnet-4-6',
       max_tokens: 120,
       messages: [{ role: 'user', content: prompt }],
     })
@@ -157,7 +159,7 @@ Pain points identified: ${pain_points || 'None noted'}
 Write a concise 150-word prep briefing for the closer. Cover: (1) likely pain points to probe, (2) the strongest value angle to lead with, (3) one likely objection and how to handle it. Be direct and tactical — this person is about to get on a call.`
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5',
+      model: 'claude-sonnet-4-6',
       max_tokens: 400,
       messages: [{ role: 'user', content: prompt }],
     })
@@ -193,7 +195,7 @@ Return ONLY valid JSON with these keys:
 Each section should be 3-5 sentences. The objections section should cover 2-3 common objections with responses. Use the business name and contact name naturally throughout.`
 
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1000,
     messages: [{ role: 'user', content: prompt }],
   })
@@ -211,4 +213,13 @@ Each section should be 3-5 sentences. The objections section should cover 2-3 co
     JSON.stringify({ script }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   )
+
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('generate-ai-script error:', message)
+    return new Response(
+      JSON.stringify({ error: message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
 })

@@ -143,7 +143,7 @@ function LeadRow({ lead, onScriptOpen }) {
         onMouseLeave={e => { if (!expanded) e.currentTarget.style.background = 'transparent' }}
       >
         {/* Business name + contact */}
-        <div style={{ flex: '1 1 0', minWidth: 0, padding: '10px 16px' }}>
+        <div style={{ flex: '1 1 0', minWidth: 0, padding: '12px 16px', minHeight: 44 }}>
           <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
             {lead.business_name}
           </p>
@@ -155,27 +155,27 @@ function LeadRow({ lead, onScriptOpen }) {
         </div>
 
         {/* Niche */}
-        <div style={{ flex: '0 0 120px', padding: '10px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ flex: '0 0 120px', padding: '12px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minHeight: 44 }}>
           {lead.niche || '—'}
         </div>
 
         {/* City */}
-        <div style={{ flex: '0 0 100px', padding: '10px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ flex: '0 0 100px', padding: '12px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minHeight: 44 }}>
           {lead.city || '—'}
         </div>
 
         {/* Phone */}
-        <div style={{ flex: '0 0 130px', padding: '10px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ flex: '0 0 130px', padding: '12px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minHeight: 44 }}>
           {lead.phone || '—'}
         </div>
 
         {/* Status */}
-        <div style={{ flex: '0 0 110px', padding: '10px 8px' }}>
+        <div style={{ flex: '0 0 110px', padding: '12px 8px', minHeight: 44 }}>
           <Badge label={lead.status} />
         </div>
 
         {/* Actions */}
-        <div style={{ flex: '0 0 160px', padding: '8px 16px 8px 0', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+        <div style={{ flex: '0 0 160px', padding: '8px 16px 8px 0', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end', minHeight: 44 }}>
           <CallButton
             lead={lead}
             onScriptOpen={() => onScriptOpen(lead)}
@@ -216,9 +216,9 @@ function KpiCard({ label, value, sub, subColor }) {
         {label}
       </p>
       <p style={{
-        fontSize: 28, fontWeight: 500, lineHeight: 1,
+        fontSize: 32, fontWeight: 500, lineHeight: 1,
         fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums',
-        color: 'var(--text-primary)', margin: '8px 0 0',
+        color: 'var(--text-primary)', margin: '8px 0 0', letterSpacing: '-0.02em',
       }}>
         {value ?? '—'}
       </p>
@@ -298,38 +298,56 @@ export default function MyLeads() {
           />
         </div>
 
-        {/* Status filter row */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 12, flexWrap: 'wrap' }}>
-          {STATUS_FILTERS.map(f => (
-            <button
-              key={f}
-              onClick={() => setActiveFilter(f)}
-              style={{
-                padding: '4px 10px',
-                borderRadius: 4,
-                fontSize: 12,
-                fontWeight: 500,
-                border: '0.5px solid',
-                cursor: 'pointer',
-                transition: 'all 100ms',
-                background: activeFilter === f ? 'var(--accent-dim)' : 'transparent',
-                borderColor: activeFilter === f ? 'var(--accent-border)' : 'var(--border)',
-                color: activeFilter === f ? 'var(--accent)' : 'var(--text-muted)',
-              }}
-            >
-              {f}
-              {f !== 'All' && leads && (
-                <span style={{
-                  marginLeft: 4,
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  color: activeFilter === f ? 'var(--accent)' : 'var(--text-dim)',
-                }}>
-                  {leads.filter(l => l.status === f).length}
-                </span>
-              )}
-            </button>
-          ))}
+        {/* Status filter row — underline tabs */}
+        <div style={{
+          display: 'flex',
+          gap: 0,
+          borderBottom: '0.5px solid var(--border)',
+          marginBottom: 16,
+          overflowX: 'auto',
+        }}>
+          {STATUS_FILTERS.map(f => {
+            const count = f !== 'All' && leads ? leads.filter(l => l.status === f).length : null
+            const isActive = activeFilter === f
+            return (
+              <button
+                key={f}
+                onClick={() => setActiveFilter(f)}
+                style={{
+                  height: 36,
+                  padding: '0 12px',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent',
+                  marginBottom: -0.5,
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-sans)',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.1s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
+                {f}
+                {count !== null && count > 0 && (
+                  <span style={{
+                    fontSize: 10,
+                    background: 'var(--bg-elevated)',
+                    color: isActive ? 'var(--accent)' : 'var(--text-dim)',
+                    padding: '1px 5px',
+                    borderRadius: 3,
+                    fontFamily: 'var(--font-mono)',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
 
         {/* Table */}

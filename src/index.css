@@ -1,3 +1,6 @@
+/* Google Fonts — supplement to @fontsource packages (must be first) */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -49,6 +52,7 @@
 
   /* Typography */
   --font-sans: 'Geist', 'Inter', system-ui, sans-serif;
+  --font-ui:   'Geist', 'Inter', system-ui, sans-serif; /* alias */
   --font-mono: 'JetBrains Mono', 'IBM Plex Mono', monospace;
   --text-xs:   11px;
   --text-sm:   13px;

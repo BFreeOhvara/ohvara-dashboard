@@ -89,8 +89,8 @@ export function CallButton({ lead, onCallEnd, onScriptOpen }) {
           ? 'bg-[var(--warning)] text-white cursor-wait focus-visible:ring-[var(--warning)]'
           : isEnded
           ? 'bg-[var(--bg-3)] text-[var(--text-muted)] cursor-not-allowed opacity-50'
-          : // idle — unmissable green
-            'bg-[#22C55E] hover:bg-[#16A34A] active:bg-[#15803D] text-white focus-visible:ring-[#22C55E]'
+          : // idle — accent (purple) per design token
+            'bg-[var(--accent)] hover:bg-[var(--accent-hover)] active:opacity-90 text-white focus-visible:ring-[var(--accent)]'
       )}
     >
       {isActive

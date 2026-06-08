@@ -4,7 +4,7 @@ import {
   Users, Phone, BarChart2, Target, Bell,
   Calendar, DollarSign, TrendingUp, BookOpen,
   LayoutDashboard, List, Columns, RefreshCw, Database, LogOut,
-  Zap, Search
+  Zap, Search, PhoneCall, GitBranch
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 
@@ -17,10 +17,13 @@ const NAV = {
     { to: '/rep/feed',     label: 'Activity',     icon: Bell },
   ],
   closer: [
-    { to: '/closer',         label: 'Appointments', icon: Calendar },
-    { to: '/closer/deals',   label: 'Past Deals',   icon: DollarSign },
-    { to: '/closer/revenue', label: 'Revenue',      icon: TrendingUp },
-    { to: '/closer/reps',    label: 'Rep Stats',    icon: Users },
+    { to: '/closer',              label: 'Appointments', icon: Calendar },
+    { to: '/closer/scraper',      label: 'Lead Scraper', icon: Search },
+    { to: '/closer/call-leads',   label: 'Call Leads',   icon: PhoneCall },
+    { to: '/closer/pipeline',     label: 'Pipeline',     icon: GitBranch },
+    { to: '/closer/reps',         label: 'Rep Activity', icon: BarChart2 },
+    { to: '/closer/revenue',      label: 'Revenue',      icon: TrendingUp },
+    { to: '/closer/deals',        label: 'Past Deals',   icon: DollarSign },
   ],
   admin: [
     { to: '/admin',              label: 'Overview',       icon: LayoutDashboard },

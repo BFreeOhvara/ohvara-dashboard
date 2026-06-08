@@ -21,7 +21,7 @@ const TIER_COLORS = {
 }
 
 export function AppointmentCard({ appt }) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(true) // open by default
   const [outcome, setOutcome] = useState('')
   const [dealValue, setDealValue] = useState('')
   const [lossReason, setLossReason] = useState('')
@@ -33,15 +33,17 @@ export function AppointmentCard({ appt }) {
   const [stackLoading, setStackLoading] = useState(false)
   const [briefing, setBriefing] = useState(null)
   const [briefingLoading, setBriefingLoading] = useState(false)
+  const [closedFast, setClosedFast] = useState(false)
+  const [stripeMsg, setStripeMsg] = useState(null)
   const update = useUpdateAppointment()
   const lead = appt.lead
 
-  // Auto-load stack analysis when card expands (cache in state)
+  // Auto-load both stack analysis and briefing on mount
   useEffect(() => {
-    if (expanded && !stackAnalysis && !stackLoading && lead) {
-      loadStackAnalysis()
-    }
-  }, [expanded])
+    if (!lead) return
+    if (!stackAnalysis && !stackLoading) loadStackAnalysis()
+    if (!briefing && !briefingLoading) loadBriefing()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadStackAnalysis() {
     setStackLoading(true)
@@ -114,6 +116,32 @@ export function AppointmentCard({ appt }) {
     })
   }
 
+  // Quick close — marks outcome 'closed' immediately, no deal value prompt
+  async function handleMarkClosed() {
+    setClosedFast(true)
+    try {
+      await update.mutateAsync({
+        appointmentId: appt.id,
+        updates: { status: 'completed', outcome: 'closed', closer_notes: notes || undefined },
+      })
+    } finally {
+      setClosedFast(false)
+    }
+  }
+
+  // Generate Stripe link based on recommended tier
+  // WIRE-THIS: Replace with real Stripe API call once keys are configured in Edge Function secrets.
+  function handleStripeLink() {
+    const tier = stackAnalysis?.tier || 'Growth'
+    const price = stackAnalysis?.price || 797
+    const biz = encodeURIComponent(lead?.business_name || 'Client')
+    // Placeholder — opens Stripe payment links dashboard until API is wired
+    const url = `https://dashboard.stripe.com/payment-links/create?amount=${price * 100}&currency=usd&name=${biz}+Ohvara+${encodeURIComponent(tier)}`
+    window.open(url, '_blank', 'noopener')
+    setStripeMsg(`Opened Stripe for ${tier} · $${price}/mo`)
+    setTimeout(() => setStripeMsg(null), 4000)
+  }
+
   // Determine displayed tier from analysis or fallback
   const displayTier = stackAnalysis
     ? { name: stackAnalysis.tier, price: stackAnalysis.price }
@@ -157,11 +185,65 @@ export function AppointmentCard({ appt }) {
           <Badge label={appt.status} />
           <button
             onClick={() => setExpanded(v => !v)}
-            className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 transition-colors rounded-lg hover:bg-[var(--bg-2)]"
+            style={{
+              color: 'var(--text-muted)', background: 'none', border: 'none',
+              padding: 4, cursor: 'pointer', borderRadius: 4,
+              transition: 'color 100ms',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)' }}
           >
-            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
           </button>
         </div>
+      </div>
+
+      {/* Quick action row — always visible */}
+      <div style={{
+        display: 'flex', gap: 8, padding: '0 16px 12px', alignItems: 'center', flexWrap: 'wrap',
+      }}>
+        <button
+          onClick={handleMarkClosed}
+          disabled={closedFast || appt.status === 'completed'}
+          style={{
+            height: 30, padding: '0 12px',
+            background: 'var(--accent)', color: '#fff',
+            borderRadius: 6, border: 'none',
+            fontSize: 12, cursor: 'pointer',
+            opacity: closedFast || appt.status === 'completed' ? 0.5 : 1,
+            transition: 'opacity 100ms',
+          }}
+        >
+          {closedFast ? 'Saving…' : 'Mark Closed'}
+        </button>
+        <button
+          onClick={handleStripeLink}
+          style={{
+            height: 30, padding: '0 12px',
+            background: 'var(--success-dim)', color: 'var(--success)',
+            borderRadius: 6, border: '0.5px solid rgba(34,197,94,0.20)',
+            fontSize: 12, cursor: 'pointer',
+            transition: 'opacity 100ms',
+          }}
+        >
+          Generate Stripe Link
+        </button>
+        <button
+          onClick={() => setExpanded(true)}
+          style={{
+            height: 30, padding: '0 12px',
+            background: 'transparent', color: 'var(--text-secondary)',
+            borderRadius: 6, border: '0.5px solid var(--border)',
+            fontSize: 12, cursor: 'pointer',
+          }}
+        >
+          Reschedule
+        </button>
+        {stripeMsg && (
+          <span style={{ fontSize: 11, color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>
+            {stripeMsg}
+          </span>
+        )}
       </div>
 
       {expanded && (
@@ -300,18 +382,37 @@ export function AppointmentCard({ appt }) {
             )}
           </div>
 
-          {/* AI Prep Briefing */}
-          <div>
-            <p className="section-label mb-2">Prep Briefing</p>
-            {!briefing ? (
-              <Button variant="secondary" size="sm" onClick={loadBriefing} disabled={briefingLoading}>
-                {briefingLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-                {briefingLoading ? 'Generating…' : 'Generate Prep Briefing'}
-              </Button>
+          {/* AI Prep Briefing — always visible, auto-loads on mount */}
+          <div style={{
+            padding: 12,
+            background: 'var(--bg-elevated)',
+            borderRadius: 6,
+            border: '0.5px solid var(--border)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <Sparkles size={11} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>
+                AI Briefing
+              </span>
+              {briefingLoading && <Loader2 size={11} style={{ color: 'var(--text-muted)', animation: 'spin 1s linear infinite', marginLeft: 'auto' }} />}
+            </div>
+            {briefingLoading && !briefing ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[80, 65, 90].map(w => (
+                  <div key={w} style={{ height: 10, background: 'var(--bg-overlay)', borderRadius: 4, width: `${w}%`, animation: 'pulse 2s infinite' }} />
+                ))}
+              </div>
+            ) : briefing ? (
+              <p style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>{briefing}</p>
             ) : (
-              <div className="bg-[var(--bg-2)] rounded-lg p-3">
-                <p className="text-xs font-medium text-[var(--accent)] mb-2">AI Prep Briefing</p>
-                <p className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap leading-relaxed">{briefing}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>Briefing unavailable</p>
+                <button
+                  onClick={loadBriefing}
+                  style={{ fontSize: 11, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  Retry
+                </button>
               </div>
             )}
           </div>
