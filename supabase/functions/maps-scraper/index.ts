@@ -95,13 +95,23 @@ Deno.serve(async (req) => {
 
     for (const city of cities) {
       for (const niche of niches) {
-        const queryStr = encodeURIComponent(`${niche} contractor near ${city}`)
+        const queryStr = encodeURIComponent(`${niche} near ${city}`)
         const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${queryStr}&key=${apiKey}`
 
         let places: Record<string, unknown>[] = []
         try {
           const res  = await fetch(searchUrl, { signal: AbortSignal.timeout(8000) })
           const data = await res.json()
+
+          // Surface API key / quota errors immediately instead of silently returning 0 results
+          if (data.status === 'REQUEST_DENIED' || data.status === 'INVALID_REQUEST') {
+            return new Response(JSON.stringify({
+              error: `Google Maps API error: ${data.status}`,
+              detail: data.error_message || data.status,
+              setup: 'Ensure GOOGLE_MAPS_API_KEY in Supabase Edge Function secrets is a valid key with Places API enabled (Google Cloud Console → APIs & Services → Enable "Places API")',
+            }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+          }
+
           places = data.results || []
         } catch {
           continue
