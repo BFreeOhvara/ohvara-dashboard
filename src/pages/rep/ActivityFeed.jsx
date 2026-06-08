@@ -87,9 +87,9 @@ export default function ActivityFeed() {
 
 function FeedItem({ item }) {
   const icons = {
-    call:        <Phone size={14} className="text-indigo-400" />,
-    re_engaged:  <RefreshCw size={14} className="text-green-400" />,
-    booked:      <Calendar size={14} className="text-yellow-400" />,
+    call:        <Phone size={14} className="text-[var(--accent)]" />,
+    re_engaged:  <RefreshCw size={14} className="text-[var(--success)]" />,
+    booked:      <Calendar size={14} className="text-[var(--warning)]" />,
   }
 
   return (

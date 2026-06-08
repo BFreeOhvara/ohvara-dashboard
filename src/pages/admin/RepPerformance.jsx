@@ -50,7 +50,7 @@ function RepPerformanceRow({ rep, period }) {
   return (
     <Card>
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-8 h-8 rounded-full bg-indigo-900/30 flex items-center justify-center text-sm font-medium text-indigo-300">
+        <div className="w-8 h-8 rounded-full bg-[var(--accent-dim)] flex items-center justify-center text-sm font-medium text-[var(--accent)]">
           {rep.full_name.charAt(0)}
         </div>
         <div>
@@ -60,10 +60,10 @@ function RepPerformanceRow({ rep, period }) {
         <Badge label={rep.is_active ? 'active' : 'inactive'} variant={rep.is_active ? 'green' : 'red'} />
       </div>
       <div className="grid grid-cols-4 gap-3">
-        <Metric icon={Phone} label="Dials" value={stats?.totalDials ?? '—'} color="text-indigo-400" />
-        <Metric icon={Calendar} label="Booked" value={stats?.bookedCount ?? '—'} color="text-green-400" />
-        <Metric icon={TrendingUp} label="Book Rate" value={stats ? `${stats.bookingRate}%` : '—'} color="text-blue-400" />
-        <Metric icon={Clock} label="Avg Duration" value={stats ? formatDuration(stats.avgCallDuration) : '—'} color="text-yellow-400" />
+        <Metric icon={Phone} label="Dials" value={stats?.totalDials ?? '—'} color="text-[var(--accent)]" />
+        <Metric icon={Calendar} label="Booked" value={stats?.bookedCount ?? '—'} color="text-[var(--success)]" />
+        <Metric icon={TrendingUp} label="Book Rate" value={stats ? `${stats.bookingRate}%` : '—'} color="text-[var(--info)]" />
+        <Metric icon={Clock} label="Avg Duration" value={stats ? formatDuration(stats.avgCallDuration) : '—'} color="text-[var(--warning)]" />
       </div>
     </Card>
   )

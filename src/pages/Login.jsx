@@ -26,8 +26,7 @@ export default function Login() {
     }
   }, [loading, session, profile, submitting])
 
-  async function handleSubmit(e) {
-    e.preventDefault()
+  async function handleSubmit() {
     setError('')
     setSubmitting(true)
     try {
@@ -37,6 +36,10 @@ export default function Login() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter') handleSubmit()
   }
 
   return (
@@ -56,7 +59,7 @@ export default function Login() {
 
         {/* Login card */}
         <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-[10px] p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-4" onKeyDown={handleKeyDown}>
             <Input
               label="Username"
               type="text"
@@ -65,7 +68,6 @@ export default function Login() {
               placeholder="jsmith"
               autoFocus
               autoComplete="username"
-              required
             />
             <Input
               label="Password"
@@ -74,7 +76,6 @@ export default function Login() {
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
               autoComplete="current-password"
-              required
             />
 
             {error && (
@@ -87,10 +88,10 @@ export default function Login() {
               <p className="text-xs text-[var(--text-muted)] text-center">Loading profile…</p>
             )}
 
-            <Button type="submit" className="w-full" size="md" disabled={submitting || loading}>
+            <Button onClick={handleSubmit} className="w-full" size="md" disabled={submitting || loading}>
               {submitting ? 'Signing in…' : loading && session ? 'Loading…' : 'Sign In'}
             </Button>
-          </form>
+          </div>
         </div>
 
         <p className="text-center text-xs text-[var(--text-muted)] mt-6">

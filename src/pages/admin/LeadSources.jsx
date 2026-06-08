@@ -39,8 +39,8 @@ export default function LeadSources() {
       <Card className="mb-4">
         <p className="text-sm font-medium text-[var(--text-primary)] mb-4">Source Split</p>
         <div className="space-y-3">
-          <SourceBar label="Google Maps" count={counts?.google_maps || 0} pct={gmPct} color="bg-blue-500" />
-          <SourceBar label="Indeed" count={counts?.indeed || 0} pct={indeedPct} color="bg-green-500" />
+          <SourceBar label="Google Maps" count={counts?.google_maps || 0} pct={gmPct} color="bg-[var(--info)]" />
+          <SourceBar label="Indeed" count={counts?.indeed || 0} pct={indeedPct} color="bg-[var(--success)]" />
         </div>
       </Card>
 
@@ -70,7 +70,7 @@ function SourceBar({ label, count, pct, color }) {
 }
 
 function ScraperStub({ label, status, color }) {
-  const dotColor = { blue: 'bg-blue-500', green: 'bg-green-500' }
+  const dotColor = { blue: 'bg-[var(--info)]', green: 'bg-[var(--success)]' }
   return (
     <div className="bg-[var(--bg-2)] border border-[var(--border)] rounded-lg p-4 opacity-60">
       <div className="flex items-center gap-2 mb-2">

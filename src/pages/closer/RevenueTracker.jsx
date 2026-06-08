@@ -78,7 +78,7 @@ export default function RevenueTracker() {
             {revenue.weeklyChart.map((w, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-1">
                 <div
-                  className="w-full bg-indigo-600 rounded-t-sm transition-all"
+                  className="w-full bg-[var(--accent)] rounded-t-sm transition-all"
                   style={{ height: `${(w.value / maxVal) * 120}px`, minHeight: w.value > 0 ? '4px' : '0' }}
                 />
                 <p className="text-xs text-[var(--text-muted)]">{w.label}</p>

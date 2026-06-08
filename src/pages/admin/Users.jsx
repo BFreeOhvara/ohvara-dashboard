@@ -51,8 +51,7 @@ export default function Users() {
     })
   }, [profiles, search, roleFilter, statusFilter])
 
-  async function handleCreate(e) {
-    e.preventDefault()
+  async function handleCreate() {
     setFormError('')
     try {
       await createProfile.mutateAsync(form)
@@ -127,7 +126,7 @@ export default function Users() {
               <X size={16} />
             </button>
           </div>
-          <form onSubmit={handleCreate} className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <Input
               label="Full Name"
               value={form.full_name}
@@ -168,14 +167,14 @@ export default function Users() {
               </div>
             )}
             <div className="col-span-2 flex items-center gap-2 pt-1">
-              <Button type="submit" size="sm" disabled={createProfile.isPending}>
+              <Button onClick={handleCreate} size="sm" disabled={createProfile.isPending}>
                 {createProfile.isPending ? 'Creating…' : 'Create User'}
               </Button>
-              <Button type="button" variant="secondary" size="sm" onClick={() => setShowForm(false)}>
+              <Button variant="secondary" size="sm" onClick={() => setShowForm(false)}>
                 Cancel
               </Button>
             </div>
-          </form>
+          </div>
         </Card>
       )}
 

@@ -4,7 +4,7 @@ import {
   Users, Phone, BarChart2, Target, Bell,
   Calendar, DollarSign, TrendingUp, BookOpen,
   LayoutDashboard, List, Columns, RefreshCw, Database, LogOut,
-  Zap
+  Zap, Search
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 
@@ -23,13 +23,14 @@ const NAV = {
     { to: '/closer/reps',    label: 'Rep Stats',    icon: Users },
   ],
   admin: [
-    { to: '/admin',              label: 'Overview',      icon: LayoutDashboard },
+    { to: '/admin',              label: 'Overview',       icon: LayoutDashboard },
     { to: '/admin/reps',         label: 'Rep Performance', icon: BarChart2 },
-    { to: '/admin/leads',        label: 'All Leads',     icon: List },
-    { to: '/admin/pipeline',     label: 'Pipeline',      icon: Columns },
-    { to: '/admin/reengagement', label: 'Re-Engagement', icon: RefreshCw },
-    { to: '/admin/sources',      label: 'Lead Sources',  icon: Database },
-    { to: '/admin/users',        label: 'Users',         icon: Users },
+    { to: '/admin/leads',        label: 'All Leads',      icon: List },
+    { to: '/admin/pipeline',     label: 'Pipeline',       icon: Columns },
+    { to: '/admin/reengagement', label: 'Re-Engagement',  icon: RefreshCw },
+    { to: '/admin/sources',      label: 'Lead Sources',   icon: Database },
+    { to: '/admin/scraper',      label: 'Lead Scraper',   icon: Search },
+    { to: '/admin/users',        label: 'Users',          icon: Users },
   ],
 }
 
@@ -50,22 +51,42 @@ export function Sidebar() {
     : '?'
 
   return (
-    <aside className="w-52 flex-shrink-0 flex flex-col min-h-screen bg-[var(--bg-1)] border-r border-[var(--border)]">
+    <aside
+      style={{
+        width: 200,
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+        background: 'var(--bg-surface)',
+        borderRight: '0.5px solid var(--border)',
+      }}
+    >
       {/* Brand */}
-      <div className="px-4 pt-5 pb-4 border-b border-[var(--border)]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-[var(--accent)] flex items-center justify-center flex-shrink-0">
-            <Zap size={14} className="text-white" fill="white" />
+      <div style={{ padding: '20px 16px 16px', borderBottom: '0.5px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 28, height: 28,
+            borderRadius: 6,
+            background: 'var(--accent)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <Zap size={14} color="white" fill="white" />
           </div>
           <div>
-            <p className="text-sm font-medium text-[var(--text-primary)] tracking-tight leading-none">Ohvara</p>
-            <p className="text-[10px] text-[var(--text-muted)] mt-0.5 leading-none">{ROLE_LABELS[profile?.role] || ''}</p>
+            <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1, margin: 0 }}>
+              Ohvara
+            </p>
+            <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1 }}>
+              {ROLE_LABELS[profile?.role] || ''}
+            </p>
           </div>
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto scrollbar-thin">
+      <nav style={{ flex: 1, padding: '8px 8px', overflowY: 'auto' }} className="scrollbar-thin">
         {links.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
@@ -73,39 +94,81 @@ export function Sidebar() {
             end={to === '/rep' || to === '/closer' || to === '/admin'}
             className={({ isActive }) =>
               clsx(
-                'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm tab-transition',
-                isActive
-                  ? 'bg-[var(--accent-subtle)] text-[var(--accent)] font-medium'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-2)]'
+                'nav-item tab-transition',
+                isActive ? 'nav-active' : ''
               )
             }
+            style={{ display: 'block', textDecoration: 'none', marginBottom: 1 }}
           >
             {({ isActive }) => (
-              <>
-                <Icon size={14} className={clsx('flex-shrink-0', isActive ? 'text-[var(--accent)]' : '')} />
+              <span style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '7px 10px 7px 12px',
+                borderRadius: 6,
+                fontSize: 13,
+                fontWeight: isActive ? 500 : 400,
+                color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                position: 'relative',
+                background: isActive ? 'var(--bg-elevated)' : 'transparent',
+              }}>
+                {isActive && (
+                  <span style={{
+                    position: 'absolute',
+                    left: 0, top: 5, bottom: 5,
+                    width: 2,
+                    background: 'var(--accent)',
+                    borderRadius: '0 2px 2px 0',
+                  }} />
+                )}
+                <Icon size={13} style={{ flexShrink: 0, color: isActive ? 'var(--accent)' : 'inherit' }} />
                 {label}
-              </>
+              </span>
             )}
           </NavLink>
         ))}
       </nav>
 
       {/* User + sign out */}
-      <div className="px-2 py-3 border-t border-[var(--border)]">
-        <div className="flex items-center gap-2.5 px-3 mb-2">
-          <div className="w-7 h-7 rounded-full bg-[var(--accent-subtle)] border border-[var(--accent)]/20 flex items-center justify-center flex-shrink-0">
-            <span className="text-xs font-medium text-[var(--accent)]">{initials}</span>
+      <div style={{ padding: '8px 8px', borderTop: '0.5px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px 10px' }}>
+          <div style={{
+            width: 26, height: 26,
+            borderRadius: '50%',
+            background: 'var(--accent-dim)',
+            border: '0.5px solid var(--accent-border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--accent)' }}>{initials}</span>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-[var(--text-secondary)] truncate leading-tight">{profile?.full_name}</p>
-            <p className="text-[10px] text-[var(--text-muted)] truncate leading-tight mt-0.5">{profile?.username || profile?.email}</p>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {profile?.full_name}
+            </p>
+            <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '1px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {profile?.username || profile?.email}
+            </p>
           </div>
         </div>
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-2)] tab-transition"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            width: '100%', padding: '7px 10px',
+            borderRadius: 6,
+            fontSize: 13,
+            color: 'var(--text-muted)',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            transition: 'color 100ms, background-color 100ms',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--bg-elevated)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent' }}
         >
-          <LogOut size={14} />
+          <LogOut size={13} />
           Sign Out
         </button>
       </div>

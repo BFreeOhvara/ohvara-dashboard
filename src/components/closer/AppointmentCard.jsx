@@ -7,17 +7,17 @@ import { Select, Textarea, Input } from '../ui/Input'
 import { useUpdateAppointment } from '../../hooks/useAppointments'
 import { supabase } from '../../lib/supabase'
 
-// Tier badge colors — updated to match design system
+// Tier badge colors — token-based, no hardcoded Tailwind color names
 const TIER_STYLES = {
-  'Starter':    'bg-blue-950/60 text-blue-300 border border-blue-800/50',
-  'Growth':     'bg-[var(--accent-subtle)] text-[var(--accent)] border border-[#6C63FF]/20',
-  'Full Stack': 'bg-purple-950/60 text-purple-300 border border-purple-800/50',
+  'Starter':    'bg-[var(--info-dim)] text-[var(--info)] border border-[#38BDF8]/20',
+  'Growth':     'bg-[var(--accent-dim)] text-[var(--accent)] border border-[#6C63FF]/20',
+  'Full Stack': 'bg-[var(--success-dim)] text-[var(--success)] border border-[#22C55E]/20',
 }
 
 const TIER_COLORS = {
-  'Starter':    'text-blue-400',
+  'Starter':    'text-[var(--info)]',
   'Growth':     'text-[var(--accent)]',
-  'Full Stack': 'text-purple-400',
+  'Full Stack': 'text-[var(--success)]',
 }
 
 export function AppointmentCard({ appt }) {
@@ -120,7 +120,7 @@ export function AppointmentCard({ appt }) {
     : null
 
   return (
-    <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] overflow-hidden transition-all">
+    <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg overflow-hidden transition-all">
       {/* Card header */}
       <div className="flex items-center gap-3 px-4 py-3">
         <div className="flex-1 min-w-0">

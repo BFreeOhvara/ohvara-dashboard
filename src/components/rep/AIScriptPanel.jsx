@@ -44,7 +44,7 @@ export function AIScriptPanel({ lead, onClose }) {
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[400px] bg-[var(--bg-deep)] border-l border-[var(--border)] flex flex-col z-50 shadow-panel panel-slide-in">
+    <div className="fixed inset-y-0 right-0 w-[400px] bg-[var(--bg-surface)] border-l border-[var(--border)] flex flex-col z-50 panel-slide-in">
 
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[var(--border)]">
@@ -73,7 +73,7 @@ export function AIScriptPanel({ lead, onClose }) {
               className={[
                 'px-3 py-2.5 text-xs font-medium whitespace-nowrap transition-colors flex-1',
                 activeSection === s
-                  ? 'text-indigo-300 border-b-2 border-indigo-500 bg-[var(--accent-subtle)]'
+                  ? 'text-[var(--accent)] border-b-2 border-[var(--accent)] bg-[var(--accent-dim)]'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]',
               ].join(' ')}
             >
@@ -88,7 +88,7 @@ export function AIScriptPanel({ lead, onClose }) {
         {!script && !loading && (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-6">
             <div className="w-10 h-10 rounded-[10px] bg-[var(--accent-subtle)] flex items-center justify-center">
-              <FileText className="text-indigo-400" size={18} />
+              <FileText className="text-[var(--accent)]" size={18} />
             </div>
             <div>
               <p className="text-sm font-medium text-[var(--text-primary)]">AI Call Script</p>
@@ -102,13 +102,13 @@ export function AIScriptPanel({ lead, onClose }) {
 
         {loading && (
           <div className="flex flex-col items-center justify-center h-full gap-3">
-            <Loader2 className="text-indigo-400 animate-spin" size={24} />
+            <Loader2 className="text-[var(--accent)] animate-spin" size={24} />
             <p className="text-xs text-[var(--text-muted)]">Writing your script…</p>
           </div>
         )}
 
         {error && (
-          <div className="m-4 text-xs text-red-400 bg-red-500/10 border border-red-900 rounded-lg p-3">
+          <div className="m-4 text-xs text-[var(--danger)] bg-[#EF4444]/10 border border-[#EF4444]/20 rounded-lg p-3">
             {error}
           </div>
         )}

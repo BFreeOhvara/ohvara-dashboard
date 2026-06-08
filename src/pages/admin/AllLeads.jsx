@@ -74,8 +74,8 @@ export default function AllLeads() {
 
       {/* Bulk assign bar */}
       {selected.size > 0 && (
-        <div className="flex items-center gap-3 bg-indigo-900/20 border border-indigo-800 rounded-lg px-4 py-2.5 mb-4">
-          <p className="text-sm text-indigo-300">{selected.size} selected</p>
+        <div className="flex items-center gap-3 bg-[var(--accent-dim)] border border-[#6C63FF]/30 rounded-lg px-4 py-2.5 mb-4">
+          <p className="text-sm text-[var(--accent)]">{selected.size} selected</p>
           <Select value={assignTo} onChange={e => setAssignTo(e.target.value)}>
             <option value="">Assign to rep…</option>
             {(reps || []).map(r => <option key={r.id} value={r.id}>{r.full_name}</option>)}
@@ -94,7 +94,7 @@ export default function AllLeads() {
       <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center">
-            <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin mx-auto" />
           </div>
         ) : (
           <table className="w-full text-sm">

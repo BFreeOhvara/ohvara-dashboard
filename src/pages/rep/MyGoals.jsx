@@ -50,7 +50,7 @@ export default function MyGoals() {
 
       <Card>
         <div className="flex items-center gap-2 mb-4">
-          <Trophy size={16} className="text-yellow-400" />
+          <Trophy size={16} className="text-[var(--warning)]" />
           <h2 className="text-sm font-medium text-[var(--text-primary)]">Milestone Badges</h2>
         </div>
         <div className="grid grid-cols-3 gap-3">
@@ -79,8 +79,8 @@ export default function MyGoals() {
 
 function GoalCard({ label, current, target, pct, icon: Icon, color }) {
   const colors = {
-    indigo: { bar: 'bg-indigo-500', text: 'text-indigo-400' },
-    green:  { bar: 'bg-green-500',  text: 'text-green-400' },
+    indigo: { bar: 'bg-[var(--accent)]', text: 'text-[var(--accent)]' },
+    green:  { bar: 'bg-[var(--success)]',  text: 'text-[var(--success)]' },
   }
   const c = colors[color]
 

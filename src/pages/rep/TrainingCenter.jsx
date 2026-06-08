@@ -29,9 +29,9 @@ export default function TrainingCenter() {
           <h2 className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-3">Training Videos</h2>
           <div className="space-y-2">
             {PLACEHOLDER_VIDEOS.map(v => (
-              <Card key={v.id} className="flex items-center gap-4 hover:border-indigo-800 transition-colors cursor-pointer">
-                <div className="w-10 h-10 rounded-lg bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
-                  <Play size={16} className="text-indigo-400 ml-0.5" />
+              <Card key={v.id} className="flex items-center gap-4 hover:border-[#6C63FF]/30 transition-colors cursor-pointer">
+                <div className="w-10 h-10 rounded-lg bg-[var(--accent-dim)] flex items-center justify-center flex-shrink-0">
+                  <Play size={16} className="text-[var(--accent)] ml-0.5" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-[var(--text-primary)]">{v.title}</p>

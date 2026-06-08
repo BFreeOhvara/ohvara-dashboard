@@ -84,13 +84,13 @@ export function CallButton({ lead, onCallEnd, onScriptOpen }) {
         'focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg-1)]',
         // States
         isActive
-          ? 'bg-red-500 hover:bg-red-400 text-white focus-visible:ring-red-400 ring-1 ring-red-400/30'
+          ? 'bg-[var(--danger)] hover:bg-[#DC2626] text-white focus-visible:ring-[var(--danger)] ring-1 ring-[#EF4444]/30'
           : isBusy
-          ? 'bg-amber-500 text-white cursor-wait focus-visible:ring-amber-400'
+          ? 'bg-[var(--warning)] text-white cursor-wait focus-visible:ring-[var(--warning)]'
           : isEnded
           ? 'bg-[var(--bg-3)] text-[var(--text-muted)] cursor-not-allowed opacity-50'
           : // idle — unmissable green
-            'bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-white focus-visible:ring-emerald-400 shadow-emerald-900/50'
+            'bg-[#22C55E] hover:bg-[#16A34A] active:bg-[#15803D] text-white focus-visible:ring-[#22C55E]'
       )}
     >
       {isActive

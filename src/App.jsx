@@ -26,6 +26,7 @@ import AllLeads from './pages/admin/AllLeads'
 import LeadPipeline from './pages/admin/LeadPipeline'
 import ReEngagement from './pages/admin/ReEngagement'
 import LeadSources from './pages/admin/LeadSources'
+import LeadScraper from './pages/admin/LeadScraper'
 import Users from './pages/admin/Users'
 
 const qc = new QueryClient({
@@ -129,6 +130,11 @@ export default function App() {
             <Route path="/admin/sources" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <DashboardLayout><LeadSources /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/scraper" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardLayout><LeadScraper /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/admin/users" element={

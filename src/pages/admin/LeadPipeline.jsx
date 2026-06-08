@@ -9,7 +9,7 @@ const STAGE_COLORS = {
   'Voicemail':     'border-yellow-700',
   'No Answer':     'border-orange-700',
   'Interested':    'border-green-700',
-  'Booked':        'border-indigo-700',
+  'Booked':        'border-[#6C63FF]/25',
   'Not Interested':'border-red-800',
 }
 
