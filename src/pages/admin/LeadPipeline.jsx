@@ -38,7 +38,7 @@ export default function LeadPipeline() {
         <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-thin">
           {STAGES.map(stage => (
             <div key={stage} className="w-56 flex-shrink-0">
-              <div className={`border-t-2 ${STAGE_COLORS[stage]} bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] overflow-hidden`}>
+              <div className={`glass border-t-2 ${STAGE_COLORS[stage]}`} style={{ overflow: 'hidden', borderRadius: 10 }}>
                 <div className="px-3 py-2.5 border-b border-[var(--border)] flex items-center justify-between">
                   <p className="text-xs font-medium text-[var(--text-secondary)]">{stage}</p>
                   <span className="text-xs text-[var(--text-muted)] bg-[var(--bg-2)] rounded px-1.5 py-0.5">
@@ -50,7 +50,7 @@ export default function LeadPipeline() {
                     <p className="text-xs text-[var(--text-muted)] text-center py-4">Empty</p>
                   ) : (
                     grouped[stage].map(lead => (
-                      <div key={lead.id} className="bg-[var(--bg-2)] rounded-lg p-2.5 border border-[var(--border)]">
+                      <div key={lead.id} className="glass table-row-animated" style={{ padding: '8px 10px', borderRadius: 8 }}>
                         <p className="text-xs font-medium text-[var(--text-primary)] truncate">{lead.business_name}</p>
                         {lead.assigned_rep && (
                           <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">{lead.assigned_rep.full_name}</p>

@@ -91,7 +91,7 @@ export default function AllLeads() {
       )}
 
       {/* Table */}
-      <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] overflow-hidden">
+      <div className="glass" style={{ overflow: 'hidden', borderRadius: 10 }}>
         {isLoading ? (
           <div className="p-8 text-center">
             <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin mx-auto" />
@@ -117,7 +117,7 @@ export default function AllLeads() {
             </thead>
             <tbody>
               {(leads || []).map(lead => (
-                <tr key={lead.id} className="border-b border-[var(--border)]/50 hover:bg-[var(--bg-2)]">
+                <tr key={lead.id} className="table-row-animated border-b border-[var(--border)]/50 hover:bg-[var(--bg-2)]">
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"

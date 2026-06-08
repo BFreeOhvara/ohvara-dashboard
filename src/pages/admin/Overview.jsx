@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useReps, useRepStats } from '../../hooks/useProfiles'
 import { Phone, Calendar, TrendingUp, DollarSign, ChevronDown, ChevronUp, Clock } from 'lucide-react'
 import { Badge } from '../../components/ui/Badge'
+import { KPICard } from '../../components/ui/KPICard'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -32,37 +33,19 @@ function ConnectPct({ value }) {
   )
 }
 
-// ── KPI card ──────────────────────────────────────────────────────────────────
-
-function KpiCard({ label, value, sub, subColor, icon: Icon, iconColor }) {
+// KpiCard — local shim; delegates to shared KPICard with glass + countup
+function KpiCard({ label, value, sub, subColor, icon: Icon, accent }) {
+  // Convert string values (e.g. '$3.2k') to numeric for countup where possible
+  const numericValue = typeof value === 'number' ? value : null
   return (
-    <div style={{
-      flex: 1, minWidth: 0,
-      background: 'var(--bg-surface)',
-      border: '0.5px solid var(--border)',
-      borderRadius: 8, padding: '14px 16px',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <p style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', margin: 0 }}>
-          {label}
-        </p>
-        {Icon && (
-          <Icon size={13} color={iconColor || 'var(--text-muted)'} />
-        )}
-      </div>
-      <p style={{
-        fontSize: 28, fontWeight: 500, lineHeight: 1,
-        fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums',
-        color: 'var(--text-primary)', margin: 0,
-      }}>
-        {value ?? '—'}
-      </p>
-      {sub && (
-        <p style={{ fontSize: 11, color: subColor || 'var(--text-muted)', marginTop: 4 }}>
-          {sub}
-        </p>
-      )}
-    </div>
+    <KPICard
+      label={label}
+      value={numericValue ?? 0}
+      sub={numericValue === null ? String(value ?? '—') : sub}
+      subColor={subColor}
+      icon={Icon}
+      accent={accent}
+    />
   )
 }
 
@@ -113,6 +96,7 @@ function RepRow({ rep }) {
   return (
     <>
       <div
+        className="table-row-animated"
         style={{
           display: 'flex', alignItems: 'center',
           borderBottom: '0.5px solid var(--border)',
@@ -294,8 +278,8 @@ export default function Overview() {
           </span>
         </div>
 
-        {/* KPI row */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+        {/* KPI row — glass + countup */}
+        <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
           <KpiCard label="Calls Today"    value={kpis?.callsToday}  icon={Phone}     iconColor="var(--info)" />
           <KpiCard label="Booked Today"   value={kpis?.bookedToday} icon={Calendar}  iconColor="var(--success)" subColor={kpis?.bookedToday > 0 ? 'var(--success)' : undefined} />
           <KpiCard
@@ -316,11 +300,7 @@ export default function Overview() {
         </div>
 
         {/* Rep performance table */}
-        <div style={{
-          background: 'var(--bg-surface)',
-          border: '0.5px solid var(--border)',
-          borderRadius: 8, overflow: 'hidden',
-        }}>
+        <div className="glass" style={{ overflow: 'hidden', borderRadius: 10 }}>
           {/* Header */}
           <div style={{
             display: 'flex', alignItems: 'center',
@@ -354,11 +334,9 @@ export default function Overview() {
       </div>
 
       {/* Right — recent bookings feed */}
-      <div style={{
+      <div className="glass" style={{
         flexShrink: 0, width: 300,
-        background: 'var(--bg-surface)',
-        border: '0.5px solid var(--border)',
-        borderRadius: 8, overflow: 'hidden',
+        overflow: 'hidden', borderRadius: 10,
         display: 'flex', flexDirection: 'column',
         maxHeight: 'calc(100vh - 48px)',
         position: 'sticky', top: 0,

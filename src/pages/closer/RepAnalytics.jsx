@@ -50,7 +50,7 @@ function RepRow({ rep, period }) {
   const { data: stats } = useRepStats(rep.id, period)
 
   return (
-    <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] p-4">
+    <div className="glass" style={{ padding: 16 }}>
       <p className="text-sm font-medium text-[var(--text-primary)] mb-3">{rep.full_name}</p>
       <div className="grid grid-cols-3 gap-3">
         <StatCard label="Dials" value={stats?.totalDials ?? '—'} icon={Phone} color="indigo" />

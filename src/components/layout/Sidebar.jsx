@@ -55,14 +55,13 @@ export function Sidebar() {
 
   return (
     <aside
+      className="sidebar-glass"
       style={{
         width: 200,
         flexShrink: 0,
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100vh',
-        background: 'var(--bg-surface)',
-        borderRight: '0.5px solid var(--border)',
       }}
     >
       {/* Brand */}
@@ -126,7 +125,8 @@ export function Sidebar() {
                   }} />
                 )}
                 <Icon size={13} style={{ flexShrink: 0, color: isActive ? 'var(--accent)' : 'inherit' }} />
-                {label}
+                <span style={{ flex: 1 }}>{label}</span>
+                {isActive && <span className="nav-active-dot" />}
               </span>
             )}
           </NavLink>

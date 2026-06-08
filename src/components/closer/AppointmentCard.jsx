@@ -148,7 +148,7 @@ export function AppointmentCard({ appt }) {
     : null
 
   return (
-    <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg overflow-hidden transition-all">
+    <div className="glass" style={{ overflow: 'hidden', marginBottom: 0 }}>
       {/* Card header */}
       <div className="flex items-center gap-3 px-4 py-3">
         <div className="flex-1 min-w-0">

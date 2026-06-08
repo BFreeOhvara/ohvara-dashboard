@@ -4,7 +4,7 @@ export function Card({ className, children, ...props }) {
   return (
     <div
       className={clsx(
-        'bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg p-4',
+        'glass p-4',
         className
       )}
       {...props}

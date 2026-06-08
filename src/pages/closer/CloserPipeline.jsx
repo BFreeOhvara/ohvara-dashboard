@@ -105,14 +105,8 @@ export default function CloserPipeline() {
         </div>
       </div>
 
-      {/* Table */}
-      <div style={{
-        background: 'var(--bg-surface)',
-        border: '0.5px solid var(--border)',
-        borderRadius: 8,
-        overflow: 'hidden',
-        marginBottom: 16,
-      }}>
+      {/* Table — glass surface */}
+      <div className="glass" style={{ overflow: 'hidden', marginBottom: 16, borderRadius: 10 }}>
         {/* Table header */}
         <div style={{
           display: 'flex', alignItems: 'center',
@@ -194,6 +188,7 @@ function PipelineRow({ appt }) {
 
   return (
     <div
+      className="table-row-animated"
       style={{
         display: 'flex', alignItems: 'center',
         borderBottom: '0.5px solid var(--border)',

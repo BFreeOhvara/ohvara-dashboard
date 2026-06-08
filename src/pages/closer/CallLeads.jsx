@@ -76,13 +76,8 @@ export default function CallLeads() {
           </div>
         </div>
 
-        {/* Table */}
-        <div style={{
-          background: 'var(--bg-surface)',
-          border: '0.5px solid var(--border)',
-          borderRadius: 8,
-          overflow: 'hidden',
-        }}>
+        {/* Table — glass surface */}
+        <div className="glass" style={{ overflow: 'hidden', borderRadius: 10 }}>
           {/* Header row */}
           <div style={{
             display: 'flex', alignItems: 'center',
@@ -162,6 +157,7 @@ function LeadRow({ lead, onScriptOpen }) {
 
   return (
     <div
+      className="table-row-animated"
       style={{
         display: 'flex', alignItems: 'center',
         borderBottom: '0.5px solid var(--border)',

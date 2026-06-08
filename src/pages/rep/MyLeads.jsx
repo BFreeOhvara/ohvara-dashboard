@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react'
-import { Phone, RefreshCw, ChevronDown, ChevronUp, MapPin, Save, X } from 'lucide-react'
+import { Phone, RefreshCw, ChevronDown, ChevronUp, MapPin, Save, X, PhoneCall, Target, BarChart2, List } from 'lucide-react'
 import { useMyLeads, useUpdateLeadStatus } from '../../hooks/useLeads'
 import { AIScriptPanel } from '../../components/rep/AIScriptPanel'
 import { CallButton } from '../../components/rep/CallButton'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
+import { KPICard } from '../../components/ui/KPICard'
 import { Select, Textarea } from '../../components/ui/Input'
 
 const STATUS_FILTERS = ['All', 'New', 'Contacted', 'Voicemail', 'No Answer', 'Interested', 'Booked', 'Not Interested']
@@ -125,19 +126,21 @@ function RowEditor({ lead, onClose }) {
 }
 
 // Individual table row
-function LeadRow({ lead, onScriptOpen }) {
+function LeadRow({ lead, onScriptOpen, animDelay = 0 }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
     <>
       {/* Main row */}
       <div
+        className="table-row-animated"
         style={{
           display: 'flex', alignItems: 'center', gap: 0,
           borderBottom: '0.5px solid var(--border)',
           background: expanded ? 'var(--bg-elevated)' : 'transparent',
           transition: 'background-color 100ms',
           cursor: 'default',
+          animationDelay: `${animDelay}ms`,
         }}
         onMouseEnter={e => { if (!expanded) e.currentTarget.style.background = 'var(--bg-elevated)' }}
         onMouseLeave={e => { if (!expanded) e.currentTarget.style.background = 'transparent' }}
@@ -202,34 +205,7 @@ function LeadRow({ lead, onScriptOpen }) {
   )
 }
 
-// KPI card
-function KpiCard({ label, value, sub, subColor }) {
-  return (
-    <div style={{
-      flex: 1, minWidth: 0,
-      background: 'var(--bg-surface)',
-      border: '0.5px solid var(--border)',
-      borderRadius: 8,
-      padding: '14px 16px',
-    }}>
-      <p style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', margin: 0 }}>
-        {label}
-      </p>
-      <p style={{
-        fontSize: 32, fontWeight: 500, lineHeight: 1,
-        fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums',
-        color: 'var(--text-primary)', margin: '8px 0 0', letterSpacing: '-0.02em',
-      }}>
-        {value ?? '—'}
-      </p>
-      {sub && (
-        <p style={{ fontSize: 11, color: subColor || 'var(--text-muted)', marginTop: 4 }}>
-          {sub}
-        </p>
-      )}
-    </div>
-  )
-}
+// Local KpiCard removed — use shared KPICard from components/ui/KPICard.jsx
 
 export default function MyLeads() {
   const { data: leads, isLoading, refetch } = useMyLeads()
@@ -272,29 +248,35 @@ export default function MyLeads() {
           </div>
         </div>
 
-        {/* KPI row */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-          <KpiCard
+        {/* KPI row — glass cards with countup */}
+        <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+          <KPICard
             label="Calls Today"
             value={kpis.called}
             sub={`${kpis.total - kpis.called} remaining`}
+            icon={PhoneCall}
           />
-          <KpiCard
+          <KPICard
             label="Booked Today"
             value={kpis.booked}
             sub={kpis.booked > 0 ? 'Great work!' : 'Keep dialing'}
             subColor={kpis.booked > 0 ? 'var(--success)' : undefined}
+            accent={kpis.booked > 0}
+            icon={Target}
           />
-          <KpiCard
+          <KPICard
             label="Connect Rate"
-            value={`${kpis.connectRate}%`}
+            value={kpis.connectRate}
+            suffix="%"
             sub={kpis.connectRate >= 15 ? 'Above target' : kpis.connectRate >= 8 ? 'Near target' : 'Below target'}
             subColor={kpis.connectRate >= 15 ? 'var(--success)' : kpis.connectRate >= 8 ? 'var(--warning)' : 'var(--danger)'}
+            icon={BarChart2}
           />
-          <KpiCard
+          <KPICard
             label="Batch Total"
             value={kpis.total}
             sub="Leads assigned today"
+            icon={List}
           />
         </div>
 
@@ -350,13 +332,8 @@ export default function MyLeads() {
           })}
         </div>
 
-        {/* Table */}
-        <div style={{
-          background: 'var(--bg-surface)',
-          border: '0.5px solid var(--border)',
-          borderRadius: 8,
-          overflow: 'hidden',
-        }}>
+        {/* Table — glass surface */}
+        <div className="glass" style={{ overflow: 'hidden', borderRadius: 10 }}>
           {/* Table header */}
           <div style={{
             display: 'flex', alignItems: 'center',
@@ -394,11 +371,12 @@ export default function MyLeads() {
               </p>
             </div>
           ) : (
-            filtered.map(lead => (
+            filtered.map((lead, i) => (
               <LeadRow
                 key={lead.id}
                 lead={lead}
                 onScriptOpen={setScriptLead}
+                animDelay={i * 30}
               />
             ))
           )}

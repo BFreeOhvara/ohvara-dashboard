@@ -4,48 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useMyAppointments } from '../../hooks/useAppointments'
 import { AppointmentCard } from '../../components/closer/AppointmentCard'
-
-// KPI card — same pattern as rep dashboard for visual consistency
-function KpiCard({ label, value, sub, subColor, icon: Icon }) {
-  return (
-    <div style={{
-      flex: 1, minWidth: 0,
-      background: 'var(--bg-surface)',
-      border: '0.5px solid var(--border)',
-      borderRadius: 8,
-      padding: '16px 20px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 4,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-        {Icon && <Icon size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
-        <p style={{
-          fontSize: 10, fontWeight: 500,
-          color: 'var(--text-secondary)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.1em',
-          margin: 0,
-        }}>{label}</p>
-      </div>
-      <p style={{
-        fontSize: 32,
-        fontFamily: 'var(--font-mono)',
-        fontVariantNumeric: 'tabular-nums',
-        color: 'var(--text-primary)',
-        fontWeight: 500,
-        letterSpacing: '-0.02em',
-        lineHeight: 1,
-        margin: 0,
-      }}>{value ?? '—'}</p>
-      {sub && (
-        <p style={{ fontSize: 11, color: subColor || 'var(--text-muted)', marginTop: 2 }}>
-          {sub}
-        </p>
-      )}
-    </div>
-  )
-}
+import { KPICard } from '../../components/ui/KPICard'
 
 function useCloserKPIs(closerId) {
   return useQuery({
@@ -107,31 +66,35 @@ export default function MyAppointments() {
         </span>
       </div>
 
-      {/* KPI row */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-        <KpiCard
+      {/* KPI row — glass + countup */}
+      <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+        <KPICard
           label="Today's Appointments"
           value={kpis?.todayAppts ?? pending.length}
           sub="scheduled today"
           icon={Calendar}
         />
-        <KpiCard
+        <KPICard
           label="Weekly Close Rate"
-          value={kpis ? `${kpis.closeRate}%` : '—'}
+          value={kpis?.closeRate ?? 0}
+          suffix="%"
           sub={kpis?.closeRate >= 30 ? 'Above target' : kpis?.closeRate >= 20 ? 'On track' : 'Keep pushing'}
           subColor={kpis?.closeRate >= 30 ? 'var(--success)' : kpis?.closeRate >= 20 ? 'var(--warning)' : 'var(--danger)'}
           icon={TrendingUp}
         />
-        <KpiCard
+        <KPICard
           label="Est. Earnings"
-          value={kpis ? `$${kpis.earnings.toLocaleString()}` : '—'}
+          value={kpis?.earnings ?? 0}
+          prefix="$"
           sub="this week · $200/close"
           subColor="var(--accent)"
+          accent={kpis?.earnings > 0}
           icon={DollarSign}
         />
-        <KpiCard
+        <KPICard
           label="Revenue Generated"
-          value={kpis?.revenue ? `$${kpis.revenue.toLocaleString()}` : '$0'}
+          value={kpis?.revenue ?? 0}
+          prefix="$"
           sub="total deal value closed"
           subColor={kpis?.revenue > 0 ? 'var(--success)' : undefined}
           icon={Zap}

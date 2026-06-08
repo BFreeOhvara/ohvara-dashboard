@@ -58,7 +58,7 @@ export default function Login() {
         </div>
 
         {/* Login card */}
-        <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-[10px] p-6">
+        <div className="glass-accent" style={{ padding: 24 }}>
           <div className="space-y-4" onKeyDown={handleKeyDown}>
             <Input
               label="Username"

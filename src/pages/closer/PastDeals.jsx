@@ -43,7 +43,7 @@ export default function PastDeals() {
           <p className="text-[var(--text-muted)] text-sm">No deals match this filter</p>
         </div>
       ) : (
-        <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] overflow-hidden">
+        <div className="glass" style={{ overflow: 'hidden', borderRadius: 10 }}>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] text-left">
@@ -56,7 +56,7 @@ export default function PastDeals() {
             </thead>
             <tbody>
               {filtered.map(d => (
-                <tr key={d.id} className="border-b border-[var(--border)]/50 hover:bg-[var(--bg-2)]">
+                <tr key={d.id} className="table-row-animated border-b border-[var(--border)]/50 hover:bg-[var(--bg-2)]">
                   <td className="px-4 py-3">
                     <p className="text-[var(--text-primary)] font-medium">{d.lead?.business_name}</p>
                     {d.loss_reason && <p className="text-xs text-[var(--text-muted)]">{d.loss_reason}</p>}

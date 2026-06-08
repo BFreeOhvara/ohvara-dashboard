@@ -73,31 +73,43 @@ export function CallButton({ lead, onCallEnd, onScriptOpen }) {
   const isEnded   = status === 'disconnected' || status === 'error'
   const isBusy    = status === 'connecting'
 
+  // Idle state uses the premium .btn-call CSS class (accent glow + hover lift)
+  // Active/busy/ended states use inline style overrides
+  const idleClass = (!isActive && !isBusy && !isEnded) ? 'btn-call' : ''
+
   return (
     <button
       onClick={handleCall}
       disabled={isBusy || isEnded}
-      className={clsx(
-        // Base — unmissable primary action: larger touch target, bold contrast
-        'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium',
-        'transition-all focus-visible:outline-none focus-visible:ring-2',
-        'focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg-1)]',
-        // States
-        isActive
-          ? 'bg-[var(--danger)] hover:bg-[#DC2626] text-white focus-visible:ring-[var(--danger)] ring-1 ring-[#EF4444]/30'
-          : isBusy
-          ? 'bg-[var(--warning)] text-white cursor-wait focus-visible:ring-[var(--warning)]'
-          : isEnded
-          ? 'bg-[var(--bg-3)] text-[var(--text-muted)] cursor-not-allowed opacity-50'
-          : // idle — accent (purple) per design token
-            'bg-[var(--accent)] hover:bg-[var(--accent-hover)] active:opacity-90 text-white focus-visible:ring-[var(--accent)]'
-      )}
+      className={clsx(idleClass)}
+      style={
+        isActive ? {
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          height: 28, padding: '0 12px', borderRadius: 6, border: 'none',
+          fontSize: 11, fontFamily: 'var(--font-mono)', fontWeight: 500,
+          cursor: 'pointer',
+          background: 'var(--danger)', color: '#fff',
+          transition: 'all 0.15s',
+        } : isBusy ? {
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          height: 28, padding: '0 12px', borderRadius: 6, border: 'none',
+          fontSize: 11, fontFamily: 'var(--font-mono)', fontWeight: 500,
+          cursor: 'wait',
+          background: 'var(--warning)', color: '#fff',
+        } : isEnded ? {
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          height: 28, padding: '0 12px', borderRadius: 6, border: 'none',
+          fontSize: 11, fontFamily: 'var(--font-mono)', fontWeight: 500,
+          cursor: 'not-allowed',
+          background: 'var(--bg-elevated)', color: 'var(--text-muted)', opacity: 0.5,
+        } : undefined
+      }
     >
       {isActive
-        ? <PhoneOff size={12} />
+        ? <PhoneOff size={11} />
         : isBusy
-        ? <PhoneCall size={12} className="animate-pulse" />
-        : <Phone size={12} />
+        ? <PhoneCall size={11} style={{ animation: 'spin 1s linear infinite' }} />
+        : <Phone size={11} />
       }
       {STATUS_LABELS[status]}
     </button>

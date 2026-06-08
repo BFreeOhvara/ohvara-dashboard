@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 
 import Login from './pages/Login'
+import { BackgroundOrbs } from './components/BackgroundOrbs'
 
 // Rep pages
 import MyLeads from './pages/rep/MyLeads'
@@ -51,6 +52,7 @@ export default function App() {
     <QueryClientProvider client={qc}>
       <AuthProvider>
         <BrowserRouter>
+          <BackgroundOrbs />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<RoleRedirect />} />
