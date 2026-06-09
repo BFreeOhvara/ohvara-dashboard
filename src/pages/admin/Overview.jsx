@@ -5,6 +5,10 @@ import { useReps, useRepStats } from '../../hooks/useProfiles'
 import { Phone, Calendar, TrendingUp, DollarSign, ChevronDown, ChevronUp, Clock } from 'lucide-react'
 import { Badge } from '../../components/ui/Badge'
 import { KPICard } from '../../components/ui/KPICard'
+import {
+  ResponsiveContainer, AreaChart, Area, BarChart, Bar,
+  XAxis, YAxis, Tooltip, CartesianGrid,
+} from 'recharts'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -194,6 +198,153 @@ function RepRow({ rep }) {
   )
 }
 
+// ── Recharts tooltip ─────────────────────────────────────────────────────────
+
+function ChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div style={{
+      background: 'rgba(8,8,16,0.95)', border: '0.5px solid var(--border)',
+      borderRadius: 8, padding: '8px 12px', fontSize: 12,
+    }}>
+      <p style={{ color: 'var(--text-muted)', margin: '0 0 4px' }}>{label}</p>
+      {payload.map((p, i) => (
+        <p key={i} style={{ color: p.color || 'var(--text-primary)', margin: 0, fontFamily: 'var(--font-mono)' }}>
+          {p.name}: {p.value}
+        </p>
+      ))}
+    </div>
+  )
+}
+
+// ── Analytics charts row ──────────────────────────────────────────────────────
+
+function AnalyticsRow() {
+  // 7-day activity trend — leads whose status changed in last 7 days
+  const { data: trendData } = useQuery({
+    queryKey: ['admin', 'activity-trend'],
+    queryFn: async () => {
+      const days = 7
+      const cutoff = new Date()
+      cutoff.setDate(cutoff.getDate() - days)
+
+      const { data } = await supabase
+        .from('leads')
+        .select('updated_at, status')
+        .gte('updated_at', cutoff.toISOString())
+
+      if (!data?.length) {
+        // Return zero-filled last 7 days
+        return Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(); d.setDate(d.getDate() - (6 - i))
+          return { day: d.toLocaleDateString('en-US', { weekday: 'short' }), contacts: 0, booked: 0 }
+        })
+      }
+
+      const buckets = {}
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(); d.setDate(d.getDate() - (6 - i))
+        const key = d.toLocaleDateString('en-US', { weekday: 'short' })
+        buckets[key] = { day: key, contacts: 0, booked: 0 }
+      }
+
+      data.forEach(l => {
+        const key = new Date(l.updated_at).toLocaleDateString('en-US', { weekday: 'short' })
+        if (buckets[key]) {
+          if (l.status === 'Contacted' || l.status === 'Voicemail' || l.status === 'No Answer') {
+            buckets[key].contacts++
+          }
+          if (l.status === 'Booked') {
+            buckets[key].booked++
+          }
+        }
+      })
+
+      return Object.values(buckets)
+    },
+    refetchInterval: 120000,
+  })
+
+  // Pipeline breakdown by status
+  const { data: pipelineData } = useQuery({
+    queryKey: ['admin', 'pipeline-breakdown'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('leads')
+        .select('status')
+
+      if (!data?.length) return []
+
+      const counts = {}
+      data.forEach(l => { counts[l.status] = (counts[l.status] || 0) + 1 })
+
+      const ORDER = ['New', 'Contacted', 'Voicemail', 'No Answer', 'Booked']
+      return ORDER
+        .filter(s => counts[s])
+        .map(s => ({ status: s, count: counts[s] }))
+    },
+    refetchInterval: 120000,
+  })
+
+  const STATUS_COLORS = {
+    New:       'var(--text-muted)',
+    Contacted: 'var(--info)',
+    Voicemail: 'var(--warning)',
+    'No Answer': 'var(--danger)',
+    Booked:    'var(--success)',
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+      {/* 7-day activity */}
+      <div className="glass" style={{ flex: 1, padding: '14px 16px 10px', borderRadius: 10, minWidth: 0 }}>
+        <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', margin: '0 0 12px' }}>
+          7-Day Activity
+        </p>
+        <ResponsiveContainer width="100%" height={100}>
+          <AreaChart data={trendData || []} margin={{ top: 0, right: 0, bottom: 0, left: -28 }}>
+            <defs>
+              <linearGradient id="colorContacts" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor="#6C63FF" stopOpacity={0.3} />
+                <stop offset="100%" stopColor="#6C63FF" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="colorBooked" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor="#22C55E" stopOpacity={0.4} />
+                <stop offset="100%" stopColor="#22C55E" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <XAxis dataKey="day" tick={{ fontSize: 10, fill: '#55556A' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: '#55556A' }} axisLine={false} tickLine={false} allowDecimals={false} />
+            <Tooltip content={<ChartTooltip />} />
+            <Area type="monotone" dataKey="contacts" name="Contacts" stroke="#6C63FF" strokeWidth={1.5} fill="url(#colorContacts)" dot={false} />
+            <Area type="monotone" dataKey="booked"   name="Booked"   stroke="#22C55E" strokeWidth={1.5} fill="url(#colorBooked)"   dot={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Pipeline bar chart */}
+      <div className="glass" style={{ flex: '0 0 240px', padding: '14px 16px 10px', borderRadius: 10 }}>
+        <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', margin: '0 0 12px' }}>
+          Pipeline
+        </p>
+        <ResponsiveContainer width="100%" height={100}>
+          <BarChart data={pipelineData || []} margin={{ top: 0, right: 0, bottom: 0, left: -28 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+            <XAxis dataKey="status" tick={{ fontSize: 10, fill: '#55556A' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: '#55556A' }} axisLine={false} tickLine={false} allowDecimals={false} />
+            <Tooltip content={<ChartTooltip />} />
+            <Bar dataKey="count" name="Leads" radius={[3, 3, 0, 0]}
+              fill="#6C63FF"
+              /* per-bar coloring via cell would need Cell import — simplified single color */
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+}
+
 // ── Main admin overview ───────────────────────────────────────────────────────
 
 export default function Overview() {
@@ -298,6 +449,9 @@ export default function Overview() {
             sub="30% close probability"
           />
         </div>
+
+        {/* Analytics charts */}
+        <AnalyticsRow />
 
         {/* Rep performance table */}
         <div className="glass" style={{ overflow: 'hidden', borderRadius: 10 }}>
