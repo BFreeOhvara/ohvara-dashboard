@@ -81,23 +81,24 @@ ALTER TABLE onboarding    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 -- Clients: admins full access, closers read-only
-CREATE POLICY IF NOT EXISTS "Admins manage clients"
-  ON clients FOR ALL
-  USING (get_my_role() = 'admin');
-
-CREATE POLICY IF NOT EXISTS "Closers view clients"
-  ON clients FOR SELECT
-  USING (get_my_role() IN ('admin', 'closer'));
-
--- Onboarding: admins full access
-CREATE POLICY IF NOT EXISTS "Admins manage onboarding"
-  ON onboarding FOR ALL
-  USING (get_my_role() = 'admin');
-
--- Notifications: admins full access
-CREATE POLICY IF NOT EXISTS "Admins manage notifications"
-  ON notifications FOR ALL
-  USING (get_my_role() = 'admin');
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='clients' AND policyname='Admins manage clients') THEN
+    CREATE POLICY "Admins manage clients" ON clients FOR ALL
+      USING (EXISTS (SELECT 1 FROM profiles p WHERE p.id = auth.uid() AND p.role = 'admin'));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='clients' AND policyname='Closers view clients') THEN
+    CREATE POLICY "Closers view clients" ON clients FOR SELECT
+      USING (EXISTS (SELECT 1 FROM profiles p WHERE p.id = auth.uid() AND p.role IN ('admin','closer')));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='onboarding' AND policyname='Admins manage onboarding') THEN
+    CREATE POLICY "Admins manage onboarding" ON onboarding FOR ALL
+      USING (EXISTS (SELECT 1 FROM profiles p WHERE p.id = auth.uid() AND p.role = 'admin'));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='notifications' AND policyname='Admins manage notifications') THEN
+    CREATE POLICY "Admins manage notifications" ON notifications FOR ALL
+      USING (EXISTS (SELECT 1 FROM profiles p WHERE p.id = auth.uid() AND p.role = 'admin'));
+  END IF;
+END $$;
 
 -- ─── Indexes ───────────────────────────────────────────────────────────────────
 
