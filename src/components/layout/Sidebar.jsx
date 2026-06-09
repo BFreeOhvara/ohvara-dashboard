@@ -7,6 +7,7 @@ import {
   Zap, Search, PhoneCall, GitBranch
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import { NotificationBell } from '../admin/NotificationBell'
 
 const NAV = {
   rep: [
@@ -76,7 +77,7 @@ export function Sidebar() {
           }}>
             <Zap size={14} color="white" fill="white" />
           </div>
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1, margin: 0 }}>
               Ohvara
             </p>
@@ -84,6 +85,7 @@ export function Sidebar() {
               {ROLE_LABELS[profile?.role] || ''}
             </p>
           </div>
+          {profile?.role === 'admin' && <NotificationBell />}
         </div>
       </div>
 
