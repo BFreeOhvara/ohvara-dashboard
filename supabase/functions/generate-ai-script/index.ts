@@ -5,6 +5,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// ── Fallback script template (used when API key missing or call fails) ────────
+function buildFallbackScript(businessName: string, niche: string, jobTitle: string) {
+  return {
+    opener: `"Hey, is this ${businessName}? Hey — my name's [Your Name], I was actually looking at your Indeed listing for a ${jobTitle}. How's that search going for you?"`,
+    problem: `"Quick question — when your team's out on jobs, how are you handling the phones right now? Like if someone calls in at 2pm on a Tuesday and everyone's tied up — what happens to that call? Yeah that's the thing... most ${niche} businesses we talk to are losing 8-10 calls a week they don't even know about."`,
+    solution: `"So what we do is we set up a 24/7 AI receptionist that answers every call, qualifies the lead, and books it straight onto your calendar. No voicemail, no missed calls. It handles the after-hours stuff too so you're capturing jobs your competitors are sleeping on."`,
+    objections: `"Not interested" → "Totally get it. Quick question before I let you go — are you still missing calls right now? Because that's usually the only reason people circle back to us." \n\n"We already have someone" → "That's actually perfect — this works alongside them and handles overflow so nothing falls through the cracks. What does it cost you when you miss a job call right now?"`,
+    close: `"I'd love to show you exactly how this works in 15 minutes. Nothing to install, I'll just walk you through it on a screen share. You free Thursday at 2, or would Friday morning work better?"`,
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -28,9 +39,15 @@ Deno.serve(async (req) => {
     recommended_price,
   } = body
 
-  const anthropic = new Anthropic({
-    apiKey: Deno.env.get('ANTHROPIC_API_KEY')!,
-  })
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
+  if (!apiKey) {
+    // No API key — return fallback script immediately
+    const fb = buildFallbackScript(business_name || 'this business', niche || 'service business', job_title || 'receptionist')
+    return new Response(JSON.stringify({ script: fb, fallback: true }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  }
+
+  const anthropic = new Anthropic({ apiKey })
 
   let prompt: string
 
@@ -79,7 +96,7 @@ Respond with ONLY valid JSON — no markdown, no code blocks, no extra text:
 Use the actual numbers. Be specific to THIS lead — not generic. The 'why' array should have 2-4 items.`
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-5',
       max_tokens: 600,
       messages: [{ role: 'user', content: prompt }],
     })
@@ -134,7 +151,7 @@ Facts:
 Write exactly one confident, specific, punchy sentence the closer can use to open with financial framing. Use the actual numbers. No fluff, no "I" subject — start with the business name or the cost angle.`
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-5',
       max_tokens: 120,
       messages: [{ role: 'user', content: prompt }],
     })
@@ -159,7 +176,7 @@ Pain points identified: ${pain_points || 'None noted'}
 Write a concise 150-word prep briefing for the closer. Cover: (1) likely pain points to probe, (2) the strongest value angle to lead with, (3) one likely objection and how to handle it. Be direct and tactical — this person is about to get on a call.`
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-5',
       max_tokens: 400,
       messages: [{ role: 'user', content: prompt }],
     })
@@ -194,19 +211,26 @@ Return ONLY valid JSON with these keys:
 
 Each section should be 3-5 sentences. The objections section should cover 2-3 common objections with responses. Use the business name and contact name naturally throughout.`
 
-  const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 1000,
-    messages: [{ role: 'user', content: prompt }],
-  })
-
-  const rawText = message.content[0].type === 'text' ? message.content[0].text : '{}'
   let script
   try {
-    script = JSON.parse(rawText)
+    const message = await anthropic.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 1000,
+      messages: [{ role: 'user', content: prompt }],
+    })
+    const rawText = message.content[0].type === 'text' ? message.content[0].text : '{}'
+    try {
+      script = JSON.parse(rawText)
+    } catch {
+      const match = rawText.match(/```(?:json)?\s*([\s\S]*?)```/)
+      script = match ? JSON.parse(match[1]) : null
+    }
   } catch {
-    const match = rawText.match(/```(?:json)?\s*([\s\S]*?)```/)
-    script = match ? JSON.parse(match[1]) : { opener: rawText, problem: '', solution: '', objections: '', close: '' }
+    // API credits exhausted or network error — use fallback
+  }
+
+  if (!script) {
+    script = buildFallbackScript(business_name || 'this business', niche || 'service business', job_title || 'receptionist')
   }
 
   return new Response(
@@ -217,9 +241,11 @@ Each section should be 3-5 sentences. The objections section should cover 2-3 co
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('generate-ai-script error:', message)
+    // Never return a 500 to the rep — always give them a usable script
+    const fallback = buildFallbackScript('this business', 'service business', 'receptionist')
     return new Response(
-      JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ script: fallback, fallback: true }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })

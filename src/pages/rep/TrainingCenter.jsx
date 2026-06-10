@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { Play, BookOpen, Mic, MicOff, PhoneOff, Shuffle, ChevronLeft, ChevronRight, Check, X } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
+import { useState } from 'react'
+import { Play, BookOpen, Mic, FileText, Lock, Shuffle, ChevronLeft, ChevronRight, Check, X } from 'lucide-react'
 import { FLASHCARDS, CATEGORY_LABELS, CATEGORY_COLORS } from '../../data/flashcards'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -27,6 +26,67 @@ const CATEGORY_FILTERS = [
   { key: 'product',   label: 'Product Knowledge',   count: FLASHCARDS.filter(c => c.category === 'product').length },
 ]
 
+// The discovery script reps study before practicing. Static content —
+// the personalized version is generated per-lead in the Call Now modal.
+const DISCOVERY_SCRIPT = [
+  {
+    id: 'opener',
+    title: 'Opener',
+    goal: 'Survive the first 10 seconds. Sound like a peer, not a telemarketer.',
+    lines: [
+      `"Hey, is this [Business Name]? [First name]? Perfect — I'll be quick, I know you're mid-day."`,
+      `"I was looking at your Indeed listing for the [role] position — how's that search going?"`,
+      `If no Indeed listing: "I work with [niche] owners in [city] — quick question, are you the one who handles the phones when the crew's out on jobs?"`,
+    ],
+    tips: 'Slow down. Lower your tone. The goal of the opener is not to pitch — it is to earn the next 30 seconds.',
+  },
+  {
+    id: 'discovery',
+    title: 'Problem Discovery',
+    goal: 'Get them talking about missed calls and lost jobs. Ask, then shut up.',
+    lines: [
+      `"When a customer calls and everyone's on a job — what happens to that call?"`,
+      `"Roughly how many calls a week would you say go to voicemail?"`,
+      `"And of those, how many do you think actually leave a message versus just calling the next company on the list?"`,
+    ],
+    tips: 'Every question should make the problem bigger in THEIR head. You are not telling them they have a problem — they are telling you.',
+  },
+  {
+    id: 'pain',
+    title: 'Pain Amplification',
+    goal: 'Turn "yeah we miss some calls" into a dollar figure they can feel.',
+    lines: [
+      `"Let's do quick math — if you're missing 8 calls a week and even 3 of those are real jobs at, what, $400 each? That's close to $5K a month walking to a competitor."`,
+      `"And that's not counting the after-hours calls. What happens when someone calls at 7pm with a burst pipe?"`,
+      `"Most owners I talk to know they're losing jobs — they just haven't put a number on it. Does that number surprise you?"`,
+    ],
+    tips: 'Use THEIR numbers from discovery, not yours. A number they gave you is a number they believe.',
+  },
+  {
+    id: 'objections',
+    title: 'Objection Handling',
+    goal: 'Acknowledge, reframe, ask one more question. Never argue.',
+    lines: [
+      `"Not interested" → "Totally fair — most owners say that until they see the missed-call math. One question and I'll let you go: what happens to a call you can't answer right now?"`,
+      `"Too busy" → "That's exactly why I called. This takes 15 minutes and it's about getting you hours back, not taking them."`,
+      `"We have someone for that" → "Nice — does that cover after-hours and weekends too? That's usually where the gap is."`,
+      `"Send me an email" → "Happy to — but honestly the email won't mean much without the numbers. Let's grab 15 minutes and I'll walk you through it live."`,
+    ],
+    tips: 'One objection handled well earns the close. Two objections means let go gracefully — leave the door open and log it as a callback.',
+  },
+  {
+    id: 'close',
+    title: 'Close / Book',
+    goal: 'Ask for the 15-minute call. Offer two times. Confirm and get off the phone.',
+    lines: [
+      `"Look, I don't want to eat up your morning. Let's do a quick 15-minute call this week — I'll show you exactly how many calls you're missing and what they're worth."`,
+      `"Does Tuesday afternoon or Thursday morning work better?"`,
+      `After they pick: "Perfect — [day] at [time]. You'll get a text reminder. What's the best cell for that?"`,
+    ],
+    tips: 'Always offer two specific times — never "when works for you?". Confirm the number, confirm the time, end the call. Do not keep selling after the yes.',
+  },
+]
+
 function shuffle(arr) {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
@@ -34,26 +94,6 @@ function shuffle(arr) {
     [a[i], a[j]] = [a[j], a[i]]
   }
   return a
-}
-
-// ── Score display helpers ──────────────────────────────────────────────────────
-
-function ScoreBar({ label, score, max, color }) {
-  return (
-    <div style={{ marginBottom: 10 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{label}</span>
-        <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color }}>{score}/{max}</span>
-      </div>
-      <div style={{ height: 4, background: 'var(--bg-elevated)', borderRadius: 2, overflow: 'hidden' }}>
-        <div style={{
-          height: '100%', width: `${(score / max) * 100}%`,
-          background: color, borderRadius: 2,
-          transition: 'width 0.8s ease',
-        }} />
-      </div>
-    </div>
-  )
 }
 
 // ── VideoLibrary ──────────────────────────────────────────────────────────────
@@ -504,441 +544,141 @@ function FlashcardDeck() {
   )
 }
 
-// ── AIRoleplay ────────────────────────────────────────────────────────────────
+// ── DiscoveryScript ───────────────────────────────────────────────────────────
+// Static, readable version of the call script. Reps study this before practicing.
+
+function DiscoveryScript() {
+  return (
+    <div style={{ maxWidth: 680, margin: '0 auto' }}>
+      <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 24 }}>
+        This is the full discovery script used on every cold call. Study each section until
+        you can deliver it without reading. The Call Now button on your leads generates a
+        version personalized to each business.
+      </p>
+
+      {DISCOVERY_SCRIPT.map((section, i) => (
+        <div
+          key={section.id}
+          className="glass"
+          style={{ padding: '20px 22px', marginBottom: 16, borderRadius: 12 }}
+        >
+          {/* Section header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <span style={{
+              width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+              background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--accent)', fontWeight: 600,
+            }}>
+              {i + 1}
+            </span>
+            <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
+              {section.title}
+            </h2>
+          </div>
+
+          {/* Goal */}
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 14px 34px', fontStyle: 'italic' }}>
+            Goal: {section.goal}
+          </p>
+
+          {/* Script lines */}
+          <div style={{ marginLeft: 34, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {section.lines.map((line, j) => (
+              <p key={j} style={{
+                fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0,
+                padding: '10px 14px',
+                background: 'var(--bg-elevated)', borderRadius: 8,
+                borderLeft: '2px solid var(--accent-border)',
+              }}>
+                {line}
+              </p>
+            ))}
+          </div>
+
+          {/* Coaching tip */}
+          <div style={{
+            marginLeft: 34, marginTop: 12,
+            padding: '8px 12px',
+            background: 'rgba(245,158,11,0.06)', border: '0.5px solid rgba(245,158,11,0.18)',
+            borderRadius: 8,
+          }}>
+            <p style={{ fontSize: 12, color: 'var(--warning)', margin: 0, lineHeight: 1.6 }}>
+              Coach's note: {section.tips}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── AIRoleplay — Coming Soon ──────────────────────────────────────────────────
+// Voice roleplay ships once RETELL_API_KEY is configured. Intentional locked state.
 
 function AIRoleplay() {
-  const [callState, setCallState]   = useState('idle')   // idle | connecting | active | ending | scoring | scored | unavailable
-  const [transcript, setTranscript] = useState([])       // [{role, content}]
-  const [score, setScore]           = useState(null)
-  const [error, setError]           = useState('')
-  const [agentSpeaking, setAgentSpeaking] = useState(false)
-  const clientRef  = useRef(null)
-  const transcriptEndRef = useRef(null)
-
-  useEffect(() => {
-    return () => {
-      // Cleanup on unmount
-      if (clientRef.current) {
-        try { clientRef.current.stopCall() } catch { /* ignore */ }
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [transcript])
-
-  async function startCall() {
-    setCallState('connecting')
-    setError('')
-    setTranscript([])
-    setScore(null)
-
-    try {
-      // Get access token from edge function
-      const { data, error: fnErr } = await supabase.functions.invoke('create-roleplay-call')
-      if (fnErr) throw new Error(fnErr.message)
-      if (data?.notConfigured) {
-        setCallState('unavailable')
-        return
-      }
-      if (!data?.access_token) throw new Error('No access token returned')
-
-      // Import Retell SDK
-      const { RetellWebClient } = await import('retell-client-js-sdk')
-      const retell = new RetellWebClient()
-      clientRef.current = retell
-
-      retell.on('call_started',        () => setCallState('active'))
-      retell.on('agent_start_talking', () => setAgentSpeaking(true))
-      retell.on('agent_stop_talking',  () => setAgentSpeaking(false))
-      retell.on('update', (update) => {
-        if (update?.transcript) {
-          setTranscript(update.transcript.map(t => ({
-            role: t.role,
-            content: t.content,
-          })))
-        }
-      })
-      retell.on('call_ended', () => endCallAndScore())
-      retell.on('error', (err) => {
-        console.error('[Roleplay] Retell error:', err)
-        setError(err?.message || 'Connection error')
-        setCallState('idle')
-      })
-
-      await retell.startCall({ accessToken: data.access_token })
-    } catch (err) {
-      setError(err.message || 'Failed to start call')
-      setCallState('idle')
-    }
-  }
-
-  const endCallAndScore = useCallback(async () => {
-    setCallState('ending')
-    try {
-      if (clientRef.current) {
-        clientRef.current.stopCall()
-        clientRef.current = null
-      }
-    } catch { /* ignore */ }
-
-    setCallState('scoring')
-
-    // Get final transcript
-    let finalTranscript = []
-    setTranscript(prev => { finalTranscript = prev; return prev })
-
-    // Call score-roleplay
-    try {
-      const { data } = await supabase.functions.invoke('score-roleplay', {
-        body: { transcript: finalTranscript }
-      })
-      setScore(data)
-      setCallState('scored')
-    } catch {
-      setScore({ notScored: true, summary: 'Call completed. Scoring unavailable.', total: 0, maxTotal: 12 })
-      setCallState('scored')
-    }
-  }, [])
-
-  function handleEndCall() {
-    endCallAndScore()
-  }
-
-  function handleReset() {
-    setCallState('idle')
-    setTranscript([])
-    setScore(null)
-    setError('')
-  }
-
-  // ── Idle state ───────────────────────────────────────────────────────────────
-  if (callState === 'idle') {
-    return (
-      <div style={{ maxWidth: 520, margin: '0 auto' }}>
-        {/* Persona card */}
-        <div className="glass" style={{ padding: '24px', marginBottom: 20 }}>
-          <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-            <div style={{
-              width: 52, height: 52, borderRadius: 12, flexShrink: 0,
-              background: 'rgba(245,158,11,0.12)', border: '0.5px solid rgba(245,158,11,0.25)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
-            }}>
-              🔧
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Mike Johnson</p>
-                <span style={{
-                  fontSize: 10, padding: '2px 6px', borderRadius: 3,
-                  background: 'rgba(245,158,11,0.1)', color: 'var(--warning)',
-                  border: '0.5px solid rgba(245,158,11,0.2)', fontWeight: 500,
-                }}>
-                  HVAC Owner · Dallas, TX
-                </span>
-              </div>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-                4-person crew. Gets ~30 calls/week but misses 8–10 because everyone's on jobs.
-                Gruff but genuine — he has real pain. He'll throw one objection. Book the 15-min call.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Scoring criteria */}
-        <div style={{ marginBottom: 20 }}>
-          <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 10 }}>
-            You're scored on
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {[
-              { label: 'Opener quality',       max: 2, hint: 'Reference Indeed, sound confident' },
-              { label: 'Pain discovery',        max: 3, hint: 'Missed calls, after-hours, cost of hire' },
-              { label: 'Objection handling',    max: 2, hint: 'Handle "not interested" without pitching' },
-              { label: 'Booking ask',           max: 2, hint: 'Ask for a 15-minute call' },
-              { label: 'Tone & delivery',       max: 3, hint: 'Calm, peer-to-peer, not robotic' },
-            ].map(s => (
-              <div key={s.label} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '7px 12px',
-                background: 'var(--bg-surface)', border: '0.5px solid var(--border)',
-                borderRadius: 7,
-              }}>
-                <div>
-                  <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>{s.label}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>{s.hint}</span>
-                </div>
-                <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
-                  0–{s.max}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {error && (
-          <p style={{ fontSize: 12, color: 'var(--danger)', marginBottom: 12, textAlign: 'center' }}>{error}</p>
-        )}
-
-        {/* Start button */}
-        <button
-          onClick={startCall}
-          style={{
-            width: '100%', height: 52,
-            background: 'var(--accent)',
-            border: 'none', borderRadius: 10,
-            fontSize: 15, fontWeight: 500, color: 'white',
-            cursor: 'pointer', transition: 'all 0.15s',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            boxShadow: '0 0 24px rgba(108,99,255,0.35)',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-hover)'; e.currentTarget.style.boxShadow = '0 0 32px rgba(108,99,255,0.5)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 24px rgba(108,99,255,0.35)' }}
-        >
-          <Mic size={16} />
-          Start Practice Call
-        </button>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 8 }}>
-          Mic access required · calls ~2–3 minutes
-        </p>
+  return (
+    <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '56px 24px' }}>
+      <div style={{
+        width: 64, height: 64, borderRadius: 16,
+        background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        margin: '0 auto 20px',
+      }}>
+        <Lock size={26} color="var(--accent)" />
       </div>
-    )
-  }
 
-  // ── Unavailable state ────────────────────────────────────────────────────────
-  if (callState === 'unavailable') {
-    return (
-      <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '48px 24px' }}>
-        <div style={{
-          width: 56, height: 56, borderRadius: '50%',
-          background: 'rgba(245,158,11,0.1)', border: '0.5px solid rgba(245,158,11,0.25)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 24,
-        }}>
-          ⏳
-        </div>
-        <h2 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 8 }}>Voice Roleplay — Coming Soon</h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 8 }}>
-          AI Voice Roleplay is ready to deploy — just needs the <code style={{ background: 'var(--bg-elevated)', padding: '1px 5px', borderRadius: 3, fontSize: 12 }}>RETELL_API_KEY</code> configured in Supabase Edge Function secrets.
-        </p>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          Set in Supabase Dashboard → Settings → Edge Functions → Secrets
-        </p>
-        <button onClick={handleReset} style={{ marginTop: 20, background: 'var(--bg-surface)', border: '0.5px solid var(--border)', borderRadius: 8, padding: '8px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-          Back
-        </button>
-      </div>
-    )
-  }
+      <h2 style={{ fontSize: 19, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 10px', letterSpacing: '-0.01em' }}>
+        AI Voice Roleplay — Coming Soon
+      </h2>
+      <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 24px' }}>
+        Practice live cold calls against an AI business owner who pushes back like the real
+        thing — then get scored on your opener, discovery, objection handling, and close.
+      </p>
 
-  // ── Connecting state ─────────────────────────────────────────────────────────
-  if (callState === 'connecting') {
-    return (
-      <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '64px 24px' }}>
-        <div style={{
-          width: 64, height: 64, borderRadius: '50%',
-          border: '2px solid var(--accent-border)',
-          borderTopColor: 'var(--accent)',
-          animation: 'spin 1s linear infinite',
-          margin: '0 auto 20px',
-        }} />
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Connecting to Mike…</p>
-        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-      </div>
-    )
-  }
-
-  // ── Active call state ────────────────────────────────────────────────────────
-  if (callState === 'active' || callState === 'ending') {
-    return (
-      <div style={{ maxWidth: 560, margin: '0 auto' }}>
-        {/* Call header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginBottom: 16, padding: '12px 16px',
-          background: 'rgba(34,197,94,0.06)', border: '0.5px solid rgba(34,197,94,0.2)',
-          borderRadius: 10,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 8, height: 8, borderRadius: '50%',
-              background: 'var(--success)',
-              animation: 'navPulse 2s ease infinite',
-            }} />
-            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--success)' }}>Live Call — Mike Johnson</span>
-            {agentSpeaking && (
-              <span style={{ fontSize: 11, color: 'var(--text-muted)', animation: 'pulse 1.5s ease infinite' }}>speaking…</span>
-            )}
-          </div>
-          <Mic size={14} style={{ color: 'var(--success)' }} />
-        </div>
-
-        {/* Transcript */}
-        <div style={{
-          height: 260, overflowY: 'auto',
-          background: 'var(--bg-surface)', border: '0.5px solid var(--border)',
-          borderRadius: 10, padding: '12px 14px', marginBottom: 16,
-        }} className="scrollbar-thin">
-          {!transcript.length ? (
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', paddingTop: 40 }}>
-              Waiting for Mike to answer…
-            </p>
-          ) : (
-            transcript.map((t, i) => {
-              const isRep = t.role === 'user'
-              return (
-                <div key={i} style={{
-                  marginBottom: 10,
-                  display: 'flex',
-                  justifyContent: isRep ? 'flex-end' : 'flex-start',
-                }}>
-                  <div style={{
-                    maxWidth: '80%', padding: '8px 12px', borderRadius: 8,
-                    background: isRep ? 'var(--accent-dim)' : 'var(--bg-elevated)',
-                    border: `0.5px solid ${isRep ? 'var(--accent-border)' : 'var(--border)'}`,
-                  }}>
-                    <p style={{ fontSize: 10, color: isRep ? 'var(--accent)' : 'var(--text-muted)', marginBottom: 3 }}>
-                      {isRep ? 'You' : 'Mike'}
-                    </p>
-                    <p style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.4, margin: 0 }}>
-                      {t.content}
-                    </p>
-                  </div>
-                </div>
-              )
-            })
-          )}
-          <div ref={transcriptEndRef} />
-        </div>
-
-        {/* End call button */}
-        <button
-          onClick={handleEndCall}
-          disabled={callState === 'ending'}
-          style={{
-            width: '100%', height: 48,
-            background: 'rgba(239,68,68,0.12)', border: '0.5px solid rgba(239,68,68,0.3)',
-            borderRadius: 10, fontSize: 14, fontWeight: 500,
-            color: 'var(--danger)', cursor: 'pointer', transition: 'all 0.15s',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.2)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)' }}
-        >
-          <PhoneOff size={14} />
-          {callState === 'ending' ? 'Ending call…' : 'End Call'}
-        </button>
-      </div>
-    )
-  }
-
-  // ── Scoring state ────────────────────────────────────────────────────────────
-  if (callState === 'scoring') {
-    return (
-      <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '64px 24px' }}>
-        <div style={{
-          width: 64, height: 64, borderRadius: '50%',
-          border: '2px solid var(--accent-border)',
-          borderTopColor: 'var(--accent)',
-          animation: 'spin 1s linear infinite',
-          margin: '0 auto 20px',
-        }} />
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Analyzing your call…</p>
-        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-      </div>
-    )
-  }
-
-  // ── Scored state ─────────────────────────────────────────────────────────────
-  if (callState === 'scored' && score) {
-    const totalPct    = Math.round(((score.total || 0) / (score.maxTotal || 12)) * 100)
-    const scoreColor  = totalPct >= 75 ? 'var(--success)' : totalPct >= 50 ? 'var(--warning)' : 'var(--danger)'
-    const scoreLabel  = totalPct >= 75 ? 'Great call' : totalPct >= 50 ? 'Good effort' : 'Keep practicing'
-
-    return (
-      <div style={{ maxWidth: 560, margin: '0 auto' }}>
-        {/* Score header */}
-        <div className="glass" style={{ padding: '24px', marginBottom: 16, textAlign: 'center' }}>
-          <div style={{
-            width: 80, height: 80, borderRadius: '50%',
-            background: `${scoreColor}14`, border: `2px solid ${scoreColor}40`,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 12px',
+      {/* What's coming */}
+      <div style={{ textAlign: 'left', marginBottom: 24 }}>
+        {[
+          'Live voice conversation with a realistic owner persona',
+          'Real objections — "not interested", "too busy", "send an email"',
+          'Instant scorecard with tips after every call',
+        ].map((item, i) => (
+          <div key={i} style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '10px 14px', marginBottom: 6,
+            background: 'var(--bg-surface)', border: '0.5px solid var(--border)',
+            borderRadius: 8,
           }}>
-            <span style={{ fontSize: 26, fontFamily: 'var(--font-mono)', fontWeight: 600, color: scoreColor, lineHeight: 1 }}>
-              {score.total ?? 0}
-            </span>
-            <span style={{ fontSize: 10, color: scoreColor }}>/{score.maxTotal ?? 12}</span>
+            <Mic size={13} color="var(--accent)" style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{item}</span>
           </div>
-          <p style={{ fontSize: 16, fontWeight: 500, color: scoreColor, margin: '0 0 6px' }}>{scoreLabel}</p>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>{score.summary}</p>
-        </div>
-
-        {/* Score breakdown */}
-        {score.scores && (
-          <div className="glass" style={{ padding: '16px 20px', marginBottom: 14 }}>
-            <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 12 }}>Breakdown</p>
-            <ScoreBar label="Opener quality"    score={score.scores.opener           ?? 0} max={2} color="var(--info)" />
-            <ScoreBar label="Pain discovery"    score={score.scores.painDiscovery    ?? 0} max={3} color="var(--accent)" />
-            <ScoreBar label="Objection handling" score={score.scores.objectionHandling ?? 0} max={2} color="var(--warning)" />
-            <ScoreBar label="Booking ask"       score={score.scores.bookingAsk        ?? 0} max={2} color="var(--success)" />
-            <ScoreBar label="Tone & delivery"   score={score.scores.tone              ?? 0} max={3} color="var(--info)" />
-          </div>
-        )}
-
-        {/* Tips + highlights */}
-        {score.tips?.length > 0 && (
-          <div className="glass" style={{ padding: '16px 20px', marginBottom: 14 }}>
-            <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 10 }}>Improve Next Time</p>
-            {score.tips.map((tip, i) => (
-              <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                <span style={{ color: 'var(--danger)', flexShrink: 0 }}>→</span>
-                <span>{tip}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {score.highlights?.length > 0 && (
-          <div className="glass" style={{ padding: '16px 20px', marginBottom: 14 }}>
-            <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 10 }}>What Worked</p>
-            {score.highlights.map((h, i) => (
-              <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                <span style={{ color: 'var(--success)', flexShrink: 0 }}>✓</span>
-                <span>{h}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Try again */}
-        <button
-          onClick={handleReset}
-          style={{
-            width: '100%', height: 48,
-            background: 'var(--accent)', border: 'none', borderRadius: 10,
-            fontSize: 14, fontWeight: 500, color: 'white',
-            cursor: 'pointer', transition: 'all 0.15s',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            boxShadow: '0 0 24px rgba(108,99,255,0.3)',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-hover)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'var(--accent)' }}
-        >
-          <Mic size={14} />
-          Practice Again
-        </button>
+        ))}
       </div>
-    )
-  }
 
-  return null
+      <div style={{
+        display: 'inline-flex', alignItems: 'center', gap: 8,
+        padding: '8px 16px', borderRadius: 8,
+        background: 'rgba(245,158,11,0.08)', border: '0.5px solid rgba(245,158,11,0.2)',
+      }}>
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--warning)', flexShrink: 0 }} />
+        <span style={{ fontSize: 12, color: 'var(--warning)' }}>
+          Unlocks when <code style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>RETELL_API_KEY</code> is configured
+        </span>
+      </div>
+
+      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 20 }}>
+        In the meantime, master the <strong style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>Script</strong> tab — that's what you'll be scored on.
+      </p>
+    </div>
+  )
 }
 
 // ── Main Training Center page ─────────────────────────────────────────────────
 
 const TABS = [
-  { id: 'videos',     label: 'Videos',     icon: Play,     count: `${TRAINING_VIDEOS.length} videos` },
-  { id: 'flashcards', label: 'Flashcards', icon: BookOpen, count: `${FLASHCARDS.length} cards` },
+  { id: 'videos',     label: 'Videos',      icon: Play,     count: `${TRAINING_VIDEOS.length} videos` },
+  { id: 'flashcards', label: 'Flashcards',  icon: BookOpen, count: `${FLASHCARDS.length} cards` },
+  { id: 'script',     label: 'Script',      icon: FileText, count: null },
   { id: 'roleplay',   label: 'AI Roleplay', icon: Mic,      count: null },
 ]
 
@@ -953,7 +693,7 @@ export default function TrainingCenter() {
           Training Center
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-          Videos, flashcards, and AI voice roleplay
+          Videos, flashcards, the discovery script, and AI voice roleplay
         </p>
       </div>
 
@@ -1001,6 +741,7 @@ export default function TrainingCenter() {
       {/* Tab content */}
       {tab === 'videos'     && <VideoLibrary />}
       {tab === 'flashcards' && <FlashcardDeck />}
+      {tab === 'script'     && <DiscoveryScript />}
       {tab === 'roleplay'   && <AIRoleplay />}
     </div>
   )

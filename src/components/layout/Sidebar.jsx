@@ -60,11 +60,16 @@ export function Sidebar() {
     <aside
       className="sidebar-glass"
       style={{
-        width: 200,
-        flexShrink: 0,
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        bottom: 0,
+        width: 240,
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '100vh',
+        height: '100vh',
+        overflow: 'hidden',
+        zIndex: 100,
       }}
     >
       {/* Brand */}
@@ -92,7 +97,7 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '8px 8px', overflowY: 'auto' }} className="scrollbar-thin">
+      <nav style={{ flex: 1, padding: '10px 10px', overflowY: 'auto' }} className="scrollbar-thin">
         {links.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
@@ -104,31 +109,32 @@ export function Sidebar() {
                 isActive ? 'nav-active' : ''
               )
             }
-            style={{ display: 'block', textDecoration: 'none', marginBottom: 1 }}
+            style={{ display: 'block', textDecoration: 'none', marginBottom: 3 }}
           >
             {({ isActive }) => (
               <span style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8,
-                padding: '7px 10px 7px 12px',
-                borderRadius: 6,
-                fontSize: 13,
+                gap: 10,
+                padding: '12px 12px 12px 14px',
+                borderRadius: 8,
+                fontSize: 14,
                 fontWeight: isActive ? 500 : 400,
                 color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
                 position: 'relative',
                 background: isActive ? 'var(--bg-elevated)' : 'transparent',
+                minHeight: 44,
               }}>
                 {isActive && (
                   <span style={{
                     position: 'absolute',
-                    left: 0, top: 5, bottom: 5,
+                    left: 0, top: 8, bottom: 8,
                     width: 2,
                     background: 'var(--accent)',
                     borderRadius: '0 2px 2px 0',
                   }} />
                 )}
-                <Icon size={13} style={{ flexShrink: 0, color: isActive ? 'var(--accent)' : 'inherit' }} />
+                <Icon size={16} style={{ flexShrink: 0, color: isActive ? 'var(--accent)' : 'inherit' }} />
                 <span style={{ flex: 1 }}>{label}</span>
                 {isActive && <span className="nav-active-dot" />}
               </span>
@@ -162,10 +168,11 @@ export function Sidebar() {
         <button
           onClick={handleSignOut}
           style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            width: '100%', padding: '7px 10px',
-            borderRadius: 6,
-            fontSize: 13,
+            display: 'flex', alignItems: 'center', gap: 10,
+            width: '100%', padding: '12px 12px',
+            minHeight: 44,
+            borderRadius: 8,
+            fontSize: 14,
             color: 'var(--text-muted)',
             background: 'transparent',
             border: 'none',
@@ -175,7 +182,7 @@ export function Sidebar() {
           onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--bg-elevated)' }}
           onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent' }}
         >
-          <LogOut size={13} />
+          <LogOut size={16} />
           Sign Out
         </button>
       </div>

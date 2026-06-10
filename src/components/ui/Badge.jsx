@@ -31,6 +31,11 @@ const STATUS_STYLES = {
     color: 'var(--accent)',
     border: '0.5px solid var(--accent-border)',
   },
+  'Callback': {
+    background: 'var(--warning-dim)',
+    color: 'var(--warning)',
+    border: '0.5px solid rgba(245,158,11,0.20)',
+  },
   'Not Interested': {
     background: 'var(--danger-dim)',
     color: 'var(--danger)',
