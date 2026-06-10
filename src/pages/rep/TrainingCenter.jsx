@@ -17,6 +17,7 @@ const TRAINING_VIDEOS = [
   { id: 5, title: 'Booking the Call',   description: 'How to go from good conversation to confirmed appointment. The exact close.', duration: '4 min', category: 'Booking',    youtubeId: 'ScMzIvxBSi4' },
   { id: 6, title: 'Common Mistakes',    description: 'The 5 things new reps do that kill their connect rate. Watch this before your first call.', duration: '7 min', category: 'Mistakes',   youtubeId: 'kNjOjZElkZM' },
   { id: 7, title: 'The Full Call Walkthrough', description: 'A complete mock call from dial to booked appointment. Watch how it\'s done.', duration: '8 min', category: 'Full Call', youtubeId: 'rcmDflVnfxY' },
+  { id: 8, title: 'The Numbers Game', description: 'Why calling volume beats everything else. The math behind consistent bookings.', duration: '5 min', category: 'Mindset', youtubeId: 'PLACEHOLDER_NUMBERS_GAME' },
 ]
 
 const CATEGORY_FILTERS = [
@@ -138,7 +139,7 @@ function VideoLibrary() {
       {/* Grid */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
         gap: 14,
       }}>
         {TRAINING_VIDEOS.map(v => {
@@ -676,14 +677,14 @@ function AIRoleplay() {
 // ── Main Training Center page ─────────────────────────────────────────────────
 
 const TABS = [
+  { id: 'script',     label: 'Script',      icon: FileText, count: null },
   { id: 'videos',     label: 'Videos',      icon: Play,     count: `${TRAINING_VIDEOS.length} videos` },
   { id: 'flashcards', label: 'Flashcards',  icon: BookOpen, count: `${FLASHCARDS.length} cards` },
-  { id: 'script',     label: 'Script',      icon: FileText, count: null },
   { id: 'roleplay',   label: 'AI Roleplay', icon: Mic,      count: null },
 ]
 
 export default function TrainingCenter() {
-  const [tab, setTab] = useState('videos')
+  const [tab, setTab] = useState('script')
 
   return (
     <div>

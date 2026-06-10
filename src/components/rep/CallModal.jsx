@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Phone, X, Loader2, RotateCcw, MapPin, User } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
@@ -58,15 +59,20 @@ export function CallModal({ lead, onClose }) {
 
   useEffect(() => { generateScript() }, [lead.id])
 
-  return (
+  // Rendered through a portal: ancestors with transform/backdrop-filter
+  // (e.g. animated table rows) would otherwise hijack position:fixed.
+  // stopPropagation keeps clicks inside the modal from bubbling to the
+  // row that opened it (React events bubble through the component tree
+  // even across portals).
+  return createPortal(
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 300,
+        position: 'fixed', inset: 0, zIndex: 1000,
         background: 'rgba(8,8,16,0.85)', backdropFilter: 'blur(6px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 20,
       }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      onClick={e => { e.stopPropagation(); if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{
         width: '100%', maxWidth: 560, maxHeight: '85vh',
@@ -196,6 +202,7 @@ export function CallModal({ lead, onClose }) {
       </div>
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-    </div>
+    </div>,
+    document.body
   )
 }

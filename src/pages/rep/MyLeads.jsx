@@ -163,11 +163,6 @@ function LeadDetailPanel({ lead, onClose }) {
         )}
       </div>
 
-      {/* Footer — call action */}
-      <div style={{ padding: '14px 18px', borderTop: '0.5px solid var(--border)', flexShrink: 0 }}>
-        <CallButton lead={lead} />
-      </div>
-
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   )
