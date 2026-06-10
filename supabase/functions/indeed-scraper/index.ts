@@ -21,6 +21,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// ── Allowed job titles (only these 13 pass through) ──────────────────────────
+const ALLOWED_JOB_TITLES = [
+  'receptionist', 'dispatcher', 'office manager', 'administrative assistant',
+  'customer service', 'data entry', 'appointment setter', 'call center',
+  'phone support', 'front desk', 'secretary', 'billing', 'operations assistant',
+]
+
+function isTitleAllowed(title: string): boolean {
+  const lower = title.toLowerCase()
+  return ALLOWED_JOB_TITLES.some(t => lower.includes(t))
+}
+
 // ── Niche detection from company + job title ─────────────────────────────────
 const NICHE_KEYWORDS: Record<string, string> = {
   'hvac': 'hvac', 'air conditioning': 'hvac', 'heating': 'hvac', 'cooling': 'hvac',
@@ -90,11 +102,15 @@ function parseMcpText(text: string, existingNames: Set<string>): JobResult[] {
     const monthly   = salary.min !== null && salary.max !== null
       ? Math.round(((salary.min + salary.max) / 2) * 160) : null
 
+    const jobTitle = title || 'Dispatcher/Receptionist'
+    // Skip titles not in the allowed list
+    if (!isTitleAllowed(jobTitle)) continue
+
     jobs.push({
-      company, title: title || 'Dispatcher/Receptionist', location, city, state,
+      company, title: jobTitle, location, city, state,
       compensation: comp, hourly_min: salary.min, hourly_max: salary.max,
       monthly_labor_cost: monthly, job_url: jobUrl || '',
-      niche: detectNiche((company || '') + ' ' + (title || '')),
+      niche: detectNiche((company || '') + ' ' + jobTitle),
       already_in_db: existingNames.has(company.toLowerCase().trim()),
     })
   }

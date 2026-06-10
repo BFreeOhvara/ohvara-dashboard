@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from './hooks/useAuth'
+import { SecretsProvider } from './contexts/SecretsContext'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 
@@ -32,6 +33,7 @@ import ReEngagement from './pages/admin/ReEngagement'
 import LeadSources from './pages/admin/LeadSources'
 import LeadScraper from './pages/admin/LeadScraper'
 import Users from './pages/admin/Users'
+import Commissions from './pages/admin/Commissions'
 
 const qc = new QueryClient({
   defaultOptions: { queries: { staleTime: 30000, retry: 1 } },
@@ -51,6 +53,7 @@ export default function App() {
   return (
     <QueryClientProvider client={qc}>
       <AuthProvider>
+        <SecretsProvider>
         <BrowserRouter>
           <BackgroundOrbs />
           <Routes>
@@ -162,10 +165,21 @@ export default function App() {
                 <DashboardLayout><Users /></DashboardLayout>
               </ProtectedRoute>
             } />
+            <Route path="/admin/commissions" element={
+              <ProtectedRoute allowedRoles={['admin', 'closer']}>
+                <DashboardLayout><Commissions /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/closer/commissions" element={
+              <ProtectedRoute allowedRoles={['admin', 'closer']}>
+                <DashboardLayout><Commissions /></DashboardLayout>
+              </ProtectedRoute>
+            } />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
+        </SecretsProvider>
       </AuthProvider>
     </QueryClientProvider>
   )

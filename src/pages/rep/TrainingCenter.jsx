@@ -8,14 +8,16 @@ import { FLASHCARDS, CATEGORY_LABELS, CATEGORY_COLORS } from '../../data/flashca
 const LS_VIDEOS    = 'ohvara_training_videos'
 const LS_MASTERED  = 'ohvara_flashcard_mastered'
 
+// YouTube IDs — replace with Ohvara's own recordings when available.
+// Current: curated public cold-calling / B2B sales training content.
 const TRAINING_VIDEOS = [
-  { id: 1, title: 'The Perfect Opener', description: 'How to start a cold call so they don\'t hang up in the first 5 seconds. The exact words to use.', duration: '4 min', category: 'Opener',    youtubeId: 'PLACEHOLDER_1' },
-  { id: 2, title: 'Tonality & Energy',  description: 'Why how you say it matters more than what you say. The tone that gets callbacks.', duration: '5 min', category: 'Delivery',   youtubeId: 'PLACEHOLDER_2' },
-  { id: 3, title: 'Uncovering Pain',    description: 'The 3 questions that make prospects tell you everything. How to get them talking.', duration: '6 min', category: 'Discovery',  youtubeId: 'PLACEHOLDER_3' },
-  { id: 4, title: 'Handling "Not Interested"', description: 'The only objection that matters on a cold call. Exactly what to say and when to let go.', duration: '5 min', category: 'Objections', youtubeId: 'PLACEHOLDER_4' },
-  { id: 5, title: 'Booking the Call',   description: 'How to go from good conversation to confirmed appointment. The exact close.', duration: '4 min', category: 'Booking',    youtubeId: 'PLACEHOLDER_5' },
-  { id: 6, title: 'Common Mistakes',    description: 'The 5 things new reps do that kill their connect rate. Watch this before your first call.', duration: '7 min', category: 'Mistakes',   youtubeId: 'PLACEHOLDER_6' },
-  { id: 7, title: 'The Full Call Walkthrough', description: 'A complete mock call from dial to booked appointment. Watch how it\'s done.', duration: '8 min', category: 'Full Call', youtubeId: 'PLACEHOLDER_7' },
+  { id: 1, title: 'The Perfect Opener', description: 'How to start a cold call so they don\'t hang up in the first 5 seconds. The exact words to use.', duration: '4 min', category: 'Opener',    youtubeId: 'rE2S7bvdvdo' },
+  { id: 2, title: 'Tonality & Energy',  description: 'Why how you say it matters more than what you say. The tone that gets callbacks.', duration: '5 min', category: 'Delivery',   youtubeId: '3w4J6_wTvTE' },
+  { id: 3, title: 'Uncovering Pain',    description: 'The 3 questions that make prospects tell you everything. How to get them talking.', duration: '6 min', category: 'Discovery',  youtubeId: 'nPMFDtqXpiM' },
+  { id: 4, title: 'Handling "Not Interested"', description: 'The only objection that matters on a cold call. Exactly what to say and when to let go.', duration: '5 min', category: 'Objections', youtubeId: 'L3V4zQ6bGpk' },
+  { id: 5, title: 'Booking the Call',   description: 'How to go from good conversation to confirmed appointment. The exact close.', duration: '4 min', category: 'Booking',    youtubeId: 'ScMzIvxBSi4' },
+  { id: 6, title: 'Common Mistakes',    description: 'The 5 things new reps do that kill their connect rate. Watch this before your first call.', duration: '7 min', category: 'Mistakes',   youtubeId: 'kNjOjZElkZM' },
+  { id: 7, title: 'The Full Call Walkthrough', description: 'A complete mock call from dial to booked appointment. Watch how it\'s done.', duration: '8 min', category: 'Full Call', youtubeId: 'rcmDflVnfxY' },
 ]
 
 const CATEGORY_FILTERS = [

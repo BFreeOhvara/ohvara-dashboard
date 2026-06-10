@@ -72,8 +72,7 @@ Deno.serve(async (req) => {
       closerName,
     } = await req.json()
 
-    const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY')! })
-
+    const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
     const packagesText = Object.entries(PACKAGES)
       .map(
         ([id, p]) =>
@@ -122,13 +121,21 @@ Respond ONLY in this exact JSON format, no markdown, no code blocks:
   "upsell_path": "One sentence — how to move them up a tier if they're open to it"
 }`
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1000,
-      messages: [{ role: 'user', content: prompt }],
-    })
-
-    const rawText = message.content[0].type === 'text' ? message.content[0].text.trim() : '{}'
+    let rawText = '{}'
+    if (apiKey) {
+      try {
+        const anthropic = new Anthropic({ apiKey })
+        const message = await anthropic.messages.create({
+          model: 'claude-haiku-4-5',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }],
+        })
+        rawText = message.content[0].type === 'text' ? message.content[0].text.trim() : '{}'
+      } catch (apiErr) {
+        // Credits depleted or API error — fall through to fallback
+        console.warn('[recommend-stack] API error, using fallback:', String(apiErr))
+      }
+    }
 
     let rec: Record<string, unknown>
     try {
@@ -142,8 +149,8 @@ Respond ONLY in this exact JSON format, no markdown, no code blocks:
       }
     }
 
-    // Fallback if parse fails
-    if (!rec) {
+    // Fallback if parse fails or API unavailable
+    if (!rec || !rec.recommended_tier) {
       const laborCost = parseFloat(String(monthlyLaborCost || '0'))
       let fallbackTier: PackageKey = 'pro'
       if (laborCost < 3000) fallbackTier = 'basic'
