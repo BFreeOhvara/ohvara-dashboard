@@ -21,14 +21,26 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// ── Allowed job titles (only these 13 pass through) ──────────────────────────
+// ── Allowed job titles (only these 28 pass through) ──────────────────────────
 // 'customer service' intentionally matches "Customer Service Representative",
 // "Customer Service Rep", etc.
+// Titles 14-16 map to Review Generation (Product 3) — businesses posting these want more Google reviews
+// Titles 17-18 map to Lead Follow-Up Automation (Product 4) — quotes going cold, no one chasing leads
+// Titles 19-22 map to Appointment Reminders (Product 5) — no-shows killing their schedule
+// Titles 23-26 map to AI Dispatcher (Product 6) — hotshot/towing/oilfield post these instead of "dispatcher"
+// Titles 27-28 map to SMS Marketing/Reactivation (Product 7) — dead customer list they want to reactivate
 const ALLOWED_JOB_TITLES = [
   'receptionist', 'dispatcher', 'office manager', 'administrative assistant',
   'customer service', 'front desk', 'scheduler', 'answering service',
   'call center', 'phone support', 'office coordinator', 'bookkeeper',
   'customer support',
+  'marketing assistant', 'social media coordinator', 'reputation manager',
+  'lead coordinator', 'sales support',
+  'appointment coordinator', 'scheduling coordinator', 'job coordinator',
+  'booking coordinator',
+  'logistics coordinator', 'route coordinator', 'operations coordinator',
+  'estimator assistant',
+  'customer retention', 'outreach coordinator',
 ]
 
 function isTitleAllowed(title: string): boolean {
