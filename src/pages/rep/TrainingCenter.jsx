@@ -30,22 +30,49 @@ const CATEGORY_FILTERS = [
 
 // The discovery script reps study before practicing. Static content —
 // the personalized version is generated per-lead in the Call Now modal.
+// color/dim/border values mirror SECTIONS in CallModal.jsx exactly — the rep
+// must see the same color system in Training and on a live call.
 const DISCOVERY_SCRIPT = [
   {
     id: 'opener',
     title: 'Opener',
     goal: 'Survive the first 10 seconds. Sound like a peer, not a telemarketer.',
-    lines: [
-      `"Hey, is this [Business Name]? [First name]? Perfect — I'll be quick, I know you're mid-day."`,
-      `"I was looking at your Indeed listing for the [role] position — how's that search going?"`,
-      `If no Indeed listing: "I work with [niche] owners in [city] — quick question, are you the one who handles the phones when the crew's out on jobs?"`,
+    color: 'var(--accent)',  dim: 'rgba(108,99,255,0.08)',  border: 'rgba(108,99,255,0.25)',
+    variations: [
+      {
+        label: `📞 Indeed — Phone Coverage Lead`,
+        lines: [
+          `"Hey, is this [Business Name]? [First name]? Perfect — I'll be quick, I know you're mid-day."`,
+          `"I was looking at your Indeed listing for the [receptionist/front desk/phone] position — how's that search going?"`,
+          `If no Indeed listing: "I work with [niche] owners in [city] — quick question, are you the one who handles the phones when the crew's out on jobs?"`,
+        ],
+        tips: 'Slow down. Lower your tone. The goal of the opener is not to pitch — it is to earn the next 30 seconds.',
+      },
+      {
+        label: `🚛 Indeed — Dispatcher/Coordinator Lead`,
+        lines: [
+          `"Hey, is this [Business Name]? [First name]? Perfect — super quick."`,
+          `"I saw you're looking for a [dispatcher/coordinator/logistics] — is that because scheduling and routing calls is eating up your day?"`,
+          `If no Indeed listing: "I work with [niche] owners in [city] — quick question, who's handling your dispatch and scheduling calls right now?"`,
+        ],
+        tips: `They posted the job because they're drowning in coordination. Let them say it — don't say it for them.`,
+      },
+      {
+        label: `🗺️ Maps — No Website / Low Reviews Lead`,
+        lines: [
+          `"Hey, is this [Business Name]? [First name]? Perfect — real quick."`,
+          `"I was actually looking at your Google listing — are you the owner?"`,
+          `"Quick question — when someone finds you on Google and wants to reach out, where are they going right now?"`,
+        ],
+        tips: `They don't know they have a problem until you make them picture it. A customer who can't find your website calls your competitor instead.`,
+      },
     ],
-    tips: 'Slow down. Lower your tone. The goal of the opener is not to pitch — it is to earn the next 30 seconds.',
   },
   {
     id: 'discovery',
     title: 'Problem Discovery',
     goal: 'Get them talking about missed calls and lost jobs. Ask, then shut up.',
+    color: 'var(--info)',    dim: 'rgba(56,189,248,0.08)',  border: 'rgba(56,189,248,0.25)',
     lines: [
       `"When a customer calls and everyone's on a job — what happens to that call?"`,
       `"Roughly how many calls a week would you say go to voicemail?"`,
@@ -57,6 +84,7 @@ const DISCOVERY_SCRIPT = [
     id: 'pain',
     title: 'Pain Amplification',
     goal: 'Turn "yeah we miss some calls" into a dollar figure they can feel.',
+    color: 'var(--warning)', dim: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.25)',
     lines: [
       `"Let's do quick math — if you're missing 8 calls a week and even 3 of those are real jobs at, what, $400 each? That's close to $5K a month walking to a competitor."`,
       `"And that's not counting the after-hours calls. What happens when someone calls at 7pm with a burst pipe?"`,
@@ -68,6 +96,7 @@ const DISCOVERY_SCRIPT = [
     id: 'objections',
     title: 'Objection Handling',
     goal: 'Acknowledge, reframe, ask one more question. Never argue.',
+    color: 'var(--danger)',  dim: 'rgba(239,68,68,0.08)',   border: 'rgba(239,68,68,0.25)',
     lines: [
       `"Not interested" → "Totally fair — most owners say that until they see the missed-call math. One question and I'll let you go: what happens to a call you can't answer right now?"`,
       `"Too busy" → "That's exactly why I called. This takes 15 minutes and it's about getting you hours back, not taking them."`,
@@ -80,6 +109,7 @@ const DISCOVERY_SCRIPT = [
     id: 'close',
     title: 'Close / Book',
     goal: 'Ask for the 15-minute call. Offer two times. Confirm and get off the phone.',
+    color: 'var(--success)', dim: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.25)',
     lines: [
       `"Look, I don't want to eat up your morning. Let's do a quick 15-minute call this week — I'll show you exactly how many calls you're missing and what they're worth."`,
       `"Does Tuesday afternoon or Thursday morning work better?"`,
@@ -562,19 +592,28 @@ function DiscoveryScript() {
         <div
           key={section.id}
           className="glass"
-          style={{ padding: '20px 22px', marginBottom: 16, borderRadius: 12 }}
+          style={{
+            padding: '20px 22px', marginBottom: 16, borderRadius: 12,
+            // Same color treatment as the Call Now modal SECTIONS cards
+            background: section.dim,
+            border: `0.5px solid ${section.border}`,
+            borderLeft: `3px solid ${section.color}`,
+          }}
         >
           {/* Section header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <span style={{
               width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-              background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
+              background: section.dim, border: `0.5px solid ${section.border}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--accent)', fontWeight: 600,
+              fontSize: 12, fontFamily: 'var(--font-mono)', color: section.color, fontWeight: 600,
             }}>
               {i + 1}
             </span>
-            <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
+            <h2 style={{
+              fontSize: 15, fontWeight: 500, color: section.color, margin: 0,
+              textTransform: 'uppercase', letterSpacing: '0.06em',
+            }}>
               {section.title}
             </h2>
           </div>
@@ -584,31 +623,74 @@ function DiscoveryScript() {
             Goal: {section.goal}
           </p>
 
-          {/* Script lines */}
-          <div style={{ marginLeft: 34, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {section.lines.map((line, j) => (
-              <p key={j} style={{
-                fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0,
-                padding: '10px 14px',
-                background: 'var(--bg-elevated)', borderRadius: 8,
-                borderLeft: '2px solid var(--accent-border)',
-              }}>
-                {line}
-              </p>
-            ))}
-          </div>
+          {section.variations ? (
+            /* Opener: 3 labeled variations — one per entry point. Stacked column = mobile safe. */
+            <div style={{ marginLeft: 34, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {section.variations.map((v, k) => (
+                <div key={k} style={{
+                  border: `0.5px solid ${section.border}`,
+                  borderRadius: 10, padding: '14px 16px',
+                  background: 'var(--bg-surface)',
+                }}>
+                  <p style={{
+                    fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.09em',
+                    color: section.color, margin: '0 0 10px', fontWeight: 600,
+                  }}>
+                    {v.label}
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {v.lines.map((line, j) => (
+                      <p key={j} style={{
+                        fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0,
+                        padding: '10px 14px',
+                        background: 'var(--bg-elevated)', borderRadius: 8,
+                        borderLeft: `2px solid ${section.border}`,
+                      }}>
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                  <div style={{
+                    marginTop: 10, padding: '8px 12px',
+                    background: 'rgba(245,158,11,0.06)', border: '0.5px solid rgba(245,158,11,0.18)',
+                    borderRadius: 8,
+                  }}>
+                    <p style={{ fontSize: 12, color: 'var(--warning)', margin: 0, lineHeight: 1.6 }}>
+                      Coach's note: {v.tips}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              {/* Script lines */}
+              <div style={{ marginLeft: 34, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {section.lines.map((line, j) => (
+                  <p key={j} style={{
+                    fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0,
+                    padding: '10px 14px',
+                    background: 'var(--bg-elevated)', borderRadius: 8,
+                    borderLeft: `2px solid ${section.border}`,
+                  }}>
+                    {line}
+                  </p>
+                ))}
+              </div>
 
-          {/* Coaching tip */}
-          <div style={{
-            marginLeft: 34, marginTop: 12,
-            padding: '8px 12px',
-            background: 'rgba(245,158,11,0.06)', border: '0.5px solid rgba(245,158,11,0.18)',
-            borderRadius: 8,
-          }}>
-            <p style={{ fontSize: 12, color: 'var(--warning)', margin: 0, lineHeight: 1.6 }}>
-              Coach's note: {section.tips}
-            </p>
-          </div>
+              {/* Coaching tip */}
+              <div style={{
+                marginLeft: 34, marginTop: 12,
+                padding: '8px 12px',
+                background: 'rgba(245,158,11,0.06)', border: '0.5px solid rgba(245,158,11,0.18)',
+                borderRadius: 8,
+              }}>
+                <p style={{ fontSize: 12, color: 'var(--warning)', margin: 0, lineHeight: 1.6 }}>
+                  Coach's note: {section.tips}
+                </p>
+              </div>
+            </>
+          )}
         </div>
       ))}
     </div>
