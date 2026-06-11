@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   ChevronDown, ChevronUp, MapPin, Phone, Mail, Sparkles, Loader2,
-  Calendar, Bell, Zap, DollarSign, Target, MessageSquare, TrendingUp,
+  Calendar, Bell, Zap, DollarSign, Target, MessageSquare,
   CheckCircle, AlertTriangle,
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
@@ -11,12 +11,57 @@ import { useUpdateAppointment } from '../../hooks/useAppointments'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
 
-// Package display config — matches North Star locked pricing
+// Package display config — matches North Star locked pricing.
+// services mirror the recommend-stack edge function PACKAGES (Elite itemized in full).
 const PACKAGES = {
-  basic:   { name: 'Basic',   setup: 497, monthly: 497,  color: 'var(--info)',    dim: 'var(--info-dim)',    border: 'rgba(56,189,248,0.20)' },
-  pro:     { name: 'Pro',     setup: 497, monthly: 797,  color: 'var(--accent)',  dim: 'var(--accent-dim)', border: 'var(--accent-border)' },
-  premium: { name: 'Premium', setup: 497, monthly: 1297, color: 'var(--success)', dim: 'var(--success-dim)', border: 'rgba(34,197,94,0.20)' },
-  elite:   { name: 'Elite',   setup: 497, monthly: 1797, color: 'var(--warning)', dim: 'var(--warning-dim)', border: 'rgba(245,158,11,0.20)' },
+  basic: {
+    name: 'Basic', setup: 497, monthly: 497,
+    color: 'var(--info)', dim: 'var(--info-dim)', border: 'rgba(56,189,248,0.20)',
+    services: ['AI Receptionist (24/7)', 'Missed Call Text Back'],
+  },
+  pro: {
+    name: 'Pro', setup: 497, monthly: 797,
+    color: 'var(--accent)', dim: 'var(--accent-dim)', border: 'var(--accent-border)',
+    services: [
+      'AI Receptionist (24/7)', 'Missed Call Text Back', 'Review Generation',
+      'Lead Follow-Up Automation', 'Appointment Reminders',
+    ],
+  },
+  premium: {
+    name: 'Premium', setup: 497, monthly: 1297,
+    color: 'var(--success)', dim: 'var(--success-dim)', border: 'rgba(34,197,94,0.20)',
+    services: [
+      'AI Receptionist (24/7)', 'Missed Call Text Back', 'Review Generation',
+      'Lead Follow-Up Automation', 'Appointment Reminders', 'AI Dispatcher', 'SMS Marketing',
+    ],
+  },
+  elite: {
+    name: 'Elite', setup: 497, monthly: 1797,
+    color: 'var(--warning)', dim: 'var(--warning-dim)', border: 'rgba(245,158,11,0.20)',
+    services: [
+      'AI Receptionist (24/7)', 'Missed Call Text Back', 'Review Generation',
+      'Lead Follow-Up Automation', 'Appointment Reminders', 'AI Dispatcher', 'SMS Marketing',
+      'Professional Website', 'Multiple AI agents (up to 5 lines)', 'Priority support',
+      'Custom reporting dashboard',
+    ],
+  },
+}
+
+const TIER_ORDER = ['basic', 'pro', 'premium', 'elite']
+
+// Itemized checklist shown inside every tier card
+function ServiceChecklist({ tier, compact = false }) {
+  const p = PACKAGES[tier]
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? 4 : 6, margin: '10px 0' }}>
+      {p.services.map((s, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
+          <CheckCircle size={compact ? 11 : 12} style={{ color: p.color, flexShrink: 0, marginTop: 2 }} />
+          <span style={{ fontSize: compact ? 12 : 13, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{s}</span>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function PackageBadge({ tier, size = 'sm' }) {
@@ -61,6 +106,13 @@ export function AppointmentCard({ appt }) {
   useEffect(() => {
     if (!lead) return
     if (!rec && !recLoading) loadRecommendation()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pre-generate Stripe links for ALL 4 tiers so every card is one click from payment.
+  // silent=true: a failure just leaves that tier's Generate button as fallback.
+  useEffect(() => {
+    if (!lead) return
+    TIER_ORDER.forEach(tier => handleStripeLinks(tier, { silent: true }))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadRecommendation() {
@@ -117,7 +169,7 @@ export function AppointmentCard({ appt }) {
     }
   }
 
-  async function handleStripeLinks(tier) {
+  async function handleStripeLinks(tier, { silent = false } = {}) {
     if (stripeLoading[tier]) return
     setStripeLoading(prev => ({ ...prev, [tier]: true }))
     try {
@@ -132,9 +184,8 @@ export function AppointmentCard({ appt }) {
       if (error || !data) throw new Error(error?.message || 'No links returned')
       setStripeLinks(prev => ({ ...prev, [tier]: { setup: data.setupLink, monthly: data.monthlyLink } }))
     } catch {
-      // Fallback — open Stripe dashboard
-      const p = PACKAGES[tier]
-      window.open(`https://dashboard.stripe.com/payment-links/create`, '_blank', 'noopener')
+      // Fallback — open Stripe dashboard, but only on an explicit click
+      if (!silent) window.open(`https://dashboard.stripe.com/payment-links/create`, '_blank', 'noopener')
     } finally {
       setStripeLoading(prev => ({ ...prev, [tier]: false }))
     }
@@ -172,6 +223,16 @@ export function AppointmentCard({ appt }) {
   }
 
   const isClosed = appt.status === 'completed' && appt.outcome === 'closed'
+
+  // RLS can hide the lead row (closer sees leads only when assigned_closer_id matches).
+  // Render a quiet placeholder instead of crashing the whole appointment queue.
+  if (!lead) {
+    return (
+      <div className="glass" style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-muted)' }}>
+        Appointment {appt.id?.slice(0, 8)} — lead not visible to this account
+      </div>
+    )
+  }
 
   return (
     <div className="glass" style={{ overflow: 'hidden', marginBottom: 0 }}>
@@ -239,6 +300,28 @@ export function AppointmentCard({ appt }) {
             </div>
           )}
 
+          {/* ── Closer Notes + Outcome — ABOVE packages: capture the call, then pick the tier ── */}
+          <div style={{ padding: '16px 16px 0' }}>
+            <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Closer notes…" />
+            <div style={{ display: 'flex', gap: 10, marginTop: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+              <Select value={outcome} onChange={e => setOutcome(e.target.value)} style={{ flex: '1 1 140px' }}>
+                <option value="">Mark outcome…</option>
+                <option value="closed">Closed</option>
+                <option value="lost">Lost</option>
+                <option value="no_show">No Show</option>
+              </Select>
+              {outcome === 'closed' && (
+                <Input type="number" value={dealValue} onChange={e => setDealValue(e.target.value)} placeholder="Deal value ($)" style={{ flex: '0 0 140px' }} />
+              )}
+              {outcome && outcome !== 'closed' && (
+                <Input value={lossReason} onChange={e => setLossReason(e.target.value)} placeholder="Loss reason…" style={{ flex: '1 1 180px' }} />
+              )}
+              <Button size="sm" onClick={handleComplete} disabled={!outcome || update.isPending}>
+                {update.isPending ? 'Saving…' : 'Save Outcome'}
+              </Button>
+            </div>
+          </div>
+
           {/* ── AI RECOMMENDATION PANEL — DOMINANT ───────────────────────── */}
           <div style={{ padding: '16px 16px 0' }}>
             {recLoading && !rec ? (
@@ -298,27 +381,8 @@ export function AppointmentCard({ appt }) {
             )}
           </div>
 
-          {/* ── Closer Notes + Outcome ───────────────────────────────────────── */}
-          <div style={{ padding: '16px 16px 16px' }}>
-            <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Closer notes…" />
-            <div style={{ display: 'flex', gap: 10, marginTop: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-              <Select value={outcome} onChange={e => setOutcome(e.target.value)} style={{ flex: '1 1 140px' }}>
-                <option value="">Mark outcome…</option>
-                <option value="closed">Closed</option>
-                <option value="lost">Lost</option>
-                <option value="no_show">No Show</option>
-              </Select>
-              {outcome === 'closed' && (
-                <Input type="number" value={dealValue} onChange={e => setDealValue(e.target.value)} placeholder="Deal value ($)" style={{ flex: '0 0 140px' }} />
-              )}
-              {outcome && outcome !== 'closed' && (
-                <Input value={lossReason} onChange={e => setLossReason(e.target.value)} placeholder="Loss reason…" style={{ flex: '1 1 180px' }} />
-              )}
-              <Button size="sm" onClick={handleComplete} disabled={!outcome || update.isPending}>
-                {update.isPending ? 'Saving…' : 'Save Outcome'}
-              </Button>
-            </div>
-          </div>
+          {/* bottom padding under the package cards */}
+          <div style={{ height: 16 }} />
         </div>
       )}
     </div>
@@ -332,17 +396,39 @@ function RecommendationPanel({
   stripeLinks, stripeLoading, onMarkClosed, onStripeLinks,
 }) {
   const primary = PACKAGES[rec.recommended_tier]
-  const alt = PACKAGES[rec.alternative_tier]
 
-  // The three alternatives (all packages except the recommended one)
-  const allTiers = ['basic', 'pro', 'premium', 'elite']
-  const alternatives = allTiers.filter(t => t !== rec.recommended_tier)
+  // Directional ordering: recommended first, then nearest tier above (upsell),
+  // nearest tier below (fallback), then the remaining tiers by distance.
+  const rIdx = TIER_ORDER.indexOf(rec.recommended_tier)
+  const above = TIER_ORDER.slice(rIdx + 1)                 // higher tiers, nearest first
+  const below = TIER_ORDER.slice(0, rIdx).reverse()        // lower tiers, nearest first
+  const orderedAlternatives = [
+    ...(above[0] ? [{ tier: above[0], label: '⬆️ Upsell Option', direction: 'up' }] : []),
+    ...(below[0] ? [{ tier: below[0], label: '⬇️ Fallback Option', direction: 'down' }] : []),
+    ...above.slice(1).map(t => ({ tier: t, label: '⬆️ Top-Tier Upsell', direction: 'up' })),
+    ...below.slice(1).map(t => ({ tier: t, label: '⬇️ Budget Option', direction: 'down' })),
+  ]
+
+  // One-sentence fit reason per alternative card
+  function reasonFor(tier, direction) {
+    if (tier === rec.alternative_tier && rec.alternative_reason) return rec.alternative_reason
+    if (direction === 'up') {
+      return (tier === 'elite' && rec.upsell_path)
+        ? rec.upsell_path
+        : 'Pitch this if they mention multiple locations, crews, or want the full package.'
+    }
+    return 'Offer this if they hesitate on price — still solves their core problem.'
+  }
 
   return (
     <div style={{ marginBottom: 16 }}>
 
       {/* ── Recommended Package — Dominant ─────────────────────────────────── */}
-      <div className="glass-accent" style={{ padding: 20, borderRadius: 10, marginBottom: 12 }}>
+      <div className="glass-accent" style={{
+        padding: 20, borderRadius: 10, marginBottom: 12,
+        borderTop: `2px solid ${primary?.color || 'var(--accent)'}`,
+        boxShadow: '0 0 0 1px var(--accent-border), 0 0 24px rgba(108,99,255,0.18)',
+      }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -350,6 +436,13 @@ function RecommendationPanel({
             <Zap size={14} style={{ color: 'var(--accent)', flexShrink: 0 }} />
             <span style={{ fontSize: 10, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500 }}>
               AI Recommendation
+            </span>
+            <span style={{
+              fontSize: 10, padding: '2px 7px', borderRadius: 3,
+              background: 'var(--accent)', color: '#fff',
+              fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em',
+            }}>
+              Recommended
             </span>
           </div>
           <span style={{
@@ -363,16 +456,23 @@ function RecommendationPanel({
           </span>
         </div>
 
-        {/* Package name + price */}
+        {/* Package name + price + product count */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 28, fontWeight: 500, color: primary?.color || 'var(--accent)', letterSpacing: '-0.02em', lineHeight: 1, fontFamily: 'var(--font-mono)' }}>
               {primary?.name}
             </span>
-            <span style={{ fontSize: 14, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
-              $497 setup + ${primary?.monthly?.toLocaleString()}/mo
+            <span style={{ fontSize: 18, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
+              ${primary?.monthly?.toLocaleString()}/mo
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+              + $497 setup
+            </span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {primary?.services?.length} products included
             </span>
           </div>
+          <ServiceChecklist tier={rec.recommended_tier} />
           {rec.headline && (
             <p style={{ fontSize: 14, color: 'var(--text-primary)', marginTop: 8, lineHeight: 1.4, fontWeight: 500 }}>
               "{rec.headline}"
@@ -493,18 +593,19 @@ function RecommendationPanel({
         )}
       </div>
 
-      {/* ── Alternative Packages ───────────────────────────────────────────── */}
+      {/* ── Alternative Packages — all expanded, directionally ordered ──────── */}
       <div>
         <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500, marginBottom: 10 }}>
           Alternative Packages
         </p>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {alternatives.map(tier => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {orderedAlternatives.map(({ tier, label, direction }) => (
             <AlternativePackageCard
               key={tier}
               tier={tier}
+              directionLabel={label}
               isAlt={tier === rec.alternative_tier}
-              altReason={rec.alternative_reason}
+              reason={reasonFor(tier, direction)}
               stripeLinks={stripeLinks}
               stripeLoading={stripeLoading}
               onGenerate={onStripeLinks}
@@ -514,55 +615,55 @@ function RecommendationPanel({
             />
           ))}
         </div>
-        {rec.upsell_path && (
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 10, fontStyle: 'italic' }}>
-            <TrendingUp size={11} style={{ display: 'inline', marginRight: 4, color: 'var(--accent)' }} />
-            Upsell: {rec.upsell_path}
-          </p>
-        )}
       </div>
     </div>
   )
 }
 
-function AlternativePackageCard({ tier, isAlt, altReason, stripeLinks, stripeLoading, onGenerate, onMarkClosed, provisionLoading, isClosed }) {
+// Always-expanded tier card: header (name + price + setup + product count),
+// itemized checklist, one-line fit reason, Stripe links, Mark Closed.
+function AlternativePackageCard({ tier, directionLabel, isAlt, reason, stripeLinks, stripeLoading, onGenerate, onMarkClosed, provisionLoading, isClosed }) {
   const p = PACKAGES[tier]
-  const [open, setOpen] = useState(false)
   return (
     <div
       className="glass"
-      style={{ flex: '1 1 140px', minWidth: 130, padding: 12, borderRadius: 8, cursor: 'pointer' }}
-      onClick={() => setOpen(v => !v)}
+      style={{ padding: '14px 16px', borderRadius: 8, borderTop: `2px solid ${p.color}` }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <PackageBadge tier={tier} />
-        {isAlt && <span style={{ fontSize: 9, color: 'var(--warning)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Suggested alt</span>}
-      </div>
-      <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums', marginBottom: 2 }}>
-        ${p.monthly.toLocaleString()}/mo
-      </p>
-      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: open ? 10 : 0 }}>$497 setup</p>
-      {open && (
-        <div onClick={e => e.stopPropagation()}>
-          {isAlt && altReason && (
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8, fontStyle: 'italic' }}>{altReason}</p>
-          )}
-          <StripeButtonRow tier={tier} stripeLinks={stripeLinks} stripeLoading={stripeLoading} onGenerate={onGenerate} compact />
-          <button
-            onClick={() => onMarkClosed(tier)}
-            disabled={provisionLoading || isClosed}
-            style={{
-              width: '100%', height: 32, marginTop: 6,
-              background: 'var(--accent)', color: '#fff',
-              border: 'none', borderRadius: 6, fontSize: 12,
-              cursor: isClosed ? 'not-allowed' : 'pointer',
-              opacity: isClosed ? 0.5 : 1,
-            }}
-          >
-            {provisionLoading ? 'Closing…' : `Close — ${p.name}`}
-          </button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 18, fontWeight: 500, color: p.color, fontFamily: 'var(--font-mono)', letterSpacing: '-0.01em' }}>
+            {p.name}
+          </span>
+          <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
+            ${p.monthly.toLocaleString()}/mo
+          </span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>+ $497 setup</span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.services.length} products included</span>
         </div>
-      )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {isAlt && <span style={{ fontSize: 9, color: 'var(--warning)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Suggested alt</span>}
+          <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{directionLabel}</span>
+        </div>
+      </div>
+
+      <ServiceChecklist tier={tier} compact />
+
+      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 10px', fontStyle: 'italic' }}>{reason}</p>
+
+      <StripeButtonRow tier={tier} stripeLinks={stripeLinks} stripeLoading={stripeLoading} onGenerate={onGenerate} compact />
+      <button
+        onClick={() => onMarkClosed(tier)}
+        disabled={provisionLoading || isClosed}
+        style={{
+          width: '100%', height: 32, marginTop: 6,
+          background: 'var(--accent)', color: '#fff',
+          border: 'none', borderRadius: 6, fontSize: 12,
+          cursor: isClosed ? 'not-allowed' : 'pointer',
+          opacity: isClosed ? 0.5 : 1,
+        }}
+      >
+        {provisionLoading ? 'Closing…' : `Close — ${p.name}`}
+      </button>
     </div>
   )
 }
