@@ -1,6 +1,12 @@
-import { useState } from 'react'
-import { Play, BookOpen, Mic, FileText, Lock, Shuffle, ChevronLeft, ChevronRight, Check, X } from 'lucide-react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { Play, BookOpen, Mic, FileText, Lock, Shuffle, ChevronLeft, ChevronRight, Check, X, ClipboardCheck, Loader2, PhoneOff, RotateCcw, Award } from 'lucide-react'
 import { FLASHCARDS, CATEGORY_LABELS, CATEGORY_COLORS } from '../../data/flashcards'
+import { supabase } from '../../lib/supabase'
+import { useCapability } from '../../contexts/SecretsContext'
+import {
+  useTrainingProgress, useSaveTrainingProgress, trainingChecks, isTrainingComplete,
+  TOTAL_VIDEOS, QUIZ_QUESTIONS, QUIZ_PASS_PCT, ROLEPLAY_PASS_SCORE, ROLEPLAY_PASS_GRADE, gradeFromScore,
+} from '../../hooks/useTraining'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -130,16 +136,28 @@ function shuffle(arr) {
 
 // ── VideoLibrary ──────────────────────────────────────────────────────────────
 
-function VideoLibrary() {
-  const [watched, setWatched]   = useState(() => {
-    try { return JSON.parse(localStorage.getItem(LS_VIDEOS) || '[]') } catch { return [] }
+function VideoLibrary({ progress, saveProgress }) {
+  // Watched state lives in training_progress (it gates lead access);
+  // localStorage stays as a fallback merge for pre-gate completions.
+  const [watched, setWatched] = useState(() => {
+    const fromDb = Array.isArray(progress?.videos_watched) ? progress.videos_watched : []
+    let fromLs = []
+    try { fromLs = JSON.parse(localStorage.getItem(LS_VIDEOS) || '[]') } catch { /* ignore */ }
+    return [...new Set([...fromDb, ...fromLs])]
   })
   const [activeVideo, setActiveVideo] = useState(null)
+
+  // DB row loads async — merge it in when it arrives
+  useEffect(() => {
+    const fromDb = Array.isArray(progress?.videos_watched) ? progress.videos_watched : []
+    if (fromDb.length) setWatched(prev => prev.length === new Set([...prev, ...fromDb]).size ? prev : [...new Set([...prev, ...fromDb])])
+  }, [progress])
 
   function toggleWatched(id) {
     setWatched(prev => {
       const next = prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]
       localStorage.setItem(LS_VIDEOS, JSON.stringify(next))
+      saveProgress({ videos_watched: next })
       return next
     })
   }
@@ -697,10 +715,238 @@ function DiscoveryScript() {
   )
 }
 
-// ── AIRoleplay — Coming Soon ──────────────────────────────────────────────────
-// Voice roleplay ships once RETELL_API_KEY is configured. Intentional locked state.
+// ── QuizTab — 20 questions auto-generated from the flashcard deck ─────────────
+// Pass mark is 85% (17/20). Passing is one of the three lead-unlock checks.
 
-function AIRoleplay() {
+function generateQuiz() {
+  const pool = shuffle(FLASHCARDS).slice(0, QUIZ_QUESTIONS)
+  return pool.map(card => {
+    // 3 distractors — same-category answers first so options read plausibly
+    const sameCat  = FLASHCARDS.filter(c => c.id !== card.id && c.category === card.category)
+    const otherCat = FLASHCARDS.filter(c => c.id !== card.id && c.category !== card.category)
+    const distractors = shuffle([...shuffle(sameCat).slice(0, 3), ...shuffle(otherCat)]).slice(0, 3)
+    return {
+      id: card.id,
+      category: card.category,
+      question: card.front,
+      options: shuffle([
+        { text: card.back, correct: true },
+        ...distractors.map(d => ({ text: d.back, correct: false })),
+      ]),
+    }
+  })
+}
+
+function QuizTab({ progress, saveProgress }) {
+  const [questions, setQuestions] = useState(null) // null = idle screen
+  const [index, setIndex]         = useState(0)
+  const [picked, setPicked]       = useState(null) // option index while showing feedback
+  const [correct, setCorrect]     = useState(0)
+  const [finished, setFinished]   = useState(false)
+
+  const bestPct = progress?.quiz_score != null
+    ? Math.round((progress.quiz_score / (progress.quiz_total || 1)) * 100)
+    : null
+  const passed = !!progress?.quiz_passed_at
+
+  function start() {
+    setQuestions(generateQuiz())
+    setIndex(0)
+    setPicked(null)
+    setCorrect(0)
+    setFinished(false)
+  }
+
+  function pick(i) {
+    if (picked !== null) return
+    setPicked(i)
+    const isRight = questions[index].options[i].correct
+    const nextCorrect = correct + (isRight ? 1 : 0)
+    setCorrect(nextCorrect)
+    setTimeout(() => {
+      if (index + 1 >= questions.length) {
+        finish(nextCorrect)
+      } else {
+        setIndex(v => v + 1)
+        setPicked(null)
+      }
+    }, 900)
+  }
+
+  function finish(finalCorrect) {
+    setFinished(true)
+    const pct = Math.round((finalCorrect / questions.length) * 100)
+    const patch = {}
+    // Keep the best attempt on record
+    if (bestPct === null || pct > bestPct) {
+      patch.quiz_score = finalCorrect
+      patch.quiz_total = questions.length
+    }
+    if (pct >= QUIZ_PASS_PCT && !progress?.quiz_passed_at) {
+      patch.quiz_passed_at = new Date().toISOString()
+    }
+    if (Object.keys(patch).length) saveProgress(patch)
+  }
+
+  // ── Results screen ──
+  if (finished) {
+    const pct = Math.round((correct / questions.length) * 100)
+    const didPass = pct >= QUIZ_PASS_PCT
+    return (
+      <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '48px 24px' }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: '50%',
+          background: didPass ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+          border: `0.5px solid ${didPass ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          margin: '0 auto 18px',
+        }}>
+          {didPass ? <Check size={28} color="var(--success)" /> : <X size={28} color="var(--danger)" />}
+        </div>
+        <p style={{ fontSize: 34, fontFamily: 'var(--font-mono)', fontWeight: 500, color: didPass ? 'var(--success)' : 'var(--danger)', margin: '0 0 4px' }}>
+          {pct}%
+        </p>
+        <p style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 500, margin: '0 0 6px' }}>
+          {correct} / {questions.length} correct — {didPass ? 'Passed!' : `${QUIZ_PASS_PCT}% needed to pass`}
+        </p>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 24px' }}>
+          {didPass
+            ? 'Quiz check complete. This counts toward unlocking your leads.'
+            : 'Review the flashcards and try again — the questions change every attempt.'}
+        </p>
+        <button
+          onClick={start}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            height: 40, padding: '0 20px',
+            background: didPass ? 'var(--bg-surface)' : 'var(--accent)',
+            border: didPass ? '0.5px solid var(--border)' : 'none',
+            borderRadius: 10, fontSize: 13, fontWeight: 500,
+            color: didPass ? 'var(--text-secondary)' : 'white',
+            cursor: 'pointer',
+          }}
+        >
+          <RotateCcw size={14} />
+          {didPass ? 'Take it again' : 'Retry quiz'}
+        </button>
+      </div>
+    )
+  }
+
+  // ── Idle screen ──
+  if (!questions) {
+    return (
+      <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '48px 24px' }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: 16,
+          background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          margin: '0 auto 20px',
+        }}>
+          <ClipboardCheck size={26} color="var(--accent)" />
+        </div>
+        <h2 style={{ fontSize: 19, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 10px', letterSpacing: '-0.01em' }}>
+          Flashcard Quiz
+        </h2>
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 8px' }}>
+          {QUIZ_QUESTIONS} questions drawn at random from the flashcard deck — objections,
+          scripts, and product knowledge. Score {QUIZ_PASS_PCT}% or higher to pass.
+        </p>
+        {bestPct !== null && (
+          <p style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: passed ? 'var(--success)' : 'var(--warning)', margin: '0 0 8px' }}>
+            Best attempt: {bestPct}% {passed && '· Passed ✓'}
+          </p>
+        )}
+        <button
+          onClick={start}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            height: 42, padding: '0 24px', marginTop: 16,
+            background: 'var(--accent)', border: 'none',
+            borderRadius: 10, fontSize: 14, fontWeight: 500, color: 'white',
+            cursor: 'pointer', boxShadow: '0 0 20px rgba(108,99,255,0.25)',
+          }}
+        >
+          <Play size={15} />
+          Start Quiz
+        </button>
+      </div>
+    )
+  }
+
+  // ── Question screen ──
+  const q = questions[index]
+  const catColor = CATEGORY_COLORS[q.category] || 'var(--accent)'
+  return (
+    <div style={{ maxWidth: 640, margin: '0 auto' }}>
+      {/* Progress */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+        <div style={{ flex: 1, height: 4, background: 'var(--bg-elevated)', borderRadius: 2, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${((index + 1) / questions.length) * 100}%`, background: 'var(--accent)', borderRadius: 2, transition: 'width 0.3s ease' }} />
+        </div>
+        <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', flexShrink: 0 }}>
+          {index + 1} / {questions.length}
+        </span>
+      </div>
+
+      {/* Question */}
+      <div className="glass" style={{ borderRadius: 12, padding: '22px 24px', marginBottom: 16 }}>
+        <p style={{
+          fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em',
+          color: catColor, margin: '0 0 8px',
+        }}>
+          {CATEGORY_LABELS[q.category]}
+        </p>
+        <p style={{ fontSize: 16, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>
+          {q.question}
+        </p>
+      </div>
+
+      {/* Options */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {q.options.map((opt, i) => {
+          const showFeedback = picked !== null
+          const isPicked  = picked === i
+          const highlight = showFeedback && (opt.correct || isPicked)
+          const color = !showFeedback ? 'var(--border)'
+            : opt.correct ? 'rgba(34,197,94,0.5)'
+            : isPicked ? 'rgba(239,68,68,0.5)'
+            : 'var(--border)'
+          return (
+            <button
+              key={i}
+              onClick={() => pick(i)}
+              disabled={picked !== null}
+              style={{
+                textAlign: 'left', padding: '13px 16px',
+                background: !showFeedback ? 'var(--bg-surface)'
+                  : opt.correct ? 'rgba(34,197,94,0.08)'
+                  : isPicked ? 'rgba(239,68,68,0.08)'
+                  : 'var(--bg-surface)',
+                border: `0.5px solid ${color}`,
+                borderRadius: 10, cursor: picked === null ? 'pointer' : 'default',
+                fontSize: 13, lineHeight: 1.55,
+                color: highlight
+                  ? (opt.correct ? 'var(--success)' : 'var(--danger)')
+                  : 'var(--text-secondary)',
+                transition: 'all 0.15s',
+                opacity: showFeedback && !highlight ? 0.5 : 1,
+              }}
+            >
+              {opt.text}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── AIRoleplay — live voice practice scored by Claude ─────────────────────────
+// Calls Retell ("Mike", a gruff HVAC owner), transcribes live, and on hang-up
+// sends the transcript to score-roleplay. B+ or higher (9/12) passes the gate.
+
+function RoleplayComingSoon() {
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '56px 24px' }}>
       <div style={{
@@ -757,17 +1003,318 @@ function AIRoleplay() {
   )
 }
 
+function AIRoleplay({ progress, saveProgress }) {
+  const hasRetell = useCapability('has_retell')
+  const [phase, setPhase]           = useState('idle') // idle | connecting | live | scoring | scored | error
+  const [transcript, setTranscript] = useState([])
+  const [score, setScore]           = useState(null)
+  const [error, setError]           = useState('')
+  const clientRef     = useRef(null)
+  const transcriptRef = useRef([])
+  const scrollRef     = useRef(null)
+
+  useEffect(() => () => { clientRef.current?.stopCall?.() }, [])
+
+  // Keep the live transcript pinned to the latest line
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+  }, [transcript])
+
+  async function startCall() {
+    setPhase('connecting')
+    setError('')
+    setTranscript([])
+    transcriptRef.current = []
+    setScore(null)
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke('create-roleplay-call')
+      if (fnError || !data?.access_token) throw new Error(data?.error || fnError?.message || 'Could not start the practice call')
+
+      const { RetellWebClient } = await import('retell-client-js-sdk')
+      // Fresh client per call — reusing one across calls leaks listeners
+      const client = new RetellWebClient()
+      clientRef.current = client
+
+      client.on('call_started', () => setPhase('live'))
+      client.on('update', (update) => {
+        if (update?.transcript?.length) {
+          transcriptRef.current = update.transcript
+          setTranscript(update.transcript)
+        }
+      })
+      client.on('call_ended', () => scoreCall())
+      client.on('error', (e) => {
+        setError(typeof e === 'string' ? e : 'Call dropped — try again')
+        setPhase('error')
+        client.stopCall()
+      })
+
+      await client.startCall({ accessToken: data.access_token })
+    } catch (err) {
+      setError(err.message || 'Could not start the practice call')
+      setPhase('error')
+    }
+  }
+
+  function endCall() {
+    clientRef.current?.stopCall()
+  }
+
+  async function scoreCall() {
+    const finalTranscript = transcriptRef.current
+    if (!finalTranscript.length) {
+      setError('No conversation recorded — make sure your mic is allowed and try again.')
+      setPhase('error')
+      return
+    }
+    setPhase('scoring')
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke('score-roleplay', {
+        body: { transcript: finalTranscript },
+      })
+      if (fnError || !data?.scores) throw new Error(data?.error || fnError?.message || 'Scoring failed')
+
+      const total = data.total ?? 0
+      const grade = gradeFromScore(total)
+      const passedNow = total >= ROLEPLAY_PASS_SCORE
+      setScore({ ...data, grade, passedNow })
+      setPhase('scored')
+
+      const patch = { roleplay_score: total, roleplay_grade: grade }
+      if (passedNow && !progress?.roleplay_passed_at) {
+        patch.roleplay_passed_at = new Date().toISOString()
+      }
+      saveProgress(patch)
+    } catch (err) {
+      setError(err.message || 'Scoring failed — the call still counts, try again for a grade')
+      setPhase('error')
+    }
+  }
+
+  if (!hasRetell) return <RoleplayComingSoon />
+
+  // ── Scorecard ──
+  if (phase === 'scored' && score) {
+    const dims = [
+      { key: 'opener',            label: 'Opener',             max: 2 },
+      { key: 'painDiscovery',     label: 'Pain Discovery',     max: 3 },
+      { key: 'objectionHandling', label: 'Objection Handling', max: 2 },
+      { key: 'bookingAsk',        label: 'Booking Ask',        max: 2 },
+      { key: 'tone',              label: 'Tone',               max: 3 },
+    ]
+    return (
+      <div style={{ maxWidth: 560, margin: '0 auto' }}>
+        <div className="glass" style={{ borderRadius: 14, padding: '28px 28px', textAlign: 'center', marginBottom: 16 }}>
+          <Award size={28} color={score.passedNow ? 'var(--success)' : 'var(--warning)'} style={{ margin: '0 auto 10px' }} />
+          <p style={{ fontSize: 40, fontFamily: 'var(--font-mono)', fontWeight: 500, margin: '0 0 2px', color: score.passedNow ? 'var(--success)' : 'var(--warning)' }}>
+            {score.grade}
+          </p>
+          <p style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', margin: '0 0 10px' }}>
+            {score.total} / {score.maxTotal ?? 12}
+          </p>
+          <p style={{ fontSize: 13, color: score.passedNow ? 'var(--success)' : 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>
+            {score.passedNow
+              ? 'Roleplay check passed — this counts toward unlocking your leads.'
+              : `${ROLEPLAY_PASS_GRADE} (${ROLEPLAY_PASS_SCORE}/12) or higher passes. Run it again — Mike's always up for round two.`}
+          </p>
+        </div>
+
+        {/* Dimension bars */}
+        <div className="glass" style={{ borderRadius: 12, padding: '18px 20px', marginBottom: 16 }}>
+          {dims.map(d => (
+            <div key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+              <span style={{ flex: '0 0 150px', fontSize: 12, color: 'var(--text-secondary)' }}>{d.label}</span>
+              <div style={{ flex: 1, height: 5, background: 'var(--bg-elevated)', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${((score.scores?.[d.key] ?? 0) / d.max) * 100}%`,
+                  background: 'var(--accent)', borderRadius: 3,
+                }} />
+              </div>
+              <span style={{ flex: '0 0 34px', fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', textAlign: 'right' }}>
+                {score.scores?.[d.key] ?? 0}/{d.max}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {score.summary && (
+          <div className="glass" style={{ borderRadius: 12, padding: '16px 20px', marginBottom: 16 }}>
+            <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 6px' }}>Coach's Assessment</p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>{score.summary}</p>
+            {score.tips?.length > 0 && (
+              <ul style={{ margin: '10px 0 0', paddingLeft: 18 }}>
+                {score.tips.map((tip, i) => (
+                  <li key={i} style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>{tip}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        <div style={{ textAlign: 'center' }}>
+          <button
+            onClick={startCall}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              height: 42, padding: '0 24px',
+              background: 'var(--accent)', border: 'none',
+              borderRadius: 10, fontSize: 14, fontWeight: 500, color: 'white', cursor: 'pointer',
+            }}
+          >
+            <Mic size={15} />
+            Practice Again
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Live call / connecting / scoring ──
+  if (phase === 'connecting' || phase === 'live' || phase === 'scoring') {
+    return (
+      <div style={{ maxWidth: 560, margin: '0 auto' }}>
+        <div className="glass" style={{ borderRadius: 14, padding: '20px 22px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+            background: phase === 'live' ? 'rgba(34,197,94,0.12)' : 'var(--accent-dim)',
+            border: `0.5px solid ${phase === 'live' ? 'rgba(34,197,94,0.35)' : 'var(--accent-border)'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {phase === 'live'
+              ? <Mic size={18} color="var(--success)" />
+              : <Loader2 size={18} color="var(--accent)" style={{ animation: 'spin 1s linear infinite' }} />}
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
+              {phase === 'connecting' ? 'Dialing Mike…' : phase === 'live' ? 'Live — Mike picked up' : 'Scoring your call…'}
+            </p>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>
+              {phase === 'scoring' ? 'Claude is reviewing the transcript' : 'HVAC owner · Dallas, TX · gruff but winnable'}
+            </p>
+          </div>
+          {phase === 'live' && (
+            <button
+              onClick={endCall}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                height: 36, padding: '0 14px',
+                background: 'var(--danger)', border: 'none',
+                borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer',
+              }}
+            >
+              <PhoneOff size={13} />
+              End Call
+            </button>
+          )}
+        </div>
+
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+
+        {/* Live transcript */}
+        <div
+          ref={scrollRef}
+          className="glass scrollbar-thin"
+          style={{ borderRadius: 12, padding: '16px 18px', height: 320, overflowY: 'auto' }}
+        >
+          {transcript.length === 0 ? (
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', marginTop: 130 }}>
+              {phase === 'live' ? 'Say hello — Mike answered.' : 'Transcript appears here once the call connects.'}
+            </p>
+          ) : (
+            transcript.map((t, i) => (
+              <div key={i} style={{ marginBottom: 10, display: 'flex', flexDirection: 'column', alignItems: t.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 2 }}>
+                  {t.role === 'user' ? 'You' : 'Mike'}
+                </span>
+                <p style={{
+                  fontSize: 13, lineHeight: 1.55, margin: 0, maxWidth: '85%',
+                  padding: '8px 12px', borderRadius: 10,
+                  background: t.role === 'user' ? 'var(--accent-dim)' : 'var(--bg-elevated)',
+                  border: `0.5px solid ${t.role === 'user' ? 'var(--accent-border)' : 'var(--border)'}`,
+                  color: 'var(--text-secondary)',
+                }}>
+                  {t.content}
+                </p>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Idle / error ──
+  return (
+    <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '48px 24px' }}>
+      <div style={{
+        width: 64, height: 64, borderRadius: 16,
+        background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        margin: '0 auto 20px',
+      }}>
+        <Mic size={26} color="var(--accent)" />
+      </div>
+      <h2 style={{ fontSize: 19, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 10px', letterSpacing: '-0.01em' }}>
+        AI Voice Roleplay
+      </h2>
+      <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 10px' }}>
+        Cold-call Mike — a busy HVAC owner in Dallas who's been burned by software
+        before. Open clean, dig into his missed-call pain, survive one objection,
+        and book the 15-minute call. Claude grades the whole conversation.
+      </p>
+      <p style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: progress?.roleplay_passed_at ? 'var(--success)' : 'var(--text-muted)', margin: '0 0 6px' }}>
+        {progress?.roleplay_grade
+          ? `Last grade: ${progress.roleplay_grade}${progress.roleplay_passed_at ? ' · Passed ✓' : ''}`
+          : `Pass mark: ${ROLEPLAY_PASS_GRADE} or higher`}
+      </p>
+      {error && (
+        <p style={{ fontSize: 12, color: 'var(--danger)', margin: '8px 0 0', lineHeight: 1.5 }}>{error}</p>
+      )}
+      <button
+        onClick={startCall}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          height: 42, padding: '0 24px', marginTop: 18,
+          background: 'var(--accent)', border: 'none',
+          borderRadius: 10, fontSize: 14, fontWeight: 500, color: 'white',
+          cursor: 'pointer', boxShadow: '0 0 20px rgba(108,99,255,0.25)',
+        }}
+      >
+        <Mic size={15} />
+        Start Practice Call
+      </button>
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 14 }}>
+        Uses your microphone — allow access when the browser asks.
+      </p>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}
+
 // ── Main Training Center page ─────────────────────────────────────────────────
 
 const TABS = [
-  { id: 'script',     label: 'Script',      icon: FileText, count: null },
-  { id: 'videos',     label: 'Videos',      icon: Play,     count: `${TRAINING_VIDEOS.length} videos` },
-  { id: 'flashcards', label: 'Flashcards',  icon: BookOpen, count: `${FLASHCARDS.length} cards` },
-  { id: 'roleplay',   label: 'AI Roleplay', icon: Mic,      count: null },
+  { id: 'script',     label: 'Script',      icon: FileText,       count: null },
+  { id: 'videos',     label: 'Videos',      icon: Play,           count: `${TRAINING_VIDEOS.length} videos` },
+  { id: 'flashcards', label: 'Flashcards',  icon: BookOpen,       count: `${FLASHCARDS.length} cards` },
+  { id: 'quiz',       label: 'Quiz',        icon: ClipboardCheck, count: null },
+  { id: 'roleplay',   label: 'AI Roleplay', icon: Mic,            count: null },
 ]
 
 export default function TrainingCenter() {
   const [tab, setTab] = useState('script')
+  const { data: progress } = useTrainingProgress()
+  const saveMutation = useSaveTrainingProgress()
+  const saveProgress = (patch) => saveMutation.mutate(patch)
+
+  const checks   = trainingChecks(progress)
+  const complete = isTrainingComplete(progress)
+  const gateSteps = [
+    { label: `Videos ${checks.videosWatched}/${TOTAL_VIDEOS}`, done: checks.videosDone,   goTab: 'videos' },
+    { label: `Quiz ${QUIZ_PASS_PCT}%+`,                        done: checks.quizDone,     goTab: 'quiz' },
+    { label: `Roleplay ${ROLEPLAY_PASS_GRADE}+`,               done: checks.roleplayDone, goTab: 'roleplay' },
+  ]
 
   return (
     <div>
@@ -777,9 +1324,42 @@ export default function TrainingCenter() {
           Training Center
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-          Videos, flashcards, the discovery script, and AI voice roleplay
+          Videos, flashcards, the discovery script, quiz, and AI voice roleplay
         </p>
       </div>
+
+      {/* Unlock progress — shown until all three gate checks pass */}
+      {!complete && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+          background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
+          borderRadius: 10, padding: '10px 16px', marginBottom: 20,
+        }}>
+          <Lock size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>
+            Complete all three to unlock your leads:
+          </span>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {gateSteps.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => setTab(s.goTab)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '4px 10px', borderRadius: 6,
+                  background: s.done ? 'rgba(34,197,94,0.1)' : 'var(--bg-surface)',
+                  border: `0.5px solid ${s.done ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`,
+                  fontSize: 11, fontWeight: 500, cursor: 'pointer',
+                  color: s.done ? 'var(--success)' : 'var(--text-secondary)',
+                }}
+              >
+                {s.done ? <Check size={11} /> : <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--text-dim)' }} />}
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Tab bar */}
       <div style={{
@@ -823,10 +1403,11 @@ export default function TrainingCenter() {
       </div>
 
       {/* Tab content */}
-      {tab === 'videos'     && <VideoLibrary />}
+      {tab === 'videos'     && <VideoLibrary progress={progress} saveProgress={saveProgress} />}
       {tab === 'flashcards' && <FlashcardDeck />}
+      {tab === 'quiz'       && <QuizTab progress={progress} saveProgress={saveProgress} />}
       {tab === 'script'     && <DiscoveryScript />}
-      {tab === 'roleplay'   && <AIRoleplay />}
+      {tab === 'roleplay'   && <AIRoleplay progress={progress} saveProgress={saveProgress} />}
     </div>
   )
 }

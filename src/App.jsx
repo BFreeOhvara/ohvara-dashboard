@@ -36,7 +36,9 @@ import Users from './pages/admin/Users'
 import Commissions from './pages/admin/Commissions'
 
 const qc = new QueryClient({
-  defaultOptions: { queries: { staleTime: 30000, retry: 1 } },
+  // refetchOnWindowFocus off: tabbing back must be silent — fresh data
+  // arrives via explicit invalidations, not a focus-triggered refetch wave.
+  defaultOptions: { queries: { staleTime: 30000, retry: 1, refetchOnWindowFocus: false } },
 })
 
 function RoleRedirect() {

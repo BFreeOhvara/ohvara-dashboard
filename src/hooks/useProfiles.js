@@ -80,6 +80,33 @@ export function useDeleteUser() {
 
 const BOOKED_OUTCOMES = ['Booked', 'Appointment Booked']
 
+// Today's KPI counters for the rep dashboard — sourced from the calls
+// table with a UTC-midnight cutoff, so all three (calls, bookings,
+// booking rate) reset at 00:00 UTC alongside the daily batch cron.
+export function useTodayCallStats(repId) {
+  return useQuery({
+    queryKey: ['stats', repId, 'today'],
+    staleTime: 0,
+    queryFn: async () => {
+      const utcMidnight = new Date().toISOString().split('T')[0] + 'T00:00:00Z'
+      const { data, error } = await supabase
+        .from('calls')
+        .select('id, outcome')
+        .eq('rep_id', repId)
+        .gte('created_at', utcMidnight)
+      if (error) throw error
+      const calls  = data?.length || 0
+      const booked = (data || []).filter(c => BOOKED_OUTCOMES.includes(c.outcome)).length
+      return {
+        calls,
+        booked,
+        bookingRate: calls ? Math.round((booked / calls) * 100) : 0,
+      }
+    },
+    enabled: !!repId,
+  })
+}
+
 export function useRepStats(repId, period = 'week') {
   return useQuery({
     queryKey: ['stats', repId, period],

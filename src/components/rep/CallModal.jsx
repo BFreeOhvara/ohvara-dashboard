@@ -10,7 +10,7 @@ import { Badge } from '../ui/Badge'
 // `note` tells the rep exactly where the lead routes (pipeline behavior).
 const STATUS_OPTIONS = [
   { value: 'New',                color: '#38BDF8', dim: 'rgba(56,189,248,0.10)',  border: 'rgba(56,189,248,0.35)', note: null },
-  { value: 'Appointment Booked', color: '#22C55E', dim: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.35)',  note: 'Sent to the closer pipeline' },
+  { value: 'Appointment Booked', color: '#22C55E', dim: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.35)',  note: 'Sent to the closer pipeline — set the appointment time below' },
   { value: 'No Answer',          color: '#94A3B8', dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.35)', note: 'Back in rotation tomorrow — redistributed to the team after 24h' },
   { value: 'Not Interested',     color: '#EF4444', dim: 'rgba(239,68,68,0.10)',   border: 'rgba(239,68,68,0.35)',  note: 'Removed permanently — never contacted again' },
   { value: 'Follow-Up',          color: '#F59E0B', dim: 'rgba(245,158,11,0.10)',  border: 'rgba(245,158,11,0.35)', note: 'Returns to your list on your chosen date' },
@@ -90,6 +90,7 @@ export function CallModal({ lead, onClose }) {
   const [preCallNotes, setPreCallNotes] = useState(lead.pre_call_notes || '')
   const [followUpAt, setFollowUpAt]   = useState(toDatetimeLocal(lead.follow_up_at))
   const [followUpNotes, setFollowUpNotes] = useState(lead.follow_up_notes || '')
+  const [appointmentAt, setAppointmentAt] = useState(toDatetimeLocal(lead.appointment_at))
   const [closing, setClosing]         = useState(false)
   const [doneError, setDoneError]     = useState('')
   const dropdownRef = useRef(null)
@@ -187,6 +188,10 @@ export function CallModal({ lead, onClose }) {
       if (status === 'Follow-Up') {
         patch.follow_up_at    = followUpAt ? new Date(followUpAt).toISOString() : null
         patch.follow_up_notes = followUpNotes || null
+      }
+      if (status === 'Appointment Booked') {
+        // The pipeline trigger syncs an appointments row for the closer
+        patch.appointment_at = appointmentAt ? new Date(appointmentAt).toISOString() : null
       }
       const { error } = await supabase.from('leads').update(patch).eq('id', lead.id)
       if (error) throw error
@@ -381,10 +386,42 @@ export function CallModal({ lead, onClose }) {
                 <p style={{ fontSize: 11, color: selected.color, margin: '5px 0 0', opacity: 0.9 }}>
                   {status === 'Follow-Up' && followUpAt
                     ? `Returns to your list on ${new Date(followUpAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+                    : status === 'Appointment Booked' && appointmentAt
+                    ? `Appointment: ${new Date(appointmentAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
                     : selected.note}
                 </p>
               )}
             </div>
+
+            {/* Appointment scheduling — only when Appointment Booked is selected */}
+            {status === 'Appointment Booked' && (
+              <div style={{
+                marginBottom: 14, padding: '12px',
+                background: 'rgba(34,197,94,0.06)', borderRadius: 8,
+                border: '0.5px solid rgba(34,197,94,0.2)',
+              }}>
+                <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#22C55E', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <CalendarClock size={10} /> Appointment Time
+                </p>
+                <input
+                  type="datetime-local"
+                  value={appointmentAt}
+                  onChange={e => setAppointmentAt(e.target.value)}
+                  style={{
+                    width: '100%', height: 36, padding: '0 10px',
+                    background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                    borderRadius: 7, fontSize: 13, color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-sans)', colorScheme: 'dark',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '6px 0 0' }}>
+                  {appointmentAt
+                    ? `Scheduled for ${new Date(appointmentAt).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} — saved when you hit Done.`
+                    : 'Pick the day and time the prospect agreed to.'}
+                </p>
+              </div>
+            )}
 
             {/* Follow-Up scheduling — only when Follow-Up is selected */}
             {status === 'Follow-Up' && (

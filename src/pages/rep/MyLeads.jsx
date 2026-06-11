@@ -1,6 +1,13 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { Phone, RefreshCw, PhoneCall, Target, BarChart2, List } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Phone, RefreshCw, PhoneCall, Target, BarChart2, List, Lock, Check, GraduationCap } from 'lucide-react'
 import { useMyLeads } from '../../hooks/useLeads'
+import { useTodayCallStats } from '../../hooks/useProfiles'
+import { useAuth } from '../../hooks/useAuth'
+import {
+  useTrainingProgress, trainingChecks, isTrainingComplete,
+  TOTAL_VIDEOS, QUIZ_PASS_PCT, ROLEPLAY_PASS_GRADE,
+} from '../../hooks/useTraining'
 import { CallModal } from '../../components/rep/CallModal'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
@@ -12,15 +19,21 @@ const STATUS_FILTERS = ['All', 'New', 'Appointment Booked', 'Follow-Up', 'No Ans
 const SS_FILTER = 'ohvara_myleads_filter'
 const SS_SCROLL = 'ohvara_myleads_scroll'
 
-// KPI helper computed from leads data
+// Batch progress computed from leads data (the three KPI counters come
+// from useTodayCallStats — calls-table based, resets at UTC midnight)
 function computeKPIs(leads) {
-  if (!leads) return { called: 0, booked: 0, connectRate: 0, total: 0 }
-  const total   = leads.length
-  const booked  = leads.filter(l => ['Booked', 'Appointment Booked'].includes(l.status)).length
-  const called  = leads.filter(l => l.status !== 'New').length
-  const reached = leads.filter(l => ['Contacted', 'Interested', 'Booked', 'Appointment Booked', 'Follow-Up', 'Not Interested'].includes(l.status)).length
-  const connectRate = called > 0 ? Math.round((reached / called) * 100) : 0
-  return { called, booked, connectRate, total }
+  if (!leads) return { called: 0, total: 0 }
+  const total  = leads.length
+  const called = leads.filter(l => l.status !== 'New').length
+  return { called, total }
+}
+
+// Short date+time for booked appointments shown in the status column
+function formatAppointment(ts) {
+  if (!ts) return null
+  const d = new Date(ts)
+  if (isNaN(d)) return null
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
 // A follow-up lead that has come back to the rep's list: follow_up_at has
@@ -80,9 +93,17 @@ function LeadRow({ lead, onOpen, animDelay = 0 }) {
         {lead.phone || '—'}
       </div>
 
-      {/* Status */}
+      {/* Status — booked leads also show the scheduled appointment time */}
       <div style={{ flex: '0 0 110px', padding: '12px 8px', minHeight: 44 }}>
         <Badge label={lead.status} />
+        {lead.status === 'Appointment Booked' && lead.appointment_at && (
+          <p style={{
+            fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--success)',
+            margin: '3px 0 0', whiteSpace: 'nowrap',
+          }}>
+            {formatAppointment(lead.appointment_at)}
+          </p>
+        )}
       </div>
 
       {/* Actions */}
@@ -99,8 +120,115 @@ function LeadRow({ lead, onOpen, animDelay = 0 }) {
   )
 }
 
+// Locked state shown until the rep passes all three training checks.
+// Progress lives in training_progress; unlock is automatic the moment
+// the last check passes (no admin action, no reload needed).
+function TrainingGate({ progress }) {
+  const checks = trainingChecks(progress)
+  const items = [
+    {
+      label: 'Watch all training videos',
+      detail: `${checks.videosWatched} / ${TOTAL_VIDEOS} watched`,
+      done: checks.videosDone,
+    },
+    {
+      label: `Pass the flashcard quiz (${QUIZ_PASS_PCT}%+)`,
+      detail: progress?.quiz_score != null
+        ? `Best attempt: ${Math.round((progress.quiz_score / (progress.quiz_total || 1)) * 100)}%`
+        : 'Not attempted yet',
+      done: checks.quizDone,
+    },
+    {
+      label: `Pass the AI roleplay (${ROLEPLAY_PASS_GRADE} or higher)`,
+      detail: progress?.roleplay_grade
+        ? `Last grade: ${progress.roleplay_grade}`
+        : 'Not attempted yet',
+      done: checks.roleplayDone,
+    },
+  ]
+  const doneCount = items.filter(i => i.done).length
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 48px)' }}>
+      <div className="glass" style={{ maxWidth: 520, width: '100%', borderRadius: 14, padding: '36px 32px', textAlign: 'center' }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: 14, margin: '0 auto 18px',
+          background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Lock size={24} color="var(--accent)" />
+        </div>
+        <h1 style={{ fontSize: 19, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 8px', letterSpacing: '-0.01em' }}>
+          Complete training to unlock your leads
+        </h1>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 22px' }}>
+          Your 150 daily leads are waiting. Pass all three training steps and they unlock automatically.
+        </p>
+
+        {/* Overall progress */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+          <div style={{ flex: 1, height: 6, background: 'var(--bg-elevated)', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', width: `${(doneCount / 3) * 100}%`,
+              background: doneCount === 3 ? 'var(--success)' : 'var(--accent)',
+              borderRadius: 3, transition: 'width 0.4s ease',
+            }} />
+          </div>
+          <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', flexShrink: 0 }}>
+            {doneCount} / 3
+          </span>
+        </div>
+
+        {/* Checklist */}
+        <div style={{ textAlign: 'left', marginBottom: 24 }}>
+          {items.map((item, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '12px 14px', marginBottom: 8,
+              background: item.done ? 'rgba(34,197,94,0.06)' : 'var(--bg-surface)',
+              border: `0.5px solid ${item.done ? 'rgba(34,197,94,0.25)' : 'var(--border)'}`,
+              borderRadius: 10,
+            }}>
+              <div style={{
+                width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                background: item.done ? 'var(--success)' : 'var(--bg-elevated)',
+                border: item.done ? 'none' : '0.5px solid var(--border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {item.done && <Check size={12} color="white" />}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontSize: 13, fontWeight: 500, color: item.done ? 'var(--success)' : 'var(--text-primary)', margin: 0 }}>
+                  {item.label}
+                </p>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>{item.detail}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <Link
+          to="/rep/training"
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            height: 42, padding: '0 24px',
+            background: 'var(--accent)', borderRadius: 10,
+            fontSize: 14, fontWeight: 500, color: 'white', textDecoration: 'none',
+          }}
+        >
+          <GraduationCap size={16} />
+          Go to Training Center
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 export default function MyLeads() {
+  const { profile } = useAuth()
   const { data: leads, isLoading, refetch } = useMyLeads()
+  const { data: callStats } = useTodayCallStats(profile?.id)
+  const { data: training, isLoading: trainingLoading } = useTrainingProgress()
   // Filter + scroll position survive tab switches via sessionStorage
   const [activeFilter, setActiveFilter] = useState(() => sessionStorage.getItem(SS_FILTER) || 'All')
   const [callLead, setCallLead] = useState(null)
@@ -130,6 +258,10 @@ export default function MyLeads() {
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
+  // Onboarding gate: leads stay locked until videos + quiz + roleplay pass
+  if (trainingLoading) return null
+  if (!isTrainingComplete(training)) return <TrainingGate progress={training} />
+
   return (
     // Page fills the viewport (parent <main> has 24px padding); the leads
     // table scrolls internally instead of the whole page.
@@ -155,28 +287,29 @@ export default function MyLeads() {
         </div>
       </div>
 
-      {/* KPI row — glass cards with countup */}
+      {/* KPI row — counters come from the calls table (UTC day) so all
+          three reset together at midnight UTC, same clock as the batch cron */}
       <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
         <KPICard
           label="Calls Today"
-          value={kpis.called}
-          sub={`${kpis.total - kpis.called} remaining`}
+          value={callStats?.calls ?? 0}
+          sub={`${Math.max(kpis.total - kpis.called, 0)} leads remaining`}
           icon={PhoneCall}
         />
         <KPICard
           label="Booked Today"
-          value={kpis.booked}
-          sub={kpis.booked > 0 ? 'Great work!' : 'Keep dialing'}
-          subColor={kpis.booked > 0 ? 'var(--success)' : undefined}
-          accent={kpis.booked > 0}
+          value={callStats?.booked ?? 0}
+          sub={(callStats?.booked ?? 0) > 0 ? 'Great work!' : 'Keep dialing'}
+          subColor={(callStats?.booked ?? 0) > 0 ? 'var(--success)' : undefined}
+          accent={(callStats?.booked ?? 0) > 0}
           icon={Target}
         />
         <KPICard
-          label="Connect Rate"
-          value={kpis.connectRate}
+          label="Booking Rate"
+          value={callStats?.bookingRate ?? 0}
           suffix="%"
-          sub={kpis.connectRate >= 15 ? 'Above target' : kpis.connectRate >= 8 ? 'Near target' : 'Below target'}
-          subColor={kpis.connectRate >= 15 ? 'var(--success)' : kpis.connectRate >= 8 ? 'var(--warning)' : 'var(--danger)'}
+          sub={(callStats?.bookingRate ?? 0) >= 10 ? 'Above target' : (callStats?.bookingRate ?? 0) >= 5 ? 'Near target' : 'Below target'}
+          subColor={(callStats?.bookingRate ?? 0) >= 10 ? 'var(--success)' : (callStats?.bookingRate ?? 0) >= 5 ? 'var(--warning)' : 'var(--danger)'}
           icon={BarChart2}
         />
         <KPICard

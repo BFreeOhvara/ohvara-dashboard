@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Phone, Calendar, TrendingUp, Clock } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
 import { useRepStats, useRepDailyActivity } from '../../hooks/useProfiles'
 import { StatCard } from '../../components/ui/StatCard'
@@ -18,7 +18,7 @@ function ChartTooltip({ active, payload, label }) {
     }}>
       <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 4px' }}>{label}</p>
       {payload.map(p => (
-        <p key={p.dataKey} style={{ fontSize: 12, color: p.fill, margin: 0, fontFamily: 'var(--font-mono)' }}>
+        <p key={p.dataKey} style={{ fontSize: 12, color: p.stroke || p.fill, margin: 0, fontFamily: 'var(--font-mono)' }}>
           {p.name}: {p.value}
         </p>
       ))}
@@ -28,8 +28,8 @@ function ChartTooltip({ active, payload, label }) {
 
 export default function MyStats() {
   const { profile } = useAuth()
-  // Period selection survives tab switches via sessionStorage
-  const [period, setPeriod] = useState(() => sessionStorage.getItem(SS_PERIOD) || 'week')
+  // Period selection survives tab switches via sessionStorage — Day is the default view
+  const [period, setPeriod] = useState(() => sessionStorage.getItem(SS_PERIOD) || 'day')
   const { data: stats, isLoading } = useRepStats(profile?.id, period)
   const { data: daily } = useRepDailyActivity(profile?.id)
 
@@ -92,9 +92,21 @@ export default function MyStats() {
         <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 14px' }}>
           Daily calls and appointments booked
         </p>
+        {/* Stock-style chart: smooth lines with gradient fills below */}
         <div style={{ width: '100%', height: 240 }}>
           <ResponsiveContainer>
-            <BarChart data={daily || []} barGap={4}>
+            <AreaChart data={daily || []}>
+              <defs>
+                <linearGradient id="gradCalls" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#6C63FF" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#6C63FF" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gradBookings" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#22C55E" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#22C55E" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
               <XAxis
                 dataKey="label"
                 tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
@@ -108,29 +120,37 @@ export default function MyStats() {
                 tickLine={false}
                 width={28}
               />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+              <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.15)', strokeDasharray: '3 3' }} />
               <Legend
                 wrapperStyle={{ fontSize: 12, color: 'var(--text-secondary)' }}
                 iconType="circle"
                 iconSize={8}
               />
-              <Bar
+              <Area
+                type="monotone"
                 dataKey="calls"
                 name="Calls"
-                fill="#6C63FF"
-                radius={[4, 4, 0, 0]}
+                stroke="#6C63FF"
+                strokeWidth={2}
+                fill="url(#gradCalls)"
+                dot={false}
+                activeDot={{ r: 4, strokeWidth: 0 }}
                 animationDuration={700}
                 animationEasing="ease-out"
               />
-              <Bar
+              <Area
+                type="monotone"
                 dataKey="bookings"
                 name="Bookings"
-                fill="#22C55E"
-                radius={[4, 4, 0, 0]}
+                stroke="#22C55E"
+                strokeWidth={2}
+                fill="url(#gradBookings)"
+                dot={false}
+                activeDot={{ r: 4, strokeWidth: 0 }}
                 animationDuration={700}
                 animationEasing="ease-out"
               />
-            </BarChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>

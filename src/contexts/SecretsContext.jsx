@@ -27,7 +27,9 @@ export function SecretsProvider({ children }) {
   async function fetchCapabilities() {
     if (!profile) { setLoading(false); return }
     try {
-      const { data, error } = await supabase.functions.invoke('fetch-secrets')
+      // invoke() defaults to POST — capabilities live on the GET branch
+      // (POST is the admin-only secret-write path and 403s for reps)
+      const { data, error } = await supabase.functions.invoke('fetch-secrets', { method: 'GET' })
       if (!error && data) {
         setCapabilities(data.capabilities || defaultCaps)
         setSecrets(data.secrets || [])
