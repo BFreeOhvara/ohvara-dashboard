@@ -247,8 +247,9 @@ function IndeedTab() {
     if (!newLeads.length) { setImportMsg('No new leads to import.'); return }
     setImporting(true); setImportMsg('')
     try {
+      // place_id stays on the row — it's the Maps scraper's dedup identifier
       const { error: insErr } = await supabase.from('leads').insert(
-        newLeads.map(({ already_in_db, no_website, place_id, ...lead }) => lead)
+        newLeads.map(({ already_in_db, no_website, ...lead }) => lead)
       )
       if (insErr) throw insErr
       setImportMsg(`✅ Imported ${newLeads.length} leads.`)
@@ -422,8 +423,9 @@ function MapsTab() {
     if (!newLeads.length) { setImportMsg('No new leads to import.'); return }
     setImporting(true); setImportMsg('')
     try {
+      // place_id stays on the row — it's the Maps scraper's dedup identifier
       const { error: insErr } = await supabase.from('leads').insert(
-        newLeads.map(({ already_in_db, no_website, place_id, ...lead }) => lead)
+        newLeads.map(({ already_in_db, no_website, ...lead }) => lead)
       )
       if (insErr) throw insErr
       setImportMsg(`✅ Imported ${newLeads.length} leads.`)

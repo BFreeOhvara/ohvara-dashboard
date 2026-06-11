@@ -6,13 +6,14 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { Badge } from '../ui/Badge'
 
-// The only statuses a rep can set from the call modal — color coordinated
+// The only statuses a rep can set from the call modal — color coordinated.
+// `note` tells the rep exactly where the lead routes (pipeline behavior).
 const STATUS_OPTIONS = [
-  { value: 'New',                color: '#38BDF8', dim: 'rgba(56,189,248,0.10)',  border: 'rgba(56,189,248,0.35)' },
-  { value: 'Appointment Booked', color: '#22C55E', dim: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.35)' },
-  { value: 'No Answer',          color: '#94A3B8', dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.35)' },
-  { value: 'Not Interested',     color: '#EF4444', dim: 'rgba(239,68,68,0.10)',   border: 'rgba(239,68,68,0.35)' },
-  { value: 'Follow-Up',          color: '#F59E0B', dim: 'rgba(245,158,11,0.10)',  border: 'rgba(245,158,11,0.35)' },
+  { value: 'New',                color: '#38BDF8', dim: 'rgba(56,189,248,0.10)',  border: 'rgba(56,189,248,0.35)', note: null },
+  { value: 'Appointment Booked', color: '#22C55E', dim: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.35)',  note: 'Sent to the closer pipeline' },
+  { value: 'No Answer',          color: '#94A3B8', dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.35)', note: 'Back in rotation tomorrow — redistributed to the team after 24h' },
+  { value: 'Not Interested',     color: '#EF4444', dim: 'rgba(239,68,68,0.10)',   border: 'rgba(239,68,68,0.35)',  note: 'Removed permanently — never contacted again' },
+  { value: 'Follow-Up',          color: '#F59E0B', dim: 'rgba(245,158,11,0.10)',  border: 'rgba(245,158,11,0.35)', note: 'Returns to your list on your chosen date' },
 ]
 
 // Statuses that count as a completed dial — logged to the calls table for stats
@@ -144,8 +145,9 @@ export function CallModal({ lead, onClose }) {
   useEffect(() => { generateScript() }, [lead.id])
 
   // Status saves to DB immediately on selection.
-  // no_answer_at is stamped by a DB trigger; a pg_cron job re-queues
-  // No Answer leads back to 'New' after 4 hours.
+  // Pipeline routing happens in the handle_lead_pipeline DB trigger:
+  // No Answer → 24h queue, random rep tomorrow; Follow-Up → returns to
+  // this rep at the chosen time; Not Interested → permanent do-not-contact.
   // Real outcomes also log a row in calls so My Stats stays live.
   async function selectStatus(value) {
     setStatusOpen(false)
@@ -357,9 +359,16 @@ export function CallModal({ lead, onClose }) {
                         onMouseEnter={e => { e.currentTarget.style.background = o.dim }}
                         onMouseLeave={e => { e.currentTarget.style.background = status === o.value ? o.dim : 'transparent' }}
                       >
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: o.color, flexShrink: 0 }} />
-                        {o.value}
-                        {status === o.value && <Check size={12} style={{ marginLeft: 'auto' }} />}
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: o.color, flexShrink: 0, marginTop: o.note ? 3 : 0, alignSelf: o.note ? 'flex-start' : 'center' }} />
+                        <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                          {o.value}
+                          {o.note && (
+                            <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-muted)', lineHeight: 1.3 }}>
+                              {o.note}
+                            </span>
+                          )}
+                        </span>
+                        {status === o.value && <Check size={12} style={{ marginLeft: 'auto', flexShrink: 0 }} />}
                       </button>
                     ))}
                   </div>
@@ -368,9 +377,11 @@ export function CallModal({ lead, onClose }) {
               {saveState === 'error' && (
                 <p style={{ fontSize: 11, color: 'var(--danger)', margin: '5px 0 0' }}>Save failed — try again.</p>
               )}
-              {status === 'No Answer' && (
-                <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '5px 0 0' }}>
-                  Re-queues back into your list as New in 4 hours.
+              {selected?.note && (
+                <p style={{ fontSize: 11, color: selected.color, margin: '5px 0 0', opacity: 0.9 }}>
+                  {status === 'Follow-Up' && followUpAt
+                    ? `Returns to your list on ${new Date(followUpAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+                    : selected.note}
                 </p>
               )}
             </div>

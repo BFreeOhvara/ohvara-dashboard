@@ -110,7 +110,18 @@ interface JobResult {
   already_in_db: boolean
 }
 
-function parseMcpText(text: string, existingNames: Set<string>): JobResult[] {
+// Deduplication check — never re-scrape businesses already in the pipeline.
+// Match on business_name + city (case-insensitive). A lead row with ANY
+// status (not_interested, booked, or anything active) blocks re-insertion —
+// existingKeys covers the entire leads table. Rows without a city in the DB
+// fall back to a name-only match.
+function isAlreadyInDb(company: string, city: string, existingKeys: Set<string>, existingNamesNoCity: Set<string>): boolean {
+  const name = company.toLowerCase().trim()
+  return existingKeys.has(`${name}|${(city || '').toLowerCase().trim()}`)
+    || existingNamesNoCity.has(name)
+}
+
+function parseMcpText(text: string, existingKeys: Set<string>, existingNamesNoCity: Set<string>): JobResult[] {
   const jobs: JobResult[] = []
   const blocks = text.split(/\n\s*\n/).filter(b => b.includes('**Job Title:**'))
 
@@ -146,7 +157,7 @@ function parseMcpText(text: string, existingNames: Set<string>): JobResult[] {
       compensation: comp, hourly_min: salary.min, hourly_max: salary.max,
       monthly_labor_cost: monthly, job_url: jobUrl || '',
       niche,
-      already_in_db: existingNames.has(company.toLowerCase().trim()),
+      already_in_db: isAlreadyInDb(company, city, existingKeys, existingNamesNoCity),
     })
   }
   return jobs
@@ -189,10 +200,19 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
+    // Deduplication check — never re-scrape businesses already in the pipeline.
+    // The whole leads table counts: not_interested, booked, and every active
+    // status all block re-insertion.
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-    const { data: existing } = await supabase.from('leads').select('business_name')
-    const existingNames = new Set((existing || []).map((l: { business_name: string }) =>
-      l.business_name.toLowerCase().trim()))
+    const { data: existing } = await supabase.from('leads').select('business_name, city')
+    const existingKeys = new Set<string>()
+    const existingNamesNoCity = new Set<string>()
+    for (const l of (existing || []) as { business_name: string; city: string | null }[]) {
+      const name = (l.business_name || '').toLowerCase().trim()
+      if (!name) continue
+      if (l.city) existingKeys.add(`${name}|${l.city.toLowerCase().trim()}`)
+      else existingNamesNoCity.add(name)
+    }
 
     const allJobs: JobResult[] = []
 
@@ -221,7 +241,7 @@ Deno.serve(async (req) => {
         const data = await res.json()
         // MCP returns text in result.content[0].text OR result (string)
         const text = (data?.result?.content?.[0]?.text) || (typeof data?.result === 'string' ? data.result : '')
-        allJobs.push(...parseMcpText(String(text), existingNames).slice(0, maxResults))
+        allJobs.push(...parseMcpText(String(text), existingKeys, existingNamesNoCity).slice(0, maxResults))
       } catch (err) {
         console.warn(`[indeed] ${niche} failed:`, err)
       }

@@ -23,6 +23,12 @@ function computeKPIs(leads) {
   return { called, booked, connectRate, total }
 }
 
+// A follow-up lead that has come back to the rep's list: follow_up_at has
+// arrived and the lead carries the reason the rep recorded. Not a cold call.
+function isReturnedFollowUp(lead) {
+  return !!(lead.follow_up_at && lead.follow_up_notes && new Date(lead.follow_up_at) <= new Date())
+}
+
 // Individual table row — clicking anywhere opens the Call Now modal
 function LeadRow({ lead, onOpen, animDelay = 0 }) {
   return (
@@ -40,16 +46,23 @@ function LeadRow({ lead, onOpen, animDelay = 0 }) {
       onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
       onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
     >
-      {/* Business name + contact */}
+      {/* Business name + contact (or returned-follow-up flag) */}
       <div style={{ flex: '1 1 0', minWidth: 0, padding: '12px 16px', minHeight: 44 }}>
         <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
           {lead.business_name}
         </p>
-        {lead.contact_name && (
+        {isReturnedFollowUp(lead) ? (
+          <p style={{
+            fontSize: 11, color: 'var(--warning)', fontWeight: 500, marginTop: 2,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            📅 Follow-Up — {lead.follow_up_notes}
+          </p>
+        ) : lead.contact_name ? (
           <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {lead.contact_name}
           </p>
-        )}
+        ) : null}
       </div>
 
       {/* Niche */}

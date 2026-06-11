@@ -131,14 +131,28 @@ Deno.serve(async (req) => {
           const details = await getPlaceDetails(placeId, apiKey)
           const noWebsite = !details.website
 
-          // Dedup check
-          const { data: existing } = await supabase
+          const cityName = city.replace(/,?\s*[A-Z]{2}$/, '').trim()
+
+          // Deduplication check — never re-scrape businesses already in the
+          // pipeline. Match on place_id when available, fallback to
+          // business_name + city (case-insensitive). A lead row with ANY
+          // status (not_interested, booked, or anything active) blocks
+          // re-insertion.
+          const { data: byPlaceId } = await supabase
             .from('leads')
             .select('id')
-            .ilike('business_name', `%${String(place.name || '').slice(0, 30)}%`)
+            .eq('place_id', placeId)
             .limit(1)
-
-          const cityName = city.replace(/,?\s*[A-Z]{2}$/, '').trim()
+          let alreadyInDb = !!(byPlaceId && byPlaceId.length > 0)
+          if (!alreadyInDb) {
+            const { data: byNameCity } = await supabase
+              .from('leads')
+              .select('id')
+              .ilike('business_name', String(place.name || ''))
+              .ilike('city', cityName)
+              .limit(1)
+            alreadyInDb = !!(byNameCity && byNameCity.length > 0)
+          }
 
           const notes = noWebsite
             ? `No website — web agency candidate. Reviews: ${reviewCount}. Address: ${place.formatted_address}`
@@ -156,7 +170,7 @@ Deno.serve(async (req) => {
             source:        'google_maps',
             status:        'New',
             notes,
-            already_in_db: !!(existing && existing.length > 0),
+            already_in_db: alreadyInDb,
             place_id:      placeId,
           })
         }
