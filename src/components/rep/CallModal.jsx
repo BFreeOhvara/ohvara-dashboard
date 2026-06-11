@@ -3,15 +3,20 @@ import { createPortal } from 'react-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { Phone, X, Loader2, RotateCcw, MapPin, User, Tag, Globe, Check, FileText, StickyNote, AlertTriangle, ChevronDown, CalendarClock } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../hooks/useAuth'
 import { Badge } from '../ui/Badge'
 
 // The only statuses a rep can set from the call modal — color coordinated
 const STATUS_OPTIONS = [
+  { value: 'New',                color: '#38BDF8', dim: 'rgba(56,189,248,0.10)',  border: 'rgba(56,189,248,0.35)' },
   { value: 'Appointment Booked', color: '#22C55E', dim: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.35)' },
   { value: 'No Answer',          color: '#94A3B8', dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.35)' },
   { value: 'Not Interested',     color: '#EF4444', dim: 'rgba(239,68,68,0.10)',   border: 'rgba(239,68,68,0.35)' },
   { value: 'Follow-Up',          color: '#F59E0B', dim: 'rgba(245,158,11,0.10)',  border: 'rgba(245,158,11,0.35)' },
 ]
+
+// Statuses that count as a completed dial — logged to the calls table for stats
+const CALL_OUTCOMES = ['Appointment Booked', 'No Answer', 'Not Interested', 'Follow-Up']
 
 // Color-coded script sections
 const SECTIONS = [
@@ -71,14 +76,17 @@ function Field({ icon: Icon, label, value, mono = false }) {
 
 export function CallModal({ lead, onClose }) {
   const qc = useQueryClient()
+  const { profile } = useAuth()
 
   const [script, setScript]           = useState(null)
   const [loading, setLoading]         = useState(true)
   const [isFallback, setIsFallback]   = useState(false)
   const [status, setStatus]           = useState(lead.status)
+  const [statusTouched, setStatusTouched] = useState(false)
   const [statusOpen, setStatusOpen]   = useState(false)
   const [saveState, setSaveState]     = useState('idle') // idle | saving | saved | error
   const [notes, setNotes]             = useState(lead.notes || '')
+  const [preCallNotes, setPreCallNotes] = useState(lead.pre_call_notes || '')
   const [followUpAt, setFollowUpAt]   = useState(toDatetimeLocal(lead.follow_up_at))
   const [followUpNotes, setFollowUpNotes] = useState(lead.follow_up_notes || '')
   const [closing, setClosing]         = useState(false)
@@ -138,15 +146,25 @@ export function CallModal({ lead, onClose }) {
   // Status saves to DB immediately on selection.
   // no_answer_at is stamped by a DB trigger; a pg_cron job re-queues
   // No Answer leads back to 'New' after 4 hours.
+  // Real outcomes also log a row in calls so My Stats stays live.
   async function selectStatus(value) {
     setStatusOpen(false)
+    setStatusTouched(true)
     if (value === status) return
     setStatus(value)
     setSaveState('saving')
     try {
       const { error } = await supabase.from('leads').update({ status: value }).eq('id', lead.id)
       if (error) throw error
+      if (CALL_OUTCOMES.includes(value) && profile?.id) {
+        await supabase.from('calls').insert({
+          lead_id: lead.id,
+          rep_id: profile.id,
+          outcome: value,
+        })
+      }
       qc.invalidateQueries({ queryKey: ['leads'] })
+      qc.invalidateQueries({ queryKey: ['stats'] })
       setSaveState('saved')
       setTimeout(() => setSaveState(s => (s === 'saved' ? 'idle' : s)), 2000)
     } catch {
@@ -154,12 +172,16 @@ export function CallModal({ lead, onClose }) {
     }
   }
 
-  // Done: persist notes (+ follow-up fields when scheduled), then close
+  // Done: persist both note fields (+ follow-up fields when scheduled), then close
   async function handleDone() {
+    if (!statusTouched) return
     setClosing(true)
     setDoneError('')
     try {
-      const patch = { notes: notes || null }
+      const patch = {
+        notes: notes || null,
+        pre_call_notes: preCallNotes || null,
+      }
       if (status === 'Follow-Up') {
         patch.follow_up_at    = followUpAt ? new Date(followUpAt).toISOString() : null
         patch.follow_up_notes = followUpNotes || null
@@ -190,7 +212,7 @@ export function CallModal({ lead, onClose }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 20,
       }}
-      onClick={e => { e.stopPropagation(); if (e.target === e.currentTarget) onClose() }}
+      onClick={e => e.stopPropagation() /* click-outside does NOT close — exit via X (discard) or Done (save) */}
     >
       <div style={{
         width: '100%', maxWidth: 960, maxHeight: '88vh',
@@ -268,7 +290,27 @@ export function CallModal({ lead, onClose }) {
               </div>
             )}
 
-            {/* Status dropdown — 4 color-coded outcomes, saves on change */}
+            {/* Pre-call notes — research about the lead before dialing, saved on Done */}
+            <div style={{ marginBottom: 14 }}>
+              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <StickyNote size={10} /> Pre-Call Notes
+              </p>
+              <textarea
+                value={preCallNotes}
+                onChange={e => setPreCallNotes(e.target.value)}
+                placeholder="Research before you dial: who owns it, recent reviews, hiring posts…"
+                rows={2}
+                style={{
+                  width: '100%', padding: '8px 10px',
+                  background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                  borderRadius: 8, fontSize: 13, color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-sans)', resize: 'vertical', lineHeight: 1.5,
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Status dropdown — color-coded outcomes, saves on change */}
             <div style={{ marginBottom: 14 }} ref={dropdownRef}>
               <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 6px' }}>Status</p>
               <div style={{ position: 'relative' }}>
@@ -484,7 +526,7 @@ export function CallModal({ lead, onClose }) {
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer — Done disabled until the rep picks a status for this call */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12,
           padding: '12px 18px',
@@ -492,15 +534,23 @@ export function CallModal({ lead, onClose }) {
           flexShrink: 0,
         }}>
           {doneError && <p style={{ fontSize: 12, color: 'var(--danger)', margin: 0 }}>{doneError}</p>}
+          {!statusTouched && (
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>
+              Select a status to finish
+            </p>
+          )}
           <button
             onClick={handleDone}
-            disabled={closing}
+            disabled={closing || !statusTouched}
             style={{
               padding: '9px 24px', borderRadius: 8,
-              background: 'var(--accent)', border: 'none',
-              fontSize: 13, fontWeight: 500, color: 'white',
-              cursor: closing ? 'not-allowed' : 'pointer',
-              opacity: closing ? 0.7 : 1,
+              background: statusTouched ? 'var(--accent)' : 'var(--bg-elevated)',
+              border: statusTouched ? 'none' : '0.5px solid var(--border)',
+              fontSize: 13, fontWeight: 500,
+              color: statusTouched ? 'white' : 'var(--text-muted)',
+              cursor: (closing || !statusTouched) ? 'not-allowed' : 'pointer',
+              opacity: closing ? 0.7 : statusTouched ? 1 : 0.6,
+              transition: 'all 0.15s',
             }}
           >
             {closing ? 'Saving…' : 'Done'}

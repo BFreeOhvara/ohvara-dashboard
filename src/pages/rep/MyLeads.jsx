@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { Phone, RefreshCw, PhoneCall, Target, BarChart2, List } from 'lucide-react'
 import { useMyLeads } from '../../hooks/useLeads'
 import { CallModal } from '../../components/rep/CallModal'
@@ -7,6 +7,10 @@ import { Button } from '../../components/ui/Button'
 import { KPICard } from '../../components/ui/KPICard'
 
 const STATUS_FILTERS = ['All', 'New', 'Appointment Booked', 'Follow-Up', 'No Answer', 'Not Interested']
+
+// sessionStorage keys — preserve view state across tab switches
+const SS_FILTER = 'ohvara_myleads_filter'
+const SS_SCROLL = 'ohvara_myleads_scroll'
 
 // KPI helper computed from leads data
 function computeKPIs(leads) {
@@ -84,8 +88,24 @@ function LeadRow({ lead, onOpen, animDelay = 0 }) {
 
 export default function MyLeads() {
   const { data: leads, isLoading, refetch } = useMyLeads()
-  const [activeFilter, setActiveFilter] = useState('All')
+  // Filter + scroll position survive tab switches via sessionStorage
+  const [activeFilter, setActiveFilter] = useState(() => sessionStorage.getItem(SS_FILTER) || 'All')
   const [callLead, setCallLead] = useState(null)
+  const scrollRef = useRef(null)
+  const scrollRestored = useRef(false)
+
+  function changeFilter(f) {
+    setActiveFilter(f)
+    sessionStorage.setItem(SS_FILTER, f)
+  }
+
+  // Restore the table's scroll position once leads have rendered
+  useEffect(() => {
+    if (isLoading || scrollRestored.current || !scrollRef.current) return
+    const saved = Number(sessionStorage.getItem(SS_SCROLL) || 0)
+    if (saved > 0) scrollRef.current.scrollTop = saved
+    scrollRestored.current = true
+  }, [isLoading])
 
   const kpis = useMemo(() => computeKPIs(leads), [leads])
 
@@ -98,7 +118,9 @@ export default function MyLeads() {
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
   return (
-    <div>
+    // Page fills the viewport (parent <main> has 24px padding); the leads
+    // table scrolls internally instead of the whole page.
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 48px)' }}>
       {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
@@ -196,7 +218,7 @@ export default function MyLeads() {
           return (
             <button
               key={f}
-              onClick={() => setActiveFilter(f)}
+              onClick={() => changeFilter(f)}
               style={{
                 height: 36,
                 padding: '0 12px',
@@ -234,14 +256,15 @@ export default function MyLeads() {
         })}
       </div>
 
-      {/* Table — glass surface */}
-      <div className="glass" style={{ overflow: 'hidden', borderRadius: 10 }}>
+      {/* Table — glass surface, scrolls internally */}
+      <div className="glass" style={{ overflow: 'hidden', borderRadius: 10, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         {/* Table header */}
         <div style={{
           display: 'flex', alignItems: 'center',
           borderBottom: '0.5px solid var(--border)',
           padding: '0',
           background: 'var(--bg-elevated)',
+          flexShrink: 0,
         }}>
           <div style={{ flex: '1 1 0', padding: '8px 16px' }} className="section-label">Business</div>
           <div style={{ flex: '0 0 120px', padding: '8px 8px' }} className="section-label">Niche</div>
@@ -251,7 +274,13 @@ export default function MyLeads() {
           <div style={{ flex: '0 0 120px', padding: '8px 16px 8px 0', textAlign: 'right' }} className="section-label">Action</div>
         </div>
 
-        {/* Rows */}
+        {/* Rows — internal scroll; position persisted to sessionStorage */}
+        <div
+          ref={scrollRef}
+          className="scrollbar-thin"
+          style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}
+          onScroll={e => sessionStorage.setItem(SS_SCROLL, String(e.currentTarget.scrollTop))}
+        >
         {isLoading ? (
           <div>
             {[...Array(8)].map((_, i) => (
@@ -278,10 +307,11 @@ export default function MyLeads() {
               key={lead.id}
               lead={lead}
               onOpen={setCallLead}
-              animDelay={i * 30}
+              animDelay={Math.min(i, 20) * 30}
             />
           ))
         )}
+        </div>
       </div>
 
       {/* Row count */}

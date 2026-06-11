@@ -7,17 +7,18 @@ import { FLASHCARDS, CATEGORY_LABELS, CATEGORY_COLORS } from '../../data/flashca
 const LS_VIDEOS    = 'ohvara_training_videos'
 const LS_MASTERED  = 'ohvara_flashcard_mastered'
 
-// YouTube IDs — replace with Ohvara's own recordings when available.
-// Current: curated public cold-calling / B2B sales training content.
+// Real YouTube videos — found via AI web search and verified live through
+// YouTube's oEmbed endpoint on 2026-06-11. Replace with Ohvara's own
+// recordings when available.
 const TRAINING_VIDEOS = [
-  { id: 1, title: 'The Perfect Opener', description: 'How to start a cold call so they don\'t hang up in the first 5 seconds. The exact words to use.', duration: '4 min', category: 'Opener',    youtubeId: 'rE2S7bvdvdo' },
-  { id: 2, title: 'Tonality & Energy',  description: 'Why how you say it matters more than what you say. The tone that gets callbacks.', duration: '5 min', category: 'Delivery',   youtubeId: '3w4J6_wTvTE' },
-  { id: 3, title: 'Uncovering Pain',    description: 'The 3 questions that make prospects tell you everything. How to get them talking.', duration: '6 min', category: 'Discovery',  youtubeId: 'nPMFDtqXpiM' },
-  { id: 4, title: 'Handling "Not Interested"', description: 'The only objection that matters on a cold call. Exactly what to say and when to let go.', duration: '5 min', category: 'Objections', youtubeId: 'L3V4zQ6bGpk' },
-  { id: 5, title: 'Booking the Call',   description: 'How to go from good conversation to confirmed appointment. The exact close.', duration: '4 min', category: 'Booking',    youtubeId: 'ScMzIvxBSi4' },
-  { id: 6, title: 'Common Mistakes',    description: 'The 5 things new reps do that kill their connect rate. Watch this before your first call.', duration: '7 min', category: 'Mistakes',   youtubeId: 'kNjOjZElkZM' },
-  { id: 7, title: 'The Full Call Walkthrough', description: 'A complete mock call from dial to booked appointment. Watch how it\'s done.', duration: '8 min', category: 'Full Call', youtubeId: 'rcmDflVnfxY' },
-  { id: 8, title: 'The Numbers Game', description: 'Why calling volume beats everything else. The math behind consistent bookings.', duration: '5 min', category: 'Mindset', youtubeId: 'PLACEHOLDER_NUMBERS_GAME' },
+  { id: 1, title: 'The Perfect Opener', description: 'How to start a cold call so they don\'t hang up in the first 5 seconds. The exact words to use.', duration: '6 min', category: 'Opener',    youtubeId: 'nkGuC2gy1To' }, // "Best Cold Call Opening Lines for Sales Reps" — Matt Easton
+  { id: 2, title: 'Tonality & Energy',  description: 'Why how you say it matters more than what you say. The tone that gets callbacks.', duration: '9 min', category: 'Delivery',   youtubeId: 'nH3B415NSio' }, // "Cold Calls Are Won With TONE (Not Your Script)" — Sell Better
+  { id: 3, title: 'Uncovering Pain',    description: 'The questions that make prospects tell you everything. How to get them talking.', duration: '8 min', category: 'Discovery',  youtubeId: 'swr2VsX5Ank' }, // "Discovery Calls That Don't Suck: How to Uncover Real Pain FAST" — Connor Murray
+  { id: 4, title: 'Handling "Not Interested"', description: 'The only objection that matters on a cold call. Exactly what to say and when to let go.', duration: '7 min', category: 'Objections', youtubeId: 'z_JohGi_i7k' }, // "How I Handle 'Not Interested' (Cold Call Script)" — 30 Minutes to President's Club
+  { id: 5, title: 'Booking the Call',   description: 'How to go from good conversation to confirmed appointment. The exact close.', duration: '6 min', category: 'Booking',    youtubeId: 'mQ68FJYL8Lg' }, // "Cold Calling Appointment Setting: How to Book the Meeting on the 2nd Ask" — Matt Macnamara
+  { id: 6, title: 'Common Mistakes',    description: 'The cold-calling mistakes that kill your connect rate. Watch this before your first call.', duration: '8 min', category: 'Mistakes',   youtubeId: 'dUvLjS064Rw' }, // "Five B2B Cold-Calling Mistakes That Cost You Sales & Customers" — Ian Johnson
+  { id: 7, title: 'The Full Call Walkthrough', description: 'A real live cold call from dial to booked meeting. Watch how it\'s done.', duration: '10 min', category: 'Full Call', youtubeId: '4BpD8-BHrJg' }, // "cold call LIVE (what the gurus dont show) 1 meeting booked" — Pavlo
+  { id: 8, title: 'The Numbers Game', description: 'Why calling volume beats everything else. The math behind consistent bookings.', duration: '9 min', category: 'Mindset', youtubeId: 'dnOu6ysy7NU' }, // "How I book 3-5 appointments per day (B2B Cold Calling)" — Connor Murray
 ]
 
 const CATEGORY_FILTERS = [
