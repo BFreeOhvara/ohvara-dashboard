@@ -22,10 +22,13 @@ const corsHeaders = {
 }
 
 // ── Allowed job titles (only these 13 pass through) ──────────────────────────
+// 'customer service' intentionally matches "Customer Service Representative",
+// "Customer Service Rep", etc.
 const ALLOWED_JOB_TITLES = [
   'receptionist', 'dispatcher', 'office manager', 'administrative assistant',
-  'customer service', 'data entry', 'appointment setter', 'call center',
-  'phone support', 'front desk', 'secretary', 'billing', 'operations assistant',
+  'customer service', 'front desk', 'scheduler', 'answering service',
+  'call center', 'phone support', 'office coordinator', 'bookkeeper',
+  'customer support',
 ]
 
 function isTitleAllowed(title: string): boolean {
@@ -33,11 +36,27 @@ function isTitleAllowed(title: string): boolean {
   return ALLOWED_JOB_TITLES.some(t => lower.includes(t))
 }
 
+// ── Profile A niches — the only verticals we sell into ───────────────────────
+const PROFILE_A_NICHES = [
+  'roofing', 'hvac', 'electrical', 'landscaping', 'concrete',
+  'pressure washing', 'hotshot trucking', 'towing', 'oilfield',
+  'transportation', 'plumbing', 'pest control', 'pool service',
+]
+
 // ── Niche detection from company + job title ─────────────────────────────────
+// Keyword order matters: more specific keywords ('hotshot', 'tow') must be
+// checked before generic ones ('truck'). All values are Profile A niches.
 const NICHE_KEYWORDS: Record<string, string> = {
   'hvac': 'hvac', 'air conditioning': 'hvac', 'heating': 'hvac', 'cooling': 'hvac',
   'plumb': 'plumbing', 'electric': 'electrical', 'roof': 'roofing',
-  'landscap': 'landscaping', 'tow': 'tow truck', 'truck': 'trucking',
+  'landscap': 'landscaping', 'lawn': 'landscaping',
+  'concrete': 'concrete',
+  'pressure wash': 'pressure washing', 'power wash': 'pressure washing',
+  'hotshot': 'hotshot trucking', 'hot shot': 'hotshot trucking',
+  'tow': 'towing',
+  'oilfield': 'oilfield', 'oil field': 'oilfield',
+  'truck': 'transportation', 'freight': 'transportation',
+  'logistic': 'transportation', 'transport': 'transportation',
   'pest': 'pest control', 'pool': 'pool service',
 }
 
@@ -106,11 +125,15 @@ function parseMcpText(text: string, existingNames: Set<string>): JobResult[] {
     // Skip titles not in the allowed list
     if (!isTitleAllowed(jobTitle)) continue
 
+    // Skip businesses outside Profile A niches
+    const niche = detectNiche((company || '') + ' ' + jobTitle)
+    if (!PROFILE_A_NICHES.includes(niche)) continue
+
     jobs.push({
       company, title: jobTitle, location, city, state,
       compensation: comp, hourly_min: salary.min, hourly_max: salary.max,
       monthly_labor_cost: monthly, job_url: jobUrl || '',
-      niche: detectNiche((company || '') + ' ' + jobTitle),
+      niche,
       already_in_db: existingNames.has(company.toLowerCase().trim()),
     })
   }
@@ -141,6 +164,10 @@ Deno.serve(async (req) => {
     const { niches = ['HVAC', 'Plumbing', 'Electrical'], location = 'Dallas, TX', maxResults = 20 }
       = await req.json()
 
+    // Clamp requested niches to Profile A only
+    const validNiches = niches.filter((n: string) => PROFILE_A_NICHES.includes(n.toLowerCase()))
+    const searchNiches = validNiches.length ? validNiches : ['hvac', 'plumbing', 'electrical']
+
     const mcpToken = Deno.env.get('INDEED_MCP_TOKEN')
     if (!mcpToken) {
       return new Response(JSON.stringify({
@@ -157,14 +184,23 @@ Deno.serve(async (req) => {
 
     const allJobs: JobResult[] = []
 
-    for (const niche of niches.slice(0, 5)) {
+    for (const niche of searchNiches.slice(0, 5)) {
       try {
         const res = await fetch('https://mcp.indeed.com/claude/mcp', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${mcpToken}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             jsonrpc: '2.0', method: 'tools/call', id: 1,
-            params: { name: 'search_jobs', arguments: { search: `receptionist dispatcher ${niche}`, location, country_code: 'US' } },
+            params: {
+              name: 'search_jobs',
+              arguments: {
+                // Search across all allowed office/phone titles, scoped to the niche.
+                // parseMcpText + isTitleAllowed enforce the full 13-title list on results.
+                search: `receptionist or dispatcher or "office manager" or "front desk" or scheduler or "administrative assistant" or "customer service" or "call center" or bookkeeper ${niche}`,
+                location,
+                country_code: 'US',
+              },
+            },
           }),
           signal: AbortSignal.timeout(15_000),
         })

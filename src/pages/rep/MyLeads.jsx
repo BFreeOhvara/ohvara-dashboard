@@ -1,34 +1,36 @@
 import { useState, useMemo } from 'react'
 import { Phone, RefreshCw, PhoneCall, Target, BarChart2, List } from 'lucide-react'
 import { useMyLeads } from '../../hooks/useLeads'
-import { CallButton } from '../../components/rep/CallButton'
+import { CallModal } from '../../components/rep/CallModal'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { KPICard } from '../../components/ui/KPICard'
 
-const STATUS_FILTERS = ['All', 'New', 'Contacted', 'Interested', 'Callback', 'Not Interested']
+const STATUS_FILTERS = ['All', 'New', 'Appointment Booked', 'Follow-Up', 'No Answer', 'Not Interested']
 
 // KPI helper computed from leads data
 function computeKPIs(leads) {
   if (!leads) return { called: 0, booked: 0, connectRate: 0, total: 0 }
   const total   = leads.length
-  const booked  = leads.filter(l => l.status === 'Booked').length
+  const booked  = leads.filter(l => ['Booked', 'Appointment Booked'].includes(l.status)).length
   const called  = leads.filter(l => l.status !== 'New').length
-  const reached = leads.filter(l => ['Contacted', 'Interested', 'Booked'].includes(l.status)).length
+  const reached = leads.filter(l => ['Contacted', 'Interested', 'Booked', 'Appointment Booked', 'Follow-Up', 'Not Interested'].includes(l.status)).length
   const connectRate = called > 0 ? Math.round((reached / called) * 100) : 0
   return { called, booked, connectRate, total }
 }
 
-// Individual table row — display only; all interaction goes through Call Now
-function LeadRow({ lead, animDelay = 0 }) {
+// Individual table row — clicking anywhere opens the Call Now modal
+function LeadRow({ lead, onOpen, animDelay = 0 }) {
   return (
     <div
       className="table-row-animated"
+      onClick={() => onOpen(lead)}
       style={{
         display: 'flex', alignItems: 'center', gap: 0,
         borderBottom: '0.5px solid var(--border)',
         background: 'transparent',
         transition: 'background-color 100ms',
+        cursor: 'pointer',
         animationDelay: `${animDelay}ms`,
       }}
       onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
@@ -68,7 +70,13 @@ function LeadRow({ lead, animDelay = 0 }) {
 
       {/* Actions */}
       <div style={{ flex: '0 0 120px', padding: '8px 16px 8px 0', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minHeight: 44 }}>
-        <CallButton lead={lead} />
+        <button
+          className="btn-call"
+          onClick={e => { e.stopPropagation(); onOpen(lead) }}
+        >
+          <Phone size={11} />
+          Call Now
+        </button>
       </div>
     </div>
   )
@@ -77,6 +85,7 @@ function LeadRow({ lead, animDelay = 0 }) {
 export default function MyLeads() {
   const { data: leads, isLoading, refetch } = useMyLeads()
   const [activeFilter, setActiveFilter] = useState('All')
+  const [callLead, setCallLead] = useState(null)
 
   const kpis = useMemo(() => computeKPIs(leads), [leads])
 
@@ -268,6 +277,7 @@ export default function MyLeads() {
             <LeadRow
               key={lead.id}
               lead={lead}
+              onOpen={setCallLead}
               animDelay={i * 30}
             />
           ))
@@ -279,6 +289,14 @@ export default function MyLeads() {
         <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8, fontFamily: 'var(--font-mono)' }}>
           Showing {filtered.length} of {leads?.length ?? 0} leads
         </p>
+      )}
+
+      {/* Call Now modal — opened by row click or the Call Now button */}
+      {callLead && (
+        <CallModal
+          lead={callLead}
+          onClose={() => setCallLead(null)}
+        />
       )}
     </div>
   )

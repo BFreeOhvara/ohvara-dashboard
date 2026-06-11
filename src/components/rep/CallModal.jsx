@@ -1,12 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Phone, X, Loader2, RotateCcw, MapPin, User, Tag, Globe, Check, FileText, StickyNote, AlertTriangle } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { Phone, X, Loader2, RotateCcw, MapPin, User, Tag, Globe, Check, FileText, StickyNote, AlertTriangle, ChevronDown, CalendarClock } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { useUpdateLeadStatus } from '../../hooks/useLeads'
 import { Badge } from '../ui/Badge'
 
-// All statuses a rep can set — matches the lead_status enum
-const STATUSES = ['New', 'Contacted', 'Interested', 'Callback', 'No Answer', 'Voicemail', 'Not Interested', 'Booked']
+// The only statuses a rep can set from the call modal — color coordinated
+const STATUS_OPTIONS = [
+  { value: 'Appointment Booked', color: '#22C55E', dim: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.35)' },
+  { value: 'No Answer',          color: '#94A3B8', dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.35)' },
+  { value: 'Not Interested',     color: '#EF4444', dim: 'rgba(239,68,68,0.10)',   border: 'rgba(239,68,68,0.35)' },
+  { value: 'Follow-Up',          color: '#F59E0B', dim: 'rgba(245,158,11,0.10)',  border: 'rgba(245,158,11,0.35)' },
+]
 
 // Color-coded script sections
 const SECTIONS = [
@@ -30,6 +35,15 @@ function fallbackScript(lead) {
     objections: `"Not interested" → "Totally fair — most ${niche} owners say that until they see the missed-call math. Can I ask just one thing: what happens to a call you can't answer right now?"\n\n"Too busy" → "That's exactly why I'm calling. This takes 15 minutes and saves you hours."`,
     close: `"Look, I don't want to take up your morning. Let's do a quick 15-minute call this week — I'll show you exactly how many calls you're missing and what they're worth. Does Tuesday or Thursday work better?"\n\nAlways offer two times. Confirm and get off the phone.`,
   }
+}
+
+// timestamptz → value for <input type="datetime-local"> in local time
+function toDatetimeLocal(ts) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  if (isNaN(d)) return ''
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 // Labeled info field for the left column
@@ -56,13 +70,43 @@ function Field({ icon: Icon, label, value, mono = false }) {
 }
 
 export function CallModal({ lead, onClose }) {
-  const updateStatus = useUpdateLeadStatus()
+  const qc = useQueryClient()
 
-  const [script, setScript]         = useState(null)
-  const [loading, setLoading]       = useState(true)
-  const [isFallback, setIsFallback] = useState(false)
-  const [status, setStatus]         = useState(lead.status)
-  const [saveState, setSaveState]   = useState('idle') // idle | saving | saved | error
+  const [script, setScript]           = useState(null)
+  const [loading, setLoading]         = useState(true)
+  const [isFallback, setIsFallback]   = useState(false)
+  const [status, setStatus]           = useState(lead.status)
+  const [statusOpen, setStatusOpen]   = useState(false)
+  const [saveState, setSaveState]     = useState('idle') // idle | saving | saved | error
+  const [notes, setNotes]             = useState(lead.notes || '')
+  const [followUpAt, setFollowUpAt]   = useState(toDatetimeLocal(lead.follow_up_at))
+  const [followUpNotes, setFollowUpNotes] = useState(lead.follow_up_notes || '')
+  const [closing, setClosing]         = useState(false)
+  const [doneError, setDoneError]     = useState('')
+  const dropdownRef = useRef(null)
+
+  // Background scroll lock while the modal is open.
+  // Lock <html> as well as <body> — overflow:hidden on body alone still
+  // lets the documentElement scroller move (incl. programmatic scrolls).
+  useEffect(() => {
+    const prevBody = document.body.style.overflow
+    const prevHtml = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevBody
+      document.documentElement.style.overflow = prevHtml
+    }
+  }, [])
+
+  // Close the status dropdown on outside click
+  useEffect(() => {
+    function onDocClick(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setStatusOpen(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [])
 
   async function generateScript() {
     setLoading(true)
@@ -91,12 +135,18 @@ export function CallModal({ lead, onClose }) {
 
   useEffect(() => { generateScript() }, [lead.id])
 
-  async function handleStatusChange(e) {
-    const next = e.target.value
-    setStatus(next)
+  // Status saves to DB immediately on selection.
+  // no_answer_at is stamped by a DB trigger; a pg_cron job re-queues
+  // No Answer leads back to 'New' after 4 hours.
+  async function selectStatus(value) {
+    setStatusOpen(false)
+    if (value === status) return
+    setStatus(value)
     setSaveState('saving')
     try {
-      await updateStatus.mutateAsync({ leadId: lead.id, status: next })
+      const { error } = await supabase.from('leads').update({ status: value }).eq('id', lead.id)
+      if (error) throw error
+      qc.invalidateQueries({ queryKey: ['leads'] })
       setSaveState('saved')
       setTimeout(() => setSaveState(s => (s === 'saved' ? 'idle' : s)), 2000)
     } catch {
@@ -104,6 +154,27 @@ export function CallModal({ lead, onClose }) {
     }
   }
 
+  // Done: persist notes (+ follow-up fields when scheduled), then close
+  async function handleDone() {
+    setClosing(true)
+    setDoneError('')
+    try {
+      const patch = { notes: notes || null }
+      if (status === 'Follow-Up') {
+        patch.follow_up_at    = followUpAt ? new Date(followUpAt).toISOString() : null
+        patch.follow_up_notes = followUpNotes || null
+      }
+      const { error } = await supabase.from('leads').update(patch).eq('id', lead.id)
+      if (error) throw error
+      qc.invalidateQueries({ queryKey: ['leads'] })
+      onClose()
+    } catch (err) {
+      setDoneError(err.message || 'Failed to save')
+      setClosing(false)
+    }
+  }
+
+  const selected = STATUS_OPTIONS.find(o => o.value === status)
   const telHref = lead.phone ? `tel:${lead.phone.replace(/\D/g, '')}` : null
 
   // Rendered through a portal: ancestors with transform/backdrop-filter
@@ -168,15 +239,14 @@ export function CallModal({ lead, onClose }) {
         {/* Body — two columns */}
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
 
-          {/* LEFT — lead info + status + call */}
+          {/* LEFT — lead info, status, follow-up, notes, call */}
           <div
             className="scrollbar-thin"
             style={{
-              flex: '0 0 320px', minWidth: 0,
+              flex: '0 0 340px', minWidth: 0,
               borderRight: '0.5px solid var(--border)',
               overflowY: 'auto',
               padding: '16px 18px',
-              display: 'flex', flexDirection: 'column',
             }}
           >
             <Field icon={User}   label="Contact"  value={lead.contact_name} />
@@ -187,7 +257,7 @@ export function CallModal({ lead, onClose }) {
 
             {lead.pain_points && (
               <div style={{
-                marginBottom: 12, padding: '10px 12px',
+                marginBottom: 14, padding: '10px 12px',
                 background: 'rgba(245,158,11,0.06)', borderRadius: 8,
                 border: '0.5px solid rgba(245,158,11,0.18)',
               }}>
@@ -198,73 +268,156 @@ export function CallModal({ lead, onClose }) {
               </div>
             )}
 
-            {lead.notes && (
-              <div style={{
-                marginBottom: 12, padding: '10px 12px',
-                background: 'var(--bg-elevated)', borderRadius: 8,
-                border: '0.5px solid var(--border)',
-              }}>
-                <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <StickyNote size={10} /> Notes
-                </p>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>{lead.notes}</p>
-              </div>
-            )}
-
-            {/* Status dropdown — saves immediately */}
-            <div style={{ marginTop: 'auto', paddingTop: 12 }}>
+            {/* Status dropdown — 4 color-coded outcomes, saves on change */}
+            <div style={{ marginBottom: 14 }} ref={dropdownRef}>
               <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 6px' }}>Status</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <select
-                  value={status}
-                  onChange={handleStatusChange}
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setStatusOpen(v => !v)}
                   disabled={saveState === 'saving'}
                   style={{
-                    flex: 1, height: 38, padding: '0 10px',
-                    background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-                    borderRadius: 8, fontSize: 13, color: 'var(--text-primary)',
-                    fontFamily: 'var(--font-sans)', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                    width: '100%', height: 40, padding: '0 12px',
+                    background: selected ? selected.dim : 'var(--bg-elevated)',
+                    border: `0.5px solid ${selected ? selected.border : 'var(--border)'}`,
+                    borderRadius: 8, cursor: 'pointer', fontSize: 13,
+                    color: selected ? selected.color : 'var(--text-secondary)',
+                    fontWeight: 500,
                   }}
                 >
-                  {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                {saveState === 'saving' && <Loader2 size={14} color="var(--accent)" style={{ animation: 'spin 1s linear infinite' }} />}
-                {saveState === 'saved'  && <Check size={14} color="var(--success)" />}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {selected && <span style={{ width: 8, height: 8, borderRadius: '50%', background: selected.color, flexShrink: 0 }} />}
+                    {selected ? selected.value : `${status} — pick an outcome`}
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {saveState === 'saving' && <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />}
+                    {saveState === 'saved'  && <Check size={13} color="#22C55E" />}
+                    <ChevronDown size={14} />
+                  </span>
+                </button>
+                {statusOpen && (
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20,
+                    marginTop: 4, background: '#13131F', border: '0.5px solid var(--border)',
+                    borderRadius: 8, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                  }}>
+                    {STATUS_OPTIONS.map(o => (
+                      <button
+                        key={o.value}
+                        onClick={() => selectStatus(o.value)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 9,
+                          width: '100%', padding: '11px 12px', border: 'none',
+                          background: status === o.value ? o.dim : 'transparent',
+                          cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                          color: o.color, textAlign: 'left',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = o.dim }}
+                        onMouseLeave={e => { e.currentTarget.style.background = status === o.value ? o.dim : 'transparent' }}
+                      >
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: o.color, flexShrink: 0 }} />
+                        {o.value}
+                        {status === o.value && <Check size={12} style={{ marginLeft: 'auto' }} />}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               {saveState === 'error' && (
                 <p style={{ fontSize: 11, color: 'var(--danger)', margin: '5px 0 0' }}>Save failed — try again.</p>
               )}
-              {saveState === 'saved' && (
-                <p style={{ fontSize: 11, color: 'var(--success)', margin: '5px 0 0' }}>Saved</p>
-              )}
-
-              {/* Call Now — tel: link for now */}
-              {telHref ? (
-                <a
-                  href={telHref}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    marginTop: 12, height: 44,
-                    background: 'var(--success)', borderRadius: 10,
-                    fontSize: 14, fontWeight: 500, color: 'white',
-                    textDecoration: 'none',
-                    boxShadow: '0 0 20px rgba(34,197,94,0.3)',
-                  }}
-                >
-                  <Phone size={15} />
-                  Call {lead.phone}
-                </a>
-              ) : (
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  marginTop: 12, height: 44,
-                  background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-                  borderRadius: 10, fontSize: 13, color: 'var(--text-muted)',
-                }}>
-                  No phone number on file
-                </div>
+              {status === 'No Answer' && (
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '5px 0 0' }}>
+                  Re-queues back into your list as New in 4 hours.
+                </p>
               )}
             </div>
+
+            {/* Follow-Up scheduling — only when Follow-Up is selected */}
+            {status === 'Follow-Up' && (
+              <div style={{
+                marginBottom: 14, padding: '12px',
+                background: 'rgba(245,158,11,0.06)', borderRadius: 8,
+                border: '0.5px solid rgba(245,158,11,0.2)',
+              }}>
+                <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#F59E0B', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <CalendarClock size={10} /> Schedule Follow-Up
+                </p>
+                <input
+                  type="datetime-local"
+                  value={followUpAt}
+                  onChange={e => setFollowUpAt(e.target.value)}
+                  style={{
+                    width: '100%', height: 36, padding: '0 10px', marginBottom: 8,
+                    background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                    borderRadius: 7, fontSize: 13, color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-sans)', colorScheme: 'dark',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                <textarea
+                  value={followUpNotes}
+                  onChange={e => setFollowUpNotes(e.target.value)}
+                  placeholder="Reason for follow-up (e.g. owner asked to call back Thursday)…"
+                  rows={2}
+                  style={{
+                    width: '100%', padding: '8px 10px',
+                    background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                    borderRadius: 7, fontSize: 13, color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-sans)', resize: 'none', lineHeight: 1.5,
+                    boxSizing: 'border-box',
+                  }}
+                />
+                <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '6px 0 0' }}>Saved when you hit Done.</p>
+              </div>
+            )}
+
+            {/* Call notes — always available, saved on Done */}
+            <div style={{ marginBottom: 14 }}>
+              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <StickyNote size={10} /> Call Notes
+              </p>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="What happened on this call? Pain points, who answered, best time to retry…"
+                rows={3}
+                style={{
+                  width: '100%', padding: '8px 10px',
+                  background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                  borderRadius: 8, fontSize: 13, color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-sans)', resize: 'vertical', lineHeight: 1.5,
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Call Now — tel: link for now */}
+            {telHref ? (
+              <a
+                href={telHref}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  height: 44,
+                  background: 'var(--success)', borderRadius: 10,
+                  fontSize: 14, fontWeight: 500, color: 'white',
+                  textDecoration: 'none',
+                  boxShadow: '0 0 20px rgba(34,197,94,0.3)',
+                }}
+              >
+                <Phone size={15} />
+                Call {lead.phone}
+              </a>
+            ) : (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                height: 44,
+                background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                borderRadius: 10, fontSize: 13, color: 'var(--text-muted)',
+              }}>
+                No phone number on file
+              </div>
+            )}
           </div>
 
           {/* RIGHT — AI discovery script */}
@@ -333,20 +486,24 @@ export function CallModal({ lead, onClose }) {
 
         {/* Footer */}
         <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+          display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12,
           padding: '12px 18px',
           borderTop: '0.5px solid var(--border)',
           flexShrink: 0,
         }}>
+          {doneError && <p style={{ fontSize: 12, color: 'var(--danger)', margin: 0 }}>{doneError}</p>}
           <button
-            onClick={onClose}
+            onClick={handleDone}
+            disabled={closing}
             style={{
               padding: '9px 24px', borderRadius: 8,
               background: 'var(--accent)', border: 'none',
-              fontSize: 13, fontWeight: 500, color: 'white', cursor: 'pointer',
+              fontSize: 13, fontWeight: 500, color: 'white',
+              cursor: closing ? 'not-allowed' : 'pointer',
+              opacity: closing ? 0.7 : 1,
             }}
           >
-            Done
+            {closing ? 'Saving…' : 'Done'}
           </button>
         </div>
       </div>

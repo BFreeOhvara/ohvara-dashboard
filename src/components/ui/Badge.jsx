@@ -17,6 +17,16 @@ const STATUS_STYLES = {
     border: '0.5px solid var(--border)',
   },
   'No Answer': {
+    background: 'rgba(148,163,184,0.10)',
+    color: '#94A3B8',
+    border: '0.5px solid rgba(148,163,184,0.25)',
+  },
+  'Appointment Booked': {
+    background: 'var(--success-dim)',
+    color: 'var(--success)',
+    border: '0.5px solid rgba(34,197,94,0.20)',
+  },
+  'Follow-Up': {
     background: 'var(--warning-dim)',
     color: 'var(--warning)',
     border: '0.5px solid rgba(245,158,11,0.20)',
