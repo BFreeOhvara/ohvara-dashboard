@@ -28,10 +28,10 @@ const TRAINING_VIDEOS = [
 ]
 
 const CATEGORY_FILTERS = [
-  { key: 'all',       label: 'All Cards',          count: FLASHCARDS.length },
-  { key: 'objection', label: 'Objection Handling',  count: FLASHCARDS.filter(c => c.category === 'objection').length },
-  { key: 'script',    label: 'Scripts & Openers',   count: FLASHCARDS.filter(c => c.category === 'script').length },
-  { key: 'product',   label: 'Product Knowledge',   count: FLASHCARDS.filter(c => c.category === 'product').length },
+  { key: 'all', label: 'All Cards', count: FLASHCARDS.length },
+  ...Object.entries(CATEGORY_LABELS).map(([key, label]) => ({
+    key, label, count: FLASHCARDS.filter(c => c.category === key).length,
+  })),
 ]
 
 // The discovery script reps study before practicing. Static content —
@@ -556,7 +556,7 @@ function FlashcardDeck() {
               }}>
                 Answer
               </div>
-              <p style={{ fontSize: 15, color: catColor, lineHeight: 1.6, margin: 0, fontStyle: card.category === 'script' ? 'italic' : 'normal' }}>
+              <p style={{ fontSize: 15, color: catColor, lineHeight: 1.6, margin: 0 }}>
                 {card.back}
               </p>
             </div>
