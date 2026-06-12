@@ -29,17 +29,18 @@ const SECTIONS = [
 ]
 
 // Static fallback so the modal always shows a usable script even if the
-// generate-ai-script function is unreachable.
+// generate-ai-script function is unreachable. Bullet cheat-sheet format —
+// every line starts with "- " (rendered as bullets, same as AI output).
 function fallbackScript(lead) {
   const biz   = lead.business_name || 'the business'
-  const name  = lead.contact_name || 'there'
+  const name  = lead.contact_name || 'the owner'
   const niche = lead.niche || 'service'
   return {
-    opener: `"Hey, is this ${biz}? ${name}, I was looking at your listing — how's business going this season?"\n\nKeep it casual. You're a peer, not a telemarketer.`,
-    problem: `"How are you handling calls when the whole crew is out on jobs?"\n\n"Roughly how many calls a week would you say go to voicemail?"\n\nLet them talk. Every missed call for a ${niche} business is real money.`,
-    solution: `"So if 8–10 calls a week are going to voicemail, and even half of those are real jobs… that's serious revenue walking to a competitor every month."\n\nMake the cost concrete. Use their numbers, not yours.`,
-    objections: `"Not interested" → "Totally fair — most ${niche} owners say that until they see the missed-call math. Can I ask just one thing: what happens to a call you can't answer right now?"\n\n"Too busy" → "That's exactly why I'm calling. This takes 15 minutes and saves you hours."`,
-    close: `"Look, I don't want to take up your morning. Let's do a quick 15-minute call this week — I'll show you exactly how many calls you're missing and what they're worth. Does Tuesday or Thursday work better?"\n\nAlways offer two times. Confirm and get off the phone.`,
+    opener: `- "Hey, is this ${biz}? Is ${name} around?"\n- Casual, peer-to-peer — you're not a telemarketer.\n- "Saw your listing — how's the season going?"`,
+    problem: `- "Who's grabbing the phone when the crew's out on jobs?"\n- "How many calls a week would you guess hit voicemail?"\n- Let them talk — the pauses do the work.`,
+    solution: `- Use THEIR numbers: "Say half those calls are real jobs…"\n- "What's an average job worth for you?"\n- Every missed call is money walking to a competitor ${niche} shop.`,
+    objections: `- "Not interested" → "Fair — what happens to a call you can't answer right now?"\n- "Too busy" → "Exactly why I'm calling. 15 minutes, that's it."\n- One objection, one comeback, then go to the close.`,
+    close: `- The only goal: book the 15-minute call.\n- Offer two times: "Tuesday at 2, or Thursday morning?"\n- Confirm the time, then get off the phone.`,
   }
 }
 
@@ -557,11 +558,21 @@ export function CallModal({ lead, onClose }) {
                       }}>
                         {label}
                       </p>
-                      {script[key].split('\n').map((line, i) =>
-                        line
-                          ? <p key={i} style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 4px' }}>{line}</p>
-                          : <div key={i} style={{ height: 6 }} />
-                      )}
+                      {script[key].split('\n').map((line, i) => {
+                        const t = line.trim()
+                        if (!t) return <div key={i} style={{ height: 6 }} />
+                        // Bullet lines ("- ...") render as a tight list with a
+                        // colored marker; anything else falls back to prose.
+                        if (t.startsWith('- ') || t.startsWith('• ')) {
+                          return (
+                            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 5 }}>
+                              <span style={{ fontSize: 13, lineHeight: 1.5, color, flexShrink: 0 }}>•</span>
+                              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>{t.slice(2)}</p>
+                            </div>
+                          )
+                        }
+                        return <p key={i} style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 4px' }}>{line}</p>
+                      })}
                     </div>
                   ))}
                 </div>

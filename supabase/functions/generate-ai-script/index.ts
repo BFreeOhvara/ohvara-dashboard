@@ -6,13 +6,15 @@ const corsHeaders = {
 }
 
 // ── Fallback script template (used when API key missing or call fails) ────────
+// Bullet cheat-sheet format — every line starts with "- " so the modal
+// renders it as a scannable list, not prose.
 function buildFallbackScript(businessName: string, niche: string, jobTitle: string) {
   return {
-    opener: `"Hey, is this ${businessName}? Hey — my name's [Your Name], I was actually looking at your Indeed listing for a ${jobTitle}. How's that search going for you?"`,
-    problem: `"Quick question — when your team's out on jobs, how are you handling the phones right now? Like if someone calls in at 2pm on a Tuesday and everyone's tied up — what happens to that call? Yeah that's the thing... most ${niche} businesses we talk to are losing 8-10 calls a week they don't even know about."`,
-    solution: `"So what we do is we set up a 24/7 AI receptionist that answers every call, qualifies the lead, and books it straight onto your calendar. No voicemail, no missed calls. It handles the after-hours stuff too so you're capturing jobs your competitors are sleeping on."`,
-    objections: `"Not interested" → "Totally get it. Quick question before I let you go — are you still missing calls right now? Because that's usually the only reason people circle back to us." \n\n"We already have someone" → "That's actually perfect — this works alongside them and handles overflow so nothing falls through the cracks. What does it cost you when you miss a job call right now?"`,
-    close: `"I'd love to show you exactly how this works in 15 minutes. Nothing to install, I'll just walk you through it on a screen share. You free Thursday at 2, or would Friday morning work better?"`,
+    opener: `- "Hey, is this ${businessName}? Saw your listing for a ${jobTitle} — how's that search going?"\n- Casual, peer-to-peer. You're not a telemarketer.\n- Smile when you dial — tone carries.`,
+    problem: `- "Who's grabbing the phone when the crew's out on jobs?"\n- "How many calls a week would you guess hit voicemail?"\n- Let them talk — the pauses do the work.`,
+    solution: `- Use THEIR numbers: "Say half those calls are real jobs…"\n- "What's an average job worth for you?"\n- Every missed call is revenue walking to a competitor — most ${niche} shops lose 8-10/week.`,
+    objections: `- "Not interested" → "Fair — what happens to a call you can't answer right now?"\n- "Too busy" → "Exactly why I'm calling. 15 minutes, that's it."\n- One objection, one comeback, then move to the close.`,
+    close: `- The only goal: book the 15-minute call. Nothing else.\n- Offer two times: "Tuesday at 2, or Thursday morning?"\n- Confirm the time, then get off the phone.`,
   }
 }
 
@@ -188,7 +190,12 @@ Write a concise 150-word prep briefing for the closer. Cover: (1) likely pain po
   }
 
   // ---- SCRIPT mode (default) ----
-  prompt = `You are an expert cold call script writer for a web design agency that targets local service businesses with no website.
+  // Bullet cheat-sheet, not prose: the rep glances at this mid-call. The
+  // "solution" key renders under a "Pain Amplification" heading in the
+  // modal — it amplifies the cost of the problem, it does NOT pitch.
+  prompt = `You are writing a cold-call CHEAT SHEET for an appointment setter at Ohvara, which sells AI receptionists/dispatchers to local service businesses that are trying to hire for the phones.
+
+The rep's ONLY goal: surface the prospect's missed-call pain with QUESTIONS, then book a 15-minute discovery call. The rep never pitches product details or pricing — questions, not pitch.
 
 Lead info:
 - Business: ${business_name}
@@ -197,8 +204,6 @@ Lead info:
 - City: ${city || 'their area'}
 - Known pain points: ${pain_points || 'none noted'}
 - Rep notes: ${notes || 'none'}
-
-Write a complete cold call script in JSON format. The script should sound natural, conversational, and confident — not salesy.
 
 Return ONLY valid JSON with these keys:
 {
@@ -209,7 +214,17 @@ Return ONLY valid JSON with these keys:
   "close": "..."
 }
 
-Each section should be 3-5 sentences. The objections section should cover 2-3 common objections with responses. Use the business name and contact name naturally throughout.`
+FORMAT — this is the important part:
+- Each value is 2-4 SHORT bullet lines. Every line starts with "- ".
+- Each bullet is a glanceable prompt, question, or reminder — 15 words max. NOT sentences to read verbatim.
+- Tailor bullets to THIS lead: use the business name, niche, city, and pain points where they make a bullet sharper.
+
+Section meanings:
+- opener: how to open casual and peer-to-peer (reference their niche/city/hiring situation)
+- problem: discovery questions that surface missed-call pain
+- solution: pain amplification — make the cost of missed calls concrete with THEIR numbers (renders under a "Pain Amplification" heading; do not pitch)
+- objections: 2-3 likely objections, each with a one-line comeback ('"Not interested" → ...')
+- close: how to book the 15-minute call (offer two specific times, confirm, hang up)`
 
   let script
   try {
