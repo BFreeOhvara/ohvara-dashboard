@@ -172,6 +172,56 @@ export function useRepStats(repId, period = 'week') {
 }
 
 // Daily dials + bookings for the past 7 days — feeds the My Stats bar chart
+// Completed days — how many of the rep's assigned leads they actually worked
+// each day, from the calls table (net: one row per lead per day, deleted on
+// revert). A day is "complete" when the rep dialed the full daily batch.
+export const DAILY_BATCH_TARGET = 150
+
+export function useCompletedDays(repId, numDays = 21) {
+  return useQuery({
+    queryKey: ['stats', repId, 'completed-days', numDays],
+    staleTime: 0,
+    queryFn: async () => {
+      const since = new Date()
+      since.setDate(since.getDate() - (numDays - 1))
+      since.setHours(0, 0, 0, 0)
+
+      const { data, error } = await supabase
+        .from('calls')
+        .select('lead_id, created_at')
+        .eq('rep_id', repId)
+        .gte('created_at', since.toISOString())
+      if (error) throw error
+
+      const days = []
+      for (let i = numDays - 1; i >= 0; i--) {
+        const d = new Date()
+        d.setDate(d.getDate() - i)
+        d.setHours(0, 0, 0, 0)
+        days.push({
+          key: d.toDateString(),
+          label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          leads: new Set(),
+        })
+      }
+      const byKey = Object.fromEntries(days.map(d => [d.key, d]))
+      for (const c of data || []) {
+        const day = byKey[new Date(c.created_at).toDateString()]
+        if (day) day.leads.add(c.lead_id)
+      }
+      return days.map(d => {
+        const dialed = d.leads.size
+        return {
+          label: d.label,
+          dialed,
+          completed: dialed >= DAILY_BATCH_TARGET,
+        }
+      })
+    },
+    enabled: !!repId,
+  })
+}
+
 export function useRepDailyActivity(repId) {
   return useQuery({
     queryKey: ['stats', repId, 'daily7'],

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Phone, Calendar, TrendingUp, Clock } from 'lucide-react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts'
+import { AreaChart, Area, BarChart, Bar, Cell, ReferenceLine, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
-import { useRepStats, useRepDailyActivity } from '../../hooks/useProfiles'
+import { useRepStats, useRepDailyActivity, useCompletedDays, DAILY_BATCH_TARGET } from '../../hooks/useProfiles'
 import { StatCard } from '../../components/ui/StatCard'
 import { Button } from '../../components/ui/Button'
 
@@ -32,6 +32,8 @@ export default function MyStats() {
   const [period, setPeriod] = useState(() => sessionStorage.getItem(SS_PERIOD) || 'day')
   const { data: stats, isLoading } = useRepStats(profile?.id, period)
   const { data: daily } = useRepDailyActivity(profile?.id)
+  const { data: completedDays } = useCompletedDays(profile?.id, 21)
+  const completedCount = (completedDays || []).filter(d => d.completed).length
 
   function changePeriod(p) {
     setPeriod(p)
@@ -151,6 +153,69 @@ export default function MyStats() {
                 animationEasing="ease-out"
               />
             </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Completed days — full daily batch worked (leads dialed vs the 150 target) */}
+      <div className="glass" style={{ marginTop: 20, padding: '18px 20px', borderRadius: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+          <div>
+            <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 2px' }}>
+              Completed Days
+            </p>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 14px' }}>
+              Days you worked the full {DAILY_BATCH_TARGET}-lead batch — green bars cleared the line
+            </p>
+          </div>
+          <p style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: completedCount > 0 ? 'var(--success)' : 'var(--text-muted)', margin: 0 }}>
+            {completedCount} of {completedDays?.length ?? 21} days completed
+          </p>
+        </div>
+        <div style={{ width: '100%', height: 200 }}>
+          <ResponsiveContainer>
+            <BarChart data={completedDays || []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+                axisLine={{ stroke: 'var(--border)' }}
+                tickLine={false}
+                interval={2}
+              />
+              <YAxis
+                allowDecimals={false}
+                domain={[0, DAILY_BATCH_TARGET]}
+                tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
+                axisLine={false}
+                tickLine={false}
+                width={32}
+              />
+              <Tooltip
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null
+                  const d = payload[0].payload
+                  return (
+                    <div style={{
+                      background: '#13131F', border: '0.5px solid var(--border)',
+                      borderRadius: 8, padding: '8px 12px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                    }}>
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 4px' }}>{label}</p>
+                      <p style={{ fontSize: 12, color: d.completed ? 'var(--success)' : 'var(--text-secondary)', margin: 0, fontFamily: 'var(--font-mono)' }}>
+                        {d.dialed} / {DAILY_BATCH_TARGET} leads{d.completed ? ' ✓ complete' : ''}
+                      </p>
+                    </div>
+                  )
+                }}
+                cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+              />
+              <ReferenceLine y={DAILY_BATCH_TARGET} stroke="#22C55E" strokeDasharray="4 4" strokeOpacity={0.5} />
+              <Bar dataKey="dialed" name="Leads dialed" radius={[3, 3, 0, 0]} animationDuration={700} animationEasing="ease-out">
+                {(completedDays || []).map((d, i) => (
+                  <Cell key={i} fill={d.completed ? '#22C55E' : 'rgba(108,99,255,0.45)'} />
+                ))}
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
