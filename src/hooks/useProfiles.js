@@ -109,19 +109,21 @@ export function useTodayCallStats(repId) {
 
 // Rep's commission earned — $248.50 per closed deal (50% of the $497 setup
 // fee). Reads the commissions table (RLS: recipient sees own rows); voided
-// commissions don't count.
+// commissions don't count. Returns totals plus the raw rows so the
+// My Commissions page can chart daily earnings.
 export function useMyCommission(repId) {
   return useQuery({
     queryKey: ['commissions', repId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('commissions')
-        .select('amount, status')
+        .select('amount, status, tier, commission_type, created_at')
         .eq('recipient_id', repId)
         .neq('status', 'voided')
+        .order('created_at', { ascending: true })
       if (error) throw error
       const total = (data || []).reduce((sum, c) => sum + Number(c.amount || 0), 0)
-      return { total, deals: data?.length || 0 }
+      return { total, deals: data?.length || 0, rows: data || [] }
     },
     enabled: !!repId,
   })

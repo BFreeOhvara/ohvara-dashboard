@@ -13,6 +13,7 @@ import MyLeads from './pages/rep/MyLeads'
 import TrainingCenter from './pages/rep/TrainingCenter'
 import MyStats from './pages/rep/MyStats'
 import MyGoals from './pages/rep/MyGoals'
+import MyCommissions from './pages/rep/MyCommissions'
 import ActivityFeed from './pages/rep/ActivityFeed'
 
 // Closer pages
@@ -81,6 +82,11 @@ export default function App() {
             <Route path="/rep/goals" element={
               <ProtectedRoute allowedRoles={['rep']}>
                 <DashboardLayout><MyGoals /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/rep/commissions" element={
+              <ProtectedRoute allowedRoles={['rep']}>
+                <DashboardLayout><MyCommissions /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/rep/feed" element={

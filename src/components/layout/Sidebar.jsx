@@ -11,11 +11,12 @@ import { NotificationBell } from '../admin/NotificationBell'
 
 const NAV = {
   rep: [
-    { to: '/rep',          label: 'My Leads',    icon: Phone },
-    { to: '/rep/training', label: 'Training',     icon: BookOpen },
-    { to: '/rep/stats',    label: 'My Stats',     icon: BarChart2 },
-    { to: '/rep/goals',    label: 'My Goals',     icon: Target },
-    { to: '/rep/feed',     label: 'Activity',     icon: Bell },
+    { to: '/rep',             label: 'My Leads',       icon: Phone },
+    { to: '/rep/training',    label: 'Training',       icon: BookOpen },
+    { to: '/rep/stats',       label: 'My Stats',       icon: BarChart2 },
+    { to: '/rep/goals',       label: 'My Goals',       icon: Target },
+    { to: '/rep/commissions', label: 'My Commissions', icon: DollarSign },
+    { to: '/rep/feed',        label: 'Activity',       icon: Bell },
   ],
   closer: [
     { to: '/closer',                   label: 'Appointments',  icon: Calendar },
