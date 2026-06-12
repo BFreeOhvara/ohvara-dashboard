@@ -85,7 +85,6 @@ export function CallModal({ lead, onClose }) {
   const [status, setStatus]           = useState(lead.status)
   const [statusTouched, setStatusTouched] = useState(false)
   const [statusOpen, setStatusOpen]   = useState(false)
-  const [saveState, setSaveState]     = useState('idle') // idle | saving | saved | error
   const [notes, setNotes]             = useState(lead.notes || '')
   const [preCallNotes, setPreCallNotes] = useState(lead.pre_call_notes || '')
   const [followUpAt, setFollowUpAt]   = useState(toDatetimeLocal(lead.follow_up_at))
@@ -145,57 +144,75 @@ export function CallModal({ lead, onClose }) {
 
   useEffect(() => { generateScript() }, [lead.id])
 
-  // Status saves to DB immediately on selection.
-  // Pipeline routing happens in the handle_lead_pipeline DB trigger:
-  // No Answer → 24h queue, random rep tomorrow; Follow-Up → returns to
-  // this rep at the chosen time; Not Interested → permanent do-not-contact.
-  // Real outcomes also log a row in calls so My Stats stays live.
-  async function selectStatus(value) {
+  // Status selection is LOCAL ONLY — nothing touches the DB until Done.
+  // X (close) discards any selection made since the modal opened.
+  function selectStatus(value) {
     setStatusOpen(false)
     setStatusTouched(true)
-    if (value === status) return
     setStatus(value)
-    setSaveState('saving')
-    try {
-      const { error } = await supabase.from('leads').update({ status: value }).eq('id', lead.id)
-      if (error) throw error
-      if (CALL_OUTCOMES.includes(value) && profile?.id) {
-        await supabase.from('calls').insert({
-          lead_id: lead.id,
-          rep_id: profile.id,
-          outcome: value,
-        })
-      }
-      qc.invalidateQueries({ queryKey: ['leads'] })
-      qc.invalidateQueries({ queryKey: ['stats'] })
-      setSaveState('saved')
-      setTimeout(() => setSaveState(s => (s === 'saved' ? 'idle' : s)), 2000)
-    } catch {
-      setSaveState('error')
-    }
   }
 
-  // Done: persist both note fields (+ follow-up fields when scheduled), then close
+  // Appointment Booked and Follow-Up cannot be saved without a date/time
+  const needsDate =
+    (status === 'Appointment Booked' && !appointmentAt) ||
+    (status === 'Follow-Up' && !followUpAt)
+
+  // Done is the ONLY commit path: status + notes (+ scheduling fields) save
+  // together, then the calls table is synced to the NET outcome — one row
+  // per lead per rep per UTC day, deleted on revert to New — so Calls Today
+  // and Booked Today move with the lead's current state, matching the
+  // progress bar. Pipeline routing happens in the handle_lead_pipeline DB
+  // trigger: No Answer → 24h queue, random rep tomorrow; Follow-Up →
+  // returns to this rep at the chosen time; Not Interested → permanent
+  // do-not-contact.
   async function handleDone() {
-    if (!statusTouched) return
+    if (!statusTouched || needsDate) return
     setClosing(true)
     setDoneError('')
     try {
       const patch = {
+        status,
         notes: notes || null,
         pre_call_notes: preCallNotes || null,
       }
       if (status === 'Follow-Up') {
-        patch.follow_up_at    = followUpAt ? new Date(followUpAt).toISOString() : null
+        patch.follow_up_at    = new Date(followUpAt).toISOString()
         patch.follow_up_notes = followUpNotes || null
       }
       if (status === 'Appointment Booked') {
         // The pipeline trigger syncs an appointments row for the closer
-        patch.appointment_at = appointmentAt ? new Date(appointmentAt).toISOString() : null
+        patch.appointment_at = new Date(appointmentAt).toISOString()
       }
-      const { error } = await supabase.from('leads').update(patch).eq('id', lead.id)
+      // .select() so a 0-row update (expired session, RLS mismatch) is a
+      // visible error instead of a silent no-op that closes the modal
+      const { data: updated, error } = await supabase
+        .from('leads')
+        .update(patch)
+        .eq('id', lead.id)
+        .select('id')
       if (error) throw error
+      if (!updated?.length) throw new Error('Save failed — your session may have expired. Refresh the page and try again.')
+
+      // Net calls sync — only when the status actually changed this session
+      if (status !== lead.status && profile?.id) {
+        const utcMidnight = new Date().toISOString().split('T')[0] + 'T00:00:00Z'
+        await supabase
+          .from('calls')
+          .delete()
+          .eq('lead_id', lead.id)
+          .eq('rep_id', profile.id)
+          .gte('created_at', utcMidnight)
+        if (CALL_OUTCOMES.includes(status)) {
+          await supabase.from('calls').insert({
+            lead_id: lead.id,
+            rep_id: profile.id,
+            outcome: status,
+          })
+        }
+      }
+
       qc.invalidateQueries({ queryKey: ['leads'] })
+      qc.invalidateQueries({ queryKey: ['stats'] })
       onClose()
     } catch (err) {
       setDoneError(err.message || 'Failed to save')
@@ -317,13 +334,12 @@ export function CallModal({ lead, onClose }) {
               />
             </div>
 
-            {/* Status dropdown — color-coded outcomes, saves on change */}
+            {/* Status dropdown — color-coded outcomes, committed on Done (X discards) */}
             <div style={{ marginBottom: 14 }} ref={dropdownRef}>
               <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 6px' }}>Status</p>
               <div style={{ position: 'relative' }}>
                 <button
                   onClick={() => setStatusOpen(v => !v)}
-                  disabled={saveState === 'saving'}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
                     width: '100%', height: 40, padding: '0 12px',
@@ -339,8 +355,6 @@ export function CallModal({ lead, onClose }) {
                     {selected ? selected.value : `${status} — pick an outcome`}
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {saveState === 'saving' && <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />}
-                    {saveState === 'saved'  && <Check size={13} color="#22C55E" />}
                     <ChevronDown size={14} />
                   </span>
                 </button>
@@ -379,9 +393,6 @@ export function CallModal({ lead, onClose }) {
                   </div>
                 )}
               </div>
-              {saveState === 'error' && (
-                <p style={{ fontSize: 11, color: 'var(--danger)', margin: '5px 0 0' }}>Save failed — try again.</p>
-              )}
               {selected?.note && (
                 <p style={{ fontSize: 11, color: selected.color, margin: '5px 0 0', opacity: 0.9 }}>
                   {status === 'Follow-Up' && followUpAt
@@ -574,7 +585,8 @@ export function CallModal({ lead, onClose }) {
           </div>
         </div>
 
-        {/* Footer — Done disabled until the rep picks a status for this call */}
+        {/* Footer — Done (the only save path) disabled until a status is
+            picked, and blocked when Booked/Follow-Up is missing its date */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12,
           padding: '12px 18px',
@@ -582,22 +594,28 @@ export function CallModal({ lead, onClose }) {
           flexShrink: 0,
         }}>
           {doneError && <p style={{ fontSize: 12, color: 'var(--danger)', margin: 0 }}>{doneError}</p>}
-          {!statusTouched && (
+          {!statusTouched ? (
             <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>
-              Select a status to finish
+              Select a status to finish — X discards changes
             </p>
-          )}
+          ) : needsDate ? (
+            <p style={{ fontSize: 12, color: 'var(--warning)', margin: 0, fontStyle: 'italic' }}>
+              {status === 'Appointment Booked'
+                ? 'Pick the appointment date & time to save'
+                : 'Pick the follow-up date & time to save'}
+            </p>
+          ) : null}
           <button
             onClick={handleDone}
-            disabled={closing || !statusTouched}
+            disabled={closing || !statusTouched || needsDate}
             style={{
               padding: '9px 24px', borderRadius: 8,
-              background: statusTouched ? 'var(--accent)' : 'var(--bg-elevated)',
-              border: statusTouched ? 'none' : '0.5px solid var(--border)',
+              background: (statusTouched && !needsDate) ? 'var(--accent)' : 'var(--bg-elevated)',
+              border: (statusTouched && !needsDate) ? 'none' : '0.5px solid var(--border)',
               fontSize: 13, fontWeight: 500,
-              color: statusTouched ? 'white' : 'var(--text-muted)',
-              cursor: (closing || !statusTouched) ? 'not-allowed' : 'pointer',
-              opacity: closing ? 0.7 : statusTouched ? 1 : 0.6,
+              color: (statusTouched && !needsDate) ? 'white' : 'var(--text-muted)',
+              cursor: (closing || !statusTouched || needsDate) ? 'not-allowed' : 'pointer',
+              opacity: closing ? 0.7 : (statusTouched && !needsDate) ? 1 : 0.6,
               transition: 'all 0.15s',
             }}
           >

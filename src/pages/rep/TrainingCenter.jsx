@@ -17,14 +17,14 @@ const LS_MASTERED  = 'ohvara_flashcard_mastered'
 // YouTube's oEmbed endpoint on 2026-06-11. Replace with Ohvara's own
 // recordings when available.
 const TRAINING_VIDEOS = [
-  { id: 1, title: 'The Perfect Opener', description: 'How to start a cold call so they don\'t hang up in the first 5 seconds. The exact words to use.', duration: '6 min', category: 'Opener',    youtubeId: 'nkGuC2gy1To' }, // "Best Cold Call Opening Lines for Sales Reps" — Matt Easton
-  { id: 2, title: 'Tonality & Energy',  description: 'Why how you say it matters more than what you say. The tone that gets callbacks.', duration: '9 min', category: 'Delivery',   youtubeId: 'nH3B415NSio' }, // "Cold Calls Are Won With TONE (Not Your Script)" — Sell Better
-  { id: 3, title: 'Uncovering Pain',    description: 'The questions that make prospects tell you everything. How to get them talking.', duration: '8 min', category: 'Discovery',  youtubeId: 'swr2VsX5Ank' }, // "Discovery Calls That Don't Suck: How to Uncover Real Pain FAST" — Connor Murray
-  { id: 4, title: 'Handling "Not Interested"', description: 'The only objection that matters on a cold call. Exactly what to say and when to let go.', duration: '7 min', category: 'Objections', youtubeId: 'z_JohGi_i7k' }, // "How I Handle 'Not Interested' (Cold Call Script)" — 30 Minutes to President's Club
-  { id: 5, title: 'Booking the Call',   description: 'How to go from good conversation to confirmed appointment. The exact close.', duration: '6 min', category: 'Booking',    youtubeId: 'mQ68FJYL8Lg' }, // "Cold Calling Appointment Setting: How to Book the Meeting on the 2nd Ask" — Matt Macnamara
-  { id: 6, title: 'Common Mistakes',    description: 'The cold-calling mistakes that kill your connect rate. Watch this before your first call.', duration: '8 min', category: 'Mistakes',   youtubeId: 'dUvLjS064Rw' }, // "Five B2B Cold-Calling Mistakes That Cost You Sales & Customers" — Ian Johnson
-  { id: 7, title: 'The Full Call Walkthrough', description: 'A real live cold call from dial to booked meeting. Watch how it\'s done.', duration: '10 min', category: 'Full Call', youtubeId: '4BpD8-BHrJg' }, // "cold call LIVE (what the gurus dont show) 1 meeting booked" — Pavlo
-  { id: 8, title: 'The Numbers Game', description: 'Why calling volume beats everything else. The math behind consistent bookings.', duration: '9 min', category: 'Mindset', youtubeId: 'dnOu6ysy7NU' }, // "How I book 3-5 appointments per day (B2B Cold Calling)" — Connor Murray
+  { id: 1, title: 'The Perfect Opener', description: 'How to start a cold call so they don\'t hang up in the first 5 seconds. The exact words to use.', duration: '3 min', category: 'Opener',    youtubeId: 'nkGuC2gy1To' }, // "Best Cold Call Opening Lines for Sales Reps" — Matt Easton
+  { id: 2, title: 'Tonality & Energy',  description: 'Why how you say it matters more than what you say. The tone that gets callbacks.', duration: '24 min', category: 'Delivery',   youtubeId: 'nH3B415NSio' }, // "Cold Calls Are Won With TONE (Not Your Script)" — Sell Better
+  { id: 3, title: 'Uncovering Pain',    description: 'The questions that make prospects tell you everything. How to get them talking.', duration: '28 min', category: 'Discovery',  youtubeId: 'swr2VsX5Ank' }, // "Discovery Calls That Don't Suck: How to Uncover Real Pain FAST" — Connor Murray
+  { id: 4, title: 'Handling "Not Interested"', description: 'The only objection that matters on a cold call. Exactly what to say and when to let go.', duration: '5 min', category: 'Objections', youtubeId: 'z_JohGi_i7k' }, // "How I Handle 'Not Interested' (Cold Call Script)" — 30 Minutes to President's Club
+  { id: 5, title: 'Booking the Call',   description: 'How to go from good conversation to confirmed appointment. The exact close.', duration: '4 min', category: 'Booking',    youtubeId: 'mQ68FJYL8Lg' }, // "Cold Calling Appointment Setting: How to Book the Meeting on the 2nd Ask" — Matt Macnamara
+  { id: 6, title: 'Common Mistakes',    description: 'The cold-calling mistakes that kill your connect rate. Watch this before your first call.', duration: '10 min', category: 'Mistakes',   youtubeId: 'dUvLjS064Rw' }, // "Five B2B Cold-Calling Mistakes That Cost You Sales & Customers" — Ian Johnson
+  { id: 7, title: 'The Full Call Walkthrough', description: 'A real live cold call from dial to booked meeting. Watch how it\'s done.', duration: '1h 23m', category: 'Full Call', youtubeId: '4BpD8-BHrJg' }, // "cold call LIVE (what the gurus dont show) 1 meeting booked" — Pavlo
+  { id: 8, title: 'The Numbers Game', description: 'Why calling volume beats everything else. The math behind consistent bookings.', duration: '13 min', category: 'Mindset', youtubeId: 'dnOu6ysy7NU' }, // "How I book 3-5 appointments per day (B2B Cold Calling)" — Connor Murray
 ]
 
 const CATEGORY_FILTERS = [
@@ -973,7 +973,7 @@ function QuizTab({ progress, saveProgress }) {
   )
 }
 
-// ── AIRoleplay — live voice practice scored by Claude ─────────────────────────
+// ── AIRoleplay — live voice practice scored by "Phoenix" (claude-haiku) ───────
 // Calls Retell ("Mike", a gruff HVAC owner), transcribes live, and on hang-up
 // sends the transcript to score-roleplay. B+ or higher (9/12) passes the gate.
 
@@ -1221,7 +1221,7 @@ function AIRoleplay({ progress, saveProgress }) {
               {phase === 'connecting' ? 'Dialing Mike…' : phase === 'live' ? 'Live — Mike picked up' : 'Scoring your call…'}
             </p>
             <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>
-              {phase === 'scoring' ? 'Claude is reviewing the transcript' : 'HVAC owner · Dallas, TX · gruff but winnable'}
+              {phase === 'scoring' ? 'Phoenix is reviewing the transcript' : 'HVAC owner · Dallas, TX · gruff but winnable'}
             </p>
           </div>
           {phase === 'live' && (
@@ -1292,7 +1292,7 @@ function AIRoleplay({ progress, saveProgress }) {
       <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 10px' }}>
         Cold-call Mike — a busy HVAC owner in Dallas who's been burned by software
         before. Open clean, dig into his missed-call pain, survive one objection,
-        and book the 15-minute call. Claude grades the whole conversation.
+        and book the 15-minute call. Phoenix, our AI coach, grades the whole conversation.
       </p>
       <p style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: progress?.roleplay_passed_at ? 'var(--success)' : 'var(--text-muted)', margin: '0 0 6px' }}>
         {progress?.roleplay_grade

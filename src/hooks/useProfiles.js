@@ -107,6 +107,26 @@ export function useTodayCallStats(repId) {
   })
 }
 
+// Rep's commission earned — $248.50 per closed deal (50% of the $497 setup
+// fee). Reads the commissions table (RLS: recipient sees own rows); voided
+// commissions don't count.
+export function useMyCommission(repId) {
+  return useQuery({
+    queryKey: ['commissions', repId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('commissions')
+        .select('amount, status')
+        .eq('recipient_id', repId)
+        .neq('status', 'voided')
+      if (error) throw error
+      const total = (data || []).reduce((sum, c) => sum + Number(c.amount || 0), 0)
+      return { total, deals: data?.length || 0 }
+    },
+    enabled: !!repId,
+  })
+}
+
 export function useRepStats(repId, period = 'week') {
   return useQuery({
     queryKey: ['stats', repId, period],

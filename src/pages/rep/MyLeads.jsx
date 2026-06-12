@@ -1,8 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Phone, RefreshCw, PhoneCall, Target, BarChart2, List, Lock, Check, GraduationCap } from 'lucide-react'
+import { Phone, RefreshCw, PhoneCall, Target, BarChart2, List, Lock, Check, GraduationCap, DollarSign } from 'lucide-react'
 import { useMyLeads } from '../../hooks/useLeads'
-import { useTodayCallStats } from '../../hooks/useProfiles'
+import { useTodayCallStats, useMyCommission } from '../../hooks/useProfiles'
 import { useAuth } from '../../hooks/useAuth'
 import {
   useTrainingProgress, trainingChecks, isTrainingComplete,
@@ -228,6 +228,7 @@ export default function MyLeads() {
   const { profile } = useAuth()
   const { data: leads, isLoading, refetch } = useMyLeads()
   const { data: callStats } = useTodayCallStats(profile?.id)
+  const { data: commission } = useMyCommission(profile?.id)
   const { data: training, isLoading: trainingLoading } = useTrainingProgress()
   // Filter + scroll position survive tab switches via sessionStorage
   const [activeFilter, setActiveFilter] = useState(() => sessionStorage.getItem(SS_FILTER) || 'All')
@@ -317,6 +318,15 @@ export default function MyLeads() {
           value={kpis.total}
           sub="Leads assigned today"
           icon={List}
+        />
+        <KPICard
+          label="Commission Earned"
+          value={Math.floor(commission?.total ?? 0)}
+          prefix="$"
+          sub={`$248 per closed deal · ${commission?.deals ?? 0} closed`}
+          subColor={(commission?.total ?? 0) > 0 ? 'var(--success)' : undefined}
+          accent={(commission?.total ?? 0) > 0}
+          icon={DollarSign}
         />
       </div>
 

@@ -50,6 +50,7 @@ export default function ActivityFeed() {
       type: 'call',
       label: `Called ${c.lead?.business_name}`,
       sub: c.outcome ? `Outcome: ${c.outcome}` : null,
+      status: c.outcome,
       time: c.created_at,
     })),
   ].sort((a, b) => new Date(b.time) - new Date(a.time))
@@ -85,21 +86,40 @@ export default function ActivityFeed() {
   )
 }
 
+// Same status color scheme as the Call Now modal / Badge
+const STATUS_COLORS = {
+  'New':                { color: '#38BDF8', dim: 'rgba(56,189,248,0.10)' },
+  'Appointment Booked': { color: '#22C55E', dim: 'rgba(34,197,94,0.10)' },
+  'No Answer':          { color: '#94A3B8', dim: 'rgba(148,163,184,0.10)' },
+  'Not Interested':     { color: '#EF4444', dim: 'rgba(239,68,68,0.10)' },
+  'Follow-Up':          { color: '#F59E0B', dim: 'rgba(245,158,11,0.10)' },
+}
+
 function FeedItem({ item }) {
+  const sc = item.status ? STATUS_COLORS[item.status] : null
+
   const icons = {
-    call:        <Phone size={14} className="text-[var(--accent)]" />,
+    call:        <Phone size={14} style={sc ? { color: sc.color } : undefined} className={sc ? undefined : 'text-[var(--accent)]'} />,
     re_engaged:  <RefreshCw size={14} className="text-[var(--success)]" />,
     booked:      <Calendar size={14} className="text-[var(--warning)]" />,
   }
 
   return (
-    <div className="flex items-start gap-3 px-2 py-2.5 rounded-lg hover:bg-[var(--bg-2)] transition-colors">
-      <div className="w-7 h-7 rounded-full bg-[var(--bg-3)] flex items-center justify-center flex-shrink-0 mt-0.5">
+    <div
+      className="flex items-start gap-3 px-2 py-2.5 rounded-lg hover:bg-[var(--bg-2)] transition-colors"
+      style={sc ? { borderLeft: `2px solid ${sc.color}` } : { borderLeft: '2px solid transparent' }}
+    >
+      <div
+        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+        style={{ background: sc ? sc.dim : 'var(--bg-3)' }}
+      >
         {icons[item.type] || <Bell size={14} className="text-[var(--text-secondary)]" />}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-[var(--text-primary)]">{item.label}</p>
-        {item.sub && <p className="text-xs text-[var(--text-muted)]">{item.sub}</p>}
+        {item.sub && (
+          <p className="text-xs" style={{ color: sc ? sc.color : 'var(--text-muted)' }}>{item.sub}</p>
+        )}
       </div>
       <p className="text-xs text-[var(--text-muted)] flex-shrink-0">{formatTime(item.time)}</p>
     </div>
