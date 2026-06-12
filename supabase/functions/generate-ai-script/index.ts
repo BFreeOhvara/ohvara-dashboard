@@ -244,6 +244,32 @@ Section meanings:
     // API credits exhausted or network error — use fallback
   }
 
+  // Coerce sections to strings before they leave the function. The model
+  // sometimes returns arrays of bullets (the bullet prompt invites it) —
+  // the client renders strings, so normalize here too (belt and suspenders
+  // with the client-side normalizeScript).
+  if (script && typeof script === 'object') {
+    let usable = 0
+    for (const k of ['opener', 'problem', 'solution', 'objections', 'close']) {
+      const v = (script as Record<string, unknown>)[k]
+      if (typeof v === 'string' && v.trim()) {
+        usable++
+      } else if (Array.isArray(v) && v.length) {
+        ;(script as Record<string, unknown>)[k] = v
+          .map(x => String(x).trim())
+          .filter(Boolean)
+          .map(l => (l.startsWith('- ') || l.startsWith('• ') ? l : `- ${l}`))
+          .join('\n')
+        usable++
+      } else {
+        delete (script as Record<string, unknown>)[k]
+      }
+    }
+    if (usable < 3) script = null
+  } else {
+    script = null
+  }
+
   if (!script) {
     script = buildFallbackScript(business_name || 'this business', niche || 'service business', job_title || 'receptionist')
   }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Component } from 'react'
 import { createPortal } from 'react-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { Phone, X, Loader2, RotateCcw, MapPin, User, Tag, Globe, Check, FileText, StickyNote, AlertTriangle, ChevronDown, CalendarClock } from 'lucide-react'
@@ -41,6 +41,72 @@ function fallbackScript(lead) {
     solution: `- Use THEIR numbers: "Say half those calls are real jobs…"\n- "What's an average job worth for you?"\n- Every missed call is money walking to a competitor ${niche} shop.`,
     objections: `- "Not interested" → "Fair — what happens to a call you can't answer right now?"\n- "Too busy" → "Exactly why I'm calling. 15 minutes, that's it."\n- One objection, one comeback, then go to the close.`,
     close: `- The only goal: book the 15-minute call.\n- Offer two times: "Tuesday at 2, or Thursday morning?"\n- Confirm the time, then get off the phone.`,
+  }
+}
+
+// How long we wait for the AI script before falling back. functions.invoke()
+// has NO built-in timeout — a stalled request would otherwise spin forever.
+const SCRIPT_TIMEOUT_MS = 15000
+
+// Coerce whatever the model returned into render-safe strings. Sections can
+// come back as arrays of bullets (the bullet-format prompt invites it) or
+// other shapes — rendering calls .split('\n'), so anything non-string used
+// to crash the React tree (blank page: no error boundary existed).
+// Returns null if nothing usable survives — caller falls back.
+function normalizeScript(raw) {
+  if (!raw || typeof raw !== 'object') return null
+  const keys = ['opener', 'problem', 'solution', 'objections', 'close']
+  const out = {}
+  let usable = 0
+  for (const k of keys) {
+    const v = raw[k]
+    if (typeof v === 'string' && v.trim()) {
+      out[k] = v
+      usable++
+    } else if (Array.isArray(v) && v.length) {
+      out[k] = v
+        .map(x => String(x).trim())
+        .filter(Boolean)
+        .map(l => (l.startsWith('- ') || l.startsWith('• ') ? l : `- ${l}`))
+        .join('\n')
+      usable++
+    }
+    // anything else (object, number, empty) — drop the section
+  }
+  return usable >= 3 ? out : null
+}
+
+// Catches render-time crashes inside the modal so a bad script payload (or
+// any other bug in here) degrades to a retry state instead of unmounting
+// the entire app. The page going black on script failures was exactly this.
+class ModalErrorBoundary extends Component {
+  state = { crashed: false }
+  static getDerivedStateFromError() { return { crashed: true } }
+  render() {
+    if (!this.state.crashed) return this.props.children
+    return (
+      <div style={{
+        width: '100%', maxWidth: 480, background: '#0E0E1A',
+        border: '0.5px solid var(--border)', borderRadius: 14,
+        padding: '32px 28px', textAlign: 'center',
+      }}>
+        <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 8px' }}>
+          Something went wrong loading this call
+        </p>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 20px' }}>
+          Nothing was saved. Close this and open the lead again — the script will regenerate.
+        </p>
+        <button
+          onClick={this.props.onClose}
+          style={{
+            padding: '9px 24px', borderRadius: 8, background: 'var(--accent)',
+            border: 'none', fontSize: 13, fontWeight: 500, color: 'white', cursor: 'pointer',
+          }}
+        >
+          Close
+        </button>
+      </div>
+    )
   }
 }
 
@@ -122,7 +188,9 @@ export function CallModal({ lead, onClose }) {
     setLoading(true)
     setIsFallback(false)
     try {
-      const { data, error } = await supabase.functions.invoke('generate-ai-script', {
+      // Race the invoke against a hard timeout — without it a stalled
+      // request leaves "Writing your discovery script…" spinning forever.
+      const invoke = supabase.functions.invoke('generate-ai-script', {
         body: {
           lead_id: lead.id,
           business_name: lead.business_name,
@@ -133,8 +201,13 @@ export function CallModal({ lead, onClose }) {
           notes: lead.notes,
         },
       })
-      if (error || !data?.script) throw new Error('no script')
-      setScript(data.script)
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('script generation timed out')), SCRIPT_TIMEOUT_MS)
+      )
+      const { data, error } = await Promise.race([invoke, timeout])
+      const normalized = normalizeScript(error ? null : data?.script)
+      if (!normalized) throw new Error('no usable script')
+      setScript(normalized)
     } catch {
       setScript(fallbackScript(lead))
       setIsFallback(true)
@@ -239,6 +312,7 @@ export function CallModal({ lead, onClose }) {
       }}
       onClick={e => e.stopPropagation() /* click-outside does NOT close — exit via X (discard) or Done (save) */}
     >
+      <ModalErrorBoundary onClose={onClose}>
       <div style={{
         width: '100%', maxWidth: 960, maxHeight: '88vh',
         display: 'flex', flexDirection: 'column',
@@ -634,6 +708,7 @@ export function CallModal({ lead, onClose }) {
           </button>
         </div>
       </div>
+      </ModalErrorBoundary>
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>,
