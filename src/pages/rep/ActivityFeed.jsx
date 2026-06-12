@@ -1,9 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { Bell, Phone, Calendar, RefreshCw } from 'lucide-react'
+import { Bell, Phone } from 'lucide-react'
 import { Card } from '../../components/ui/Card'
-import { clsx } from 'clsx'
+
+// The feed is strictly outcome-driven: a calls row exists only when a lead
+// was moved to a real outcome (Appointment Booked / No Answer / Not
+// Interested / Follow-Up), and the row is deleted if the rep reverts the
+// lead to New — so the feed self-corrects. No other event types are logged.
+const FEED_OUTCOMES = ['Appointment Booked', 'No Answer', 'Not Interested', 'Follow-Up']
 
 export default function ActivityFeed() {
   const { profile } = useAuth()
@@ -15,6 +20,7 @@ export default function ActivityFeed() {
         .from('calls')
         .select(`*, lead:leads(business_name, contact_name)`)
         .eq('rep_id', profile.id)
+        .in('outcome', FEED_OUTCOMES)
         .order('created_at', { ascending: false })
         .limit(50)
       if (error) throw error
@@ -23,43 +29,20 @@ export default function ActivityFeed() {
     enabled: !!profile?.id,
   })
 
-  const { data: reEngaged } = useQuery({
-    queryKey: ['re_engagement', profile?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('re_engagement_log')
-        .select(`*, lead:leads(business_name, assigned_rep_id)`)
-        .eq('status', 'replied')
-        .order('created_at', { ascending: false })
-        .limit(10)
-      if (error) throw error
-      return (data || []).filter(r => r.lead?.assigned_rep_id === profile.id)
-    },
-    enabled: !!profile?.id,
-  })
-
-  const items = [
-    ...(reEngaged || []).map(r => ({
-      id: r.id,
-      type: 're_engaged',
-      label: `${r.lead?.business_name} replied to re-engagement`,
-      time: r.created_at,
-    })),
-    ...(calls || []).map(c => ({
-      id: c.id,
-      type: 'call',
-      label: `Called ${c.lead?.business_name}`,
-      sub: c.outcome ? `Outcome: ${c.outcome}` : null,
-      status: c.outcome,
-      time: c.created_at,
-    })),
-  ].sort((a, b) => new Date(b.time) - new Date(a.time))
+  const items = (calls || []).map(c => ({
+    id: c.id,
+    type: 'call',
+    label: `Called ${c.lead?.business_name}`,
+    sub: `Outcome: ${c.outcome}`,
+    status: c.outcome,
+    time: c.created_at,
+  }))
 
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-medium text-[var(--text-primary)]">Activity Feed</h1>
-        <p className="text-[var(--text-muted)] text-sm mt-0.5">Recent calls, assignments, and replies</p>
+        <p className="text-[var(--text-muted)] text-sm mt-0.5">Call outcomes — booked, follow-up, no answer, not interested</p>
       </div>
 
       <Card>
@@ -99,9 +82,7 @@ function FeedItem({ item }) {
   const sc = item.status ? STATUS_COLORS[item.status] : null
 
   const icons = {
-    call:        <Phone size={14} style={sc ? { color: sc.color } : undefined} className={sc ? undefined : 'text-[var(--accent)]'} />,
-    re_engaged:  <RefreshCw size={14} className="text-[var(--success)]" />,
-    booked:      <Calendar size={14} className="text-[var(--warning)]" />,
+    call: <Phone size={14} style={sc ? { color: sc.color } : undefined} className={sc ? undefined : 'text-[var(--accent)]'} />,
   }
 
   return (
