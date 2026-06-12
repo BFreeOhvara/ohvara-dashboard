@@ -4,7 +4,8 @@ import { Card } from '../../components/ui/Card'
 import { Trophy, Zap, Calendar } from 'lucide-react'
 import { clsx } from 'clsx'
 
-const WEEKLY_GOALS = { dials: 150, bookings: 10 }
+// 150 dials/day × 5 working days — matches the daily batch size
+const WEEKLY_GOALS = { dials: 750, bookings: 10 }
 
 const BADGES = [
   { id: 'first_booking', label: 'First Booking', icon: '🎯', condition: s => s?.bookedCount >= 1 },
