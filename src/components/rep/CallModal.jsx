@@ -267,8 +267,12 @@ export function CallModal({ lead, onClose }) {
       if (error) throw error
       if (!updated?.length) throw new Error('Save failed — your session may have expired. Refresh the page and try again.')
 
-      // Net calls sync — only when the status actually changed this session
-      if (status !== lead.status && profile?.id) {
+      // Net calls sync — ALWAYS re-sync on Done. Guarding on
+      // status !== lead.status used a possibly-stale lead prop (React Query
+      // not yet refetched between rapid commits), which skipped the delete
+      // and left phantom calls rows behind. Delete-then-insert is idempotent,
+      // so unconditional is safe.
+      if (profile?.id) {
         const utcMidnight = new Date().toISOString().split('T')[0] + 'T00:00:00Z'
         await supabase
           .from('calls')

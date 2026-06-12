@@ -107,10 +107,11 @@ export function useTodayCallStats(repId) {
   })
 }
 
-// Rep's commission earned — $248.50 per closed deal (50% of the $497 setup
-// fee). Reads the commissions table (RLS: recipient sees own rows); voided
-// commissions don't count. Returns totals plus the raw rows so the
-// My Commissions page can chart daily earnings.
+// Rep's commission earned — 50% of the setup fee per closed deal (the UI
+// shows the percentage framing, never the dollar math). Reads the
+// commissions table (RLS: recipient sees own rows); voided commissions
+// don't count. Returns totals plus the raw rows so the My Commissions
+// page can chart daily earnings.
 export function useMyCommission(repId) {
   return useQuery({
     queryKey: ['commissions', repId],
@@ -265,10 +266,75 @@ export function useRepDailyActivity(repId) {
   })
 }
 
+// Lifetime call activity for milestone badges — streaks, day records and
+// time-of-day achievements that period stats can't answer. Calls are net
+// (one row per lead per rep per UTC day), so rows-per-day ≈ leads dialed.
+export function useBadgeActivity(repId) {
+  return useQuery({
+    queryKey: ['stats', repId, 'badge-activity'],
+    staleTime: 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('calls')
+        .select('outcome, created_at')
+        .eq('rep_id', repId)
+        .order('created_at', { ascending: true })
+      if (error) throw error
+
+      const byDay = new Map()
+      let earlyBird = false, nightOwl = false, hotStreak = false, bookedRun = 0
+      for (const c of data || []) {
+        const d = new Date(c.created_at)
+        const key = d.toDateString()
+        const day = byDay.get(key) || { dials: 0, bookings: 0, ts: new Date(d).setHours(0, 0, 0, 0) }
+        day.dials += 1
+        const isBooked = BOOKED_OUTCOMES.includes(c.outcome)
+        if (isBooked) day.bookings += 1
+        byDay.set(key, day)
+        if (d.getHours() < 9) earlyBird = true
+        if (d.getHours() >= 20) nightOwl = true
+        bookedRun = isBooked ? bookedRun + 1 : 0
+        if (bookedRun >= 3) hotStreak = true
+      }
+
+      const days = [...byDay.values()].sort((a, b) => a.ts - b.ts)
+
+      // Longest run of consecutive active days (rounding absorbs DST shifts)
+      let longestStreak = 0, run = 0, prev = null
+      for (const day of days) {
+        run = prev !== null && Math.round((day.ts - prev) / 86400000) === 1 ? run + 1 : 1
+        longestStreak = Math.max(longestStreak, run)
+        prev = day.ts
+      }
+
+      // Best rolling 7-day dial total
+      let bestWeekDials = 0
+      for (let i = 0; i < days.length; i++) {
+        let sum = 0
+        for (let j = i; j < days.length && days[j].ts - days[i].ts < 7 * 86400000; j++) sum += days[j].dials
+        bestWeekDials = Math.max(bestWeekDials, sum)
+      }
+
+      return {
+        longestStreak,
+        bestWeekDials,
+        bestDayDials: days.reduce((m, d) => Math.max(m, d.dials), 0),
+        bestDayBookings: days.reduce((m, d) => Math.max(m, d.bookings), 0),
+        earlyBird,
+        nightOwl,
+        hotStreak,
+      }
+    },
+    enabled: !!repId,
+  })
+}
+
 function getPeriodCutoff(period) {
+  // 'day' is the UTC calendar day, NOT a rolling 24h window — it must match
+  // useTodayCallStats exactly so MyStats Day view equals the Calls Today KPI.
+  if (period === 'day') return new Date().toISOString().split('T')[0] + 'T00:00:00Z'
   const d = new Date()
-  if (period === 'day')   d.setDate(d.getDate() - 1)
-  else if (period === 'week')  d.setDate(d.getDate() - 7)
+  if (period === 'week')  d.setDate(d.getDate() - 7)
   else if (period === 'month') d.setMonth(d.getMonth() - 1)
   return d.toISOString()
 }

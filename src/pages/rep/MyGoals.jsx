@@ -1,94 +1,262 @@
-import { useAuth } from '../../hooks/useAuth'
-import { useRepStats } from '../../hooks/useProfiles'
-import { Card } from '../../components/ui/Card'
-import { Trophy, Zap, Calendar } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Trophy, Zap, Calendar, Briefcase, Lock } from 'lucide-react'
 import { clsx } from 'clsx'
+import { useAuth } from '../../hooks/useAuth'
+import { useRepStats, useMyCommission, useBadgeActivity, DAILY_BATCH_TARGET } from '../../hooks/useProfiles'
+import { Card } from '../../components/ui/Card'
+import { Button } from '../../components/ui/Button'
 
-// 150 dials/day × 5 working days — matches the daily batch size
-const WEEKLY_GOALS = { dials: 750, bookings: 10 }
-
-const BADGES = [
-  { id: 'first_booking', label: 'First Booking', icon: '🎯', condition: s => s?.bookedCount >= 1 },
-  { id: 'dialer_50',     label: '50 Dials',      icon: '📞', condition: s => s?.totalDials >= 50 },
-  { id: 'dialer_100',    label: '100 Dials',      icon: '🔥', condition: s => s?.totalDials >= 100 },
-  { id: 'bookings_5',    label: '5 Bookings',     icon: '⭐', condition: s => s?.bookedCount >= 5 },
-  { id: 'bookings_10',   label: '10 Bookings',    icon: '🏆', condition: s => s?.bookedCount >= 10 },
-  { id: 'rate_10',       label: '10% Rate',       icon: '💎', condition: s => parseFloat(s?.bookingRate) >= 10 },
+// Goal targets per period. Daily dials = the 150 batch; weekly = 150 × 5
+// working days; monthly closes counts commission rows (one per closed deal).
+const GOAL_PERIODS = [
+  { key: 'daily',   label: 'Daily',   statsPeriod: 'day' },
+  { key: 'weekly',  label: 'Weekly',  statsPeriod: 'week' },
+  { key: 'monthly', label: 'Monthly', statsPeriod: 'month' },
 ]
+const SS_PERIOD = 'ohvara_mygoals_period'
+
+const GOALS = {
+  daily:   { dials: DAILY_BATCH_TARGET, bookings: 3 },
+  weekly:  { dials: 750,  bookings: 10 },
+  monthly: { dials: 3000, bookings: 40, closes: 8 },
+}
+
+// 40 milestone badges in six groups. Dials / bookings / rate badges read
+// this month's stats; commission badges read all-time earnings; streak and
+// special badges read lifetime call activity (useBadgeActivity).
+const BADGE_GROUPS = [
+  {
+    group: 'Dialer',
+    badges: [
+      { id: 'dial_1',     label: 'First Dial',    icon: '🎯', condition: c => (c.month?.totalDials || 0) >= 1 },
+      { id: 'dial_10',    label: '10 Dials',      icon: '📞', condition: c => (c.month?.totalDials || 0) >= 10 },
+      { id: 'dial_50',    label: '50 Dials',      icon: '🔥', condition: c => (c.month?.totalDials || 0) >= 50 },
+      { id: 'dial_100',   label: '100 Dials',     icon: '💪', condition: c => (c.month?.totalDials || 0) >= 100 },
+      { id: 'dial_250',   label: '250 Dials',     icon: '⚡', condition: c => (c.month?.totalDials || 0) >= 250 },
+      { id: 'dial_500',   label: '500 Dials',     icon: '🚀', condition: c => (c.month?.totalDials || 0) >= 500 },
+      { id: 'dial_1000',  label: '1,000 Dials',   icon: '🏅', condition: c => (c.month?.totalDials || 0) >= 1000 },
+      { id: 'dial_2500',  label: '2,500 Dials',   icon: '🌟', condition: c => (c.month?.totalDials || 0) >= 2500 },
+      { id: 'dial_5000',  label: '5,000 Dials',   icon: '👑', condition: c => (c.month?.totalDials || 0) >= 5000 },
+      { id: 'dial_10000', label: '10,000 Dials',  icon: '🔱', condition: c => (c.month?.totalDials || 0) >= 10000 },
+    ],
+  },
+  {
+    group: 'Booking',
+    badges: [
+      { id: 'book_1',   label: 'First Booking', icon: '🎯', condition: c => (c.month?.bookedCount || 0) >= 1 },
+      { id: 'book_5',   label: '5 Bookings',    icon: '⭐', condition: c => (c.month?.bookedCount || 0) >= 5 },
+      { id: 'book_10',  label: '10 Bookings',   icon: '🏆', condition: c => (c.month?.bookedCount || 0) >= 10 },
+      { id: 'book_25',  label: '25 Bookings',   icon: '💫', condition: c => (c.month?.bookedCount || 0) >= 25 },
+      { id: 'book_50',  label: '50 Bookings',   icon: '🔥', condition: c => (c.month?.bookedCount || 0) >= 50 },
+      { id: 'book_100', label: '100 Bookings',  icon: '👑', condition: c => (c.month?.bookedCount || 0) >= 100 },
+      { id: 'book_250', label: '250 Bookings',  icon: '🌙', condition: c => (c.month?.bookedCount || 0) >= 250 },
+    ],
+  },
+  {
+    group: 'Booking Rate',
+    badges: [
+      { id: 'rate_5',  label: '5% Rate',  icon: '📈', condition: c => parseFloat(c.month?.bookingRate) >= 5 },
+      { id: 'rate_10', label: '10% Rate', icon: '💎', condition: c => parseFloat(c.month?.bookingRate) >= 10 },
+      { id: 'rate_15', label: '15% Rate', icon: '🔮', condition: c => parseFloat(c.month?.bookingRate) >= 15 },
+      { id: 'rate_20', label: '20% Rate', icon: '🧠', condition: c => parseFloat(c.month?.bookingRate) >= 20 },
+      { id: 'rate_25', label: '25% Rate', icon: '🌟', condition: c => parseFloat(c.month?.bookingRate) >= 25 },
+    ],
+  },
+  {
+    group: 'Streak & Consistency',
+    badges: [
+      { id: 'streak_3',    label: '3-Day Streak',  icon: '🗓️', condition: c => (c.activity?.longestStreak || 0) >= 3 },
+      { id: 'streak_7',    label: '7-Day Streak',  icon: '🔥', condition: c => (c.activity?.longestStreak || 0) >= 7 },
+      { id: 'streak_14',   label: '14-Day Streak', icon: '⚡', condition: c => (c.activity?.longestStreak || 0) >= 14 },
+      { id: 'streak_21',   label: '21-Day Streak', icon: '🏆', condition: c => (c.activity?.longestStreak || 0) >= 21 },
+      { id: 'streak_30',   label: '30-Day Streak', icon: '👑', condition: c => (c.activity?.longestStreak || 0) >= 30 },
+      { id: 'full_week',   label: 'Full Week',     icon: '💪', condition: c => (c.activity?.bestWeekDials || 0) >= 750,
+        detail: '750 dials in 7 days' },
+      { id: 'perfect_day', label: 'Perfect Day',   icon: '✅', condition: c => (c.activity?.bestDayDials || 0) >= DAILY_BATCH_TARGET,
+        detail: `${DAILY_BATCH_TARGET} dials in a day` },
+    ],
+  },
+  {
+    group: 'Commission',
+    badges: [
+      { id: 'comm_first', label: 'First Commission', icon: '💰', condition: c => (c.commission?.total || 0) > 0 },
+      { id: 'comm_500',   label: '$500 Earned',      icon: '💵', condition: c => (c.commission?.total || 0) >= 500 },
+      { id: 'comm_1k',    label: '$1K Earned',       icon: '🎰', condition: c => (c.commission?.total || 0) >= 1000 },
+      { id: 'comm_2_5k',  label: '$2.5K Earned',     icon: '💎', condition: c => (c.commission?.total || 0) >= 2500 },
+      { id: 'comm_5k',    label: '$5K Earned',       icon: '🔱', condition: c => (c.commission?.total || 0) >= 5000 },
+      { id: 'comm_10k',   label: '$10K Earned',      icon: '👑', condition: c => (c.commission?.total || 0) >= 10000 },
+    ],
+  },
+  {
+    group: 'Special',
+    badges: [
+      { id: 'early_bird',  label: 'Early Bird',   icon: '🌅', condition: c => !!c.activity?.earlyBird,
+        detail: 'First dial before 9am' },
+      { id: 'night_owl',   label: 'Night Owl',    icon: '🦉', condition: c => !!c.activity?.nightOwl,
+        detail: 'Dial after 8pm' },
+      { id: 'five_a_day',  label: '5 in a Day',   icon: '🚀', condition: c => (c.activity?.bestDayBookings || 0) >= 5,
+        detail: '5 bookings in one day' },
+      { id: 'hot_streak',  label: 'Hot Streak',   icon: '🔥', condition: c => !!c.activity?.hotStreak,
+        detail: '3 bookings in a row' },
+      { id: 'century',     label: 'Century Club', icon: '💯', condition: c => (c.activity?.bestDayDials || 0) >= 100,
+        detail: '100 dials in one day' },
+    ],
+  },
+]
+
+const TOTAL_BADGES = BADGE_GROUPS.reduce((n, g) => n + g.badges.length, 0)
 
 export default function MyGoals() {
   const { profile } = useAuth()
-  const { data: stats } = useRepStats(profile?.id, 'week')
+  // Period selection survives tab switches via sessionStorage
+  const [periodKey, setPeriodKey] = useState(() => sessionStorage.getItem(SS_PERIOD) || 'daily')
+  const period = GOAL_PERIODS.find(p => p.key === periodKey) || GOAL_PERIODS[0]
+  const { data: stats } = useRepStats(profile?.id, period.statsPeriod)
+  const { data: monthStats } = useRepStats(profile?.id, 'month')
+  const { data: commission } = useMyCommission(profile?.id)
+  const { data: activity } = useBadgeActivity(profile?.id)
 
-  const dialPct = Math.min(100, Math.round(((stats?.totalDials || 0) / WEEKLY_GOALS.dials) * 100))
-  const bookPct = Math.min(100, Math.round(((stats?.bookedCount || 0) / WEEKLY_GOALS.bookings) * 100))
+  function changePeriod(key) {
+    setPeriodKey(key)
+    sessionStorage.setItem(SS_PERIOD, key)
+  }
+
+  const goals = GOALS[period.key]
+
+  // Closes this calendar month — one commission row per closed deal
+  const monthCloses = useMemo(() => {
+    const now = new Date()
+    return (commission?.rows || []).filter(r => {
+      const d = new Date(r.created_at)
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+    }).length
+  }, [commission])
+
+  const badgeCtx = { month: monthStats, commission, activity }
+  const earnedCount = BADGE_GROUPS
+    .flatMap(g => g.badges)
+    .filter(b => b.condition(badgeCtx)).length
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-medium text-[var(--text-primary)]">My Goals</h1>
-        <p className="text-[var(--text-muted)] text-sm mt-0.5">Weekly targets and milestone badges</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-medium text-[var(--text-primary)]">My Goals</h1>
+          <p className="text-[var(--text-muted)] text-sm mt-0.5">
+            {period.label} targets and milestone badges
+          </p>
+        </div>
+        <div className="flex gap-1">
+          {GOAL_PERIODS.map(p => (
+            <Button
+              key={p.key}
+              variant={periodKey === p.key ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => changePeriod(p.key)}
+            >
+              {p.label}
+            </Button>
+          ))}
+        </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4 mb-6">
+      <div className={clsx('grid gap-4 mb-6', goals.closes ? 'md:grid-cols-3' : 'md:grid-cols-2')}>
         <GoalCard
-          label="Weekly Dials"
+          label={`${period.label} Dials`}
+          unit="dials"
           current={stats?.totalDials || 0}
-          target={WEEKLY_GOALS.dials}
-          pct={dialPct}
+          target={goals.dials}
           icon={Zap}
           color="indigo"
         />
         <GoalCard
-          label="Weekly Bookings"
+          label={`${period.label} Bookings`}
+          unit="bookings"
           current={stats?.bookedCount || 0}
-          target={WEEKLY_GOALS.bookings}
-          pct={bookPct}
+          target={goals.bookings}
           icon={Calendar}
           color="green"
         />
+        {goals.closes && (
+          <GoalCard
+            label="Monthly Closes"
+            unit="closes"
+            current={monthCloses}
+            target={goals.closes}
+            icon={Briefcase}
+            color="green"
+          />
+        )}
       </div>
 
       <Card>
-        <div className="flex items-center gap-2 mb-4">
-          <Trophy size={16} className="text-[var(--warning)]" />
-          <h2 className="text-sm font-medium text-[var(--text-primary)]">Milestone Badges</h2>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Trophy size={16} className="text-[var(--warning)]" />
+            <h2 className="text-sm font-medium text-[var(--text-primary)]">Milestone Badges</h2>
+          </div>
+          <span
+            className="text-xs font-medium text-[var(--text-secondary)]"
+            style={{ fontFamily: 'var(--font-mono)' }}
+          >
+            {earnedCount} / {TOTAL_BADGES} badges earned
+          </span>
         </div>
-        <div className="grid grid-cols-3 gap-3">
-          {BADGES.map(badge => {
-            const earned = badge.condition(stats)
-            return (
-              <div
-                key={badge.id}
-                className={clsx(
-                  'flex flex-col items-center gap-2 p-3 rounded-lg border text-center',
-                  earned
-                    ? 'border-yellow-700 bg-yellow-900/20'
-                    : 'border-[var(--border)] bg-[var(--bg-2)] opacity-40 grayscale'
-                )}
-              >
-                <span className="text-2xl">{badge.icon}</span>
-                <p className="text-xs text-[var(--text-secondary)] font-medium">{badge.label}</p>
-              </div>
-            )
-          })}
-        </div>
+
+        {BADGE_GROUPS.map(group => (
+          <div key={group.group} className="mb-5 last:mb-0">
+            <p className="section-label" style={{ marginBottom: 8 }}>{group.group}</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {group.badges.map(badge => {
+                const earned = badge.condition(badgeCtx)
+                return (
+                  <div
+                    key={badge.id}
+                    className={clsx(
+                      'relative flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center',
+                      earned
+                        ? 'border-yellow-700 bg-yellow-900/20'
+                        : 'border-[var(--border)] bg-[var(--bg-2)] opacity-40 grayscale'
+                    )}
+                    style={earned ? { boxShadow: '0 0 14px rgba(245,158,11,0.18)' } : undefined}
+                  >
+                    {!earned && (
+                      <Lock
+                        size={11}
+                        className="absolute top-2 right-2 text-[var(--text-muted)]"
+                      />
+                    )}
+                    <span className="text-2xl">{badge.icon}</span>
+                    <p className="text-xs text-[var(--text-secondary)] font-medium">{badge.label}</p>
+                    {badge.detail && (
+                      <p className="text-[10px] text-[var(--text-muted)]">{badge.detail}</p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </Card>
     </div>
   )
 }
 
-function GoalCard({ label, current, target, pct, icon: Icon, color }) {
+function GoalCard({ label, unit, current, target, icon: Icon, color }) {
+  const pct = Math.min(100, Math.round((current / target) * 100))
   const colors = {
     indigo: { bar: 'bg-[var(--accent)]', text: 'text-[var(--accent)]' },
-    green:  { bar: 'bg-[var(--success)]',  text: 'text-[var(--success)]' },
+    green:  { bar: 'bg-[var(--success)]', text: 'text-[var(--success)]' },
   }
   const c = colors[color]
 
   return (
     <Card>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-medium text-[var(--text-primary)]">{label}</p>
+        <div className="flex items-center gap-2">
+          <Icon size={14} className={c.text} />
+          <p className="text-sm font-medium text-[var(--text-primary)]">{label}</p>
+        </div>
         <span className={clsx('text-sm font-medium', c.text)}>{pct}%</span>
       </div>
       <div className="h-2 bg-[var(--bg-3)] rounded-full overflow-hidden mb-2">
@@ -98,7 +266,7 @@ function GoalCard({ label, current, target, pct, icon: Icon, color }) {
         />
       </div>
       <p className="text-xs text-[var(--text-muted)]">
-        {current} / {target} {label.split(' ')[1].toLowerCase()}
+        {current.toLocaleString()} / {target.toLocaleString()} {unit}
       </p>
     </Card>
   )

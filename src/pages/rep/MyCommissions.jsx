@@ -62,7 +62,7 @@ export default function MyCommissions() {
           My Commissions
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-          $248 per closed deal — 50% of the $497 setup fee, paid when the closer signs the client
+          50% of every setup fee — paid when the closer signs the client you booked
         </p>
       </div>
 
@@ -80,7 +80,7 @@ export default function MyCommissions() {
         <KPICard
           label="Closed Deals"
           value={commission?.deals ?? 0}
-          sub="$248 each"
+          sub="50% per close"
           icon={Briefcase}
         />
         <KPICard
