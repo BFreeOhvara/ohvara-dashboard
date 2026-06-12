@@ -50,21 +50,42 @@ Deno.serve(async (req) => {
     let agentId = Deno.env.get('RETELL_ROLEPLAY_AGENT_ID')
 
     if (!agentId) {
-      // Create agent dynamically — store the returned ID in secrets to avoid re-creating
-      const agentRes = await fetch('https://api.retellai.com/v2/create-agent', {
+      // Create the agent dynamically — Retell v2 requires the persona to
+      // live in a Retell LLM, wired to the agent via response_engine.
+      // Store the returned ID in secrets to avoid re-creating.
+      const headers = {
+        'Authorization': `Bearer ${retellApiKey}`,
+        'Content-Type': 'application/json',
+      }
+
+      const llmRes = await fetch('https://api.retellai.com/create-retell-llm', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${retellApiKey}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
-          agent_name: 'Ohvara Roleplay — HVAC Owner (Mike)',
-          voice_id: 'eleven_labs_adam',
-          language: 'en-US',
           general_prompt: ROLEPLAY_AGENT_PROMPT,
           begin_message: "Yeah, who's this?",
+        }),
+      })
+
+      if (!llmRes.ok) {
+        const errText = await llmRes.text()
+        console.error('[create-roleplay-call] LLM creation failed:', errText)
+        return new Response(
+          JSON.stringify({ error: `Agent creation failed: ${errText}` }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      const llm = await llmRes.json()
+
+      const agentRes = await fetch('https://api.retellai.com/create-agent', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          agent_name: 'Mike - HVAC Owner',
+          voice_id: '11labs-Adrian',
+          language: 'en-US',
+          response_engine: { type: 'retell-llm', llm_id: llm.llm_id },
           enable_backchannel: true,
-          backchannel_frequency: 0.5,
           responsiveness: 0.7,
           interruption_sensitivity: 0.8,
         }),
