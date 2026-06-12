@@ -200,46 +200,77 @@ function VideoLibrary({ progress, saveProgress }) {
               style={{ padding: 16, cursor: 'pointer', transition: 'border-color 0.15s', position: 'relative' }}
               onClick={() => !isPlaceholder(v.youtubeId) && setActiveVideo(v)}
             >
-              {/* Thumbnail */}
+              {/* Thumbnail — flush with the card's top corners (.glass is
+                  12px radius, card padding 16px → negative margins) */}
               <div style={{
-                height: 120,
-                background: done ? 'rgba(34,197,94,0.06)' : 'var(--accent-dim)',
-                borderRadius: 8, marginBottom: 12,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: `0.5px solid ${done ? 'rgba(34,197,94,0.2)' : 'var(--accent-border)'}`,
                 position: 'relative', overflow: 'hidden',
+                margin: '-16px -16px 12px',
+                height: 120,
+                borderRadius: '12px 12px 0 0',
+                background: 'var(--bg-elevated)',
               }}>
                 {isPlaceholder(v.youtubeId) ? (
-                  <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    height: '100%', background: 'var(--accent-dim)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  }}>
                     <div style={{
                       width: 40, height: 40,
                       background: 'rgba(108,99,255,0.2)',
                       borderRadius: '50%',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      margin: '0 auto 8px',
+                      marginBottom: 8,
                     }}>
                       <Play size={16} style={{ color: 'var(--accent)', marginLeft: 2 }} />
                     </div>
-                    <p style={{ fontSize: 10, color: 'var(--text-muted)' }}>Coming Soon</p>
+                    <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: 0 }}>Coming Soon</p>
                   </div>
                 ) : (
-                  <div style={{
-                    width: 44, height: 44,
-                    background: done ? 'var(--success)' : 'var(--accent)',
-                    borderRadius: '50%',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {done
-                      ? <Check size={18} color="white" />
-                      : <Play size={18} color="white" style={{ marginLeft: 2 }} />
-                    }
-                  </div>
+                  <>
+                    <img
+                      src={`https://img.youtube.com/vi/${v.youtubeId}/hqdefault.jpg`}
+                      alt={v.title}
+                      loading="lazy"
+                      style={{
+                        display: 'block', width: '100%', height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                    {/* Play overlay — white semi-transparent circle + CSS triangle */}
+                    <div style={{
+                      position: 'absolute', top: '50%', left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      width: 42, height: 42, borderRadius: '50%',
+                      background: 'rgba(255,255,255,0.78)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <span style={{
+                        display: 'block', width: 0, height: 0, marginLeft: 4,
+                        borderTop: '8px solid transparent',
+                        borderBottom: '8px solid transparent',
+                        borderLeft: '13px solid rgba(8,8,16,0.85)',
+                      }} />
+                    </div>
+                    {/* Watched badge */}
+                    {done && (
+                      <span style={{
+                        position: 'absolute', top: 8, right: 8,
+                        width: 22, height: 22, borderRadius: '50%',
+                        background: 'var(--success)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 12, color: 'white', fontWeight: 500,
+                        boxShadow: '0 1px 6px rgba(0,0,0,0.4)',
+                      }}>
+                        ✓
+                      </span>
+                    )}
+                  </>
                 )}
                 {/* Duration badge */}
                 <span style={{
                   position: 'absolute', bottom: 6, right: 8,
                   fontSize: 10, fontFamily: 'var(--font-mono)',
-                  color: 'var(--text-muted)', background: 'rgba(8,8,16,0.7)',
+                  color: 'white', background: 'rgba(8,8,16,0.75)',
                   padding: '1px 5px', borderRadius: 3,
                 }}>
                   {v.duration}
