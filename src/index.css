@@ -108,6 +108,35 @@
   to { transform: rotate(360deg); }
 }
 
+/* Training Center — quiz/roleplay redesign animations */
+@keyframes quizReveal {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes callPulse {
+  0%   { transform: scale(1);    opacity: 0.7; }
+  70%  { transform: scale(1.45); opacity: 0; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0);   opacity: 0.4; }
+  30%           { transform: translateY(-4px); opacity: 1; }
+}
+.quiz-reveal { animation: quizReveal 0.45s cubic-bezier(0.4, 0, 0.2, 1); }
+.quiz-option { transition: all 0.18s ease; }
+.quiz-option:hover {
+  border-color: var(--accent-border) !important;
+  background: var(--bg-elevated) !important;
+  transform: translateY(-1px);
+}
+.call-pulse { animation: callPulse 1.8s ease-out infinite; }
+.typing-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--text-muted);
+  display: inline-block;
+  animation: typingBounce 1.2s ease-in-out infinite;
+}
+
 /* ── Base ──────────────────────────────────────────────────── */
 
 @layer base {

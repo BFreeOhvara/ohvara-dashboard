@@ -819,28 +819,45 @@ function QuizTab({ progress, saveProgress }) {
     if (Object.keys(patch).length) saveProgress(patch)
   }
 
-  // ── Results screen ──
+  // ── Results screen — animated score ring, badge-style reveal ──
   if (finished) {
     const pct = Math.round((correct / questions.length) * 100)
     const didPass = pct >= QUIZ_PASS_PCT
+    const ringColor = didPass ? 'var(--success)' : 'var(--danger)'
+    const R = 54, C = 2 * Math.PI * R
     return (
-      <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '48px 24px' }}>
-        <div style={{
-          width: 64, height: 64, borderRadius: '50%',
-          background: didPass ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-          border: `0.5px solid ${didPass ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 18px',
-        }}>
-          {didPass ? <Check size={28} color="var(--success)" /> : <X size={28} color="var(--danger)" />}
+      <div className="quiz-reveal" style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '40px 24px' }}>
+        {/* Circular score ring with a badge medallion at center */}
+        <div style={{ position: 'relative', width: 140, height: 140, margin: '0 auto 22px' }}>
+          <svg width="140" height="140" viewBox="0 0 140 140" style={{ transform: 'rotate(-90deg)' }}>
+            <circle cx="70" cy="70" r={R} fill="none" stroke="var(--bg-elevated)" strokeWidth="9" />
+            <circle
+              cx="70" cy="70" r={R} fill="none" stroke={ringColor} strokeWidth="9" strokeLinecap="round"
+              strokeDasharray={C}
+              strokeDashoffset={C - (Math.min(pct, 100) / 100) * C}
+              style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1)' }}
+            />
+          </svg>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: 32, fontFamily: 'var(--font-mono)', fontWeight: 600, color: ringColor, letterSpacing: '-0.02em', lineHeight: 1 }}>{pct}%</span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginTop: 3 }}>{correct}/{questions.length}</span>
+          </div>
+          {/* Pass/fail medallion badge */}
+          <div style={{
+            position: 'absolute', bottom: -2, right: 8,
+            width: 34, height: 34, borderRadius: '50%',
+            background: didPass ? 'var(--success)' : 'var(--danger)',
+            border: '3px solid var(--bg-base, #0B0B12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: `0 0 16px ${didPass ? 'rgba(34,197,94,0.5)' : 'rgba(239,68,68,0.4)'}`,
+          }}>
+            {didPass ? <Check size={18} color="white" /> : <X size={18} color="white" />}
+          </div>
         </div>
-        <p style={{ fontSize: 34, fontFamily: 'var(--font-mono)', fontWeight: 500, color: didPass ? 'var(--success)' : 'var(--danger)', margin: '0 0 4px' }}>
-          {pct}%
+        <p style={{ fontSize: 17, color: 'var(--text-primary)', fontWeight: 600, margin: '0 0 6px', letterSpacing: '-0.01em' }}>
+          {didPass ? 'Quiz Passed!' : `${QUIZ_PASS_PCT}% needed to pass`}
         </p>
-        <p style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 500, margin: '0 0 6px' }}>
-          {correct} / {questions.length} correct — {didPass ? 'Passed!' : `${QUIZ_PASS_PCT}% needed to pass`}
-        </p>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 24px' }}>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 auto 24px', maxWidth: 360 }}>
           {didPass
             ? 'Quiz check complete. This counts toward unlocking your leads.'
             : 'Review the flashcards and try again — the questions change every attempt.'}
@@ -849,12 +866,13 @@ function QuizTab({ progress, saveProgress }) {
           onClick={start}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
-            height: 40, padding: '0 20px',
+            height: 42, padding: '0 22px',
             background: didPass ? 'var(--bg-surface)' : 'var(--accent)',
             border: didPass ? '0.5px solid var(--border)' : 'none',
             borderRadius: 10, fontSize: 13, fontWeight: 500,
             color: didPass ? 'var(--text-secondary)' : 'white',
             cursor: 'pointer',
+            boxShadow: didPass ? 'none' : '0 0 20px rgba(108,99,255,0.25)',
           }}
         >
           <RotateCcw size={14} />
@@ -905,26 +923,40 @@ function QuizTab({ progress, saveProgress }) {
     )
   }
 
-  // ── Question screen ──
+  // ── Question screen — segmented progress, lettered options, answer feedback ──
   const q = questions[index]
   const catColor = CATEGORY_COLORS[q.category] || 'var(--accent)'
+  const LETTERS = ['A', 'B', 'C', 'D', 'E']
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
-      {/* Progress */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-        <div style={{ flex: 1, height: 4, background: 'var(--bg-elevated)', borderRadius: 2, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${((index + 1) / questions.length) * 100}%`, background: 'var(--accent)', borderRadius: 2, transition: 'width 0.3s ease' }} />
-        </div>
-        <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', flexShrink: 0 }}>
-          {index + 1} / {questions.length}
+      {/* Progress: question counter, running score, segmented bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
+          Question <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{index + 1}</span> of {questions.length}
         </span>
+        <span style={{
+          fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--success)',
+          background: 'rgba(34,197,94,0.1)', border: '0.5px solid rgba(34,197,94,0.25)',
+          borderRadius: 20, padding: '2px 9px',
+        }}>
+          {correct} correct
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: 3, marginBottom: 20 }}>
+        {questions.map((_, i) => (
+          <div key={i} style={{
+            flex: 1, height: 4, borderRadius: 2,
+            background: i < index ? 'var(--success)' : i === index ? 'var(--accent)' : 'var(--bg-elevated)',
+            transition: 'background 0.3s ease',
+          }} />
+        ))}
       </div>
 
       {/* Question */}
       <div className="glass" style={{ borderRadius: 12, padding: '22px 24px', marginBottom: 16 }}>
         <p style={{
           fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em',
-          color: catColor, margin: '0 0 8px',
+          color: catColor, margin: '0 0 8px', fontWeight: 600,
         }}>
           {CATEGORY_LABELS[q.category]}
         </p>
@@ -933,7 +965,7 @@ function QuizTab({ progress, saveProgress }) {
         </p>
       </div>
 
-      {/* Options */}
+      {/* Options — lettered chips + correct/incorrect feedback icons */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {q.options.map((opt, i) => {
           const showFeedback = picked !== null
@@ -943,28 +975,40 @@ function QuizTab({ progress, saveProgress }) {
             : opt.correct ? 'rgba(34,197,94,0.5)'
             : isPicked ? 'rgba(239,68,68,0.5)'
             : 'var(--border)'
+          const fg = highlight ? (opt.correct ? 'var(--success)' : 'var(--danger)') : 'var(--text-secondary)'
           return (
             <button
               key={i}
               onClick={() => pick(i)}
               disabled={picked !== null}
+              className={picked === null ? 'quiz-option' : undefined}
               style={{
-                textAlign: 'left', padding: '13px 16px',
+                display: 'flex', alignItems: 'center', gap: 12,
+                textAlign: 'left', padding: '13px 14px',
                 background: !showFeedback ? 'var(--bg-surface)'
                   : opt.correct ? 'rgba(34,197,94,0.08)'
                   : isPicked ? 'rgba(239,68,68,0.08)'
                   : 'var(--bg-surface)',
                 border: `0.5px solid ${color}`,
                 borderRadius: 10, cursor: picked === null ? 'pointer' : 'default',
-                fontSize: 13, lineHeight: 1.55,
-                color: highlight
-                  ? (opt.correct ? 'var(--success)' : 'var(--danger)')
-                  : 'var(--text-secondary)',
-                transition: 'all 0.15s',
-                opacity: showFeedback && !highlight ? 0.5 : 1,
+                fontSize: 13, lineHeight: 1.55, color: fg,
+                transition: 'all 0.18s ease',
+                opacity: showFeedback && !highlight ? 0.45 : 1,
               }}
             >
-              {opt.text}
+              {/* Letter chip / feedback icon */}
+              <span style={{
+                flexShrink: 0, width: 24, height: 24, borderRadius: 7,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-mono)',
+                background: highlight ? (opt.correct ? 'var(--success)' : 'var(--danger)') : 'var(--bg-elevated)',
+                color: highlight ? 'white' : 'var(--text-muted)',
+                border: highlight ? 'none' : '0.5px solid var(--border)',
+                transition: 'all 0.18s ease',
+              }}>
+                {highlight ? (opt.correct ? <Check size={13} /> : <X size={13} />) : LETTERS[i]}
+              </span>
+              <span style={{ flex: 1 }}>{opt.text}</span>
             </button>
           )
         })}
@@ -1051,6 +1095,17 @@ function AIRoleplay({ progress, saveProgress }) {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [transcript])
 
+  // Live call timer (visual only) — ticks while the call is connected
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    if (phase !== 'live') { setElapsed(0); return }
+    const t = setInterval(() => setElapsed(e => e + 1), 1000)
+    return () => clearInterval(t)
+  }, [phase])
+  const mmss = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`
+  // "Mike is thinking" when the rep spoke last and no AI reply has landed yet
+  const aiThinking = phase === 'live' && transcript.length > 0 && transcript[transcript.length - 1]?.role === 'user'
+
   async function startCall() {
     setPhase('connecting')
     setError('')
@@ -1135,14 +1190,35 @@ function AIRoleplay({ progress, saveProgress }) {
     ]
     return (
       <div style={{ maxWidth: 560, margin: '0 auto' }}>
-        <div className="glass" style={{ borderRadius: 14, padding: '28px 28px', textAlign: 'center', marginBottom: 16 }}>
-          <Award size={28} color={score.passedNow ? 'var(--success)' : 'var(--warning)'} style={{ margin: '0 auto 10px' }} />
-          <p style={{ fontSize: 40, fontFamily: 'var(--font-mono)', fontWeight: 500, margin: '0 0 2px', color: score.passedNow ? 'var(--success)' : 'var(--warning)' }}>
-            {score.grade}
-          </p>
-          <p style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', margin: '0 0 10px' }}>
-            {score.total} / {score.maxTotal ?? 12}
-          </p>
+        <div className="glass quiz-reveal" style={{ borderRadius: 14, padding: '28px 28px', textAlign: 'center', marginBottom: 16 }}>
+          {(() => {
+            const maxTotal = score.maxTotal ?? 12
+            const gradeColor = score.passedNow ? 'var(--success)' : 'var(--warning)'
+            const R = 50, C = 2 * Math.PI * R
+            const frac = Math.min((score.total ?? 0) / maxTotal, 1)
+            return (
+              <div style={{ position: 'relative', width: 128, height: 128, margin: '0 auto 14px' }}>
+                <svg width="128" height="128" viewBox="0 0 128 128" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="64" cy="64" r={R} fill="none" stroke="var(--bg-elevated)" strokeWidth="8" />
+                  <circle cx="64" cy="64" r={R} fill="none" stroke={gradeColor} strokeWidth="8" strokeLinecap="round"
+                    strokeDasharray={C} strokeDashoffset={C - frac * C}
+                    style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1)' }} />
+                </svg>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 34, fontFamily: 'var(--font-mono)', fontWeight: 600, color: gradeColor, lineHeight: 1, letterSpacing: '-0.02em' }}>{score.grade}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginTop: 3 }}>{score.total}/{maxTotal}</span>
+                </div>
+                <div style={{
+                  position: 'absolute', bottom: 0, right: 4, width: 30, height: 30, borderRadius: '50%',
+                  background: gradeColor, border: '3px solid var(--bg-base, #0B0B12)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: `0 0 14px ${score.passedNow ? 'rgba(34,197,94,0.5)' : 'rgba(245,158,11,0.45)'}`,
+                }}>
+                  {score.passedNow ? <Check size={16} color="white" /> : <Award size={15} color="white" />}
+                </div>
+              </div>
+            )
+          })()}
           <p style={{ fontSize: 13, color: score.passedNow ? 'var(--success)' : 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>
             {score.passedNow
               ? 'Roleplay check passed — this counts toward unlocking your leads.'
@@ -1152,21 +1228,26 @@ function AIRoleplay({ progress, saveProgress }) {
 
         {/* Dimension bars */}
         <div className="glass" style={{ borderRadius: 12, padding: '18px 20px', marginBottom: 16 }}>
-          {dims.map(d => (
-            <div key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-              <span style={{ flex: '0 0 150px', fontSize: 12, color: 'var(--text-secondary)' }}>{d.label}</span>
-              <div style={{ flex: 1, height: 5, background: 'var(--bg-elevated)', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%',
-                  width: `${((score.scores?.[d.key] ?? 0) / d.max) * 100}%`,
-                  background: 'var(--accent)', borderRadius: 3,
-                }} />
+          {dims.map(d => {
+            const v = score.scores?.[d.key] ?? 0
+            const frac = v / d.max
+            const barColor = frac >= 1 ? 'var(--success)' : frac >= 0.5 ? 'var(--accent)' : 'var(--warning)'
+            return (
+              <div key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                <span style={{ flex: '0 0 150px', fontSize: 12, color: 'var(--text-secondary)' }}>{d.label}</span>
+                <div style={{ flex: 1, height: 5, background: 'var(--bg-elevated)', borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', width: `${frac * 100}%`,
+                    background: barColor, borderRadius: 3,
+                    transition: 'width 0.7s cubic-bezier(0.4,0,0.2,1)',
+                  }} />
+                </div>
+                <span style={{ flex: '0 0 34px', fontSize: 12, fontFamily: 'var(--font-mono)', color: barColor, textAlign: 'right' }}>
+                  {v}/{d.max}
+                </span>
               </div>
-              <span style={{ flex: '0 0 34px', fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', textAlign: 'right' }}>
-                {score.scores?.[d.key] ?? 0}/{d.max}
-              </span>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {score.summary && (
@@ -1205,23 +1286,31 @@ function AIRoleplay({ progress, saveProgress }) {
   if (phase === 'connecting' || phase === 'live' || phase === 'scoring') {
     return (
       <div style={{ maxWidth: 560, margin: '0 auto' }}>
-        <div className="glass" style={{ borderRadius: 14, padding: '20px 22px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-            background: phase === 'live' ? 'rgba(34,197,94,0.12)' : 'var(--accent-dim)',
-            border: `0.5px solid ${phase === 'live' ? 'rgba(34,197,94,0.35)' : 'var(--accent-border)'}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            {phase === 'live'
-              ? <Mic size={18} color="var(--success)" />
-              : <Loader2 size={18} color="var(--accent)" style={{ animation: 'spin 1s linear infinite' }} />}
+        <div className="glass" style={{ borderRadius: 14, padding: '20px 22px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 16 }}>
+          {/* Persona avatar — pulsing ring while the call is live */}
+          <div style={{ position: 'relative', width: 52, height: 52, flexShrink: 0 }}>
+            {phase === 'live' && <span className="call-pulse" style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '2px solid var(--success)' }} />}
+            <div style={{
+              position: 'relative', width: 52, height: 52, borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 18, fontWeight: 600, fontFamily: 'var(--font-mono)',
+              color: phase === 'live' ? 'var(--success)' : 'var(--accent)',
+              background: phase === 'live' ? 'rgba(34,197,94,0.12)' : 'var(--accent-dim)',
+              border: `0.5px solid ${phase === 'live' ? 'rgba(34,197,94,0.35)' : 'var(--accent-border)'}`,
+            }}>
+              {phase === 'scoring'
+                ? <Loader2 size={20} color="var(--accent)" style={{ animation: 'spin 1s linear infinite' }} />
+                : 'M'}
+            </div>
           </div>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
-              {phase === 'connecting' ? 'Dialing Mike…' : phase === 'live' ? 'Live — Mike picked up' : 'Scoring your call…'}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
+              Mike — HVAC Owner
             </p>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>
-              {phase === 'scoring' ? 'Phoenix is reviewing the transcript' : 'HVAC owner · Dallas, TX · gruff but winnable'}
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+              {phase === 'connecting' && <><Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> Dialing…</>}
+              {phase === 'live' && <><span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--success)' }} /> Live · <span style={{ fontFamily: 'var(--font-mono)' }}>{mmss}</span> · Dallas, TX</>}
+              {phase === 'scoring' && 'Phoenix is reviewing the transcript…'}
             </p>
           </div>
           {phase === 'live' && (
@@ -1229,9 +1318,9 @@ function AIRoleplay({ progress, saveProgress }) {
               onClick={endCall}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                height: 36, padding: '0 14px',
+                height: 38, padding: '0 16px',
                 background: 'var(--danger)', border: 'none',
-                borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer',
+                borderRadius: 999, fontSize: 12, fontWeight: 500, color: 'white', cursor: 'pointer',
               }}
             >
               <PhoneOff size={13} />
@@ -1253,22 +1342,57 @@ function AIRoleplay({ progress, saveProgress }) {
               {phase === 'live' ? 'Say hello — Mike answered.' : 'Transcript appears here once the call connects.'}
             </p>
           ) : (
-            transcript.map((t, i) => (
-              <div key={i} style={{ marginBottom: 10, display: 'flex', flexDirection: 'column', alignItems: t.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 2 }}>
-                  {t.role === 'user' ? 'You' : 'Mike'}
-                </span>
-                <p style={{
-                  fontSize: 13, lineHeight: 1.55, margin: 0, maxWidth: '85%',
-                  padding: '8px 12px', borderRadius: 10,
-                  background: t.role === 'user' ? 'var(--accent-dim)' : 'var(--bg-elevated)',
-                  border: `0.5px solid ${t.role === 'user' ? 'var(--accent-border)' : 'var(--border)'}`,
-                  color: 'var(--text-secondary)',
-                }}>
-                  {t.content}
-                </p>
+            <>
+            {transcript.map((t, i) => {
+              const isYou = t.role === 'user'
+              return (
+                <div key={i} style={{ marginBottom: 12, display: 'flex', flexDirection: isYou ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 8 }}>
+                  {/* Speaker avatar */}
+                  <div style={{
+                    flexShrink: 0, width: 26, height: 26, borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-mono)',
+                    color: isYou ? 'var(--accent)' : 'var(--text-secondary)',
+                    background: isYou ? 'var(--accent-dim)' : 'var(--bg-elevated)',
+                    border: `0.5px solid ${isYou ? 'var(--accent-border)' : 'var(--border)'}`,
+                  }}>
+                    {isYou ? 'Y' : 'M'}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: isYou ? 'flex-end' : 'flex-start', maxWidth: '80%' }}>
+                    <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', margin: '0 4px 2px' }}>
+                      {isYou ? 'You' : 'Mike'}
+                    </span>
+                    <p style={{
+                      fontSize: 13, lineHeight: 1.55, margin: 0,
+                      padding: '8px 12px',
+                      borderRadius: isYou ? '12px 12px 3px 12px' : '12px 12px 12px 3px',
+                      background: isYou ? 'var(--accent-dim)' : 'var(--bg-elevated)',
+                      border: `0.5px solid ${isYou ? 'var(--accent-border)' : 'var(--border)'}`,
+                      color: 'var(--text-secondary)',
+                    }}>
+                      {t.content}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+            {/* Mike "thinking" indicator while awaiting his reply */}
+            {aiThinking && (
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: 12 }}>
+                <div style={{
+                  flexShrink: 0, width: 26, height: 26, borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)',
+                  background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                }}>M</div>
+                <div style={{ display: 'flex', gap: 4, padding: '11px 14px', borderRadius: '12px 12px 12px 3px', background: 'var(--bg-elevated)', border: '0.5px solid var(--border)' }}>
+                  <span className="typing-dot" style={{ animationDelay: '0ms' }} />
+                  <span className="typing-dot" style={{ animationDelay: '160ms' }} />
+                  <span className="typing-dot" style={{ animationDelay: '320ms' }} />
+                </div>
               </div>
-            ))
+            )}
+            </>
           )}
         </div>
       </div>
