@@ -1,8 +1,21 @@
-"""Seed 10 realistic test leads for apex11."""
-import json, urllib.request, urllib.error
+"""Seed 10 realistic test leads for apex11.
 
-SERVICE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpqZXh0aXRtYnB0b2FvbGFjb2NzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDgwMTUwMywiZXhwIjoyMDk2Mzc3NTAzfQ.j0-nvzNhwP6OtVZ6Sqto165MFrXJc53MHETj6Z7jybw"
-URL    = "https://jjextitmbptoaolacocs.supabase.co"
+Requires the service_role key in the environment (never hardcode it):
+
+  SUPABASE_SERVICE_ROLE_KEY=<key> python scripts/seed_leads.py
+
+Optionally override the project URL with SUPABASE_URL. Get the key from the
+Supabase Dashboard → Project Settings → API → service_role (secret).
+"""
+import json, os, urllib.request, urllib.error
+
+SERVICE = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+URL     = os.environ.get("SUPABASE_URL", "https://jjextitmbptoaolacocs.supabase.co")
+if not SERVICE:
+    raise SystemExit(
+        "Missing SUPABASE_SERVICE_ROLE_KEY. Run:\n"
+        "  SUPABASE_SERVICE_ROLE_KEY=<key> python scripts/seed_leads.py"
+    )
 APEX   = "67bdea10-62d0-44c6-81b0-a321ca9ea52e"
 JORDAN = "2d7e4b45-08ed-42c3-84d5-7fcf6744ddd5"
 TODAY  = "2026-06-08"

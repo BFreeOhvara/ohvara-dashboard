@@ -15,25 +15,24 @@ in the unassigned pool and flow into rep batches via assign_daily_batches
 Idempotent-ish: every row is tagged in notes with the SENTINEL below, so a
 re-run first deletes prior sample rows (by the sentinel) before re-inserting.
 
-The service_role key is read from the sibling seed_leads.py at runtime so it
-is not committed twice. Run:  python scripts/seed_sample_leads.py
-"""
-import json, re, os, pathlib, urllib.request, urllib.parse
+The service_role key is read from the environment (never hardcoded). Run:
 
-URL = "https://jjextitmbptoaolacocs.supabase.co"
+  SUPABASE_SERVICE_ROLE_KEY=<key> python scripts/seed_sample_leads.py
+
+Optionally override the project URL with SUPABASE_URL. Get the key from the
+Supabase Dashboard → Project Settings → API → service_role (secret).
+"""
+import json, os, urllib.request, urllib.parse
+
+URL = os.environ.get("SUPABASE_URL", "https://jjextitmbptoaolacocs.supabase.co")
 SENTINEL = "[sample-pool]"  # tag in notes so the pool is identifiable/removable
 
-# ── read the service key from seed_leads.py (already in the repo) ──────────
-def _service_key():
-    if os.environ.get("SUPABASE_SERVICE_ROLE_KEY"):
-        return os.environ["SUPABASE_SERVICE_ROLE_KEY"]
-    sib = pathlib.Path(__file__).with_name("seed_leads.py").read_text()
-    m = re.search(r'SERVICE\s*=\s*"([^"]+)"', sib)
-    if not m:
-        raise SystemExit("service key not found; set SUPABASE_SERVICE_ROLE_KEY")
-    return m.group(1)
-
-SERVICE = _service_key()
+SERVICE = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+if not SERVICE:
+    raise SystemExit(
+        "Missing SUPABASE_SERVICE_ROLE_KEY. Run:\n"
+        "  SUPABASE_SERVICE_ROLE_KEY=<key> python scripts/seed_sample_leads.py"
+    )
 HEADERS = {
     "apikey": SERVICE,
     "Authorization": f"Bearer {SERVICE}",
