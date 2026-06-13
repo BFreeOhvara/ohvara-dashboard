@@ -80,27 +80,26 @@ export function useDeleteUser() {
 
 const BOOKED_OUTCOMES = ['Booked', 'Appointment Booked']
 
-// Today's KPI counters for the rep dashboard — sourced from the calls
-// table with a UTC-midnight cutoff, so all three (calls, bookings,
-// booking rate) reset at 00:00 UTC alongside the daily batch cron.
+// Today's KPI counters for the rep dashboard — THE single source of truth.
+// All headline "today" numbers (Calls Today, Booked Today, Booking Rate,
+// Batch Total) come from the rep_today_metrics RPC (migration 026), which
+// aggregates server-side against a UTC-calendar-day cutoff so My Leads,
+// My Stats (Day) and the Goals widget can never diverge. No component
+// recomputes these locally.
 export function useTodayCallStats(repId) {
   return useQuery({
     queryKey: ['stats', repId, 'today'],
     staleTime: 0,
     queryFn: async () => {
-      const utcMidnight = new Date().toISOString().split('T')[0] + 'T00:00:00Z'
-      const { data, error } = await supabase
-        .from('calls')
-        .select('id, outcome')
-        .eq('rep_id', repId)
-        .gte('created_at', utcMidnight)
+      const { data, error } = await supabase.rpc('rep_today_metrics', { p_rep_id: repId })
       if (error) throw error
-      const calls  = data?.length || 0
-      const booked = (data || []).filter(c => BOOKED_OUTCOMES.includes(c.outcome)).length
+      const m = data?.[0] || {}
       return {
-        calls,
-        booked,
-        bookingRate: calls ? Math.round((booked / calls) * 100) : 0,
+        calls: m.calls ?? 0,
+        booked: m.booked ?? 0,
+        bookingRate: m.booking_rate ?? 0,
+        batchTotal: m.batch_total ?? 0,
+        dailyTarget: m.daily_target ?? DAILY_BATCH_TARGET,
       }
     },
     enabled: !!repId,
@@ -183,41 +182,20 @@ export function useCompletedDays(repId, numDays = 21) {
     queryKey: ['stats', repId, 'completed-days', numDays],
     staleTime: 0,
     queryFn: async () => {
-      const since = new Date()
-      since.setDate(since.getDate() - (numDays - 1))
-      since.setHours(0, 0, 0, 0)
-
-      const { data, error } = await supabase
-        .from('calls')
-        .select('lead_id, created_at')
-        .eq('rep_id', repId)
-        .gte('created_at', since.toISOString())
-      if (error) throw error
-
-      const days = []
-      for (let i = numDays - 1; i >= 0; i--) {
-        const d = new Date()
-        d.setDate(d.getDate() - i)
-        d.setHours(0, 0, 0, 0)
-        days.push({
-          key: d.toDateString(),
-          label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          leads: new Set(),
-        })
-      }
-      const byKey = Object.fromEntries(days.map(d => [d.key, d]))
-      for (const c of data || []) {
-        const day = byKey[new Date(c.created_at).toDateString()]
-        if (day) day.leads.add(c.lead_id)
-      }
-      return days.map(d => {
-        const dialed = d.leads.size
-        return {
-          label: d.label,
-          dialed,
-          completed: dialed >= DAILY_BATCH_TARGET,
-        }
+      // Single source: rep_completed_days RPC (migration 026) — distinct
+      // leads dialed per UTC day vs the 150 target, computed server-side.
+      const { data, error } = await supabase.rpc('rep_completed_days', {
+        p_rep_id: repId,
+        p_days: numDays,
       })
+      if (error) throw error
+      return (data || []).map(d => ({
+        label: new Date(d.day).toLocaleDateString('en-US', {
+          month: 'short', day: 'numeric', timeZone: 'UTC',
+        }),
+        dialed: d.dialed,
+        completed: d.completed,
+      }))
     },
     enabled: !!repId,
   })

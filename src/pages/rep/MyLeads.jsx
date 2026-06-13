@@ -314,7 +314,7 @@ export default function MyLeads() {
         />
         <KPICard
           label="Batch Total"
-          value={kpis.total}
+          value={callStats?.batchTotal ?? kpis.total}
           sub="Leads assigned today"
           icon={List}
         />

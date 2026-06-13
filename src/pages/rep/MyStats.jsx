@@ -1,13 +1,17 @@
 import { useState } from 'react'
-import { Phone, Calendar, TrendingUp, Clock } from 'lucide-react'
+import { Phone, Calendar, TrendingUp, Clock, Check } from 'lucide-react'
 import { AreaChart, Area, BarChart, Bar, Cell, ReferenceLine, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
-import { useRepStats, useRepDailyActivity, useCompletedDays, DAILY_BATCH_TARGET } from '../../hooks/useProfiles'
+import { useRepStats, useRepDailyActivity, useCompletedDays, useTodayCallStats, DAILY_BATCH_TARGET } from '../../hooks/useProfiles'
 import { StatCard } from '../../components/ui/StatCard'
 import { Button } from '../../components/ui/Button'
 
 const PERIODS = ['day', 'week', 'month']
 const SS_PERIOD = 'ohvara_mystats_period'
+
+// Daily goals for the gamified completion module (matches MyGoals Daily tab:
+// 150 dials / 3 bookings; 10% booking rate is the "above target" line on My Leads)
+const DAILY_GOALS = { dials: DAILY_BATCH_TARGET, booked: 3, rate: 10 }
 
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -26,6 +30,75 @@ function ChartTooltip({ active, payload, label }) {
   )
 }
 
+// Gamified daily-completion module — each daily goal flips to a satisfying
+// completed state (success glow + checkmark) the moment live data clears it.
+// Tied to the same single source (useTodayCallStats) as every other surface.
+function DailyGoals({ today }) {
+  const items = [
+    { key: 'dials',  label: 'Daily Dials',  value: today?.calls ?? 0,       goal: DAILY_GOALS.dials,  icon: Phone,      suffix: '' },
+    { key: 'booked', label: 'Booked',       value: today?.booked ?? 0,      goal: DAILY_GOALS.booked, icon: Calendar,   suffix: '' },
+    { key: 'rate',   label: 'Booking Rate', value: today?.bookingRate ?? 0, goal: DAILY_GOALS.rate,   icon: TrendingUp, suffix: '%' },
+  ]
+  const metCount = items.filter(i => i.value >= i.goal).length
+
+  return (
+    <div className="glass" style={{ marginTop: 20, padding: '18px 20px', borderRadius: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div>
+          <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 2px' }}>Today's Goals</p>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>Clear all three to complete the day</p>
+        </div>
+        <span style={{
+          fontSize: 11, fontFamily: 'var(--font-mono)', fontWeight: 600,
+          color: metCount === items.length ? 'var(--success)' : 'var(--text-secondary)',
+          background: metCount === items.length ? 'rgba(34,197,94,0.12)' : 'var(--bg-elevated)',
+          border: `0.5px solid ${metCount === items.length ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`,
+          borderRadius: 20, padding: '3px 10px',
+        }}>
+          {metCount === items.length ? '✦ Day complete' : `${metCount} / ${items.length} cleared`}
+        </span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+        {items.map(it => {
+          const done = it.value >= it.goal
+          const pct = Math.min((it.value / it.goal) * 100, 100)
+          const Icon = it.icon
+          return (
+            <div key={it.key} style={{
+              position: 'relative', overflow: 'hidden',
+              background: done ? 'rgba(34,197,94,0.07)' : 'var(--bg-surface)',
+              border: `0.5px solid ${done ? 'rgba(34,197,94,0.35)' : 'var(--border)'}`,
+              borderRadius: 10, padding: '14px 14px',
+              transition: 'background 0.4s ease, border-color 0.4s ease',
+              boxShadow: done ? '0 0 0 1px rgba(34,197,94,0.15), 0 4px 16px rgba(34,197,94,0.08)' : 'none',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <Icon size={15} color={done ? 'var(--success)' : 'var(--text-muted)'} />
+                <div style={{
+                  width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: done ? 'var(--success)' : 'var(--bg-elevated)',
+                  border: done ? 'none' : '0.5px solid var(--border)',
+                  transition: 'all 0.3s ease', transform: done ? 'scale(1)' : 'scale(0.85)',
+                }}>
+                  {done && <Check size={12} color="white" />}
+                </div>
+              </div>
+              <p style={{ fontSize: 20, fontWeight: 600, color: done ? 'var(--success)' : 'var(--text-primary)', margin: 0, fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
+                {it.value}{it.suffix}<span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 400 }}> / {it.goal}{it.suffix}</span>
+              </p>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 10px' }}>{it.label}</p>
+              <div style={{ height: 5, background: 'var(--bg-elevated)', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${pct}%`, background: done ? 'var(--success)' : 'var(--accent)', borderRadius: 3, transition: 'width 0.5s ease' }} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function MyStats() {
   const { profile } = useAuth()
   // Period selection survives tab switches via sessionStorage — Day is the default view
@@ -33,7 +106,15 @@ export default function MyStats() {
   const { data: stats, isLoading } = useRepStats(profile?.id, period)
   const { data: daily } = useRepDailyActivity(profile?.id)
   const { data: completedDays } = useCompletedDays(profile?.id, 21)
+  const { data: today } = useTodayCallStats(profile?.id)
   const completedCount = (completedDays || []).filter(d => d.completed).length
+
+  // Single source of truth: the Day view's headline numbers come from the
+  // same rep_today_metrics RPC as the My Leads KPIs and the goals module, so
+  // "Total Dials" on Day === "Calls Today" on My Leads exactly.
+  const display = period === 'day' && today
+    ? { totalDials: today.calls, bookedCount: today.booked, bookingRate: String(today.bookingRate), avgCallDuration: stats?.avgCallDuration }
+    : stats
 
   function changePeriod(p) {
     setPeriod(p)
@@ -69,22 +150,25 @@ export default function MyStats() {
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard label="Total Dials" value={stats?.totalDials ?? 0} icon={Phone} color="indigo" />
-          <StatCard label="Booked" value={stats?.bookedCount ?? 0} icon={Calendar} color="green" />
+          <StatCard label="Total Dials" value={display?.totalDials ?? 0} icon={Phone} color="indigo" />
+          <StatCard label="Booked" value={display?.bookedCount ?? 0} icon={Calendar} color="green" />
           <StatCard
             label="Booking Rate"
-            value={`${stats?.bookingRate ?? '0'}%`}
+            value={`${display?.bookingRate ?? '0'}%`}
             icon={TrendingUp}
             color="blue"
           />
           <StatCard
             label="Avg Call Duration"
-            value={formatDuration(stats?.avgCallDuration)}
+            value={formatDuration(display?.avgCallDuration)}
             icon={Clock}
             color="yellow"
           />
         </div>
       )}
+
+      {/* Gamified daily completion — live from the single-source today RPC */}
+      <DailyGoals today={today} />
 
       {/* Past 7 days — daily calls + bookings */}
       <div className="glass" style={{ marginTop: 20, padding: '18px 20px', borderRadius: 12 }}>
