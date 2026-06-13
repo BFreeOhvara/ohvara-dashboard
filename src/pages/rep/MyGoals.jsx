@@ -21,9 +21,12 @@ const GOALS = {
   monthly: { dials: 3000, bookings: 40, closes: 8 },
 }
 
-// 40 milestone badges in six groups. Dials / bookings / rate badges read
+// 38 milestone badges in six groups. Dials / bookings / rate badges read
 // this month's stats; commission badges read all-time earnings; streak and
-// special badges read lifetime call activity (useBadgeActivity).
+// special badges read lifetime call activity (useBadgeActivity). Special
+// badges are over-and-above achievements only — time-of-day badges and any
+// single-day milestone at or below the 150/day target were removed (a setter
+// is expected to hit 150/day, so beating it is the achievement worth a badge).
 const BADGE_GROUPS = [
   {
     group: 'Dialer',
@@ -90,16 +93,12 @@ const BADGE_GROUPS = [
   {
     group: 'Special',
     badges: [
-      { id: 'early_bird',  label: 'Early Bird',   icon: '🌅', condition: c => !!c.activity?.earlyBird,
-        detail: 'First dial before 9am' },
-      { id: 'night_owl',   label: 'Night Owl',    icon: '🦉', condition: c => !!c.activity?.nightOwl,
-        detail: 'Dial after 8pm' },
-      { id: 'five_a_day',  label: '5 in a Day',   icon: '🚀', condition: c => (c.activity?.bestDayBookings || 0) >= 5,
+      { id: 'five_a_day',   label: '5 in a Day',   icon: '🚀', condition: c => (c.activity?.bestDayBookings || 0) >= 5,
         detail: '5 bookings in one day' },
-      { id: 'hot_streak',  label: 'Hot Streak',   icon: '🔥', condition: c => !!c.activity?.hotStreak,
+      { id: 'hot_streak',   label: 'Hot Streak',   icon: '🔥', condition: c => !!c.activity?.hotStreak,
         detail: '3 bookings in a row' },
-      { id: 'century',     label: 'Century Club', icon: '💯', condition: c => (c.activity?.bestDayDials || 0) >= 100,
-        detail: '100 dials in one day' },
+      { id: 'marathon_day', label: 'Marathon Day', icon: '🏔️', condition: c => (c.activity?.bestDayDials || 0) >= 200,
+        detail: '200+ dials in one day' },
     ],
   },
 ]
