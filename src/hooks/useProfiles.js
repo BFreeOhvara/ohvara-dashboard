@@ -190,6 +190,7 @@ export function useCompletedDays(repId, numDays = 21) {
       })
       if (error) throw error
       return (data || []).map(d => ({
+        day: d.day, // raw ISO date — used by the heatmap for week bucketing
         label: new Date(d.day).toLocaleDateString('en-US', {
           month: 'short', day: 'numeric', timeZone: 'UTC',
         }),

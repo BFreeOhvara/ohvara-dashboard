@@ -882,38 +882,66 @@ function QuizTab({ progress, saveProgress }) {
     )
   }
 
-  // ── Idle screen ──
+  // ── Idle screen ── score ring (best vs pass threshold) + at-a-glance chips
   if (!questions) {
+    const RC = 2 * Math.PI * 30 // ring circumference, r=30
+    const ringPct = Math.min(bestPct ?? 0, 100)
     return (
       <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '48px 24px' }}>
-        <div style={{
-          width: 64, height: 64, borderRadius: 16,
-          background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 20px',
-        }}>
-          <ClipboardCheck size={26} color="var(--accent)" />
+        <div style={{ position: 'relative', width: 84, height: 84, margin: '0 auto 18px' }}>
+          <svg width="84" height="84" style={{ transform: 'rotate(-90deg)' }}>
+            <circle cx="42" cy="42" r="30" fill="none" stroke="var(--bg-elevated)" strokeWidth="6" />
+            {bestPct !== null && (
+              <circle
+                cx="42" cy="42" r="30" fill="none"
+                stroke={passed ? 'var(--success)' : 'var(--warning)'} strokeWidth="6" strokeLinecap="round"
+                strokeDasharray={RC} strokeDashoffset={RC - (ringPct / 100) * RC}
+                style={{ transition: 'stroke-dashoffset 700ms ease' }}
+              />
+            )}
+          </svg>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            {bestPct !== null
+              ? <span style={{ fontSize: 19, fontWeight: 600, fontFamily: 'var(--font-mono)', color: passed ? 'var(--success)' : 'var(--warning)' }}>{bestPct}%</span>
+              : <ClipboardCheck size={26} color="var(--accent)" />}
+          </div>
         </div>
         <h2 style={{ fontSize: 19, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 10px', letterSpacing: '-0.01em' }}>
           Flashcard Quiz
         </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 8px' }}>
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 12px' }}>
           {QUIZ_QUESTIONS} questions drawn at random from the flashcard deck — objections,
-          scripts, and product knowledge. Score {QUIZ_PASS_PCT}% or higher to pass.
+          scripts, and product knowledge.
         </p>
-        {bestPct !== null && (
-          <p style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: passed ? 'var(--success)' : 'var(--warning)', margin: '0 0 8px' }}>
-            Best attempt: {bestPct}% {passed && '· Passed ✓'}
-          </p>
-        )}
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 20, padding: '3px 10px' }}>
+            {QUIZ_QUESTIONS} questions
+          </span>
+          <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 20, padding: '3px 10px' }}>
+            Pass ≥ {QUIZ_PASS_PCT}%
+          </span>
+          {bestPct !== null && (
+            <span style={{
+              fontSize: 11, fontFamily: 'var(--font-mono)', fontWeight: 600,
+              color: passed ? 'var(--success)' : 'var(--warning)',
+              background: passed ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)',
+              border: `0.5px solid ${passed ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.3)'}`,
+              borderRadius: 20, padding: '3px 10px',
+            }}>
+              {passed ? 'Passed ✓' : `Best ${bestPct}%`}
+            </span>
+          )}
+        </div>
         <button
           onClick={start}
+          className="hover:!brightness-110"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
-            height: 42, padding: '0 24px', marginTop: 16,
+            height: 42, padding: '0 24px', marginTop: 4,
             background: 'var(--accent)', border: 'none',
             borderRadius: 10, fontSize: 14, fontWeight: 500, color: 'white',
             cursor: 'pointer', boxShadow: '0 0 20px rgba(108,99,255,0.25)',
+            transition: 'filter 120ms ease',
           }}
         >
           <Play size={15} />
@@ -1399,46 +1427,77 @@ function AIRoleplay({ progress, saveProgress }) {
     )
   }
 
-  // ── Idle / error ──
+  // ── Idle / error ── persona avatar + scenario chips + grade badge
+  const rpGrade = progress?.roleplay_grade
+  const rpPassed = !!progress?.roleplay_passed_at
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '48px 24px' }}>
-      <div style={{
-        width: 64, height: 64, borderRadius: 16,
-        background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        margin: '0 auto 20px',
-      }}>
-        <Mic size={26} color="var(--accent)" />
+      {/* scenario persona — Mike, the HVAC owner you're cold-calling */}
+      <div style={{ position: 'relative', width: 76, height: 76, margin: '0 auto 18px' }}>
+        <div style={{
+          width: 76, height: 76, borderRadius: '50%',
+          background: 'linear-gradient(135deg, var(--accent), #8B5CF6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 28, fontWeight: 600, color: 'white', fontFamily: 'var(--font-mono)',
+          boxShadow: '0 0 24px rgba(108,99,255,0.3)',
+        }}>
+          M
+        </div>
+        <div style={{
+          position: 'absolute', bottom: -2, right: -2,
+          width: 28, height: 28, borderRadius: '50%',
+          background: 'var(--bg-surface)', border: '1.5px solid var(--bg-1)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Mic size={13} color="var(--accent)" />
+        </div>
       </div>
-      <h2 style={{ fontSize: 19, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 10px', letterSpacing: '-0.01em' }}>
+      <h2 style={{ fontSize: 19, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px', letterSpacing: '-0.01em' }}>
         AI Voice Roleplay
       </h2>
-      <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 10px' }}>
-        Cold-call Mike — a busy HVAC owner in Dallas who's been burned by software
-        before. Open clean, dig into his missed-call pain, survive one objection,
-        and book the 15-minute call. Phoenix, our AI coach, grades the whole conversation.
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', margin: '0 0 12px' }}>
+        {['Cold call', 'Mike · HVAC owner, Dallas', `Pass ≥ ${ROLEPLAY_PASS_GRADE}`].map(t => (
+          <span key={t} style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 20, padding: '3px 10px' }}>
+            {t}
+          </span>
+        ))}
+      </div>
+      <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 12px' }}>
+        Open clean, dig into his missed-call pain, survive one objection, and book the
+        15-minute call. Phoenix, our AI coach, grades the whole conversation.
       </p>
-      <p style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: progress?.roleplay_passed_at ? 'var(--success)' : 'var(--text-muted)', margin: '0 0 6px' }}>
-        {progress?.roleplay_grade
-          ? `Last grade: ${progress.roleplay_grade}${progress.roleplay_passed_at ? ' · Passed ✓' : ''}`
-          : `Pass mark: ${ROLEPLAY_PASS_GRADE} or higher`}
-      </p>
+      {rpGrade && (
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 4,
+          background: rpPassed ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)',
+          border: `0.5px solid ${rpPassed ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.3)'}`,
+          borderRadius: 20, padding: '4px 12px',
+        }}>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Last grade</span>
+          <span style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--font-mono)', color: rpPassed ? 'var(--success)' : 'var(--warning)' }}>{rpGrade}</span>
+          {rpPassed && <span style={{ fontSize: 11, color: 'var(--success)', fontWeight: 600 }}>Passed ✓</span>}
+        </div>
+      )}
       {error && (
         <p style={{ fontSize: 12, color: 'var(--danger)', margin: '8px 0 0', lineHeight: 1.5 }}>{error}</p>
       )}
-      <button
-        onClick={startCall}
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          height: 42, padding: '0 24px', marginTop: 18,
-          background: 'var(--accent)', border: 'none',
-          borderRadius: 10, fontSize: 14, fontWeight: 500, color: 'white',
-          cursor: 'pointer', boxShadow: '0 0 20px rgba(108,99,255,0.25)',
-        }}
-      >
-        <Mic size={15} />
-        Start Practice Call
-      </button>
+      <div>
+        <button
+          onClick={startCall}
+          className="hover:!brightness-110"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            height: 42, padding: '0 24px', marginTop: 14,
+            background: 'var(--accent)', border: 'none',
+            borderRadius: 10, fontSize: 14, fontWeight: 500, color: 'white',
+            cursor: 'pointer', boxShadow: '0 0 20px rgba(108,99,255,0.25)',
+            transition: 'filter 120ms ease',
+          }}
+        >
+          <Mic size={15} />
+          Start Practice Call
+        </button>
+      </div>
       <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 14 }}>
         Uses your microphone — allow access when the browser asks.
       </p>

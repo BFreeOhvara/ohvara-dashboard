@@ -21,7 +21,7 @@ const GOALS = {
   monthly: { dials: 3000, bookings: 40, closes: 8 },
 }
 
-// 38 milestone badges in six groups. Dials / bookings / rate badges read
+// 37 milestone badges in six groups. Dials / bookings / rate badges read
 // this month's stats; commission badges read all-time earnings; streak and
 // special badges read lifetime call activity (useBadgeActivity). Special
 // badges are over-and-above achievements only — time-of-day badges and any
@@ -97,8 +97,6 @@ const BADGE_GROUPS = [
         detail: '5 bookings in one day' },
       { id: 'hot_streak',   label: 'Hot Streak',   icon: '🔥', condition: c => !!c.activity?.hotStreak,
         detail: '3 bookings in a row' },
-      { id: 'marathon_day', label: 'Marathon Day', icon: '🏔️', condition: c => (c.activity?.bestDayDials || 0) >= 200,
-        detail: '200+ dials in one day' },
     ],
   },
 ]

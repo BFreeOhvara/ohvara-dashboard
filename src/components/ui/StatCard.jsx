@@ -14,7 +14,7 @@ export function StatCard({ label, value, sub, trend, icon: Icon, color = 'indigo
   const [iconColor] = iconStyle.split(' ')
 
   return (
-    <div className="glass p-4">
+    <div className="glass p-4 transition-colors duration-150 hover:bg-[var(--bg-elevated)]/40">
       <div className="flex items-start gap-3">
         {Icon && (
           <div className={clsx('p-2 rounded-md flex-shrink-0', iconStyle)}>
