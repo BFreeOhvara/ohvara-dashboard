@@ -7,8 +7,26 @@ Requires the service_role key in the environment (never hardcode it):
 Optionally override the project URL with SUPABASE_URL. Get the key from the
 Supabase Dashboard → Project Settings → API → service_role (secret).
 """
-import json, os, urllib.request, urllib.error
+import json, os, pathlib, urllib.request, urllib.error
 
+
+def _load_env_local():
+    """Zero-dependency .env.local loader: walk up from this file to the repo
+    root, load the first .env.local found. Real env vars always win (setdefault)."""
+    here = pathlib.Path(__file__).resolve()
+    for d in (here.parent, *here.parents):
+        f = d / ".env.local"
+        if f.exists():
+            for line in f.read_text().splitlines():
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+            break
+
+
+_load_env_local()
 SERVICE = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 URL     = os.environ.get("SUPABASE_URL", "https://jjextitmbptoaolacocs.supabase.co")
 if not SERVICE:
