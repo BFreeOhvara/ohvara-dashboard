@@ -209,25 +209,30 @@ def post(path, data):
         return json.loads(r.read())
 
 
-print("=== Inserting 10 leads ===")
-inserted = post("/rest/v1/leads", LEADS)
-print(f"Inserted {len(inserted)} leads:")
-booked_lead_id = None
-for r in inserted:
-    flag = " <-- BOOKED" if r["status"] == "Booked" else ""
-    print(f"  {r['id'][:8]}  {r['business_name']:<40} [{r['status']}]{flag}")
-    if r["status"] == "Booked":
-        booked_lead_id = r["id"]
+def main():
+    print("=== Inserting 10 leads ===")
+    inserted = post("/rest/v1/leads", LEADS)
+    print(f"Inserted {len(inserted)} leads:")
+    booked_lead_id = None
+    for r in inserted:
+        flag = " <-- BOOKED" if r["status"] == "Booked" else ""
+        print(f"  {r['id'][:8]}  {r['business_name']:<40} [{r['status']}]{flag}")
+        if r["status"] == "Booked":
+            booked_lead_id = r["id"]
 
-print()
-print("=== Inserting test appointment (booked lead -> jordan22 closer) ===")
-appt = post("/rest/v1/appointments", [{
-    "lead_id":     booked_lead_id,
-    "rep_id":      APEX,
-    "closer_id":   JORDAN,
-    "scheduled_at": f"{TODAY}T15:00:00Z",   # 3pm today
-    "status":       "scheduled",
-    "deal_value":   None,
-    "closer_notes": "Rep surfaced strong pain — owner answering dispatch calls while driving. High urgency. Recommend Growth tier at minimum.",
-}])
-print(f"Appointment ID: {appt[0]['id'][:8]}... | status: {appt[0]['status']} | closer: jordan22 | lead: Texas Road Kings Towing")
+    print()
+    print("=== Inserting test appointment (booked lead -> jordan22 closer) ===")
+    appt = post("/rest/v1/appointments", [{
+        "lead_id":     booked_lead_id,
+        "rep_id":      APEX,
+        "closer_id":   JORDAN,
+        "scheduled_at": f"{TODAY}T15:00:00Z",   # 3pm today
+        "status":       "scheduled",
+        "deal_value":   None,
+        "closer_notes": "Rep surfaced strong pain — owner answering dispatch calls while driving. High urgency. Recommend Growth tier at minimum.",
+    }])
+    print(f"Appointment ID: {appt[0]['id'][:8]}... | status: {appt[0]['status']} | closer: jordan22 | lead: Texas Road Kings Towing")
+
+
+if __name__ == "__main__":
+    main()
