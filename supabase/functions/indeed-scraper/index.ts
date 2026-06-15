@@ -1,166 +1,33 @@
 /**
- * indeed-scraper Edge Function — v2
+ * indeed-scraper Edge Function — v3
  *
  * Calls mcp.indeed.com/claude/mcp (official Indeed MCP endpoint) using
- * INDEED_MCP_TOKEN set in Supabase Edge Function secrets.
+ * INDEED_MCP_TOKEN set in Supabase Edge Function secrets, then JOINS each
+ * posting to a Google Places lookup (reusing maps-scraper's getPlaceDetails
+ * mechanism) to attach phone + place_id — producing lead-ready records.
  *
  * To get INDEED_MCP_TOKEN:
- *   Option A — Indeed Publisher API: developer.indeed.com → apply for access
+ *   Option A — Indeed Publisher/Partner API: developer.indeed.com → apply
  *   Option B — Claude.ai integrations page → Settings → Integrations →
  *              Indeed → copy the OAuth token shown there
  *
  * MCP protocol: JSON-RPC 2.0 over HTTPS (Streamable HTTP transport)
  *   POST https://mcp.indeed.com/claude/mcp
  *   Authorization: Bearer <token>
+ *
+ * The Places join is server-side ON PURPOSE: GOOGLE_MAPS_API_KEY is a
+ * Supabase secret and must never reach the browser, so this cannot live in
+ * the LeadScraper UI import step.
+ *
+ * Pure parsing/filtering logic lives in ./parse.ts (Node-unit-tested).
  */
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { parseMcpText, PROFILE_A_NICHES, type IndeedLead } from './parse.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-// ── Allowed job titles (only these 28 pass through) ──────────────────────────
-// 'customer service' intentionally matches "Customer Service Representative",
-// "Customer Service Rep", etc.
-// Titles 14-16 map to Review Generation (Product 3) — businesses posting these want more Google reviews
-// Titles 17-18 map to Lead Follow-Up Automation (Product 4) — quotes going cold, no one chasing leads
-// Titles 19-22 map to Appointment Reminders (Product 5) — no-shows killing their schedule
-// Titles 23-26 map to AI Dispatcher (Product 6) — hotshot/towing/oilfield post these instead of "dispatcher"
-// Titles 27-28 map to SMS Marketing/Reactivation (Product 7) — dead customer list they want to reactivate
-const ALLOWED_JOB_TITLES = [
-  'receptionist', 'dispatcher', 'office manager', 'administrative assistant',
-  'customer service', 'front desk', 'scheduler', 'answering service',
-  'call center', 'phone support', 'office coordinator', 'bookkeeper',
-  'customer support',
-  'marketing assistant', 'social media coordinator', 'reputation manager',
-  'lead coordinator', 'sales support',
-  'appointment coordinator', 'scheduling coordinator', 'job coordinator',
-  'booking coordinator',
-  'logistics coordinator', 'route coordinator', 'operations coordinator',
-  'estimator assistant',
-  'customer retention', 'outreach coordinator',
-]
-
-function isTitleAllowed(title: string): boolean {
-  const lower = title.toLowerCase()
-  return ALLOWED_JOB_TITLES.some(t => lower.includes(t))
-}
-
-// ── Profile A niches — the only verticals we sell into ───────────────────────
-const PROFILE_A_NICHES = [
-  'roofing', 'hvac', 'electrical', 'landscaping', 'concrete',
-  'pressure washing', 'hotshot trucking', 'towing', 'oilfield',
-  'transportation', 'plumbing', 'pest control', 'pool service',
-]
-
-// ── Niche detection from company + job title ─────────────────────────────────
-// Keyword order matters: more specific keywords ('hotshot', 'tow') must be
-// checked before generic ones ('truck'). All values are Profile A niches.
-const NICHE_KEYWORDS: Record<string, string> = {
-  'hvac': 'hvac', 'air conditioning': 'hvac', 'heating': 'hvac', 'cooling': 'hvac',
-  'plumb': 'plumbing', 'electric': 'electrical', 'roof': 'roofing',
-  'landscap': 'landscaping', 'lawn': 'landscaping',
-  'concrete': 'concrete',
-  'pressure wash': 'pressure washing', 'power wash': 'pressure washing',
-  'hotshot': 'hotshot trucking', 'hot shot': 'hotshot trucking',
-  'tow': 'towing',
-  'oilfield': 'oilfield', 'oil field': 'oilfield',
-  'truck': 'transportation', 'freight': 'transportation',
-  'logistic': 'transportation', 'transport': 'transportation',
-  'pest': 'pest control', 'pool': 'pool service',
-}
-
-function detectNiche(text: string): string {
-  const lower = text.toLowerCase()
-  for (const [keyword, niche] of Object.entries(NICHE_KEYWORDS)) {
-    if (lower.includes(keyword)) return niche
-  }
-  return 'other'
-}
-
-// ── Parse hourly/annual salary text → hourly range ───────────────────────────
-function parseSalary(comp: string | null): { min: number | null; max: number | null } {
-  if (!comp) return { min: null, max: null }
-  const clean = comp.replace(/,/g, '').toLowerCase()
-  const hrRange = clean.match(/\$(\d+(?:\.\d+)?)\s*[-–]\s*\$(\d+(?:\.\d+)?)\s*(?:an hour|\/hr)/i)
-  if (hrRange) return { min: parseFloat(hrRange[1]), max: parseFloat(hrRange[2]) }
-  const hrSingle = clean.match(/\$(\d+(?:\.\d+)?)\s*(?:an hour|\/hr)/i)
-  if (hrSingle) { const v = parseFloat(hrSingle[1]); return { min: v, max: v } }
-  const yrRange = clean.match(/\$(\d+(?:\.\d+)?)\s*[-–]\s*\$(\d+(?:\.\d+)?)\s*(?:a year|\/yr)/i)
-  if (yrRange) return {
-    min: Math.round(parseFloat(yrRange[1]) / 2080 * 100) / 100,
-    max: Math.round(parseFloat(yrRange[2]) / 2080 * 100) / 100,
-  }
-  const yrSingle = clean.match(/\$(\d+(?:\.\d+)?)\s*(?:a year|\/yr)/i)
-  if (yrSingle) {
-    const v = Math.round(parseFloat(yrSingle[1]) / 2080 * 100) / 100
-    return { min: v, max: v }
-  }
-  return { min: null, max: null }
-}
-
-// ── Parse the markdown text returned by the MCP tool ────────────────────────
-interface JobResult {
-  company: string; title: string; location: string
-  city: string; state: string; compensation: string | null
-  hourly_min: number | null; hourly_max: number | null
-  monthly_labor_cost: number | null; job_url: string; niche: string
-  already_in_db: boolean
-}
-
-// Deduplication check — never re-scrape businesses already in the pipeline.
-// Match on business_name + city (case-insensitive). A lead row with ANY
-// status (not_interested, booked, or anything active) blocks re-insertion —
-// existingKeys covers the entire leads table. Rows without a city in the DB
-// fall back to a name-only match.
-function isAlreadyInDb(company: string, city: string, existingKeys: Set<string>, existingNamesNoCity: Set<string>): boolean {
-  const name = company.toLowerCase().trim()
-  return existingKeys.has(`${name}|${(city || '').toLowerCase().trim()}`)
-    || existingNamesNoCity.has(name)
-}
-
-function parseMcpText(text: string, existingKeys: Set<string>, existingNamesNoCity: Set<string>): JobResult[] {
-  const jobs: JobResult[] = []
-  const blocks = text.split(/\n\s*\n/).filter(b => b.includes('**Job Title:**'))
-
-  for (const block of blocks) {
-    const get = (label: string) => {
-      const m = block.match(new RegExp(`\\*\\*${label}:\\*\\*\\s*([^\\n]+)`))
-      return m ? m[1].trim() : null
-    }
-    const company  = get('Company')
-    const title    = get('Job Title')
-    const location = get('Location')
-    const comp     = get('Compensation')
-    const jobUrl   = get('View Job URL')
-    if (!company || !location) continue
-
-    const locParts  = location.split(',').map((s: string) => s.trim())
-    const city      = locParts[0] || location
-    const state     = locParts[1] || 'TX'
-    const salary    = parseSalary(comp)
-    const monthly   = salary.min !== null && salary.max !== null
-      ? Math.round(((salary.min + salary.max) / 2) * 160) : null
-
-    const jobTitle = title || 'Dispatcher/Receptionist'
-    // Skip titles not in the allowed list
-    if (!isTitleAllowed(jobTitle)) continue
-
-    // Skip businesses outside Profile A niches
-    const niche = detectNiche((company || '') + ' ' + jobTitle)
-    if (!PROFILE_A_NICHES.includes(niche)) continue
-
-    jobs.push({
-      company, title: jobTitle, location, city, state,
-      compensation: comp, hourly_min: salary.min, hourly_max: salary.max,
-      monthly_labor_cost: monthly, job_url: jobUrl || '',
-      niche,
-      already_in_db: isAlreadyInDb(company, city, existingKeys, existingNamesNoCity),
-    })
-  }
-  return jobs
 }
 
 // ── Admin auth ────────────────────────────────────────────────────────────────
@@ -173,6 +40,37 @@ async function requireAdmin(req: Request): Promise<boolean> {
   const { data: profile } = await admin.from('profiles').select('role').eq('id', user.id).single()
   return profile?.role === 'admin'
 }
+
+// ── Google Places join — phone + place_id per posting ────────────────────────
+// Mirrors maps-scraper: Text Search (business + city) → first place_id →
+// Place Details (formatted_phone_number). Returns nulls on any miss so a
+// posting without a Places match still becomes a (phone-less) lead.
+async function placesLookup(
+  business: string, city: string, state: string, apiKey: string,
+): Promise<{ phone: string | null; place_id: string | null }> {
+  try {
+    const where = [city, state].filter(Boolean).join(', ')
+    const query = encodeURIComponent(`${business} ${where}`.trim())
+    const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}&key=${apiKey}`
+    const searchRes = await fetch(searchUrl, { signal: AbortSignal.timeout(8000) })
+    const searchData = await searchRes.json()
+    const placeId = searchData?.results?.[0]?.place_id as string | undefined
+    if (!placeId) return { phone: null, place_id: null }
+
+    const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=formatted_phone_number&key=${apiKey}`
+    const detailsRes = await fetch(detailsUrl, { signal: AbortSignal.timeout(5000) })
+    const detailsData = await detailsRes.json()
+    return {
+      phone: detailsData?.result?.formatted_phone_number || null,
+      place_id: placeId,
+    }
+  } catch {
+    return { phone: null, place_id: null }
+  }
+}
+
+// Cap total Places lookups per run to bound latency + Google quota.
+const MAX_PLACES_LOOKUPS = 30
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
@@ -214,7 +112,7 @@ Deno.serve(async (req) => {
       else existingNamesNoCity.add(name)
     }
 
-    const allJobs: JobResult[] = []
+    const allJobs: IndeedLead[] = []
 
     for (const niche of searchNiches.slice(0, 5)) {
       try {
@@ -227,7 +125,7 @@ Deno.serve(async (req) => {
               name: 'search_jobs',
               arguments: {
                 // Search across all allowed office/phone titles, scoped to the niche.
-                // parseMcpText + isTitleAllowed enforce the full 13-title list on results.
+                // parseMcpText + isTitleAllowed enforce the full title list on results.
                 search: `receptionist or dispatcher or "office manager" or "front desk" or scheduler or "administrative assistant" or "customer service" or "call center" or bookkeeper ${niche}`,
                 location,
                 country_code: 'US',
@@ -250,10 +148,26 @@ Deno.serve(async (req) => {
     // Deduplicate by company name
     const seen = new Set<string>()
     const unique = allJobs.filter(j => {
-      const key = j.company.toLowerCase().trim()
+      const key = j.business_name.toLowerCase().trim()
       if (seen.has(key)) return false
       seen.add(key); return true
     })
+
+    // ── Places join: attach phone + place_id to fresh leads ──────────────────
+    // Only fresh (not already-in-db) leads, capped to bound quota/latency.
+    const mapsKey = Deno.env.get('GOOGLE_MAPS_API_KEY')
+    if (mapsKey) {
+      let used = 0
+      for (const job of unique) {
+        if (job.already_in_db || used >= MAX_PLACES_LOOKUPS) continue
+        used++
+        const { phone, place_id } = await placesLookup(job.business_name, job.city, job.state, mapsKey)
+        job.phone = phone
+        job.place_id = place_id
+      }
+    } else {
+      console.warn('[indeed] GOOGLE_MAPS_API_KEY not set — returning leads without phone/place_id')
+    }
 
     return new Response(JSON.stringify({ results: unique, total: unique.length }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })

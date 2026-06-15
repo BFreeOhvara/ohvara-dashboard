@@ -22,6 +22,25 @@ const MAPS_NICHES = [
 
 const DEFAULT_CITIES = 'Dallas TX, Houston TX, San Antonio TX, Oklahoma City OK, Tulsa OK, New Orleans LA'
 
+// Columns that actually exist on the `leads` table. Scraper results carry
+// display-only extras (already_in_db, no_website, website, rating,
+// review_count, compensation, hourly_*, location) that PostgREST would
+// reject on insert — whitelist before importing.
+const LEAD_COLUMNS = [
+  'source', 'business_name', 'contact_name', 'phone', 'email',
+  'city', 'state', 'niche', 'status', 'notes', 'pain_points',
+  'job_title', 'monthly_labor_cost', 'place_id',
+  'posting_title', 'posting_snippet', 'source_url',
+]
+
+function toLeadRow(result) {
+  const row = {}
+  for (const col of LEAD_COLUMNS) {
+    if (result[col] !== undefined) row[col] = result[col]
+  }
+  return row
+}
+
 // ── Shared components ─────────────────────────────────────────────────────────
 
 function NicheGrid({ niches, selected, onChange }) {
@@ -247,9 +266,10 @@ function IndeedTab() {
     if (!newLeads.length) { setImportMsg('No new leads to import.'); return }
     setImporting(true); setImportMsg('')
     try {
-      // place_id stays on the row — it's the Maps scraper's dedup identifier
+      // Whitelist to real `leads` columns — strips display-only extras
+      // (already_in_db, no_website, website, rating, review_count, etc.).
       const { error: insErr } = await supabase.from('leads').insert(
-        newLeads.map(({ already_in_db, no_website, ...lead }) => lead)
+        newLeads.map(toLeadRow)
       )
       if (insErr) throw insErr
       setImportMsg(`✅ Imported ${newLeads.length} leads.`)
@@ -423,9 +443,10 @@ function MapsTab() {
     if (!newLeads.length) { setImportMsg('No new leads to import.'); return }
     setImporting(true); setImportMsg('')
     try {
-      // place_id stays on the row — it's the Maps scraper's dedup identifier
+      // Whitelist to real `leads` columns — strips display-only extras
+      // (already_in_db, no_website, website, rating, review_count, etc.).
       const { error: insErr } = await supabase.from('leads').insert(
-        newLeads.map(({ already_in_db, no_website, ...lead }) => lead)
+        newLeads.map(toLeadRow)
       )
       if (insErr) throw insErr
       setImportMsg(`✅ Imported ${newLeads.length} leads.`)
