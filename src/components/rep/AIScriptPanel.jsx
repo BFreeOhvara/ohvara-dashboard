@@ -1,46 +1,26 @@
 import { useState } from 'react'
-import { X, Loader2, FileText, RotateCcw } from 'lucide-react'
+import { X, FileText, RotateCcw } from 'lucide-react'
 import { Button } from '../ui/Button'
-import { supabase } from '../../lib/supabase'
+import { buildCallScript } from '../../lib/discoveryScript'
 
 const SECTIONS = ['opener', 'problem', 'solution', 'objections', 'close']
 const LABELS = {
   opener:     'Opener',
-  problem:    'Problem',
-  solution:   'Pitch',
+  problem:    'Discovery',
+  solution:   'Pain',
   objections: 'Objections',
   close:      'Close',
 }
 
 export function AIScriptPanel({ lead, onClose }) {
   const [script, setScript] = useState(null)
-  const [loading, setLoading] = useState(false)
   const [activeSection, setActiveSection] = useState('opener')
-  const [error, setError] = useState('')
 
-  async function generateScript() {
-    setLoading(true)
-    setError('')
-    try {
-      const { data, error: fnError } = await supabase.functions.invoke('generate-ai-script', {
-        body: {
-          lead_id: lead.id,
-          business_name: lead.business_name,
-          contact_name: lead.contact_name,
-          niche: lead.niche,
-          city: lead.city,
-          pain_points: lead.pain_points,
-          notes: lead.notes,
-        },
-      })
-      if (fnError) throw fnError
-      setScript(data.script)
-      setActiveSection('opener')
-    } catch {
-      setError('Failed to generate script. Try again.')
-    } finally {
-      setLoading(false)
-    }
+  // The ONE universal script with this lead's real details filled in — fully
+  // deterministic, no AI call, no pain_points. Ready the instant it's clicked.
+  function generateScript() {
+    setScript(buildCallScript(lead))
+    setActiveSection('opener')
   }
 
   return (
@@ -85,35 +65,22 @@ export function AIScriptPanel({ lead, onClose }) {
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto scrollbar-thin">
-        {!script && !loading && (
+        {!script && (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-6">
             <div className="w-10 h-10 rounded-[10px] bg-[var(--accent-subtle)] flex items-center justify-center">
               <FileText className="text-[var(--accent)]" size={18} />
             </div>
             <div>
-              <p className="text-sm font-medium text-[var(--text-primary)]">AI Call Script</p>
+              <p className="text-sm font-medium text-[var(--text-primary)]">Call Script</p>
               <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
-                Generate a personalized script for {lead.business_name} before you dial.
+                Build the script for {lead.business_name} before you dial.
               </p>
             </div>
             <Button onClick={generateScript}>Generate Script</Button>
           </div>
         )}
 
-        {loading && (
-          <div className="flex flex-col items-center justify-center h-full gap-3">
-            <Loader2 className="text-[var(--accent)] animate-spin" size={24} />
-            <p className="text-xs text-[var(--text-muted)]">Writing your script…</p>
-          </div>
-        )}
-
-        {error && (
-          <div className="m-4 text-xs text-[var(--danger)] bg-[#EF4444]/10 border border-[#EF4444]/20 rounded-lg p-3">
-            {error}
-          </div>
-        )}
-
-        {script && !loading && (
+        {script && (
           <div className="p-4">
             <p className="section-label mb-3">{LABELS[activeSection]}</p>
             <div className="space-y-2">
@@ -130,9 +97,9 @@ export function AIScriptPanel({ lead, onClose }) {
       {/* Footer */}
       {script && (
         <div className="px-4 py-3 border-t border-[var(--border)]">
-          <Button variant="ghost" size="sm" onClick={generateScript} disabled={loading}>
+          <Button variant="ghost" size="sm" onClick={generateScript}>
             <RotateCcw size={12} />
-            Regenerate
+            Rebuild
           </Button>
         </div>
       )}

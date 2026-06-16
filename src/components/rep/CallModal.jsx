@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, Component } from 'react'
 import { createPortal } from 'react-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Phone, X, Loader2, RotateCcw, MapPin, User, Tag, Globe, Check, FileText, StickyNote, ChevronDown, CalendarClock } from 'lucide-react'
+import { Phone, X, MapPin, User, Tag, Globe, Check, FileText, StickyNote, ChevronDown, CalendarClock } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { Badge } from '../ui/Badge'
+import { buildCallScript } from '../../lib/discoveryScript'
 
 // The only statuses a rep can set from the call modal — color coordinated.
 // `note` tells the rep exactly where the lead routes (pipeline behavior).
@@ -28,53 +29,6 @@ const SECTIONS = [
   { key: 'close',      label: 'Close',              color: 'var(--success)', dim: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.25)' },
 ]
 
-// Static fallback so the modal always shows a usable script even if the
-// generate-ai-script function is unreachable. Bullet cheat-sheet format —
-// every line starts with "- " (rendered as bullets, same as AI output).
-function fallbackScript(lead) {
-  const biz   = lead.business_name || 'the business'
-  const name  = lead.contact_name || 'the owner'
-  const niche = lead.niche || 'service'
-  return {
-    opener: `- "Hey, is this ${biz}? Is ${name} around?"\n- Casual, peer-to-peer — you're not a telemarketer.\n- "Saw your listing — how's the season going?"`,
-    problem: `- "Who's grabbing the phone when the crew's out on jobs?"\n- "How many calls a week would you guess hit voicemail?"\n- Let them talk — the pauses do the work.`,
-    solution: `- Use THEIR numbers: "Say half those calls are real jobs…"\n- "What's an average job worth for you?"\n- Every missed call is money walking to a competitor ${niche} shop.`,
-    objections: `- "Not interested" → "Fair — what happens to a call you can't answer right now?"\n- "Too busy" → "Exactly why I'm calling. 15 minutes, that's it."\n- One objection, one comeback, then go to the close.`,
-    close: `- The only goal: book the 15-minute call.\n- Offer two times: "Tuesday at 2, or Thursday morning?"\n- Confirm the time, then get off the phone.`,
-  }
-}
-
-// How long we wait for the AI script before falling back. functions.invoke()
-// has NO built-in timeout — a stalled request would otherwise spin forever.
-const SCRIPT_TIMEOUT_MS = 15000
-
-// Coerce whatever the model returned into render-safe strings. Sections can
-// come back as arrays of bullets (the bullet-format prompt invites it) or
-// other shapes — rendering calls .split('\n'), so anything non-string used
-// to crash the React tree (blank page: no error boundary existed).
-// Returns null if nothing usable survives — caller falls back.
-function normalizeScript(raw) {
-  if (!raw || typeof raw !== 'object') return null
-  const keys = ['opener', 'problem', 'solution', 'objections', 'close']
-  const out = {}
-  let usable = 0
-  for (const k of keys) {
-    const v = raw[k]
-    if (typeof v === 'string' && v.trim()) {
-      out[k] = v
-      usable++
-    } else if (Array.isArray(v) && v.length) {
-      out[k] = v
-        .map(x => String(x).trim())
-        .filter(Boolean)
-        .map(l => (l.startsWith('- ') || l.startsWith('• ') ? l : `- ${l}`))
-        .join('\n')
-      usable++
-    }
-    // anything else (object, number, empty) — drop the section
-  }
-  return usable >= 3 ? out : null
-}
 
 // Catches render-time crashes inside the modal so a bad script payload (or
 // any other bug in here) degrades to a retry state instead of unmounting
@@ -146,9 +100,9 @@ export function CallModal({ lead, onClose }) {
   const qc = useQueryClient()
   const { profile } = useAuth()
 
-  const [script, setScript]           = useState(null)
-  const [loading, setLoading]         = useState(true)
-  const [isFallback, setIsFallback]   = useState(false)
+  // The discovery script is the ONE universal script with this lead's real
+  // details filled in — fully deterministic, no AI call, ready immediately.
+  const [script, setScript]           = useState(() => buildCallScript(lead))
   const [status, setStatus]           = useState(lead.status)
   const [statusTouched, setStatusTouched] = useState(false)
   const [statusOpen, setStatusOpen]   = useState(false)
@@ -183,39 +137,8 @@ export function CallModal({ lead, onClose }) {
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [])
 
-  async function generateScript() {
-    setLoading(true)
-    setIsFallback(false)
-    try {
-      // Race the invoke against a hard timeout — without it a stalled
-      // request leaves "Writing your discovery script…" spinning forever.
-      const invoke = supabase.functions.invoke('generate-ai-script', {
-        body: {
-          lead_id: lead.id,
-          business_name: lead.business_name,
-          contact_name: lead.contact_name,
-          niche: lead.niche,
-          city: lead.city,
-          pain_points: lead.pain_points,
-          notes: lead.notes,
-        },
-      })
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('script generation timed out')), SCRIPT_TIMEOUT_MS)
-      )
-      const { data, error } = await Promise.race([invoke, timeout])
-      const normalized = normalizeScript(error ? null : data?.script)
-      if (!normalized) throw new Error('no usable script')
-      setScript(normalized)
-    } catch {
-      setScript(fallbackScript(lead))
-      setIsFallback(true)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => { generateScript() }, [lead.id])
+  // Rebuild the filled-in script if a different lead opens in this modal.
+  useEffect(() => { setScript(buildCallScript(lead)) }, [lead.id])
 
   // Status selection is LOCAL ONLY — nothing touches the DB until Done.
   // X (close) discards any selection made since the modal opened.
@@ -565,26 +488,14 @@ export function CallModal({ lead, onClose }) {
             )}
           </div>
 
-          {/* RIGHT — AI discovery script */}
+          {/* RIGHT — discovery script (the universal script, filled in for this lead) */}
           <div
             className="scrollbar-thin"
             style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '16px 18px', display: 'flex', flexDirection: 'column' }}
           >
-            {loading ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, flex: 1, padding: '48px 0' }}>
-                <Loader2 size={26} color="var(--accent)" style={{ animation: 'spin 1s linear infinite' }} />
-                <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>Writing your discovery script…</p>
-              </div>
-            ) : (
-              <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
                   <FileText size={13} color="var(--accent)" />
                   <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Discovery Script</p>
-                  {isFallback && (
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', marginLeft: 6 }}>
-                      standard version — AI personalization unavailable
-                    </span>
-                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {SECTIONS.map(({ key, label, color, dim, border }) => script?.[key] && (
@@ -619,23 +530,6 @@ export function CallModal({ lead, onClose }) {
                     </div>
                   ))}
                 </div>
-                <button
-                  onClick={generateScript}
-                  disabled={loading}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    marginTop: 14, padding: '9px 14px', borderRadius: 8,
-                    background: 'transparent', border: '0.5px solid var(--border)',
-                    fontSize: 13, color: 'var(--text-secondary)',
-                    cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1,
-                    alignSelf: 'flex-start',
-                  }}
-                >
-                  <RotateCcw size={13} />
-                  Regenerate
-                </button>
-              </>
-            )}
           </div>
         </div>
 
@@ -678,8 +572,6 @@ export function CallModal({ lead, onClose }) {
         </div>
       </div>
       </ModalErrorBoundary>
-
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>,
     document.body
   )

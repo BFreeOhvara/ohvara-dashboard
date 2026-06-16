@@ -7,6 +7,7 @@ import {
   useTrainingProgress, useSaveTrainingProgress, trainingChecks, isTrainingComplete,
   TOTAL_VIDEOS, QUIZ_QUESTIONS, QUIZ_PASS_PCT, ROLEPLAY_PASS_SCORE, ROLEPLAY_PASS_GRADE, gradeFromScore,
 } from '../../hooks/useTraining'
+import { DISCOVERY_SCRIPT } from '../../lib/discoveryScript'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -34,96 +35,9 @@ const CATEGORY_FILTERS = [
   })),
 ]
 
-// The discovery script reps study before practicing. Static content —
-// the personalized version is generated per-lead in the Call Now modal.
-// color/dim/border values mirror SECTIONS in CallModal.jsx exactly — the rep
-// must see the same color system in Training and on a live call.
-const DISCOVERY_SCRIPT = [
-  {
-    id: 'opener',
-    title: 'Opener',
-    goal: 'Survive the first 10 seconds. Sound like a peer, not a telemarketer.',
-    color: 'var(--accent)',  dim: 'rgba(108,99,255,0.08)',  border: 'rgba(108,99,255,0.25)',
-    variations: [
-      {
-        label: `📞 Indeed — Phone Coverage Lead`,
-        lines: [
-          `"Hey, is this [Business Name]? [First name]? Perfect — I'll be quick, I know you're mid-day."`,
-          `"I was looking at your Indeed listing for the [receptionist/front desk/phone] position — how's that search going?"`,
-          `If no Indeed listing: "I work with [niche] owners in [city] — quick question, are you the one who handles the phones when the crew's out on jobs?"`,
-        ],
-        tips: 'Slow down. Lower your tone. The goal of the opener is not to pitch — it is to earn the next 30 seconds.',
-      },
-      {
-        label: `🚛 Indeed — Dispatcher/Coordinator Lead`,
-        lines: [
-          `"Hey, is this [Business Name]? [First name]? Perfect — super quick."`,
-          `"I saw you're looking for a [dispatcher/coordinator/logistics] — is that because scheduling and routing calls is eating up your day?"`,
-          `If no Indeed listing: "I work with [niche] owners in [city] — quick question, who's handling your dispatch and scheduling calls right now?"`,
-        ],
-        tips: `They posted the job because they're drowning in coordination. Let them say it — don't say it for them.`,
-      },
-      {
-        label: `🗺️ Maps — No Website / Low Reviews Lead`,
-        lines: [
-          `"Hey, is this [Business Name]? [First name]? Perfect — real quick."`,
-          `"I was actually looking at your Google listing — are you the owner?"`,
-          `"Quick question — when someone finds you on Google and wants to reach out, where are they going right now?"`,
-        ],
-        tips: `They don't know they have a problem until you make them picture it. A customer who can't find your website calls your competitor instead.`,
-      },
-    ],
-  },
-  {
-    id: 'discovery',
-    title: 'Problem Discovery',
-    goal: 'Get them talking about missed calls and lost jobs. Ask, then shut up.',
-    color: 'var(--info)',    dim: 'rgba(56,189,248,0.08)',  border: 'rgba(56,189,248,0.25)',
-    lines: [
-      `"When a customer calls and everyone's on a job — what happens to that call?"`,
-      `"Roughly how many calls a week would you say go to voicemail?"`,
-      `"And of those, how many do you think actually leave a message versus just calling the next company on the list?"`,
-    ],
-    tips: 'Every question should make the problem bigger in THEIR head. You are not telling them they have a problem — they are telling you.',
-  },
-  {
-    id: 'pain',
-    title: 'Pain Amplification',
-    goal: 'Turn "yeah we miss some calls" into a dollar figure they can feel.',
-    color: 'var(--warning)', dim: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.25)',
-    lines: [
-      `"Let's do quick math — if you're missing 8 calls a week and even 3 of those are real jobs at, what, $400 each? That's close to $5K a month walking to a competitor."`,
-      `"And that's not counting the after-hours calls. What happens when someone calls at 7pm with a burst pipe?"`,
-      `"Most owners I talk to know they're losing jobs — they just haven't put a number on it. Does that number surprise you?"`,
-    ],
-    tips: 'Use THEIR numbers from discovery, not yours. A number they gave you is a number they believe.',
-  },
-  {
-    id: 'objections',
-    title: 'Objection Handling',
-    goal: 'Acknowledge, reframe, ask one more question. Never argue.',
-    color: 'var(--danger)',  dim: 'rgba(239,68,68,0.08)',   border: 'rgba(239,68,68,0.25)',
-    lines: [
-      `"Not interested" → "Totally fair — most owners say that until they see the missed-call math. One question and I'll let you go: what happens to a call you can't answer right now?"`,
-      `"Too busy" → "That's exactly why I called. This takes 15 minutes and it's about getting you hours back, not taking them."`,
-      `"We have someone for that" → "Nice — does that cover after-hours and weekends too? That's usually where the gap is."`,
-      `"Send me an email" → "Happy to — but honestly the email won't mean much without the numbers. Let's grab 15 minutes and I'll walk you through it live."`,
-    ],
-    tips: 'One objection handled well earns the close. Two objections means let go gracefully — leave the door open and log it as a callback.',
-  },
-  {
-    id: 'close',
-    title: 'Close / Book',
-    goal: 'Ask for the 15-minute call. Offer two times. Confirm and get off the phone.',
-    color: 'var(--success)', dim: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.25)',
-    lines: [
-      `"Look, I don't want to eat up your morning. Let's do a quick 15-minute call this week — I'll show you exactly how many calls you're missing and what they're worth."`,
-      `"Does Tuesday afternoon or Thursday morning work better?"`,
-      `After they pick: "Perfect — [day] at [time]. You'll get a text reminder. What's the best cell for that?"`,
-    ],
-    tips: 'Always offer two specific times — never "when works for you?". Confirm the number, confirm the time, end the call. Do not keep selling after the yes.',
-  },
-]
+// DISCOVERY_SCRIPT (the universal discovery script) now lives in
+// src/lib/discoveryScript.js — imported above and shared with the Call Now
+// modal so Training and a live call show the exact same script.
 
 function shuffle(arr) {
   const a = [...arr]
