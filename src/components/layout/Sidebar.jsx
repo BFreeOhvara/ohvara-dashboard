@@ -4,7 +4,7 @@ import {
   Users, Phone, BarChart2, Target, Bell,
   Calendar, DollarSign, TrendingUp, BookOpen,
   LayoutDashboard, List, Columns, RefreshCw, Database, LogOut,
-  Zap, Search, PhoneCall, GitBranch
+  Zap, Search, PhoneCall, GitBranch, MessageSquare
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { NotificationBell } from '../admin/NotificationBell'
@@ -17,6 +17,7 @@ const NAV = {
     { to: '/rep/goals',       label: 'My Goals',       icon: Target },
     { to: '/rep/commissions', label: 'My Commissions', icon: DollarSign },
     { to: '/rep/feed',        label: 'Activity',       icon: Bell },
+    { to: '/rep/messages',    label: 'Messages',       icon: MessageSquare },
   ],
   closer: [
     { to: '/closer',                   label: 'Appointments',  icon: Calendar },
@@ -27,6 +28,7 @@ const NAV = {
     { to: '/closer/revenue',           label: 'Revenue',       icon: TrendingUp },
     { to: '/closer/deals',             label: 'Past Deals',    icon: DollarSign },
     { to: '/closer/commissions',       label: 'Commissions',   icon: DollarSign },
+    { to: '/closer/messages',          label: 'Messages',      icon: MessageSquare },
   ],
   admin: [
     { to: '/admin',              label: 'Overview',        icon: LayoutDashboard },
@@ -38,6 +40,7 @@ const NAV = {
     { to: '/admin/scraper',      label: 'Lead Scraper',    icon: Search },
     { to: '/admin/users',        label: 'Users',           icon: Users },
     { to: '/admin/commissions',  label: 'Commissions',     icon: DollarSign },
+    { to: '/admin/messages',     label: 'Messages',        icon: MessageSquare },
   ],
 }
 

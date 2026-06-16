@@ -51,8 +51,9 @@ export const DISCOVERY_SCRIPT = [
       `"When a customer calls and everyone's on a job — what happens to that call?"`,
       `"Roughly how many calls a week would you say go to voicemail?"`,
       `"And of those, how many do you think actually leave a message versus just calling the next company on the list?"`,
+      `"What's a typical job worth for you, start to finish — like, what's your average ticket?"`,
     ],
-    tips: 'Every question should make the problem bigger in THEIR head. You are not telling them they have a problem — they are telling you.',
+    tips: 'Every question should make the problem bigger in THEIR head. You are not telling them they have a problem — they are telling you. The average-ticket number is gold for Nate — it sizes the pricing.',
   },
   {
     id: 'pain',

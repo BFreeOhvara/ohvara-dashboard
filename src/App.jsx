@@ -35,6 +35,9 @@ import LeadSources from './pages/admin/LeadSources'
 import LeadScraper from './pages/admin/LeadScraper'
 import Users from './pages/admin/Users'
 import Commissions from './pages/admin/Commissions'
+import RepMessages from './pages/rep/Messages'
+import CloserMessages from './pages/closer/Messages'
+import AdminMessages from './pages/admin/Messages'
 
 const qc = new QueryClient({
   // refetchOnWindowFocus off: tabbing back must be silent — fresh data
@@ -94,6 +97,11 @@ export default function App() {
                 <DashboardLayout><ActivityFeed /></DashboardLayout>
               </ProtectedRoute>
             } />
+            <Route path="/rep/messages" element={
+              <ProtectedRoute allowedRoles={['rep']}>
+                <DashboardLayout><RepMessages /></DashboardLayout>
+              </ProtectedRoute>
+            } />
 
             {/* Closer routes */}
             <Route path="/closer" element={
@@ -129,6 +137,11 @@ export default function App() {
             <Route path="/closer/pipeline" element={
               <ProtectedRoute allowedRoles={['closer']}>
                 <DashboardLayout><CloserPipeline /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/closer/messages" element={
+              <ProtectedRoute allowedRoles={['closer']}>
+                <DashboardLayout><CloserMessages /></DashboardLayout>
               </ProtectedRoute>
             } />
 
@@ -171,6 +184,11 @@ export default function App() {
             <Route path="/admin/users" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <DashboardLayout><Users /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/messages" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardLayout><AdminMessages /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/admin/commissions" element={
