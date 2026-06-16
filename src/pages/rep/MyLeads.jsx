@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { Phone, RefreshCw, PhoneCall, Target, BarChart2, List, Lock, Check, GraduationCap } from 'lucide-react'
+import { Phone, RefreshCw, PhoneCall, Target, BarChart2, List, Lock, Check, GraduationCap, AlarmClock, X } from 'lucide-react'
 import { useMyLeads } from '../../hooks/useLeads'
 import { useTodayCallStats } from '../../hooks/useProfiles'
 import { useAuth } from '../../hooks/useAuth'
@@ -36,14 +37,31 @@ function formatAppointment(ts) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-// A follow-up lead that has come back to the rep's list: follow_up_at has
-// arrived and the lead carries the reason the rep recorded. Not a cold call.
-function isReturnedFollowUp(lead) {
-  return !!(lead.follow_up_at && lead.follow_up_notes && new Date(lead.follow_up_at) <= new Date())
+// How long until a follow-up is due — drives the row countdown. Coarse on
+// purpose (minutes/hours/days); seconds only inside the final minute.
+function formatCountdown(due, now) {
+  const ms = due - now
+  if (ms <= 0) return 'now'
+  const totalSec = Math.floor(ms / 1000)
+  const d = Math.floor(totalSec / 86400)
+  const h = Math.floor((totalSec % 86400) / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  if (d > 0) return `in ${d}d ${h}h`
+  if (h > 0) return `in ${h}h ${m}m`
+  if (m > 0) return `in ${m}m`
+  return `in ${s}s`
 }
 
-// Individual table row — clicking anywhere opens the Call Now modal
-function LeadRow({ lead, onOpen, animDelay = 0 }) {
+// Reminder fires this long before a follow-up's due time.
+const FOLLOW_UP_REMIND_MS = 5 * 60 * 1000
+
+// Individual table row — clicking anywhere opens the Call Now modal.
+// `now` (epoch ms, ticked by the parent) drives the live follow-up countdown.
+function LeadRow({ lead, onOpen, now, animDelay = 0 }) {
+  const followUpDue = lead.status === 'Follow-Up' && lead.follow_up_at
+    ? new Date(lead.follow_up_at).getTime()
+    : null
   return (
     <div
       className="table-row-animated"
@@ -64,12 +82,15 @@ function LeadRow({ lead, onOpen, animDelay = 0 }) {
         <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
           {lead.business_name}
         </p>
-        {isReturnedFollowUp(lead) ? (
+        {followUpDue ? (
           <p style={{
             fontSize: 11, color: 'var(--warning)', fontWeight: 500, marginTop: 2,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
-            📅 Follow-Up — {lead.follow_up_notes}
+            {followUpDue > now
+              ? `⏳ Follow-up ${formatCountdown(followUpDue, now)}`
+              : '📅 Follow-up due now'}
+            {lead.follow_up_notes ? ` — ${lead.follow_up_notes}` : ''}
           </p>
         ) : lead.contact_name ? (
           <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -232,8 +253,37 @@ export default function MyLeads() {
   // Filter + scroll position survive tab switches via sessionStorage
   const [activeFilter, setActiveFilter] = useState(() => sessionStorage.getItem(SS_FILTER) || 'All')
   const [callLead, setCallLead] = useState(null)
+  const [reminderLead, setReminderLead] = useState(null)
+  const remindedRef = useRef(new Set())
   const scrollRef = useRef(null)
   const scrollRestored = useRef(false)
+
+  // Ticks the follow-up countdowns + drives the reminder check. 15s keeps the
+  // list cheap while firing the reminder within 15s of the 5-min mark.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 15000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Follow-up reminder: pop up ~5 min before a Follow-Up lead's due time.
+  // DEFERRED while the call modal is open (mid-call) or another reminder is
+  // showing — the effect bails, so the next tick fires it the moment the rep
+  // closes the modal (as long as the due time hasn't passed). Each lead
+  // reminds once (remindedRef), so dismiss doesn't re-trigger.
+  useEffect(() => {
+    if (callLead || reminderLead || !leads) return
+    const candidate = leads.find(l => {
+      if (l.status !== 'Follow-Up' || !l.follow_up_at) return false
+      if (remindedRef.current.has(l.id)) return false
+      const due = new Date(l.follow_up_at).getTime()
+      return now >= due - FOLLOW_UP_REMIND_MS && now < due
+    })
+    if (candidate) {
+      remindedRef.current.add(candidate.id)
+      setReminderLead(candidate)
+    }
+  }, [now, callLead, reminderLead, leads])
 
   function changeFilter(f) {
     setActiveFilter(f)
@@ -453,6 +503,7 @@ export default function MyLeads() {
               key={lead.id}
               lead={lead}
               onOpen={setCallLead}
+              now={now}
               animDelay={Math.min(i, 20) * 30}
             />
           ))
@@ -474,6 +525,85 @@ export default function MyLeads() {
           onClose={() => setCallLead(null)}
         />
       )}
+
+      {/* Follow-up reminder — fires ~5 min before due, only when no call is in
+          progress (the effect defers it while the modal is open) */}
+      {reminderLead && !callLead && (
+        <FollowUpReminder
+          lead={reminderLead}
+          now={now}
+          onCall={() => { setCallLead(reminderLead); setReminderLead(null) }}
+          onDismiss={() => setReminderLead(null)}
+        />
+      )}
     </div>
+  )
+}
+
+// Toast-style reminder that a follow-up is coming due. Portaled to body so a
+// transformed ancestor can't clip its fixed position (same reason CallModal
+// portals). "Call now" hands the lead to the Call Now modal.
+function FollowUpReminder({ lead, now, onCall, onDismiss }) {
+  const due = lead.follow_up_at ? new Date(lead.follow_up_at).getTime() : null
+  return createPortal(
+    <div style={{
+      position: 'fixed', right: 20, bottom: 20, zIndex: 1100,
+      width: 320, maxWidth: 'calc(100vw - 40px)',
+      background: '#0E0E1A', border: '0.5px solid var(--warning)',
+      borderRadius: 12, padding: '14px 16px',
+      boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+          background: 'rgba(245,158,11,0.12)', border: '0.5px solid rgba(245,158,11,0.35)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <AlarmClock size={16} color="var(--warning)" />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            Follow-up {due ? formatCountdown(due, now) : 'due'}
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {lead.business_name}
+          </p>
+          {lead.follow_up_notes && (
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '4px 0 0', lineHeight: 1.4 }}>
+              {lead.follow_up_notes}
+            </p>
+          )}
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <button
+              onClick={onCall}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '6px 14px', borderRadius: 7, border: 'none',
+                background: 'var(--accent)', color: 'white', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+              }}
+            >
+              <Phone size={12} /> Call now
+            </button>
+            <button
+              onClick={onDismiss}
+              style={{
+                padding: '6px 12px', borderRadius: 7,
+                background: 'transparent', border: '0.5px solid var(--border)',
+                color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer',
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+        <button
+          onClick={onDismiss}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2, flexShrink: 0 }}
+        >
+          <X size={15} />
+        </button>
+      </div>
+    </div>,
+    document.body
   )
 }

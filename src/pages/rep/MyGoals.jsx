@@ -95,8 +95,8 @@ const BADGE_GROUPS = [
     badges: [
       { id: 'five_a_day',   label: '5 in a Day',   icon: '🚀', condition: c => (c.activity?.bestDayBookings || 0) >= 5,
         detail: '5 bookings in one day' },
-      { id: 'hot_streak',   label: 'Hot Streak',   icon: '🔥', condition: c => !!c.activity?.hotStreak,
-        detail: '3 bookings in a row' },
+      { id: 'back_to_back', label: 'Back-to-Back Bookings', icon: '🔁', condition: c => !!c.activity?.backToBack,
+        detail: '2 bookings in a row' },
     ],
   },
 ]

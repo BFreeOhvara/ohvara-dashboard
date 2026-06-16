@@ -261,7 +261,7 @@ export function useBadgeActivity(repId) {
       if (error) throw error
 
       const byDay = new Map()
-      let earlyBird = false, nightOwl = false, hotStreak = false, bookedRun = 0
+      let earlyBird = false, nightOwl = false, backToBack = false, bookedRun = 0
       for (const c of data || []) {
         const d = new Date(c.created_at)
         const key = d.toDateString()
@@ -273,7 +273,7 @@ export function useBadgeActivity(repId) {
         if (d.getHours() < 9) earlyBird = true
         if (d.getHours() >= 20) nightOwl = true
         bookedRun = isBooked ? bookedRun + 1 : 0
-        if (bookedRun >= 3) hotStreak = true
+        if (bookedRun >= 2) backToBack = true
       }
 
       const days = [...byDay.values()].sort((a, b) => a.ts - b.ts)
@@ -301,7 +301,7 @@ export function useBadgeActivity(repId) {
         bestDayBookings: days.reduce((m, d) => Math.max(m, d.bookings), 0),
         earlyBird,
         nightOwl,
-        hotStreak,
+        backToBack,
       }
     },
     enabled: !!repId,
