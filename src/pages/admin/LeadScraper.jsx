@@ -6,21 +6,13 @@ import { Search, Download, Globe, AlertTriangle, CheckCircle, Loader2, Database 
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
+// Locked 7-setter lineup (vet + 6 trades) + the two still-undecided 7th-slot
+// candidates (Plumbing, Pest Control). HIPAA-relevant and dropped niches are
+// intentionally excluded.
 const INDEED_NICHES = [
-  'Roofing', 'HVAC', 'Electrical', 'Landscaping',
-  'Pressure Washing', 'Concrete', 'Hotshot Trucking',
-  'Oilfield Services', 'Plumbing', 'Pest Control',
-  'Auto Repair', 'Towing', 'Physical Therapy', 'Chiropractic',
+  'Veterinary', 'HVAC', 'Electrical', 'Roofing',
+  'Landscaping', 'Pressure Washing', 'Plumbing', 'Pest Control',
 ]
-
-const MAPS_NICHES = [
-  'HVAC', 'Plumbing', 'Roofing', 'Electrical',
-  'Landscaping', 'Auto Repair', 'Pest Control',
-  'Dental', 'Chiropractic', 'Physical Therapy',
-  'Law Firm', 'Hotshot Trucking',
-]
-
-const DEFAULT_CITIES = 'Dallas TX, Houston TX, San Antonio TX, Oklahoma City OK, Tulsa OK, New Orleans LA'
 
 // Columns that actually exist on the `leads` table. Scraper results carry
 // display-only extras (already_in_db, no_website, website, rating,
@@ -386,200 +378,9 @@ function IndeedTab() {
   )
 }
 
-// ── Google Maps tab ───────────────────────────────────────────────────────────
-
-function MapsTab() {
-  const [selectedNiches, setSelectedNiches] = useState(['HVAC', 'Plumbing'])
-  const [cities,      setCities]      = useState(DEFAULT_CITIES)
-  const [maxReviews,  setMaxReviews]  = useState('50')
-  const [loading,     setLoading]     = useState(false)
-  const [results,     setResults]     = useState([])
-  const [selectedIds, setSelectedIds] = useState(new Set())
-  const [importing,   setImporting]   = useState(false)
-  const [importMsg,   setImportMsg]   = useState('')
-  const [error,       setError]       = useState('')
-
-  async function handleScrape() {
-    if (!selectedNiches.length) { setError('Select at least one niche.'); return }
-    const cityList = cities.split(',').map(c => c.trim()).filter(Boolean)
-    if (!cityList.length) { setError('Enter at least one city.'); return }
-    setLoading(true); setResults([]); setSelectedIds(new Set()); setError(''); setImportMsg('')
-    try {
-      const { data, error: fnErr } = await supabase.functions.invoke('maps-scraper', {
-        body: { niches: selectedNiches, cities: cityList, maxReviews: parseInt(maxReviews) || 50 },
-      })
-      if (fnErr) throw fnErr
-      if (data?.error) throw new Error(data.error + (data.setup ? `\n\n${data.setup}` : ''))
-      setResults(data.results || [])
-    } catch (err) {
-      setError(String(err?.message || err))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  function toggleRow(i) {
-    setSelectedIds(prev => {
-      const next = new Set(prev)
-      next.has(i) ? next.delete(i) : next.add(i)
-      return next
-    })
-  }
-
-  function toggleAll(allSelected) {
-    if (allSelected) {
-      setSelectedIds(new Set())
-    } else {
-      const newIds = new Set(
-        results.map((r, i) => (!r.already_in_db ? i : null)).filter(i => i !== null)
-      )
-      setSelectedIds(newIds)
-    }
-  }
-
-  async function handleImport(subset) {
-    const toImport = subset ?? results.filter((_, i) => selectedIds.has(i))
-    const newLeads = toImport.filter(r => !r.already_in_db)
-    if (!newLeads.length) { setImportMsg('No new leads to import.'); return }
-    setImporting(true); setImportMsg('')
-    try {
-      // Whitelist to real `leads` columns — strips display-only extras
-      // (already_in_db, no_website, website, rating, review_count, etc.).
-      const { error: insErr } = await supabase.from('leads').insert(
-        newLeads.map(toLeadRow)
-      )
-      if (insErr) throw insErr
-      setImportMsg(`✅ Imported ${newLeads.length} leads.`)
-      setSelectedIds(new Set())
-    } catch (err) {
-      setImportMsg(`❌ Import failed: ${err?.message || err}`)
-    } finally {
-      setImporting(false)
-    }
-  }
-
-  const newCount  = results.filter(r => !r.already_in_db).length
-  const noWebsite = results.filter(r => r.no_website).length
-
-  return (
-    <div>
-      {/* Config panel */}
-      <div style={{
-        background: 'var(--bg-surface)',
-        border: '0.5px solid var(--border)',
-        borderRadius: 8, padding: '16px', marginBottom: 16,
-      }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 12, marginBottom: 16 }}>
-          <div>
-            <p className="section-label" style={{ marginBottom: 6 }}>Cities (comma-separated)</p>
-            <input
-              value={cities}
-              onChange={e => setCities(e.target.value)}
-              placeholder="Dallas TX, Houston TX, Oklahoma City OK"
-              style={{
-                width: '100%', height: 32, padding: '0 10px',
-                background: 'var(--bg-base)', border: '0.5px solid var(--border)',
-                borderRadius: 6, fontSize: 12, color: 'var(--text-primary)',
-                fontFamily: 'var(--font-sans)',
-              }}
-            />
-          </div>
-          <div>
-            <p className="section-label" style={{ marginBottom: 6 }}>Max Reviews</p>
-            <input
-              type="number"
-              value={maxReviews}
-              onChange={e => setMaxReviews(e.target.value)}
-              min={1}
-              style={{
-                width: 80, height: 32, padding: '0 10px',
-                background: 'var(--bg-base)', border: '0.5px solid var(--border)',
-                borderRadius: 6, fontSize: 13, color: 'var(--text-primary)',
-                fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums',
-              }}
-            />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-            <Button onClick={handleScrape} disabled={loading || !selectedNiches.length} size="md">
-              {loading ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Search size={13} />}
-              {loading ? 'Scraping…' : 'Run Scrape'}
-            </Button>
-          </div>
-        </div>
-
-        <div>
-          <p className="section-label" style={{ marginBottom: 8 }}>Niches</p>
-          <NicheGrid niches={MAPS_NICHES} selected={selectedNiches} onChange={setSelectedNiches} />
-        </div>
-
-        <div style={{
-          marginTop: 12, padding: '8px 10px',
-          background: 'var(--warning-dim)', border: '0.5px solid var(--warning)',
-          borderRadius: 6, fontSize: 11, color: 'var(--warning)',
-        }}>
-          Requires GOOGLE_MAPS_API_KEY set in Supabase → Edge Functions → Secrets.
-          Businesses flagged with no website are prioritized as web agency candidates.
-        </div>
-      </div>
-
-      {/* Error */}
-      {error && (
-        <div style={{
-          display: 'flex', alignItems: 'flex-start', gap: 8,
-          padding: '10px 12px', borderRadius: 6,
-          background: 'var(--danger-dim)', border: '0.5px solid var(--danger)',
-          fontSize: 12, color: 'var(--danger)', marginBottom: 12,
-          whiteSpace: 'pre-wrap',
-        }}>
-          <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
-          {error}
-        </div>
-      )}
-
-      {/* Results header */}
-      {results.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-            Found <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{results.length}</span> results ·{' '}
-            <span style={{ color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>{newCount}</span> new ·{' '}
-            <span style={{ color: 'var(--warning)', fontFamily: 'var(--font-mono)' }}>{noWebsite}</span> no website
-          </p>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {importMsg && (
-              <span style={{ fontSize: 12, color: importMsg.startsWith('✅') ? 'var(--success)' : 'var(--danger)' }}>
-                {importMsg}
-              </span>
-            )}
-            <Button
-              variant="secondary" size="sm"
-              onClick={() => handleImport(results.filter(r => !r.already_in_db))}
-              disabled={importing || newCount === 0}
-            >
-              <Download size={12} />
-              Import All New ({newCount})
-            </Button>
-            <Button
-              variant="primary" size="sm"
-              onClick={() => handleImport(null)}
-              disabled={importing || selectedIds.size === 0}
-            >
-              <Download size={12} />
-              Import Selected ({selectedIds.size})
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <ResultsTable results={results} selectedIds={selectedIds} onToggle={toggleRow} onToggleAll={toggleAll} />
-    </div>
-  )
-}
-
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function LeadScraper() {
-  const [tab, setTab] = useState('indeed')
-
   return (
     <div className="page-enter">
       {/* Header */}
@@ -588,43 +389,11 @@ export default function LeadScraper() {
           Lead Scraper
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-          Find businesses hiring receptionists and dispatchers — your warmest leads
+          Indeed — find businesses hiring receptionists and dispatchers, your warmest leads
         </p>
       </div>
 
-      {/* Tabs */}
-      <div style={{
-        display: 'flex', gap: 0,
-        borderBottom: '0.5px solid var(--border)',
-        marginBottom: 20,
-      }}>
-        {[
-          { id: 'indeed',  label: 'Indeed', sub: 'Salary-verified' },
-          { id: 'maps',    label: 'Google Maps', sub: 'No-website flags' },
-        ].map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            style={{
-              padding: '10px 20px',
-              border: 'none', borderBottom: tab === t.id ? '2px solid var(--accent)' : '2px solid transparent',
-              background: 'transparent',
-              cursor: 'pointer', transition: 'all 100ms',
-              marginBottom: -1,
-            }}
-          >
-            <span style={{ fontSize: 13, fontWeight: 500, color: tab === t.id ? 'var(--text-primary)' : 'var(--text-muted)', display: 'block' }}>
-              {t.label}
-            </span>
-            <span style={{ fontSize: 10, color: tab === t.id ? 'var(--accent)' : 'var(--text-dim)', display: 'block', marginTop: 1 }}>
-              {t.sub}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* Tab content */}
-      {tab === 'indeed' ? <IndeedTab /> : <MapsTab />}
+      <IndeedTab />
     </div>
   )
 }

@@ -27,29 +27,28 @@ export default function LeadSources() {
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-medium text-[var(--text-primary)]">Lead Sources</h1>
-        <p className="text-[var(--text-muted)] text-sm mt-0.5">Indeed vs Google Maps split and scraper controls</p>
+        <p className="text-[var(--text-muted)] text-sm mt-0.5">Indeed is the only active source — Google Maps is legacy/inactive</p>
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         <StatCard label="Total Leads" value={total} icon={Database} color="indigo" />
-        <StatCard label="Google Maps" value={counts?.google_maps || 0} icon={MapPin} color="blue" sub={`${gmPct}% of total`} />
-        <StatCard label="Indeed" value={counts?.indeed || 0} icon={Briefcase} color="green" sub={`${indeedPct}% of total`} />
+        <StatCard label="Indeed (active)" value={counts?.indeed || 0} icon={Briefcase} color="green" sub={`${indeedPct}% of total`} />
+        <StatCard label="Google Maps (legacy)" value={counts?.google_maps || 0} icon={MapPin} color="blue" sub="inactive — historical only" />
       </div>
 
       <Card className="mb-4">
         <p className="text-sm font-medium text-[var(--text-primary)] mb-4">Source Split</p>
         <div className="space-y-3">
-          <SourceBar label="Google Maps" count={counts?.google_maps || 0} pct={gmPct} color="bg-[var(--info)]" />
           <SourceBar label="Indeed" count={counts?.indeed || 0} pct={indeedPct} color="bg-[var(--success)]" />
+          <SourceBar label="Google Maps (legacy)" count={counts?.google_maps || 0} pct={gmPct} color="bg-[var(--info)]" />
         </div>
       </Card>
 
-      {/* Scraper controls — stubbed */}
+      {/* Scraper controls — Indeed only (Google Maps retired) */}
       <Card>
         <p className="text-sm font-medium text-[var(--text-primary)] mb-1">Scraper Controls</p>
         <p className="text-xs text-[var(--text-muted)] mb-4">Live scraper connection — coming in a future session</p>
-        <div className="grid md:grid-cols-2 gap-3">
-          <ScraperStub label="Google Maps Scraper" status="Not connected" color="blue" />
+        <div className="grid gap-3">
           <ScraperStub label="Indeed Scraper" status="Not connected" color="green" />
         </div>
       </Card>

@@ -1,22 +1,42 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { PhoneMissed, CalendarClock, Ban, CheckCircle } from 'lucide-react'
+import { PhoneMissed, CalendarClock, Ban, CheckCircle, Inbox, FilePlus2, Search } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { useReps } from '../../hooks/useProfiles'
 import { KPICard } from '../../components/ui/KPICard'
 import { Badge } from '../../components/ui/Badge'
 
-// ── Pipeline queues — one page, four tabs ─────────────────────────────────────
-// Tab 1 No Answer Queue (24h redistribution pool)
-// Tab 2 Follow-Up Queue (same-rep scheduled returns)
-// Tab 3 Not Interested Archive (permanent do-not-contact, read-only)
-// Tab 4 Booked (closer pipeline)
+// ── Pipeline — one page, full lead lifecycle in six tabs ──────────────────────
+// Tab 1 Unassigned (scraped, no rep yet — the pool)
+// Tab 2 New (assigned to a rep, not yet called)
+// Tab 3 No Answer Queue (24h redistribution pool)
+// Tab 4 Follow-Up Queue (same-rep scheduled returns)
+// Tab 5 Not Interested Archive (permanent do-not-contact, read-only)
+// Tab 6 Booked (closer pipeline)
+// A page-level business-name search + rep filter narrow every tab.
 
 const TABS = [
+  { key: 'unassigned',     label: 'Unassigned',       icon: Inbox },
+  { key: 'new',            label: 'New',              icon: FilePlus2 },
   { key: 'no_answer',      label: 'No Answer Queue',  icon: PhoneMissed },
   { key: 'follow_up',      label: 'Follow-Up Queue',  icon: CalendarClock },
   { key: 'not_interested', label: 'Not Interested',   icon: Ban },
   { key: 'booked',         label: 'Booked',           icon: CheckCircle },
 ]
+
+// Page-level filters applied client-side to every tab's rows. `getRepName`
+// returns the row's assigned-rep name (tab-specific); when a rep is selected,
+// rows without that rep — including all Unassigned rows — drop out.
+function applyFilters(rows, { search, repName }, getRepName) {
+  if (!rows) return rows
+  const s = search.trim().toLowerCase()
+  return rows.filter(r => {
+    const biz = (r.lead?.business_name ?? r.business_name ?? '').toLowerCase()
+    if (s && !biz.includes(s)) return false
+    if (repName && (getRepName ? getRepName(r) : null) !== repName) return false
+    return true
+  })
+}
 
 function weekAgoISO() {
   const d = new Date()
@@ -101,6 +121,43 @@ function useBooked() {
   })
 }
 
+// Unassigned — scraped leads sitting in the pool with no rep yet
+function useUnassigned() {
+  return useQuery({
+    queryKey: ['pipeline', 'unassigned'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('id, business_name, niche, city, source, created_at')
+        .is('assigned_rep_id', null)
+        .order('created_at', { ascending: false })
+        .limit(500)
+      if (error) throw error
+      return data
+    },
+    refetchInterval: 60_000,
+  })
+}
+
+// New — assigned to a rep but not yet called
+function useNewAssigned() {
+  return useQuery({
+    queryKey: ['pipeline', 'new_assigned'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('id, business_name, niche, city, batch_date, assigned_rep:profiles!leads_assigned_rep_id_fkey(full_name)')
+        .eq('status', 'New')
+        .not('assigned_rep_id', 'is', null)
+        .order('batch_date', { ascending: false })
+        .limit(500)
+      if (error) throw error
+      return data
+    },
+    refetchInterval: 60_000,
+  })
+}
+
 // "redistributes in Xh Xm" countdown (or how it resolved)
 function countdown(availableAt, distributedAt) {
   if (distributedAt) return 'distributed'
@@ -140,12 +197,71 @@ function QueueTable({ columns, rows, renderRow, emptyText }) {
   )
 }
 
-function NoAnswerTab() {
-  const { data: rows, isLoading } = useNoAnswerQueue()
-  const waiting = rows?.filter(r => !r.distributed_at) ?? []
+function UnassignedTab({ filters }) {
+  const { data: allRows, isLoading } = useUnassigned()
+  const rows = applyFilters(allRows, filters, null) // no rep — rep filter empties it
+
+  return (
+    <div>
+      <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <KPICard label="In Pool" value={allRows?.length ?? 0} sub="scraped, no rep yet" icon={Inbox} />
+      </div>
+      <QueueTable
+        columns={[['Business', '1 1 0'], ['Niche', '0 0 130px'], ['City', '0 0 120px'], ['Source', '0 0 110px'], ['Scraped', '0 0 130px']]}
+        rows={rows}
+        emptyText={isLoading ? 'Loading…' : 'No unassigned leads in the pool.'}
+        renderRow={r => (
+          <div key={r.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
+            <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{r.business_name}</div>
+            <div style={cell('0 0 130px')}>{r.niche || '—'}</div>
+            <div style={cell('0 0 120px')}>{r.city || '—'}</div>
+            <div style={cell('0 0 110px', { textTransform: 'capitalize' })}>{r.source?.replace('_', ' ') || '—'}</div>
+            <div style={cell('0 0 130px', { fontFamily: 'var(--font-mono)' })}>
+              {r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+            </div>
+          </div>
+        )}
+      />
+    </div>
+  )
+}
+
+function NewTab({ filters }) {
+  const { data: allRows, isLoading } = useNewAssigned()
+  const rows = applyFilters(allRows, filters, r => r.assigned_rep?.full_name)
+
+  return (
+    <div>
+      <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <KPICard label="New, Uncalled" value={allRows?.length ?? 0} sub="assigned, awaiting first call" icon={FilePlus2} />
+      </div>
+      <QueueTable
+        columns={[['Business', '1 1 0'], ['Niche', '0 0 130px'], ['City', '0 0 120px'], ['Rep Assigned', '0 0 130px'], ['Batch Date', '0 0 130px']]}
+        rows={rows}
+        emptyText={isLoading ? 'Loading…' : 'No uncalled New leads.'}
+        renderRow={r => (
+          <div key={r.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
+            <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{r.business_name}</div>
+            <div style={cell('0 0 130px')}>{r.niche || '—'}</div>
+            <div style={cell('0 0 120px')}>{r.city || '—'}</div>
+            <div style={cell('0 0 130px')}>{r.assigned_rep?.full_name || '—'}</div>
+            <div style={cell('0 0 130px', { fontFamily: 'var(--font-mono)' })}>
+              {r.batch_date ? new Date(r.batch_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
+            </div>
+          </div>
+        )}
+      />
+    </div>
+  )
+}
+
+function NoAnswerTab({ filters }) {
+  const { data: allRows, isLoading } = useNoAnswerQueue()
+  const rows = applyFilters(allRows, filters, r => r.orig_rep?.full_name)
+  const waiting = allRows?.filter(r => !r.distributed_at) ?? []
   const todayStr = new Date().toISOString().slice(0, 10)
   const dueToday = waiting.filter(r => r.available_at?.slice(0, 10) <= todayStr).length
-  const distributedThisWeek = rows?.filter(r => r.distributed_at && r.distributed_at >= weekAgoISO()).length ?? 0
+  const distributedThisWeek = allRows?.filter(r => r.distributed_at && r.distributed_at >= weekAgoISO()).length ?? 0
 
   return (
     <div>
@@ -186,9 +302,10 @@ function NoAnswerTab() {
   )
 }
 
-function FollowUpTab() {
-  const { data: rows, isLoading } = useFollowUpQueue()
-  const pending = rows?.filter(r => !r.reminded_at && !r.completed_at) ?? []
+function FollowUpTab({ filters }) {
+  const { data: allRows, isLoading } = useFollowUpQueue()
+  const rows = applyFilters(allRows, filters, r => r.rep?.full_name)
+  const pending = allRows?.filter(r => !r.reminded_at && !r.completed_at) ?? []
   const now = new Date()
   const todayStr = now.toISOString().slice(0, 10)
   const dueToday = pending.filter(r => r.follow_up_at?.slice(0, 10) === todayStr).length
@@ -231,14 +348,15 @@ function FollowUpTab() {
   )
 }
 
-function NotInterestedTab() {
-  const { data: rows, isLoading } = useNotInterested()
-  const addedThisWeek = rows?.filter(r => r.updated_at >= weekAgoISO()).length ?? 0
+function NotInterestedTab({ filters }) {
+  const { data: allRows, isLoading } = useNotInterested()
+  const rows = applyFilters(allRows, filters, r => r.rep?.full_name)
+  const addedThisWeek = allRows?.filter(r => r.updated_at >= weekAgoISO()).length ?? 0
 
   return (
     <div>
       <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-        <KPICard label="Do-Not-Contact Total" value={rows?.length ?? 0} sub="flagged permanently" icon={Ban} />
+        <KPICard label="Do-Not-Contact Total" value={allRows?.length ?? 0} sub="flagged permanently" icon={Ban} />
         <KPICard label="Added This Week" value={addedThisWeek} sub="new flags" icon={CalendarClock} />
       </div>
       <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 12px' }}>
@@ -264,10 +382,11 @@ function NotInterestedTab() {
   )
 }
 
-function BookedTab() {
-  const { data: rows, isLoading } = useBooked()
-  const pending = rows?.filter(r => r.status === 'pending') ?? []
-  const closed = rows?.filter(r => r.outcome === 'closed').length ?? 0
+function BookedTab({ filters }) {
+  const { data: allRows, isLoading } = useBooked()
+  const rows = applyFilters(allRows, filters, r => r.rep?.full_name)
+  const pending = allRows?.filter(r => r.status === 'pending') ?? []
+  const closed = allRows?.filter(r => r.outcome === 'closed').length ?? 0
 
   return (
     <div>
@@ -297,17 +416,52 @@ function BookedTab() {
 }
 
 export default function LeadPipeline() {
-  const [tab, setTab] = useState('no_answer')
+  const [tab, setTab] = useState('unassigned')
+  const [search, setSearch] = useState('')
+  const [repName, setRepName] = useState('')
+  const { data: reps } = useReps()
+  const filters = { search, repName }
 
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
-          Lead Pipeline
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-          Every lead routes through one of four queues after a call.
-        </p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
+            Lead Pipeline
+          </h1>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
+            Every lead, scrape to close — pool, assigned, and post-call queues.
+          </p>
+        </div>
+
+        {/* Page-level filters — apply to every tab */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative' }}>
+            <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search business name…"
+              style={{
+                height: 32, padding: '0 10px 0 28px', width: 200,
+                background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                borderRadius: 6, fontSize: 12, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', outline: 'none',
+              }}
+            />
+          </div>
+          <select
+            value={repName}
+            onChange={e => setRepName(e.target.value)}
+            style={{
+              height: 32, padding: '0 10px',
+              background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+              borderRadius: 6, fontSize: 12, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', cursor: 'pointer',
+            }}
+          >
+            <option value="">All Reps</option>
+            {(reps || []).map(r => <option key={r.id} value={r.full_name}>{r.full_name}</option>)}
+          </select>
+        </div>
       </div>
 
       {/* Tabs — underline pattern */}
@@ -330,10 +484,12 @@ export default function LeadPipeline() {
         ))}
       </div>
 
-      {tab === 'no_answer' && <NoAnswerTab />}
-      {tab === 'follow_up' && <FollowUpTab />}
-      {tab === 'not_interested' && <NotInterestedTab />}
-      {tab === 'booked' && <BookedTab />}
+      {tab === 'unassigned' && <UnassignedTab filters={filters} />}
+      {tab === 'new' && <NewTab filters={filters} />}
+      {tab === 'no_answer' && <NoAnswerTab filters={filters} />}
+      {tab === 'follow_up' && <FollowUpTab filters={filters} />}
+      {tab === 'not_interested' && <NotInterestedTab filters={filters} />}
+      {tab === 'booked' && <BookedTab filters={filters} />}
     </div>
   )
 }

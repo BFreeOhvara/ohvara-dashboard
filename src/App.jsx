@@ -28,9 +28,7 @@ import LeadScraperCloser from './pages/admin/LeadScraper'
 // Admin pages
 import Overview from './pages/admin/Overview'
 import RepPerformance from './pages/admin/RepPerformance'
-import AllLeads from './pages/admin/AllLeads'
 import LeadPipeline from './pages/admin/LeadPipeline'
-import ReEngagement from './pages/admin/ReEngagement'
 import LeadSources from './pages/admin/LeadSources'
 import LeadScraper from './pages/admin/LeadScraper'
 import Users from './pages/admin/Users'
@@ -156,19 +154,9 @@ export default function App() {
                 <DashboardLayout><RepPerformance /></DashboardLayout>
               </ProtectedRoute>
             } />
-            <Route path="/admin/leads" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><AllLeads /></DashboardLayout>
-              </ProtectedRoute>
-            } />
             <Route path="/admin/pipeline" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <DashboardLayout><LeadPipeline /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/reengagement" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><ReEngagement /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/admin/sources" element={

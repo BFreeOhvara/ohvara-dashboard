@@ -33,9 +33,7 @@ const NAV = {
   admin: [
     { to: '/admin',              label: 'Overview',        icon: LayoutDashboard },
     { to: '/admin/reps',         label: 'Rep Performance', icon: BarChart2 },
-    { to: '/admin/leads',        label: 'All Leads',       icon: List },
     { to: '/admin/pipeline',     label: 'Pipeline',        icon: Columns },
-    { to: '/admin/reengagement', label: 'Re-Engagement',   icon: RefreshCw },
     { to: '/admin/sources',      label: 'Lead Sources',    icon: Database },
     { to: '/admin/scraper',      label: 'Lead Scraper',    icon: Search },
     { to: '/admin/users',        label: 'Users',           icon: Users },
