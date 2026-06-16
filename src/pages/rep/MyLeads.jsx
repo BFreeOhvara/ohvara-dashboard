@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { Phone, RefreshCw, PhoneCall, Target, BarChart2, List, Lock, Check, GraduationCap, AlarmClock, X } from 'lucide-react'
+import { Phone, RefreshCw, PhoneCall, Target, BarChart2, Lock, Check, GraduationCap, AlarmClock, X } from 'lucide-react'
 import { useMyLeads } from '../../hooks/useLeads'
 import { useTodayCallStats } from '../../hooks/useProfiles'
 import { useAuth } from '../../hooks/useAuth'
@@ -27,6 +27,21 @@ function computeKPIs(leads) {
   const total  = leads.length
   const called = leads.filter(l => l.status !== 'New').length
   return { called, total }
+}
+
+// Count of the rep's leads with status Follow-Up whose follow_up_at lands on
+// today (local calendar day). Computed from the already-loaded batch so it
+// stays live with the row countdowns — no extra query. Drives the
+// "Follow-Ups Due Today" stat card.
+function countFollowUpsDueToday(leads) {
+  if (!leads) return 0
+  const now = new Date()
+  const y = now.getFullYear(), m = now.getMonth(), d = now.getDate()
+  return leads.filter(l => {
+    if (l.status !== 'Follow-Up' || !l.follow_up_at) return false
+    const f = new Date(l.follow_up_at)
+    return !isNaN(f) && f.getFullYear() === y && f.getMonth() === m && f.getDate() === d
+  }).length
 }
 
 // Short date+time for booked appointments shown in the status column
@@ -299,6 +314,9 @@ export default function MyLeads() {
   }, [isLoading])
 
   const kpis = useMemo(() => computeKPIs(leads), [leads])
+  // Recompute on each `now` tick so the count rolls over with the day / as
+  // follow-ups come due alongside the row countdowns.
+  const followUpsDueToday = useMemo(() => countFollowUpsDueToday(leads), [leads, now])
 
   const filtered = useMemo(() => {
     if (!leads) return []
@@ -363,10 +381,11 @@ export default function MyLeads() {
           icon={BarChart2}
         />
         <KPICard
-          label="Batch Total"
-          value={callStats?.batchTotal ?? kpis.total}
-          sub="Leads assigned today"
-          icon={List}
+          label="Follow-Ups Due Today"
+          value={followUpsDueToday}
+          sub={followUpsDueToday > 0 ? 'Callbacks scheduled for today' : 'None due today'}
+          subColor={followUpsDueToday > 0 ? 'var(--warning)' : undefined}
+          icon={AlarmClock}
         />
       </div>
 

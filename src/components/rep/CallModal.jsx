@@ -515,6 +515,26 @@ export function CallModal({ lead, onClose }) {
                       {script[key].split('\n').map((line, i) => {
                         const t = line.trim()
                         if (!t) return <div key={i} style={{ height: 6 }} />
+                        // Branch header ("BRANCH — …") — a small uppercase cue
+                        // that a yes/no fork follows.
+                        if (/^BRANCH\b/i.test(t)) {
+                          return (
+                            <p key={i} style={{
+                              fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.07em',
+                              fontWeight: 600, color, margin: '8px 0 4px',
+                            }}>{t.replace(/^BRANCH\s*[—-]\s*/i, '⑂ ')}</p>
+                          )
+                        }
+                        // Branch follow-up ("↳ IF …") — indented, in the
+                        // section color, so the fork reads clearly mid-call.
+                        if (t.startsWith('↳')) {
+                          return (
+                            <p key={i} style={{
+                              fontSize: 12.5, color, lineHeight: 1.5,
+                              margin: '0 0 5px 16px', opacity: 0.95,
+                            }}>{t}</p>
+                          )
+                        }
                         // Bullet lines ("- ...") render as a tight list with a
                         // colored marker; anything else falls back to prose.
                         if (t.startsWith('- ') || t.startsWith('• ')) {
