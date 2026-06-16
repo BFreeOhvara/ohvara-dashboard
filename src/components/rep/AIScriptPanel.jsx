@@ -1,16 +1,12 @@
 import { useState } from 'react'
 import { X, FileText, RotateCcw } from 'lucide-react'
 import { Button } from '../ui/Button'
-import { buildCallScript } from '../../lib/discoveryScript'
+import { buildCallScript, DISCOVERY_SCRIPT } from '../../lib/discoveryScript'
 
-const SECTIONS = ['opener', 'problem', 'solution', 'objections', 'close']
-const LABELS = {
-  opener:     'Opener',
-  problem:    'Discovery',
-  solution:   'Pain',
-  objections: 'Objections',
-  close:      'Close',
-}
+// Derived from the shared decision tree so this panel never drifts from the
+// rep's Call Now script: one tab per block (Opener, branches A–E, Close).
+const SECTIONS = DISCOVERY_SCRIPT.map(s => s.id)
+const LABELS = Object.fromEntries(DISCOVERY_SCRIPT.map(s => [s.id, s.short]))
 
 export function AIScriptPanel({ lead, onClose }) {
   const [script, setScript] = useState(null)

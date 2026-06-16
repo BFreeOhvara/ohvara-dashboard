@@ -5,7 +5,7 @@ import { Phone, X, MapPin, User, Tag, Globe, Check, FileText, StickyNote, Chevro
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { Badge } from '../ui/Badge'
-import { buildCallScript } from '../../lib/discoveryScript'
+import { buildCallScript, DISCOVERY_SCRIPT } from '../../lib/discoveryScript'
 
 // The only statuses a rep can set from the call modal — color coordinated.
 // `note` tells the rep exactly where the lead routes (pipeline behavior).
@@ -20,14 +20,71 @@ const STATUS_OPTIONS = [
 // Statuses that count as a completed dial — logged to the calls table for stats
 const CALL_OUTCOMES = ['Appointment Booked', 'No Answer', 'Not Interested', 'Follow-Up']
 
-// Color-coded script sections
-const SECTIONS = [
-  { key: 'opener',     label: 'Opener',             color: 'var(--accent)',  dim: 'rgba(108,99,255,0.08)',  border: 'rgba(108,99,255,0.25)' },
-  { key: 'problem',    label: 'Problem Discovery',  color: 'var(--info)',    dim: 'rgba(56,189,248,0.08)',  border: 'rgba(56,189,248,0.25)' },
-  { key: 'solution',   label: 'Pain Amplification', color: 'var(--warning)', dim: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.25)' },
-  { key: 'objections', label: 'Objection Handling', color: 'var(--danger)',  dim: 'rgba(239,68,68,0.08)',   border: 'rgba(239,68,68,0.25)' },
-  { key: 'close',      label: 'Close',              color: 'var(--success)', dim: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.25)' },
-]
+// The call script is a DECISION TREE: a fixed opener (pinned to the top of the
+// right column), branches A–E that the prospect's response routes to (scrolling
+// middle), and the close (pinned to the bottom, always visible). All metadata —
+// labels, colors, trigger lines — comes from DISCOVERY_SCRIPT so there's one
+// source of truth shared with the closer panel and Training Center.
+const OPENER   = DISCOVERY_SCRIPT.find(s => s.kind === 'opener')
+const BRANCHES = DISCOVERY_SCRIPT.filter(s => s.kind === 'branch')
+const CLOSE    = DISCOVERY_SCRIPT.find(s => s.kind === 'close')
+
+// Render one block's text (newline-separated marker lines) into styled rows.
+// Markers: BRANCH — (fork), ↳ (option/sub-branch, deeper indent if the source
+// line is space-prefixed), ▸ (rep action), → (route to another block),
+// "- " (spoken bullet), 💡 (coach note), else prose.
+function ScriptLines({ text, color }) {
+  return text.split('\n').map((line, i) => {
+    const t = line.trim()
+    if (!t) return <div key={i} style={{ height: 6 }} />
+    if (t.startsWith('💡')) {
+      return <p key={i} style={{ fontSize: 11.5, color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.5, margin: '7px 0 0' }}>{t}</p>
+    }
+    if (/^BRANCH\b/i.test(t)) {
+      return <p key={i} style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700, color, margin: '9px 0 4px' }}>{t.replace(/^BRANCH\s*[—-]\s*/i, '⑂ ')}</p>
+    }
+    if (t.startsWith('▸')) {
+      return (
+        <div key={i} style={{ display: 'flex', gap: 7, alignItems: 'flex-start', margin: '5px 0' }}>
+          <span style={{ fontSize: 11, color, marginTop: 1, flexShrink: 0 }}>▸</span>
+          <p style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500, lineHeight: 1.45, margin: 0 }}>{t.slice(1).trim()}</p>
+        </div>
+      )
+    }
+    if (t.startsWith('→')) {
+      return <p key={i} style={{ fontSize: 12, fontWeight: 600, color, margin: '7px 0 2px' }}>{t}</p>
+    }
+    if (t.startsWith('↳')) {
+      const indent = /^(\s{3,}|\t)/.test(line) ? 30 : 16
+      return <p key={i} style={{ fontSize: 12.5, color, lineHeight: 1.5, margin: `0 0 5px ${indent}px`, opacity: 0.95 }}>{t}</p>
+    }
+    if (t.startsWith('- ') || t.startsWith('• ')) {
+      return (
+        <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 5 }}>
+          <span style={{ fontSize: 13, lineHeight: 1.5, color, flexShrink: 0 }}>•</span>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>{t.slice(2)}</p>
+        </div>
+      )
+    }
+    return <p key={i} style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 4px' }}>{line}</p>
+  })
+}
+
+// One branch block: lettered badge + label + the trigger that routes here,
+// then its steps.
+function BranchBlock({ section, text }) {
+  const { short, title, trigger, color, dim, border } = section
+  return (
+    <div style={{ background: dim, border: `0.5px solid ${border}`, borderLeft: `3px solid ${color}`, borderRadius: 10, padding: '11px 13px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+        <span style={{ width: 18, height: 18, borderRadius: 5, background: color, color: '#0E0E1A', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{short}</span>
+        <p style={{ fontSize: 12.5, fontWeight: 600, color, margin: 0 }}>{title}</p>
+      </div>
+      {trigger && <p style={{ fontSize: 10.5, color: 'var(--text-muted)', margin: '0 0 8px 26px', fontStyle: 'italic' }}>{trigger}</p>}
+      {text && <ScriptLines text={text} color={color} />}
+    </div>
+  )
+}
 
 
 // Catches render-time crashes inside the modal so a bad script payload (or
@@ -102,7 +159,7 @@ export function CallModal({ lead, onClose }) {
 
   // The discovery script is the ONE universal script with this lead's real
   // details filled in — fully deterministic, no AI call, ready immediately.
-  const [script, setScript]           = useState(() => buildCallScript(lead))
+  const [script, setScript]           = useState(() => buildCallScript(lead, profile))
   const [status, setStatus]           = useState(lead.status)
   const [statusTouched, setStatusTouched] = useState(false)
   const [statusOpen, setStatusOpen]   = useState(false)
@@ -138,7 +195,7 @@ export function CallModal({ lead, onClose }) {
   }, [])
 
   // Rebuild the filled-in script if a different lead opens in this modal.
-  useEffect(() => { setScript(buildCallScript(lead)) }, [lead.id])
+  useEffect(() => { setScript(buildCallScript(lead, profile)) }, [lead.id, profile?.id])
 
   // Status selection is LOCAL ONLY — nothing touches the DB until Done.
   // X (close) discards any selection made since the modal opened.
@@ -488,68 +545,44 @@ export function CallModal({ lead, onClose }) {
             )}
           </div>
 
-          {/* RIGHT — discovery script (the universal script, filled in for this lead) */}
-          <div
-            className="scrollbar-thin"
-            style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '16px 18px', display: 'flex', flexDirection: 'column' }}
-          >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                  <FileText size={13} color="var(--accent)" />
-                  <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Discovery Script</p>
+          {/* RIGHT — the call DECISION TREE: fixed opener pinned at top,
+              branches A–E scrolling in the middle, close pinned at the bottom
+              as a persistent reference. */}
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+
+            {/* Opener — pinned top, prominent */}
+            <div style={{ flexShrink: 0, padding: '14px 18px 12px', borderBottom: '0.5px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <FileText size={13} color="var(--accent)" />
+                <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Call Script · start here</p>
+              </div>
+              {OPENER && (
+                <div style={{ background: OPENER.dim, border: `0.5px solid ${OPENER.border}`, borderLeft: `3px solid ${OPENER.color}`, borderRadius: 10, padding: '12px 14px' }}>
+                  <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: OPENER.color, fontWeight: 700, margin: '0 0 6px' }}>{OPENER.title}</p>
+                  {script?.opener && <ScriptLines text={script.opener} color={OPENER.color} />}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {SECTIONS.map(({ key, label, color, dim, border }) => script?.[key] && (
-                    <div key={key} style={{
-                      background: dim,
-                      border: `0.5px solid ${border}`,
-                      borderLeft: `3px solid ${color}`,
-                      borderRadius: 10,
-                      padding: '12px 14px',
-                    }}>
-                      <p style={{
-                        fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em',
-                        color, margin: '0 0 7px', fontWeight: 600,
-                      }}>
-                        {label}
-                      </p>
-                      {script[key].split('\n').map((line, i) => {
-                        const t = line.trim()
-                        if (!t) return <div key={i} style={{ height: 6 }} />
-                        // Branch header ("BRANCH — …") — a small uppercase cue
-                        // that a yes/no fork follows.
-                        if (/^BRANCH\b/i.test(t)) {
-                          return (
-                            <p key={i} style={{
-                              fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.07em',
-                              fontWeight: 600, color, margin: '8px 0 4px',
-                            }}>{t.replace(/^BRANCH\s*[—-]\s*/i, '⑂ ')}</p>
-                          )
-                        }
-                        // Branch follow-up ("↳ IF …") — indented, in the
-                        // section color, so the fork reads clearly mid-call.
-                        if (t.startsWith('↳')) {
-                          return (
-                            <p key={i} style={{
-                              fontSize: 12.5, color, lineHeight: 1.5,
-                              margin: '0 0 5px 16px', opacity: 0.95,
-                            }}>{t}</p>
-                          )
-                        }
-                        // Bullet lines ("- ...") render as a tight list with a
-                        // colored marker; anything else falls back to prose.
-                        if (t.startsWith('- ') || t.startsWith('• ')) {
-                          return (
-                            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 5 }}>
-                              <span style={{ fontSize: 13, lineHeight: 1.5, color, flexShrink: 0 }}>•</span>
-                              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>{t.slice(2)}</p>
-                            </div>
-                          )
-                        }
-                        return <p key={i} style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 4px' }}>{line}</p>
-                      })}
-                    </div>
-                  ))}
+              )}
+              <p style={{ fontSize: 10.5, color: 'var(--text-muted)', margin: '8px 0 0', textAlign: 'center' }}>
+                ↓ their response routes you to a branch ↓
+              </p>
+            </div>
+
+            {/* Branches A–E — scrollable */}
+            <div className="scrollbar-thin" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {BRANCHES.map(section => script?.[section.id] && (
+                <BranchBlock key={section.id} section={section} text={script[section.id]} />
+              ))}
+            </div>
+
+            {/* Close — pinned bottom, always visible */}
+            {CLOSE && (
+              <div style={{ flexShrink: 0, padding: '12px 18px 14px', borderTop: '0.5px solid var(--border)', background: '#0C0C16' }}>
+                <div style={{ background: CLOSE.dim, border: `0.5px solid ${CLOSE.border}`, borderLeft: `3px solid ${CLOSE.color}`, borderRadius: 10, padding: '11px 13px' }}>
+                  <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: CLOSE.color, fontWeight: 700, margin: '0 0 6px' }}>★ {CLOSE.title}</p>
+                  {script?.close && <ScriptLines text={script.close} color={CLOSE.color} />}
                 </div>
+              </div>
+            )}
           </div>
         </div>
 
