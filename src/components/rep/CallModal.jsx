@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, Component } from 'react'
 import { createPortal } from 'react-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Phone, X, Loader2, RotateCcw, MapPin, User, Tag, Globe, Check, FileText, StickyNote, AlertTriangle, ChevronDown, CalendarClock } from 'lucide-react'
+import { Phone, X, Loader2, RotateCcw, MapPin, User, Tag, Globe, Check, FileText, StickyNote, ChevronDown, CalendarClock } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { Badge } from '../ui/Badge'
@@ -153,7 +153,6 @@ export function CallModal({ lead, onClose }) {
   const [statusTouched, setStatusTouched] = useState(false)
   const [statusOpen, setStatusOpen]   = useState(false)
   const [notes, setNotes]             = useState(lead.notes || '')
-  const [preCallNotes, setPreCallNotes] = useState(lead.pre_call_notes || '')
   const [followUpAt, setFollowUpAt]   = useState(toDatetimeLocal(lead.follow_up_at))
   const [followUpNotes, setFollowUpNotes] = useState(lead.follow_up_notes || '')
   const [appointmentAt, setAppointmentAt] = useState(toDatetimeLocal(lead.appointment_at))
@@ -247,7 +246,6 @@ export function CallModal({ lead, onClose }) {
       const patch = {
         status,
         notes: notes || null,
-        pre_call_notes: preCallNotes || null,
       }
       if (status === 'Follow-Up') {
         patch.follow_up_at    = new Date(followUpAt).toISOString()
@@ -379,39 +377,6 @@ export function CallModal({ lead, onClose }) {
             <Field icon={MapPin} label="City"     value={[lead.city, lead.state].filter(Boolean).join(', ')} />
             <Field icon={Phone}  label="Phone"    value={lead.phone} mono />
             <Field icon={Globe}  label="Source"   value={lead.source === 'google_maps' ? 'Google Maps' : lead.source === 'indeed' ? 'Indeed' : lead.source} />
-
-            {lead.pain_points && (
-              <div style={{
-                marginBottom: 14, padding: '10px 12px',
-                background: 'rgba(245,158,11,0.06)', borderRadius: 8,
-                border: '0.5px solid rgba(245,158,11,0.18)',
-              }}>
-                <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--warning)', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <AlertTriangle size={10} /> Pain Points
-                </p>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>{lead.pain_points}</p>
-              </div>
-            )}
-
-            {/* Pre-call notes — research about the lead before dialing, saved on Done */}
-            <div style={{ marginBottom: 14 }}>
-              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 5 }}>
-                <StickyNote size={10} /> Pre-Call Notes
-              </p>
-              <textarea
-                value={preCallNotes}
-                onChange={e => setPreCallNotes(e.target.value)}
-                placeholder="Research before you dial: who owns it, recent reviews, hiring posts…"
-                rows={2}
-                style={{
-                  width: '100%', padding: '8px 10px',
-                  background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-                  borderRadius: 8, fontSize: 13, color: 'var(--text-primary)',
-                  fontFamily: 'var(--font-sans)', resize: 'vertical', lineHeight: 1.5,
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
 
             {/* Status dropdown — color-coded outcomes, committed on Done (X discards) */}
             <div style={{ marginBottom: 14 }} ref={dropdownRef}>
