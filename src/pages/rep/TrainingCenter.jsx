@@ -563,8 +563,8 @@ function DiscoveryScript() {
   )
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto' }}>
-      <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
+    <div style={{ maxWidth: 960, margin: '0 auto' }}>
+      <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16, maxWidth: 680 }}>
         This is the call script — a decision tree every rep follows. Study the <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Flowchart</strong> to learn
         the shape, <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Practice</strong> the exact click-through you'll use live, and read the <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Full script</strong> to
         memorize the words. The Call Now button on each lead runs this same walk, personalized to that business.
@@ -605,7 +605,7 @@ function DiscoveryScript() {
 // The full written script — every section's lines spelled out for memorization.
 function FullScript() {
   return (
-    <div>
+    <div style={{ maxWidth: 680, margin: '0 auto' }}>
       {DISCOVERY_SCRIPT.map((section, i) => (
         <div
           key={section.id}

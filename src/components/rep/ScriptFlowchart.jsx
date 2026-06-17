@@ -33,7 +33,7 @@ export function ScriptFlowchart({ flow }) {
   const openerLine = opener.steps[0]?.text || ''
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <div style={{ maxWidth: 940, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 
       {/* Opener — the single root box */}
       <Box color={opener.color} wide>
@@ -46,12 +46,13 @@ export function ScriptFlowchart({ flow }) {
       <VLine caption="Their response routes the call" />
 
       {/* Decorative rail above the branch row */}
-      <div style={{ width: '100%', height: 2, background: 'var(--border)', maxWidth: 640 }} />
+      <div style={{ width: '100%', height: 2, background: 'var(--border)', maxWidth: 860 }} />
 
-      {/* The five response branches */}
+      {/* The five response branches — sized to sit in one row on desktop,
+          wrapping gracefully on narrower screens. */}
       <div style={{
         width: '100%', display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12, marginTop: 16,
+        gridTemplateColumns: 'repeat(auto-fit, minmax(165px, 1fr))', gap: 12, marginTop: 16,
       }}>
         {flow.branches.map(b => (
           <div key={b.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
