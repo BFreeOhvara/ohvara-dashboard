@@ -166,3 +166,159 @@ export function buildCallScript(lead, rep) {
   for (const section of DISCOVERY_SCRIPT) out[section.id] = sectionToText(section, lead, rep)
   return out
 }
+
+// ── Click-through flow derivation (CONTENT-FREE) ─────────────────────────────
+// Parses each section's EXISTING marker lines into a navigable step tree so the
+// same script can drive a one-line-at-a-time guided walk (live Call modal +
+// Training practice) WITHOUT changing a single spoken word. This is a pure view
+// over DISCOVERY_SCRIPT — no forked/duplicated script data, no routing content
+// added to the source. If the wording changes later (pending Brayden + Nate),
+// the walk re-derives automatically as long as the line markers are preserved.
+//
+// Step shapes:
+//   { type:'say',    text }                       a line to read aloud
+//   { type:'action', text }                       a ▸ thing the rep does
+//   { type:'route',  text, target }               jump to another block id
+//   { type:'fork',   q, options:[{label, steps}] } tap the prospect's response
+
+// Leading-whitespace depth of a source line (tabs counted as 3).
+function leadingSpaces(s) {
+  const m = s.match(/^([ \t]*)/)
+  return m ? m[1].replace(/\t/g, '   ').length : 0
+}
+
+// A line that hands off to another block: "→ …", or any "run BRANCH x" /
+// "→ CLOSE" reference embedded mid-line (the cross-branch routes).
+function isRouteLine(t) {
+  return /^→/.test(t) || /run\s+BRANCH\s*[A-E]/i.test(t) || /→\s*CLOSE/i.test(t) || /to\s+CLOSE/i.test(t)
+}
+
+// Resolve a route line to a target section id. A branch reference wins (e.g.
+// "run BRANCH A" → branchA, which itself ends by routing to the close);
+// otherwise it points at the close.
+function routeTarget(t) {
+  const b = t.match(/BRANCH\s*([A-E])/i)
+  if (b) return 'branch' + b[1].toUpperCase()
+  return 'close'
+}
+
+// "THEY HAVE SOMEONE" → "They have someone"; used for the tap-button labels.
+function optionLabel(s) {
+  const x = s.trim()
+  return x.charAt(0).toUpperCase() + x.slice(1).toLowerCase()
+}
+
+function shorten(s) {
+  const x = s.replace(/^["']|["']$/g, '').trim()
+  return x.length > 42 ? x.slice(0, 40).trimEnd() + '…' : x
+}
+
+// Turn one trimmed marker line into a step. Marker is detected, then stripped
+// from the display text so the UI styles it (a ▸ chip, a route button, …).
+function makeStep(t, lead, rep) {
+  const route = isRouteLine(t)
+  const action = /^▸/.test(t)
+  const sub = /^↳/.test(t)
+  const clean = t.replace(/^(↳|▸|→)\s*/, '')
+  const text = fillTokens(clean, lead, rep)
+  if (route)  return { type: 'route', text, target: routeTarget(t) }
+  if (action) return { type: 'action', text }
+  return { type: 'say', text, ...(sub ? { sub: true } : {}) }
+}
+
+// Recursive descent over lines[start..]: collect steps at indent ≥ baseIndent,
+// returning { steps, next }. A "BRANCH —" opens a fork; the sibling ↳ lines are
+// its tap options, and each option's deeper-indented lines are its child steps.
+function parseSteps(lines, start, baseIndent, lead, rep) {
+  const steps = []
+  let i = start
+  while (i < lines.length) {
+    const raw = lines[i]
+    if (leadingSpaces(raw) < baseIndent) break
+    const t = raw.trim()
+
+    if (/^BRANCH\b/i.test(t)) {
+      const q = fillTokens(t.replace(/^BRANCH\s*[—-]\s*/i, ''), lead, rep)
+      i++
+      const options = []
+      let optIndent = null
+      while (i < lines.length) {
+        const oraw = lines[i]
+        const ot = oraw.trim()
+        if (!/^↳/.test(ot)) break
+        const oind = leadingSpaces(oraw)
+        if (optIndent === null) optIndent = oind
+        if (oind !== optIndent) break
+        const body = ot.replace(/^↳\s*/, '')
+        const m = body.match(/^IF\s+([^:]+):\s*(.*)$/i) || body.match(/^([^:]{1,32}):\s+(.*)$/)
+        const label = m ? optionLabel(m[1]) : shorten(body)
+        const rest = m ? m[2] : body
+        const optSteps = []
+        if (rest && rest.trim()) optSteps.push(makeStep(rest.trim(), lead, rep))
+        i++
+        const child = parseSteps(lines, i, optIndent + 1, lead, rep)
+        optSteps.push(...child.steps)
+        i = child.next
+        options.push({ label, steps: optSteps })
+      }
+      steps.push({ type: 'fork', q, options })
+      continue
+    }
+
+    steps.push(makeStep(t, lead, rep))
+    i++
+  }
+  return { steps, next: i }
+}
+
+// Derive the full navigable flow for a lead. Returns the opener, the ordered
+// branches, the close, and a byId map — every block carries its parsed `steps`
+// plus the display metadata (color/label/trigger/goal/tips) from the source.
+// Each branch also gets derived flags for the flowchart: `booksNate` (it has a
+// path that routes onward to the close) and `outcome` (the status it ends on).
+export function buildScriptFlow(lead, rep) {
+  const byId = {}
+  for (const section of DISCOVERY_SCRIPT) {
+    const { steps } = parseSteps(section.lines, 0, 0, lead, rep)
+    byId[section.id] = {
+      id: section.id, kind: section.kind, short: section.short,
+      title: section.title, trigger: section.trigger, goal: section.goal,
+      color: section.color, dim: section.dim, border: section.border,
+      tips: section.tips ? fillTokens(section.tips, lead, rep) : '',
+      steps,
+      booksNate: flowHasRoute(steps),
+      outcome: flowOutcome(steps),
+    }
+  }
+  return {
+    byId,
+    opener: byId.opener,
+    branches: DISCOVERY_SCRIPT.filter(s => s.kind === 'branch').map(s => byId[s.id]),
+    close: byId.close,
+  }
+}
+
+// Does any step (including inside fork options) route onward to another block?
+function flowHasRoute(steps) {
+  for (const s of steps) {
+    if (s.type === 'route') return true
+    if (s.type === 'fork' && s.options.some(o => flowHasRoute(o.steps))) return true
+  }
+  return false
+}
+
+// The status a path ends on, read from its last "Set status X" action.
+function flowOutcome(steps) {
+  let found = null
+  const scan = arr => {
+    for (const s of arr) {
+      if (s.type === 'action') {
+        const m = s.text.match(/set status\s+([A-Za-z][A-Za-z -]*?)(?:\s*\(|\.|$)/i)
+        if (m) found = m[1].trim()
+      }
+      if (s.type === 'fork') s.options.forEach(o => scan(o.steps))
+    }
+  }
+  scan(steps)
+  return found
+}

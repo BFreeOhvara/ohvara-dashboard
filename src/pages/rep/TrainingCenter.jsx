@@ -7,7 +7,9 @@ import {
   useTrainingProgress, useSaveTrainingProgress, trainingChecks, isTrainingComplete,
   TOTAL_VIDEOS, QUIZ_QUESTIONS, QUIZ_PASS_PCT, ROLEPLAY_PASS_SCORE, ROLEPLAY_PASS_GRADE, gradeFromScore,
 } from '../../hooks/useTraining'
-import { DISCOVERY_SCRIPT } from '../../lib/discoveryScript'
+import { DISCOVERY_SCRIPT, buildScriptFlow } from '../../lib/discoveryScript'
+import { ScriptWalk } from '../../components/rep/ScriptWalk'
+import { ScriptFlowchart } from '../../components/rep/ScriptFlowchart'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -540,17 +542,70 @@ function FlashcardDeck() {
 }
 
 // ── DiscoveryScript ───────────────────────────────────────────────────────────
-// Static, readable version of the call script. Reps study this before practicing.
+// The Script tab. Three ways to learn the same decision tree (all derived from
+// the shared DISCOVERY_SCRIPT, so none can drift from the live Call modal):
+//   • Flowchart — the bird's-eye tree: opener → 5 response branches → close.
+//   • Practice  — the exact click-through the rep uses on a live call.
+//   • Full script — every line written out, for memorization.
+
+const SCRIPT_VIEWS = [
+  { key: 'flowchart', label: 'Flowchart' },
+  { key: 'practice',  label: 'Practice' },
+  { key: 'full',      label: 'Full script' },
+]
 
 function DiscoveryScript() {
+  const [view, setView] = useState('flowchart')
+  // A neutral demo lead so the practice walk reads naturally without a real lead.
+  const flow = useMemo(
+    () => buildScriptFlow({ business_name: 'the business', niche: 'service', city: 'your area' }, null),
+    []
+  )
+
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto' }}>
-      <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 24 }}>
-        This is the full discovery script used on every cold call. Study each section until
-        you can deliver it without reading. The Call Now button on your leads generates a
-        version personalized to each business.
+    <div style={{ maxWidth: 720, margin: '0 auto' }}>
+      <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
+        This is the call script — a decision tree every rep follows. Study the <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Flowchart</strong> to learn
+        the shape, <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Practice</strong> the exact click-through you'll use live, and read the <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Full script</strong> to
+        memorize the words. The Call Now button on each lead runs this same walk, personalized to that business.
       </p>
 
+      {/* View switch */}
+      <div style={{ display: 'inline-flex', gap: 2, padding: 3, background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 10, marginBottom: 22 }}>
+        {SCRIPT_VIEWS.map(v => (
+          <button
+            key={v.key}
+            onClick={() => setView(v.key)}
+            style={{
+              padding: '7px 16px', borderRadius: 7, border: 'none', cursor: 'pointer',
+              fontSize: 12.5, fontWeight: 600,
+              background: view === v.key ? 'var(--accent)' : 'transparent',
+              color: view === v.key ? 'white' : 'var(--text-muted)',
+              transition: 'all 0.15s',
+            }}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'flowchart' && <ScriptFlowchart flow={flow} />}
+
+      {view === 'practice' && (
+        <div style={{ height: 560, maxWidth: 460, margin: '0 auto', background: '#0E0E1A', border: '0.5px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
+          <ScriptWalk flow={flow} mode="practice" />
+        </div>
+      )}
+
+      {view === 'full' && <FullScript />}
+    </div>
+  )
+}
+
+// The full written script — every section's lines spelled out for memorization.
+function FullScript() {
+  return (
+    <div>
       {DISCOVERY_SCRIPT.map((section, i) => (
         <div
           key={section.id}
