@@ -5,58 +5,108 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// À la carte automation catalog — the menu Nate sells from.
+// price fields are reference only; the actual charged price is formula-derived.
+const AUTOMATION_CATALOG = [
+  { id: 'ai_receptionist',       name: 'AI Receptionist',           desc: '24/7 call answering — captures every lead, even after hours' },
+  { id: 'missed_call_text_back', name: 'Missed Call Text Back',     desc: 'Auto-SMS to any caller who doesn\'t get answered' },
+  { id: 'review_generation',     name: 'Review Generation',         desc: 'Auto-requests 5-star reviews from completed jobs' },
+  { id: 'lead_followup',         name: 'Lead Follow-Up Automation', desc: 'Multi-touch follow-up for quotes that go quiet' },
+  { id: 'appointment_reminders', name: 'Appointment Reminders',     desc: 'SMS reminders that cut no-shows by 60%+' },
+  { id: 'ai_dispatcher',         name: 'AI Dispatcher',             desc: 'Intelligent call routing to the right crew member' },
+  { id: 'sms_marketing',         name: 'SMS Marketing',             desc: 'Monthly campaigns to past customers for repeat jobs' },
+  { id: 'website',               name: 'Professional Website',      desc: 'Mobile-first site that converts visitors to booked calls' },
+] as const
+
+type AutomationId = typeof AUTOMATION_CATALOG[number]['id']
+
+// Packages kept for backward-compat: closest-tier display name + Stripe link generation.
+// NOT used for pricing — that comes from the formula.
 const PACKAGES = {
-  basic: {
-    name: 'Basic',
-    setup: 497,
-    monthly: 497,
-    services: ['AI Receptionist (24/7)', 'Missed Call Text Back'],
-    roi: 'Replaces a $2,800+/mo receptionist',
-  },
-  pro: {
-    name: 'Pro',
-    setup: 497,
-    monthly: 797,
-    services: [
-      'AI Receptionist (24/7)',
-      'Missed Call Text Back',
-      'Review Generation',
-      'Lead Follow-Up Automation',
-      'Appointment Reminders',
-    ],
-    roi: 'Replaces a $3,500+/mo receptionist + marketing assistant',
-  },
-  premium: {
-    name: 'Premium',
-    setup: 497,
-    monthly: 1297,
-    services: [
-      'AI Receptionist (24/7)',
-      'Missed Call Text Back',
-      'Review Generation',
-      'Lead Follow-Up Automation',
-      'Appointment Reminders',
-      'AI Dispatcher',
-      'SMS Marketing',
-    ],
-    roi: 'Replaces a $4,500+/mo receptionist + dispatcher',
-  },
-  elite: {
-    name: 'Elite',
-    setup: 497,
-    monthly: 1797,
-    services: [
-      'Everything in Premium',
-      'Professional Website',
-      'Multiple AI agents (up to 5 lines)',
-      'Priority support',
-      'Custom reporting dashboard',
-    ],
-    roi: 'Replaces $6,000+/mo full office staff',
-  },
+  basic:   { name: 'Basic',   setup: 497, monthly: 497,  services: ['AI Receptionist (24/7)', 'Missed Call Text Back'] },
+  pro:     { name: 'Pro',     setup: 497, monthly: 797,  services: ['AI Receptionist (24/7)', 'Missed Call Text Back', 'Review Generation', 'Lead Follow-Up Automation', 'Appointment Reminders'] },
+  premium: { name: 'Premium', setup: 497, monthly: 1297, services: ['AI Receptionist (24/7)', 'Missed Call Text Back', 'Review Generation', 'Lead Follow-Up Automation', 'Appointment Reminders', 'AI Dispatcher', 'SMS Marketing'] },
+  elite:   { name: 'Elite',   setup: 497, monthly: 1797, services: ['AI Receptionist (24/7)', 'Missed Call Text Back', 'Review Generation', 'Lead Follow-Up Automation', 'Appointment Reminders', 'AI Dispatcher', 'SMS Marketing', 'Professional Website'] },
 } as const
 
 type PackageKey = keyof typeof PACKAGES
+
+function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)) }
+
+// Formula: 15% of estimated monthly lost revenue.
+// Tunable constants flagged here: 4.33 (weeks/month), 0.15 (take rate), 297/1797 (floor/ceiling).
+function formulaPrice(callsMissedPerWeek: number | null, avgTicket: number | null): number | null {
+  if (!callsMissedPerWeek || !avgTicket || callsMissedPerWeek <= 0 || avgTicket <= 0) return null
+  const monthlyLost = callsMissedPerWeek * 4.33 * avgTicket
+  if (monthlyLost < 500) return null  // not enough signal to formula-price
+  return Math.round(clamp(monthlyLost * 0.15, 297, 1797) / 10) * 10  // round to nearest $10
+}
+
+// Map price → closest display tier for Stripe link generation + UI color.
+function priceToTier(monthly: number): PackageKey {
+  if (monthly >= 1500) return 'elite'
+  if (monthly >= 1000) return 'premium'
+  if (monthly >= 650)  return 'pro'
+  return 'basic'
+}
+
+// Labor-cost fallback when no formula data is available (original logic preserved).
+function laborTier(monthlyLaborCost: number | null): PackageKey {
+  if (!monthlyLaborCost || monthlyLaborCost < 3000) return 'basic'
+  if (monthlyLaborCost < 4000) return 'pro'
+  if (monthlyLaborCost < 5000) return 'premium'
+  return 'elite'
+}
+
+function deterministicFallback(inputs: {
+  callsMissedPerWeek: number | null
+  avgTicket: number | null
+  monthlyLaborCost: number | null
+  repNotes: string | null
+  niche: string | null
+  customMonthly: number | null
+}): Record<string, unknown> {
+  const { callsMissedPerWeek, avgTicket, monthlyLaborCost, repNotes, niche, customMonthly } = inputs
+
+  // Heuristic automation selection from available signals
+  const automations: AutomationId[] = ['ai_receptionist']
+  if (callsMissedPerWeek && callsMissedPerWeek > 0) automations.push('missed_call_text_back')
+  const notes = (repNotes || '').toLowerCase()
+  if (notes.includes('review') || notes.includes('reputation') || notes.includes('rating')) automations.push('review_generation')
+  if (notes.includes('follow') || notes.includes('ghost') || notes.includes('quote')) automations.push('lead_followup')
+  if (notes.includes('no show') || notes.includes('cancel') || notes.includes('reminder')) automations.push('appointment_reminders')
+  if (notes.includes('dispatch') || notes.includes('route') || notes.includes('crew')) automations.push('ai_dispatcher')
+  if (notes.includes('marketing') || notes.includes('repeat') || notes.includes('seasonal')) automations.push('sms_marketing')
+  if (notes.includes('website') || notes.includes('web') || notes.includes('online')) automations.push('website')
+  if (automations.length < 2) automations.push('missed_call_text_back')
+
+  const tier = customMonthly ? priceToTier(customMonthly) : laborTier(monthlyLaborCost)
+  const monthly = customMonthly || PACKAGES[tier].monthly
+
+  const missedRevStr = (callsMissedPerWeek && avgTicket)
+    ? `You're missing ~${Math.round(callsMissedPerWeek * 4.33)} calls/month at $${avgTicket}/ticket — that's $${Math.round(callsMissedPerWeek * 4.33 * avgTicket).toLocaleString()}/month walking out the door.`
+    : `At your current call volume, 2-3 missed calls a week adds up to thousands in lost revenue every month.`
+
+  return {
+    recommended_tier: tier,
+    recommended_automations: automations,
+    custom_monthly_price: monthly,
+    confidence: 'medium',
+    headline: `${niche || 'Your business'} is leaking revenue every time a call goes unanswered`,
+    roi_argument: missedRevStr,
+    pain_points: ['Calls going unanswered while crew is on jobs', 'Quotes that go cold because nobody follows up', 'No way to capture after-hours leads'],
+    why_pitch_this: `The selected automations directly address the gaps identified during your conversation — specifically the missed calls and follow-up problem.`,
+    talking_points: [
+      `At ${callsMissedPerWeek || 'a few'} missed calls per week, you're leaving real money on the table every month`,
+      `This stack pays for itself with just 1-2 recovered jobs per month`,
+      `Live in 48 hours — no downtime, no hiring, no training`,
+    ],
+    pushback_response: `Think of it this way — if we recover even one job per week that you would have missed, the stack has already paid for itself. We're just making sure you capture what's already coming your way.`,
+    alternative_tier: tier === 'basic' ? 'pro' : 'basic',
+    alternative_reason: tier === 'basic' ? 'If they want review generation and follow-up automation too, Pro covers those gaps' : 'If price is the objection, Basic still covers the highest-ROI automations',
+    upsell_path: 'Once they see ROI in month 1, they typically want to add review generation and SMS marketing to compound the gains',
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -67,61 +117,67 @@ Deno.serve(async (req) => {
       niche,
       location,
       monthlyLaborCost,
+      callsMissedPerWeek,
+      avgTicket,
       repNotes,
       jobTitle,
       closerName,
     } = await req.json()
 
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
-    const packagesText = Object.entries(PACKAGES)
-      .map(
-        ([id, p]) =>
-          `${p.name} (${id}): $${p.setup} one-time setup + $${p.monthly}/mo\n` +
-          `  Services: ${p.services.join(', ')}\n` +
-          `  ROI: ${p.roi}`
-      )
-      .join('\n\n')
+    const customMonthly = formulaPrice(callsMissedPerWeek, avgTicket)
+    const fallbackTier  = laborTier(monthlyLaborCost)
+    const effectiveMonthly = customMonthly || PACKAGES[fallbackTier].monthly
 
-    const prompt = `You are an AI sales consultant for Ohvara, an AI automation company targeting trades businesses.
+    const catalogList = AUTOMATION_CATALOG.map(a => `- ${a.id}: ${a.name} — ${a.desc}`).join('\n')
 
-BUSINESS PROFILE:
-- Business: ${businessName}
-- Industry: ${niche}
-- Location: ${location}
-- Currently hiring for: ${jobTitle || 'not specified'}
-- Estimated monthly labor cost: ${monthlyLaborCost ? `$${monthlyLaborCost}/mo` : 'not specified'}
-- Pain points from appointment setter: ${repNotes || 'Not captured yet'}
-- Closer handling this call: ${closerName || 'not specified'}
+    const formulaExplanation = customMonthly
+      ? `Formula price: ${callsMissedPerWeek} missed calls/week × 4.33 weeks × $${avgTicket}/ticket = $${Math.round(callsMissedPerWeek * 4.33 * avgTicket).toLocaleString()}/month lost × 15% = $${customMonthly}/month for the stack`
+      : `No formula data — price based on labor cost tier: $${effectiveMonthly}/month`
 
-PACKAGES AVAILABLE:
-${packagesText}
+    const prompt = `You are a sales strategy AI for Ohvara, an SMB automation company. Analyze this lead and recommend an à la carte automation stack.
 
-RECOMMENDATION RULES:
-- Monthly labor cost under $3,000 → Basic
-- Monthly labor cost $3,000–$4,000 → Pro
-- Monthly labor cost $4,000–$5,000 → Premium
-- Monthly labor cost over $5,000 OR dispatcher/multiple locations needed → Elite
-- Always anchor ROI to their labor cost vs our monthly price
-- Lead with ROI and pain, not features
-- Pain points from the rep are GOLD — reference them specifically
-- If no labor cost is known, infer from niche and job title
+BUSINESS CONTEXT:
+- Business: ${businessName || 'Unknown'} (${niche || 'general SMB'}) in ${location || 'unknown location'}
+- Job Title: ${jobTitle || 'Owner'}
+- Monthly Labor Cost: ${monthlyLaborCost ? `$${monthlyLaborCost}` : 'unknown'}
+- Calls Missed Per Week: ${callsMissedPerWeek ?? 'not captured'}
+- Avg Ticket Value: ${avgTicket ? `$${avgTicket}` : 'not captured'}
+- Rep Notes: ${repNotes || 'No notes captured'}
 
-Respond ONLY in this exact JSON format, no markdown, no code blocks:
+CUSTOM PRICE TO CHARGE:
+$${effectiveMonthly}/month + $497 one-time setup
+${formulaExplanation}
+
+AUTOMATION CATALOG (pick 2-5 that fit this lead):
+${catalogList}
+
+RULES:
+- Always include ai_receptionist for any lead with missed call pain (almost every SMB)
+- Select automations that directly address specific pain points in the rep notes
+- Anchor ALL talking points and ROI arguments to exactly $${effectiveMonthly}/month and $497 setup
+- Lead with missed revenue recovery, not features
+- Reference specific numbers from the context when available
+
+CLOSER: ${closerName || 'Nate'}
+
+Respond with ONLY valid JSON, no markdown:
 {
-  "recommended_tier": "basic|pro|premium|elite",
+  "recommended_automations": ["id1", "id2"],
   "confidence": "high|medium|low",
-  "headline": "One punchy sentence why this fits — max 12 words",
-  "roi_argument": "Specific dollar comparison — their hire cost vs our monthly price",
-  "pain_points": ["Pain point 1 (from rep notes or inferred from niche)", "Pain point 2", "Pain point 3"],
-  "why_pitch_this": "2-3 sentences on why this tier specifically solves their problem",
-  "talking_points": ["Talking point 1", "Talking point 2", "Talking point 3"],
-  "pushback_response": "One direct response if they hesitate on price",
-  "alternative_tier": "basic|pro|premium|elite",
-  "alternative_reason": "One sentence — when to offer this tier instead",
-  "upsell_path": "One sentence — how to move them up a tier if they're open to it"
+  "headline": "One punchy sentence — max 12 words",
+  "roi_argument": "Specific dollar-anchored ROI argument using the numbers above",
+  "pain_points": ["3-4 pain points from rep notes or inferred from niche"],
+  "why_pitch_this": "2-3 sentences on why this specific stack for this specific business",
+  "talking_points": ["3-4 concrete talking points for ${closerName || 'Nate'} to use on the call"],
+  "pushback_response": "What to say if they push back on the $${effectiveMonthly}/month price",
+  "alternative_automations": ["id1", "id2"],
+  "alternative_reason": "One line — when to offer the alternative stack instead",
+  "upsell_path": "One sentence — how to expand the stack if they're open to it"
 }`
 
-    let rawText = '{}'
+    const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
+    let rec: Record<string, unknown> | null = null
+
     if (apiKey) {
       try {
         const anthropic = new Anthropic({ apiKey })
@@ -130,53 +186,46 @@ Respond ONLY in this exact JSON format, no markdown, no code blocks:
           max_tokens: 1000,
           messages: [{ role: 'user', content: prompt }],
         })
-        rawText = message.content[0].type === 'text' ? message.content[0].text.trim() : '{}'
+
+        const rawText = message.content[0].type === 'text' ? message.content[0].text.trim() : '{}'
+
+        let parsed: Record<string, unknown>
+        try {
+          parsed = JSON.parse(rawText)
+        } catch {
+          const match = rawText.match(/```(?:json)?\s*([\s\S]*?)```/)
+          parsed = match ? JSON.parse(match[1].trim()) : {}
+        }
+
+        const validIds = new Set(AUTOMATION_CATALOG.map(a => a.id))
+        const validatedAutomations = ((parsed.recommended_automations || []) as string[]).filter(id => validIds.has(id as AutomationId))
+
+        const resolvedTier = priceToTier(effectiveMonthly)
+
+        if (parsed.recommended_automations) {
+          rec = {
+            recommended_tier: resolvedTier,
+            recommended_automations: validatedAutomations.length >= 1 ? validatedAutomations : ['ai_receptionist', 'missed_call_text_back'],
+            custom_monthly_price: effectiveMonthly,
+            confidence: parsed.confidence || 'medium',
+            headline: parsed.headline || '',
+            roi_argument: parsed.roi_argument || '',
+            pain_points: parsed.pain_points || [],
+            why_pitch_this: parsed.why_pitch_this || '',
+            talking_points: parsed.talking_points || [],
+            pushback_response: parsed.pushback_response || '',
+            alternative_tier: resolvedTier === 'basic' ? 'pro' : 'basic',
+            alternative_reason: parsed.alternative_reason || '',
+            upsell_path: parsed.upsell_path || '',
+          }
+        }
       } catch (apiErr) {
-        // Credits depleted or API error — fall through to fallback
         console.warn('[recommend-stack] API error, using fallback:', String(apiErr))
       }
     }
 
-    let rec: Record<string, unknown>
-    try {
-      rec = JSON.parse(rawText)
-    } catch {
-      const match = rawText.match(/```(?:json)?\s*([\s\S]*?)```/)
-      try {
-        rec = match ? JSON.parse(match[1].trim()) : null
-      } catch {
-        rec = null
-      }
-    }
-
-    // Fallback if parse fails or API unavailable
-    if (!rec || !rec.recommended_tier) {
-      const laborCost = parseFloat(String(monthlyLaborCost || '0'))
-      let fallbackTier: PackageKey = 'pro'
-      if (laborCost < 3000) fallbackTier = 'basic'
-      else if (laborCost >= 5000) fallbackTier = 'premium'
-      const fp = PACKAGES[fallbackTier]
-      rec = {
-        recommended_tier: fallbackTier,
-        confidence: 'medium',
-        headline: `${fp.name} at $${fp.monthly}/mo beats hiring at $${laborCost || fp.monthly * 4}/mo`,
-        roi_argument: `At $${fp.monthly}/mo vs a $${laborCost || fp.monthly * 4}/mo hire, you keep ${fp.roi.toLowerCase()}.`,
-        pain_points: [
-          'Missing calls while team is on job sites',
-          'Losing work to competitors who answer faster',
-          repNotes || 'High inbound call volume overwhelming the business',
-        ],
-        why_pitch_this: `${fp.name} is the right fit based on their size and pain. ${fp.roi}.`,
-        talking_points: [
-          `You're spending or about to spend $${laborCost || fp.monthly * 4}/mo — we do more for $${fp.monthly}/mo`,
-          `We're live in 24 hours — no hiring, no training, no sick days`,
-          `${fp.services[0]} never misses a call, even at 2am`,
-        ],
-        pushback_response: "I get it — but you're already spending more than this every month just trying to cover calls. This just works better and costs less.",
-        alternative_tier: fallbackTier === 'basic' ? 'pro' : 'basic',
-        alternative_reason: 'If they need review generation and follow-up too',
-        upsell_path: 'Once they see the call volume drop and reviews tick up, Premium pays for itself in saved dispatcher time',
-      }
+    if (!rec) {
+      rec = deterministicFallback({ callsMissedPerWeek, avgTicket, monthlyLaborCost, repNotes, niche, customMonthly }) as Record<string, unknown>
     }
 
     return new Response(

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import {
   ChevronDown, ChevronUp, MapPin, Phone, Mail, Sparkles, Loader2,
   Calendar, Bell, Zap, DollarSign, Target, MessageSquare,
-  CheckCircle, AlertTriangle,
+  CheckCircle, AlertTriangle, Star, RefreshCw, Globe, Activity, Eye,
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
@@ -48,6 +48,122 @@ const PACKAGES = {
 }
 
 const TIER_ORDER = ['basic', 'pro', 'premium', 'elite']
+
+// Map custom price → closest display tier (for color/name, not billing)
+function priceToTier(monthly) {
+  if (monthly >= 1500) return 'elite'
+  if (monthly >= 1000) return 'premium'
+  if (monthly >= 650)  return 'pro'
+  return 'basic'
+}
+
+// Sample data for the "Preview for [Business Name]" panel — synthetic, clearly labeled.
+const SAMPLE_DATA = {
+  ai_receptionist: {
+    label: 'AI Receptionist', color: 'var(--accent)',
+    kpis: [
+      { label: 'Calls Answered / Mo', value: '247' },
+      { label: 'After-Hours Captured', value: '89' },
+      { label: 'Booking Rate', value: '73%' },
+    ],
+    feed: [
+      'New caller booked HVAC inspection — 2 min ago',
+      'After-hours call captured, quote requested — 41 min ago',
+      '3 calls handled while crew was on job — 2h ago',
+    ],
+  },
+  missed_call_text_back: {
+    label: 'Missed Call Text Back', color: 'var(--info)',
+    kpis: [
+      { label: 'Texts Sent / Mo', value: '31' },
+      { label: 'Reply Rate', value: '67%' },
+      { label: 'Bookings Recovered', value: '8' },
+    ],
+    feed: [
+      '"Thanks! Can you come Wednesday?" — 8 min ago',
+      'Missed caller booked roof inspection — 2h ago',
+      '4 texts sent during job rush — Yesterday',
+    ],
+  },
+  review_generation: {
+    label: 'Review Generation', color: 'var(--warning)',
+    kpis: [
+      { label: 'Reviews Generated', value: '12' },
+      { label: 'Avg Rating', value: '4.9★' },
+      { label: 'Profile Views', value: '+34%' },
+    ],
+    feed: [
+      '5★ "Best in the area!" — 3h ago',
+      '5★ "Fast, professional, fair price" — Yesterday',
+      '4★ "Would recommend to anyone" — 2 days ago',
+    ],
+  },
+  lead_followup: {
+    label: 'Lead Follow-Up', color: 'var(--success)',
+    kpis: [
+      { label: 'Leads Followed Up', value: '47' },
+      { label: 'Recovery Rate', value: '23%' },
+      { label: 'Revenue Recovered', value: '$3,200' },
+    ],
+    feed: [
+      '"OK let\'s do it" — week-old lead replied — 1h ago',
+      'Ghosted quote → booked after 3rd touch — Yesterday',
+      '4 follow-up sequences triggered — 2 days ago',
+    ],
+  },
+  appointment_reminders: {
+    label: 'Appointment Reminders', color: 'var(--info)',
+    kpis: [
+      { label: 'Reminders Sent', value: '89' },
+      { label: 'No-Show Rate', value: '-62%' },
+      { label: 'Confirmations', value: '91%' },
+    ],
+    feed: [
+      '"See you Thursday at 2pm!" — 10 min ago',
+      '24h reminder sent for tomorrow\'s install — 2h ago',
+      'Client rescheduled early, crew reallocated — Yesterday',
+    ],
+  },
+  ai_dispatcher: {
+    label: 'AI Dispatcher', color: 'var(--accent)',
+    kpis: [
+      { label: 'Calls Routed / Mo', value: '156' },
+      { label: 'Avg Hold Time', value: '< 2s' },
+      { label: 'Crew Utilization', value: '+28%' },
+    ],
+    feed: [
+      'Emergency AC → nearest crew routed — 5 min ago',
+      'Commercial inquiry → sales line — 1h ago',
+      '12 calls auto-routed, 0 manual transfers — Yesterday',
+    ],
+  },
+  sms_marketing: {
+    label: 'SMS Marketing', color: 'var(--warning)',
+    kpis: [
+      { label: 'Open Rate', value: '89%' },
+      { label: 'Response Rate', value: '34%' },
+      { label: 'Revenue Attributed', value: '$1,800' },
+    ],
+    feed: [
+      '"Summer tune-up" campaign → 8 bookings — 2 days ago',
+      'Win-back SMS → 5 past customers returned — 3w ago',
+      'Seasonal reminder → 12 jobs booked — 6w ago',
+    ],
+  },
+  website: {
+    label: 'Professional Website', color: 'var(--success)',
+    kpis: [
+      { label: 'Monthly Visitors', value: '847' },
+      { label: 'Contact Forms', value: '12' },
+      { label: 'Mobile Score', value: '97/100' },
+    ],
+    feed: [
+      'New contact: "Need emergency AC repair" — 4h ago',
+      '43 organic visitors from Google — Yesterday',
+      'Commercial inquiry via contact form — 2 days ago',
+    ],
+  },
+}
 
 // Itemized checklist shown inside every tier card
 function ServiceChecklist({ tier, compact = false }) {
@@ -103,9 +219,14 @@ export function AppointmentCard({ appt }) {
   const update = useUpdateAppointment()
   const lead = appt.lead
 
-  // Auto-load recommendation on mount
+  // Auto-load recommendation on mount.
+  // Use full cached rec if the rep's booking trigger already generated it.
   useEffect(() => {
     if (!lead) return
+    if (lead.recommended_stack && lead.custom_monthly_price) {
+      setRec(lead.recommended_stack)
+      return
+    }
     if (!rec && !recLoading) loadRecommendation()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -122,13 +243,15 @@ export function AppointmentCard({ appt }) {
     try {
       const { data, error } = await supabase.functions.invoke('recommend-stack', {
         body: {
-          businessName: lead.business_name,
-          niche: lead.niche,
-          location: lead.city ? `${lead.city}${lead.state ? ', ' + lead.state : ''}` : null,
-          monthlyLaborCost: lead.monthly_labor_cost,
-          repNotes: lead.notes || lead.pain_points,
-          jobTitle: lead.job_title,
-          closerName: profile?.full_name,
+          businessName:       lead.business_name,
+          niche:              lead.niche,
+          location:           lead.city ? `${lead.city}${lead.state ? ', ' + lead.state : ''}` : null,
+          monthlyLaborCost:   lead.monthly_labor_cost ?? null,
+          callsMissedPerWeek: lead.calls_missed_per_week ?? null,
+          avgTicket:          lead.avg_ticket ?? null,
+          repNotes:           lead.notes || lead.pain_points,
+          jobTitle:           lead.job_title,
+          closerName:         profile?.full_name,
         },
       })
       if (error || !data?.rec) throw new Error(error?.message || 'No recommendation returned')
@@ -156,7 +279,7 @@ export function AppointmentCard({ appt }) {
           location: lead.city,
           monthlyLaborCost: lead.monthly_labor_cost,
           recommendedTier: rec?.recommended_tier || null,
-          recommendedPrice: rec?.recommended_tier ? PACKAGES[rec.recommended_tier]?.monthly ?? null : null,
+          recommendedPrice: rec?.custom_monthly_price ?? (rec?.recommended_tier ? PACKAGES[rec.recommended_tier]?.monthly ?? null : null),
           overridePrice: parsedOverride && parsedOverride > 0 ? parsedOverride : null,
         },
       })
@@ -376,6 +499,13 @@ export function AppointmentCard({ appt }) {
             ) : null}
           </div>
 
+          {/* ── Sample Dashboard Preview ─────────────────────────────────────── */}
+          {rec?.recommended_automations?.length > 0 && (
+            <div style={{ padding: '0 16px 16px' }}>
+              <SampleDashboard rec={rec} lead={lead} />
+            </div>
+          )}
+
           {/* ── Schedule + Reminders ─────────────────────────────────────────── */}
           <div style={{ padding: '16px 16px 0' }}>
             <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500, marginBottom: 8 }}>
@@ -472,23 +602,37 @@ function RecommendationPanel({
           </span>
         </div>
 
-        {/* Package name + price + product count */}
+        {/* Custom price + automation list */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 28, fontWeight: 500, color: primary?.color || 'var(--accent)', letterSpacing: '-0.02em', lineHeight: 1, fontFamily: 'var(--font-mono)' }}>
-              {primary?.name}
-            </span>
-            <span style={{ fontSize: 18, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
-              ${primary?.monthly?.toLocaleString()}/mo
+            <span style={{ fontSize: 30, fontWeight: 500, color: primary?.color || 'var(--accent)', letterSpacing: '-0.02em', lineHeight: 1, fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
+              ${(rec.custom_monthly_price || primary?.monthly)?.toLocaleString()}/mo
             </span>
             <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
               + $497 setup
             </span>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-              {primary?.services?.length} products included
-            </span>
+            {rec.custom_monthly_price && (
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-elevated)', padding: '2px 6px', borderRadius: 3 }}>
+                Custom stack · {primary?.name} tier
+              </span>
+            )}
           </div>
-          <ServiceChecklist tier={rec.recommended_tier} />
+          {/* Show selected automations if available, else tier services */}
+          {rec.recommended_automations?.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, margin: '10px 0' }}>
+              {rec.recommended_automations.map((id, i) => {
+                const data = SAMPLE_DATA[id]
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <CheckCircle size={12} style={{ color: primary?.color || 'var(--accent)', flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{data?.label || id}</span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <ServiceChecklist tier={rec.recommended_tier} />
+          )}
           {rec.headline && (
             <p style={{ fontSize: 14, color: 'var(--text-primary)', marginTop: 8, lineHeight: 1.4, fontWeight: 500 }}>
               "{rec.headline}"
@@ -602,7 +746,7 @@ function RecommendationPanel({
               ) : isClosed ? (
                 <><CheckCircle size={15} /> Already Closed</>
               ) : (
-                <><CheckCircle size={15} /> Mark Closed — {PACKAGES[rec.recommended_tier]?.name} ${PACKAGES[rec.recommended_tier]?.monthly?.toLocaleString()}/mo</>
+                <><CheckCircle size={15} /> Mark Closed — ${(rec.custom_monthly_price || PACKAGES[rec.recommended_tier]?.monthly)?.toLocaleString()}/mo</>
               )}
             </button>
           </div>
@@ -680,6 +824,154 @@ function AlternativePackageCard({ tier, directionLabel, isAlt, reason, stripeLin
       >
         {provisionLoading ? 'Closing…' : `Close — ${p.name}`}
       </button>
+    </div>
+  )
+}
+
+// ── Sample Dashboard Preview ───────────────────────────────────────────────────
+// Shows only the automations in rec.recommended_automations, sample data only,
+// clearly labeled. Nate uses this to walk the prospect through the actual
+// dashboard they'd get — without needing a live client account.
+
+function SampleDashboard({ rec, lead }) {
+  const [open, setOpen] = useState(false)
+  const [tab, setTab] = useState('overview')
+
+  const automations = rec.recommended_automations || []
+  if (!automations.length) return null
+
+  const businessName = lead.business_name || 'This Business'
+  const callsPerWeek = lead.calls_missed_per_week || 5
+  const avgTicket    = lead.avg_ticket || 800
+  const recoveredJobs = Math.max(1, Math.round(callsPerWeek * 4.33 * 0.25))
+  const estRevenue    = recoveredJobs * avgTicket
+
+  return (
+    <div style={{ borderRadius: 10, overflow: 'hidden', border: '0.5px solid rgba(245,158,11,0.25)' }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          width: '100%', padding: '10px 14px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: 'rgba(245,158,11,0.06)', border: 'none', cursor: 'pointer',
+          borderBottom: open ? '0.5px solid rgba(245,158,11,0.20)' : 'none',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Eye size={13} style={{ color: 'var(--warning)' }} />
+          <span style={{ fontSize: 12, color: 'var(--warning)', fontWeight: 500 }}>
+            Preview for {businessName}
+          </span>
+          <span style={{
+            fontSize: 9, padding: '1px 5px', borderRadius: 2,
+            background: 'rgba(245,158,11,0.15)', color: 'var(--warning)',
+            border: '0.5px solid rgba(245,158,11,0.25)',
+            textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500,
+          }}>
+            Sample Data
+          </span>
+        </div>
+        {open ? <ChevronUp size={13} style={{ color: 'var(--warning)' }} /> : <ChevronDown size={13} style={{ color: 'var(--warning)' }} />}
+      </button>
+
+      {open && (
+        <div style={{ background: 'rgba(0,0,0,0.15)' }}>
+          <div style={{ padding: '7px 14px', background: 'rgba(245,158,11,0.04)', borderBottom: '0.5px solid rgba(245,158,11,0.12)' }}>
+            <p style={{ fontSize: 11, color: 'var(--warning)', margin: 0, fontStyle: 'italic' }}>
+              Sample data only — shows what the client would see after onboarding. Walk the prospect through this.
+            </p>
+          </div>
+
+          {/* Tab strip */}
+          <div style={{ display: 'flex', borderBottom: '0.5px solid var(--border)', overflowX: 'auto' }}>
+            {['overview', ...automations].map(id => {
+              const label = id === 'overview' ? 'Overview' : (SAMPLE_DATA[id]?.label || id)
+              return (
+                <button
+                  key={id}
+                  onClick={() => setTab(id)}
+                  style={{
+                    padding: '7px 13px', fontSize: 11, border: 'none', cursor: 'pointer',
+                    background: 'none', whiteSpace: 'nowrap',
+                    color: tab === id ? 'var(--accent)' : 'var(--text-muted)',
+                    borderBottom: tab === id ? '2px solid var(--accent)' : '2px solid transparent',
+                    fontWeight: tab === id ? 500 : 400,
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Tab content */}
+          <div style={{ padding: '14px 14px' }}>
+            {tab === 'overview'
+              ? <SampleOverview automations={automations} recoveredJobs={recoveredJobs} estRevenue={estRevenue} callsPerWeek={callsPerWeek} />
+              : <SampleAutomationTab id={tab} />
+            }
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SampleOverview({ automations, recoveredJobs, estRevenue, callsPerWeek }) {
+  const kpis = [
+    { label: 'Calls Captured / Mo',   value: `${Math.round(callsPerWeek * 4.33 * 0.85)}+`, color: 'var(--accent)' },
+    { label: 'Jobs Recovered / Mo',   value: `${recoveredJobs}`,                            color: 'var(--success)' },
+    { label: 'Est. Revenue Impact',   value: `$${estRevenue.toLocaleString()}+`,             color: 'var(--success)' },
+    { label: 'Automations Active',    value: `${automations.length}`,                        color: 'var(--info)' },
+  ]
+  return (
+    <div>
+      <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+        Combined Impact — Sample Data
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 10 }}>
+        {kpis.map((kpi, i) => (
+          <div key={i} style={{ padding: '10px 12px', background: 'var(--bg-elevated)', borderRadius: 8, border: '0.5px solid var(--border)' }}>
+            <p style={{ fontSize: 18, fontWeight: 500, color: kpi.color, fontFamily: 'var(--font-mono)', margin: '0 0 2px', fontVariantNumeric: 'tabular-nums' }}>
+              {kpi.value}
+            </p>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>{kpi.label}</p>
+          </div>
+        ))}
+      </div>
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', margin: 0 }}>
+        Based on {callsPerWeek} missed calls/week — industry average 25% recovery. Actual results vary.
+      </p>
+    </div>
+  )
+}
+
+function SampleAutomationTab({ id }) {
+  const data = SAMPLE_DATA[id]
+  if (!data) return <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No sample data available.</p>
+  return (
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
+        {data.kpis.map((kpi, i) => (
+          <div key={i} style={{ padding: '10px 12px', background: 'var(--bg-elevated)', borderRadius: 8, border: '0.5px solid var(--border)' }}>
+            <p style={{ fontSize: 16, fontWeight: 500, color: data.color, fontFamily: 'var(--font-mono)', margin: '0 0 2px', fontVariantNumeric: 'tabular-nums' }}>
+              {kpi.value}
+            </p>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>{kpi.label}</p>
+          </div>
+        ))}
+      </div>
+      <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+        Recent Activity
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+        {data.feed.map((item, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: 'var(--bg-elevated)', borderRadius: 6 }}>
+            <div style={{ width: 5, height: 5, borderRadius: '50%', background: data.color, flexShrink: 0 }} />
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{item}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

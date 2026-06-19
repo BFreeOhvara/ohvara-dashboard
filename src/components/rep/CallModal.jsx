@@ -207,6 +207,33 @@ export function CallModal({ lead, onClose }) {
 
       qc.invalidateQueries({ queryKey: ['leads'] })
       qc.invalidateQueries({ queryKey: ['stats'] })
+
+      // Pre-generate à la carte stack recommendation for Nate's card.
+      // Fire-and-forget: failure is silent — AppointmentCard falls back to on-demand.
+      if (status === 'Appointment Booked') {
+        supabase.functions.invoke('recommend-stack', {
+          body: {
+            businessName:       lead.business_name,
+            niche:              lead.niche,
+            location:           lead.city || null,
+            callsMissedPerWeek: lead.calls_missed_per_week ?? null,
+            avgTicket:          lead.avg_ticket ?? null,
+            monthlyLaborCost:   lead.monthly_labor_cost ?? null,
+            repNotes:           notes || lead.notes || null,
+            jobTitle:           lead.job_title || null,
+          },
+        }).then(({ data }) => {
+          if (data?.rec) {
+            supabase.from('leads').update({
+              recommended_automations: data.rec.recommended_automations ?? null,
+              custom_monthly_price:    data.rec.custom_monthly_price ?? null,
+              recommended_stack:       data.rec,
+              stack_generated_at:      new Date().toISOString(),
+            }).eq('id', lead.id)
+          }
+        }).catch(() => {})
+      }
+
       onClose()
     } catch (err) {
       setDoneError(err.message || 'Failed to save')
