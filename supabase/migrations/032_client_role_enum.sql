@@ -1,0 +1,12 @@
+-- ============================================================
+-- Migration 032: add 'client' to the user_role enum (4th role)
+-- ============================================================
+-- The fulfillment pivot adds a CLIENT role alongside admin/closer/rep so a
+-- closed customer can log into /client/* on the main dashboard.
+--
+-- WHY THIS IS ITS OWN MIGRATION: PostgreSQL forbids USING a newly-added enum
+-- value in the same transaction that ADDs it ("unsafe use of new value").
+-- Migration runners commonly wrap one file in a single transaction, so the
+-- ADD VALUE is isolated here — guaranteeing 'client' is committed before
+-- migration 033 (or any policy / insert) references it.
+alter type user_role add value if not exists 'client';
