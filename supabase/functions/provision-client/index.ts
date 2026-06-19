@@ -204,7 +204,10 @@ Deno.serve(async (req) => {
       },
     })
 
-    const portalUrl = `${Deno.env.get('CLIENT_PORTAL_URL') || 'https://client.ohvara.com'}/onboard/${client.id}`
+    // The client logs into the main dashboard now (no UUID-in-URL flow) — their
+    // first login lands on /client, which prompts to finish onboarding if
+    // incomplete. Standalone ohvara-client-portal retired (migration 032/033).
+    const portalUrl = `${Deno.env.get('DASHBOARD_URL') || 'https://ohvara-dashboard.vercel.app'}/login`
 
     return new Response(
       JSON.stringify({

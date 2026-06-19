@@ -136,7 +136,10 @@ Deno.serve(async (req) => {
       owner_name: answers.owner_name || null,
       owner_email: answers.owner_email || null,
       business_phone: answers.business_phone || null,
-      portal_url: `${Deno.env.get('CLIENT_PORTAL_URL') || 'https://client.ohvara.com'}/${clientId}`,
+      // Points at the client's own /client overview on the main dashboard now
+      // (the standalone ohvara-client-portal app is retired — superseded by
+      // the client role, see migration 032/033 + App.jsx /client/* routes).
+      portal_url: `${Deno.env.get('DASHBOARD_URL') || 'https://ohvara-dashboard.vercel.app'}/client`,
     }
     if (agentId)     clientUpdates.retell_agent_id = agentId
     if (twilioNumber) clientUpdates.twilio_number  = twilioNumber
