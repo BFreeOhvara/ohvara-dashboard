@@ -41,7 +41,9 @@ const NAV = {
     { to: '/admin/messages',     label: 'Messages',        icon: MessageSquare },
   ],
   client: [
-    { to: '/client', label: 'Overview', icon: Home },
+    { to: '/client',             label: 'Overview',    icon: Home },
+    { to: '/client/automations', label: 'Automations', icon: Zap },
+    { to: '/client/messages',    label: 'Messages',    icon: MessageSquare },
   ],
 }
 

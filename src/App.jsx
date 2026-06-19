@@ -40,6 +40,8 @@ import AdminMessages from './pages/admin/Messages'
 // Client pages
 import ClientOverview from './pages/client/ClientOverview'
 import ClientOnboarding from './pages/client/ClientOnboarding'
+import ClientAutomations from './pages/client/ClientAutomations'
+import ClientMessages from './pages/client/ClientMessages'
 
 const qc = new QueryClient({
   // refetchOnWindowFocus off: tabbing back must be silent — fresh data
@@ -204,6 +206,16 @@ export default function App() {
             <Route path="/client" element={
               <ProtectedRoute allowedRoles={['client']}>
                 <DashboardLayout><ClientOverview /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/client/automations" element={
+              <ProtectedRoute allowedRoles={['client']}>
+                <DashboardLayout><ClientAutomations /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/client/messages" element={
+              <ProtectedRoute allowedRoles={['client']}>
+                <DashboardLayout><ClientMessages /></DashboardLayout>
               </ProtectedRoute>
             } />
 
