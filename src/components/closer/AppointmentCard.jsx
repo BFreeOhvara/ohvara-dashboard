@@ -97,6 +97,7 @@ export function AppointmentCard({ appt }) {
   )
   const [provisionLoading, setProvisionLoading] = useState(false)
   const [provisionResult, setProvisionResult] = useState(null)
+  const [overridePrice, setOverridePrice] = useState('')
   const [stripeLinks, setStripeLinks] = useState({})
   const [stripeLoading, setStripeLoading] = useState({})
   const update = useUpdateAppointment()
@@ -144,6 +145,7 @@ export function AppointmentCard({ appt }) {
     if (provisionLoading) return
     setProvisionLoading(true)
     try {
+      const parsedOverride = overridePrice ? parseFloat(overridePrice) : null
       const { data, error } = await supabase.functions.invoke('provision-client', {
         body: {
           appointmentId: appt.id,
@@ -153,6 +155,9 @@ export function AppointmentCard({ appt }) {
           niche: lead.niche,
           location: lead.city,
           monthlyLaborCost: lead.monthly_labor_cost,
+          recommendedTier: rec?.recommended_tier || null,
+          recommendedPrice: rec?.recommended_tier ? PACKAGES[rec.recommended_tier]?.monthly ?? null : null,
+          overridePrice: parsedOverride && parsedOverride > 0 ? parsedOverride : null,
         },
       })
       if (error) throw new Error(error.message)
@@ -320,6 +325,17 @@ export function AppointmentCard({ appt }) {
                 {update.isPending ? 'Saving…' : 'Save Outcome'}
               </Button>
             </div>
+            {!isClosed && (
+              <div style={{ marginTop: 10 }}>
+                <Input
+                  type="number"
+                  value={overridePrice}
+                  onChange={e => setOverridePrice(e.target.value)}
+                  placeholder="Override monthly price (optional — leave blank to bill list price)"
+                  style={{ maxWidth: 320 }}
+                />
+              </div>
+            )}
           </div>
 
           {/* ── AI RECOMMENDATION PANEL — DOMINANT ───────────────────────── */}

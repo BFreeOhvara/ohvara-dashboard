@@ -10,6 +10,63 @@ function getTierPrice(tier: string): number {
   return prices[tier] ?? 497
 }
 
+function slugifyUsername(businessName: string): string {
+  const base = businessName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 24)
+  return base || 'client'
+}
+
+function randomSuffix(length = 4): string {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789' // no ambiguous chars
+  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+}
+
+function generatePassword(): string {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%'
+  return Array.from({ length: 14 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+}
+
+// Creates the client's login (auth.users + profiles via the handle_new_user trigger,
+// same username@ohvara.internal pattern as admin-create-user). Retries the username
+// once on collision. Auth creation failures are non-fatal — the close flow still
+// produces a clients/onboarding row; manual login creation is the fallback.
+async function createClientLogin(
+  supabase: ReturnType<typeof createClient>,
+  businessName: string
+): Promise<{ userId: string; username: string; password: string } | null> {
+  const baseSlug = slugifyUsername(businessName)
+  const password = generatePassword()
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const username = attempt === 0 ? baseSlug : `${baseSlug}-${randomSuffix()}`
+    const email = `${username}@ohvara.internal`
+
+    const { data, error } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: businessName, role: 'client', username },
+    })
+
+    if (!error && data.user) {
+      return { userId: data.user.id, username, password }
+    }
+
+    const collision = error?.status === 422 || error?.message?.includes('already been registered')
+    if (!collision) {
+      console.error('[provision-client] login creation failed:', error?.message)
+      return null
+    }
+    // collision — loop retries with a randomized suffix
+  }
+
+  console.error('[provision-client] login creation failed: username collisions exhausted')
+  return null
+}
+
 function generateOnboardingQuestions(
   tier: string,
   businessName: string,
@@ -62,6 +119,9 @@ Deno.serve(async (req) => {
       niche,
       location,
       monthlyLaborCost,
+      recommendedTier,
+      recommendedPrice,
+      overridePrice,
     } = await req.json()
 
     if (!appointmentId || !tier || !businessName) {
@@ -85,7 +145,13 @@ Deno.serve(async (req) => {
       closer_id: closerId,
     }).eq('id', appointmentId)
 
-    // 2. Create client record
+    // 2. Create client record — override_price (Nate's negotiated price, if set)
+    // wins as the billed monthly_value; recommended_tier/recommended_price persist
+    // the AI's recommendation at close time for later analysis.
+    const finalMonthlyValue = typeof overridePrice === 'number' && overridePrice > 0
+      ? overridePrice
+      : getTierPrice(tier)
+
     const { data: client, error: clientError } = await supabase
       .from('clients')
       .insert({
@@ -94,18 +160,27 @@ Deno.serve(async (req) => {
         location: location || null,
         tier,
         status: 'onboarding',
-        monthly_value: getTierPrice(tier),
+        monthly_value: finalMonthlyValue,
         setup_fee: 497,
+        recommended_tier: recommendedTier || null,
+        recommended_price: typeof recommendedPrice === 'number' ? recommendedPrice : null,
+        override_price: typeof overridePrice === 'number' && overridePrice > 0 ? overridePrice : null,
       })
       .select()
       .single()
 
     if (clientError) throw new Error(`Failed to create client: ${clientError.message}`)
 
-    // 3. Generate onboarding questions per tier
+    // 3. Create the client's login (auth.users + profiles role='client') and link it
+    const login = await createClientLogin(supabase, businessName)
+    if (login) {
+      await supabase.from('clients').update({ profile_id: login.userId }).eq('id', client.id)
+    }
+
+    // 4. Generate onboarding questions per tier
     const questions = generateOnboardingQuestions(tier, businessName, niche || 'service')
 
-    // 4. Create onboarding record
+    // 5. Create onboarding record
     await supabase.from('onboarding').insert({
       client_id: client.id,
       tier,
@@ -113,11 +188,20 @@ Deno.serve(async (req) => {
       questions,
     })
 
-    // 5. Create admin notification
+    // 6. Create admin notification (carries the login credentials for manual handoff —
+    // no client email automation exists yet)
     await supabase.from('notifications').insert({
       type: 'new_client',
-      message: `${businessName} closed on ${tier[0].toUpperCase() + tier.slice(1)} ($${getTierPrice(tier)}/mo)`,
-      data: { clientId: client.id, tier, closerId, appointmentId },
+      message: login
+        ? `${businessName} closed on ${tier[0].toUpperCase() + tier.slice(1)} ($${finalMonthlyValue}/mo) — login: ${login.username} / ${login.password}`
+        : `${businessName} closed on ${tier[0].toUpperCase() + tier.slice(1)} ($${finalMonthlyValue}/mo) — login creation FAILED, create manually`,
+      data: {
+        clientId: client.id,
+        tier,
+        closerId,
+        appointmentId,
+        ...(login ? { clientLogin: { username: login.username, password: login.password } } : {}),
+      },
     })
 
     const portalUrl = `${Deno.env.get('CLIENT_PORTAL_URL') || 'https://client.ohvara.com'}/onboard/${client.id}`
@@ -127,9 +211,10 @@ Deno.serve(async (req) => {
         success: true,
         clientId: client.id,
         tier,
-        monthlyValue: getTierPrice(tier),
+        monthlyValue: finalMonthlyValue,
         onboardingUrl: portalUrl,
         questionCount: questions.length,
+        clientLogin: login ? { username: login.username, password: login.password } : null,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

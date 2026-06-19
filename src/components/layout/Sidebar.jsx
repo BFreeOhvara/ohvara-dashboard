@@ -4,7 +4,7 @@ import {
   Users, Phone, BarChart2, Target, Bell,
   Calendar, DollarSign, TrendingUp, BookOpen,
   LayoutDashboard, List, Columns, RefreshCw, Database, LogOut,
-  Zap, Search, PhoneCall, GitBranch, MessageSquare
+  Zap, Search, PhoneCall, GitBranch, MessageSquare, Home
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { NotificationBell } from '../admin/NotificationBell'
@@ -40,9 +40,12 @@ const NAV = {
     { to: '/admin/commissions',  label: 'Commissions',     icon: DollarSign },
     { to: '/admin/messages',     label: 'Messages',        icon: MessageSquare },
   ],
+  client: [
+    { to: '/client', label: 'Overview', icon: Home },
+  ],
 }
 
-const ROLE_LABELS = { rep: 'Rep Portal', closer: 'Closer Portal', admin: 'Admin' }
+const ROLE_LABELS = { rep: 'Rep Portal', closer: 'Closer Portal', admin: 'Admin', client: 'Client Portal' }
 
 export function Sidebar() {
   const { profile, signOut } = useAuth()
@@ -104,7 +107,7 @@ export function Sidebar() {
           <NavLink
             key={to}
             to={to}
-            end={to === '/rep' || to === '/closer' || to === '/admin'}
+            end={to === '/rep' || to === '/closer' || to === '/admin' || to === '/client'}
             className={({ isActive }) =>
               clsx(
                 'nav-item tab-transition',

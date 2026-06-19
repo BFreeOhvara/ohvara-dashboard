@@ -37,6 +37,10 @@ import RepMessages from './pages/rep/Messages'
 import CloserMessages from './pages/closer/Messages'
 import AdminMessages from './pages/admin/Messages'
 
+// Client pages
+import ClientOverview from './pages/client/ClientOverview'
+import ClientOnboarding from './pages/client/ClientOnboarding'
+
 const qc = new QueryClient({
   // refetchOnWindowFocus off: tabbing back must be silent — fresh data
   // arrives via explicit invalidations, not a focus-triggered refetch wave.
@@ -50,6 +54,7 @@ function RoleRedirect() {
   if (profile.role === 'rep') return <Navigate to="/rep" replace />
   if (profile.role === 'closer') return <Navigate to="/closer" replace />
   if (profile.role === 'admin') return <Navigate to="/admin" replace />
+  if (profile.role === 'client') return <Navigate to="/client" replace />
   return <Navigate to="/login" replace />
 }
 
@@ -187,6 +192,18 @@ export default function App() {
             <Route path="/closer/commissions" element={
               <ProtectedRoute allowedRoles={['admin', 'closer']}>
                 <DashboardLayout><Commissions /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+
+            {/* Client routes */}
+            <Route path="/client/onboarding" element={
+              <ProtectedRoute allowedRoles={['client']}>
+                <ClientOnboarding />
+              </ProtectedRoute>
+            } />
+            <Route path="/client" element={
+              <ProtectedRoute allowedRoles={['client']}>
+                <DashboardLayout><ClientOverview /></DashboardLayout>
               </ProtectedRoute>
             } />
 
