@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import {
-  ChevronDown, ChevronUp, MapPin, Phone, Mail, Sparkles, Loader2,
+  ChevronDown, ChevronUp, ChevronRight, MapPin, Phone, Mail, Sparkles, Loader2,
   Calendar, Bell, Zap, DollarSign, Target, MessageSquare,
   CheckCircle, AlertTriangle, Star, RefreshCw, Globe, Activity, Eye,
-  Copy, ExternalLink, KeyRound,
+  Copy, ExternalLink, KeyRound, X,
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
@@ -61,24 +62,6 @@ function ServiceChecklist({ tier, compact = false }) {
         </div>
       ))}
     </div>
-  )
-}
-
-function PackageBadge({ tier, size = 'sm' }) {
-  const p = PACKAGES[tier]
-  if (!p) return null
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center',
-      padding: size === 'sm' ? '2px 7px' : '4px 10px',
-      borderRadius: 4,
-      background: p.dim, color: p.color,
-      border: `0.5px solid ${p.border}`,
-      fontSize: size === 'sm' ? 11 : 13,
-      fontWeight: 500,
-    }}>
-      {p.name}
-    </span>
   )
 }
 
@@ -152,7 +135,7 @@ function AgentStackList({ rec, primary }) {
 
 export function AppointmentCard({ appt }) {
   const { profile } = useAuth()
-  const [expanded, setExpanded] = useState(true)
+  const [modalOpen, setModalOpen] = useState(false)
   const [rec, setRec] = useState(null)
   const [recLoading, setRecLoading] = useState(false)
   const [recError, setRecError] = useState(false)
@@ -184,6 +167,19 @@ export function AppointmentCard({ appt }) {
     }
     if (!rec && !recLoading) loadRecommendation()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Background scroll lock while the detail modal is open (same pattern as CallModal).
+  useEffect(() => {
+    if (!modalOpen) return
+    const prevBody = document.body.style.overflow
+    const prevHtml = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevBody
+      document.documentElement.style.overflow = prevHtml
+    }
+  }, [modalOpen])
 
   async function loadRecommendation() {
     setRecLoading(true)
@@ -333,54 +329,95 @@ export function AppointmentCard({ appt }) {
   }
 
   return (
-    <div className="glass" style={{ overflow: 'hidden', marginBottom: 0 }}>
-
-      {/* ── Card Header ──────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>
-              {lead.business_name}
-            </span>
-            {rec?.recommended_tier && <PackageBadge tier={rec.recommended_tier} />}
+    <>
+      {/* ── Card — collapsed by default; click anywhere on the row to open details (Prompt 11) ── */}
+      <div
+        className="glass"
+        style={{ overflow: 'hidden', marginBottom: 0, cursor: 'pointer' }}
+        onClick={() => setModalOpen(true)}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>
+                {lead.business_name}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 3, flexWrap: 'wrap' }}>
+              {lead.niche && (
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{lead.niche}</span>
+              )}
+              {lead.city && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-muted)' }}>
+                  <MapPin size={10} /> {lead.city}
+                </span>
+              )}
+              {appt.rep && (
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Set by {appt.rep.full_name}</span>
+              )}
+            </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 3, flexWrap: 'wrap' }}>
-            {lead.niche && (
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{lead.niche}</span>
-            )}
-            {lead.city && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-muted)' }}>
-                <MapPin size={10} /> {lead.city}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            {appt.scheduled_at && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-secondary)' }}>
+                <Calendar size={11} />
+                {new Date(appt.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
               </span>
             )}
-            {appt.rep && (
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Set by {appt.rep.full_name}</span>
-            )}
+            <Badge label={appt.status} />
+            <ChevronRight size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          {appt.scheduled_at && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-secondary)' }}>
-              <Calendar size={11} />
-              {new Date(appt.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-            </span>
-          )}
-          <Badge label={appt.status} />
-          <button
-            onClick={() => setExpanded(v => !v)}
-            style={{ color: 'var(--text-muted)', background: 'none', border: 'none', padding: 4, cursor: 'pointer', borderRadius: 4, transition: 'color 100ms' }}
-            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)' }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)' }}
-          >
-            {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-          </button>
         </div>
       </div>
 
-      {/* ── Expanded Content ─────────────────────────────────────────────────── */}
-      {expanded && (
-        <div style={{ borderTop: '0.5px solid var(--border)' }}>
+      {/* ── Detail Modal — popup overlay instead of inline expand (Prompt 11) ───── */}
+      {modalOpen && createPortal(
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(8,8,16,0.85)', backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 20,
+          }}
+          onClick={e => e.stopPropagation() /* click-outside does NOT close — exit via X, same convention as CallModal */}
+        >
+          <div style={{
+            width: '100%', maxWidth: 720, maxHeight: '88vh',
+            display: 'flex', flexDirection: 'column',
+            background: '#0E0E1A',
+            border: '0.5px solid var(--border)',
+            borderRadius: 14,
+            overflow: 'hidden',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+          }}>
+
+            {/* Modal Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '14px 18px',
+              borderBottom: '0.5px solid var(--border)',
+              flexShrink: 0,
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {lead.business_name}
+                </p>
+                {lead.niche && (
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>{lead.niche}</p>
+                )}
+              </div>
+              <Badge label={appt.status} />
+              <button
+                onClick={() => setModalOpen(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 8 }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="scrollbar-thin" style={{ flex: 1, overflowY: 'auto' }}>
 
           {/* Contact row */}
           {(lead.phone || lead.email) && (
@@ -514,9 +551,12 @@ export function AppointmentCard({ appt }) {
 
           {/* bottom padding under the package cards */}
           <div style={{ height: 16 }} />
-        </div>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   )
 }
 

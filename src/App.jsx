@@ -18,7 +18,6 @@ import ActivityFeed from './pages/rep/ActivityFeed'
 
 // Closer pages
 import MyAppointments from './pages/closer/MyAppointments'
-import PastDeals from './pages/closer/PastDeals'
 import RevenueTracker from './pages/closer/RevenueTracker'
 import RepAnalytics from './pages/closer/RepAnalytics'
 import CallLeads from './pages/closer/CallLeads'
@@ -112,11 +111,6 @@ export default function App() {
             <Route path="/closer" element={
               <ProtectedRoute allowedRoles={['closer']}>
                 <DashboardLayout><MyAppointments /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/closer/deals" element={
-              <ProtectedRoute allowedRoles={['closer']}>
-                <DashboardLayout><PastDeals /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/closer/revenue" element={
