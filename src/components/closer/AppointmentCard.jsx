@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createPortal } from 'react-dom'
 import {
-  ChevronDown, ChevronUp, ChevronRight, MapPin, Phone, Mail, Sparkles, Loader2,
+  ChevronDown, ChevronUp, ChevronRight, ChevronLeft, MapPin, Phone, Mail, Sparkles, Loader2,
   Calendar, Bell, Zap, DollarSign, Target, MessageSquare,
   CheckCircle, AlertTriangle, Star, RefreshCw, Globe, Activity, Eye,
   Copy, ExternalLink, KeyRound, X,
@@ -565,6 +565,226 @@ export function AppointmentCard({ appt }) {
   )
 }
 
+// ── Presentation Walk — click-through presentation for Nate ──────────────────
+// Replaces the static scrolling AI Recommendation panel. One step at a time:
+// Intro (problem / ROI / price) → front-runner agents → sub-agents → Live Preview.
+// Each step is a full-screen card with Back / Next navigation; agent steps show
+// customer_benefit (benefit-framed language) if available, else description.
+
+function PresentationWalk({ rec, appt, primary, retryProvisionLoading, onRetryProvision }) {
+  const steps = useMemo(() => {
+    const s = [{ kind: 'intro' }]
+    let tpIdx = 0
+    const hasSplit = (rec.front_runners?.length > 0 || rec.sub_agents?.length > 0)
+    if (hasSplit) {
+      for (const agent of (rec.front_runners || [])) {
+        s.push({ kind: 'agent', tier: 'front', agent, talkingPoint: (rec.talking_points || [])[tpIdx++] || null })
+      }
+      for (const agent of (rec.sub_agents || [])) {
+        s.push({ kind: 'agent', tier: 'sub', agent, talkingPoint: (rec.talking_points || [])[tpIdx++] || null })
+      }
+    } else {
+      // Legacy flat list — treat first 2 as front-runners, rest as sub-agents.
+      for (const [i, agent] of (rec.recommended_automations || []).entries()) {
+        s.push({ kind: 'agent', tier: i < 2 ? 'front' : 'sub', agent, talkingPoint: (rec.talking_points || [])[tpIdx++] || null })
+      }
+    }
+    s.push({ kind: 'dashboard' })
+    return s
+  }, [rec])
+
+  const [idx, setIdx] = useState(0)
+  const step = steps[idx]
+  const progress = Math.round(((idx + 1) / steps.length) * 100)
+  const stepAccent = step.kind === 'intro' ? 'var(--warning)'
+    : step.kind === 'dashboard' ? 'var(--success)'
+    : step.tier === 'front' ? (primary?.color || 'var(--accent)')
+    : 'var(--text-muted)'
+  const stepLabel = step.kind === 'intro' ? 'The Problem'
+    : step.kind === 'dashboard' ? 'Live Preview'
+    : step.tier === 'front' ? 'Core Solution'
+    : 'Supporting Agent'
+
+  return (
+    <div className="glass-accent" style={{
+      borderRadius: 10, marginBottom: 12, overflow: 'hidden',
+      borderTop: `2px solid ${primary?.color || 'var(--accent)'}`,
+    }}>
+      {/* Header */}
+      <div style={{ padding: '12px 16px 10px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '0.5px solid var(--border)' }}>
+        <Zap size={13} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+        <span style={{ fontSize: 10, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500, flex: 1 }}>
+          AI Recommendation
+        </span>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+          {idx + 1} / {steps.length}
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ height: 2, background: 'var(--bg-elevated)' }}>
+        <div style={{ height: '100%', width: `${progress}%`, background: primary?.color || 'var(--accent)', transition: 'width 0.2s ease' }} />
+      </div>
+
+      {/* Step content */}
+      <div style={{ padding: '16px 18px 12px' }}>
+        <p style={{ fontSize: 9, color: stepAccent, textTransform: 'uppercase', letterSpacing: '0.09em', fontWeight: 500, margin: '0 0 12px' }}>
+          {stepLabel}
+        </p>
+        {step.kind === 'intro' && <WalkIntroStep rec={rec} primary={primary} />}
+        {step.kind === 'agent' && <WalkAgentStep agent={step.agent} tier={step.tier} primary={primary} talkingPoint={step.talkingPoint} />}
+        {step.kind === 'dashboard' && (
+          <WalkDashboardStep appt={appt} rec={rec} retryProvisionLoading={retryProvisionLoading} onRetryProvision={onRetryProvision} />
+        )}
+      </div>
+
+      {/* Navigation */}
+      <div style={{ padding: '0 18px 14px', display: 'flex', gap: 8 }}>
+        <button
+          onClick={() => setIdx(i => i - 1)}
+          disabled={idx === 0}
+          style={{
+            height: 38, paddingInline: 14, display: 'flex', alignItems: 'center', gap: 5,
+            background: 'var(--bg-elevated)', color: idx > 0 ? 'var(--text-secondary)' : 'var(--text-muted)',
+            border: '0.5px solid var(--border)', borderRadius: 8, fontSize: 13,
+            cursor: idx > 0 ? 'pointer' : 'not-allowed', opacity: idx > 0 ? 1 : 0.4,
+          }}
+        >
+          <ChevronLeft size={14} /> Back
+        </button>
+        {idx < steps.length - 1 && (
+          <button
+            onClick={() => setIdx(i => i + 1)}
+            style={{
+              flex: 1, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              background: primary?.color || 'var(--accent)', color: '#0E0E1A',
+              border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer',
+            }}
+          >
+            Next <ChevronRight size={14} />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function WalkIntroStep({ rec, primary }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {rec.headline && (
+        <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.4, margin: 0 }}>
+          "{rec.headline}"
+        </p>
+      )}
+      {rec.roi_argument && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 12px', background: 'rgba(34,197,94,0.06)', border: '0.5px solid rgba(34,197,94,0.15)', borderRadius: 8 }}>
+          <DollarSign size={12} style={{ color: 'var(--success)', marginTop: 2, flexShrink: 0 }} />
+          <p style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>{rec.roi_argument}</p>
+        </div>
+      )}
+      {rec.pain_points?.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          {rec.pain_points.map((pt, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <span style={{ color: 'var(--warning)', flexShrink: 0, marginTop: 3, fontSize: 10 }}>•</span>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{pt}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+        <span style={{ fontSize: 26, fontWeight: 500, color: primary?.color || 'var(--accent)', fontFamily: 'var(--font-mono)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
+          ${(rec.custom_monthly_price)?.toLocaleString()}/mo
+        </span>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+          + $297 setup
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function WalkAgentStep({ agent, tier, primary, talkingPoint }) {
+  const borderColor = tier === 'front' ? (primary?.border || 'var(--accent-border)') : 'var(--border)'
+  const bgColor = tier === 'front' ? (primary?.dim || 'var(--accent-dim)') : 'var(--bg-elevated)'
+  const benefit = agent.customer_benefit || agent.description
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <p style={{ fontSize: 19, fontWeight: 500, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>
+        {agent.name}
+      </p>
+      {benefit && (
+        <div style={{ padding: '12px 14px', borderRadius: 8, background: bgColor, border: `0.5px solid ${borderColor}` }}>
+          <p style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>{benefit}</p>
+        </div>
+      )}
+      {talkingPoint && (
+        <div style={{ padding: '9px 12px', background: 'rgba(108,99,255,0.06)', border: '0.5px solid var(--accent-border)', borderRadius: 8 }}>
+          <p style={{ fontSize: 9, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, marginBottom: 4 }}>What to say</p>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>{talkingPoint}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function WalkDashboardStep({ appt, rec, retryProvisionLoading, onRetryProvision }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div>
+        <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 5px', lineHeight: 1.4 }}>
+          Show them their dashboard
+        </p>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+          Open a live demo — let them see what they'd get before they commit.
+        </p>
+      </div>
+      {appt.demo_client_id ? (
+        <a
+          href={import.meta.env.VITE_CLIENT_PORTAL_URL || 'https://ohvara-client-portal.vercel.app'}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            height: 44, borderRadius: 8, fontSize: 14, fontWeight: 500,
+            background: 'var(--success-dim)', color: 'var(--success)',
+            border: '0.5px solid rgba(34,197,94,0.20)', textDecoration: 'none',
+          }}
+        >
+          <ExternalLink size={14} /> Open Client Dashboard →
+        </a>
+      ) : (
+        <button
+          onClick={onRetryProvision}
+          disabled={retryProvisionLoading}
+          style={{
+            height: 44, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            background: 'var(--bg-elevated)', color: retryProvisionLoading ? 'var(--text-muted)' : 'var(--accent)',
+            border: `0.5px solid ${retryProvisionLoading ? 'var(--border)' : 'var(--accent-border)'}`,
+            borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: retryProvisionLoading ? 'wait' : 'pointer',
+          }}
+        >
+          {retryProvisionLoading ? (
+            <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Provisioning demo account…</>
+          ) : (
+            <><RefreshCw size={13} /> Demo account not ready — retry provisioning</>
+          )}
+        </button>
+      )}
+      {rec.pushback_response && (
+        <div style={{ padding: '10px 12px', background: 'rgba(108,99,255,0.06)', border: '0.5px solid var(--accent-border)', borderRadius: 8 }}>
+          <p style={{ fontSize: 9, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, marginBottom: 4 }}>
+            If they push back on price
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>"{rec.pushback_response}"</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Recommendation Panel ───────────────────────────────────────────────────────
 
 function RecommendationPanel({
@@ -572,213 +792,89 @@ function RecommendationPanel({
   paymentLink, paymentLinkLoading, paymentLinkError, retryProvisionLoading,
   onMarkClosed, onGeneratePaymentLink, onRetryProvision,
 }) {
-  // No fixed packages anymore — `primary` is just a closest-tier color/name
-  // for display, not a sellable unit. There's one custom-priced
-  // recommendation per lead; no alternative package cards.
   const primary = PACKAGES[rec.recommended_tier]
 
   return (
     <div style={{ marginBottom: 16 }}>
 
-      {/* ── Recommended Package — Dominant ─────────────────────────────────── */}
-      <div className="glass-accent" style={{
-        padding: 20, borderRadius: 10, marginBottom: 12,
-        borderTop: `2px solid ${primary?.color || 'var(--accent)'}`,
-        boxShadow: '0 0 0 1px var(--accent-border), 0 0 24px rgba(108,99,255,0.18)',
-      }}>
+      {/* Click-through presentation walk — replaces the static scrolling panel */}
+      <PresentationWalk
+        rec={rec}
+        appt={appt}
+        primary={primary}
+        retryProvisionLoading={retryProvisionLoading}
+        onRetryProvision={onRetryProvision}
+      />
 
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Zap size={14} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-            <span style={{ fontSize: 10, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500 }}>
-              AI Recommendation
-            </span>
-            <span style={{
-              fontSize: 10, padding: '2px 7px', borderRadius: 3,
-              background: 'var(--accent)', color: '#fff',
-              fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em',
-            }}>
-              Recommended
-            </span>
+      {/* Action buttons — always visible below the walk */}
+      {provisionResult ? (
+        <div style={{ padding: '12px 14px', background: 'var(--success-dim)', border: '0.5px solid rgba(34,197,94,0.20)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CheckCircle size={14} style={{ color: 'var(--success)', flexShrink: 0 }} />
+          <div>
+            <p style={{ fontSize: 13, color: 'var(--success)', fontWeight: 500, margin: 0 }}>
+              ${provisionResult.monthlyValue?.toLocaleString()}/mo — Closed!
+            </p>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+              Client created · Onboarding link ready · Admin notified
+            </p>
           </div>
         </div>
-
-        {/* Custom price + automation list */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 30, fontWeight: 500, color: primary?.color || 'var(--accent)', letterSpacing: '-0.02em', lineHeight: 1, fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
-              ${(rec.custom_monthly_price || primary?.monthly)?.toLocaleString()}/mo
-            </span>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-              + $297 setup
-            </span>
-            {rec.custom_monthly_price && (
-              <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-elevated)', padding: '2px 6px', borderRadius: 3 }}>
-                Custom stack
-              </span>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* Real Stripe Checkout Session — gated on a demo account existing */}
+          <PaymentLinkRow
+            demoReady={!!appt.demo_client_id}
+            paymentLink={paymentLink}
+            loading={paymentLinkLoading}
+            error={paymentLinkError}
+            onGenerate={onGeneratePaymentLink}
+            onRetryProvision={onRetryProvision}
+            retryProvisionLoading={retryProvisionLoading}
+          />
+          {/* Mark Closed — one custom stack, one price */}
+          <button
+            onClick={() => onMarkClosed(rec.recommended_tier)}
+            disabled={provisionLoading || isClosed}
+            style={{
+              height: 44, width: '100%',
+              background: isClosed ? 'var(--bg-elevated)' : 'var(--accent)',
+              color: isClosed ? 'var(--text-muted)' : '#fff',
+              border: 'none', borderRadius: 8,
+              fontSize: 14, fontWeight: 500, cursor: isClosed ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              transition: 'all 0.15s',
+              boxShadow: isClosed ? 'none' : '0 0 20px rgba(108,99,255,0.3)',
+            }}
+          >
+            {provisionLoading ? (
+              <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Provisioning…</>
+            ) : isClosed ? (
+              <><CheckCircle size={15} /> Already Closed</>
+            ) : (
+              <><CheckCircle size={15} /> Mark Closed — ${rec.custom_monthly_price?.toLocaleString()}/mo</>
             )}
+          </button>
+        </div>
+      )}
+
+      {/* Lighter alternative — talking point if they push back */}
+      {rec.alternative_automations?.length > 0 && (
+        <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 8 }}>
+          <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, marginBottom: 6 }}>
+            If They Push Back — Lighter Option
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: rec.alternative_reason ? 6 : 0 }}>
+            {rec.alternative_automations.map((a, i) => (
+              <span key={i} style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '0.5px solid var(--border)', borderRadius: 4, padding: '2px 7px' }}>
+                {a.name}
+              </span>
+            ))}
           </div>
-          {/* Free-form AI-generated agent stack — no fixed catalog */}
-          <AgentStackList rec={rec} primary={primary} />
-          {rec.headline && (
-            <p style={{ fontSize: 14, color: 'var(--text-primary)', marginTop: 8, lineHeight: 1.4, fontWeight: 500 }}>
-              "{rec.headline}"
-            </p>
+          {rec.alternative_reason && (
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>{rec.alternative_reason}</p>
           )}
         </div>
-
-        {/* ROI Argument */}
-        {rec.roi_argument && (
-          <div style={{ padding: '10px 14px', background: 'rgba(34,197,94,0.06)', border: '0.5px solid rgba(34,197,94,0.15)', borderRadius: 8, marginBottom: 14, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-            <DollarSign size={13} style={{ color: 'var(--success)', marginTop: 2, flexShrink: 0 }} />
-            <div>
-              <p style={{ fontSize: 10, color: 'var(--success)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, marginBottom: 4 }}>ROI Argument</p>
-              <p style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>{rec.roi_argument}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Pain Points */}
-        {rec.pain_points?.length > 0 && (
-          <div style={{ marginBottom: 14 }}>
-            <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <AlertTriangle size={11} style={{ color: lead.notes || lead.pain_points ? 'var(--warning)' : 'var(--text-muted)' }} />
-              Pain Points {!(lead.notes || lead.pain_points) && <span style={{ color: 'var(--warning)', fontStyle: 'italic' }}>— no rep notes captured</span>}
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              {rec.pain_points.map((pt, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <span style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 2, fontSize: 11 }}>•</span>
-                  <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{pt}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Why Pitch This */}
-        {rec.why_pitch_this && (
-          <div style={{ marginBottom: 14 }}>
-            <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Target size={11} /> Why Pitch This
-            </p>
-            <p style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>{rec.why_pitch_this}</p>
-          </div>
-        )}
-
-        {/* Talking Points */}
-        {rec.talking_points?.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <MessageSquare size={11} /> Talking Points
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {rec.talking_points.map((pt, i) => (
-                <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: 11, color: 'var(--accent)', fontFamily: 'var(--font-mono)', flexShrink: 0, marginTop: 2 }}>{i + 1}.</span>
-                  <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{pt}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Pushback Response */}
-        {rec.pushback_response && (
-          <div style={{ padding: '10px 14px', background: 'rgba(108,99,255,0.06)', border: '0.5px solid var(--accent-border)', borderRadius: 8, marginBottom: 16 }}>
-            <p style={{ fontSize: 10, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, marginBottom: 4 }}>If They Push Back on Price</p>
-            <p style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>"{rec.pushback_response}"</p>
-          </div>
-        )}
-
-        {/* ── Action Buttons ─────────────────────────────────────────────────── */}
-        {provisionResult ? (
-          <div style={{ padding: '12px 14px', background: 'var(--success-dim)', border: '0.5px solid rgba(34,197,94,0.20)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <CheckCircle size={14} style={{ color: 'var(--success)', flexShrink: 0 }} />
-            <div>
-              <p style={{ fontSize: 13, color: 'var(--success)', fontWeight: 500, margin: 0 }}>
-                ${provisionResult.monthlyValue?.toLocaleString()}/mo — Closed!
-              </p>
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                Client created · Onboarding link ready · Admin notified
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {appt.demo_client_id && (
-              <a
-                href={import.meta.env.VITE_CLIENT_PORTAL_URL || 'https://ohvara-client-portal.vercel.app'}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  height: 36, borderRadius: 6, fontSize: 13,
-                  background: 'var(--bg-elevated)', color: 'var(--text-secondary)',
-                  border: '0.5px solid var(--border)', textDecoration: 'none',
-                }}
-              >
-                Open Client Dashboard →
-              </a>
-            )}
-            {/* Real Stripe Checkout Session at the actual custom price — one
-                combined session (monthly + setup), gated on a demo account
-                existing (Prompt 7) since that's what the session is tagged to. */}
-            <PaymentLinkRow
-              demoReady={!!appt.demo_client_id}
-              paymentLink={paymentLink}
-              loading={paymentLinkLoading}
-              error={paymentLinkError}
-              onGenerate={onGeneratePaymentLink}
-              onRetryProvision={onRetryProvision}
-              retryProvisionLoading={retryProvisionLoading}
-            />
-            {/* Mark Closed — one custom stack, one price, no alternative packages */}
-            <button
-              onClick={() => onMarkClosed(rec.recommended_tier)}
-              disabled={provisionLoading || isClosed}
-              style={{
-                height: 44, width: '100%',
-                background: isClosed ? 'var(--bg-elevated)' : 'var(--accent)',
-                color: isClosed ? 'var(--text-muted)' : '#fff',
-                border: 'none', borderRadius: 8,
-                fontSize: 14, fontWeight: 500, cursor: isClosed ? 'not-allowed' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                transition: 'all 0.15s',
-                boxShadow: isClosed ? 'none' : '0 0 20px rgba(108,99,255,0.3)',
-              }}
-            >
-              {provisionLoading ? (
-                <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Provisioning…</>
-              ) : isClosed ? (
-                <><CheckCircle size={15} /> Already Closed</>
-              ) : (
-                <><CheckCircle size={15} /> Mark Closed — ${rec.custom_monthly_price?.toLocaleString()}/mo</>
-              )}
-            </button>
-          </div>
-        )}
-
-        {/* Lighter alternative — a talking point if they push back, not a separate billable package */}
-        {rec.alternative_automations?.length > 0 && (
-          <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 8 }}>
-            <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, marginBottom: 6 }}>
-              If They Push Back — Lighter Option
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: rec.alternative_reason ? 6 : 0 }}>
-              {rec.alternative_automations.map((a, i) => (
-                <span key={i} style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '0.5px solid var(--border)', borderRadius: 4, padding: '2px 7px' }}>
-                  {a.name}
-                </span>
-              ))}
-            </div>
-            {rec.alternative_reason && (
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>{rec.alternative_reason}</p>
-            )}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   )
 }
@@ -1083,13 +1179,20 @@ function PaymentLinkRow({ demoReady, paymentLink, loading, error, onGenerate, on
           onClick={onRetryProvision}
           disabled={retryProvisionLoading}
           style={{
-            display: 'block', marginTop: 4, background: 'none', border: 'none',
-            padding: 0, fontSize: 10, cursor: retryProvisionLoading ? 'wait' : 'pointer',
+            width: '100%', height: 36, marginTop: 6,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            background: 'var(--bg-elevated)',
             color: retryProvisionLoading ? 'var(--text-muted)' : 'var(--accent)',
-            textDecoration: 'underline', textAlign: 'left',
+            border: `0.5px solid ${retryProvisionLoading ? 'var(--border)' : 'var(--accent-border)'}`,
+            borderRadius: 6, fontSize: 12,
+            cursor: retryProvisionLoading ? 'wait' : 'pointer',
           }}
         >
-          {retryProvisionLoading ? 'Provisioning demo account…' : 'Demo account not ready — retry provisioning'}
+          {retryProvisionLoading ? (
+            <><Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> Provisioning demo account…</>
+          ) : (
+            <><RefreshCw size={11} /> Demo account not ready — retry provisioning</>
+          )}
         </button>
       )}
       {error && (

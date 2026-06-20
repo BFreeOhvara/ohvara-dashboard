@@ -54,7 +54,7 @@ const PAIN_LABELS: Record<string, string> = {
   never_booked:  'leads who called but never booked',
 }
 
-type Automation = { name: string; description: string }
+type Automation = { name: string; description: string; customer_benefit?: string }
 
 // Heuristic, catalog-free automation generation for the no-API-key / API-error
 // fallback path. Builds 2-5 named automations straight from whatever discovery
@@ -68,43 +68,43 @@ function fallbackAutomations(inputs: {
 }): Automation[] {
   const { primaryPain, currentSetup, secondaryPain, callsMissedPerWeek, repNotes } = inputs
   const automations: Automation[] = [
-    { name: 'AI Receptionist', description: '24/7 call answering — captures every lead, even after hours' },
+    { name: 'AI Receptionist', description: '24/7 call answering — captures every lead, even after hours', customer_benefit: 'You get every inbound call answered, even when your crew is on a job — no leads slip through' },
   ]
 
   const painLabel = primaryPain ? PAIN_LABELS[primaryPain] : null
   if (painLabel === 'missed calls' || (callsMissedPerWeek && callsMissedPerWeek > 0)) {
-    automations.push({ name: 'Missed Call Text Back', description: 'Auto-SMS to any caller who doesn\'t get answered' })
+    automations.push({ name: 'Missed Call Text Back', description: 'Auto-SMS to any caller who doesn\'t get answered', customer_benefit: 'Every missed call gets an instant text back — prospects stay warm instead of calling someone else' })
   }
   if (painLabel === 'slow response times') {
-    automations.push({ name: 'Instant Lead Response', description: 'AI replies to every new inquiry within seconds, day or night' })
+    automations.push({ name: 'Instant Lead Response', description: 'AI replies to every new inquiry within seconds, day or night', customer_benefit: 'Every new inquiry gets a reply in seconds — before they move on to the next business' })
   }
   if (painLabel === 'no-shows') {
-    automations.push({ name: 'Appointment Reminders', description: 'SMS reminders that cut no-shows by 60%+' })
+    automations.push({ name: 'Appointment Reminders', description: 'SMS reminders that cut no-shows by 60%+', customer_benefit: 'No-shows drop dramatically because customers get reminders that actually get seen' })
   }
   if (painLabel === 'leads who called but never booked') {
-    automations.push({ name: 'Lead Follow-Up Automation', description: 'Multi-touch follow-up for quotes that go quiet' })
+    automations.push({ name: 'Lead Follow-Up Automation', description: 'Multi-touch follow-up for quotes that go quiet', customer_benefit: 'Quotes that went quiet come back to life — the system follows up so you don\'t have to' })
   }
 
   const notes = `${repNotes || ''} ${currentSetup || ''} ${secondaryPain || ''}`.toLowerCase()
   if (notes.includes('review') || notes.includes('reputation') || notes.includes('rating')) {
-    automations.push({ name: 'Review Generation', description: 'Auto-requests 5-star reviews from completed jobs' })
+    automations.push({ name: 'Review Generation', description: 'Auto-requests 5-star reviews from completed jobs', customer_benefit: 'You build a 5-star reputation automatically, without ever having to ask' })
   }
   if (notes.includes('dispatch') || notes.includes('route') || notes.includes('crew')) {
-    automations.push({ name: 'AI Dispatcher', description: 'Intelligent call routing to the right crew member' })
+    automations.push({ name: 'AI Dispatcher', description: 'Intelligent call routing to the right crew member', customer_benefit: 'Every call goes to the right person instantly — no hold times, no chaos' })
   }
   if (notes.includes('marketing') || notes.includes('repeat') || notes.includes('seasonal')) {
-    automations.push({ name: 'SMS Marketing', description: 'Monthly campaigns to past customers for repeat jobs' })
+    automations.push({ name: 'SMS Marketing', description: 'Monthly campaigns to past customers for repeat jobs', customer_benefit: 'Past customers come back on their own — repeat jobs without any extra sales effort' })
   }
   if (notes.includes('website') || notes.includes('web') || notes.includes('online')) {
-    automations.push({ name: 'Professional Website', description: 'Mobile-first site that converts visitors to booked calls' })
+    automations.push({ name: 'Professional Website', description: 'Mobile-first site that converts visitors to booked calls', customer_benefit: 'You get a site that turns visitors into booked calls, not just a brochure' })
   }
 
   // Ensure a minimum of 4 automations so the split+floor always has material to work with.
   const fallbackPad = [
-    { name: 'Missed Call Text Back', description: 'Auto-SMS to any caller who doesn\'t get answered' },
-    { name: 'Appointment Reminders', description: 'SMS reminders that cut no-shows by 60%+' },
-    { name: 'Review Generation', description: 'Auto-requests 5-star reviews from completed jobs' },
-    { name: 'Lead Follow-Up Automation', description: 'Multi-touch follow-up for quotes that go quiet' },
+    { name: 'Missed Call Text Back', description: 'Auto-SMS to any caller who doesn\'t get answered', customer_benefit: 'Every missed call gets an instant text back — prospects stay warm instead of calling someone else' },
+    { name: 'Appointment Reminders', description: 'SMS reminders that cut no-shows by 60%+', customer_benefit: 'No-shows drop dramatically because customers get reminders that actually get seen' },
+    { name: 'Review Generation', description: 'Auto-requests 5-star reviews from completed jobs', customer_benefit: 'You build a 5-star reputation automatically, without ever having to ask' },
+    { name: 'Lead Follow-Up Automation', description: 'Multi-touch follow-up for quotes that go quiet', customer_benefit: 'Quotes that went quiet come back to life — the system follows up so you don\'t have to' },
   ]
   for (const a of fallbackPad) {
     if (automations.length >= 4) break
@@ -143,14 +143,14 @@ function enforceBothTiers(frontRunners: Automation[], subAgents: Automation[]): 
 // Curated pool for padding sub-agents when the AI or fallback returns too few.
 // Ordered by how broadly applicable they are to SMB phone-booking businesses.
 const AUTOMATION_POOL: Automation[] = [
-  { name: 'Appointment Reminders', description: 'SMS reminders that cut no-shows by 60%+' },
-  { name: 'Review Generation', description: 'Auto-requests 5-star reviews from completed jobs' },
-  { name: 'Lead Follow-Up Automation', description: 'Multi-touch follow-up for quotes that go quiet' },
-  { name: 'After-Hours Call Handler', description: 'Captures leads when the office is closed' },
-  { name: 'Booking Confirmation SMS', description: 'Instant confirmation text when appointments are scheduled' },
-  { name: 'Customer Reactivation', description: 'Re-engages past customers for repeat and referral business' },
-  { name: 'Missed Call Text Back', description: 'Auto-SMS to any caller who doesn\'t get answered' },
-  { name: 'Job Status Updates', description: 'Automated SMS keeping customers informed on job progress' },
+  { name: 'Appointment Reminders', description: 'SMS reminders that cut no-shows by 60%+', customer_benefit: 'No-shows drop dramatically because customers get reminders that actually get seen' },
+  { name: 'Review Generation', description: 'Auto-requests 5-star reviews from completed jobs', customer_benefit: 'You build a 5-star reputation automatically, without ever having to ask' },
+  { name: 'Lead Follow-Up Automation', description: 'Multi-touch follow-up for quotes that go quiet', customer_benefit: 'Quotes that went quiet come back to life — the system follows up so you don\'t have to' },
+  { name: 'After-Hours Call Handler', description: 'Captures leads when the office is closed', customer_benefit: 'Leads coming in after hours still get answered — you never lose a job to off-hours timing' },
+  { name: 'Booking Confirmation SMS', description: 'Instant confirmation text when appointments are scheduled', customer_benefit: 'Every new booking gets instant confirmation — customers feel taken care of from the start' },
+  { name: 'Customer Reactivation', description: 'Re-engages past customers for repeat and referral business', customer_benefit: 'Past customers come back on their own — repeat jobs without any extra sales effort' },
+  { name: 'Missed Call Text Back', description: 'Auto-SMS to any caller who doesn\'t get answered', customer_benefit: 'Every missed call gets an instant text back — prospects stay warm instead of calling someone else' },
+  { name: 'Job Status Updates', description: 'Automated SMS keeping customers informed on job progress', customer_benefit: 'Customers stay informed without calling in — fewer interruptions, happier jobs' },
 ]
 
 // Enforces the stack composition floor: sub_agents ≥ 2 × front_runners.length.
@@ -284,8 +284,8 @@ CLOSER: ${closerName || 'Nate'}
 
 Respond with ONLY valid JSON, no markdown:
 {
-  "front_runners": [{"name": "Short Specific Name", "description": "One-line description"}],
-  "sub_agents": [{"name": "Short Specific Name", "description": "One-line description"}],
+  "front_runners": [{"name": "Short Specific Name", "description": "One-line description of what the automation does", "customer_benefit": "You get [specific benefit tied to their diagnosed pain] — written as what the customer experiences, not a feature description"}],
+  "sub_agents": [{"name": "Short Specific Name", "description": "One-line description of what the automation does", "customer_benefit": "You get [specific benefit tied to their diagnosed pain] — written as what the customer experiences, not a feature description"}],
   "confidence": "high|medium|low",
   "headline": "One punchy sentence — max 12 words",
   "roi_argument": "Specific dollar-anchored ROI argument using the numbers above",
@@ -306,7 +306,7 @@ Respond with ONLY valid JSON, no markdown:
         const anthropic = new Anthropic({ apiKey })
         const message = await anthropic.messages.create({
           model: 'claude-haiku-4-5',
-          max_tokens: 1200,
+          max_tokens: 1500,
           messages: [{ role: 'user', content: prompt }],
         })
 
@@ -326,7 +326,12 @@ Respond with ONLY valid JSON, no markdown:
           return raw
             .map(a => {
               if (a && typeof a === 'object' && typeof (a as Automation).name === 'string') {
-                return { name: (a as Automation).name.trim(), description: String((a as Automation).description || '').trim() }
+                const benefit = String((a as Automation).customer_benefit || '').trim()
+                return {
+                  name: (a as Automation).name.trim(),
+                  description: String((a as Automation).description || '').trim(),
+                  ...(benefit ? { customer_benefit: benefit } : {}),
+                }
               }
               if (typeof a === 'string') return { name: a, description: '' }
               return null
