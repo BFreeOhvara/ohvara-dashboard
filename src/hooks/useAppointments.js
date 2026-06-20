@@ -15,7 +15,7 @@ export function useMyAppointments() {
           rep:profiles!appointments_rep_id_fkey(id, full_name),
           reminders:reminder_log(id, scheduled_time, status, channel)
         `)
-        .eq('closer_id', profile.id)
+        .or(`closer_id.eq.${profile.id},closer_id.is.null`)
         .eq('status', 'pending')
         .order('scheduled_at', { ascending: true })
       if (error) throw error
