@@ -3,6 +3,7 @@ import {
   ChevronDown, ChevronUp, MapPin, Phone, Mail, Sparkles, Loader2,
   Calendar, Bell, Zap, DollarSign, Target, MessageSquare,
   CheckCircle, AlertTriangle, Star, RefreshCw, Globe, Activity, Eye,
+  Copy, ExternalLink, KeyRound,
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
@@ -10,6 +11,7 @@ import { Select, Textarea, Input } from '../ui/Input'
 import { useUpdateAppointment } from '../../hooks/useAppointments'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
+import { syntheticStatsFor } from '../../lib/syntheticStats'
 
 // Package display config — matches North Star locked pricing.
 // services mirror the recommend-stack edge function PACKAGES (Elite itemized in full).
@@ -96,6 +98,8 @@ export function AppointmentCard({ appt }) {
   const [provisionLoading, setProvisionLoading] = useState(false)
   const [provisionResult, setProvisionResult] = useState(null)
   const [overridePrice, setOverridePrice] = useState('')
+  const [clientEmail, setClientEmail] = useState('')
+  const [lostLoading, setLostLoading] = useState(false)
   const [stripeLinks, setStripeLinks] = useState({})
   const [stripeLoading, setStripeLoading] = useState({})
   const update = useUpdateAppointment()
@@ -167,6 +171,7 @@ export function AppointmentCard({ appt }) {
           recommendedTier: rec?.recommended_tier || null,
           recommendedPrice: rec?.custom_monthly_price ?? (rec?.recommended_tier ? PACKAGES[rec.recommended_tier]?.monthly ?? null : null),
           overridePrice: parsedOverride && parsedOverride > 0 ? parsedOverride : null,
+          clientEmail: clientEmail.trim() || lead.email || null,
         },
       })
       if (error) throw new Error(error.message)
@@ -233,6 +238,19 @@ export function AppointmentCard({ appt }) {
       await supabase.functions.invoke('schedule-reminders', {
         body: { appointment_id: appt.id, cancel_all: true },
       })
+    }
+    // Prompt 8: marking a deal lost deletes its demo client account (real
+    // auth.users delete needs the service role, not available client-side) —
+    // no-ops if there was never a demo account for this appointment.
+    if (outcome === 'lost' && appt.demo_client_id) {
+      setLostLoading(true)
+      try {
+        await supabase.functions.invoke('cleanup-lost-demo', { body: { appointmentId: appt.id } })
+      } catch (err) {
+        console.error('[AppointmentCard] cleanup-lost-demo failed:', err)
+      } finally {
+        setLostLoading(false)
+      }
     }
   }
 
@@ -330,18 +348,25 @@ export function AppointmentCard({ appt }) {
               {outcome && outcome !== 'closed' && (
                 <Input value={lossReason} onChange={e => setLossReason(e.target.value)} placeholder="Loss reason…" style={{ flex: '1 1 180px' }} />
               )}
-              <Button size="sm" onClick={handleComplete} disabled={!outcome || update.isPending}>
-                {update.isPending ? 'Saving…' : 'Save Outcome'}
+              <Button size="sm" onClick={handleComplete} disabled={!outcome || update.isPending || lostLoading}>
+                {update.isPending ? 'Saving…' : lostLoading ? 'Cleaning up demo…' : 'Save Outcome'}
               </Button>
             </div>
             {!isClosed && (
-              <div style={{ marginTop: 10 }}>
+              <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 <Input
                   type="number"
                   value={overridePrice}
                   onChange={e => setOverridePrice(e.target.value)}
                   placeholder="Override monthly price (optional — leave blank to bill list price)"
-                  style={{ maxWidth: 320 }}
+                  style={{ flex: '1 1 260px', maxWidth: 320 }}
+                />
+                <Input
+                  type="email"
+                  value={clientEmail}
+                  onChange={e => setClientEmail(e.target.value)}
+                  placeholder="Client's real email (optional — for their login on close)"
+                  style={{ flex: '1 1 260px', maxWidth: 320 }}
                 />
               </div>
             )}
@@ -389,6 +414,13 @@ export function AppointmentCard({ appt }) {
           {rec?.recommended_automations?.length > 0 && (
             <div style={{ padding: '0 16px 16px' }}>
               <SampleDashboard rec={rec} lead={lead} />
+            </div>
+          )}
+
+          {/* ── Open Client Preview — real demo login, not just a panel ────────── */}
+          {appt.demo_client_id && (
+            <div style={{ padding: '0 16px 16px' }}>
+              <ClientPreviewCard demoCredentials={appt.demo_credentials} />
             </div>
           )}
 
@@ -641,6 +673,76 @@ function RecommendationPanel({
   )
 }
 
+// ── Client Preview — real demo login ────────────────────────────────────────────
+// Unlike SampleDashboard (an in-card panel), this is an actual provisioned
+// account (provision-demo-client, fired from CallModal on booking) Nate can
+// open in a new tab and hand the prospect the password for live, on the
+// call. Disappears once the deal closes/is lost (demo_client_id clears).
+
+function ClientPreviewCard({ demoCredentials }) {
+  const [copied, setCopied] = useState(false)
+  const portalUrl = `${window.location.origin}/login`
+
+  async function copyLogin() {
+    if (!demoCredentials) return
+    const text = `${window.location.origin}/login\nUsername: ${demoCredentials.username}\nPassword: ${demoCredentials.password}`
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard permission denied — silently no-op, the credentials are still visible to read
+    }
+  }
+
+  return (
+    <div className="glass-accent" style={{ padding: '14px 16px', borderRadius: 10 }}>
+      <p style={{ fontSize: 10, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <KeyRound size={11} /> Live Client Preview
+      </p>
+      {demoCredentials ? (
+        <>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10, lineHeight: 1.5 }}>
+            A real dashboard account is provisioned for this prospect with sample data — open it and walk them through it live on the call.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12, fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+            <span style={{ color: 'var(--text-muted)' }}>Username: <span style={{ color: 'var(--text-primary)' }}>{demoCredentials.username}</span></span>
+            <span style={{ color: 'var(--text-muted)' }}>Password: <span style={{ color: 'var(--text-primary)' }}>{demoCredentials.password}</span></span>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={copyLogin}
+              style={{
+                flex: 1, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                background: 'var(--bg-elevated)', color: 'var(--text-primary)',
+                border: '0.5px solid var(--border)', borderRadius: 7, fontSize: 12, cursor: 'pointer',
+              }}
+            >
+              {copied ? <><CheckCircle size={13} style={{ color: 'var(--success)' }} /> Copied</> : <><Copy size={13} /> Copy Login</>}
+            </button>
+            <a
+              href={portalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                flex: 1, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                background: 'var(--accent-dim)', color: 'var(--accent)',
+                border: '0.5px solid var(--accent-border)', borderRadius: 7, fontSize: 12, textDecoration: 'none',
+              }}
+            >
+              <ExternalLink size={13} /> Open Dashboard
+            </a>
+          </div>
+        </>
+      ) : (
+        <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+          Demo account is provisioned but login creation failed — create one manually via Admin → Users.
+        </p>
+      )}
+    </div>
+  )
+}
+
 // ── Sample Dashboard Preview ───────────────────────────────────────────────────
 // Shows only the automations in rec.recommended_automations, sample data only,
 // clearly labeled. Nate uses this to walk the prospect through the actual
@@ -754,44 +856,6 @@ function SampleOverview({ automations, recoveredJobs, estRevenue, callsPerWeek }
       </p>
     </div>
   )
-}
-
-// Deterministic string hash + seeded PRNG — same automation name always
-// produces the same sample numbers within a render, but no fixed catalog
-// lookup table is needed (automations are AI-generated, name varies per lead).
-function hashStr(s) {
-  let h = 0
-  for (let i = 0; i < s.length; i++) { h = (h << 5) - h + s.charCodeAt(i); h |= 0 }
-  return Math.abs(h) || 1
-}
-
-function seededRandom(seed) {
-  let s = seed % 2147483647
-  if (s <= 0) s += 2147483646
-  return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646 }
-}
-
-const TAB_COLORS = ['var(--accent)', 'var(--success)', 'var(--info)', 'var(--warning)']
-
-function syntheticStatsFor(automation, index) {
-  const rand = seededRandom(hashStr(automation.name + index))
-  const actions = Math.round(20 + rand() * 70)
-  const successRate = Math.round(60 + rand() * 35)
-  const value = Math.round((400 + rand() * 3800) / 50) * 50
-  const color = TAB_COLORS[index % TAB_COLORS.length]
-  return {
-    color,
-    kpis: [
-      { label: 'Actions This Month', value: `${actions}` },
-      { label: 'Success Rate', value: `${successRate}%` },
-      { label: 'Est. Value Recovered', value: `$${value.toLocaleString()}` },
-    ],
-    feed: [
-      `${automation.name} triggered — ${Math.round(rand() * 50) + 1} min ago`,
-      automation.description ? `${automation.description} — Yesterday` : 'New activity logged — Yesterday',
-      `${Math.max(1, Math.round(actions / 10))} actions completed this week`,
-    ],
-  }
 }
 
 function SampleAutomationTab({ automation, index }) {

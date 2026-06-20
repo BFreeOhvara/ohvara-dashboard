@@ -242,14 +242,39 @@ export function CallModal({ lead, onClose }) {
             currentSetup:       patch.current_setup,
             secondaryPain:      secondaryPain || null,
           },
-        }).then(({ data }) => {
-          if (data?.rec) {
-            supabase.from('leads').update({
-              recommended_automations: data.rec.recommended_automations ?? null,
-              custom_monthly_price:    data.rec.custom_monthly_price ?? null,
-              recommended_stack:       data.rec,
-              stack_generated_at:      new Date().toISOString(),
-            }).eq('id', lead.id)
+        }).then(async ({ data }) => {
+          if (!data?.rec) return
+          await supabase.from('leads').update({
+            recommended_automations: data.rec.recommended_automations ?? null,
+            custom_monthly_price:    data.rec.custom_monthly_price ?? null,
+            recommended_stack:       data.rec,
+            stack_generated_at:      new Date().toISOString(),
+          }).eq('id', lead.id)
+
+          // Auto-provision a real demo client account Nate can show live on
+          // the close call. Chained AFTER the cache-write (not parallel with
+          // recommend-stack) so the automations/price it's seeded with are
+          // never stale — same data just written above, not a re-read.
+          const { data: pendingAppt } = await supabase
+            .from('appointments')
+            .select('id')
+            .eq('lead_id', lead.id)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          if (pendingAppt?.id) {
+            supabase.functions.invoke('provision-demo-client', {
+              body: {
+                appointmentId:        pendingAppt.id,
+                leadId:                lead.id,
+                businessName:          lead.business_name,
+                niche:                 lead.niche,
+                location:              lead.city || null,
+                customMonthlyPrice:    data.rec.custom_monthly_price ?? null,
+                recommendedAutomations: data.rec.recommended_automations ?? null,
+              },
+            }).catch(() => {})
           }
         }).catch(() => {})
       }

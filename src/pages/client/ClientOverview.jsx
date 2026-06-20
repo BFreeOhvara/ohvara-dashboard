@@ -1,10 +1,9 @@
 import { useNavigate } from 'react-router-dom'
-import { Phone, Clock, CheckCircle, Loader2, AlertTriangle, Bot, Package, Zap } from 'lucide-react'
+import { Phone, Clock, CheckCircle, Loader2, AlertTriangle, Bot, Package, Zap, Eye } from 'lucide-react'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { KPICard } from '../../components/ui/KPICard'
 import { useMyClient, useMyOnboarding } from '../../hooks/useClientPortal'
-import { TIER_NAMES, TIER_FEATURES } from './clientConstants'
 
 export default function ClientOverview() {
   const navigate = useNavigate()
@@ -41,16 +40,28 @@ export default function ClientOverview() {
   )
 
   const tier = client.tier || 'basic'
+  const isDemo = client.status === 'demo'
   const isActive = client.status === 'active'
   const isAgentLive = !!client.retell_agent_id
   const hasPhone = !!client.twilio_number
-  const features = TIER_FEATURES.filter(f => f.tiers.includes(tier))
+  // Free-form AI-generated automations (Prompt 5) — no fixed catalog anymore.
+  const automations = client.recommended_automations || []
 
   return (
     <div style={{ display: 'flex', gap: 20, minHeight: 0 }}>
 
       {/* Left — KPIs + automations grid */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+        {/* Demo preview banner */}
+        {isDemo && (
+          <div className="glass-accent" style={{ padding: '10px 14px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Eye size={14} style={{ color: 'var(--warning)', flexShrink: 0 }} />
+            <p style={{ fontSize: 12, color: 'var(--warning)', margin: 0 }}>
+              <strong>Demo Preview</strong> — sample data. Goes live with real call data when you sign up.
+            </p>
+          </div>
+        )}
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
@@ -68,10 +79,10 @@ export default function ClientOverview() {
         {/* KPI row */}
         <div className="stagger" style={{ display: 'flex', gap: 12 }}>
           <KPICard
-            label="Package"
-            value={TIER_NAMES[tier] || tier}
+            label="Custom Stack"
+            value={client.monthly_value ? `$${Number(client.monthly_value).toLocaleString()}/mo` : '—'}
             icon={Package}
-            sub={`${features.length} automations included`}
+            sub={`${automations.length} automation${automations.length === 1 ? '' : 's'} included`}
           />
           <KPICard
             label="AI Agent"
@@ -82,30 +93,31 @@ export default function ClientOverview() {
           />
           <KPICard
             label="Active Services"
-            value={isAgentLive ? features.length : 0}
+            value={isAgentLive ? automations.length : 0}
             icon={Zap}
             sub={isAgentLive ? 'All running' : 'Activating after setup'}
             subColor={isAgentLive ? 'var(--success)' : 'var(--warning)'}
           />
         </div>
 
-        {/* Automations grid */}
+        {/* Automations grid — free-form, AI-generated per this business's stated problems */}
         <div>
           <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500, marginBottom: 10 }}>
             Your Automations
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
-            {features.map(f => (
-              <div key={f.key} className="glass" style={{ padding: '14px 16px', borderRadius: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontSize: 18 }}>{f.icon}</span>
+            {automations.map((a, i) => (
+              <div key={i} className="glass" style={{ padding: '14px 16px', borderRadius: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 8 }}>
                   {isAgentLive
                     ? <CheckCircle size={14} style={{ color: 'var(--success)' }} />
                     : <Clock size={14} style={{ color: 'var(--warning)' }} />
                   }
                 </div>
-                <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{f.name}</p>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.4 }}>{f.desc.split(' — ')[0]}</p>
+                <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{a.name}</p>
+                {a.description && (
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.4 }}>{a.description}</p>
+                )}
               </div>
             ))}
           </div>

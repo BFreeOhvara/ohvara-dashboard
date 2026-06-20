@@ -122,6 +122,7 @@ Deno.serve(async (req) => {
       recommendedTier,
       recommendedPrice,
       overridePrice,
+      clientEmail,
     } = await req.json()
 
     if (!appointmentId || !tier || !businessName) {
@@ -145,36 +146,85 @@ Deno.serve(async (req) => {
       closer_id: closerId,
     }).eq('id', appointmentId)
 
-    // 2. Create client record — override_price (Nate's negotiated price, if set)
-    // wins as the billed monthly_value; recommended_tier/recommended_price persist
-    // the AI's recommendation at close time for later analysis.
+    // 2. Create (or reuse) the client record. Billed monthly_value priority:
+    // override_price (Nate's negotiated price) > recommendedPrice (the actual
+    // custom formula price from recommend-stack) > getTierPrice(tier) (last-
+    // resort fallback for old/incomplete data only — tier is a closest-color
+    // label now, not a sellable price point, so this should rarely fire).
     const finalMonthlyValue = typeof overridePrice === 'number' && overridePrice > 0
       ? overridePrice
-      : getTierPrice(tier)
+      : typeof recommendedPrice === 'number' && recommendedPrice > 0
+        ? recommendedPrice
+        : getTierPrice(tier)
 
-    const { data: client, error: clientError } = await supabase
-      .from('clients')
-      .insert({
-        business_name: businessName,
-        niche: niche || null,
-        location: location || null,
-        tier,
-        status: 'onboarding',
-        monthly_value: finalMonthlyValue,
-        setup_fee: 297,
-        recommended_tier: recommendedTier || null,
-        recommended_price: typeof recommendedPrice === 'number' ? recommendedPrice : null,
-        override_price: typeof overridePrice === 'number' && overridePrice > 0 ? overridePrice : null,
-      })
-      .select()
+    const clientFields = {
+      business_name: businessName,
+      niche: niche || null,
+      location: location || null,
+      tier,
+      status: 'onboarding',
+      monthly_value: finalMonthlyValue,
+      setup_fee: 297,
+      recommended_tier: recommendedTier || null,
+      recommended_price: typeof recommendedPrice === 'number' ? recommendedPrice : null,
+      override_price: typeof overridePrice === 'number' && overridePrice > 0 ? overridePrice : null,
+    }
+
+    // Prompt 7/8: if this appointment already has a demo account (provisioned
+    // automatically at booking), convert it in place — update the same
+    // clients row + reuse the same login, rather than spawning a duplicate.
+    const { data: existingAppt } = await supabase
+      .from('appointments')
+      .select('demo_client_id')
+      .eq('id', appointmentId)
       .single()
 
-    if (clientError) throw new Error(`Failed to create client: ${clientError.message}`)
+    let client: { id: string; profile_id: string | null } | null = null
+    let login: { userId: string; username: string; password: string } | null = null
+    let reusedDemo = false
 
-    // 3. Create the client's login (auth.users + profiles role='client') and link it
-    const login = await createClientLogin(supabase, businessName)
-    if (login) {
-      await supabase.from('clients').update({ profile_id: login.userId }).eq('id', client.id)
+    if (existingAppt?.demo_client_id) {
+      const { data: updated, error: updateError } = await supabase
+        .from('clients')
+        .update(clientFields)
+        .eq('id', existingAppt.demo_client_id)
+        .select('id, profile_id')
+        .single()
+      if (updateError) throw new Error(`Failed to convert demo client: ${updateError.message}`)
+      client = updated
+      reusedDemo = true
+
+      // Swap the demo-{leadId}@ohvara.internal identity for a real email if
+      // Nate provided one (or the lead has one on file) — same password, so
+      // there's nothing new to hand the client who already saw the demo.
+      const realEmail = (clientEmail || '').trim()
+      if (client.profile_id && realEmail) {
+        const { error: emailError } = await supabase.auth.admin.updateUserById(client.profile_id, {
+          email: realEmail,
+          email_confirm: true,
+        })
+        if (emailError) console.error('[provision-client] email update failed:', emailError.message)
+      }
+    } else {
+      const { data: created, error: clientError } = await supabase
+        .from('clients')
+        .insert(clientFields)
+        .select('id, profile_id')
+        .single()
+      if (clientError) throw new Error(`Failed to create client: ${clientError.message}`)
+      client = created
+
+      // 3. Create the client's login (auth.users + profiles role='client') and link it
+      login = await createClientLogin(supabase, businessName)
+      if (login) {
+        await supabase.from('clients').update({ profile_id: login.userId }).eq('id', client.id)
+      }
+    }
+
+    // Demo account is now a real one — clear the appointment's demo pointer
+    // so the closer UI stops showing "Open Client Preview" for it.
+    if (reusedDemo) {
+      await supabase.from('appointments').update({ demo_client_id: null, demo_credentials: null }).eq('id', appointmentId)
     }
 
     // 4. Generate onboarding questions per tier
@@ -190,16 +240,22 @@ Deno.serve(async (req) => {
 
     // 6. Create admin notification (carries the login credentials for manual handoff —
     // no client email automation exists yet)
+    const dealLabel = `${businessName} closed on ${tier[0].toUpperCase() + tier.slice(1)} ($${finalMonthlyValue}/mo)`
+    const notifMessage = reusedDemo
+      ? `${dealLabel} — converted from demo account, same login as shown on the call`
+      : login
+        ? `${dealLabel} — login: ${login.username} / ${login.password}`
+        : `${dealLabel} — login creation FAILED, create manually`
+
     await supabase.from('notifications').insert({
       type: 'new_client',
-      message: login
-        ? `${businessName} closed on ${tier[0].toUpperCase() + tier.slice(1)} ($${finalMonthlyValue}/mo) — login: ${login.username} / ${login.password}`
-        : `${businessName} closed on ${tier[0].toUpperCase() + tier.slice(1)} ($${finalMonthlyValue}/mo) — login creation FAILED, create manually`,
+      message: notifMessage,
       data: {
         clientId: client.id,
         tier,
         closerId,
         appointmentId,
+        reusedDemo,
         ...(login ? { clientLogin: { username: login.username, password: login.password } } : {}),
       },
     })
@@ -218,6 +274,7 @@ Deno.serve(async (req) => {
         onboardingUrl: portalUrl,
         questionCount: questions.length,
         clientLogin: login ? { username: login.username, password: login.password } : null,
+        reusedDemo,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
