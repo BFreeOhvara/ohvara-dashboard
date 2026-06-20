@@ -15,12 +15,12 @@ import { supabase } from '../../lib/supabase'
 // services mirror the recommend-stack edge function PACKAGES (Elite itemized in full).
 const PACKAGES = {
   basic: {
-    name: 'Basic', setup: 497, monthly: 497,
+    name: 'Basic', setup: 297, monthly: 497,
     color: 'var(--info)', dim: 'var(--info-dim)', border: 'rgba(56,189,248,0.20)',
     services: ['AI Receptionist (24/7)', 'Missed Call Text Back'],
   },
   pro: {
-    name: 'Pro', setup: 497, monthly: 797,
+    name: 'Pro', setup: 297, monthly: 797,
     color: 'var(--accent)', dim: 'var(--accent-dim)', border: 'var(--accent-border)',
     services: [
       'AI Receptionist (24/7)', 'Missed Call Text Back', 'Review Generation',
@@ -28,7 +28,7 @@ const PACKAGES = {
     ],
   },
   premium: {
-    name: 'Premium', setup: 497, monthly: 1297,
+    name: 'Premium', setup: 297, monthly: 1297,
     color: 'var(--success)', dim: 'var(--success-dim)', border: 'rgba(34,197,94,0.20)',
     services: [
       'AI Receptionist (24/7)', 'Missed Call Text Back', 'Review Generation',
@@ -36,131 +36,13 @@ const PACKAGES = {
     ],
   },
   elite: {
-    name: 'Elite', setup: 497, monthly: 1797,
+    name: 'Elite', setup: 297, monthly: 1797,
     color: 'var(--warning)', dim: 'var(--warning-dim)', border: 'rgba(245,158,11,0.20)',
     services: [
       'AI Receptionist (24/7)', 'Missed Call Text Back', 'Review Generation',
       'Lead Follow-Up Automation', 'Appointment Reminders', 'AI Dispatcher', 'SMS Marketing',
       'Professional Website', 'Multiple AI agents (up to 5 lines)', 'Priority support',
       'Custom reporting dashboard',
-    ],
-  },
-}
-
-const TIER_ORDER = ['basic', 'pro', 'premium', 'elite']
-
-// Map custom price → closest display tier (for color/name, not billing)
-function priceToTier(monthly) {
-  if (monthly >= 1500) return 'elite'
-  if (monthly >= 1000) return 'premium'
-  if (monthly >= 650)  return 'pro'
-  return 'basic'
-}
-
-// Sample data for the "Preview for [Business Name]" panel — synthetic, clearly labeled.
-const SAMPLE_DATA = {
-  ai_receptionist: {
-    label: 'AI Receptionist', color: 'var(--accent)',
-    kpis: [
-      { label: 'Calls Answered / Mo', value: '247' },
-      { label: 'After-Hours Captured', value: '89' },
-      { label: 'Booking Rate', value: '73%' },
-    ],
-    feed: [
-      'New caller booked HVAC inspection — 2 min ago',
-      'After-hours call captured, quote requested — 41 min ago',
-      '3 calls handled while crew was on job — 2h ago',
-    ],
-  },
-  missed_call_text_back: {
-    label: 'Missed Call Text Back', color: 'var(--info)',
-    kpis: [
-      { label: 'Texts Sent / Mo', value: '31' },
-      { label: 'Reply Rate', value: '67%' },
-      { label: 'Bookings Recovered', value: '8' },
-    ],
-    feed: [
-      '"Thanks! Can you come Wednesday?" — 8 min ago',
-      'Missed caller booked roof inspection — 2h ago',
-      '4 texts sent during job rush — Yesterday',
-    ],
-  },
-  review_generation: {
-    label: 'Review Generation', color: 'var(--warning)',
-    kpis: [
-      { label: 'Reviews Generated', value: '12' },
-      { label: 'Avg Rating', value: '4.9★' },
-      { label: 'Profile Views', value: '+34%' },
-    ],
-    feed: [
-      '5★ "Best in the area!" — 3h ago',
-      '5★ "Fast, professional, fair price" — Yesterday',
-      '4★ "Would recommend to anyone" — 2 days ago',
-    ],
-  },
-  lead_followup: {
-    label: 'Lead Follow-Up', color: 'var(--success)',
-    kpis: [
-      { label: 'Leads Followed Up', value: '47' },
-      { label: 'Recovery Rate', value: '23%' },
-      { label: 'Revenue Recovered', value: '$3,200' },
-    ],
-    feed: [
-      '"OK let\'s do it" — week-old lead replied — 1h ago',
-      'Ghosted quote → booked after 3rd touch — Yesterday',
-      '4 follow-up sequences triggered — 2 days ago',
-    ],
-  },
-  appointment_reminders: {
-    label: 'Appointment Reminders', color: 'var(--info)',
-    kpis: [
-      { label: 'Reminders Sent', value: '89' },
-      { label: 'No-Show Rate', value: '-62%' },
-      { label: 'Confirmations', value: '91%' },
-    ],
-    feed: [
-      '"See you Thursday at 2pm!" — 10 min ago',
-      '24h reminder sent for tomorrow\'s install — 2h ago',
-      'Client rescheduled early, crew reallocated — Yesterday',
-    ],
-  },
-  ai_dispatcher: {
-    label: 'AI Dispatcher', color: 'var(--accent)',
-    kpis: [
-      { label: 'Calls Routed / Mo', value: '156' },
-      { label: 'Avg Hold Time', value: '< 2s' },
-      { label: 'Crew Utilization', value: '+28%' },
-    ],
-    feed: [
-      'Emergency AC → nearest crew routed — 5 min ago',
-      'Commercial inquiry → sales line — 1h ago',
-      '12 calls auto-routed, 0 manual transfers — Yesterday',
-    ],
-  },
-  sms_marketing: {
-    label: 'SMS Marketing', color: 'var(--warning)',
-    kpis: [
-      { label: 'Open Rate', value: '89%' },
-      { label: 'Response Rate', value: '34%' },
-      { label: 'Revenue Attributed', value: '$1,800' },
-    ],
-    feed: [
-      '"Summer tune-up" campaign → 8 bookings — 2 days ago',
-      'Win-back SMS → 5 past customers returned — 3w ago',
-      'Seasonal reminder → 12 jobs booked — 6w ago',
-    ],
-  },
-  website: {
-    label: 'Professional Website', color: 'var(--success)',
-    kpis: [
-      { label: 'Monthly Visitors', value: '847' },
-      { label: 'Contact Forms', value: '12' },
-      { label: 'Mobile Score', value: '97/100' },
-    ],
-    feed: [
-      'New contact: "Need emergency AC repair" — 4h ago',
-      '43 organic visitors from Google — Yesterday',
-      'Commercial inquiry via contact form — 2 days ago',
     ],
   },
 }
@@ -230,12 +112,14 @@ export function AppointmentCard({ appt }) {
     if (!rec && !recLoading) loadRecommendation()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Pre-generate Stripe links for ALL 4 tiers so every card is one click from payment.
-  // silent=true: a failure just leaves that tier's Generate button as fallback.
+  // Pre-generate the Stripe link for the recommended (closest-tier) price the
+  // moment the recommendation is known — there's only ONE custom stack per
+  // lead now (no fixed-package alternatives), so only one link is needed.
+  // silent=true: a failure just leaves the Generate button as fallback.
   useEffect(() => {
-    if (!lead) return
-    TIER_ORDER.forEach(tier => handleStripeLinks(tier, { silent: true }))
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    if (!lead || !rec?.recommended_tier) return
+    handleStripeLinks(rec.recommended_tier, { silent: true })
+  }, [rec?.recommended_tier]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadRecommendation() {
     setRecLoading(true)
@@ -252,6 +136,8 @@ export function AppointmentCard({ appt }) {
           repNotes:           lead.notes || lead.pain_points,
           jobTitle:           lead.job_title,
           closerName:         profile?.full_name,
+          primaryPain:        lead.primary_pain ?? null,
+          currentSetup:       lead.current_setup ?? null,
         },
       })
       if (error || !data?.rec) throw new Error(error?.message || 'No recommendation returned')
@@ -541,30 +427,10 @@ function RecommendationPanel({
   rec, lead, appt, isClosed, provisionLoading, provisionResult,
   stripeLinks, stripeLoading, onMarkClosed, onStripeLinks,
 }) {
+  // No fixed packages anymore — `primary` is just a closest-tier color/name
+  // for display + Stripe link lookup, not a sellable unit. There's one
+  // custom-priced recommendation per lead; no alternative package cards.
   const primary = PACKAGES[rec.recommended_tier]
-
-  // Directional ordering: recommended first, then nearest tier above (upsell),
-  // nearest tier below (fallback), then the remaining tiers by distance.
-  const rIdx = TIER_ORDER.indexOf(rec.recommended_tier)
-  const above = TIER_ORDER.slice(rIdx + 1)                 // higher tiers, nearest first
-  const below = TIER_ORDER.slice(0, rIdx).reverse()        // lower tiers, nearest first
-  const orderedAlternatives = [
-    ...(above[0] ? [{ tier: above[0], label: '⬆️ Upsell Option', direction: 'up' }] : []),
-    ...(below[0] ? [{ tier: below[0], label: '⬇️ Fallback Option', direction: 'down' }] : []),
-    ...above.slice(1).map(t => ({ tier: t, label: '⬆️ Top-Tier Upsell', direction: 'up' })),
-    ...below.slice(1).map(t => ({ tier: t, label: '⬇️ Budget Option', direction: 'down' })),
-  ]
-
-  // One-sentence fit reason per alternative card
-  function reasonFor(tier, direction) {
-    if (tier === rec.alternative_tier && rec.alternative_reason) return rec.alternative_reason
-    if (direction === 'up') {
-      return (tier === 'elite' && rec.upsell_path)
-        ? rec.upsell_path
-        : 'Pitch this if they mention multiple locations, crews, or want the full package.'
-    }
-    return 'Offer this if they hesitate on price — still solves their core problem.'
-  }
 
   return (
     <div style={{ marginBottom: 16 }}>
@@ -609,26 +475,26 @@ function RecommendationPanel({
               ${(rec.custom_monthly_price || primary?.monthly)?.toLocaleString()}/mo
             </span>
             <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-              + $497 setup
+              + $297 setup
             </span>
             {rec.custom_monthly_price && (
               <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-elevated)', padding: '2px 6px', borderRadius: 3 }}>
-                Custom stack · {primary?.name} tier
+                Custom stack
               </span>
             )}
           </div>
-          {/* Show selected automations if available, else tier services */}
+          {/* Free-form AI-generated automations — no fixed catalog */}
           {rec.recommended_automations?.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, margin: '10px 0' }}>
-              {rec.recommended_automations.map((id, i) => {
-                const data = SAMPLE_DATA[id]
-                return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <CheckCircle size={12} style={{ color: primary?.color || 'var(--accent)', flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{data?.label || id}</span>
-                  </div>
-                )
-              })}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, margin: '10px 0' }}>
+              {rec.recommended_automations.map((a, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
+                  <CheckCircle size={12} style={{ color: primary?.color || 'var(--accent)', flexShrink: 0, marginTop: 2 }} />
+                  <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                    <strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{a.name}</strong>
+                    {a.description ? ` — ${a.description}` : ''}
+                  </span>
+                </div>
+              ))}
             </div>
           ) : (
             <ServiceChecklist tier={rec.recommended_tier} />
@@ -710,7 +576,7 @@ function RecommendationPanel({
             <CheckCircle size={14} style={{ color: 'var(--success)', flexShrink: 0 }} />
             <div>
               <p style={{ fontSize: 13, color: 'var(--success)', fontWeight: 500, margin: 0 }}>
-                {PACKAGES[provisionResult.tier]?.name} · ${provisionResult.monthlyValue?.toLocaleString()}/mo — Closed!
+                ${provisionResult.monthlyValue?.toLocaleString()}/mo — Closed!
               </p>
               <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
                 Client created · Onboarding link ready · Admin notified
@@ -719,14 +585,14 @@ function RecommendationPanel({
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {/* Stripe links for recommended package */}
+            {/* Stripe links — closest-tier checkout link (no per-deal custom-amount Stripe link yet) */}
             <StripeButtonRow
               tier={rec.recommended_tier}
               stripeLinks={stripeLinks}
               stripeLoading={stripeLoading}
               onGenerate={onStripeLinks}
             />
-            {/* Mark Closed */}
+            {/* Mark Closed — one custom stack, one price, no alternative packages */}
             <button
               onClick={() => onMarkClosed(rec.recommended_tier)}
               disabled={provisionLoading || isClosed}
@@ -746,84 +612,31 @@ function RecommendationPanel({
               ) : isClosed ? (
                 <><CheckCircle size={15} /> Already Closed</>
               ) : (
-                <><CheckCircle size={15} /> Mark Closed — ${(rec.custom_monthly_price || PACKAGES[rec.recommended_tier]?.monthly)?.toLocaleString()}/mo</>
+                <><CheckCircle size={15} /> Mark Closed — ${rec.custom_monthly_price?.toLocaleString()}/mo</>
               )}
             </button>
           </div>
         )}
+
+        {/* Lighter alternative — a talking point if they push back, not a separate billable package */}
+        {rec.alternative_automations?.length > 0 && (
+          <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 8 }}>
+            <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, marginBottom: 6 }}>
+              If They Push Back — Lighter Option
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: rec.alternative_reason ? 6 : 0 }}>
+              {rec.alternative_automations.map((a, i) => (
+                <span key={i} style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '0.5px solid var(--border)', borderRadius: 4, padding: '2px 7px' }}>
+                  {a.name}
+                </span>
+              ))}
+            </div>
+            {rec.alternative_reason && (
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>{rec.alternative_reason}</p>
+            )}
+          </div>
+        )}
       </div>
-
-      {/* ── Alternative Packages — all expanded, directionally ordered ──────── */}
-      <div>
-        <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500, marginBottom: 10 }}>
-          Alternative Packages
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {orderedAlternatives.map(({ tier, label, direction }) => (
-            <AlternativePackageCard
-              key={tier}
-              tier={tier}
-              directionLabel={label}
-              isAlt={tier === rec.alternative_tier}
-              reason={reasonFor(tier, direction)}
-              stripeLinks={stripeLinks}
-              stripeLoading={stripeLoading}
-              onGenerate={onStripeLinks}
-              onMarkClosed={onMarkClosed}
-              provisionLoading={provisionLoading}
-              isClosed={isClosed}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Always-expanded tier card: header (name + price + setup + product count),
-// itemized checklist, one-line fit reason, Stripe links, Mark Closed.
-function AlternativePackageCard({ tier, directionLabel, isAlt, reason, stripeLinks, stripeLoading, onGenerate, onMarkClosed, provisionLoading, isClosed }) {
-  const p = PACKAGES[tier]
-  return (
-    <div
-      className="glass"
-      style={{ padding: '14px 16px', borderRadius: 8, borderTop: `2px solid ${p.color}` }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 18, fontWeight: 500, color: p.color, fontFamily: 'var(--font-mono)', letterSpacing: '-0.01em' }}>
-            {p.name}
-          </span>
-          <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
-            ${p.monthly.toLocaleString()}/mo
-          </span>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>+ $497 setup</span>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.services.length} products included</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {isAlt && <span style={{ fontSize: 9, color: 'var(--warning)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Suggested alt</span>}
-          <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{directionLabel}</span>
-        </div>
-      </div>
-
-      <ServiceChecklist tier={tier} compact />
-
-      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 10px', fontStyle: 'italic' }}>{reason}</p>
-
-      <StripeButtonRow tier={tier} stripeLinks={stripeLinks} stripeLoading={stripeLoading} onGenerate={onGenerate} compact />
-      <button
-        onClick={() => onMarkClosed(tier)}
-        disabled={provisionLoading || isClosed}
-        style={{
-          width: '100%', height: 32, marginTop: 6,
-          background: 'var(--accent)', color: '#fff',
-          border: 'none', borderRadius: 6, fontSize: 12,
-          cursor: isClosed ? 'not-allowed' : 'pointer',
-          opacity: isClosed ? 0.5 : 1,
-        }}
-      >
-        {provisionLoading ? 'Closing…' : `Close — ${p.name}`}
-      </button>
     </div>
   )
 }
@@ -835,7 +648,7 @@ function AlternativePackageCard({ tier, directionLabel, isAlt, reason, stripeLin
 
 function SampleDashboard({ rec, lead }) {
   const [open, setOpen] = useState(false)
-  const [tab, setTab] = useState('overview')
+  const [tab, setTab] = useState(0) // 0 = overview, 1-N = automations[n-1]
 
   const automations = rec.recommended_automations || []
   if (!automations.length) return null
@@ -882,33 +695,30 @@ function SampleDashboard({ rec, lead }) {
             </p>
           </div>
 
-          {/* Tab strip */}
+          {/* Tab strip — index-based since automations are free-form (no catalog ids) */}
           <div style={{ display: 'flex', borderBottom: '0.5px solid var(--border)', overflowX: 'auto' }}>
-            {['overview', ...automations].map(id => {
-              const label = id === 'overview' ? 'Overview' : (SAMPLE_DATA[id]?.label || id)
-              return (
-                <button
-                  key={id}
-                  onClick={() => setTab(id)}
-                  style={{
-                    padding: '7px 13px', fontSize: 11, border: 'none', cursor: 'pointer',
-                    background: 'none', whiteSpace: 'nowrap',
-                    color: tab === id ? 'var(--accent)' : 'var(--text-muted)',
-                    borderBottom: tab === id ? '2px solid var(--accent)' : '2px solid transparent',
-                    fontWeight: tab === id ? 500 : 400,
-                  }}
-                >
-                  {label}
-                </button>
-              )
-            })}
+            {['Overview', ...automations.map(a => a.name)].map((label, idx) => (
+              <button
+                key={idx}
+                onClick={() => setTab(idx)}
+                style={{
+                  padding: '7px 13px', fontSize: 11, border: 'none', cursor: 'pointer',
+                  background: 'none', whiteSpace: 'nowrap',
+                  color: tab === idx ? 'var(--accent)' : 'var(--text-muted)',
+                  borderBottom: tab === idx ? '2px solid var(--accent)' : '2px solid transparent',
+                  fontWeight: tab === idx ? 500 : 400,
+                }}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
           {/* Tab content */}
           <div style={{ padding: '14px 14px' }}>
-            {tab === 'overview'
+            {tab === 0
               ? <SampleOverview automations={automations} recoveredJobs={recoveredJobs} estRevenue={estRevenue} callsPerWeek={callsPerWeek} />
-              : <SampleAutomationTab id={tab} />
+              : <SampleAutomationTab automation={automations[tab - 1]} index={tab - 1} />
             }
           </div>
         </div>
@@ -946,11 +756,52 @@ function SampleOverview({ automations, recoveredJobs, estRevenue, callsPerWeek }
   )
 }
 
-function SampleAutomationTab({ id }) {
-  const data = SAMPLE_DATA[id]
-  if (!data) return <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No sample data available.</p>
+// Deterministic string hash + seeded PRNG — same automation name always
+// produces the same sample numbers within a render, but no fixed catalog
+// lookup table is needed (automations are AI-generated, name varies per lead).
+function hashStr(s) {
+  let h = 0
+  for (let i = 0; i < s.length; i++) { h = (h << 5) - h + s.charCodeAt(i); h |= 0 }
+  return Math.abs(h) || 1
+}
+
+function seededRandom(seed) {
+  let s = seed % 2147483647
+  if (s <= 0) s += 2147483646
+  return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646 }
+}
+
+const TAB_COLORS = ['var(--accent)', 'var(--success)', 'var(--info)', 'var(--warning)']
+
+function syntheticStatsFor(automation, index) {
+  const rand = seededRandom(hashStr(automation.name + index))
+  const actions = Math.round(20 + rand() * 70)
+  const successRate = Math.round(60 + rand() * 35)
+  const value = Math.round((400 + rand() * 3800) / 50) * 50
+  const color = TAB_COLORS[index % TAB_COLORS.length]
+  return {
+    color,
+    kpis: [
+      { label: 'Actions This Month', value: `${actions}` },
+      { label: 'Success Rate', value: `${successRate}%` },
+      { label: 'Est. Value Recovered', value: `$${value.toLocaleString()}` },
+    ],
+    feed: [
+      `${automation.name} triggered — ${Math.round(rand() * 50) + 1} min ago`,
+      automation.description ? `${automation.description} — Yesterday` : 'New activity logged — Yesterday',
+      `${Math.max(1, Math.round(actions / 10))} actions completed this week`,
+    ],
+  }
+}
+
+function SampleAutomationTab({ automation, index }) {
+  if (!automation) return <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No sample data available.</p>
+  const data = syntheticStatsFor(automation, index)
   return (
     <div>
+      {automation.description && (
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 12px', lineHeight: 1.5 }}>{automation.description}</p>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
         {data.kpis.map((kpi, i) => (
           <div key={i} style={{ padding: '10px 12px', background: 'var(--bg-elevated)', borderRadius: 8, border: '0.5px solid var(--border)' }}>

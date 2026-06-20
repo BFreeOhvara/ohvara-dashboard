@@ -50,10 +50,13 @@ export const DISCOVERY_SCRIPT = [
       `"Roughly how many calls a week would you say you're just not getting to?"`,
       `"And what's a typical job worth to you, start to finish — ballpark average ticket?"`,
       `"Have you tried anything to fix it — answering service, hiring someone before? How'd that go?"`,
+      `"What's costing you the most right now — missed calls, slow response, no-shows, or leads who called but never booked?"`,
+      `"What do you have in place today to handle that?"`,
+      `"Anything else slipping through the cracks?"`,
       `"Even 2–3 missed jobs a week at [their ticket] each is real money walking to whoever picks up first. Does that surprise you?"`,
       `→ Go to CLOSE (book Nate).`,
     ],
-    tips: `Write every answer in Call Notes — who answers now, calls/week, average ticket, what they've tried. That's exactly what Nate builds the fix from. The average-ticket number is gold.`,
+    tips: `Write every answer in Call Notes AND the discovery fields below — who answers now, calls/week, average ticket, biggest pain, what they've tried, what else is slipping. That's exactly what Nate's custom stack gets built from. The average-ticket number is gold.`,
   },
 
   {

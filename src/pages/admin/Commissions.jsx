@@ -5,7 +5,12 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 
 // ── Commission constants ───────────────────────────────────────────────────────
-const SETUP_FEE = 497
+// NOTE: TIER_MONTHLY below is a closest-tier fallback for recurring commission
+// math — with Prompt 5's custom formula pricing, a deal's REAL monthly value
+// can differ from this. Known gap, not fixed under this prompt's scope (would
+// need pulling the actual custom_monthly_price/override_price from the linked
+// clients row instead of guessing from closed_tier).
+const SETUP_FEE = 297
 
 const TIER_MONTHLY = { basic: 497, pro: 797, premium: 1297, elite: 1797 }
 

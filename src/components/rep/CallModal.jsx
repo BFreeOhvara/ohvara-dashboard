@@ -105,6 +105,11 @@ export function CallModal({ lead, onClose }) {
   const [statusTouched, setStatusTouched] = useState(false)
   const [statusOpen, setStatusOpen]   = useState(false)
   const [notes, setNotes]             = useState(lead.notes || '')
+  const [callsMissedPerWeek, setCallsMissedPerWeek] = useState(lead.calls_missed_per_week ?? '')
+  const [avgTicket, setAvgTicket]                   = useState(lead.avg_ticket ?? '')
+  const [primaryPain, setPrimaryPain]               = useState(lead.primary_pain || '')
+  const [currentSetup, setCurrentSetup]             = useState(lead.current_setup || '')
+  const [secondaryPain, setSecondaryPain]           = useState('')
   const [followUpAt, setFollowUpAt]   = useState(toDatetimeLocal(lead.follow_up_at))
   const [followUpNotes, setFollowUpNotes] = useState(lead.follow_up_notes || '')
   const [appointmentAt, setAppointmentAt] = useState(toDatetimeLocal(lead.appointment_at))
@@ -161,9 +166,19 @@ export function CallModal({ lead, onClose }) {
     setClosing(true)
     setDoneError('')
     try {
+      // Folds secondaryPain into pain_points (no dedicated column — per Prompt 5 spec)
+      // rather than overwriting it outright, since pain_points already carries
+      // other lead-prep context elsewhere in the app.
+      const combinedPainPoints = [lead.pain_points, secondaryPain || null].filter(Boolean).join(' | ') || null
+
       const patch = {
         status,
         notes: notes || null,
+        calls_missed_per_week: callsMissedPerWeek === '' ? null : Number(callsMissedPerWeek),
+        avg_ticket:             avgTicket === '' ? null : Number(avgTicket),
+        primary_pain:           primaryPain || null,
+        current_setup:          currentSetup || null,
+        pain_points:            combinedPainPoints,
       }
       if (status === 'Follow-Up') {
         patch.follow_up_at    = new Date(followUpAt).toISOString()
@@ -216,11 +231,16 @@ export function CallModal({ lead, onClose }) {
             businessName:       lead.business_name,
             niche:              lead.niche,
             location:           lead.city || null,
-            callsMissedPerWeek: lead.calls_missed_per_week ?? null,
-            avgTicket:          lead.avg_ticket ?? null,
+            // Use the values just typed into the form, not the stale lead prop —
+            // this is the same save, so patch.* and these must agree.
+            callsMissedPerWeek: patch.calls_missed_per_week,
+            avgTicket:          patch.avg_ticket,
             monthlyLaborCost:   lead.monthly_labor_cost ?? null,
             repNotes:           notes || lead.notes || null,
             jobTitle:           lead.job_title || null,
+            primaryPain:        patch.primary_pain,
+            currentSetup:       patch.current_setup,
+            secondaryPain:      secondaryPain || null,
           },
         }).then(({ data }) => {
           if (data?.rec) {
@@ -420,6 +440,93 @@ export function CallModal({ lead, onClose }) {
                     ? `Scheduled for ${new Date(appointmentAt).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} — saved when you hit Done.`
                     : 'Pick the day and time the prospect agreed to.'}
                 </p>
+              </div>
+            )}
+
+            {/* Discovery — feeds the custom stack recommendation Nate sees.
+                Only matters (and only shown) when booking — this is what gets
+                fired into recommend-stack on Done. */}
+            {status === 'Appointment Booked' && (
+              <div style={{
+                marginBottom: 14, padding: '12px',
+                background: 'rgba(108,99,255,0.06)', borderRadius: 8,
+                border: '0.5px solid var(--accent-border)',
+              }}>
+                <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent)', margin: '0 0 8px' }}>
+                  Discovery — for the custom stack
+                </p>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Calls missed/wk</label>
+                    <input
+                      type="number" min="0" value={callsMissedPerWeek}
+                      onChange={e => setCallsMissedPerWeek(e.target.value)}
+                      placeholder="e.g. 5"
+                      style={{
+                        width: '100%', height: 34, padding: '0 10px',
+                        background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                        borderRadius: 7, fontSize: 13, color: 'var(--text-primary)', boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Avg ticket ($)</label>
+                    <input
+                      type="number" min="0" value={avgTicket}
+                      onChange={e => setAvgTicket(e.target.value)}
+                      placeholder="e.g. 600"
+                      style={{
+                        width: '100%', height: 34, padding: '0 10px',
+                        background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                        borderRadius: 7, fontSize: 13, color: 'var(--text-primary)', boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                </div>
+                <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                  What's costing them most?
+                </label>
+                <select
+                  value={primaryPain}
+                  onChange={e => setPrimaryPain(e.target.value)}
+                  style={{
+                    width: '100%', height: 34, padding: '0 10px', marginBottom: 8,
+                    background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                    borderRadius: 7, fontSize: 13, color: 'var(--text-primary)', boxSizing: 'border-box',
+                  }}
+                >
+                  <option value="">Select…</option>
+                  <option value="missed_calls">Missed calls</option>
+                  <option value="slow_response">Slow response</option>
+                  <option value="no_shows">No-shows</option>
+                  <option value="never_booked">Leads who called but never booked</option>
+                </select>
+                <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                  What do they have today to handle that?
+                </label>
+                <input
+                  type="text" value={currentSetup}
+                  onChange={e => setCurrentSetup(e.target.value)}
+                  placeholder="e.g. voicemail only, answering service…"
+                  style={{
+                    width: '100%', height: 34, padding: '0 10px', marginBottom: 8,
+                    background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                    borderRadius: 7, fontSize: 13, color: 'var(--text-primary)', boxSizing: 'border-box',
+                  }}
+                />
+                <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                  Anything else slipping through the cracks?
+                </label>
+                <input
+                  type="text" value={secondaryPain}
+                  onChange={e => setSecondaryPain(e.target.value)}
+                  placeholder="optional"
+                  style={{
+                    width: '100%', height: 34, padding: '0 10px',
+                    background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                    borderRadius: 7, fontSize: 13, color: 'var(--text-primary)', boxSizing: 'border-box',
+                  }}
+                />
               </div>
             )}
 

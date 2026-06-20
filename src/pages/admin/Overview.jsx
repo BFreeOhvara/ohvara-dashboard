@@ -53,23 +53,29 @@ function KpiCard({ label, value, sub, subColor, icon: Icon, accent }) {
   )
 }
 
-// ── Tier badge for bookings feed ──────────────────────────────────────────────
+// ── Price badge for bookings feed ───────────────────────────────────────────────
+// No fixed tiers anymore (Prompt 5) — shows the lead's actual cached custom
+// price if recommend-stack has already run, else a neutral "pending" badge.
 
-const TIER_COLORS = {
-  'Starter':    { bg: 'var(--info-dim)',    color: 'var(--info)',    label: '$497' },
-  'Growth':     { bg: 'var(--accent-dim)',  color: 'var(--accent)',  label: '$797' },
-  'Full Stack': { bg: 'var(--success-dim)', color: 'var(--success)', label: '$1,297' },
-}
-
-function TierBadge({ tier }) {
-  const t = TIER_COLORS[tier] || TIER_COLORS['Growth']
+function PriceBadge({ customMonthlyPrice }) {
+  if (!customMonthlyPrice) {
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center',
+        padding: '2px 6px', borderRadius: 4, fontSize: 10, fontWeight: 500,
+        background: 'var(--bg-elevated)', color: 'var(--text-muted)',
+      }}>
+        Quote pending
+      </span>
+    )
+  }
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center',
       padding: '2px 6px', borderRadius: 4, fontSize: 10, fontWeight: 500,
-      background: t.bg, color: t.color,
+      background: 'var(--accent-dim)', color: 'var(--accent)',
     }}>
-      {tier} · {t.label}
+      ${customMonthlyPrice.toLocaleString()}/mo
     </span>
   )
 }
@@ -389,7 +395,7 @@ export default function Overview() {
         .from('appointments')
         .select(`
           id, scheduled_at, created_at, status,
-          lead:leads(id, business_name, niche, monthly_labor_cost),
+          lead:leads(id, business_name, niche, monthly_labor_cost, custom_monthly_price),
           closer:profiles!appointments_closer_id_fkey(id, full_name),
           rep:profiles!appointments_rep_id_fkey(id, full_name)
         `)
@@ -400,13 +406,6 @@ export default function Overview() {
     },
     refetchInterval: 30000,
   })
-
-  function getTier(monthlyCost) {
-    if (!monthlyCost) return 'Growth'
-    if (monthlyCost >= 1000) return 'Full Stack'
-    if (monthlyCost >= 600)  return 'Growth'
-    return 'Starter'
-  }
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
@@ -535,7 +534,7 @@ export default function Overview() {
                       {appt.closer?.full_name || 'Unassigned'} · {fmtTime(appt.scheduled_at || appt.created_at)}
                     </p>
                   </div>
-                  <TierBadge tier={getTier(appt.lead?.monthly_labor_cost)} />
+                  <PriceBadge customMonthlyPrice={appt.lead?.custom_monthly_price} />
                 </div>
                 <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
                   via {appt.rep?.full_name || '—'}

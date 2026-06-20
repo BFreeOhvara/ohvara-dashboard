@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
         tier,
         status: 'onboarding',
         monthly_value: finalMonthlyValue,
-        setup_fee: 497,
+        setup_fee: 297,
         recommended_tier: recommendedTier || null,
         recommended_price: typeof recommendedPrice === 'number' ? recommendedPrice : null,
         override_price: typeof overridePrice === 'number' && overridePrice > 0 ? overridePrice : null,
