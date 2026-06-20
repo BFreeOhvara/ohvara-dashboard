@@ -241,13 +241,13 @@ export function MessageCenter({ role }) {
   const { title, subtitle } = HEADER[role]
 
   return (
-    <div>
-      <div style={{ marginBottom: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      <div style={{ padding: '20px 24px 12px', flexShrink: 0 }}>
         <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>{title}</h1>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{subtitle}</p>
       </div>
 
-      <div className="glass" style={{ display: 'flex', height: 'calc(100vh - 180px)', minHeight: 420, borderRadius: 12, overflow: 'hidden' }}>
+      <div className="glass" style={{ display: 'flex', flex: 1, minHeight: 0, borderRadius: 0, overflow: 'hidden' }}>
 
         {/* Left — conversation list */}
         <div style={{ width: 280, flexShrink: 0, borderRight: '0.5px solid var(--border)', display: 'flex', flexDirection: 'column' }}>

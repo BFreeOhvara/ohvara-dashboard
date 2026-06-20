@@ -1,248 +1,208 @@
 import { useState, useMemo } from 'react'
-import { GitBranch } from 'lucide-react'
-import { useAllAppointments } from '../../hooks/useAppointments'
+import { CalendarClock, CheckCircle, Ban, Search } from 'lucide-react'
+import { useMyAppointments } from '../../hooks/useAppointments'
+import { KPICard } from '../../components/ui/KPICard'
 import { Badge } from '../../components/ui/Badge'
 
-const PERIODS = [
-  { key: 'week',  label: 'This Week' },
-  { key: 'month', label: 'This Month' },
-  { key: 'all',   label: 'All Time' },
+const TABS = [
+  { key: 'pending', label: 'Pending', icon: CalendarClock },
+  { key: 'closed',  label: 'Closed',  icon: CheckCircle },
+  { key: 'lost',    label: 'Lost',    icon: Ban },
 ]
 
-// Tier badge inline — no hardcoded colors
-const TIER_STYLE = {
-  'Starter':    { background: 'var(--info-dim)',    color: 'var(--info)',    border: '0.5px solid rgba(56,189,248,0.20)' },
-  'Growth':     { background: 'var(--accent-dim)',  color: 'var(--accent)',  border: '0.5px solid var(--accent-border)' },
-  'Full Stack': { background: 'var(--success-dim)', color: 'var(--success)', border: '0.5px solid rgba(34,197,94,0.20)' },
-}
-
-function TierBadge({ tier }) {
-  if (!tier) return <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>—</span>
-  const s = TIER_STYLE[tier] || TIER_STYLE['Growth']
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center',
-      padding: '2px 7px', borderRadius: 4, fontSize: 11, fontWeight: 500,
-      ...s,
-    }}>
-      {tier}
-    </span>
-  )
-}
+const cell = (basis, extra = {}) => ({
+  flex: basis, padding: '10px 12px', fontSize: 12, color: 'var(--text-secondary)',
+  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, ...extra,
+})
 
 function fmtDate(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })
 }
 
-function getPeriodCutoff(period) {
-  const d = new Date()
-  if (period === 'week')  { d.setDate(d.getDate() - 7); return d }
-  if (period === 'month') { d.setMonth(d.getMonth() - 1); return d }
-  return null
+function fmtDateTime(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-export default function CloserPipeline() {
-  const { data: appointments, isLoading } = useAllAppointments()
-  const [period, setPeriod] = useState('month')
-
-  const filtered = useMemo(() => {
-    if (!appointments) return []
-    const cutoff = getPeriodCutoff(period)
-    return appointments.filter(a => {
-      if (!cutoff) return true
-      return new Date(a.created_at) >= cutoff
-    })
-  }, [appointments, period])
-
-  const totalRevenue = useMemo(() =>
-    filtered
-      .filter(a => a.outcome === 'closed')
-      .reduce((s, a) => s + (a.deal_value || 0), 0),
-    [filtered]
-  )
-
-  const closedCount  = filtered.filter(a => a.outcome === 'closed').length
-  const pendingCount = filtered.filter(a => a.status === 'pending').length
-
+function QueueTable({ columns, rows, renderRow, emptyText }) {
   return (
-    <div>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
-        <div>
-          <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
-            Pipeline
-          </h1>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-            <span style={{ fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>{filtered.length}</span> bookings
-            {' · '}
-            <span style={{ color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>{closedCount}</span> closed
-            {' · '}
-            <span style={{ fontFamily: 'var(--font-mono)' }}>{pendingCount}</span> pending
-          </p>
-        </div>
-
-        {/* Filter bar */}
-        <div style={{ display: 'flex', gap: 0, borderBottom: '0.5px solid var(--border)' }}>
-          {PERIODS.map(p => (
-            <button
-              key={p.key}
-              onClick={() => setPeriod(p.key)}
-              style={{
-                height: 32, padding: '0 14px',
-                background: 'transparent', border: 'none',
-                borderBottom: period === p.key ? '2px solid var(--accent)' : '2px solid transparent',
-                marginBottom: -0.5,
-                color: period === p.key ? 'var(--text-primary)' : 'var(--text-secondary)',
-                fontSize: 13, cursor: 'pointer',
-                fontFamily: 'var(--font-sans)',
-                transition: 'all 0.1s',
-              }}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Table — glass surface */}
-      <div className="glass" style={{ overflow: 'hidden', marginBottom: 16, borderRadius: 10 }}>
-        {/* Table header */}
-        <div style={{
-          display: 'flex', alignItems: 'center',
-          background: 'var(--bg-elevated)',
-          borderBottom: '0.5px solid var(--border)',
-        }}>
-          <div style={{ flex: '1 1 0', padding: '8px 16px' }}      className="section-label">Business</div>
-          <div style={{ flex: '0 0 110px', padding: '8px 8px' }}   className="section-label">Rep</div>
-          <div style={{ flex: '0 0 110px', padding: '8px 8px' }}   className="section-label">Closer</div>
-          <div style={{ flex: '0 0 100px', padding: '8px 8px' }}   className="section-label">Booked</div>
-          <div style={{ flex: '0 0 100px', padding: '8px 8px' }}   className="section-label">Stack</div>
-          <div style={{ flex: '0 0 100px', padding: '8px 8px' }}   className="section-label">Status</div>
-          <div style={{ flex: '0 0 100px', padding: '8px 16px 8px 0', textAlign: 'right' }} className="section-label">Revenue</div>
-        </div>
-
-        {/* Rows */}
-        {isLoading ? (
-          <div>
-            {[...Array(6)].map((_, i) => (
-              <div key={i} style={{ height: 44, borderBottom: '0.5px solid var(--border)' }}>
-                <div style={{ margin: '14px 16px', height: 12, width: `${40 + (i % 3) * 15}%`, background: 'var(--bg-elevated)', borderRadius: 4, animation: 'pulse 2s infinite' }} />
+    <div className="glass" style={{ borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ overflowX: 'auto' }} className="scrollbar-thin">
+        <div style={{ minWidth: 600 }}>
+          <div style={{ display: 'flex', borderBottom: '0.5px solid var(--border)', background: 'var(--bg-elevated)' }}>
+            {columns.map(([label, basis]) => (
+              <div key={label} style={cell(basis, { fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontWeight: 500 })}>
+                {label}
               </div>
             ))}
           </div>
-        ) : !filtered.length ? (
-          <div style={{
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            padding: '48px 16px', textAlign: 'center',
-          }}>
-            <div style={{
-              width: 40, height: 40, borderRadius: '50%',
-              background: 'var(--bg-elevated)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginBottom: 12,
-            }}>
-              <GitBranch size={18} color="var(--text-muted)" />
-            </div>
-            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', margin: 0 }}>
-              No bookings in this period
-            </p>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-              Try expanding to All Time.
-            </p>
+          <div style={{ maxHeight: 480, overflowY: 'auto' }} className="scrollbar-thin">
+            {!rows?.length ? (
+              <p style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>{emptyText}</p>
+            ) : rows.map(renderRow)}
           </div>
-        ) : (
-          filtered.map(appt => (
-            <PipelineRow key={appt.id} appt={appt} />
-          ))
-        )}
-      </div>
-
-      {/* Total pipeline value */}
-      <div style={{
-        display: 'flex', justifyContent: 'flex-end', alignItems: 'baseline',
-        gap: 12, padding: '12px 0',
-        borderTop: '0.5px solid var(--border)',
-      }}>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>
-          Pipeline Value
-        </span>
-        <span style={{
-          fontSize: 28, fontWeight: 500,
-          fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums',
-          color: totalRevenue > 0 ? 'var(--success)' : 'var(--text-primary)',
-          letterSpacing: '-0.02em', lineHeight: 1,
-        }}>
-          {totalRevenue > 0 ? `$${totalRevenue.toLocaleString()}` : '$0'}
-        </span>
+        </div>
       </div>
     </div>
   )
 }
 
-function PipelineRow({ appt }) {
-  const lead   = appt.lead
-  const rep    = appt.rep
-  const closer = appt.closer
+function PendingTab({ rows }) {
+  const scheduled = rows.filter(a => a.scheduled_at)
+  return (
+    <div>
+      <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <KPICard label="Pending" value={rows.length} sub="awaiting close call" icon={CalendarClock} />
+        <KPICard label="Scheduled" value={scheduled.length} sub="time confirmed" icon={CheckCircle} />
+      </div>
+      <QueueTable
+        columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Scheduled', '0 0 150px'], ['Status', '0 0 100px']]}
+        rows={rows}
+        emptyText="No pending appointments."
+        renderRow={a => (
+          <div key={a.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
+            <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
+            <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
+            <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
+            <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
+            <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at)}</div>
+            <div style={cell('0 0 100px')}><Badge label={a.status} /></div>
+          </div>
+        )}
+      />
+    </div>
+  )
+}
+
+function ClosedTab({ rows }) {
+  const totalRevenue = rows.reduce((s, a) => s + (a.deal_value || 0), 0)
+  return (
+    <div>
+      <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <KPICard label="Closed Deals" value={rows.length} sub="all time" icon={CheckCircle} />
+        <KPICard label="Total Revenue" value={totalRevenue > 0 ? `$${totalRevenue.toLocaleString()}` : '$0'} sub="deal value" icon={CheckCircle} />
+      </div>
+      <QueueTable
+        columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Closed On', '0 0 130px'], ['Revenue', '0 0 110px']]}
+        rows={rows}
+        emptyText="No closed deals yet."
+        renderRow={a => (
+          <div key={a.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
+            <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
+            <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
+            <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
+            <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
+            <div style={cell('0 0 130px', { fontFamily: 'var(--font-mono)' })}>{fmtDate(a.updated_at || a.created_at)}</div>
+            <div style={cell('0 0 110px', { color: 'var(--success)', fontFamily: 'var(--font-mono)' })}>
+              {a.deal_value ? `$${Number(a.deal_value).toLocaleString()}` : '—'}
+            </div>
+          </div>
+        )}
+      />
+    </div>
+  )
+}
+
+function LostTab({ rows }) {
+  return (
+    <div>
+      <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <KPICard label="Lost / No Show" value={rows.length} sub="all time" icon={Ban} />
+      </div>
+      <QueueTable
+        columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Outcome', '0 0 120px'], ['Date', '0 0 130px']]}
+        rows={rows}
+        emptyText="No lost deals yet."
+        renderRow={a => (
+          <div key={a.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
+            <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
+            <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
+            <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
+            <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
+            <div style={cell('0 0 120px')}><Badge label={a.outcome} /></div>
+            <div style={cell('0 0 130px', { fontFamily: 'var(--font-mono)' })}>{fmtDate(a.updated_at || a.created_at)}</div>
+          </div>
+        )}
+      />
+    </div>
+  )
+}
+
+export default function CloserPipeline() {
+  const { data: allAppts, isLoading } = useMyAppointments()
+  const [tab, setTab] = useState('pending')
+  const [search, setSearch] = useState('')
+
+  const filtered = useMemo(() => {
+    if (!allAppts) return { pending: [], closed: [], lost: [] }
+    const s = search.trim().toLowerCase()
+    const appts = s
+      ? allAppts.filter(a => (a.lead?.business_name || '').toLowerCase().includes(s))
+      : allAppts
+    return {
+      pending: appts.filter(a => a.status === 'pending'),
+      closed:  appts.filter(a => a.outcome === 'closed'),
+      lost:    appts.filter(a => a.outcome === 'lost' || a.outcome === 'no_show'),
+    }
+  }, [allAppts, search])
 
   return (
-    <div
-      className="table-row-animated"
-      style={{
-        display: 'flex', alignItems: 'center',
-        borderBottom: '0.5px solid var(--border)',
-        minHeight: 44,
-        transition: 'background-color 100ms',
-      }}
-      onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
-      onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-    >
-      {/* Business */}
-      <div style={{ flex: '1 1 0', minWidth: 0, padding: '10px 16px' }}>
-        <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {lead?.business_name || '—'}
-        </p>
-        {lead?.niche && (
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{lead.niche}</p>
-        )}
+    <div>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
+            Pipeline
+          </h1>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
+            Your appointments — pending, closed, and lost.
+          </p>
+        </div>
+        <div style={{ position: 'relative' }}>
+          <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search business name…"
+            style={{
+              height: 32, padding: '0 10px 0 28px', width: 200,
+              background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+              borderRadius: 6, fontSize: 12, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', outline: 'none',
+            }}
+          />
+        </div>
       </div>
 
-      {/* Rep */}
-      <div style={{ flex: '0 0 110px', padding: '10px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {rep?.full_name || '—'}
+      <div style={{ display: 'flex', gap: 4, borderBottom: '0.5px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
+        {TABS.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              padding: '10px 14px', background: 'none', cursor: 'pointer',
+              border: 'none', borderBottom: tab === key ? '2px solid var(--accent)' : '2px solid transparent',
+              fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap',
+              color: tab === key ? 'var(--accent)' : 'var(--text-muted)',
+            }}
+          >
+            <Icon size={13} />
+            {label}
+            <span style={{
+              fontSize: 10, padding: '1px 6px', borderRadius: 10, fontFamily: 'var(--font-mono)',
+              background: tab === key ? 'var(--accent-dim)' : 'var(--bg-elevated)',
+              color: tab === key ? 'var(--accent)' : 'var(--text-muted)',
+              border: `0.5px solid ${tab === key ? 'var(--accent-border)' : 'var(--border)'}`,
+            }}>
+              {isLoading ? '…' : filtered[key]?.length ?? 0}
+            </span>
+          </button>
+        ))}
       </div>
 
-      {/* Closer */}
-      <div style={{ flex: '0 0 110px', padding: '10px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {closer?.full_name || '—'}
-      </div>
-
-      {/* Booked date */}
-      <div style={{ flex: '0 0 100px', padding: '10px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
-        {fmtDate(appt.created_at)}
-      </div>
-
-      {/* Stack */}
-      <div style={{ flex: '0 0 100px', padding: '10px 8px' }}>
-        <TierBadge tier={appt.recommended_tier || null} />
-      </div>
-
-      {/* Status */}
-      <div style={{ flex: '0 0 100px', padding: '10px 8px' }}>
-        <Badge label={appt.outcome || appt.status} />
-      </div>
-
-      {/* Revenue */}
-      <div style={{ flex: '0 0 100px', padding: '10px 16px 10px 0', textAlign: 'right' }}>
-        {appt.deal_value ? (
-          <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums', color: 'var(--success)' }}>
-            ${Number(appt.deal_value).toLocaleString()}
-          </span>
-        ) : (
-          <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>—</span>
-        )}
-      </div>
+      {tab === 'pending' && <PendingTab rows={filtered.pending} />}
+      {tab === 'closed'  && <ClosedTab  rows={filtered.closed} />}
+      {tab === 'lost'    && <LostTab    rows={filtered.lost} />}
     </div>
   )
 }
