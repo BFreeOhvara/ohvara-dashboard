@@ -278,9 +278,9 @@ export function CallModal({ lead, onClose }) {
                 frontRunnerAgents:     data.rec.front_runners ?? null,
                 subAgents:             data.rec.sub_agents ?? null,
               },
-            }).catch(() => {})
+            }).catch(err => console.error('[CallModal] provision-demo-client failed:', err))
           }
-        }).catch(() => {})
+        }).catch(err => console.error('[CallModal] recommend-stack failed:', err))
       }
 
       onClose()
