@@ -148,8 +148,6 @@ export function AppointmentCard({ appt }) {
   )
   const [provisionLoading, setProvisionLoading] = useState(false)
   const [provisionResult, setProvisionResult] = useState(null)
-  const [overridePrice, setOverridePrice] = useState('')
-  const [clientEmail, setClientEmail] = useState('')
   const [lostLoading, setLostLoading] = useState(false)
   const [paymentLink, setPaymentLink] = useState(null)
   const [paymentLinkLoading, setPaymentLinkLoading] = useState(false)
@@ -214,8 +212,7 @@ export function AppointmentCard({ appt }) {
     if (provisionLoading) return
     setProvisionLoading(true)
     try {
-      const parsedOverride = overridePrice ? parseFloat(overridePrice) : null
-      const { data, error } = await supabase.functions.invoke('provision-client', {
+        const { data, error } = await supabase.functions.invoke('provision-client', {
         body: {
           appointmentId: appt.id,
           tier,
@@ -226,8 +223,7 @@ export function AppointmentCard({ appt }) {
           monthlyLaborCost: lead.monthly_labor_cost,
           recommendedTier: rec?.recommended_tier || null,
           recommendedPrice: rec?.custom_monthly_price ?? (rec?.recommended_tier ? PACKAGES[rec.recommended_tier]?.monthly ?? null : null),
-          overridePrice: parsedOverride && parsedOverride > 0 ? parsedOverride : null,
-          clientEmail: clientEmail.trim() || lead.email || null,
+          clientEmail: lead.email || null,
         },
       })
       if (error) throw new Error(error.message)
@@ -259,7 +255,7 @@ export function AppointmentCard({ appt }) {
           businessName: lead.business_name,
           monthlyPrice: rec?.custom_monthly_price,
           setupFee: 297,
-          customerEmail: clientEmail.trim() || lead.email || undefined,
+          customerEmail: lead.email || undefined,
         },
       })
       if (error || !data?.checkoutUrl) throw new Error(error?.message || data?.error || 'No checkout URL returned')
@@ -438,40 +434,22 @@ export function AppointmentCard({ appt }) {
           {/* ── Closer Notes + Outcome — ABOVE packages: capture the call, then pick the tier ── */}
           <div style={{ padding: '16px 16px 0' }}>
             <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Closer notes…" />
-            <div style={{ display: 'flex', gap: 10, marginTop: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-              <Select value={outcome} onChange={e => setOutcome(e.target.value)} style={{ flex: '1 1 140px' }}>
+            <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+              <Select value={outcome} onChange={e => setOutcome(e.target.value)} style={{ flex: 1, height: 38 }}>
                 <option value="">Mark outcome…</option>
                 <option value="closed">Closed</option>
                 <option value="lost">Lost</option>
                 <option value="no_show">No Show</option>
               </Select>
-              {outcome === 'closed' && (
-                <Input type="number" value={dealValue} onChange={e => setDealValue(e.target.value)} placeholder="Deal value ($)" style={{ flex: '0 0 140px' }} />
-              )}
-              {outcome && outcome !== 'closed' && (
-                <Input value={lossReason} onChange={e => setLossReason(e.target.value)} placeholder="Loss reason…" style={{ flex: '1 1 180px' }} />
-              )}
-              <Button size="sm" onClick={handleComplete} disabled={!outcome || update.isPending || lostLoading}>
+              <Button size="sm" onClick={handleComplete} disabled={!outcome || update.isPending || lostLoading} style={{ flexShrink: 0 }}>
                 {update.isPending ? 'Saving…' : lostLoading ? 'Cleaning up demo…' : 'Save Outcome'}
               </Button>
             </div>
-            {!isClosed && (
-              <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <Input
-                  type="number"
-                  value={overridePrice}
-                  onChange={e => setOverridePrice(e.target.value)}
-                  placeholder="Override price (optional)"
-                  style={{ flex: '0 1 200px', height: 34, fontSize: 13, padding: '0 10px' }}
-                />
-                <Input
-                  type="email"
-                  value={clientEmail}
-                  onChange={e => setClientEmail(e.target.value)}
-                  placeholder="Client's real email (optional)"
-                  style={{ flex: '0 1 220px', height: 34, fontSize: 13, padding: '0 10px' }}
-                />
-              </div>
+            {outcome === 'closed' && (
+              <Input type="number" value={dealValue} onChange={e => setDealValue(e.target.value)} placeholder="Deal value ($)" style={{ marginTop: 8, width: '100%' }} />
+            )}
+            {outcome && outcome !== 'closed' && (
+              <Input value={lossReason} onChange={e => setLossReason(e.target.value)} placeholder="Loss reason…" style={{ marginTop: 8, width: '100%' }} />
             )}
           </div>
 
@@ -513,13 +491,6 @@ export function AppointmentCard({ appt }) {
               />
             ) : null}
           </div>
-
-          {/* ── Sample Dashboard Preview ─────────────────────────────────────── */}
-          {rec?.recommended_automations?.length > 0 && (
-            <div style={{ padding: '0 16px 16px' }}>
-              <SampleDashboard rec={rec} lead={lead} />
-            </div>
-          )}
 
           {/* ── Open Client Preview — real demo login, not just a panel ────────── */}
           {appt.demo_client_id && (
@@ -710,6 +681,21 @@ function RecommendationPanel({
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {appt.demo_client_id && (
+              <a
+                href={import.meta.env.VITE_CLIENT_PORTAL_URL || 'https://ohvara-client-portal.vercel.app'}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  height: 36, borderRadius: 6, fontSize: 13,
+                  background: 'var(--bg-elevated)', color: 'var(--text-secondary)',
+                  border: '0.5px solid var(--border)', textDecoration: 'none',
+                }}
+              >
+                Open Client Dashboard →
+              </a>
+            )}
             {/* Real Stripe Checkout Session at the actual custom price — one
                 combined session (monthly + setup), gated on a demo account
                 existing (Prompt 7) since that's what the session is tagged to. */}
