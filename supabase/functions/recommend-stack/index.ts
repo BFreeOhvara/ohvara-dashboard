@@ -202,6 +202,7 @@ RULES:
 - Design 2-5 automations that directly solve THIS business's stated problems — problem-first, not feature-first
 - Almost every lead needs some form of always-on call/lead capture — include it if missed calls or slow response is a factor
 - Give each automation a short, plain-English name (2-4 words) and a one-line description of what it does
+- Do not recommend two automations that solve the same problem. If there's overlap, combine them into one. Each automation must address a distinct problem the prospect described
 - Anchor ALL talking points and ROI arguments to exactly $${effectiveMonthly}/month and $${SETUP_FEE} setup
 - Lead with missed revenue recovery, not features
 - Reference specific numbers and their stated pain from the context when available

@@ -100,8 +100,9 @@ export function AppointmentCard({ appt }) {
   const [overridePrice, setOverridePrice] = useState('')
   const [clientEmail, setClientEmail] = useState('')
   const [lostLoading, setLostLoading] = useState(false)
-  const [stripeLinks, setStripeLinks] = useState({})
-  const [stripeLoading, setStripeLoading] = useState({})
+  const [paymentLink, setPaymentLink] = useState(null)
+  const [paymentLinkLoading, setPaymentLinkLoading] = useState(false)
+  const [paymentLinkError, setPaymentLinkError] = useState('')
   const update = useUpdateAppointment()
   const lead = appt.lead
 
@@ -115,15 +116,6 @@ export function AppointmentCard({ appt }) {
     }
     if (!rec && !recLoading) loadRecommendation()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Pre-generate the Stripe link for the recommended (closest-tier) price the
-  // moment the recommendation is known — there's only ONE custom stack per
-  // lead now (no fixed-package alternatives), so only one link is needed.
-  // silent=true: a failure just leaves the Generate button as fallback.
-  useEffect(() => {
-    if (!lead || !rec?.recommended_tier) return
-    handleStripeLinks(rec.recommended_tier, { silent: true })
-  }, [rec?.recommended_tier]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadRecommendation() {
     setRecLoading(true)
@@ -188,25 +180,31 @@ export function AppointmentCard({ appt }) {
     }
   }
 
-  async function handleStripeLinks(tier, { silent = false } = {}) {
-    if (stripeLoading[tier]) return
-    setStripeLoading(prev => ({ ...prev, [tier]: true }))
+  // Real Stripe Checkout Session at the actual custom price — one combined
+  // session (recurring monthly + one-time setup line item), not the old
+  // static fixed-tier payment links. Only callable once a demo client exists
+  // (Prompt 7) since that's the clientId the session gets tagged with.
+  async function handleGeneratePaymentLink() {
+    if (paymentLinkLoading || !appt.demo_client_id) return
+    setPaymentLinkLoading(true)
+    setPaymentLinkError('')
     try {
-      const { data, error } = await supabase.functions.invoke('generate-stripe-links', {
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: {
-          tier,
+          clientId: appt.demo_client_id,
           businessName: lead.business_name,
-          closerName: profile?.full_name,
-          appointmentId: appt.id,
+          monthlyPrice: rec?.custom_monthly_price,
+          setupFee: 297,
+          customerEmail: clientEmail.trim() || lead.email || undefined,
         },
       })
-      if (error || !data) throw new Error(error?.message || 'No links returned')
-      setStripeLinks(prev => ({ ...prev, [tier]: { setup: data.setupLink, monthly: data.monthlyLink } }))
-    } catch {
-      // Fallback — open Stripe dashboard, but only on an explicit click
-      if (!silent) window.open(`https://dashboard.stripe.com/payment-links/create`, '_blank', 'noopener')
+      if (error || !data?.checkoutUrl) throw new Error(error?.message || data?.error || 'No checkout URL returned')
+      setPaymentLink(data.checkoutUrl)
+    } catch (err) {
+      console.error('[AppointmentCard] create-checkout-session failed:', err)
+      setPaymentLinkError(err.message || 'Failed to generate payment link')
     } finally {
-      setStripeLoading(prev => ({ ...prev, [tier]: false }))
+      setPaymentLinkLoading(false)
     }
   }
 
@@ -402,10 +400,11 @@ export function AppointmentCard({ appt }) {
                 isClosed={isClosed}
                 provisionLoading={provisionLoading}
                 provisionResult={provisionResult}
-                stripeLinks={stripeLinks}
-                stripeLoading={stripeLoading}
+                paymentLink={paymentLink}
+                paymentLinkLoading={paymentLinkLoading}
+                paymentLinkError={paymentLinkError}
                 onMarkClosed={handleMarkClosed}
-                onStripeLinks={handleStripeLinks}
+                onGeneratePaymentLink={handleGeneratePaymentLink}
               />
             ) : null}
           </div>
@@ -457,11 +456,11 @@ export function AppointmentCard({ appt }) {
 
 function RecommendationPanel({
   rec, lead, appt, isClosed, provisionLoading, provisionResult,
-  stripeLinks, stripeLoading, onMarkClosed, onStripeLinks,
+  paymentLink, paymentLinkLoading, paymentLinkError, onMarkClosed, onGeneratePaymentLink,
 }) {
   // No fixed packages anymore — `primary` is just a closest-tier color/name
-  // for display + Stripe link lookup, not a sellable unit. There's one
-  // custom-priced recommendation per lead; no alternative package cards.
+  // for display, not a sellable unit. There's one custom-priced
+  // recommendation per lead; no alternative package cards.
   const primary = PACKAGES[rec.recommended_tier]
 
   return (
@@ -617,12 +616,15 @@ function RecommendationPanel({
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {/* Stripe links — closest-tier checkout link (no per-deal custom-amount Stripe link yet) */}
-            <StripeButtonRow
-              tier={rec.recommended_tier}
-              stripeLinks={stripeLinks}
-              stripeLoading={stripeLoading}
-              onGenerate={onStripeLinks}
+            {/* Real Stripe Checkout Session at the actual custom price — one
+                combined session (monthly + setup), gated on a demo account
+                existing (Prompt 7) since that's what the session is tagged to. */}
+            <PaymentLinkRow
+              demoReady={!!appt.demo_client_id}
+              paymentLink={paymentLink}
+              loading={paymentLinkLoading}
+              error={paymentLinkError}
+              onGenerate={onGeneratePaymentLink}
             />
             {/* Mark Closed — one custom stack, one price, no alternative packages */}
             <button
@@ -891,67 +893,81 @@ function SampleAutomationTab({ automation, index }) {
   )
 }
 
-function StripeButtonRow({ tier, stripeLinks, stripeLoading, onGenerate, compact = false }) {
-  const p = PACKAGES[tier]
-  const links = stripeLinks[tier]
-  const loading = stripeLoading[tier]
+// Real Stripe Checkout Session — one combined link (monthly + $297 setup) at
+// the lead's actual custom price, not a fixed-tier static link. Needs a demo
+// account to exist first (Prompt 7) since the session is tagged to it.
+function PaymentLinkRow({ demoReady, paymentLink, loading, error, onGenerate }) {
+  const [copied, setCopied] = useState(false)
 
-  if (links) {
+  async function copyLink() {
+    if (!paymentLink) return
+    try {
+      await navigator.clipboard.writeText(paymentLink)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard permission denied — link is still visible/clickable below
+    }
+  }
+
+  if (paymentLink) {
     return (
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         <a
-          href={links.setup}
+          href={paymentLink}
           target="_blank"
           rel="noopener noreferrer"
           style={{
-            flex: 1, height: compact ? 30 : 36,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'var(--bg-elevated)', color: 'var(--text-primary)',
-            borderRadius: 6, border: '0.5px solid var(--border)',
-            fontSize: compact ? 11 : 12, textDecoration: 'none', fontFamily: 'var(--font-mono)',
-            fontVariantNumeric: 'tabular-nums',
-          }}
-        >
-          $497 Setup ↗
-        </a>
-        <a
-          href={links.monthly}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            flex: 1, height: compact ? 30 : 36,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flex: 1, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             background: 'var(--success-dim)', color: 'var(--success)',
             borderRadius: 6, border: '0.5px solid rgba(34,197,94,0.20)',
-            fontSize: compact ? 11 : 12, textDecoration: 'none', fontFamily: 'var(--font-mono)',
-            fontVariantNumeric: 'tabular-nums',
+            fontSize: 12, textDecoration: 'none', fontFamily: 'var(--font-mono)',
           }}
         >
-          ${p.monthly.toLocaleString()}/mo ↗
+          Open Payment Link ↗
         </a>
+        <button
+          onClick={copyLink}
+          style={{
+            flex: '0 0 110px', height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            background: 'var(--bg-elevated)', color: 'var(--text-primary)',
+            border: '0.5px solid var(--border)', borderRadius: 6, fontSize: 12, cursor: 'pointer',
+          }}
+        >
+          {copied ? <><CheckCircle size={12} style={{ color: 'var(--success)' }} /> Copied</> : <><Copy size={12} /> Copy Link</>}
+        </button>
       </div>
     )
   }
 
   return (
-    <button
-      onClick={() => onGenerate(tier)}
-      disabled={loading}
-      style={{
-        width: '100%', height: compact ? 30 : 36,
-        background: 'var(--success-dim)', color: 'var(--success)',
-        border: '0.5px solid rgba(34,197,94,0.20)',
-        borderRadius: 6, fontSize: compact ? 11 : 12,
-        cursor: loading ? 'wait' : 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-        fontFamily: 'var(--font-mono)',
-      }}
-    >
-      {loading ? (
-        <><Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> Generating…</>
-      ) : (
-        <>Generate $497 + ${p.monthly.toLocaleString()}/mo Links</>
+    <div>
+      <button
+        onClick={onGenerate}
+        disabled={loading || !demoReady}
+        style={{
+          width: '100%', height: 36,
+          background: 'var(--success-dim)', color: 'var(--success)',
+          border: '0.5px solid rgba(34,197,94,0.20)',
+          borderRadius: 6, fontSize: 12,
+          cursor: loading ? 'wait' : !demoReady ? 'not-allowed' : 'pointer',
+          opacity: demoReady ? 1 : 0.5,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          fontFamily: 'var(--font-mono)',
+        }}
+      >
+        {loading ? (
+          <><Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> Generating…</>
+        ) : (
+          <>Generate Payment Link</>
+        )}
+      </button>
+      {!demoReady && (
+        <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '4px 0 0' }}>Waiting on the demo account to provision…</p>
       )}
-    </button>
+      {error && (
+        <p style={{ fontSize: 10, color: 'var(--danger)', margin: '4px 0 0' }}>{error}</p>
+      )}
+    </div>
   )
 }
