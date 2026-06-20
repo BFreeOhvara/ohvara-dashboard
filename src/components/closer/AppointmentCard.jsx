@@ -461,15 +461,15 @@ export function AppointmentCard({ appt }) {
                   type="number"
                   value={overridePrice}
                   onChange={e => setOverridePrice(e.target.value)}
-                  placeholder="Override monthly price (optional — leave blank to bill list price)"
-                  style={{ flex: '1 1 260px', maxWidth: 320 }}
+                  placeholder="Override price (optional)"
+                  style={{ flex: '0 1 200px', height: 34, fontSize: 13, padding: '0 10px' }}
                 />
                 <Input
                   type="email"
                   value={clientEmail}
                   onChange={e => setClientEmail(e.target.value)}
-                  placeholder="Client's real email (optional — for their login on close)"
-                  style={{ flex: '1 1 260px', maxWidth: 320 }}
+                  placeholder="Client's real email (optional)"
+                  style={{ flex: '0 1 220px', height: 34, fontSize: 13, padding: '0 10px' }}
                 />
               </div>
             )}

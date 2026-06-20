@@ -113,6 +113,25 @@ function splitFrontRunners(automations: Automation[]): { frontRunners: Automatio
   return { frontRunners, subAgents }
 }
 
+// Safety net (Prompt 12 fix 2): the AI doesn't always honor "both tiers
+// required," and the deterministic fallback's short automation pools can
+// split too unevenly on their own. Promotes/demotes one agent across the
+// boundary so neither tier ever comes back empty, without ever dropping
+// below 1 front-runner.
+function enforceBothTiers(frontRunners: Automation[], subAgents: Automation[]): { frontRunners: Automation[]; subAgents: Automation[] } {
+  let fr = [...frontRunners]
+  let sub = [...subAgents]
+  if (fr.length === 0 && sub.length > 0) {
+    fr = [sub[0]]
+    sub = sub.slice(1)
+  }
+  if (sub.length === 0 && fr.length > 1) {
+    sub = [fr[fr.length - 1]]
+    fr = fr.slice(0, -1)
+  }
+  return { frontRunners: fr, subAgents: sub }
+}
+
 function deterministicFallback(inputs: {
   callsMissedPerWeek: number | null
   avgTicket: number | null
@@ -127,7 +146,8 @@ function deterministicFallback(inputs: {
   const { callsMissedPerWeek, avgTicket, monthlyLaborCost, repNotes, niche, customMonthly, primaryPain, currentSetup, secondaryPain } = inputs
 
   const automations = fallbackAutomations({ primaryPain, currentSetup, secondaryPain, callsMissedPerWeek, repNotes })
-  const { frontRunners, subAgents } = splitFrontRunners(automations)
+  const split = splitFrontRunners(automations)
+  const { frontRunners, subAgents } = enforceBothTiers(split.frontRunners, split.subAgents)
   const tier = customMonthly ? priceToTier(customMonthly) : laborTier(monthlyLaborCost)
   const monthly = customMonthly || PACKAGES[tier].monthly
   const painLabel = primaryPain ? PAIN_LABELS[primaryPain] : null
@@ -212,6 +232,7 @@ ${formulaExplanation}
 RULES:
 - Identify the 1-2 MOST CRITICAL problems this business described, then assign 1-2 front-runner agents that directly solve them — these are the headline of the sale
 - Assign 1-5 sub-agents that complement and amplify the front-runners (make one smarter, handle its edge cases, extend its reach). No standalone sub-agent that could exist without a front-runner — every sub-agent must have a clear relationship to one
+- You MUST return at least 1 front-runner agent AND at least 1 sub-agent in every response. Never return only one tier. The full stack should have between 3 and 7 agents total
 - Almost every lead needs some form of always-on call/lead capture as a front-runner — include it if missed calls or slow response is a factor
 - Give each agent a short, SPECIFIC, plain-English name (2-4 words) that names the job it does — "After-Hours Call Handler," not "AI Receptionist." Avoid generic names
 - No agent should sound generic or overlap another. If there's overlap, combine into one
@@ -276,15 +297,16 @@ Respond with ONLY valid JSON, no markdown:
 
         const validatedFrontRunners = normalizeAutomations(parsed.front_runners, 2)
         const validatedSubAgents = normalizeAutomations(parsed.sub_agents, 5)
+        const { frontRunners: enforcedFrontRunners, subAgents: enforcedSubAgents } = enforceBothTiers(validatedFrontRunners, validatedSubAgents)
         const resolvedTier = priceToTier(effectiveMonthly)
 
-        if (validatedFrontRunners.length >= 1) {
+        if (enforcedFrontRunners.length >= 1) {
           rec = {
             recommended_tier: resolvedTier,
-            front_runners: validatedFrontRunners,
-            sub_agents: validatedSubAgents,
+            front_runners: enforcedFrontRunners,
+            sub_agents: enforcedSubAgents,
             // Combined list — backward compat for any code/data still reading the flat array.
-            recommended_automations: [...validatedFrontRunners, ...validatedSubAgents],
+            recommended_automations: [...enforcedFrontRunners, ...enforcedSubAgents],
             custom_monthly_price: effectiveMonthly,
             confidence: parsed.confidence || 'medium',
             headline: parsed.headline || '',

@@ -1,6 +1,6 @@
-import { Inbox } from '../../components/messages/Inbox'
+import { MessageCenter } from '../../components/messages/MessageCenter'
 
-// Nate's inbox — sales questions from reps.
+// Nate's inbox — sales questions from reps, 3-panel chat layout (Prompt 12).
 export default function CloserMessages() {
-  return <Inbox recipient="nate" title="Messages" subtitle="Sales questions from reps" />
+  return <MessageCenter role="closer" />
 }

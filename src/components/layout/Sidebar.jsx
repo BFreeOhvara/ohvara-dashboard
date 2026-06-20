@@ -21,12 +21,10 @@ const NAV = {
   ],
   closer: [
     { to: '/closer',                   label: 'Appointments',  icon: Calendar },
-    { to: '/closer/scraper',           label: 'Lead Scraper',  icon: Search },
     { to: '/closer/call-leads',        label: 'Call Leads',    icon: PhoneCall },
     { to: '/closer/pipeline',          label: 'Pipeline',      icon: GitBranch },
     { to: '/closer/reps',              label: 'Rep Activity',  icon: BarChart2 },
     { to: '/closer/revenue',           label: 'Revenue',       icon: TrendingUp },
-    { to: '/closer/commissions',       label: 'Commissions',   icon: DollarSign },
     { to: '/closer/messages',          label: 'Messages',      icon: MessageSquare },
   ],
   admin: [

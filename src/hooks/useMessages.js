@@ -8,13 +8,6 @@ export const MESSAGE_CATEGORIES = [
   { value: 'nate',    label: 'Sales Question',     to: 'Nate',    hint: 'Pitching, objections, closing, the script' },
 ]
 
-export function recipientLabel(recipient) {
-  return MESSAGE_CATEGORIES.find(c => c.value === recipient)?.label || recipient
-}
-export function recipientName(recipient) {
-  return MESSAGE_CATEGORIES.find(c => c.value === recipient)?.to || recipient
-}
-
 // Rep: send a message to brayden/nate
 export function useSendMessage() {
   const qc = useQueryClient()
