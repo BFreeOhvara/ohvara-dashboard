@@ -46,6 +46,11 @@ export default function ClientOverview() {
   const hasPhone = !!client.twilio_number
   // Free-form AI-generated automations (Prompt 5) — no fixed catalog anymore.
   const automations = client.recommended_automations || []
+  // Front-runner / sub-agent hierarchy (Prompt 10) — falls back to the flat
+  // list above for clients provisioned before this split existed.
+  const frontRunners = client.front_runner_agents || []
+  const subAgents = client.sub_agents || []
+  const hasTieredStack = frontRunners.length > 0
 
   return (
     <div style={{ display: 'flex', gap: 20, minHeight: 0 }}>
@@ -100,27 +105,79 @@ export default function ClientOverview() {
           />
         </div>
 
-        {/* Automations grid — free-form, AI-generated per this business's stated problems */}
+        {/* Automations — front-runner agents (Core Solution) emphasized, sub-agents
+            (Supporting Agents) underneath. Falls back to a flat grid for clients
+            provisioned before the front-runner/sub-agent split existed. */}
         <div>
-          <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500, marginBottom: 10 }}>
-            Your Automations
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
-            {automations.map((a, i) => (
-              <div key={i} className="glass" style={{ padding: '14px 16px', borderRadius: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 8 }}>
-                  {isAgentLive
-                    ? <CheckCircle size={14} style={{ color: 'var(--success)' }} />
-                    : <Clock size={14} style={{ color: 'var(--warning)' }} />
-                  }
-                </div>
-                <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{a.name}</p>
-                {a.description && (
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.4 }}>{a.description}</p>
-                )}
+          {hasTieredStack ? (
+            <>
+              <p style={{ fontSize: 10, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, marginBottom: 10 }}>
+                Core Solution
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 8, marginBottom: subAgents.length > 0 ? 18 : 0 }}>
+                {frontRunners.map((a, i) => (
+                  <div key={i} className="glass-accent" style={{ padding: '16px 18px', borderRadius: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <Zap size={13} style={{ color: 'var(--accent)' }} />
+                      {isAgentLive
+                        ? <CheckCircle size={14} style={{ color: 'var(--success)' }} />
+                        : <Clock size={14} style={{ color: 'var(--warning)' }} />
+                      }
+                    </div>
+                    <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{a.name}</p>
+                    {a.description && (
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.4 }}>{a.description}</p>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+              {subAgents.length > 0 && (
+                <>
+                  <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, marginBottom: 10 }}>
+                    Supporting Agents
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
+                    {subAgents.map((a, i) => (
+                      <div key={i} className="glass" style={{ padding: '14px 16px', borderRadius: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 8 }}>
+                          {isAgentLive
+                            ? <CheckCircle size={14} style={{ color: 'var(--success)' }} />
+                            : <Clock size={14} style={{ color: 'var(--warning)' }} />
+                          }
+                        </div>
+                        <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{a.name}</p>
+                        {a.description && (
+                          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.4 }}>{a.description}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500, marginBottom: 10 }}>
+                Your Automations
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
+                {automations.map((a, i) => (
+                  <div key={i} className="glass" style={{ padding: '14px 16px', borderRadius: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 8 }}>
+                      {isAgentLive
+                        ? <CheckCircle size={14} style={{ color: 'var(--success)' }} />
+                        : <Clock size={14} style={{ color: 'var(--warning)' }} />
+                      }
+                    </div>
+                    <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{a.name}</p>
+                    {a.description && (
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.4 }}>{a.description}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 

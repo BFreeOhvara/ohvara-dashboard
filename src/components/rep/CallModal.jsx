@@ -246,6 +246,8 @@ export function CallModal({ lead, onClose }) {
           if (!data?.rec) return
           await supabase.from('leads').update({
             recommended_automations: data.rec.recommended_automations ?? null,
+            front_runner_agents:     data.rec.front_runners ?? null,
+            sub_agents:              data.rec.sub_agents ?? null,
             custom_monthly_price:    data.rec.custom_monthly_price ?? null,
             recommended_stack:       data.rec,
             stack_generated_at:      new Date().toISOString(),
@@ -273,6 +275,8 @@ export function CallModal({ lead, onClose }) {
                 location:              lead.city || null,
                 customMonthlyPrice:    data.rec.custom_monthly_price ?? null,
                 recommendedAutomations: data.rec.recommended_automations ?? null,
+                frontRunnerAgents:     data.rec.front_runners ?? null,
+                subAgents:             data.rec.sub_agents ?? null,
               },
             }).catch(() => {})
           }

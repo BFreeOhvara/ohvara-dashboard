@@ -82,6 +82,74 @@ function PackageBadge({ tier, size = 'sm' }) {
   )
 }
 
+// Front-runner agents (1-2, the headline of the sale) rendered as larger
+// "Core Solution" cards; sub-agents (1-5, complement the front-runners)
+// rendered smaller underneath as "Supporting Agents." Falls back to the old
+// flat recommended_automations list for leads generated before Prompt 10.
+function AgentStackList({ rec, primary }) {
+  if (rec.front_runners?.length > 0) {
+    return (
+      <div style={{ margin: '10px 0' }}>
+        <p style={{ fontSize: 9, color: primary?.color || 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 8 }}>
+          Core Solution
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: rec.sub_agents?.length > 0 ? 14 : 0 }}>
+          {rec.front_runners.map((a, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'flex-start', gap: 9,
+              padding: '10px 12px', borderRadius: 8,
+              background: 'var(--bg-elevated)', border: `0.5px solid ${primary?.border || 'var(--accent-border)'}`,
+            }}>
+              <Zap size={14} style={{ color: primary?.color || 'var(--accent)', flexShrink: 0, marginTop: 1 }} />
+              <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                <strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{a.name}</strong>
+                {a.description ? ` — ${a.description}` : ''}
+              </span>
+            </div>
+          ))}
+        </div>
+        {rec.sub_agents?.length > 0 && (
+          <>
+            <p style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 6 }}>
+              Supporting Agents
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {rec.sub_agents.map((a, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
+                  <CheckCircle size={11} style={{ color: 'var(--text-muted)', flexShrink: 0, marginTop: 2 }} />
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                    <strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{a.name}</strong>
+                    {a.description ? ` — ${a.description}` : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  // Legacy fallback — leads recommended before Prompt 10 only have the flat list.
+  if (rec.recommended_automations?.length > 0) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, margin: '10px 0' }}>
+        {rec.recommended_automations.map((a, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
+            <CheckCircle size={12} style={{ color: primary?.color || 'var(--accent)', flexShrink: 0, marginTop: 2 }} />
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+              <strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{a.name}</strong>
+              {a.description ? ` — ${a.description}` : ''}
+            </span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return <ServiceChecklist tier={rec.recommended_tier} />
+}
+
 export function AppointmentCard({ appt }) {
   const { profile } = useAuth()
   const [expanded, setExpanded] = useState(true)
@@ -514,22 +582,8 @@ function RecommendationPanel({
               </span>
             )}
           </div>
-          {/* Free-form AI-generated automations — no fixed catalog */}
-          {rec.recommended_automations?.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, margin: '10px 0' }}>
-              {rec.recommended_automations.map((a, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
-                  <CheckCircle size={12} style={{ color: primary?.color || 'var(--accent)', flexShrink: 0, marginTop: 2 }} />
-                  <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                    <strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{a.name}</strong>
-                    {a.description ? ` — ${a.description}` : ''}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <ServiceChecklist tier={rec.recommended_tier} />
-          )}
+          {/* Free-form AI-generated agent stack — no fixed catalog */}
+          <AgentStackList rec={rec} primary={primary} />
           {rec.headline && (
             <p style={{ fontSize: 14, color: 'var(--text-primary)', marginTop: 8, lineHeight: 1.4, fontWeight: 500 }}>
               "{rec.headline}"
@@ -756,6 +810,7 @@ function SampleDashboard({ rec, lead }) {
 
   const automations = rec.recommended_automations || []
   if (!automations.length) return null
+  const frontRunnerNames = new Set((rec.front_runners || []).map(a => a.name))
 
   const businessName = lead.business_name || 'This Business'
   const callsPerWeek = lead.calls_missed_per_week || 5
@@ -799,23 +854,30 @@ function SampleDashboard({ rec, lead }) {
             </p>
           </div>
 
-          {/* Tab strip — index-based since automations are free-form (no catalog ids) */}
+          {/* Tab strip — index-based since automations are free-form (no catalog ids).
+              Front-runner agents get a star marker to match the Core Solution / Supporting
+              Agents split shown in the AI Recommendation panel above. */}
           <div style={{ display: 'flex', borderBottom: '0.5px solid var(--border)', overflowX: 'auto' }}>
-            {['Overview', ...automations.map(a => a.name)].map((label, idx) => (
-              <button
-                key={idx}
-                onClick={() => setTab(idx)}
-                style={{
-                  padding: '7px 13px', fontSize: 11, border: 'none', cursor: 'pointer',
-                  background: 'none', whiteSpace: 'nowrap',
-                  color: tab === idx ? 'var(--accent)' : 'var(--text-muted)',
-                  borderBottom: tab === idx ? '2px solid var(--accent)' : '2px solid transparent',
-                  fontWeight: tab === idx ? 500 : 400,
-                }}
-              >
-                {label}
-              </button>
-            ))}
+            {['Overview', ...automations.map(a => a.name)].map((label, idx) => {
+              const isFrontRunner = idx > 0 && frontRunnerNames.has(automations[idx - 1].name)
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setTab(idx)}
+                  style={{
+                    padding: '7px 13px', fontSize: 11, border: 'none', cursor: 'pointer',
+                    background: 'none', whiteSpace: 'nowrap',
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    color: tab === idx ? 'var(--accent)' : 'var(--text-muted)',
+                    borderBottom: tab === idx ? '2px solid var(--accent)' : '2px solid transparent',
+                    fontWeight: tab === idx ? 500 : 400,
+                  }}
+                >
+                  {isFrontRunner && <Star size={9} style={{ color: 'var(--warning)', flexShrink: 0 }} />}
+                  {label}
+                </button>
+              )
+            })}
           </div>
 
           {/* Tab content */}

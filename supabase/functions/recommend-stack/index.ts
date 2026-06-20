@@ -23,12 +23,12 @@ type PackageKey = keyof typeof PACKAGES
 function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)) }
 
 // Formula: 15% of estimated monthly lost revenue.
-// Tunable constants flagged here: 4.33 (weeks/month), 0.15 (take rate), 297/1797 (floor/ceiling).
+// Tunable constants flagged here: 4.33 (weeks/month), 0.15 (take rate), 397/1997 (floor/ceiling).
 function formulaPrice(callsMissedPerWeek: number | null, avgTicket: number | null): number | null {
   if (!callsMissedPerWeek || !avgTicket || callsMissedPerWeek <= 0 || avgTicket <= 0) return null
   const monthlyLost = callsMissedPerWeek * 4.33 * avgTicket
   if (monthlyLost < 500) return null  // not enough signal to formula-price
-  return Math.round(clamp(monthlyLost * 0.15, 297, 1797) / 10) * 10  // round to nearest $10
+  return Math.round(clamp(monthlyLost * 0.15, 397, 1997) / 10) * 10  // round to nearest $10
 }
 
 // Map price → closest display tier for Stripe link generation + UI color.
@@ -102,7 +102,15 @@ function fallbackAutomations(inputs: {
   if (automations.length < 2) {
     automations.push({ name: 'Missed Call Text Back', description: 'Auto-SMS to any caller who doesn\'t get answered' })
   }
-  return automations.slice(0, 5)
+  return automations.slice(0, 7)
+}
+
+// Splits a flat, ordered automation list into 1-2 front-runners (the
+// headline agents, always first) + up to 5 sub-agents (the rest).
+function splitFrontRunners(automations: Automation[]): { frontRunners: Automation[]; subAgents: Automation[] } {
+  const frontRunners = automations.slice(0, Math.min(2, automations.length || 1))
+  const subAgents = automations.slice(frontRunners.length, frontRunners.length + 5)
+  return { frontRunners, subAgents }
 }
 
 function deterministicFallback(inputs: {
@@ -119,6 +127,7 @@ function deterministicFallback(inputs: {
   const { callsMissedPerWeek, avgTicket, monthlyLaborCost, repNotes, niche, customMonthly, primaryPain, currentSetup, secondaryPain } = inputs
 
   const automations = fallbackAutomations({ primaryPain, currentSetup, secondaryPain, callsMissedPerWeek, repNotes })
+  const { frontRunners, subAgents } = splitFrontRunners(automations)
   const tier = customMonthly ? priceToTier(customMonthly) : laborTier(monthlyLaborCost)
   const monthly = customMonthly || PACKAGES[tier].monthly
   const painLabel = primaryPain ? PAIN_LABELS[primaryPain] : null
@@ -129,6 +138,8 @@ function deterministicFallback(inputs: {
 
   return {
     recommended_tier: tier,
+    front_runners: frontRunners,
+    sub_agents: subAgents,
     recommended_automations: automations,
     custom_monthly_price: monthly,
     confidence: 'medium',
@@ -199,10 +210,11 @@ $${effectiveMonthly}/month + $${SETUP_FEE} one-time setup
 ${formulaExplanation}
 
 RULES:
-- Design 2-5 automations that directly solve THIS business's stated problems — problem-first, not feature-first
-- Almost every lead needs some form of always-on call/lead capture — include it if missed calls or slow response is a factor
-- Give each automation a short, plain-English name (2-4 words) and a one-line description of what it does
-- Do not recommend two automations that solve the same problem. If there's overlap, combine them into one. Each automation must address a distinct problem the prospect described
+- Identify the 1-2 MOST CRITICAL problems this business described, then assign 1-2 front-runner agents that directly solve them — these are the headline of the sale
+- Assign 1-5 sub-agents that complement and amplify the front-runners (make one smarter, handle its edge cases, extend its reach). No standalone sub-agent that could exist without a front-runner — every sub-agent must have a clear relationship to one
+- Almost every lead needs some form of always-on call/lead capture as a front-runner — include it if missed calls or slow response is a factor
+- Give each agent a short, SPECIFIC, plain-English name (2-4 words) that names the job it does — "After-Hours Call Handler," not "AI Receptionist." Avoid generic names
+- No agent should sound generic or overlap another. If there's overlap, combine into one
 - Anchor ALL talking points and ROI arguments to exactly $${effectiveMonthly}/month and $${SETUP_FEE} setup
 - Lead with missed revenue recovery, not features
 - Reference specific numbers and their stated pain from the context when available
@@ -211,7 +223,8 @@ CLOSER: ${closerName || 'Nate'}
 
 Respond with ONLY valid JSON, no markdown:
 {
-  "recommended_automations": [{"name": "Short Name", "description": "One-line description"}],
+  "front_runners": [{"name": "Short Specific Name", "description": "One-line description"}],
+  "sub_agents": [{"name": "Short Specific Name", "description": "One-line description"}],
   "confidence": "high|medium|low",
   "headline": "One punchy sentence — max 12 words",
   "roi_argument": "Specific dollar-anchored ROI argument using the numbers above",
@@ -247,7 +260,7 @@ Respond with ONLY valid JSON, no markdown:
         }
 
         // Coerce + validate: each automation needs a non-empty name; description optional.
-        function normalizeAutomations(raw: unknown): Automation[] {
+        function normalizeAutomations(raw: unknown, max = 5): Automation[] {
           if (!Array.isArray(raw)) return []
           return raw
             .map(a => {
@@ -258,16 +271,20 @@ Respond with ONLY valid JSON, no markdown:
               return null
             })
             .filter((a): a is Automation => !!a && a.name.length > 0)
-            .slice(0, 5)
+            .slice(0, max)
         }
 
-        const validatedAutomations = normalizeAutomations(parsed.recommended_automations)
+        const validatedFrontRunners = normalizeAutomations(parsed.front_runners, 2)
+        const validatedSubAgents = normalizeAutomations(parsed.sub_agents, 5)
         const resolvedTier = priceToTier(effectiveMonthly)
 
-        if (validatedAutomations.length >= 1) {
+        if (validatedFrontRunners.length >= 1) {
           rec = {
             recommended_tier: resolvedTier,
-            recommended_automations: validatedAutomations,
+            front_runners: validatedFrontRunners,
+            sub_agents: validatedSubAgents,
+            // Combined list — backward compat for any code/data still reading the flat array.
+            recommended_automations: [...validatedFrontRunners, ...validatedSubAgents],
             custom_monthly_price: effectiveMonthly,
             confidence: parsed.confidence || 'medium',
             headline: parsed.headline || '',

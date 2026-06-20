@@ -36,6 +36,8 @@ Deno.serve(async (req) => {
       location,
       customMonthlyPrice,
       recommendedAutomations,
+      frontRunnerAgents,
+      subAgents,
     } = await req.json()
 
     if (!appointmentId || !leadId || !businessName) {
@@ -84,6 +86,8 @@ Deno.serve(async (req) => {
     const monthly = typeof customMonthlyPrice === 'number' && customMonthlyPrice > 0 ? customMonthlyPrice : 497
     const tier = priceToTier(monthly)
     const automations = Array.isArray(recommendedAutomations) ? recommendedAutomations : []
+    const frontRunners = Array.isArray(frontRunnerAgents) ? frontRunnerAgents : []
+    const subs = Array.isArray(subAgents) ? subAgents : []
 
     // 1. Demo client row — status='demo' so the portal shows the sample-data banner
     const { data: client, error: clientError } = await supabase
@@ -100,6 +104,8 @@ Deno.serve(async (req) => {
         recommended_tier: tier,
         recommended_price: monthly,
         recommended_automations: automations,
+        front_runner_agents: frontRunners,
+        sub_agents: subs,
       })
       .select()
       .single()
