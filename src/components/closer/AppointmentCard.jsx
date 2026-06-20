@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { createPortal } from 'react-dom'
 import {
   ChevronDown, ChevronUp, ChevronRight, MapPin, Phone, Mail, Sparkles, Loader2,
@@ -152,7 +153,9 @@ export function AppointmentCard({ appt }) {
   const [paymentLink, setPaymentLink] = useState(null)
   const [paymentLinkLoading, setPaymentLinkLoading] = useState(false)
   const [paymentLinkError, setPaymentLinkError] = useState('')
+  const [retryProvisionLoading, setRetryProvisionLoading] = useState(false)
   const update = useUpdateAppointment()
+  const qc = useQueryClient()
   const lead = appt.lead
 
   // Auto-load recommendation on mount.
@@ -265,6 +268,35 @@ export function AppointmentCard({ appt }) {
       setPaymentLinkError(err.message || 'Failed to generate payment link')
     } finally {
       setPaymentLinkLoading(false)
+    }
+  }
+
+  // Manual reprovision for appointments that were booked before Prompt 7 shipped
+  // (provision-demo-client was never called) or where the fire-and-forget silently failed.
+  // On success, invalidates the appointments query so the parent re-renders with
+  // the populated demo_client_id and the "Open Client Dashboard" button appears.
+  async function handleRetryProvision() {
+    if (retryProvisionLoading || !rec) return
+    setRetryProvisionLoading(true)
+    try {
+      await supabase.functions.invoke('provision-demo-client', {
+        body: {
+          appointmentId: appt.id,
+          leadId: lead.id,
+          businessName: lead.business_name,
+          niche: lead.niche,
+          location: lead.city || null,
+          customMonthlyPrice: rec.custom_monthly_price ?? null,
+          recommendedAutomations: rec.recommended_automations ?? null,
+          frontRunnerAgents: rec.front_runners ?? null,
+          subAgents: rec.sub_agents ?? null,
+        },
+      })
+      qc.invalidateQueries({ queryKey: ['appointments'] })
+    } catch (err) {
+      console.error('[AppointmentCard] retry provision-demo-client failed:', err)
+    } finally {
+      setRetryProvisionLoading(false)
     }
   }
 
@@ -486,8 +518,10 @@ export function AppointmentCard({ appt }) {
                 paymentLink={paymentLink}
                 paymentLinkLoading={paymentLinkLoading}
                 paymentLinkError={paymentLinkError}
+                retryProvisionLoading={retryProvisionLoading}
                 onMarkClosed={handleMarkClosed}
                 onGeneratePaymentLink={handleGeneratePaymentLink}
+                onRetryProvision={handleRetryProvision}
               />
             ) : null}
           </div>
@@ -535,7 +569,8 @@ export function AppointmentCard({ appt }) {
 
 function RecommendationPanel({
   rec, lead, appt, isClosed, provisionLoading, provisionResult,
-  paymentLink, paymentLinkLoading, paymentLinkError, onMarkClosed, onGeneratePaymentLink,
+  paymentLink, paymentLinkLoading, paymentLinkError, retryProvisionLoading,
+  onMarkClosed, onGeneratePaymentLink, onRetryProvision,
 }) {
   // No fixed packages anymore — `primary` is just a closest-tier color/name
   // for display, not a sellable unit. There's one custom-priced
@@ -567,15 +602,6 @@ function RecommendationPanel({
               Recommended
             </span>
           </div>
-          <span style={{
-            fontSize: 10, padding: '2px 6px', borderRadius: 3,
-            background: rec.confidence === 'high' ? 'var(--success-dim)' : 'var(--warning-dim)',
-            color: rec.confidence === 'high' ? 'var(--success)' : 'var(--warning)',
-            border: `0.5px solid ${rec.confidence === 'high' ? 'rgba(34,197,94,0.20)' : 'rgba(245,158,11,0.20)'}`,
-            fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em',
-          }}>
-            {rec.confidence} confidence
-          </span>
         </div>
 
         {/* Custom price + automation list */}
@@ -705,6 +731,8 @@ function RecommendationPanel({
               loading={paymentLinkLoading}
               error={paymentLinkError}
               onGenerate={onGeneratePaymentLink}
+              onRetryProvision={onRetryProvision}
+              retryProvisionLoading={retryProvisionLoading}
             />
             {/* Mark Closed — one custom stack, one price, no alternative packages */}
             <button
@@ -984,7 +1012,7 @@ function SampleAutomationTab({ automation, index }) {
 // Real Stripe Checkout Session — one combined link (monthly + $297 setup) at
 // the lead's actual custom price, not a fixed-tier static link. Needs a demo
 // account to exist first (Prompt 7) since the session is tagged to it.
-function PaymentLinkRow({ demoReady, paymentLink, loading, error, onGenerate }) {
+function PaymentLinkRow({ demoReady, paymentLink, loading, error, onGenerate, onRetryProvision, retryProvisionLoading }) {
   const [copied, setCopied] = useState(false)
 
   async function copyLink() {
@@ -1051,7 +1079,18 @@ function PaymentLinkRow({ demoReady, paymentLink, loading, error, onGenerate }) 
         )}
       </button>
       {!demoReady && (
-        <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '4px 0 0' }}>Waiting on the demo account to provision…</p>
+        <button
+          onClick={onRetryProvision}
+          disabled={retryProvisionLoading}
+          style={{
+            display: 'block', marginTop: 4, background: 'none', border: 'none',
+            padding: 0, fontSize: 10, cursor: retryProvisionLoading ? 'wait' : 'pointer',
+            color: retryProvisionLoading ? 'var(--text-muted)' : 'var(--accent)',
+            textDecoration: 'underline', textAlign: 'left',
+          }}
+        >
+          {retryProvisionLoading ? 'Provisioning demo account…' : 'Demo account not ready — retry provisioning'}
+        </button>
       )}
       {error && (
         <p style={{ fontSize: 10, color: 'var(--danger)', margin: '4px 0 0' }}>{error}</p>

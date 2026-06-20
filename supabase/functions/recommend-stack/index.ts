@@ -99,8 +99,16 @@ function fallbackAutomations(inputs: {
     automations.push({ name: 'Professional Website', description: 'Mobile-first site that converts visitors to booked calls' })
   }
 
-  if (automations.length < 2) {
-    automations.push({ name: 'Missed Call Text Back', description: 'Auto-SMS to any caller who doesn\'t get answered' })
+  // Ensure a minimum of 4 automations so the split+floor always has material to work with.
+  const fallbackPad = [
+    { name: 'Missed Call Text Back', description: 'Auto-SMS to any caller who doesn\'t get answered' },
+    { name: 'Appointment Reminders', description: 'SMS reminders that cut no-shows by 60%+' },
+    { name: 'Review Generation', description: 'Auto-requests 5-star reviews from completed jobs' },
+    { name: 'Lead Follow-Up Automation', description: 'Multi-touch follow-up for quotes that go quiet' },
+  ]
+  for (const a of fallbackPad) {
+    if (automations.length >= 4) break
+    if (!automations.some(x => x.name === a.name)) automations.push(a)
   }
   return automations.slice(0, 7)
 }
@@ -132,6 +140,37 @@ function enforceBothTiers(frontRunners: Automation[], subAgents: Automation[]): 
   return { frontRunners: fr, subAgents: sub }
 }
 
+// Curated pool for padding sub-agents when the AI or fallback returns too few.
+// Ordered by how broadly applicable they are to SMB phone-booking businesses.
+const AUTOMATION_POOL: Automation[] = [
+  { name: 'Appointment Reminders', description: 'SMS reminders that cut no-shows by 60%+' },
+  { name: 'Review Generation', description: 'Auto-requests 5-star reviews from completed jobs' },
+  { name: 'Lead Follow-Up Automation', description: 'Multi-touch follow-up for quotes that go quiet' },
+  { name: 'After-Hours Call Handler', description: 'Captures leads when the office is closed' },
+  { name: 'Booking Confirmation SMS', description: 'Instant confirmation text when appointments are scheduled' },
+  { name: 'Customer Reactivation', description: 'Re-engages past customers for repeat and referral business' },
+  { name: 'Missed Call Text Back', description: 'Auto-SMS to any caller who doesn\'t get answered' },
+  { name: 'Job Status Updates', description: 'Automated SMS keeping customers informed on job progress' },
+]
+
+// Enforces the stack composition floor: sub_agents ≥ 2 × front_runners.length.
+// Pads from AUTOMATION_POOL (de-duped against what's already in the stack) when
+// the AI or deterministic fallback returns fewer sub-agents than required.
+function enforceStackFloor(frontRunners: Automation[], subAgents: Automation[]): { frontRunners: Automation[]; subAgents: Automation[] } {
+  const minSubs = frontRunners.length * 2
+  if (subAgents.length >= minSubs) return { frontRunners, subAgents }
+  const existing = new Set([...frontRunners, ...subAgents].map(a => a.name.toLowerCase()))
+  const padded = [...subAgents]
+  for (const candidate of AUTOMATION_POOL) {
+    if (padded.length >= minSubs) break
+    if (!existing.has(candidate.name.toLowerCase())) {
+      padded.push(candidate)
+      existing.add(candidate.name.toLowerCase())
+    }
+  }
+  return { frontRunners, subAgents: padded }
+}
+
 function deterministicFallback(inputs: {
   callsMissedPerWeek: number | null
   avgTicket: number | null
@@ -147,7 +186,8 @@ function deterministicFallback(inputs: {
 
   const automations = fallbackAutomations({ primaryPain, currentSetup, secondaryPain, callsMissedPerWeek, repNotes })
   const split = splitFrontRunners(automations)
-  const { frontRunners, subAgents } = enforceBothTiers(split.frontRunners, split.subAgents)
+  const { frontRunners: bothTiersFR, subAgents: bothTiersSub } = enforceBothTiers(split.frontRunners, split.subAgents)
+  const { frontRunners, subAgents } = enforceStackFloor(bothTiersFR, bothTiersSub)
   const tier = customMonthly ? priceToTier(customMonthly) : laborTier(monthlyLaborCost)
   const monthly = customMonthly || PACKAGES[tier].monthly
   const painLabel = primaryPain ? PAIN_LABELS[primaryPain] : null
@@ -160,7 +200,7 @@ function deterministicFallback(inputs: {
     recommended_tier: tier,
     front_runners: frontRunners,
     sub_agents: subAgents,
-    recommended_automations: automations,
+    recommended_automations: [...frontRunners, ...subAgents],
     custom_monthly_price: monthly,
     confidence: 'medium',
     headline: `${niche || 'Your business'} is leaking revenue every time a call goes unanswered`,
@@ -232,7 +272,7 @@ ${formulaExplanation}
 RULES:
 - Identify the 1-2 MOST CRITICAL problems this business described, then assign 1-2 front-runner agents that directly solve them — these are the headline of the sale
 - Assign 1-5 sub-agents that complement and amplify the front-runners (make one smarter, handle its edge cases, extend its reach). No standalone sub-agent that could exist without a front-runner — every sub-agent must have a clear relationship to one
-- You MUST return at least 1 front-runner agent AND at least 1 sub-agent in every response. Never return only one tier. The full stack should have between 3 and 7 agents total
+- You MUST return 1-2 front-runner agents AND at least 2 sub-agents per front-runner: with 1 front-runner return ≥2 sub-agents (≥3 total); with 2 front-runners return ≥4 sub-agents (≥6 total). Never return only one tier, and never return fewer sub-agents than 2× the front-runner count
 - Almost every lead needs some form of always-on call/lead capture as a front-runner — include it if missed calls or slow response is a factor
 - Give each agent a short, SPECIFIC, plain-English name (2-4 words) that names the job it does — "After-Hours Call Handler," not "AI Receptionist." Avoid generic names
 - No agent should sound generic or overlap another. If there's overlap, combine into one
@@ -298,15 +338,16 @@ Respond with ONLY valid JSON, no markdown:
         const validatedFrontRunners = normalizeAutomations(parsed.front_runners, 2)
         const validatedSubAgents = normalizeAutomations(parsed.sub_agents, 5)
         const { frontRunners: enforcedFrontRunners, subAgents: enforcedSubAgents } = enforceBothTiers(validatedFrontRunners, validatedSubAgents)
+        const { frontRunners: finalFrontRunners, subAgents: finalSubAgents } = enforceStackFloor(enforcedFrontRunners, enforcedSubAgents)
         const resolvedTier = priceToTier(effectiveMonthly)
 
-        if (enforcedFrontRunners.length >= 1) {
+        if (finalFrontRunners.length >= 1) {
           rec = {
             recommended_tier: resolvedTier,
-            front_runners: enforcedFrontRunners,
-            sub_agents: enforcedSubAgents,
+            front_runners: finalFrontRunners,
+            sub_agents: finalSubAgents,
             // Combined list — backward compat for any code/data still reading the flat array.
-            recommended_automations: [...enforcedFrontRunners, ...enforcedSubAgents],
+            recommended_automations: [...finalFrontRunners, ...finalSubAgents],
             custom_monthly_price: effectiveMonthly,
             confidence: parsed.confidence || 'medium',
             headline: parsed.headline || '',
