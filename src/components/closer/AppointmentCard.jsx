@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronUp, ChevronRight, ChevronLeft, MapPin, Phone, Mail, Sparkles, Loader2,
   Calendar, Bell, Zap, DollarSign, Target, MessageSquare,
   CheckCircle, AlertTriangle, Star, RefreshCw, Globe, Activity, Eye,
-  Copy, ExternalLink, KeyRound, X,
+  Copy, ExternalLink, X,
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
@@ -526,13 +526,6 @@ export function AppointmentCard({ appt }) {
             ) : null}
           </div>
 
-          {/* ── Open Client Preview — real demo login, not just a panel ────────── */}
-          {appt.demo_client_id && (
-            <div style={{ padding: '0 16px 16px' }}>
-              <ClientPreviewCard demoCredentials={appt.demo_credentials} />
-            </div>
-          )}
-
           {/* ── Schedule + Reminders ─────────────────────────────────────────── */}
           <div style={{ padding: '16px 16px 0' }}>
             <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500, marginBottom: 8 }}>
@@ -571,7 +564,7 @@ export function AppointmentCard({ appt }) {
 // Each step is a full-screen card with Back / Next navigation; agent steps show
 // customer_benefit (benefit-framed language) if available, else description.
 
-function PresentationWalk({ rec, appt, primary, retryProvisionLoading, onRetryProvision }) {
+function PresentationWalk({ rec, appt, primary }) {
   const steps = useMemo(() => {
     const s = [{ kind: 'intro' }]
     let tpIdx = 0
@@ -634,7 +627,7 @@ function PresentationWalk({ rec, appt, primary, retryProvisionLoading, onRetryPr
         {step.kind === 'intro' && <WalkIntroStep rec={rec} primary={primary} />}
         {step.kind === 'agent' && <WalkAgentStep agent={step.agent} tier={step.tier} primary={primary} talkingPoint={step.talkingPoint} />}
         {step.kind === 'dashboard' && (
-          <WalkDashboardStep appt={appt} rec={rec} retryProvisionLoading={retryProvisionLoading} onRetryProvision={onRetryProvision} />
+          <WalkDashboardStep appt={appt} rec={rec} />
         )}
       </div>
 
@@ -730,7 +723,13 @@ function WalkAgentStep({ agent, tier, primary, talkingPoint }) {
   )
 }
 
-function WalkDashboardStep({ appt, rec, retryProvisionLoading, onRetryProvision }) {
+// No-auth fake-data preview — keyed to the appointment, fed entirely from the
+// already-computed stack recommendation. No real client account, nothing to
+// provision, nothing that can fail (see Prompt 18b — supersedes the old
+// real-demo-login ClientPreviewCard, whose "Open Dashboard" opened Nate's own
+// authenticated session on this same origin instead of the client portal).
+function WalkDashboardStep({ appt, rec }) {
+  const previewUrl = `${import.meta.env.VITE_CLIENT_PORTAL_URL || 'https://ohvara-client-portal.vercel.app'}/preview/${appt.id}`
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div>
@@ -738,41 +737,22 @@ function WalkDashboardStep({ appt, rec, retryProvisionLoading, onRetryProvision 
           Show them their dashboard
         </p>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-          Open a live demo — let them see what they'd get before they commit.
+          Open a live preview — let them see what they'd get before they commit.
         </p>
       </div>
-      {appt.demo_client_id ? (
-        <a
-          href={import.meta.env.VITE_CLIENT_PORTAL_URL || 'https://ohvara-client-portal.vercel.app'}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            height: 44, borderRadius: 8, fontSize: 14, fontWeight: 500,
-            background: 'var(--success-dim)', color: 'var(--success)',
-            border: '0.5px solid rgba(34,197,94,0.20)', textDecoration: 'none',
-          }}
-        >
-          <ExternalLink size={14} /> Open Client Dashboard →
-        </a>
-      ) : (
-        <button
-          onClick={onRetryProvision}
-          disabled={retryProvisionLoading}
-          style={{
-            height: 44, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            background: 'var(--bg-elevated)', color: retryProvisionLoading ? 'var(--text-muted)' : 'var(--accent)',
-            border: `0.5px solid ${retryProvisionLoading ? 'var(--border)' : 'var(--accent-border)'}`,
-            borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: retryProvisionLoading ? 'wait' : 'pointer',
-          }}
-        >
-          {retryProvisionLoading ? (
-            <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Provisioning demo account…</>
-          ) : (
-            <><RefreshCw size={13} /> Demo account not ready — retry provisioning</>
-          )}
-        </button>
-      )}
+      <a
+        href={previewUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          height: 44, borderRadius: 8, fontSize: 14, fontWeight: 500,
+          background: 'var(--success-dim)', color: 'var(--success)',
+          border: '0.5px solid rgba(34,197,94,0.20)', textDecoration: 'none',
+        }}
+      >
+        <ExternalLink size={14} /> Open Dashboard →
+      </a>
       {rec.pushback_response && (
         <div style={{ padding: '10px 12px', background: 'rgba(108,99,255,0.06)', border: '0.5px solid var(--accent-border)', borderRadius: 8 }}>
           <p style={{ fontSize: 9, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, marginBottom: 4 }}>
@@ -802,8 +782,6 @@ function RecommendationPanel({
         rec={rec}
         appt={appt}
         primary={primary}
-        retryProvisionLoading={retryProvisionLoading}
-        onRetryProvision={onRetryProvision}
       />
 
       {/* Action buttons — always visible below the walk */}
@@ -874,76 +852,6 @@ function RecommendationPanel({
             <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>{rec.alternative_reason}</p>
           )}
         </div>
-      )}
-    </div>
-  )
-}
-
-// ── Client Preview — real demo login ────────────────────────────────────────────
-// Unlike SampleDashboard (an in-card panel), this is an actual provisioned
-// account (provision-demo-client, fired from CallModal on booking) Nate can
-// open in a new tab and hand the prospect the password for live, on the
-// call. Disappears once the deal closes/is lost (demo_client_id clears).
-
-function ClientPreviewCard({ demoCredentials }) {
-  const [copied, setCopied] = useState(false)
-  const portalUrl = `${window.location.origin}/login`
-
-  async function copyLogin() {
-    if (!demoCredentials) return
-    const text = `${window.location.origin}/login\nUsername: ${demoCredentials.username}\nPassword: ${demoCredentials.password}`
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // clipboard permission denied — silently no-op, the credentials are still visible to read
-    }
-  }
-
-  return (
-    <div className="glass-accent" style={{ padding: '14px 16px', borderRadius: 10 }}>
-      <p style={{ fontSize: 10, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-        <KeyRound size={11} /> Live Client Preview
-      </p>
-      {demoCredentials ? (
-        <>
-          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10, lineHeight: 1.5 }}>
-            A real dashboard account is provisioned for this prospect with sample data — open it and walk them through it live on the call.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12, fontFamily: 'var(--font-mono)', fontSize: 12 }}>
-            <span style={{ color: 'var(--text-muted)' }}>Username: <span style={{ color: 'var(--text-primary)' }}>{demoCredentials.username}</span></span>
-            <span style={{ color: 'var(--text-muted)' }}>Password: <span style={{ color: 'var(--text-primary)' }}>{demoCredentials.password}</span></span>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={copyLogin}
-              style={{
-                flex: 1, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                background: 'var(--bg-elevated)', color: 'var(--text-primary)',
-                border: '0.5px solid var(--border)', borderRadius: 7, fontSize: 12, cursor: 'pointer',
-              }}
-            >
-              {copied ? <><CheckCircle size={13} style={{ color: 'var(--success)' }} /> Copied</> : <><Copy size={13} /> Copy Login</>}
-            </button>
-            <a
-              href={portalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                flex: 1, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                background: 'var(--accent-dim)', color: 'var(--accent)',
-                border: '0.5px solid var(--accent-border)', borderRadius: 7, fontSize: 12, textDecoration: 'none',
-              }}
-            >
-              <ExternalLink size={13} /> Open Dashboard
-            </a>
-          </div>
-        </>
-      ) : (
-        <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          Demo account is provisioned but login creation failed — create one manually via Admin → Users.
-        </p>
       )}
     </div>
   )
