@@ -3,10 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { PhoneMissed, CalendarClock, Ban, CheckCircle, Inbox, FilePlus2, Search } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useReps } from '../../hooks/useProfiles'
-import { useAuth } from '../../hooks/useAuth'
-import { formatInTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { KPICard } from '../../components/ui/KPICard'
-import { Badge } from '../../components/ui/Badge'
+import { AppointmentCard } from '../../components/closer/AppointmentCard'
 
 // ── Pipeline — one page, full lead lifecycle in six tabs ──────────────────────
 // Tab 1 Unassigned (scraped, no rep yet — the pool)
@@ -110,10 +108,10 @@ function useBooked() {
       const { data, error } = await supabase
         .from('appointments')
         .select(`
-          id, scheduled_at, status, outcome, deal_value,
-          lead:leads(business_name, niche, city),
+          *,
+          lead:leads(id, business_name, contact_name, phone, email, niche, city, state, pain_points, notes, job_title, monthly_labor_cost, calls_missed_per_week, avg_ticket, recommended_automations, custom_monthly_price, recommended_stack, stack_generated_at),
           closer:profiles!appointments_closer_id_fkey(full_name),
-          rep:profiles!appointments_rep_id_fkey(full_name)
+          rep:profiles!appointments_rep_id_fkey(id, full_name)
         `)
         .order('scheduled_at', { ascending: true })
         .limit(300)
@@ -384,7 +382,7 @@ function NotInterestedTab({ filters }) {
   )
 }
 
-function BookedTab({ filters, tz }) {
+function BookedTab({ filters }) {
   const { data: allRows, isLoading } = useBooked()
   const rows = applyFilters(allRows, filters, r => r.rep?.full_name)
   const pending = allRows?.filter(r => r.status === 'pending') ?? []
@@ -396,30 +394,24 @@ function BookedTab({ filters, tz }) {
         <KPICard label="Pending Appointments" value={pending.length} sub="with closers now" icon={CalendarClock} />
         <KPICard label="Closed" value={closed} sub="all time" icon={CheckCircle} />
       </div>
-      <QueueTable
-        columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['Set By', '0 0 110px'], ['Closer', '0 0 110px'], ['Scheduled', '0 0 150px'], ['Status', '0 0 110px']]}
-        rows={rows}
-        emptyText={isLoading ? 'Loading…' : 'No booked appointments.'}
-        renderRow={r => (
-          <div key={r.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)', alignItems: 'center' }}>
-            <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{r.lead?.business_name || '—'}</div>
-            <div style={cell('0 0 120px')}>{r.lead?.niche || '—'}</div>
-            <div style={cell('0 0 110px')}>{r.rep?.full_name || '—'}</div>
-            <div style={cell('0 0 110px')}>{r.closer?.full_name || '—'}</div>
-            <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>
-              {formatInTimezone(r.scheduled_at, tz, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-            </div>
-            <div style={cell('0 0 110px')}><Badge label={r.outcome || r.status} /></div>
-          </div>
-        )}
-      />
+      {isLoading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[...Array(3)].map((_, i) => (
+            <div key={i} style={{ height: 72, borderRadius: 8, background: 'var(--bg-surface)', border: '0.5px solid var(--border)', animation: 'pulse 2s infinite' }} />
+          ))}
+        </div>
+      ) : !rows?.length ? (
+        <p style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>No booked appointments.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {rows.map(r => <AppointmentCard key={r.id} appt={r} />)}
+        </div>
+      )}
     </div>
   )
 }
 
 export default function LeadPipeline() {
-  const { profile } = useAuth()
-  const tz = profile?.timezone || DEFAULT_TIMEZONE
   const [tab, setTab] = useState('unassigned')
   const [search, setSearch] = useState('')
   const [repName, setRepName] = useState('')
@@ -493,7 +485,7 @@ export default function LeadPipeline() {
       {tab === 'no_answer' && <NoAnswerTab filters={filters} />}
       {tab === 'follow_up' && <FollowUpTab filters={filters} />}
       {tab === 'not_interested' && <NotInterestedTab filters={filters} />}
-      {tab === 'booked' && <BookedTab filters={filters} tz={tz} />}
+      {tab === 'booked' && <BookedTab filters={filters} />}
     </div>
   )
 }
