@@ -726,10 +726,12 @@ function WalkAgentStep({ agent, tier, primary, talkingPoint }) {
 // No-auth fake-data preview — keyed to the appointment, fed entirely from the
 // already-computed stack recommendation. No real client account, nothing to
 // provision, nothing that can fail (see Prompt 18b — supersedes the old
-// real-demo-login ClientPreviewCard, whose "Open Dashboard" opened Nate's own
-// authenticated session on this same origin instead of the client portal).
+// real-demo-login ClientPreviewCard). Prompt 26: the preview route now lives
+// in THIS app (/preview/:appointmentId) — the separate ohvara-client-portal
+// repo was abandoned (never pushed, dead remote), so this is a same-origin
+// relative link, not a cross-app URL.
 function WalkDashboardStep({ appt, rec }) {
-  const previewUrl = `${import.meta.env.VITE_CLIENT_PORTAL_URL || 'https://ohvara-client-portal.vercel.app'}/preview/${appt.id}`
+  const previewUrl = `/preview/${appt.id}`
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div>

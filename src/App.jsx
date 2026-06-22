@@ -6,6 +6,7 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 
 import Login from './pages/Login'
+import ClientPreview from './pages/ClientPreview'
 import { BackgroundOrbs } from './components/BackgroundOrbs'
 
 // Rep pages
@@ -68,6 +69,7 @@ export default function App() {
           <BackgroundOrbs />
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/preview/:appointmentId" element={<ClientPreview />} />
             <Route path="/" element={<RoleRedirect />} />
 
             {/* Rep routes */}
