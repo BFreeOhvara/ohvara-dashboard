@@ -70,15 +70,18 @@ export function NotificationBell() {
         )}
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown — opens to the RIGHT of the bell, not below-right. The bell
+          sits in the narrow sidebar; anchoring with `right: 0` (relative to
+          the bell's own small wrapper) made the 340px panel extend leftward
+          and cover the nav instead of opening into the main content area. */}
       {open && (
         <div
           className="glass"
           style={{
-            position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+            position: 'absolute', top: -4, left: 'calc(100% + 8px)',
             width: 340, maxHeight: 420,
             borderRadius: 10, overflow: 'hidden',
-            zIndex: 100,
+            zIndex: 200,
             boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
           }}
         >
