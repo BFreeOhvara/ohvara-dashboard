@@ -41,9 +41,18 @@ Deno.serve(async (req) => {
     recommended_price,
   } = body
 
-  const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
+  const demoMode = Deno.env.get('DEMO_MODE') === 'true'
+  const apiKey = demoMode ? null : Deno.env.get('ANTHROPIC_API_KEY')
   if (!apiKey) {
-    // No API key — return fallback script immediately
+    // No API key, or DEMO_MODE on — return fallback content immediately, no Anthropic call.
+    if (mode === 'pitch_anchor') {
+      return new Response(JSON.stringify({ pitch_anchor: `${business_name || 'This business'} is bleeding revenue on every missed call — we fix that for less than a part-time hire.`, fallback: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+    if (mode === 'briefing') {
+      return new Response(JSON.stringify({ briefing: `Lead with missed-call revenue loss — ${niche || 'this business'} is almost certainly losing jobs to unanswered calls. Probe current setup and after-hours coverage. Expect a price objection; reframe around cost of one lost job vs. the monthly fee.`, fallback: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
     const fb = buildFallbackScript(business_name || 'this business', niche || 'service business', job_title || 'receptionist')
     return new Response(JSON.stringify({ script: fb, fallback: true }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })

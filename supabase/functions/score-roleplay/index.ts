@@ -24,8 +24,23 @@ Deno.serve(async (req) => {
       )
     }
 
-    const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY')
+    const demoMode = Deno.env.get('DEMO_MODE') === 'true'
+    const anthropicKey = demoMode ? null : Deno.env.get('ANTHROPIC_API_KEY')
     if (!anthropicKey) {
+      if (demoMode) {
+        // DEMO_MODE — realistic pre-baked score, no Anthropic call, same shape as the live path.
+        return new Response(
+          JSON.stringify({
+            scores: { opener: 2, painDiscovery: 2, objectionHandling: 1, bookingAsk: 2, tone: 2 },
+            total: 9,
+            maxTotal: 12,
+            summary: 'Solid call — clean opener and good pain discovery. Objection handling felt a little rushed; slow down and let the prospect finish before pivoting to the close.',
+            tips: ['Pause after pain questions instead of filling silence', 'Acknowledge the objection before reframing it', 'Confirm the booked time back to the prospect explicitly'],
+            highlights: ['Referenced the Indeed posting naturally in the opener', 'Asked about after-hours coverage, not just missed calls'],
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
       // Return a default score if Claude isn't available
       return new Response(
         JSON.stringify({

@@ -298,7 +298,8 @@ Respond with ONLY valid JSON, no markdown:
   "upsell_path": "One sentence — how to expand the stack if they're open to it"
 }`
 
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
+    const demoMode = Deno.env.get('DEMO_MODE') === 'true'
+    const apiKey = demoMode ? null : Deno.env.get('ANTHROPIC_API_KEY')
     let rec: Record<string, unknown> | null = null
 
     if (apiKey) {
