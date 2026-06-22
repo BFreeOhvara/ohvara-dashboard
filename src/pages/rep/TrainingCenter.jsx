@@ -7,7 +7,7 @@ import {
   useTrainingProgress, useSaveTrainingProgress, trainingChecks, isTrainingComplete,
   TOTAL_VIDEOS, QUIZ_QUESTIONS, QUIZ_PASS_PCT, ROLEPLAY_PASS_SCORE, ROLEPLAY_PASS_GRADE, gradeFromScore,
 } from '../../hooks/useTraining'
-import { DISCOVERY_SCRIPT, buildScriptFlow } from '../../lib/discoveryScript'
+import { buildScriptFlow } from '../../lib/discoveryScript'
 import { ScriptWalk } from '../../components/rep/ScriptWalk'
 import { ScriptFlowchart } from '../../components/rep/ScriptFlowchart'
 
@@ -551,7 +551,6 @@ function FlashcardDeck() {
 const SCRIPT_VIEWS = [
   { key: 'flowchart', label: 'Flowchart' },
   { key: 'practice',  label: 'Practice' },
-  { key: 'full',      label: 'Full script' },
 ]
 
 function DiscoveryScript() {
@@ -566,8 +565,8 @@ function DiscoveryScript() {
     <div style={{ maxWidth: 960, margin: '0 auto' }}>
       <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16, maxWidth: 680 }}>
         This is the call script — a decision tree every rep follows. Study the <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Flowchart</strong> to learn
-        the shape, <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Practice</strong> the exact click-through you'll use live, and read the <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Full script</strong> to
-        memorize the words. The Call Now button on each lead runs this same walk, personalized to that business.
+        the shape, then <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Practice</strong> the exact click-through you'll use live.
+        The Call Now button on each lead runs this same walk, personalized to that business.
       </p>
 
       {/* View switch */}
@@ -596,121 +595,6 @@ function DiscoveryScript() {
           <ScriptWalk flow={flow} mode="practice" />
         </div>
       )}
-
-      {view === 'full' && <FullScript />}
-    </div>
-  )
-}
-
-// The full written script — every section's lines spelled out for memorization.
-function FullScript() {
-  return (
-    <div style={{ maxWidth: 680, margin: '0 auto' }}>
-      {DISCOVERY_SCRIPT.map((section, i) => (
-        <div
-          key={section.id}
-          className="glass"
-          style={{
-            padding: '20px 22px', marginBottom: 16, borderRadius: 12,
-            // Same color treatment as the Call Now modal SECTIONS cards
-            background: section.dim,
-            border: `0.5px solid ${section.border}`,
-            borderLeft: `3px solid ${section.color}`,
-          }}
-        >
-          {/* Section header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <span style={{
-              width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-              background: section.dim, border: `0.5px solid ${section.border}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 12, fontFamily: 'var(--font-mono)', color: section.color, fontWeight: 600,
-            }}>
-              {i + 1}
-            </span>
-            <h2 style={{
-              fontSize: 15, fontWeight: 500, color: section.color, margin: 0,
-              textTransform: 'uppercase', letterSpacing: '0.06em',
-            }}>
-              {section.title}
-            </h2>
-          </div>
-
-          {/* Goal */}
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 14px 34px', fontStyle: 'italic' }}>
-            Goal: {section.goal}
-          </p>
-
-          {section.variations ? (
-            /* Opener: 3 labeled variations — one per entry point. Stacked column = mobile safe. */
-            <div style={{ marginLeft: 34, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {section.variations.map((v, k) => (
-                <div key={k} style={{
-                  border: `0.5px solid ${section.border}`,
-                  borderRadius: 10, padding: '14px 16px',
-                  background: 'var(--bg-surface)',
-                }}>
-                  <p style={{
-                    fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.09em',
-                    color: section.color, margin: '0 0 10px', fontWeight: 600,
-                  }}>
-                    {v.label}
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {v.lines.map((line, j) => (
-                      <p key={j} style={{
-                        fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0,
-                        padding: '10px 14px',
-                        background: 'var(--bg-elevated)', borderRadius: 8,
-                        borderLeft: `2px solid ${section.border}`,
-                      }}>
-                        {line}
-                      </p>
-                    ))}
-                  </div>
-                  <div style={{
-                    marginTop: 10, padding: '8px 12px',
-                    background: 'rgba(245,158,11,0.06)', border: '0.5px solid rgba(245,158,11,0.18)',
-                    borderRadius: 8,
-                  }}>
-                    <p style={{ fontSize: 12, color: 'var(--warning)', margin: 0, lineHeight: 1.6 }}>
-                      Coach's note: {v.tips}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <>
-              {/* Script lines */}
-              <div style={{ marginLeft: 34, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {section.lines.map((line, j) => (
-                  <p key={j} style={{
-                    fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0,
-                    padding: '10px 14px',
-                    background: 'var(--bg-elevated)', borderRadius: 8,
-                    borderLeft: `2px solid ${section.border}`,
-                  }}>
-                    {line}
-                  </p>
-                ))}
-              </div>
-
-              {/* Coaching tip */}
-              <div style={{
-                marginLeft: 34, marginTop: 12,
-                padding: '8px 12px',
-                background: 'rgba(245,158,11,0.06)', border: '0.5px solid rgba(245,158,11,0.18)',
-                borderRadius: 8,
-              }}>
-                <p style={{ fontSize: 12, color: 'var(--warning)', margin: 0, lineHeight: 1.6 }}>
-                  Coach's note: {section.tips}
-                </p>
-              </div>
-            </>
-          )}
-        </div>
-      ))}
     </div>
   )
 }
