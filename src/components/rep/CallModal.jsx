@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { Phone, X, MapPin, User, Tag, Globe, Check, StickyNote, ChevronDown, CalendarClock } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { bridgeCall } from '../../lib/twilio'
 import { useAuth } from '../../hooks/useAuth'
 import { Badge } from '../ui/Badge'
 import { buildScriptFlow } from '../../lib/discoveryScript'
@@ -121,6 +122,8 @@ export function CallModal({ lead, onClose }) {
   const [appointmentAt, setAppointmentAt] = useState(utcIsoToZonedDatetimeLocal(lead.appointment_at, clientTz))
   const [closing, setClosing]         = useState(false)
   const [doneError, setDoneError]     = useState('')
+  // 'idle' | 'calling' | 'connected' | 'error'
+  const [bridgeState, setBridgeState] = useState('idle')
   const dropdownRef = useRef(null)
 
   // Background scroll lock while the modal is open.
@@ -627,22 +630,72 @@ export function CallModal({ lead, onClose }) {
               />
             </div>
 
-            {/* Call Now — tel: link for now */}
+            {/* Call Now — bridge call (recorded) when rep has a phone set; tel: fallback otherwise */}
             {telHref ? (
-              <a
-                href={telHref}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  height: 44,
-                  background: 'var(--success)', borderRadius: 10,
-                  fontSize: 14, fontWeight: 500, color: 'white',
-                  textDecoration: 'none',
-                  boxShadow: '0 0 20px rgba(34,197,94,0.3)',
-                }}
-              >
-                <Phone size={15} />
-                Call {lead.phone}
-              </a>
+              profile?.phone ? (
+                // Bridge call: Twilio rings the rep, then connects to the lead with recording.
+                bridgeState === 'connected' ? (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    height: 44, background: 'rgba(34,197,94,0.12)',
+                    border: '0.5px solid rgba(34,197,94,0.3)', borderRadius: 10,
+                    fontSize: 13, color: 'var(--success)',
+                  }}>
+                    <Phone size={14} />
+                    Calling your phone — pick up to connect to {lead.business_name}
+                  </div>
+                ) : bridgeState === 'error' ? (
+                  <a href={telHref} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    height: 44, background: 'var(--success)', borderRadius: 10,
+                    fontSize: 14, fontWeight: 500, color: 'white', textDecoration: 'none',
+                    boxShadow: '0 0 20px rgba(34,197,94,0.3)',
+                  }}>
+                    <Phone size={15} /> Call {lead.phone}
+                  </a>
+                ) : (
+                  <button
+                    disabled={bridgeState === 'calling'}
+                    onClick={async () => {
+                      setBridgeState('calling')
+                      try {
+                        const result = await bridgeCall(profile.phone, lead.phone)
+                        if (result?.error) throw new Error(result.error)
+                        setBridgeState('connected')
+                      } catch {
+                        setBridgeState('error')
+                      }
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      height: 44, width: '100%',
+                      background: bridgeState === 'calling' ? 'rgba(34,197,94,0.5)' : 'var(--success)',
+                      borderRadius: 10, border: 'none',
+                      fontSize: 14, fontWeight: 500, color: 'white', cursor: bridgeState === 'calling' ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 0 20px rgba(34,197,94,0.3)',
+                    }}
+                  >
+                    <Phone size={15} />
+                    {bridgeState === 'calling' ? 'Connecting…' : `Call ${lead.phone} (Recorded)`}
+                  </button>
+                )
+              ) : (
+                // No rep phone set — fall back to tel: link
+                <a
+                  href={telHref}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    height: 44,
+                    background: 'var(--success)', borderRadius: 10,
+                    fontSize: 14, fontWeight: 500, color: 'white',
+                    textDecoration: 'none',
+                    boxShadow: '0 0 20px rgba(34,197,94,0.3)',
+                  }}
+                >
+                  <Phone size={15} />
+                  Call {lead.phone}
+                </a>
+              )
             ) : (
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',

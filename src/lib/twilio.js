@@ -1,51 +1,21 @@
 // ============================================================
-// TWILIO VOICE SDK — Browser Dialer
-// WIRE-THIS: Twilio account not yet provisioned.
+// Twilio — bridge call with recording
 //
-// Steps to enable:
-// 1. Create a Twilio account at twilio.com
-// 2. Purchase a phone number with Voice capability
-// 3. Create a TwiML App — set the Voice Request URL to:
-//      https://<your-supabase-project>.supabase.co/functions/v1/twilio-voice
-// 4. Note the TwiML App SID
-// 5. Add to .env:
-//      VITE_TWILIO_TWIML_APP_SID=<TwiML App SID>
-//      TWILIO_ACCOUNT_SID=<Account SID>         (server-side only)
-//      TWILIO_AUTH_TOKEN=<Auth Token>           (server-side only)
-//      TWILIO_PHONE_NUMBER=<Your Twilio number> (server-side only)
-// 6. Deploy the `twilio-voice` Edge Function (see supabase/functions/twilio-voice/)
-// 7. Remove the STUB_MODE flag below and uncomment Device init
+// Replaces the old browser-dialer stub. Reps still use their own
+// phone; the bridge pattern has Twilio ring the rep first, then
+// connects them to the lead while recording both channels.
+//
+// Requires: TWILIO_* secrets set in Supabase + profiles.phone set
+// for the rep (migration 045). Falls back to tel: link if either
+// is missing — see CallModal.jsx.
 // ============================================================
 
-export const TWILIO_STUB_MODE = true
+import { supabase } from './supabase'
 
-let device = null
-
-export async function initTwilioDevice(accessToken) {
-  if (TWILIO_STUB_MODE) return null
-
-  // Uncomment when Twilio is provisioned:
-  // const { Device } = await import('@twilio/voice-sdk')
-  // device = new Device(accessToken, { logLevel: 1 })
-  // await device.register()
-  // return device
-}
-
-export async function makeCall(toNumber, onStatusChange) {
-  if (TWILIO_STUB_MODE) {
-    onStatusChange('stub')
-    return null
-  }
-
-  if (!device) throw new Error('Twilio Device not initialized')
-  const call = await device.connect({ params: { To: toNumber } })
-  call.on('accept', () => onStatusChange('connected'))
-  call.on('disconnect', () => onStatusChange('disconnected'))
-  call.on('error', (err) => onStatusChange('error', err))
-  return call
-}
-
-export function hangUp() {
-  if (TWILIO_STUB_MODE || !device) return
-  device.disconnectAll()
+export async function bridgeCall(repPhone, leadPhone) {
+  const { data, error } = await supabase.functions.invoke('twilio-call', {
+    body: { repPhone, leadPhone },
+  })
+  if (error) throw error
+  return data
 }
