@@ -27,13 +27,21 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 // ── Completed Days heatmap ────────────────────────────────────────────────
-// white (0) → red ramp (progress) → dark red (hit 150) → green (Perfect Day: 150 dials + 2+ bookings)
+// white (0) → pink → dark red (progress, lerp) → dark red (hit 150) → green (Perfect Day: 150 dials + 2+ bookings)
+const RAMP_START = [255, 255, 255]  // white
+const RAMP_END = [185, 28, 28]      // dark red — matches the completed/non-perfect cap below
+
+function lerpColor(a, b, t) {
+  const ch = (x, y) => Math.round(x + (y - x) * t)
+  return `rgb(${ch(a[0], b[0])}, ${ch(a[1], b[1])}, ${ch(a[2], b[2])})`
+}
+
 function cellColor(d) {
-  if (!d || d.dialed === 0) return 'rgba(255,255,255,0.08)'
+  if (!d || d.dialed === 0) return lerpColor(RAMP_START, RAMP_END, 0)
   if (d.completed && (d.bookings || 0) >= 2) return 'var(--success)'
-  if (d.completed) return 'rgba(185,28,28,0.85)'
+  if (d.completed) return lerpColor(RAMP_START, RAMP_END, 1)
   const r = Math.min(d.dialed / DAILY_BATCH_TARGET, 1)
-  return `rgba(239,68,68,${(0.15 + r * 0.55).toFixed(3)})`
+  return lerpColor(RAMP_START, RAMP_END, r)
 }
 
 function CompletedDaysHeatmap({ days }) {
@@ -78,50 +86,48 @@ function CompletedDaysHeatmap({ days }) {
         </div>
       </div>
 
-      {/* heatmap rows: one per week */}
+      {/* heatmap rows: one per week — cells stretch to fill the card's full width */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
         {weeks.map((wk, wi) => (
-          <div key={wi} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {wk.map((d, di) => (
-                <div key={di} className="group" style={{ position: 'relative' }}>
-                  <div
-                    style={{
-                      width: 30, height: 30, borderRadius: 5,
-                      background: cellColor(d),
-                      border: '0.5px solid rgba(255,255,255,0.06)',
-                      transition: 'transform 80ms ease, box-shadow 80ms ease',
-                      cursor: 'default',
-                    }}
-                    className="hover:!shadow-[0_0_0_2px_rgba(108,99,255,0.5)]"
-                  />
-                  <div
-                    className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-20 whitespace-nowrap"
-                    style={{
-                      background: '#13131F', border: '0.5px solid var(--border)',
-                      borderRadius: 8, padding: '6px 9px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-                    }}
-                  >
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.label}</span>
-                    <span style={{ fontSize: 12, color: d.dialed === 0 ? 'var(--text-secondary)' : (d.completed && (d.bookings || 0) >= 2 ? 'var(--success)' : d.completed ? '#ef4444' : 'rgba(239,68,68,0.7)'), margin: '0 0 0 6px', fontFamily: 'var(--font-mono)' }}>
-                      {d.dialed}/{DAILY_BATCH_TARGET}{(d.bookings || 0) > 0 ? ` · ${d.bookings} booked` : ''}
-                    </span>
-                  </div>
+          <div key={wi} style={{ display: 'flex', gap: 6, width: '100%' }}>
+            {wk.map((d, di) => (
+              <div key={di} className="group" style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    width: '100%', height: 30, borderRadius: 5,
+                    background: cellColor(d),
+                    border: '0.5px solid rgba(255,255,255,0.06)',
+                    transition: 'transform 80ms ease, box-shadow 80ms ease',
+                    cursor: 'default',
+                  }}
+                  className="hover:!shadow-[0_0_0_2px_rgba(108,99,255,0.5)]"
+                />
+                <div
+                  className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-20 whitespace-nowrap"
+                  style={{
+                    background: '#13131F', border: '0.5px solid var(--border)',
+                    borderRadius: 8, padding: '6px 9px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                  }}
+                >
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.label}</span>
+                  <span style={{ fontSize: 12, color: d.dialed === 0 ? 'var(--text-secondary)' : (d.completed && (d.bookings || 0) >= 2 ? 'var(--success)' : d.completed ? '#ef4444' : 'rgba(239,68,68,0.7)'), margin: '0 0 0 6px', fontFamily: 'var(--font-mono)' }}>
+                    {d.dialed}/{DAILY_BATCH_TARGET}{(d.bookings || 0) > 0 ? ` · ${d.bookings} booked` : ''}
+                  </span>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         ))}
       </div>
 
-      {/* legend */}
+      {/* legend — swatches call cellColor directly so they can't drift from the actual cells */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
-        <div style={{ width: 12, height: 12, borderRadius: 3, background: 'rgba(255,255,255,0.08)', border: '0.5px solid rgba(255,255,255,0.06)' }} />
-        {[0.2, 0.45, 0.7].map((r, i) => (
-          <div key={i} style={{ width: 12, height: 12, borderRadius: 3, background: `rgba(239,68,68,${(0.15 + r * 0.55).toFixed(3)})`, border: '0.5px solid rgba(255,255,255,0.06)' }} />
+        <div style={{ width: 12, height: 12, borderRadius: 3, background: cellColor(null), border: '0.5px solid rgba(255,255,255,0.06)' }} />
+        {[0.2, 0.45, 0.7].map(r => (
+          <div key={r} style={{ width: 12, height: 12, borderRadius: 3, background: cellColor({ dialed: Math.round(r * DAILY_BATCH_TARGET), completed: false }), border: '0.5px solid rgba(255,255,255,0.06)' }} />
         ))}
-        <div style={{ width: 12, height: 12, borderRadius: 3, background: 'rgba(185,28,28,0.85)' }} />
-        <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--success)' }} />
+        <div style={{ width: 12, height: 12, borderRadius: 3, background: cellColor({ dialed: DAILY_BATCH_TARGET, completed: true, bookings: 0 }) }} />
+        <div style={{ width: 12, height: 12, borderRadius: 3, background: cellColor({ dialed: DAILY_BATCH_TARGET, completed: true, bookings: 2 }) }} />
         <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>0 · progress · 150 dials · Perfect Day</span>
       </div>
     </div>
