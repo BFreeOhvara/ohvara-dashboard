@@ -41,7 +41,6 @@ export const DISCOVERY_SCRIPT = [
     goal: 'You have the decision-maker. Diagnose the pain, then route to the close.',
     color: 'var(--success)', dim: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.25)',
     lines: [
-      `▸ You've got the decision-maker — go straight into discovery.`,
       `"Awesome — so the reason I'm reaching out: I work with a lot of [niche] businesses, and the ones hiring usually have calls slipping through the cracks. Mind if I ask you a couple quick questions?"`,
       `"Who's handling your calls right now when you and the crew are out on jobs?"`,
       `BRANCH — Do they have someone on the phones, or is it just them?`,
@@ -65,7 +64,9 @@ export const DISCOVERY_SCRIPT = [
     goal: 'Reach the owner or get a clean callback. Never pitch the gatekeeper.',
     color: 'var(--info)', dim: 'rgba(56,189,248,0.08)', border: 'rgba(56,189,248,0.25)',
     lines: [
-      `▸ Do NOT pitch the gatekeeper. Goal: reach the owner, or get a name + callback time.`,
+      // ⚡ CC DRAFT (2026-06-22) — spoken opening line for gatekeeper. Pending Brayden + Nate review.
+      `"Oh hey — is the owner or manager around? Just had a real quick question about how y'all handle phones right now."`,
+      `▸ Keep it short and warm — your only goal is the owner's name and a callback time. Don't pitch.`,
       `BRANCH — Are they transferring you, or is the owner not available?`,
       `↳ IF TRANSFERRING: "Perfect, thank you so much." — stay on the line.`,
       `   ↳ When the owner picks up → run BRANCH A from the top.`,
@@ -85,7 +86,7 @@ export const DISCOVERY_SCRIPT = [
       `"Oh perfect — congrats! Sounds like business is picking up."`,
       `"Actually, the reason I reach out to [niche] businesses that are hiring is they're usually dealing with call volume or follow-up slipping through the cracks. Is that something you're running into at all?"`,
       `BRANCH — Did the pivot land — are they feeling a problem?`,
-      `↳ IF YES: run the discovery + pain questions from BRANCH A, then → CLOSE.`,
+      `↳ IF YES: → run BRANCH A from the top.`,
       `↳ IF NO: "Totally fair — appreciate the minute. Have a good one."`,
       `   ▸ Set status Not Interested.`,
     ],
@@ -110,7 +111,6 @@ export const DISCOVERY_SCRIPT = [
     goal: 'Leave the fixed message, log it, move on.',
     color: '#94A3B8', dim: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.25)',
     lines: [
-      `Leave word for word:`,
       `"Hey, this is [Rep Name] calling — I came across your Indeed listing for a receptionist and wanted to reach out. Give me a call back when you get a chance at [your number]. Thanks!"`,
       `▸ Set status No Answer (voicemail) in the dropdown.`,
     ],
@@ -123,10 +123,12 @@ export const DISCOVERY_SCRIPT = [
     goal: 'Position Nate as the specialist, deflect price, lock a specific time.',
     color: 'var(--accent)', dim: 'rgba(108,99,255,0.10)', border: 'rgba(108,99,255,0.30)',
     lines: [
-      `IF THEY ASK ABOUT PRICE: "That's actually something our specialist Nate goes over — he'll look at everything you told me and put together exactly what makes sense for your business. That's why I want to get you two connected."`,
+      `BRANCH — Did they ask about price?`,
+      `↳ IF YES: "That's actually something our specialist Nate goes over — he'll look at everything you told me and put together exactly what makes sense for your business. That's why I want to get you two connected."`,
+      `↳ IF NO:`,
       `"Nate usually has openings in the mornings or afternoons — what works better for you?"`,
-      `↳ ONCE THEY PICK: lock a specific day + time, then confirm it back —`,
-      `   "Perfect — [day] at [time]. Nate will give you a call then. What's the best number to reach you?"`,
+      `▸ Once they pick a window, lock a specific time and confirm it back:`,
+      `"Perfect — [day] at [time]. Nate will give you a call then. What's the best number to reach you?"`,
     ],
     tips: `Never price it yourself — that's Nate's job. Offer two windows, pin ONE exact time, confirm it back to them, then stop selling.`,
   },

@@ -1,183 +1,254 @@
 // ── ScriptFlowchart ──────────────────────────────────────────────────────────
-// The bird's-eye view of the call decision tree for the Training Center.
-// Top-down: opener → five response branches (with condensed step details)
-//           → shared close at the bottom.
-// Built from buildScriptFlow() so structure, colors, and outcomes stay in
-// lock-step with the live Call modal.
+// Full recursive branching tree of the call script. Every fork splits into
+// separate visual paths — you can see every possible route through the script
+// at once, down to each terminal outcome.
+// Built entirely from buildScriptFlow() data — no duplicated script content.
 
-function VLine({ caption }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, margin: '6px 0' }}>
-      <div style={{ width: 2, height: 22, background: 'var(--border)' }} />
-      {caption && <p style={{ fontSize: 10.5, color: 'var(--text-muted)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{caption}</p>}
-      {caption && <div style={{ width: 2, height: 22, background: 'var(--border)' }} />}
-    </div>
-  )
+// Short vertical connector between nodes
+function VC({ h = 12 }) {
+  return <div style={{ width: 2, height: h, background: 'var(--border)', flexShrink: 0 }} />
 }
 
-function Box({ color, children, wide }) {
+// Strip surrounding double-quotes if the entire string is quoted
+function unquote(t) {
+  const s = t.trim()
+  return s.length >= 2 && s[0] === '"' && s[s.length - 1] === '"'
+    ? s.slice(1, -1)
+    : s
+}
+
+// A spoken line node — italic, color-tinted
+function SayNode({ text, color }) {
   return (
     <div style={{
-      width: wide ? 'min(440px, 100%)' : '100%',
-      background: color + '14', border: `0.5px solid ${color}55`, borderLeft: `3px solid ${color}`,
-      borderRadius: 12, padding: '14px 16px', boxSizing: 'border-box',
+      width: '100%', padding: '7px 10px', boxSizing: 'border-box',
+      background: color + '12', border: `0.5px solid ${color}35`,
+      borderRadius: 7,
     }}>
-      {children}
+      <p style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0 }}>
+        {unquote(text)}
+      </p>
     </div>
   )
 }
 
-// Extract up to 4 meaningful steps for the flowchart — skips sub-steps and
-// limits say lines to 2. Routes are shown via the outcome badge, not here.
-function getHighlights(steps) {
-  const out = []
-  let sayCount = 0
-  for (const s of steps) {
-    if (out.length >= 4) break
-    if (s.type === 'action') {
-      out.push(s)
-    } else if (s.type === 'say' && !s.sub && sayCount < 2) {
-      out.push(s)
-      sayCount++
-    } else if (s.type === 'fork') {
-      out.push(s)
-    }
-    // routes shown via booksNate/outcome badge at bottom
-  }
-  return out
+// A ▸ action the rep performs (set status, coaching reminder)
+function ActionNode({ text }) {
+  return (
+    <div style={{
+      width: '100%', padding: '5px 9px', boxSizing: 'border-box',
+      background: 'rgba(245,158,11,0.07)', border: '0.5px solid rgba(245,158,11,0.25)',
+      borderRadius: 6, display: 'flex', alignItems: 'flex-start', gap: 5,
+    }}>
+      <span style={{ fontSize: 9.5, color: 'var(--warning)', fontWeight: 700, flexShrink: 0, marginTop: 1 }}>▸</span>
+      <span style={{ fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.45 }}>{text}</span>
+    </div>
+  )
 }
 
-function trunc(t, n = 56) {
-  const s = t.trim()
-  return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s
+// A route node (→ CLOSE, → Branch A)
+function RouteNode({ target, flow }) {
+  const dest = flow.byId[target]
+  const label = dest?.kind === 'close'
+    ? '→ CLOSE — book with Nate'
+    : `→ ${dest?.title || target}`
+  const isClose = dest?.kind === 'close'
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      fontSize: 10.5, fontWeight: 600,
+      color: isClose ? 'var(--success)' : 'var(--info)',
+      background: isClose ? 'rgba(34,197,94,0.10)' : 'rgba(56,189,248,0.10)',
+      border: `0.5px solid ${isClose ? 'rgba(34,197,94,0.30)' : 'rgba(56,189,248,0.30)'}`,
+      borderRadius: 20, padding: '3px 10px',
+    }}>
+      {label}
+    </span>
+  )
 }
 
-function StepItem({ s }) {
-  if (s.type === 'action') {
-    return (
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginBottom: 4 }}>
-        <span style={{ fontSize: 9.5, color: 'var(--warning)', flexShrink: 0, marginTop: 1, fontWeight: 700 }}>▸</span>
-        <span style={{ fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.45 }}>{trunc(s.text)}</span>
+// A fork node: decision box + side-by-side option columns (recursive)
+function ForkNode({ step, color, flow }) {
+  return (
+    <div style={{ width: '100%' }}>
+      {/* Fork question */}
+      <div style={{
+        padding: '6px 10px', boxSizing: 'border-box',
+        background: 'rgba(108,99,255,0.10)', border: '0.5px solid rgba(108,99,255,0.25)',
+        borderRadius: '7px 7px 0 0',
+        display: 'flex', alignItems: 'flex-start', gap: 6,
+      }}>
+        <span style={{
+          fontSize: 9, fontWeight: 700, color: 'var(--accent)',
+          background: 'rgba(108,99,255,0.18)', borderRadius: 3, padding: '1px 5px',
+          flexShrink: 0, whiteSpace: 'nowrap', marginTop: 1,
+        }}>if/else</span>
+        <span style={{ fontSize: 10.5, color: 'var(--text-secondary)', lineHeight: 1.45 }}>{step.q}</span>
       </div>
-    )
-  }
-  if (s.type === 'say') {
-    const clean = s.text.replace(/^["']|["']$/g, '').trim()
-    return (
-      <p style={{ fontSize: 10.5, color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1.45, margin: '0 0 4px', paddingLeft: 2 }}>
-        "{trunc(clean)}"
-      </p>
-    )
-  }
-  if (s.type === 'fork') {
-    return (
-      <div style={{ marginBottom: 5 }}>
-        <p style={{ fontSize: 10.5, margin: '0 0 4px', lineHeight: 1.35, display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{
-            fontSize: 9, fontWeight: 700, color: 'var(--accent)',
-            background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
-            borderRadius: 3, padding: '1px 5px', flexShrink: 0,
-          }}>if/else</span>
-          <span style={{ color: 'var(--text-muted)' }}>{trunc(s.q, 44)}</span>
-        </p>
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', paddingLeft: 2 }}>
-          {s.options.slice(0, 3).map((o, i) => (
-            <span key={i} style={{
-              fontSize: 9.5, padding: '1px 7px', borderRadius: 4,
-              background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-              color: 'var(--text-muted)',
-            }}>{trunc(o.label, 24)}</span>
-          ))}
-        </div>
+      {/* Option columns */}
+      <div style={{
+        display: 'flex', width: '100%', boxSizing: 'border-box',
+        border: '0.5px solid var(--border)', borderTop: 'none',
+        borderRadius: '0 0 7px 7px', overflow: 'hidden',
+      }}>
+        {step.options.map((opt, i) => (
+          <div key={i} style={{
+            flex: 1, minWidth: 0, boxSizing: 'border-box',
+            padding: '8px 7px',
+            borderLeft: i > 0 ? '0.5px solid var(--border)' : 'none',
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+          }}>
+            {/* Option label */}
+            <span style={{
+              fontSize: 9.5, fontWeight: 600, color: color,
+              background: color + '15', border: `0.5px solid ${color}44`,
+              borderRadius: 4, padding: '2px 7px', whiteSpace: 'nowrap',
+              maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
+              textAlign: 'center', display: 'block',
+            }}>
+              {opt.label}
+            </span>
+            {/* Option's step tree (recursive) */}
+            {opt.steps.length > 0
+              ? opt.steps.map((s, j) => <FlowStep key={j} step={s} color={color} flow={flow} />)
+              : (
+                <>
+                  <VC h={6} />
+                  <span style={{ fontSize: 9.5, color: 'var(--text-muted)', fontStyle: 'italic' }}>continue</span>
+                </>
+              )
+            }
+          </div>
+        ))}
       </div>
-    )
-  }
+    </div>
+  )
+}
+
+// One step with its leading connector — renders the right node type
+function FlowStep({ step, color, flow }) {
+  if (step.type === 'say')    return <><VC /><SayNode    text={step.text}  color={color} /></>
+  if (step.type === 'action') return <><VC /><ActionNode text={step.text} /></>
+  if (step.type === 'route')  return <><VC /><RouteNode  target={step.target} flow={flow} /></>
+  if (step.type === 'fork')   return <><VC /><ForkNode   step={step} color={color} flow={flow} /></>
   return null
+}
+
+// A branch column: header card + full step tree
+function BranchColumn({ branch, flow }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+      <VC h={12} />
+      <div style={{
+        width: '100%', boxSizing: 'border-box',
+        background: branch.dim, border: `0.5px solid ${branch.border}`,
+        borderTop: `3px solid ${branch.color}`, borderRadius: 10, padding: '10px 12px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: branch.trigger ? 4 : 0 }}>
+          <span style={{
+            width: 19, height: 19, borderRadius: 5, flexShrink: 0,
+            background: branch.color, color: '#0E0E1A',
+            fontSize: 11, fontWeight: 700,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>{branch.short}</span>
+          <p style={{ fontSize: 12.5, fontWeight: 600, color: branch.color, margin: 0, lineHeight: 1.25 }}>{branch.title}</p>
+        </div>
+        {branch.trigger && (
+          <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: 0, fontStyle: 'italic', lineHeight: 1.4 }}>
+            {branch.trigger}
+          </p>
+        )}
+      </div>
+      {/* Full recursive step tree */}
+      {branch.steps.map((step, i) => (
+        <FlowStep key={i} step={step} color={branch.color} flow={flow} />
+      ))}
+    </div>
+  )
+}
+
+// The close column — full step tree for the booking block
+function CloseColumn({ close, flow }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+      <div style={{
+        width: '100%', boxSizing: 'border-box',
+        background: close.color + '12', border: `0.5px solid ${close.color}44`,
+        borderTop: `3px solid ${close.color}`, borderRadius: 10, padding: '12px 14px',
+      }}>
+        <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: close.color, fontWeight: 700, margin: '0 0 4px' }}>
+          ★ Close · all booking paths end here
+        </p>
+        <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>{close.goal}</p>
+      </div>
+      {close.steps.map((step, i) => (
+        <FlowStep key={i} step={step} color={close.color} flow={flow} />
+      ))}
+    </div>
+  )
+}
+
+// Main connector between top-level sections
+function VLine({ caption }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, margin: '5px 0' }}>
+      <div style={{ width: 2, height: 20, background: 'var(--border)' }} />
+      {caption && (
+        <>
+          <p style={{ fontSize: 10.5, color: 'var(--text-muted)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{caption}</p>
+          <div style={{ width: 2, height: 20, background: 'var(--border)' }} />
+        </>
+      )}
+    </div>
+  )
 }
 
 export function ScriptFlowchart({ flow }) {
   const opener = flow.opener
-  const close = flow.close
-  const openerLine = opener.steps[0]?.text || ''
+  const openerLine = opener.steps[0]?.text || opener.goal
 
   return (
-    <div style={{ maxWidth: 940, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <div style={{ width: '100%', overflowX: 'auto' }}>
+      <div style={{ minWidth: 900, maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 
-      {/* Opener — single root box */}
-      <Box color={opener.color} wide>
-        <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: opener.color, fontWeight: 700, margin: '0 0 6px' }}>
-          Opener · same every call
-        </p>
-        <p style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{openerLine}</p>
-      </Box>
+        {/* Opener */}
+        <div style={{
+          width: 'min(460px, 100%)', boxSizing: 'border-box',
+          background: opener.color + '14', border: `0.5px solid ${opener.color}55`,
+          borderLeft: `3px solid ${opener.color}`, borderRadius: 12, padding: '14px 16px',
+        }}>
+          <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: opener.color, fontWeight: 700, margin: '0 0 6px' }}>
+            Opener · same every call
+          </p>
+          <p style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--text-primary)', margin: 0, fontWeight: 500, fontStyle: 'italic' }}>
+            {unquote(openerLine)}
+          </p>
+        </div>
 
-      <VLine caption="Their response routes the call" />
+        <VLine caption="Their response routes the call" />
 
-      {/* Rail above branch row */}
-      <div style={{ width: '100%', height: 2, background: 'var(--border)', maxWidth: 860 }} />
+        {/* Rail */}
+        <div style={{ width: '100%', height: 2, background: 'var(--border)' }} />
 
-      {/* Five response branches */}
-      <div style={{
-        width: '100%', display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(165px, 1fr))', gap: 12, marginTop: 16,
-      }}>
-        {flow.branches.map(b => {
-          const highlights = getHighlights(b.steps)
-          return (
-            <div key={b.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ width: 2, height: 12, background: 'var(--border)' }} />
-              <div style={{
-                width: '100%', background: b.dim, border: `0.5px solid ${b.border}`, borderTop: `3px solid ${b.color}`,
-                borderRadius: 12, padding: '12px 13px', boxSizing: 'border-box',
-                display: 'flex', flexDirection: 'column',
-              }}>
-                {/* Branch header */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                  <span style={{ width: 19, height: 19, borderRadius: 5, background: b.color, color: '#0E0E1A', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{b.short}</span>
-                  <p style={{ fontSize: 12.5, fontWeight: 600, color: b.color, margin: 0, lineHeight: 1.25 }}>{b.title}</p>
-                </div>
+        {/* Five response branches */}
+        <div style={{
+          width: '100%', display: 'grid',
+          gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+          gap: 10, alignItems: 'start',
+        }}>
+          {flow.branches.map(b => (
+            <BranchColumn key={b.id} branch={b} flow={flow} />
+          ))}
+        </div>
 
-                {/* Trigger */}
-                {b.trigger && <p style={{ fontSize: 10.5, color: 'var(--text-muted)', margin: '0 0 8px', fontStyle: 'italic', lineHeight: 1.4 }}>{b.trigger}</p>}
+        <VLine caption="Booking paths funnel to the close" />
 
-                {/* Condensed step details */}
-                {highlights.length > 0 && (
-                  <>
-                    <div style={{ height: 1, background: 'var(--border)', margin: '0 0 8px', opacity: 0.5 }} />
-                    <div style={{ flex: 1 }}>
-                      {highlights.map((s, i) => <StepItem key={i} s={s} />)}
-                    </div>
-                    <div style={{ height: 1, background: 'var(--border)', margin: '8px 0 8px', opacity: 0.5 }} />
-                  </>
-                )}
+        {/* Close — full step tree, centered */}
+        <div style={{ width: 'min(480px, 100%)' }}>
+          <CloseColumn close={flow.close} flow={flow} />
+        </div>
 
-                {/* Outcome badge */}
-                <div style={{ marginTop: highlights.length > 0 ? 0 : 'auto' }}>
-                  {b.booksNate ? (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 600, color: 'var(--success)', background: 'rgba(34,197,94,0.10)', border: '0.5px solid rgba(34,197,94,0.3)', borderRadius: 6, padding: '3px 8px' }}>
-                      → Books Nate
-                    </span>
-                  ) : (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 600, color: 'var(--text-muted)', background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 6, padding: '3px 8px' }}>
-                      Ends: {b.outcome || 'log outcome'}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          )
-        })}
       </div>
-
-      <VLine caption="Booking paths funnel to the close" />
-
-      {/* Close — shared terminal box */}
-      <Box color={close.color} wide>
-        <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: close.color, fontWeight: 700, margin: '0 0 6px' }}>
-          ★ Close · hand off to Nate &amp; book
-        </p>
-        <p style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-secondary)', margin: 0 }}>{close.goal}</p>
-      </Box>
     </div>
   )
 }
