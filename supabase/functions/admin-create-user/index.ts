@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
   const { error: authError } = await requireAdmin(req, adminClient)
   if (authError) return authError
 
-  const { username, password, full_name, role } = await req.json()
+  const { username, password, full_name, role, timezone } = await req.json()
 
   if (!username || !password || !full_name || !role) {
     return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -94,6 +94,19 @@ Deno.serve(async (req) => {
     )
   if (credError) {
     console.error('rep_credentials upsert failed:', credError.message)
+  }
+
+  // profiles.timezone (migration 042) defaults to America/Chicago at the
+  // table level — only worth an explicit write when the admin picked
+  // something else. Non-fatal, same as the credentials upsert above.
+  if (timezone && timezone !== 'America/Chicago') {
+    const { error: tzError } = await adminClient
+      .from('profiles')
+      .update({ timezone })
+      .eq('id', data.user.id)
+    if (tzError) {
+      console.error('profiles.timezone update failed:', tzError.message)
+    }
   }
 
   return new Response(

@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button'
 import { Input, Select } from '../../components/ui/Input'
 import { Card } from '../../components/ui/Card'
 import { UserPlus, X, CheckCircle, Copy, Check, Search, Trash2, AlertTriangle, KeyRound, Eye, EyeOff } from 'lucide-react'
+import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../../lib/timezones'
 
 function CredentialsReveal({ profileId }) {
   const { data, isLoading, error } = useRepCredentials(profileId, true)
@@ -55,7 +56,7 @@ export default function Users() {
   const deleteUser    = useDeleteUser()
 
   const [showForm,     setShowForm]     = useState(false)
-  const [form,         setForm]         = useState({ username: '', password: '', full_name: '', role: 'rep' })
+  const [form,         setForm]         = useState({ username: '', password: '', full_name: '', role: 'rep', timezone: DEFAULT_TIMEZONE })
   const [formError,    setFormError]    = useState('')
   const [createdCreds, setCreatedCreds] = useState(null)
   const [copied,       setCopied]       = useState(false)
@@ -88,7 +89,7 @@ export default function Users() {
       await createProfile.mutateAsync(form)
       setCreatedCreds({ username: form.username, password: form.password, full_name: form.full_name })
       setShowForm(false)
-      setForm({ username: '', password: '', full_name: '', role: 'rep' })
+      setForm({ username: '', password: '', full_name: '', role: 'rep', timezone: DEFAULT_TIMEZONE })
     } catch (err) {
       setFormError(err.message || 'Failed to create user')
     }
@@ -191,6 +192,15 @@ export default function Users() {
               <option value="rep">Rep</option>
               <option value="closer">Closer</option>
               <option value="admin">Admin</option>
+            </Select>
+            <Select
+              label="Timezone"
+              value={form.timezone}
+              onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}
+            >
+              {SELECTABLE_TIMEZONES.map(tz => (
+                <option key={tz.value} value={tz.value}>{tz.label}</option>
+              ))}
             </Select>
             {formError && (
               <div className="col-span-2">

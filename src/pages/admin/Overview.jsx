@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useReps, useRepStats } from '../../hooks/useProfiles'
+import { useAuth } from '../../hooks/useAuth'
+import { formatInTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { Phone, Calendar, TrendingUp, DollarSign, ChevronDown, ChevronUp, Clock } from 'lucide-react'
 import { Badge } from '../../components/ui/Badge'
 import { KPICard } from '../../components/ui/KPICard'
@@ -22,9 +24,8 @@ function fmt$(n) {
   return n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n}`
 }
 
-function fmtTime(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+function fmtTime(iso, tz) {
+  return formatInTimezone(iso, tz, { hour: 'numeric', minute: '2-digit' })
 }
 
 function ConnectPct({ value }) {
@@ -354,6 +355,8 @@ function AnalyticsRow() {
 // ── Main admin overview ───────────────────────────────────────────────────────
 
 export default function Overview() {
+  const { profile } = useAuth()
+  const tz = profile?.timezone || DEFAULT_TIMEZONE
   const { data: reps, isLoading: repsLoading } = useReps()
 
   const { data: kpis } = useQuery({
@@ -531,7 +534,7 @@ export default function Overview() {
                       {appt.lead?.business_name || 'Unknown'}
                     </p>
                     <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {appt.closer?.full_name || 'Unassigned'} · {fmtTime(appt.scheduled_at || appt.created_at)}
+                      {appt.closer?.full_name || 'Unassigned'} · {fmtTime(appt.scheduled_at || appt.created_at, tz)}
                     </p>
                   </div>
                   <PriceBadge customMonthlyPrice={appt.lead?.custom_monthly_price} />

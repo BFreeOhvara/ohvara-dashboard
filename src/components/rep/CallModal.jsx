@@ -7,6 +7,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { Badge } from '../ui/Badge'
 import { buildScriptFlow } from '../../lib/discoveryScript'
 import { ScriptWalk } from './ScriptWalk'
+import { inferTimezoneFromState, zonedTimeToUtcIso, timezoneLabel, utcIsoToZonedDatetimeLocal } from '../../lib/timezones'
 
 // The only statuses a rep can set from the call modal — color coordinated.
 // `note` tells the rep exactly where the lead routes (pipeline behavior).
@@ -101,6 +102,11 @@ export function CallModal({ lead, onClose }) {
   // real details filled in — derived deterministically (no AI), walked one
   // step at a time in the right column.
   const flow = useMemo(() => buildScriptFlow(lead, profile), [lead.id, profile?.id])
+  // The appointment time the rep enters is the CLIENT's local time (what
+  // the prospect said on the call), not the rep's own browser timezone —
+  // inferred from the lead's state. Stored as UTC via zonedTimeToUtcIso.
+  const clientTz = useMemo(() => inferTimezoneFromState(lead.state), [lead.state])
+  const clientTzLabel = timezoneLabel(clientTz)
   const [status, setStatus]           = useState(lead.status)
   const [statusTouched, setStatusTouched] = useState(false)
   const [statusOpen, setStatusOpen]   = useState(false)
@@ -112,7 +118,7 @@ export function CallModal({ lead, onClose }) {
   const [secondaryPain, setSecondaryPain]           = useState('')
   const [followUpAt, setFollowUpAt]   = useState(toDatetimeLocal(lead.follow_up_at))
   const [followUpNotes, setFollowUpNotes] = useState(lead.follow_up_notes || '')
-  const [appointmentAt, setAppointmentAt] = useState(toDatetimeLocal(lead.appointment_at))
+  const [appointmentAt, setAppointmentAt] = useState(utcIsoToZonedDatetimeLocal(lead.appointment_at, clientTz))
   const [closing, setClosing]         = useState(false)
   const [doneError, setDoneError]     = useState('')
   const dropdownRef = useRef(null)
@@ -185,8 +191,11 @@ export function CallModal({ lead, onClose }) {
         patch.follow_up_notes = followUpNotes || null
       }
       if (status === 'Appointment Booked') {
-        // The pipeline trigger syncs an appointments row for the closer
-        patch.appointment_at = new Date(appointmentAt).toISOString()
+        // The pipeline trigger syncs an appointments row for the closer.
+        // appointmentAt is the CLIENT's local wall-clock time (the rep
+        // typed what the prospect said) — convert using the lead's
+        // inferred timezone, not the rep's own browser timezone.
+        patch.appointment_at = zonedTimeToUtcIso(appointmentAt, clientTz)
       }
       // .select() so a 0-row update (expired session, RLS mismatch) is a
       // visible error instead of a silent no-op that closes the modal
@@ -436,7 +445,7 @@ export function CallModal({ lead, onClose }) {
                   {status === 'Follow-Up' && followUpAt
                     ? `Returns to your list on ${new Date(followUpAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
                     : status === 'Appointment Booked' && appointmentAt
-                    ? `Appointment: ${new Date(appointmentAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+                    ? `Appointment: ${new Date(appointmentAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} ${clientTzLabel}`
                     : selected.note}
                 </p>
               )}
@@ -450,7 +459,7 @@ export function CallModal({ lead, onClose }) {
                 border: '0.5px solid rgba(34,197,94,0.2)',
               }}>
                 <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#22C55E', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <CalendarClock size={10} /> Appointment Time
+                  <CalendarClock size={10} /> Appointment Time — {clientTzLabel} (client's local time)
                 </p>
                 <input
                   type="datetime-local"
@@ -466,8 +475,8 @@ export function CallModal({ lead, onClose }) {
                 />
                 <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '6px 0 0' }}>
                   {appointmentAt
-                    ? `Scheduled for ${new Date(appointmentAt).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} — saved when you hit Done.`
-                    : 'Pick the day and time the prospect agreed to.'}
+                    ? `Scheduled for ${new Date(appointmentAt).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} ${clientTzLabel} — saved when you hit Done.`
+                    : `Pick the day and time the prospect agreed to, in THEIR local time (${clientTzLabel}).`}
                 </p>
               </div>
             )}

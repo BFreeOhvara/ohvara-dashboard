@@ -15,7 +15,7 @@ export function useMyAppointments() {
         .from('appointments')
         .select(`
           *,
-          lead:leads(id, business_name, contact_name, phone, email, niche, city, pain_points, notes, job_title, monthly_labor_cost, calls_missed_per_week, avg_ticket, recommended_automations, custom_monthly_price, recommended_stack, stack_generated_at),
+          lead:leads(id, business_name, contact_name, phone, email, niche, city, state, pain_points, notes, job_title, monthly_labor_cost, calls_missed_per_week, avg_ticket, recommended_automations, custom_monthly_price, recommended_stack, stack_generated_at),
           rep:profiles!appointments_rep_id_fkey(id, full_name),
           reminders:reminder_log(id, scheduled_time, status, channel)
         `)

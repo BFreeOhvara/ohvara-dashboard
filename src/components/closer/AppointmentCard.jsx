@@ -14,6 +14,7 @@ import { useUpdateAppointment } from '../../hooks/useAppointments'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
 import { syntheticStatsFor } from '../../lib/syntheticStats'
+import { inferTimezoneFromState, zonedTimeToUtcIso, timezoneLabel, formatInTimezone, utcIsoToZonedDatetimeLocal, DEFAULT_TIMEZONE } from '../../lib/timezones'
 
 // Package display config — matches North Star locked pricing.
 // services mirror the recommend-stack edge function PACKAGES (Elite itemized in full).
@@ -136,6 +137,12 @@ function AgentStackList({ rec, primary }) {
 
 export function AppointmentCard({ appt }) {
   const { profile } = useAuth()
+  const lead = appt.lead
+  // Appointment times are with the CLIENT, so the scheduling input is
+  // entered/interpreted in the lead's inferred local timezone; everything
+  // displayed is converted to the VIEWING user's own profile.timezone.
+  const clientTz = inferTimezoneFromState(lead?.state)
+  const viewerTz = profile?.timezone || DEFAULT_TIMEZONE
   const [modalOpen, setModalOpen] = useState(false)
   const [rec, setRec] = useState(null)
   const [recLoading, setRecLoading] = useState(false)
@@ -145,7 +152,7 @@ export function AppointmentCard({ appt }) {
   const [lossReason, setLossReason] = useState('')
   const [notes, setNotes] = useState(appt.closer_notes || '')
   const [scheduledAt, setScheduledAt] = useState(
-    appt.scheduled_at ? new Date(appt.scheduled_at).toISOString().slice(0, 16) : ''
+    utcIsoToZonedDatetimeLocal(appt.scheduled_at, clientTz)
   )
   const [provisionLoading, setProvisionLoading] = useState(false)
   const [provisionResult, setProvisionResult] = useState(null)
@@ -156,7 +163,6 @@ export function AppointmentCard({ appt }) {
   const [retryProvisionLoading, setRetryProvisionLoading] = useState(false)
   const update = useUpdateAppointment()
   const qc = useQueryClient()
-  const lead = appt.lead
 
   // Auto-load recommendation on mount.
   // Use full cached rec if the rep's booking trigger already generated it.
@@ -302,7 +308,9 @@ export function AppointmentCard({ appt }) {
 
   async function handleSchedule() {
     if (!scheduledAt) return
-    const iso = new Date(scheduledAt).toISOString()
+    // scheduledAt is entered in the client's local time (clientTz), same
+    // convention as the setter's original booking — not Nate's own browser tz.
+    const iso = zonedTimeToUtcIso(scheduledAt, clientTz)
     await update.mutateAsync({
       appointmentId: appt.id,
       updates: { scheduled_at: iso, status: 'pending' },
@@ -390,7 +398,7 @@ export function AppointmentCard({ appt }) {
             {appt.scheduled_at && (
               <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-secondary)' }}>
                 <Calendar size={11} />
-                {new Date(appt.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                {formatInTimezone(appt.scheduled_at, viewerTz, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
               </span>
             )}
             <Badge label={appt.status} />
@@ -529,7 +537,7 @@ export function AppointmentCard({ appt }) {
           {/* ── Schedule + Reminders ─────────────────────────────────────────── */}
           <div style={{ padding: '16px 16px 0' }}>
             <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500, marginBottom: 8 }}>
-              Appointment Time
+              Appointment Time — {timezoneLabel(clientTz)} (client's local time)
             </p>
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
               <div style={{ flex: 1 }}>

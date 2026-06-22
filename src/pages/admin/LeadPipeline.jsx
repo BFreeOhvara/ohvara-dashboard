@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { PhoneMissed, CalendarClock, Ban, CheckCircle, Inbox, FilePlus2, Search } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useReps } from '../../hooks/useProfiles'
+import { useAuth } from '../../hooks/useAuth'
+import { formatInTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { KPICard } from '../../components/ui/KPICard'
 import { Badge } from '../../components/ui/Badge'
 
@@ -405,7 +407,7 @@ function BookedTab({ filters }) {
             <div style={cell('0 0 110px')}>{r.rep?.full_name || '—'}</div>
             <div style={cell('0 0 110px')}>{r.closer?.full_name || '—'}</div>
             <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>
-              {r.scheduled_at ? new Date(r.scheduled_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—'}
+              {formatInTimezone(r.scheduled_at, tz, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
             </div>
             <div style={cell('0 0 110px')}><Badge label={r.outcome || r.status} /></div>
           </div>
@@ -416,6 +418,8 @@ function BookedTab({ filters }) {
 }
 
 export default function LeadPipeline() {
+  const { profile } = useAuth()
+  const tz = profile?.timezone || DEFAULT_TIMEZONE
   const [tab, setTab] = useState('unassigned')
   const [search, setSearch] = useState('')
   const [repName, setRepName] = useState('')

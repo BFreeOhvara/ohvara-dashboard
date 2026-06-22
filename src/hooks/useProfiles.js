@@ -50,9 +50,9 @@ export function useRepCredentials(profileId, enabled) {
 export function useCreateProfile() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ username, password, full_name, role }) => {
+    mutationFn: async ({ username, password, full_name, role, timezone }) => {
       const { data, error } = await supabase.functions.invoke('admin-create-user', {
-        body: { username, password, full_name, role },
+        body: { username, password, full_name, role, timezone },
       })
       if (error) throw error
       return data

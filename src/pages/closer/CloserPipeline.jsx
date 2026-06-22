@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react'
 import { CalendarClock, CheckCircle, Ban, Search } from 'lucide-react'
 import { useMyAppointments } from '../../hooks/useAppointments'
+import { useAuth } from '../../hooks/useAuth'
+import { formatInTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { KPICard } from '../../components/ui/KPICard'
 import { Badge } from '../../components/ui/Badge'
 
@@ -20,9 +22,8 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })
 }
 
-function fmtDateTime(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+function fmtDateTime(iso, tz) {
+  return formatInTimezone(iso, tz, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
 function QueueTable({ columns, rows, renderRow, emptyText }) {
@@ -48,7 +49,7 @@ function QueueTable({ columns, rows, renderRow, emptyText }) {
   )
 }
 
-function PendingTab({ rows }) {
+function PendingTab({ rows, tz }) {
   const scheduled = rows.filter(a => a.scheduled_at)
   return (
     <div>
@@ -66,7 +67,7 @@ function PendingTab({ rows }) {
             <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
             <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
             <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
-            <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at)}</div>
+            <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at, tz)}</div>
             <div style={cell('0 0 100px')}><Badge label={a.status} /></div>
           </div>
         )}
@@ -130,6 +131,8 @@ function LostTab({ rows }) {
 }
 
 export default function CloserPipeline() {
+  const { profile } = useAuth()
+  const tz = profile?.timezone || DEFAULT_TIMEZONE
   const { data: allAppts, isLoading } = useMyAppointments()
   const [tab, setTab] = useState('pending')
   const [search, setSearch] = useState('')
@@ -200,7 +203,7 @@ export default function CloserPipeline() {
         ))}
       </div>
 
-      {tab === 'pending' && <PendingTab rows={filtered.pending} />}
+      {tab === 'pending' && <PendingTab rows={filtered.pending} tz={tz} />}
       {tab === 'closed'  && <ClosedTab  rows={filtered.closed} />}
       {tab === 'lost'    && <LostTab    rows={filtered.lost} />}
     </div>
