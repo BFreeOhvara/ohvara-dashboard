@@ -29,6 +29,26 @@ function computeKPIs(leads) {
   return { called, total }
 }
 
+// Batch reset countdown — target is the live `daily-batch-assign` pg_cron
+// schedule (migration 016: '5 0 * * *' = 00:05 UTC). NOT 06:05 UTC — that
+// was the spec's stated value, but it doesn't match the actual cron and
+// was corrected here (see Memories 2026-06-22).
+const BATCH_RESET_UTC_HOUR = 0
+const BATCH_RESET_UTC_MINUTE = 5
+
+function formatResetCountdown(nowMs) {
+  const now = new Date(nowMs)
+  const next = new Date(Date.UTC(
+    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(),
+    BATCH_RESET_UTC_HOUR, BATCH_RESET_UTC_MINUTE, 0, 0
+  ))
+  if (next.getTime() <= nowMs) next.setUTCDate(next.getUTCDate() + 1)
+  const totalMinutes = Math.floor((next.getTime() - nowMs) / 60000)
+  if (totalMinutes < 1) return 'Resetting soon'
+  if (totalMinutes < 60) return `Resets in ${totalMinutes}m`
+  return `Resets in ${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`
+}
+
 // Count of the rep's leads with status Follow-Up whose follow_up_at lands on
 // today (local calendar day). Computed from the already-loaded batch so it
 // stays live with the row countdowns — no extra query. Drives the
@@ -314,6 +334,7 @@ export default function MyLeads() {
     scrollRestored.current = true
   }, [isLoading])
 
+  const resetCountdown = useMemo(() => formatResetCountdown(now), [now])
   const kpis = useMemo(() => computeKPIs(leads), [leads])
   const newCount = useMemo(() => leads ? leads.filter(l => l.status === 'New').length : null, [leads])
   // Recompute on each `now` tick so the count rolls over with the day / as
@@ -349,6 +370,9 @@ export default function MyLeads() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
             {today}
+          </span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+            {resetCountdown}
           </span>
           <Button variant="secondary" size="sm" onClick={() => refetch()}>
             <RefreshCw size={12} />
