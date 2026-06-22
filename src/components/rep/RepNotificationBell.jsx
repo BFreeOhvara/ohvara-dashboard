@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
-import { Bell, CheckCheck, MessageSquare, Award, Clock } from 'lucide-react'
+import { Bell, CheckCheck, MessageSquare, Award, Clock, DollarSign } from 'lucide-react'
 import { useRepNotifications, useRepUnreadCount, useRepMarkNotificationRead, useRepMarkAllRead } from '../../hooks/useNotifications'
 import { useFollowUpNotifier } from '../../hooks/useRepNotificationTriggers'
 import { useMyLeads } from '../../hooks/useLeads'
 
 const TYPE_STYLES = {
-  message:   { Icon: MessageSquare, color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
-  badge:     { Icon: Award,         color: 'var(--success)', bg: 'var(--success-dim)' },
-  follow_up: { Icon: Clock,         color: 'var(--warning)', bg: 'var(--warning-dim)' },
-  default:   { Icon: Bell,          color: 'var(--info)',    bg: 'var(--info-dim)'    },
+  message:      { Icon: MessageSquare, color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
+  badge:        { Icon: Award,         color: 'var(--success)', bg: 'var(--success-dim)' },
+  follow_up:    { Icon: Clock,         color: 'var(--warning)', bg: 'var(--warning-dim)' },
+  deal_closed:  { Icon: DollarSign,    color: 'var(--success)', bg: 'var(--success-dim)' },
+  default:      { Icon: Bell,          color: 'var(--info)',    bg: 'var(--info-dim)'    },
 }
 
 function fmtTime(iso) {
@@ -74,12 +75,15 @@ export function RepNotificationBell({ profileId }) {
         )}
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown — opens to the RIGHT of the bell, not below-right. The bell
+          sits in the narrow sidebar; anchoring with `right: 0` (relative to
+          the bell's own small wrapper) made the 340px panel extend leftward
+          and cover the nav instead of opening into the main content area. */}
       {open && (
         <div
           className="glass"
           style={{
-            position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+            position: 'absolute', top: -4, left: 'calc(100% + 8px)',
             width: 340, maxHeight: 420,
             borderRadius: 10, overflow: 'hidden',
             zIndex: 200,

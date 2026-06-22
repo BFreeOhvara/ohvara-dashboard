@@ -83,9 +83,15 @@ export function useBadgeNotifier(repId, badgeCtx) {
 }
 
 // ── Follow-up notifier ───────────────────────────────────────────────────────
-// Checks the lead list for follow-ups due within 30 minutes. Runs on each
-// leads refresh. Uses a session-local ref + the existing notifications list to
-// avoid duplicate inserts within the session.
+// Checks the lead list against three thresholds before each follow-up's due
+// time (60m, 10m, 1m) and inserts one notification per threshold crossed.
+// Dedup key is `${leadId}:${threshold}` (not just leadId) so all three fire
+// independently for the same lead instead of the first one blocking the rest.
+// Runs on each leads/notifications refresh (useRepNotifications polls every
+// 15s, which re-triggers this since `existingNotifications` is a dependency —
+// no separate timer needed).
+
+const FOLLOW_UP_THRESHOLDS_MIN = [60, 10, 1]
 
 export function useFollowUpNotifier(repId, leads = [], existingNotifications = []) {
   const qc = useQueryClient()
@@ -95,40 +101,37 @@ export function useFollowUpNotifier(repId, leads = [], existingNotifications = [
     if (!repId || !leads.length) return
 
     const now = Date.now()
-    const cutoff = now + 30 * 60 * 1000
-
-    const dueSoon = leads.filter(l =>
-      l.status === 'Follow-Up' &&
-      l.follow_up_at &&
-      new Date(l.follow_up_at).getTime() > now &&
-      new Date(l.follow_up_at).getTime() <= cutoff
-    )
-
-    if (dueSoon.length === 0) return
 
     const alreadyInDB = new Set(
       existingNotifications
-        .filter(n => n.type === 'follow_up' && n.data?.lead_id)
-        .map(n => n.data.lead_id)
+        .filter(n => n.type === 'follow_up' && n.data?.lead_id != null && n.data?.threshold != null)
+        .map(n => `${n.data.lead_id}:${n.data.threshold}`)
     )
 
-    const toNotify = dueSoon.filter(l =>
-      !notifiedThisSession.current.has(l.id) && !alreadyInDB.has(l.id)
-    )
+    const toNotify = []
+    for (const lead of leads) {
+      if (lead.status !== 'Follow-Up' || !lead.follow_up_at) continue
+      const minutesUntilDue = (new Date(lead.follow_up_at).getTime() - now) / 60000
+      if (minutesUntilDue <= 0) continue
+
+      for (const threshold of FOLLOW_UP_THRESHOLDS_MIN) {
+        if (minutesUntilDue > threshold) continue
+        const key = `${lead.id}:${threshold}`
+        if (notifiedThisSession.current.has(key) || alreadyInDB.has(key)) continue
+        notifiedThisSession.current.add(key)
+        toNotify.push({
+          profile_id: repId,
+          type: 'follow_up',
+          message: `Follow-up in ${threshold}m: ${lead.business_name}`,
+          data: { lead_id: lead.id, business_name: lead.business_name, threshold },
+        })
+      }
+    }
 
     if (toNotify.length === 0) return
 
-    toNotify.forEach(lead => notifiedThisSession.current.add(lead.id))
-
     Promise.all(
-      toNotify.map(lead =>
-        supabase.from('notifications').insert({
-          profile_id: repId,
-          type: 'follow_up',
-          message: `Follow-up due soon: ${lead.business_name}`,
-          data: { lead_id: lead.id, business_name: lead.business_name },
-        })
-      )
+      toNotify.map(row => supabase.from('notifications').insert(row))
     ).then(() => {
       qc.invalidateQueries({ queryKey: ['rep-notifications', repId] })
       qc.invalidateQueries({ queryKey: ['rep-notifications-unread', repId] })
