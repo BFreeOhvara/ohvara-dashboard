@@ -343,7 +343,7 @@ export default function MyLeads() {
             My Leads
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-            Today's batch · <span style={{ fontFamily: 'var(--font-mono)' }}>150</span> leads assigned
+            Today's batch · <span style={{ fontFamily: 'var(--font-mono)' }}>{kpis.total}</span> leads assigned
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
