@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { Trophy, Zap, Calendar, Briefcase, Lock } from 'lucide-react'
+import { useState } from 'react'
+import { Trophy, Zap, Calendar, Lock } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAuth } from '../../hooks/useAuth'
 import { useRepStats, useMyCommission, useBadgeActivity, DAILY_BATCH_TARGET } from '../../hooks/useProfiles'
@@ -19,7 +19,7 @@ const SS_PERIOD = 'ohvara_mygoals_period'
 const GOALS = {
   daily:   { dials: DAILY_BATCH_TARGET, bookings: 3 },
   weekly:  { dials: 750,  bookings: 10 },
-  monthly: { dials: 3000, bookings: 40, closes: 8 },
+  monthly: { dials: 3000, bookings: 40 },
 }
 
 // 37 milestone badges in six groups. Dials / bookings / rate badges read
@@ -121,15 +121,6 @@ export default function MyGoals() {
 
   const goals = GOALS[period.key]
 
-  // Closes this calendar month — one commission row per closed deal
-  const monthCloses = useMemo(() => {
-    const now = new Date()
-    return (commission?.rows || []).filter(r => {
-      const d = new Date(r.created_at)
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
-    }).length
-  }, [commission])
-
   const badgeCtx = { month: monthStats, commission, activity }
   useBadgeNotifier(profile?.id, badgeCtx)
   const earnedCount = BADGE_GROUPS
@@ -159,7 +150,7 @@ export default function MyGoals() {
         </div>
       </div>
 
-      <div className={clsx('grid gap-4 mb-6', goals.closes ? 'md:grid-cols-3' : 'md:grid-cols-2')}>
+      <div className="grid gap-4 mb-6 md:grid-cols-2">
         <GoalCard
           label={`${period.label} Dials`}
           unit="dials"
@@ -176,16 +167,6 @@ export default function MyGoals() {
           icon={Calendar}
           color="green"
         />
-        {goals.closes && (
-          <GoalCard
-            label="Monthly Closes"
-            unit="closes"
-            current={monthCloses}
-            target={goals.closes}
-            icon={Briefcase}
-            color="green"
-          />
-        )}
       </div>
 
       <Card>

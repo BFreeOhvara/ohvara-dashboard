@@ -110,8 +110,12 @@ function FeedItem({ item }) {
 function formatTime(ts) {
   const d = new Date(ts)
   const now = new Date()
-  const diff = now - d
-  if (diff < 3600000) return `${Math.round(diff / 60000)}m ago`
-  if (diff < 86400000) return `${Math.round(diff / 3600000)}h ago`
-  return d.toLocaleDateString()
+  const isToday = d.toDateString() === now.toDateString()
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const isYesterday = d.toDateString() === yesterday.toDateString()
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  if (isToday) return `Today ${time}`
+  if (isYesterday) return `Yesterday ${time}`
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ` ${time}`
 }
