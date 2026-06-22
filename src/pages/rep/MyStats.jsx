@@ -53,12 +53,15 @@ function CompletedDaysHeatmap({ days }) {
 
   return (
     <div className="glass" style={{ marginTop: 20, padding: '18px 20px', borderRadius: 12 }}>
-      <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 14px' }}>
-        Completed Days
-      </p>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+        <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 14px' }}>
+          Completed Days
+        </p>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Last 21 days</span>
+      </div>
 
-      {/* heatmap rows: one per week — cells stretch to fill the card's full width, square */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+      {/* heatmap rows: one per week — grid shrunk + centered, cells fill it, square */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '70%', margin: '4px auto 0' }}>
         {weeks.map((wk, wi) => (
           <div key={wi} style={{ display: 'flex', gap: 6, width: '100%' }}>
             {wk.map((d, di) => (
