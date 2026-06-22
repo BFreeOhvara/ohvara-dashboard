@@ -83,6 +83,19 @@ Deno.serve(async (req) => {
     })
   }
 
+  // Store the plaintext credentials for admin lookup (rep_credentials, migration 041).
+  // Service-role client bypasses RLS. Non-fatal: the account itself is already
+  // created above, so a credentials-table failure shouldn't fail the whole request.
+  const { error: credError } = await adminClient
+    .from('rep_credentials')
+    .upsert(
+      { profile_id: data.user.id, username, password },
+      { onConflict: 'profile_id' }
+    )
+  if (credError) {
+    console.error('rep_credentials upsert failed:', credError.message)
+  }
+
   return new Response(
     JSON.stringify({ user: data.user }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -30,6 +30,23 @@ export function useAllProfiles() {
   })
 }
 
+export function useRepCredentials(profileId, enabled) {
+  return useQuery({
+    queryKey: ['rep_credentials', profileId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('rep_credentials')
+        .select('username, password')
+        .eq('profile_id', profileId)
+        .maybeSingle()
+      if (error) throw error
+      return data
+    },
+    enabled: !!profileId && !!enabled,
+    staleTime: Infinity,
+  })
+}
+
 export function useCreateProfile() {
   const qc = useQueryClient()
   return useMutation({

@@ -1,10 +1,40 @@
 import { useState, useMemo } from 'react'
-import { useAllProfiles, useCreateProfile, useToggleUserActive, useDeleteUser } from '../../hooks/useProfiles'
+import { useAllProfiles, useCreateProfile, useToggleUserActive, useDeleteUser, useRepCredentials } from '../../hooks/useProfiles'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Input, Select } from '../../components/ui/Input'
 import { Card } from '../../components/ui/Card'
-import { UserPlus, X, CheckCircle, Copy, Check, Search, Trash2, AlertTriangle } from 'lucide-react'
+import { UserPlus, X, CheckCircle, Copy, Check, Search, Trash2, AlertTriangle, KeyRound, Eye, EyeOff } from 'lucide-react'
+
+function CredentialsReveal({ profileId }) {
+  const { data, isLoading, error } = useRepCredentials(profileId, true)
+  const [showUser, setShowUser] = useState(false)
+  const [showPass, setShowPass] = useState(false)
+
+  if (isLoading) {
+    return <p className="text-[10px] text-[var(--text-muted)] mt-1.5">Loading…</p>
+  }
+  if (error || !data) {
+    return <p className="text-[10px] text-[#EF4444] mt-1.5">No saved login for this account.</p>
+  }
+
+  return (
+    <div className="flex items-center gap-3 mt-1.5 font-mono text-[10px]">
+      <span className="flex items-center gap-1 text-[var(--text-muted)]">
+        User: <span className="text-[var(--text-secondary)]">{showUser ? data.username : '••••••••'}</span>
+        <button onClick={() => setShowUser(v => !v)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+          {showUser ? <EyeOff size={11} /> : <Eye size={11} />}
+        </button>
+      </span>
+      <span className="flex items-center gap-1 text-[var(--text-muted)]">
+        Pass: <span className="text-[var(--text-secondary)]">{showPass ? data.password : '••••••••'}</span>
+        <button onClick={() => setShowPass(v => !v)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+          {showPass ? <EyeOff size={11} /> : <Eye size={11} />}
+        </button>
+      </span>
+    </div>
+  )
+}
 
 function formatDate(iso) {
   if (!iso) return <span className="text-[var(--text-muted)] opacity-40">Never</span>
@@ -35,6 +65,7 @@ export default function Users() {
   const [statusFilter, setStatusFilter] = useState('all')
 
   const [confirmDelete, setConfirmDelete] = useState(null) // profile object
+  const [viewingCreds,  setViewingCreds]  = useState(null) // profile id with login panel open
 
   // Filtered profiles
   const filtered = useMemo(() => {
@@ -248,6 +279,7 @@ export default function Users() {
                         <p className="font-mono text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">
                           {p.username ? `@${p.username}` : <span className="opacity-40">no username</span>}
                         </p>
+                        {viewingCreds === p.id && <CredentialsReveal profileId={p.id} />}
                       </div>
                     </div>
                   </td>
@@ -268,6 +300,13 @@ export default function Users() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => setViewingCreds(v => v === p.id ? null : p.id)}
+                        className={`p-1.5 rounded-lg transition-all ${viewingCreds === p.id ? 'text-[var(--accent)] bg-[var(--accent-subtle)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-3)]'}`}
+                        title="View login"
+                      >
+                        <KeyRound size={13} />
+                      </button>
                       <Button
                         variant={p.is_active ? 'secondary' : 'ghost'}
                         size="sm"
