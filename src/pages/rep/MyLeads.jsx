@@ -269,6 +269,7 @@ export default function MyLeads() {
   const [activeFilter, setActiveFilter] = useState(() => sessionStorage.getItem(SS_FILTER) || 'All')
   const [callLead, setCallLead] = useState(null)
   const [reminderLead, setReminderLead] = useState(null)
+  const [dayComplete, setDayComplete] = useState(false)
   const remindedRef = useRef(new Set())
   const scrollRef = useRef(null)
   const scrollRestored = useRef(false)
@@ -314,6 +315,7 @@ export default function MyLeads() {
   }, [isLoading])
 
   const kpis = useMemo(() => computeKPIs(leads), [leads])
+  const newCount = useMemo(() => leads ? leads.filter(l => l.status === 'New').length : null, [leads])
   // Recompute on each `now` tick so the count rolls over with the day / as
   // follow-ups come due alongside the row countdowns.
   const followUpsDueToday = useMemo(() => countFollowUpsDueToday(leads), [leads, now])
@@ -505,6 +507,44 @@ export default function MyLeads() {
             ))}
           </div>
         ) : !filtered.length ? (
+          // Complete Day state: all leads actioned, New tab is empty
+          newCount === 0 && kpis.total > 0 && activeFilter === 'New' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px', textAlign: 'center' }}>
+              {dayComplete ? (
+                <>
+                  <div style={{ fontSize: 36, marginBottom: 12 }}>🎉</div>
+                  <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--success)', margin: '0 0 6px' }}>Day complete!</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                    Your batch resets overnight. See you tomorrow.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(34,197,94,0.12)', border: '0.5px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+                    <Check size={20} color="var(--success)" />
+                  </div>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px' }}>
+                    All {kpis.total} leads worked
+                  </p>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 18px' }}>
+                    Nothing left in New — tap to confirm your day is done.
+                  </p>
+                  <button
+                    onClick={() => setDayComplete(true)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 8,
+                      height: 40, padding: '0 24px',
+                      background: 'var(--success)', borderRadius: 10, border: 'none',
+                      fontSize: 14, fontWeight: 500, color: 'white', cursor: 'pointer',
+                    }}
+                  >
+                    <Check size={15} />
+                    Complete Day
+                  </button>
+                </>
+              )}
+            </div>
+          ) : (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px', textAlign: 'center' }}>
             <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
               <Phone size={18} color="var(--text-muted)" />
@@ -516,6 +556,7 @@ export default function MyLeads() {
               {activeFilter === 'All' ? 'Check back after the nightly batch runs.' : 'Try a different filter.'}
             </p>
           </div>
+          )
         ) : (
           filtered.map((lead, i) => (
             <LeadRow
