@@ -17,7 +17,7 @@ const GOAL_PERIODS = [
 const SS_PERIOD = 'ohvara_mygoals_period'
 
 const GOALS = {
-  daily:   { dials: DAILY_BATCH_TARGET, bookings: 3 },
+  daily:   { dials: DAILY_BATCH_TARGET, bookings: 2 },
   weekly:  { dials: 750,  bookings: 10 },
   monthly: { dials: 3000, bookings: 40 },
 }
@@ -69,15 +69,18 @@ const BADGE_GROUPS = [
   {
     group: 'Streak & Consistency',
     badges: [
-      { id: 'streak_3',    label: '3-Day Streak',  icon: '🗓️', condition: c => (c.activity?.longestStreak || 0) >= 3 },
-      { id: 'streak_7',    label: '7-Day Streak',  icon: '🔥', condition: c => (c.activity?.longestStreak || 0) >= 7 },
-      { id: 'streak_14',   label: '14-Day Streak', icon: '⚡', condition: c => (c.activity?.longestStreak || 0) >= 14 },
-      { id: 'streak_21',   label: '21-Day Streak', icon: '🏆', condition: c => (c.activity?.longestStreak || 0) >= 21 },
-      { id: 'streak_30',   label: '30-Day Streak', icon: '👑', condition: c => (c.activity?.longestStreak || 0) >= 30 },
-      { id: 'full_week',   label: 'Full Week',     icon: '💪', condition: c => (c.activity?.bestWeekDials || 0) >= 750,
+      { id: 'streak_3',  label: '3-Day Streak',  icon: '🗓️', condition: c => (c.activity?.longestStreak || 0) >= 3,
+        detail: '3 completed days in a row' },
+      { id: 'streak_7',  label: '7-Day Streak',  icon: '🔥', condition: c => (c.activity?.longestStreak || 0) >= 7,
+        detail: '7 completed days in a row' },
+      { id: 'streak_14', label: '14-Day Streak', icon: '⚡', condition: c => (c.activity?.longestStreak || 0) >= 14,
+        detail: '14 completed days in a row' },
+      { id: 'streak_21', label: '21-Day Streak', icon: '🏆', condition: c => (c.activity?.longestStreak || 0) >= 21,
+        detail: '21 completed days in a row' },
+      { id: 'streak_30', label: '30-Day Streak', icon: '👑', condition: c => (c.activity?.longestStreak || 0) >= 30,
+        detail: '30 completed days in a row' },
+      { id: 'full_week', label: 'Full Week',     icon: '💪', condition: c => (c.activity?.bestWeekDials || 0) >= 750,
         detail: '750 dials in 7 days' },
-      { id: 'perfect_day', label: 'Perfect Day',   icon: '✅', condition: c => (c.activity?.bestDayDials || 0) >= DAILY_BATCH_TARGET,
-        detail: `${DAILY_BATCH_TARGET} dials in a day` },
     ],
   },
   {
@@ -94,6 +97,8 @@ const BADGE_GROUPS = [
   {
     group: 'Special',
     badges: [
+      { id: 'perfect_day',  label: 'Perfect Day',  icon: '✅', condition: c => !!c.activity?.perfectDay,
+        detail: '150 dials + 2 bookings in one day' },
       { id: 'five_a_day',   label: '5 in a Day',   icon: '🚀', condition: c => (c.activity?.bestDayBookings || 0) >= 5,
         detail: '5 bookings in one day' },
       { id: 'back_to_back', label: 'Back-to-Back Bookings', icon: '🔁', condition: c => !!c.activity?.backToBack,

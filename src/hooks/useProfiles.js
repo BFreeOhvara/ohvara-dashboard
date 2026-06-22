@@ -201,18 +201,31 @@ export function useCompletedDays(repId, numDays = 21) {
     queryFn: async () => {
       // Single source: rep_completed_days RPC (migration 026) — distinct
       // leads dialed per UTC day vs the 150 target, computed server-side.
-      const { data, error } = await supabase.rpc('rep_completed_days', {
-        p_rep_id: repId,
-        p_days: numDays,
-      })
-      if (error) throw error
-      return (data || []).map(d => ({
-        day: d.day, // raw ISO date — used by the heatmap for week bucketing
+      const since = new Date()
+      since.setDate(since.getDate() - numDays)
+      const [rpc, calls] = await Promise.all([
+        supabase.rpc('rep_completed_days', { p_rep_id: repId, p_days: numDays }),
+        supabase
+          .from('calls')
+          .select('created_at')
+          .eq('rep_id', repId)
+          .eq('outcome', 'Appointment Booked')
+          .gte('created_at', since.toISOString()),
+      ])
+      if (rpc.error) throw rpc.error
+      const bookingsByDay = {}
+      for (const c of calls.data || []) {
+        const day = c.created_at.slice(0, 10)
+        bookingsByDay[day] = (bookingsByDay[day] || 0) + 1
+      }
+      return (rpc.data || []).map(d => ({
+        day: d.day,
         label: new Date(d.day).toLocaleDateString('en-US', {
           month: 'short', day: 'numeric', timeZone: 'UTC',
         }),
         dialed: d.dialed,
         completed: d.completed,
+        bookings: bookingsByDay[d.day] || 0,
       }))
     },
     enabled: !!repId,
@@ -295,13 +308,15 @@ export function useBadgeActivity(repId) {
 
       const days = [...byDay.values()].sort((a, b) => a.ts - b.ts)
 
-      // Longest run of consecutive active days (rounding absorbs DST shifts)
+      // Longest run of consecutive COMPLETED days (150+ dials — rounding absorbs DST shifts)
+      const completedDaysArr = days.filter(d => d.dials >= DAILY_BATCH_TARGET)
       let longestStreak = 0, run = 0, prev = null
-      for (const day of days) {
+      for (const day of completedDaysArr) {
         run = prev !== null && Math.round((day.ts - prev) / 86400000) === 1 ? run + 1 : 1
         longestStreak = Math.max(longestStreak, run)
         prev = day.ts
       }
+      const perfectDay = days.some(d => d.dials >= DAILY_BATCH_TARGET && d.bookings >= 2)
 
       // Best rolling 7-day dial total
       let bestWeekDials = 0
@@ -319,6 +334,7 @@ export function useBadgeActivity(repId) {
         earlyBird,
         nightOwl,
         backToBack,
+        perfectDay,
       }
     },
     enabled: !!repId,

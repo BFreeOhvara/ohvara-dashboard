@@ -27,52 +27,27 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 // ── Completed Days heatmap ────────────────────────────────────────────────
-// GitHub-contribution-style grid: one cell per day, colour intensity scales
-// with dials vs the 150 target. Colourblind-safe — the tooltip always states
-// the count + letter grade (never hue alone), and grade chips back the colour.
-const GRADE_BANDS = [
-  { min: 1.0, grade: 'A' },
-  { min: 0.8, grade: 'B' },
-  { min: 0.6, grade: 'C' },
-  { min: 0.4, grade: 'D' },
-  { min: 0,   grade: 'F' },
-]
-function gradeFor(ratio) {
-  return (GRADE_BANDS.find(b => ratio >= b.min) || GRADE_BANDS[GRADE_BANDS.length - 1]).grade
-}
+// white (0) → red ramp (progress) → dark red (hit 150) → green (Perfect Day: 150 dials + 2+ bookings)
 function cellColor(d) {
-  if (!d || d.dialed === 0) return 'var(--bg-elevated)'
-  if (d.completed) return 'var(--success)' // cleared the 150 line
+  if (!d || d.dialed === 0) return 'rgba(255,255,255,0.08)'
+  if (d.completed && (d.bookings || 0) >= 2) return 'var(--success)'
+  if (d.completed) return 'rgba(185,28,28,0.85)'
   const r = Math.min(d.dialed / DAILY_BATCH_TARGET, 1)
-  return `rgba(108,99,255,${(0.18 + r * 0.55).toFixed(3)})` // indigo intensity ramp
-}
-const GRADE_CHIP = {
-  A: { color: 'var(--success)',   bg: 'rgba(34,197,94,0.12)',  bd: 'rgba(34,197,94,0.3)' },
-  B: { color: 'var(--accent)',    bg: 'rgba(108,99,255,0.14)', bd: 'rgba(108,99,255,0.35)' },
-  C: { color: 'var(--text-secondary)', bg: 'var(--bg-elevated)', bd: 'var(--border)' },
-  D: { color: 'var(--warning)',   bg: 'rgba(245,158,11,0.12)', bd: 'rgba(245,158,11,0.3)' },
-  F: { color: 'var(--danger)',    bg: 'rgba(239,68,68,0.10)',  bd: 'rgba(239,68,68,0.28)' },
+  return `rgba(239,68,68,${(0.15 + r * 0.55).toFixed(3)})`
 }
 
 function CompletedDaysHeatmap({ days }) {
   const sorted = [...(days || [])].sort((a, b) => new Date(a.day) - new Date(b.day))
   const completedCount = sorted.filter(d => d.completed).length
-  // bucket into weeks of 7, oldest first
+  const perfectCount = sorted.filter(d => d.completed && (d.bookings || 0) >= 2).length
   const weeks = []
   for (let i = 0; i < sorted.length; i += 7) weeks.push(sorted.slice(i, i + 7))
-  // week-over-week trend on average dials (last 7 vs previous 7)
   const avg = arr => (arr.length ? arr.reduce((s, d) => s + d.dialed, 0) / arr.length : 0)
   const recentAvg = avg(sorted.slice(-7))
   const prevAvg = avg(sorted.slice(-14, -7))
   const delta = recentAvg - prevAvg
   const trendPct = prevAvg > 0 ? Math.round((delta / prevAvg) * 100) : (recentAvg > 0 ? 100 : 0)
   const up = delta >= 0
-
-  const weekGrade = wk => {
-    if (!wk.length) return 'F'
-    const ratio = wk.reduce((s, d) => s + d.dialed, 0) / (DAILY_BATCH_TARGET * wk.length)
-    return gradeFor(ratio)
-  }
 
   return (
     <div className="glass" style={{ marginTop: 20, padding: '18px 20px', borderRadius: 12 }}>
@@ -82,7 +57,7 @@ function CompletedDaysHeatmap({ days }) {
             Completed Days
           </p>
           <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 14px' }}>
-            Each cell is a day — darker means closer to the {DAILY_BATCH_TARGET}-lead target; green cleared it
+            Green = Perfect Day (150 dials + 2 bookings) · Dark red = 150 dials · Red = in progress
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -98,69 +73,56 @@ function CompletedDaysHeatmap({ days }) {
             </span>
           )}
           <p style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: completedCount > 0 ? 'var(--success)' : 'var(--text-muted)', margin: 0 }}>
-            {completedCount} of {sorted.length || 21} days completed
+            {completedCount} of {sorted.length || 21} days completed{perfectCount > 0 ? ` · ${perfectCount} perfect` : ''}
           </p>
         </div>
       </div>
 
-      {/* heatmap rows: one per week, with a trailing week-grade chip */}
+      {/* heatmap rows: one per week */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
-        {weeks.map((wk, wi) => {
-          const g = weekGrade(wk)
-          const chip = GRADE_CHIP[g]
-          return (
-            <div key={wi} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {wk.map((d, di) => {
-                  const ratio = Math.min(d.dialed / DAILY_BATCH_TARGET, 1)
-                  return (
-                    <div key={di} className="group" style={{ position: 'relative' }}>
-                      <div
-                        style={{
-                          width: 24, height: 24, borderRadius: 5,
-                          background: cellColor(d),
-                          border: '0.5px solid rgba(255,255,255,0.06)',
-                          transition: 'transform 80ms ease, box-shadow 80ms ease',
-                          cursor: 'default',
-                        }}
-                        className="hover:!shadow-[0_0_0_2px_rgba(108,99,255,0.5)]"
-                      />
-                      <div
-                        className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-20 whitespace-nowrap"
-                        style={{
-                          background: '#13131F', border: '0.5px solid var(--border)',
-                          borderRadius: 8, padding: '6px 9px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-                        }}
-                      >
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.label}</span>
-                        <span style={{ fontSize: 12, color: cellColor(d) === 'var(--bg-elevated)' ? 'var(--text-secondary)' : (d.completed ? 'var(--success)' : 'var(--accent)'), margin: '0 0 0 6px', fontFamily: 'var(--font-mono)' }}>
-                          {d.dialed}/{DAILY_BATCH_TARGET} · {gradeFor(ratio)}
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-              <span title="Week grade" style={{
-                fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 700,
-                color: chip.color, background: chip.bg, border: `0.5px solid ${chip.bd}`,
-                borderRadius: 5, padding: '2px 7px', lineHeight: 1.4,
-              }}>
-                {g}
-              </span>
+        {weeks.map((wk, wi) => (
+          <div key={wi} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {wk.map((d, di) => (
+                <div key={di} className="group" style={{ position: 'relative' }}>
+                  <div
+                    style={{
+                      width: 30, height: 30, borderRadius: 5,
+                      background: cellColor(d),
+                      border: '0.5px solid rgba(255,255,255,0.06)',
+                      transition: 'transform 80ms ease, box-shadow 80ms ease',
+                      cursor: 'default',
+                    }}
+                    className="hover:!shadow-[0_0_0_2px_rgba(108,99,255,0.5)]"
+                  />
+                  <div
+                    className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-20 whitespace-nowrap"
+                    style={{
+                      background: '#13131F', border: '0.5px solid var(--border)',
+                      borderRadius: 8, padding: '6px 9px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                    }}
+                  >
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.label}</span>
+                    <span style={{ fontSize: 12, color: d.dialed === 0 ? 'var(--text-secondary)' : (d.completed && (d.bookings || 0) >= 2 ? 'var(--success)' : d.completed ? '#ef4444' : 'rgba(239,68,68,0.7)'), margin: '0 0 0 6px', fontFamily: 'var(--font-mono)' }}>
+                      {d.dialed}/{DAILY_BATCH_TARGET}{(d.bookings || 0) > 0 ? ` · ${d.bookings} booked` : ''}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
-          )
-        })}
+          </div>
+        ))}
       </div>
 
       {/* legend */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
-        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Less</span>
-        {[0, 0.35, 0.6, 0.85].map((r, i) => (
-          <div key={i} style={{ width: 12, height: 12, borderRadius: 3, background: r === 0 ? 'var(--bg-elevated)' : `rgba(108,99,255,${(0.18 + r * 0.55).toFixed(3)})`, border: '0.5px solid rgba(255,255,255,0.06)' }} />
+        <div style={{ width: 12, height: 12, borderRadius: 3, background: 'rgba(255,255,255,0.08)', border: '0.5px solid rgba(255,255,255,0.06)' }} />
+        {[0.2, 0.45, 0.7].map((r, i) => (
+          <div key={i} style={{ width: 12, height: 12, borderRadius: 3, background: `rgba(239,68,68,${(0.15 + r * 0.55).toFixed(3)})`, border: '0.5px solid rgba(255,255,255,0.06)' }} />
         ))}
-        <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--success)' }} title="Hit the 150 target" />
-        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>More · green = target hit</span>
+        <div style={{ width: 12, height: 12, borderRadius: 3, background: 'rgba(185,28,28,0.85)' }} />
+        <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--success)' }} />
+        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>0 · progress · 150 dials · Perfect Day</span>
       </div>
     </div>
   )
