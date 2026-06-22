@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { NotificationBell } from '../admin/NotificationBell'
+import { RepNotificationBell } from '../rep/RepNotificationBell'
 
 const NAV = {
   rep: [
@@ -97,6 +98,7 @@ export function Sidebar() {
             </p>
           </div>
           {profile?.role === 'admin' && <NotificationBell />}
+          {profile?.role === 'rep' && <RepNotificationBell profileId={profile.id} />}
         </div>
       </div>
 

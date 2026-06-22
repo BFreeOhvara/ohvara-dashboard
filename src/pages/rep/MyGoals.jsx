@@ -3,6 +3,7 @@ import { Trophy, Zap, Calendar, Briefcase, Lock } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAuth } from '../../hooks/useAuth'
 import { useRepStats, useMyCommission, useBadgeActivity, DAILY_BATCH_TARGET } from '../../hooks/useProfiles'
+import { useBadgeNotifier } from '../../hooks/useRepNotificationTriggers'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 
@@ -130,6 +131,7 @@ export default function MyGoals() {
   }, [commission])
 
   const badgeCtx = { month: monthStats, commission, activity }
+  useBadgeNotifier(profile?.id, badgeCtx)
   const earnedCount = BADGE_GROUPS
     .flatMap(g => g.badges)
     .filter(b => b.condition(badgeCtx)).length
