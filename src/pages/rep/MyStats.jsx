@@ -41,60 +41,31 @@ function cellColor(d) {
   if (d.completed && (d.bookings || 0) >= 2) return 'var(--success)'
   if (d.completed) return lerpColor(RAMP_START, RAMP_END, 1)
   const r = Math.min(d.dialed / DAILY_BATCH_TARGET, 1)
-  return lerpColor(RAMP_START, RAMP_END, r)
+  // Power curve so low dial counts are clearly visible instead of near-white
+  // (linear t left e.g. 7/150 at t≈0.05 — barely off white).
+  return lerpColor(RAMP_START, RAMP_END, Math.pow(r, 0.4))
 }
 
 function CompletedDaysHeatmap({ days }) {
   const sorted = [...(days || [])].sort((a, b) => new Date(a.day) - new Date(b.day))
-  const completedCount = sorted.filter(d => d.completed).length
-  const perfectCount = sorted.filter(d => d.completed && (d.bookings || 0) >= 2).length
   const weeks = []
   for (let i = 0; i < sorted.length; i += 7) weeks.push(sorted.slice(i, i + 7))
-  const avg = arr => (arr.length ? arr.reduce((s, d) => s + d.dialed, 0) / arr.length : 0)
-  const recentAvg = avg(sorted.slice(-7))
-  const prevAvg = avg(sorted.slice(-14, -7))
-  const delta = recentAvg - prevAvg
-  const trendPct = prevAvg > 0 ? Math.round((delta / prevAvg) * 100) : (recentAvg > 0 ? 100 : 0)
-  const up = delta >= 0
 
   return (
     <div className="glass" style={{ marginTop: 20, padding: '18px 20px', borderRadius: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-        <div>
-          <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 2px' }}>
-            Completed Days
-          </p>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 14px' }}>
-            Green = Perfect Day (150 dials + 2 bookings) · Dark red = 150 dials · Red = in progress
-          </p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {prevAvg > 0 && (
-            <span title="This week's avg dials vs last week's" style={{
-              fontSize: 11, fontFamily: 'var(--font-mono)', fontWeight: 600,
-              color: up ? 'var(--success)' : 'var(--danger)',
-              background: up ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.10)',
-              border: `0.5px solid ${up ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.28)'}`,
-              borderRadius: 20, padding: '3px 9px',
-            }}>
-              {up ? '↑' : '↓'} {Math.abs(trendPct)}% vs last wk
-            </span>
-          )}
-          <p style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: completedCount > 0 ? 'var(--success)' : 'var(--text-muted)', margin: 0 }}>
-            {completedCount} of {sorted.length || 21} days completed{perfectCount > 0 ? ` · ${perfectCount} perfect` : ''}
-          </p>
-        </div>
-      </div>
+      <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 14px' }}>
+        Completed Days
+      </p>
 
-      {/* heatmap rows: one per week — cells stretch to fill the card's full width */}
+      {/* heatmap rows: one per week — cells stretch to fill the card's full width, square */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
         {weeks.map((wk, wi) => (
           <div key={wi} style={{ display: 'flex', gap: 6, width: '100%' }}>
             {wk.map((d, di) => (
-              <div key={di} className="group" style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+              <div key={di} className="group" style={{ position: 'relative', flex: 1, minWidth: 0, aspectRatio: '1' }}>
                 <div
                   style={{
-                    width: '100%', height: 30, borderRadius: 5,
+                    width: '100%', height: '100%', borderRadius: 5,
                     background: cellColor(d),
                     border: '0.5px solid rgba(255,255,255,0.06)',
                     transition: 'transform 80ms ease, box-shadow 80ms ease',
