@@ -384,7 +384,7 @@ function NotInterestedTab({ filters }) {
   )
 }
 
-function BookedTab({ filters }) {
+function BookedTab({ filters, tz }) {
   const { data: allRows, isLoading } = useBooked()
   const rows = applyFilters(allRows, filters, r => r.rep?.full_name)
   const pending = allRows?.filter(r => r.status === 'pending') ?? []
@@ -493,7 +493,7 @@ export default function LeadPipeline() {
       {tab === 'no_answer' && <NoAnswerTab filters={filters} />}
       {tab === 'follow_up' && <FollowUpTab filters={filters} />}
       {tab === 'not_interested' && <NotInterestedTab filters={filters} />}
-      {tab === 'booked' && <BookedTab filters={filters} />}
+      {tab === 'booked' && <BookedTab filters={filters} tz={tz} />}
     </div>
   )
 }
