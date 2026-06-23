@@ -334,11 +334,28 @@ export function useBadgeActivity(repId) {
       // consecutiveness not required). Never resets.
       const totalCompletedDays = completedDaysArr.length
 
-      const perfectDay = days.some(d => d.dials >= DAILY_BATCH_TARGET && d.bookings >= 2)
+      // Perfect day = 150+ dials AND 2+ bookings in a single day.
+      const perfectDaysArr = days.filter(d => d.dials >= DAILY_BATCH_TARGET && d.bookings >= 2)
+      const perfectDay = perfectDaysArr.length > 0
+
+      // Track 3 — lifetime cumulative perfect days (never resets).
+      const totalPerfectDays = perfectDaysArr.length
+
+      // Track 4 — longest run of consecutive WEEKDAY perfect days. Same
+      // weekday-skip logic as longestStreak, but only perfect days count.
+      const weekdayPerfect = perfectDaysArr.filter(d => !isWeekendTs(d.ts))
+      let perfectStreak = 0, pRun = 0, pPrevWd = null
+      for (const day of weekdayPerfect) {
+        pRun = pPrevWd !== null && nextWeekdayTs(pPrevWd) === day.ts ? pRun + 1 : 1
+        perfectStreak = Math.max(perfectStreak, pRun)
+        pPrevWd = day.ts
+      }
 
       return {
         longestStreak,
         totalCompletedDays,
+        perfectStreak,
+        totalPerfectDays,
         bestDayDials: days.reduce((m, d) => Math.max(m, d.dials), 0),
         bestDayBookings: days.reduce((m, d) => Math.max(m, d.bookings), 0),
         earlyBird,

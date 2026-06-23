@@ -70,11 +70,26 @@ const BADGE_GROUPS = [
     group: 'Streak',
     badges: [
       { id: 'streak_3',  label: '3-Day Streak',   icon: '🗓️', condition: c => (c.activity?.longestStreak || 0) >= 3,
-        detail: '3 weekdays in a row (weekends skip, never break)' },
+        detail: ['Complete 3 days in a row', 'A completed day = 150 dials'] },
       { id: 'streak_5',  label: 'Full Work Week', icon: '🔥', condition: c => (c.activity?.longestStreak || 0) >= 5,
-        detail: '5 weekdays in a row' },
+        detail: 'Complete a work week (5 days in a row)' },
       { id: 'streak_10', label: 'Two-Week Run',   icon: '👑', condition: c => (c.activity?.longestStreak || 0) >= 10,
-        detail: '10 weekdays in a row' },
+        detail: 'Complete two work weeks in a row' },
+      { id: 'perfect_streak_3', label: '3 Perfect Days in a Row', icon: '✨', condition: c => (c.activity?.perfectStreak || 0) >= 3,
+        detail: '3 perfect weekdays in a row' },
+      { id: 'perfect_week',     label: 'Perfect Week',            icon: '🌈', condition: c => (c.activity?.perfectStreak || 0) >= 5,
+        detail: 'A full work week of perfect days' },
+    ],
+  },
+  {
+    group: 'Perfect Days',
+    badges: [
+      { id: 'perfect_5',  label: '5 Perfect Days',  icon: '💯', condition: c => (c.activity?.totalPerfectDays || 0) >= 5,
+        detail: '5 completed days with 150 dials + 2 bookings' },
+      { id: 'perfect_25', label: '25 Perfect Days', icon: '🌟', condition: c => (c.activity?.totalPerfectDays || 0) >= 25,
+        detail: '25 perfect days total' },
+      { id: 'perfect_50', label: '50 Perfect Days', icon: '👑', condition: c => (c.activity?.totalPerfectDays || 0) >= 50,
+        detail: '50 perfect days total' },
     ],
   },
   {
@@ -222,9 +237,10 @@ export default function MyGoals() {
                     )}
                     <span className="text-2xl">{badge.icon}</span>
                     <p className="text-xs text-[var(--text-secondary)] font-medium">{badge.label}</p>
-                    {badge.detail && (
-                      <p className="text-[10px] text-[var(--text-muted)]">{badge.detail}</p>
-                    )}
+                    {badge.detail &&
+                      (Array.isArray(badge.detail) ? badge.detail : [badge.detail]).map((line, i) => (
+                        <p key={i} className="text-[10px] text-[var(--text-muted)]">{line}</p>
+                      ))}
                   </div>
                 )
               })}
