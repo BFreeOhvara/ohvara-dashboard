@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Bell, CheckCheck, Zap, User, Activity } from 'lucide-react'
 import { useNotifications, useUnreadCount, useMarkNotificationRead, useMarkAllRead } from '../../hooks/useNotifications'
 
@@ -22,15 +23,36 @@ function fmtTime(iso) {
 export function NotificationBell() {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
+  const panelRef = useRef(null)
+  const [coords, setCoords] = useState(null)
   const { data: notifications = [] } = useNotifications(20)
   const { data: unreadCount = 0 } = useUnreadCount()
   const markRead = useMarkNotificationRead()
   const markAll = useMarkAllRead()
 
-  // Close on outside click
+  // The sidebar (`<aside>`) is `position: fixed` with `overflow: hidden` for
+  // its own scroll containment — any dropdown rendered as its DOM descendant
+  // gets clipped to the sidebar's 240px width no matter the z-index, even
+  // positioned outside that box. Render the panel into a portal instead,
+  // positioned via the bell's own bounding rect, so it isn't a descendant of
+  // the clipped container at all.
+  useEffect(() => {
+    if (open && ref.current) {
+      const rect = ref.current.getBoundingClientRect()
+      setCoords({ top: rect.top - 4, left: rect.right + 8 })
+    }
+  }, [open])
+
+  // Close on outside click — checks both the bell wrapper and the portal panel,
+  // since the panel is no longer a DOM descendant of the wrapper.
   useEffect(() => {
     function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+      if (
+        ref.current && !ref.current.contains(e.target) &&
+        panelRef.current && !panelRef.current.contains(e.target)
+      ) {
+        setOpen(false)
+      }
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -70,18 +92,18 @@ export function NotificationBell() {
         )}
       </button>
 
-      {/* Dropdown — opens to the RIGHT of the bell, not below-right. The bell
-          sits in the narrow sidebar; anchoring with `right: 0` (relative to
-          the bell's own small wrapper) made the 340px panel extend leftward
-          and cover the nav instead of opening into the main content area. */}
-      {open && (
+      {/* Dropdown — portaled to document.body, positioned via the bell's
+          bounding rect (see the coords effect above) so it escapes the
+          sidebar's overflow:hidden clipping entirely. */}
+      {open && coords && createPortal(
         <div
+          ref={panelRef}
           className="glass"
           style={{
-            position: 'absolute', top: -4, left: 'calc(100% + 8px)',
+            position: 'fixed', top: coords.top, left: coords.left,
             width: 340, maxHeight: 420,
             borderRadius: 10, overflow: 'hidden',
-            zIndex: 200,
+            zIndex: 9999,
             boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
           }}
         >
@@ -174,7 +196,8 @@ export function NotificationBell() {
               })
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
