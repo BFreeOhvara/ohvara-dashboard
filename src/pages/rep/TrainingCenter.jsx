@@ -8,8 +8,7 @@ import {
   TOTAL_VIDEOS, QUIZ_QUESTIONS, QUIZ_PASS_PCT, ROLEPLAY_PASS_SCORE, ROLEPLAY_PASS_GRADE, gradeFromScore,
 } from '../../hooks/useTraining'
 import { buildScriptFlow } from '../../lib/discoveryScript'
-import { ScriptWalk } from '../../components/rep/ScriptWalk'
-import { ScriptFlowchart } from '../../components/rep/ScriptFlowchart'
+import { ScriptCanvas } from '../../components/rep/ScriptCanvas'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -542,59 +541,28 @@ function FlashcardDeck() {
 }
 
 // ── DiscoveryScript ───────────────────────────────────────────────────────────
-// The Script tab. Three ways to learn the same decision tree (all derived from
-// the shared DISCOVERY_SCRIPT, so none can drift from the live Call modal):
-//   • Flowchart — the bird's-eye tree: opener → 5 response branches → close.
-//   • Practice  — the exact click-through the rep uses on a live call.
-//   • Full script — every line written out, for memorization.
-
-const SCRIPT_VIEWS = [
-  { key: 'flowchart', label: 'Flowchart' },
-  { key: 'practice',  label: 'Practice' },
-]
+// The Script tab. One interactive canvas (Prompt 48, React Flow) that both maps
+// the whole decision tree AND runs the click-through practice on the same
+// surface — derived from the shared DISCOVERY_SCRIPT so it can't drift from the
+// live Call modal.
 
 function DiscoveryScript() {
-  const [view, setView] = useState('flowchart')
-  // A neutral demo lead so the practice walk reads naturally without a real lead.
+  // A neutral demo lead so the canvas reads naturally without a real lead.
   const flow = useMemo(
     () => buildScriptFlow({ business_name: 'the business', niche: 'service', city: 'your area' }, null),
     []
   )
 
   return (
-    <div style={{ maxWidth: 960, margin: '0 auto' }}>
-      <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16, maxWidth: 680 }}>
-        This is the call script — a decision tree every rep follows. Study the <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Flowchart</strong> to learn
-        the shape, then <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Practice</strong> the exact click-through you'll use live.
-        The Call Now button on each lead runs this same walk, personalized to that business.
+    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+      <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16, maxWidth: 720 }}>
+        This is the call script — a decision tree every rep follows. Drag to pan, scroll to zoom,
+        and explore the whole map. Hit <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Start Practice</strong> to
+        walk it one step at a time, exactly like a live call. The Call Now button on each lead runs
+        this same walk, personalized to that business.
       </p>
 
-      {/* View switch */}
-      <div style={{ display: 'inline-flex', gap: 2, padding: 3, background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 10, marginBottom: 22 }}>
-        {SCRIPT_VIEWS.map(v => (
-          <button
-            key={v.key}
-            onClick={() => setView(v.key)}
-            style={{
-              padding: '7px 16px', borderRadius: 7, border: 'none', cursor: 'pointer',
-              fontSize: 12.5, fontWeight: 600,
-              background: view === v.key ? 'var(--accent)' : 'transparent',
-              color: view === v.key ? 'white' : 'var(--text-muted)',
-              transition: 'all 0.15s',
-            }}
-          >
-            {v.label}
-          </button>
-        ))}
-      </div>
-
-      {view === 'flowchart' && <ScriptFlowchart flow={flow} />}
-
-      {view === 'practice' && (
-        <div style={{ height: 560, maxWidth: 460, margin: '0 auto', background: '#0E0E1A', border: '0.5px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
-          <ScriptWalk flow={flow} mode="practice" />
-        </div>
-      )}
+      <ScriptCanvas flow={flow} />
     </div>
   )
 }
