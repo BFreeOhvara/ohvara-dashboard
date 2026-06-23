@@ -29,11 +29,13 @@ function computeKPIs(leads) {
   return { called, total }
 }
 
-// Batch reset countdown — target is the live `daily-batch-assign` pg_cron
-// schedule (migration 016: '5 0 * * *' = 00:05 UTC). NOT 06:05 UTC — that
-// was the spec's stated value, but it doesn't match the actual cron and
-// was corrected here (see Memories 2026-06-22).
-const BATCH_RESET_UTC_HOUR = 0
+// Batch reset countdown target — 06:05 UTC (1:05 AM Central). Brayden
+// rescheduled the live `daily-batch-assign` cron via the Supabase SQL editor
+// on 2026-06-22 (confirmed directly in chat, not via a relayed prompt — see
+// Memories same date for the back-and-forth this resolved). Migration
+// 016's committed schedule line still literally reads '5 0 * * *' (00:05
+// UTC) and was not updated to match — if this drifts again, update here.
+const BATCH_RESET_UTC_HOUR = 6
 const BATCH_RESET_UTC_MINUTE = 5
 
 function formatResetCountdown(nowMs) {
