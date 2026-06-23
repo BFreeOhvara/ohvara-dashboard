@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import { DAILY_BATCH_TARGET } from './useProfiles'
 
 // Badge definitions — must stay in sync with BADGE_GROUPS in MyGoals.jsx.
 // Conditions are deterministic from badgeCtx = { month, commission, activity }.
@@ -23,11 +22,6 @@ const ALL_BADGES = [
   { id: 'book_50',     label: '50 Bookings',             condition: c => (c.month?.bookedCount   || 0) >= 50 },
   { id: 'book_100',    label: '100 Bookings',            condition: c => (c.month?.bookedCount   || 0) >= 100 },
   { id: 'book_250',    label: '250 Bookings',            condition: c => (c.month?.bookedCount   || 0) >= 250 },
-  { id: 'rate_5',      label: '5% Rate',                 condition: c => parseFloat(c.month?.bookingRate) >= 5 },
-  { id: 'rate_10',     label: '10% Rate',                condition: c => parseFloat(c.month?.bookingRate) >= 10 },
-  { id: 'rate_15',     label: '15% Rate',                condition: c => parseFloat(c.month?.bookingRate) >= 15 },
-  { id: 'rate_20',     label: '20% Rate',                condition: c => parseFloat(c.month?.bookingRate) >= 20 },
-  { id: 'rate_25',     label: '25% Rate',                condition: c => parseFloat(c.month?.bookingRate) >= 25 },
   { id: 'streak_3',    label: '3-Day Streak',            condition: c => (c.activity?.longestStreak     || 0) >= 3 },
   { id: 'streak_5',    label: 'Full Work Week',          condition: c => (c.activity?.longestStreak     || 0) >= 5 },
   { id: 'streak_10',   label: 'Two-Week Run',            condition: c => (c.activity?.longestStreak     || 0) >= 10 },
@@ -41,7 +35,7 @@ const ALL_BADGES = [
   { id: 'days_50',     label: '50 Days',                 condition: c => (c.activity?.totalCompletedDays || 0) >= 50 },
   { id: 'days_75',     label: '75 Days',                 condition: c => (c.activity?.totalCompletedDays || 0) >= 75 },
   { id: 'days_100',    label: '100 Days',                condition: c => (c.activity?.totalCompletedDays || 0) >= 100 },
-  { id: 'perfect_day', label: 'Perfect Day',             condition: c => (c.activity?.bestDayDials      || 0) >= DAILY_BATCH_TARGET },
+  { id: 'perfect_day', label: 'Perfect Day',             condition: c => !!c.activity?.perfectDay },
   { id: 'comm_first',  label: 'First Commission',        condition: c => (c.commission?.total          || 0) > 0 },
   { id: 'comm_500',    label: '$500 Earned',             condition: c => (c.commission?.total          || 0) >= 500 },
   { id: 'comm_1k',     label: '$1K Earned',              condition: c => (c.commission?.total          || 0) >= 1000 },

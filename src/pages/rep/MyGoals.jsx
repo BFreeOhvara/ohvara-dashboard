@@ -22,9 +22,10 @@ const GOALS = {
   monthly: { dials: 3000, bookings: 40 },
 }
 
-// 37 milestone badges in six groups. Dials / bookings / rate badges read
-// this month's stats; commission badges read all-time earnings; streak and
-// special badges read lifetime call activity (useBadgeActivity). Special
+// Milestone badges in seven groups. Dials / bookings badges read this
+// month's stats; commission badges read all-time earnings; streak, perfect-
+// day, days-completed and special badges read lifetime call activity
+// (useBadgeActivity). Total count is derived (TOTAL_BADGES). Special
 // badges are over-and-above achievements only — time-of-day badges and any
 // single-day milestone at or below the 150/day target were removed (a setter
 // is expected to hit 150/day, so beating it is the achievement worth a badge).
@@ -57,16 +58,6 @@ const BADGE_GROUPS = [
     ],
   },
   {
-    group: 'Booking Rate',
-    badges: [
-      { id: 'rate_5',  label: '5% Rate',  icon: '📈', condition: c => parseFloat(c.month?.bookingRate) >= 5 },
-      { id: 'rate_10', label: '10% Rate', icon: '💎', condition: c => parseFloat(c.month?.bookingRate) >= 10 },
-      { id: 'rate_15', label: '15% Rate', icon: '🔮', condition: c => parseFloat(c.month?.bookingRate) >= 15 },
-      { id: 'rate_20', label: '20% Rate', icon: '🧠', condition: c => parseFloat(c.month?.bookingRate) >= 20 },
-      { id: 'rate_25', label: '25% Rate', icon: '🌟', condition: c => parseFloat(c.month?.bookingRate) >= 25 },
-    ],
-  },
-  {
     group: 'Streak',
     badges: [
       { id: 'streak_3',  label: '3-Day Streak',   icon: '🗓️', condition: c => (c.activity?.longestStreak || 0) >= 3,
@@ -84,6 +75,8 @@ const BADGE_GROUPS = [
   {
     group: 'Perfect Days',
     badges: [
+      { id: 'perfect_day', label: 'Perfect Day', icon: '✅', condition: c => !!c.activity?.perfectDay,
+        detail: '150 dials + 2 bookings in one day' },
       { id: 'perfect_5',  label: '5 Perfect Days',  icon: '💯', condition: c => (c.activity?.totalPerfectDays || 0) >= 5,
         detail: '5 completed days with 150 dials + 2 bookings' },
       { id: 'perfect_25', label: '25 Perfect Days', icon: '🌟', condition: c => (c.activity?.totalPerfectDays || 0) >= 25,
@@ -121,8 +114,6 @@ const BADGE_GROUPS = [
   {
     group: 'Special',
     badges: [
-      { id: 'perfect_day',  label: 'Perfect Day',  icon: '✅', condition: c => !!c.activity?.perfectDay,
-        detail: '150 dials + 2 bookings in one day' },
       { id: 'five_a_day',   label: '5 in a Day',   icon: '🚀', condition: c => (c.activity?.bestDayBookings || 0) >= 5,
         detail: '5 bookings in one day' },
       { id: 'back_to_back', label: 'Back-to-Back Bookings', icon: '🔁', condition: c => !!c.activity?.backToBack,
