@@ -388,6 +388,17 @@ export function AppointmentCard({ appt }) {
                   <MapPin size={10} /> {lead.city}
                 </span>
               )}
+              {lead.google_rating != null && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'var(--text-muted)' }}>
+                  <Star size={10} style={{ color: 'var(--warning)' }} fill="var(--warning)" />
+                  {lead.google_rating}{lead.google_review_count != null ? ` · ${lead.google_review_count} reviews` : ''}
+                </span>
+              )}
+              {lead.has_website != null && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'var(--text-muted)' }}>
+                  <Globe size={10} /> {lead.has_website ? 'Has website' : 'No website'}
+                </span>
+              )}
               {appt.rep && (
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Set by {appt.rep.full_name}</span>
               )}

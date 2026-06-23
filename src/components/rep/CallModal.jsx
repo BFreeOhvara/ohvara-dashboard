@@ -235,6 +235,23 @@ export function CallModal({ lead, onClose }) {
       qc.invalidateQueries({ queryKey: ['leads'] })
       qc.invalidateQueries({ queryKey: ['stats'] })
 
+      // Background business research (Prompt 46) — Google rating/review
+      // count/website presence for Nate's card. Independent of the stack
+      // recommendation below; fire-and-forget, never awaited, failure is
+      // silent (AppointmentCard just doesn't show the rating/website tag).
+      if (status === 'Appointment Booked') {
+        supabase.functions.invoke('enrich-business-info', {
+          body: {
+            leadId:       lead.id,
+            businessName: lead.business_name,
+            city:         lead.city || null,
+            placeId:      lead.place_id || null,
+          },
+        }).then(({ data }) => {
+          if (data?.success) qc.invalidateQueries({ queryKey: ['appointments'] })
+        }).catch(() => {})
+      }
+
       // Pre-generate à la carte stack recommendation for Nate's card.
       // Fire-and-forget: failure is silent — AppointmentCard falls back to on-demand.
       if (status === 'Appointment Booked') {
