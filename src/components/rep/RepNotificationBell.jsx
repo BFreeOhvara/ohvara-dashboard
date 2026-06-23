@@ -103,10 +103,12 @@ export function RepNotificationBell({ profileId }) {
       {open && coords && createPortal(
         <div
           ref={panelRef}
-          className="glass"
           style={{
             position: 'fixed', top: coords.top, left: coords.left,
             width: 340, maxHeight: 420,
+            // Solid, not the translucent/backdrop-blur `glass` token — this
+            // panel needs to fully cover whatever's behind it.
+            background: '#13131F', border: '0.5px solid var(--border)',
             borderRadius: 10, overflow: 'hidden',
             zIndex: 9999,
             boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
