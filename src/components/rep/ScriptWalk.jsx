@@ -69,17 +69,21 @@ export function ScriptWalk({ flow, mode = 'live' }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
 
-      {/* Track header — which part of the tree the rep is on */}
-      <div style={{ flexShrink: 0, padding: '12px 18px 10px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: 9 }}>
-        <span style={{ width: 20, height: 20, borderRadius: 6, background: accent, color: '#0E0E1A', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          {section.short}
-        </span>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <p style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{section.title}</p>
-          {section.trigger && <p style={{ fontSize: 10.5, color: 'var(--text-muted)', margin: '1px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{section.trigger}</p>}
+      {/* Track header — which part of the tree the rep is on. Hidden in the
+          live Call modal (Prompt 49 — the "Fixed Opener / Same words" card was
+          clutter mid-call); kept for the practice walk. */}
+      {mode !== 'live' && (
+        <div style={{ flexShrink: 0, padding: '12px 18px 10px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: 9 }}>
+          <span style={{ width: 20, height: 20, borderRadius: 6, background: accent, color: '#0E0E1A', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {section.short}
+          </span>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{section.title}</p>
+            {section.trigger && <p style={{ fontSize: 10.5, color: 'var(--text-muted)', margin: '1px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{section.trigger}</p>}
+          </div>
+          {mode === 'practice' && <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Practice</span>}
         </div>
-        {mode === 'practice' && <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Practice</span>}
-      </div>
+      )}
 
       {/* Stage — the current step, the response chooser, or the terminal card */}
       <div className="scrollbar-thin" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px', display: 'flex', flexDirection: 'column' }}>
@@ -108,8 +112,9 @@ export function ScriptWalk({ flow, mode = 'live' }) {
           <RouteCard step={step} accent={accent} flow={flow} onGo={() => navigateTo(step.target)} />
         )}
 
-        {/* Coach note for the current track */}
-        {section.tips && !atChooser && (
+        {/* Coach note for the current track — hidden in the live Call modal
+            (Prompt 49); kept for the practice walk. */}
+        {mode !== 'live' && section.tips && !atChooser && (
           <p style={{ fontSize: 11.5, color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.55, margin: '16px 4px 0' }}>
             💡 {section.tips}
           </p>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, Component } from 'react'
 import { createPortal } from 'react-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Phone, X, MapPin, User, Tag, Globe, Check, StickyNote, ChevronDown, CalendarClock } from 'lucide-react'
+import { Phone, X, MapPin, User, Tag, Check, StickyNote, ChevronDown, CalendarClock } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { bridgeCall } from '../../lib/twilio'
 import { useAuth } from '../../hooks/useAuth'
@@ -124,7 +124,10 @@ export function CallModal({ lead, onClose }) {
   const [doneError, setDoneError]     = useState('')
   // 'idle' | 'calling' | 'connected' | 'error'
   const [bridgeState, setBridgeState] = useState('idle')
-  const dropdownRef = useRef(null)
+  const dropdownRef = useRef(null)   // status trigger wrapper (outside-click anchor)
+  const triggerRef = useRef(null)    // the trigger button — measured for the portal menu
+  const menuRef = useRef(null)       // the portaled menu (outside-click anchor)
+  const [statusMenuCoords, setStatusMenuCoords] = useState(null)
 
   // Background scroll lock while the modal is open.
   // Lock <html> as well as <body> — overflow:hidden on body alone still
@@ -140,14 +143,28 @@ export function CallModal({ lead, onClose }) {
     }
   }, [])
 
-  // Close the status dropdown on outside click
+  // Close the status dropdown on outside click. The menu is portaled to
+  // document.body (so an ancestor's overflow:hidden can't clip it), so the
+  // check covers both the trigger wrapper AND the portaled menu.
   useEffect(() => {
     function onDocClick(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setStatusOpen(false)
+      const inTrigger = dropdownRef.current && dropdownRef.current.contains(e.target)
+      const inMenu = menuRef.current && menuRef.current.contains(e.target)
+      if (!inTrigger && !inMenu) setStatusOpen(false)
     }
     document.addEventListener('mousedown', onDocClick)
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [])
+
+  // Open the status menu, measuring the trigger so the portaled menu lands
+  // directly under it (position: fixed, matched width).
+  function toggleStatusMenu() {
+    if (!statusOpen && triggerRef.current) {
+      const r = triggerRef.current.getBoundingClientRect()
+      setStatusMenuCoords({ top: r.bottom + 4, left: r.left, width: r.width })
+    }
+    setStatusOpen(v => !v)
+  }
 
   // Status selection is LOCAL ONLY — nothing touches the DB until Done.
   // X (close) discards any selection made since the modal opened.
@@ -395,18 +412,18 @@ export function CallModal({ lead, onClose }) {
               padding: '16px 18px',
             }}
           >
+            {/* Phone (redundant — the green call button below) and Source
+                removed per Prompt 49; contact/niche/city only. */}
             <Field icon={User}   label="Contact"  value={lead.contact_name} />
             <Field icon={Tag}    label="Niche"    value={lead.niche} />
             <Field icon={MapPin} label="City"     value={[lead.city, lead.state].filter(Boolean).join(', ')} />
-            <Field icon={Phone}  label="Phone"    value={lead.phone} mono />
-            <Field icon={Globe}  label="Source"   value={lead.source === 'google_maps' ? 'Google Maps' : lead.source === 'indeed' ? 'Indeed' : lead.source} />
 
             {/* Status dropdown — color-coded outcomes, committed on Done (X discards) */}
             <div style={{ marginBottom: 14 }} ref={dropdownRef}>
               <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 6px' }}>Status</p>
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative' }} ref={triggerRef}>
                 <button
-                  onClick={() => setStatusOpen(v => !v)}
+                  onClick={toggleStatusMenu}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
                     width: '100%', height: 40, padding: '0 12px',
@@ -425,10 +442,14 @@ export function CallModal({ lead, onClose }) {
                     <ChevronDown size={14} />
                   </span>
                 </button>
-                {statusOpen && (
-                  <div style={{
-                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20,
-                    marginTop: 4, background: '#13131F', border: '0.5px solid var(--border)',
+                {/* Menu portaled to document.body — the left panel scrolls with
+                    overflow:auto, which clipped the old absolute menu (Prompt 49,
+                    same fix as the notification bell in Prompt 44). */}
+                {statusOpen && statusMenuCoords && createPortal(
+                  <div ref={menuRef} style={{
+                    position: 'fixed', top: statusMenuCoords.top, left: statusMenuCoords.left, width: statusMenuCoords.width,
+                    zIndex: 2000,
+                    background: '#13131F', border: '0.5px solid var(--border)',
                     borderRadius: 8, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
                   }}>
                     {STATUS_OPTIONS.map(o => (
@@ -457,7 +478,8 @@ export function CallModal({ lead, onClose }) {
                         {status === o.value && <Check size={12} style={{ marginLeft: 'auto', flexShrink: 0 }} />}
                       </button>
                     ))}
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
               {selected?.note && (
