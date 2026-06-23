@@ -308,27 +308,37 @@ export function useBadgeActivity(repId) {
 
       const days = [...byDay.values()].sort((a, b) => a.ts - b.ts)
 
-      // Longest run of consecutive COMPLETED days (150+ dials — rounding absorbs DST shifts)
+      // Completed day = 150+ dials (rounding absorbs DST shifts).
       const completedDaysArr = days.filter(d => d.dials >= DAILY_BATCH_TARGET)
-      let longestStreak = 0, run = 0, prev = null
-      for (const day of completedDaysArr) {
-        run = prev !== null && Math.round((day.ts - prev) / 86400000) === 1 ? run + 1 : 1
-        longestStreak = Math.max(longestStreak, run)
-        prev = day.ts
-      }
-      const perfectDay = days.some(d => d.dials >= DAILY_BATCH_TARGET && d.bookings >= 2)
 
-      // Best rolling 7-day dial total
-      let bestWeekDials = 0
-      for (let i = 0; i < days.length; i++) {
-        let sum = 0
-        for (let j = i; j < days.length && days[j].ts - days[i].ts < 7 * 86400000; j++) sum += days[j].dials
-        bestWeekDials = Math.max(bestWeekDials, sum)
+      // Track 1 — longest run of consecutive WEEKDAY completed days (Mon–Fri).
+      // Weekends are skipped, not breaks: Fri → Mon counts as consecutive, and a
+      // completed Sat/Sun neither adds to the streak nor resets it. A streak
+      // breaks only when a weekday between two completed days was missed.
+      const isWeekendTs = ts => { const wd = new Date(ts).getDay(); return wd === 0 || wd === 6 }
+      const nextWeekdayTs = ts => {
+        const d = new Date(ts)
+        d.setDate(d.getDate() + 1)
+        while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1)
+        return d.setHours(0, 0, 0, 0)
       }
+      const weekdayCompleted = completedDaysArr.filter(d => !isWeekendTs(d.ts))
+      let longestStreak = 0, run = 0, prevWd = null
+      for (const day of weekdayCompleted) {
+        run = prevWd !== null && nextWeekdayTs(prevWd) === day.ts ? run + 1 : 1
+        longestStreak = Math.max(longestStreak, run)
+        prevWd = day.ts
+      }
+
+      // Track 2 — lifetime cumulative completed days (weekends included,
+      // consecutiveness not required). Never resets.
+      const totalCompletedDays = completedDaysArr.length
+
+      const perfectDay = days.some(d => d.dials >= DAILY_BATCH_TARGET && d.bookings >= 2)
 
       return {
         longestStreak,
-        bestWeekDials,
+        totalCompletedDays,
         bestDayDials: days.reduce((m, d) => Math.max(m, d.dials), 0),
         bestDayBookings: days.reduce((m, d) => Math.max(m, d.bookings), 0),
         earlyBird,
