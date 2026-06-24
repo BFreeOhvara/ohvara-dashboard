@@ -12,12 +12,14 @@
 // TwiML App Voice URL (set in Twilio console):
 //   https://jjextitmbptoaolacocs.supabase.co/functions/v1/twilio-voice-webhook
 //
-// Required Supabase secret:
+// Required Supabase secrets:
 //   TWILIO_PHONE_NUMBER — the callerId shown to the lead (e.g. +12345678900)
 //
-// Recording status callbacks POST to the /recording subpath — for now
-// they just log (no DB storage until the Phase 2 AI grading pipeline).
+// Recording status callbacks POST to the /recording subpath and trigger
+// the grade-call edge function (Deepgram transcription + Claude Haiku grading).
 // ============================================================
+
+import { createClient } from 'npm:@supabase/supabase-js'
 
 const xmlHeaders = { 'Content-Type': 'text/xml' }
 
@@ -29,19 +31,41 @@ Deno.serve(async (req) => {
   const url = new URL(req.url)
 
   // Recording status callback — Twilio POSTs recording metadata here.
-  // No DB storage yet (Phase 2); log and ack so Twilio stops retrying.
+  // On completed recordings: store the URL on the calls row (by CallSid),
+  // then fire grade-call async to transcribe + grade.
   if (url.pathname.endsWith('/recording')) {
     try {
       const form = await req.formData()
-      console.log('[twilio-voice-webhook] recording callback:', {
-        recordingSid: form.get('RecordingSid'),
-        recordingUrl: form.get('RecordingUrl'),
-        callSid: form.get('CallSid'),
-        status: form.get('RecordingStatus'),
-        duration: form.get('RecordingDuration'),
-      })
-    } catch (_e) {
-      console.log('[twilio-voice-webhook] recording callback (unparseable body)')
+      const recordingSid = String(form.get('RecordingSid') || '')
+      const recordingUrl = String(form.get('RecordingUrl') || '')
+      const callSid      = String(form.get('CallSid')      || '')
+      const status       = String(form.get('RecordingStatus') || '')
+
+      console.log('[twilio-voice-webhook] recording callback:', { recordingSid, callSid, status })
+
+      if (status === 'completed' && callSid && recordingUrl) {
+        const admin = createClient(
+          Deno.env.get('SUPABASE_URL')!,
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+        )
+        // Store recording metadata on the calls row.
+        await admin
+          .from('calls')
+          .update({ twilio_recording_sid: recordingSid, twilio_recording_url: recordingUrl })
+          .eq('twilio_call_sid', callSid)
+
+        // Fire grade-call — fire-and-forget, never awaited.
+        fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/grade-call`, {
+          method: 'POST',
+          headers: {
+            'Content-Type':  'application/json',
+            Authorization:   `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          },
+          body: JSON.stringify({ callSid, recordingUrl, recordingSid }),
+        }).catch(err => console.error('[twilio-voice-webhook] grade-call invoke failed:', err))
+      }
+    } catch (err) {
+      console.error('[twilio-voice-webhook] recording callback error:', err)
     }
     return new Response('ok', { status: 200 })
   }

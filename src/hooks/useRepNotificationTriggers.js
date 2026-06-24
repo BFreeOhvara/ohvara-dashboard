@@ -195,6 +195,32 @@ export function useBadgeNotifier(repId, badgeCtx) {
   }, [repId, badgeCtx, qc])
 }
 
+// ── Call graded notifier ─────────────────────────────────────────────────────
+// Subscribes to realtime UPDATEs on the calls table for this rep.
+// When grade-call writes a grade (graded_at transitions null → set), invalidates
+// the notification cache so the bell refreshes without waiting for the next poll.
+export function useCallGradedNotifier(repId) {
+  const qc = useQueryClient()
+
+  useEffect(() => {
+    if (!repId) return
+    const channel = supabase
+      .channel(`call-graded-${repId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'calls',
+        filter: `rep_id=eq.${repId}`,
+      }, (payload) => {
+        if (payload.new?.graded_at && !payload.old?.graded_at) {
+          qc.invalidateQueries({ queryKey: ['rep-notifications', repId] })
+          qc.invalidateQueries({ queryKey: ['rep-notifications-unread', repId] })
+          qc.invalidateQueries({ queryKey: ['my-calls', repId] })
+        }
+      })
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [repId, qc])
+}
+
 // ── Follow-up notifier ───────────────────────────────────────────────────────
 // Checks the lead list against three thresholds before each follow-up's due
 // time (60m, 10m, 1m) and inserts one notification per threshold crossed.

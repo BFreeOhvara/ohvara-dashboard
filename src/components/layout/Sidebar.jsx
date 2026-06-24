@@ -17,6 +17,7 @@ const NAV = {
     { to: '/rep/stats',       label: 'My Stats',       icon: BarChart2 },
     { to: '/rep/goals',       label: 'My Goals',       icon: Target },
     { to: '/rep/commissions', label: 'My Commissions', icon: DollarSign },
+    { to: '/rep/calls',       label: 'My Calls',       icon: PhoneCall },
     { to: '/rep/feed',        label: 'Activity',       icon: Bell },
     { to: '/rep/messages',    label: 'Messages',       icon: MessageSquare },
   ],

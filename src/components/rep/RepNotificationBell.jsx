@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Bell, CheckCheck, MessageSquare, Award, Clock, DollarSign } from 'lucide-react'
+import { Bell, CheckCheck, MessageSquare, Award, Clock, DollarSign, PhoneCall } from 'lucide-react'
 import { useRepNotifications, useRepUnreadCount, useRepMarkNotificationRead, useRepMarkAllRead } from '../../hooks/useNotifications'
-import { useFollowUpNotifier, useMessageReplyNotifier, useFollowUp5MinNotifier, useDealClosedNotifier } from '../../hooks/useRepNotificationTriggers'
+import { useFollowUpNotifier, useMessageReplyNotifier, useFollowUp5MinNotifier, useDealClosedNotifier, useCallGradedNotifier } from '../../hooks/useRepNotificationTriggers'
 import { useMyLeads } from '../../hooks/useLeads'
 
 const TYPE_STYLES = {
@@ -10,6 +10,7 @@ const TYPE_STYLES = {
   badge:        { Icon: Award,         color: 'var(--success)', bg: 'var(--success-dim)' },
   follow_up:    { Icon: Clock,         color: 'var(--warning)', bg: 'var(--warning-dim)' },
   deal_closed:  { Icon: DollarSign,    color: 'var(--success)', bg: 'var(--success-dim)' },
+  call_graded:  { Icon: PhoneCall,     color: 'var(--info)',    bg: 'var(--info-dim)'    },
   default:      { Icon: Bell,          color: 'var(--info)',    bg: 'var(--info-dim)'    },
 }
 
@@ -41,6 +42,7 @@ export function RepNotificationBell({ profileId }) {
   useMessageReplyNotifier(profileId)
   useFollowUp5MinNotifier(profileId)
   useDealClosedNotifier(profileId)
+  useCallGradedNotifier(profileId)
 
   // The sidebar (`<aside>`) is `position: fixed` with `overflow: hidden` for
   // its own scroll containment — any dropdown rendered as its DOM descendant

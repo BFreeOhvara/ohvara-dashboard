@@ -16,6 +16,7 @@ import MyStats from './pages/rep/MyStats'
 import MyGoals from './pages/rep/MyGoals'
 import MyCommissions from './pages/rep/MyCommissions'
 import ActivityFeed from './pages/rep/ActivityFeed'
+import MyCalls from './pages/rep/MyCalls'
 
 // Closer pages
 import MyAppointments from './pages/closer/MyAppointments'
@@ -107,6 +108,11 @@ export default function App() {
             <Route path="/rep/messages" element={
               <ProtectedRoute allowedRoles={['rep']}>
                 <DashboardLayout><RepMessages /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/rep/calls" element={
+              <ProtectedRoute allowedRoles={['rep']}>
+                <DashboardLayout><MyCalls /></DashboardLayout>
               </ProtectedRoute>
             } />
 

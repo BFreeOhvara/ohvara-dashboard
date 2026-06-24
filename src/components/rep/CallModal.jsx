@@ -79,6 +79,114 @@ function toDatetimeLocal(ts) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+function gradeColor(grade) {
+  if (!grade) return 'var(--text-muted)'
+  if (['A+', 'A', 'A-'].includes(grade)) return 'var(--success)'
+  if (['B+', 'B', 'B-'].includes(grade)) return 'var(--info)'
+  if (['C+', 'C'].includes(grade)) return 'var(--warning)'
+  return 'var(--danger)'
+}
+
+function gradeDim(grade) {
+  if (!grade) return 'var(--bg-elevated)'
+  if (['A+', 'A', 'A-'].includes(grade)) return 'var(--success-dim)'
+  if (['B+', 'B', 'B-'].includes(grade)) return 'var(--info-dim)'
+  if (['C+', 'C'].includes(grade)) return 'var(--warning-dim)'
+  return 'var(--danger-dim)'
+}
+
+function PostCallCard({ state, onClose, leadName }) {
+  const isGrading = state === 'grading'
+  const grade = typeof state === 'object' ? state?.grade : null
+  return (
+    <div style={{
+      width: '100%', maxWidth: 420, background: '#0E0E1A',
+      border: '0.5px solid var(--border)', borderRadius: 14, overflow: 'hidden',
+      boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '14px 18px', borderBottom: '0.5px solid var(--border)',
+      }}>
+        <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
+          {isGrading ? 'Grading your call…' : `Grade: ${grade}`}
+        </p>
+        <button
+          onClick={onClose}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 8 }}
+        >
+          <X size={18} />
+        </button>
+      </div>
+      <div style={{ padding: '22px 20px' }}>
+        <p style={{ fontSize: 13, color: 'var(--success)', margin: '0 0 18px', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>✓</span> Call saved for {leadName}
+        </p>
+        {isGrading ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <Loader2 size={16} style={{ color: 'var(--accent)', animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>AI is analyzing the recording…</p>
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 0 26px', lineHeight: 1.55 }}>
+              Takes about 30–60 seconds. You can close now — the grade will appear in My Calls and your notifications.
+            </p>
+          </>
+        ) : (
+          <div style={{
+            background: gradeDim(grade),
+            border: `0.5px solid ${gradeColor(grade)}55`,
+            borderLeft: `3px solid ${gradeColor(grade)}`,
+            borderRadius: 10, padding: '14px 16px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: 8, flexShrink: 0,
+                background: gradeDim(grade), border: `0.5px solid ${gradeColor(grade)}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: gradeColor(grade), fontFamily: 'var(--font-mono)' }}>
+                  {grade}
+                </span>
+              </div>
+              <p style={{ fontSize: 13, fontWeight: 500, color: gradeColor(grade), margin: 0 }}>
+                {leadName}
+              </p>
+            </div>
+            {state?.feedback_good && (
+              <p style={{ fontSize: 12, color: 'var(--success)', margin: '0 0 6px', lineHeight: 1.5 }}>
+                ✓ {state.feedback_good}
+              </p>
+            )}
+            {state?.feedback_improve && (
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
+                ↗ {state.feedback_improve}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+      <div style={{
+        display: 'flex', justifyContent: 'flex-end',
+        padding: '10px 18px', borderTop: '0.5px solid var(--border)',
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            padding: '8px 22px', borderRadius: 8, cursor: 'pointer',
+            background: grade ? 'var(--accent)' : 'var(--bg-elevated)',
+            border: grade ? 'none' : '0.5px solid var(--border)',
+            fontSize: 13, fontWeight: 500,
+            color: grade ? 'white' : 'var(--text-secondary)',
+          }}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // Labeled info field for the left column
 function Field({ icon: Icon, label, value, mono = false }) {
   if (!value) return null
@@ -139,10 +247,13 @@ export function CallModal({ lead, onClose }) {
   const [callSeconds, setCallSeconds] = useState(0)
   const deviceRef = useRef(null)     // Twilio Device (lives for the modal's lifetime)
   const callRef   = useRef(null)     // the active Call object
+  const callSidRef = useRef(null)    // Twilio Call SID captured on 'accept'
   const dropdownRef = useRef(null)   // status trigger wrapper (outside-click anchor)
   const triggerRef = useRef(null)    // the trigger button — measured for the portal menu
   const menuRef = useRef(null)       // the portaled menu (outside-click anchor)
   const [statusMenuCoords, setStatusMenuCoords] = useState(null)
+  const [postCallCallId, setPostCallCallId] = useState(null) // calls row id after Done
+  const [postCallState, setPostCallState]   = useState(null) // null | 'grading' | { grade, feedback_good, feedback_improve }
 
   // Background scroll lock while the modal is open.
   // Lock <html> as well as <body> — overflow:hidden on body alone still
@@ -209,6 +320,25 @@ export function CallModal({ lead, onClose }) {
     return () => clearInterval(t)
   }, [callState])
 
+  // Subscribe to realtime grade updates on this rep's calls row once Done fires.
+  // Switches postCallState from 'grading' to the grade object when it arrives.
+  useEffect(() => {
+    if (!postCallCallId) return
+    const channel = supabase
+      .channel(`call-grade-${postCallCallId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'calls',
+        filter: `id=eq.${postCallCallId}`,
+      }, (payload) => {
+        const n = payload.new
+        if (n.graded_at) {
+          setPostCallState({ grade: n.grade, feedback_good: n.feedback_good, feedback_improve: n.feedback_improve })
+        }
+      })
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [postCallCallId])
+
   // Place the WebRTC call: Twilio dials lead.phone via the TwiML App webhook.
   async function startCall() {
     const device = deviceRef.current
@@ -219,7 +349,10 @@ export function CallModal({ lead, onClose }) {
     try {
       const call = await device.connect({ params: { To: lead.phone } })
       callRef.current = call
-      call.on('accept', () => setCallState('in-call'))
+      call.on('accept', () => {
+        setCallState('in-call')
+        callSidRef.current = call.parameters?.CallSid || null
+      })
       call.on('disconnect', () => { callRef.current = null; setMuted(false); setCallState('idle') })
       call.on('cancel',     () => { callRef.current = null; setCallState('idle') })
       call.on('error',      () => { callRef.current = null; setCallState('error') })
@@ -317,6 +450,7 @@ export function CallModal({ lead, onClose }) {
       // not yet refetched between rapid commits), which skipped the delete
       // and left phantom calls rows behind. Delete-then-insert is idempotent,
       // so unconditional is safe.
+      let insertedCallId = null
       if (profile?.id) {
         const utcMidnight = new Date().toISOString().split('T')[0] + 'T00:00:00Z'
         await supabase
@@ -326,11 +460,13 @@ export function CallModal({ lead, onClose }) {
           .eq('rep_id', profile.id)
           .gte('created_at', utcMidnight)
         if (CALL_OUTCOMES.includes(status)) {
-          await supabase.from('calls').insert({
+          const { data: newCall } = await supabase.from('calls').insert({
             lead_id: lead.id,
             rep_id: profile.id,
             outcome: status,
-          })
+            twilio_call_sid: callSidRef.current || null,
+          }).select('id').single()
+          if (newCall?.id) insertedCallId = newCall.id
         }
       }
 
@@ -414,7 +550,12 @@ export function CallModal({ lead, onClose }) {
         }).catch(err => console.error('[CallModal] recommend-stack failed:', err))
       }
 
-      onClose()
+      if (callSidRef.current && insertedCallId) {
+        setPostCallCallId(insertedCallId)
+        setPostCallState('grading')
+      } else {
+        onClose()
+      }
     } catch (err) {
       setDoneError(err.message || 'Failed to save')
       setClosing(false)
@@ -440,6 +581,9 @@ export function CallModal({ lead, onClose }) {
       onClick={e => e.stopPropagation() /* click-outside does NOT close — exit via X (discard) or Done (save) */}
     >
       <ModalErrorBoundary onClose={onClose}>
+      {postCallState !== null ? (
+        <PostCallCard state={postCallState} onClose={onClose} leadName={lead.business_name} />
+      ) : (
       <div style={{
         width: '100%', maxWidth: 960, maxHeight: '88vh',
         display: 'flex', flexDirection: 'column',
@@ -898,6 +1042,7 @@ export function CallModal({ lead, onClose }) {
           </button>
         </div>
       </div>
+      )}
       </ModalErrorBoundary>
     </div>,
     document.body
