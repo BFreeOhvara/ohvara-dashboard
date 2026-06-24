@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Calendar, TrendingUp, DollarSign, Zap } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
@@ -44,15 +43,8 @@ export default function MyAppointments() {
   const { profile } = useAuth()
   const { data: appointments, isLoading } = useMyAppointments()
   const { data: kpis } = useCloserKPIs(profile?.id)
-  const [tab, setTab] = useState('pending')
 
   const pending = appointments?.filter(a => a.status === 'pending') ?? []
-  // "Closed" bundles every non-pending outcome (closed/lost/no_show) — same
-  // definition Past Deals used, now folded into this page (Prompt 11).
-  const closed = appointments
-    ?.filter(a => a.status !== 'pending')
-    .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)) ?? []
-  const visible = tab === 'pending' ? pending : closed
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
   return (
@@ -109,66 +101,32 @@ export default function MyAppointments() {
         />
       </div>
 
-      {/* Pending / Closed filter (Prompt 11 — replaces the standalone Past Deals page) */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 16, padding: 3, background: 'var(--bg-surface)', border: '0.5px solid var(--border)', borderRadius: 8, width: 'fit-content' }}>
-        {['pending', 'closed'].map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            style={{
-              padding: '7px 16px', borderRadius: 6, border: 'none', cursor: 'pointer',
-              fontSize: 13, fontWeight: tab === t ? 500 : 400, textTransform: 'capitalize',
-              background: tab === t ? 'var(--bg-elevated)' : 'transparent',
-              color: tab === t ? 'var(--text-primary)' : 'var(--text-muted)',
-            }}
-          >
-            {t} {t === 'pending' ? `(${pending.length})` : `(${closed.length})`}
-          </button>
-        ))}
+      {/* Appointment list — scrollable box */}
+      <div className="glass" style={{ borderRadius: 12, overflow: 'hidden' }}>
+        <div className="scrollbar-thin" style={{ maxHeight: 560, overflowY: 'auto' }}>
+          {isLoading ? (
+            <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[...Array(3)].map((_, i) => (
+                <div key={i} style={{ height: 80, borderRadius: 8, background: 'var(--bg-surface)', border: '0.5px solid var(--border)', animation: 'pulse 2s infinite' }} />
+              ))}
+            </div>
+          ) : !pending.length ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 16px', textAlign: 'center' }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                <Calendar size={18} color="var(--text-muted)" />
+              </div>
+              <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', margin: 0 }}>No appointments</p>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>New bookings will appear here automatically.</p>
+            </div>
+          ) : (
+            <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {pending.map(appt => (
+                <AppointmentCard key={appt.id} appt={appt} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-
-      {/* Appointment list */}
-      {isLoading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {[...Array(3)].map((_, i) => (
-            <div key={i} style={{
-              height: 80, borderRadius: 8,
-              background: 'var(--bg-surface)', border: '0.5px solid var(--border)',
-              animation: 'pulse 2s infinite',
-            }} />
-          ))}
-        </div>
-      ) : !visible.length ? (
-        <div style={{
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          padding: '64px 16px', textAlign: 'center',
-          background: 'var(--bg-surface)',
-          border: '0.5px solid var(--border)',
-          borderRadius: 8,
-        }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: '50%',
-            background: 'var(--bg-elevated)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            marginBottom: 12,
-          }}>
-            <Calendar size={18} color="var(--text-muted)" />
-          </div>
-          <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', margin: 0 }}>
-            {tab === 'pending' ? 'No pending appointments' : 'No closed deals yet'}
-          </p>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-            {tab === 'pending' ? 'New bookings will appear here automatically.' : 'Closed, lost, and no-show appointments will appear here.'}
-          </p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {visible.map(appt => (
-            <AppointmentCard key={appt.id} appt={appt} />
-          ))}
-        </div>
-      )}
     </div>
   )
 }
