@@ -288,7 +288,7 @@ export default function MyLeads() {
   const { data: callStats } = useTodayCallStats(profile?.id)
   const { data: training, isLoading: trainingLoading } = useTrainingProgress()
   // Filter + scroll position survive tab switches via sessionStorage
-  const [activeFilter, setActiveFilter] = useState(() => sessionStorage.getItem(SS_FILTER) || 'All')
+  const [activeFilter, setActiveFilter] = useState(() => sessionStorage.getItem(SS_FILTER) || 'New')
   const [callLead, setCallLead] = useState(null)
   const [reminderLead, setReminderLead] = useState(null)
   const [dayComplete, setDayComplete] = useState(false)
