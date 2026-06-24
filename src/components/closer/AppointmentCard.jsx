@@ -332,6 +332,15 @@ export function AppointmentCard({ appt }) {
         closer_notes: notes,
       },
     })
+    // Prompt 55: a closed deal auto-creates a PENDING commission payout for the
+    // booking rep (10% of the deal total, computed server-side). Fire-and-forget
+    // and idempotent per appointment — never blocks the close, admin still
+    // approves before money moves.
+    if (outcome === 'closed') {
+      supabase.functions.invoke('create-commission-payout', {
+        body: { appointment_id: appt.id },
+      }).catch(err => console.error('[AppointmentCard] create-commission-payout failed:', err))
+    }
     if (outcome === 'no_show' || outcome === 'lost') {
       await supabase.functions.invoke('schedule-reminders', {
         body: { appointment_id: appt.id, cancel_all: true },

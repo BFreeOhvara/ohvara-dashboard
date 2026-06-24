@@ -4,7 +4,7 @@ import {
   Users, Phone, BarChart2, Target, Bell,
   Calendar, DollarSign, TrendingUp, BookOpen,
   LayoutDashboard, List, Columns, RefreshCw, Database, LogOut,
-  Zap, Search, PhoneCall, GitBranch, MessageSquare, Home
+  Zap, Search, PhoneCall, GitBranch, MessageSquare, Home, Wallet
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { NotificationBell } from '../admin/NotificationBell'
@@ -36,6 +36,7 @@ const NAV = {
     { to: '/admin/scraper',      label: 'Lead Scraper',    icon: Search },
     { to: '/admin/users',        label: 'Users',           icon: Users },
     { to: '/admin/commissions',  label: 'Commissions',     icon: DollarSign },
+    { to: '/admin/payouts',      label: 'Payouts',         icon: Wallet },
     { to: '/admin/messages',     label: 'Messages',        icon: MessageSquare },
   ],
   client: [

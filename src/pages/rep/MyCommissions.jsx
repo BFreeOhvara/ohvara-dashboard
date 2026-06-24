@@ -1,11 +1,36 @@
-import { useMemo } from 'react'
-import { DollarSign, Briefcase, TrendingUp } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { DollarSign, Briefcase, TrendingUp, Landmark, CheckCircle2, ExternalLink, Loader2 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
 import { useMyCommission } from '../../hooks/useProfiles'
+import { useMyPayouts, useConnectOnboard, useCheckOnboardStatus } from '../../hooks/usePayouts'
 import { KPICard } from '../../components/ui/KPICard'
 
 const CHART_DAYS = 30
+
+// status → chip colors, shared with the admin Payouts tab semantics.
+const PAYOUT_STATUS = {
+  pending:  { label: 'Pending',  color: '#F59E0B', dim: 'rgba(245,158,11,0.12)' },
+  approved: { label: 'Approved', color: '#38BDF8', dim: 'rgba(56,189,248,0.12)' },
+  paid:     { label: 'Paid',     color: '#22C55E', dim: 'rgba(34,197,94,0.12)' },
+  failed:   { label: 'Failed',   color: '#EF4444', dim: 'rgba(239,68,68,0.12)' },
+}
+
+function StatusChip({ status }) {
+  const s = PAYOUT_STATUS[status] || PAYOUT_STATUS.pending
+  return (
+    <span style={{
+      fontSize: 11, fontWeight: 500, color: s.color, background: s.dim,
+      padding: '3px 9px', borderRadius: 999, whiteSpace: 'nowrap',
+    }}>
+      {s.label}
+    </span>
+  )
+}
+
+function fmtUsd(cents) {
+  return `$${(Number(cents || 0) / 100).toFixed(2)}`
+}
 
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -137,6 +162,143 @@ export default function MyCommissions() {
           </p>
         )}
       </div>
+
+      <MyPayouts />
+    </div>
+  )
+}
+
+// Stripe Connect bank-link + payout history. Reps connect their bank once
+// (Stripe handles KYC + 1099), then watch each closed deal's 10% move
+// pending → paid here.
+function MyPayouts() {
+  const { profile } = useAuth()
+  const connected = !!profile?.stripe_onboarding_complete
+  const { data: payouts } = useMyPayouts(profile?.id)
+  const onboard = useConnectOnboard()
+  const checkStatus = useCheckOnboardStatus()
+  const [awaitingReturn, setAwaitingReturn] = useState(false)
+
+  // When Stripe redirects back to ?onboarding=complete, confirm the account and
+  // reload to a clean URL so useAuth re-fetches the (now connected) profile.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const flag = params.get('onboarding')
+    if (!flag) return
+    if (flag === 'complete') {
+      checkStatus.mutateAsync().finally(() => {
+        window.location.assign('/rep/commissions')
+      })
+    } else {
+      // 'refresh' (link expired) — just clean the URL
+      window.history.replaceState({}, '', '/rep/commissions')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function startOnboarding() {
+    try {
+      const res = await onboard.mutateAsync()
+      if (res?.url) {
+        window.open(res.url, '_blank', 'noopener')
+        setAwaitingReturn(true)
+      }
+    } catch { /* error surfaced via onboard.error below */ }
+  }
+
+  async function refreshStatus() {
+    const res = await checkStatus.mutateAsync()
+    if (res?.complete) window.location.assign('/rep/commissions')
+  }
+
+  return (
+    <div className="glass" style={{ padding: '18px 20px', borderRadius: 12, marginTop: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+        <div>
+          <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 2px' }}>My Payouts</p>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>
+            Connect your bank once — paid commissions land in ~2 days
+          </p>
+        </div>
+        {connected ? (
+          <span style={{
+            display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500,
+            color: 'var(--success)', background: 'rgba(34,197,94,0.12)', padding: '6px 12px', borderRadius: 999,
+          }}>
+            <CheckCircle2 size={14} /> Bank connected
+          </span>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={startOnboarding}
+              disabled={onboard.isPending}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px',
+                background: 'var(--accent)', border: 'none', borderRadius: 8,
+                fontSize: 13, fontWeight: 500, color: 'white',
+                cursor: onboard.isPending ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+              }}
+            >
+              {onboard.isPending
+                ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Opening…</>
+                : <><Landmark size={14} /> Connect your bank <ExternalLink size={12} /></>}
+            </button>
+            {awaitingReturn && (
+              <button
+                onClick={refreshStatus}
+                disabled={checkStatus.isPending}
+                style={{
+                  height: 36, padding: '0 12px', background: 'var(--bg-elevated)',
+                  border: '0.5px solid var(--border)', borderRadius: 8,
+                  fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap',
+                }}
+              >
+                {checkStatus.isPending ? 'Checking…' : "I'm done — refresh"}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {onboard.error && (
+        <p style={{ fontSize: 12, color: 'var(--danger)', margin: '0 0 12px' }}>
+          {onboard.error.message || 'Could not start onboarding'}
+        </p>
+      )}
+
+      {(payouts?.length ?? 0) === 0 ? (
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', margin: '8px 0' }}>
+          No payouts yet — a pending payout appears here when the closer signs a deal you booked.
+        </p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {payouts.map(p => {
+            const biz = p.appointment?.lead?.business_name || 'Closed deal'
+            const when = p.appointment?.appointment_at || p.created_at
+            return (
+              <div key={p.id} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                padding: '10px 4px', borderBottom: '0.5px solid var(--border)',
+              }}>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {biz}
+                  </p>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>
+                    {when ? new Date(when).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
+                    {fmtUsd(p.amount_cents)}
+                  </span>
+                  <StatusChip status={p.status} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

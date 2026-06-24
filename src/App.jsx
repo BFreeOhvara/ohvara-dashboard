@@ -33,6 +33,7 @@ import LeadSources from './pages/admin/LeadSources'
 import LeadScraper from './pages/admin/LeadScraper'
 import Users from './pages/admin/Users'
 import Commissions from './pages/admin/Commissions'
+import Payouts from './pages/admin/Payouts'
 import RepMessages from './pages/rep/Messages'
 import CloserMessages from './pages/closer/Messages'
 import AdminMessages from './pages/admin/Messages'
@@ -185,6 +186,11 @@ export default function App() {
             <Route path="/admin/commissions" element={
               <ProtectedRoute allowedRoles={['admin', 'closer']}>
                 <DashboardLayout><Commissions /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/payouts" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardLayout><Payouts /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/closer/commissions" element={
