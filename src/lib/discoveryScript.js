@@ -19,6 +19,15 @@
 // `kind` places the section in the Call Now modal: 'opener' pins to the top,
 // 'branch' scrolls in the middle, 'close' pins to the bottom (always visible).
 
+// The two pricing inputs the rep logs mid-call (Prompt 53, Change 3). A
+// `data_collect` step renders these as number inputs in the live walk (PATCHed
+// onto the lead) and as a non-interactive preview on the training canvas. Keys
+// match the leads columns added in migration 050.
+export const DATA_COLLECT_FIELDS = [
+  { key: 'calls_missed_per_week', label: 'Calls missed / week', placeholder: 'e.g. 5' },
+  { key: 'avg_ticket_value',      label: 'Avg ticket value ($)', placeholder: 'e.g. 300' },
+]
+
 // The fixed opener — word for word, every call. Only [Business Name] is filled.
 export const FIXED_OPENER =
   `"Hey, is this [Business Name]? I saw y'all had a listing for a receptionist on Indeed — I was wondering who I should speak to about that?"`
@@ -53,6 +62,7 @@ export const DISCOVERY_SCRIPT = [
       `"What do you have in place today to handle that?"`,
       `"Anything else slipping through the cracks?"`,
       `"Even 2–3 missed jobs a week at [their ticket] each is real money walking to whoever picks up first. Does that surprise you?"`,
+      `⊞ Log the numbers — calls missed per week + average ticket. Both feed the custom stack Nate builds.`,
       `→ Go to CLOSE (book Nate).`,
     ],
     tips: `Write every answer in Call Notes AND the discovery fields below — who answers now, calls/week, average ticket, biggest pain, what they've tried, what else is slipping. That's exactly what Nate's custom stack gets built from. The average-ticket number is gold.`,
@@ -156,7 +166,7 @@ function sectionToText(section, lead, rep) {
   const out = section.lines.map(l => {
     const filled = fillTokens(l, lead, rep)
     const t = filled.trimStart()
-    if (/^(↳|▸|→|•|- |BRANCH\b|IF\b)/i.test(t)) return filled
+    if (/^(↳|▸|→|⊞|•|- |BRANCH\b|IF\b)/i.test(t)) return filled
     return `- ${filled}`
   })
   if (section.tips) out.push(`💡 ${fillTokens(section.tips, lead, rep)}`)
@@ -221,6 +231,10 @@ function shorten(s) {
 // Turn one trimmed marker line into a step. Marker is detected, then stripped
 // from the display text so the UI styles it (a ▸ chip, a route button, …).
 function makeStep(t, lead, rep) {
+  // ⊞ — an inline data-collection step (Prompt 53). Fixed two-field set.
+  if (/^⊞/.test(t)) {
+    return { type: 'data_collect', title: fillTokens(t.replace(/^⊞\s*/, ''), lead, rep), fields: DATA_COLLECT_FIELDS }
+  }
   const route = isRouteLine(t)
   const action = /^▸/.test(t)
   const sub = /^↳/.test(t)

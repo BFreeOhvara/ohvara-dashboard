@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { ChevronRight, ChevronLeft, RotateCcw, CornerDownRight, ArrowRight, CheckCircle2, CalendarCheck } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
 
 // ── ScriptWalk ───────────────────────────────────────────────────────────────
 // The guided, one-line-at-a-time call experience. Reads a flow from
@@ -13,7 +14,7 @@ import { ChevronRight, ChevronLeft, RotateCcw, CornerDownRight, ArrowRight, Chec
 // step past the fork in the parent. Routes (→ CLOSE / run BRANCH A) hard-jump to
 // another block. An undo history backs the Back button.
 
-export function ScriptWalk({ flow, mode = 'live' }) {
+export function ScriptWalk({ flow, mode = 'live', leadId }) {
   const start = useMemo(
     () => ({ sectionId: 'opener', stack: [{ steps: flow.opener.steps, index: 0 }] }),
     [flow]
@@ -108,6 +109,10 @@ export function ScriptWalk({ flow, mode = 'live' }) {
           <ActionCard step={step} accent={accent} onNext={advance} />
         )}
 
+        {step && step.type === 'data_collect' && (
+          <DataCollectCard step={step} accent={accent} leadId={leadId} mode={mode} onNext={advance} />
+        )}
+
         {step && step.type === 'route' && (
           <RouteCard step={step} accent={accent} flow={flow} onGo={() => navigateTo(step.target)} />
         )}
@@ -166,6 +171,65 @@ function ActionCard({ step, accent, onNext }) {
         <p style={{ fontSize: 14.5, lineHeight: 1.5, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{step.text}</p>
       </div>
       <NextButton accent={accent} onClick={onNext} label="Next" />
+    </div>
+  )
+}
+
+// Inline data capture (Prompt 53, Change 3) — the rep logs calls-missed/week
+// and average ticket mid-call. In live mode "Save & Continue" PATCHes the lead
+// then advances; a save failure is logged but never blocks the call. In
+// practice mode (no real lead) it just advances.
+function DataCollectCard({ step, accent, leadId, mode, onNext }) {
+  const [vals, setVals] = useState({})
+  const [saving, setSaving] = useState(false)
+
+  async function saveAndContinue() {
+    if (mode === 'live' && leadId) {
+      setSaving(true)
+      const patch = {}
+      for (const f of step.fields) {
+        const v = vals[f.key]
+        patch[f.key] = (v === undefined || v === '') ? null : Number(v)
+      }
+      try {
+        const { error } = await supabase.from('leads').update(patch).eq('id', leadId)
+        if (error) throw error
+      } catch (err) {
+        // Never block a live call — log and advance regardless.
+        console.error('[ScriptWalk] data_collect save failed:', err)
+      } finally {
+        setSaving(false)
+      }
+    }
+    onNext()
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: 0 }}>Log the numbers</p>
+      {step.title && (
+        <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>{step.title}</p>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {step.fields.map(f => (
+          <div key={f.key} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontSize: 12, color: 'var(--text-muted)' }}>{f.label}</label>
+            <input
+              type="number"
+              min="0"
+              value={vals[f.key] ?? ''}
+              onChange={e => setVals(v => ({ ...v, [f.key]: e.target.value }))}
+              placeholder={f.placeholder}
+              style={{
+                height: 44, padding: '0 14px', background: 'var(--bg-elevated)',
+                border: '0.5px solid var(--border)', borderRadius: 10,
+                fontSize: 16, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', boxSizing: 'border-box',
+              }}
+            />
+          </div>
+        ))}
+      </div>
+      <NextButton accent={accent} onClick={saveAndContinue} label={saving ? 'Saving…' : 'Save & Continue'} />
     </div>
   )
 }

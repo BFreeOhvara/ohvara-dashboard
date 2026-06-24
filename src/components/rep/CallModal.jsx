@@ -856,7 +856,7 @@ export function CallModal({ lead, onClose }) {
           {/* RIGHT — the guided call walk: one step at a time, tap the
               prospect's response, the tree routes the rep to booking Nate. */}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <ScriptWalk flow={flow} mode="live" />
+            <ScriptWalk flow={flow} mode="live" leadId={lead.id} />
           </div>
         </div>
 

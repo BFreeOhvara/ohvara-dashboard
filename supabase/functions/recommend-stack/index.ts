@@ -242,12 +242,21 @@ Deno.serve(async (req) => {
       secondaryPain,
     } = await req.json()
 
-    const customMonthly = formulaPrice(callsMissedPerWeek, avgTicket)
+    // Prompt 53, Change 3: the rep may not have captured these on the call, so
+    // fall back to sane defaults (5 calls/week, $300 ticket) rather than letting
+    // the formula return nothing. Not silent zeros — explicit, documented values.
+    const FALLBACK_CALLS_PER_WEEK = 5
+    const FALLBACK_AVG_TICKET = 300
+    const usedCalls  = (callsMissedPerWeek && callsMissedPerWeek > 0) ? callsMissedPerWeek : FALLBACK_CALLS_PER_WEEK
+    const usedTicket = (avgTicket && avgTicket > 0) ? avgTicket : FALLBACK_AVG_TICKET
+    const defaulted  = usedCalls !== callsMissedPerWeek || usedTicket !== avgTicket
+
+    const customMonthly = formulaPrice(usedCalls, usedTicket)
     const fallbackTier  = laborTier(monthlyLaborCost)
     const effectiveMonthly = customMonthly || PACKAGES[fallbackTier].monthly
 
     const formulaExplanation = customMonthly
-      ? `Formula price: ${callsMissedPerWeek} missed calls/week × 4.33 weeks × $${avgTicket}/ticket = $${Math.round(callsMissedPerWeek * 4.33 * avgTicket).toLocaleString()}/month lost × 15% = $${customMonthly}/month for the stack`
+      ? `Formula price: ${usedCalls} missed calls/week${defaulted ? ' (est.)' : ''} × 4.33 weeks × $${usedTicket}/ticket${defaulted ? ' (est.)' : ''} = $${Math.round(usedCalls * 4.33 * usedTicket).toLocaleString()}/month lost × 15% = $${customMonthly}/month for the stack`
       : `No formula data — price based on labor cost tier: $${effectiveMonthly}/month`
 
     const painLabel = primaryPain ? (PAIN_LABELS[primaryPain] || primaryPain) : null

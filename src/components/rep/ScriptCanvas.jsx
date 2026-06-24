@@ -23,7 +23,6 @@ const BRANCH_GAP_Y = 210  // opener bottom → branch header row
 const CLOSE_GAP_Y = 120   // tallest branch bottom → close header
 
 const EDGE_GREY = '#3A3A4A'
-const ACCENT = '#6C63FF'
 
 function unquote(t) {
   const s = (t || '').trim()
@@ -31,14 +30,21 @@ function unquote(t) {
 }
 
 // Subtree width in columns: a linear chain is 1; a fork is the sum of its
-// option widths; a chain's width is the max width of any step in it.
-function measureSteps(steps) {
+// option widths; a chain's width is the max width of any step in it. A route
+// to another branch is INLINED (Prompt 53, Change 1), so it contributes that
+// branch's full width here; `visited` guards against any cyclic route.
+function measureSteps(steps, flow, visited) {
   let w = 1
   for (const s of steps) {
     if (s.type === 'fork') {
       let fw = 0
-      for (const opt of s.options) fw += Math.max(1, measureSteps(opt.steps))
+      for (const opt of s.options) fw += Math.max(1, measureSteps(opt.steps, flow, visited))
       w = Math.max(w, fw)
+    } else if (s.type === 'route' && flow?.byId[s.target]?.kind === 'branch') {
+      const seen = visited || new Set()
+      if (!seen.has(s.target)) {
+        w = Math.max(w, measureSteps(flow.byId[s.target].steps, flow, new Set([...seen, s.target])))
+      }
     }
   }
   return w
@@ -58,27 +64,21 @@ function buildGraph(flow) {
   let counter = 0
   const nextId = () => `n${counter++}`
 
-  function pushEdge(srcTail, targetId, label, kind) {
-    const isBack = kind === 'backref'
+  // All edges are now forward (Prompt 53, Change 1 dropped the looping
+  // back-ref edges — branch routes are inlined instead).
+  function pushEdge(srcTail, targetId, label) {
     edges.push({
       id: `e${counter++}`,
       source: srcTail.id,
       target: targetId,
-      sourceHandle: isBack ? 'lsource' : undefined,
-      targetHandle: isBack ? 'ltarget' : undefined,
       label: (srcTail.label ?? label) || undefined,
-      type: isBack ? 'default' : 'smoothstep',
-      animated: isBack,
-      style: {
-        stroke: isBack ? ACCENT : EDGE_GREY,
-        strokeWidth: 1.5,
-        ...(isBack ? { strokeDasharray: '5 4' } : null),
-      },
+      type: 'smoothstep',
+      style: { stroke: EDGE_GREY, strokeWidth: 1.5 },
       labelStyle: { fontSize: 10, fill: '#9090AA', fontWeight: 600 },
       labelBgStyle: { fill: '#13131F' },
       labelBgPadding: [5, 3],
       labelBgBorderRadius: 4,
-      markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: isBack ? ACCENT : EDGE_GREY },
+      markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: EDGE_GREY },
     })
   }
 
@@ -90,7 +90,7 @@ function buildGraph(flow) {
   // Lay out a sequence of steps within a horizontal band. incomingTails carry
   // an optional per-tail label (used when an empty fork option must label the
   // edge into the next step). Returns { tails, endY }.
-  function placeSteps(steps, bandLeftPx, bandCols, startY, incomingTails, incomingLabel, accent) {
+  function placeSteps(steps, bandLeftPx, bandCols, startY, incomingTails, incomingLabel, accent, visited = new Set()) {
     let tails = incomingTails
     let label = incomingLabel
     let y = startY
@@ -98,9 +98,19 @@ function buildGraph(flow) {
 
     for (const step of steps) {
       if (step.type === 'route') {
-        const isBack = flow.byId[step.target]?.kind === 'branch'
+        const targetSection = flow.byId[step.target]
+        if (targetSection?.kind === 'branch' && !visited.has(step.target)) {
+          // Inline the target branch's steps right here so every path is
+          // self-contained (Prompt 53, Change 1) — no looping back-ref edge.
+          const r = placeSteps(targetSection.steps, bandLeftPx, bandCols, y, tails, label, accent, new Set([...visited, step.target]))
+          tails = r.tails
+          y = r.endY
+          label = null
+          continue
+        }
+        // forward route (to close, or a guard-tripped cyclic branch)
         const tgt = headerNodeId(step.target)
-        for (const t of tails) pushEdge(t, tgt, label ?? routeLabel(flow, step.target), isBack ? 'backref' : 'forward')
+        for (const t of tails) pushEdge(t, tgt, label ?? routeLabel(flow, step.target))
         label = null
         tails = []          // a route jumps away — nothing continues in this chain
         continue
@@ -109,7 +119,7 @@ function buildGraph(flow) {
       if (step.type === 'fork') {
         const id = nextId()
         makeNode(id, 'fork', { q: step.q, accent }, centerX, y)
-        for (const t of tails) pushEdge(t, id, label, 'forward')
+        for (const t of tails) pushEdge(t, id, label)
         label = null
 
         const optY = y + ROW
@@ -117,14 +127,14 @@ function buildGraph(flow) {
         const optTails = []
         let maxEndY = optY
         for (const opt of step.options) {
-          const optCols = Math.max(1, measureSteps(opt.steps))
+          const optCols = Math.max(1, measureSteps(opt.steps, flow, visited))
           const optLeftPx = bandLeftPx + optLeftCols * COL
           if (opt.steps.length === 0) {
             // empty option (e.g. close's "IF NO:") — the fork is the tail and
             // this option's label rides the edge into the next post-fork step.
             optTails.push({ id, label: opt.label })
           } else {
-            const r = placeSteps(opt.steps, optLeftPx, optCols, optY, [{ id }], opt.label, accent)
+            const r = placeSteps(opt.steps, optLeftPx, optCols, optY, [{ id }], opt.label, accent, visited)
             for (const tt of r.tails) optTails.push(tt)
             maxEndY = Math.max(maxEndY, r.endY)
           }
@@ -135,10 +145,20 @@ function buildGraph(flow) {
         continue
       }
 
+      if (step.type === 'data_collect') {
+        const id = nextId()
+        makeNode(id, 'dataCollect', { fields: step.fields, title: step.title, accent }, centerX, y)
+        for (const t of tails) pushEdge(t, id, label)
+        label = null
+        tails = [{ id }]
+        y += ROW
+        continue
+      }
+
       // say / action — a single node
       const id = nextId()
       makeNode(id, step.type, { text: step.text, sub: step.sub, accent }, centerX, y)
-      for (const t of tails) pushEdge(t, id, label, 'forward')
+      for (const t of tails) pushEdge(t, id, label)
       label = null
       tails = [{ id }]
       y += ROW
@@ -151,12 +171,12 @@ function buildGraph(flow) {
   let leftCols = 0
   let maxBranchEndY = BRANCH_GAP_Y
   for (const b of flow.branches) {
-    const cols = Math.max(1, measureSteps(b.steps))
+    const cols = Math.max(1, measureSteps(b.steps, flow))
     const bandLeftPx = leftCols * COL
     const hx = bandLeftPx + (cols * COL) / 2 - NODE_W / 2
     const hid = headerNodeId(b.id)
     makeNode(hid, 'branchHeader', { branch: b }, hx, BRANCH_GAP_Y)
-    pushEdge({ id: 'opener' }, hid, b.short, 'forward')
+    pushEdge({ id: 'opener' }, hid, b.short)
     const r = placeSteps(b.steps, bandLeftPx, cols, BRANCH_GAP_Y + ROW, [{ id: hid }], null, b.color)
     maxBranchEndY = Math.max(maxBranchEndY, r.endY)
     leftCols += cols
@@ -168,7 +188,7 @@ function buildGraph(flow) {
   makeNode('opener', 'opener', { text: openerLine, accent: flow.opener.color }, totalW / 2 - NODE_W / 2, 0)
 
   // Close centered below the tallest branch, with its own step tree beneath.
-  const closeCols = Math.max(1, measureSteps(flow.close.steps))
+  const closeCols = Math.max(1, measureSteps(flow.close.steps, flow))
   const closeY = maxBranchEndY + CLOSE_GAP_Y
   const closeBandLeft = totalW / 2 - (closeCols * COL) / 2
   makeNode('close-header', 'close', { close: flow.close }, totalW / 2 - NODE_W / 2, closeY)
@@ -184,12 +204,12 @@ function buildGraph(flow) {
 const HANDLE = { width: 7, height: 7, opacity: 0, border: 'none', background: 'transparent', minWidth: 0, minHeight: 0 }
 
 function Handles() {
+  // Top target / bottom source only — all edges flow downward now that
+  // branch routes are inlined (Prompt 53, Change 1 removed the side handles).
   return (
     <>
       <Handle type="target" position={Position.Top} style={HANDLE} />
       <Handle type="source" position={Position.Bottom} style={HANDLE} />
-      <Handle type="target" position={Position.Left} id="ltarget" style={{ ...HANDLE, top: '38%' }} />
-      <Handle type="source" position={Position.Left} id="lsource" style={{ ...HANDLE, top: '62%' }} />
     </>
   )
 }
@@ -235,6 +255,32 @@ function ActionNode({ data }) {
         <span style={{ fontSize: 11, color: 'var(--warning)', fontWeight: 700, marginTop: 1, flexShrink: 0 }}>▸</span>
         <span style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.45 }}>{data.text}</span>
       </div>
+    </div>
+  )
+}
+
+function DataCollectNode({ data }) {
+  return (
+    <div style={shell(data, 'var(--success)', { background: 'rgba(34,197,94,0.06)' })}>
+      <Handles />
+      <Tag color="var(--success)">▦ Log on the call</Tag>
+      {data.title && (
+        <p style={{ fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.4, margin: '0 0 8px' }}>{data.title}</p>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {(data.fields || []).map(f => (
+          <div key={f.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span style={{ fontSize: 10.5, color: 'var(--text-secondary)' }}>{f.label}</span>
+            <span style={{
+              fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)',
+              border: '0.5px dashed var(--border)', borderRadius: 5, padding: '2px 8px', minWidth: 44, textAlign: 'center',
+            }}>—</span>
+          </div>
+        ))}
+      </div>
+      <p style={{ fontSize: 9, color: 'var(--text-muted)', fontStyle: 'italic', margin: '8px 0 0' }}>
+        Fill in during your actual call
+      </p>
     </div>
   )
 }
@@ -292,6 +338,7 @@ const nodeTypes = {
   say: SayNode,
   action: ActionNode,
   fork: ForkNode,
+  dataCollect: DataCollectNode,
   opener: OpenerNode,
   branchHeader: BranchHeaderNode,
   close: CloseNode,
