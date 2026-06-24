@@ -200,8 +200,7 @@ function MyPayouts() {
     try {
       const res = await onboard.mutateAsync()
       if (res?.url) {
-        window.open(res.url, '_blank', 'noopener')
-        setAwaitingReturn(true)
+        window.location.href = res.url
       }
     } catch { /* error surfaced via onboard.error below */ }
   }
