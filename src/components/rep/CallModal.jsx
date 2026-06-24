@@ -15,10 +15,10 @@ import { useActiveCall } from '../../contexts/ActiveCallContext'
 // `note` tells the rep exactly where the lead routes (pipeline behavior).
 const STATUS_OPTIONS = [
   { value: 'New',                color: '#38BDF8', dim: 'rgba(56,189,248,0.10)',  border: 'rgba(56,189,248,0.35)', note: null },
-  { value: 'Appointment Booked', color: '#22C55E', dim: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.35)',  note: 'Sent to the closer pipeline — set the appointment time below' },
-  { value: 'No Answer',          color: '#94A3B8', dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.35)', note: 'Back in rotation tomorrow — redistributed to the team after 24h' },
-  { value: 'Not Interested',     color: '#EF4444', dim: 'rgba(239,68,68,0.10)',   border: 'rgba(239,68,68,0.35)',  note: 'Stays in your list today — permanently archived at end of day' },
-  { value: 'Follow-Up',          color: '#F59E0B', dim: 'rgba(245,158,11,0.10)',  border: 'rgba(245,158,11,0.35)', note: 'Stays in your list today — returns to New on your chosen date' },
+  { value: 'Appointment Booked', color: '#22C55E', dim: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.35)',  note: 'Nice work! Fill in the appointment details below' },
+  { value: 'No Answer',          color: '#94A3B8', dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.35)', note: 'No one picked up — try again later or set a follow-up date' },
+  { value: 'Not Interested',     color: '#EF4444', dim: 'rgba(239,68,68,0.10)',   border: 'rgba(239,68,68,0.35)',  note: 'Lead declined — removed from your active list' },
+  { value: 'Follow-Up',          color: '#F59E0B', dim: 'rgba(245,158,11,0.10)',  border: 'rgba(245,158,11,0.35)', note: 'Lead stays in your list — pick a date below to come back to this one' },
 ]
 
 // Statuses that count as a completed dial — logged to the calls table for stats

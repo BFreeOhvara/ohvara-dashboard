@@ -15,6 +15,16 @@ import { KPICard } from '../../components/ui/KPICard'
 
 const STATUS_FILTERS = ['New', 'Appointment Booked', 'Follow-Up', 'No Answer', 'Not Interested', 'All']
 
+// Tab underline/label color per status — mirrors Badge.jsx STATUS_STYLES colors.
+const TAB_COLORS = {
+  'New':                'var(--text-secondary)',
+  'Appointment Booked': 'var(--success)',
+  'Follow-Up':          'var(--warning)',
+  'No Answer':          '#94A3B8',
+  'Not Interested':     'var(--danger)',
+  'All':                'var(--accent)',
+}
+
 // sessionStorage keys — preserve view state across tab switches
 const SS_FILTER = 'ohvara_myleads_filter'
 const SS_SCROLL = 'ohvara_myleads_scroll'
@@ -453,6 +463,7 @@ export default function MyLeads() {
         {STATUS_FILTERS.map(f => {
           const count = f !== 'All' && leads ? leads.filter(l => l.status === f).length : null
           const isActive = activeFilter === f
+          const tabColor = TAB_COLORS[f] || 'var(--accent)'
           return (
             <button
               key={f}
@@ -462,9 +473,9 @@ export default function MyLeads() {
                 padding: '0 12px',
                 background: 'transparent',
                 border: 'none',
-                borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent',
+                borderBottom: isActive ? `2px solid ${tabColor}` : '2px solid transparent',
                 marginBottom: -0.5,
-                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                color: isActive ? tabColor : 'var(--text-secondary)',
                 fontSize: 13,
                 cursor: 'pointer',
                 fontFamily: 'var(--font-sans)',
@@ -480,7 +491,7 @@ export default function MyLeads() {
                 <span style={{
                   fontSize: 10,
                   background: 'var(--bg-elevated)',
-                  color: isActive ? 'var(--accent)' : 'var(--text-dim)',
+                  color: isActive ? tabColor : 'var(--text-dim)',
                   padding: '1px 5px',
                   borderRadius: 3,
                   fontFamily: 'var(--font-mono)',
