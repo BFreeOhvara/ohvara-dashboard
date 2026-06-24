@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { Phone, RefreshCw, PhoneCall, Target, BarChart2, Lock, Check, GraduationCap, AlarmClock, X } from 'lucide-react'
+import { Phone, PhoneCall, Target, BarChart2, Lock, Check, GraduationCap, AlarmClock, X } from 'lucide-react'
 import { useMyLeads } from '../../hooks/useLeads'
 import { useTodayCallStats } from '../../hooks/useProfiles'
 import { useAuth } from '../../hooks/useAuth'
@@ -11,7 +11,6 @@ import {
 } from '../../hooks/useTraining'
 import { CallModal } from '../../components/rep/CallModal'
 import { Badge } from '../../components/ui/Badge'
-import { Button } from '../../components/ui/Button'
 import { KPICard } from '../../components/ui/KPICard'
 
 const STATUS_FILTERS = ['New', 'Appointment Booked', 'Follow-Up', 'No Answer', 'Not Interested', 'All']
@@ -46,9 +45,9 @@ function formatResetCountdown(nowMs) {
   ))
   if (next.getTime() <= nowMs) next.setUTCDate(next.getUTCDate() + 1)
   const totalMinutes = Math.floor((next.getTime() - nowMs) / 60000)
-  if (totalMinutes < 1) return 'Resetting soon'
-  if (totalMinutes < 60) return `Resets in ${totalMinutes}m`
-  return `Resets in ${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`
+  if (totalMinutes < 1) return 'Leads refreshing'
+  if (totalMinutes < 60) return `Leads refresh ${totalMinutes}m`
+  return `Leads refresh ${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`
 }
 
 // Count of the rep's leads with status Follow-Up whose follow_up_at lands on
@@ -284,7 +283,7 @@ function TrainingGate({ progress }) {
 
 export default function MyLeads() {
   const { profile } = useAuth()
-  const { data: leads, isLoading, refetch } = useMyLeads()
+  const { data: leads, isLoading } = useMyLeads()
   const { data: callStats } = useTodayCallStats(profile?.id)
   const { data: training, isLoading: trainingLoading } = useTrainingProgress()
   // Filter + scroll position survive tab switches via sessionStorage
@@ -376,10 +375,6 @@ export default function MyLeads() {
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
             {resetCountdown}
           </span>
-          <Button variant="secondary" size="sm" onClick={() => refetch()}>
-            <RefreshCw size={12} />
-            Refresh
-          </Button>
         </div>
       </div>
 

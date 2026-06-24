@@ -14,10 +14,10 @@ const NAV = {
   rep: [
     { to: '/rep',             label: 'My Leads',       icon: Phone },
     { to: '/rep/training',    label: 'Training',       icon: BookOpen },
+    { to: '/rep/calls',       label: 'My Calls',       icon: PhoneCall },
     { to: '/rep/stats',       label: 'My Stats',       icon: BarChart2 },
     { to: '/rep/goals',       label: 'My Goals',       icon: Target },
     { to: '/rep/commissions', label: 'My Commissions', icon: DollarSign },
-    { to: '/rep/calls',       label: 'My Calls',       icon: PhoneCall },
     { to: '/rep/feed',        label: 'Activity',       icon: Bell },
     { to: '/rep/messages',    label: 'Messages',       icon: MessageSquare },
   ],
@@ -47,7 +47,7 @@ const NAV = {
   ],
 }
 
-const ROLE_LABELS = { rep: 'Rep Portal', closer: 'Closer Portal', admin: 'Admin', client: 'Client Portal' }
+const ROLE_LABELS = { rep: 'Setter Portal', closer: 'Closer Portal', admin: 'Admin', client: 'Client Portal' }
 
 export function Sidebar() {
   const { profile, signOut } = useAuth()

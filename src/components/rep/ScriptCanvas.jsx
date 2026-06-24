@@ -235,7 +235,7 @@ function SayNode({ data }) {
     <div style={shell(data, data.accent)}>
       <Handles />
       <Tag color={data.accent}>{data.sub ? 'Then say' : 'Say'}</Tag>
-      <p style={{ fontSize: 11.5, fontStyle: 'italic', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+      <p style={{ fontSize: 11.5, fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>
         {unquote(data.text)}
       </p>
     </div>
@@ -248,7 +248,7 @@ function ActionNode({ data }) {
       <Handles />
       <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
         <span style={{ fontSize: 11, color: 'var(--warning)', fontWeight: 700, marginTop: 1, flexShrink: 0 }}>▸</span>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.45 }}>{data.text}</span>
+        <span style={{ fontSize: 11, color: 'var(--text-primary)', lineHeight: 1.45 }}>{data.text}</span>
       </div>
     </div>
   )
@@ -286,7 +286,7 @@ function ForkNode({ data }) {
       <Handles />
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
         <span style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--accent)', background: 'rgba(108,99,255,0.20)', borderRadius: 3, padding: '1px 5px', flexShrink: 0, marginTop: 1, whiteSpace: 'nowrap' }}>if/else</span>
-        <span style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.45 }}>{data.q}</span>
+        <span style={{ fontSize: 11, color: 'var(--text-primary)', lineHeight: 1.45 }}>{data.q}</span>
       </div>
     </div>
   )
@@ -296,7 +296,15 @@ function OpenerNode({ data }) {
   return (
     <div style={shell(data, data.accent, { width: 300, borderLeft: `3px solid ${data.accent}` })}>
       <Handles />
-      <Tag color={data.accent}>Opener · same every call</Tag>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+        <Tag color={data.accent} style={{ margin: 0 }}>Opener · same every call</Tag>
+        <span style={{
+          fontSize: 8, fontWeight: 700, color: '#0E0E1A',
+          background: data.accent, borderRadius: 4,
+          padding: '2px 6px', textTransform: 'uppercase', letterSpacing: '0.07em',
+          flexShrink: 0,
+        }}>▶ Start here</span>
+      </div>
       <p style={{ fontSize: 13, fontStyle: 'italic', fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>
         {unquote(data.text)}
       </p>
@@ -324,7 +332,7 @@ function CloseNode({ data }) {
     <div style={shell(data, c.color, { width: 300, background: 'rgba(108,99,255,0.10)', borderTop: `3px solid ${c.color}` })}>
       <Handles />
       <Tag color={c.color}>★ Close · all booking paths end here</Tag>
-      <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>{c.goal}</p>
+      <p style={{ fontSize: 11.5, color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>{c.goal}</p>
     </div>
   )
 }
