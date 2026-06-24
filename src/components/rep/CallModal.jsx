@@ -9,6 +9,7 @@ import { Badge } from '../ui/Badge'
 import { buildScriptFlow } from '../../lib/discoveryScript'
 import { ScriptWalk } from './ScriptWalk'
 import { inferTimezoneFromState, zonedTimeToUtcIso, timezoneLabel, utcIsoToZonedDatetimeLocal } from '../../lib/timezones'
+import { useActiveCall } from '../../contexts/ActiveCallContext'
 
 // The only statuses a rep can set from the call modal — color coordinated.
 // `note` tells the rep exactly where the lead routes (pipeline behavior).
@@ -213,6 +214,7 @@ function Field({ icon: Icon, label, value, mono = false }) {
 export function CallModal({ lead, onClose }) {
   const qc = useQueryClient()
   const { profile } = useAuth()
+  const { setIsInCall } = useActiveCall()
 
   // The discovery script is the ONE universal decision tree with this lead's
   // real details filled in — derived deterministically (no AI), walked one
@@ -312,6 +314,9 @@ export function CallModal({ lead, onClose }) {
       callRef.current = null
     }
   }, [lead.id])
+
+  // Expose in-call state to the toast system so toasts are suppressed mid-call.
+  useEffect(() => { setIsInCall(callState === 'in-call') }, [callState, setIsInCall])
 
   // In-call timer — ticks only while connected.
   useEffect(() => {
