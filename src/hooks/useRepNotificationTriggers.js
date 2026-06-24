@@ -2,6 +2,118 @@ import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
+// ── Message reply notifier ───────────────────────────────────────────────────
+// Subscribes to realtime UPDATEs on the messages table for this rep's sent
+// messages. When a reply arrives (reply_body transitions null → set), the DB
+// trigger (migration 043 messages_reply_notify) has already inserted a
+// notifications row — we just invalidate the cache to surface it immediately
+// rather than waiting for the next polling cycle.
+export function useMessageReplyNotifier(repId) {
+  const qc = useQueryClient()
+
+  useEffect(() => {
+    if (!repId) return
+    const channel = supabase
+      .channel(`msg-replies-${repId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `sender_id=eq.${repId}` },
+        (payload) => {
+          if (payload.new?.reply_body && !payload.old?.reply_body) {
+            qc.invalidateQueries({ queryKey: ['rep-notifications', repId] })
+            qc.invalidateQueries({ queryKey: ['rep-notifications-unread', repId] })
+          }
+        })
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [repId, qc])
+}
+
+// ── Follow-up 5-minute polling notifier ─────────────────────────────────────
+// Polls every 60s for leads with follow_up_at within the next ~5 min.
+// Fires a one-time "Follow-up in 5 min" notification per lead per session.
+// Separate from useFollowUpNotifier (which runs on the leads list at 60/10/1m).
+export function useFollowUp5MinNotifier(repId) {
+  const qc = useQueryClient()
+  const notifiedThisSession = useRef(new Set())
+
+  useEffect(() => {
+    if (!repId) return
+
+    async function check() {
+      const now = new Date()
+      const soon = new Date(now.getTime() + 6 * 60 * 1000)
+      const { data: leads } = await supabase
+        .from('leads')
+        .select('id, business_name, follow_up_at')
+        .eq('assigned_rep_id', repId)
+        .eq('status', 'Follow-Up')
+        .gte('follow_up_at', now.toISOString())
+        .lte('follow_up_at', soon.toISOString())
+      if (!leads?.length) return
+      const toNotify = leads.filter(l => {
+        const key = `${l.id}:${l.follow_up_at}`
+        if (notifiedThisSession.current.has(key)) return false
+        notifiedThisSession.current.add(key)
+        return true
+      })
+      if (!toNotify.length) return
+      await Promise.all(
+        toNotify.map(l => supabase.from('notifications').insert({
+          profile_id: repId,
+          type: 'follow_up',
+          message: `Follow-up in 5 min: ${l.business_name}`,
+          data: { lead_id: l.id, business_name: l.business_name, threshold: 5 },
+        }))
+      )
+      qc.invalidateQueries({ queryKey: ['rep-notifications', repId] })
+      qc.invalidateQueries({ queryKey: ['rep-notifications-unread', repId] })
+    }
+
+    check()
+    const timer = setInterval(check, 60_000)
+    return () => clearInterval(timer)
+  }, [repId, qc])
+}
+
+// ── Deal closed notifier ─────────────────────────────────────────────────────
+// Subscribes to realtime INSERTs on commission_payouts for this rep.
+// Fetches the payout with joins (realtime payload has no joined data), then
+// inserts a "Deal closed!" notification with the dollar amount and business name.
+export function useDealClosedNotifier(repId) {
+  const qc = useQueryClient()
+
+  useEffect(() => {
+    if (!repId) return
+    const channel = supabase
+      .channel(`deal-closed-${repId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'commission_payouts', filter: `rep_profile_id=eq.${repId}` },
+        async (payload) => {
+          const raw = payload.new
+          let biz = 'a new deal'
+          let amountCents = raw.amount_cents
+          const { data } = await supabase
+            .from('commission_payouts')
+            .select('amount_cents, appointment:appointments!appointment_id ( lead:leads ( business_name ) )')
+            .eq('id', raw.id)
+            .single()
+          if (data) {
+            amountCents = data.amount_cents
+            if (data.appointment?.lead?.business_name) biz = data.appointment.lead.business_name
+          }
+          const cutDollars = Math.round(amountCents / 100).toLocaleString()
+          await supabase.from('notifications').insert({
+            profile_id: repId,
+            type: 'deal_closed',
+            message: `Deal closed! You'll earn $${cutDollars} from ${biz}`,
+            data: { payout_id: raw.id, amount_cents: amountCents },
+          })
+          qc.invalidateQueries({ queryKey: ['rep-notifications', repId] })
+          qc.invalidateQueries({ queryKey: ['rep-notifications-unread', repId] })
+        })
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [repId, qc])
+}
+
 // Badge definitions — must stay in sync with BADGE_GROUPS in MyGoals.jsx.
 // Conditions are deterministic from badgeCtx = { month, commission, activity }.
 const ALL_BADGES = [
@@ -80,7 +192,7 @@ export function useBadgeNotifier(repId, badgeCtx) {
       qc.invalidateQueries({ queryKey: ['rep-notifications', repId] })
       qc.invalidateQueries({ queryKey: ['rep-notifications-unread', repId] })
     })
-  }, [repId, badgeCtx?.month, badgeCtx?.activity, badgeCtx?.commission])
+  }, [repId, badgeCtx, qc])
 }
 
 // ── Follow-up notifier ───────────────────────────────────────────────────────
@@ -137,5 +249,5 @@ export function useFollowUpNotifier(repId, leads = [], existingNotifications = [
       qc.invalidateQueries({ queryKey: ['rep-notifications', repId] })
       qc.invalidateQueries({ queryKey: ['rep-notifications-unread', repId] })
     })
-  }, [repId, leads, existingNotifications])
+  }, [repId, leads, existingNotifications, qc])
 }

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Bell, CheckCheck, MessageSquare, Award, Clock, DollarSign } from 'lucide-react'
 import { useRepNotifications, useRepUnreadCount, useRepMarkNotificationRead, useRepMarkAllRead } from '../../hooks/useNotifications'
-import { useFollowUpNotifier } from '../../hooks/useRepNotificationTriggers'
+import { useFollowUpNotifier, useMessageReplyNotifier, useFollowUp5MinNotifier, useDealClosedNotifier } from '../../hooks/useRepNotificationTriggers'
 import { useMyLeads } from '../../hooks/useLeads'
 
 const TYPE_STYLES = {
@@ -38,6 +38,9 @@ export function RepNotificationBell({ profileId }) {
   // Follow-up trigger — runs silently in the background
   const { data: leads = [] } = useMyLeads()
   useFollowUpNotifier(profileId, leads, notifications)
+  useMessageReplyNotifier(profileId)
+  useFollowUp5MinNotifier(profileId)
+  useDealClosedNotifier(profileId)
 
   // The sidebar (`<aside>`) is `position: fixed` with `overflow: hidden` for
   // its own scroll containment — any dropdown rendered as its DOM descendant
