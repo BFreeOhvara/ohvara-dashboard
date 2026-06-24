@@ -1,20 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
   ReactFlow, ReactFlowProvider, Background, Controls, MiniMap,
-  Handle, Position, MarkerType, useReactFlow,
+  Handle, Position, MarkerType,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Play, X as XIcon, RotateCcw, CheckCircle2, CalendarCheck } from 'lucide-react'
+import { X as XIcon } from 'lucide-react'
+import { ScriptWalk } from './ScriptWalk'
 
 // ── ScriptCanvas ─────────────────────────────────────────────────────────────
-// Interactive zoomable map of the call script (Prompt 48). Replaces the static
-// ScriptFlowchart + the separate Practice tab with a single React Flow canvas:
-// every step is a node, every connection a drawn edge, back-references loop
-// back as real edges, and click-through practice runs ON the canvas.
-//
-// Pure derivation of buildScriptFlow() — no duplicated script content. The
-// layout engine (measureSteps + placeSteps) walks the same step tree the
-// flowchart/walk use and assigns the x/y positions React Flow needs.
+// Interactive zoomable map of the call script. Prompt 61 changes:
+//   - Full page height (height: 100% in the canvas container)
+//   - No node dragging (nodesDraggable={false})
+//   - Clicking any node replaces the canvas with a ScriptWalk practice view
+//     starting from that node's section; Exit returns to the canvas.
 
 const NODE_W = 240
 const COL = NODE_W + 70   // horizontal column unit
@@ -56,16 +54,14 @@ const routeLabel = (flow, target) => {
   return t?.kind === 'close' ? '→ Close' : `→ ${t?.title || target}`
 }
 
-// Build React Flow nodes + edges + an adjacency map (for practice navigation)
-// from the derived flow. Deterministic — same flow always lays out identically.
+// Build React Flow nodes + edges from the derived flow. sectionId is stored
+// in each node's data so clicking a node can start ScriptWalk at that section.
 function buildGraph(flow) {
   const nodes = []
   const edges = []
   let counter = 0
   const nextId = () => `n${counter++}`
 
-  // All edges are now forward (Prompt 53, Change 1 dropped the looping
-  // back-ref edges — branch routes are inlined instead).
   function pushEdge(srcTail, targetId, label) {
     edges.push({
       id: `e${counter++}`,
@@ -82,15 +78,14 @@ function buildGraph(flow) {
     })
   }
 
-  function makeNode(id, type, data, x, y) {
-    nodes.push({ id, type, position: { x, y }, data: { dim: false, active: false, pickable: false, ...data } })
+  function makeNode(id, type, data, x, y, sectionId) {
+    nodes.push({ id, type, position: { x, y }, data: { dim: false, active: false, pickable: false, sectionId, ...data } })
     return id
   }
 
-  // Lay out a sequence of steps within a horizontal band. incomingTails carry
-  // an optional per-tail label (used when an empty fork option must label the
-  // edge into the next step). Returns { tails, endY }.
-  function placeSteps(steps, bandLeftPx, bandCols, startY, incomingTails, incomingLabel, accent, visited = new Set()) {
+  // Lay out a sequence of steps within a horizontal band. sectionId tracks
+  // which section owns these steps so nodes can route ScriptWalk on click.
+  function placeSteps(steps, bandLeftPx, bandCols, startY, incomingTails, incomingLabel, accent, visited = new Set(), sectionId = 'opener') {
     let tails = incomingTails
     let label = incomingLabel
     let y = startY
@@ -100,9 +95,10 @@ function buildGraph(flow) {
       if (step.type === 'route') {
         const targetSection = flow.byId[step.target]
         if (targetSection?.kind === 'branch' && !visited.has(step.target)) {
-          // Inline the target branch's steps right here so every path is
-          // self-contained (Prompt 53, Change 1) — no looping back-ref edge.
-          const r = placeSteps(targetSection.steps, bandLeftPx, bandCols, y, tails, label, accent, new Set([...visited, step.target]))
+          // Inline the target branch's steps — no looping back-ref edge.
+          // Inlined nodes carry the target branch's sectionId so clicking
+          // them starts practice at that branch (Prompt 53, Change 1).
+          const r = placeSteps(targetSection.steps, bandLeftPx, bandCols, y, tails, label, accent, new Set([...visited, step.target]), step.target)
           tails = r.tails
           y = r.endY
           label = null
@@ -112,13 +108,13 @@ function buildGraph(flow) {
         const tgt = headerNodeId(step.target)
         for (const t of tails) pushEdge(t, tgt, label ?? routeLabel(flow, step.target))
         label = null
-        tails = []          // a route jumps away — nothing continues in this chain
+        tails = []
         continue
       }
 
       if (step.type === 'fork') {
         const id = nextId()
-        makeNode(id, 'fork', { q: step.q, accent }, centerX, y)
+        makeNode(id, 'fork', { q: step.q, accent }, centerX, y, sectionId)
         for (const t of tails) pushEdge(t, id, label)
         label = null
 
@@ -130,11 +126,9 @@ function buildGraph(flow) {
           const optCols = Math.max(1, measureSteps(opt.steps, flow, visited))
           const optLeftPx = bandLeftPx + optLeftCols * COL
           if (opt.steps.length === 0) {
-            // empty option (e.g. close's "IF NO:") — the fork is the tail and
-            // this option's label rides the edge into the next post-fork step.
             optTails.push({ id, label: opt.label })
           } else {
-            const r = placeSteps(opt.steps, optLeftPx, optCols, optY, [{ id }], opt.label, accent, visited)
+            const r = placeSteps(opt.steps, optLeftPx, optCols, optY, [{ id }], opt.label, accent, visited, sectionId)
             for (const tt of r.tails) optTails.push(tt)
             maxEndY = Math.max(maxEndY, r.endY)
           }
@@ -147,7 +141,7 @@ function buildGraph(flow) {
 
       if (step.type === 'data_collect') {
         const id = nextId()
-        makeNode(id, 'dataCollect', { fields: step.fields, label: step.label, hint: step.hint, accent }, centerX, y)
+        makeNode(id, 'dataCollect', { fields: step.fields, label: step.label, hint: step.hint, accent }, centerX, y, sectionId)
         for (const t of tails) pushEdge(t, id, label)
         label = null
         tails = [{ id }]
@@ -157,7 +151,7 @@ function buildGraph(flow) {
 
       // say / action — a single node
       const id = nextId()
-      makeNode(id, step.type, { text: step.text, sub: step.sub, accent }, centerX, y)
+      makeNode(id, step.type, { text: step.text, sub: step.sub, accent }, centerX, y, sectionId)
       for (const t of tails) pushEdge(t, id, label)
       label = null
       tails = [{ id }]
@@ -175,9 +169,9 @@ function buildGraph(flow) {
     const bandLeftPx = leftCols * COL
     const hx = bandLeftPx + (cols * COL) / 2 - NODE_W / 2
     const hid = headerNodeId(b.id)
-    makeNode(hid, 'branchHeader', { branch: b }, hx, BRANCH_GAP_Y)
+    makeNode(hid, 'branchHeader', { branch: b }, hx, BRANCH_GAP_Y, b.id)
     pushEdge({ id: 'opener' }, hid, b.short)
-    const r = placeSteps(b.steps, bandLeftPx, cols, BRANCH_GAP_Y + ROW, [{ id: hid }], null, b.color)
+    const r = placeSteps(b.steps, bandLeftPx, cols, BRANCH_GAP_Y + ROW, [{ id: hid }], null, b.color, new Set(), b.id)
     maxBranchEndY = Math.max(maxBranchEndY, r.endY)
     leftCols += cols
   }
@@ -185,27 +179,22 @@ function buildGraph(flow) {
 
   // Opener centered over the full branch row.
   const openerLine = flow.opener.steps[0]?.text || flow.opener.goal
-  makeNode('opener', 'opener', { text: openerLine, accent: flow.opener.color }, totalW / 2 - NODE_W / 2, 0)
+  makeNode('opener', 'opener', { text: openerLine, accent: flow.opener.color }, totalW / 2 - NODE_W / 2, 0, 'opener')
 
   // Close centered below the tallest branch, with its own step tree beneath.
   const closeCols = Math.max(1, measureSteps(flow.close.steps, flow))
   const closeY = maxBranchEndY + CLOSE_GAP_Y
   const closeBandLeft = totalW / 2 - (closeCols * COL) / 2
-  makeNode('close-header', 'close', { close: flow.close }, totalW / 2 - NODE_W / 2, closeY)
-  placeSteps(flow.close.steps, closeBandLeft, closeCols, closeY + ROW, [{ id: 'close-header' }], null, flow.close.color)
+  makeNode('close-header', 'close', { close: flow.close }, totalW / 2 - NODE_W / 2, closeY, 'close')
+  placeSteps(flow.close.steps, closeBandLeft, closeCols, closeY + ROW, [{ id: 'close-header' }], null, flow.close.color, new Set(), 'close')
 
-  const outgoing = {}
-  for (const e of edges) (outgoing[e.source] ||= []).push(e.target)
-
-  return { nodes, edges, outgoing }
+  return { nodes, edges }
 }
 
 // ── Node shells ───────────────────────────────────────────────────────────────
 const HANDLE = { width: 7, height: 7, opacity: 0, border: 'none', background: 'transparent', minWidth: 0, minHeight: 0 }
 
 function Handles() {
-  // Top target / bottom source only — all edges flow downward now that
-  // branch routes are inlined (Prompt 53, Change 1 removed the side handles).
   return (
     <>
       <Handle type="target" position={Position.Top} style={HANDLE} />
@@ -221,7 +210,7 @@ function shell({ dim, active, pickable }, accent, extra) {
     border: `1px solid ${active || pickable ? accent : 'var(--border)'}`,
     boxShadow: active ? `0 0 0 2px ${accent}, 0 8px 28px rgba(0,0,0,0.45)` : pickable ? `0 0 0 1px ${accent}` : 'none',
     opacity: dim ? 0.2 : 1,
-    cursor: active || pickable ? 'pointer' : 'default',
+    cursor: 'pointer',
     transition: 'opacity 0.2s, box-shadow 0.2s, border-color 0.2s',
     ...extra,
   }
@@ -344,113 +333,22 @@ const nodeTypes = {
   close: CloseNode,
 }
 
-// ── Canvas ────────────────────────────────────────────────────────────────────
-function CanvasInner({ flow }) {
+// ── CanvasInner ───────────────────────────────────────────────────────────────
+// Renders the React Flow canvas. Clicking any node calls onPractice(sectionId)
+// so the parent can swap to PracticeView. Nodes are not draggable (Prompt 61).
+function CanvasInner({ flow, onPractice }) {
   const graph = useMemo(() => buildGraph(flow), [flow])
-  const baseById = useMemo(() => {
-    const m = {}
-    for (const n of graph.nodes) m[n.id] = n
-    return m
-  }, [graph])
-
-  const [positions, setPositions] = useState({})   // drag overrides, keyed by node id
-  const [practice, setPractice] = useState(false)
-  const [activeId, setActiveId] = useState(null)
-  const [history, setHistory] = useState([])
-  const rf = useReactFlow()
-
-  const pickable = useMemo(() => {
-    if (!practice || !activeId) return new Set()
-    const outs = graph.outgoing[activeId] || []
-    return outs.length > 1 ? new Set(outs) : new Set()
-  }, [practice, activeId, graph])
-
-  const atTerminal = practice && activeId && (graph.outgoing[activeId] || []).length === 0
-
-  // Rendered nodes are derived (not stored) so practice highlight/dim flags
-  // never need a setState-in-effect — they recompute from practice/activeId,
-  // while drag positions persist via the `positions` override map.
-  const nodes = useMemo(() => graph.nodes.map(n => {
-    const pos = positions[n.id] || n.position
-    if (!practice) return positions[n.id] ? { ...n, position: pos } : n
-    const active = n.id === activeId
-    const pick = pickable.has(n.id)
-    return { ...n, position: pos, data: { ...n.data, active, pickable: pick, dim: !active && !pick } }
-  }), [graph, positions, practice, activeId, pickable])
-
-  // Frame the focus: a chooser frames its options too; otherwise center the
-  // node. Imperative React Flow calls only — no React state set here.
-  useEffect(() => {
-    if (!practice || !activeId) return
-    const ids = pickable.size > 0 ? [activeId, ...pickable] : [activeId]
-    const present = ids.filter(id => baseById[id])
-    if (pickable.size > 0) {
-      rf.fitView({ nodes: present.map(id => ({ id })), duration: 450, padding: 0.35, maxZoom: 1 })
-    } else {
-      const n = baseById[activeId]
-      if (n) rf.setCenter(n.position.x + NODE_W / 2, n.position.y + 50, { zoom: 1, duration: 450 })
-    }
-  }, [activeId, practice, pickable, baseById, rf])
-
-  const onNodesChange = useCallback((changes) => {
-    // Persist only drag position changes; ignore selection/dimension churn.
-    setPositions(prev => {
-      let next = prev
-      for (const c of changes) {
-        if (c.type === 'position' && c.position) {
-          if (next === prev) next = { ...prev }
-          next[c.id] = c.position
-        }
-      }
-      return next
-    })
-  }, [])
-
-  function startPractice() {
-    setPractice(true)
-    setActiveId('opener')
-    setHistory([])
-  }
-  function exitPractice() {
-    setPractice(false)
-    setActiveId(null)
-    setHistory([])
-    rf.fitView({ duration: 450, padding: 0.15 })
-  }
-  function restart() {
-    setHistory(h => (activeId ? [...h, activeId] : h))
-    setActiveId('opener')
-  }
-  function back() {
-    setHistory(h => {
-      if (!h.length) return h
-      setActiveId(h[h.length - 1])
-      return h.slice(0, -1)
-    })
-  }
 
   const onNodeClick = useCallback((_evt, node) => {
-    if (!practice) return
-    const outs = graph.outgoing[node.id] || []
-    if (node.id === activeId) {
-      if (outs.length === 1) {
-        setHistory(h => [...h, node.id])
-        setActiveId(outs[0])
-      }
-      // chooser (outs>1): wait for a target pick; terminal (0): no-op
-    } else if (pickable.has(node.id)) {
-      setHistory(h => [...h, activeId])
-      setActiveId(node.id)
-    }
-  }, [practice, activeId, pickable, graph])
+    onPractice(node.data.sectionId || 'opener')
+  }, [onPractice])
 
   return (
-    <div style={{ position: 'relative', height: 640, borderRadius: 14, overflow: 'hidden', border: '0.5px solid var(--border)', background: '#0A0A12' }}>
+    <div style={{ position: 'relative', height: '100%', borderRadius: 14, overflow: 'hidden', border: '0.5px solid var(--border)', background: '#0A0A12' }}>
       <ReactFlow
-        nodes={nodes}
+        nodes={graph.nodes}
         edges={graph.edges}
         nodeTypes={nodeTypes}
-        onNodesChange={onNodesChange}
         onNodeClick={onNodeClick}
         colorMode="dark"
         fitView
@@ -460,7 +358,7 @@ function CanvasInner({ flow }) {
         proOptions={{ hideAttribution: true }}
         nodesConnectable={false}
         edgesFocusable={false}
-        nodesDraggable
+        nodesDraggable={false}
       >
         <Background color="#1C1C2A" gap={22} size={1} />
         <Controls showInteractive={false} />
@@ -471,70 +369,56 @@ function CanvasInner({ flow }) {
           nodeColor={n => (n.type === 'branchHeader' || n.type === 'fork' ? '#6C63FF' : '#2A2A3A')}
         />
       </ReactFlow>
-
-      {/* Practice control — floating top-right */}
-      <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 5, display: 'flex', gap: 8 }}>
-        {!practice ? (
-          <button
-            onClick={startPractice}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--accent)', border: 'none', borderRadius: 9, cursor: 'pointer', color: 'white', fontSize: 12.5, fontWeight: 600, boxShadow: '0 6px 20px rgba(108,99,255,0.4)' }}
-          >
-            <Play size={13} fill="white" /> Start Practice
-          </button>
-        ) : (
-          <>
-            <button
-              onClick={back}
-              disabled={!history.length}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', background: '#13131F', border: '0.5px solid var(--border)', borderRadius: 9, cursor: history.length ? 'pointer' : 'not-allowed', color: history.length ? 'var(--text-secondary)' : 'var(--text-muted)', fontSize: 12, fontWeight: 500, opacity: history.length ? 1 : 0.6 }}
-            >
-              Back
-            </button>
-            <button
-              onClick={restart}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', background: '#13131F', border: '0.5px solid var(--border)', borderRadius: 9, cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 500 }}
-            >
-              <RotateCcw size={12} /> Restart
-            </button>
-            <button
-              onClick={exitPractice}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', background: '#13131F', border: '0.5px solid var(--border)', borderRadius: 9, cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 500 }}
-            >
-              <XIcon size={13} /> Exit
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Practice hint / terminal banner — floating bottom-center */}
-      {practice && (
-        <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 5, maxWidth: 460 }}>
-          {atTerminal ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 16px', background: '#13131F', border: `0.5px solid ${baseById[activeId]?.type === 'close' ? 'var(--success)' : 'var(--border)'}`, borderRadius: 10, boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
-              {baseById[activeId]?.type === 'close'
-                ? <CalendarCheck size={16} color="var(--success)" />
-                : <CheckCircle2 size={16} color="var(--accent)" />}
-              <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>
-                End of this path — <button onClick={restart} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontWeight: 600, fontSize: 12.5, padding: 0 }}>start over</button> or exit.
-              </span>
-            </div>
-          ) : (
-            <div style={{ padding: '8px 14px', background: '#13131F', border: '0.5px solid var(--border)', borderRadius: 10, boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                {pickable.size > 0 ? 'Tap the prospect’s response to continue' : 'Tap the highlighted card to advance'}
-              </span>
-            </div>
-          )}
+      <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 5 }}>
+        <div style={{ padding: '8px 14px', background: '#13131F', border: '0.5px solid var(--border)', borderRadius: 10, boxShadow: '0 10px 30px rgba(0,0,0,0.5)', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Click any node to practice from that step</span>
         </div>
-      )}
+      </div>
     </div>
   )
 }
 
+// ── PracticeView ──────────────────────────────────────────────────────────────
+// Full-height ScriptWalk practice experience starting from a specific section.
+// Exit button returns to the canvas.
+function PracticeView({ flow, startSectionId, onExit }) {
+  return (
+    <div style={{ position: 'relative', height: '100%', borderRadius: 14, overflow: 'hidden', border: '0.5px solid var(--border)', background: '#0A0A12' }}>
+      <ScriptWalk flow={flow} mode="practice" startSectionId={startSectionId} />
+      <button
+        onClick={onExit}
+        style={{
+          position: 'absolute', top: 12, right: 12, zIndex: 5,
+          display: 'flex', alignItems: 'center', gap: 5,
+          padding: '8px 12px', background: '#13131F',
+          border: '0.5px solid var(--border)', borderRadius: 9,
+          cursor: 'pointer', color: 'var(--text-secondary)',
+          fontSize: 12, fontWeight: 500,
+        }}
+      >
+        <XIcon size={13} /> Exit practice
+      </button>
+    </div>
+  )
+}
+
+// ── ScriptCanvas ──────────────────────────────────────────────────────────────
 export function ScriptCanvas({ flow }) {
+  const [practiceSectionId, setPracticeSectionId] = useState(null)
+
+  if (practiceSectionId !== null) {
+    return (
+      <PracticeView
+        flow={flow}
+        startSectionId={practiceSectionId}
+        onExit={() => setPracticeSectionId(null)}
+      />
+    )
+  }
+
   return (
     <ReactFlowProvider>
-      <CanvasInner flow={flow} />
+      <CanvasInner flow={flow} onPractice={setPracticeSectionId} />
     </ReactFlowProvider>
   )
 }

@@ -14,11 +14,12 @@ import { supabase } from '../../lib/supabase'
 // step past the fork in the parent. Routes (→ CLOSE / run BRANCH A) hard-jump to
 // another block. An undo history backs the Back button.
 
-export function ScriptWalk({ flow, mode = 'live', leadId }) {
-  const start = useMemo(
-    () => ({ sectionId: 'opener', stack: [{ steps: flow.opener.steps, index: 0 }] }),
-    [flow]
-  )
+export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId }) {
+  const start = useMemo(() => {
+    const sid = (startSectionId && flow.byId[startSectionId]) ? startSectionId : 'opener'
+    const sec = flow.byId[sid]
+    return { sectionId: sid, stack: [{ steps: sec.steps, index: 0 }] }
+  }, [flow, startSectionId])
   const [state, setState] = useState(start)
   const [history, setHistory] = useState([])
 

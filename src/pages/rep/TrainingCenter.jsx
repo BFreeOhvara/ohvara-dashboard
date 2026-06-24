@@ -554,15 +554,16 @@ function DiscoveryScript() {
   )
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-      <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16, maxWidth: 720 }}>
-        This is the call script — a decision tree every rep follows. Drag to pan, scroll to zoom,
-        and explore the whole map. Hit <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Start Practice</strong> to
-        walk it one step at a time, exactly like a live call. The Call Now button on each lead runs
-        this same walk, personalized to that business.
+    <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 160px)' }}>
+      <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16, maxWidth: 720, flexShrink: 0 }}>
+        This is the call script — a decision tree every rep follows. Scroll to zoom, drag to pan.{' '}
+        <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Click any node</strong> to
+        practice from that step, one line at a time. The Call Now button on each lead runs this same
+        walk, personalized to that business.
       </p>
-
-      <ScriptCanvas flow={flow} />
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <ScriptCanvas flow={flow} />
+      </div>
     </div>
   )
 }
