@@ -70,7 +70,8 @@ Deno.serve(async (req) => {
     dealTotal = Number(lead?.custom_monthly_price) || 0
   }
 
-  const amountCents = Math.round(dealTotal * 100 * COMMISSION_RATE)
+  const dealValueCents = Math.round(dealTotal * 100)
+  const amountCents = Math.round(dealValueCents * COMMISSION_RATE)
   if (amountCents <= 0) {
     return json({ error: 'Deal total is zero — no payout created', skipped: true }, 200)
   }
@@ -81,6 +82,7 @@ Deno.serve(async (req) => {
       rep_profile_id: appt.rep_id,
       appointment_id: appt.id,
       amount_cents: amountCents,
+      deal_value_cents: dealValueCents,
       status: 'pending',
     })
     .select('id')

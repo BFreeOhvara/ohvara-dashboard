@@ -1,5 +1,5 @@
-import { useMemo, useState, useEffect } from 'react'
-import { DollarSign, Briefcase, TrendingUp, Landmark, CheckCircle2, ExternalLink, Loader2 } from 'lucide-react'
+import { useMemo, useEffect } from 'react'
+import { DollarSign, Briefcase, TrendingUp, Landmark, CheckCircle2, Loader2 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
 import { useMyCommission } from '../../hooks/useProfiles'
@@ -28,10 +28,6 @@ function StatusChip({ status }) {
   )
 }
 
-function fmtUsd(cents) {
-  return `$${(Number(cents || 0) / 100).toFixed(2)}`
-}
-
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
@@ -50,6 +46,15 @@ function ChartTooltip({ active, payload, label }) {
 export default function MyCommissions() {
   const { profile } = useAuth()
   const { data: commission, isLoading } = useMyCommission(profile?.id)
+  const connected = !!profile?.stripe_onboarding_complete
+  const onboard = useConnectOnboard()
+
+  async function startOnboarding() {
+    try {
+      const res = await onboard.mutateAsync()
+      if (res?.url) window.location.href = res.url
+    } catch { /* error surfaced via onboard.error below */ }
+  }
 
   // Daily earned series over the last CHART_DAYS (local days)
   const daily = useMemo(() => {
@@ -91,8 +96,8 @@ export default function MyCommissions() {
         </p>
       </div>
 
-      {/* KPI row */}
-      <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+      {/* KPI row + connect-bank button (top-right, hidden once connected) */}
+      <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'flex-start' }}>
         <KPICard
           label="Total Earned"
           value={Math.floor(commission?.total ?? 0)}
@@ -115,6 +120,22 @@ export default function MyCommissions() {
           sub={thisWeek > 0 ? 'Keep it rolling' : 'Book more appointments'}
           icon={TrendingUp}
         />
+        {!connected && (
+          <button
+            onClick={startOnboarding}
+            disabled={onboard.isPending}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px',
+              background: 'var(--accent)', border: 'none', borderRadius: 8,
+              fontSize: 13, fontWeight: 500, color: 'white', marginLeft: 'auto', alignSelf: 'center',
+              cursor: onboard.isPending ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+            }}
+          >
+            {onboard.isPending
+              ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Opening…</>
+              : <><Landmark size={14} /> Connect bank</>}
+          </button>
+        )}
       </div>
 
       {/* Daily earnings chart */}
@@ -163,7 +184,7 @@ export default function MyCommissions() {
         )}
       </div>
 
-      <MyPayouts />
+      <MyPayouts connected={connected} />
     </div>
   )
 }
@@ -171,13 +192,10 @@ export default function MyCommissions() {
 // Stripe Connect bank-link + payout history. Reps connect their bank once
 // (Stripe handles KYC + 1099), then watch each closed deal's 10% move
 // pending → paid here.
-function MyPayouts() {
+function MyPayouts({ connected }) {
   const { profile } = useAuth()
-  const connected = !!profile?.stripe_onboarding_complete
   const { data: payouts } = useMyPayouts(profile?.id)
-  const onboard = useConnectOnboard()
   const checkStatus = useCheckOnboardStatus()
-  const [awaitingReturn, setAwaitingReturn] = useState(false)
 
   // When Stripe redirects back to ?onboarding=complete, confirm the account and
   // reload to a clean URL so useAuth re-fetches the (now connected) profile.
@@ -196,20 +214,6 @@ function MyPayouts() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function startOnboarding() {
-    try {
-      const res = await onboard.mutateAsync()
-      if (res?.url) {
-        window.location.href = res.url
-      }
-    } catch { /* error surfaced via onboard.error below */ }
-  }
-
-  async function refreshStatus() {
-    const res = await checkStatus.mutateAsync()
-    if (res?.complete) window.location.assign('/rep/commissions')
-  }
-
   return (
     <div className="glass" style={{ padding: '18px 20px', borderRadius: 12, marginTop: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
@@ -219,51 +223,15 @@ function MyPayouts() {
             Connect your bank once — paid commissions land in ~2 days
           </p>
         </div>
-        {connected ? (
+        {connected && (
           <span style={{
             display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500,
             color: 'var(--success)', background: 'rgba(34,197,94,0.12)', padding: '6px 12px', borderRadius: 999,
           }}>
             <CheckCircle2 size={14} /> Bank connected
           </span>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button
-              onClick={startOnboarding}
-              disabled={onboard.isPending}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px',
-                background: 'var(--accent)', border: 'none', borderRadius: 8,
-                fontSize: 13, fontWeight: 500, color: 'white',
-                cursor: onboard.isPending ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
-              }}
-            >
-              {onboard.isPending
-                ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Opening…</>
-                : <><Landmark size={14} /> Connect your bank <ExternalLink size={12} /></>}
-            </button>
-            {awaitingReturn && (
-              <button
-                onClick={refreshStatus}
-                disabled={checkStatus.isPending}
-                style={{
-                  height: 36, padding: '0 12px', background: 'var(--bg-elevated)',
-                  border: '0.5px solid var(--border)', borderRadius: 8,
-                  fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap',
-                }}
-              >
-                {checkStatus.isPending ? 'Checking…' : "I'm done — refresh"}
-              </button>
-            )}
-          </div>
         )}
       </div>
-
-      {onboard.error && (
-        <p style={{ fontSize: 12, color: 'var(--danger)', margin: '0 0 12px' }}>
-          {onboard.error.message || 'Could not start onboarding'}
-        </p>
-      )}
 
       {(payouts?.length ?? 0) === 0 ? (
         <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', margin: '8px 0' }}>
@@ -273,26 +241,23 @@ function MyPayouts() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {payouts.map(p => {
             const biz = p.appointment?.lead?.business_name || 'Closed deal'
-            const when = p.appointment?.appointment_at || p.created_at
+            const dealValueCents = p.deal_value_cents ?? (p.amount_cents * 10)
+            const dealDollars = Math.round(dealValueCents / 100).toLocaleString()
+            const cutDollars = Math.round(p.amount_cents / 100).toLocaleString()
             return (
               <div key={p.id} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
                 padding: '10px 4px', borderBottom: '0.5px solid var(--border)',
               }}>
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <p style={{ fontSize: 13, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {biz}
                   </p>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>
-                    {when ? new Date(when).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
+                    Closed ${dealDollars} · Your cut: ${cutDollars}
                   </p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
-                    {fmtUsd(p.amount_cents)}
-                  </span>
-                  <StatusChip status={p.status} />
-                </div>
+                <StatusChip status={p.status} />
               </div>
             )
           })}

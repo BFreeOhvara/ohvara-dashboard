@@ -13,7 +13,7 @@ export function useMyPayouts(repId) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('commission_payouts')
-        .select('id, amount_cents, status, created_at, paid_at, appointment:appointments!appointment_id ( appointment_at, lead:leads ( business_name ) )')
+        .select('id, amount_cents, deal_value_cents, status, created_at, paid_at, appointment:appointments!appointment_id ( appointment_at, lead:leads ( business_name ) )')
         .eq('rep_profile_id', repId)
         .order('created_at', { ascending: false })
       if (error) throw error
