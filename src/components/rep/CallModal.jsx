@@ -118,7 +118,7 @@ export function CallModal({ lead, onClose }) {
   const [status, setStatus]           = useState(lead.status)
   const [statusTouched, setStatusTouched] = useState(false)
   const [statusOpen, setStatusOpen]   = useState(false)
-  const [notes, setNotes]             = useState(lead.notes || '')
+  const [notes, setNotes]             = useState('')
   const [callsMissedPerWeek, setCallsMissedPerWeek] = useState(lead.calls_missed_per_week ?? '')
   const [avgTicket, setAvgTicket]                   = useState(lead.avg_ticket ?? '')
   const [primaryPain, setPrimaryPain]               = useState(lead.primary_pain || '')
@@ -828,7 +828,7 @@ export function CallModal({ lead, onClose }) {
                     boxShadow: '0 0 20px rgba(34,197,94,0.3)',
                   }}
                 >
-                  <Phone size={15} /> Call {lead.phone} (Recorded)
+                  <Phone size={15} /> Call {lead.phone}
                 </button>
                 {callState === 'error' && (
                   <p style={{ fontSize: 11, color: 'var(--danger)', margin: '6px 0 0', textAlign: 'center' }}>

@@ -14,7 +14,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { KPICard } from '../../components/ui/KPICard'
 
-const STATUS_FILTERS = ['All', 'New', 'Appointment Booked', 'Follow-Up', 'No Answer', 'Not Interested', 'Old']
+const STATUS_FILTERS = ['New', 'Appointment Booked', 'Follow-Up', 'No Answer', 'Not Interested', 'All']
 
 // sessionStorage keys — preserve view state across tab switches
 const SS_FILTER = 'ohvara_myleads_filter'

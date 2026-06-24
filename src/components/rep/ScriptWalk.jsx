@@ -132,7 +132,7 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId }) {
         <button
           onClick={back}
           disabled={!history.length}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: history.length ? 'pointer' : 'not-allowed', color: history.length ? 'var(--text-secondary)' : 'var(--text-muted)', fontSize: 12, fontWeight: 500, opacity: history.length ? 1 : 0.5, padding: 4 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 5, background: history.length ? 'var(--accent-dim)' : 'none', border: `0.5px solid ${history.length ? 'var(--accent-border)' : 'transparent'}`, borderRadius: 8, cursor: history.length ? 'pointer' : 'not-allowed', color: history.length ? 'var(--accent)' : 'var(--text-muted)', fontSize: 12, fontWeight: 500, opacity: history.length ? 1 : 0.4, padding: '5px 10px' }}
         >
           <ChevronLeft size={14} /> Back
         </button>

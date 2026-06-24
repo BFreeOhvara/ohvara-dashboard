@@ -278,7 +278,7 @@ function MyPayouts({ connected }) {
                     {biz}
                   </p>
                   <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
-                    Closed ${dealDollars} · Your cut: ${cutDollars}
+                    Closed ${dealDollars} · 10% · ${cutDollars} earned
                   </p>
                 </div>
                 {p.source === 'legacy' ? (
