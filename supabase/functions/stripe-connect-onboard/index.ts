@@ -84,6 +84,7 @@ Deno.serve(async (req) => {
       const acct = await stripe('accounts', stripeKey, {
         type: 'express',
         country: 'US',
+        'capabilities[card_payments][requested]': 'true',
         'capabilities[transfers][requested]': 'true',
         ...(profile.email ? { email: profile.email } : {}),
         'business_type': 'individual',
