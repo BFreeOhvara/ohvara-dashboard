@@ -24,7 +24,7 @@ export function useMyPayouts(repId) {
       const [{ data: payouts, error: pe }, { data: legacy }] = await Promise.all([
         supabase
           .from('commission_payouts')
-          .select('id, amount_cents, deal_value_cents, status, created_at, paid_at, appointment:appointments!appointment_id ( appointment_at, lead:leads ( business_name ) )')
+          .select('id, amount_cents, deal_value_cents, status, created_at, paid_at, appointment:appointments!appointment_id ( scheduled_at, lead:leads ( business_name ) )')
           .eq('rep_id', repId)
           .order('created_at', { ascending: false }),
         supabase
@@ -61,7 +61,7 @@ export function useAllPayouts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('commission_payouts')
-        .select('id, amount_cents, status, created_at, paid_at, stripe_transfer_id, rep_id, appointment_id, rep:profiles!rep_id ( full_name, stripe_onboarding_complete ), appointment:appointments!appointment_id ( appointment_at, lead:leads ( business_name ) )')
+        .select('id, amount_cents, status, created_at, paid_at, stripe_transfer_id, rep_id, appointment_id, rep:profiles!rep_id ( full_name, stripe_onboarding_complete ), appointment:appointments!appointment_id ( scheduled_at, lead:leads ( business_name ) )')
         .order('created_at', { ascending: false })
       if (error) throw error
       return data || []
