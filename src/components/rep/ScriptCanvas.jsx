@@ -28,9 +28,9 @@ function unquote(t) {
 }
 
 // Subtree width in columns: a linear chain is 1; a fork is the sum of its
-// option widths; a chain's width is the max width of any step in it. A route
-// to another branch is INLINED (Prompt 53, Change 1), so it contributes that
-// branch's full width here; `visited` guards against any cyclic route.
+// option widths; a chain's width is the max width of any step in it.
+// Routes to other branches are back-ref arrows, not inlined subtrees, so they
+// don't contribute width.
 function measureSteps(steps, flow, visited) {
   let w = 1
   for (const s of steps) {
@@ -38,11 +38,6 @@ function measureSteps(steps, flow, visited) {
       let fw = 0
       for (const opt of s.options) fw += Math.max(1, measureSteps(opt.steps, flow, visited))
       w = Math.max(w, fw)
-    } else if (s.type === 'route' && flow?.byId[s.target]?.kind === 'branch') {
-      const seen = visited || new Set()
-      if (!seen.has(s.target)) {
-        w = Math.max(w, measureSteps(flow.byId[s.target].steps, flow, new Set([...seen, s.target])))
-      }
     }
   }
   return w
@@ -94,19 +89,30 @@ function buildGraph(flow) {
     for (const step of steps) {
       if (step.type === 'route') {
         const targetSection = flow.byId[step.target]
-        if (targetSection?.kind === 'branch' && !visited.has(step.target)) {
-          // Inline the target branch's steps — no looping back-ref edge.
-          // Inlined nodes carry the target branch's sectionId so clicking
-          // them starts practice at that branch (Prompt 53, Change 1).
-          const r = placeSteps(targetSection.steps, bandLeftPx, bandCols, y, tails, label, accent, new Set([...visited, step.target]), step.target)
-          tails = r.tails
-          y = r.endY
-          label = null
-          continue
-        }
-        // forward route (to close, or a guard-tripped cyclic branch)
         const tgt = headerNodeId(step.target)
-        for (const t of tails) pushEdge(t, tgt, label ?? routeLabel(flow, step.target))
+        if (targetSection?.kind === 'branch') {
+          // Back-reference: draw a curved dashed accent arrow back to that branch's
+          // header node instead of inlining its content.
+          for (const t of tails) {
+            edges.push({
+              id: `e${counter++}`,
+              source: t.id,
+              target: tgt,
+              label: (t.label ?? routeLabel(flow, step.target)) || undefined,
+              type: 'smoothstep',
+              animated: true,
+              style: { stroke: 'var(--accent)', strokeWidth: 1.5, strokeDasharray: '5 3' },
+              labelStyle: { fontSize: 10, fill: 'var(--accent)', fontWeight: 600 },
+              labelBgStyle: { fill: 'rgba(108,99,255,0.12)' },
+              labelBgPadding: [5, 3],
+              labelBgBorderRadius: 4,
+              markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14, color: 'var(--accent)' },
+            })
+          }
+        } else {
+          // Forward route (to close or terminal)
+          for (const t of tails) pushEdge(t, tgt, label ?? routeLabel(flow, step.target))
+        }
         label = null
         tails = []
         continue
@@ -339,28 +345,44 @@ const nodeTypes = {
 function CanvasInner({ flow, onPractice }) {
   const graph = useMemo(() => buildGraph(flow), [flow])
 
+  // Clamp panning so the diagram can't scroll off-screen entirely.
+  const translateExtent = useMemo(() => {
+    if (!graph.nodes.length) return [[-500, -500], [2000, 2000]]
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    for (const n of graph.nodes) {
+      minX = Math.min(minX, n.position.x)
+      minY = Math.min(minY, n.position.y)
+      maxX = Math.max(maxX, n.position.x + NODE_W + 60)
+      maxY = Math.max(maxY, n.position.y + 150)
+    }
+    const margin = 400
+    return [[minX - margin, minY - margin], [maxX + margin, maxY + margin]]
+  }, [graph.nodes])
+
   const onNodeClick = useCallback((_evt, node) => {
     onPractice(node.data.sectionId || 'opener')
   }, [onPractice])
 
   return (
-    <div style={{ position: 'relative', height: '100%', borderRadius: 14, overflow: 'hidden', border: '0.5px solid var(--border)', background: '#0A0A12' }}>
+    // White canvas background — deliberate one-off; no light/white design token exists
+    // for canvas surfaces; this is not a UI surface token.
+    <div style={{ position: 'relative', height: '100%', borderRadius: 14, overflow: 'hidden', border: '0.5px solid var(--border)', background: '#ffffff' }}>
       <ReactFlow
         nodes={graph.nodes}
         edges={graph.edges}
         nodeTypes={nodeTypes}
         onNodeClick={onNodeClick}
-        colorMode="dark"
         fitView
         fitViewOptions={{ padding: 0.15 }}
         minZoom={0.2}
         maxZoom={1.75}
+        translateExtent={translateExtent}
         proOptions={{ hideAttribution: true }}
         nodesConnectable={false}
         edgesFocusable={false}
         nodesDraggable={false}
       >
-        <Background color="#1C1C2A" gap={22} size={1} />
+        <Background color="#e0e0ec" gap={22} size={1} />
         <Controls showInteractive={false} />
         <MiniMap
           pannable zoomable
