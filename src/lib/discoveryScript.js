@@ -25,7 +25,7 @@
 // match the leads columns added in migration 050.
 export const DATA_COLLECT_FIELDS = [
   { key: 'calls_missed_per_week', label: 'Missed calls / week',   placeholder: '8' },
-  { key: 'avg_ticket_value',      label: 'Average job value ($)', placeholder: '350' },
+  { key: 'avg_ticket',            label: 'Average job value ($)', placeholder: '350' },
 ]
 
 // The single data-collect step the ⊞ marker expands to (Prompt 53, Change 3).
