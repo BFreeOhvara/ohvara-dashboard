@@ -25,6 +25,7 @@ const NAV = {
     { to: '/closer',                   label: 'Appointments',  icon: Calendar },
     { to: '/closer/call-leads',        label: 'Call Leads',    icon: PhoneCall },
     { to: '/closer/pipeline',          label: 'Pipeline',      icon: GitBranch },
+    { to: '/closer/stats',             label: 'My Stats',      icon: Target },
     { to: '/closer/reps',              label: 'Rep Activity',  icon: BarChart2 },
     { to: '/closer/revenue',           label: 'Revenue',       icon: TrendingUp },
     { to: '/closer/messages',          label: 'Messages',      icon: MessageSquare },

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Send, MessageSquare } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { useReps } from '../../hooks/useProfiles'
+import { useReps, useClosers, useAdmins } from '../../hooks/useProfiles'
 import {
   MESSAGE_CATEGORIES,
   useSendMessage, useMyMessages, useInbox, useReplyMessage, useMarkMessageRead,
@@ -11,8 +11,8 @@ import {
 
 const HEADER = {
   rep:    { title: 'Messages', subtitle: 'Dashboard questions go to Brayden · sales questions go to Nate' },
-  closer: { title: 'Messages', subtitle: 'Sales questions from reps' },
-  admin:  { title: 'Messages', subtitle: 'Dashboard questions from reps' },
+  closer: { title: 'Messages', subtitle: 'Rep questions + Brayden direct messages' },
+  admin:  { title: 'Messages', subtitle: 'Rep questions + Nate direct messages' },
 }
 
 function timeAgo(ts) {
@@ -85,6 +85,11 @@ function ConversationRow({ conv, active, onClick }) {
             {conv.name}
           </span>
           {conv.unread > 0 && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />}
+          {conv.isManager && (
+            <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent)', background: 'var(--accent-dim)', borderRadius: 3, padding: '1px 4px', flexShrink: 0 }}>
+              Direct
+            </span>
+          )}
         </div>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {conv.lastMessage}
@@ -124,7 +129,8 @@ function Bubble({ side, name, text, timestamp }) {
 }
 
 function ContactPanel({ role, selected }) {
-  const { data: recentBookings } = useRepRecentBookings(selected?.key, role === 'closer')
+  const isRepThread = !selected?.isManager
+  const { data: recentBookings } = useRepRecentBookings(selected?.key, role === 'closer' && isRepThread)
   if (!selected) return null
 
   return (
@@ -139,7 +145,7 @@ function ContactPanel({ role, selected }) {
         <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '8px 0 0', lineHeight: 1.5, opacity: 0.8 }}>{selected.description}</p>
       )}
 
-      {role === 'closer' && (
+      {role === 'closer' && isRepThread && (
         <div style={{ marginTop: 24, width: '100%', padding: '12px 14px', background: 'var(--bg-elevated)', borderRadius: 8, border: '0.5px solid var(--border)' }}>
           <p style={{ fontSize: 18, fontWeight: 500, color: 'var(--accent)', fontFamily: 'var(--font-mono)', margin: '0 0 2px', fontVariantNumeric: 'tabular-nums' }}>
             {recentBookings ?? '—'}
@@ -147,7 +153,7 @@ function ContactPanel({ role, selected }) {
           <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>Bookings, last 7 days</p>
         </div>
       )}
-      {role === 'admin' && (
+      {(role === 'admin' || selected.isManager) && (
         <div style={{ marginTop: 24, width: '100%', padding: '12px 14px', background: 'var(--bg-elevated)', borderRadius: 8, border: '0.5px solid var(--border)' }}>
           <p style={{ fontSize: 18, fontWeight: 500, color: 'var(--accent)', fontFamily: 'var(--font-mono)', margin: '0 0 2px', fontVariantNumeric: 'tabular-nums' }}>
             {selected.messages.length}
@@ -164,14 +170,30 @@ function ContactPanel({ role, selected }) {
 // with at most one reply on it. "Conversations" are a client-side grouping:
 // by sender for the recipient (closer/admin) views, or the two fixed
 // contacts (Brayden/Nate) for the rep view. RLS already scopes the raw rows.
+//
+// Prompt 75: admin and closer also get a mutual direct-message thread with
+// each other. Admin fetches their inbox (recipient='brayden') AND their own
+// sent-to-nate rows (useInbox('nate'), which after migration 053 only returns
+// rows where sender_id = auth.uid()). The Nate thread = inbox rows from Nate +
+// sent-to-nate rows. Closer mirrors this symmetrically with Brayden.
 export function MessageCenter({ role }) {
   const { profile } = useAuth()
   const isRep = role === 'rep'
-  const recipientKey = role === 'closer' ? 'nate' : role === 'admin' ? 'brayden' : null
+  const isAdmin = role === 'admin'
+  const isCloser = role === 'closer'
+  const primaryRecipient = isCloser ? 'nate' : isAdmin ? 'brayden' : null
+  const mutualRecipient = isAdmin ? 'nate' : isCloser ? 'brayden' : null
 
   const { data: repMessages, isLoading: repLoading } = useMyMessages(isRep ? profile?.id : undefined)
-  const { data: inboxMessages, isLoading: inboxLoading } = useInbox(!isRep ? recipientKey : undefined)
+  const { data: inboxMessages, isLoading: inboxLoading } = useInbox(!isRep ? primaryRecipient : undefined)
+  // After migration 053: admin calling useInbox('nate') only sees own sent-to-nate rows (RLS);
+  // closer calling useInbox('brayden') only sees own sent-to-brayden rows.
+  const { data: mutualSentMessages = [] } = useInbox(!isRep && mutualRecipient ? mutualRecipient : undefined)
+
   const { data: allReps = [] } = useReps()
+  const { data: allClosers = [] } = useClosers()
+  const { data: allAdmins = [] } = useAdmins()
+
   const send = useSendMessage()
   const reply = useReplyMessage()
   const markRead = useMarkMessageRead()
@@ -180,6 +202,9 @@ export function MessageCenter({ role }) {
   const [draft, setDraft] = useState('')
 
   const isLoading = isRep ? repLoading : inboxLoading
+
+  // Manager profiles for seeding the mutual direct-message thread
+  const managerProfiles = isAdmin ? allClosers : isCloser ? allAdmins : []
 
   const conversations = useMemo(() => {
     if (isRep) {
@@ -191,43 +216,67 @@ export function MessageCenter({ role }) {
         const last = msgs[msgs.length - 1]
         return {
           key: c.value, name: c.to, role: c.label, description: c.hint, messages: msgs, unread: 0,
+          recipientKey: c.value,
           lastMessage: last ? (last.reply_body || last.body) : 'No messages yet',
           lastTimestamp: last ? (last.replied_at || last.created_at) : null,
         }
       })
     }
-    // Seed every known rep so they appear immediately even with no messages yet.
-    // Messages overlay on top; reps who have sent messages win their name from the message row.
+
+    // Build rep conversation threads from inbox, excluding manager profiles
+    const managerIds = new Set(managerProfiles.map(p => p.id))
     const bySender = {}
     for (const rep of allReps) {
-      bySender[rep.id] = { key: rep.id, name: rep.full_name, role: 'Rep', messages: [] }
+      bySender[rep.id] = { key: rep.id, name: rep.full_name, role: 'Rep', messages: [], isManager: false }
     }
     for (const m of inboxMessages || []) {
-      if (!bySender[m.sender_id]) bySender[m.sender_id] = { key: m.sender_id, name: m.sender_name, role: 'Rep', messages: [] }
+      if (managerIds.has(m.sender_id)) continue // handled in manager thread below
+      if (!bySender[m.sender_id]) bySender[m.sender_id] = { key: m.sender_id, name: m.sender_name, role: 'Rep', messages: [], isManager: false }
       bySender[m.sender_id].messages.push(m)
     }
-    return Object.values(bySender)
+
+    const repConvs = Object.values(bySender)
       .map(c => {
         const sorted = c.messages.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
         const last = sorted[sorted.length - 1]
         return {
-          ...c, messages: sorted,
+          ...c, messages: sorted, recipientKey: null,
           lastMessage: last ? (last.reply_body || last.body) : 'No messages yet',
           lastTimestamp: last ? (last.replied_at || last.created_at) : null,
           unread: c.messages.filter(m => !m.read).length,
         }
       })
       .sort((a, b) => {
-        // Reps with messages float to the top; silent reps sorted alphabetically below.
         const aHas = !!a.lastTimestamp, bHas = !!b.lastTimestamp
         if (aHas && !bHas) return -1
         if (!aHas && bHas) return 1
         if (aHas && bHas) return new Date(b.lastTimestamp) - new Date(a.lastTimestamp)
         return a.name.localeCompare(b.name)
       })
-  }, [isRep, repMessages, inboxMessages, allReps])
 
-  // Rep view always has exactly 2 fixed contacts — default to the first.
+    // Build manager direct-message threads (Brayden↔Nate)
+    const managerConvs = managerProfiles.map(mgr => {
+      const fromMgr = (inboxMessages || []).filter(m => m.sender_id === mgr.id)
+      const toMgr = mutualSentMessages || []
+      const allMsgs = [...fromMgr, ...toMgr].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      const last = allMsgs[allMsgs.length - 1]
+      return {
+        key: mgr.id,
+        name: mgr.full_name,
+        role: mgr.role === 'closer' ? 'Closer' : 'Admin',
+        messages: allMsgs,
+        isManager: true,
+        recipientKey: mutualRecipient,
+        lastMessage: last ? last.body : 'No messages yet',
+        lastTimestamp: last ? last.created_at : null,
+        unread: 0,
+      }
+    })
+
+    // Manager threads float to the top of the list
+    return [...managerConvs, ...repConvs]
+  }, [isRep, repMessages, inboxMessages, mutualSentMessages, allReps, managerProfiles, mutualRecipient])
+
   useEffect(() => {
     if (isRep && !selectedKey && conversations.length) setSelectedKey(conversations[0].key)
   }, [isRep, selectedKey, conversations])
@@ -237,14 +286,17 @@ export function MessageCenter({ role }) {
   function openConversation(conv) {
     setSelectedKey(conv.key)
     setDraft('')
-    if (!isRep) conv.messages.filter(m => !m.read).forEach(m => markRead.mutate(m.id))
+    if (!isRep && !conv.isManager) {
+      conv.messages.filter(m => !m.read).forEach(m => markRead.mutate(m.id))
+    }
   }
 
   async function handleSend() {
     if (!draft.trim() || !selected) return
-    if (isRep) {
+    if (isRep || selected.isManager) {
       if (send.isPending) return
-      await send.mutateAsync({ sender_id: profile.id, sender_name: profile.full_name, recipient: selected.key, body: draft.trim() })
+      const recipient = isRep ? selected.key : selected.recipientKey
+      await send.mutateAsync({ sender_id: profile.id, sender_name: profile.full_name, recipient, body: draft.trim() })
     } else {
       const target = selected.messages[selected.messages.length - 1]
       if (!target || reply.isPending) return
@@ -309,7 +361,19 @@ export function MessageCenter({ role }) {
                   <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', margin: 'auto' }}>
                     No messages yet — say hello below.
                   </p>
+                ) : selected.isManager ? (
+                  // Manager mutual thread — each INSERT row is its own chat bubble
+                  selected.messages.map(m => (
+                    <Bubble
+                      key={m.id}
+                      side={m.sender_id === profile.id ? 'right' : 'left'}
+                      name={m.sender_name}
+                      text={m.body}
+                      timestamp={m.created_at}
+                    />
+                  ))
                 ) : (
+                  // Rep thread — message row + optional reply slot
                   selected.messages.map(m => (
                     <div key={m.id} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       <Bubble side="left" name={senderName} text={m.body} timestamp={m.created_at} />
@@ -326,7 +390,7 @@ export function MessageCenter({ role }) {
                   value={draft}
                   onChange={e => setDraft(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
-                  placeholder={isRep ? `Message ${selected.name}…` : `Reply to ${selected.name}…`}
+                  placeholder={isRep || selected.isManager ? `Message ${selected.name}…` : `Reply to ${selected.name}…`}
                   rows={1}
                   style={{
                     flex: 1, resize: 'none', maxHeight: 100, boxSizing: 'border-box',

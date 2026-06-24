@@ -24,6 +24,7 @@ import RevenueTracker from './pages/closer/RevenueTracker'
 import RepAnalytics from './pages/closer/RepAnalytics'
 import CallLeads from './pages/closer/CallLeads'
 import CloserPipeline from './pages/closer/CloserPipeline'
+import CloserMyStats from './pages/closer/CloserMyStats'
 import LeadScraperCloser from './pages/admin/LeadScraper'
 
 // Admin pages
@@ -145,6 +146,11 @@ export default function App() {
             <Route path="/closer/pipeline" element={
               <ProtectedRoute allowedRoles={['closer']}>
                 <DashboardLayout><CloserPipeline /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/closer/stats" element={
+              <ProtectedRoute allowedRoles={['closer']}>
+                <DashboardLayout><CloserMyStats /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/closer/messages" element={

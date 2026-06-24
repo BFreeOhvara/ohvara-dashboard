@@ -16,6 +16,36 @@ export function useReps() {
   })
 }
 
+export function useClosers() {
+  return useQuery({
+    queryKey: ['profiles', 'closers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'closer')
+        .order('full_name')
+      if (error) throw error
+      return data || []
+    },
+  })
+}
+
+export function useAdmins() {
+  return useQuery({
+    queryKey: ['profiles', 'admins'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'admin')
+        .order('full_name')
+      if (error) throw error
+      return data || []
+    },
+  })
+}
+
 export function useAllProfiles() {
   return useQuery({
     queryKey: ['profiles', 'all'],
