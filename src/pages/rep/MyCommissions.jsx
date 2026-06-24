@@ -48,13 +48,51 @@ export default function MyCommissions() {
   const { data: commission, isLoading } = useMyCommission(profile?.id)
   const connected = !!profile?.stripe_onboarding_complete
   const onboard = useConnectOnboard()
+  const checkStatus = useCheckOnboardStatus()
 
   async function startOnboarding() {
     try {
       const res = await onboard.mutateAsync()
-      if (res?.url) window.location.href = res.url
+      if (res?.url) {
+        window.open(
+          res.url,
+          'stripe-connect',
+          `popup,width=500,height=700,left=${Math.floor((screen.width - 500) / 2)},top=${Math.floor((screen.height - 700) / 2)}`
+        )
+      }
     } catch { /* error surfaced via onboard.error below */ }
   }
+
+  // When Stripe returns to ?onboarding=complete inside the popup, relay via
+  // postMessage and close. If window.opener is null (popup blocked / same-tab
+  // fallback), run checkStatus directly.
+  useEffect(() => {
+    const flag = new URLSearchParams(window.location.search).get('onboarding')
+    if (!flag) return
+    if (flag === 'complete') {
+      if (window.opener) {
+        window.opener.postMessage('stripe-onboarding-complete', window.location.origin)
+        window.close()
+      } else {
+        checkStatus.mutateAsync().finally(() => window.location.assign('/rep/commissions'))
+      }
+    } else {
+      window.history.replaceState({}, '', '/rep/commissions')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Receive the popup's relay message and confirm onboarding status.
+  useEffect(() => {
+    function handleMessage(e) {
+      if (e.origin !== window.location.origin) return
+      if (e.data !== 'stripe-onboarding-complete') return
+      checkStatus.mutateAsync().finally(() => window.history.replaceState({}, '', '/rep/commissions'))
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Daily earned series over the last CHART_DAYS (local days)
   const daily = useMemo(() => {
@@ -96,7 +134,27 @@ export default function MyCommissions() {
         </p>
       </div>
 
-      {/* KPI row + connect-bank button (top-right, hidden once connected) */}
+      {/* Connect bank button — own row above KPI cards, right-aligned */}
+      {!connected && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+          <button
+            onClick={startOnboarding}
+            disabled={onboard.isPending}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px',
+              background: 'var(--accent)', border: 'none', borderRadius: 8,
+              fontSize: 13, fontWeight: 500, color: 'white',
+              cursor: onboard.isPending ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+            }}
+          >
+            {onboard.isPending
+              ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Opening…</>
+              : <><Landmark size={14} /> Connect bank</>}
+          </button>
+        </div>
+      )}
+
+      {/* KPI row */}
       <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'flex-start' }}>
         <KPICard
           label="Total Earned"
@@ -120,22 +178,6 @@ export default function MyCommissions() {
           sub={thisWeek > 0 ? 'Keep it rolling' : 'Book more appointments'}
           icon={TrendingUp}
         />
-        {!connected && (
-          <button
-            onClick={startOnboarding}
-            disabled={onboard.isPending}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 7, height: 36, padding: '0 14px',
-              background: 'var(--accent)', border: 'none', borderRadius: 8,
-              fontSize: 13, fontWeight: 500, color: 'white', marginLeft: 'auto', alignSelf: 'center',
-              cursor: onboard.isPending ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-            }}
-          >
-            {onboard.isPending
-              ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Opening…</>
-              : <><Landmark size={14} /> Connect bank</>}
-          </button>
-        )}
       </div>
 
       {/* Daily earnings chart */}
@@ -195,24 +237,6 @@ export default function MyCommissions() {
 function MyPayouts({ connected }) {
   const { profile } = useAuth()
   const { data: payouts } = useMyPayouts(profile?.id)
-  const checkStatus = useCheckOnboardStatus()
-
-  // When Stripe redirects back to ?onboarding=complete, confirm the account and
-  // reload to a clean URL so useAuth re-fetches the (now connected) profile.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const flag = params.get('onboarding')
-    if (!flag) return
-    if (flag === 'complete') {
-      checkStatus.mutateAsync().finally(() => {
-        window.location.assign('/rep/commissions')
-      })
-    } else {
-      // 'refresh' (link expired) — just clean the URL
-      window.history.replaceState({}, '', '/rep/commissions')
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   return (
     <div className="glass" style={{ padding: '18px 20px', borderRadius: 12, marginTop: 16 }}>
@@ -257,7 +281,13 @@ function MyPayouts({ connected }) {
                     Closed ${dealDollars} · Your cut: ${cutDollars}
                   </p>
                 </div>
-                <StatusChip status={p.status} />
+                {p.source === 'legacy' ? (
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-elevated)', padding: '3px 8px', borderRadius: 999, whiteSpace: 'nowrap' }}>
+                    Legacy
+                  </span>
+                ) : (
+                  <StatusChip status={p.status} />
+                )}
               </div>
             )
           })}

@@ -14,7 +14,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { KPICard } from '../../components/ui/KPICard'
 
-const STATUS_FILTERS = ['All', 'New', 'Appointment Booked', 'Follow-Up', 'No Answer', 'Not Interested']
+const STATUS_FILTERS = ['All', 'New', 'Appointment Booked', 'Follow-Up', 'No Answer', 'Not Interested', 'Old']
 
 // sessionStorage keys — preserve view state across tab switches
 const SS_FILTER = 'ohvara_myleads_filter'
@@ -55,9 +55,9 @@ function formatResetCountdown(nowMs) {
 // today (local calendar day). Computed from the already-loaded batch so it
 // stays live with the row countdowns — no extra query. Drives the
 // "Follow-Ups Due Today" stat card.
-function countFollowUpsDueToday(leads) {
+function countFollowUpsDueToday(leads, nowMs) {
   if (!leads) return 0
-  const now = new Date()
+  const now = new Date(nowMs)
   const y = now.getFullYear(), m = now.getMonth(), d = now.getDate()
   return leads.filter(l => {
     if (l.status !== 'Follow-Up' || !l.follow_up_at) return false
@@ -341,7 +341,7 @@ export default function MyLeads() {
   const newCount = useMemo(() => leads ? leads.filter(l => l.status === 'New').length : null, [leads])
   // Recompute on each `now` tick so the count rolls over with the day / as
   // follow-ups come due alongside the row countdowns.
-  const followUpsDueToday = useMemo(() => countFollowUpsDueToday(leads), [leads, now])
+  const followUpsDueToday = useMemo(() => countFollowUpsDueToday(leads, now), [leads, now])
 
   const filtered = useMemo(() => {
     if (!leads) return []
@@ -571,7 +571,7 @@ export default function MyLeads() {
               )}
             </div>
           ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px', textAlign: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 240, padding: '48px 16px', textAlign: 'center' }}>
             <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
               <Phone size={18} color="var(--text-muted)" />
             </div>

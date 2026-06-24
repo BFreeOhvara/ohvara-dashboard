@@ -6,18 +6,40 @@ import { supabase } from '../lib/supabase'
 // from the `commissions` earned-ledger (useMyCommission). RLS scopes rep reads
 // to their own rows; admin sees all.
 
-// Rep's own payout rows + the booked business/date for each.
+// Rep's own payout rows merged with legacy commissions (migration 014).
+// Legacy rows are display-only: source='legacy', status shows as "Legacy" badge.
 export function useMyPayouts(repId) {
   return useQuery({
     queryKey: ['payouts', 'mine', repId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('commission_payouts')
-        .select('id, amount_cents, deal_value_cents, status, created_at, paid_at, appointment:appointments!appointment_id ( appointment_at, lead:leads ( business_name ) )')
-        .eq('rep_profile_id', repId)
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      return data || []
+      const [{ data: payouts, error: pe }, { data: legacy, error: le }] = await Promise.all([
+        supabase
+          .from('commission_payouts')
+          .select('id, amount_cents, deal_value_cents, status, created_at, paid_at, appointment:appointments!appointment_id ( appointment_at, lead:leads ( business_name ) )')
+          .eq('rep_profile_id', repId)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('commissions')
+          .select('id, amount, created_at, lead:leads!lead_id ( business_name )')
+          .eq('recipient_id', repId)
+          .eq('recipient_role', 'rep')
+          .order('created_at', { ascending: false }),
+      ])
+      if (pe) throw pe
+      if (le) throw le
+      const legacyRows = (legacy || []).map(c => ({
+        id: `legacy_${c.id}`,
+        amount_cents: Math.round(Number(c.amount) * 100),
+        deal_value_cents: Math.round(Number(c.amount) * 1000),
+        status: 'paid',
+        created_at: c.created_at,
+        paid_at: null,
+        appointment: c.lead ? { lead: { business_name: c.lead.business_name } } : null,
+        source: 'legacy',
+      }))
+      const all = [...(payouts || []), ...legacyRows]
+      all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      return all
     },
     enabled: !!repId,
   })
