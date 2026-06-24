@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Send, MessageSquare } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { useReps } from '../../hooks/useProfiles'
 import {
   MESSAGE_CATEGORIES,
   useSendMessage, useMyMessages, useInbox, useReplyMessage, useMarkMessageRead,
@@ -134,6 +135,9 @@ function ContactPanel({ role, selected }) {
       <Avatar name={selected.name} size={56} />
       <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: '12px 0 2px' }}>{selected.name}</p>
       <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>{selected.role}</p>
+      {selected.description && (
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '8px 0 0', lineHeight: 1.5, opacity: 0.8 }}>{selected.description}</p>
+      )}
 
       {role === 'closer' && (
         <div style={{ marginTop: 24, width: '100%', padding: '12px 14px', background: 'var(--bg-elevated)', borderRadius: 8, border: '0.5px solid var(--border)' }}>
@@ -167,6 +171,7 @@ export function MessageCenter({ role }) {
 
   const { data: repMessages, isLoading: repLoading } = useMyMessages(isRep ? profile?.id : undefined)
   const { data: inboxMessages, isLoading: inboxLoading } = useInbox(!isRep ? recipientKey : undefined)
+  const { data: allReps = [] } = useReps()
   const send = useSendMessage()
   const reply = useReplyMessage()
   const markRead = useMarkMessageRead()
@@ -185,13 +190,18 @@ export function MessageCenter({ role }) {
           .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
         const last = msgs[msgs.length - 1]
         return {
-          key: c.value, name: c.to, role: c.label, messages: msgs, unread: 0,
+          key: c.value, name: c.to, role: c.label, description: c.hint, messages: msgs, unread: 0,
           lastMessage: last ? (last.reply_body || last.body) : 'No messages yet',
           lastTimestamp: last ? (last.replied_at || last.created_at) : null,
         }
       })
     }
+    // Seed every known rep so they appear immediately even with no messages yet.
+    // Messages overlay on top; reps who have sent messages win their name from the message row.
     const bySender = {}
+    for (const rep of allReps) {
+      bySender[rep.id] = { key: rep.id, name: rep.full_name, role: 'Rep', messages: [] }
+    }
     for (const m of inboxMessages || []) {
       if (!bySender[m.sender_id]) bySender[m.sender_id] = { key: m.sender_id, name: m.sender_name, role: 'Rep', messages: [] }
       bySender[m.sender_id].messages.push(m)
@@ -202,13 +212,20 @@ export function MessageCenter({ role }) {
         const last = sorted[sorted.length - 1]
         return {
           ...c, messages: sorted,
-          lastMessage: last.reply_body || last.body,
-          lastTimestamp: last.replied_at || last.created_at,
+          lastMessage: last ? (last.reply_body || last.body) : 'No messages yet',
+          lastTimestamp: last ? (last.replied_at || last.created_at) : null,
           unread: c.messages.filter(m => !m.read).length,
         }
       })
-      .sort((a, b) => new Date(b.lastTimestamp) - new Date(a.lastTimestamp))
-  }, [isRep, repMessages, inboxMessages])
+      .sort((a, b) => {
+        // Reps with messages float to the top; silent reps sorted alphabetically below.
+        const aHas = !!a.lastTimestamp, bHas = !!b.lastTimestamp
+        if (aHas && !bHas) return -1
+        if (!aHas && bHas) return 1
+        if (aHas && bHas) return new Date(b.lastTimestamp) - new Date(a.lastTimestamp)
+        return a.name.localeCompare(b.name)
+      })
+  }, [isRep, repMessages, inboxMessages, allReps])
 
   // Rep view always has exactly 2 fixed contacts — default to the first.
   useEffect(() => {
