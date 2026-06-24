@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import {
-  ReactFlow, ReactFlowProvider, Background, Controls, MiniMap,
+  ReactFlow, ReactFlowProvider, Background, Controls,
   Handle, Position, MarkerType,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
@@ -364,9 +364,7 @@ function CanvasInner({ flow, onPractice }) {
   }, [onPractice])
 
   return (
-    // White canvas background — deliberate one-off; no light/white design token exists
-    // for canvas surfaces; this is not a UI surface token.
-    <div style={{ position: 'relative', height: '100%', borderRadius: 14, overflow: 'hidden', border: '0.5px solid var(--border)', background: '#ffffff' }}>
+    <div style={{ position: 'relative', height: '100%', borderRadius: 14, overflow: 'hidden', border: '0.5px solid var(--border)', background: '#0A0A12' }}>
       <ReactFlow
         nodes={graph.nodes}
         edges={graph.edges}
@@ -382,14 +380,8 @@ function CanvasInner({ flow, onPractice }) {
         edgesFocusable={false}
         nodesDraggable={false}
       >
-        <Background color="#e0e0ec" gap={22} size={1} />
+        <Background color="#1C1C2A" gap={22} size={1} colorMode="dark" />
         <Controls showInteractive={false} />
-        <MiniMap
-          pannable zoomable
-          maskColor="rgba(8,8,16,0.7)"
-          style={{ background: '#0E0E1A', border: '0.5px solid var(--border)' }}
-          nodeColor={n => (n.type === 'branchHeader' || n.type === 'fork' ? '#6C63FF' : '#2A2A3A')}
-        />
       </ReactFlow>
       <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 5 }}>
         <div style={{ padding: '8px 14px', background: '#13131F', border: '0.5px solid var(--border)', borderRadius: 10, boxShadow: '0 10px 30px rgba(0,0,0,0.5)', whiteSpace: 'nowrap' }}>
