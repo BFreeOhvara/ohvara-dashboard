@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useMemo, Component } from 'react'
 import { createPortal } from 'react-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Phone, X, MapPin, User, Tag, Check, StickyNote, ChevronDown, CalendarClock } from 'lucide-react'
+import { Phone, X, MapPin, User, Tag, Check, StickyNote, ChevronDown, CalendarClock, Mic, MicOff, PhoneOff, Loader2 } from 'lucide-react'
+import { Device } from '@twilio/voice-sdk'
 import { supabase } from '../../lib/supabase'
-import { bridgeCall } from '../../lib/twilio'
 import { useAuth } from '../../hooks/useAuth'
 import { Badge } from '../ui/Badge'
 import { buildScriptFlow } from '../../lib/discoveryScript'
@@ -61,6 +61,13 @@ class ModalErrorBoundary extends Component {
       </div>
     )
   }
+}
+
+// Seconds → "m:ss" for the in-call timer.
+function fmtCallTime(total) {
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return `${m}:${String(s).padStart(2, '0')}`
 }
 
 // timestamptz → value for <input type="datetime-local"> in local time
@@ -122,8 +129,16 @@ export function CallModal({ lead, onClose }) {
   const [appointmentAt, setAppointmentAt] = useState(utcIsoToZonedDatetimeLocal(lead.appointment_at, clientTz))
   const [closing, setClosing]         = useState(false)
   const [doneError, setDoneError]     = useState('')
-  // 'idle' | 'calling' | 'connected' | 'error'
-  const [bridgeState, setBridgeState] = useState('idle')
+  // ── Twilio Voice (browser WebRTC, Prompt 54) ─────────────────────────────
+  // The rep's audio runs through their mic/headset; Twilio dials the lead
+  // directly (1 leg). Replaces the Prompt 29 rep-first bridge entirely.
+  // callState: 'idle' | 'connecting' | 'in-call' | 'error'
+  const [callState, setCallState]   = useState('idle')
+  const [deviceReady, setDeviceReady] = useState(false) // token fetched + Device registered
+  const [muted, setMuted]           = useState(false)
+  const [callSeconds, setCallSeconds] = useState(0)
+  const deviceRef = useRef(null)     // Twilio Device (lives for the modal's lifetime)
+  const callRef   = useRef(null)     // the active Call object
   const dropdownRef = useRef(null)   // status trigger wrapper (outside-click anchor)
   const triggerRef = useRef(null)    // the trigger button — measured for the portal menu
   const menuRef = useRef(null)       // the portaled menu (outside-click anchor)
@@ -155,6 +170,76 @@ export function CallModal({ lead, onClose }) {
     document.addEventListener('mousedown', onDocClick)
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [])
+
+  // Fetch a Voice access token and register a Twilio Device once per lead.
+  // On unmount, hang up any live call and destroy the Device so the mic is
+  // released and no token lingers. If the token fetch fails (secrets not set
+  // yet, offline), deviceReady stays false and the UI falls back to a tel: link.
+  useEffect(() => {
+    let cancelled = false
+    let device = null
+    async function init() {
+      try {
+        const { data, error } = await supabase.functions.invoke('twilio-token')
+        if (error || !data?.token) throw error || new Error('No token returned')
+        if (cancelled) return
+        device = new Device(data.token, { codecPreferences: ['opus', 'pcmu'] })
+        device.on('error', () => { setCallState('error') })
+        device.register()
+        deviceRef.current = device
+        setDeviceReady(true)
+      } catch {
+        if (!cancelled) setDeviceReady(false)
+      }
+    }
+    init()
+    return () => {
+      cancelled = true
+      try { callRef.current?.disconnect() } catch { /* already gone */ }
+      try { device?.destroy() } catch { /* already gone */ }
+      deviceRef.current = null
+      callRef.current = null
+    }
+  }, [lead.id])
+
+  // In-call timer — ticks only while connected.
+  useEffect(() => {
+    if (callState !== 'in-call') return
+    const t = setInterval(() => setCallSeconds(s => s + 1), 1000)
+    return () => clearInterval(t)
+  }, [callState])
+
+  // Place the WebRTC call: Twilio dials lead.phone via the TwiML App webhook.
+  async function startCall() {
+    const device = deviceRef.current
+    if (!device || !lead.phone) return
+    setMuted(false)
+    setCallSeconds(0)
+    setCallState('connecting')
+    try {
+      const call = await device.connect({ params: { To: lead.phone } })
+      callRef.current = call
+      call.on('accept', () => setCallState('in-call'))
+      call.on('disconnect', () => { callRef.current = null; setMuted(false); setCallState('idle') })
+      call.on('cancel',     () => { callRef.current = null; setCallState('idle') })
+      call.on('error',      () => { callRef.current = null; setCallState('error') })
+    } catch {
+      callRef.current = null
+      setCallState('error')
+    }
+  }
+
+  function toggleMute() {
+    const call = callRef.current
+    if (!call) return
+    const next = !muted
+    call.mute(next)
+    setMuted(next)
+  }
+
+  function hangUp() {
+    try { callRef.current?.disconnect() } catch { /* disconnect handler resets state */ }
+  }
 
   // Open the status menu, measuring the trigger so the portaled menu lands
   // directly under it (position: fixed, matched width).
@@ -669,73 +754,11 @@ export function CallModal({ lead, onClose }) {
               />
             </div>
 
-            {/* Call Now — bridge call (recorded) when rep has a phone set; tel: fallback otherwise */}
-            {telHref ? (
-              profile?.phone ? (
-                // Bridge call: Twilio rings the rep, then connects to the lead with recording.
-                bridgeState === 'connected' ? (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    height: 44, background: 'rgba(34,197,94,0.12)',
-                    border: '0.5px solid rgba(34,197,94,0.3)', borderRadius: 10,
-                    fontSize: 13, color: 'var(--success)',
-                  }}>
-                    <Phone size={14} />
-                    Calling your phone — pick up to connect to {lead.business_name}
-                  </div>
-                ) : bridgeState === 'error' ? (
-                  <a href={telHref} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    height: 44, background: 'var(--success)', borderRadius: 10,
-                    fontSize: 14, fontWeight: 500, color: 'white', textDecoration: 'none',
-                    boxShadow: '0 0 20px rgba(34,197,94,0.3)',
-                  }}>
-                    <Phone size={15} /> Call {lead.phone}
-                  </a>
-                ) : (
-                  <button
-                    disabled={bridgeState === 'calling'}
-                    onClick={async () => {
-                      setBridgeState('calling')
-                      try {
-                        const result = await bridgeCall(profile.phone, lead.phone)
-                        if (result?.error) throw new Error(result.error)
-                        setBridgeState('connected')
-                      } catch {
-                        setBridgeState('error')
-                      }
-                    }}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                      height: 44, width: '100%',
-                      background: bridgeState === 'calling' ? 'rgba(34,197,94,0.5)' : 'var(--success)',
-                      borderRadius: 10, border: 'none',
-                      fontSize: 14, fontWeight: 500, color: 'white', cursor: bridgeState === 'calling' ? 'not-allowed' : 'pointer',
-                      boxShadow: '0 0 20px rgba(34,197,94,0.3)',
-                    }}
-                  >
-                    <Phone size={15} />
-                    {bridgeState === 'calling' ? 'Connecting…' : `Call ${lead.phone} (Recorded)`}
-                  </button>
-                )
-              ) : (
-                // No rep phone set — fall back to tel: link
-                <a
-                  href={telHref}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    height: 44,
-                    background: 'var(--success)', borderRadius: 10,
-                    fontSize: 14, fontWeight: 500, color: 'white',
-                    textDecoration: 'none',
-                    boxShadow: '0 0 20px rgba(34,197,94,0.3)',
-                  }}
-                >
-                  <Phone size={15} />
-                  Call {lead.phone}
-                </a>
-              )
-            ) : (
+            {/* Call Now — browser WebRTC (Prompt 54): Twilio dials the lead
+                directly through the rep's mic/headset, recorded. No rep phone
+                needed. Falls back to a tel: link only if the Device couldn't
+                register (secrets not set) or the lead has no number. */}
+            {!telHref ? (
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 height: 44,
@@ -744,6 +767,89 @@ export function CallModal({ lead, onClose }) {
               }}>
                 No phone number on file
               </div>
+            ) : callState === 'in-call' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  height: 40, background: 'rgba(34,197,94,0.12)',
+                  border: '0.5px solid rgba(34,197,94,0.3)', borderRadius: 10,
+                  fontSize: 13, fontWeight: 500, color: 'var(--success)',
+                }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success)' }} />
+                  Connected · <span style={{ fontFamily: 'var(--font-mono)' }}>{fmtCallTime(callSeconds)}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={toggleMute}
+                    style={{
+                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      height: 40, borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                      background: muted ? 'rgba(245,158,11,0.14)' : 'var(--bg-elevated)',
+                      border: `0.5px solid ${muted ? 'rgba(245,158,11,0.4)' : 'var(--border)'}`,
+                      color: muted ? 'var(--warning)' : 'var(--text-secondary)',
+                    }}
+                  >
+                    {muted ? <MicOff size={14} /> : <Mic size={14} />}
+                    {muted ? 'Unmute' : 'Mute'}
+                  </button>
+                  <button
+                    onClick={hangUp}
+                    style={{
+                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      height: 40, borderRadius: 10, border: 'none', cursor: 'pointer',
+                      fontSize: 13, fontWeight: 500, color: 'white', background: 'var(--danger)',
+                    }}
+                  >
+                    <PhoneOff size={14} /> Hang Up
+                  </button>
+                </div>
+              </div>
+            ) : callState === 'connecting' ? (
+              <button
+                disabled
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  height: 44, width: '100%',
+                  background: 'rgba(34,197,94,0.5)', borderRadius: 10, border: 'none',
+                  fontSize: 14, fontWeight: 500, color: 'white', cursor: 'not-allowed',
+                }}
+              >
+                <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Connecting…
+              </button>
+            ) : deviceReady ? (
+              <>
+                <button
+                  onClick={startCall}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    height: 44, width: '100%',
+                    background: 'var(--success)', borderRadius: 10, border: 'none',
+                    fontSize: 14, fontWeight: 500, color: 'white', cursor: 'pointer',
+                    boxShadow: '0 0 20px rgba(34,197,94,0.3)',
+                  }}
+                >
+                  <Phone size={15} /> Call {lead.phone} (Recorded)
+                </button>
+                {callState === 'error' && (
+                  <p style={{ fontSize: 11, color: 'var(--danger)', margin: '6px 0 0', textAlign: 'center' }}>
+                    Call failed — try again, or use <a href={telHref} style={{ color: 'var(--accent)' }}>your phone</a>.
+                  </p>
+                )}
+              </>
+            ) : (
+              // Device not ready (token/secrets missing) — tel: link fallback
+              <a
+                href={telHref}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  height: 44,
+                  background: 'var(--success)', borderRadius: 10,
+                  fontSize: 14, fontWeight: 500, color: 'white', textDecoration: 'none',
+                  boxShadow: '0 0 20px rgba(34,197,94,0.3)',
+                }}
+              >
+                <Phone size={15} /> Call {lead.phone}
+              </a>
             )}
           </div>
 
