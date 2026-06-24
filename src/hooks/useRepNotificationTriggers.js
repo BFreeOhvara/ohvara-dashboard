@@ -85,7 +85,7 @@ export function useDealClosedNotifier(repId) {
     if (!repId) return
     const channel = supabase
       .channel(`deal-closed-${repId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'commission_payouts', filter: `rep_profile_id=eq.${repId}` },
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'commission_payouts', filter: `rep_id=eq.${repId}` },
         async (payload) => {
           const raw = payload.new
           let biz = 'a new deal'

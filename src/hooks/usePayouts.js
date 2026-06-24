@@ -25,7 +25,7 @@ export function useMyPayouts(repId) {
         supabase
           .from('commission_payouts')
           .select('id, amount_cents, deal_value_cents, status, created_at, paid_at, appointment:appointments!appointment_id ( appointment_at, lead:leads ( business_name ) )')
-          .eq('rep_profile_id', repId)
+          .eq('rep_id', repId)
           .order('created_at', { ascending: false }),
         supabase
           .from('commissions')
@@ -61,7 +61,7 @@ export function useAllPayouts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('commission_payouts')
-        .select('id, amount_cents, status, created_at, paid_at, stripe_transfer_id, rep_profile_id, appointment_id, rep:profiles!rep_profile_id ( full_name, stripe_onboarding_complete ), appointment:appointments!appointment_id ( appointment_at, lead:leads ( business_name ) )')
+        .select('id, amount_cents, status, created_at, paid_at, stripe_transfer_id, rep_id, appointment_id, rep:profiles!rep_id ( full_name, stripe_onboarding_complete ), appointment:appointments!appointment_id ( appointment_at, lead:leads ( business_name ) )')
         .order('created_at', { ascending: false })
       if (error) throw error
       return data || []
@@ -119,7 +119,7 @@ export function useCreatePayout() {
   return useMutation({
     mutationFn: async ({ repProfileId, appointmentId, amountCents }) => {
       const { error } = await supabase.from('commission_payouts').insert({
-        rep_profile_id: repProfileId,
+        rep_id: repProfileId,
         appointment_id: appointmentId,
         amount_cents: amountCents,
         status: 'pending',
