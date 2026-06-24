@@ -206,9 +206,9 @@ function DataCollectCard({ step, accent, leadId, mode, onNext }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: 0 }}>Log the numbers</p>
-      {step.title && (
-        <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>{step.title}</p>
+      <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: 0 }}>{step.label || 'Log the numbers'}</p>
+      {step.hint && (
+        <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>{step.hint}</p>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {step.fields.map(f => (

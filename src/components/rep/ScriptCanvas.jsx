@@ -147,7 +147,7 @@ function buildGraph(flow) {
 
       if (step.type === 'data_collect') {
         const id = nextId()
-        makeNode(id, 'dataCollect', { fields: step.fields, title: step.title, accent }, centerX, y)
+        makeNode(id, 'dataCollect', { fields: step.fields, label: step.label, hint: step.hint, accent }, centerX, y)
         for (const t of tails) pushEdge(t, id, label)
         label = null
         tails = [{ id }]
@@ -263,9 +263,9 @@ function DataCollectNode({ data }) {
   return (
     <div style={shell(data, 'var(--success)', { background: 'rgba(34,197,94,0.06)' })}>
       <Handles />
-      <Tag color="var(--success)">▦ Log on the call</Tag>
-      {data.title && (
-        <p style={{ fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.4, margin: '0 0 8px' }}>{data.title}</p>
+      <Tag color="var(--success)">▦ {data.label || 'Log on the call'}</Tag>
+      {data.hint && (
+        <p style={{ fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.4, margin: '0 0 8px' }}>{data.hint}</p>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {(data.fields || []).map(f => (

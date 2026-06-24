@@ -245,9 +245,9 @@ Deno.serve(async (req) => {
     // Prompt 53, Change 3: the rep may not have captured these on the call, so
     // fall back to sane defaults (5 calls/week, $300 ticket) rather than letting
     // the formula return nothing. Not silent zeros — explicit, documented values.
-    const FALLBACK_CALLS_PER_WEEK = 5
+    const FALLBACK_CALLS_MISSED = 5
     const FALLBACK_AVG_TICKET = 300
-    const usedCalls  = (callsMissedPerWeek && callsMissedPerWeek > 0) ? callsMissedPerWeek : FALLBACK_CALLS_PER_WEEK
+    const usedCalls  = (callsMissedPerWeek && callsMissedPerWeek > 0) ? callsMissedPerWeek : FALLBACK_CALLS_MISSED
     const usedTicket = (avgTicket && avgTicket > 0) ? avgTicket : FALLBACK_AVG_TICKET
     const defaulted  = usedCalls !== callsMissedPerWeek || usedTicket !== avgTicket
 

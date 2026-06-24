@@ -24,9 +24,17 @@
 // onto the lead) and as a non-interactive preview on the training canvas. Keys
 // match the leads columns added in migration 050.
 export const DATA_COLLECT_FIELDS = [
-  { key: 'calls_missed_per_week', label: 'Calls missed / week', placeholder: 'e.g. 5' },
-  { key: 'avg_ticket_value',      label: 'Avg ticket value ($)', placeholder: 'e.g. 300' },
+  { key: 'calls_missed_per_week', label: 'Missed calls / week',   placeholder: '8' },
+  { key: 'avg_ticket_value',      label: 'Average job value ($)', placeholder: '350' },
 ]
+
+// The single data-collect step the ⊞ marker expands to (Prompt 53, Change 3).
+const DATA_COLLECT_STEP = {
+  type: 'data_collect',
+  label: 'Qualifying Numbers',
+  hint: 'Ask and fill in before continuing',
+  fields: DATA_COLLECT_FIELDS,
+}
 
 // The fixed opener — word for word, every call. Only [Business Name] is filled.
 export const FIXED_OPENER =
@@ -231,10 +239,9 @@ function shorten(s) {
 // Turn one trimmed marker line into a step. Marker is detected, then stripped
 // from the display text so the UI styles it (a ▸ chip, a route button, …).
 function makeStep(t, lead, rep) {
-  // ⊞ — an inline data-collection step (Prompt 53). Fixed two-field set.
-  if (/^⊞/.test(t)) {
-    return { type: 'data_collect', title: fillTokens(t.replace(/^⊞\s*/, ''), lead, rep), fields: DATA_COLLECT_FIELDS }
-  }
+  // ⊞ — an inline data-collection step (Prompt 53). Fixed config; the marker
+  // text is just an authoring hint, the step shape comes from DATA_COLLECT_STEP.
+  if (/^⊞/.test(t)) return { ...DATA_COLLECT_STEP }
   const route = isRouteLine(t)
   const action = /^▸/.test(t)
   const sub = /^↳/.test(t)
