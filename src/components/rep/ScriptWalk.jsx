@@ -2,6 +2,20 @@ import { useState, useMemo } from 'react'
 import { ChevronRight, ChevronLeft, RotateCcw, CornerDownRight, ArrowRight, CheckCircle2, CalendarCheck } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
+// In live mode, action steps (coaching notes) are skipped transparently — they
+// should never appear as standalone pages a rep might accidentally read aloud.
+function applyLiveSkip(ns) {
+  let t = ns[ns.length - 1]
+  while (t.index < t.steps.length && t.steps[t.index]?.type === 'action') {
+    t.index++
+    while (ns.length > 1 && t.index >= t.steps.length) {
+      ns.pop()
+      t = ns[ns.length - 1]
+      t.index++
+    }
+  }
+}
+
 // ── ScriptWalk ───────────────────────────────────────────────────────────────
 // The guided, one-line-at-a-time call experience. Reads a flow from
 // buildScriptFlow() (a pure derivation of the shared DISCOVERY_SCRIPT) and walks
@@ -48,16 +62,35 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
       t = ns[ns.length - 1]
       t.index++
     }
+    if (mode === 'live') applyLiveSkip(ns)
     commit({ ...state, stack: ns })
   }
   function chooseOption(opt) {
     if (!opt.steps || !opt.steps.length) return advance()
     const ns = cloneStack()
     ns.push({ steps: opt.steps, index: 0 })
+    if (mode === 'live') applyLiveSkip(ns)
     commit({ ...state, stack: ns })
   }
   function navigateTo(id) {
-    commit({ sectionId: id, stack: [{ steps: flow.byId[id].steps, index: 0 }] })
+    const ns = [{ steps: flow.byId[id].steps, index: 0 }]
+    if (mode === 'live') applyLiveSkip(ns)
+    commit({ sectionId: id, stack: ns })
+  }
+  // Jump from a combined say+fork screen: advance past both the say step (at
+  // top.index) and the fork step (at forkIdx), then enter the chosen option.
+  function advanceThenPick(forkIdx, opt) {
+    const ns = cloneStack()
+    let t = ns[ns.length - 1]
+    t.index = forkIdx + 1
+    while (ns.length > 1 && t.index >= t.steps.length) {
+      ns.pop()
+      t = ns[ns.length - 1]
+      t.index++
+    }
+    if (opt.steps?.length) ns.push({ steps: opt.steps, index: 0 })
+    if (mode === 'live') applyLiveSkip(ns)
+    commit({ ...state, stack: ns })
   }
   function back() {
     if (!history.length) return
@@ -66,6 +99,15 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
   }
   function restart() {
     commit({ sectionId: 'opener', stack: [{ steps: flow.opener.steps, index: 0 }] })
+  }
+
+  // In live mode, a say step immediately preceding a fork (only action steps
+  // between) shows as one combined screen instead of two separate taps.
+  let nextForkForSay = null
+  if (mode === 'live' && step?.type === 'say') {
+    let i = top.index + 1
+    while (i < top.steps.length && top.steps[i]?.type === 'action') i++
+    if (top.steps[i]?.type === 'fork') nextForkForSay = { fork: top.steps[i], forkIdx: i }
   }
 
   return (
@@ -103,7 +145,9 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
         )}
 
         {step && step.type === 'say' && (
-          <SayCard step={step} accent={accent} onNext={advance} />
+          mode === 'live' && nextForkForSay
+            ? <SayWithFork step={step} fork={nextForkForSay.fork} accent={accent} onPick={opt => advanceThenPick(nextForkForSay.forkIdx, opt)} />
+            : <SayCard step={step} accent={accent} onNext={advance} />
         )}
 
         {step && step.type === 'action' && (
@@ -351,5 +395,36 @@ function NextButton({ accent, onClick, label }) {
     >
       {label} <ChevronRight size={17} />
     </button>
+  )
+}
+
+// Combined say + fork screen — the spoken question and the response buttons on
+// one screen so reps never tap through a standalone say just to reach the fork.
+function SayWithFork({ step, fork, accent, onPick }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: 0 }}>
+        {step.sub ? 'Then say' : 'Say this'}
+      </p>
+      <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderLeft: `3px solid ${accent}`, borderRadius: 12, padding: '18px 20px' }}>
+        <p style={{ fontSize: 17, lineHeight: 1.55, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{step.text}</p>
+      </div>
+      <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: '4px 0 0' }}>What did they do?</p>
+      {fork.q && <p style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{fork.q}</p>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 2 }}>
+        {fork.options.map((opt, i) => (
+          <button
+            key={i}
+            onClick={() => onPick(opt)}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, textAlign: 'left', padding: '14px 16px', background: 'var(--bg-elevated)', border: `0.5px solid ${accent}55`, borderRadius: 11, cursor: 'pointer', color: 'var(--text-primary)', fontSize: 14.5, fontWeight: 500 }}
+            onMouseEnter={e => { e.currentTarget.style.background = accent + '1A'; e.currentTarget.style.borderColor = accent }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.borderColor = accent + '55' }}
+          >
+            {opt.label}
+            <ChevronRight size={16} color={accent} style={{ flexShrink: 0 }} />
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
