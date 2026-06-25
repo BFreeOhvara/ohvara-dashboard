@@ -194,7 +194,9 @@ export function RepNotificationBell({ profileId }) {
                       <p style={{
                         fontSize: 13, color: 'var(--text-primary)', margin: 0,
                         lineHeight: 1.4, overflow: 'hidden',
-                        textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
                       }}>
                         {n.message}
                       </p>
