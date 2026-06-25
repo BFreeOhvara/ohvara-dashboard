@@ -288,20 +288,37 @@ export function CallModal({ lead, onClose }) {
   // On unmount, hang up any live call and destroy the Device so the mic is
   // released and no token lingers. If the token fetch fails (secrets not set
   // yet, offline), deviceReady stays false and the UI falls back to a tel: link.
+  //
+  // IMPORTANT: setDeviceReady(true) fires only when the Device emits 'registered'
+  // — NOT synchronously after device.register(). register() is async; calling it
+  // immediately after device.register() was the root cause of "Call failed"
+  // (device.connect() was reached before Device was actually registered).
   useEffect(() => {
     let cancelled = false
     let device = null
     async function init() {
       try {
         const { data, error } = await supabase.functions.invoke('twilio-token')
-        if (error || !data?.token) throw error || new Error('No token returned')
+        if (error || !data?.token) {
+          console.error('[twilio-token] failed:', error || 'no token returned')
+          return
+        }
         if (cancelled) return
         device = new Device(data.token, { codecPreferences: ['opus', 'pcmu'] })
-        device.on('error', () => { setCallState('error') })
-        device.register()
+        device.on('registered', () => {
+          if (!cancelled) setDeviceReady(true)
+        })
+        device.on('error', (twilioError) => {
+          console.error('[Twilio Device] error:', twilioError?.message || twilioError?.code || twilioError)
+          // Only surface as call-failure if a call is in flight — during registration
+          // failure the Device never reaches 'registered', so deviceReady stays false
+          // and the UI correctly falls back to the tel: link.
+          if (!cancelled) setCallState(prev => prev !== 'idle' ? 'error' : prev)
+        })
         deviceRef.current = device
-        setDeviceReady(true)
-      } catch {
+        device.register()
+      } catch (e) {
+        console.error('[twilio-token] exception:', e)
         if (!cancelled) setDeviceReady(false)
       }
     }
@@ -360,8 +377,9 @@ export function CallModal({ lead, onClose }) {
       })
       call.on('disconnect', () => { callRef.current = null; setMuted(false); setCallState('idle') })
       call.on('cancel',     () => { callRef.current = null; setCallState('idle') })
-      call.on('error',      () => { callRef.current = null; setCallState('error') })
-    } catch {
+      call.on('error',      (e) => { console.error('[Twilio call] error:', e?.message || e?.code || e); callRef.current = null; setCallState('error') })
+    } catch (e) {
+      console.error('[Twilio startCall] connect failed:', e?.message || e)
       callRef.current = null
       setCallState('error')
     }
