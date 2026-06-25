@@ -262,6 +262,11 @@ function MyPayouts({ connected }) {
             const dealValueCents = p.deal_value_cents ?? (p.amount_cents * 10)
             const dealDollars = Math.round(dealValueCents / 100).toLocaleString()
             const cutDollars = Math.round(p.amount_cents / 100).toLocaleString()
+            const isPaid = p.status === 'paid'
+            const fmtDate = iso => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            const dateLabel = isPaid && p.paid_at
+              ? `Paid on ${fmtDate(p.paid_at)}`
+              : `Closed on ${fmtDate(p.created_at)}`
             return (
               <div key={p.id} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
@@ -273,6 +278,9 @@ function MyPayouts({ connected }) {
                   </p>
                   <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
                     Closed ${dealDollars} · 10% · ${cutDollars} earned
+                  </p>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>
+                    {dateLabel}
                   </p>
                 </div>
                 <StatusChip status={p.status} />
