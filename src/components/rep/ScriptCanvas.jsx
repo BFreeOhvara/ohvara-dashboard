@@ -86,35 +86,27 @@ function buildGraph(flow) {
     let y = startY
     const centerX = bandLeftPx + (bandCols * COL) / 2 - NODE_W / 2
 
-    for (const step of steps) {
+    let si = 0
+    while (si < steps.length) {
+      const step = steps[si]
+
       if (step.type === 'route') {
         const targetSection = flow.byId[step.target]
         const tgt = headerNodeId(step.target)
         if (targetSection?.kind === 'branch') {
-          // Back-reference: draw a curved dashed accent arrow back to that branch's
-          // header node instead of inlining its content.
-          for (const t of tails) {
-            edges.push({
-              id: `e${counter++}`,
-              source: t.id,
-              target: tgt,
-              label: (t.label ?? routeLabel(flow, step.target)) || undefined,
-              type: 'smoothstep',
-              animated: true,
-              style: { stroke: 'var(--accent)', strokeWidth: 1.5, strokeDasharray: '5 3' },
-              labelStyle: { fontSize: 10, fill: 'var(--accent)', fontWeight: 600 },
-              labelBgStyle: { fill: 'rgba(108,99,255,0.12)' },
-              labelBgPadding: [5, 3],
-              labelBgBorderRadius: 4,
-              markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14, color: 'var(--accent)' },
-            })
-          }
+          // Terminal "Go to X" node — no long cross-canvas arrow drawn.
+          // Clicking this node in practice mode jumps to the target branch.
+          const id = nextId()
+          makeNode(id, 'goTo', { label: routeLabel(flow, step.target), targetSectionId: step.target, accent }, centerX, y, sectionId)
+          for (const t of tails) pushEdge(t, id, label)
+          y += ROW
         } else {
           // Forward route (to close or terminal)
           for (const t of tails) pushEdge(t, tgt, label ?? routeLabel(flow, step.target))
         }
         label = null
         tails = []
+        si++
         continue
       }
 
@@ -142,6 +134,7 @@ function buildGraph(flow) {
         }
         tails = optTails
         y = maxEndY
+        si++
         continue
       }
 
@@ -152,16 +145,64 @@ function buildGraph(flow) {
         label = null
         tails = [{ id }]
         y += ROW
+        si++
         continue
       }
 
-      // say / action — a single node
+      if (step.type === 'say') {
+        // Peek ahead past any action steps for an immediately adjacent fork.
+        let j = si + 1
+        while (j < steps.length && steps[j]?.type === 'action') j++
+        const nextFork = steps[j]?.type === 'fork' ? steps[j] : null
+
+        if (nextFork) {
+          // Say + fork combined into one node — no intermediate arrow.
+          const id = nextId()
+          makeNode(id, 'sayFork', { text: step.text, sub: step.sub, q: nextFork.q, accent }, centerX, y, sectionId)
+          for (const t of tails) pushEdge(t, id, label)
+          label = null
+
+          const optY = y + ROW
+          let optLeftCols = 0
+          const optTails = []
+          let maxEndY = optY
+          for (const opt of nextFork.options) {
+            const optCols = Math.max(1, measureSteps(opt.steps, flow, visited))
+            const optLeftPx = bandLeftPx + optLeftCols * COL
+            if (opt.steps.length === 0) {
+              optTails.push({ id, label: opt.label })
+            } else {
+              const r = placeSteps(opt.steps, optLeftPx, optCols, optY, [{ id }], opt.label, accent, visited, sectionId)
+              for (const tt of r.tails) optTails.push(tt)
+              maxEndY = Math.max(maxEndY, r.endY)
+            }
+            optLeftCols += optCols
+          }
+          tails = optTails
+          y = maxEndY
+          si = j + 1  // skip say + interstitial actions + fork
+          continue
+        }
+
+        // Standalone say (no adjacent fork)
+        const id = nextId()
+        makeNode(id, 'say', { text: step.text, sub: step.sub, accent }, centerX, y, sectionId)
+        for (const t of tails) pushEdge(t, id, label)
+        label = null
+        tails = [{ id }]
+        y += ROW
+        si++
+        continue
+      }
+
+      // action (and any other step type) — single node
       const id = nextId()
       makeNode(id, step.type, { text: step.text, sub: step.sub, accent }, centerX, y, sectionId)
       for (const t of tails) pushEdge(t, id, label)
       label = null
       tails = [{ id }]
       y += ROW
+      si++
     }
 
     return { tails, endY: y }
@@ -280,6 +321,34 @@ function DataCollectNode({ data }) {
   )
 }
 
+function SayForkNode({ data }) {
+  return (
+    <div style={shell(data, data.accent, { background: `${data.accent}0D` })}>
+      <Handles />
+      <Tag color={data.accent}>{data.sub ? 'Then say' : 'Say'}</Tag>
+      <p style={{ fontSize: 11.5, fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5, margin: '0 0 10px', borderBottom: '0.5px solid var(--border)', paddingBottom: 10 }}>
+        {unquote(data.text)}
+      </p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+        <span style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--accent)', background: 'rgba(108,99,255,0.20)', borderRadius: 3, padding: '1px 5px', flexShrink: 0, marginTop: 1, whiteSpace: 'nowrap' }}>if/else</span>
+        {data.q && <span style={{ fontSize: 11, color: 'var(--text-primary)', lineHeight: 1.45 }}>{data.q}</span>}
+      </div>
+    </div>
+  )
+}
+
+function GoToNode({ data }) {
+  return (
+    <div style={shell(data, 'var(--accent)', { background: 'rgba(108,99,255,0.08)', border: '1px dashed rgba(108,99,255,0.40)' })}>
+      <Handle type="target" position={Position.Top} style={HANDLE} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+        <span style={{ fontSize: 15, color: 'var(--accent)', lineHeight: 1 }}>→</span>
+        <span style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 600 }}>{data.label}</span>
+      </div>
+    </div>
+  )
+}
+
 function ForkNode({ data }) {
   return (
     <div style={shell(data, 'var(--accent)', { background: 'rgba(108,99,255,0.10)', border: data.active || data.pickable ? undefined : '1px solid rgba(108,99,255,0.30)' })}>
@@ -339,6 +408,8 @@ function CloseNode({ data }) {
 
 const nodeTypes = {
   say: SayNode,
+  sayFork: SayForkNode,
+  goTo: GoToNode,
   action: ActionNode,
   fork: ForkNode,
   dataCollect: DataCollectNode,
@@ -368,7 +439,7 @@ function CanvasInner({ flow, onPractice }) {
   }, [graph.nodes])
 
   const onNodeClick = useCallback((_evt, node) => {
-    onPractice(node.data.sectionId || 'opener')
+    onPractice(node.data.targetSectionId || node.data.sectionId || 'opener')
   }, [onPractice])
 
   return (
