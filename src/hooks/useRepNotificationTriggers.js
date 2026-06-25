@@ -27,53 +27,6 @@ export function useMessageReplyNotifier(repId) {
   }, [repId, qc])
 }
 
-// ── Follow-up 5-minute polling notifier ─────────────────────────────────────
-// Polls every 60s for leads with follow_up_at within the next ~5 min.
-// Fires a one-time "Follow-up in 5 min" notification per lead per session.
-// Separate from useFollowUpNotifier (which runs on the leads list at 60/10/1m).
-export function useFollowUp5MinNotifier(repId) {
-  const qc = useQueryClient()
-  const notifiedThisSession = useRef(new Set())
-
-  useEffect(() => {
-    if (!repId) return
-
-    async function check() {
-      const now = new Date()
-      const soon = new Date(now.getTime() + 6 * 60 * 1000)
-      const { data: leads } = await supabase
-        .from('leads')
-        .select('id, business_name, follow_up_at')
-        .eq('assigned_rep_id', repId)
-        .eq('status', 'Follow-Up')
-        .gte('follow_up_at', now.toISOString())
-        .lte('follow_up_at', soon.toISOString())
-      if (!leads?.length) return
-      const toNotify = leads.filter(l => {
-        const key = `${l.id}:${l.follow_up_at}`
-        if (notifiedThisSession.current.has(key)) return false
-        notifiedThisSession.current.add(key)
-        return true
-      })
-      if (!toNotify.length) return
-      await Promise.all(
-        toNotify.map(l => supabase.from('notifications').insert({
-          profile_id: repId,
-          type: 'follow_up',
-          message: `Follow-up in 5 min: ${l.business_name}`,
-          data: { lead_id: l.id, business_name: l.business_name, threshold: 5 },
-        }))
-      )
-      qc.invalidateQueries({ queryKey: ['rep-notifications', repId] })
-      qc.invalidateQueries({ queryKey: ['rep-notifications-unread', repId] })
-    }
-
-    check()
-    const timer = setInterval(check, 60_000)
-    return () => clearInterval(timer)
-  }, [repId, qc])
-}
-
 // ── Deal closed notifier ─────────────────────────────────────────────────────
 // Subscribes to realtime INSERTs on commission_payouts for this rep.
 // Fetches the payout with joins (realtime payload has no joined data), then
@@ -99,11 +52,10 @@ export function useDealClosedNotifier(repId) {
             amountCents = data.amount_cents
             if (data.appointment?.lead?.business_name) biz = data.appointment.lead.business_name
           }
-          const cutDollars = Math.round(amountCents / 100).toLocaleString()
           await supabase.from('notifications').insert({
             profile_id: repId,
             type: 'deal_closed',
-            message: `Deal closed! You'll earn $${cutDollars} from ${biz}`,
+            message: `Deal closed: ${biz}`,
             data: { payout_id: raw.id, amount_cents: amountCents },
           })
           qc.invalidateQueries({ queryKey: ['rep-notifications', repId] })
@@ -222,15 +174,11 @@ export function useCallGradedNotifier(repId) {
 }
 
 // ── Follow-up notifier ───────────────────────────────────────────────────────
-// Checks the lead list against three thresholds before each follow-up's due
-// time (60m, 10m, 1m) and inserts one notification per threshold crossed.
-// Dedup key is `${leadId}:${threshold}` (not just leadId) so all three fire
-// independently for the same lead instead of the first one blocking the rest.
-// Runs on each leads/notifications refresh (useRepNotifications polls every
-// 15s, which re-triggers this since `existingNotifications` is a dependency —
-// no separate timer needed).
+// Fires once per lead when its follow_up_at is within 5 minutes.
+// Dedup key is `${leadId}:5` (session + DB both checked).
+// Runs on each notifications refresh (every 15s) — no separate timer needed.
 
-const FOLLOW_UP_THRESHOLDS_MIN = [60, 10, 1]
+const FOLLOW_UP_THRESHOLDS_MIN = [5]
 
 export function useFollowUpNotifier(repId, leads = [], existingNotifications = []) {
   const qc = useQueryClient()
@@ -261,7 +209,7 @@ export function useFollowUpNotifier(repId, leads = [], existingNotifications = [
         toNotify.push({
           profile_id: repId,
           type: 'follow_up',
-          message: `Follow-up in ${threshold}m: ${lead.business_name}`,
+          message: `Follow-up in 5 min: ${lead.business_name}`,
           data: { lead_id: lead.id, business_name: lead.business_name, threshold },
         })
       }

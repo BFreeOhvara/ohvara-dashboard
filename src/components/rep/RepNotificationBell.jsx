@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Bell, CheckCheck, MessageSquare, Award, Clock, DollarSign, PhoneCall } from 'lucide-react'
 import { useRepNotifications, useRepUnreadCount, useRepMarkNotificationRead, useRepMarkAllRead } from '../../hooks/useNotifications'
-import { useFollowUpNotifier, useMessageReplyNotifier, useFollowUp5MinNotifier, useDealClosedNotifier, useCallGradedNotifier } from '../../hooks/useRepNotificationTriggers'
+import { useFollowUpNotifier, useMessageReplyNotifier, useDealClosedNotifier, useCallGradedNotifier } from '../../hooks/useRepNotificationTriggers'
 import { useMyLeads } from '../../hooks/useLeads'
 
 const TYPE_STYLES = {
@@ -40,7 +40,6 @@ export function RepNotificationBell({ profileId }) {
   const { data: leads = [] } = useMyLeads()
   useFollowUpNotifier(profileId, leads, notifications)
   useMessageReplyNotifier(profileId)
-  useFollowUp5MinNotifier(profileId)
   useDealClosedNotifier(profileId)
   useCallGradedNotifier(profileId)
 
@@ -76,7 +75,11 @@ export function RepNotificationBell({ profileId }) {
     <div ref={ref} style={{ position: 'relative' }}>
       {/* Bell button */}
       <button
-        onClick={() => setOpen(v => !v)}
+        onClick={() => {
+          const willOpen = !open
+          setOpen(willOpen)
+          if (willOpen && unreadCount > 0) markAll.mutate()
+        }}
         style={{
           position: 'relative',
           width: 34, height: 34,
