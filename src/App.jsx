@@ -25,6 +25,7 @@ import RepAnalytics from './pages/closer/RepAnalytics'
 import CallLeads from './pages/closer/CallLeads'
 import CloserPipeline from './pages/closer/CloserPipeline'
 import CloserMyStats from './pages/closer/CloserMyStats'
+import CloserScript from './pages/closer/CloserScript'
 import LeadScraperCloser from './pages/admin/LeadScraper'
 
 // Admin pages
@@ -156,6 +157,11 @@ export default function App() {
             <Route path="/closer/messages" element={
               <ProtectedRoute allowedRoles={['closer']}>
                 <DashboardLayout><CloserMessages /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/closer/script" element={
+              <ProtectedRoute allowedRoles={['closer']}>
+                <DashboardLayout><CloserScript /></DashboardLayout>
               </ProtectedRoute>
             } />
 

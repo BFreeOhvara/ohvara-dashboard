@@ -302,9 +302,9 @@ function parseSteps(lines, start, baseIndent, lead, rep) {
 // plus the display metadata (color/label/trigger/goal/tips) from the source.
 // Each branch also gets derived flags for the flowchart: `booksNate` (it has a
 // path that routes onward to the close) and `outcome` (the status it ends on).
-export function buildScriptFlow(lead, rep) {
+export function buildScriptFlow(lead, rep, script = DISCOVERY_SCRIPT) {
   const byId = {}
-  for (const section of DISCOVERY_SCRIPT) {
+  for (const section of script) {
     const { steps } = parseSteps(section.lines, 0, 0, lead, rep)
     byId[section.id] = {
       id: section.id, kind: section.kind, short: section.short,
@@ -319,7 +319,7 @@ export function buildScriptFlow(lead, rep) {
   return {
     byId,
     opener: byId.opener,
-    branches: DISCOVERY_SCRIPT.filter(s => s.kind === 'branch').map(s => byId[s.id]),
+    branches: script.filter(s => s.kind === 'branch').map(s => byId[s.id]),
     close: byId.close,
   }
 }
