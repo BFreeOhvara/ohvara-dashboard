@@ -1,15 +1,23 @@
 import { useState, useMemo } from 'react'
-import { CalendarClock, CheckCircle, Ban, Search } from 'lucide-react'
+import { CalendarClock, CheckCircle, Ban, Search, Phone, Calendar } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { useMyAppointments } from '../../hooks/useAppointments'
 import { useAuth } from '../../hooks/useAuth'
+import { supabase } from '../../lib/supabase'
 import { formatInTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { KPICard } from '../../components/ui/KPICard'
 import { Badge } from '../../components/ui/Badge'
 
-const TABS = [
+// ── Closer pipeline tabs ──────────────────────────────────────────────────────
+const CLOSER_TABS = [
   { key: 'pending', label: 'Pending', icon: CalendarClock },
   { key: 'closed',  label: 'Closed',  icon: CheckCircle },
   { key: 'lost',    label: 'Lost',    icon: Ban },
+]
+
+// ── Appointment-setter status tabs ────────────────────────────────────────────
+const SETTER_STATUSES = [
+  'New', 'No Answer', 'Follow-Up', 'Appointment Booked', 'Not Interested',
 ]
 
 const cell = (basis, extra = {}) => ({
@@ -48,6 +56,8 @@ function QueueTable({ columns, rows, renderRow, emptyText }) {
     </div>
   )
 }
+
+// ── Closer pipeline sub-views ─────────────────────────────────────────────────
 
 function PendingTab({ rows, tz }) {
   const scheduled = rows.filter(a => a.scheduled_at)
@@ -130,14 +140,116 @@ function LostTab({ rows }) {
   )
 }
 
+// ── Appointment-setting view ──────────────────────────────────────────────────
+
+function useRepLeads(profileId) {
+  return useQuery({
+    queryKey: ['leads', 'rep-pipeline', profileId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('id, business_name, phone, city, niche, status, follow_up_at, created_at')
+        .eq('assigned_rep_id', profileId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!profileId,
+  })
+}
+
+function SetterView({ profileId, search }) {
+  const { data: leads = [], isLoading } = useRepLeads(profileId)
+  const [statusFilter, setStatusFilter] = useState('All')
+
+  const counts = useMemo(() => {
+    const out = { All: leads.length }
+    for (const s of SETTER_STATUSES) out[s] = 0
+    for (const l of leads) if (out[l.status] !== undefined) out[l.status]++
+    return out
+  }, [leads])
+
+  const filtered = useMemo(() => {
+    let list = statusFilter === 'All' ? leads : leads.filter(l => l.status === statusFilter)
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter(l => l.business_name?.toLowerCase().includes(q) || l.niche?.toLowerCase().includes(q))
+    }
+    return list
+  }, [leads, statusFilter, search])
+
+  return (
+    <div>
+      {/* KPI row */}
+      <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <KPICard label="Total" value={counts.All} sub="leads assigned" icon={Phone} />
+        <KPICard label="Booked" value={counts['Appointment Booked'] || 0} sub="appointments set" icon={Calendar} />
+        <KPICard label="Active" value={(counts['New'] || 0) + (counts['No Answer'] || 0) + (counts['Follow-Up'] || 0)} sub="still in play" icon={CalendarClock} />
+      </div>
+
+      {/* Status filter tabs */}
+      <div style={{ display: 'flex', gap: 4, borderBottom: '0.5px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
+        {['All', ...SETTER_STATUSES].map(s => (
+          <button
+            key={s}
+            onClick={() => setStatusFilter(s)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '10px 14px', background: 'none', cursor: 'pointer',
+              border: 'none', borderBottom: statusFilter === s ? '2px solid var(--accent)' : '2px solid transparent',
+              fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap',
+              color: statusFilter === s ? 'var(--accent)' : 'var(--text-muted)',
+            }}
+          >
+            {s}
+            <span style={{
+              fontSize: 10, padding: '1px 6px', borderRadius: 10, fontFamily: 'var(--font-mono)',
+              background: statusFilter === s ? 'var(--accent-dim)' : 'var(--bg-elevated)',
+              color: statusFilter === s ? 'var(--accent)' : 'var(--text-muted)',
+              border: `0.5px solid ${statusFilter === s ? 'var(--accent-border)' : 'var(--border)'}`,
+            }}>
+              {isLoading ? '…' : counts[s] ?? 0}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Leads table */}
+      <QueueTable
+        columns={[['Business', '1 1 0'], ['Niche', '0 0 130px'], ['City', '0 0 110px'], ['Phone', '0 0 140px'], ['Status', '0 0 140px'], ['Follow-Up', '0 0 120px']]}
+        rows={filtered}
+        emptyText={isLoading ? 'Loading…' : 'No leads match.'}
+        renderRow={l => (
+          <div key={l.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
+            <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{l.business_name || '—'}</div>
+            <div style={cell('0 0 130px')}>{l.niche || '—'}</div>
+            <div style={cell('0 0 110px')}>{l.city || '—'}</div>
+            <div style={cell('0 0 140px', { fontFamily: 'var(--font-mono)', fontSize: 11 })}>{l.phone || '—'}</div>
+            <div style={cell('0 0 140px')}><Badge label={l.status || 'New'} /></div>
+            <div style={cell('0 0 120px', { fontFamily: 'var(--font-mono)' })}>{fmtDate(l.follow_up_at)}</div>
+          </div>
+        )}
+      />
+    </div>
+  )
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
+
+const VIEW_TABS = [
+  { key: 'setter', label: 'Appointment Setting', icon: Phone },
+  { key: 'closer', label: 'Closer',              icon: CalendarClock },
+]
+
 export default function CloserPipeline() {
   const { profile } = useAuth()
   const tz = profile?.timezone || DEFAULT_TIMEZONE
   const { data: allAppts, isLoading } = useMyAppointments()
-  const [tab, setTab] = useState('pending')
+  const [view, setView] = useState('closer')
+  const [closerTab, setCloserTab] = useState('pending')
   const [search, setSearch] = useState('')
 
-  const filtered = useMemo(() => {
+  const filteredAppts = useMemo(() => {
     if (!allAppts) return { pending: [], closed: [], lost: [] }
     const s = search.trim().toLowerCase()
     const appts = s
@@ -158,7 +270,7 @@ export default function CloserPipeline() {
             Pipeline
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-            Your appointments — pending, closed, and lost.
+            {view === 'setter' ? 'Leads you\'re working as an appointment setter.' : 'Your appointments — pending, closed, and lost.'}
           </p>
         </div>
         <div style={{ position: 'relative' }}>
@@ -176,36 +288,65 @@ export default function CloserPipeline() {
         </div>
       </div>
 
+      {/* View toggle — Appointment Setting vs Closer */}
       <div style={{ display: 'flex', gap: 4, borderBottom: '0.5px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
-        {TABS.map(({ key, label, icon: Icon }) => (
+        {VIEW_TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
-            onClick={() => setTab(key)}
+            onClick={() => setView(key)}
             style={{
               display: 'flex', alignItems: 'center', gap: 7,
-              padding: '10px 14px', background: 'none', cursor: 'pointer',
-              border: 'none', borderBottom: tab === key ? '2px solid var(--accent)' : '2px solid transparent',
-              fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap',
-              color: tab === key ? 'var(--accent)' : 'var(--text-muted)',
+              padding: '10px 16px', background: 'none', cursor: 'pointer',
+              border: 'none', borderBottom: view === key ? '2px solid var(--accent)' : '2px solid transparent',
+              fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap',
+              color: view === key ? 'var(--accent)' : 'var(--text-muted)',
             }}
           >
-            <Icon size={13} />
+            <Icon size={14} />
             {label}
-            <span style={{
-              fontSize: 10, padding: '1px 6px', borderRadius: 10, fontFamily: 'var(--font-mono)',
-              background: tab === key ? 'var(--accent-dim)' : 'var(--bg-elevated)',
-              color: tab === key ? 'var(--accent)' : 'var(--text-muted)',
-              border: `0.5px solid ${tab === key ? 'var(--accent-border)' : 'var(--border)'}`,
-            }}>
-              {isLoading ? '…' : filtered[key]?.length ?? 0}
-            </span>
           </button>
         ))}
       </div>
 
-      {tab === 'pending' && <PendingTab rows={filtered.pending} tz={tz} />}
-      {tab === 'closed'  && <ClosedTab  rows={filtered.closed} />}
-      {tab === 'lost'    && <LostTab    rows={filtered.lost} />}
+      {/* Appointment Setting view */}
+      {view === 'setter' && (
+        <SetterView profileId={profile?.id} search={search} />
+      )}
+
+      {/* Closer view */}
+      {view === 'closer' && (
+        <div>
+          <div style={{ display: 'flex', gap: 4, borderBottom: '0.5px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
+            {CLOSER_TABS.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setCloserTab(key)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  padding: '10px 14px', background: 'none', cursor: 'pointer',
+                  border: 'none', borderBottom: closerTab === key ? '2px solid var(--accent)' : '2px solid transparent',
+                  fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap',
+                  color: closerTab === key ? 'var(--accent)' : 'var(--text-muted)',
+                }}
+              >
+                <Icon size={13} />
+                {label}
+                <span style={{
+                  fontSize: 10, padding: '1px 6px', borderRadius: 10, fontFamily: 'var(--font-mono)',
+                  background: closerTab === key ? 'var(--accent-dim)' : 'var(--bg-elevated)',
+                  color: closerTab === key ? 'var(--accent)' : 'var(--text-muted)',
+                  border: `0.5px solid ${closerTab === key ? 'var(--accent-border)' : 'var(--border)'}`,
+                }}>
+                  {isLoading ? '…' : filteredAppts[key]?.length ?? 0}
+                </span>
+              </button>
+            ))}
+          </div>
+          {closerTab === 'pending' && <PendingTab rows={filteredAppts.pending} tz={tz} />}
+          {closerTab === 'closed'  && <ClosedTab  rows={filteredAppts.closed} />}
+          {closerTab === 'lost'    && <LostTab    rows={filteredAppts.lost} />}
+        </div>
+      )}
     </div>
   )
 }
