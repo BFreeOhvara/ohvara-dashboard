@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { CalendarClock, CheckCircle, Ban, Search, Phone, Calendar } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { CalendarClock, CheckCircle, Ban, Search, Phone, Calendar, X } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useMyAppointments } from '../../hooks/useAppointments'
 import { useAuth } from '../../hooks/useAuth'
@@ -19,6 +20,16 @@ const CLOSER_TABS = [
 const SETTER_STATUSES = [
   'New', 'No Answer', 'Follow-Up', 'Appointment Booked', 'Not Interested',
 ]
+
+// Colors per status — matches Badge.jsx STATUS_STYLES tokens exactly
+const STATUS_TAB_COLORS = {
+  'New':                { color: 'var(--info)',    dim: 'var(--info-dim)',        border: 'rgba(56,189,248,0.20)' },
+  'No Answer':          { color: '#94A3B8',         dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)' },
+  'Follow-Up':          { color: 'var(--warning)',  dim: 'var(--warning-dim)',     border: 'rgba(245,158,11,0.20)' },
+  'Appointment Booked': { color: 'var(--success)',  dim: 'var(--success-dim)',     border: 'rgba(34,197,94,0.20)' },
+  'Not Interested':     { color: 'var(--danger)',   dim: 'var(--danger-dim)',      border: 'rgba(239,68,68,0.20)' },
+  'All':                { color: 'var(--accent)',   dim: 'var(--accent-dim)',      border: 'var(--accent-border)' },
+}
 
 const cell = (basis, extra = {}) => ({
   flex: basis, padding: '10px 12px', fontSize: 12, color: 'var(--text-secondary)',
@@ -46,7 +57,7 @@ function QueueTable({ columns, rows, renderRow, emptyText }) {
               </div>
             ))}
           </div>
-          <div style={{ maxHeight: 480, overflowY: 'auto' }} className="scrollbar-thin">
+          <div style={{ height: 480, overflowY: 'auto' }} className="scrollbar-thin">
             {!rows?.length ? (
               <p style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>{emptyText}</p>
             ) : rows.map(renderRow)}
@@ -140,6 +151,46 @@ function LostTab({ rows }) {
   )
 }
 
+// ── Lead detail overlay ───────────────────────────────────────────────────────
+function LeadDetailOverlay({ lead, onClose }) {
+  if (!lead) return null
+  return createPortal(
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: '#13131F', border: '0.5px solid var(--border)', borderRadius: 12, padding: '20px 24px', width: 360, maxWidth: '90vw' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{lead.business_name || '—'}</p>
+            <div style={{ marginTop: 6 }}><Badge label={lead.status || 'New'} /></div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2 }}>
+            <X size={16} />
+          </button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[
+            ['Phone',     lead.phone,         'var(--font-mono)'],
+            ['Niche',     lead.niche,         undefined],
+            ['City',      lead.city,          undefined],
+            ['Follow-up', lead.follow_up_at ? fmtDate(lead.follow_up_at) : null, 'var(--font-mono)'],
+          ].filter(([, v]) => v).map(([label, value, ff]) => (
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{label}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-primary)', fontFamily: ff }}>{value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 // ── Appointment-setting view ──────────────────────────────────────────────────
 
 function useRepLeads(profileId) {
@@ -161,6 +212,7 @@ function useRepLeads(profileId) {
 function SetterView({ profileId, search }) {
   const { data: leads = [], isLoading } = useRepLeads(profileId)
   const [statusFilter, setStatusFilter] = useState('All')
+  const [selectedLead, setSelectedLead] = useState(null)
 
   const counts = useMemo(() => {
     const out = { All: leads.length }
@@ -187,40 +239,50 @@ function SetterView({ profileId, search }) {
         <KPICard label="Active" value={(counts['New'] || 0) + (counts['No Answer'] || 0) + (counts['Follow-Up'] || 0)} sub="still in play" icon={CalendarClock} />
       </div>
 
-      {/* Status filter tabs */}
+      {/* Status filter tabs — order: statuses first, All last; colored per status */}
       <div style={{ display: 'flex', gap: 4, borderBottom: '0.5px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
-        {['All', ...SETTER_STATUSES].map(s => (
-          <button
-            key={s}
-            onClick={() => setStatusFilter(s)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '10px 14px', background: 'none', cursor: 'pointer',
-              border: 'none', borderBottom: statusFilter === s ? '2px solid var(--accent)' : '2px solid transparent',
-              fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap',
-              color: statusFilter === s ? 'var(--accent)' : 'var(--text-muted)',
-            }}
-          >
-            {s}
-            <span style={{
-              fontSize: 10, padding: '1px 6px', borderRadius: 10, fontFamily: 'var(--font-mono)',
-              background: statusFilter === s ? 'var(--accent-dim)' : 'var(--bg-elevated)',
-              color: statusFilter === s ? 'var(--accent)' : 'var(--text-muted)',
-              border: `0.5px solid ${statusFilter === s ? 'var(--accent-border)' : 'var(--border)'}`,
-            }}>
-              {isLoading ? '…' : counts[s] ?? 0}
-            </span>
-          </button>
-        ))}
+        {[...SETTER_STATUSES, 'All'].map(s => {
+          const tc = STATUS_TAB_COLORS[s]
+          const active = statusFilter === s
+          return (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '10px 14px', background: 'none', cursor: 'pointer',
+                border: 'none', borderBottom: active ? `2px solid ${tc.color}` : '2px solid transparent',
+                fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap',
+                color: active ? tc.color : 'var(--text-muted)',
+              }}
+            >
+              {s}
+              <span style={{
+                fontSize: 10, padding: '1px 6px', borderRadius: 10, fontFamily: 'var(--font-mono)',
+                background: active ? tc.dim : 'var(--bg-elevated)',
+                color: active ? tc.color : 'var(--text-muted)',
+                border: `0.5px solid ${active ? tc.border : 'var(--border)'}`,
+              }}>
+                {isLoading ? '…' : counts[s] ?? 0}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
-      {/* Leads table */}
+      {/* Leads table — click any row to open detail overlay */}
       <QueueTable
         columns={[['Business', '1 1 0'], ['Niche', '0 0 130px'], ['City', '0 0 110px'], ['Phone', '0 0 140px'], ['Status', '0 0 140px'], ['Follow-Up', '0 0 120px']]}
         rows={filtered}
         emptyText={isLoading ? 'Loading…' : 'No leads match.'}
         renderRow={l => (
-          <div key={l.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
+          <div
+            key={l.id}
+            onClick={() => setSelectedLead(l)}
+            style={{ display: 'flex', borderBottom: '0.5px solid var(--border)', cursor: 'pointer', transition: 'background 100ms' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+          >
             <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{l.business_name || '—'}</div>
             <div style={cell('0 0 130px')}>{l.niche || '—'}</div>
             <div style={cell('0 0 110px')}>{l.city || '—'}</div>
@@ -230,6 +292,7 @@ function SetterView({ profileId, search }) {
           </div>
         )}
       />
+      <LeadDetailOverlay lead={selectedLead} onClose={() => setSelectedLead(null)} />
     </div>
   )
 }
