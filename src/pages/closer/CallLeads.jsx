@@ -1,6 +1,9 @@
 import { useState, useMemo } from 'react'
-import { PhoneCall, RefreshCw } from 'lucide-react'
+import { Phone, PhoneCall, RefreshCw } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAllLeads } from '../../hooks/useLeads'
+import { useAuth } from '../../hooks/useAuth'
+import { supabase } from '../../lib/supabase'
 import { Badge } from '../../components/ui/Badge'
 import { CallButton } from '../../components/rep/CallButton'
 import { AIScriptPanel } from '../../components/rep/AIScriptPanel'
@@ -8,12 +11,32 @@ import { Button } from '../../components/ui/Button'
 
 const UNBOOKED_STATUSES = ['New', 'Contacted', 'Voicemail', 'No Answer', 'Interested']
 
+function useRequestLeads() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ closerId, count }) => {
+      const { data, error } = await supabase.rpc('request_closer_leads', {
+        p_closer_id: closerId,
+        p_count: count,
+      })
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['leads'] })
+    },
+  })
+}
+
 export default function CallLeads() {
+  const { profile } = useAuth()
   const { data: allLeads, isLoading, refetch } = useAllLeads()
   const [scriptLead, setScriptLead] = useState(null)
   const [search, setSearch] = useState('')
+  const [count, setCount] = useState(50)
+  const [lastResult, setLastResult] = useState(null)
+  const requestLeads = useRequestLeads()
 
-  // Only unbooked leads — closers bypass reps on these
   const leads = useMemo(() => {
     if (!allLeads) return []
     return allLeads.filter(l => UNBOOKED_STATUSES.includes(l.status))
@@ -29,6 +52,12 @@ export default function CallLeads() {
     )
   }, [leads, search])
 
+  async function handleRequest() {
+    if (!profile?.id || requestLeads.isPending) return
+    const assigned = await requestLeads.mutateAsync({ closerId: profile.id, count })
+    setLastResult(assigned)
+  }
+
   return (
     <div style={{ display: 'flex', height: '100%' }}>
       {/* Main panel — shrinks when script panel opens */}
@@ -39,10 +68,10 @@ export default function CallLeads() {
       }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20, gap: 16, flexWrap: 'wrap' }}>
           <div>
             <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
-              Call Leads
+              My Leads
             </h1>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
               Unbooked leads across all reps —{' '}
@@ -52,7 +81,37 @@ export default function CallLeads() {
               available
             </p>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Request Leads */}
+            <input
+              type="number"
+              min={1}
+              max={500}
+              value={count}
+              onChange={e => setCount(Math.min(500, Math.max(1, Number(e.target.value) || 1)))}
+              style={{
+                width: 72, height: 30, padding: '0 10px', textAlign: 'center',
+                background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                borderRadius: 6, fontSize: 13, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)',
+              }}
+            />
+            <button
+              onClick={handleRequest}
+              disabled={requestLeads.isPending}
+              style={{
+                height: 30, padding: '0 12px', borderRadius: 6, border: 'none',
+                cursor: requestLeads.isPending ? 'not-allowed' : 'pointer',
+                background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 500,
+                opacity: requestLeads.isPending ? 0.6 : 1,
+              }}
+            >
+              {requestLeads.isPending ? 'Requesting…' : `Request ${count}`}
+            </button>
+            {lastResult !== null && (
+              <span style={{ fontSize: 12, color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>
+                +{lastResult} assigned
+              </span>
+            )}
             {/* Search */}
             <input
               value={search}
@@ -76,7 +135,7 @@ export default function CallLeads() {
           </div>
         </div>
 
-        {/* Table — glass surface */}
+        {/* Table — glass surface with internally-scrollable rows */}
         <div className="glass" style={{ overflow: 'hidden', borderRadius: 10 }}>
           {/* Header row */}
           <div style={{
@@ -92,45 +151,47 @@ export default function CallLeads() {
             <div style={{ flex: '0 0 140px', padding: '8px 16px 8px 0', textAlign: 'right' }} className="section-label">Action</div>
           </div>
 
-          {/* Rows */}
-          {isLoading ? (
-            <div>
-              {[...Array(8)].map((_, i) => (
-                <div key={i} style={{ height: 44, borderBottom: '0.5px solid var(--border)' }}>
-                  <div style={{ margin: '14px 16px', height: 12, width: `${35 + (i % 4) * 12}%`, background: 'var(--bg-elevated)', borderRadius: 4, animation: 'pulse 2s infinite' }} />
-                </div>
-              ))}
-            </div>
-          ) : !filtered.length ? (
-            <div style={{
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-              padding: '48px 16px', textAlign: 'center',
-            }}>
-              <div style={{
-                width: 40, height: 40, borderRadius: '50%',
-                background: 'var(--bg-elevated)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                marginBottom: 12,
-              }}>
-                <PhoneCall size={18} color="var(--text-muted)" />
+          {/* Rows — fixed scroll box */}
+          <div className="scrollbar-thin" style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
+            {isLoading ? (
+              <div>
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} style={{ height: 44, borderBottom: '0.5px solid var(--border)' }}>
+                    <div style={{ margin: '14px 16px', height: 12, width: `${35 + (i % 4) * 12}%`, background: 'var(--bg-elevated)', borderRadius: 4, animation: 'pulse 2s infinite' }} />
+                  </div>
+                ))}
               </div>
-              <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', margin: 0 }}>
-                {search ? 'No leads match that search' : 'No unbooked leads right now'}
-              </p>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                {search ? 'Try a different search term.' : 'All leads are already booked or not interested.'}
-              </p>
-            </div>
-          ) : (
-            filtered.map(lead => (
-              <LeadRow
-                key={lead.id}
-                lead={lead}
-                onScriptOpen={() => setScriptLead(lead)}
-              />
-            ))
-          )}
+            ) : !filtered.length ? (
+              <div style={{
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                padding: '48px 16px', textAlign: 'center',
+              }}>
+                <div style={{
+                  width: 40, height: 40, borderRadius: '50%',
+                  background: 'var(--bg-elevated)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  marginBottom: 12,
+                }}>
+                  <PhoneCall size={18} color="var(--text-muted)" />
+                </div>
+                <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', margin: 0 }}>
+                  {search ? 'No leads match that search' : 'No unbooked leads right now'}
+                </p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                  {search ? 'Try a different search term.' : 'All leads are already booked or not interested.'}
+                </p>
+              </div>
+            ) : (
+              filtered.map(lead => (
+                <LeadRow
+                  key={lead.id}
+                  lead={lead}
+                  onScriptOpen={() => setScriptLead(lead)}
+                />
+              ))
+            )}
+          </div>
         </div>
 
         {/* Row count */}
