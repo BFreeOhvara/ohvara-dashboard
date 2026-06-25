@@ -8,22 +8,16 @@ import { KPICard } from '../../components/ui/KPICard'
 
 const CHART_DAYS = 30
 
-// status → chip colors, shared with the admin Payouts tab semantics.
-const PAYOUT_STATUS = {
-  pending:  { label: 'Pending',  color: '#F59E0B', dim: 'rgba(245,158,11,0.12)' },
-  approved: { label: 'Approved', color: '#38BDF8', dim: 'rgba(56,189,248,0.12)' },
-  paid:     { label: 'Paid',     color: '#22C55E', dim: 'rgba(34,197,94,0.12)' },
-  failed:   { label: 'Failed',   color: '#EF4444', dim: 'rgba(239,68,68,0.12)' },
-}
-
 function StatusChip({ status }) {
-  const s = PAYOUT_STATUS[status] || PAYOUT_STATUS.pending
+  const isPaid = status === 'paid'
   return (
     <span style={{
-      fontSize: 11, fontWeight: 500, color: s.color, background: s.dim,
+      fontSize: 11, fontWeight: 500,
+      color: isPaid ? '#22C55E' : '#F59E0B',
+      background: isPaid ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)',
       padding: '3px 9px', borderRadius: 999, whiteSpace: 'nowrap',
     }}>
-      {s.label}
+      {isPaid ? 'Paid' : 'Pending'}
     </span>
   )
 }
@@ -281,13 +275,7 @@ function MyPayouts({ connected }) {
                     Closed ${dealDollars} · 10% · ${cutDollars} earned
                   </p>
                 </div>
-                {p.source === 'legacy' ? (
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-elevated)', padding: '3px 8px', borderRadius: 999, whiteSpace: 'nowrap' }}>
-                    Legacy
-                  </span>
-                ) : (
-                  <StatusChip status={p.status} />
-                )}
+                <StatusChip status={p.status} />
               </div>
             )
           })}

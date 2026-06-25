@@ -6,49 +6,17 @@ import { supabase } from '../lib/supabase'
 // from the `commissions` earned-ledger (useMyCommission). RLS scopes rep reads
 // to their own rows; admin sees all.
 
-// Rep's own payout rows merged with legacy commissions (migration 014).
-// Legacy rows are display-only: source='legacy', status shows as "Legacy" badge.
-//
-// Two historical failure modes this handles deliberately:
-// (1) Legacy commissions rows may have recipient_role='closer' or 'admin' if they
-//     were seeded before the rep commission model was formalised — filtering by role
-//     would silently exclude them. RLS already limits to recipient_id = auth.uid(),
-//     so role filtering is redundant.
-// (2) The `!lead_id` PostgREST hint can fail if the schema cache doesn't resolve it.
-//     Business name is optional (falls back to 'Closed deal'), so we swallow any
-//     legacy-query error rather than killing the entire payout list.
 export function useMyPayouts(repId) {
   return useQuery({
     queryKey: ['payouts', 'mine', repId],
     queryFn: async () => {
-      const [{ data: payouts, error: pe }, { data: legacy }] = await Promise.all([
-        supabase
-          .from('commission_payouts')
-          .select('id, amount_cents, deal_value_cents, status, created_at, paid_at, appointment:appointments!appointment_id ( scheduled_at, lead:leads ( business_name ) )')
-          .eq('rep_id', repId)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('commissions')
-          .select('id, amount, created_at, lead:leads ( business_name )')
-          .eq('recipient_id', repId)
-          .order('created_at', { ascending: false }),
-      ])
-      if (pe) throw pe
-      // Legacy errors are swallowed — business name missing is acceptable;
-      // a broken legacy join must not prevent commission_payouts from rendering.
-      const legacyRows = (legacy || []).map(c => ({
-        id: `legacy_${c.id}`,
-        amount_cents: Math.round(Number(c.amount) * 100),
-        deal_value_cents: Math.round(Number(c.amount) * 1000),
-        status: 'paid',
-        created_at: c.created_at,
-        paid_at: null,
-        appointment: c.lead ? { lead: { business_name: c.lead.business_name } } : null,
-        source: 'legacy',
-      }))
-      const all = [...(payouts || []), ...legacyRows]
-      all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      return all
+      const { data, error } = await supabase
+        .from('commission_payouts')
+        .select('id, amount_cents, deal_value_cents, status, created_at, paid_at, appointment:appointments!appointment_id ( scheduled_at, lead:leads ( business_name ) )')
+        .eq('rep_id', repId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data || []
     },
     enabled: !!repId,
   })
