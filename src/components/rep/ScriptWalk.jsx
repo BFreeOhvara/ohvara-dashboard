@@ -14,7 +14,7 @@ import { supabase } from '../../lib/supabase'
 // step past the fork in the parent. Routes (→ CLOSE / run BRANCH A) hard-jump to
 // another block. An undo history backs the Back button.
 
-export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId }) {
+export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onDataCollect }) {
   const start = useMemo(() => {
     const sid = (startSectionId && flow.byId[startSectionId]) ? startSectionId : 'opener'
     const sec = flow.byId[sid]
@@ -111,7 +111,7 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId }) {
         )}
 
         {step && step.type === 'data_collect' && (
-          <DataCollectCard step={step} accent={accent} leadId={leadId} mode={mode} onNext={advance} />
+          <DataCollectCard step={step} accent={accent} leadId={leadId} mode={mode} onNext={advance} onDataCollect={onDataCollect} />
         )}
 
         {step && step.type === 'route' && (
@@ -180,7 +180,7 @@ function ActionCard({ step, accent, onNext }) {
 // and average ticket mid-call. In live mode "Save & Continue" PATCHes the lead
 // then advances; a save failure is logged but never blocks the call. In
 // practice mode (no real lead) it just advances.
-function DataCollectCard({ step, accent, leadId, mode, onNext }) {
+function DataCollectCard({ step, accent, leadId, mode, onNext, onDataCollect }) {
   const [vals, setVals] = useState({})
   const [saving, setSaving] = useState(false)
 
@@ -195,6 +195,7 @@ function DataCollectCard({ step, accent, leadId, mode, onNext }) {
       try {
         const { error } = await supabase.from('leads').update(patch).eq('id', leadId)
         if (error) throw error
+        onDataCollect?.(patch)
       } catch (err) {
         // Never block a live call — log and advance regardless.
         console.error('[ScriptWalk] data_collect save failed:', err)

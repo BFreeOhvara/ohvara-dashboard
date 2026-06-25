@@ -18,7 +18,7 @@ const STATUS_OPTIONS = [
   { value: 'Appointment Booked', color: '#22C55E', dim: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.35)',  note: 'Nice work! Fill in the appointment details below' },
   { value: 'No Answer',          color: '#94A3B8', dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.35)', note: 'No one picked up — try again later or set a follow-up date' },
   { value: 'Not Interested',     color: '#EF4444', dim: 'rgba(239,68,68,0.10)',   border: 'rgba(239,68,68,0.35)',  note: 'Lead declined — removed from your active list' },
-  { value: 'Follow-Up',          color: '#F59E0B', dim: 'rgba(245,158,11,0.10)',  border: 'rgba(245,158,11,0.35)', note: 'Lead stays in your list — pick a date below to come back to this one' },
+  { value: 'Follow-Up',          color: '#F59E0B', dim: 'rgba(245,158,11,0.10)',  border: 'rgba(245,158,11,0.35)', note: 'Pick a date below to come back to this one' },
 ]
 
 // Statuses that count as a completed dial — logged to the calls table for stats
@@ -395,6 +395,16 @@ export function CallModal({ lead, onClose }) {
 
   function hangUp() {
     try { callRef.current?.disconnect() } catch { /* disconnect handler resets state */ }
+  }
+
+  // Called by DataCollectCard when the rep saves numbers mid-script.
+  // Keeps callsMissedPerWeek/avgTicket in sync so handleDone → recommend-stack
+  // sends the freshly entered values, not the stale lead prop.
+  function handleDataCollect(vals) {
+    if (vals.calls_missed_per_week !== undefined)
+      setCallsMissedPerWeek(vals.calls_missed_per_week === null ? '' : String(vals.calls_missed_per_week))
+    if (vals.avg_ticket !== undefined)
+      setAvgTicket(vals.avg_ticket === null ? '' : String(vals.avg_ticket))
   }
 
   // Open the status menu, measuring the trigger so the portaled menu lands
@@ -787,34 +797,6 @@ export function CallModal({ lead, onClose }) {
                 <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent)', margin: '0 0 8px' }}>
                   Discovery — for the custom stack
                 </p>
-                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Calls missed/wk</label>
-                    <input
-                      type="number" min="0" value={callsMissedPerWeek}
-                      onChange={e => setCallsMissedPerWeek(e.target.value)}
-                      placeholder="e.g. 5"
-                      style={{
-                        width: '100%', height: 34, padding: '0 10px',
-                        background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-                        borderRadius: 7, fontSize: 13, color: 'var(--text-primary)', boxSizing: 'border-box',
-                      }}
-                    />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Avg ticket ($)</label>
-                    <input
-                      type="number" min="0" value={avgTicket}
-                      onChange={e => setAvgTicket(e.target.value)}
-                      placeholder="e.g. 600"
-                      style={{
-                        width: '100%', height: 34, padding: '0 10px',
-                        background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-                        borderRadius: 7, fontSize: 13, color: 'var(--text-primary)', boxSizing: 'border-box',
-                      }}
-                    />
-                  </div>
-                </div>
                 <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
                   What's costing them most?
                 </label>
@@ -1023,7 +1005,7 @@ export function CallModal({ lead, onClose }) {
           {/* RIGHT — the guided call walk: one step at a time, tap the
               prospect's response, the tree routes the rep to booking Nate. */}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <ScriptWalk flow={flow} mode="live" leadId={lead.id} />
+            <ScriptWalk flow={flow} mode="live" leadId={lead.id} onDataCollect={handleDataCollect} />
           </div>
         </div>
 
