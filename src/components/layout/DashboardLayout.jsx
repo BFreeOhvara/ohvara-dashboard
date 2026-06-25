@@ -4,9 +4,9 @@ import { ActiveCallProvider } from '../../contexts/ActiveCallContext'
 import { NotificationToast } from '../rep/NotificationToast'
 import { useAuth } from '../../hooks/useAuth'
 
-function RepToastMount() {
+function ToastMount() {
   const { profile } = useAuth()
-  if (profile?.role !== 'rep') return null
+  if (!profile || !['rep', 'closer'].includes(profile.role)) return null
   return <NotificationToast profileId={profile.id} />
 }
 
@@ -29,7 +29,7 @@ export function DashboardLayout({ children }) {
             {children}
           </div>
         </main>
-        <RepToastMount />
+        <ToastMount />
       </div>
     </ActiveCallProvider>
   )

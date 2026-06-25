@@ -61,7 +61,7 @@ function ToastCard({ toast, onDismiss }) {
 }
 
 export function NotificationToast({ profileId }) {
-  const { data: notifications = [] } = useRepNotifications(profileId, 30)
+  const { data: notifications = [], isFetched } = useRepNotifications(profileId, 30)
   const [toasts, setToasts] = useState([])
 
   // Track whether the rep is in an active call via a ref so the notifications
@@ -70,13 +70,17 @@ export function NotificationToast({ profileId }) {
   const isInCallRef = useRef(false)
   useEffect(() => { isInCallRef.current = isInCall }, [isInCall])
 
-  // Track which notification IDs have already been shown. null = not yet
-  // initialized — first load seeds without firing any toasts.
+  // Track which notification IDs have already been shown.
+  // null = not yet seeded. We wait for isFetched before seeding so the
+  // initial [] default (before data loads) doesn't race-seed an empty set —
+  // which would cause the entire backlog to toast when the real data arrives.
   const seenRef = useRef(null)
 
   useEffect(() => {
+    if (!isFetched) return  // wait for the first real fetch to complete
     if (seenRef.current === null) {
-      // First load — seed as seen so existing notifications don't all pop.
+      // First settled load — seed every existing notification as "seen"
+      // so none of the backlog slides in on login.
       seenRef.current = new Set(notifications.map(n => n.id))
       return
     }
@@ -94,7 +98,7 @@ export function NotificationToast({ profileId }) {
         setTimeout(() => setToasts(prev => prev.filter(x => x.id !== tid)), 350)
       }, 4500)
     })
-  }, [notifications]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [notifications, isFetched]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleDismiss(id) {
     setToasts(prev => prev.map(t => t.id === id ? { ...t, exiting: true } : t))
