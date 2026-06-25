@@ -103,7 +103,7 @@ export default function MyAppointments() {
 
       {/* Appointment list — scrollable box */}
       <div className="glass" style={{ borderRadius: 12, overflow: 'hidden' }}>
-        <div className="scrollbar-thin" style={{ maxHeight: 560, overflowY: 'auto' }}>
+        <div className="scrollbar-thin" style={{ height: 560, overflowY: 'auto' }}>
           {isLoading ? (
             <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[...Array(3)].map((_, i) => (
