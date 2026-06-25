@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../../hooks/useAuth'
 import { NotificationBell } from '../admin/NotificationBell'
 import { RepNotificationBell } from '../rep/RepNotificationBell'
+import { CloserNotificationBell } from '../closer/CloserNotificationBell'
 
 const NAV = {
   rep: [
@@ -102,6 +103,7 @@ export function Sidebar() {
           </div>
           {profile?.role === 'admin' && <NotificationBell />}
           {profile?.role === 'rep' && <RepNotificationBell profileId={profile.id} />}
+          {profile?.role === 'closer' && <CloserNotificationBell profileId={profile.id} />}
         </div>
       </div>
 
