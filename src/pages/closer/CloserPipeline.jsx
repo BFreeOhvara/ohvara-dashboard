@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { CalendarClock, CheckCircle, Ban, Search, Phone, Calendar, X } from 'lucide-react'
+import { CalendarClock, CheckCircle, Ban, Search, Phone, Calendar, X, PhoneOff, RefreshCw } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useMyAppointments } from '../../hooks/useAppointments'
 import { useAuth } from '../../hooks/useAuth'
@@ -11,9 +11,11 @@ import { Badge } from '../../components/ui/Badge'
 
 // ── Closer pipeline tabs ──────────────────────────────────────────────────────
 const CLOSER_TABS = [
-  { key: 'pending', label: 'Pending', icon: CalendarClock },
-  { key: 'closed',  label: 'Closed',  icon: CheckCircle },
-  { key: 'lost',    label: 'Lost',    icon: Ban },
+  { key: 'pending',            label: 'Pending',            icon: CalendarClock },
+  { key: 'closed',             label: 'Closed',             icon: CheckCircle },
+  { key: 'lost',               label: 'Lost',               icon: Ban },
+  { key: 'missed',             label: 'Missed',             icon: PhoneOff },
+  { key: 'needs_rescheduling', label: 'Needs Rescheduling', icon: RefreshCw },
 ]
 
 // ── Appointment-setter status tabs ────────────────────────────────────────────
@@ -33,9 +35,11 @@ const STATUS_TAB_COLORS = {
 
 // Colors for the closer pipeline sub-tabs
 const CLOSER_TAB_COLORS = {
-  pending: { color: 'var(--accent)',  dim: 'var(--accent-dim)',  border: 'var(--accent-border)' },
-  closed:  { color: 'var(--success)', dim: 'var(--success-dim)', border: 'rgba(34,197,94,0.20)' },
-  lost:    { color: 'var(--danger)',  dim: 'var(--danger-dim)',  border: 'rgba(239,68,68,0.20)' },
+  pending:            { color: 'var(--accent)',  dim: 'var(--accent-dim)',  border: 'var(--accent-border)' },
+  closed:             { color: 'var(--success)', dim: 'var(--success-dim)', border: 'rgba(34,197,94,0.20)' },
+  lost:               { color: 'var(--danger)',  dim: 'var(--danger-dim)',  border: 'rgba(239,68,68,0.20)' },
+  missed:             { color: 'var(--warning)', dim: 'var(--warning-dim)', border: 'rgba(245,158,11,0.20)' },
+  needs_rescheduling: { color: 'var(--info)',    dim: 'var(--info-dim)',    border: 'rgba(56,189,248,0.20)' },
 }
 
 const cell = (basis, extra = {}) => ({
@@ -143,6 +147,46 @@ function LostTab({ rows }) {
           <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
           <div style={cell('0 0 120px')}><Badge label={a.outcome} /></div>
           <div style={cell('0 0 130px', { fontFamily: 'var(--font-mono)' })}>{fmtDate(a.updated_at || a.created_at)}</div>
+        </div>
+      )}
+    />
+  )
+}
+
+function MissedTab({ rows, tz }) {
+  return (
+    <QueueTable
+      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Was Scheduled', '0 0 150px']]}
+      rows={rows}
+      emptyText="No missed appointments."
+      emptyIcon={PhoneOff}
+      renderRow={a => (
+        <div key={a.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
+          <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
+          <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
+          <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
+          <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
+          <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at, tz)}</div>
+        </div>
+      )}
+    />
+  )
+}
+
+function NeedsReschedulingTab({ rows, tz }) {
+  return (
+    <QueueTable
+      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Was Scheduled', '0 0 150px']]}
+      rows={rows}
+      emptyText="No appointments need rescheduling."
+      emptyIcon={RefreshCw}
+      renderRow={a => (
+        <div key={a.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
+          <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
+          <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
+          <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
+          <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
+          <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at, tz)}</div>
         </div>
       )}
     />
@@ -312,24 +356,28 @@ export default function CloserPipeline() {
   const [search, setSearch] = useState('')
 
   const filteredAppts = useMemo(() => {
-    if (!allAppts) return { pending: [], closed: [], lost: [] }
+    if (!allAppts) return { pending: [], closed: [], lost: [], missed: [], needs_rescheduling: [] }
     const s = search.trim().toLowerCase()
     const appts = s
       ? allAppts.filter(a => (a.lead?.business_name || '').toLowerCase().includes(s))
       : allAppts
     return {
-      pending: appts.filter(a => a.status === 'pending'),
-      closed:  appts.filter(a => a.outcome === 'closed'),
-      lost:    appts.filter(a => a.outcome === 'lost' || a.outcome === 'no_show'),
+      pending:            appts.filter(a => a.status === 'pending'),
+      closed:             appts.filter(a => a.outcome === 'closed'),
+      lost:               appts.filter(a => a.outcome === 'lost' || a.outcome === 'no_show'),
+      missed:             appts.filter(a => a.status === 'missed'),
+      needs_rescheduling: appts.filter(a => a.status === 'needs_rescheduling'),
     }
   }, [allAppts, search])
 
   const closerKPIs = useMemo(() => ({
-    pendingCount:   filteredAppts.pending.length,
-    scheduledCount: filteredAppts.pending.filter(a => a.scheduled_at).length,
-    closedCount:    filteredAppts.closed.length,
-    totalRevenue:   filteredAppts.closed.reduce((s, a) => s + (a.deal_value || 0), 0),
-    lostCount:      filteredAppts.lost.length,
+    pendingCount:           filteredAppts.pending.length,
+    scheduledCount:         filteredAppts.pending.filter(a => a.scheduled_at).length,
+    closedCount:            filteredAppts.closed.length,
+    totalRevenue:           filteredAppts.closed.reduce((s, a) => s + (a.deal_value || 0), 0),
+    lostCount:              filteredAppts.lost.length,
+    missedCount:            filteredAppts.missed.length,
+    needsReschedulingCount: filteredAppts.needs_rescheduling.length,
   }), [filteredAppts])
 
   return (
@@ -403,6 +451,12 @@ export default function CloserPipeline() {
             {closerTab === 'lost' && (
               <KPICard label="Lost / No Show" value={closerKPIs.lostCount} sub="all time" icon={Ban} />
             )}
+            {closerTab === 'missed' && (
+              <KPICard label="Missed" value={closerKPIs.missedCount} sub="client didn't answer" icon={PhoneOff} />
+            )}
+            {closerTab === 'needs_rescheduling' && (
+              <KPICard label="Needs Rescheduling" value={closerKPIs.needsReschedulingCount} sub="needs a new time" icon={RefreshCw} />
+            )}
           </div>
 
           {/* Filter tabs — below KPIs, color-coded always-on */}
@@ -437,9 +491,11 @@ export default function CloserPipeline() {
             })}
           </div>
 
-          {closerTab === 'pending' && <PendingTab rows={filteredAppts.pending} tz={tz} />}
-          {closerTab === 'closed'  && <ClosedTab  rows={filteredAppts.closed} />}
-          {closerTab === 'lost'    && <LostTab    rows={filteredAppts.lost} />}
+          {closerTab === 'pending'            && <PendingTab            rows={filteredAppts.pending}            tz={tz} />}
+          {closerTab === 'closed'             && <ClosedTab             rows={filteredAppts.closed} />}
+          {closerTab === 'lost'               && <LostTab               rows={filteredAppts.lost} />}
+          {closerTab === 'missed'             && <MissedTab             rows={filteredAppts.missed}             tz={tz} />}
+          {closerTab === 'needs_rescheduling' && <NeedsReschedulingTab  rows={filteredAppts.needs_rescheduling} tz={tz} />}
         </div>
       )}
     </div>
