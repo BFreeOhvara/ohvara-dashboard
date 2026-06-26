@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { Phone, PhoneCall, RefreshCw } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { Phone, PhoneCall, RefreshCw, X } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAllLeads } from '../../hooks/useLeads'
 import { useAuth } from '../../hooks/useAuth'
@@ -33,9 +34,11 @@ export default function CallLeads() {
   const { data: allLeads, isLoading, refetch } = useAllLeads()
   const [scriptLead, setScriptLead] = useState(null)
   const [search, setSearch] = useState('')
-  const [count, setCount] = useState(50)
-  const [lastResult, setLastResult] = useState(null)
+  const [modalOpen, setModalOpen] = useState(false)
   const requestLeads = useRequestLeads()
+
+  const currentLeadCount = allLeads?.length ?? 0
+  const maxRequestable = Math.max(0, 500 - currentLeadCount)
 
   const leads = useMemo(() => {
     if (!allLeads) return []
@@ -52,10 +55,9 @@ export default function CallLeads() {
     )
   }, [leads, search])
 
-  async function handleRequest() {
+  async function handleRequest(count) {
     if (!profile?.id || requestLeads.isPending) return
-    const assigned = await requestLeads.mutateAsync({ closerId: profile.id, count })
-    setLastResult(assigned)
+    return requestLeads.mutateAsync({ closerId: profile.id, count })
   }
 
   return (
@@ -83,34 +85,20 @@ export default function CallLeads() {
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Request Leads */}
-            <input
-              type="number"
-              min={1}
-              max={500}
-              value={count}
-              onChange={e => setCount(Math.min(500, Math.max(1, Number(e.target.value) || 1)))}
-              style={{
-                width: 72, height: 30, padding: '0 10px', textAlign: 'center',
-                background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-                borderRadius: 6, fontSize: 13, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)',
-              }}
-            />
             <button
-              onClick={handleRequest}
-              disabled={requestLeads.isPending}
+              onClick={() => setModalOpen(true)}
+              disabled={maxRequestable === 0}
               style={{
                 height: 30, padding: '0 12px', borderRadius: 6, border: 'none',
-                cursor: requestLeads.isPending ? 'not-allowed' : 'pointer',
+                cursor: maxRequestable === 0 ? 'not-allowed' : 'pointer',
                 background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 500,
-                opacity: requestLeads.isPending ? 0.6 : 1,
+                opacity: maxRequestable === 0 ? 0.5 : 1,
               }}
             >
-              {requestLeads.isPending ? 'Requesting…' : `Request ${count}`}
+              Request Leads
             </button>
-            {lastResult !== null && (
-              <span style={{ fontSize: 12, color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>
-                +{lastResult} assigned
-              </span>
+            {maxRequestable === 0 && (
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>At capacity (500)</span>
             )}
             {/* Search */}
             <input
@@ -209,7 +197,116 @@ export default function CallLeads() {
           onClose={() => setScriptLead(null)}
         />
       )}
+
+      {/* Request Leads Modal */}
+      {modalOpen && (
+        <RequestLeadsModal
+          currentCount={currentLeadCount}
+          maxRequestable={maxRequestable}
+          isPending={requestLeads.isPending}
+          onClose={() => setModalOpen(false)}
+          onRequest={handleRequest}
+        />
+      )}
     </div>
+  )
+}
+
+function RequestLeadsModal({ currentCount, maxRequestable, isPending, onClose, onRequest }) {
+  const [count, setCount] = useState(Math.min(50, maxRequestable))
+  const [result, setResult] = useState(null)
+
+  async function handleSubmit() {
+    const assigned = await onRequest(count)
+    setResult(assigned)
+  }
+
+  return createPortal(
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(8,8,16,0.85)', backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 20,
+      }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div style={{
+        width: '100%', maxWidth: 400,
+        background: '#0E0E1A',
+        border: '0.5px solid var(--border)',
+        borderRadius: 14,
+        overflow: 'hidden',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '0.5px solid var(--border)' }}>
+          <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Request Leads</p>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: 20 }}>
+          {result !== null ? (
+            <div style={{ textAlign: 'center', padding: '8px 0' }}>
+              <p style={{ fontSize: 28, fontWeight: 600, color: 'var(--success)', margin: '0 0 6px', fontFamily: 'var(--font-mono)' }}>
+                +{result}
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 20px' }}>leads added to your queue</p>
+              <Button onClick={onClose} style={{ width: '100%' }}>Done</Button>
+            </div>
+          ) : (
+            <>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.5 }}>
+                You currently hold{' '}
+                <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', fontWeight: 500 }}>{currentCount}</span>
+                {' '}leads.{' '}
+                {maxRequestable > 0
+                  ? <>You can request up to <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)', fontWeight: 500 }}>{maxRequestable}</span> more.</>
+                  : <span style={{ color: 'var(--danger)' }}>You're at the 500-lead cap.</span>
+                }
+              </p>
+
+              <div style={{ marginBottom: 16 }}>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, margin: '0 0 6px' }}>
+                  How many?
+                </p>
+                <input
+                  type="number"
+                  min={1}
+                  max={maxRequestable}
+                  value={count}
+                  onChange={e => setCount(Math.min(maxRequestable, Math.max(1, Number(e.target.value) || 1)))}
+                  disabled={maxRequestable === 0}
+                  style={{
+                    width: '100%', height: 38, padding: '0 12px', boxSizing: 'border-box',
+                    background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                    borderRadius: 8, fontSize: 14, color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-mono)', outline: 'none',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isPending || maxRequestable === 0 || count < 1}
+                  style={{ flex: 1 }}
+                >
+                  {isPending ? 'Requesting…' : `Request ${count}`}
+                </Button>
+                <Button variant="secondary" onClick={onClose} style={{ flex: '0 0 auto' }}>
+                  Cancel
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
   )
 }
 
