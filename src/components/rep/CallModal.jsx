@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, Component } from 'react'
 import { createPortal } from 'react-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Phone, X, MapPin, User, Tag, Check, StickyNote, ChevronDown, CalendarClock, Mic, MicOff, PhoneOff, Loader2 } from 'lucide-react'
+import { Phone, X, MapPin, User, Tag, CalendarClock, Mic, MicOff, PhoneOff, Loader2 } from 'lucide-react'
 import { Device } from '@twilio/voice-sdk'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
@@ -10,6 +10,7 @@ import { buildScriptFlow } from '../../lib/discoveryScript'
 import { ScriptWalk } from './ScriptWalk'
 import { inferTimezoneFromState, zonedTimeToUtcIso, timezoneLabel, utcIsoToZonedDatetimeLocal } from '../../lib/timezones'
 import { useActiveCall } from '../../contexts/ActiveCallContext'
+import { CallPrepModal, Field } from '../shared/CallPrepModal'
 
 // The only statuses a rep can set from the call modal — color coordinated.
 // `note` tells the rep exactly where the lead routes (pipeline behavior).
@@ -24,15 +25,9 @@ const STATUS_OPTIONS = [
 // Statuses that count as a completed dial — logged to the calls table for stats
 const CALL_OUTCOMES = ['Appointment Booked', 'No Answer', 'Not Interested', 'Follow-Up']
 
-// The call script renders as a guided, one-step-at-a-time walk (ScriptWalk) in
-// the right column: the rep reads the fixed opener, taps who answered, and the
-// tree routes them line by line to booking Nate. The flow is derived from the
-// shared DISCOVERY_SCRIPT (buildScriptFlow) so it can't drift from the Training
-// Center or the closer panel.
-
 // Catches render-time crashes inside the modal so a bad script payload (or
 // any other bug in here) degrades to a retry state instead of unmounting
-// the entire app. The page going black on script failures was exactly this.
+// the entire app.
 class ModalErrorBoundary extends Component {
   state = { crashed: false }
   static getDerivedStateFromError() { return { crashed: true } }
@@ -188,46 +183,17 @@ function PostCallCard({ state, onClose, leadName }) {
   )
 }
 
-// Labeled info field for the left column
-function Field({ icon: Icon, label, value, mono = false }) {
-  if (!value) return null
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <p style={{
-        fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em',
-        color: 'var(--text-muted)', margin: '0 0 3px',
-        display: 'flex', alignItems: 'center', gap: 5,
-      }}>
-        {Icon && <Icon size={10} />} {label}
-      </p>
-      <p style={{
-        fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.55,
-        fontFamily: mono ? 'var(--font-mono)' : 'inherit',
-        wordBreak: 'break-word',
-      }}>
-        {value}
-      </p>
-    </div>
-  )
-}
-
 export function CallModal({ lead, onClose }) {
   const qc = useQueryClient()
   const { profile } = useAuth()
   const { setIsInCall } = useActiveCall()
 
-  // The discovery script is the ONE universal decision tree with this lead's
-  // real details filled in — derived deterministically (no AI), walked one
-  // step at a time in the right column.
   const flow = useMemo(() => buildScriptFlow(lead, profile), [lead.id, profile?.id])
-  // The appointment time the rep enters is the CLIENT's local time (what
-  // the prospect said on the call), not the rep's own browser timezone —
-  // inferred from the lead's state. Stored as UTC via zonedTimeToUtcIso.
-  const clientTz = useMemo(() => inferTimezoneFromState(lead.state), [lead.state])
+  const clientTz      = useMemo(() => inferTimezoneFromState(lead.state), [lead.state])
   const clientTzLabel = timezoneLabel(clientTz)
+
   const [status, setStatus]           = useState(lead.status)
   const [statusTouched, setStatusTouched] = useState(false)
-  const [statusOpen, setStatusOpen]   = useState(false)
   const [notes, setNotes]             = useState('')
   const [callsMissedPerWeek, setCallsMissedPerWeek] = useState(lead.calls_missed_per_week ?? '')
   const [avgTicket, setAvgTicket]                   = useState(lead.avg_ticket ?? '')
@@ -239,60 +205,17 @@ export function CallModal({ lead, onClose }) {
   const [appointmentAt, setAppointmentAt] = useState(utcIsoToZonedDatetimeLocal(lead.appointment_at, clientTz))
   const [closing, setClosing]         = useState(false)
   const [doneError, setDoneError]     = useState('')
-  // ── Twilio Voice (browser WebRTC, Prompt 54) ─────────────────────────────
-  // The rep's audio runs through their mic/headset; Twilio dials the lead
-  // directly (1 leg). Replaces the Prompt 29 rep-first bridge entirely.
-  // callState: 'idle' | 'connecting' | 'in-call' | 'error'
-  const [callState, setCallState]   = useState('idle')
-  const [deviceReady, setDeviceReady] = useState(false) // token fetched + Device registered
-  const [muted, setMuted]           = useState(false)
+  const [callState, setCallState]     = useState('idle')
+  const [deviceReady, setDeviceReady] = useState(false)
+  const [muted, setMuted]             = useState(false)
   const [callSeconds, setCallSeconds] = useState(0)
-  const deviceRef = useRef(null)     // Twilio Device (lives for the modal's lifetime)
-  const callRef   = useRef(null)     // the active Call object
-  const callSidRef = useRef(null)    // Twilio Call SID captured on 'accept'
-  const dropdownRef = useRef(null)   // status trigger wrapper (outside-click anchor)
-  const triggerRef = useRef(null)    // the trigger button — measured for the portal menu
-  const menuRef = useRef(null)       // the portaled menu (outside-click anchor)
-  const [statusMenuCoords, setStatusMenuCoords] = useState(null)
-  const [postCallCallId, setPostCallCallId] = useState(null) // calls row id after Done
-  const [postCallState, setPostCallState]   = useState(null) // null | 'grading' | { grade, feedback_good, feedback_improve }
+  const deviceRef   = useRef(null)
+  const callRef     = useRef(null)
+  const callSidRef  = useRef(null)
+  const [postCallCallId, setPostCallCallId] = useState(null)
+  const [postCallState, setPostCallState]   = useState(null)
 
-  // Background scroll lock while the modal is open.
-  // Lock <html> as well as <body> — overflow:hidden on body alone still
-  // lets the documentElement scroller move (incl. programmatic scrolls).
-  useEffect(() => {
-    const prevBody = document.body.style.overflow
-    const prevHtml = document.documentElement.style.overflow
-    document.body.style.overflow = 'hidden'
-    document.documentElement.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prevBody
-      document.documentElement.style.overflow = prevHtml
-    }
-  }, [])
-
-  // Close the status dropdown on outside click. The menu is portaled to
-  // document.body (so an ancestor's overflow:hidden can't clip it), so the
-  // check covers both the trigger wrapper AND the portaled menu.
-  useEffect(() => {
-    function onDocClick(e) {
-      const inTrigger = dropdownRef.current && dropdownRef.current.contains(e.target)
-      const inMenu = menuRef.current && menuRef.current.contains(e.target)
-      if (!inTrigger && !inMenu) setStatusOpen(false)
-    }
-    document.addEventListener('mousedown', onDocClick)
-    return () => document.removeEventListener('mousedown', onDocClick)
-  }, [])
-
-  // Fetch a Voice access token and register a Twilio Device once per lead.
-  // On unmount, hang up any live call and destroy the Device so the mic is
-  // released and no token lingers. If the token fetch fails (secrets not set
-  // yet, offline), deviceReady stays false and the UI falls back to a tel: link.
-  //
-  // IMPORTANT: setDeviceReady(true) fires only when the Device emits 'registered'
-  // — NOT synchronously after device.register(). register() is async; calling it
-  // immediately after device.register() was the root cause of "Call failed"
-  // (device.connect() was reached before Device was actually registered).
+  // Twilio Device setup — fetch token + register once per lead.
   useEffect(() => {
     let cancelled = false
     let device = null
@@ -305,14 +228,9 @@ export function CallModal({ lead, onClose }) {
         }
         if (cancelled) return
         device = new Device(data.token, { codecPreferences: ['opus', 'pcmu'] })
-        device.on('registered', () => {
-          if (!cancelled) setDeviceReady(true)
-        })
+        device.on('registered', () => { if (!cancelled) setDeviceReady(true) })
         device.on('error', (twilioError) => {
           console.error('[Twilio Device] error:', twilioError?.message || twilioError?.code || twilioError)
-          // Only surface as call-failure if a call is in flight — during registration
-          // failure the Device never reaches 'registered', so deviceReady stays false
-          // and the UI correctly falls back to the tel: link.
           if (!cancelled) setCallState(prev => prev !== 'idle' ? 'error' : prev)
         })
         deviceRef.current = device
@@ -332,18 +250,14 @@ export function CallModal({ lead, onClose }) {
     }
   }, [lead.id])
 
-  // Expose in-call state to the toast system so toasts are suppressed mid-call.
   useEffect(() => { setIsInCall(callState === 'in-call') }, [callState, setIsInCall])
 
-  // In-call timer — ticks only while connected.
   useEffect(() => {
     if (callState !== 'in-call') return
     const t = setInterval(() => setCallSeconds(s => s + 1), 1000)
     return () => clearInterval(t)
   }, [callState])
 
-  // Subscribe to realtime grade updates on this rep's calls row once Done fires.
-  // Switches postCallState from 'grading' to the grade object when it arrives.
   useEffect(() => {
     if (!postCallCallId) return
     const channel = supabase
@@ -361,7 +275,6 @@ export function CallModal({ lead, onClose }) {
     return () => supabase.removeChannel(channel)
   }, [postCallCallId])
 
-  // Place the WebRTC call: Twilio dials lead.phone via the TwiML App webhook.
   async function startCall() {
     const device = deviceRef.current
     if (!device || !lead.phone) return
@@ -371,10 +284,7 @@ export function CallModal({ lead, onClose }) {
     try {
       const call = await device.connect({ params: { To: lead.phone } })
       callRef.current = call
-      call.on('accept', () => {
-        setCallState('in-call')
-        callSidRef.current = call.parameters?.CallSid || null
-      })
+      call.on('accept', () => { setCallState('in-call'); callSidRef.current = call.parameters?.CallSid || null })
       call.on('disconnect', () => { callRef.current = null; setMuted(false); setCallState('idle') })
       call.on('cancel',     () => { callRef.current = null; setCallState('idle') })
       call.on('error',      (e) => { console.error('[Twilio call] error:', e?.message || e?.code || e); callRef.current = null; setCallState('error') })
@@ -397,9 +307,6 @@ export function CallModal({ lead, onClose }) {
     try { callRef.current?.disconnect() } catch { /* disconnect handler resets state */ }
   }
 
-  // Called by DataCollectCard when the rep saves numbers mid-script.
-  // Keeps callsMissedPerWeek/avgTicket in sync so handleDone → recommend-stack
-  // sends the freshly entered values, not the stale lead prop.
   function handleDataCollect(vals) {
     if (vals.calls_missed_per_week !== undefined)
       setCallsMissedPerWeek(vals.calls_missed_per_week === null ? '' : String(vals.calls_missed_per_week))
@@ -407,47 +314,16 @@ export function CallModal({ lead, onClose }) {
       setAvgTicket(vals.avg_ticket === null ? '' : String(vals.avg_ticket))
   }
 
-  // Open the status menu, measuring the trigger so the portaled menu lands
-  // directly under it (position: fixed, matched width).
-  function toggleStatusMenu() {
-    if (!statusOpen && triggerRef.current) {
-      const r = triggerRef.current.getBoundingClientRect()
-      setStatusMenuCoords({ top: r.bottom + 4, left: r.left, width: r.width })
-    }
-    setStatusOpen(v => !v)
-  }
-
-  // Status selection is LOCAL ONLY — nothing touches the DB until Done.
-  // X (close) discards any selection made since the modal opened.
-  function selectStatus(value) {
-    setStatusOpen(false)
-    setStatusTouched(true)
-    setStatus(value)
-  }
-
-  // Appointment Booked and Follow-Up cannot be saved without a date/time
   const needsDate =
     (status === 'Appointment Booked' && !appointmentAt) ||
     (status === 'Follow-Up' && !followUpAt)
 
-  // Done is the ONLY commit path: status + notes (+ scheduling fields) save
-  // together, then the calls table is synced to the NET outcome — one row
-  // per lead per rep per UTC day, deleted on revert to New — so Calls Today
-  // and Booked Today move with the lead's current state, matching the
-  // progress bar. Pipeline routing happens in the handle_lead_pipeline DB
-  // trigger: No Answer → 24h queue, random rep tomorrow; Follow-Up →
-  // returns to this rep at the chosen time; Not Interested → permanent
-  // do-not-contact.
   async function handleDone() {
     if (!statusTouched || needsDate) return
     setClosing(true)
     setDoneError('')
     try {
-      // Folds secondaryPain into pain_points (no dedicated column — per Prompt 5 spec)
-      // rather than overwriting it outright, since pain_points already carries
-      // other lead-prep context elsewhere in the app.
       const combinedPainPoints = [lead.pain_points, secondaryPain || null].filter(Boolean).join(' | ') || null
-
       const patch = {
         status,
         notes: notes || null,
@@ -462,14 +338,8 @@ export function CallModal({ lead, onClose }) {
         patch.follow_up_notes = followUpNotes || null
       }
       if (status === 'Appointment Booked') {
-        // The pipeline trigger syncs an appointments row for the closer.
-        // appointmentAt is the CLIENT's local wall-clock time (the rep
-        // typed what the prospect said) — convert using the lead's
-        // inferred timezone, not the rep's own browser timezone.
         patch.appointment_at = zonedTimeToUtcIso(appointmentAt, clientTz)
       }
-      // .select() so a 0-row update (expired session, RLS mismatch) is a
-      // visible error instead of a silent no-op that closes the modal
       const { data: updated, error } = await supabase
         .from('leads')
         .update(patch)
@@ -478,11 +348,6 @@ export function CallModal({ lead, onClose }) {
       if (error) throw error
       if (!updated?.length) throw new Error('Save failed — your session may have expired. Refresh the page and try again.')
 
-      // Net calls sync — ALWAYS re-sync on Done. Guarding on
-      // status !== lead.status used a possibly-stale lead prop (React Query
-      // not yet refetched between rapid commits), which skipped the delete
-      // and left phantom calls rows behind. Delete-then-insert is idempotent,
-      // so unconditional is safe.
       let insertedCallId = null
       if (profile?.id) {
         const utcMidnight = new Date().toISOString().split('T')[0] + 'T00:00:00Z'
@@ -506,41 +371,22 @@ export function CallModal({ lead, onClose }) {
       qc.invalidateQueries({ queryKey: ['leads'] })
       qc.invalidateQueries({ queryKey: ['stats'] })
 
-      // Background business research (Prompt 46) — Google rating/review
-      // count/website presence for Nate's card. Independent of the stack
-      // recommendation below; fire-and-forget, never awaited, failure is
-      // silent (AppointmentCard just doesn't show the rating/website tag).
       if (status === 'Appointment Booked') {
         supabase.functions.invoke('enrich-business-info', {
-          body: {
-            leadId:       lead.id,
-            businessName: lead.business_name,
-            city:         lead.city || null,
-            placeId:      lead.place_id || null,
-          },
+          body: { leadId: lead.id, businessName: lead.business_name, city: lead.city || null, placeId: lead.place_id || null },
         }).then(({ data }) => {
           if (data?.success) qc.invalidateQueries({ queryKey: ['appointments'] })
         }).catch(() => {})
       }
 
-      // Pre-generate à la carte stack recommendation for Nate's card.
-      // Fire-and-forget: failure is silent — AppointmentCard falls back to on-demand.
       if (status === 'Appointment Booked') {
         supabase.functions.invoke('recommend-stack', {
           body: {
-            businessName:       lead.business_name,
-            niche:              lead.niche,
-            location:           lead.city || null,
-            // Use the values just typed into the form, not the stale lead prop —
-            // this is the same save, so patch.* and these must agree.
-            callsMissedPerWeek: patch.calls_missed_per_week,
-            avgTicket:          patch.avg_ticket,
-            monthlyLaborCost:   lead.monthly_labor_cost ?? null,
-            repNotes:           notes || lead.notes || null,
-            jobTitle:           lead.job_title || null,
-            primaryPain:        patch.primary_pain,
-            currentSetup:       patch.current_setup,
-            secondaryPain:      secondaryPain || null,
+            businessName: lead.business_name, niche: lead.niche, location: lead.city || null,
+            callsMissedPerWeek: patch.calls_missed_per_week, avgTicket: patch.avg_ticket,
+            monthlyLaborCost: lead.monthly_labor_cost ?? null, repNotes: notes || lead.notes || null,
+            jobTitle: lead.job_title || null, primaryPain: patch.primary_pain,
+            currentSetup: patch.current_setup, secondaryPain: secondaryPain || null,
           },
         }).then(async ({ data }) => {
           if (!data?.rec) return
@@ -553,10 +399,6 @@ export function CallModal({ lead, onClose }) {
             stack_generated_at:      new Date().toISOString(),
           }).eq('id', lead.id)
 
-          // Auto-provision a real demo client account Nate can show live on
-          // the close call. Chained AFTER the cache-write (not parallel with
-          // recommend-stack) so the automations/price it's seeded with are
-          // never stale — same data just written above, not a re-read.
           const { data: pendingAppt } = await supabase
             .from('appointments')
             .select('id')
@@ -568,15 +410,11 @@ export function CallModal({ lead, onClose }) {
           if (pendingAppt?.id) {
             supabase.functions.invoke('provision-demo-client', {
               body: {
-                appointmentId:        pendingAppt.id,
-                leadId:                lead.id,
-                businessName:          lead.business_name,
-                niche:                 lead.niche,
-                location:              lead.city || null,
-                customMonthlyPrice:    data.rec.custom_monthly_price ?? null,
+                appointmentId: pendingAppt.id, leadId: lead.id, businessName: lead.business_name,
+                niche: lead.niche, location: lead.city || null,
+                customMonthlyPrice: data.rec.custom_monthly_price ?? null,
                 recommendedAutomations: data.rec.recommended_automations ?? null,
-                frontRunnerAgents:     data.rec.front_runners ?? null,
-                subAgents:             data.rec.sub_agents ?? null,
+                frontRunnerAgents: data.rec.front_runners ?? null, subAgents: data.rec.sub_agents ?? null,
               },
             }).catch(err => console.error('[CallModal] provision-demo-client failed:', err))
           }
@@ -595,14 +433,249 @@ export function CallModal({ lead, onClose }) {
     }
   }
 
+  // The statusNote is dynamic for setter — shows actual booked/follow-up time when available.
   const selected = STATUS_OPTIONS.find(o => o.value === status)
+  const statusNote = (() => {
+    if (!selected?.note) return undefined
+    if (status === 'Follow-Up' && followUpAt)
+      return `Returns to your list on ${new Date(followUpAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+    if (status === 'Appointment Booked' && appointmentAt)
+      return `Appointment: ${new Date(appointmentAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} ${clientTzLabel}`
+    return selected.note
+  })()
+
   const telHref = lead.phone ? `tel:${lead.phone.replace(/\D/g, '')}` : null
 
-  // Rendered through a portal: ancestors with transform/backdrop-filter
-  // (e.g. animated table rows) would otherwise hijack position:fixed.
-  // stopPropagation keeps clicks inside the modal from bubbling to the
-  // row that opened it (React events bubble through the component tree
-  // even across portals).
+  // Left column slots
+  const infoContent = (
+    <>
+      <Field icon={User}   label="Contact" value={lead.contact_name} />
+      <Field icon={Tag}    label="Niche"   value={lead.niche} />
+      <Field icon={MapPin} label="City"    value={[lead.city, lead.state].filter(Boolean).join(', ')} />
+    </>
+  )
+
+  const statusAddon = (
+    <>
+      {status === 'Appointment Booked' && (
+        <div style={{
+          marginBottom: 14, padding: '12px',
+          background: 'rgba(34,197,94,0.06)', borderRadius: 8,
+          border: '0.5px solid rgba(34,197,94,0.2)',
+        }}>
+          <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#22C55E', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <CalendarClock size={10} /> Appointment Time — {clientTzLabel} (client's local time)
+          </p>
+          <input
+            type="datetime-local"
+            value={appointmentAt}
+            onChange={e => setAppointmentAt(e.target.value)}
+            style={{
+              width: '100%', height: 36, padding: '0 10px',
+              background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+              borderRadius: 7, fontSize: 13, color: 'var(--text-primary)',
+              fontFamily: 'var(--font-sans)', colorScheme: 'dark',
+              boxSizing: 'border-box',
+            }}
+          />
+          <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '6px 0 0' }}>
+            {appointmentAt
+              ? `Scheduled for ${new Date(appointmentAt).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} ${clientTzLabel} — saved when you hit Done.`
+              : `Pick the day and time the prospect agreed to, in THEIR local time (${clientTzLabel}).`}
+          </p>
+        </div>
+      )}
+      {status === 'Appointment Booked' && (
+        <div style={{
+          marginBottom: 14, padding: '12px',
+          background: 'rgba(108,99,255,0.06)', borderRadius: 8,
+          border: '0.5px solid var(--accent-border)',
+        }}>
+          <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent)', margin: '0 0 8px' }}>
+            Discovery — for the custom stack
+          </p>
+          <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>What's costing them most?</label>
+          <select
+            value={primaryPain}
+            onChange={e => setPrimaryPain(e.target.value)}
+            style={{ width: '100%', height: 34, padding: '0 10px', marginBottom: 8, background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 7, fontSize: 13, color: 'var(--text-primary)', boxSizing: 'border-box' }}
+          >
+            <option value="">Select…</option>
+            <option value="missed_calls">Missed calls</option>
+            <option value="slow_response">Slow response</option>
+            <option value="no_shows">No-shows</option>
+            <option value="never_booked">Leads who called but never booked</option>
+          </select>
+          <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>What do they have today to handle that?</label>
+          <input
+            type="text" value={currentSetup}
+            onChange={e => setCurrentSetup(e.target.value)}
+            placeholder="e.g. voicemail only, answering service…"
+            style={{ width: '100%', height: 34, padding: '0 10px', marginBottom: 8, background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 7, fontSize: 13, color: 'var(--text-primary)', boxSizing: 'border-box' }}
+          />
+          <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Anything else slipping through the cracks?</label>
+          <input
+            type="text" value={secondaryPain}
+            onChange={e => setSecondaryPain(e.target.value)}
+            placeholder="optional"
+            style={{ width: '100%', height: 34, padding: '0 10px', background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 7, fontSize: 13, color: 'var(--text-primary)', boxSizing: 'border-box' }}
+          />
+        </div>
+      )}
+      {status === 'Follow-Up' && (
+        <div style={{
+          marginBottom: 14, padding: '12px',
+          background: 'rgba(245,158,11,0.06)', borderRadius: 8,
+          border: '0.5px solid rgba(245,158,11,0.2)',
+        }}>
+          <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#F59E0B', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <CalendarClock size={10} /> Schedule Follow-Up
+          </p>
+          <input
+            type="datetime-local"
+            value={followUpAt}
+            onChange={e => setFollowUpAt(e.target.value)}
+            style={{
+              width: '100%', height: 36, padding: '0 10px', marginBottom: 8,
+              background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+              borderRadius: 7, fontSize: 13, color: 'var(--text-primary)',
+              fontFamily: 'var(--font-sans)', colorScheme: 'dark',
+              boxSizing: 'border-box',
+            }}
+          />
+          <textarea
+            value={followUpNotes}
+            onChange={e => setFollowUpNotes(e.target.value)}
+            placeholder="Reason for follow-up (e.g. owner asked to call back Thursday)…"
+            rows={2}
+            style={{
+              width: '100%', padding: '8px 10px',
+              background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+              borderRadius: 7, fontSize: 13, color: 'var(--text-primary)',
+              fontFamily: 'var(--font-sans)', resize: 'none', lineHeight: 1.5,
+              boxSizing: 'border-box',
+            }}
+          />
+          <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '6px 0 0' }}>Saved when you hit Done.</p>
+        </div>
+      )}
+    </>
+  )
+
+  const callSection = !telHref ? (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      height: 44, background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+      borderRadius: 10, fontSize: 13, color: 'var(--text-muted)',
+    }}>
+      No phone number on file
+    </div>
+  ) : callState === 'in-call' ? (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        height: 40, background: 'rgba(34,197,94,0.12)',
+        border: '0.5px solid rgba(34,197,94,0.3)', borderRadius: 10,
+        fontSize: 13, fontWeight: 500, color: 'var(--success)',
+      }}>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success)' }} />
+        Connected · <span style={{ fontFamily: 'var(--font-mono)' }}>{fmtCallTime(callSeconds)}</span>
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          onClick={toggleMute}
+          style={{
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            height: 40, borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 500,
+            background: muted ? 'rgba(245,158,11,0.14)' : 'var(--bg-elevated)',
+            border: `0.5px solid ${muted ? 'rgba(245,158,11,0.4)' : 'var(--border)'}`,
+            color: muted ? 'var(--warning)' : 'var(--text-secondary)',
+          }}
+        >
+          {muted ? <MicOff size={14} /> : <Mic size={14} />}
+          {muted ? 'Unmute' : 'Mute'}
+        </button>
+        <button
+          onClick={hangUp}
+          style={{
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            height: 40, borderRadius: 10, border: 'none', cursor: 'pointer',
+            fontSize: 13, fontWeight: 500, color: 'white', background: 'var(--danger)',
+          }}
+        >
+          <PhoneOff size={14} /> Hang Up
+        </button>
+      </div>
+    </div>
+  ) : callState === 'connecting' ? (
+    <button
+      disabled
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        height: 44, width: '100%',
+        background: 'rgba(34,197,94,0.5)', borderRadius: 10, border: 'none',
+        fontSize: 14, fontWeight: 500, color: 'white', cursor: 'not-allowed',
+      }}
+    >
+      <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Connecting…
+    </button>
+  ) : deviceReady ? (
+    <>
+      <button
+        onClick={startCall}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          height: 44, width: '100%',
+          background: 'var(--success)', borderRadius: 10, border: 'none',
+          fontSize: 14, fontWeight: 500, color: 'white', cursor: 'pointer',
+          boxShadow: '0 0 20px rgba(34,197,94,0.3)',
+        }}
+      >
+        <Phone size={15} /> Call {lead.phone}
+      </button>
+      {callState === 'error' && (
+        <p style={{ fontSize: 11, color: 'var(--danger)', margin: '6px 0 0', textAlign: 'center' }}>
+          Call failed — try again, or use <a href={telHref} style={{ color: 'var(--accent)' }}>your phone</a>.
+        </p>
+      )}
+    </>
+  ) : (
+    <a
+      href={telHref}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        height: 44,
+        background: 'var(--success)', borderRadius: 10,
+        fontSize: 14, fontWeight: 500, color: 'white', textDecoration: 'none',
+        boxShadow: '0 0 20px rgba(34,197,94,0.3)',
+      }}
+    >
+      <Phone size={15} /> Call {lead.phone}
+    </a>
+  )
+
+  const footerWarning = needsDate
+    ? (status === 'Appointment Booked' ? 'Pick the appointment date & time to save' : 'Pick the follow-up date & time to save')
+    : undefined
+
+  // Post-call state: show the grade card in a separate overlay instead of the modal.
+  if (postCallState !== null) {
+    return createPortal(
+      <div
+        style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          background: 'rgba(8,8,16,0.85)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 20,
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <PostCallCard state={postCallState} onClose={onClose} leadName={lead.business_name} />
+      </div>,
+      document.body
+    )
+  }
+
   return createPortal(
     <div
       style={{
@@ -611,443 +684,33 @@ export function CallModal({ lead, onClose }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 20,
       }}
-      onClick={e => e.stopPropagation() /* click-outside does NOT close — exit via X (discard) or Done (save) */}
+      onClick={e => e.stopPropagation()}
     >
       <ModalErrorBoundary onClose={onClose}>
-      {postCallState !== null ? (
-        <PostCallCard state={postCallState} onClose={onClose} leadName={lead.business_name} />
-      ) : (
-      <div style={{
-        width: '100%', maxWidth: 960, maxHeight: '88vh',
-        display: 'flex', flexDirection: 'column',
-        // solid backdrop — --bg-surface is translucent and lets the page bleed through
-        background: '#0E0E1A',
-        border: '0.5px solid var(--border)',
-        borderRadius: 14,
-        overflow: 'hidden',
-        boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
-      }}>
-
-        {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: '14px 18px',
-          borderBottom: '0.5px solid var(--border)',
-          flexShrink: 0,
-        }}>
-          <div style={{
-            width: 38, height: 38, borderRadius: 10,
-            background: 'var(--accent-dim)',
-            border: '0.5px solid var(--accent-border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-          }}>
-            <Phone size={16} color="var(--accent)" />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {lead.business_name}
-            </p>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>
-              Call prep · everything you need in one place
-            </p>
-          </div>
-          <Badge label={status} />
-          <button
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 8 }}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Body — two columns */}
-        <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-
-          {/* LEFT — lead info, status, follow-up, notes, call */}
-          <div
-            className="scrollbar-thin"
-            style={{
-              flex: '0 0 340px', minWidth: 0,
-              borderRight: '0.5px solid var(--border)',
-              overflowY: 'auto',
-              padding: '16px 18px',
-            }}
-          >
-            {/* Phone (redundant — the green call button below) and Source
-                removed per Prompt 49; contact/niche/city only. */}
-            <Field icon={User}   label="Contact"  value={lead.contact_name} />
-            <Field icon={Tag}    label="Niche"    value={lead.niche} />
-            <Field icon={MapPin} label="City"     value={[lead.city, lead.state].filter(Boolean).join(', ')} />
-
-            {/* Status dropdown — color-coded outcomes, committed on Done (X discards) */}
-            <div style={{ marginBottom: 14 }} ref={dropdownRef}>
-              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 6px' }}>Status</p>
-              <div style={{ position: 'relative' }} ref={triggerRef}>
-                <button
-                  onClick={toggleStatusMenu}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-                    width: '100%', height: 40, padding: '0 12px',
-                    background: selected ? selected.dim : 'var(--bg-elevated)',
-                    border: `0.5px solid ${selected ? selected.border : 'var(--border)'}`,
-                    borderRadius: 8, cursor: 'pointer', fontSize: 13,
-                    color: selected ? selected.color : 'var(--text-secondary)',
-                    fontWeight: 500,
-                  }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {selected && <span style={{ width: 8, height: 8, borderRadius: '50%', background: selected.color, flexShrink: 0 }} />}
-                    {selected ? selected.value : `${status} — pick an outcome`}
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <ChevronDown size={14} />
-                  </span>
-                </button>
-                {/* Menu portaled to document.body — the left panel scrolls with
-                    overflow:auto, which clipped the old absolute menu (Prompt 49,
-                    same fix as the notification bell in Prompt 44). */}
-                {statusOpen && statusMenuCoords && createPortal(
-                  <div ref={menuRef} style={{
-                    position: 'fixed', top: statusMenuCoords.top, left: statusMenuCoords.left, width: statusMenuCoords.width,
-                    zIndex: 2000,
-                    background: '#13131F', border: '0.5px solid var(--border)',
-                    borderRadius: 8, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-                  }}>
-                    {STATUS_OPTIONS.map(o => (
-                      <button
-                        key={o.value}
-                        onClick={() => selectStatus(o.value)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 9,
-                          width: '100%', padding: '11px 12px', border: 'none',
-                          background: status === o.value ? o.dim : 'transparent',
-                          cursor: 'pointer', fontSize: 13, fontWeight: 500,
-                          color: o.color, textAlign: 'left',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = o.dim }}
-                        onMouseLeave={e => { e.currentTarget.style.background = status === o.value ? o.dim : 'transparent' }}
-                      >
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: o.color, flexShrink: 0, marginTop: o.note ? 3 : 0, alignSelf: o.note ? 'flex-start' : 'center' }} />
-                        <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                          {o.value}
-                          {o.note && (
-                            <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-muted)', lineHeight: 1.3 }}>
-                              {o.note}
-                            </span>
-                          )}
-                        </span>
-                        {status === o.value && <Check size={12} style={{ marginLeft: 'auto', flexShrink: 0 }} />}
-                      </button>
-                    ))}
-                  </div>,
-                  document.body
-                )}
-              </div>
-              {selected?.note && (
-                <p style={{ fontSize: 11, color: selected.color, margin: '5px 0 0', opacity: 0.9 }}>
-                  {status === 'Follow-Up' && followUpAt
-                    ? `Returns to your list on ${new Date(followUpAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
-                    : status === 'Appointment Booked' && appointmentAt
-                    ? `Appointment: ${new Date(appointmentAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} ${clientTzLabel}`
-                    : selected.note}
-                </p>
-              )}
-            </div>
-
-            {/* Appointment scheduling — only when Appointment Booked is selected */}
-            {status === 'Appointment Booked' && (
-              <div style={{
-                marginBottom: 14, padding: '12px',
-                background: 'rgba(34,197,94,0.06)', borderRadius: 8,
-                border: '0.5px solid rgba(34,197,94,0.2)',
-              }}>
-                <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#22C55E', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <CalendarClock size={10} /> Appointment Time — {clientTzLabel} (client's local time)
-                </p>
-                <input
-                  type="datetime-local"
-                  value={appointmentAt}
-                  onChange={e => setAppointmentAt(e.target.value)}
-                  style={{
-                    width: '100%', height: 36, padding: '0 10px',
-                    background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-                    borderRadius: 7, fontSize: 13, color: 'var(--text-primary)',
-                    fontFamily: 'var(--font-sans)', colorScheme: 'dark',
-                    boxSizing: 'border-box',
-                  }}
-                />
-                <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '6px 0 0' }}>
-                  {appointmentAt
-                    ? `Scheduled for ${new Date(appointmentAt).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} ${clientTzLabel} — saved when you hit Done.`
-                    : `Pick the day and time the prospect agreed to, in THEIR local time (${clientTzLabel}).`}
-                </p>
-              </div>
-            )}
-
-            {/* Discovery — feeds the custom stack recommendation Nate sees.
-                Only matters (and only shown) when booking — this is what gets
-                fired into recommend-stack on Done. */}
-            {status === 'Appointment Booked' && (
-              <div style={{
-                marginBottom: 14, padding: '12px',
-                background: 'rgba(108,99,255,0.06)', borderRadius: 8,
-                border: '0.5px solid var(--accent-border)',
-              }}>
-                <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent)', margin: '0 0 8px' }}>
-                  Discovery — for the custom stack
-                </p>
-                <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
-                  What's costing them most?
-                </label>
-                <select
-                  value={primaryPain}
-                  onChange={e => setPrimaryPain(e.target.value)}
-                  style={{
-                    width: '100%', height: 34, padding: '0 10px', marginBottom: 8,
-                    background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-                    borderRadius: 7, fontSize: 13, color: 'var(--text-primary)', boxSizing: 'border-box',
-                  }}
-                >
-                  <option value="">Select…</option>
-                  <option value="missed_calls">Missed calls</option>
-                  <option value="slow_response">Slow response</option>
-                  <option value="no_shows">No-shows</option>
-                  <option value="never_booked">Leads who called but never booked</option>
-                </select>
-                <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
-                  What do they have today to handle that?
-                </label>
-                <input
-                  type="text" value={currentSetup}
-                  onChange={e => setCurrentSetup(e.target.value)}
-                  placeholder="e.g. voicemail only, answering service…"
-                  style={{
-                    width: '100%', height: 34, padding: '0 10px', marginBottom: 8,
-                    background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-                    borderRadius: 7, fontSize: 13, color: 'var(--text-primary)', boxSizing: 'border-box',
-                  }}
-                />
-                <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
-                  Anything else slipping through the cracks?
-                </label>
-                <input
-                  type="text" value={secondaryPain}
-                  onChange={e => setSecondaryPain(e.target.value)}
-                  placeholder="optional"
-                  style={{
-                    width: '100%', height: 34, padding: '0 10px',
-                    background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-                    borderRadius: 7, fontSize: 13, color: 'var(--text-primary)', boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Follow-Up scheduling — only when Follow-Up is selected */}
-            {status === 'Follow-Up' && (
-              <div style={{
-                marginBottom: 14, padding: '12px',
-                background: 'rgba(245,158,11,0.06)', borderRadius: 8,
-                border: '0.5px solid rgba(245,158,11,0.2)',
-              }}>
-                <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#F59E0B', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <CalendarClock size={10} /> Schedule Follow-Up
-                </p>
-                <input
-                  type="datetime-local"
-                  value={followUpAt}
-                  onChange={e => setFollowUpAt(e.target.value)}
-                  style={{
-                    width: '100%', height: 36, padding: '0 10px', marginBottom: 8,
-                    background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-                    borderRadius: 7, fontSize: 13, color: 'var(--text-primary)',
-                    fontFamily: 'var(--font-sans)', colorScheme: 'dark',
-                    boxSizing: 'border-box',
-                  }}
-                />
-                <textarea
-                  value={followUpNotes}
-                  onChange={e => setFollowUpNotes(e.target.value)}
-                  placeholder="Reason for follow-up (e.g. owner asked to call back Thursday)…"
-                  rows={2}
-                  style={{
-                    width: '100%', padding: '8px 10px',
-                    background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-                    borderRadius: 7, fontSize: 13, color: 'var(--text-primary)',
-                    fontFamily: 'var(--font-sans)', resize: 'none', lineHeight: 1.5,
-                    boxSizing: 'border-box',
-                  }}
-                />
-                <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '6px 0 0' }}>Saved when you hit Done.</p>
-              </div>
-            )}
-
-            {/* Call notes — always available, saved on Done */}
-            <div style={{ marginBottom: 14 }}>
-              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 5 }}>
-                <StickyNote size={10} /> Call Notes
-              </p>
-              <textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                placeholder="What happened on this call? Pain points, who answered, best time to retry…"
-                rows={3}
-                style={{
-                  width: '100%', padding: '8px 10px',
-                  background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-                  borderRadius: 8, fontSize: 13, color: 'var(--text-primary)',
-                  fontFamily: 'var(--font-sans)', resize: 'vertical', lineHeight: 1.5,
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-
-            {/* Call Now — browser WebRTC (Prompt 54): Twilio dials the lead
-                directly through the rep's mic/headset, recorded. No rep phone
-                needed. Falls back to a tel: link only if the Device couldn't
-                register (secrets not set) or the lead has no number. */}
-            {!telHref ? (
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                height: 44,
-                background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-                borderRadius: 10, fontSize: 13, color: 'var(--text-muted)',
-              }}>
-                No phone number on file
-              </div>
-            ) : callState === 'in-call' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  height: 40, background: 'rgba(34,197,94,0.12)',
-                  border: '0.5px solid rgba(34,197,94,0.3)', borderRadius: 10,
-                  fontSize: 13, fontWeight: 500, color: 'var(--success)',
-                }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success)' }} />
-                  Connected · <span style={{ fontFamily: 'var(--font-mono)' }}>{fmtCallTime(callSeconds)}</span>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={toggleMute}
-                    style={{
-                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                      height: 40, borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 500,
-                      background: muted ? 'rgba(245,158,11,0.14)' : 'var(--bg-elevated)',
-                      border: `0.5px solid ${muted ? 'rgba(245,158,11,0.4)' : 'var(--border)'}`,
-                      color: muted ? 'var(--warning)' : 'var(--text-secondary)',
-                    }}
-                  >
-                    {muted ? <MicOff size={14} /> : <Mic size={14} />}
-                    {muted ? 'Unmute' : 'Mute'}
-                  </button>
-                  <button
-                    onClick={hangUp}
-                    style={{
-                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                      height: 40, borderRadius: 10, border: 'none', cursor: 'pointer',
-                      fontSize: 13, fontWeight: 500, color: 'white', background: 'var(--danger)',
-                    }}
-                  >
-                    <PhoneOff size={14} /> Hang Up
-                  </button>
-                </div>
-              </div>
-            ) : callState === 'connecting' ? (
-              <button
-                disabled
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  height: 44, width: '100%',
-                  background: 'rgba(34,197,94,0.5)', borderRadius: 10, border: 'none',
-                  fontSize: 14, fontWeight: 500, color: 'white', cursor: 'not-allowed',
-                }}
-              >
-                <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Connecting…
-              </button>
-            ) : deviceReady ? (
-              <>
-                <button
-                  onClick={startCall}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    height: 44, width: '100%',
-                    background: 'var(--success)', borderRadius: 10, border: 'none',
-                    fontSize: 14, fontWeight: 500, color: 'white', cursor: 'pointer',
-                    boxShadow: '0 0 20px rgba(34,197,94,0.3)',
-                  }}
-                >
-                  <Phone size={15} /> Call {lead.phone}
-                </button>
-                {callState === 'error' && (
-                  <p style={{ fontSize: 11, color: 'var(--danger)', margin: '6px 0 0', textAlign: 'center' }}>
-                    Call failed — try again, or use <a href={telHref} style={{ color: 'var(--accent)' }}>your phone</a>.
-                  </p>
-                )}
-              </>
-            ) : (
-              // Device not ready (token/secrets missing) — tel: link fallback
-              <a
-                href={telHref}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  height: 44,
-                  background: 'var(--success)', borderRadius: 10,
-                  fontSize: 14, fontWeight: 500, color: 'white', textDecoration: 'none',
-                  boxShadow: '0 0 20px rgba(34,197,94,0.3)',
-                }}
-              >
-                <Phone size={15} /> Call {lead.phone}
-              </a>
-            )}
-          </div>
-
-          {/* RIGHT — the guided call walk: one step at a time, tap the
-              prospect's response, the tree routes the rep to booking Nate. */}
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <ScriptWalk flow={flow} mode="live" leadId={lead.id} onDataCollect={handleDataCollect} />
-          </div>
-        </div>
-
-        {/* Footer — Done (the only save path) disabled until a status is
-            picked, and blocked when Booked/Follow-Up is missing its date */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12,
-          padding: '12px 18px',
-          borderTop: '0.5px solid var(--border)',
-          flexShrink: 0,
-        }}>
-          {doneError && <p style={{ fontSize: 12, color: 'var(--danger)', margin: 0 }}>{doneError}</p>}
-          {!statusTouched ? (
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>
-              Select a status to finish — X discards changes
-            </p>
-          ) : needsDate ? (
-            <p style={{ fontSize: 12, color: 'var(--warning)', margin: 0, fontStyle: 'italic' }}>
-              {status === 'Appointment Booked'
-                ? 'Pick the appointment date & time to save'
-                : 'Pick the follow-up date & time to save'}
-            </p>
-          ) : null}
-          <button
-            onClick={handleDone}
-            disabled={closing || !statusTouched || needsDate}
-            style={{
-              padding: '9px 24px', borderRadius: 8,
-              background: (statusTouched && !needsDate) ? 'var(--accent)' : 'var(--bg-elevated)',
-              border: (statusTouched && !needsDate) ? 'none' : '0.5px solid var(--border)',
-              fontSize: 13, fontWeight: 500,
-              color: (statusTouched && !needsDate) ? 'white' : 'var(--text-muted)',
-              cursor: (closing || !statusTouched || needsDate) ? 'not-allowed' : 'pointer',
-              opacity: closing ? 0.7 : (statusTouched && !needsDate) ? 1 : 0.6,
-              transition: 'all 0.15s',
-            }}
-          >
-            {closing ? 'Saving…' : 'Done'}
-          </button>
-        </div>
-      </div>
-      )}
+        <CallPrepModal
+          lead={lead}
+          onClose={onClose}
+          badge={<Badge label={status} />}
+          subtitle="Call prep · everything you need in one place"
+          infoContent={infoContent}
+          statusOptions={STATUS_OPTIONS}
+          status={status}
+          statusTouched={statusTouched}
+          onStatusSelect={v => { setStatus(v); setStatusTouched(true) }}
+          statusNote={statusNote}
+          statusAddon={statusAddon}
+          notes={notes}
+          onNotesChange={e => setNotes(e.target.value)}
+          callSection={callSection}
+          footerHint="Select a status to finish — X discards changes"
+          footerWarning={footerWarning}
+          footerError={doneError}
+          onDone={handleDone}
+          isDoneDisabled={closing || !statusTouched || needsDate}
+          doneLabel={closing ? 'Saving…' : 'Done'}
+        >
+          <ScriptWalk flow={flow} mode="live" leadId={lead.id} onDataCollect={handleDataCollect} />
+        </CallPrepModal>
       </ModalErrorBoundary>
     </div>,
     document.body
