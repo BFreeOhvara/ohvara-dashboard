@@ -28,7 +28,10 @@ function formulaPrice(callsMissedPerWeek: number | null, avgTicket: number | nul
   if (!callsMissedPerWeek || !avgTicket || callsMissedPerWeek <= 0 || avgTicket <= 0) return null
   const monthlyLost = callsMissedPerWeek * 4.33 * avgTicket
   if (monthlyLost < 500) return null  // not enough signal to formula-price
-  return Math.round(clamp(monthlyLost * 0.15, 397, 1997) / 10) * 10  // round to nearest $10
+  // Floor/ceiling (397/1997) round to 399/1999 under the ...99 convention —
+  // constants stay until Brayden confirms they should change to 399/1999.
+  const raw = clamp(monthlyLost * 0.15, 397, 1997)
+  return Math.round((raw + 1) / 100) * 100 - 1  // round to nearest value ending in 99
 }
 
 // Map price → closest display tier for Stripe link generation + UI color.
