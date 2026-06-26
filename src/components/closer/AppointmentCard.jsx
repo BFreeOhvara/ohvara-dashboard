@@ -68,7 +68,7 @@ export function AppointmentCard({ appt }) {
         </div>
       </div>
 
-      {modalOpen && <AppointmentCardModal lead={appt.lead} onClose={() => setModalOpen(false)} />}
+      {modalOpen && <AppointmentCardModal appt={appt} onClose={() => setModalOpen(false)} />}
     </>
   )
 }

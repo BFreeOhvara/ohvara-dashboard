@@ -14,7 +14,7 @@ const CLOSER_TABS = [
   { key: 'pending',            label: 'Pending',            icon: CalendarClock },
   { key: 'closed',             label: 'Closed',             icon: CheckCircle },
   { key: 'lost',               label: 'Lost',               icon: Ban },
-  { key: 'missed',             label: 'Missed',             icon: PhoneOff },
+  { key: 'no_show',            label: 'No Show',            icon: PhoneOff },
   { key: 'needs_rescheduling', label: 'Needs Rescheduling', icon: RefreshCw },
 ]
 
@@ -38,7 +38,7 @@ const CLOSER_TAB_COLORS = {
   pending:            { color: 'var(--accent)',  dim: 'var(--accent-dim)',  border: 'var(--accent-border)' },
   closed:             { color: 'var(--success)', dim: 'var(--success-dim)', border: 'rgba(34,197,94,0.20)' },
   lost:               { color: 'var(--danger)',  dim: 'var(--danger-dim)',  border: 'rgba(239,68,68,0.20)' },
-  missed:             { color: 'var(--warning)', dim: 'var(--warning-dim)', border: 'rgba(245,158,11,0.20)' },
+  no_show:            { color: '#94A3B8',        dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)' },
   needs_rescheduling: { color: 'var(--info)',    dim: 'var(--info-dim)',    border: 'rgba(56,189,248,0.20)' },
 }
 
@@ -153,12 +153,12 @@ function LostTab({ rows }) {
   )
 }
 
-function MissedTab({ rows, tz }) {
+function NoShowTab({ rows, tz }) {
   return (
     <QueueTable
       columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Was Scheduled', '0 0 150px']]}
       rows={rows}
-      emptyText="No missed appointments."
+      emptyText="No no-shows."
       emptyIcon={PhoneOff}
       renderRow={a => (
         <div key={a.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
@@ -356,7 +356,7 @@ export default function CloserPipeline() {
   const [search, setSearch] = useState('')
 
   const filteredAppts = useMemo(() => {
-    if (!allAppts) return { pending: [], closed: [], lost: [], missed: [], needs_rescheduling: [] }
+    if (!allAppts) return { pending: [], closed: [], lost: [], no_show: [], needs_rescheduling: [] }
     const s = search.trim().toLowerCase()
     const appts = s
       ? allAppts.filter(a => (a.lead?.business_name || '').toLowerCase().includes(s))
@@ -365,7 +365,7 @@ export default function CloserPipeline() {
       pending:            appts.filter(a => a.status === 'pending'),
       closed:             appts.filter(a => a.outcome === 'closed'),
       lost:               appts.filter(a => a.outcome === 'lost' || a.outcome === 'no_show'),
-      missed:             appts.filter(a => a.status === 'missed'),
+      no_show:            appts.filter(a => a.status === 'no_show' || a.outcome === 'no_show' || a.status === 'missed'),
       needs_rescheduling: appts.filter(a => a.status === 'needs_rescheduling'),
     }
   }, [allAppts, search])
@@ -376,7 +376,7 @@ export default function CloserPipeline() {
     closedCount:            filteredAppts.closed.length,
     totalRevenue:           filteredAppts.closed.reduce((s, a) => s + (a.deal_value || 0), 0),
     lostCount:              filteredAppts.lost.length,
-    missedCount:            filteredAppts.missed.length,
+    noShowCount:            filteredAppts.no_show.length,
     needsReschedulingCount: filteredAppts.needs_rescheduling.length,
   }), [filteredAppts])
 
@@ -451,8 +451,8 @@ export default function CloserPipeline() {
             {closerTab === 'lost' && (
               <KPICard label="Lost / No Show" value={closerKPIs.lostCount} sub="all time" icon={Ban} />
             )}
-            {closerTab === 'missed' && (
-              <KPICard label="Missed" value={closerKPIs.missedCount} sub="client didn't answer" icon={PhoneOff} />
+            {closerTab === 'no_show' && (
+              <KPICard label="No Show" value={closerKPIs.noShowCount} sub="client didn't answer" icon={PhoneOff} />
             )}
             {closerTab === 'needs_rescheduling' && (
               <KPICard label="Needs Rescheduling" value={closerKPIs.needsReschedulingCount} sub="needs a new time" icon={RefreshCw} />
@@ -494,7 +494,7 @@ export default function CloserPipeline() {
           {closerTab === 'pending'            && <PendingTab            rows={filteredAppts.pending}            tz={tz} />}
           {closerTab === 'closed'             && <ClosedTab             rows={filteredAppts.closed} />}
           {closerTab === 'lost'               && <LostTab               rows={filteredAppts.lost} />}
-          {closerTab === 'missed'             && <MissedTab             rows={filteredAppts.missed}             tz={tz} />}
+          {closerTab === 'no_show'             && <NoShowTab             rows={filteredAppts.no_show}             tz={tz} />}
           {closerTab === 'needs_rescheduling' && <NeedsReschedulingTab  rows={filteredAppts.needs_rescheduling} tz={tz} />}
         </div>
       )}

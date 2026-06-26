@@ -23,7 +23,6 @@ const STATUS_OPTIONS = [
   { value: 'closed',             label: 'Closed',           color: 'var(--success)', dim: 'var(--success-dim)', border: 'rgba(34,197,94,0.20)' },
   { value: 'lost',               label: 'Lost',             color: 'var(--danger)',  dim: 'var(--danger-dim)',  border: 'rgba(239,68,68,0.20)' },
   { value: 'no_show',            label: 'No Show',          color: '#94A3B8',        dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)' },
-  { value: 'missed',             label: 'Missed',           color: 'var(--warning)', dim: 'var(--warning-dim)', border: 'rgba(245,158,11,0.20)' },
   { value: 'needs_rescheduling', label: 'Needs Reschedule', color: 'var(--info)',    dim: 'var(--info-dim)',    border: 'rgba(56,189,248,0.20)' },
 ]
 
@@ -48,7 +47,7 @@ export function CloserModal({ appt, onClose }) {
     setSaving(true)
     setSaveError('')
     try {
-      if (outcome === 'missed' || outcome === 'needs_rescheduling') {
+      if (outcome === 'needs_rescheduling') {
         await update.mutateAsync({ appointmentId: appt.id, updates: { status: outcome, closer_notes: notes || undefined } })
         onClose()
         return
@@ -108,7 +107,7 @@ export function CloserModal({ appt, onClose }) {
           style={{ marginBottom: 8, width: '100%' }}
         />
       )}
-      {outcomeTouched && outcome && !['closed', 'missed', 'needs_rescheduling'].includes(outcome) && (
+      {outcomeTouched && outcome && !['closed', 'needs_rescheduling'].includes(outcome) && (
         <Input
           value={lossReason}
           onChange={e => setLossReason(e.target.value)}
