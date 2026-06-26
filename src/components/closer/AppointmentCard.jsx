@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  MapPin, Phone, Mail, Bell, Calendar, Star, Globe, ChevronRight, X,
+  MapPin, Phone, Mail, Calendar, Star, Globe, ChevronRight, X, StickyNote,
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
-import { Textarea, Input } from '../ui/Input'
+import { Input } from '../ui/Input'
 import { useUpdateAppointment } from '../../hooks/useAppointments'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
-import { inferTimezoneFromState, zonedTimeToUtcIso, timezoneLabel, formatInTimezone, utcIsoToZonedDatetimeLocal, DEFAULT_TIMEZONE } from '../../lib/timezones'
+import { formatInTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { CLOSER_SCRIPT } from '../../lib/closerScript'
 
 const STATUS_OPTIONS = [
@@ -25,14 +25,12 @@ const SAY_LINES = CLOSER_SCRIPT.flatMap(s => s.lines)
 export function AppointmentCard({ appt }) {
   const { profile } = useAuth()
   const lead = appt.lead
-  const clientTz = inferTimezoneFromState(lead?.state)
   const viewerTz = profile?.timezone || DEFAULT_TIMEZONE
   const [modalOpen, setModalOpen] = useState(false)
   const [outcome, setOutcome] = useState('')
   const [dealValue, setDealValue] = useState('')
   const [lossReason, setLossReason] = useState('')
   const [notes, setNotes] = useState(appt.closer_notes || '')
-  const [scheduledAt, setScheduledAt] = useState(utcIsoToZonedDatetimeLocal(appt.scheduled_at, clientTz))
   const [lostLoading, setLostLoading] = useState(false)
   const [sayStep, setSayStep] = useState(0)
   const update = useUpdateAppointment()
@@ -87,18 +85,6 @@ export function AppointmentCard({ appt }) {
       }
     }
     setModalOpen(false)
-  }
-
-  async function handleSchedule() {
-    if (!scheduledAt) return
-    const iso = zonedTimeToUtcIso(scheduledAt, clientTz)
-    await update.mutateAsync({
-      appointmentId: appt.id,
-      updates: { scheduled_at: iso, status: 'pending' },
-    })
-    await supabase.functions.invoke('schedule-reminders', {
-      body: { appointment_id: appt.id, scheduled_at: iso, lead_phone: lead.phone, contact_name: lead.contact_name },
-    })
   }
 
   if (!lead) {
@@ -174,7 +160,7 @@ export function AppointmentCard({ appt }) {
           onClick={e => e.stopPropagation()}
         >
           <div style={{
-            width: '100%', maxWidth: 880, maxHeight: '88vh',
+            width: '100%', maxWidth: 960, maxHeight: '88vh',
             display: 'flex', flexDirection: 'column',
             background: '#0E0E1A',
             border: '0.5px solid var(--border)',
@@ -183,13 +169,29 @@ export function AppointmentCard({ appt }) {
             boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
           }}>
 
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: '0.5px solid var(--border)', flexShrink: 0 }}>
+            {/* Header — matches CallModal */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '14px 18px',
+              borderBottom: '0.5px solid var(--border)',
+              flexShrink: 0,
+            }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: 10,
+                background: 'var(--accent-dim)',
+                border: '0.5px solid var(--accent-border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <Phone size={16} color="var(--accent)" />
+              </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {lead.business_name}
                 </p>
-                {lead.niche && <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>{lead.niche}</p>}
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>
+                  Close prep · everything you need in one place
+                </p>
               </div>
               <Badge label={appt.status} />
               <button onClick={() => setModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 8 }}>
@@ -198,50 +200,39 @@ export function AppointmentCard({ appt }) {
             </div>
 
             {/* Two-column body */}
-            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+            <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
 
-              {/* LEFT — contact / appointment / status / notes */}
-              <div className="scrollbar-thin" style={{ flex: '0 0 52%', overflowY: 'auto', borderRight: '0.5px solid var(--border)' }}>
-
+              {/* LEFT — contact info, status, notes */}
+              <div
+                className="scrollbar-thin"
+                style={{
+                  flex: '0 0 340px', minWidth: 0,
+                  borderRight: '0.5px solid var(--border)',
+                  overflowY: 'auto',
+                  padding: '16px 18px',
+                }}
+              >
                 {/* Contact info */}
-                <div style={{ padding: '14px 18px', borderBottom: '0.5px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {lead.phone && (
-                    <a href={`tel:${lead.phone}`} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none' }}>
-                      <Phone size={13} /> {lead.phone}
-                    </a>
-                  )}
-                  {lead.email && (
-                    <a href={`mailto:${lead.email}`} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none' }}>
-                      <Mail size={13} /> {lead.email}
-                    </a>
-                  )}
-                  {appt.rep && <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>Set by {appt.rep.full_name}</p>}
-                </div>
+                {lead.phone && (
+                  <a href={`tel:${lead.phone}`} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', marginBottom: 10 }}>
+                    <Phone size={13} /> {lead.phone}
+                  </a>
+                )}
+                {lead.email && (
+                  <a href={`mailto:${lead.email}`} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', marginBottom: 10 }}>
+                    <Mail size={13} /> {lead.email}
+                  </a>
+                )}
+                {appt.rep && (
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 14px' }}>
+                    Set by {appt.rep.full_name}
+                  </p>
+                )}
 
-                {/* Appointment time */}
-                <div style={{ padding: '14px 18px', borderBottom: '0.5px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, margin: '0 0 4px' }}>
-                        Appointment — {timezoneLabel(clientTz)}
-                      </p>
-                      <Input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} />
-                    </div>
-                    <Button variant="secondary" size="sm" onClick={handleSchedule} disabled={!scheduledAt || update.isPending}>
-                      <Bell size={13} /> Set
-                    </Button>
-                  </div>
-                  {appt.scheduled_at && (
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, margin: 0 }}>
-                      <Bell size={10} /> Reminders: 24h, 1h, 10min before
-                    </p>
-                  )}
-                </div>
-
-                {/* Status picker */}
-                <div style={{ padding: '14px 18px', borderBottom: '0.5px solid var(--border)' }}>
-                  <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, margin: '0 0 10px' }}>
-                    Set Outcome
+                {/* Status picker — matches CallModal label style */}
+                <div style={{ marginBottom: 14 }}>
+                  <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 6px' }}>
+                    Status
                   </p>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {STATUS_OPTIONS.map(opt => {
@@ -251,10 +242,10 @@ export function AppointmentCard({ appt }) {
                           key={opt.value}
                           onClick={() => setOutcome(active ? '' : opt.value)}
                           style={{
-                            padding: '6px 14px', borderRadius: 8, cursor: 'pointer',
-                            fontSize: 12, fontWeight: 500,
+                            padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
+                            fontSize: 13, fontWeight: 500,
                             background: active ? opt.dim : 'var(--bg-elevated)',
-                            color: active ? opt.color : 'var(--text-muted)',
+                            color: active ? opt.color : 'var(--text-secondary)',
                             border: `0.5px solid ${active ? opt.border : 'var(--border)'}`,
                             transition: 'all 0.1s',
                           }}
@@ -272,19 +263,34 @@ export function AppointmentCard({ appt }) {
                   )}
                 </div>
 
-                {/* Call notes */}
-                <div style={{ padding: '14px 18px' }}>
-                  <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Call notes…" />
+                {/* Call notes — matches CallModal exactly */}
+                <div style={{ marginBottom: 14 }}>
+                  <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <StickyNote size={10} /> Call Notes
+                  </p>
+                  <textarea
+                    value={notes}
+                    onChange={e => setNotes(e.target.value)}
+                    placeholder="What happened on this call? Objections, tone, best time to follow up…"
+                    rows={4}
+                    style={{
+                      width: '100%', padding: '8px 10px',
+                      background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                      borderRadius: 8, fontSize: 13, color: 'var(--text-primary)',
+                      fontFamily: 'var(--font-sans)', resize: 'vertical', lineHeight: 1.5,
+                      boxSizing: 'border-box',
+                    }}
+                  />
                 </div>
               </div>
 
               {/* RIGHT — SAY THIS stepper */}
-              <div style={{ flex: '0 0 48%', display: 'flex', flexDirection: 'column', padding: '18px 18px 14px' }}>
-                <p style={{ fontSize: 10, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, margin: '0 0 12px' }}>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', padding: '16px 18px' }}>
+                <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent)', fontWeight: 600, margin: '0 0 10px' }}>
                   Say This
                 </p>
 
-                {/* Say card — grows to fill available space */}
+                {/* Say card — fills available height */}
                 <div style={{
                   flex: 1,
                   padding: '16px 18px',
@@ -325,7 +331,7 @@ export function AppointmentCard({ appt }) {
               </div>
             </div>
 
-            {/* Footer — Save gating */}
+            {/* Footer — matches CallModal footer exactly */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12,
               padding: '12px 18px',
@@ -333,16 +339,26 @@ export function AppointmentCard({ appt }) {
               flexShrink: 0,
             }}>
               {!outcome && (
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
-                  Select a status to finish
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>
+                  Select a status to finish — X discards changes
                 </p>
               )}
-              <Button
+              <button
                 onClick={handleComplete}
                 disabled={!outcome || update.isPending || lostLoading}
+                style={{
+                  padding: '9px 24px', borderRadius: 8,
+                  background: outcome ? 'var(--accent)' : 'var(--bg-elevated)',
+                  border: outcome ? 'none' : '0.5px solid var(--border)',
+                  fontSize: 13, fontWeight: 500,
+                  color: outcome ? 'white' : 'var(--text-muted)',
+                  cursor: (!outcome || update.isPending || lostLoading) ? 'not-allowed' : 'pointer',
+                  opacity: (update.isPending || lostLoading) ? 0.7 : outcome ? 1 : 0.6,
+                  transition: 'all 0.15s',
+                }}
               >
-                {update.isPending ? 'Saving…' : lostLoading ? 'Cleaning up…' : 'Save'}
-              </Button>
+                {update.isPending ? 'Saving…' : lostLoading ? 'Cleaning up…' : 'Done'}
+              </button>
             </div>
 
           </div>
