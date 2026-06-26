@@ -31,6 +31,13 @@ const STATUS_TAB_COLORS = {
   'All':                { color: 'var(--accent)',   dim: 'var(--accent-dim)',      border: 'var(--accent-border)' },
 }
 
+// Colors for the closer pipeline sub-tabs
+const CLOSER_TAB_COLORS = {
+  pending: { color: 'var(--accent)',  dim: 'var(--accent-dim)',  border: 'var(--accent-border)' },
+  closed:  { color: 'var(--success)', dim: 'var(--success-dim)', border: 'rgba(34,197,94,0.20)' },
+  lost:    { color: 'var(--danger)',  dim: 'var(--danger-dim)',  border: 'rgba(239,68,68,0.20)' },
+}
+
 const cell = (basis, extra = {}) => ({
   flex: basis, padding: '10px 12px', fontSize: 12, color: 'var(--text-secondary)',
   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, ...extra,
@@ -45,7 +52,7 @@ function fmtDateTime(iso, tz) {
   return formatInTimezone(iso, tz, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-function QueueTable({ columns, rows, renderRow, emptyText }) {
+function QueueTable({ columns, rows, renderRow, emptyText, emptyIcon: EmptyIcon }) {
   return (
     <div className="glass" style={{ borderRadius: 12, overflow: 'hidden' }}>
       <div style={{ overflowX: 'auto' }} className="scrollbar-thin">
@@ -59,7 +66,14 @@ function QueueTable({ columns, rows, renderRow, emptyText }) {
           </div>
           <div style={{ height: 480, overflowY: 'auto' }} className="scrollbar-thin">
             {!rows?.length ? (
-              <p style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>{emptyText}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '48px 16px', textAlign: 'center' }}>
+                {EmptyIcon && (
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                    <EmptyIcon size={18} color="var(--text-muted)" />
+                  </div>
+                )}
+                <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', margin: 0 }}>{emptyText}</p>
+              </div>
             ) : rows.map(renderRow)}
           </div>
         </div>
@@ -71,83 +85,67 @@ function QueueTable({ columns, rows, renderRow, emptyText }) {
 // ── Closer pipeline sub-views ─────────────────────────────────────────────────
 
 function PendingTab({ rows, tz }) {
-  const scheduled = rows.filter(a => a.scheduled_at)
   return (
-    <div>
-      <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-        <KPICard label="Pending" value={rows.length} sub="awaiting close call" icon={CalendarClock} />
-        <KPICard label="Scheduled" value={scheduled.length} sub="time confirmed" icon={CheckCircle} />
-      </div>
-      <QueueTable
-        columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Scheduled', '0 0 150px'], ['Status', '0 0 100px']]}
-        rows={rows}
-        emptyText="No pending appointments."
-        renderRow={a => (
-          <div key={a.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
-            <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
-            <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
-            <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
-            <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
-            <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at, tz)}</div>
-            <div style={cell('0 0 100px')}><Badge label={a.status} /></div>
-          </div>
-        )}
-      />
-    </div>
+    <QueueTable
+      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Scheduled', '0 0 150px'], ['Status', '0 0 100px']]}
+      rows={rows}
+      emptyText="No pending appointments."
+      emptyIcon={CalendarClock}
+      renderRow={a => (
+        <div key={a.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
+          <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
+          <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
+          <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
+          <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
+          <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at, tz)}</div>
+          <div style={cell('0 0 100px')}><Badge label={a.status} /></div>
+        </div>
+      )}
+    />
   )
 }
 
 function ClosedTab({ rows }) {
-  const totalRevenue = rows.reduce((s, a) => s + (a.deal_value || 0), 0)
   return (
-    <div>
-      <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-        <KPICard label="Closed Deals" value={rows.length} sub="all time" icon={CheckCircle} />
-        <KPICard label="Total Revenue" value={totalRevenue > 0 ? `$${totalRevenue.toLocaleString()}` : '$0'} sub="deal value" icon={CheckCircle} />
-      </div>
-      <QueueTable
-        columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Closed On', '0 0 130px'], ['Revenue', '0 0 110px']]}
-        rows={rows}
-        emptyText="No closed deals yet."
-        renderRow={a => (
-          <div key={a.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
-            <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
-            <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
-            <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
-            <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
-            <div style={cell('0 0 130px', { fontFamily: 'var(--font-mono)' })}>{fmtDate(a.updated_at || a.created_at)}</div>
-            <div style={cell('0 0 110px', { color: 'var(--success)', fontFamily: 'var(--font-mono)' })}>
-              {a.deal_value ? `$${Number(a.deal_value).toLocaleString()}` : '—'}
-            </div>
+    <QueueTable
+      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Closed On', '0 0 130px'], ['Revenue', '0 0 110px']]}
+      rows={rows}
+      emptyText="No closed deals yet."
+      emptyIcon={CheckCircle}
+      renderRow={a => (
+        <div key={a.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
+          <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
+          <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
+          <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
+          <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
+          <div style={cell('0 0 130px', { fontFamily: 'var(--font-mono)' })}>{fmtDate(a.updated_at || a.created_at)}</div>
+          <div style={cell('0 0 110px', { color: 'var(--success)', fontFamily: 'var(--font-mono)' })}>
+            {a.deal_value ? `$${Number(a.deal_value).toLocaleString()}` : '—'}
           </div>
-        )}
-      />
-    </div>
+        </div>
+      )}
+    />
   )
 }
 
 function LostTab({ rows }) {
   return (
-    <div>
-      <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-        <KPICard label="Lost / No Show" value={rows.length} sub="all time" icon={Ban} />
-      </div>
-      <QueueTable
-        columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Outcome', '0 0 120px'], ['Date', '0 0 130px']]}
-        rows={rows}
-        emptyText="No lost deals yet."
-        renderRow={a => (
-          <div key={a.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
-            <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
-            <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
-            <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
-            <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
-            <div style={cell('0 0 120px')}><Badge label={a.outcome} /></div>
-            <div style={cell('0 0 130px', { fontFamily: 'var(--font-mono)' })}>{fmtDate(a.updated_at || a.created_at)}</div>
-          </div>
-        )}
-      />
-    </div>
+    <QueueTable
+      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Outcome', '0 0 120px'], ['Date', '0 0 130px']]}
+      rows={rows}
+      emptyText="No lost deals yet."
+      emptyIcon={Ban}
+      renderRow={a => (
+        <div key={a.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
+          <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
+          <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
+          <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
+          <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
+          <div style={cell('0 0 120px')}><Badge label={a.outcome} /></div>
+          <div style={cell('0 0 130px', { fontFamily: 'var(--font-mono)' })}>{fmtDate(a.updated_at || a.created_at)}</div>
+        </div>
+      )}
+    />
   )
 }
 
@@ -253,15 +251,15 @@ function SetterView({ profileId, search }) {
                 padding: '10px 14px', background: 'none', cursor: 'pointer',
                 border: 'none', borderBottom: active ? `2px solid ${tc.color}` : '2px solid transparent',
                 fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap',
-                color: active ? tc.color : 'var(--text-muted)',
+                color: tc.color,
               }}
             >
               {s}
               <span style={{
                 fontSize: 10, padding: '1px 6px', borderRadius: 10, fontFamily: 'var(--font-mono)',
-                background: active ? tc.dim : 'var(--bg-elevated)',
-                color: active ? tc.color : 'var(--text-muted)',
-                border: `0.5px solid ${active ? tc.border : 'var(--border)'}`,
+                background: tc.dim,
+                color: tc.color,
+                border: `0.5px solid ${tc.border}`,
               }}>
                 {isLoading ? '…' : counts[s] ?? 0}
               </span>
@@ -275,6 +273,7 @@ function SetterView({ profileId, search }) {
         columns={[['Business', '1 1 0'], ['Niche', '0 0 130px'], ['City', '0 0 110px'], ['Phone', '0 0 140px'], ['Status', '0 0 140px'], ['Follow-Up', '0 0 120px']]}
         rows={filtered}
         emptyText={isLoading ? 'Loading…' : 'No leads match.'}
+        emptyIcon={Phone}
         renderRow={l => (
           <div
             key={l.id}
@@ -324,6 +323,14 @@ export default function CloserPipeline() {
       lost:    appts.filter(a => a.outcome === 'lost' || a.outcome === 'no_show'),
     }
   }, [allAppts, search])
+
+  const closerKPIs = useMemo(() => ({
+    pendingCount:   filteredAppts.pending.length,
+    scheduledCount: filteredAppts.pending.filter(a => a.scheduled_at).length,
+    closedCount:    filteredAppts.closed.length,
+    totalRevenue:   filteredAppts.closed.reduce((s, a) => s + (a.deal_value || 0), 0),
+    lostCount:      filteredAppts.lost.length,
+  }), [filteredAppts])
 
   return (
     <div>
@@ -379,32 +386,57 @@ export default function CloserPipeline() {
       {/* Closer view */}
       {view === 'closer' && (
         <div>
-          <div style={{ display: 'flex', gap: 4, borderBottom: '0.5px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
-            {CLOSER_TABS.map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setCloserTab(key)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 7,
-                  padding: '10px 14px', background: 'none', cursor: 'pointer',
-                  border: 'none', borderBottom: closerTab === key ? '2px solid var(--accent)' : '2px solid transparent',
-                  fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap',
-                  color: closerTab === key ? 'var(--accent)' : 'var(--text-muted)',
-                }}
-              >
-                <Icon size={13} />
-                {label}
-                <span style={{
-                  fontSize: 10, padding: '1px 6px', borderRadius: 10, fontFamily: 'var(--font-mono)',
-                  background: closerTab === key ? 'var(--accent-dim)' : 'var(--bg-elevated)',
-                  color: closerTab === key ? 'var(--accent)' : 'var(--text-muted)',
-                  border: `0.5px solid ${closerTab === key ? 'var(--accent-border)' : 'var(--border)'}`,
-                }}>
-                  {isLoading ? '…' : filteredAppts[key]?.length ?? 0}
-                </span>
-              </button>
-            ))}
+          {/* KPI row — first, matching Appointment Setting tab order */}
+          <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+            {closerTab === 'pending' && (
+              <>
+                <KPICard label="Pending" value={closerKPIs.pendingCount} sub="awaiting close call" icon={CalendarClock} />
+                <KPICard label="Scheduled" value={closerKPIs.scheduledCount} sub="time confirmed" icon={CheckCircle} />
+              </>
+            )}
+            {closerTab === 'closed' && (
+              <>
+                <KPICard label="Closed Deals" value={closerKPIs.closedCount} sub="all time" icon={CheckCircle} />
+                <KPICard label="Total Revenue" value={closerKPIs.totalRevenue > 0 ? `$${closerKPIs.totalRevenue.toLocaleString()}` : '$0'} sub="deal value" icon={CheckCircle} />
+              </>
+            )}
+            {closerTab === 'lost' && (
+              <KPICard label="Lost / No Show" value={closerKPIs.lostCount} sub="all time" icon={Ban} />
+            )}
           </div>
+
+          {/* Filter tabs — below KPIs, color-coded always-on */}
+          <div style={{ display: 'flex', gap: 4, borderBottom: '0.5px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
+            {CLOSER_TABS.map(({ key, label, icon: Icon }) => {
+              const tc = CLOSER_TAB_COLORS[key]
+              const active = closerTab === key
+              return (
+                <button
+                  key={key}
+                  onClick={() => setCloserTab(key)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 7,
+                    padding: '10px 14px', background: 'none', cursor: 'pointer',
+                    border: 'none', borderBottom: active ? `2px solid ${tc.color}` : '2px solid transparent',
+                    fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap',
+                    color: tc.color,
+                  }}
+                >
+                  <Icon size={13} />
+                  {label}
+                  <span style={{
+                    fontSize: 10, padding: '1px 6px', borderRadius: 10, fontFamily: 'var(--font-mono)',
+                    background: tc.dim,
+                    color: tc.color,
+                    border: `0.5px solid ${tc.border}`,
+                  }}>
+                    {isLoading ? '…' : filteredAppts[key]?.length ?? 0}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
           {closerTab === 'pending' && <PendingTab rows={filteredAppts.pending} tz={tz} />}
           {closerTab === 'closed'  && <ClosedTab  rows={filteredAppts.closed} />}
           {closerTab === 'lost'    && <LostTab    rows={filteredAppts.lost} />}
