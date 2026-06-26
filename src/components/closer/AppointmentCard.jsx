@@ -4,7 +4,6 @@ import {
   MapPin, Phone, Mail, Calendar, Star, Globe, ChevronRight,
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
-import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { useUpdateAppointment } from '../../hooks/useAppointments'
 import { useAuth } from '../../hooks/useAuth'
@@ -30,7 +29,7 @@ export function AppointmentCard({ appt }) {
   const viewerTz = profile?.timezone || DEFAULT_TIMEZONE
 
   const [modalOpen, setModalOpen]       = useState(false)
-  const [outcome, setOutcome]           = useState('')
+  const [outcome, setOutcome]           = useState(appt.status || 'pending')
   const [outcomeTouched, setOutcomeTouched] = useState(false)
   const [dealValue, setDealValue]       = useState('')
   const [lossReason, setLossReason]     = useState('')
@@ -88,6 +87,10 @@ export function AppointmentCard({ appt }) {
     }
   }
 
+  // Guard: only show conditional inputs after the user has explicitly touched the outcome.
+  // Without this, initializing outcome to appt.status ("pending") would incorrectly
+  // show the loss-reason input on open since "pending" isn't in the terminal outcomes list.
+
   if (!lead) {
     return (
       <div className="glass" style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-muted)' }}>
@@ -95,12 +98,6 @@ export function AppointmentCard({ appt }) {
       </div>
     )
   }
-
-  const canGoBack  = sayStep > 0
-  const canGoNext  = sayStep < SAY_LINES.length - 1
-  const rawLine    = SAY_LINES[sayStep] || ''
-  const isAsk      = rawLine.startsWith('[ASK]')
-  const displayLine = isAsk ? rawLine.replace(/^\[ASK\]\s*/, '') : rawLine
 
   // Left column slots for CallPrepModal
   const infoContent = (
@@ -113,7 +110,7 @@ export function AppointmentCard({ appt }) {
 
   const statusAddon = (
     <>
-      {outcome === 'closed' && (
+      {outcomeTouched && outcome === 'closed' && (
         <Input
           type="number" value={dealValue}
           onChange={e => setDealValue(e.target.value)}
@@ -121,7 +118,7 @@ export function AppointmentCard({ appt }) {
           style={{ marginBottom: 8, width: '100%' }}
         />
       )}
-      {outcome && !['closed', 'missed', 'needs_rescheduling'].includes(outcome) && (
+      {outcomeTouched && outcome && !['closed', 'missed', 'needs_rescheduling'].includes(outcome) && (
         <Input
           value={lossReason}
           onChange={e => setLossReason(e.target.value)}
@@ -146,58 +143,6 @@ export function AppointmentCard({ appt }) {
       <Phone size={15} /> Call {lead.phone}
     </a>
   ) : null
-
-  // SAY THIS right column
-  const sayThisPanel = (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 18px' }}>
-      <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent)', fontWeight: 600, margin: '0 0 10px' }}>
-        Say This
-      </p>
-      <div style={{
-        flex: 1, padding: '16px 18px', borderRadius: 10,
-        background: 'var(--bg-elevated)', border: '0.5px solid var(--accent-border)',
-        display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-        minHeight: 0,
-      }}>
-        {isAsk && (
-          <span style={{
-            display: 'inline-block', marginBottom: 8,
-            padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600,
-            background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
-            color: 'var(--accent)', letterSpacing: '0.06em', textTransform: 'uppercase',
-            fontStyle: 'normal',
-          }}>
-            Ask
-          </span>
-        )}
-        <p style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.65, margin: 0, fontStyle: 'italic', overflowY: 'auto' }}>
-          {displayLine}
-        </p>
-        <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '12px 0 0', fontFamily: 'var(--font-mono)' }}>
-          {sayStep + 1} / {SAY_LINES.length}
-        </p>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
-        <button
-          onClick={() => setSayStep(s => Math.max(0, s - 1))}
-          disabled={!canGoBack}
-          style={{ fontSize: 12, color: canGoBack ? 'var(--text-secondary)' : 'var(--border)', background: 'none', border: 'none', cursor: canGoBack ? 'pointer' : 'default', padding: 0 }}
-        >
-          ← Back
-        </button>
-        <button
-          onClick={() => setSayStep(0)}
-          style={{ fontSize: 12, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-        >
-          Start Over
-        </button>
-        <div style={{ flex: 1 }} />
-        <Button size="sm" onClick={() => setSayStep(s => Math.min(SAY_LINES.length - 1, s + 1))} disabled={!canGoNext}>
-          Next →
-        </Button>
-      </div>
-    </div>
-  )
 
   return (
     <>
@@ -278,9 +223,10 @@ export function AppointmentCard({ appt }) {
             onDone={handleComplete}
             isDoneDisabled={saving || !outcomeTouched || lostLoading}
             doneLabel={saving ? 'Saving…' : lostLoading ? 'Cleaning up…' : 'Done'}
-          >
-            {sayThisPanel}
-          </CallPrepModal>
+            scriptLines={SAY_LINES}
+            scriptStep={sayStep}
+            onScriptStepChange={setSayStep}
+          />
         </div>,
         document.body
       )}

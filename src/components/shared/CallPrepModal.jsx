@@ -10,28 +10,32 @@
  * output — style drift is structurally impossible.
  *
  * Props:
- *   onClose          — called when X is clicked
- *   lead             — lead object (used for business_name in header)
- *   badge            — JSX for the status badge in the header
- *   subtitle         — string shown under business name in header
- *   infoContent      — JSX at the top of the left column (Field rows, links, etc.)
- *   statusOptions    — array of { value, label?, color, dim, border, note? }
- *   status           — currently selected status value (controlled, owned by parent)
- *   statusTouched    — boolean: has the user explicitly picked a status this session?
- *   onStatusSelect   — (value) => void — called when user picks from dropdown
- *   statusNote       — string | null | undefined — overrides selected.note below the dropdown.
- *                      Pass undefined to fall back to selected.note from statusOptions.
- *   statusAddon      — JSX below the dropdown (date pickers, conditional inputs, etc.)
- *   notes            — textarea value (controlled)
- *   onNotesChange    — (e) => void
- *   callSection      — JSX for the call button at the bottom of the left column
- *   footerHint       — string shown italic-muted when !statusTouched
- *   footerWarning    — string shown warning-color when statusTouched but can't save
- *   footerError      — string shown danger-color (overrides hint/warning)
- *   onDone           — called when Done button is clicked
- *   isDoneDisabled   — boolean
- *   doneLabel        — string (default: "Done")
- *   children         — right column content (ScriptWalk, SAY THIS stepper, etc.)
+ *   onClose            — called when X is clicked
+ *   lead               — lead object (used for business_name in header)
+ *   badge              — JSX for the status badge in the header
+ *   subtitle           — string shown under business name in header
+ *   infoContent        — JSX at the top of the left column (Field rows, links, etc.)
+ *   statusOptions      — array of { value, label?, color, dim, border, note? }
+ *   status             — currently selected status value (controlled, owned by parent)
+ *   statusTouched      — boolean: has the user explicitly picked a status this session?
+ *   onStatusSelect     — (value) => void — called when user picks from dropdown
+ *   statusNote         — string | null | undefined — overrides selected.note below the dropdown.
+ *                        Pass undefined to fall back to selected.note from statusOptions.
+ *   statusAddon        — JSX below the dropdown (date pickers, conditional inputs, etc.)
+ *   notes              — textarea value (controlled)
+ *   onNotesChange      — (e) => void
+ *   callSection        — JSX for the call button at the bottom of the left column
+ *   footerHint         — string shown italic-muted when !statusTouched
+ *   footerWarning      — string shown warning-color when statusTouched but can't save
+ *   footerError        — string shown danger-color (overrides hint/warning)
+ *   onDone             — called when Done button is clicked
+ *   isDoneDisabled     — boolean
+ *   doneLabel          — string (default: "Done")
+ *   scriptLines        — string[] | undefined — when provided, renders the built-in SAY THIS
+ *                        stepper instead of children. One block, one style, both callers.
+ *   scriptStep         — number — current step index (controlled by parent)
+ *   onScriptStepChange — (index: number) => void
+ *   children           — right column content when scriptLines is not provided (e.g. ScriptWalk)
  */
 
 import { useState, useEffect, useRef } from 'react'
@@ -82,6 +86,9 @@ export function CallPrepModal({
   onDone,
   isDoneDisabled,
   doneLabel = 'Done',
+  scriptLines,
+  scriptStep = 0,
+  onScriptStepChange,
   children,
 }) {
   // All dropdown UI state lives here — parent only gets the selected value.
@@ -132,10 +139,21 @@ export function CallPrepModal({
   const selected    = statusOptions.find(o => o.value === status)
   const displayNote = statusNote !== undefined ? statusNote : selected?.note
   // label || value fallback: CallModal's STATUS_OPTIONS have no label field.
+  // When status exists but isn't in options (e.g. "pending" default), show it
+  // capitalized instead of the generic placeholder.
   const triggerLabel = selected
     ? (selected.label || selected.value)
-    : (status ? `${status} — pick an outcome` : 'Pick an outcome')
+    : status
+      ? status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+      : 'Pick an outcome'
   const doneLit = statusTouched && !footerWarning
+
+  // SAY THIS stepper — derived values used in right column when scriptLines is provided.
+  const scriptRawLine  = scriptLines ? (scriptLines[scriptStep] || '') : null
+  const scriptIsAsk    = !!scriptRawLine && scriptRawLine.startsWith('[ASK]')
+  const scriptDisplay  = scriptIsAsk ? scriptRawLine.replace(/^\[ASK\]\s*/, '') : scriptRawLine
+  const scriptCanNext  = !!scriptLines && scriptStep < scriptLines.length - 1
+  const scriptCanBack  = !!scriptLines && scriptStep > 0
 
   return (
     <div style={{
@@ -294,9 +312,64 @@ export function CallPrepModal({
           {callSection}
         </div>
 
-        {/* RIGHT column — caller provides content */}
+        {/* RIGHT column — built-in SAY THIS stepper when scriptLines provided, else children */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          {children}
+          {scriptLines ? (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 18px', minHeight: 0 }}>
+              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent)', fontWeight: 600, margin: '0 0 10px' }}>
+                Say This
+              </p>
+              {/* ONE quote box — identical padding/font for every caller, content-sized */}
+              <div style={{
+                padding: '16px 18px', borderRadius: 10,
+                background: 'var(--bg-elevated)', border: '0.5px solid var(--accent-border)',
+              }}>
+                {scriptIsAsk && (
+                  <span style={{
+                    display: 'inline-block', marginBottom: 8,
+                    padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600,
+                    background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
+                    color: 'var(--accent)', letterSpacing: '0.06em', textTransform: 'uppercase',
+                    fontStyle: 'normal',
+                  }}>Ask</span>
+                )}
+                <p style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.65, margin: 0, fontStyle: 'italic' }}>
+                  {scriptDisplay}
+                </p>
+              </div>
+              {/* Next button — always full width, same height regardless of stepper row */}
+              <button
+                onClick={() => onScriptStepChange(Math.min(scriptLines.length - 1, scriptStep + 1))}
+                disabled={!scriptCanNext}
+                style={{
+                  marginTop: 12, width: '100%', height: 38,
+                  background: scriptCanNext ? 'var(--accent)' : 'var(--bg-elevated)',
+                  border: scriptCanNext ? 'none' : '0.5px solid var(--border)',
+                  borderRadius: 8, fontSize: 13, fontWeight: 500,
+                  color: scriptCanNext ? 'white' : 'var(--text-muted)',
+                  cursor: scriptCanNext ? 'pointer' : 'not-allowed',
+                  transition: 'opacity 0.15s',
+                }}
+              >Next →</button>
+              {/* Back / Start Over / counter — separate row, only when multi-line */}
+              {scriptLines.length > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                  <button
+                    onClick={() => onScriptStepChange(Math.max(0, scriptStep - 1))}
+                    disabled={!scriptCanBack}
+                    style={{ fontSize: 12, color: scriptCanBack ? 'var(--text-secondary)' : 'var(--border)', background: 'none', border: 'none', cursor: scriptCanBack ? 'pointer' : 'default', padding: 0 }}
+                  >← Back</button>
+                  <button
+                    onClick={() => onScriptStepChange(0)}
+                    style={{ fontSize: 12, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                  >Start Over</button>
+                  <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '0 0 0 auto', fontFamily: 'var(--font-mono)' }}>
+                    {scriptStep + 1} / {scriptLines.length}
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : children}
         </div>
       </div>
 
