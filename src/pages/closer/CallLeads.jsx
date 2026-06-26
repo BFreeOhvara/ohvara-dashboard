@@ -7,6 +7,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
 import { Badge } from '../../components/ui/Badge'
 import { CallButton } from '../../components/rep/CallButton'
+import { CallModal } from '../../components/rep/CallModal'
 import { AIScriptPanel } from '../../components/rep/AIScriptPanel'
 import { Button } from '../../components/ui/Button'
 
@@ -312,59 +313,69 @@ function RequestLeadsModal({ currentCount, maxRequestable, isPending, onClose, o
 
 function LeadRow({ lead, onScriptOpen }) {
   const repName = lead.assigned_rep?.full_name || '—'
+  const [modalOpen, setModalOpen] = useState(false)
 
   return (
-    <div
-      className="table-row-animated"
-      style={{
-        display: 'flex', alignItems: 'center',
-        borderBottom: '0.5px solid var(--border)',
-        minHeight: 44,
-        transition: 'background-color 100ms',
-      }}
-      onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
-      onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-    >
-      {/* Business */}
-      <div style={{ flex: '1 1 0', minWidth: 0, padding: '10px 16px' }}>
-        <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {lead.business_name}
-        </p>
-        {lead.city && (
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-            {lead.city}{lead.state ? `, ${lead.state}` : ''}
+    <>
+      <div
+        className="table-row-animated"
+        style={{
+          display: 'flex', alignItems: 'center',
+          borderBottom: '0.5px solid var(--border)',
+          minHeight: 44,
+          transition: 'background-color 100ms',
+          cursor: 'pointer',
+        }}
+        onClick={() => setModalOpen(true)}
+        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+      >
+        {/* Business */}
+        <div style={{ flex: '1 1 0', minWidth: 0, padding: '10px 16px' }}>
+          <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {lead.business_name}
           </p>
-        )}
+          {lead.city && (
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+              {lead.city}{lead.state ? `, ${lead.state}` : ''}
+            </p>
+          )}
+        </div>
+
+        {/* Niche */}
+        <div style={{ flex: '0 0 110px', padding: '10px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {lead.niche || '—'}
+        </div>
+
+        {/* Phone */}
+        <div style={{ flex: '0 0 120px', padding: '10px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {lead.phone || '—'}
+        </div>
+
+        {/* Rep */}
+        <div style={{ flex: '0 0 140px', padding: '10px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {repName}
+        </div>
+
+        {/* Status */}
+        <div style={{ flex: '0 0 110px', padding: '10px 8px' }}>
+          <Badge label={lead.status} />
+        </div>
+
+        {/* Action — stopPropagation so button click doesn't also fire the row onClick */}
+        <div
+          style={{ flex: '0 0 140px', padding: '8px 16px 8px 0', display: 'flex', justifyContent: 'flex-end' }}
+          onClick={e => e.stopPropagation()}
+        >
+          <CallButton
+            lead={lead}
+            onScriptOpen={onScriptOpen}
+            onCallEnd={() => {}}
+          />
+        </div>
       </div>
 
-      {/* Niche */}
-      <div style={{ flex: '0 0 110px', padding: '10px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {lead.niche || '—'}
-      </div>
-
-      {/* Phone */}
-      <div style={{ flex: '0 0 120px', padding: '10px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {lead.phone || '—'}
-      </div>
-
-      {/* Rep */}
-      <div style={{ flex: '0 0 140px', padding: '10px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {repName}
-      </div>
-
-      {/* Status */}
-      <div style={{ flex: '0 0 110px', padding: '10px 8px' }}>
-        <Badge label={lead.status} />
-      </div>
-
-      {/* Action */}
-      <div style={{ flex: '0 0 140px', padding: '8px 16px 8px 0', display: 'flex', justifyContent: 'flex-end' }}>
-        <CallButton
-          lead={lead}
-          onScriptOpen={onScriptOpen}
-          onCallEnd={() => {}}
-        />
-      </div>
-    </div>
+      {modalOpen && <CallModal lead={lead} onClose={() => setModalOpen(false)} />}
+    </>
   )
 }
