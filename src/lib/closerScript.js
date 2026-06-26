@@ -1,8 +1,9 @@
-// ── Closer Script — Call 2 (the locked stack pitch) ─────────────────────────
+// ── Closer Script — Call 2 (consultative rewrite) ────────────────────────────
 // Nate's script for the 15-minute closer call.
-// Only literal say-this lines are included — stage directions and instructional
-// meta-text have been removed per Brayden's rule: the popup and canvas should
-// show what to say, never what to do.
+// Lines marked [ASK] are questions — they get a distinct visual indicator in
+// the SAY THIS stepper. Everything else is a talking point; Nate delivers it in
+// his own words. Quoted phrases are anchor phrases that should land close to
+// as-written. Bracketed placeholders are filled live.
 
 import { buildScriptFlow } from './discoveryScript'
 
@@ -12,50 +13,47 @@ export const CLOSER_SCRIPT = [
     title: 'Reconnect & Confirm Pain', trigger: 'Start here — every Call 2',
     color: 'var(--accent)', dim: 'rgba(108,99,255,0.08)', border: 'rgba(108,99,255,0.25)',
     lines: [
-      `"Hey, is this [Business Name]? Hey — this is Nate over at Ohvara. [Rep Name] passed your info along, told me you two had a great conversation. How's it going?"`,
-      `"So [Rep Name] filled me in on your situation — sounds like missed calls and follow-up slipping through are the main headaches right now. Is that still the biggest thing, or has anything changed since you two talked?"`,
-      `"Perfect — same spot they left it. That's exactly what I put together for you today."`,
-      `"Tell me a bit more — what's shifted since you spoke?"`,
-      `"Got it — that actually changes the picture a little. Let me still walk you through what we put together, because most of it still applies."`,
+      `Reconnect warmly — drop [Rep Name]'s name, reference that they had a good conversation.`,
+      `[ASK] "Sounds like missed calls and stuff falling through the cracks was the big one — is that still the main thing, or has anything changed since you talked to [Rep Name]?"`,
+      `Let them answer fully. Don't jump in. This is the only information you need before the rest of the call.`,
+      `Reflect back specifically what they just said — in their words, not yours — before moving on. "So really it's [their specific situation] that's costing you the most right now."`,
+      `If something's changed since the rep call: [ASK] "What's shifted?" — then bridge: most of what we built still applies, here's why.`,
     ],
   },
 
   {
     id: 'stack', kind: 'branch', short: 'Stack',
-    title: "The Locked Stack — What You're Getting", trigger: 'After pain is confirmed',
+    title: 'Problem → Fix (Not Feature Tour)', trigger: 'After pain is confirmed and reflected back',
     color: 'var(--success)', dim: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.25)',
     lines: [
-      `"So here's exactly what we build for [niche] businesses like yours — same setup every time, because the problems are always the same."`,
-      `"The front-runner is an AI Receptionist. It answers every single call — days, nights, weekends. Qualifies the caller, books the appointment straight onto your calendar. No more voicemail black holes, no more missed jobs because you were on a job."`,
-      `"For operations running multiple crews like yours, we actually lead with an AI Dispatcher instead — same concept, but it routes jobs to the right tech or driver automatically based on location and schedule."`,
-      `"And does your site have a live chat or AI chatbot on it?"`,
-      `"Perfect — you're already covered there. We leave the site and chatbot alone and just integrate the AI Receptionist on the backend."`,
-      `"We also add an AI chatbot to your existing site — same technology as the phone agent. Captures leads who browse but never call."`,
-      `"We also build a clean landing page for you and add the chatbot — captures everyone who Googles you but doesn't call. You get both channels covered."`,
-      `"On top of the AI Receptionist, we plug in five automations that run completely in the background:"`,
-      `"Review Generation — after every completed job, it follows up automatically and asks for a Google review. Most businesses we work with see 3–5× more reviews in the first 30 days."`,
-      `"Lead Follow-Up — if someone called or inquired but didn't book, it texts and emails them over the next week until they do. Recovers jobs that would've just gone quiet."`,
-      `"Appointment Reminders — texts the customer 24 hours out and again an hour before the job. Cuts no-shows in half."`,
-      `"Appointment Cancellation — if someone cancels, it immediately tries to rebook them. If that doesn't work, it texts your next few upcoming customers: 'A slot just opened up — first to reply YES gets it.' Slot fills automatically."`,
-      `"And SMS Marketing — a quarterly text blast to your past customers. Keeps you top of mind without you doing anything. One blast per quarter usually books 5–10 jobs on its own."`,
-      `"That's the full stack. All of it running 24/7. You don't hire anyone, you don't manage anything — it just runs."`,
+      `Bridge line: "Based on exactly what you just told me, here's what we'd build for you" — not "here's our stack."`,
+      `Name the core problem in their words again, then introduce AI Receptionist as the direct fix. "You said calls go to voicemail when your guys are on a job — that's the exact gap this closes: answers every call, qualifies them, books it on your calendar, day or night."`,
+      `[ASK] "Does that match what you're dealing with, or is there more to it?"`,
+      `If multi-crew or dispatch-heavy: pivot to AI Dispatcher as the lead — same fix, but routes to the right tech/driver automatically based on location and schedule.`,
+      `[ASK] "Does your site have a chatbot or live chat on it right now?" — branch: already covered (leave it, integrate on backend) / needs chatbot added / needs site + chatbot.`,
+      `"Jobs finish and nobody asks for a review" → "Most clients see 3–5x more reviews in 30 days once this runs automatically."`,
+      `[ASK] "How many people would you say call or message and just never book?" → "That's what Lead Follow-Up catches — it keeps after them till they do or tell us no."`,
+      `"No-shows costing you a wasted slot?" → "Reminders at 24hr and 1hr cut that in half."`,
+      `"Someone cancels and that slot sits empty" → "It auto-offers the spot to your next few upcoming customers — first to say yes gets it."`,
+      `"Quarterly text blast to past customers, zero effort from you — usually books 5–10 jobs a quarter on its own."`,
+      `Close the section: "None of this is extra software for you to manage — it's the stuff that's currently costing you money, running in the background instead."`,
+      `[ASK] "Anything in there that doesn't fit how you operate, or does it all track?"`,
     ],
   },
 
   {
     id: 'close', kind: 'close', short: 'Close',
-    title: 'Price, Stripe Links & Close', trigger: 'After walking the full stack',
+    title: 'Cost of Inaction → Price → Stripe', trigger: 'After stack is confirmed as a fit',
     color: 'var(--accent)', dim: 'rgba(108,99,255,0.10)', border: 'rgba(108,99,255,0.30)',
     lines: [
-      `"So that's the full stack — AI Receptionist, all five plug-ins, and the website piece if you needed it. Everything running 24/7, hands-off."`,
-      `"Now for the investment. There's a one-time setup fee of $297 — covers building everything out and getting it live. Then a monthly rate that's formula-based on your numbers."`,
-      `"[Rep Name] logged what you told them — [calls missed] missed calls a week, [ticket] average job value. Running the math on that, your monthly comes out to [monthly price]."`,
-      `"I know $[monthly price] sounds like a number — but let's anchor it. A part-time receptionist alone runs you $2,800 to $4,000 a month. This is the AI that never calls in sick, never misses a call, and runs five other automations on top of it. Even if it recovers two missed jobs a month at [ticket] each, it's already paid for itself twice over."`,
-      `"Does that number make sense given what you told [Rep Name] about what you're losing right now?"`,
-      `"Perfect. I'm going to send you two links right now — one for the $297 setup, one for the [monthly price] monthly. Takes about 60 seconds on your end."`,
-      `"Once those are done, we start building within the week. You'll hear from us on next steps."`,
-      `"What's the main thing holding you back — the investment, the timing, or something else you want to think through?"`,
-      `"No problem at all — when's a good time tomorrow to reconnect?"`,
+      `[ASK] "Just so I'm clear — what's it actually costing you right now, the calls and jobs that slip through? Even a rough number." — let them say it themselves before you anchor anything.`,
+      `Bridge: "That's exactly the number this is built to fix." Then price: one-time $297 setup, monthly formula-based on what they told the rep.`,
+      `State their specific monthly number — "[monthly price]" — tied directly to what they told [Rep Name] ([calls missed] missed calls/week at [ticket] average ticket).`,
+      `Anchor against a hire: "A part-time receptionist alone runs $2,800–$4,000/month. This never calls in sick, never misses a call, and runs five other automations on top." Tie back to the number they gave you — show it pays for itself.`,
+      `[ASK] "Does that number make sense against what you told me it's costing you right now?"`,
+      `Close: "I'll send two links right now — setup and monthly, 60 seconds to handle both. We start building within the week."`,
+      `[ASK] If hesitation: "What's the main thing holding you back — the investment, the timing, or something else?" — handle the real objection, don't re-pitch.`,
+      `If not closing today: lock a specific reconnect time before hanging up. "When's a good time tomorrow?"`,
     ],
   },
 ]

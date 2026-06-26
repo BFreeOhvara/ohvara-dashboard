@@ -96,8 +96,11 @@ export function AppointmentCard({ appt }) {
     )
   }
 
-  const canGoBack = sayStep > 0
-  const canGoNext = sayStep < SAY_LINES.length - 1
+  const canGoBack  = sayStep > 0
+  const canGoNext  = sayStep < SAY_LINES.length - 1
+  const rawLine    = SAY_LINES[sayStep] || ''
+  const isAsk      = rawLine.startsWith('[ASK]')
+  const displayLine = isAsk ? rawLine.replace(/^\[ASK\]\s*/, '') : rawLine
 
   // Left column slots for CallPrepModal
   const infoContent = (
@@ -156,8 +159,19 @@ export function AppointmentCard({ appt }) {
         display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
         minHeight: 0,
       }}>
+        {isAsk && (
+          <span style={{
+            display: 'inline-block', marginBottom: 8,
+            padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600,
+            background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
+            color: 'var(--accent)', letterSpacing: '0.06em', textTransform: 'uppercase',
+            fontStyle: 'normal',
+          }}>
+            Ask
+          </span>
+        )}
         <p style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.65, margin: 0, fontStyle: 'italic', overflowY: 'auto' }}>
-          {SAY_LINES[sayStep] || ''}
+          {displayLine}
         </p>
         <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '12px 0 0', fontFamily: 'var(--font-mono)' }}>
           {sayStep + 1} / {SAY_LINES.length}
