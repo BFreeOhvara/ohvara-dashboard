@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { createPortal } from 'react-dom'
 import {
@@ -15,6 +16,46 @@ import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
 import { syntheticStatsFor } from '../../lib/syntheticStats'
 import { inferTimezoneFromState, zonedTimeToUtcIso, timezoneLabel, formatInTimezone, utcIsoToZonedDatetimeLocal, DEFAULT_TIMEZONE } from '../../lib/timezones'
+import { CLOSER_SCRIPT } from '../../lib/closerScript'
+
+const STATUS_OPTIONS = [
+  { value: 'closed',              label: 'Closed',           color: 'var(--success)', dim: 'var(--success-dim)', border: 'rgba(34,197,94,0.20)' },
+  { value: 'lost',                label: 'Lost',             color: 'var(--danger)',  dim: 'var(--danger-dim)',  border: 'rgba(239,68,68,0.20)' },
+  { value: 'no_show',             label: 'No Show',          color: '#94A3B8',        dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)' },
+  { value: 'missed',              label: 'Missed',           color: 'var(--warning)', dim: 'var(--warning-dim)', border: 'rgba(245,158,11,0.20)' },
+  { value: 'needs_rescheduling',  label: 'Needs Reschedule', color: 'var(--info)',    dim: 'var(--info-dim)',    border: 'rgba(56,189,248,0.20)' },
+]
+
+function ScriptQuickRef({ onNavigate }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <p style={{ fontSize: 10, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, margin: 0 }}>
+          Closer Script
+        </p>
+        <button
+          onClick={onNavigate}
+          style={{ fontSize: 11, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline', textUnderlineOffset: 2 }}
+        >
+          Open full →
+        </button>
+      </div>
+      {CLOSER_SCRIPT.map(s => (
+        <div key={s.id} style={{
+          marginBottom: 10, padding: '8px 10px', borderRadius: 7,
+          background: s.dim || 'var(--bg-elevated)',
+          border: `0.5px solid ${s.border || 'var(--border)'}`,
+        }}>
+          <p style={{ fontSize: 10, color: s.color || 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, margin: '0 0 2px' }}>
+            {s.short}
+          </p>
+          <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 2px', lineHeight: 1.3 }}>{s.title}</p>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>{s.trigger}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 // Package display config — matches North Star locked pricing.
 // services mirror the recommend-stack edge function PACKAGES (Elite itemized in full).
@@ -137,6 +178,7 @@ function AgentStackList({ rec, primary }) {
 
 export function AppointmentCard({ appt }) {
   const { profile } = useAuth()
+  const navigate = useNavigate()
   const lead = appt.lead
   // Appointment times are with the CLIENT, so the scheduling input is
   // entered/interpreted in the lead's inferred local timezone; everything
@@ -322,6 +364,16 @@ export function AppointmentCard({ appt }) {
 
   async function handleComplete() {
     if (!outcome) return
+
+    // missed / needs_rescheduling are status-only (not completed outcomes)
+    if (outcome === 'missed' || outcome === 'needs_rescheduling') {
+      await update.mutateAsync({
+        appointmentId: appt.id,
+        updates: { status: outcome, closer_notes: notes || undefined },
+      })
+      return
+    }
+
     await update.mutateAsync({
       appointmentId: appt.id,
       updates: {
@@ -332,10 +384,7 @@ export function AppointmentCard({ appt }) {
         closer_notes: notes,
       },
     })
-    // Prompt 55: a closed deal auto-creates a PENDING commission payout for the
-    // booking rep (10% of the deal total, computed server-side). Fire-and-forget
-    // and idempotent per appointment — never blocks the close, admin still
-    // approves before money moves.
+    // Prompt 55: closed deal auto-creates a PENDING commission payout.
     if (outcome === 'closed') {
       supabase.functions.invoke('create-commission-payout', {
         body: { appointment_id: appt.id },
@@ -346,9 +395,7 @@ export function AppointmentCard({ appt }) {
         body: { appointment_id: appt.id, cancel_all: true },
       })
     }
-    // Prompt 8: marking a deal lost deletes its demo client account (real
-    // auth.users delete needs the service role, not available client-side) —
-    // no-ops if there was never a demo account for this appointment.
+    // Prompt 8: marking a deal lost deletes its demo client account.
     if (outcome === 'lost' && appt.demo_client_id) {
       setLostLoading(true)
       try {
@@ -439,7 +486,7 @@ export function AppointmentCard({ appt }) {
           onClick={e => e.stopPropagation() /* click-outside does NOT close — exit via X, same convention as CallModal */}
         >
           <div style={{
-            width: '100%', maxWidth: 720, maxHeight: '88vh',
+            width: '100%', maxWidth: 900, maxHeight: '88vh',
             display: 'flex', flexDirection: 'column',
             background: '#0E0E1A',
             border: '0.5px solid var(--border)',
@@ -475,108 +522,145 @@ export function AppointmentCard({ appt }) {
             {/* Modal Body */}
             <div className="scrollbar-thin" style={{ flex: 1, overflowY: 'auto' }}>
 
-          {/* Contact row */}
-          {(lead.phone || lead.email) && (
-            <div style={{ display: 'flex', gap: 16, padding: '10px 16px', borderBottom: '0.5px solid var(--border)' }}>
-              {lead.phone && (
-                <a href={`tel:${lead.phone}`} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none' }}>
-                  <Phone size={13} /> {lead.phone}
-                </a>
-              )}
-              {lead.email && (
-                <a href={`mailto:${lead.email}`} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none' }}>
-                  <Mail size={13} /> {lead.email}
-                </a>
-              )}
-            </div>
-          )}
+              {/* Two-column: LEFT = contact + schedule + notes | RIGHT = closer script */}
+              <div style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
 
-          {/* ── Closer Notes + Outcome — ABOVE packages: capture the call, then pick the tier ── */}
-          <div style={{ padding: '16px 16px 0' }}>
-            <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Closer notes…" />
-            <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
-              <Select value={outcome} onChange={e => setOutcome(e.target.value)} style={{ flex: 1, height: 38 }}>
-                <option value="">Mark outcome…</option>
-                <option value="closed">Closed</option>
-                <option value="lost">Lost</option>
-                <option value="no_show">No Show</option>
-              </Select>
-              <Button size="sm" onClick={handleComplete} disabled={!outcome || update.isPending || lostLoading} style={{ flexShrink: 0 }}>
-                {update.isPending ? 'Saving…' : lostLoading ? 'Cleaning up demo…' : 'Save Outcome'}
-              </Button>
-            </div>
-            {outcome === 'closed' && (
-              <Input type="number" value={dealValue} onChange={e => setDealValue(e.target.value)} placeholder="Deal value ($)" style={{ marginTop: 8, width: '100%' }} />
-            )}
-            {outcome && outcome !== 'closed' && (
-              <Input value={lossReason} onChange={e => setLossReason(e.target.value)} placeholder="Loss reason…" style={{ marginTop: 8, width: '100%' }} />
-            )}
-          </div>
+                {/* LEFT */}
+                <div style={{ flex: 1, minWidth: 0, padding: '14px 16px', borderRight: '0.5px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-          {/* ── AI RECOMMENDATION PANEL — DOMINANT ───────────────────────── */}
-          <div style={{ padding: '16px 16px 0' }}>
-            {recLoading && !rec ? (
-              <div className="glass-accent" style={{ padding: 20, borderRadius: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                  <Loader2 size={14} style={{ color: 'var(--accent)', animation: 'spin 1s linear infinite' }} />
-                  <span style={{ fontSize: 12, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>
-                    AI Analyzing…
-                  </span>
+                  {/* Contact */}
+                  {(lead.phone || lead.email || appt.rep) && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {lead.phone && (
+                        <a href={`tel:${lead.phone}`} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                          <Phone size={13} /> {lead.phone}
+                        </a>
+                      )}
+                      {lead.email && (
+                        <a href={`mailto:${lead.email}`} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                          <Mail size={13} /> {lead.email}
+                        </a>
+                      )}
+                      {appt.rep && (
+                        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>Set by {appt.rep.full_name}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Schedule */}
+                  <div>
+                    <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500, margin: '0 0 6px' }}>
+                      Appointment Time — {timezoneLabel(clientTz)} (client's local time)
+                    </p>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                      <div style={{ flex: 1 }}>
+                        <Input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} />
+                      </div>
+                      <Button variant="secondary" size="sm" onClick={handleSchedule} disabled={!scheduledAt || update.isPending}>
+                        <Bell size={13} />
+                        Set
+                      </Button>
+                    </div>
+                    {appt.scheduled_at && (
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Bell size={10} /> Reminders: 24h, 1h, 10min before
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Call notes */}
+                  <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={4} placeholder="Call notes…" />
                 </div>
-                {[90, 70, 80, 65].map((w, i) => (
-                  <div key={i} style={{ height: 10, background: 'var(--bg-elevated)', borderRadius: 4, width: `${w}%`, marginBottom: 10, animation: 'pulse 2s infinite' }} />
-                ))}
-              </div>
-            ) : recError ? (
-              <div style={{ padding: '12px 16px', borderRadius: 8, background: 'var(--danger-dim)', border: '0.5px solid rgba(239,68,68,0.20)', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                <AlertTriangle size={14} style={{ color: 'var(--danger)', flexShrink: 0 }} />
-                <span style={{ fontSize: 13, color: 'var(--danger)' }}>AI recommendation failed.</span>
-                <button onClick={loadRecommendation} style={{ fontSize: 12, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto' }}>
-                  Retry
-                </button>
-              </div>
-            ) : rec ? (
-              <RecommendationPanel
-                rec={rec}
-                lead={lead}
-                appt={appt}
-                isClosed={isClosed}
-                provisionLoading={provisionLoading}
-                provisionResult={provisionResult}
-                paymentLink={paymentLink}
-                paymentLinkLoading={paymentLinkLoading}
-                paymentLinkError={paymentLinkError}
-                retryProvisionLoading={retryProvisionLoading}
-                onMarkClosed={handleMarkClosed}
-                onGeneratePaymentLink={handleGeneratePaymentLink}
-                onRetryProvision={handleRetryProvision}
-              />
-            ) : null}
-          </div>
 
-          {/* ── Schedule + Reminders ─────────────────────────────────────────── */}
-          <div style={{ padding: '16px 16px 0' }}>
-            <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500, marginBottom: 8 }}>
-              Appointment Time — {timezoneLabel(clientTz)} (client's local time)
-            </p>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-              <div style={{ flex: 1 }}>
-                <Input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} />
+                {/* RIGHT — script quick reference */}
+                <div className="scrollbar-thin" style={{ width: 260, flexShrink: 0, padding: '14px 16px', overflowY: 'auto', maxHeight: 360 }}>
+                  <ScriptQuickRef onNavigate={() => { setModalOpen(false); navigate('/closer/script') }} />
+                </div>
               </div>
-              <Button variant="secondary" size="sm" onClick={handleSchedule} disabled={!scheduledAt || update.isPending}>
-                <Bell size={13} />
-                Schedule + Reminders
-              </Button>
-            </div>
-            {appt.scheduled_at && (
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                <Bell size={10} /> 3 SMS reminders auto-scheduled (24h, 1h, 10min before)
-              </p>
-            )}
-          </div>
 
-          {/* bottom padding under the package cards */}
-          <div style={{ height: 16 }} />
+              {/* Status picker — bottom of the two-column section */}
+              <div style={{ padding: '14px 16px', borderBottom: '0.5px solid var(--border)' }}>
+                <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, margin: '0 0 10px' }}>
+                  Set Outcome
+                </p>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {STATUS_OPTIONS.map(opt => {
+                    const active = outcome === opt.value
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => setOutcome(active ? '' : opt.value)}
+                        style={{
+                          padding: '6px 14px', borderRadius: 8, cursor: 'pointer',
+                          fontSize: 12, fontWeight: 500,
+                          background: active ? opt.dim : 'var(--bg-elevated)',
+                          color: active ? opt.color : 'var(--text-muted)',
+                          border: `0.5px solid ${active ? opt.border : 'var(--border)'}`,
+                          transition: 'all 0.1s',
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    )
+                  })}
+                </div>
+                {outcome === 'closed' && (
+                  <Input type="number" value={dealValue} onChange={e => setDealValue(e.target.value)} placeholder="Deal value ($)" style={{ marginTop: 10, width: '100%' }} />
+                )}
+                {outcome && !['closed', 'missed', 'needs_rescheduling'].includes(outcome) && (
+                  <Input value={lossReason} onChange={e => setLossReason(e.target.value)} placeholder="Loss reason…" style={{ marginTop: 10, width: '100%' }} />
+                )}
+                {outcome && (
+                  <div style={{ marginTop: 10 }}>
+                    <Button size="sm" onClick={handleComplete} disabled={update.isPending || lostLoading}>
+                      {update.isPending ? 'Saving…' : lostLoading ? 'Cleaning up…' : 'Save'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* AI Recommendation Panel */}
+              <div style={{ padding: '16px 16px 0' }}>
+                {recLoading && !rec ? (
+                  <div className="glass-accent" style={{ padding: 20, borderRadius: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                      <Loader2 size={14} style={{ color: 'var(--accent)', animation: 'spin 1s linear infinite' }} />
+                      <span style={{ fontSize: 12, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>
+                        AI Analyzing…
+                      </span>
+                    </div>
+                    {[90, 70, 80, 65].map((w, i) => (
+                      <div key={i} style={{ height: 10, background: 'var(--bg-elevated)', borderRadius: 4, width: `${w}%`, marginBottom: 10, animation: 'pulse 2s infinite' }} />
+                    ))}
+                  </div>
+                ) : recError ? (
+                  <div style={{ padding: '12px 16px', borderRadius: 8, background: 'var(--danger-dim)', border: '0.5px solid rgba(239,68,68,0.20)', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                    <AlertTriangle size={14} style={{ color: 'var(--danger)', flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: 'var(--danger)' }}>AI recommendation failed.</span>
+                    <button onClick={loadRecommendation} style={{ fontSize: 12, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto' }}>
+                      Retry
+                    </button>
+                  </div>
+                ) : rec ? (
+                  <RecommendationPanel
+                    rec={rec}
+                    lead={lead}
+                    appt={appt}
+                    isClosed={isClosed}
+                    provisionLoading={provisionLoading}
+                    provisionResult={provisionResult}
+                    paymentLink={paymentLink}
+                    paymentLinkLoading={paymentLinkLoading}
+                    paymentLinkError={paymentLinkError}
+                    retryProvisionLoading={retryProvisionLoading}
+                    onMarkClosed={handleMarkClosed}
+                    onGeneratePaymentLink={handleGeneratePaymentLink}
+                    onRetryProvision={handleRetryProvision}
+                  />
+                ) : null}
+              </div>
+
+              <div style={{ height: 16 }} />
             </div>
           </div>
         </div>,
