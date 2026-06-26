@@ -3,7 +3,7 @@ import { MapPin, Phone, Calendar, Star, Globe, ChevronRight } from 'lucide-react
 import { Badge } from '../ui/Badge'
 import { useAuth } from '../../hooks/useAuth'
 import { formatInTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
-import { CloserModal } from './CloserModal'
+import { CallModal as AppointmentCardModal } from './AppointmentCardModal'
 
 export function AppointmentCard({ appt }) {
   const { profile } = useAuth()
@@ -68,7 +68,7 @@ export function AppointmentCard({ appt }) {
         </div>
       </div>
 
-      {modalOpen && <CloserModal appt={appt} onClose={() => setModalOpen(false)} />}
+      {modalOpen && <AppointmentCardModal lead={appt.lead} onClose={() => setModalOpen(false)} />}
     </>
   )
 }
