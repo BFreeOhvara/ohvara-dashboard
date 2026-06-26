@@ -316,7 +316,7 @@ export function CallPrepModal({
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {scriptLines ? (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 18px', minHeight: 0 }}>
-              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent)', fontWeight: 600, margin: '0 0 10px' }}>
+              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 10px' }}>
                 Say This
               </p>
               {/* ONE quote box — identical padding/font for every caller, content-sized */}
@@ -333,7 +333,7 @@ export function CallPrepModal({
                     fontStyle: 'normal',
                   }}>Ask</span>
                 )}
-                <p style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.65, margin: 0, fontStyle: 'italic' }}>
+                <p style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.65, margin: 0 }}>
                   {scriptDisplay}
                 </p>
               </div>
