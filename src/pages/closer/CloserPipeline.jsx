@@ -316,7 +316,14 @@ function SetterView({ profileId, search }) {
       <QueueTable
         columns={[['Business', '1 1 0'], ['Niche', '0 0 130px'], ['City', '0 0 110px'], ['Phone', '0 0 140px'], ['Status', '0 0 140px'], ['Follow-Up', '0 0 120px']]}
         rows={filtered}
-        emptyText={isLoading ? 'Loading…' : 'No leads match.'}
+        emptyText={isLoading ? 'Loading…' : {
+          'New': 'No new leads',
+          'No Answer': 'No no-answer leads',
+          'Follow-Up': 'No follow-up leads',
+          'Appointment Booked': 'No booked appointments',
+          'Not Interested': 'No not-interested leads',
+          'All': 'No leads',
+        }[statusFilter] || 'No leads'}
         emptyIcon={Phone}
         renderRow={l => (
           <div
@@ -343,8 +350,8 @@ function SetterView({ profileId, search }) {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 const VIEW_TABS = [
-  { key: 'setter', label: 'Appointment Setting', icon: Phone },
   { key: 'closer', label: 'Closer',              icon: CalendarClock },
+  { key: 'setter', label: 'Appointment Setting', icon: Phone },
 ]
 
 export default function CloserPipeline() {

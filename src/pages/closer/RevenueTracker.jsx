@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { StatCard } from '../../components/ui/StatCard'
 import { Card } from '../../components/ui/Card'
-import { DollarSign, TrendingUp, BarChart2, Target, Landmark, X } from 'lucide-react'
+import { DollarSign, TrendingUp, BarChart2, Target, Landmark, X, Handshake } from 'lucide-react'
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts'
@@ -202,7 +202,59 @@ export default function RevenueTracker() {
         )}
       </Card>
 
+      <DealsSection closerId={profile?.id} />
+
       {showBankModal && <AddBankModal onClose={() => setShowBankModal(false)} />}
     </div>
+  )
+}
+
+function DealsSection({ closerId }) {
+  const { data: deals = [], isLoading } = useQuery({
+    queryKey: ['closer-deals', closerId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('commission_payouts')
+        .select('id, amount_cents, status, created_at, appointment:appointments!appointment_id ( lead:leads ( business_name ) )')
+        .eq('rep_id', closerId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!closerId,
+  })
+
+  return (
+    <Card style={{ marginTop: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <Handshake size={14} style={{ color: 'var(--text-muted)' }} />
+        <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Deals</p>
+      </div>
+      {isLoading ? (
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0', margin: 0 }}>Loading…</p>
+      ) : deals.length === 0 ? (
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0', margin: 0 }}>No closed deals yet</p>
+      ) : (
+        <div>
+          {deals.map((d, i) => {
+            const biz = d.appointment?.lead?.business_name || '—'
+            const payout = d.amount_cents != null ? `$${(d.amount_cents / 100).toLocaleString()}` : '—'
+            return (
+              <div
+                key={d.id}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 0',
+                  borderBottom: i < deals.length - 1 ? '0.5px solid var(--border)' : 'none',
+                }}
+              >
+                <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{biz}</span>
+                <span style={{ fontSize: 13, color: 'var(--success)', fontFamily: 'var(--font-mono)', fontWeight: 500 }}>{payout}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </Card>
   )
 }

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { Phone, PhoneCall, RefreshCw, X } from 'lucide-react'
+import { Phone, PhoneCall, X } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAllLeads } from '../../hooks/useLeads'
 import { useAuth } from '../../hooks/useAuth'
@@ -32,7 +32,7 @@ function useRequestLeads() {
 
 export default function CallLeads() {
   const { profile } = useAuth()
-  const { data: allLeads, isLoading, refetch } = useAllLeads()
+  const { data: allLeads, isLoading } = useAllLeads()
   const [scriptLead, setScriptLead] = useState(null)
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -117,10 +117,6 @@ export default function CallLeads() {
                 outline: 'none',
               }}
             />
-            <Button variant="secondary" size="sm" onClick={() => refetch()}>
-              <RefreshCw size={12} />
-              Refresh
-            </Button>
           </div>
         </div>
 
