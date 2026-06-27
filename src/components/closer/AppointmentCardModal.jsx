@@ -9,13 +9,15 @@ import { CLOSER_SCRIPT } from '../../lib/closerScript'
 import { CallPrepModal, Field } from '../shared/CallPrepModal'
 
 const STATUS_OPTIONS = [
+  { value: 'pending',            label: 'Pending',          color: 'var(--warning)', dim: 'var(--warning-dim)', border: 'rgba(245,158,11,0.20)' },
   { value: 'closed',             label: 'Closed',           color: 'var(--success)', dim: 'var(--success-dim)', border: 'rgba(34,197,94,0.20)' },
   { value: 'lost',               label: 'Lost',             color: 'var(--danger)',  dim: 'var(--danger-dim)',  border: 'rgba(239,68,68,0.20)' },
   { value: 'no_show',            label: 'No Show',          color: '#94A3B8',        dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)' },
   { value: 'needs_rescheduling', label: 'Needs Reschedule', color: 'var(--info)',    dim: 'var(--info-dim)',    border: 'rgba(56,189,248,0.20)' },
 ]
 
-const SAY_LINES = CLOSER_SCRIPT.flatMap(s => s.lines)
+// Each line carries its section color so the SAY THIS stepper can tint accordingly.
+const SAY_LINES = CLOSER_SCRIPT.flatMap(s => s.lines.map(l => ({ text: l, color: s.color })))
 
 export function CallModal({ appt, onClose }) {
   const lead = appt.lead
@@ -36,7 +38,7 @@ export function CallModal({ appt, onClose }) {
     setSaving(true)
     setSaveError('')
     try {
-      if (outcome === 'needs_rescheduling') {
+      if (outcome === 'needs_rescheduling' || outcome === 'pending') {
         await update.mutateAsync({ appointmentId: appt.id, updates: { status: outcome, closer_notes: notes || undefined } })
         onClose()
         return

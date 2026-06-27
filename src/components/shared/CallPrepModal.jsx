@@ -149,7 +149,10 @@ export function CallPrepModal({
   const doneLit = statusTouched && !footerWarning
 
   // SAY THIS stepper — derived values used in right column when scriptLines is provided.
-  const scriptRawLine  = scriptLines ? (scriptLines[scriptStep] || '') : null
+  // scriptLines entries may be plain strings OR { text, color } objects.
+  const currentEntry   = scriptLines ? (scriptLines[scriptStep] || '') : null
+  const lineColor      = (currentEntry && typeof currentEntry === 'object' ? currentEntry.color : null) || 'var(--accent)'
+  const scriptRawLine  = currentEntry ? (typeof currentEntry === 'object' ? currentEntry.text : currentEntry) : ''
   const scriptIsAsk    = !!scriptRawLine && scriptRawLine.startsWith('[ASK]')
   const scriptDisplay  = scriptIsAsk ? scriptRawLine.replace(/^\[ASK\]\s*/, '') : scriptRawLine
   const scriptCanNext  = !!scriptLines && scriptStep < scriptLines.length - 1
@@ -315,14 +318,16 @@ export function CallPrepModal({
         {/* RIGHT column — built-in SAY THIS stepper when scriptLines provided, else children */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {scriptLines ? (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 18px', minHeight: 0 }}>
-              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 10px' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, padding: '16px 18px', minHeight: 0 }}>
+                  <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: lineColor, fontWeight: 700, margin: '0 0 0' }}>
                 Say This
               </p>
-              {/* ONE quote box — identical padding/font for every caller, content-sized */}
+              {/* Quote box — matches ScriptWalk SayCard exactly: left-only accent border */}
               <div style={{
-                padding: '16px 18px', borderRadius: 10,
-                background: 'var(--bg-elevated)', border: '0.5px solid var(--accent-border)',
+                background: 'var(--bg-elevated)',
+                border: '0.5px solid var(--border)',
+                borderLeft: `3px solid ${lineColor}`,
+                borderRadius: 12, padding: '18px 20px',
               }}>
                 {scriptIsAsk && (
                   <span style={{
@@ -330,39 +335,51 @@ export function CallPrepModal({
                     padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600,
                     background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
                     color: 'var(--accent)', letterSpacing: '0.06em', textTransform: 'uppercase',
-                    fontStyle: 'normal',
                   }}>Ask</span>
                 )}
-                <p style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.65, margin: 0 }}>
+                <p style={{ fontSize: 17, color: 'var(--text-primary)', lineHeight: 1.55, margin: 0, fontWeight: 500 }}>
                   {scriptDisplay}
                 </p>
               </div>
-              {/* Next button — always full width, same height regardless of stepper row */}
+              {/* Next button — full width, accent follows section color */}
               <button
                 onClick={() => onScriptStepChange(Math.min(scriptLines.length - 1, scriptStep + 1))}
                 disabled={!scriptCanNext}
                 style={{
-                  marginTop: 12, width: '100%', height: 38,
-                  background: scriptCanNext ? 'var(--accent)' : 'var(--bg-elevated)',
+                  width: '100%', height: 46,
+                  background: scriptCanNext ? lineColor : 'var(--bg-elevated)',
                   border: scriptCanNext ? 'none' : '0.5px solid var(--border)',
-                  borderRadius: 8, fontSize: 13, fontWeight: 500,
-                  color: scriptCanNext ? 'white' : 'var(--text-muted)',
+                  borderRadius: 11, fontSize: 14.5, fontWeight: 600,
+                  color: scriptCanNext ? '#0E0E1A' : 'var(--text-muted)',
                   cursor: scriptCanNext ? 'pointer' : 'not-allowed',
                   transition: 'opacity 0.15s',
                 }}
               >Next →</button>
-              {/* Back / Start Over / counter — separate row, only when multi-line */}
+              {/* Back / Start Over / counter — separate row below Next, only when multi-line */}
               {scriptLines.length > 1 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <button
                     onClick={() => onScriptStepChange(Math.max(0, scriptStep - 1))}
                     disabled={!scriptCanBack}
-                    style={{ fontSize: 12, color: scriptCanBack ? 'var(--text-secondary)' : 'var(--border)', background: 'none', border: 'none', cursor: scriptCanBack ? 'pointer' : 'default', padding: 0 }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      background: scriptCanBack ? 'var(--accent-dim)' : 'none',
+                      border: `0.5px solid ${scriptCanBack ? 'var(--accent-border)' : 'transparent'}`,
+                      borderRadius: 8, cursor: scriptCanBack ? 'pointer' : 'not-allowed',
+                      color: scriptCanBack ? 'var(--accent)' : 'var(--text-muted)',
+                      fontSize: 12, fontWeight: 500,
+                      opacity: scriptCanBack ? 1 : 0.4, padding: '5px 10px',
+                    }}
                   >← Back</button>
                   <button
                     onClick={() => onScriptStepChange(0)}
-                    style={{ fontSize: 12, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                  >Start Over</button>
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      background: 'none', border: '0.5px solid transparent',
+                      borderRadius: 8, cursor: 'pointer',
+                      color: 'var(--text-muted)', fontSize: 12, fontWeight: 500, padding: '5px 10px',
+                    }}
+                  >↺ Start over</button>
                   <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '0 0 0 auto', fontFamily: 'var(--font-mono)' }}>
                     {scriptStep + 1} / {scriptLines.length}
                   </p>
