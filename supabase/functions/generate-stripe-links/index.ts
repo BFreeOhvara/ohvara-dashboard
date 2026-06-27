@@ -8,10 +8,10 @@ const corsHeaders = {
 
 // ── Pricing (North Star locked) ───────────────────────────────────────────────
 const PACKAGES = {
-  basic:   { name: 'Basic',   setup: 497, monthly: 497  },
-  pro:     { name: 'Pro',     setup: 497, monthly: 797  },
-  premium: { name: 'Premium', setup: 497, monthly: 1297 },
-  elite:   { name: 'Elite',   setup: 497, monthly: 1797 },
+  basic:   { name: 'Basic',   setup: 297, monthly: 497  },
+  pro:     { name: 'Pro',     setup: 297, monthly: 797  },
+  premium: { name: 'Premium', setup: 297, monthly: 1297 },
+  elite:   { name: 'Elite',   setup: 297, monthly: 1797 },
 }
 
 // ── Strategy 1: Pre-created payment links from env vars ────────────────────────

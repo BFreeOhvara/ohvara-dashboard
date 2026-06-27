@@ -54,12 +54,6 @@ function calcMonthly(missed, ticket) {
   return Math.round((raw + 1) / 100) * 100 - 1
 }
 
-function priceToTier(monthly) {
-  if (monthly >= 1500) return 'elite'
-  if (monthly >= 1000) return 'premium'
-  if (monthly >= 650)  return 'pro'
-  return 'basic'
-}
 
 export function CallModal({ appt, onClose }) {
   const lead = appt.lead
@@ -81,8 +75,7 @@ export function CallModal({ appt, onClose }) {
   // Close section
   const [callsMissed, setCallsMissed] = useState(lead.calls_missed_per_week != null ? String(lead.calls_missed_per_week) : '')
   const [avgTicket,   setAvgTicket]   = useState(lead.avg_ticket != null ? String(lead.avg_ticket) : '')
-  const [setupCopied,   setSetupCopied]   = useState(false)
-  const [monthlyCopied, setMonthlyCopied] = useState(false)
+  const [linkCopied,  setLinkCopied]  = useState(false)
   const [linkLoading, setLinkLoading] = useState(false)
 
   const update = useUpdateAppointment()
@@ -135,42 +128,22 @@ export function CallModal({ appt, onClose }) {
     }
   }
 
-  async function copySetupLink() {
-    setLinkLoading(true)
-    try {
-      const tier = priceToTier(monthlyPrice || 399)
-      const { data } = await supabase.functions.invoke('generate-stripe-links', {
-        body: { tier, businessName: lead.business_name },
-      })
-      const link = data?.setupLink
-      if (link) {
-        await navigator.clipboard.writeText(link)
-        setSetupCopied(true)
-        setTimeout(() => setSetupCopied(false), 2000)
-      }
-    } catch (err) {
-      console.error('[AppointmentCardModal] copySetupLink failed:', err)
-    } finally {
-      setLinkLoading(false)
-    }
-  }
-
-  async function copyMonthlyLink() {
+  async function generatePaymentLink() {
     if (!monthlyPrice) return
     setLinkLoading(true)
     try {
-      const tier = priceToTier(monthlyPrice)
-      const { data } = await supabase.functions.invoke('generate-stripe-links', {
-        body: { tier, businessName: lead.business_name },
+      const { data, error } = await supabase.functions.invoke('create-payment-link', {
+        body: { monthlyPrice, businessName: lead.business_name },
       })
-      const link = data?.monthlyLink
-      if (link) {
-        await navigator.clipboard.writeText(link)
-        setMonthlyCopied(true)
-        setTimeout(() => setMonthlyCopied(false), 2000)
+      if (error) throw error
+      const url = data?.url
+      if (url) {
+        await navigator.clipboard.writeText(url)
+        setLinkCopied(true)
+        setTimeout(() => setLinkCopied(false), 2000)
       }
     } catch (err) {
-      console.error('[AppointmentCardModal] copyMonthlyLink failed:', err)
+      console.error('[AppointmentCardModal] generatePaymentLink failed:', err)
     } finally {
       setLinkLoading(false)
     }
@@ -302,34 +275,20 @@ export function CallModal({ appt, onClose }) {
             ${monthlyPrice.toLocaleString()}/mo
           </p>
         )}
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={copySetupLink}
-            disabled={linkLoading}
-            style={{
-              flex: 1, height: 36, borderRadius: 8, fontSize: 12, fontWeight: 500,
-              background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-              color: setupCopied ? 'var(--success)' : 'var(--text-secondary)',
-              cursor: linkLoading ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {setupCopied ? 'Copied!' : 'Copy Setup Link'}
-          </button>
-          <button
-            onClick={copyMonthlyLink}
-            disabled={!monthlyPrice || linkLoading}
-            style={{
-              flex: 1, height: 36, borderRadius: 8, fontSize: 12, fontWeight: 500,
-              background: monthlyPrice ? 'var(--accent-dim)' : 'var(--bg-elevated)',
-              border: `0.5px solid ${monthlyPrice ? 'var(--accent-border)' : 'var(--border)'}`,
-              color: monthlyCopied ? 'var(--success)' : monthlyPrice ? 'var(--accent)' : 'var(--text-muted)',
-              cursor: (!monthlyPrice || linkLoading) ? 'not-allowed' : 'pointer',
-              opacity: !monthlyPrice ? 0.5 : 1,
-            }}
-          >
-            {monthlyCopied ? 'Copied!' : 'Copy Monthly Link'}
-          </button>
-        </div>
+        <button
+          onClick={generatePaymentLink}
+          disabled={!monthlyPrice || linkLoading}
+          style={{
+            width: '100%', height: 36, borderRadius: 8, fontSize: 12, fontWeight: 500,
+            background: monthlyPrice ? 'var(--accent-dim)' : 'var(--bg-elevated)',
+            border: `0.5px solid ${monthlyPrice ? 'var(--accent-border)' : 'var(--border)'}`,
+            color: linkCopied ? 'var(--success)' : monthlyPrice ? 'var(--accent)' : 'var(--text-muted)',
+            cursor: (!monthlyPrice || linkLoading) ? 'not-allowed' : 'pointer',
+            opacity: !monthlyPrice ? 0.5 : 1,
+          }}
+        >
+          {linkLoading ? 'Generating…' : linkCopied ? 'Copied!' : 'Generate Payment Link'}
+        </button>
       </div>
 
       {/* Call button */}
