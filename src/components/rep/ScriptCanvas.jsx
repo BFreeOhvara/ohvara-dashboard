@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, useRef } from 'react'
 import {
   ReactFlow, ReactFlowProvider, Background, Controls,
   Handle, Position, MarkerType,
@@ -438,9 +438,16 @@ function CanvasInner({ flow, onPractice }) {
     return [[minX - margin, minY - margin], [maxX + margin, maxY + margin]]
   }, [graph.nodes])
 
+  const rfInstance = useRef(null)
+
   const onNodeClick = useCallback((_evt, node) => {
     onPractice(node.data.targetSectionId || node.data.sectionId || 'opener')
   }, [onPractice])
+
+  const onInit = useCallback((instance) => {
+    rfInstance.current = instance
+    setTimeout(() => instance.fitView({ padding: 0.15 }), 50)
+  }, [])
 
   return (
     <div style={{ position: 'relative', height: '100%', borderRadius: 14, overflow: 'hidden', border: '0.5px solid var(--border)', background: '#0A0A12' }}>
@@ -449,6 +456,7 @@ function CanvasInner({ flow, onPractice }) {
         edges={graph.edges}
         nodeTypes={nodeTypes}
         onNodeClick={onNodeClick}
+        onInit={onInit}
         fitView
         fitViewOptions={{ padding: 0.15 }}
         minZoom={0.2}

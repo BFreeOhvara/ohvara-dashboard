@@ -7,14 +7,14 @@ const DEMO_LEAD = { business_name: 'the business', niche: 'service', city: 'your
 
 const TABS = [
   {
-    key: 'setter',
-    label: 'Appointment Setting Script',
-    sub: 'Call 1 — reps use this to surface pain and book Nate',
-  },
-  {
     key: 'closer',
     label: 'Closer Script',
     sub: 'Call 2 — walk the locked stack, price, close',
+  },
+  {
+    key: 'setter',
+    label: 'Appointment Setting Script',
+    sub: 'Call 1 — reps use this to surface pain and book Nate',
   },
 ]
 
