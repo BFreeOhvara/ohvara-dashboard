@@ -355,9 +355,9 @@ export function CallPrepModal({
                   transition: 'opacity 0.15s',
                 }}
               >Next →</button>
-              {/* Back / Start Over / counter — separate row below Next, only when multi-line */}
+              {/* Back / Start Over / counter — separate row, Back hard-left, Start Over hard-right */}
               {scriptLines.length > 1 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <button
                     onClick={() => onScriptStepChange(Math.max(0, scriptStep - 1))}
                     disabled={!scriptCanBack}
@@ -371,18 +371,20 @@ export function CallPrepModal({
                       opacity: scriptCanBack ? 1 : 0.4, padding: '5px 10px',
                     }}
                   >← Back</button>
-                  <button
-                    onClick={() => onScriptStepChange(0)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 5,
-                      background: 'none', border: '0.5px solid transparent',
-                      borderRadius: 8, cursor: 'pointer',
-                      color: 'var(--text-muted)', fontSize: 12, fontWeight: 500, padding: '5px 10px',
-                    }}
-                  >↺ Start over</button>
-                  <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '0 0 0 auto', fontFamily: 'var(--font-mono)' }}>
-                    {scriptStep + 1} / {scriptLines.length}
-                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: 0, fontFamily: 'var(--font-mono)' }}>
+                      {scriptStep + 1} / {scriptLines.length}
+                    </p>
+                    <button
+                      onClick={() => onScriptStepChange(0)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        background: 'none', border: '0.5px solid transparent',
+                        borderRadius: 8, cursor: 'pointer',
+                        color: 'var(--text-muted)', fontSize: 12, fontWeight: 500, padding: '5px 10px',
+                      }}
+                    >↺ Start over</button>
+                  </div>
                 </div>
               )}
             </div>
