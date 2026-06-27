@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Phone, Mail } from 'lucide-react'
+import { Phone, Mail, StickyNote } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Input } from '../ui/Input'
 import { useUpdateAppointment } from '../../hooks/useAppointments'
@@ -19,6 +19,48 @@ const STATUS_OPTIONS = [
 // Each line carries its section color so the SAY THIS stepper can tint accordingly.
 const SAY_LINES = CLOSER_SCRIPT.flatMap(s => s.lines.map(l => ({ text: l, color: s.color })))
 
+// Fixed stack — every client gets the same core agents.
+const NICHE_TO_AGENT = {
+  'hvac':             'AI Receptionist',
+  'electrical':       'AI Receptionist',
+  'roofing':          'AI Receptionist',
+  'landscaping':      'AI Receptionist',
+  'pressure washing': 'AI Receptionist',
+  'veterinary':       'AI Receptionist',
+  'towing':           'AI Dispatcher',
+  'trucking':         'AI Dispatcher',
+  'hotshot':          'AI Dispatcher',
+}
+
+function getFrontRunner(niche) {
+  if (!niche) return 'AI Receptionist'
+  return NICHE_TO_AGENT[niche.toLowerCase()] || 'AI Receptionist'
+}
+
+const FIXED_SUB_AGENTS = [
+  'Review Generation',
+  'Lead Follow-Up',
+  'Appointment Reminders',
+  'Appointment Cancellation',
+  'SMS Marketing',
+]
+
+// Price formula — mirrors edge function logic.
+function calcMonthly(missed, ticket) {
+  const m = parseFloat(missed)
+  const t = parseFloat(ticket)
+  if (!m || !t || m <= 0 || t <= 0) return null
+  const raw = Math.max(399, Math.min(1999, m * 4.33 * t * 0.15))
+  return Math.round((raw + 1) / 100) * 100 - 1
+}
+
+function priceToTier(monthly) {
+  if (monthly >= 1500) return 'elite'
+  if (monthly >= 1000) return 'premium'
+  if (monthly >= 650)  return 'pro'
+  return 'basic'
+}
+
 export function CallModal({ appt, onClose }) {
   const lead = appt.lead
 
@@ -31,7 +73,20 @@ export function CallModal({ appt, onClose }) {
   const [saving, setSaving]                 = useState(false)
   const [saveError, setSaveError]           = useState('')
   const [sayStep, setSayStep]               = useState(0)
+
+  // Stack checkboxes
+  const [noWebsite, setNoWebsite] = useState(!lead.has_website)
+  const [noChatbot, setNoChatbot] = useState(false)
+
+  // Close section
+  const [callsMissed, setCallsMissed] = useState(lead.calls_missed_per_week != null ? String(lead.calls_missed_per_week) : '')
+  const [avgTicket,   setAvgTicket]   = useState(lead.avg_ticket != null ? String(lead.avg_ticket) : '')
+  const [setupCopied,   setSetupCopied]   = useState(false)
+  const [monthlyCopied, setMonthlyCopied] = useState(false)
+  const [linkLoading, setLinkLoading] = useState(false)
+
   const update = useUpdateAppointment()
+  const monthlyPrice = calcMonthly(callsMissed, avgTicket)
 
   async function handleComplete() {
     if (!outcomeTouched) return
@@ -80,6 +135,49 @@ export function CallModal({ appt, onClose }) {
     }
   }
 
+  async function copySetupLink() {
+    setLinkLoading(true)
+    try {
+      const tier = priceToTier(monthlyPrice || 399)
+      const { data } = await supabase.functions.invoke('generate-stripe-links', {
+        body: { tier, businessName: lead.business_name },
+      })
+      const link = data?.setupLink
+      if (link) {
+        await navigator.clipboard.writeText(link)
+        setSetupCopied(true)
+        setTimeout(() => setSetupCopied(false), 2000)
+      }
+    } catch (err) {
+      console.error('[AppointmentCardModal] copySetupLink failed:', err)
+    } finally {
+      setLinkLoading(false)
+    }
+  }
+
+  async function copyMonthlyLink() {
+    if (!monthlyPrice) return
+    setLinkLoading(true)
+    try {
+      const tier = priceToTier(monthlyPrice)
+      const { data } = await supabase.functions.invoke('generate-stripe-links', {
+        body: { tier, businessName: lead.business_name },
+      })
+      const link = data?.monthlyLink
+      if (link) {
+        await navigator.clipboard.writeText(link)
+        setMonthlyCopied(true)
+        setTimeout(() => setMonthlyCopied(false), 2000)
+      }
+    } catch (err) {
+      console.error('[AppointmentCardModal] copyMonthlyLink failed:', err)
+    } finally {
+      setLinkLoading(false)
+    }
+  }
+
+  const frontRunner = getFrontRunner(lead.niche)
+
   const infoContent = (
     <>
       <Field icon={Phone} label="Phone"  value={lead.phone} mono />
@@ -106,23 +204,151 @@ export function CallModal({ appt, onClose }) {
           style={{ marginBottom: 8, width: '100%' }}
         />
       )}
+      {/* SETTER NOTES — rep's notes from the lead record, read-only, above closer's own CALL NOTES */}
+      {lead.notes ? (
+        <div style={{ marginBottom: 14 }}>
+          <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <StickyNote size={10} /> Setter Notes
+          </p>
+          <p style={{
+            fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5,
+            padding: '8px 10px',
+            background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+            borderRadius: 8,
+          }}>
+            {lead.notes}
+          </p>
+        </div>
+      ) : null}
     </>
   )
 
-  const callSection = lead.phone ? (
-    <a
-      href={`tel:${lead.phone.replace(/\D/g, '')}`}
-      style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        height: 44,
-        background: 'var(--success)', borderRadius: 10,
-        fontSize: 14, fontWeight: 500, color: 'white', textDecoration: 'none',
-        boxShadow: '0 0 20px rgba(34,197,94,0.3)',
-      }}
-    >
-      <Phone size={15} /> Call {lead.phone}
-    </a>
-  ) : null
+  const callSection = (
+    <>
+      {/* THE STACK */}
+      <div style={{ marginBottom: 14 }}>
+        <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 8px' }}>
+          The Stack
+        </p>
+        <div style={{
+          background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+          borderRadius: 8, padding: '10px 12px',
+          display: 'flex', flexDirection: 'column', gap: 6,
+        }}>
+          {/* Front-runner — bold, auto-derived */}
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>
+            ★ {frontRunner}
+          </div>
+          {/* Fixed sub-agents */}
+          {FIXED_SUB_AGENTS.map(name => (
+            <div key={name} style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ color: 'var(--success)', fontSize: 10 }}>✓</span> {name}
+            </div>
+          ))}
+          {/* Website checkbox */}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: noWebsite ? 'var(--text-secondary)' : 'var(--text-muted)', cursor: 'pointer', userSelect: 'none' }}>
+            <input
+              type="checkbox"
+              checked={noWebsite}
+              onChange={e => setNoWebsite(e.target.checked)}
+              style={{ accentColor: 'var(--accent)', width: 13, height: 13 }}
+            />
+            Website (no website?)
+          </label>
+          {/* Chatbot checkbox — only relevant if website exists */}
+          {!noWebsite && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: noChatbot ? 'var(--text-secondary)' : 'var(--text-muted)', cursor: 'pointer', userSelect: 'none' }}>
+              <input
+                type="checkbox"
+                checked={noChatbot}
+                onChange={e => setNoChatbot(e.target.checked)}
+                style={{ accentColor: 'var(--accent)', width: 13, height: 13 }}
+              />
+              AI Chatbot (no chatbot?)
+            </label>
+          )}
+        </div>
+      </div>
+
+      {/* CLOSE — price calc + Stripe links */}
+      <div style={{ marginBottom: 14 }}>
+        <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 8px' }}>
+          Close
+        </p>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <Input
+            type="number"
+            value={callsMissed}
+            onChange={e => setCallsMissed(e.target.value)}
+            placeholder="Calls missed/week"
+            style={{ flex: 1 }}
+          />
+          <Input
+            type="number"
+            value={avgTicket}
+            onChange={e => setAvgTicket(e.target.value)}
+            placeholder="Avg ticket $"
+            style={{ flex: 1 }}
+          />
+        </div>
+        {monthlyPrice != null && (
+          <p style={{
+            fontSize: 20, fontWeight: 700,
+            fontFamily: 'var(--font-mono)',
+            color: 'var(--accent)',
+            margin: '0 0 8px',
+            textAlign: 'center',
+          }}>
+            ${monthlyPrice.toLocaleString()}/mo
+          </p>
+        )}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={copySetupLink}
+            disabled={linkLoading}
+            style={{
+              flex: 1, height: 36, borderRadius: 8, fontSize: 12, fontWeight: 500,
+              background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+              color: setupCopied ? 'var(--success)' : 'var(--text-secondary)',
+              cursor: linkLoading ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {setupCopied ? 'Copied!' : 'Copy Setup Link'}
+          </button>
+          <button
+            onClick={copyMonthlyLink}
+            disabled={!monthlyPrice || linkLoading}
+            style={{
+              flex: 1, height: 36, borderRadius: 8, fontSize: 12, fontWeight: 500,
+              background: monthlyPrice ? 'var(--accent-dim)' : 'var(--bg-elevated)',
+              border: `0.5px solid ${monthlyPrice ? 'var(--accent-border)' : 'var(--border)'}`,
+              color: monthlyCopied ? 'var(--success)' : monthlyPrice ? 'var(--accent)' : 'var(--text-muted)',
+              cursor: (!monthlyPrice || linkLoading) ? 'not-allowed' : 'pointer',
+              opacity: !monthlyPrice ? 0.5 : 1,
+            }}
+          >
+            {monthlyCopied ? 'Copied!' : 'Copy Monthly Link'}
+          </button>
+        </div>
+      </div>
+
+      {/* Call button */}
+      {lead.phone ? (
+        <a
+          href={`tel:${lead.phone.replace(/\D/g, '')}`}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            height: 44,
+            background: 'var(--success)', borderRadius: 10,
+            fontSize: 14, fontWeight: 500, color: 'white', textDecoration: 'none',
+            boxShadow: '0 0 20px rgba(34,197,94,0.3)',
+          }}
+        >
+          <Phone size={15} /> Call {lead.phone}
+        </a>
+      ) : null}
+    </>
+  )
 
   return createPortal(
     <div
