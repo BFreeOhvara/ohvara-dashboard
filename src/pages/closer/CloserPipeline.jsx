@@ -16,6 +16,7 @@ const CLOSER_TABS = [
   { key: 'lost',               label: 'Lost',               icon: Ban },
   { key: 'no_show',            label: 'No Show',            icon: PhoneOff },
   { key: 'needs_rescheduling', label: 'Needs Rescheduling', icon: RefreshCw },
+  { key: 'all',                label: 'All',                icon: null },
 ]
 
 // ── Appointment-setter status tabs ────────────────────────────────────────────
@@ -35,11 +36,12 @@ const STATUS_TAB_COLORS = {
 
 // Colors for the closer pipeline sub-tabs
 const CLOSER_TAB_COLORS = {
-  pending:            { color: 'var(--accent)',  dim: 'var(--accent-dim)',  border: 'var(--accent-border)' },
+  pending:            { color: 'var(--warning)', dim: 'var(--warning-dim)', border: 'rgba(245,158,11,0.20)' },
   closed:             { color: 'var(--success)', dim: 'var(--success-dim)', border: 'rgba(34,197,94,0.20)' },
   lost:               { color: 'var(--danger)',  dim: 'var(--danger-dim)',  border: 'rgba(239,68,68,0.20)' },
   no_show:            { color: '#94A3B8',        dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)' },
   needs_rescheduling: { color: 'var(--info)',    dim: 'var(--info-dim)',    border: 'rgba(56,189,248,0.20)' },
+  all:                { color: 'var(--accent)',  dim: 'var(--accent-dim)',  border: 'var(--accent-border)' },
 }
 
 const cell = (basis, extra = {}) => ({
@@ -187,6 +189,27 @@ function NeedsReschedulingTab({ rows, tz }) {
           <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
           <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
           <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at, tz)}</div>
+        </div>
+      )}
+    />
+  )
+}
+
+function AllTab({ rows, tz }) {
+  return (
+    <QueueTable
+      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Scheduled', '0 0 150px'], ['Status', '0 0 100px']]}
+      rows={rows}
+      emptyText="No appointments."
+      emptyIcon={CalendarClock}
+      renderRow={a => (
+        <div key={a.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
+          <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
+          <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
+          <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
+          <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
+          <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at, tz)}</div>
+          <div style={cell('0 0 100px')}>{a.status || '—'}</div>
         </div>
       )}
     />
@@ -363,7 +386,7 @@ export default function CloserPipeline() {
   const [search, setSearch] = useState('')
 
   const filteredAppts = useMemo(() => {
-    if (!allAppts) return { pending: [], closed: [], lost: [], no_show: [], needs_rescheduling: [] }
+    if (!allAppts) return { pending: [], closed: [], lost: [], no_show: [], needs_rescheduling: [], all: [] }
     const s = search.trim().toLowerCase()
     const appts = s
       ? allAppts.filter(a => (a.lead?.business_name || '').toLowerCase().includes(s))
@@ -374,6 +397,7 @@ export default function CloserPipeline() {
       lost:               appts.filter(a => a.outcome === 'lost' || a.outcome === 'no_show'),
       no_show:            appts.filter(a => a.status === 'no_show' || a.outcome === 'no_show' || a.status === 'missed'),
       needs_rescheduling: appts.filter(a => a.status === 'needs_rescheduling'),
+      all:                appts,
     }
   }, [allAppts, search])
 
@@ -483,7 +507,7 @@ export default function CloserPipeline() {
                     color: tc.color,
                   }}
                 >
-                  <Icon size={13} />
+                  {Icon && <Icon size={13} />}
                   {label}
                   <span style={{
                     fontSize: 10, padding: '1px 6px', borderRadius: 10, fontFamily: 'var(--font-mono)',
@@ -501,8 +525,9 @@ export default function CloserPipeline() {
           {closerTab === 'pending'            && <PendingTab            rows={filteredAppts.pending}            tz={tz} />}
           {closerTab === 'closed'             && <ClosedTab             rows={filteredAppts.closed} />}
           {closerTab === 'lost'               && <LostTab               rows={filteredAppts.lost} />}
-          {closerTab === 'no_show'             && <NoShowTab             rows={filteredAppts.no_show}             tz={tz} />}
+          {closerTab === 'no_show'            && <NoShowTab             rows={filteredAppts.no_show}             tz={tz} />}
           {closerTab === 'needs_rescheduling' && <NeedsReschedulingTab  rows={filteredAppts.needs_rescheduling} tz={tz} />}
+          {closerTab === 'all'               && <AllTab                 rows={filteredAppts.all}                tz={tz} />}
         </div>
       )}
     </div>
