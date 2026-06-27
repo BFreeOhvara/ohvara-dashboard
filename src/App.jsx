@@ -20,6 +20,7 @@ import MyCalls from './pages/rep/MyCalls'
 
 // Closer pages
 import MyAppointments from './pages/closer/MyAppointments'
+import CloserMyCalls from './pages/closer/MyCalls'
 import RevenueTracker from './pages/closer/RevenueTracker'
 import RepAnalytics from './pages/closer/RepAnalytics'
 import CallLeads from './pages/closer/CallLeads'
@@ -162,6 +163,11 @@ export default function App() {
             <Route path="/closer/script" element={
               <ProtectedRoute allowedRoles={['closer']}>
                 <DashboardLayout><CloserScript /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/closer/calls" element={
+              <ProtectedRoute allowedRoles={['closer']}>
+                <DashboardLayout><CloserMyCalls /></DashboardLayout>
               </ProtectedRoute>
             } />
 

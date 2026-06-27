@@ -25,8 +25,9 @@ const NAV = {
   closer: [
     { to: '/closer',                   label: 'Appointments',  icon: Calendar },
     { to: '/closer/call-leads',        label: 'My Leads',      icon: Phone },
-    { to: '/closer/pipeline',          label: 'Pipeline',      icon: GitBranch },
     { to: '/closer/script',            label: 'Script',        icon: BookOpen },
+    { to: '/closer/pipeline',          label: 'Pipeline',      icon: GitBranch },
+    { to: '/closer/calls',             label: 'My Calls',      icon: PhoneCall },
     { to: '/closer/stats',             label: 'My Stats',      icon: Target },
     { to: '/closer/reps',              label: 'Rep Activity',  icon: BarChart2 },
     { to: '/closer/revenue',           label: 'Revenue',       icon: TrendingUp },
