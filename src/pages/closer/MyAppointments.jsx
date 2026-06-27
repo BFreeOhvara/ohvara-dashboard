@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Calendar, TrendingUp, DollarSign, Zap } from 'lucide-react'
+import { Calendar, TrendingUp, Trophy } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useMyAppointments } from '../../hooks/useAppointments'
@@ -13,27 +13,31 @@ function useCloserKPIs(closerId) {
       const weekAgo = new Date()
       weekAgo.setDate(weekAgo.getDate() - 7)
 
-      const { data } = await supabase
-        .from('appointments')
-        .select('id, outcome, deal_value, status, scheduled_at')
-        .eq('closer_id', closerId)
-        .gte('updated_at', weekAgo.toISOString())
+      const [{ data: weekData }, { count: dealsTotal }] = await Promise.all([
+        supabase
+          .from('appointments')
+          .select('id, outcome, status, scheduled_at')
+          .eq('closer_id', closerId)
+          .gte('updated_at', weekAgo.toISOString()),
+        supabase
+          .from('appointments')
+          .select('id', { count: 'exact', head: true })
+          .eq('closer_id', closerId)
+          .eq('outcome', 'closed'),
+      ])
 
-      const all = data || []
+      const all = weekData || []
       const completed = all.filter(a => a.status === 'completed')
       const closed = completed.filter(a => a.outcome === 'closed')
       const closeRate = completed.length ? Math.round((closed.length / completed.length) * 100) : 0
-      const earnings = closed.length * 200 // $200 avg commission
-      const revenue = closed.reduce((s, a) => s + (a.deal_value || 0), 0)
 
-      // Today's pending appointments
       const todayStr = new Date().toISOString().split('T')[0]
       const todayAppts = all.filter(a => {
         if (!a.scheduled_at) return false
         return a.scheduled_at.startsWith(todayStr) && a.status === 'pending'
       }).length
 
-      return { closeRate, earnings, revenue, todayAppts }
+      return { closeRate, dealsTotal: dealsTotal ?? 0, todayAppts }
     },
     enabled: !!closerId,
   })
@@ -83,21 +87,10 @@ export default function MyAppointments() {
           icon={TrendingUp}
         />
         <KPICard
-          label="Est. Earnings"
-          value={kpis?.earnings ?? 0}
-          prefix="$"
-          sub="this week · $200/close"
-          subColor="var(--accent)"
-          accent={kpis?.earnings > 0}
-          icon={DollarSign}
-        />
-        <KPICard
-          label="Revenue Generated"
-          value={kpis?.revenue ?? 0}
-          prefix="$"
-          sub="total deal value closed"
-          subColor={kpis?.revenue > 0 ? 'var(--success)' : undefined}
-          icon={Zap}
+          label="Deals Closed"
+          value={kpis?.dealsTotal ?? 0}
+          sub="all time"
+          icon={Trophy}
         />
       </div>
 
