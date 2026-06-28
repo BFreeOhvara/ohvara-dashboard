@@ -40,8 +40,8 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
   const section = flow.byId[state.sectionId]
   const top = state.stack[state.stack.length - 1]
   const baseExhausted = state.stack.length === 1 && top.index >= top.steps.length
-  const atChooser = baseExhausted && state.sectionId === 'opener'
-  const atTerminal = baseExhausted && state.sectionId !== 'opener'
+  const atChooser = false
+  const atTerminal = baseExhausted
   const step = !baseExhausted ? top.steps[top.index] : null
   const accent = section.color
 
@@ -52,6 +52,21 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
   function cloneStack() {
     return state.stack.map(f => ({ steps: f.steps, index: f.index }))
   }
+  // If the step at the top of the stack is a route with a known target,
+  // jump to that section automatically — no button required.
+  function followRouteIfNeeded(ns, currentState) {
+    const t = ns[ns.length - 1]
+    const s = t.steps[t.index]
+    if (s?.type !== 'route') return null
+    const target = flow.byId[s.target]
+    if (!target) return null
+    const ns2 = [{ steps: target.steps, index: 0 }]
+    if (mode === 'live') applyLiveSkip(ns2)
+    setHistory(h => [...h, currentState])
+    setState({ sectionId: s.target, stack: ns2 })
+    return true
+  }
+
   function advance() {
     const ns = cloneStack()
     let t = ns[ns.length - 1]
@@ -63,6 +78,7 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
       t.index++
     }
     if (mode === 'live') applyLiveSkip(ns)
+    if (followRouteIfNeeded(ns, state)) return
     commit({ ...state, stack: ns })
   }
   function chooseOption(opt) {
@@ -70,6 +86,7 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
     const ns = cloneStack()
     ns.push({ steps: opt.steps, index: 0 })
     if (mode === 'live') applyLiveSkip(ns)
+    if (followRouteIfNeeded(ns, state)) return
     commit({ ...state, stack: ns })
   }
   function navigateTo(id) {

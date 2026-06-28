@@ -228,6 +228,10 @@ function isRouteLine(t) {
 
 // Resolve a route line to a target section id.
 function routeTarget(t) {
+  if (/vitals/i.test(t))     return 'vitals'
+  if (/pain/i.test(t))       return 'pain'
+  if (/handoff/i.test(t))    return 'handoff'
+  if (/objection/i.test(t))  return 'objections'
   const b = t.match(/BRANCH\s*([A-E])/i)
   if (b) return 'branch' + b[1].toUpperCase()
   return 'close'
