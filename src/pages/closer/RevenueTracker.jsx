@@ -536,7 +536,89 @@ export default function RevenueTracker() {
       </Card>
 
       <DealsSection closerId={profile?.id} />
+      <RecurringSection closerId={profile?.id} />
     </div>
+  )
+}
+
+function RecurringSection({ closerId }) {
+  const { data: subs = [], isLoading } = useQuery({
+    queryKey: ['closer-subscriptions', closerId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('id, monthly_amount, started_at, lead:leads(business_name)')
+        .eq('closer_id', closerId)
+        .eq('is_active', true)
+        .order('started_at', { ascending: false })
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!closerId,
+  })
+
+  const totalMRR = subs.reduce((s, sub) => s + (sub.monthly_amount || 0), 0)
+  const monthlyCut = Math.round(totalMRR * 0.5)
+
+  return (
+    <Card style={{ marginTop: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <TrendingUp size={14} style={{ color: 'var(--text-muted)' }} />
+        <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Monthly Recurring</p>
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+        {[
+          { label: 'Total MRR', value: `$${totalMRR.toLocaleString()}` },
+          { label: 'Your Monthly Cut', value: `$${monthlyCut.toLocaleString()}` },
+        ].map(({ label, value }) => (
+          <div key={label} style={{
+            flex: 1, background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+            borderRadius: 8, padding: '12px 14px',
+          }}>
+            <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
+            <p style={{ fontSize: 20, fontWeight: 600, color: 'var(--success)', fontFamily: 'var(--font-mono)', margin: 0 }}>{value}</p>
+          </div>
+        ))}
+      </div>
+
+      {isLoading ? (
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: '12px 0', margin: 0 }}>Loading…</p>
+      ) : subs.length === 0 ? (
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: '12px 0', margin: 0 }}>No active recurring clients yet</p>
+      ) : (
+        <div>
+          {/* Header */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '0 16px', padding: '0 0 8px', borderBottom: '0.5px solid var(--border)', marginBottom: 4 }}>
+            {['BUSINESS', 'MONTHLY AMOUNT', 'YOUR CUT (50%)', 'ACTIVE SINCE'].map(h => (
+              <span key={h} style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: h === 'BUSINESS' ? 'left' : 'right' }}>{h}</span>
+            ))}
+          </div>
+          {subs.map((sub, i) => {
+            const cut = Math.round((sub.monthly_amount || 0) * 0.5)
+            const since = sub.started_at
+              ? new Date(sub.started_at).toLocaleString('en-US', { month: 'short', year: 'numeric' })
+              : '—'
+            return (
+              <div
+                key={sub.id}
+                style={{
+                  display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '0 16px',
+                  alignItems: 'center',
+                  padding: '10px 0',
+                  borderBottom: i < subs.length - 1 ? '0.5px solid var(--border)' : 'none',
+                }}
+              >
+                <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{sub.lead?.business_name || '—'}</span>
+                <span style={{ fontSize: 13, color: 'var(--success)', fontFamily: 'var(--font-mono)', fontWeight: 500, textAlign: 'right' }}>${(sub.monthly_amount || 0).toLocaleString()}</span>
+                <span style={{ fontSize: 13, color: 'var(--success)', fontFamily: 'var(--font-mono)', fontWeight: 500, textAlign: 'right' }}>${cut.toLocaleString()}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'right' }}>{since}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </Card>
   )
 }
 

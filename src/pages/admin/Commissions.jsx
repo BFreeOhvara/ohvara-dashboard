@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { DollarSign, TrendingUp, Users, Check, ChevronDown, ChevronRight } from 'lucide-react'
+import { DollarSign, TrendingUp, Users, Check, ChevronDown, ChevronRight, RefreshCw } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 
@@ -81,6 +81,17 @@ function useAllProfiles() {
     queryKey: ['all-profiles'],
     queryFn: async () => {
       const { data, error } = await supabase.from('profiles').select('*').order('role')
+      if (error) throw error
+      return data || []
+    },
+  })
+}
+
+function useSubscriptions() {
+  return useQuery({
+    queryKey: ['subscriptions-admin'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('subscriptions').select('*')
       if (error) throw error
       return data || []
     },
@@ -211,11 +222,17 @@ export default function Commissions() {
   const { data: commissions = [], isLoading: loadingComm } = useCommissions()
   const { data: closedDeals = [], isLoading: loadingDeals } = useClosedAppointments()
   const { data: profiles = [] }                             = useAllProfiles()
+  const { data: subscriptions = [] }                        = useSubscriptions()
   const qc = useQueryClient()
 
-  const [expandedRep, setExpandedRep]     = useState(null)
-  const [generating, setGenerating]       = useState(null)
+  const [expandedRep, setExpandedRep]       = useState(null)
+  const [generating, setGenerating]         = useState(null)
   const [updatingStatus, setUpdatingStatus] = useState(null)
+  const [recurringInput, setRecurringInput] = useState({}) // leadId -> amount string
+  const [recurringOpen, setRecurringOpen]   = useState({}) // leadId -> bool
+  const [savingSub, setSavingSub]           = useState(null)
+
+  const subByLead = subscriptions.reduce((acc, s) => { acc[s.lead_id] = s; return acc }, {})
 
   const adminProfile = profiles.find(p => p.role === 'admin')
 
@@ -262,6 +279,28 @@ export default function Commissions() {
     } finally {
       setUpdatingStatus(null)
     }
+  }
+
+  async function setRecurring(deal) {
+    const amount = parseInt(recurringInput[deal.lead_id] || '', 10)
+    if (!amount || amount <= 0) return
+    setSavingSub(deal.lead_id)
+    try {
+      await supabase.from('subscriptions').insert({
+        lead_id: deal.lead_id,
+        closer_id: deal.closer_id,
+        monthly_amount: amount,
+      })
+      qc.invalidateQueries({ queryKey: ['subscriptions-admin'] })
+      setRecurringOpen(o => ({ ...o, [deal.lead_id]: false }))
+    } finally {
+      setSavingSub(null)
+    }
+  }
+
+  async function deactivateSub(subId) {
+    await supabase.from('subscriptions').update({ is_active: false }).eq('id', subId)
+    qc.invalidateQueries({ queryKey: ['subscriptions-admin'] })
   }
 
   const grandTotalPending = commissions.filter(c => c.status === 'pending').reduce((s, c) => s + c.amount, 0)
@@ -323,6 +362,109 @@ export default function Commissions() {
           </div>
         </div>
       )}
+
+      {/* Closed Deals — Set Recurring */}
+      <div style={{ marginBottom: 24 }}>
+        <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 12 }}>Closed Deals</p>
+        {loadingDeals ? (
+          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Loading…</p>
+        ) : closedDeals.length === 0 ? (
+          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No closed deals yet.</p>
+        ) : (
+          <div style={{ background: 'var(--bg-surface)', border: '0.5px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: 'var(--bg-elevated)' }}>
+                  {['Business', 'Closer', 'Date', 'Recurring'].map(h => (
+                    <th key={h} style={{ padding: '8px 14px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 500, fontSize: 11 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {closedDeals.map((deal, i) => {
+                  const sub = subByLead[deal.lead_id]
+                  const isOpen = recurringOpen[deal.lead_id]
+                  const inputVal = recurringInput[deal.lead_id] || ''
+                  return (
+                    <tr key={deal.id} style={{ borderTop: i > 0 ? '0.5px solid var(--border)' : 'none' }}>
+                      <td style={{ padding: '10px 14px', color: 'var(--text-primary)', fontWeight: 500 }}>
+                        {deal.lead?.business_name || '—'}
+                      </td>
+                      <td style={{ padding: '10px 14px', color: 'var(--text-muted)' }}>
+                        {deal.closer?.full_name || '—'}
+                      </td>
+                      <td style={{ padding: '10px 14px', color: 'var(--text-muted)' }}>
+                        {formatDate(deal.closed_at || deal.updated_at)}
+                      </td>
+                      <td style={{ padding: '10px 14px' }}>
+                        {sub ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 12, color: 'var(--success)', fontFamily: 'var(--font-mono)', fontWeight: 500 }}>
+                              Active ✓ ${(sub.monthly_amount || 0).toLocaleString()}/mo
+                            </span>
+                            {sub.is_active && (
+                              <button
+                                onClick={() => deactivateSub(sub.id)}
+                                style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, border: '0.5px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}
+                              >
+                                Deactivate
+                              </button>
+                            )}
+                          </div>
+                        ) : isOpen ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>$/mo</span>
+                            <input
+                              type="number"
+                              value={inputVal}
+                              onChange={e => setRecurringInput(r => ({ ...r, [deal.lead_id]: e.target.value }))}
+                              placeholder="e.g. 999"
+                              style={{
+                                width: 80, padding: '4px 8px', borderRadius: 5,
+                                border: '0.5px solid var(--border)', background: 'var(--bg-elevated)',
+                                color: 'var(--text-primary)', fontSize: 12, outline: 'none',
+                              }}
+                            />
+                            <button
+                              onClick={() => setRecurring(deal)}
+                              disabled={savingSub === deal.lead_id || !inputVal}
+                              style={{
+                                padding: '4px 10px', borderRadius: 5, border: 'none',
+                                background: 'var(--accent)', color: '#fff',
+                                fontSize: 11, cursor: 'pointer', fontWeight: 500,
+                                opacity: savingSub === deal.lead_id || !inputVal ? 0.5 : 1,
+                              }}
+                            >
+                              {savingSub === deal.lead_id ? '…' : 'Confirm'}
+                            </button>
+                            <button
+                              onClick={() => setRecurringOpen(o => ({ ...o, [deal.lead_id]: false }))}
+                              style={{ fontSize: 11, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setRecurringOpen(o => ({ ...o, [deal.lead_id]: true }))}
+                            style={{
+                              padding: '4px 10px', borderRadius: 5,
+                              border: '0.5px solid var(--border)', background: 'transparent',
+                              color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer',
+                            }}
+                          >
+                            Set Recurring
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Per-person breakdown */}
       {loadingComm ? (
