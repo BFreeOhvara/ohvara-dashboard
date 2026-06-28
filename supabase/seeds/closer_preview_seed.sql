@@ -69,12 +69,11 @@ BEGIN
 
   -- 4. Insert commission_payouts (10% of deal value)
   FOR i IN 1..12 LOOP
-    INSERT INTO commission_payouts (rep_profile_id, appointment_id, amount_cents, deal_value_cents, status)
+    INSERT INTO commission_payouts (rep_id, appointment_id, amount_cents, status)
     VALUES (
       closer_id,
       appt_id_arr[i],
       (deal_vals[i] * 0.10 * 100)::int,
-      (deal_vals[i] * 100)::int,
       'paid'
     );
   END LOOP;
