@@ -49,10 +49,12 @@ export default function CallLeads() {
   const filtered = useMemo(() => {
     if (!search.trim()) return leads
     const q = search.toLowerCase()
+    const qDigits = q.replace(/\D/g, '')
     return leads.filter(l =>
       l.business_name?.toLowerCase().includes(q) ||
       l.niche?.toLowerCase().includes(q) ||
-      l.city?.toLowerCase().includes(q)
+      l.city?.toLowerCase().includes(q) ||
+      (qDigits && (l.phone || '').replace(/\D/g, '').includes(qDigits))
     )
   }, [leads, search])
 
@@ -105,7 +107,7 @@ export default function CallLeads() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search business, niche, city…"
+              placeholder="Search business, niche, city, phone…"
               style={{
                 height: 30, padding: '0 10px',
                 background: 'var(--bg-elevated)',

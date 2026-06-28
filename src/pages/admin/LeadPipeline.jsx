@@ -30,9 +30,13 @@ const TABS = [
 function applyFilters(rows, { search, repName }, getRepName) {
   if (!rows) return rows
   const s = search.trim().toLowerCase()
+  const sDigits = s.replace(/\D/g, '')
   return rows.filter(r => {
-    const biz = (r.lead?.business_name ?? r.business_name ?? '').toLowerCase()
-    if (s && !biz.includes(s)) return false
+    if (s) {
+      const biz   = (r.lead?.business_name ?? r.business_name ?? '').toLowerCase()
+      const phone = (r.lead?.phone ?? r.phone ?? '').replace(/\D/g, '')
+      if (!biz.includes(s) && !(sDigits && phone.includes(sDigits))) return false
+    }
     if (repName && (getRepName ? getRepName(r) : null) !== repName) return false
     return true
   })
@@ -437,9 +441,9 @@ export default function LeadPipeline() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search business name…"
+              placeholder="Search business, niche, city, phone…"
               style={{
-                height: 32, padding: '0 10px 0 28px', width: 200,
+                height: 32, padding: '0 10px 0 28px', width: 240,
                 background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
                 borderRadius: 6, fontSize: 12, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', outline: 'none',
               }}

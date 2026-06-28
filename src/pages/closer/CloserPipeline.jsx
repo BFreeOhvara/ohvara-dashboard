@@ -93,7 +93,7 @@ function QueueTable({ columns, rows, renderRow, emptyText, emptyIcon: EmptyIcon 
 function PendingTab({ rows, tz }) {
   return (
     <QueueTable
-      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Scheduled', '0 0 150px'], ['Status', '0 0 100px']]}
+      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Phone', '0 0 140px'], ['Set By', '0 0 120px'], ['Scheduled', '0 0 150px'], ['Status', '0 0 100px']]}
       rows={rows}
       emptyText="No pending appointments."
       emptyIcon={CalendarClock}
@@ -102,6 +102,7 @@ function PendingTab({ rows, tz }) {
           <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
           <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
           <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
+          <div style={cell('0 0 140px', { fontFamily: 'var(--font-mono)' })}>{a.lead?.phone || '—'}</div>
           <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
           <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at, tz)}</div>
           <div style={cell('0 0 100px')}><Badge label={a.status} /></div>
@@ -114,7 +115,7 @@ function PendingTab({ rows, tz }) {
 function ClosedTab({ rows }) {
   return (
     <QueueTable
-      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Closed On', '0 0 130px'], ['Revenue', '0 0 110px']]}
+      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Phone', '0 0 140px'], ['Set By', '0 0 120px'], ['Closed On', '0 0 130px'], ['Revenue', '0 0 110px']]}
       rows={rows}
       emptyText="No closed deals yet."
       emptyIcon={CheckCircle}
@@ -123,6 +124,7 @@ function ClosedTab({ rows }) {
           <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
           <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
           <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
+          <div style={cell('0 0 140px', { fontFamily: 'var(--font-mono)' })}>{a.lead?.phone || '—'}</div>
           <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
           <div style={cell('0 0 130px', { fontFamily: 'var(--font-mono)' })}>{fmtDate(a.updated_at || a.created_at)}</div>
           <div style={cell('0 0 110px', { color: 'var(--success)', fontFamily: 'var(--font-mono)' })}>
@@ -137,7 +139,7 @@ function ClosedTab({ rows }) {
 function LostTab({ rows }) {
   return (
     <QueueTable
-      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Outcome', '0 0 120px'], ['Date', '0 0 130px']]}
+      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Phone', '0 0 140px'], ['Set By', '0 0 120px'], ['Outcome', '0 0 120px'], ['Date', '0 0 130px']]}
       rows={rows}
       emptyText="No lost deals yet."
       emptyIcon={Ban}
@@ -146,6 +148,7 @@ function LostTab({ rows }) {
           <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
           <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
           <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
+          <div style={cell('0 0 140px', { fontFamily: 'var(--font-mono)' })}>{a.lead?.phone || '—'}</div>
           <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
           <div style={cell('0 0 120px')}><Badge label={a.outcome} /></div>
           <div style={cell('0 0 130px', { fontFamily: 'var(--font-mono)' })}>{fmtDate(a.updated_at || a.created_at)}</div>
@@ -158,7 +161,7 @@ function LostTab({ rows }) {
 function NoShowTab({ rows, tz }) {
   return (
     <QueueTable
-      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Was Scheduled', '0 0 150px']]}
+      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Phone', '0 0 140px'], ['Set By', '0 0 120px'], ['Was Scheduled', '0 0 150px']]}
       rows={rows}
       emptyText="No no-shows."
       emptyIcon={PhoneOff}
@@ -167,6 +170,7 @@ function NoShowTab({ rows, tz }) {
           <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
           <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
           <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
+          <div style={cell('0 0 140px', { fontFamily: 'var(--font-mono)' })}>{a.lead?.phone || '—'}</div>
           <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
           <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at, tz)}</div>
         </div>
@@ -178,7 +182,7 @@ function NoShowTab({ rows, tz }) {
 function NeedsReschedulingTab({ rows, tz }) {
   return (
     <QueueTable
-      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Was Scheduled', '0 0 150px']]}
+      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Phone', '0 0 140px'], ['Set By', '0 0 120px'], ['Was Scheduled', '0 0 150px']]}
       rows={rows}
       emptyText="No appointments need rescheduling."
       emptyIcon={RefreshCw}
@@ -187,6 +191,7 @@ function NeedsReschedulingTab({ rows, tz }) {
           <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
           <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
           <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
+          <div style={cell('0 0 140px', { fontFamily: 'var(--font-mono)' })}>{a.lead?.phone || '—'}</div>
           <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
           <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at, tz)}</div>
         </div>
@@ -198,7 +203,7 @@ function NeedsReschedulingTab({ rows, tz }) {
 function AllTab({ rows, tz }) {
   return (
     <QueueTable
-      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Set By', '0 0 120px'], ['Scheduled', '0 0 150px'], ['Status', '0 0 100px']]}
+      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Phone', '0 0 140px'], ['Set By', '0 0 120px'], ['Scheduled', '0 0 150px'], ['Status', '0 0 100px']]}
       rows={rows}
       emptyText="No appointments."
       emptyIcon={CalendarClock}
@@ -207,6 +212,7 @@ function AllTab({ rows, tz }) {
           <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
           <div style={cell('0 0 120px')}>{a.lead?.niche || '—'}</div>
           <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
+          <div style={cell('0 0 140px', { fontFamily: 'var(--font-mono)' })}>{a.lead?.phone || '—'}</div>
           <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
           <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at, tz)}</div>
           <div style={cell('0 0 100px')}>{a.status || '—'}</div>
@@ -290,7 +296,12 @@ function SetterView({ profileId, search }) {
     let list = statusFilter === 'All' ? leads : leads.filter(l => l.status === statusFilter)
     if (search.trim()) {
       const q = search.toLowerCase()
-      list = list.filter(l => l.business_name?.toLowerCase().includes(q) || l.niche?.toLowerCase().includes(q))
+      const qDigits = q.replace(/\D/g, '')
+      list = list.filter(l =>
+        l.business_name?.toLowerCase().includes(q) ||
+        l.niche?.toLowerCase().includes(q) ||
+        (qDigits && (l.phone || '').replace(/\D/g, '').includes(qDigits))
+      )
     }
     return list
   }, [leads, statusFilter, search])
@@ -388,8 +399,12 @@ export default function CloserPipeline() {
   const filteredAppts = useMemo(() => {
     if (!allAppts) return { pending: [], closed: [], lost: [], no_show: [], needs_rescheduling: [], all: [] }
     const s = search.trim().toLowerCase()
+    const sDigits = s.replace(/\D/g, '')
     const appts = s
-      ? allAppts.filter(a => (a.lead?.business_name || '').toLowerCase().includes(s))
+      ? allAppts.filter(a =>
+          (a.lead?.business_name || '').toLowerCase().includes(s) ||
+          (sDigits && (a.lead?.phone || '').replace(/\D/g, '').includes(sDigits))
+        )
       : allAppts
     return {
       pending:            appts.filter(a => a.status === 'pending'),
@@ -427,9 +442,9 @@ export default function CloserPipeline() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search business name…"
+            placeholder="Search business, niche, phone…"
             style={{
-              height: 32, padding: '0 10px 0 28px', width: 200,
+              height: 32, padding: '0 10px 0 28px', width: 220,
               background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
               borderRadius: 6, fontSize: 12, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', outline: 'none',
             }}
