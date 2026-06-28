@@ -72,6 +72,10 @@ export const DISCOVERY_SCRIPT = [
       `⊞ Log the numbers — calls missed per week + average ticket`,
       `→ Go to Pain Amplification`,
     ],
+    captures: [
+      { match: 'how many calls are you getting', field: 'calls_missed_per_week', label: 'Missed calls / week', placeholder: 'e.g. 10' },
+      { match: 'what one of those calls is worth', field: 'avg_ticket', label: 'Avg job value ($)', placeholder: 'e.g. 300' },
+    ],
     tips: `Ask and listen. Goal: clear picture of who covers calls, how many slip per week, rough ticket value, and what they've tried. Every answer feeds what our team builds for them. Don't skip the "why now" — it tells you how motivated they are.`,
   },
 
@@ -304,11 +308,29 @@ function parseSteps(lines, start, baseIndent, lead, rep) {
   return { steps, next: i }
 }
 
+// Attach capture configs to matching say steps (recursive over fork options).
+function attachCaptures(steps, captures) {
+  for (const s of steps) {
+    if (s.type === 'say' && captures) {
+      for (const c of captures) {
+        if (s.text.toLowerCase().includes(c.match.toLowerCase())) {
+          s.capture = { field: c.field, label: c.label, placeholder: c.placeholder }
+          break
+        }
+      }
+    }
+    if (s.type === 'fork') {
+      for (const opt of s.options) attachCaptures(opt.steps, captures)
+    }
+  }
+}
+
 // Derive the full navigable flow for a lead.
 export function buildScriptFlow(lead, rep, script = DISCOVERY_SCRIPT) {
   const byId = {}
   for (const section of script) {
     const { steps } = parseSteps(section.lines, 0, 0, lead, rep)
+    if (section.captures) attachCaptures(steps, section.captures)
     byId[section.id] = {
       id: section.id, kind: section.kind, short: section.short,
       title: section.title, trigger: section.trigger, goal: section.goal,

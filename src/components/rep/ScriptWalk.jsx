@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useCallback } from 'react'
 import { ChevronRight, ChevronLeft, RotateCcw, CornerDownRight, ArrowRight, CheckCircle2, CalendarCheck } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
@@ -36,6 +36,32 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
   }, [flow, startSectionId])
   const [state, setState] = useState(start)
   const [history, setHistory] = useState([])
+  const [capturedValues, setCapturedValues] = useState({})
+  const saveTimers = useRef({})
+
+  const captureField = useCallback((field, value) => {
+    setCapturedValues(prev => ({ ...prev, [field]: value }))
+    // Debounced save to lead record (600 ms)
+    clearTimeout(saveTimers.current[field])
+    saveTimers.current[field] = setTimeout(async () => {
+      if (!leadId || mode !== 'live') return
+      const parsed = value === '' ? null : Number(value)
+      try {
+        await supabase.from('leads').update({ [field]: parsed }).eq('id', leadId)
+        onDataCollect?.({ [field]: parsed })
+      } catch (err) {
+        console.error('[ScriptWalk] capture save failed:', err)
+      }
+    }, 600)
+  }, [leadId, mode, onDataCollect])
+
+  // Replace in-call placeholders with captured values at render time.
+  function renderText(text) {
+    return text
+      .replace(/\[their number\]/gi, capturedValues.calls_missed_per_week || '[their number]')
+      .replace(/\[their estimate\]/gi,
+        capturedValues.avg_ticket ? `$${capturedValues.avg_ticket}` : '[their estimate]')
+  }
 
   const section = flow.byId[state.sectionId]
   const top = state.stack[state.stack.length - 1]
@@ -163,8 +189,8 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
 
         {step && step.type === 'say' && (
           mode === 'live' && nextForkForSay
-            ? <SayWithFork step={step} fork={nextForkForSay.fork} accent={accent} onPick={opt => advanceThenPick(nextForkForSay.forkIdx, opt)} />
-            : <SayCard step={step} accent={accent} onNext={advance} />
+            ? <SayWithFork step={step} fork={nextForkForSay.fork} accent={accent} capturedValues={capturedValues} onCapture={captureField} renderText={renderText} onPick={opt => advanceThenPick(nextForkForSay.forkIdx, opt)} />
+            : <SayCard step={step} accent={accent} capturedValues={capturedValues} onCapture={captureField} renderText={renderText} onNext={advance} />
         )}
 
         {step && step.type === 'action' && (
@@ -209,15 +235,31 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
 }
 
 // One spoken line — the words to read, big and clear, with a Next advance.
-function SayCard({ step, accent, onNext }) {
+function SayCard({ step, accent, onNext, capturedValues, onCapture, renderText }) {
+  const display = renderText ? renderText(step.text) : step.text
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: 0 }}>
         {step.sub ? 'Then say' : 'Say this'}
       </p>
       <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderLeft: `3px solid ${accent}`, borderRadius: 12, padding: '18px 20px' }}>
-        <p style={{ fontSize: 17, lineHeight: 1.55, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{step.text}</p>
+        <p style={{ fontSize: 17, lineHeight: 1.55, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{display}</p>
       </div>
+      {step.capture && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', fontWeight: 600 }}>
+            {step.capture.label}
+          </label>
+          <input
+            type="number"
+            min="0"
+            value={capturedValues?.[step.capture.field] ?? ''}
+            onChange={e => onCapture?.(step.capture.field, e.target.value)}
+            placeholder={step.capture.placeholder}
+            style={{ height: 40, padding: '0 12px', background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 8, fontSize: 15, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', boxSizing: 'border-box' }}
+          />
+        </div>
+      )}
       <NextButton accent={accent} onClick={onNext} label="Next" />
     </div>
   )
@@ -417,15 +459,31 @@ function NextButton({ accent, onClick, label }) {
 
 // Combined say + fork screen — the spoken question and the response buttons on
 // one screen so reps never tap through a standalone say just to reach the fork.
-function SayWithFork({ step, fork, accent, onPick }) {
+function SayWithFork({ step, fork, accent, onPick, capturedValues, onCapture, renderText }) {
+  const display = renderText ? renderText(step.text) : step.text
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: 0 }}>
         {step.sub ? 'Then say' : 'Say this'}
       </p>
       <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderLeft: `3px solid ${accent}`, borderRadius: 12, padding: '18px 20px' }}>
-        <p style={{ fontSize: 17, lineHeight: 1.55, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{step.text}</p>
+        <p style={{ fontSize: 17, lineHeight: 1.55, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{display}</p>
       </div>
+      {step.capture && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', fontWeight: 600 }}>
+            {step.capture.label}
+          </label>
+          <input
+            type="number"
+            min="0"
+            value={capturedValues?.[step.capture.field] ?? ''}
+            onChange={e => onCapture?.(step.capture.field, e.target.value)}
+            placeholder={step.capture.placeholder}
+            style={{ height: 40, padding: '0 12px', background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 8, fontSize: 15, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', boxSizing: 'border-box' }}
+          />
+        </div>
+      )}
       <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: '4px 0 0' }}>What did they do?</p>
       {fork.q && <p style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{fork.q}</p>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 2 }}>
