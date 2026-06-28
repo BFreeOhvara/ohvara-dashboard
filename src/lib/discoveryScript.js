@@ -28,30 +28,38 @@ const DATA_COLLECT_STEP = {
 }
 
 export const FIXED_OPENER =
-  `"Hey, is this [Business Name]? Is [First Name] around?"`
+  `"Hey, is this [Business Name]?"`
 
 export const DISCOVERY_SCRIPT = [
   {
     id: 'opener', kind: 'opener', short: 'Opener',
-    title: 'Open the Call', trigger: 'Same words, every call — confirm you have the right person',
-    goal: 'Get to the owner. If gatekeeper, get a callback. If owner, bridge to the gap question.',
+    title: 'Open the Call', trigger: 'Same words, every call — confirm the business and ask who to speak with',
+    goal: 'Get to the decision maker. If transferred, re-intro with their name. Any pushback — permission frame, then bridge.',
     color: 'var(--accent)', dim: 'rgba(108,99,255,0.08)', border: 'rgba(108,99,255,0.25)',
     lines: [
-      `"Hey, is this [Business Name]? Is [First Name] around?"`,
-      `BRANCH — Who answers?`,
-      `↳ IF Yes / speaking: "Hey [First Name] — saw you guys have a listing up for a [niche] receptionist. Quick question about how you're handling calls while that search is going — you got a minute?"`,
-      `   BRANCH — Do they engage?`,
-      `   ↳ IF Sure / go ahead: "Quick question — while that search is going, what's actually happening right now when a call comes in and nobody's free to grab it?"`,
+      `"Hey, is this [Business Name]?"`,
+      `BRANCH — Do they confirm?`,
+      `↳ IF Yes / speaking: "Hey — I saw y'all had an Indeed listing up. I was wondering who I should speak to about that?"`,
+      `   BRANCH — What do they say?`,
+      `   ↳ IF That's me / you got them: "Quick question — while that search is going, what's actually happening right now when a call comes in and nobody's free to grab it?"`,
       `      → Go to Vitals Check`,
-      `   ↳ IF What's this about? / I'm busy: "I know this is out of nowhere — you can totally tell me you're slammed and I'll let you go. Quick question first though: while you're looking for that person, who's catching the phones when your team's tied up?"`,
-      `      BRANCH — Do they engage now?`,
+      `   ↳ IF Let me transfer you / that's [Name]: "Hey [Name] — yeah, I was just asking about your listing for a [receptionist / dispatcher / front desk]. Quick question about how you're handling calls while that search is going — you got a minute?"`,
+      `      BRANCH — Do they engage?`,
+      `      ↳ IF Sure / yeah: "Quick question — while that search is going, what's actually happening right now when a call comes in and nobody's free to grab it?"`,
+      `         → Go to Vitals Check`,
+      `      ↳ IF What is this? / I'm busy: "I know this is out of nowhere — you can totally tell me you're slammed and I'll let you go. Quick question first though: while you're looking for that person, who's catching the phones when your team's tied up?"`,
+      `         BRANCH — Do they engage now?`,
+      `         ↳ IF They engage: "Quick question — while that search is going, what's actually happening right now when a call comes in and nobody's free to grab it?"`,
+      `            → Go to Vitals Check`,
+      `         ↳ IF Not interested: ▸ Set status Not Interested.`,
+      `   ↳ IF What's this about?: "I know this is out of nowhere — you can totally tell me you're slammed and I'll let you go. Quick question first though: while you're looking for that person, who's catching the phones when your team's tied up?"`,
+      `      BRANCH — Do they engage?`,
       `      ↳ IF They engage: "Quick question — while that search is going, what's actually happening right now when a call comes in and nobody's free to grab it?"`,
       `         → Go to Vitals Check`,
       `      ↳ IF Not interested: ▸ Set status Not Interested.`,
-      `↳ IF They're not in / who's calling?: "No worries — do you know when they'd be back? I'll give them a call then."`,
-      `   ▸ Set status Follow-Up (log callback time).`,
+      `↳ IF Wrong number / not them: ▸ Set status Not Interested.`,
     ],
-    tips: `Warm and casual — you're someone who saw their job post, not a pitch machine. Your only goal in the opener: get to the bridge question ("what's actually happening when a call comes in?"). Everything else is just navigation.`,
+    tips: `You're someone who saw their job listing, not a pitch machine. Two paths: owner answers → ask "who should I speak to?" → if it's them, bridge. If transferred → re-intro with their name and the listing. Any pushback → permission frame, then bridge.`,
   },
 
   {
@@ -182,11 +190,9 @@ function fillTokens(text, lead, rep) {
   const biz       = lead.business_name || 'the business'
   const niche     = lead.niche || 'service'
   const city      = lead.city || 'your area'
-  const firstName = lead.first_name || lead.contact_name || '[First Name]'
-  const repName   = (rep?.full_name || '').trim() || '[Rep Name]'
+  const repName = (rep?.full_name || '').trim() || '[Rep Name]'
   return text
     .replace(/\[Business Name\]/gi, biz)
-    .replace(/\[First Name\]/gi, firstName)
     .replace(/\[niche\]/gi, niche)
     .replace(/\[city\]/gi, city)
     .replace(/\[Rep Name\]/gi, repName)
