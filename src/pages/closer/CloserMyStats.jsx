@@ -107,11 +107,11 @@ function useCloserCommissions(closerId) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('commissions')
-        .select('amount')
+        .select('amount, created_at')
         .eq('recipient_id', closerId)
         .neq('status', 'voided')
       if (error) throw error
-      return (data || []).reduce((s, c) => s + Number(c.amount || 0), 0)
+      return data || []
     },
     enabled: !!closerId,
   })
@@ -119,9 +119,9 @@ function useCloserCommissions(closerId) {
 
 export default function CloserMyStats() {
   const { profile } = useAuth()
-  const [filter, setFilter] = useState('Month')
+  const [filter, setFilter] = useState('Day')
   const { data: raw = [] } = useCloserRawData(profile?.id)
-  const { data: totalCommission } = useCloserCommissions(profile?.id)
+  const { data: commissionRows = [] } = useCloserCommissions(profile?.id)
 
   const windowStart = useMemo(() => getWindowStart(filter), [filter])
 
@@ -148,6 +148,11 @@ export default function CloserMyStats() {
 
   const allClosed = useMemo(() => raw.filter(a => a.outcome === 'closed'), [raw])
   const chartData = useMemo(() => buildChartData(allClosed, raw, filter), [allClosed, raw, filter])
+
+  const windowCommission = useMemo(
+    () => commissionRows.filter(c => new Date(c.created_at) >= windowStart).reduce((s, c) => s + Number(c.amount || 0), 0),
+    [commissionRows, windowStart]
+  )
   const hasChartData = chartData.some(d => d.rate > 0)
 
   return (
@@ -252,7 +257,7 @@ export default function CloserMyStats() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Commission earned</span>
               <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>
-                ${(totalCommission || 0).toLocaleString()}
+                ${windowCommission.toLocaleString()}
               </span>
             </div>
           </div>
