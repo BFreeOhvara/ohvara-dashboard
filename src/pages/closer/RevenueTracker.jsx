@@ -64,8 +64,9 @@ function buildChartData(all, filter, rangeStart, rangeEnd) {
       byMonth[key] = (byMonth[key] || 0) + (a.deal_value || 0)
     }
     return Object.keys(byMonth).sort().map(k => {
-      const [y, m] = k.split('-')
-      const label = new Date(+y, +m - 1, 1).toLocaleString('en-US', { month: 'short', year: '2-digit' })
+      const [yr, mn] = k.split('-')
+      const mo = new Date(+yr, +mn - 1, 1).toLocaleString('en-US', { month: 'short' })
+      const label = `${mo} '${String(+yr).slice(2)}`
       return { label, value: byMonth[k], count: 0 }
     })
   }
@@ -545,7 +546,7 @@ function DealsSection({ closerId }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('commission_payouts')
-        .select('id, amount_cents, status, created_at, appointment:appointments!appointment_id ( lead:leads ( business_name ) )')
+        .select('id, amount_cents, status, created_at, appointment:appointments!appointment_id ( deal_value, updated_at, lead:leads ( business_name ) )')
         .eq('rep_id', closerId)
         .order('created_at', { ascending: false })
       if (error) throw error
@@ -566,20 +567,36 @@ function DealsSection({ closerId }) {
         <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0', margin: 0 }}>No closed deals yet</p>
       ) : (
         <div>
+          {/* Header row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '0 16px', padding: '0 0 8px', borderBottom: '0.5px solid var(--border)', marginBottom: 4 }}>
+            {['BUSINESS', 'TOTAL DEAL', 'YOUR CUT (45%)', 'DATE'].map(h => (
+              <span key={h} style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: h === 'BUSINESS' ? 'left' : 'right' }}>{h}</span>
+            ))}
+          </div>
           {deals.map((d, i) => {
-            const biz = d.appointment?.lead?.business_name || '—'
-            const payout = d.amount_cents != null ? `$${(d.amount_cents / 100).toLocaleString()}` : '—'
+            const biz       = d.appointment?.lead?.business_name || '—'
+            const dealValue = d.appointment?.deal_value != null ? d.appointment.deal_value : null
+            const totalFmt  = dealValue != null ? `$${dealValue.toLocaleString()}` : '—'
+            const cutFmt    = dealValue != null ? `$${Math.round(dealValue * 0.45).toLocaleString()}` : '—'
+            const closeDate = d.appointment?.updated_at
+              ? new Date(d.appointment.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+              : d.created_at
+              ? new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+              : '—'
             return (
               <div
                 key={d.id}
                 style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '0 16px',
+                  alignItems: 'center',
                   padding: '10px 0',
                   borderBottom: i < deals.length - 1 ? '0.5px solid var(--border)' : 'none',
                 }}
               >
                 <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{biz}</span>
-                <span style={{ fontSize: 13, color: 'var(--success)', fontFamily: 'var(--font-mono)', fontWeight: 500 }}>{payout}</span>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', textAlign: 'right' }}>{totalFmt}</span>
+                <span style={{ fontSize: 13, color: 'var(--success)', fontFamily: 'var(--font-mono)', fontWeight: 500, textAlign: 'right' }}>{cutFmt}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'right' }}>{closeDate}</span>
               </div>
             )
           })}
