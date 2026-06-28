@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Bell, CheckCheck, Calendar, Clock } from 'lucide-react'
 import { useRepNotifications, useRepUnreadCount, useRepMarkNotificationRead, useRepMarkAllRead } from '../../hooks/useNotifications'
-import { useAppointmentBookedNotifier, useAppointmentReminder5MinNotifier } from '../../hooks/useCloserNotificationTriggers'
+import { useAppointmentBookedNotifier, useAppointmentReminder5MinNotifier, useCloserCallGradedNotifier } from '../../hooks/useCloserNotificationTriggers'
 
 const TYPE_STYLES = {
   appointment_booked:        { Icon: Calendar, color: 'var(--success)', bg: 'var(--success-dim)' },
@@ -35,6 +35,7 @@ export function CloserNotificationBell({ profileId }) {
   // Closer-specific trigger hooks — run silently in the background
   useAppointmentBookedNotifier(profileId)
   useAppointmentReminder5MinNotifier(profileId)
+  useCloserCallGradedNotifier(profileId)
 
   // Portal positioning — same technique as RepNotificationBell to escape sidebar clipping
   useEffect(() => {

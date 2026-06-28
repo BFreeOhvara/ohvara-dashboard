@@ -49,6 +49,33 @@ export function useAppointmentBookedNotifier(closerId) {
   }, [closerId, qc])
 }
 
+// ── Call recording graded notifier ───────────────────────────────────────────
+// Mirrors useCallGradedNotifier in useRepNotificationTriggers.js.
+// Listens for UPDATE on calls where rep_id = closerId and graded_at transitions
+// null → set (the grade-call edge function writes this field on completion).
+// Invalidates notification cache so the bell refreshes immediately.
+export function useCloserCallGradedNotifier(closerId) {
+  const qc = useQueryClient()
+
+  useEffect(() => {
+    if (!closerId) return
+    const channel = supabase
+      .channel(`closer-call-graded-${closerId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'calls',
+        filter: `rep_id=eq.${closerId}`,
+      }, (payload) => {
+        if (payload.new?.graded_at && !payload.old?.graded_at) {
+          qc.invalidateQueries({ queryKey: ['rep-notifications', closerId] })
+          qc.invalidateQueries({ queryKey: ['rep-notifications-unread', closerId] })
+          qc.invalidateQueries({ queryKey: ['closer-calls', closerId] })
+        }
+      })
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [closerId, qc])
+}
+
 // ── Appointment 5-minute reminder notifier ───────────────────────────────────
 // Polls every 60s for pending appointments with scheduled_at within the next
 // 6 minutes. Fires a one-time reminder per appointment per session.

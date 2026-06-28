@@ -131,7 +131,7 @@ export default function CallLeads() {
             <div style={{ flex: '1 1 0', padding: '8px 16px' }} className="section-label">Business</div>
             <div style={{ flex: '0 0 110px', padding: '8px 8px' }} className="section-label">Niche</div>
             <div style={{ flex: '0 0 120px', padding: '8px 8px' }} className="section-label">Phone</div>
-            <div style={{ flex: '0 0 140px', padding: '8px 8px' }} className="section-label">Rep Assigned</div>
+            <div style={{ flex: '0 0 140px', padding: '8px 8px' }} className="section-label">City</div>
             <div style={{ flex: '0 0 110px', padding: '8px 8px' }} className="section-label">Status</div>
             <div style={{ flex: '0 0 140px', padding: '8px 16px 8px 0', textAlign: 'right' }} className="section-label">Action</div>
           </div>
@@ -308,7 +308,6 @@ function RequestLeadsModal({ currentCount, maxRequestable, isPending, onClose, o
 }
 
 function LeadRow({ lead, onScriptOpen }) {
-  const repName = lead.assigned_rep?.full_name || '—'
   const [modalOpen, setModalOpen] = useState(false)
 
   return (
@@ -348,9 +347,9 @@ function LeadRow({ lead, onScriptOpen }) {
           {lead.phone || '—'}
         </div>
 
-        {/* Rep */}
+        {/* City */}
         <div style={{ flex: '0 0 140px', padding: '10px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {repName}
+          {lead.city || '—'}
         </div>
 
         {/* Status */}

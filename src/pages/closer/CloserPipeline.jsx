@@ -276,7 +276,7 @@ function useRepLeads(profileId) {
 
 function SetterView({ profileId, search }) {
   const { data: leads = [], isLoading } = useRepLeads(profileId)
-  const [statusFilter, setStatusFilter] = useState('All')
+  const [statusFilter, setStatusFilter] = useState('New')
   const [selectedLead, setSelectedLead] = useState(null)
 
   const counts = useMemo(() => {
