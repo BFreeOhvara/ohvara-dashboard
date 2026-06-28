@@ -239,13 +239,13 @@ export default function CloserMyStats() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Total revenue closed</span>
               <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>
-                ${(raw.filter(a => a.outcome === 'closed').reduce((s, a) => s + (a.deal_value || 0), 0)).toLocaleString()}
+                ${(windowData.filter(a => a.outcome === 'closed').reduce((s, a) => s + (a.deal_value || 0), 0)).toLocaleString()}
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Deals closed</span>
               <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
-                {raw.filter(a => a.outcome === 'closed').length}
+                {windowData.filter(a => a.outcome === 'closed').length}
               </span>
             </div>
             <div style={{ height: '0.5px', background: 'var(--border)' }} />
