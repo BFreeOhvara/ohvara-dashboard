@@ -17,7 +17,7 @@ const STATUS_FILTERS = ['New', 'Appointment Booked', 'Follow-Up', 'No Answer', '
 
 // Tab underline/label color per status — mirrors Badge.jsx STATUS_STYLES colors.
 const TAB_COLORS = {
-  'New':                'var(--text-secondary)',
+  'New':                'var(--info)',
   'Appointment Booked': 'var(--success)',
   'Follow-Up':          'var(--warning)',
   'No Answer':          '#94A3B8',

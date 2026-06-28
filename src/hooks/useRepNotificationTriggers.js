@@ -173,6 +173,37 @@ export function useCallGradedNotifier(repId) {
   }, [repId, qc])
 }
 
+// ── Leads unlocked notifier ──────────────────────────────────────────────────
+// Fires once when the first lead is assigned to a rep whose training is complete.
+// Only fires if training_completed = true so subsequent daily batches don't re-fire.
+export function useLeadsUnlockedNotifier(repId, trainingCompleted) {
+  const qc = useQueryClient()
+  const firedRef = useRef(false)
+
+  useEffect(() => {
+    if (!repId || !trainingCompleted) return
+    const channel = supabase
+      .channel(`leads-unlocked-${repId}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'leads',
+        filter: `assigned_rep_id=eq.${repId}`,
+      }, async () => {
+        if (firedRef.current) return
+        firedRef.current = true
+        await supabase.from('notifications').insert({
+          profile_id: repId,
+          type: 'leads_unlocked',
+          message: 'Your leads are ready — start calling.',
+          data: {},
+        })
+        qc.invalidateQueries({ queryKey: ['rep-notifications', repId] })
+        qc.invalidateQueries({ queryKey: ['rep-notifications-unread', repId] })
+      })
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [repId, trainingCompleted, qc])
+}
+
 // ── Follow-up notifier ───────────────────────────────────────────────────────
 // Fires once per lead when its follow_up_at is within 5 minutes.
 // Dedup key is `${leadId}:5` (session + DB both checked).

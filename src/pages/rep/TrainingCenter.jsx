@@ -3,6 +3,7 @@ import { Play, BookOpen, Mic, FileText, Lock, Shuffle, ChevronLeft, ChevronRight
 import { FLASHCARDS, CATEGORY_LABELS, CATEGORY_COLORS } from '../../data/flashcards'
 import { supabase } from '../../lib/supabase'
 import { useCapability } from '../../contexts/SecretsContext'
+import { useAuth } from '../../hooks/useAuth'
 import {
   useTrainingProgress, useSaveTrainingProgress, trainingChecks, isTrainingComplete,
   TOTAL_VIDEOS, QUIZ_QUESTIONS, QUIZ_PASS_PCT, ROLEPLAY_PASS_SCORE, ROLEPLAY_PASS_GRADE, gradeFromScore,
@@ -266,7 +267,7 @@ function VideoLibrary({ progress, saveProgress }) {
 
 // ── FlashcardDeck ─────────────────────────────────────────────────────────────
 
-function FlashcardDeck() {
+function FlashcardDeck({ onAllMastered }) {
   const [filter, setFilter]     = useState('all')
   const [deck, setDeck]         = useState(() => FLASHCARDS)
   const [index, setIndex]       = useState(0)
@@ -275,6 +276,7 @@ function FlashcardDeck() {
     try { return new Set(JSON.parse(localStorage.getItem(LS_MASTERED) || '[]')) } catch { return new Set() }
   })
   const [animDir, setAnimDir]   = useState(null) // 'left' | 'right'
+  const [allMasteredMsg, setAllMasteredMsg] = useState(false)
 
   const filteredDeck = deck.filter(c => filter === 'all' || c.category === filter)
   const card = filteredDeck[index] || null
@@ -315,6 +317,10 @@ function FlashcardDeck() {
       const next = new Set(prev)
       if (next.has(card.id)) { next.delete(card.id) } else { next.add(card.id) }
       saveMastered(next)
+      if (next.size >= FLASHCARDS.length) {
+        setAllMasteredMsg(true)
+        onAllMastered?.()
+      }
       return next
     })
   }
@@ -386,6 +392,19 @@ function FlashcardDeck() {
           </button>
         </div>
       </div>
+
+      {/* All-mastered success message */}
+      {allMasteredMsg && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '10px 14px', marginBottom: 16,
+          background: 'rgba(34,197,94,0.08)', border: '0.5px solid rgba(34,197,94,0.25)',
+          borderRadius: 10, fontSize: 13, color: 'var(--success)',
+        }}>
+          <Check size={14} />
+          Training complete — your leads will come in on the next refresh.
+        </div>
+      )}
 
       {/* Progress bar */}
       <div style={{ height: 3, background: 'var(--bg-elevated)', borderRadius: 2, marginBottom: 20, overflow: 'hidden' }}>
@@ -1340,9 +1359,15 @@ const TABS = [
 
 export default function TrainingCenter() {
   const [tab, setTab] = useState('script')
+  const { profile } = useAuth()
   const { data: progress } = useTrainingProgress()
   const saveMutation = useSaveTrainingProgress()
   const saveProgress = (patch) => saveMutation.mutate(patch)
+
+  async function handleAllFlashcardsMastered() {
+    if (!profile?.id || profile?.training_completed) return
+    await supabase.from('profiles').update({ training_completed: true }).eq('id', profile.id)
+  }
 
   const checks   = trainingChecks(progress)
   const complete = isTrainingComplete(progress)
@@ -1440,7 +1465,7 @@ export default function TrainingCenter() {
 
       {/* Tab content */}
       {tab === 'videos'     && <VideoLibrary progress={progress} saveProgress={saveProgress} />}
-      {tab === 'flashcards' && <FlashcardDeck />}
+      {tab === 'flashcards' && <FlashcardDeck onAllMastered={handleAllFlashcardsMastered} />}
       {tab === 'quiz'       && <QuizTab progress={progress} saveProgress={saveProgress} />}
       {tab === 'script'     && <DiscoveryScript />}
       {tab === 'roleplay'   && <AIRoleplay progress={progress} saveProgress={saveProgress} />}
