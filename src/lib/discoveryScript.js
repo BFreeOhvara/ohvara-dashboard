@@ -1,34 +1,25 @@
-// ── The ONE universal call script — a DECISION TREE ──────────────────────────
-// Single source of truth for the rep call flow. Rendered as the live "Call Now"
-// cheat sheet (rep CallModal), the closer reference (AIScriptPanel), and the
-// learning reference (Training Center). Every rep opens with the SAME fixed
-// opener, then the prospect's response routes them down one branch (A–E). Every
-// path ends the same way — booking Nate (the CLOSE block).
+// ── Setter script v2 — branching discovery flow ───────────────────────────────
+// Built from S1–S5 transcript research. Every spoken line is exactly what the
+// setter reads. No meta text, no instructions. No closer name — "our team" / "we."
+// Dynamic tokens: [Business Name], [First Name], [niche] filled from the lead.
+// In-call tokens: [their number], [their estimate], [day], [time], [Tuesday morning],
+// [Wednesday afternoon] stay literal as rep guidance during the call.
 //
-// Personalization = plugging THIS lead's business/niche/city + the rep's name
-// into the tree's tokens; the words never change per lead, only the blanks.
+// LINE MARKERS (renderers style these):
+//   plain string     a spoken line                      → bullet
+//   BRANCH — ...     a decision point (fork)             → fork header
+//   ↳ IF ...: ...    a fork option (indented = child)    → indented option
+//   ▸ ...            a rep action (set status, log)      → action chip
+//   → ...            route to another section            → route step
+//   ⊞ ...            data-collect step (inline)          → number inputs
 //
-// LINE MARKERS (the renderers style these):
-//   "..."          a spoken line                       → bullet
-//   BRANCH — ...    a decision point (yes/no fork)      → fork header
-//   ↳ ...           a fork option / sub-branch          → indented, in color
-//   ▸ ...           an action the rep takes (set status)→ action chip
-//   → ...           a route to another block (e.g. CLOSE)→ routing line
-//   tips            coach note                          → 💡 prose line
-//
-// `kind` places the section in the Call Now modal: 'opener' pins to the top,
-// 'branch' scrolls in the middle, 'close' pins to the bottom (always visible).
+// `kind`: 'opener' pins to top, 'branch' scrolls middle, 'close' pins bottom.
 
-// The two pricing inputs the rep logs mid-call (Prompt 53, Change 3). A
-// `data_collect` step renders these as number inputs in the live walk (PATCHed
-// onto the lead) and as a non-interactive preview on the training canvas. Keys
-// match the leads columns added in migration 050.
 export const DATA_COLLECT_FIELDS = [
   { key: 'calls_missed_per_week', label: 'Missed calls / week',   placeholder: '8' },
   { key: 'avg_ticket',            label: 'Average job value ($)', placeholder: '350' },
 ]
 
-// The single data-collect step the ⊞ marker expands to (Prompt 53, Change 3).
 const DATA_COLLECT_STEP = {
   type: 'data_collect',
   label: 'Qualifying Numbers',
@@ -36,132 +27,162 @@ const DATA_COLLECT_STEP = {
   fields: DATA_COLLECT_FIELDS,
 }
 
-// The fixed opener — word for word, every call. Only [Business Name] is filled.
 export const FIXED_OPENER =
-  `"Hey, is this [Business Name]? I saw y'all had a listing for a receptionist on Indeed — I was wondering who I should speak to about that?"`
+  `"Hey, is this [Business Name]? Is [First Name] around?"`
 
 export const DISCOVERY_SCRIPT = [
   {
     id: 'opener', kind: 'opener', short: 'Opener',
-    title: 'Fixed Opener', trigger: 'Same words, every single call',
-    goal: 'Sound like a person who saw their post — not a telemarketer. Ask for the right person, then listen.',
+    title: 'Open the Call', trigger: 'Same words, every call — confirm you have the right person',
+    goal: 'Get to the owner. If gatekeeper, get a callback. If owner, bridge to the gap question.',
     color: 'var(--accent)', dim: 'rgba(108,99,255,0.08)', border: 'rgba(108,99,255,0.25)',
     lines: [
-      FIXED_OPENER,
+      `"Hey, is this [Business Name]? Is [First Name] around?"`,
+      `BRANCH — Who answers?`,
+      `↳ IF Yes / speaking: "Hey [First Name] — saw you guys have a listing up for a [niche] receptionist. Quick question about how you're handling calls while that search is going — you got a minute?"`,
+      `   BRANCH — Do they engage?`,
+      `   ↳ IF Sure / go ahead: "Quick question — while that search is going, what's actually happening right now when a call comes in and nobody's free to grab it?"`,
+      `      → Go to Vitals Check`,
+      `   ↳ IF What's this about? / I'm busy: "I know this is out of nowhere — you can totally tell me you're slammed and I'll let you go. Quick question first though: while you're looking for that person, who's catching the phones when your team's tied up?"`,
+      `      BRANCH — Do they engage now?`,
+      `      ↳ IF They engage: "Quick question — while that search is going, what's actually happening right now when a call comes in and nobody's free to grab it?"`,
+      `         → Go to Vitals Check`,
+      `      ↳ IF Not interested: ▸ Set status Not Interested.`,
+      `↳ IF They're not in / who's calling?: "No worries — do you know when they'd be back? I'll give them a call then."`,
+      `   ▸ Set status Follow-Up (log callback time).`,
     ],
-    tips: `Say it word for word, friendly and casual. You're not pitching — you're asking who to talk to. Then listen to WHO answers and HOW, and pick your branch below.`,
+    tips: `Warm and casual — you're someone who saw their job post, not a pitch machine. Your only goal in the opener: get to the bridge question ("what's actually happening when a call comes in?"). Everything else is just navigation.`,
   },
 
   {
-    id: 'branchA', kind: 'branch', short: 'A',
-    title: 'Owner / Decision-Maker', trigger: `They're the owner, or "that's me / speaking"`,
-    goal: 'You have the decision-maker. Diagnose the pain, then route to the close.',
-    color: 'var(--success)', dim: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.25)',
+    id: 'vitals', kind: 'branch', short: 'Vitals',
+    title: 'Vitals Check', trigger: `They answered the bridge question — now map their situation`,
+    goal: 'Understand the setup: who covers calls, volume, leakage, ticket value, what they\'ve tried, why now.',
+    color: 'var(--accent)', dim: 'rgba(108,99,255,0.08)', border: 'rgba(108,99,255,0.25)',
     lines: [
-      `"Awesome — so the reason I'm reaching out: I work with a lot of [niche] businesses, and the ones hiring usually have calls slipping through the cracks. Mind if I ask you a couple quick questions?"`,
-      `"Who's handling your calls right now when you and the crew are out on jobs?"`,
-      `BRANCH — Do they have someone on the phones, or is it just them?`,
-      `↳ IF THEY HAVE SOMEONE: "Got it — and when they're slammed, off, or it's after hours, where do those calls go?"`,
-      `↳ IF IT'S JUST THEM: "So when you're heads-down on a job, that call's basically going to voicemail — fair to say?"`,
-      `"Roughly how many calls a week would you say you're just not getting to?"`,
-      `"And what's a typical job worth to you, start to finish — ballpark average ticket?"`,
-      `"Have you tried anything to fix it — answering service, hiring someone before? How'd that go?"`,
-      `"What's costing you the most right now — missed calls, slow response, no-shows, or leads who called but never booked?"`,
-      `"What do you have in place today to handle that?"`,
-      `"Anything else slipping through the cracks?"`,
-      `"Even 2–3 missed jobs a week at [their ticket] each is real money walking to whoever picks up first. Does that surprise you?"`,
-      `⊞ Log the numbers — calls missed per week + average ticket. Both feed the custom stack Nate builds.`,
-      `→ Go to CLOSE (book Nate).`,
+      `"Most [niche] owners I talk to, their crew's out on jobs and the calls are the thing that slips through the cracks the most — even after they've tried to fix it. Is that kind of the situation, or is it something different for you?"`,
+      `"Walk me through what happens right now when a call comes in — who picks it up?"`,
+      `"On a normal day, how many calls are you getting in?"`,
+      `"And when nobody gets to it, where does it go — voicemail, a cell? Does it ever just not get picked up at all?"`,
+      `"How often does that happen — in a given week?"`,
+      `"Do you have a rough sense of what one of those calls is worth if it turns into a job?"`,
+      `"So if a handful of those are slipping through every week — what's that running you a month?"`,
+      `"What's kept you from solving it before now — just the timing, or is it harder than it looks to find the right person?"`,
+      `"What made now the time to post for this — was there a specific moment, or has it just been building?"`,
+      `⊞ Log the numbers — calls missed per week + average ticket`,
+      `→ Go to Pain Amplification`,
     ],
-    tips: `Write every answer in Call Notes AND the discovery fields below — who answers now, calls/week, average ticket, biggest pain, what they've tried, what else is slipping. That's exactly what Nate's custom stack gets built from. The average-ticket number is gold.`,
+    tips: `Ask and listen. Goal: clear picture of who covers calls, how many slip per week, rough ticket value, and what they've tried. Every answer feeds what our team builds for them. Don't skip the "why now" — it tells you how motivated they are.`,
   },
 
   {
-    id: 'branchB', kind: 'branch', short: 'B',
-    title: 'Gatekeeper', trigger: `Receptionist / office manager / employee answers`,
-    goal: 'Reach the owner or get a clean callback. Never pitch the gatekeeper.',
-    color: 'var(--info)', dim: 'rgba(56,189,248,0.08)', border: 'rgba(56,189,248,0.25)',
-    lines: [
-      // ⚡ CC DRAFT (2026-06-22) — spoken opening line for gatekeeper. Pending Brayden + Nate review.
-      `"Oh hey — is the owner or manager around? Just had a real quick question about how y'all handle phones right now."`,
-      `▸ Keep it short and warm — your only goal is the owner's name and a callback time. Don't pitch.`,
-      `BRANCH — Are they transferring you, or is the owner not available?`,
-      `↳ IF TRANSFERRING: "Perfect, thank you so much." — stay on the line.`,
-      `   ↳ When the owner picks up → run BRANCH A from the top.`,
-      `↳ IF NOT AVAILABLE: "No worries at all — who's the best person to ask for? And is mornings or afternoons better to catch them?"`,
-      `   ↳ "Great — I'll give them a call back then. Really appreciate your help!"`,
-      `▸ Log the owner's name + best callback time in Call Notes; set status Follow-Up (or No Answer).`,
-    ],
-    tips: `Gatekeepers are allies, not obstacles. Warm, brief, get the name + best time, get off the phone. Pitching them just gets you screened out.`,
-  },
-
-  {
-    id: 'branchC', kind: 'branch', short: 'C',
-    title: '"Position\'s Already Filled"', trigger: `They say they already hired someone`,
-    goal: 'Congratulate, then pivot to the real problem. Filling a seat ≠ fixing the leak.',
+    id: 'pain', kind: 'branch', short: 'Pain',
+    title: 'Pain Amplification', trigger: `You have their vitals — now help them see the gap clearly`,
+    goal: 'Surface the real cost. Get them to say a number out loud, then project it forward.',
     color: 'var(--warning)', dim: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.25)',
     lines: [
-      `"Oh perfect — congrats! Sounds like business is picking up."`,
-      `"Actually, the reason I reach out to [niche] businesses that are hiring is they're usually dealing with call volume or follow-up slipping through the cracks. Is that something you're running into at all?"`,
-      `BRANCH — Did the pivot land — are they feeling a problem?`,
-      `↳ IF YES: → run BRANCH A from the top.`,
-      `↳ IF NO: "Totally fair — appreciate the minute. Have a good one."`,
-      `   ▸ Set status Not Interested.`,
+      `"So on one side — what's been slipping. On the other — every call caught, every job booked. What does that gap actually look like?"`,
+      `BRANCH — How engaged are they?`,
+      `↳ IF They gave real numbers / engaged: "So just to make sure I've got this right — when it goes to voicemail, that's not just a missed call. That's probably a job that goes to whoever picks up next. Is that kind of what you're seeing?"`,
+      `   BRANCH — Do they confirm?`,
+      `   ↳ IF Yeah, exactly / sometimes: "So on one side — [their number] calls a week going unanswered, [their estimate] per job. On the other side, every one of those gets picked up, every estimate gets booked. What does that gap look like over a month?"`,
+      `      "If nothing changed — same volume, same leakage — what does that add up to by this time next year?"`,
+      `      "And if that gap closed — every call answered, no jobs slipping — what would that actually change for [Business Name] day to day?"`,
+      `      → Go to Handoff`,
+      `↳ IF Vague / not sure / minimizing: "Most [niche] owners I talk to, even when they feel on top of it, are losing three to five jobs a week they never even know about. Does that resonate at all, or do you feel like you've got it covered?"`,
+      `   BRANCH — Does it land?`,
+      `   ↳ IF Yeah, probably / fair: "So on one side — [their number] calls a week going unanswered, [their estimate] per job. On the other side, every one of those gets picked up, every estimate gets booked. What does that gap look like over a month?"`,
+      `      "If nothing changed — same volume, same leakage — what does that add up to by this time next year?"`,
+      `      "And if that gap closed — every call answered, no jobs slipping — what would that actually change for [Business Name] day to day?"`,
+      `      → Go to Handoff`,
+      `   ↳ IF We're fine / not a big deal: → Go to Handoff`,
     ],
-    tips: `A new hire still misses after-hours, lunch, and overflow calls — the pivot reopens the door without being pushy. If they're genuinely fine, exit clean; don't force it.`,
+    tips: `You're not closing — you're helping them see the math. Use their own numbers back at them. If they minimize, name the pattern ("three to five jobs a week they never even know about") and let them confirm or deny. Then move to handoff regardless.`,
   },
 
   {
-    id: 'branchD', kind: 'branch', short: 'D',
-    title: 'Hostile / Hard No', trigger: `"Not interested," hangs up, or aggressive`,
-    goal: 'Exit politely and protect the brand. Never push.',
-    color: '#EF4444', dim: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)',
+    id: 'handoff', kind: 'branch', short: 'Handoff',
+    title: 'Handoff & Book', trigger: `Pain is established — position our team and lock a time`,
+    goal: 'Hand off everything they told you. Get a specific day and time. Handle pushback calmly.',
+    color: 'var(--success)', dim: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.25)',
     lines: [
-      `"No worries at all — sorry to bother you. Have a good one."`,
-      `▸ Set status Not Interested. Do not push, do not rebut.`,
+      `"Okay — here's what I want to do. Everything you just told me — the volume, what's slipping, your typical job value — I'm going to pass all of that to our team, who works specifically with [niche] businesses on this exact problem."`,
+      `"They're going to review your situation before the call and put together what would actually make sense for [Business Name] — not some generic package. It's 15 minutes."`,
+      `"Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
+      `BRANCH — How do they respond?`,
+      `↳ IF They pick a time: → Go to Close (lock the time and confirm)`,
+      `↳ IF Neither / let me think / just send info: → Go to Objections`,
+      `↳ IF No time this week: → Go to Objections`,
+      `↳ IF Who is this / what company?: → Go to Objections`,
+      `↳ IF How much does it cost?: → Go to Objections`,
     ],
-    tips: `Never argue. A clean exit protects the brand and saves your energy for the next dial. One hard no is not worth ten minutes.`,
+    tips: `Two windows — never open-ended. If they pick one, move straight to Close. If they push back, go to Objections — it's one extra step, not a rejection. Stay calm.`,
   },
 
   {
-    id: 'branchE', kind: 'branch', short: 'E',
-    title: 'Voicemail', trigger: `No pickup — goes to voicemail`,
-    goal: 'Leave the fixed message, log it, move on.',
-    color: '#94A3B8', dim: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.25)',
+    id: 'objections', kind: 'branch', short: 'Objections',
+    title: 'Booking Objections', trigger: `They pushed back on the time — handle and loop back to book`,
+    goal: 'Handle each objection, then re-ask for the time. Every track ends with "Tuesday or Wednesday?"',
+    color: 'var(--danger)', dim: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)',
     lines: [
-      `"Hey, this is [Rep Name] calling — I came across your Indeed listing for a receptionist and wanted to reach out. Give me a call back when you get a chance at [your number]. Thanks!"`,
-      `▸ Set status No Answer (voicemail) in the dropdown.`,
+      `BRANCH — What's the objection?`,
+      `↳ IF Just send me info / want to see something first: "Yeah, totally — I can do that. The thing is, anything I send is going to be pretty generic. The stuff that actually matters is specific to what you just told me about your setup — that's exactly what our team would be working from. Easier to just grab 15 minutes and have them walk you through it directly."`,
+      `   BRANCH — Do they agree?`,
+      `   ↳ IF Okay, fair: "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
+      `      → Go to Close`,
+      `   ↳ IF I still want to see something: "Can I ask — are you actually going to read it? Because I know how packed inboxes get, and I don't want to put something together that just disappears in there. That's why I'd rather get you 15 minutes with someone who can actually answer your questions."`,
+      `      BRANCH — Still pushing for it?`,
+      `      ↳ IF Okay fine: "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
+      `         → Go to Close`,
+      `      ↳ IF Yeah, still want it: "Okay — I'll send it over today. And I'm going to drop a 15-minute placeholder on your calendar for [day]. If you read it and it's not worth your time, just decline — no hard feelings. If it's interesting, we're already set."`,
+      `         ▸ Set status Follow-Up (send email + placeholder).`,
+      `↳ IF No time this week / I'm slammed: "No problem — what works better, [Tuesday of next week] or [Wednesday of next week]?"`,
+      `   BRANCH — Do they pick a day?`,
+      `   ↳ IF Picks a day: "Does morning or afternoon work better on [day]?"`,
+      `      → Go to Close`,
+      `   ↳ IF Those don't work either: "Got it — what's a better week for you?"`,
+      `      ▸ Set status Follow-Up (log the week they gave).`,
+      `↳ IF Who is this / what company?: "We work with [niche] businesses specifically on the call-coverage issue we just walked through. Our team builds out what that looks like for your exact setup — that's the point of the call."`,
+      `   "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
+      `   → Go to Close`,
+      `↳ IF How much does it cost?: "Honestly depends on your call volume and setup — which is exactly what our team figures out on the call. That's why I didn't want to guess at a number before they've seen your actual situation."`,
+      `   BRANCH — Do they push for a ballpark?`,
+      `   ↳ IF Okay: "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
+      `      → Go to Close`,
+      `   ↳ IF I just need a ballpark: "The range is wide depending on what you need, which is exactly why the call is worth 15 minutes — they'll give you a real number based on what you just told me."`,
+      `      "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
+      `      → Go to Close`,
     ],
-    tips: `Keep it short and warm — you're a person who saw their post, not a robocall. Say your callback number slowly, twice if you can.`,
+    tips: `Every track ends the same: "Tuesday or Wednesday?" Handle the objection, then re-ask. Stay calm — objections are navigation, not rejection. Never pitch on price yourself; always redirect to the call.`,
   },
 
   {
     id: 'close', kind: 'close', short: 'Close',
-    title: 'Close — Hand Off to Nate & Book', trigger: `Used at the end of Branch A and Branch C-yes`,
-    goal: 'Position Nate as the specialist, deflect price, lock a specific time.',
+    title: 'Lock the Time', trigger: `They said yes to a day — confirm time, get number, done`,
+    goal: 'Pin the exact time. Get their best number. Give them confidence. Stop talking.',
     color: 'var(--accent)', dim: 'rgba(108,99,255,0.10)', border: 'rgba(108,99,255,0.30)',
     lines: [
-      `BRANCH — Did they ask about price?`,
-      `↳ IF YES: "That's actually something our specialist Nate goes over — he'll look at everything you told me and put together exactly what makes sense for your business. That's why I want to get you two connected."`,
-      `↳ IF NO:`,
-      `"Nate usually has openings in the mornings or afternoons — what works better for you?"`,
-      `▸ Once they pick a window, lock a specific time and confirm it back:`,
-      `"Perfect — [day] at [time]. Nate will give you a call then. What's the best number to reach you?"`,
+      `"What time on [day] works — morning or afternoon?"`,
+      `"[Day] at [time] — perfect. I'll send you a quick text right now to confirm. What's the best number for that?"`,
+      `"Got it. Our team will have everything you told me today in front of them before the call — you won't have to re-explain anything."`,
+      `▸ Set status Appointment Booked. Log the time and number.`,
     ],
-    tips: `Never price it yourself — that's Nate's job. Offer two windows, pin ONE exact time, confirm it back to them, then stop selling.`,
+    tips: `Confirm the day and time back clearly. Get their number. Then stop talking — they're booked. Don't add more selling after the yes.`,
   },
 ]
 
-// Substitute a lead's (and the rep's) real details into the tree's tokens.
-// In-call choice placeholders ([their ticket], [day], [time], [your number])
-// stay literal as rep guidance.
+// Substitute a lead's real details into the tree's tokens.
+// In-call placeholders ([their number], [their estimate], [day], [time], etc.)
+// stay literal as rep guidance during the call.
 function fillTokens(text, lead, rep) {
-  const biz   = lead.business_name || 'the business'
-  const niche = lead.niche || 'service'
-  const city  = lead.city || 'your area'
-  const repName = (rep?.full_name || '').trim() || '[Rep Name]'
+  const biz       = lead.business_name || 'the business'
+  const niche     = lead.niche || 'service'
+  const city      = lead.city || 'your area'
+  const firstName = lead.first_name || lead.contact_name || '[First Name]'
+  const repName   = (rep?.full_name || '').trim() || '[Rep Name]'
   return text
     .replace(/\[Business Name\]/gi, biz)
+    .replace(/\[First Name\]/gi, firstName)
     .replace(/\[niche\]/gi, niche)
     .replace(/\[city\]/gi, city)
     .replace(/\[Rep Name\]/gi, repName)
@@ -182,8 +203,7 @@ function sectionToText(section, lead, rep) {
 }
 
 // Build the filled tree for a lead: a map of { sectionId: filledText } for
-// every block (opener, branchA–E, close). Fully deterministic — no AI call.
-// `rep` is optional (used to fill [Rep Name] in the voicemail).
+// every block. Fully deterministic — no AI call.
 export function buildCallScript(lead, rep) {
   const out = {}
   for (const section of DISCOVERY_SCRIPT) out[section.id] = sectionToText(section, lead, rep)
@@ -193,16 +213,7 @@ export function buildCallScript(lead, rep) {
 // ── Click-through flow derivation (CONTENT-FREE) ─────────────────────────────
 // Parses each section's EXISTING marker lines into a navigable step tree so the
 // same script can drive a one-line-at-a-time guided walk (live Call modal +
-// Training practice) WITHOUT changing a single spoken word. This is a pure view
-// over DISCOVERY_SCRIPT — no forked/duplicated script data, no routing content
-// added to the source. If the wording changes later (pending Brayden + Nate),
-// the walk re-derives automatically as long as the line markers are preserved.
-//
-// Step shapes:
-//   { type:'say',    text }                       a line to read aloud
-//   { type:'action', text }                       a ▸ thing the rep does
-//   { type:'route',  text, target }               jump to another block id
-//   { type:'fork',   q, options:[{label, steps}] } tap the prospect's response
+// Training practice) WITHOUT changing a single spoken word.
 
 // Leading-whitespace depth of a source line (tabs counted as 3).
 function leadingSpaces(s) {
@@ -210,22 +221,19 @@ function leadingSpaces(s) {
   return m ? m[1].replace(/\t/g, '   ').length : 0
 }
 
-// A line that hands off to another block: "→ …", or any "run BRANCH x" /
-// "→ CLOSE" reference embedded mid-line (the cross-branch routes).
+// A line that hands off to another block.
 function isRouteLine(t) {
   return /^→/.test(t) || /run\s+BRANCH\s*[A-E]/i.test(t) || /→\s*CLOSE/i.test(t) || /to\s+CLOSE/i.test(t)
 }
 
-// Resolve a route line to a target section id. A branch reference wins (e.g.
-// "run BRANCH A" → branchA, which itself ends by routing to the close);
-// otherwise it points at the close.
+// Resolve a route line to a target section id.
 function routeTarget(t) {
   const b = t.match(/BRANCH\s*([A-E])/i)
   if (b) return 'branch' + b[1].toUpperCase()
   return 'close'
 }
 
-// "THEY HAVE SOMEONE" → "They have someone"; used for the tap-button labels.
+// "THEY HAVE SOMEONE" → "They have someone"; used for tap-button labels.
 function optionLabel(s) {
   const x = s.trim()
   return x.charAt(0).toUpperCase() + x.slice(1).toLowerCase()
@@ -236,11 +244,8 @@ function shorten(s) {
   return x.length > 42 ? x.slice(0, 40).trimEnd() + '…' : x
 }
 
-// Turn one trimmed marker line into a step. Marker is detected, then stripped
-// from the display text so the UI styles it (a ▸ chip, a route button, …).
+// Turn one trimmed marker line into a step.
 function makeStep(t, lead, rep) {
-  // ⊞ — an inline data-collection step (Prompt 53). Fixed config; the marker
-  // text is just an authoring hint, the step shape comes from DATA_COLLECT_STEP.
   if (/^⊞/.test(t)) return { ...DATA_COLLECT_STEP }
   const route = isRouteLine(t)
   const action = /^▸/.test(t)
@@ -252,9 +257,7 @@ function makeStep(t, lead, rep) {
   return { type: 'say', text, ...(sub ? { sub: true } : {}) }
 }
 
-// Recursive descent over lines[start..]: collect steps at indent ≥ baseIndent,
-// returning { steps, next }. A "BRANCH —" opens a fork; the sibling ↳ lines are
-// its tap options, and each option's deeper-indented lines are its child steps.
+// Recursive descent over lines[start..]: collect steps at indent ≥ baseIndent.
 function parseSteps(lines, start, baseIndent, lead, rep) {
   const steps = []
   let i = start
@@ -297,11 +300,7 @@ function parseSteps(lines, start, baseIndent, lead, rep) {
   return { steps, next: i }
 }
 
-// Derive the full navigable flow for a lead. Returns the opener, the ordered
-// branches, the close, and a byId map — every block carries its parsed `steps`
-// plus the display metadata (color/label/trigger/goal/tips) from the source.
-// Each branch also gets derived flags for the flowchart: `booksNate` (it has a
-// path that routes onward to the close) and `outcome` (the status it ends on).
+// Derive the full navigable flow for a lead.
 export function buildScriptFlow(lead, rep, script = DISCOVERY_SCRIPT) {
   const byId = {}
   for (const section of script) {
