@@ -312,7 +312,6 @@ function SetterView({ profileId, search }) {
       <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
         <KPICard label="Total" value={counts.All} sub="leads assigned" icon={Phone} />
         <KPICard label="Booked" value={counts['Appointment Booked'] || 0} sub="appointments set" icon={Calendar} />
-        <KPICard label="Active" value={(counts['New'] || 0) + (counts['No Answer'] || 0) + (counts['Follow-Up'] || 0)} sub="still in play" icon={CalendarClock} />
       </div>
 
       {/* Status filter tabs — order: statuses first, All last; colored per status */}
@@ -480,14 +479,10 @@ export default function CloserPipeline() {
       {/* Closer view */}
       {view === 'closer' && (
         <div>
-          {/* KPI row — first, matching Appointment Setting tab order */}
+          {/* KPI row — PENDING + SCHEDULED always visible; tab-specific cards appended */}
           <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-            {closerTab === 'pending' && (
-              <>
-                <KPICard label="Pending" value={closerKPIs.pendingCount} sub="awaiting close call" icon={CalendarClock} />
-                <KPICard label="Scheduled" value={closerKPIs.scheduledCount} sub="time confirmed" icon={CheckCircle} />
-              </>
-            )}
+            <KPICard label="Pending" value={closerKPIs.pendingCount} sub="awaiting close call" icon={CalendarClock} />
+            <KPICard label="Scheduled" value={closerKPIs.scheduledCount} sub="time confirmed" icon={CheckCircle} />
             {closerTab === 'closed' && (
               <>
                 <KPICard label="Closed Deals" value={closerKPIs.closedCount} sub="all time" icon={CheckCircle} />

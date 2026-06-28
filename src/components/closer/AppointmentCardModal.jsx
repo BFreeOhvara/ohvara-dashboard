@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Phone, Mail, StickyNote } from 'lucide-react'
 import { Badge } from '../ui/Badge'
-import { Input } from '../ui/Input'
 import { useUpdateAppointment } from '../../hooks/useAppointments'
 import { supabase } from '../../lib/supabase'
 import { CLOSER_SCRIPT } from '../../lib/closerScript'
@@ -72,9 +71,9 @@ export function CallModal({ appt, onClose }) {
   const [noWebsite, setNoWebsite] = useState(!lead.has_website)
   const [noChatbot, setNoChatbot] = useState(false)
 
-  // Close section
-  const [callsMissed, setCallsMissed] = useState(lead.calls_missed_per_week != null ? String(lead.calls_missed_per_week) : '')
-  const [avgTicket,   setAvgTicket]   = useState(lead.avg_ticket != null ? String(lead.avg_ticket) : '')
+  // Close section — read-only from setter captures
+  const callsMissed = lead.calls_missed_per_week != null ? String(lead.calls_missed_per_week) : ''
+  const avgTicket   = lead.avg_ticket != null ? String(lead.avg_ticket) : ''
   const [linkCopied,  setLinkCopied]  = useState(false)
   const [linkLoading, setLinkLoading] = useState(false)
 
@@ -248,33 +247,34 @@ export function CallModal({ appt, onClose }) {
         <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '0 0 8px' }}>
           Close
         </p>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          <Input
-            type="number"
-            value={callsMissed}
-            onChange={e => setCallsMissed(e.target.value)}
-            placeholder="Calls missed/week"
-            style={{ flex: 1 }}
-          />
-          <Input
-            type="number"
-            value={avgTicket}
-            onChange={e => setAvgTicket(e.target.value)}
-            placeholder="Avg ticket $"
-            style={{ flex: 1 }}
-          />
+        {/* Read-only setter capture values */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 10 }}>
+          <div>
+            <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', margin: '0 0 2px' }}>Calls Missed/Wk</p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', margin: 0 }}>
+              {callsMissed || '—'}
+            </p>
+          </div>
+          <div>
+            <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', margin: '0 0 2px' }}>Avg Ticket</p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', margin: 0 }}>
+              {avgTicket ? `$${Number(avgTicket).toLocaleString()}` : '—'}
+            </p>
+          </div>
         </div>
-        {monthlyPrice != null && (
-          <p style={{
-            fontSize: 20, fontWeight: 700,
-            fontFamily: 'var(--font-mono)',
-            color: 'var(--accent)',
-            margin: '0 0 8px',
-            textAlign: 'center',
-          }}>
-            ${monthlyPrice.toLocaleString()}/mo
-          </p>
-        )}
+        {/* Pricing display */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 10 }}>
+          <div>
+            <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', margin: '0 0 2px' }}>Setup Fee</p>
+            <p style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', margin: 0 }}>$297</p>
+          </div>
+          <div>
+            <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', margin: '0 0 2px' }}>Monthly</p>
+            <p style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-mono)', color: monthlyPrice != null ? 'var(--accent)' : 'var(--text-muted)', margin: 0 }}>
+              {monthlyPrice != null ? `$${monthlyPrice.toLocaleString()}` : '—'}
+            </p>
+          </div>
+        </div>
         <button
           onClick={generatePaymentLink}
           disabled={!monthlyPrice || linkLoading}
