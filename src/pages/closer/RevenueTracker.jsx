@@ -333,7 +333,6 @@ export default function RevenueTracker() {
 
   const kpis = useMemo(() => {
     const sum = arr => arr.reduce((s, d) => s + (d.deal_value || 0), 0)
-    const avg = arr => arr.length ? sum(arr) / arr.length : 0
 
     let scoped = allDeals
     if (hasCustomRange) {
@@ -344,21 +343,31 @@ export default function RevenueTracker() {
       scoped = allDeals.filter(a => new Date(a.updated_at) >= getWindowStart(filter))
     }
 
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const weekAgo    = new Date(now - 7 * 86400000)
-
+    const revenue = sum(scoped)
+    const count   = scoped.length
     return {
-      allTime:   sum(allDeals),
-      thisMonth: sum(allDeals.filter(d => new Date(d.updated_at) >= monthStart)),
-      thisWeek:  sum(allDeals.filter(d => new Date(d.updated_at) >= weekAgo)),
-      avgDeal:   avg(scoped),
+      revenue,
+      yourCut:     Math.round(revenue * 0.45),
+      dealsClosed: count,
+      avgDeal:     count ? revenue / count : null,
     }
   }, [allDeals, filter, hasCustomRange, rangeStart, rangeEnd])
 
-  const chartData = useMemo(
-    () => buildChartData(allDeals, filter, hasCustomRange ? rangeStart : null, hasCustomRange ? rangeEnd : null),
-    [allDeals, filter, hasCustomRange, rangeStart, rangeEnd]
-  )
+  // Chart always shows last 8 calendar months — independent of filter/date range.
+  const chartData = useMemo(() => {
+    return Array.from({ length: 8 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - 7 + i, 1)
+      const yr = d.getFullYear(), mo = d.getMonth()
+      const mo2Digit = String(mo + 1).padStart(2, '0')
+      const key = `${yr}-${mo2Digit}`
+      const mo3 = d.toLocaleString('en-US', { month: 'short' })
+      const label = `${mo3} '${String(yr).slice(2)}`
+      const value = allDeals
+        .filter(a => a.updated_at && a.updated_at.slice(0, 7) === key)
+        .reduce((s, a) => s + (a.deal_value || 0), 0)
+      return { label, value }
+    })
+  }, [allDeals])
 
   function fmtRangeLabel(iso) {
     const [, m, d] = iso.split('-')
@@ -372,12 +381,7 @@ export default function RevenueTracker() {
     ? `${fmtRangeLabel(rangeStart)} – …`
     : 'Custom Range'
 
-  const chartTitle = hasCustomRange
-    ? `Revenue ${fmtRangeLabel(rangeStart)} – ${fmtRangeLabel(rangeEnd)}`
-    : filter === 'All Time' ? 'All-Time Revenue by Month'
-    : filter === 'Day' ? "Today's Revenue"
-    : filter === 'Week' ? "This Week's Revenue"
-    : 'Weekly Revenue (last 8 weeks)'
+  const chartTitle = 'New Revenue — Last 8 Months'
 
   return (
     <div>
@@ -503,36 +507,32 @@ export default function RevenueTracker() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatCard label="All Time"   value={`$${(kpis.allTime   || 0).toLocaleString()}`} icon={DollarSign}  color="green" />
-        <StatCard label="This Month" value={`$${(kpis.thisMonth || 0).toLocaleString()}`} icon={TrendingUp}  color="indigo" />
-        <StatCard label="This Week"  value={`$${(kpis.thisWeek  || 0).toLocaleString()}`} icon={BarChart2}   color="blue" />
-        <StatCard label="Avg Deal"   value={`$${Math.round(kpis.avgDeal || 0).toLocaleString()}`} icon={Target} color="yellow" />
+        <StatCard label="Revenue"      value={`$${kpis.revenue.toLocaleString()}`}                                                   icon={DollarSign}  color="green" />
+        <StatCard label="Your Cut"     value={`$${kpis.yourCut.toLocaleString()}`}                                                   icon={TrendingUp}  color="indigo" />
+        <StatCard label="Deals Closed" value={kpis.dealsClosed}                                                                      icon={BarChart2}   color="blue" />
+        <StatCard label="Avg Deal"     value={kpis.avgDeal != null ? `$${Math.round(kpis.avgDeal).toLocaleString()}` : '—'}          icon={Target}      color="yellow" />
       </div>
 
       <Card>
         <p className="text-sm font-medium text-[var(--text-primary)] mb-4">{chartTitle}</p>
-        {!chartData.some(d => d.value > 0) ? (
-          <p className="text-[var(--text-muted)] text-sm text-center py-8">No closed deals in this period</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 11, fill: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}
-                axisLine={false} tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 11, fill: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}
-                axisLine={false} tickLine={false}
-                tickFormatter={v => v === 0 ? '$0' : `$${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`}
-                width={48}
-              />
-              <Tooltip content={<RevenueTooltip />} />
-              <Bar dataKey="value" fill="var(--accent)" radius={[3, 3, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
+        <ResponsiveContainer width="100%" height={160}>
+          <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+            <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 11, fill: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}
+              axisLine={false} tickLine={false}
+            />
+            <YAxis
+              tick={{ fontSize: 11, fill: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}
+              axisLine={false} tickLine={false}
+              tickFormatter={v => v === 0 ? '$0' : `$${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`}
+              width={48}
+            />
+            <Tooltip content={<RevenueTooltip />} />
+            <Bar dataKey="value" fill="var(--accent)" radius={[3, 3, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </Card>
 
       <DealsSection closerId={profile?.id} />
@@ -650,9 +650,9 @@ function DealsSection({ closerId }) {
       ) : (
         <div>
           {/* Header row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '0 16px', padding: '0 0 8px', borderBottom: '0.5px solid var(--border)', marginBottom: 4 }}>
-            {['BUSINESS', 'TOTAL DEAL', 'YOUR CUT (45%)', 'DATE'].map(h => (
-              <span key={h} style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: h === 'BUSINESS' ? 'left' : 'right' }}>{h}</span>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 160px 130px', padding: '0 0 8px', borderBottom: '0.5px solid var(--border)', marginBottom: 4 }}>
+            {[['BUSINESS','left'],['TOTAL DEAL','right'],['YOUR CUT (45%)','right'],['DATE','right']].map(([h, align]) => (
+              <span key={h} style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: align }}>{h}</span>
             ))}
           </div>
           {deals.map((d, i) => {
@@ -669,7 +669,7 @@ function DealsSection({ closerId }) {
               <div
                 key={d.id}
                 style={{
-                  display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '0 16px',
+                  display: 'grid', gridTemplateColumns: '1fr 140px 160px 130px',
                   alignItems: 'center',
                   padding: '10px 0',
                   borderBottom: i < deals.length - 1 ? '0.5px solid var(--border)' : 'none',

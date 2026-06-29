@@ -121,7 +121,6 @@ export default function CloserMyStats() {
   const { profile } = useAuth()
   const [filter, setFilter] = useState('Day')
   const { data: raw = [] } = useCloserRawData(profile?.id)
-  const { data: commissionRows = [] } = useCloserCommissions(profile?.id)
 
   const windowStart = useMemo(() => getWindowStart(filter), [filter])
 
@@ -150,8 +149,8 @@ export default function CloserMyStats() {
   const chartData = useMemo(() => buildChartData(allClosed, raw, filter), [allClosed, raw, filter])
 
   const windowCommission = useMemo(
-    () => commissionRows.filter(c => new Date(c.created_at) >= windowStart).reduce((s, c) => s + Number(c.amount || 0), 0),
-    [commissionRows, windowStart]
+    () => Math.round(windowData.filter(a => a.outcome === 'closed').reduce((s, a) => s + (a.deal_value || 0), 0) * 0.45),
+    [windowData]
   )
   const hasChartData = chartData.some(d => d.rate > 0)
 
