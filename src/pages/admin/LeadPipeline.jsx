@@ -497,7 +497,7 @@ function NoAnswerTab({ filters }) {
                 background: r.distributed_at ? 'var(--success-dim)' : 'var(--warning-dim)',
                 color: r.distributed_at ? 'var(--success)' : 'var(--warning)',
               }}>
-                {r.distributed_at ? `→ ${r.dist_rep?.full_name || 'distributed'}` : 'waiting'}
+                {r.distributed_at ? `→ ${r.dist_rep?.full_name || 'pool'}` : 'waiting'}
               </span>
             </div>
           </div>
