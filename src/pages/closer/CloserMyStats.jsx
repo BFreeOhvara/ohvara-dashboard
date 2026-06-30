@@ -24,50 +24,6 @@ function getWindowStart(filter) {
   return new Date(now.getFullYear(), now.getMonth(), 1)
 }
 
-function buildChartData(closed, all, filter) {
-  const now = new Date()
-  if (filter === 'Day') {
-    // 6 blocks of 4h each
-    const blocks = []
-    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    for (let h = 0; h < 24; h += 4) {
-      const start = new Date(dayStart.getTime() + h * 3600000)
-      const end   = new Date(start.getTime() + 4 * 3600000)
-      const wClosed = closed.filter(a => { const d = new Date(a.updated_at); return d >= start && d < end })
-      const wAll    = all.filter(a => { const d = new Date(a.updated_at); return d >= start && d < end && (a.outcome === 'closed' || a.outcome === 'lost') })
-      blocks.push({
-        label: `${h}h`,
-        rate: wAll.length ? Math.round((wClosed.length / wAll.length) * 100) : 0,
-      })
-    }
-    return blocks
-  }
-  if (filter === 'Week') {
-    const weekStart = getWindowStart('Week')
-    return Array.from({ length: 7 }, (_, i) => {
-      const start = new Date(weekStart.getTime() + i * 86400000)
-      const end   = new Date(start.getTime() + 86400000)
-      const wClosed = closed.filter(a => { const d = new Date(a.updated_at); return d >= start && d < end })
-      const wAll    = all.filter(a => { const d = new Date(a.updated_at); return d >= start && d < end && (a.outcome === 'closed' || a.outcome === 'lost') })
-      return {
-        label: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][i],
-        rate: wAll.length ? Math.round((wClosed.length / wAll.length) * 100) : 0,
-      }
-    })
-  }
-  // Month — last 8 weeks
-  return Array.from({ length: 8 }, (_, i) => {
-    const idx = 7 - i
-    const start = new Date(now - (idx + 1) * 7 * 86400000)
-    const end   = new Date(now - idx * 7 * 86400000)
-    const wClosed = closed.filter(a => { const d = new Date(a.updated_at); return d >= start && d < end })
-    const wAll    = all.filter(a => { const d = new Date(a.updated_at); return d >= start && d < end && (a.outcome === 'closed' || a.outcome === 'lost') })
-    return {
-      label: `W${8 - idx}`,
-      rate: wAll.length ? Math.round((wClosed.length / wAll.length) * 100) : 0,
-    }
-  })
-}
 
 function CloseRateTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -91,7 +47,7 @@ function useCloserRawData(closerId) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('appointments')
-        .select('outcome, deal_value, updated_at')
+        .select('outcome, deal_value, created_at')
         .eq('closer_id', closerId)
         .not('outcome', 'is', null)
       if (error) throw error
@@ -125,7 +81,7 @@ export default function CloserMyStats() {
   const windowStart = useMemo(() => getWindowStart(filter), [filter])
 
   const windowData = useMemo(() => {
-    return raw.filter(a => new Date(a.updated_at) >= windowStart)
+    return raw.filter(a => new Date(a.created_at) >= windowStart)
   }, [raw, windowStart])
 
   const stats = useMemo(() => {
@@ -145,8 +101,20 @@ export default function CloserMyStats() {
     }
   }, [windowData])
 
-  const allClosed = useMemo(() => raw.filter(a => a.outcome === 'closed'), [raw])
-  const chartData = useMemo(() => buildChartData(allClosed, raw, filter), [allClosed, raw, filter])
+  // Chart: last 7 calendar days — independent of filter
+  const chartData = useMemo(() => {
+    const now = new Date()
+    return Array.from({ length: 7 }, (_, i) => {
+      const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (6 - i))
+      const dayEnd   = new Date(dayStart.getTime() + 86400000)
+      const dayAll    = raw.filter(a => { const d = new Date(a.created_at); return d >= dayStart && d < dayEnd && (a.outcome === 'closed' || a.outcome === 'lost') })
+      const dayClosed = raw.filter(a => { const d = new Date(a.created_at); return d >= dayStart && d < dayEnd && a.outcome === 'closed' })
+      return {
+        label: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dayStart.getDay()],
+        rate: dayAll.length ? Math.round((dayClosed.length / dayAll.length) * 100) : 0,
+      }
+    })
+  }, [raw])
 
   const windowCommission = useMemo(
     () => Math.round(windowData.filter(a => a.outcome === 'closed').reduce((s, a) => s + (a.deal_value || 0), 0) * 0.45),
@@ -197,7 +165,7 @@ export default function CloserMyStats() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <Card>
           <p className="text-sm font-medium text-[var(--text-primary)] mb-4">
-            {filter === 'Day' ? 'Today\'s Close Rate' : filter === 'Week' ? 'This Week\'s Close Rate' : 'Weekly Close Rate (last 8 weeks)'}
+            Close Rate — Last 7 Days
           </p>
           {!hasChartData ? (
             <p className="text-[var(--text-muted)] text-sm text-center py-8">No closed outcomes yet</p>
