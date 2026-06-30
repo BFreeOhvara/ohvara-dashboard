@@ -1757,7 +1757,6 @@ const TABS = [
   { id: 'script',      label: 'Script',      icon: FileText,       count: null },
   { id: 'videos',      label: 'Videos',      icon: Play,           count: `${TRAINING_VIDEOS.length} videos` },
   { id: 'flashcards',  label: 'Flashcards',  icon: BookOpen,       count: `${FLASHCARDS.length} cards` },
-  { id: 'quiz',        label: 'Quiz',        icon: ClipboardCheck, count: null },
   { id: 'final-exam',  label: 'Final Exam',  icon: Award,          count: null },
   { id: 'roleplay',    label: 'AI Roleplay', icon: Mic,            count: null },
 ]
@@ -1803,7 +1802,6 @@ export default function TrainingCenter() {
   const watchedCount = checks.videosWatched
   const gateSteps = [
     { label: `Videos ${watchedCount}/${TOTAL_VIDEOS}`, done: checks.videosDone,   goTab: 'videos' },
-    { label: `Quiz ${QUIZ_PASS_PCT}%+`,                done: checks.quizDone,     goTab: 'quiz' },
     { label: `Final Exam ${FINAL_QUIZ_PASS_PCT}%+`,    done: finalQuizPassed,     goTab: 'final-exam' },
     { label: `Roleplay ${ROLEPLAY_PASS_GRADE}+`,        done: checks.roleplayDone, goTab: 'roleplay' },
   ]
@@ -1897,7 +1895,6 @@ export default function TrainingCenter() {
       {/* Tab content */}
       {tab === 'videos'     && <VideoLibrary progress={progress} saveProgress={saveProgress} />}
       {tab === 'flashcards' && <FlashcardDeck onAllMastered={handleAllFlashcardsMastered} />}
-      {tab === 'quiz'       && <QuizTab progress={progress} saveProgress={saveProgress} />}
       {tab === 'final-exam' && <FinalQuizTab watchedCount={watchedCount} passed={finalQuizPassed} onPass={handleFinalQuizPassed} />}
       {tab === 'script'     && <DiscoveryScript />}
       {tab === 'roleplay'   && <AIRoleplay progress={progress} saveProgress={saveProgress} />}
