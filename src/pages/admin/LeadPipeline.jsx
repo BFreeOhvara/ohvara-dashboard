@@ -19,8 +19,8 @@ const VIEW_TABS = [
 
 const SETTER_FILTER_TABS = [
   { key: 'new',            label: 'New',            icon: FilePlus2,   color: 'var(--info)',    dim: 'var(--info-dim)',    border: 'rgba(56,189,248,0.20)' },
-  { key: 'no_answer',      label: 'No Answer',      icon: PhoneMissed, color: 'var(--warning)', dim: 'var(--warning-dim)', border: 'rgba(245,158,11,0.20)' },
-  { key: 'follow_up',      label: 'Follow-Up',      icon: CalendarClock, color: 'var(--accent)', dim: 'var(--accent-dim)', border: 'var(--accent-border)' },
+  { key: 'no_answer',      label: 'No Answer',      icon: PhoneMissed, color: '#94A3B8',        dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)' },
+  { key: 'follow_up',      label: 'Follow-Up',      icon: CalendarClock, color: 'var(--warning)', dim: 'var(--warning-dim)', border: 'rgba(245,158,11,0.20)' },
   { key: 'not_interested', label: 'Not Interested', icon: Ban,         color: 'var(--danger)',  dim: 'var(--danger-dim)',  border: 'rgba(239,68,68,0.20)' },
   { key: 'all',            label: 'All',            icon: null,        color: '#94A3B8',        dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)' },
 ]
