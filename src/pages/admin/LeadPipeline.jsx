@@ -22,7 +22,7 @@ const SETTER_FILTER_TABS = [
   { key: 'no_answer',      label: 'No Answer',      icon: PhoneMissed, color: '#94A3B8',        dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)' },
   { key: 'follow_up',      label: 'Follow-Up',      icon: CalendarClock, color: 'var(--warning)', dim: 'var(--warning-dim)', border: 'rgba(245,158,11,0.20)' },
   { key: 'not_interested', label: 'Not Interested', icon: Ban,         color: 'var(--danger)',  dim: 'var(--danger-dim)',  border: 'rgba(239,68,68,0.20)' },
-  { key: 'all',            label: 'All',            icon: null,        color: '#94A3B8',        dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)' },
+  { key: 'all',            label: 'All',            icon: null,        color: 'var(--accent)',  dim: 'var(--accent-dim)',     border: 'var(--accent-border)' },
 ]
 
 // Page-level filters applied client-side to every tab's rows. `getRepName`
