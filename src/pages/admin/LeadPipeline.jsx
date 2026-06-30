@@ -17,11 +17,12 @@ const VIEW_TABS = [
   { key: 'closer',               label: 'Closer',               icon: CalendarClock },
 ]
 
-const SETTER_SUB_TABS = [
-  { key: 'new',            label: 'New',              icon: FilePlus2 },
-  { key: 'no_answer',      label: 'No Answer Queue',  icon: PhoneMissed },
-  { key: 'follow_up',      label: 'Follow-Up Queue',  icon: CalendarClock },
-  { key: 'not_interested', label: 'Not Interested',   icon: Ban },
+const SETTER_FILTER_TABS = [
+  { key: 'new',            label: 'New',            icon: FilePlus2,   color: 'var(--info)',    dim: 'var(--info-dim)',    border: 'rgba(56,189,248,0.20)' },
+  { key: 'no_answer',      label: 'No Answer',      icon: PhoneMissed, color: 'var(--warning)', dim: 'var(--warning-dim)', border: 'rgba(245,158,11,0.20)' },
+  { key: 'follow_up',      label: 'Follow-Up',      icon: CalendarClock, color: 'var(--accent)', dim: 'var(--accent-dim)', border: 'var(--accent-border)' },
+  { key: 'not_interested', label: 'Not Interested', icon: Ban,         color: 'var(--danger)',  dim: 'var(--danger-dim)',  border: 'rgba(239,68,68,0.20)' },
+  { key: 'all',            label: 'All',            icon: null,        color: '#94A3B8',        dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)' },
 ]
 
 // Page-level filters applied client-side to every tab's rows. `getRepName`
@@ -125,24 +126,6 @@ function useBooked() {
   })
 }
 
-// Unassigned — scraped leads sitting in the pool with no rep yet
-function useUnassigned() {
-  return useQuery({
-    queryKey: ['pipeline', 'unassigned'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('leads')
-        .select('id, business_name, niche, city, source, created_at')
-        .is('assigned_rep_id', null)
-        .order('created_at', { ascending: false })
-        .limit(500)
-      if (error) throw error
-      return data
-    },
-    refetchInterval: 60_000,
-  })
-}
-
 // New — assigned to a rep but not yet called
 function useNewAssigned() {
   return useQuery({
@@ -155,6 +138,23 @@ function useNewAssigned() {
         .not('assigned_rep_id', 'is', null)
         .order('batch_date', { ascending: false })
         .limit(500)
+      if (error) throw error
+      return data
+    },
+    refetchInterval: 60_000,
+  })
+}
+
+function useAllRepAssigned() {
+  return useQuery({
+    queryKey: ['pipeline', 'all_rep_assigned'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('id, business_name, niche, city, status, batch_date, assigned_rep:profiles!leads_assigned_rep_id_fkey(full_name)')
+        .not('assigned_rep_id', 'is', null)
+        .order('batch_date', { ascending: false })
+        .limit(1000)
       if (error) throw error
       return data
     },
@@ -201,31 +201,147 @@ function QueueTable({ columns, rows, renderRow, emptyText }) {
   )
 }
 
+function useUnassignedByVerified(verified) {
+  return useQuery({
+    queryKey: ['pipeline', 'unassigned', verified],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('id, business_name, niche, city, phone, source, created_at, verified')
+        .is('assigned_rep_id', null)
+        .is('assigned_closer_id', null)
+        .eq('verified', verified)
+        .order('created_at', { ascending: false })
+        .limit(500)
+      if (error) throw error
+      return data
+    },
+    refetchInterval: 60_000,
+  })
+}
+
+async function confirmLead(id) {
+  const { error } = await supabase.from('leads').update({ verified: true }).eq('id', id)
+  if (error) throw error
+}
+
 function UnassignedTab({ filters }) {
-  const { data: allRows, isLoading } = useUnassigned()
-  const rows = applyFilters(allRows, filters, null) // no rep — rep filter empties it
+  const [subTab, setSubTab] = useState('confirmed')
+  const { data: reviewRows = [], isLoading: loadingReview, refetch: refetchReview } = useUnassignedByVerified(false)
+  const { data: confirmedRows = [], isLoading: loadingConfirmed, refetch: refetchConfirmed } = useUnassignedByVerified(true)
+  const [confirming, setConfirming] = useState(null)
+
+  async function handleConfirm(id) {
+    setConfirming(id)
+    try {
+      await confirmLead(id)
+      await refetchReview()
+      await refetchConfirmed()
+    } finally {
+      setConfirming(null)
+    }
+  }
+
+  const reviewFiltered    = applyFilters(reviewRows,    filters, null)
+  const confirmedFiltered = applyFilters(confirmedRows, filters, null)
 
   return (
     <div>
-      <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-        <KPICard label="In Pool" value={allRows?.length ?? 0} sub="scraped, no rep yet" icon={Inbox} />
+      {/* Sub-tabs */}
+      <div style={{ display: 'flex', gap: 4, borderBottom: '0.5px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
+        {[
+          { key: 'review',    label: 'Review',    color: 'var(--warning)', count: reviewRows.length },
+          { key: 'confirmed', label: 'Confirmed', color: 'var(--success)', count: confirmedRows.length },
+        ].map(({ key, label, color, count }) => (
+          <button
+            key={key}
+            onClick={() => setSubTab(key)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '10px 14px', background: 'none', cursor: 'pointer',
+              border: 'none', borderBottom: subTab === key ? `2px solid ${color}` : '2px solid transparent',
+              fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', color,
+            }}
+          >
+            {label}
+            <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, fontFamily: 'var(--font-mono)', background: `${color}22`, color, border: `0.5px solid ${color}33` }}>
+              {count}
+            </span>
+          </button>
+        ))}
       </div>
-      <QueueTable
-        columns={[['Business', '1 1 0'], ['Niche', '0 0 130px'], ['City', '0 0 120px'], ['Source', '0 0 110px'], ['Scraped', '0 0 130px']]}
-        rows={rows}
-        emptyText={isLoading ? 'Loading…' : 'No unassigned leads in the pool.'}
-        renderRow={r => (
-          <div key={r.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
-            <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{r.business_name}</div>
-            <div style={cell('0 0 130px')}>{r.niche || '—'}</div>
-            <div style={cell('0 0 120px')}>{r.city || '—'}</div>
-            <div style={cell('0 0 110px', { textTransform: 'capitalize' })}>{r.source?.replace('_', ' ') || '—'}</div>
-            <div style={cell('0 0 130px', { fontFamily: 'var(--font-mono)' })}>
-              {r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
-            </div>
+
+      {subTab === 'review' && (
+        <div>
+          <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+            <KPICard label="Pending Review" value={reviewRows.length} sub="unverified leads" icon={Inbox} />
           </div>
-        )}
-      />
+          <QueueTable
+            columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Phone', '0 0 130px'], ['Google', '0 0 80px'], ['Date Added', '0 0 120px'], ['', '0 0 100px']]}
+            rows={reviewFiltered}
+            emptyText={loadingReview ? 'Loading…' : 'No leads pending review.'}
+            renderRow={r => (
+              <div key={r.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)', alignItems: 'center' }}>
+                <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{r.business_name}</div>
+                <div style={cell('0 0 120px')}>{r.niche || '—'}</div>
+                <div style={cell('0 0 110px')}>{r.city || '—'}</div>
+                <div style={cell('0 0 130px', { fontFamily: 'var(--font-mono)', fontSize: 11 })}>{r.phone || '—'}</div>
+                <div style={cell('0 0 80px', { textAlign: 'center' })}>
+                  <a
+                    href={`https://www.google.com/search?q=${encodeURIComponent((r.business_name || '') + ' ' + (r.city || ''))}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--accent)', fontSize: 11, textDecoration: 'none' }}
+                  >
+                    🔍
+                  </a>
+                </div>
+                <div style={cell('0 0 120px', { fontFamily: 'var(--font-mono)' })}>
+                  {r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                </div>
+                <div style={cell('0 0 100px')}>
+                  <button
+                    onClick={() => handleConfirm(r.id)}
+                    disabled={confirming === r.id}
+                    style={{
+                      padding: '3px 10px', fontSize: 11, fontWeight: 500,
+                      background: 'var(--success-dim)', color: 'var(--success)',
+                      border: '0.5px solid rgba(34,197,94,0.30)', borderRadius: 6,
+                      cursor: confirming === r.id ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {confirming === r.id ? '…' : 'Confirm'}
+                  </button>
+                </div>
+              </div>
+            )}
+          />
+        </div>
+      )}
+
+      {subTab === 'confirmed' && (
+        <div>
+          <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+            <KPICard label="In Pool" value={confirmedRows.length} sub="verified, no rep yet" icon={Inbox} />
+          </div>
+          <QueueTable
+            columns={[['Business', '1 1 0'], ['Niche', '0 0 130px'], ['City', '0 0 120px'], ['Source', '0 0 110px'], ['Scraped', '0 0 130px']]}
+            rows={confirmedFiltered}
+            emptyText={loadingConfirmed ? 'Loading…' : 'No confirmed leads in the pool.'}
+            renderRow={r => (
+              <div key={r.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
+                <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{r.business_name}</div>
+                <div style={cell('0 0 130px')}>{r.niche || '—'}</div>
+                <div style={cell('0 0 120px')}>{r.city || '—'}</div>
+                <div style={cell('0 0 110px', { textTransform: 'capitalize' })}>{r.source?.replace('_', ' ') || '—'}</div>
+                <div style={cell('0 0 130px', { fontFamily: 'var(--font-mono)' })}>
+                  {r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                </div>
+              </div>
+            )}
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -415,9 +531,231 @@ function BookedTab({ filters }) {
   )
 }
 
+// ── Admin Closer view ─────────────────────────────────────────────────────────
+
+const ADMIN_CLOSER_TABS = [
+  { key: 'pending',            label: 'Pending',            color: 'var(--warning)', dim: 'var(--warning-dim)', border: 'rgba(245,158,11,0.20)' },
+  { key: 'closed',             label: 'Closed',             color: 'var(--success)', dim: 'var(--success-dim)', border: 'rgba(34,197,94,0.20)' },
+  { key: 'lost',               label: 'Lost',               color: 'var(--danger)',  dim: 'var(--danger-dim)',  border: 'rgba(239,68,68,0.20)' },
+  { key: 'no_show',            label: 'No Show',            color: '#94A3B8',        dim: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)' },
+  { key: 'needs_rescheduling', label: 'Needs Rescheduling', color: 'var(--info)',    dim: 'var(--info-dim)',    border: 'rgba(56,189,248,0.20)' },
+  { key: 'all',                label: 'All',                color: 'var(--accent)',  dim: 'var(--accent-dim)',  border: 'var(--accent-border)' },
+]
+
+const ADMIN_CLOSER_STATUS_STYLES = {
+  pending:            { color: 'var(--warning)', bg: 'var(--warning-dim)',  border: 'rgba(245,158,11,0.20)',   label: 'pending' },
+  completed:          { color: 'var(--success)', bg: 'var(--success-dim)',  border: 'rgba(34,197,94,0.20)',    label: 'closed' },
+  lost:               { color: 'var(--danger)',  bg: 'var(--danger-dim)',   border: 'rgba(239,68,68,0.20)',    label: 'lost' },
+  no_show:            { color: '#94A3B8',        bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)', label: 'no show' },
+  missed:             { color: '#94A3B8',        bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)', label: 'missed' },
+  needs_rescheduling: { color: 'var(--info)',    bg: 'var(--info-dim)',     border: 'rgba(56,189,248,0.20)',   label: 'reschedule' },
+}
+
+function AdminCloserStatusBadge({ status, outcome }) {
+  const key = (outcome === 'closed' || status === 'completed') ? 'completed' : (status || 'pending')
+  const s = ADMIN_CLOSER_STATUS_STYLES[key] || ADMIN_CLOSER_STATUS_STYLES.pending
+  return (
+    <span style={{
+      fontSize: 10, padding: '2px 7px', borderRadius: 10,
+      background: s.bg, color: s.color, border: `0.5px solid ${s.border}`,
+      fontFamily: 'var(--font-mono)', fontWeight: 500, whiteSpace: 'nowrap',
+    }}>
+      {s.label}
+    </span>
+  )
+}
+
+function useAllCloserAppointments() {
+  return useQuery({
+    queryKey: ['pipeline', 'all_closer_appointments'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          id, status, outcome, scheduled_at, deal_value,
+          lead:leads(business_name, niche, city, phone),
+          closer:profiles!appointments_closer_id_fkey(full_name),
+          rep:profiles!appointments_rep_id_fkey(full_name)
+        `)
+        .order('scheduled_at', { ascending: false })
+        .limit(500)
+      if (error) throw error
+      return data || []
+    },
+    refetchInterval: 60_000,
+  })
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })
+}
+
+function AdminCloserView({ filters }) {
+  const [filterTab, setFilterTab] = useState('pending')
+  const { data: allAppts = [], isLoading } = useAllCloserAppointments()
+
+  const buckets = {
+    pending:            allAppts.filter(a => a.status === 'pending'),
+    closed:             allAppts.filter(a => a.outcome === 'closed'),
+    lost:               allAppts.filter(a => a.outcome === 'lost'),
+    no_show:            allAppts.filter(a => a.status === 'no_show' || a.outcome === 'no_show' || a.status === 'missed'),
+    needs_rescheduling: allAppts.filter(a => a.status === 'needs_rescheduling'),
+    all:                allAppts,
+  }
+
+  const applyApptFilters = rows => {
+    if (!rows) return []
+    const s = filters.search.trim().toLowerCase()
+    const sDigits = s.replace(/\D/g, '')
+    return rows.filter(r => {
+      if (!s) return true
+      const biz = (r.lead?.business_name || '').toLowerCase()
+      const phone = (r.lead?.phone || '').replace(/\D/g, '')
+      return biz.includes(s) || (sDigits && phone.includes(sDigits))
+    })
+  }
+
+  const rows = applyApptFilters(buckets[filterTab])
+  const COLS = [['Business', '1 1 0'], ['Niche', '0 0 110px'], ['City', '0 0 100px'], ['Phone', '0 0 130px'], ['Set By', '0 0 110px'], ['Closer', '0 0 110px'], ['Scheduled', '0 0 140px']]
+  const COLS_ALL = [...COLS, ['Status', '0 0 110px']]
+
+  return (
+    <div>
+      {/* KPI cards */}
+      <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <KPICard label="Pending Total" value={buckets.pending.length} sub="all closers" icon={CalendarClock} />
+        <KPICard label="Closed Total"  value={buckets.closed.length}  sub="all time"    icon={CheckCircle} />
+      </div>
+
+      {/* Filter tabs */}
+      <div style={{ display: 'flex', gap: 4, borderBottom: '0.5px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
+        {ADMIN_CLOSER_TABS.map(({ key, label, color, dim, border }) => {
+          const active = filterTab === key
+          return (
+            <button
+              key={key}
+              onClick={() => setFilterTab(key)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '10px 14px', background: 'none', cursor: 'pointer',
+                border: 'none', borderBottom: active ? `2px solid ${color}` : '2px solid transparent',
+                fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', color,
+              }}
+            >
+              {label}
+              <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, fontFamily: 'var(--font-mono)', background: dim, color, border: `0.5px solid ${border}` }}>
+                {isLoading ? '…' : buckets[key]?.length ?? 0}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      <QueueTable
+        columns={filterTab === 'all' ? COLS_ALL : COLS}
+        rows={rows}
+        emptyText={isLoading ? 'Loading…' : 'No appointments.'}
+        renderRow={a => (
+          <div key={a.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
+            <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{a.lead?.business_name || '—'}</div>
+            <div style={cell('0 0 110px')}>{a.lead?.niche || '—'}</div>
+            <div style={cell('0 0 100px')}>{a.lead?.city || '—'}</div>
+            <div style={cell('0 0 130px', { fontFamily: 'var(--font-mono)' })}>{a.lead?.phone || '—'}</div>
+            <div style={cell('0 0 110px')}>{a.rep?.full_name || '—'}</div>
+            <div style={cell('0 0 110px')}>{a.closer?.full_name || '—'}</div>
+            <div style={cell('0 0 140px', { fontFamily: 'var(--font-mono)' })}>{fmtDate(a.scheduled_at)}</div>
+            {filterTab === 'all' && (
+              <div style={cell('0 0 110px')}><AdminCloserStatusBadge status={a.status} outcome={a.outcome} /></div>
+            )}
+          </div>
+        )}
+      />
+    </div>
+  )
+}
+
+function AppointmentSettingView({ filters }) {
+  const [filterTab, setFilterTab] = useState('new')
+  const { data: newRows,    isLoading: loadingNew }    = useNewAssigned()
+  const { data: naRows,     isLoading: loadingNA }     = useNoAnswerQueue()
+  const { data: fuRows,     isLoading: loadingFU }     = useFollowUpQueue()
+  const { data: niRows,     isLoading: loadingNI }     = useNotInterested()
+  const { data: allRows,    isLoading: loadingAll }    = useAllRepAssigned()
+
+  const counts = {
+    new:            newRows?.length ?? 0,
+    no_answer:      naRows?.length  ?? 0,
+    follow_up:      fuRows?.length  ?? 0,
+    not_interested: niRows?.length  ?? 0,
+    all:            allRows?.length ?? 0,
+  }
+
+  return (
+    <div>
+      {/* Filter tabs */}
+      <div style={{ display: 'flex', gap: 4, borderBottom: '0.5px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
+        {SETTER_FILTER_TABS.map(({ key, label, icon: Icon, color, dim, border }) => {
+          const active = filterTab === key
+          return (
+            <button
+              key={key}
+              onClick={() => setFilterTab(key)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '10px 14px', background: 'none', cursor: 'pointer',
+                border: 'none', borderBottom: active ? `2px solid ${color}` : '2px solid transparent',
+                fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap',
+                color,
+              }}
+            >
+              {Icon && <Icon size={13} />}
+              {label}
+              <span style={{
+                fontSize: 10, padding: '1px 6px', borderRadius: 10, fontFamily: 'var(--font-mono)',
+                background: dim, color, border: `0.5px solid ${border}`,
+              }}>
+                {counts[key] ?? 0}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      {filterTab === 'new'            && <NewTab filters={filters} />}
+      {filterTab === 'no_answer'      && <NoAnswerTab filters={filters} />}
+      {filterTab === 'follow_up'      && <FollowUpTab filters={filters} />}
+      {filterTab === 'not_interested' && <NotInterestedTab filters={filters} />}
+      {filterTab === 'all' && (
+        <div>
+          <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+            <KPICard label="Rep-Assigned Total" value={allRows?.length ?? 0} sub="across all reps" icon={Phone} />
+          </div>
+          <QueueTable
+            columns={[['Business', '1 1 0'], ['Niche', '0 0 130px'], ['City', '0 0 120px'], ['Rep Assigned', '0 0 140px'], ['Status', '0 0 140px'], ['Batch Date', '0 0 120px']]}
+            rows={applyFilters(allRows, filters, r => r.assigned_rep?.full_name)}
+            emptyText={loadingAll ? 'Loading…' : 'No rep-assigned leads.'}
+            renderRow={r => (
+              <div key={r.id} style={{ display: 'flex', borderBottom: '0.5px solid var(--border)' }}>
+                <div style={cell('1 1 0', { color: 'var(--text-primary)', fontWeight: 500 })}>{r.business_name}</div>
+                <div style={cell('0 0 130px')}>{r.niche || '—'}</div>
+                <div style={cell('0 0 120px')}>{r.city || '—'}</div>
+                <div style={cell('0 0 140px')}>{r.assigned_rep?.full_name || '—'}</div>
+                <div style={cell('0 0 140px')}>{r.status || '—'}</div>
+                <div style={cell('0 0 120px', { fontFamily: 'var(--font-mono)' })}>
+                  {r.batch_date ? new Date(r.batch_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
+                </div>
+              </div>
+            )}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function LeadPipeline() {
   const [view, setView] = useState('unassigned')
-  const [subTab, setSubTab] = useState('new')
   const [search, setSearch] = useState('')
   const [repName, setRepName] = useState('')
   const { data: reps } = useReps()
@@ -488,36 +826,11 @@ export default function LeadPipeline() {
       {/* Unassigned */}
       {view === 'unassigned' && <UnassignedTab filters={filters} />}
 
-      {/* Appointment Setting — sub-tabs */}
-      {view === 'appointment_setting' && (
-        <div>
-          <div style={{ display: 'flex', gap: 4, borderBottom: '0.5px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
-            {SETTER_SUB_TABS.map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setSubTab(key)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 7,
-                  padding: '10px 14px', background: 'none', cursor: 'pointer',
-                  border: 'none', borderBottom: subTab === key ? '2px solid var(--accent)' : '2px solid transparent',
-                  fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap',
-                  color: subTab === key ? 'var(--accent)' : 'var(--text-muted)',
-                }}
-              >
-                <Icon size={13} />
-                {label}
-              </button>
-            ))}
-          </div>
-          {subTab === 'new'            && <NewTab filters={filters} />}
-          {subTab === 'no_answer'      && <NoAnswerTab filters={filters} />}
-          {subTab === 'follow_up'      && <FollowUpTab filters={filters} />}
-          {subTab === 'not_interested' && <NotInterestedTab filters={filters} />}
-        </div>
-      )}
+      {/* Appointment Setting — colored filter tabs with counts */}
+      {view === 'appointment_setting' && <AppointmentSettingView filters={filters} />}
 
       {/* Closer */}
-      {view === 'closer' && <BookedTab filters={filters} />}
+      {view === 'closer' && <AdminCloserView filters={filters} />}
     </div>
   )
 }
