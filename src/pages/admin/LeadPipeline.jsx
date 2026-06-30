@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { PhoneMissed, CalendarClock, Ban, CheckCircle, Inbox, FilePlus2, Search, Phone } from 'lucide-react'
+import { PhoneMissed, CalendarClock, Ban, CheckCircle, Inbox, FilePlus2, Search, Phone, Upload } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useReps } from '../../hooks/useProfiles'
 import { KPICard } from '../../components/ui/KPICard'
@@ -225,11 +225,33 @@ async function confirmLead(id) {
   if (error) throw error
 }
 
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim())
+  if (lines.length < 2) return []
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''))
+  const COL_MAP = { business_name: ['business_name', 'business name', 'name', 'company', 'company_name'], niche: ['niche', 'industry', 'category'], city: ['city'], phone: ['phone', 'phone_number', 'phone number', 'tel'], website: ['website', 'url', 'web'], state: ['state'] }
+  const idx = {}
+  for (const [field, aliases] of Object.entries(COL_MAP)) {
+    const found = headers.findIndex(h => aliases.includes(h))
+    if (found !== -1) idx[field] = found
+  }
+  if (!Object.keys(idx).length) return null // no recognized columns
+  return lines.slice(1).map(line => {
+    const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''))
+    const row = {}
+    for (const [field, i] of Object.entries(idx)) row[field] = cols[i] || null
+    return row
+  }).filter(r => r.business_name || r.phone)
+}
+
 function UnassignedTab({ filters }) {
   const [subTab, setSubTab] = useState('confirmed')
   const { data: reviewRows = [], isLoading: loadingReview, refetch: refetchReview } = useUnassignedByVerified(false)
   const { data: confirmedRows = [], isLoading: loadingConfirmed, refetch: refetchConfirmed } = useUnassignedByVerified(true)
   const [confirming, setConfirming] = useState(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadMsg, setUploadMsg] = useState(null)
+  const fileInputRef = useRef(null)
 
   async function handleConfirm(id) {
     setConfirming(id)
@@ -239,6 +261,45 @@ function UnassignedTab({ filters }) {
       await refetchConfirmed()
     } finally {
       setConfirming(null)
+    }
+  }
+
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0]
+    if (!fileInputRef.current) return
+    fileInputRef.current.value = ''
+    if (!file) return
+    setUploading(true)
+    setUploadMsg(null)
+    try {
+      const text = await file.text()
+      const rows = parseCSV(text)
+      if (rows === null) { setUploadMsg({ type: 'error', text: 'No recognized columns in CSV. Expected: business_name, niche, city, phone, website, state.' }); return }
+      if (!rows.length) { setUploadMsg({ type: 'error', text: 'CSV parsed but no valid rows found.' }); return }
+
+      // Fetch existing leads for dedup
+      const { data: existing } = await supabase.from('leads').select('phone, business_name, city')
+      const existingPhones = new Set((existing || []).map(l => (l.phone || '').replace(/\D/g, '')).filter(Boolean))
+      const existingBizCity = new Set((existing || []).map(l => `${(l.business_name || '').toLowerCase()}|${(l.city || '').toLowerCase()}`))
+
+      const toInsert = rows.filter(r => {
+        const phone = (r.phone || '').replace(/\D/g, '')
+        if (phone && existingPhones.has(phone)) return false
+        const bizCity = `${(r.business_name || '').toLowerCase()}|${(r.city || '').toLowerCase()}`
+        if (r.business_name && r.city && existingBizCity.has(bizCity)) return false
+        return true
+      }).map(r => ({ ...r, verified: false, assigned_rep_id: null }))
+
+      if (!toInsert.length) { setUploadMsg({ type: 'error', text: `All ${rows.length} rows already exist in the database — none added.` }); return }
+
+      const { error } = await supabase.from('leads').insert(toInsert)
+      if (error) throw error
+      await refetchReview()
+      setUploadMsg({ type: 'success', text: `${toInsert.length} lead${toInsert.length === 1 ? '' : 's'} added to Review${rows.length > toInsert.length ? ` (${rows.length - toInsert.length} duplicate${rows.length - toInsert.length === 1 ? '' : 's'} skipped)` : ''}.` })
+    } catch (err) {
+      setUploadMsg({ type: 'error', text: err.message || 'Upload failed.' })
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -273,8 +334,32 @@ function UnassignedTab({ filters }) {
 
       {subTab === 'review' && (
         <div>
-          <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-            <KPICard label="Pending Review" value={reviewRows.length} sub="unverified leads" icon={Inbox} />
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+            <div className="stagger" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <KPICard label="Pending Review" value={reviewRows.length} sub="unverified leads" icon={Inbox} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+              <input ref={fileInputRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleFileChange} />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '8px 14px', fontSize: 12, fontWeight: 500,
+                  background: 'var(--accent-dim)', color: 'var(--accent)',
+                  border: '0.5px solid var(--accent-border)', borderRadius: 8,
+                  cursor: uploading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <Upload size={13} />
+                {uploading ? 'Uploading…' : 'Upload Leads'}
+              </button>
+              {uploadMsg && (
+                <span style={{ fontSize: 11, color: uploadMsg.type === 'success' ? 'var(--success)' : 'var(--danger)' }}>
+                  {uploadMsg.text}
+                </span>
+              )}
+            </div>
           </div>
           <QueueTable
             columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Phone', '0 0 130px'], ['Google', '0 0 80px'], ['Date Added', '0 0 120px'], ['', '0 0 100px']]}
