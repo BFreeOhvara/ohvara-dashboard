@@ -41,7 +41,7 @@ function buildChartData(all, filter, rangeStart, rangeEnd) {
     for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
       const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate())
       const dayEnd   = new Date(dayStart.getTime() + 86400000)
-      const dayDeals = all.filter(a => { const dt = new Date(a.updated_at); return dt >= dayStart && dt < dayEnd })
+      const dayDeals = all.filter(a => { const dt = new Date(a.created_at); return dt >= dayStart && dt < dayEnd })
       days.push({
         label: `${d.getMonth() + 1}/${d.getDate()}`,
         value: sum(dayDeals),
@@ -60,7 +60,7 @@ function buildChartData(all, filter, rangeStart, rangeEnd) {
     }
     const byMonth = {}
     for (const a of all) {
-      const key = a.updated_at.slice(0, 7)
+      const key = a.created_at.slice(0, 7)
       byMonth[key] = (byMonth[key] || 0) + (a.deal_value || 0)
     }
     return Object.keys(byMonth).sort().map(k => {
@@ -76,7 +76,7 @@ function buildChartData(all, filter, rangeStart, rangeEnd) {
     return Array.from({ length: 6 }, (_, i) => {
       const start = new Date(dayStart.getTime() + i * 4 * 3600000)
       const end   = new Date(start.getTime() + 4 * 3600000)
-      const block = all.filter(a => { const dt = new Date(a.updated_at); return dt >= start && dt < end })
+      const block = all.filter(a => { const dt = new Date(a.created_at); return dt >= start && dt < end })
       return { label: `${i * 4}h`, value: sum(block), count: block.length }
     })
   }
@@ -86,7 +86,7 @@ function buildChartData(all, filter, rangeStart, rangeEnd) {
     return Array.from({ length: 7 }, (_, i) => {
       const start = new Date(weekStart.getTime() + i * 86400000)
       const end   = new Date(start.getTime() + 86400000)
-      const day = all.filter(a => { const dt = new Date(a.updated_at); return dt >= start && dt < end })
+      const day = all.filter(a => { const dt = new Date(a.created_at); return dt >= start && dt < end })
       return { label: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][i], value: sum(day), count: day.length }
     })
   }
@@ -96,7 +96,7 @@ function buildChartData(all, filter, rangeStart, rangeEnd) {
     const idx = 7 - i
     const start = new Date(now - (idx + 1) * 7 * 86400000)
     const end   = new Date(now - idx * 7 * 86400000)
-    const wDeals = all.filter(a => { const dt = new Date(a.updated_at); return dt >= start && dt < end })
+    const wDeals = all.filter(a => { const dt = new Date(a.created_at); return dt >= start && dt < end })
     return { label: `W${8 - idx}`, value: sum(wDeals), count: wDeals.length }
   })
 }
@@ -322,7 +322,7 @@ export default function RevenueTracker() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('appointments')
-        .select('deal_value, outcome, updated_at')
+        .select('deal_value, outcome, created_at')
         .eq('closer_id', profile.id)
         .eq('outcome', 'closed')
       if (error) throw error
@@ -338,9 +338,9 @@ export default function RevenueTracker() {
     if (hasCustomRange) {
       const from = new Date(rangeStart + 'T00:00:00')
       const to   = new Date(rangeEnd   + 'T23:59:59')
-      scoped = allDeals.filter(a => { const d = new Date(a.updated_at); return d >= from && d <= to })
+      scoped = allDeals.filter(a => { const d = new Date(a.created_at); return d >= from && d <= to })
     } else if (filter !== 'All Time') {
-      scoped = allDeals.filter(a => new Date(a.updated_at) >= getWindowStart(filter))
+      scoped = allDeals.filter(a => new Date(a.created_at) >= getWindowStart(filter))
     }
 
     const revenue = sum(scoped)
@@ -363,7 +363,7 @@ export default function RevenueTracker() {
       const mo3 = d.toLocaleString('en-US', { month: 'short' })
       const label = `${mo3} '${String(yr).slice(2)}`
       const value = allDeals
-        .filter(a => a.updated_at && a.updated_at.slice(0, 7) === key)
+        .filter(a => a.created_at && a.created_at.slice(0, 7) === key)
         .reduce((s, a) => s + (a.deal_value || 0), 0)
       return { label, value }
     })
@@ -628,7 +628,7 @@ function DealsSection({ closerId }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('commission_payouts')
-        .select('id, amount_cents, status, created_at, appointment:appointments!appointment_id ( deal_value, updated_at, lead:leads ( business_name ) )')
+        .select('id, amount_cents, status, created_at, appointment:appointments!appointment_id ( deal_value, created_at, lead:leads ( business_name ) )')
         .eq('rep_id', closerId)
         .order('created_at', { ascending: false })
       if (error) throw error
@@ -660,8 +660,8 @@ function DealsSection({ closerId }) {
             const dealValue = d.appointment?.deal_value != null ? d.appointment.deal_value : null
             const totalFmt  = dealValue != null ? `$${dealValue.toLocaleString()}` : '—'
             const cutFmt    = dealValue != null ? `$${Math.round(dealValue * 0.45).toLocaleString()}` : '—'
-            const closeDate = d.appointment?.updated_at
-              ? new Date(d.appointment.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            const closeDate = d.appointment?.created_at
+              ? new Date(d.appointment.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
               : d.created_at
               ? new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
               : '—'
