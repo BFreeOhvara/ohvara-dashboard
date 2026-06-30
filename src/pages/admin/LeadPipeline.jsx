@@ -1,27 +1,27 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { PhoneMissed, CalendarClock, Ban, CheckCircle, Inbox, FilePlus2, Search } from 'lucide-react'
+import { PhoneMissed, CalendarClock, Ban, CheckCircle, Inbox, FilePlus2, Search, Phone } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useReps } from '../../hooks/useProfiles'
 import { KPICard } from '../../components/ui/KPICard'
 import { AppointmentCard } from '../../components/closer/AppointmentCard'
 
-// ── Pipeline — one page, full lead lifecycle in six tabs ──────────────────────
-// Tab 1 Unassigned (scraped, no rep yet — the pool)
-// Tab 2 New (assigned to a rep, not yet called)
-// Tab 3 No Answer Queue (24h redistribution pool)
-// Tab 4 Follow-Up Queue (same-rep scheduled returns)
-// Tab 5 Not Interested Archive (permanent do-not-contact, read-only)
-// Tab 6 Booked (closer pipeline)
-// A page-level business-name search + rep filter narrow every tab.
+// ── Pipeline — 3 top-level tabs ───────────────────────────────────────────────
+// Tab 1 Unassigned   — scraped leads with no rep yet (the pool)
+// Tab 2 Appointment Setting — rep-assigned leads (New / No Answer / Follow-Up / Not Interested)
+// Tab 3 Closer       — appointments in the closer pipeline
 
-const TABS = [
-  { key: 'unassigned',     label: 'Unassigned',       icon: Inbox },
+const VIEW_TABS = [
+  { key: 'unassigned',           label: 'Unassigned',           icon: Inbox },
+  { key: 'appointment_setting',  label: 'Appointment Setting',  icon: Phone },
+  { key: 'closer',               label: 'Closer',               icon: CalendarClock },
+]
+
+const SETTER_SUB_TABS = [
   { key: 'new',            label: 'New',              icon: FilePlus2 },
   { key: 'no_answer',      label: 'No Answer Queue',  icon: PhoneMissed },
   { key: 'follow_up',      label: 'Follow-Up Queue',  icon: CalendarClock },
   { key: 'not_interested', label: 'Not Interested',   icon: Ban },
-  { key: 'booked',         label: 'Booked',           icon: CheckCircle },
 ]
 
 // Page-level filters applied client-side to every tab's rows. `getRepName`
@@ -416,7 +416,8 @@ function BookedTab({ filters }) {
 }
 
 export default function LeadPipeline() {
-  const [tab, setTab] = useState('unassigned')
+  const [view, setView] = useState('unassigned')
+  const [subTab, setSubTab] = useState('new')
   const [search, setSearch] = useState('')
   const [repName, setRepName] = useState('')
   const { data: reps } = useReps()
@@ -464,32 +465,59 @@ export default function LeadPipeline() {
         </div>
       </div>
 
-      {/* Tabs — underline pattern */}
+      {/* Top-level view tabs */}
       <div style={{ display: 'flex', gap: 4, borderBottom: '0.5px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
-        {TABS.map(({ key, label, icon: Icon }) => (
+        {VIEW_TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
-            onClick={() => setTab(key)}
+            onClick={() => setView(key)}
             style={{
               display: 'flex', alignItems: 'center', gap: 7,
-              padding: '10px 14px', background: 'none', cursor: 'pointer',
-              border: 'none', borderBottom: tab === key ? '2px solid var(--accent)' : '2px solid transparent',
-              fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap',
-              color: tab === key ? 'var(--accent)' : 'var(--text-muted)',
+              padding: '10px 16px', background: 'none', cursor: 'pointer',
+              border: 'none', borderBottom: view === key ? '2px solid var(--accent)' : '2px solid transparent',
+              fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap',
+              color: view === key ? 'var(--accent)' : 'var(--text-muted)',
             }}
           >
-            <Icon size={13} />
+            <Icon size={14} />
             {label}
           </button>
         ))}
       </div>
 
-      {tab === 'unassigned' && <UnassignedTab filters={filters} />}
-      {tab === 'new' && <NewTab filters={filters} />}
-      {tab === 'no_answer' && <NoAnswerTab filters={filters} />}
-      {tab === 'follow_up' && <FollowUpTab filters={filters} />}
-      {tab === 'not_interested' && <NotInterestedTab filters={filters} />}
-      {tab === 'booked' && <BookedTab filters={filters} />}
+      {/* Unassigned */}
+      {view === 'unassigned' && <UnassignedTab filters={filters} />}
+
+      {/* Appointment Setting — sub-tabs */}
+      {view === 'appointment_setting' && (
+        <div>
+          <div style={{ display: 'flex', gap: 4, borderBottom: '0.5px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
+            {SETTER_SUB_TABS.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setSubTab(key)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  padding: '10px 14px', background: 'none', cursor: 'pointer',
+                  border: 'none', borderBottom: subTab === key ? '2px solid var(--accent)' : '2px solid transparent',
+                  fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap',
+                  color: subTab === key ? 'var(--accent)' : 'var(--text-muted)',
+                }}
+              >
+                <Icon size={13} />
+                {label}
+              </button>
+            ))}
+          </div>
+          {subTab === 'new'            && <NewTab filters={filters} />}
+          {subTab === 'no_answer'      && <NoAnswerTab filters={filters} />}
+          {subTab === 'follow_up'      && <FollowUpTab filters={filters} />}
+          {subTab === 'not_interested' && <NotInterestedTab filters={filters} />}
+        </div>
+      )}
+
+      {/* Closer */}
+      {view === 'closer' && <BookedTab filters={filters} />}
     </div>
   )
 }
