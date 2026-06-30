@@ -61,6 +61,7 @@ function useNoAnswerQueue() {
           orig_rep:profiles!no_answer_queue_called_by_rep_id_fkey(full_name),
           dist_rep:profiles!no_answer_queue_distributed_to_rep_id_fkey(full_name)
         `)
+        .is('distributed_at', null)
         .order('available_at', { ascending: true })
         .limit(300)
       if (error) throw error
@@ -81,6 +82,8 @@ function useFollowUpQueue() {
           lead:leads(business_name, niche, city),
           rep:profiles!follow_up_queue_rep_id_fkey(full_name)
         `)
+        .is('reminded_at', null)
+        .is('completed_at', null)
         .order('follow_up_at', { ascending: true })
         .limit(300)
       if (error) throw error
