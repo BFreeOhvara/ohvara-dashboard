@@ -476,7 +476,6 @@ function NoAnswerTab({ filters }) {
       <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
         <KPICard label="In Queue" value={waiting.length} sub="waiting on 24h window" icon={PhoneMissed} />
         <KPICard label="Redistributing Today" value={dueToday} sub="hit the pool today" icon={CalendarClock} />
-        <KPICard label="Redistributed This Week" value={distributedThisWeek} sub="back in rotation" icon={CheckCircle} />
       </div>
       <QueueTable
         columns={[['Business', '1 1 0'], ['Niche', '0 0 110px'], ['City', '0 0 100px'], ['Marked By', '0 0 110px'], ['Called At', '0 0 130px'], ['Redistribution', '0 0 160px'], ['Status', '0 0 130px']]}
@@ -526,7 +525,6 @@ function FollowUpTab({ filters }) {
       <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
         <KPICard label="Pending Follow-Ups" value={pending.length} sub="scheduled by reps" icon={CalendarClock} />
         <KPICard label="Due Today" value={dueToday} sub="return today" icon={PhoneMissed} />
-        <KPICard label="Overdue" value={overdue} sub="past due, next cron run" icon={Ban} />
       </div>
       <QueueTable
         columns={[['Business', '1 1 0'], ['Rep Assigned', '0 0 120px'], ['Follow-Up At', '0 0 150px'], ['Reason', '1 1 0'], ['Status', '0 0 100px']]}
@@ -631,7 +629,7 @@ const ADMIN_CLOSER_TABS = [
 ]
 
 const SETTER_STATUS_STYLES = {
-  'New':           { color: 'var(--accent)',   bg: 'var(--accent-dim)',   border: 'var(--accent-border)',       label: 'New' },
+  'New':           { color: 'var(--info)',     bg: 'var(--info-dim)',     border: 'rgba(56,189,248,0.20)',      label: 'New' },
   'No Answer':     { color: '#94A3B8',         bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)', label: 'No Answer' },
   'Follow-Up':     { color: 'var(--warning)',  bg: 'var(--warning-dim)',  border: 'rgba(245,158,11,0.20)',      label: 'Follow-Up' },
   'Not Interested':{ color: 'var(--danger)',   bg: 'var(--danger-dim)',   border: 'rgba(239,68,68,0.20)',       label: 'Not Interested' },

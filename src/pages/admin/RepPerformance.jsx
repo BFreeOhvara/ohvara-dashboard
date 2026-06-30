@@ -9,7 +9,7 @@ const PERIODS = ['day', 'week', 'month']
 
 export default function RepPerformance() {
   const { data: reps, isLoading } = useReps()
-  const [period, setPeriod] = useState('week')
+  const [period, setPeriod] = useState('day')
 
   return (
     <div>
