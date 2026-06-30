@@ -13,22 +13,56 @@ import { ScriptCanvas } from '../../components/rep/ScriptCanvas'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const LS_VIDEOS    = 'ohvara_training_videos'
-const LS_MASTERED  = 'ohvara_flashcard_mastered'
+const LS_VIDEOS           = 'ohvara_training_videos'
+const LS_MASTERED         = 'ohvara_flashcard_mastered'
+const LS_FINAL_QUIZ_PASS  = 'ohvara_final_quiz_passed'
 
-// Real YouTube videos — found via AI web search and verified live through
-// YouTube's oEmbed endpoint on 2026-06-11. Replace with Ohvara's own
-// recordings when available.
+// 8 topics locked 2026-06-30 — see brain/training-videos.md. Durations
+// verified live via Chrome on 2026-06-30, all under 10 minutes.
 const TRAINING_VIDEOS = [
-  { id: 1, title: 'The Perfect Opener', description: 'How to start a cold call so they don\'t hang up in the first 5 seconds. The exact words to use.', duration: '3 min', category: 'Opener',    youtubeId: 'nkGuC2gy1To' }, // "Best Cold Call Opening Lines for Sales Reps" — Matt Easton
-  { id: 2, title: 'Tonality & Energy',  description: 'Why how you say it matters more than what you say. The tone that gets callbacks.', duration: '24 min', category: 'Delivery',   youtubeId: 'nH3B415NSio' }, // "Cold Calls Are Won With TONE (Not Your Script)" — Sell Better
-  { id: 3, title: 'Uncovering Pain',    description: 'The questions that make prospects tell you everything. How to get them talking.', duration: '28 min', category: 'Discovery',  youtubeId: 'swr2VsX5Ank' }, // "Discovery Calls That Don't Suck: How to Uncover Real Pain FAST" — Connor Murray
-  { id: 4, title: 'Handling "Not Interested"', description: 'The only objection that matters on a cold call. Exactly what to say and when to let go.', duration: '5 min', category: 'Objections', youtubeId: 'z_JohGi_i7k' }, // "How I Handle 'Not Interested' (Cold Call Script)" — 30 Minutes to President's Club
-  { id: 5, title: 'Booking the Call',   description: 'How to go from good conversation to confirmed appointment. The exact close.', duration: '4 min', category: 'Booking',    youtubeId: 'mQ68FJYL8Lg' }, // "Cold Calling Appointment Setting: How to Book the Meeting on the 2nd Ask" — Matt Macnamara
-  { id: 6, title: 'Common Mistakes',    description: 'The cold-calling mistakes that kill your connect rate. Watch this before your first call.', duration: '10 min', category: 'Mistakes',   youtubeId: 'dUvLjS064Rw' }, // "Five B2B Cold-Calling Mistakes That Cost You Sales & Customers" — Ian Johnson
-  { id: 7, title: 'The Full Call Walkthrough', description: 'A real live cold call from dial to booked meeting. Watch how it\'s done.', duration: '1h 23m', category: 'Full Call', youtubeId: '4BpD8-BHrJg' }, // "cold call LIVE (what the gurus dont show) 1 meeting booked" — Pavlo
-  { id: 8, title: 'The Numbers Game', description: 'Why calling volume beats everything else. The math behind consistent bookings.', duration: '13 min', category: 'Mindset', youtubeId: 'dnOu6ysy7NU' }, // "How I book 3-5 appointments per day (B2B Cold Calling)" — Connor Murray
+  { id: 1, title: 'What an AI Receptionist Does',        description: 'Plain-terms product knowledge — what it does, why a business owner should care, in 30 seconds.', duration: '7:40', category: 'Product',    youtubeId: '0_TQV5tfFds' },
+  { id: 2, title: 'Tonality & Delivery',                  description: 'Sounding like a peer who found them a fix, not a telemarketer.', duration: '9:35', category: 'Delivery',   youtubeId: 'vjj9qOxGCgk' },
+  { id: 3, title: 'The Discovery Script',                 description: 'Why questions about missed calls beat pitching the AI upfront.', duration: '4:34', category: 'Discovery',  youtubeId: 'dDGX95UkV10' },
+  { id: 4, title: 'Getting Past the Gatekeeper',          description: 'Reaching the owner without sounding like "another AI sales call."', duration: '7:40', category: 'Gatekeeper', youtubeId: 'krveop9O-ik' },
+  { id: 5, title: 'Handling Objections',                  description: '"We already have a system," "AI feels impersonal," "send me an email."', duration: '8:59', category: 'Objections', youtubeId: 'mDWUpuumAuo' },
+  { id: 6, title: 'Qualifying the Prospect',               description: 'Missed calls/week × avg ticket — the math that proves the pain is real.', duration: '9:16', category: 'Qualifying', youtubeId: 'dj3J75I0GYQ' },
+  { id: 7, title: 'Booking & Handoff',                    description: 'Framing Nate as the AI/automation specialist, not "the closer."', duration: '8:23', category: 'Booking',    youtubeId: '4mrM8GO6SS0' },
+  { id: 8, title: 'Time Management & Call Discipline',    description: 'Structuring the 150-lead day in this specific niche.', duration: '7:08', category: 'Mindset',    youtubeId: 'ga5_EizLwdw' },
 ]
+
+// Placeholder mini-quiz generator — 4 questions per video, swapped for
+// transcript-derived content once Brayden's transcriptions come in.
+function buildMiniQuiz(video) {
+  return Array.from({ length: 4 }).map((_, i) => ({
+    id: `${video.id}-mini-${i}`,
+    question: `Placeholder Q${i + 1} for "${video.title}" — replace once transcript-derived questions are ready`,
+    options: ['Placeholder answer A', 'Placeholder answer B', 'Placeholder answer C', 'Placeholder answer D'],
+    correctIndex: 0,
+  }))
+}
+
+// Placeholder final-quiz pool — 28 questions, ~3-4 per video, swapped for
+// transcript-derived content once Brayden's transcriptions come in.
+const FINAL_QUIZ_PASS_PCT = 85
+function buildFinalQuizPool() {
+  const pool = []
+  TRAINING_VIDEOS.forEach(v => {
+    for (let i = 0; i < 3; i++) {
+      pool.push({
+        id: `${v.id}-final-${i}`,
+        category: v.title,
+        question: `Placeholder Q${i + 1} for "${v.title}" — replace once transcript-derived questions are ready`,
+        options: shuffle([
+          { text: 'Placeholder correct answer', correct: true },
+          { text: 'Placeholder distractor A', correct: false },
+          { text: 'Placeholder distractor B', correct: false },
+          { text: 'Placeholder distractor C', correct: false },
+        ]),
+      })
+    }
+  })
+  return shuffle(pool).slice(0, 28)
+}
 
 const CATEGORY_FILTERS = [
   { key: 'all', label: 'All Cards', count: FLASHCARDS.length },
@@ -50,6 +84,132 @@ function shuffle(arr) {
   return a
 }
 
+// ── LockedVideoPlayer — YouTube IFrame API, blocks seeking ahead ──────────────
+// Only player chrome allowed is fullscreen + volume. We can't strip YouTube's
+// own seekbar, but we snap any forward seek back to the furthest-watched
+// point every second, and disable keyboard shortcuts (arrow-key skip).
+
+function LockedVideoPlayer({ video, onEnded }) {
+  const containerRef = useRef(null)
+  const playerRef    = useRef(null)
+  const maxTimeRef   = useRef(0)
+  const endedRef     = useRef(false)
+
+  useEffect(() => {
+    let cancelled = false
+    maxTimeRef.current = 0
+    endedRef.current = false
+
+    function createPlayer() {
+      if (cancelled || !containerRef.current) return
+      playerRef.current = new window.YT.Player(containerRef.current, {
+        videoId: video.youtubeId,
+        playerVars: { autoplay: 1, controls: 1, modestbranding: 1, rel: 0, fs: 1, disablekb: 1, playsinline: 1 },
+        events: {
+          onStateChange: (e) => {
+            if (e.data === window.YT.PlayerState.ENDED && !endedRef.current) {
+              endedRef.current = true
+              onEnded()
+            }
+          },
+        },
+      })
+    }
+
+    if (window.YT && window.YT.Player) {
+      createPlayer()
+    } else {
+      if (!document.getElementById('yt-iframe-api')) {
+        const tag = document.createElement('script')
+        tag.id = 'yt-iframe-api'
+        tag.src = 'https://www.youtube.com/iframe_api'
+        document.body.appendChild(tag)
+      }
+      const prevReady = window.onYouTubeIframeAPIReady
+      window.onYouTubeIframeAPIReady = () => { prevReady?.(); createPlayer() }
+    }
+
+    return () => {
+      cancelled = true
+      try { playerRef.current?.destroy?.() } catch { /* ignore */ }
+    }
+  }, [video.youtubeId])
+
+  // Block scrubbing ahead — snap back to furthest-watched position
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const p = playerRef.current
+      if (!p || typeof p.getCurrentTime !== 'function') return
+      const t = p.getCurrentTime()
+      if (t > maxTimeRef.current + 1.5) {
+        p.seekTo(maxTimeRef.current, true)
+      } else if (t > maxTimeRef.current) {
+        maxTimeRef.current = t
+      }
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+}
+
+// ── MiniQuiz — per-video, formative only, never blocks progress ──────────────
+
+function MiniQuiz({ video, onDone }) {
+  const [questions]  = useState(() => buildMiniQuiz(video))
+  const [index, setIndex] = useState(0)
+  const [picked, setPicked] = useState(null)
+
+  function pick(i) {
+    if (picked !== null) return
+    setPicked(i)
+    setTimeout(() => {
+      if (index + 1 >= questions.length) {
+        onDone()
+      } else {
+        setIndex(v => v + 1)
+        setPicked(null)
+      }
+    }, 700)
+  }
+
+  const q = questions[index]
+  return (
+    <div style={{ padding: '20px 24px' }}>
+      <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent)', margin: '0 0 10px' }}>
+        Quick check · {index + 1}/{questions.length}
+      </p>
+      <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.5, margin: '0 0 14px' }}>
+        {q.question}
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {q.options.map((opt, i) => {
+          const showFeedback = picked !== null
+          const isCorrect = i === q.correctIndex
+          const isPicked = picked === i
+          const color = !showFeedback ? 'var(--border)' : isCorrect ? 'rgba(34,197,94,0.5)' : isPicked ? 'rgba(239,68,68,0.5)' : 'var(--border)'
+          return (
+            <button
+              key={i}
+              onClick={() => pick(i)}
+              disabled={picked !== null}
+              style={{
+                textAlign: 'left', padding: '10px 12px', fontSize: 13,
+                background: showFeedback && isCorrect ? 'rgba(34,197,94,0.08)' : showFeedback && isPicked ? 'rgba(239,68,68,0.08)' : 'var(--bg-surface)',
+                border: `0.5px solid ${color}`, borderRadius: 8,
+                color: showFeedback ? (isCorrect ? 'var(--success)' : isPicked ? 'var(--danger)' : 'var(--text-muted)') : 'var(--text-secondary)',
+                cursor: picked === null ? 'pointer' : 'default',
+              }}
+            >
+              {opt}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── VideoLibrary ──────────────────────────────────────────────────────────────
 
 function VideoLibrary({ progress, saveProgress }) {
@@ -62,6 +222,8 @@ function VideoLibrary({ progress, saveProgress }) {
     return [...new Set([...fromDb, ...fromLs])]
   })
   const [activeVideo, setActiveVideo] = useState(null)
+  // 'playing' while locked, 'quiz' once the video ends and the mini quiz shows
+  const [stage, setStage] = useState('playing')
 
   // DB row loads async — merge it in when it arrives
   useEffect(() => {
@@ -69,13 +231,24 @@ function VideoLibrary({ progress, saveProgress }) {
     if (fromDb.length) setWatched(prev => prev.length === new Set([...prev, ...fromDb]).size ? prev : [...new Set([...prev, ...fromDb])])
   }, [progress])
 
-  function toggleWatched(id) {
+  function markWatched(id) {
     setWatched(prev => {
-      const next = prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]
+      if (prev.includes(id)) return prev
+      const next = [...prev, id]
       localStorage.setItem(LS_VIDEOS, JSON.stringify(next))
       saveProgress({ videos_watched: next })
       return next
     })
+  }
+
+  function openVideo(v) {
+    setActiveVideo(v)
+    setStage('playing')
+  }
+
+  function closeVideo() {
+    setActiveVideo(null)
+    setStage('playing')
   }
 
   const isPlaceholder = (id) => id.startsWith('PLACEHOLDER')
@@ -114,7 +287,7 @@ function VideoLibrary({ progress, saveProgress }) {
               key={v.id}
               className="glass"
               style={{ padding: 16, cursor: 'pointer', transition: 'border-color 0.15s', position: 'relative' }}
-              onClick={() => !isPlaceholder(v.youtubeId) && setActiveVideo(v)}
+              onClick={() => !isPlaceholder(v.youtubeId) && openVideo(v)}
             >
               {/* Thumbnail — flush with the card's top corners (.glass is
                   12px radius, card padding 16px → negative margins) */}
@@ -204,29 +377,25 @@ function VideoLibrary({ progress, saveProgress }) {
                 {v.description}
               </div>
 
-              {/* Completion checkbox */}
+              {/* Completion status — only earned by watching the video through (locked player) */}
               <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button
-                  onClick={e => { e.stopPropagation(); toggleWatched(v.id) }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    background: done ? 'rgba(34,197,94,0.08)' : 'transparent',
-                    border: `0.5px solid ${done ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`,
-                    borderRadius: 5, padding: '4px 8px',
-                    fontSize: 11, color: done ? 'var(--success)' : 'var(--text-muted)',
-                    cursor: 'pointer', transition: 'all 0.15s',
-                  }}
-                >
-                  <Check size={10} />
-                  {done ? 'Marked complete' : 'Mark complete'}
-                </button>
+                <span style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  background: done ? 'rgba(34,197,94,0.08)' : 'transparent',
+                  border: `0.5px solid ${done ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`,
+                  borderRadius: 5, padding: '4px 8px',
+                  fontSize: 11, color: done ? 'var(--success)' : 'var(--text-muted)',
+                }}>
+                  {done ? <Check size={10} /> : null}
+                  {done ? 'Completed' : 'Not watched'}
+                </span>
               </div>
             </div>
           )
         })}
       </div>
 
-      {/* Video modal */}
+      {/* Video modal — locked while playing: no backdrop close, no X, no skip ahead */}
       {activeVideo && (
         <div
           style={{
@@ -235,7 +404,7 @@ function VideoLibrary({ progress, saveProgress }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: 24,
           }}
-          onClick={() => setActiveVideo(null)}
+          onClick={e => { if (stage !== 'playing') closeVideo() }}
         >
           <div
             style={{ width: '100%', maxWidth: 720, background: 'var(--bg-surface)', borderRadius: 14, overflow: 'hidden', border: '0.5px solid var(--border)' }}
@@ -244,20 +413,30 @@ function VideoLibrary({ progress, saveProgress }) {
             <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid var(--border)' }}>
               <div>
                 <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{activeVideo.title}</p>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>{activeVideo.category} · {activeVideo.duration}</p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                  {activeVideo.category} · {activeVideo.duration}
+                  {stage === 'playing' && <span style={{ color: 'var(--warning)' }}> · locked until finished</span>}
+                </p>
               </div>
-              <button onClick={() => setActiveVideo(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>
-                <X size={16} />
-              </button>
+              {stage !== 'playing' && (
+                <button onClick={closeVideo} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>
+                  <X size={16} />
+                </button>
+              )}
             </div>
-            <div style={{ position: 'relative', paddingTop: '56.25%' }}>
-              <iframe
-                src={`https://www.youtube.com/embed/${activeVideo.youtubeId}?autoplay=1`}
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
-                allow="autoplay; fullscreen"
-                allowFullScreen
-              />
-            </div>
+
+            {stage === 'playing' ? (
+              <div style={{ position: 'relative', paddingTop: '56.25%' }}>
+                <div style={{ position: 'absolute', inset: 0 }}>
+                  <LockedVideoPlayer
+                    video={activeVideo}
+                    onEnded={() => { markWatched(activeVideo.id); setStage('quiz') }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <MiniQuiz video={activeVideo} onDone={closeVideo} />
+            )}
           </div>
         </div>
       )}
@@ -886,6 +1065,161 @@ function QuizTab({ progress, saveProgress }) {
   )
 }
 
+// ── FinalQuizTab — 25-30 questions covering all 8 videos, gates completion ────
+// Combined with flashcard mastery via onPass (see TrainingCenter below).
+
+function FinalQuizTab({ watchedCount, passed, onPass }) {
+  const [questions, setQuestions] = useState(null)
+  const [index, setIndex]   = useState(0)
+  const [picked, setPicked] = useState(null)
+  const [correct, setCorrect] = useState(0)
+  const [finished, setFinished] = useState(false)
+
+  const locked = watchedCount < TRAINING_VIDEOS.length
+
+  function start() {
+    setQuestions(buildFinalQuizPool())
+    setIndex(0)
+    setPicked(null)
+    setCorrect(0)
+    setFinished(false)
+  }
+
+  function pick(i) {
+    if (picked !== null) return
+    setPicked(i)
+    const isRight = questions[index].options[i].correct
+    const nextCorrect = correct + (isRight ? 1 : 0)
+    setCorrect(nextCorrect)
+    setTimeout(() => {
+      if (index + 1 >= questions.length) {
+        finish(nextCorrect)
+      } else {
+        setIndex(v => v + 1)
+        setPicked(null)
+      }
+    }, 700)
+  }
+
+  function finish(finalCorrect) {
+    setFinished(true)
+    const pct = Math.round((finalCorrect / questions.length) * 100)
+    if (pct >= FINAL_QUIZ_PASS_PCT && !passed) onPass()
+  }
+
+  if (locked) {
+    return (
+      <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '56px 24px' }}>
+        <Lock size={26} color="var(--accent)" style={{ marginBottom: 14 }} />
+        <h2 style={{ fontSize: 17, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 8px' }}>Watch all 8 videos first</h2>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{watchedCount}/{TRAINING_VIDEOS.length} watched — the final exam unlocks once every video is complete.</p>
+      </div>
+    )
+  }
+
+  if (finished) {
+    const pct = Math.round((correct / questions.length) * 100)
+    const didPass = pct >= FINAL_QUIZ_PASS_PCT
+    return (
+      <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '40px 24px' }}>
+        <p style={{ fontSize: 32, fontFamily: 'var(--font-mono)', fontWeight: 600, color: didPass ? 'var(--success)' : 'var(--danger)', margin: '0 0 8px' }}>{pct}%</p>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>{correct}/{questions.length} correct</p>
+        <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 20 }}>
+          {didPass ? 'Final exam passed — training complete.' : `${FINAL_QUIZ_PASS_PCT}% needed to pass`}
+        </p>
+        <button
+          onClick={start}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8, height: 42, padding: '0 22px',
+            background: didPass ? 'var(--bg-surface)' : 'var(--accent)',
+            border: didPass ? '0.5px solid var(--border)' : 'none',
+            borderRadius: 10, fontSize: 13, fontWeight: 500,
+            color: didPass ? 'var(--text-secondary)' : 'white', cursor: 'pointer',
+          }}
+        >
+          <RotateCcw size={14} />
+          {didPass ? 'Take it again' : 'Retry exam'}
+        </button>
+      </div>
+    )
+  }
+
+  if (!questions) {
+    return (
+      <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '48px 24px' }}>
+        <ClipboardCheck size={26} color="var(--accent)" style={{ marginBottom: 14 }} />
+        <h2 style={{ fontSize: 19, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 10px' }}>Final Exam</h2>
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 12px' }}>
+          25-30 questions covering all 8 training videos. Pass ≥ {FINAL_QUIZ_PASS_PCT}% to complete training.
+        </p>
+        {passed && (
+          <p style={{ fontSize: 12, color: 'var(--success)', marginBottom: 12 }}>Passed ✓ — you can retake it any time.</p>
+        )}
+        <button
+          onClick={start}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8, height: 42, padding: '0 24px',
+            background: 'var(--accent)', border: 'none', borderRadius: 10,
+            fontSize: 14, fontWeight: 500, color: 'white', cursor: 'pointer',
+          }}
+        >
+          <Play size={15} />
+          Start Final Exam
+        </button>
+      </div>
+    )
+  }
+
+  const q = questions[index]
+  const LETTERS = ['A', 'B', 'C', 'D']
+  return (
+    <div style={{ maxWidth: 640, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+          Question <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{index + 1}</span> of {questions.length}
+        </span>
+        <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--success)' }}>{correct} correct</span>
+      </div>
+      <div className="glass" style={{ borderRadius: 12, padding: '22px 24px', marginBottom: 16 }}>
+        <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent)', margin: '0 0 8px' }}>{q.category}</p>
+        <p style={{ fontSize: 16, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>{q.question}</p>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {q.options.map((opt, i) => {
+          const showFeedback = picked !== null
+          const isPicked = picked === i
+          const highlight = showFeedback && (opt.correct || isPicked)
+          const color = !showFeedback ? 'var(--border)' : opt.correct ? 'rgba(34,197,94,0.5)' : isPicked ? 'rgba(239,68,68,0.5)' : 'var(--border)'
+          const fg = highlight ? (opt.correct ? 'var(--success)' : 'var(--danger)') : 'var(--text-secondary)'
+          return (
+            <button
+              key={i}
+              onClick={() => pick(i)}
+              disabled={picked !== null}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', padding: '13px 14px',
+                background: !showFeedback ? 'var(--bg-surface)' : opt.correct ? 'rgba(34,197,94,0.08)' : isPicked ? 'rgba(239,68,68,0.08)' : 'var(--bg-surface)',
+                border: `0.5px solid ${color}`, borderRadius: 10, cursor: picked === null ? 'pointer' : 'default',
+                fontSize: 13, lineHeight: 1.55, color: fg, opacity: showFeedback && !highlight ? 0.45 : 1,
+              }}
+            >
+              <span style={{
+                flexShrink: 0, width: 24, height: 24, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-mono)',
+                background: highlight ? (opt.correct ? 'var(--success)' : 'var(--danger)') : 'var(--bg-elevated)',
+                color: highlight ? 'white' : 'var(--text-muted)',
+              }}>
+                {highlight ? (opt.correct ? <Check size={13} /> : <X size={13} />) : LETTERS[i]}
+              </span>
+              <span style={{ flex: 1 }}>{opt.text}</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── AIRoleplay — live voice practice scored by "Phoenix" (claude-haiku) ───────
 // Calls Retell ("Mike", a gruff HVAC owner), transcribes live, and on hang-up
 // sends the transcript to score-roleplay. B+ or higher (9/12) passes the gate.
@@ -1350,11 +1684,12 @@ function AIRoleplay({ progress, saveProgress }) {
 // ── Main Training Center page ─────────────────────────────────────────────────
 
 const TABS = [
-  { id: 'script',     label: 'Script',      icon: FileText,       count: null },
-  { id: 'videos',     label: 'Videos',      icon: Play,           count: `${TRAINING_VIDEOS.length} videos` },
-  { id: 'flashcards', label: 'Flashcards',  icon: BookOpen,       count: `${FLASHCARDS.length} cards` },
-  { id: 'quiz',       label: 'Quiz',        icon: ClipboardCheck, count: null },
-  { id: 'roleplay',   label: 'AI Roleplay', icon: Mic,            count: null },
+  { id: 'script',      label: 'Script',      icon: FileText,       count: null },
+  { id: 'videos',      label: 'Videos',      icon: Play,           count: `${TRAINING_VIDEOS.length} videos` },
+  { id: 'flashcards',  label: 'Flashcards',  icon: BookOpen,       count: `${FLASHCARDS.length} cards` },
+  { id: 'quiz',        label: 'Quiz',        icon: ClipboardCheck, count: null },
+  { id: 'final-exam',  label: 'Final Exam',  icon: Award,          count: null },
+  { id: 'roleplay',    label: 'AI Roleplay', icon: Mic,            count: null },
 ]
 
 export default function TrainingCenter() {
@@ -1364,17 +1699,43 @@ export default function TrainingCenter() {
   const saveMutation = useSaveTrainingProgress()
   const saveProgress = (patch) => saveMutation.mutate(patch)
 
-  async function handleAllFlashcardsMastered() {
+  // Combined gate: profiles.training_completed set only when both flashcards
+  // mastered AND final exam passed. Tracked client-side via localStorage since
+  // no DB column exists for final quiz state yet — Falcon to add migration if
+  // server-side persistence is needed later.
+  const [flashcardsMastered, setFlashcardsMastered] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(LS_MASTERED) || '[]')).size >= FLASHCARDS.length } catch { return false }
+  })
+  const [finalQuizPassed, setFinalQuizPassed] = useState(
+    () => localStorage.getItem(LS_FINAL_QUIZ_PASS) === '1'
+  )
+
+  async function maybeCompleteTraining(nextFC, nextFQ) {
     if (!profile?.id || profile?.training_completed) return
-    await supabase.from('profiles').update({ training_completed: true }).eq('id', profile.id)
+    if (nextFC && nextFQ) {
+      await supabase.from('profiles').update({ training_completed: true }).eq('id', profile.id)
+    }
+  }
+
+  function handleAllFlashcardsMastered() {
+    setFlashcardsMastered(true)
+    maybeCompleteTraining(true, finalQuizPassed)
+  }
+
+  function handleFinalQuizPassed() {
+    localStorage.setItem(LS_FINAL_QUIZ_PASS, '1')
+    setFinalQuizPassed(true)
+    maybeCompleteTraining(flashcardsMastered, true)
   }
 
   const checks   = trainingChecks(progress)
   const complete = isTrainingComplete(progress)
+  const watchedCount = checks.videosWatched
   const gateSteps = [
-    { label: `Videos ${checks.videosWatched}/${TOTAL_VIDEOS}`, done: checks.videosDone,   goTab: 'videos' },
-    { label: `Quiz ${QUIZ_PASS_PCT}%+`,                        done: checks.quizDone,     goTab: 'quiz' },
-    { label: `Roleplay ${ROLEPLAY_PASS_GRADE}+`,               done: checks.roleplayDone, goTab: 'roleplay' },
+    { label: `Videos ${watchedCount}/${TOTAL_VIDEOS}`, done: checks.videosDone,   goTab: 'videos' },
+    { label: `Quiz ${QUIZ_PASS_PCT}%+`,                done: checks.quizDone,     goTab: 'quiz' },
+    { label: `Final Exam ${FINAL_QUIZ_PASS_PCT}%+`,    done: finalQuizPassed,     goTab: 'final-exam' },
+    { label: `Roleplay ${ROLEPLAY_PASS_GRADE}+`,        done: checks.roleplayDone, goTab: 'roleplay' },
   ]
 
   return (
@@ -1389,7 +1750,7 @@ export default function TrainingCenter() {
         </p>
       </div>
 
-      {/* Unlock progress — shown until all three gate checks pass */}
+      {/* Unlock progress — shown until all gate checks pass */}
       {!complete && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
@@ -1398,7 +1759,7 @@ export default function TrainingCenter() {
         }}>
           <Lock size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
           <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>
-            Complete all three to unlock your leads:
+            Complete all to unlock your leads:
           </span>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {gateSteps.map((s, i) => (
@@ -1427,7 +1788,7 @@ export default function TrainingCenter() {
         display: 'flex', gap: 4, marginBottom: 24,
         background: 'var(--bg-surface)', border: '0.5px solid var(--border)',
         borderRadius: 10, padding: 4,
-        width: 'fit-content',
+        width: 'fit-content', flexWrap: 'wrap',
       }}>
         {TABS.map(t => {
           const active = tab === t.id
@@ -1467,6 +1828,7 @@ export default function TrainingCenter() {
       {tab === 'videos'     && <VideoLibrary progress={progress} saveProgress={saveProgress} />}
       {tab === 'flashcards' && <FlashcardDeck onAllMastered={handleAllFlashcardsMastered} />}
       {tab === 'quiz'       && <QuizTab progress={progress} saveProgress={saveProgress} />}
+      {tab === 'final-exam' && <FinalQuizTab watchedCount={watchedCount} passed={finalQuizPassed} onPass={handleFinalQuizPassed} />}
       {tab === 'script'     && <DiscoveryScript />}
       {tab === 'roleplay'   && <AIRoleplay progress={progress} saveProgress={saveProgress} />}
     </div>
