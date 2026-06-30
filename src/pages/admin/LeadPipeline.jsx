@@ -630,6 +630,26 @@ const ADMIN_CLOSER_TABS = [
   { key: 'all',                label: 'All',                color: 'var(--accent)',  dim: 'var(--accent-dim)',  border: 'var(--accent-border)' },
 ]
 
+const SETTER_STATUS_STYLES = {
+  'New':           { color: 'var(--accent)',   bg: 'var(--accent-dim)',   border: 'var(--accent-border)',       label: 'New' },
+  'No Answer':     { color: '#94A3B8',         bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)', label: 'No Answer' },
+  'Follow-Up':     { color: 'var(--warning)',  bg: 'var(--warning-dim)',  border: 'rgba(245,158,11,0.20)',      label: 'Follow-Up' },
+  'Not Interested':{ color: 'var(--danger)',   bg: 'var(--danger-dim)',   border: 'rgba(239,68,68,0.20)',       label: 'Not Interested' },
+}
+
+function SetterStatusBadge({ status }) {
+  const s = SETTER_STATUS_STYLES[status] || { color: 'var(--text-muted)', bg: 'var(--bg-elevated)', border: 'var(--border)', label: status || '—' }
+  return (
+    <span style={{
+      fontSize: 10, padding: '2px 7px', borderRadius: 10,
+      background: s.bg, color: s.color, border: `0.5px solid ${s.border}`,
+      fontFamily: 'var(--font-mono)', fontWeight: 500, whiteSpace: 'nowrap',
+    }}>
+      {s.label}
+    </span>
+  )
+}
+
 const ADMIN_CLOSER_STATUS_STYLES = {
   pending:            { color: 'var(--warning)', bg: 'var(--warning-dim)',  border: 'rgba(245,158,11,0.20)',   label: 'pending' },
   completed:          { color: 'var(--success)', bg: 'var(--success-dim)',  border: 'rgba(34,197,94,0.20)',    label: 'closed' },
@@ -829,7 +849,7 @@ function AppointmentSettingView({ filters }) {
                 <div style={cell('0 0 130px')}>{r.niche || '—'}</div>
                 <div style={cell('0 0 120px')}>{r.city || '—'}</div>
                 <div style={cell('0 0 140px')}>{r.assigned_rep?.full_name || '—'}</div>
-                <div style={cell('0 0 140px')}>{r.status || '—'}</div>
+                <div style={cell('0 0 140px')}><SetterStatusBadge status={r.status} /></div>
                 <div style={cell('0 0 120px', { fontFamily: 'var(--font-mono)' })}>
                   {r.batch_date ? new Date(r.batch_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
                 </div>
