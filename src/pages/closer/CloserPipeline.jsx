@@ -93,7 +93,7 @@ function QueueTable({ columns, rows, renderRow, emptyText, emptyIcon: EmptyIcon 
 function PendingTab({ rows, tz }) {
   return (
     <QueueTable
-      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Phone', '0 0 140px'], ['Set By', '0 0 120px'], ['Scheduled', '0 0 150px'], ['Status', '0 0 100px']]}
+      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Phone', '0 0 140px'], ['Set By', '0 0 120px'], ['Scheduled', '0 0 150px']]}
       rows={rows}
       emptyText="No pending appointments."
       emptyIcon={CalendarClock}
@@ -105,7 +105,6 @@ function PendingTab({ rows, tz }) {
           <div style={cell('0 0 140px', { fontFamily: 'var(--font-mono)' })}>{a.lead?.phone || '—'}</div>
           <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
           <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at, tz)}</div>
-          <div style={cell('0 0 100px')}><Badge label={a.status} /></div>
         </div>
       )}
     />
@@ -200,10 +199,33 @@ function NeedsReschedulingTab({ rows, tz }) {
   )
 }
 
+const ALL_TAB_STATUS_STYLES = {
+  pending:            { color: 'var(--warning)', bg: 'var(--warning-dim)',  border: 'rgba(245,158,11,0.20)',   label: 'pending' },
+  completed:          { color: 'var(--success)', bg: 'var(--success-dim)',  border: 'rgba(34,197,94,0.20)',    label: 'closed' },
+  lost:               { color: 'var(--danger)',  bg: 'var(--danger-dim)',   border: 'rgba(239,68,68,0.20)',    label: 'lost' },
+  no_show:            { color: '#94A3B8',        bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)', label: 'no show' },
+  missed:             { color: '#94A3B8',        bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)', label: 'missed' },
+  needs_rescheduling: { color: 'var(--info)',    bg: 'var(--info-dim)',     border: 'rgba(56,189,248,0.20)',   label: 'reschedule' },
+}
+
+function AllStatusBadge({ status, outcome }) {
+  const key = (outcome === 'closed' || status === 'completed') ? 'completed' : (status || 'pending')
+  const s = ALL_TAB_STATUS_STYLES[key] || ALL_TAB_STATUS_STYLES.pending
+  return (
+    <span style={{
+      fontSize: 10, padding: '2px 7px', borderRadius: 10,
+      background: s.bg, color: s.color, border: `0.5px solid ${s.border}`,
+      fontFamily: 'var(--font-mono)', fontWeight: 500, whiteSpace: 'nowrap',
+    }}>
+      {s.label}
+    </span>
+  )
+}
+
 function AllTab({ rows, tz }) {
   return (
     <QueueTable
-      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Phone', '0 0 140px'], ['Set By', '0 0 120px'], ['Scheduled', '0 0 150px'], ['Status', '0 0 100px']]}
+      columns={[['Business', '1 1 0'], ['Niche', '0 0 120px'], ['City', '0 0 110px'], ['Phone', '0 0 140px'], ['Set By', '0 0 120px'], ['Scheduled', '0 0 150px'], ['Status', '0 0 110px']]}
       rows={rows}
       emptyText="No appointments."
       emptyIcon={CalendarClock}
@@ -215,7 +237,7 @@ function AllTab({ rows, tz }) {
           <div style={cell('0 0 140px', { fontFamily: 'var(--font-mono)' })}>{a.lead?.phone || '—'}</div>
           <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
           <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at, tz)}</div>
-          <div style={cell('0 0 100px')}>{a.status || '—'}</div>
+          <div style={cell('0 0 110px')}><AllStatusBadge status={a.status} outcome={a.outcome} /></div>
         </div>
       )}
     />
