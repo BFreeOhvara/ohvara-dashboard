@@ -25,43 +25,113 @@ const TRAINING_VIDEOS = [
   { id: 3, title: 'The Discovery Script',                 description: 'Why questions about missed calls beat pitching the AI upfront.', duration: '4:34', category: 'Discovery',  youtubeId: 'dDGX95UkV10' },
   { id: 4, title: 'Getting Past the Gatekeeper',          description: 'Reaching the owner without sounding like "another AI sales call."', duration: '7:40', category: 'Gatekeeper', youtubeId: 'krveop9O-ik' },
   { id: 5, title: 'Handling Objections',                  description: '"We already have a system," "AI feels impersonal," "send me an email."', duration: '8:59', category: 'Objections', youtubeId: 'mDWUpuumAuo' },
-  { id: 6, title: 'Qualifying the Prospect',               description: 'Missed calls/week × avg ticket — the math that proves the pain is real.', duration: '9:16', category: 'Qualifying', youtubeId: 'dj3J75I0GYQ' },
+  { id: 6, title: 'Qualifying the Prospect',               description: 'Missed calls/week × avg ticket — the math that proves the pain is real.', duration: '5:05', category: 'Qualifying', youtubeId: 'wDgnnCRufOI' },
   { id: 7, title: 'Booking & Handoff',                    description: 'Framing Nate as the AI/automation specialist, not "the closer."', duration: '8:23', category: 'Booking',    youtubeId: '4mrM8GO6SS0' },
   { id: 8, title: 'Time Management & Call Discipline',    description: 'Structuring the 150-lead day in this specific niche.', duration: '7:08', category: 'Mindset',    youtubeId: 'ga5_EizLwdw' },
 ]
 
-// Placeholder mini-quiz generator — 4 questions per video, swapped for
-// transcript-derived content once Brayden's transcriptions come in.
-function buildMiniQuiz(video) {
-  return Array.from({ length: 4 }).map((_, i) => ({
-    id: `${video.id}-mini-${i}`,
-    question: `Placeholder Q${i + 1} for "${video.title}" — replace once transcript-derived questions are ready`,
-    options: ['Placeholder answer A', 'Placeholder answer B', 'Placeholder answer C', 'Placeholder answer D'],
-    correctIndex: 0,
-  }))
+// Real quiz content from brain/training-quiz-content.md (Prompt 176, 2026-06-30).
+// Mini-quiz: 4 questions per video (non-gating, formative). correctIndex is 0-based.
+// Final exam: 28 questions covering all 8 videos (85% gate).
+
+const FINAL_QUIZ_PASS_PCT = 85
+
+const MINI_QUIZ_CONTENT = {
+  1: [
+    { id: '1-mini-0', question: 'According to the video, what does missing just one call a day for a $300 product translate to per year?', options: ['About $10,000 in missed revenue', 'About $100,000 in missed revenue', 'About $300,000 in missed revenue', "It doesn't really add up to anything significant"], correctIndex: 1 },
+    { id: '1-mini-1', question: "What typically happens when a caller's call goes to voicemail, per the video?", options: ['They always leave a detailed message', 'They wait a day and call back', "They usually don't leave a voicemail and just call the next business", 'They text the business instead'], correctIndex: 2 },
+    { id: '1-mini-2', question: 'Which is described as the better-quality type of AI receptionist setup?', options: ['A basic voicemail system', 'A templated plug-and-play tool like RingCentral or GoHighLevel', 'A custom solution built on a platform like Retell AI or Vapi', 'A simple chatbot widget'], correctIndex: 2 },
+    { id: '1-mini-3', question: 'How does the video say you should figure out if an AI receptionist is worth it for a business?', options: ['Multiply missed calls per month by average ticket price and compare it to the monthly cost', 'Just guess based on gut feeling', "Copy whatever a competitor is paying", 'Ask the AI vendor what\'s fair'], correctIndex: 0 },
+  ],
+  2: [
+    { id: '2-mini-0', question: 'Roughly how much of total communication impact comes from tonality and body language combined, per the video?', options: ['About 10%', 'About 50%', 'About 90%', 'About 25%'], correctIndex: 2 },
+    { id: '2-mini-1', question: 'What three things must you establish in the first four seconds of a call?', options: ['Name, company, and price', 'Sharp/on the ball, enthusiastic, and perceived as an expert', 'Greeting, pitch, and close', 'Problem, solution, and price'], correctIndex: 1 },
+    { id: '2-mini-2', question: 'What are the two core elements of rapport described in the video?', options: ["Talking a lot and smiling often", "Matching the other person's volume and speed", 'The prospect feeling you care about them, and feeling you\'re similar to them', 'Agreeing with everything they say'], correctIndex: 2 },
+    { id: '2-mini-3', question: 'What three things make up charisma, per the video?', options: ['Natural talent, confidence, and luck', 'Being loud, being persistent, and memorizing a script', 'Effective tonality, appropriate body language, and not saying foolish things', 'Volume, speed, and eye contact only'], correctIndex: 2 },
+  ],
+  3: [
+    { id: '3-mini-0', question: "What's the simplest follow-up technique when a prospect uses an emotional word like \"stressed\"?", options: ['Change the subject right away', 'Repeat the word back as a question — "stressed?"', 'Apologize for bringing it up', 'Offer a discount immediately'], correctIndex: 1 },
+    { id: '3-mini-1', question: 'What does asking "how long has that been going on for?" accomplish?', options: ['Confirms a callback time', 'Qualifies their budget', 'Gets the prospect to relive the pain of the problem', 'Ends the conversation politely'], correctIndex: 2 },
+    { id: '3-mini-2', question: 'Why is the word "trying" (as in "we\'ve been trying to...") called out as important?', options: ["It means they're not a real lead", 'It signals frustration and is a good opening to probe deeper', 'It means they already solved the problem', 'It\'s a signal to end the call'], correctIndex: 1 },
+    { id: '3-mini-3', question: "What's the overall goal of these clarifying and probing questions?", options: ['Fill time before pitching', 'Make small talk to build comfort', 'Confirm contact information', 'Get the prospect to reveal the real problem and feel the emotion behind it'], correctIndex: 3 },
+  ],
+  4: [
+    { id: '4-mini-0', question: "What's the stated goal when a gatekeeper answers the phone?", options: ['Convince the gatekeeper to buy', 'Get past them to reach an actual decision-maker', 'End the call immediately', 'Leave a detailed voicemail'], correctIndex: 1 },
+    { id: '4-mini-1', question: 'What tone does the video recommend when greeting the gatekeeper?', options: ['Very formal and corporate', 'Apologetic and unsure', 'Casual and confident, as if you already know the person you\'re calling for', 'Reading a long scripted introduction'], correctIndex: 2 },
+    { id: '4-mini-2', question: "What's a key mistake to avoid once the gatekeeper starts asking questions?", options: ['Saying your own name', 'Asking for the owner by name', 'Over-explaining yourself instead of staying brief', 'Speaking too quietly'], correctIndex: 2 },
+    { id: '4-mini-3', question: "What's an effective response if the gatekeeper asks who's calling or why?", options: ['A full explanation of your product', 'A brief reply like "is he not there? Should I call back later?"', 'Hanging up', 'Asking for their manager instead'], correctIndex: 1 },
+  ],
+  5: [
+    { id: '5-mini-0', question: 'What are the two biggest emotional drivers that cause someone to want to change, per the video?', options: ['Greed and excitement', 'Pain and the fear of future pain', 'Trust and logic', 'Guilt and obligation'], correctIndex: 1 },
+    { id: '5-mini-1', question: "What's the purpose of asking a \"consequence question\" when a prospect brushes you off?", options: ['To confirm a meeting time', "To deframe the prospect and get them thinking about what happens if they don't act", 'To ask for payment information', 'To politely end the call'], correctIndex: 1 },
+    { id: '5-mini-2', question: 'Why might you intentionally use a "concerned" tone when challenging an objection?', options: ['It makes you sound unsure of your product', 'It has no real effect either way', "It seeds doubt that the prospect might be missing something, lowering their guard", "It signals the call is ending"], correctIndex: 2 },
+    { id: '5-mini-3', question: 'What is the "identity frame" technique meant to do?', options: ["Compare your price to a competitor's", 'Get the prospect to avoid identifying with people who keep delaying and never fix the problem', 'Ask for a referral', 'Confirm the appointment time'], correctIndex: 1 },
+  ],
+  6: [
+    { id: '6-mini-0', question: 'When qualifying a prospect financially, what does the video focus on?', options: ['Just their job title', 'Their zip code', 'Combined household income relative to the payment', 'Their age'], correctIndex: 2 },
+    { id: '6-mini-1', question: 'What tone does the video recommend when asking about someone\'s financial background?', options: ["A skeptical, interrogating tone", 'A non-judgmental, coaching-style tone', 'A purely formal/legal tone', 'A sarcastic tone'], correctIndex: 1 },
+    { id: '6-mini-2', question: "What should you do if a prospect clearly can't afford any version of the offer?", options: ['Offer a steep discount immediately', 'Keep pushing the highest tier anyway', "Don't waste further time — move to the next lead", 'Report it to your manager'], correctIndex: 2 },
+    { id: '6-mini-3', question: "What's the broader mindset described for qualifying efficiently?", options: ['Spend equal time on every prospect regardless of their answers', 'Never ask about money directly', 'Ask, listen, and quickly decide whether to move forward or move on', 'Qualify everyone the exact same way'], correctIndex: 2 },
+  ],
+  7: [
+    { id: '7-mini-0', question: "Per the video, when is it okay to be more assertive about booking the appointment?", options: ['Right at the start of the call', 'Only with hesitant prospects', "After you've built rapport, provided value, and qualified them", 'Never — always let them decide'], correctIndex: 2 },
+    { id: '7-mini-1', question: 'What does "assume the appointment" mean?', options: ['Always double-confirm before booking', 'Ask permission before every step', 'Move forward with booking instead of asking "would you like to?"', 'Wait for the prospect to bring it up'], correctIndex: 2 },
+    { id: '7-mini-2', question: 'When does the video say is the best time to ask for a referral?', options: ['At the very start of the call', 'Right after handling an objection', 'When the prospect is expressing thanks or gratitude', "Setters shouldn't ask for referrals"], correctIndex: 2 },
+    { id: '7-mini-3', question: 'Why does the video recommend asking for a small, specific amount of time, like "two minutes"?', options: ['It sounds more official', 'It avoids legal issues', "It's required by every script", "It's a small ask that makes it easy for the prospect to say yes"], correctIndex: 3 },
+  ],
+  8: [
+    { id: '8-mini-0', question: 'Per the video, why are morning dial blocks especially effective?', options: ["It's required by company policy", 'Prospects are more likely to be asleep', 'Connect rates are better and it builds early momentum', 'It avoids using a CRM'], correctIndex: 2 },
+    { id: '8-mini-1', question: "What's one of the main mistakes that causes reps to underperform, per the video?", options: ['Making too many calls', 'Reacting to whatever comes up instead of planning the day', 'Following up too quickly', 'Taking too many breaks'], correctIndex: 1 },
+    { id: '8-mini-2', question: 'What should you do in the last few minutes of the day, per the video?', options: ['Schedule personal appointments', 'Clear your entire email inbox', 'Reflect on what worked and what to carry into tomorrow', 'Call your manager for a debrief'], correctIndex: 2 },
+    { id: '8-mini-3', question: "Which of these is listed as one of the video's core takeaways?", options: ['Always answer Slack messages immediately', 'Multitask calls and emails together', 'Protect your call blocks like they\'re meetings', 'Make calls only in the afternoon'], correctIndex: 2 },
+  ],
 }
 
-// Placeholder final-quiz pool — 28 questions, ~3-4 per video, swapped for
-// transcript-derived content once Brayden's transcriptions come in.
-const FINAL_QUIZ_PASS_PCT = 85
+const FINAL_EXAM_QUESTIONS = [
+  // Video 1 — What an AI receptionist does
+  { id: 'f1', category: 'What an AI Receptionist Does', question: 'What does the video compare an AI receptionist to, in simple terms?', options: [{ text: 'A basic answering machine', correct: false }, { text: '"Siri on steroids"', correct: true }, { text: 'A human temp worker', correct: false }, { text: 'A simple chatbot', correct: false }] },
+  { id: 'f2', category: 'What an AI Receptionist Does', question: 'Which type of AI receptionist requires more technical expertise to build well?', options: [{ text: 'Templated solutions', correct: false }, { text: 'Custom solutions built on platforms like Retell AI or Vapi', correct: true }, { text: 'Neither — they\'re equally simple', correct: false }, { text: 'Both require the same effort', correct: false }] },
+  { id: 'f3', category: 'What an AI Receptionist Does', question: 'Roughly what per-minute rate does the video mention for raw AI receptionist usage?', options: [{ text: 'About 12 cents per minute', correct: true }, { text: 'About $1 per minute', correct: false }, { text: 'About 50 cents per minute', correct: false }, { text: "It's always free", correct: false }] },
+  { id: 'f4', category: 'What an AI Receptionist Does', question: 'Does an AI receptionist have to fully replace human staff, per the video?', options: [{ text: 'Yes, always', correct: false }, { text: 'No — it can be set to handle only overflow/after-hours calls, or run full-time, depending on preference', correct: true }, { text: "It can never take calls when a human is available", correct: false }, { text: 'It only works after hours', correct: false }] },
+  // Video 2 — Tonality & delivery
+  { id: 'f5', category: 'Tonality & Delivery', question: 'What does effective tonality give you in a conversation, per the video?', options: [{ text: 'Control over how your message is perceived', correct: true }, { text: 'A bigger paycheck automatically', correct: false }, { text: "Nothing — words matter more", correct: false }, { text: "It's only relevant in person, not on the phone", correct: false }] },
+  { id: 'f6', category: 'Tonality & Delivery', question: 'Which of these is NOT one of the three things to establish in your first four seconds?', options: [{ text: 'Sharp/on the ball', correct: false }, { text: 'Enthusiastic', correct: false }, { text: 'An expert in your field', correct: false }, { text: 'Your exact pricing', correct: true }] },
+  { id: 'f7', category: 'Tonality & Delivery', question: 'What two things make up the bulk of communication impact described in the video?', options: [{ text: 'Words and tone', correct: false }, { text: 'Body language and price', correct: false }, { text: 'Tonality and body language', correct: true }, { text: 'Confidence and price', correct: false }] },
+  { id: 'f8', category: 'Tonality & Delivery', question: 'What must a prospect unconsciously feel for rapport to exist, per the video?', options: [{ text: "You're the cheapest option", correct: false }, { text: "You're more educated than them", correct: false }, { text: "That you care about them and that you're similar to them", correct: true }, { text: "You'll never ask them for anything", correct: false }] },
+  // Video 3 — The discovery script
+  { id: 'f9', category: 'The Discovery Script', question: 'What\'s the purpose of "clarifying and probing" questions, per the video?', options: [{ text: 'To confirm contact information', correct: false }, { text: 'To get the prospect to reveal the real problem beneath the surface', correct: true }, { text: 'To end the call faster', correct: false }, { text: 'To upsell immediately', correct: false }] },
+  { id: 'f10', category: 'The Discovery Script', question: 'If a prospect says they\'re "frustrated," what\'s the simplest follow-up shown in the video?', options: [{ text: 'Change the subject', correct: false }, { text: 'Repeat the word back as a question: "frustrated?"', correct: true }, { text: 'Apologize', correct: false }, { text: 'Offer a discount', correct: false }] },
+  { id: 'f11', category: 'The Discovery Script', question: 'What does asking "what\'s causing this to happen?" help uncover?', options: [{ text: 'Their budget range', correct: false }, { text: 'Their preferred callback time', correct: false }, { text: 'The root cause behind their stated problem', correct: true }, { text: 'Their job title', correct: false }] },
+  // Video 4 — Getting past the gatekeeper
+  { id: 'f12', category: 'Getting Past the Gatekeeper', question: 'Who is generally the best person to reach when cold calling a business, per the video?', options: [{ text: 'The receptionist', correct: false }, { text: 'Any available employee', correct: false }, { text: 'The owner or a decision-maker', correct: true }, { text: 'The IT department', correct: false }] },
+  { id: 'f13', category: 'Getting Past the Gatekeeper', question: 'What kind of tone does the video recommend using with a gatekeeper?', options: [{ text: 'Very formal and scripted', correct: false }, { text: 'Apologetic', correct: false }, { text: 'Loud and aggressive', correct: false }, { text: "Casual and confident, like you already have a relationship with the person you're calling for", correct: true }] },
+  { id: 'f14', category: 'Getting Past the Gatekeeper', question: "What's a risk of over-explaining yourself to a gatekeeper, per the video?", options: [{ text: 'Nothing — more detail always helps', correct: false }, { text: 'You lose control of the conversation and give them a reason to screen you out', correct: true }, { text: "It's required for compliance", correct: false }, { text: 'It speeds up the call', correct: false }] },
+  // Video 5 — Handling objections
+  { id: 'f15', category: 'Handling Objections', question: 'What two emotions drive a person to actually want to change, per the video?', options: [{ text: 'Excitement and hope', correct: false }, { text: 'Pain and fear of future pain', correct: true }, { text: 'Trust and logic', correct: false }, { text: 'Guilt and obligation', correct: false }] },
+  { id: 'f16', category: 'Handling Objections', question: 'What is a "consequence question" used for?', options: [{ text: 'To confirm a meeting time', correct: false }, { text: 'To ask for payment info', correct: false }, { text: "To deframe a brush-off objection and get the prospect thinking about what happens if they don't act", correct: true }, { text: 'To end the call', correct: false }] },
+  { id: 'f17', category: 'Handling Objections', question: 'Why might a salesperson intentionally use a "concerned" tone when challenging an objection?', options: [{ text: 'To sound less confident on purpose', correct: false }, { text: 'To seed doubt that the prospect may be missing something, lowering their guard', correct: true }, { text: 'It has no real effect', correct: false }, { text: 'To rush the prospect along', correct: false }] },
+  { id: 'f18', category: 'Handling Objections', question: 'What does the "identity frame" technique push a prospect to avoid?', options: [{ text: 'Identifying with their own family', correct: false }, { text: 'Comparing prices', correct: false }, { text: 'Talking about their job', correct: false }, { text: 'Identifying with other people who keep delaying and never solve their problem', correct: true }] },
+  // Video 6 — Qualifying the prospect
+  { id: 'f19', category: 'Qualifying the Prospect', question: 'When qualifying a prospect financially, what combined factor does the video focus on?', options: [{ text: 'Just their job title', correct: false }, { text: 'Their zip code', correct: false }, { text: 'Combined household income relative to the payment', correct: true }, { text: 'Their age', correct: false }] },
+  { id: 'f20', category: 'Qualifying the Prospect', question: "What should you do if a prospect clearly can't afford any version of the offer?", options: [{ text: 'Offer a steep discount immediately', correct: false }, { text: 'Keep pushing the highest tier anyway', correct: false }, { text: "Don't waste further time — move to the next lead", correct: true }, { text: 'Report them', correct: false }] },
+  { id: 'f21', category: 'Qualifying the Prospect', question: "What kind of tone does the video suggest using when asking about someone's financial background?", options: [{ text: 'A skeptical, interrogating tone', correct: false }, { text: 'A non-judgmental, coaching-style tone', correct: true }, { text: 'A purely formal/legal tone', correct: false }, { text: 'Sarcastic', correct: false }] },
+  // Video 7 — Booking & handoff
+  { id: 'f22', category: 'Booking & Handoff', question: 'What should an appointment setter do before being more assertive about booking?', options: [{ text: 'Send a contract immediately', correct: false }, { text: 'Ask for payment', correct: false }, { text: 'Build rapport, provide value, and qualify the prospect first', correct: true }, { text: 'Nothing — assertiveness should come first', correct: false }] },
+  { id: 'f23', category: 'Booking & Handoff', question: "What's the recommended phrasing style for confirming a prospect has time?", options: [{ text: 'An open-ended "you got a sec?"', correct: false }, { text: 'No need to ask at all', correct: false }, { text: 'A small, specific ask like "do you have two minutes?"', correct: true }, { text: 'A 30-minute time block request', correct: false }] },
+  { id: 'f24', category: 'Booking & Handoff', question: 'What does "assume the appointment" mean in practice?', options: [{ text: 'Always double-confirm before booking', correct: false }, { text: 'Let the prospect suggest the time', correct: false }, { text: 'Skip qualifying entirely', correct: false }, { text: 'Move forward with booking rather than asking permission to proceed', correct: true }] },
+  { id: 'f25', category: 'Booking & Handoff', question: 'When is the ideal moment to ask for a referral, per the video?', options: [{ text: "Before you've provided any value", correct: false }, { text: 'During an objection', correct: false }, { text: 'When the prospect is expressing thanks or gratitude', correct: true }, { text: "Never — setters shouldn't ask", correct: false }] },
+  // Video 8 — Time management & call discipline
+  { id: 'f26', category: 'Time Management & Call Discipline', question: "What's one of the biggest mistakes that causes reps to underperform, per the video?", options: [{ text: 'Making too many calls', correct: false }, { text: 'Taking detailed notes', correct: false }, { text: 'Reacting to the day instead of planning it', correct: true }, { text: 'Following up too quickly', correct: false }] },
+  { id: 'f27', category: 'Time Management & Call Discipline', question: 'Why are morning dial blocks especially effective, per the video?', options: [{ text: "It's mandatory company policy", correct: false }, { text: 'Prospects prefer being called early no matter what', correct: false }, { text: "It avoids using a CRM", correct: false }, { text: 'Connect rates are better and it builds early momentum', correct: true }] },
+  { id: 'f28', category: 'Time Management & Call Discipline', question: "What's the recommended way to close out the work day, per the video?", options: [{ text: 'Immediately log off without review', correct: false }, { text: 'Schedule more calls for the night', correct: false }, { text: 'A few minutes of reflection on what worked and what to carry into tomorrow', correct: true }, { text: 'Clear all browser tabs', correct: false }] },
+]
+
+function buildMiniQuiz(video) {
+  return MINI_QUIZ_CONTENT[video.id] || []
+}
+
 function buildFinalQuizPool() {
-  const pool = []
-  TRAINING_VIDEOS.forEach(v => {
-    for (let i = 0; i < 3; i++) {
-      pool.push({
-        id: `${v.id}-final-${i}`,
-        category: v.title,
-        question: `Placeholder Q${i + 1} for "${v.title}" — replace once transcript-derived questions are ready`,
-        options: shuffle([
-          { text: 'Placeholder correct answer', correct: true },
-          { text: 'Placeholder distractor A', correct: false },
-          { text: 'Placeholder distractor B', correct: false },
-          { text: 'Placeholder distractor C', correct: false },
-        ]),
-      })
-    }
-  })
-  return shuffle(pool).slice(0, 28)
+  return shuffle(FINAL_EXAM_QUESTIONS)
 }
 
 const CATEGORY_FILTERS = [
