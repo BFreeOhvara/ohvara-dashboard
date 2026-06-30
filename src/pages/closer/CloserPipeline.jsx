@@ -408,22 +408,27 @@ export default function CloserPipeline() {
     return {
       pending:            appts.filter(a => a.status === 'pending'),
       closed:             appts.filter(a => a.outcome === 'closed'),
-      lost:               appts.filter(a => a.outcome === 'lost' || a.outcome === 'no_show'),
+      lost:               appts.filter(a => a.outcome === 'lost'),
       no_show:            appts.filter(a => a.status === 'no_show' || a.outcome === 'no_show' || a.status === 'missed'),
       needs_rescheduling: appts.filter(a => a.status === 'needs_rescheduling'),
       all:                appts,
     }
   }, [allAppts, search])
 
-  const closerKPIs = useMemo(() => ({
-    pendingCount:           filteredAppts.pending.length,
-    scheduledCount:         filteredAppts.pending.filter(a => a.scheduled_at).length,
-    closedCount:            filteredAppts.closed.length,
-    totalRevenue:           filteredAppts.closed.reduce((s, a) => s + (a.deal_value || 0), 0),
-    lostCount:              filteredAppts.lost.length,
-    noShowCount:            filteredAppts.no_show.length,
-    needsReschedulingCount: filteredAppts.needs_rescheduling.length,
-  }), [filteredAppts])
+  const closerKPIs = useMemo(() => {
+    const all = allAppts || []
+    const now = new Date()
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const pendingAll = all.filter(a => a.status === 'pending')
+    return {
+      pendingCount:           pendingAll.length,
+      todayCount:             pendingAll.filter(a => a.scheduled_at && a.scheduled_at.slice(0, 10) === todayStr).length,
+      closedCount:            all.filter(a => a.outcome === 'closed').length,
+      lostCount:              all.filter(a => a.outcome === 'lost').length,
+      noShowCount:            all.filter(a => a.status === 'no_show' || a.outcome === 'no_show' || a.status === 'missed').length,
+      needsReschedulingCount: all.filter(a => a.status === 'needs_rescheduling').length,
+    }
+  }, [allAppts])
 
   return (
     <div>
@@ -479,18 +484,17 @@ export default function CloserPipeline() {
       {/* Closer view */}
       {view === 'closer' && (
         <div>
-          {/* KPI row — PENDING + SCHEDULED always visible; tab-specific cards appended */}
+          {/* KPI row — exactly 2 cards: PENDING always left, second varies by tab */}
           <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
             <KPICard label="Pending" value={closerKPIs.pendingCount} sub="awaiting close call" icon={CalendarClock} />
-            <KPICard label="Scheduled" value={closerKPIs.scheduledCount} sub="time confirmed" icon={CheckCircle} />
+            {(closerTab === 'pending' || closerTab === 'all') && (
+              <KPICard label="Today" value={closerKPIs.todayCount} sub="scheduled today" icon={Calendar} />
+            )}
             {closerTab === 'closed' && (
-              <>
-                <KPICard label="Closed Deals" value={closerKPIs.closedCount} sub="all time" icon={CheckCircle} />
-                <KPICard label="Total Revenue" value={closerKPIs.totalRevenue > 0 ? `$${closerKPIs.totalRevenue.toLocaleString()}` : '$0'} sub="deal value" icon={CheckCircle} />
-              </>
+              <KPICard label="Closed Deals" value={closerKPIs.closedCount} sub="all time" icon={CheckCircle} />
             )}
             {closerTab === 'lost' && (
-              <KPICard label="Lost / No Show" value={closerKPIs.lostCount} sub="all time" icon={Ban} />
+              <KPICard label="Lost" value={closerKPIs.lostCount} sub="all time" icon={Ban} />
             )}
             {closerTab === 'no_show' && (
               <KPICard label="No Show" value={closerKPIs.noShowCount} sub="client didn't answer" icon={PhoneOff} />
