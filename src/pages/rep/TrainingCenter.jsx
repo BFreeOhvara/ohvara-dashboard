@@ -32,7 +32,7 @@ const TRAINING_VIDEOS = [
 
 // Real quiz content from brain/training-quiz-content.md (Prompt 176, 2026-06-30).
 // Mini-quiz: 4 questions per video (non-gating, formative). correctIndex is 0-based.
-// Final exam: 28 questions covering all 8 videos (85% gate).
+// Final exam: 30 questions covering all 8 videos (85% gate).
 
 const FINAL_QUIZ_PASS_PCT = 85
 
@@ -102,6 +102,7 @@ const FINAL_EXAM_QUESTIONS = [
   { id: 'f9', category: 'The Discovery Script', question: 'What\'s the purpose of "clarifying and probing" questions, per the video?', options: [{ text: 'To confirm contact information', correct: false }, { text: 'To get the prospect to reveal the real problem beneath the surface', correct: true }, { text: 'To end the call faster', correct: false }, { text: 'To upsell immediately', correct: false }] },
   { id: 'f10', category: 'The Discovery Script', question: 'If a prospect says they\'re "frustrated," what\'s the simplest follow-up shown in the video?', options: [{ text: 'Change the subject', correct: false }, { text: 'Repeat the word back as a question: "frustrated?"', correct: true }, { text: 'Apologize', correct: false }, { text: 'Offer a discount', correct: false }] },
   { id: 'f11', category: 'The Discovery Script', question: 'What does asking "what\'s causing this to happen?" help uncover?', options: [{ text: 'Their budget range', correct: false }, { text: 'Their preferred callback time', correct: false }, { text: 'The root cause behind their stated problem', correct: true }, { text: 'Their job title', correct: false }] },
+  { id: 'f29', category: 'The Discovery Script', question: 'What does asking "how long has this been going on for?" accomplish?', options: [{ text: 'Confirms a callback time', correct: false }, { text: 'Qualifies their budget', correct: false }, { text: 'Gets the prospect to relive the pain of the problem', correct: true }, { text: 'Ends the conversation politely', correct: false }] },
   // Video 4 — Getting past the gatekeeper
   { id: 'f12', category: 'Getting Past the Gatekeeper', question: 'Who is generally the best person to reach when cold calling a business, per the video?', options: [{ text: 'The receptionist', correct: false }, { text: 'Any available employee', correct: false }, { text: 'The owner or a decision-maker', correct: true }, { text: 'The IT department', correct: false }] },
   { id: 'f13', category: 'Getting Past the Gatekeeper', question: 'What kind of tone does the video recommend using with a gatekeeper?', options: [{ text: 'Very formal and scripted', correct: false }, { text: 'Apologetic', correct: false }, { text: 'Loud and aggressive', correct: false }, { text: "Casual and confident, like you already have a relationship with the person you're calling for", correct: true }] },
@@ -124,6 +125,7 @@ const FINAL_EXAM_QUESTIONS = [
   { id: 'f26', category: 'Time Management & Call Discipline', question: "What's one of the biggest mistakes that causes reps to underperform, per the video?", options: [{ text: 'Making too many calls', correct: false }, { text: 'Taking detailed notes', correct: false }, { text: 'Reacting to the day instead of planning it', correct: true }, { text: 'Following up too quickly', correct: false }] },
   { id: 'f27', category: 'Time Management & Call Discipline', question: 'Why are morning dial blocks especially effective, per the video?', options: [{ text: "It's mandatory company policy", correct: false }, { text: 'Prospects prefer being called early no matter what', correct: false }, { text: "It avoids using a CRM", correct: false }, { text: 'Connect rates are better and it builds early momentum', correct: true }] },
   { id: 'f28', category: 'Time Management & Call Discipline', question: "What's the recommended way to close out the work day, per the video?", options: [{ text: 'Immediately log off without review', correct: false }, { text: 'Schedule more calls for the night', correct: false }, { text: 'A few minutes of reflection on what worked and what to carry into tomorrow', correct: true }, { text: 'Clear all browser tabs', correct: false }] },
+  { id: 'f30', category: 'Time Management & Call Discipline', question: "What's described as a key way to build tomorrow's pipeline today, per the video?", options: [{ text: 'Randomly cold calling with no list', correct: false }, { text: 'A dedicated sourcing block to find new target contacts', correct: true }, { text: 'Waiting until tomorrow morning to find leads', correct: false }, { text: 'Skipping prep entirely and improvising', correct: false }] },
 ]
 
 function buildMiniQuiz(video) {
@@ -1135,7 +1137,7 @@ function QuizTab({ progress, saveProgress }) {
   )
 }
 
-// ── FinalQuizTab — 25-30 questions covering all 8 videos, gates completion ────
+// ── FinalQuizTab — 30 questions covering all 8 videos, gates completion ──────
 // Combined with flashcard mastery via onPass (see TrainingCenter below).
 
 function FinalQuizTab({ watchedCount, passed, onPass }) {
@@ -1215,16 +1217,51 @@ function FinalQuizTab({ watchedCount, passed, onPass }) {
   }
 
   if (!questions) {
+    const EXAM_STATS = [
+      { label: 'Questions', value: String(FINAL_EXAM_QUESTIONS.length) },
+      { label: 'To Pass', value: `${FINAL_QUIZ_PASS_PCT}%` },
+      { label: 'Videos Covered', value: String(TRAINING_VIDEOS.length) },
+    ]
     return (
-      <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '48px 24px' }}>
+      <div style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center', padding: '48px 24px' }}>
         <ClipboardCheck size={26} color="var(--accent)" style={{ marginBottom: 14 }} />
         <h2 style={{ fontSize: 19, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 10px' }}>Final Exam</h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 12px' }}>
-          25-30 questions covering all 8 training videos. Pass ≥ {FINAL_QUIZ_PASS_PCT}% to complete training.
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 20px' }}>
+          {FINAL_EXAM_QUESTIONS.length} questions covering all 8 training videos.
         </p>
+
         {passed && (
-          <p style={{ fontSize: 12, color: 'var(--success)', marginBottom: 12 }}>Passed ✓ — you can retake it any time.</p>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px', marginBottom: 20,
+            background: 'var(--bg-surface)', border: '0.5px solid var(--border)', borderRadius: 8,
+          }}>
+            <Check size={13} color="var(--success)" />
+            <span style={{ fontSize: 12, color: 'var(--success)' }}>Passed — you can retake it any time.</span>
+          </div>
         )}
+
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+          {EXAM_STATS.map(s => (
+            <div key={s.label} style={{ flex: 1, background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 10, padding: '14px 10px' }}>
+              <p style={{ fontSize: 20, fontFamily: 'var(--font-mono)', fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px' }}>{s.value}</p>
+              <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0 }}>{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 24 }}>
+          {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+            <span key={key} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 10px',
+              background: 'var(--bg-surface)', border: `0.5px solid ${CATEGORY_COLORS[key]}`, borderRadius: 8,
+              fontSize: 11, color: 'var(--text-secondary)',
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: CATEGORY_COLORS[key] }} />
+              {label}
+            </span>
+          ))}
+        </div>
+
         <button
           onClick={start}
           style={{
