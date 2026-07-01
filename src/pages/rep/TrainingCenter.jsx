@@ -1145,7 +1145,10 @@ function QuizTab({ progress, saveProgress }) {
 function FinalQuizTab({ watchedCount, passed, onPass }) {
   const [questions, setQuestions] = useState(null)
   const [index, setIndex]   = useState(0)
-  const [correct, setCorrect] = useState(0)
+  // Answers persist per question index (answers[qIndex] = chosen option index),
+  // so Back/Next can move freely between answered and unanswered questions
+  // without losing prior picks. Score is only computed at finish time.
+  const [answers, setAnswers] = useState([])
   const [finished, setFinished] = useState(false)
 
   const locked = watchedCount < TRAINING_VIDEOS.length
@@ -1153,25 +1156,33 @@ function FinalQuizTab({ watchedCount, passed, onPass }) {
   function start() {
     setQuestions(buildFinalQuizPool())
     setIndex(0)
-    setCorrect(0)
+    setAnswers([])
     setFinished(false)
   }
 
-  // Silently records the pick and advances immediately — no color feedback,
-  // no correct/incorrect reveal, and no running score until the exam ends.
+  // Clicking an answer only *selects* it — no advance, no right/wrong reveal.
+  // Advancing is a separate "Next" click.
   function pick(i) {
-    const isRight = questions[index].options[i].correct
-    const nextCorrect = correct + (isRight ? 1 : 0)
-    setCorrect(nextCorrect)
-    if (index + 1 >= questions.length) {
-      finish(nextCorrect)
-    } else {
-      setIndex(v => v + 1)
-    }
+    setAnswers(prev => {
+      const next = [...prev]
+      next[index] = i
+      return next
+    })
   }
 
-  function finish(finalCorrect) {
+  function next() {
+    if (index + 1 >= questions.length) finish()
+    else setIndex(v => v + 1)
+  }
+
+  function back() {
+    setIndex(v => Math.max(0, v - 1))
+  }
+
+  function finish() {
     setFinished(true)
+    const finalCorrect = answers.reduce(
+      (acc, ans, qi) => acc + (ans != null && questions[qi].options[ans].correct ? 1 : 0), 0)
     const pct = Math.round((finalCorrect / questions.length) * 100)
     if (pct >= FINAL_QUIZ_PASS_PCT && !passed) onPass()
   }
@@ -1258,8 +1269,12 @@ function FinalQuizTab({ watchedCount, passed, onPass }) {
   // no X while in progress. Only the finished result screen can be dismissed.
   const q = questions[index]
   const LETTERS = ['A', 'B', 'C', 'D']
+  const selectedForCurrent = answers[index]
+  const correct = answers.reduce(
+    (acc, ans, qi) => acc + (ans != null && questions[qi].options[ans].correct ? 1 : 0), 0)
   const pct = finished ? Math.round((correct / questions.length) * 100) : null
   const didPass = finished && pct >= FINAL_QUIZ_PASS_PCT
+  const isLast = index + 1 >= questions.length
 
   // Portaled to document.body — DashboardLayout's `.page-enter` wrapper has a
   // persisted CSS transform (fadeSlideUp, fill-mode: both), which makes it the
@@ -1328,26 +1343,61 @@ function FinalQuizTab({ watchedCount, passed, onPass }) {
               <p style={{ fontSize: 21, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>{q.question}</p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {q.options.map((opt, i) => (
-                <button
-                  key={i}
-                  onClick={() => pick(i)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left', padding: '18px 20px',
-                    background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-                    borderRadius: 10, cursor: 'pointer', fontSize: 14, lineHeight: 1.55, color: 'var(--text-secondary)',
-                  }}
-                >
-                  <span style={{
-                    flexShrink: 0, width: 26, height: 26, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-mono)',
-                    background: 'var(--bg-surface)', color: 'var(--text-muted)',
-                  }}>
-                    {LETTERS[i]}
-                  </span>
-                  <span style={{ flex: 1 }}>{opt.text}</span>
-                </button>
-              ))}
+              {q.options.map((opt, i) => {
+                const selected = selectedForCurrent === i
+                return (
+                  <button
+                    key={i}
+                    onClick={() => pick(i)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left', padding: '18px 20px',
+                      background: selected ? 'var(--accent-dim)' : 'var(--bg-elevated)',
+                      border: selected ? '0.5px solid var(--accent)' : '0.5px solid var(--border)',
+                      borderRadius: 10, cursor: 'pointer', fontSize: 14, lineHeight: 1.55,
+                      color: selected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    }}
+                  >
+                    <span style={{
+                      flexShrink: 0, width: 26, height: 26, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-mono)',
+                      background: 'var(--accent)', color: 'var(--text-primary)',
+                    }}>
+                      {LETTERS[i]}
+                    </span>
+                    <span style={{ flex: 1 }}>{opt.text}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 24 }}>
+              <button
+                onClick={back}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6, height: 40, padding: '0 16px',
+                  background: 'transparent', border: '0.5px solid var(--border)', borderRadius: 10,
+                  fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)',
+                  cursor: index === 0 ? 'default' : 'pointer',
+                  visibility: index === 0 ? 'hidden' : 'visible',
+                }}
+              >
+                <ChevronLeft size={15} />
+                Back
+              </button>
+              <button
+                onClick={next}
+                disabled={selectedForCurrent == null}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6, height: 40, padding: '0 20px',
+                  background: 'var(--accent)', border: 'none', borderRadius: 10,
+                  fontSize: 13, fontWeight: 500, color: 'white',
+                  cursor: selectedForCurrent == null ? 'default' : 'pointer',
+                  opacity: selectedForCurrent == null ? 0.4 : 1,
+                }}
+              >
+                {isLast ? 'Finish' : 'Next'}
+                {!isLast && <ChevronRight size={15} />}
+              </button>
             </div>
           </>
         )}
