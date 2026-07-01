@@ -1,6 +1,6 @@
-// Setter training flashcards — video-specific content (Prompt 178, 2026-06-30).
+// Setter training flashcards — video-specific content (Prompt 179, 2026-06-30).
 // 48 cards across 8 categories: one per training video.
-// Short cue/term front + short phrase back (rewritten per Brayden — full Q&A was too hard to memorize).
+// Vocab/term format: front = short term (2-4 words), back = one-line definition (glossary style).
 // Mastered state tracked in localStorage key: 'ohvara_flashcard_mastered'
 
 export const FLASHCARDS = [
@@ -10,33 +10,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 1, category: 'ai-receptionist',
-    front: 'Missed call math',
-    back: 'Calls missed/day × ticket price × days/yr',
+    front: 'AI Receptionist',
+    back: 'AI voice agent that answers calls like a human, 24/7 or as overflow',
   },
   {
     id: 2, category: 'ai-receptionist',
-    front: 'AI receptionist',
-    back: 'Human-sounding AI phone agent',
+    front: 'Missed Call Math',
+    back: 'Missed calls/day × ticket price × days/year = lost revenue',
   },
   {
     id: 3, category: 'ai-receptionist',
-    front: 'Templated vs custom',
-    back: 'Templated = plug-in generic; custom = agency-built, tailored',
+    front: 'Templated AI',
+    back: 'Plug-and-play, generic (RingCentral, GoHighLevel)',
   },
   {
     id: 4, category: 'ai-receptionist',
-    front: 'Full AI vs overflow',
-    back: '24/7 AI, or AI only when human can\'t answer',
+    front: 'Custom AI',
+    back: 'Agency-built, tailored to the business',
   },
   {
     id: 5, category: 'ai-receptionist',
-    front: 'Voicemail problem',
-    back: 'Callers don\'t leave one — they call a competitor',
+    front: 'Overflow Mode',
+    back: 'AI only answers when a human can\'t',
   },
   {
     id: 6, category: 'ai-receptionist',
-    front: 'Pricing model',
-    back: '~$0.12/min raw; agencies charge flat rate + overage',
+    front: 'Per-Minute Pricing',
+    back: '~$0.12/min raw cost; agencies mark it up',
   },
 
   // ═══════════════════════════════════════
@@ -44,33 +44,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 7, category: 'tonality',
-    front: 'First 4 seconds',
-    back: 'Sharp, enthusiastic, expert',
+    front: 'First 4 Seconds',
+    back: 'Window to prove you\'re sharp, enthusiastic, an expert',
   },
   {
     id: 8, category: 'tonality',
-    front: '90% of communication',
-    back: 'Tonality + body language (words = 10%)',
+    front: '90/10 Rule',
+    back: 'Tonality + body language = 90% of impact, words = 10%',
   },
   {
     id: 9, category: 'tonality',
     front: 'Charisma',
-    back: 'Learnable — tonality + body language + no dumb words',
+    back: 'A learnable skill, not a trait',
   },
   {
     id: 10, category: 'tonality',
-    front: 'Rapport =',
-    back: 'They feel you care + you\'re like them',
+    front: 'Rapport',
+    back: 'Feeling cared for + feeling similarity',
   },
   {
     id: 11, category: 'tonality',
-    front: 'Why use tonality',
-    back: 'Forces listener to engage, not tune out',
+    front: 'Deliberate Tonality',
+    back: 'Vocal emphasis that pulls the listener in',
   },
   {
     id: 12, category: 'tonality',
-    front: 'Flat tone risk',
-    back: 'People mentally check out',
+    front: 'Flat Tone',
+    back: 'Causes the listener to check out',
   },
 
   // ═══════════════════════════════════════
@@ -78,33 +78,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 13, category: 'discovery',
-    front: '"How do you mean by that?"',
-    back: 'Pushes past the surface answer',
+    front: 'Clarifying Question',
+    back: '"How do you mean by that?" — digs past the surface',
   },
   {
     id: 14, category: 'discovery',
-    front: 'Repeat their word',
-    back: 'Echo their emotion word to open them up',
+    front: 'Word Echo',
+    back: 'Repeating their emotion word back to open them up',
   },
   {
     id: 15, category: 'discovery',
-    front: '"How long has this been going on?"',
-    back: 'Makes them relive the pain',
+    front: 'Pain Timeline',
+    back: '"How long has this been going on?"',
   },
   {
     id: 16, category: 'discovery',
-    front: 'Pause after a question',
-    back: 'Forces a deeper, real answer',
+    front: 'The Pause',
+    back: 'Silence after a question forces a deeper answer',
   },
   {
     id: 17, category: 'discovery',
-    front: 'Good discovery question',
-    back: '"What\'s causing this?" / "Why now?"',
+    front: 'Root Cause Question',
+    back: '"What\'s causing this?"',
   },
   {
     id: 18, category: 'discovery',
-    front: 'Why discover before pitching',
-    back: 'Surfaced pain = urgency',
+    front: 'Discovery First',
+    back: 'Surface pain before pitching, to build urgency',
   },
 
   // ═══════════════════════════════════════
@@ -112,33 +112,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 19, category: 'gatekeeper',
-    front: 'Real goal w/ gatekeeper',
-    back: 'Get to the decision-maker',
+    front: 'Decision-Maker',
+    back: 'Owner or exec — the only one who can act on your offer',
   },
   {
     id: 20, category: 'gatekeeper',
-    front: 'Skip the formal intro',
-    back: 'Sounds like a sales call, gets screened',
+    front: 'Casual Open',
+    back: 'Skip formal intros, sound like you already know them',
   },
   {
     id: 21, category: 'gatekeeper',
-    front: 'Tone with gatekeeper',
-    back: 'Casual, like you already know them',
+    front: 'The Pause (Gatekeeper)',
+    back: 'Stop talking after your question, let them answer',
   },
   {
     id: 22, category: 'gatekeeper',
-    front: 'After you ask',
-    back: 'Pause — let them respond',
+    front: 'Over-Explaining',
+    back: 'Reads as nervous or salesy',
   },
   {
     id: 23, category: 'gatekeeper',
-    front: 'Over-explaining',
-    back: 'Reads as nervous/salesy',
+    front: 'Screening',
+    back: 'What gatekeepers do to filter out sales calls',
   },
   {
     id: 24, category: 'gatekeeper',
-    front: 'Casual > professional',
-    back: 'Polished = guarded; casual = safe',
+    front: 'Casual > Professional',
+    back: 'Polished reads as guarded; casual reads as safe',
   },
 
   // ═══════════════════════════════════════
@@ -146,33 +146,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 25, category: 'objections',
-    front: '"I\'ll think about it"',
-    back: 'No urgency — stuck in a frame',
+    front: 'Frame',
+    back: 'The mental stance keeping a prospect stuck with no urgency',
   },
   {
     id: 26, category: 'objections',
-    front: '2 drivers of change',
-    back: 'Pain + fear of future pain',
+    front: 'Pain & Fear',
+    back: 'The 2 emotional drivers of change',
   },
   {
     id: 27, category: 'objections',
-    front: 'Consequence question',
-    back: '"Then what happens?" — chain it deeper',
+    front: 'Consequence Question',
+    back: '"Then what happens?" — chained deeper each time',
   },
   {
     id: 28, category: 'objections',
-    front: 'Identity frame',
-    back: 'Contrast them vs. people who stayed stuck',
+    front: 'Identity Frame',
+    back: 'Contrasting them vs. people who stayed stuck',
   },
   {
     id: 29, category: 'objections',
-    front: 'Concerned tone',
+    front: 'Concerned Tone',
     back: 'Seeds doubt, lowers their guard',
   },
   {
     id: 30, category: 'objections',
-    front: 'Rebuttal mistake',
-    back: 'Argues their frame instead of reframing',
+    front: 'Rebuttal Mistake',
+    back: 'Arguing their frame instead of reframing it',
   },
 
   // ═══════════════════════════════════════
@@ -180,33 +180,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 31, category: 'qualifying',
-    front: 'Qualify on money',
-    back: 'Household income should cover the payment',
+    front: 'Household Income Test',
+    back: 'Combined income should comfortably cover the payment',
   },
   {
     id: 32, category: 'qualifying',
-    front: 'Debt ≠ disqualified',
-    back: 'Fine if income covers it + product pays for itself',
+    front: 'Cash-Flow Negative',
+    back: 'When a payment strains the budget — not the case if the product pays for itself',
   },
   {
     id: 33, category: 'qualifying',
-    front: 'Qualifying approach',
-    back: 'Ask like a coach, not an interrogator',
+    front: 'Coach Approach',
+    back: 'Asking about money history like a coach, not an interrogator',
   },
   {
     id: 34, category: 'qualifying',
-    front: 'Can\'t afford it',
-    back: 'Qualify out fast, move on',
+    front: 'Disqualify Fast',
+    back: 'Moving on quickly when someone clearly can\'t afford it',
   },
   {
     id: 35, category: 'qualifying',
-    front: 'Why move fast',
-    back: 'Keeps overall call efficiency high',
+    front: 'Call Efficiency',
+    back: 'Why moving fast through unqualified leads matters',
   },
   {
     id: 36, category: 'qualifying',
-    front: 'Ask about money history',
-    back: 'Shows if they invest in solving problems',
+    front: 'Money History',
+    back: 'Their past relationship with money/success',
   },
 
   // ═══════════════════════════════════════
@@ -214,33 +214,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 37, category: 'booking',
-    front: 'Before calling back',
-    back: 'Pull up their info, don\'t re-ask',
+    front: 'Pre-Call Prep',
+    back: 'Having their info ready before you call — don\'t re-ask',
   },
   {
     id: 38, category: 'booking',
-    front: 'Pushy gap',
-    back: 'Prospects see it more than setters do',
+    front: 'Pushy Gap',
+    back: 'Prospects see pushiness more than setters realize',
   },
   {
     id: 39, category: 'booking',
-    front: 'When to get assertive',
-    back: 'After rapport + value + qualifying',
+    front: 'Earned Assertiveness',
+    back: 'Getting direct only after rapport + value + qualifying',
   },
   {
     id: 40, category: 'booking',
-    front: '"Got 2 minutes?"',
-    back: 'Small ask = easy yes',
+    front: 'Small Ask',
+    back: '"Got 2 minutes?" — easy yes',
   },
   {
     id: 41, category: 'booking',
-    front: 'Assume the appointment',
-    back: 'Don\'t ask "want to move forward?"',
+    front: 'Assumptive Close',
+    back: 'Booking instead of asking "want to move forward?"',
   },
   {
     id: 42, category: 'booking',
-    front: 'Best time to ask for referral',
-    back: 'When they\'re thanking you',
+    front: 'Referral Window',
+    back: 'Asking right when they\'re thanking you',
   },
 
   // ═══════════════════════════════════════
@@ -248,33 +248,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 43, category: 'time-management',
-    front: '#1 reason reps miss numbers',
-    back: 'No structure, just reacting',
+    front: 'Reactive Day',
+    back: 'Working off whatever pops up, no plan',
   },
   {
     id: 44, category: 'time-management',
-    front: 'Best call block',
-    back: 'Morning — higher connect rates',
+    front: 'Morning Dial Block',
+    back: 'Best call window, highest connect rates',
   },
   {
     id: 45, category: 'time-management',
-    front: 'Sourcing block',
-    back: 'Builds tomorrow\'s pipeline',
+    front: 'Sourcing Block',
+    back: 'Dedicated time to build tomorrow\'s pipeline',
   },
   {
     id: 46, category: 'time-management',
-    front: 'Lunch passive learning',
-    back: 'Listen to top calls, low effort',
+    front: 'Passive Learning',
+    back: 'Light, low-effort learning (e.g. lunch call reviews)',
   },
   {
     id: 47, category: 'time-management',
-    front: 'End-of-day reflection',
+    front: 'End-of-Day Reflection',
     back: 'Turns activity into improvement',
   },
   {
     id: 48, category: 'time-management',
-    front: 'Core mindset',
-    back: 'Work intentional, not longer',
+    front: 'Work Intentional',
+    back: 'The core mindset — structure over hours',
   },
 ]
 
