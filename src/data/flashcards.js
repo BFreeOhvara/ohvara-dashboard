@@ -1,6 +1,6 @@
-// Setter training flashcards — video-specific content (Prompt 177, 2026-06-30).
+// Setter training flashcards — video-specific content (Prompt 178, 2026-06-30).
 // 48 cards across 8 categories: one per training video.
-// Replaces the old generic 6-category deck (Pipeline/Discovery/Objections/Booking/Niches/Mindset).
+// Short cue/term front + short phrase back (rewritten per Brayden — full Q&A was too hard to memorize).
 // Mastered state tracked in localStorage key: 'ohvara_flashcard_mastered'
 
 export const FLASHCARDS = [
@@ -10,33 +10,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 1, category: 'ai-receptionist',
-    front: 'How do you put a dollar value on one missed call a day?',
-    back: 'Multiply missed calls/day × average ticket price × days per year — e.g. 1 missed call/day at $300/ticket ≈ $100K/year in lost revenue.',
+    front: 'Missed call math',
+    back: 'Calls missed/day × ticket price × days/yr',
   },
   {
     id: 2, category: 'ai-receptionist',
-    front: "What's the simplest way to describe what an AI receptionist is?",
-    back: "A highly conversational AI voice agent that sounds human enough most callers can't tell it's not a person.",
+    front: 'AI receptionist',
+    back: 'Human-sounding AI phone agent',
   },
   {
     id: 3, category: 'ai-receptionist',
-    front: "What's the difference between a templated AI receptionist and a custom one?",
-    back: 'Templated (e.g. RingCentral, GoHighLevel) is plug-and-play but generic; custom (built on platforms like Retell AI or Vapi) is tailored to the business but needs technical expertise, usually via an agency.',
+    front: 'Templated vs custom',
+    back: 'Templated = plug-in generic; custom = agency-built, tailored',
   },
   {
     id: 4, category: 'ai-receptionist',
-    front: 'Does an AI receptionist have to replace human staff?',
-    back: 'No — a business owner can choose full AI coverage 24/7, or AI only as overflow when humans can\'t get to the phone (busy hours, after hours).',
+    front: 'Full AI vs overflow',
+    back: '24/7 AI, or AI only when human can\'t answer',
   },
   {
     id: 5, category: 'ai-receptionist',
-    front: 'Why is voicemail considered a lost cause compared to an AI receptionist?',
-    back: "Most callers won't leave a voicemail — they just call the next business that actually answers.",
+    front: 'Voicemail problem',
+    back: 'Callers don\'t leave one — they call a competitor',
   },
   {
     id: 6, category: 'ai-receptionist',
-    front: 'Roughly what does usage-based AI receptionist pricing look like?',
-    back: 'Raw cost is around $0.12/minute; agencies typically charge a flat monthly rate (e.g. ~$200/mo for a set number of minutes) plus an overage rate per minute beyond that.',
+    front: 'Pricing model',
+    back: '~$0.12/min raw; agencies charge flat rate + overage',
   },
 
   // ═══════════════════════════════════════
@@ -44,33 +44,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 7, category: 'tonality',
-    front: 'What three things do you need to establish in the first four seconds of a call?',
-    back: "That you're sharp, enthusiastic, and an expert in your field.",
+    front: 'First 4 seconds',
+    back: 'Sharp, enthusiastic, expert',
   },
   {
     id: 8, category: 'tonality',
-    front: 'Roughly how much of communication impact comes from tonality and body language versus the actual words?',
-    back: 'About 90% combined (tonality + body language), only about 10% from the words themselves.',
+    front: '90% of communication',
+    back: 'Tonality + body language (words = 10%)',
   },
   {
     id: 9, category: 'tonality',
-    front: 'Is charisma something you\'re born with?',
-    back: "No — it's a learnable skill built from effective tonality, appropriate body language, and not saying things that undercut you.",
+    front: 'Charisma',
+    back: 'Learnable — tonality + body language + no dumb words',
   },
   {
     id: 10, category: 'tonality',
-    front: 'What two things does a prospect need to feel for rapport to form?',
-    back: 'That you genuinely care about them, and that you\'re "just like them" — a sense of commonality/connection.',
+    front: 'Rapport =',
+    back: 'They feel you care + you\'re like them',
   },
   {
     id: 11, category: 'tonality',
-    front: 'Why does using deliberate tonality give you more control of a conversation?',
-    back: "It forces the listener to unconsciously work to figure out what you really mean, pulling them into engaging with you instead of tuning out.",
+    front: 'Why use tonality',
+    back: 'Forces listener to engage, not tune out',
   },
   {
     id: 12, category: 'tonality',
-    front: "What's the risk of having no tonality at all when you speak?",
-    back: "People mentally check out — without vocal emphasis there's nothing pulling their attention into what you're saying.",
+    front: 'Flat tone risk',
+    back: 'People mentally check out',
   },
 
   // ═══════════════════════════════════════
@@ -78,33 +78,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 13, category: 'discovery',
-    front: 'What\'s the purpose of a clarifying/probing question like "how do you mean by that?"',
-    back: "It gets the prospect to go deeper than a surface answer and reveal what's really driving the problem.",
+    front: '"How do you mean by that?"',
+    back: 'Pushes past the surface answer',
   },
   {
     id: 14, category: 'discovery',
-    front: "Why repeat a prospect's own emotional word back to them (e.g. \"stressed\")?",
-    back: "It invites them to elaborate on that feeling instead of staying vague, opening them up.",
+    front: 'Repeat their word',
+    back: 'Echo their emotion word to open them up',
   },
   {
     id: 15, category: 'discovery',
-    front: 'What does asking "how long has that been going on for?" accomplish?',
-    back: "It gets the prospect to relive how long the problem has been affecting them, deepening the felt pain.",
+    front: '"How long has this been going on?"',
+    back: 'Makes them relive the pain',
   },
   {
     id: 16, category: 'discovery',
-    front: 'Why pause after asking something like "...has that had an impact on you"?',
-    back: "The pause forces a deeper, more considered answer instead of a reflexive one.",
+    front: 'Pause after a question',
+    back: 'Forces a deeper, real answer',
   },
   {
     id: 17, category: 'discovery',
-    front: 'Name an open-ended discovery question that works across any industry.',
-    back: 'Examples: "What\'s causing this to happen?" / "What\'s prompting you to look into changing this now?" / "What would it mean for you to solve this problem?"',
+    front: 'Good discovery question',
+    back: '"What\'s causing this?" / "Why now?"',
   },
   {
     id: 18, category: 'discovery',
-    front: 'Why ask discovery questions before pitching at all?',
-    back: "Surfacing the prospect's real pain and emotions first builds urgency — pitching cold gets ignored, pitching after pain is surfaced gets attention.",
+    front: 'Why discover before pitching',
+    back: 'Surfaced pain = urgency',
   },
 
   // ═══════════════════════════════════════
@@ -112,33 +112,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 19, category: 'gatekeeper',
-    front: "What's the actual goal when a gatekeeper answers the phone?",
-    back: "Get past them to the decision-maker (owner or exec) — only someone who can act on your offer is worth pitching.",
+    front: 'Real goal w/ gatekeeper',
+    back: 'Get to the decision-maker',
   },
   {
     id: 20, category: 'gatekeeper',
-    front: 'Why avoid a formal self-introduction like "Hi, this is [name] calling from [company]"?',
-    back: 'It signals "sales call" instantly and gives the gatekeeper an easy reason to screen you out.',
+    front: 'Skip the formal intro',
+    back: 'Sounds like a sales call, gets screened',
   },
   {
     id: 21, category: 'gatekeeper',
-    front: 'What tone should you use when asking for the decision-maker?',
-    back: "Casual and familiar — as if you already have a relationship with them, not overly professional or scripted.",
+    front: 'Tone with gatekeeper',
+    back: 'Casual, like you already know them',
   },
   {
     id: 22, category: 'gatekeeper',
-    front: 'What should you do immediately after asking your question to the gatekeeper?',
-    back: "Pause and let them respond — talking more to fill the silence undercuts your control of the call.",
+    front: 'After you ask',
+    back: 'Pause — let them respond',
   },
   {
     id: 23, category: 'gatekeeper',
-    front: 'Why does over-explaining yourself to a gatekeeper hurt you?',
-    back: "It reads as nervous or salesy, the opposite of sounding like someone who belongs on that call.",
+    front: 'Over-explaining',
+    back: 'Reads as nervous/salesy',
   },
   {
     id: 24, category: 'gatekeeper',
-    front: 'What\'s the underlying principle behind sounding "casual" instead of "professional" on a cold open?',
-    back: "People are more guarded around anything that looks polished/sales-like — casual reads as safe and familiar.",
+    front: 'Casual > professional',
+    back: 'Polished = guarded; casual = safe',
   },
 
   // ═══════════════════════════════════════
@@ -146,33 +146,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 25, category: 'objections',
-    front: 'Why do prospects give objections like "I need to think about it" or "send me more info"?',
-    back: "They're stuck in a frame where they feel no real urgency to change.",
+    front: '"I\'ll think about it"',
+    back: 'No urgency — stuck in a frame',
   },
   {
     id: 26, category: 'objections',
-    front: 'What are the two emotional drivers that cause someone to actually change?',
-    back: 'Pain (current) and fear of future pain.',
+    front: '2 drivers of change',
+    back: 'Pain + fear of future pain',
   },
   {
     id: 27, category: 'objections',
-    front: "What's a \"consequence question\" used for?",
-    back: 'To walk the prospect through what happens if they do nothing — chaining "and then what happens?" deeper until it hits something personal (family, career, identity).',
+    front: 'Consequence question',
+    back: '"Then what happens?" — chain it deeper',
   },
   {
     id: 28, category: 'objections',
-    front: "What's an \"identity frame\" reframe?",
-    back: "Contrasting the prospect against people who never fixed the problem and got stuck, so they don't want to identify with that outcome.",
+    front: 'Identity frame',
+    back: 'Contrast them vs. people who stayed stuck',
   },
   {
     id: 29, category: 'objections',
-    front: 'Why use a concerned tone when asking a tough question like "how can I tell you this without you getting upset?"',
-    back: "It seeds doubt — the prospect senses you know something they don't, which lowers their guard.",
+    front: 'Concerned tone',
+    back: 'Seeds doubt, lowers their guard',
   },
   {
     id: 30, category: 'objections',
-    front: "What's the underlying mistake of rebuttal-style objection handling?",
-    back: "It argues with the prospect's existing frame instead of reframing how they see the problem altogether.",
+    front: 'Rebuttal mistake',
+    back: 'Argues their frame instead of reframing',
   },
 
   // ═══════════════════════════════════════
@@ -180,33 +180,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 31, category: 'qualifying',
-    front: "What's the basic household-income idea for qualifying someone financially?",
-    back: "Their income + spouse's income should comfortably exceed what's needed to afford the payment, since the product is meant to pay for itself over time.",
+    front: 'Qualify on money',
+    back: 'Household income should cover the payment',
   },
   {
     id: 32, category: 'qualifying',
-    front: "Why doesn't existing debt automatically disqualify a prospect?",
-    back: "If their income comfortably covers the payment and the product itself improves their results/income, the payment isn't a real cash-flow problem.",
+    front: 'Debt ≠ disqualified',
+    back: 'Fine if income covers it + product pays for itself',
   },
   {
     id: 33, category: 'qualifying',
-    front: 'What approach works well when qualifying someone around money?',
-    back: "Ask like a coach — about their history and relationship with money/success — rather than just demanding numbers.",
+    front: 'Qualifying approach',
+    back: 'Ask like a coach, not an interrogator',
   },
   {
     id: 34, category: 'qualifying',
-    front: "What should you do if a prospect clearly can't afford the offer?",
-    back: "Qualify them out quickly and move to the next lead rather than spending time trying to make it work.",
+    front: 'Can\'t afford it',
+    back: 'Qualify out fast, move on',
   },
   {
     id: 35, category: 'qualifying',
-    front: "What's the benefit of moving fast through unqualified leads?",
-    back: "It keeps your overall call efficiency high — a few extra minutes either way doesn't change a clearly unqualified outcome.",
+    front: 'Why move fast',
+    back: 'Keeps overall call efficiency high',
   },
   {
     id: 36, category: 'qualifying',
-    front: "Why ask about someone's past relationship with money/success before pitching price?",
-    back: "It surfaces whether they see themselves as someone who invests in solving problems, which shapes how you frame the offer.",
+    front: 'Ask about money history',
+    back: 'Shows if they invest in solving problems',
   },
 
   // ═══════════════════════════════════════
@@ -214,33 +214,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 37, category: 'booking',
-    front: "Why have the prospect's info pulled up before calling them back?",
-    back: "Re-asking questions they already answered on a form makes them feel like you're wasting their time.",
+    front: 'Before calling back',
+    back: 'Pull up their info, don\'t re-ask',
   },
   {
     id: 38, category: 'booking',
-    front: "What's the disconnect between how setters and prospects view pushiness?",
-    back: "Far more prospects perceive salespeople as pushy than salespeople think they are — there's a real gap in self-awareness here.",
+    front: 'Pushy gap',
+    back: 'Prospects see it more than setters do',
   },
   {
     id: 39, category: 'booking',
-    front: 'When is it actually okay to get a little more assertive in a call?',
-    back: "After you've built rapport, shown value, and qualified the prospect — not before.",
+    front: 'When to get assertive',
+    back: 'After rapport + value + qualifying',
   },
   {
     id: 40, category: 'booking',
-    front: 'Why ask "do you have two minutes?" instead of not asking at all?',
-    back: "It's a small, easy yes that respects their time, especially with warmer prospects expecting your call.",
+    front: '"Got 2 minutes?"',
+    back: 'Small ask = easy yes',
   },
   {
     id: 41, category: 'booking',
-    front: 'Why assume the appointment instead of asking "would you like to move forward?"',
-    back: "Asking gives them an easy opening to say no, even if they were close to yes.",
+    front: 'Assume the appointment',
+    back: 'Don\'t ask "want to move forward?"',
   },
   {
     id: 42, category: 'booking',
-    front: 'When is the best moment to ask for a referral?',
-    back: "When the prospect is expressing gratitude — that's when they're most open to recommending you.",
+    front: 'Best time to ask for referral',
+    back: 'When they\'re thanking you',
   },
 
   // ═══════════════════════════════════════
@@ -248,33 +248,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 43, category: 'time-management',
-    front: "What's the most common reason reps fail to hit their numbers, per this training?",
-    back: "Not laziness — a lack of structure, reacting to whatever comes up instead of planning the day.",
+    front: '#1 reason reps miss numbers',
+    back: 'No structure, just reacting',
   },
   {
     id: 44, category: 'time-management',
-    front: 'Why are morning dial blocks considered the most valuable call time?',
-    back: "Prospects haven't filled up their day with meetings yet, so connect rates are higher.",
+    front: 'Best call block',
+    back: 'Morning — higher connect rates',
   },
   {
     id: 45, category: 'time-management',
-    front: 'Why dedicate a specific block to sourcing instead of doing it whenever?',
-    back: "It's easy to skip when unstructured, but it's what builds tomorrow's pipeline.",
+    front: 'Sourcing block',
+    back: 'Builds tomorrow\'s pipeline',
   },
   {
     id: 46, category: 'time-management',
-    front: "What's the value of a few minutes of passive learning (e.g. listening to top rep calls) over lunch?",
-    back: "Low-effort exposure to what's working, without taking deep focus away from active calling/selling time.",
+    front: 'Lunch passive learning',
+    back: 'Listen to top calls, low effort',
   },
   {
     id: 47, category: 'time-management',
-    front: 'Why end the day with a short reflection on what worked?',
-    back: "Without reviewing, activity doesn't turn into improvement — you repeat the same mistakes.",
+    front: 'End-of-day reflection',
+    back: 'Turns activity into improvement',
   },
   {
     id: 48, category: 'time-management',
-    front: "What's the core mindset shift behind a structured day?",
-    back: "You don't need to work longer — you need to work intentionally, protecting call blocks like they're meetings.",
+    front: 'Core mindset',
+    back: 'Work intentional, not longer',
   },
 ]
 
