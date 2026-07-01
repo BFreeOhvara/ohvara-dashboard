@@ -500,12 +500,12 @@ function VideoLibrary({ progress, saveProgress }) {
                 <div style={{ position: 'absolute', inset: 0 }}>
                   <LockedVideoPlayer
                     video={activeVideo}
-                    onEnded={() => { markWatched(activeVideo.id); setStage('quiz') }}
+                    onEnded={() => setStage('quiz')}
                   />
                 </div>
               </div>
             ) : (
-              <MiniQuiz video={activeVideo} onDone={closeVideo} />
+              <MiniQuiz video={activeVideo} onDone={() => { markWatched(activeVideo.id); closeVideo() }} />
             )}
           </div>
         </div>
