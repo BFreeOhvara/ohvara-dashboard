@@ -1,5 +1,7 @@
+import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Phone, Loader2, ExternalLink } from 'lucide-react'
+import { Phone, Loader2, X, Play } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 
@@ -15,6 +17,8 @@ const GRADE_DIM = {
   'C+': 'var(--warning-dim)', 'C': 'var(--warning-dim)',
   'D':  'var(--danger-dim)',  'F': 'var(--danger-dim)',
 }
+// "What to work on" severity: A/B range stays yellow, C+ and below escalates to red.
+const IMPROVE_SEVERE = new Set(['C+', 'C', 'C-', 'D', 'F'])
 
 function fmtDate(iso) {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -22,15 +26,23 @@ function fmtDate(iso) {
   })
 }
 
+function fmtDuration(totalSeconds) {
+  const s = Math.max(0, Math.round(totalSeconds || 0))
+  const m = Math.floor(s / 60)
+  const r = s % 60
+  return `${m}:${String(r).padStart(2, '0')}`
+}
+
 export default function MyCalls() {
   const { profile } = useAuth()
+  const [openCall, setOpenCall] = useState(null)
 
   const { data: calls = [], isLoading } = useQuery({
     queryKey: ['my-calls', profile?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('calls')
-        .select('id, created_at, outcome, grade, feedback_good, feedback_improve, graded_at, twilio_recording_url, lead:leads ( business_name )')
+        .select('id, created_at, outcome, grade, feedback_good, feedback_improve, graded_at, duration_seconds, twilio_recording_url, lead:leads ( business_name )')
         .eq('rep_id', profile.id)
         .not('graded_at', 'is', null)
         .order('created_at', { ascending: false })
@@ -73,12 +85,16 @@ export default function MyCalls() {
               <div
                 key={c.id}
                 className="table-row-animated"
+                onClick={() => setOpenCall(c)}
                 style={{
-                  padding: '14px 18px',
+                  padding: '14px 18px', cursor: 'pointer',
                   borderBottom: i < calls.length - 1 ? '0.5px solid var(--border)' : 'none',
-                  display: 'flex', alignItems: 'flex-start', gap: 14,
+                  display: 'flex', alignItems: 'center', gap: 14,
                   animationDelay: `${i * 0.03}s`,
+                  transition: 'background-color 100ms',
                 }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
               >
                 {/* Grade badge */}
                 <div style={{
@@ -108,40 +124,111 @@ export default function MyCalls() {
                       {fmtDate(c.created_at)}
                     </span>
                   </div>
-                  {c.feedback_good && (
-                    <p style={{ fontSize: 12, color: 'var(--success)', margin: '0 0 2px', lineHeight: 1.5 }}>
-                      ✓ {c.feedback_good}
-                    </p>
-                  )}
-                  {c.feedback_improve && (
-                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
-                      ↗ {c.feedback_improve}
-                    </p>
-                  )}
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
+                    Your calls are recorded.
+                  </p>
                 </div>
-
-                {/* Recording link */}
-                {c.twilio_recording_url && (
-                  <a
-                    href={`${c.twilio_recording_url}.mp3`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4,
-                      fontSize: 11, color: 'var(--accent)', textDecoration: 'none',
-                      padding: '4px 10px', borderRadius: 6,
-                      background: 'var(--accent-dim)',
-                      border: '0.5px solid var(--accent-border)',
-                    }}
-                  >
-                    <ExternalLink size={11} /> Play
-                  </a>
-                )}
               </div>
             )
           })}
         </div>
       )}
+
+      {openCall && <CallDetailModal call={openCall} onClose={() => setOpenCall(null)} />}
     </div>
+  )
+}
+
+// Dismissible info popup (X + backdrop-click both close it) — NOT the locked-modal
+// pattern used by the exam/video locks (Prompts 174/183/185), which intentionally
+// can't be dismissed mid-flow. This is just call detail, always safe to close.
+function CallDetailModal({ call: c, onClose }) {
+  const color = GRADE_COLOR[c.grade] || 'var(--text-muted)'
+  const dim   = GRADE_DIM[c.grade]   || 'var(--bg-elevated)'
+  const hasRecording = !!c.twilio_recording_url
+  const improveColor = IMPROVE_SEVERE.has(c.grade) ? 'var(--danger)' : 'var(--warning)'
+
+  return createPortal(
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(8,8,16,0.85)', backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 20,
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="glass"
+        style={{ width: '100%', maxWidth: 440, borderRadius: 14, padding: 24, position: 'relative' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}
+        >
+          <X size={18} />
+        </button>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, paddingRight: 28 }}>
+          <div style={{
+            width: 42, height: 42, borderRadius: 10, flexShrink: 0,
+            background: dim, border: `0.5px solid ${color}55`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color, fontFamily: 'var(--font-mono)' }}>
+              {c.grade || '—'}
+            </span>
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {c.lead?.business_name || 'Unknown business'}
+            </p>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>
+              {fmtDate(c.created_at)}
+            </p>
+          </div>
+        </div>
+
+        {/* Audio player shell — inert until twilio_recording_url is populated */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+          background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 10,
+          marginBottom: 20, opacity: hasRecording ? 1 : 0.5,
+        }}>
+          <button
+            disabled={!hasRecording}
+            style={{
+              width: 30, height: 30, borderRadius: '50%', flexShrink: 0, border: 'none',
+              background: 'var(--accent)', color: 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: hasRecording ? 'pointer' : 'default',
+            }}
+          >
+            <Play size={13} fill="white" />
+          </button>
+          <div style={{ flex: 1, height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{ width: '0%', height: '100%', background: 'var(--accent)' }} />
+          </div>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>
+            0:00 / {fmtDuration(c.duration_seconds)}
+          </span>
+        </div>
+
+        {/* Feedback */}
+        {c.feedback_good && (
+          <p style={{ fontSize: 13, color: 'var(--success)', margin: '0 0 8px', lineHeight: 1.5 }}>
+            ✓ {c.feedback_good}
+          </p>
+        )}
+        {c.feedback_improve && (
+          <p style={{ fontSize: 13, color: improveColor, margin: 0, lineHeight: 1.5 }}>
+            ↗ {c.feedback_improve}
+          </p>
+        )}
+      </div>
+    </div>,
+    document.body
   )
 }
