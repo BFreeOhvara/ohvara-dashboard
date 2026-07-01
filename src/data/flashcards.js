@@ -176,37 +176,37 @@ export const FLASHCARDS = [
   },
 
   // ═══════════════════════════════════════
-  // CATEGORY 6: QUALIFYING (Video 6 — Qualifying the Prospect)
+  // CATEGORY 6: QUALIFYING (Video 6 — Qualifying the Prospect, BANT — revised 2026-07-01)
   // ═══════════════════════════════════════
   {
     id: 31, category: 'qualifying',
-    front: "What should a prospect's combined household income comfortably cover?",
-    back: 'The payment',
+    front: 'What does BANT stand for?',
+    back: 'Budget, Authority, Need, Timeline',
   },
   {
     id: 32, category: 'qualifying',
-    front: "When does a payment actually strain a prospect's budget?",
-    back: "Only if the product doesn't pay for itself",
+    front: 'What does the "Budget" question in BANT actually determine?',
+    back: 'Whether the prospect can afford your product or service',
   },
   {
     id: 33, category: 'qualifying',
-    front: "How should you ask a prospect about their money history?",
-    back: 'Like a coach, not an interrogator',
+    front: 'What does the "Authority" question in BANT actually determine?',
+    back: "Whether you're talking to the real decision-maker",
   },
   {
     id: 34, category: 'qualifying',
-    front: "What should you do when someone clearly can't afford the offer?",
-    back: 'Disqualify them fast and move on',
+    front: 'What does the "Need" question in BANT actually determine?',
+    back: "The prospect's real pain point or challenge",
   },
   {
     id: 35, category: 'qualifying',
-    front: 'Why does moving fast through unqualified leads matter?',
-    back: 'It keeps your overall call efficiency high',
+    front: 'What does the "Timeline" question in BANT actually determine?',
+    back: "How urgent the prospect is and when they'd actually decide",
   },
   {
     id: 36, category: 'qualifying',
-    front: 'What should you ask about to understand how a prospect thinks about investing in solutions?',
-    back: 'Their past relationship with money/success',
+    front: 'Is thoroughly qualifying a prospect considered rude?',
+    back: "No — it's intelligent, as long as your tone is right",
   },
 
   // ═══════════════════════════════════════

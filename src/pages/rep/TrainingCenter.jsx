@@ -25,7 +25,7 @@ const TRAINING_VIDEOS = [
   { id: 3, title: 'The Discovery Script',                 description: 'Why questions about missed calls beat pitching the AI upfront.', duration: '4:34', category: 'Discovery',  youtubeId: 'dDGX95UkV10' },
   { id: 4, title: 'Getting Past the Gatekeeper',          description: 'Reaching the owner without sounding like "another AI sales call."', duration: '7:40', category: 'Gatekeeper', youtubeId: 'krveop9O-ik' },
   { id: 5, title: 'Handling Objections',                  description: '"We already have a system," "AI feels impersonal," "send me an email."', duration: '8:59', category: 'Objections', youtubeId: 'mDWUpuumAuo' },
-  { id: 6, title: 'Qualifying the Prospect',               description: 'Missed calls/week × avg ticket — the math that proves the pain is real.', duration: '5:05', category: 'Qualifying', youtubeId: 'wDgnnCRufOI' },
+  { id: 6, title: 'Qualifying the Prospect',               description: 'BANT — Budget, Authority, Need, Timeline — the framework for qualifying before you invest more time.', duration: '9:16', category: 'Qualifying', youtubeId: 'dj3J75I0GYQ' },
   { id: 7, title: 'Booking & Handoff',                    description: 'Framing Nate as the AI/automation specialist, not "the closer."', duration: '8:23', category: 'Booking',    youtubeId: '4mrM8GO6SS0' },
   { id: 8, title: 'Time Management & Call Discipline',    description: 'Structuring the 150-lead day in this specific niche.', duration: '7:08', category: 'Mindset',    youtubeId: 'ga5_EizLwdw' },
 ]
