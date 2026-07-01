@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { Play, BookOpen, Mic, FileText, Lock, Shuffle, ChevronLeft, ChevronRight, Check, X, ClipboardCheck, Loader2, PhoneOff, RotateCcw, Award } from 'lucide-react'
 import { FLASHCARDS, CATEGORY_LABELS, CATEGORY_COLORS } from '../../data/flashcards'
 import { supabase } from '../../lib/supabase'
@@ -1260,7 +1261,13 @@ function FinalQuizTab({ watchedCount, passed, onPass }) {
   const pct = finished ? Math.round((correct / questions.length) * 100) : null
   const didPass = finished && pct >= FINAL_QUIZ_PASS_PCT
 
-  return (
+  // Portaled to document.body — DashboardLayout's `.page-enter` wrapper has a
+  // persisted CSS transform (fadeSlideUp, fill-mode: both), which makes it the
+  // containing block for any `position: fixed` descendant. Left un-portaled,
+  // this modal was fixed relative to that (scrollable, often-taller-than-the-
+  // viewport) wrapper instead of the real viewport — scrolling the page pushed
+  // it off-screen above the fold (Prompt 185 regression).
+  return createPortal(
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 200,
@@ -1345,7 +1352,8 @@ function FinalQuizTab({ watchedCount, passed, onPass }) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
