@@ -53,11 +53,13 @@ function CompletedDaysHeatmap({ days }) {
 
   return (
     <div className="glass" style={{ marginTop: 20, padding: '18px 20px', borderRadius: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 14px' }}>
           Completed Days
         </p>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Last 21 days</span>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+          Completed Day = {DAILY_BATCH_TARGET} dials · Perfect Day = {DAILY_BATCH_TARGET} dials + 2 bookings · Last 21 days
+        </span>
       </div>
 
       {/* heatmap rows: one per week — grid shrunk + centered, cells fill it, square */}

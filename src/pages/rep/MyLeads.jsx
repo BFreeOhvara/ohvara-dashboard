@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { Phone, PhoneCall, Target, BarChart2, Lock, Check, GraduationCap, AlarmClock, X } from 'lucide-react'
+import { Phone, PhoneCall, Target, BarChart2, Lock, Check, GraduationCap, AlarmClock, X, Search } from 'lucide-react'
 import { useMyLeads } from '../../hooks/useLeads'
 import { useTodayCallStats } from '../../hooks/useProfiles'
 import { useAuth } from '../../hooks/useAuth'
@@ -298,6 +298,7 @@ export default function MyLeads() {
   const { data: training, isLoading: trainingLoading } = useTrainingProgress()
   // Filter + scroll position survive tab switches via sessionStorage
   const [activeFilter, setActiveFilter] = useState(() => sessionStorage.getItem(SS_FILTER) || 'New')
+  const [search, setSearch] = useState('')
   const [callLead, setCallLead] = useState(null)
   const [reminderLead, setReminderLead] = useState(null)
   const [dayComplete, setDayComplete] = useState(false)
@@ -354,9 +355,16 @@ export default function MyLeads() {
 
   const filtered = useMemo(() => {
     if (!leads) return []
-    if (activeFilter === 'All') return leads
-    return leads.filter(l => l.status === activeFilter)
-  }, [leads, activeFilter])
+    let list = activeFilter === 'All' ? leads : leads.filter(l => l.status === activeFilter)
+    const q = search.trim().toLowerCase()
+    if (q) {
+      list = list.filter(l =>
+        [l.business_name, l.contact_name, l.phone, l.city, l.niche]
+          .some(v => v && String(v).toLowerCase().includes(q))
+      )
+    }
+    return list
+  }, [leads, activeFilter, search])
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
@@ -449,6 +457,19 @@ export default function MyLeads() {
           {kpis.called >= leads.length && (
             <span style={{ fontSize: 11, color: 'var(--success)', fontWeight: 500 }}>Batch complete!</span>
           )}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search leads"
+              style={{
+                height: 32, padding: '0 10px 0 28px', width: 200,
+                background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                borderRadius: 8, fontSize: 12, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', outline: 'none',
+              }}
+            />
+          </div>
         </div>
       )}
 
