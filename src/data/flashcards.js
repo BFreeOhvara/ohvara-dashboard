@@ -7,36 +7,37 @@ export const FLASHCARDS = [
 
   // ═══════════════════════════════════════
   // CATEGORY 1: AI RECEPTIONIST (Video 1 — What an AI Receptionist Does)
+  // REVISED 2026-07-01, new video ("AI Answering Service for Small Businesses | Overview of Upfirst")
   // ═══════════════════════════════════════
   {
     id: 1, category: 'ai-receptionist',
-    front: 'What do you call an AI voice agent that answers calls like a human, 24/7 or as overflow?',
-    back: 'An AI Receptionist',
+    front: 'What three things does a business get after an AI receptionist finishes a call?',
+    back: 'A summary, a transcript, and a recording',
   },
   {
     id: 2, category: 'ai-receptionist',
-    front: 'How do you calculate how much a missed call is costing you per year?',
-    back: 'Missed calls/day × ticket price × days/year',
+    front: 'How do you teach an AI receptionist about a specific business?',
+    back: 'Give it plain-English information and instructions — no AI expertise needed',
   },
   {
     id: 3, category: 'ai-receptionist',
-    front: 'What kind of AI receptionist is plug-and-play and generic, like RingCentral or GoHighLevel?',
-    back: 'Templated AI',
+    front: "What's it called when an AI receptionist briefs a human on the caller before connecting a transferred call?",
+    back: 'A warm transfer',
   },
   {
     id: 4, category: 'ai-receptionist',
-    front: 'What kind of AI receptionist is agency-built and tailored to the business?',
-    back: 'Custom AI',
+    front: 'What happens if a human declines a warm-transferred call?',
+    back: 'The AI receptionist politely takes a message',
   },
   {
     id: 5, category: 'ai-receptionist',
-    front: "What's it called when the AI only answers calls a human can't get to?",
-    back: 'Overflow mode',
+    front: 'How can an AI receptionist book an appointment without texting the caller a link?',
+    back: 'By connecting to your calendar and checking real-time availability directly on the call',
   },
   {
     id: 6, category: 'ai-receptionist',
-    front: "Roughly how is AI receptionist usage priced before an agency's markup?",
-    back: '~$0.12/min raw cost',
+    front: 'What can an AI receptionist automatically detect and filter out of your call log?',
+    back: 'Spam calls',
   },
 
   // ═══════════════════════════════════════
