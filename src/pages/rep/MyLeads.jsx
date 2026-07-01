@@ -457,29 +457,19 @@ export default function MyLeads() {
           {kpis.called >= leads.length && (
             <span style={{ fontSize: 11, color: 'var(--success)', fontWeight: 500 }}>Batch complete!</span>
           )}
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search leads"
-              style={{
-                height: 32, padding: '0 10px 0 28px', width: 200,
-                background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-                borderRadius: 8, fontSize: 12, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', outline: 'none',
-              }}
-            />
-          </div>
         </div>
       )}
 
-      {/* Status filter row — underline tabs */}
+      {/* Status filter row — underline tabs (left) + search input floated right,
+          its own element outside both the tabs box and the table box */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
       <div style={{
         display: 'flex',
         gap: 0,
         borderBottom: '0.5px solid var(--border)',
-        marginBottom: 16,
         overflowX: 'auto',
+        flex: 1,
+        minWidth: 0,
       }}>
         {STATUS_FILTERS.map(f => {
           const count = f !== 'All' && leads ? leads.filter(l => l.status === f).length : null
@@ -525,6 +515,20 @@ export default function MyLeads() {
             </button>
           )
         })}
+      </div>
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search leads"
+            style={{
+              height: 32, padding: '0 10px 0 28px', width: 200,
+              background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+              borderRadius: 8, fontSize: 12, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', outline: 'none',
+            }}
+          />
+        </div>
       </div>
 
       {/* Table — glass surface, scrolls internally */}

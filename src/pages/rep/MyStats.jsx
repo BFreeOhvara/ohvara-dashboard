@@ -53,13 +53,15 @@ function CompletedDaysHeatmap({ days }) {
 
   return (
     <div className="glass" style={{ marginTop: 20, padding: '18px 20px', borderRadius: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 14px' }}>
-          Completed Days
-        </p>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-          Completed Day = {DAILY_BATCH_TARGET} dials · Perfect Day = {DAILY_BATCH_TARGET} dials + 2 bookings · Last 21 days
-        </span>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+        <div>
+          <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px' }}>
+            Completed Days
+          </p>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>Completed Day = {DAILY_BATCH_TARGET} dials</p>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>Perfect Day = {DAILY_BATCH_TARGET} dials + 2 bookings</p>
+        </div>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Last 21 days</span>
       </div>
 
       {/* heatmap rows: one per week — grid shrunk + centered, cells fill it, square */}
