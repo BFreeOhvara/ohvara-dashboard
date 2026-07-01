@@ -1,6 +1,6 @@
-// Setter training flashcards — video-specific content (Prompt 179, 2026-06-30).
+// Setter training flashcards — video-specific content (Prompt 181, 2026-06-30).
 // 48 cards across 8 categories: one per training video.
-// Vocab/term format: front = short term (2-4 words), back = one-line definition (glossary style).
+// Q&A format: front = natural question, back = short answer/term.
 // Mastered state tracked in localStorage key: 'ohvara_flashcard_mastered'
 
 export const FLASHCARDS = [
@@ -10,33 +10,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 1, category: 'ai-receptionist',
-    front: 'AI Receptionist',
-    back: 'AI voice agent that answers calls like a human, 24/7 or as overflow',
+    front: 'What do you call an AI voice agent that answers calls like a human, 24/7 or as overflow?',
+    back: 'An AI Receptionist',
   },
   {
     id: 2, category: 'ai-receptionist',
-    front: 'Missed Call Math',
-    back: 'Missed calls/day × ticket price × days/year = lost revenue',
+    front: 'How do you calculate how much a missed call is costing you per year?',
+    back: 'Missed calls/day × ticket price × days/year',
   },
   {
     id: 3, category: 'ai-receptionist',
-    front: 'Templated AI',
-    back: 'Plug-and-play, generic (RingCentral, GoHighLevel)',
+    front: 'What kind of AI receptionist is plug-and-play and generic, like RingCentral or GoHighLevel?',
+    back: 'Templated AI',
   },
   {
     id: 4, category: 'ai-receptionist',
-    front: 'Custom AI',
-    back: 'Agency-built, tailored to the business',
+    front: 'What kind of AI receptionist is agency-built and tailored to the business?',
+    back: 'Custom AI',
   },
   {
     id: 5, category: 'ai-receptionist',
-    front: 'Overflow Mode',
-    back: 'AI only answers when a human can\'t',
+    front: "What's it called when the AI only answers calls a human can't get to?",
+    back: 'Overflow mode',
   },
   {
     id: 6, category: 'ai-receptionist',
-    front: 'Per-Minute Pricing',
-    back: '~$0.12/min raw cost; agencies mark it up',
+    front: "Roughly how is AI receptionist usage priced before an agency's markup?",
+    back: '~$0.12/min raw cost',
   },
 
   // ═══════════════════════════════════════
@@ -44,33 +44,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 7, category: 'tonality',
-    front: 'First 4 Seconds',
-    back: 'Window to prove you\'re sharp, enthusiastic, an expert',
+    front: "How long do you have to prove you're sharp, enthusiastic, and an expert?",
+    back: 'The first 4 seconds',
   },
   {
     id: 8, category: 'tonality',
-    front: '90/10 Rule',
-    back: 'Tonality + body language = 90% of impact, words = 10%',
+    front: 'What percentage of communication impact comes from tonality and body language combined?',
+    back: '90% (words are only 10%)',
   },
   {
     id: 9, category: 'tonality',
-    front: 'Charisma',
+    front: "Is charisma something you're born with or something you can learn?",
     back: 'A learnable skill, not a trait',
   },
   {
     id: 10, category: 'tonality',
-    front: 'Rapport',
-    back: 'Feeling cared for + feeling similarity',
+    front: 'What two feelings does a prospect need to have for rapport to form?',
+    back: "That you care about them, and that you're similar to them",
   },
   {
     id: 11, category: 'tonality',
-    front: 'Deliberate Tonality',
-    back: 'Vocal emphasis that pulls the listener in',
+    front: 'What does using deliberate vocal emphasis do to a listener?',
+    back: 'Pulls them in, keeps them engaged',
   },
   {
     id: 12, category: 'tonality',
-    front: 'Flat Tone',
-    back: 'Causes the listener to check out',
+    front: 'What happens to a listener when you speak in a flat tone?',
+    back: 'They mentally check out',
   },
 
   // ═══════════════════════════════════════
@@ -78,33 +78,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 13, category: 'discovery',
-    front: 'Clarifying Question',
-    back: '"How do you mean by that?" — digs past the surface',
+    front: "What question digs past a surface-level answer to find out what's really going on?",
+    back: '"How do you mean by that?"',
   },
   {
     id: 14, category: 'discovery',
-    front: 'Word Echo',
-    back: 'Repeating their emotion word back to open them up',
+    front: "What's it called when you repeat a prospect's own emotion word back to them?",
+    back: 'A word echo',
   },
   {
     id: 15, category: 'discovery',
-    front: 'Pain Timeline',
+    front: 'What question gets a prospect to relive how long a problem has been affecting them?',
     back: '"How long has this been going on?"',
   },
   {
     id: 16, category: 'discovery',
-    front: 'The Pause',
-    back: 'Silence after a question forces a deeper answer',
+    front: 'What forces a prospect to give a deeper, more considered answer after you ask a question?',
+    back: 'The pause (staying silent)',
   },
   {
     id: 17, category: 'discovery',
-    front: 'Root Cause Question',
+    front: "What question gets straight at the root cause of a prospect's problem?",
     back: '"What\'s causing this?"',
   },
   {
     id: 18, category: 'discovery',
-    front: 'Discovery First',
-    back: 'Surface pain before pitching, to build urgency',
+    front: "Why surface a prospect's pain before pitching anything?",
+    back: 'It builds urgency',
   },
 
   // ═══════════════════════════════════════
@@ -112,33 +112,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 19, category: 'gatekeeper',
-    front: 'Decision-Maker',
-    back: 'Owner or exec — the only one who can act on your offer',
+    front: "Who's the only person who can actually act on your offer?",
+    back: 'The decision-maker (owner or exec)',
   },
   {
     id: 20, category: 'gatekeeper',
-    front: 'Casual Open',
-    back: 'Skip formal intros, sound like you already know them',
+    front: 'What kind of opener skips the formal intro and sounds like you already know them?',
+    back: 'A casual open',
   },
   {
     id: 21, category: 'gatekeeper',
-    front: 'The Pause (Gatekeeper)',
-    back: 'Stop talking after your question, let them answer',
+    front: 'What should you do right after asking the gatekeeper your question?',
+    back: 'Stop talking and let them answer',
   },
   {
     id: 22, category: 'gatekeeper',
-    front: 'Over-Explaining',
-    back: 'Reads as nervous or salesy',
+    front: 'What does over-explaining yourself to a gatekeeper make you sound like?',
+    back: 'Nervous or salesy',
   },
   {
     id: 23, category: 'gatekeeper',
-    front: 'Screening',
-    back: 'What gatekeepers do to filter out sales calls',
+    front: "What's a gatekeeper's job when it comes to sales calls?",
+    back: 'Screening them out',
   },
   {
     id: 24, category: 'gatekeeper',
-    front: 'Casual > Professional',
-    back: 'Polished reads as guarded; casual reads as safe',
+    front: 'Why does sounding casual work better than sounding polished on a cold open?',
+    back: 'Polished reads as guarded, casual reads as safe',
   },
 
   // ═══════════════════════════════════════
@@ -146,32 +146,32 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 25, category: 'objections',
-    front: 'Frame',
-    back: 'The mental stance keeping a prospect stuck with no urgency',
+    front: "What's the mental stance that keeps a prospect stuck with no urgency to change?",
+    back: 'Their frame',
   },
   {
     id: 26, category: 'objections',
-    front: 'Pain & Fear',
-    back: 'The 2 emotional drivers of change',
+    front: 'What are the two emotional drivers that actually cause someone to change?',
+    back: 'Pain, and fear of future pain',
   },
   {
     id: 27, category: 'objections',
-    front: 'Consequence Question',
-    back: '"Then what happens?" — chained deeper each time',
+    front: 'What question keeps chaining deeper into what happens if a prospect does nothing?',
+    back: '"Then what happens?"',
   },
   {
     id: 28, category: 'objections',
-    front: 'Identity Frame',
-    back: 'Contrasting them vs. people who stayed stuck',
+    front: "What's it called when you contrast a prospect against people who never fixed the problem?",
+    back: 'An identity frame',
   },
   {
     id: 29, category: 'objections',
-    front: 'Concerned Tone',
-    back: 'Seeds doubt, lowers their guard',
+    front: "What tone seeds doubt in a prospect's mind and lowers their guard?",
+    back: 'A concerned tone',
   },
   {
     id: 30, category: 'objections',
-    front: 'Rebuttal Mistake',
+    front: "What's the mistake most reps make when handling objections?",
     back: 'Arguing their frame instead of reframing it',
   },
 
@@ -180,32 +180,32 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 31, category: 'qualifying',
-    front: 'Household Income Test',
-    back: 'Combined income should comfortably cover the payment',
+    front: "What should a prospect's combined household income comfortably cover?",
+    back: 'The payment',
   },
   {
     id: 32, category: 'qualifying',
-    front: 'Cash-Flow Negative',
-    back: 'When a payment strains the budget — not the case if the product pays for itself',
+    front: "When does a payment actually strain a prospect's budget?",
+    back: "Only if the product doesn't pay for itself",
   },
   {
     id: 33, category: 'qualifying',
-    front: 'Coach Approach',
-    back: 'Asking about money history like a coach, not an interrogator',
+    front: "How should you ask a prospect about their money history?",
+    back: 'Like a coach, not an interrogator',
   },
   {
     id: 34, category: 'qualifying',
-    front: 'Disqualify Fast',
-    back: 'Moving on quickly when someone clearly can\'t afford it',
+    front: "What should you do when someone clearly can't afford the offer?",
+    back: 'Disqualify them fast and move on',
   },
   {
     id: 35, category: 'qualifying',
-    front: 'Call Efficiency',
-    back: 'Why moving fast through unqualified leads matters',
+    front: 'Why does moving fast through unqualified leads matter?',
+    back: 'It keeps your overall call efficiency high',
   },
   {
     id: 36, category: 'qualifying',
-    front: 'Money History',
+    front: 'What should you ask about to understand how a prospect thinks about investing in solutions?',
     back: 'Their past relationship with money/success',
   },
 
@@ -214,33 +214,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 37, category: 'booking',
-    front: 'Pre-Call Prep',
-    back: 'Having their info ready before you call — don\'t re-ask',
+    front: 'What should you have ready before calling a prospect back?',
+    back: "Their info, so you don't re-ask what they already gave you",
   },
   {
     id: 38, category: 'booking',
-    front: 'Pushy Gap',
-    back: 'Prospects see pushiness more than setters realize',
+    front: 'Who notices pushiness more — setters or prospects?',
+    back: 'Prospects',
   },
   {
     id: 39, category: 'booking',
-    front: 'Earned Assertiveness',
-    back: 'Getting direct only after rapport + value + qualifying',
+    front: 'When is it okay to get more direct/assertive with a prospect?',
+    back: 'Only after rapport, value, and qualifying',
   },
   {
     id: 40, category: 'booking',
-    front: 'Small Ask',
-    back: '"Got 2 minutes?" — easy yes',
+    front: 'What kind of ask makes it easy for a prospect to say yes?',
+    back: 'A small one, like "Got 2 minutes?"',
   },
   {
     id: 41, category: 'booking',
-    front: 'Assumptive Close',
-    back: 'Booking instead of asking "want to move forward?"',
+    front: 'What should you do instead of asking "want to move forward?"?',
+    back: 'Just book it (assume the appointment)',
   },
   {
     id: 42, category: 'booking',
-    front: 'Referral Window',
-    back: 'Asking right when they\'re thanking you',
+    front: "When's the best moment to ask for a referral?",
+    back: "Right when they're thanking you",
   },
 
   // ═══════════════════════════════════════
@@ -248,33 +248,33 @@ export const FLASHCARDS = [
   // ═══════════════════════════════════════
   {
     id: 43, category: 'time-management',
-    front: 'Reactive Day',
-    back: 'Working off whatever pops up, no plan',
+    front: "What's it called when you work off whatever pops up with no plan?",
+    back: 'A reactive day',
   },
   {
     id: 44, category: 'time-management',
-    front: 'Morning Dial Block',
-    back: 'Best call window, highest connect rates',
+    front: "What's the best call window for the highest connect rates?",
+    back: 'The morning dial block',
   },
   {
     id: 45, category: 'time-management',
-    front: 'Sourcing Block',
-    back: 'Dedicated time to build tomorrow\'s pipeline',
+    front: "What's dedicated time to build tomorrow's pipeline called?",
+    back: 'A sourcing block',
   },
   {
     id: 46, category: 'time-management',
-    front: 'Passive Learning',
-    back: 'Light, low-effort learning (e.g. lunch call reviews)',
+    front: "What's light, low-effort learning, like listening to call reviews at lunch, called?",
+    back: 'Passive learning',
   },
   {
     id: 47, category: 'time-management',
-    front: 'End-of-Day Reflection',
-    back: 'Turns activity into improvement',
+    front: 'What turns activity into actual improvement?',
+    back: 'End-of-day reflection',
   },
   {
     id: 48, category: 'time-management',
-    front: 'Work Intentional',
-    back: 'The core mindset — structure over hours',
+    front: "What's the core mindset behind a structured day — work longer or work smarter?",
+    back: 'Work intentional (structure over hours)',
   },
 ]
 
