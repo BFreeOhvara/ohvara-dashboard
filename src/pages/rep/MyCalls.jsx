@@ -194,11 +194,65 @@ function CallDetailModal({ call: c, onClose }) {
           </div>
         </div>
 
+        {/* Feedback — bordered cards, richer detail from migration 064, labeled fields not paragraphs */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+          {c.feedback_good && (
+            <div style={{
+              background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+              borderRadius: 10, padding: 16,
+            }}>
+              <p className="section-label" style={{ color: 'var(--success)', margin: '0 0 8px' }}>
+                What You Did Well
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--text-primary)', margin: 0, lineHeight: 1.5 }}>
+                {c.feedback_good}
+              </p>
+              {c.feedback_good_quote && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '0.5px solid var(--border)' }}>
+                  <p className="section-label" style={{ margin: '0 0 4px' }}>What You Said</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic', margin: 0, lineHeight: 1.5 }}>
+                    {c.feedback_good_quote}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          {c.feedback_improve && (
+            <div style={{
+              background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+              borderRadius: 10, padding: 16,
+            }}>
+              <p className="section-label" style={{ color: improveColor, margin: '0 0 8px' }}>
+                What To Work On
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--text-primary)', margin: 0, lineHeight: 1.5 }}>
+                {c.feedback_improve}
+              </p>
+              {c.feedback_improve_quote && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '0.5px solid var(--border)' }}>
+                  <p className="section-label" style={{ margin: '0 0 4px' }}>What You Said</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic', margin: 0, lineHeight: 1.5 }}>
+                    {c.feedback_improve_quote}
+                  </p>
+                </div>
+              )}
+              {c.feedback_improve_example && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '0.5px solid var(--border)' }}>
+                  <p className="section-label" style={{ color: 'var(--success)', margin: '0 0 4px' }}>Try Instead</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic', margin: 0, lineHeight: 1.5 }}>
+                    {c.feedback_improve_example}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Audio player shell — inert until twilio_recording_url is populated */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
           background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 10,
-          marginBottom: 20, opacity: hasRecording ? 1 : 0.5,
+          opacity: hasRecording ? 1 : 0.5,
         }}>
           <button
             disabled={!hasRecording}
@@ -217,54 +271,6 @@ function CallDetailModal({ call: c, onClose }) {
           <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>
             0:00 / {fmtDuration(c.duration_seconds)}
           </span>
-        </div>
-
-        {/* Feedback — bordered cards, richer detail from migration 064 */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {c.feedback_good && (
-            <div style={{
-              background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-              borderRadius: 10, padding: 16,
-            }}>
-              <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--success)', margin: 0, lineHeight: 1.5 }}>
-                ✓ {c.feedback_good}
-              </p>
-              {c.feedback_good_quote && (
-                <p style={{
-                  fontSize: 12, color: 'var(--text-secondary)', margin: '10px 0 0',
-                  lineHeight: 1.5, paddingLeft: 10, borderLeft: '2px solid rgba(34,197,94,0.3)',
-                }}>
-                  "What you said" — {c.feedback_good_quote}
-                </p>
-              )}
-            </div>
-          )}
-          {c.feedback_improve && (
-            <div style={{
-              background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-              borderRadius: 10, padding: 16,
-            }}>
-              <p style={{ fontSize: 13, fontWeight: 500, color: improveColor, margin: 0, lineHeight: 1.5 }}>
-                ↗ {c.feedback_improve}
-              </p>
-              {c.feedback_improve_quote && (
-                <p style={{
-                  fontSize: 12, color: 'var(--text-secondary)', margin: '10px 0 0',
-                  lineHeight: 1.5, paddingLeft: 10, borderLeft: `2px solid ${improveColor}55`,
-                }}>
-                  "What you said" — {c.feedback_improve_quote}
-                </p>
-              )}
-              {c.feedback_improve_example && (
-                <p style={{
-                  fontSize: 12, color: 'var(--success)', margin: '8px 0 0',
-                  lineHeight: 1.5, paddingLeft: 10, borderLeft: '2px solid rgba(34,197,94,0.3)',
-                }}>
-                  "Try instead" — {c.feedback_improve_example}
-                </p>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>,
