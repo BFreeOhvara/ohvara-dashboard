@@ -130,6 +130,10 @@ const FINAL_EXAM_QUESTIONS = [
   { id: 'f30', category: 'Time Management & Call Discipline', question: "What's a key way to build tomorrow's pipeline today?", options: [{ text: 'Randomly cold calling with no list', correct: false }, { text: 'A dedicated sourcing block to find new target contacts', correct: true }, { text: 'Waiting until tomorrow morning to find leads', correct: false }, { text: 'Skipping prep entirely and improvising', correct: false }] },
 ]
 
+// Shared A/B/C/D badge letters — used by both the mini-quiz and final exam
+// option lists so the two stay visually identical (Prompt 193).
+const OPTION_LETTERS = ['A', 'B', 'C', 'D']
+
 function buildMiniQuiz(video) {
   return MINI_QUIZ_CONTENT[video.id] || []
 }
@@ -249,33 +253,44 @@ function MiniQuiz({ video, onDone }) {
 
   const q = questions[index]
   return (
-    <div style={{ padding: '20px 24px' }}>
-      <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent)', margin: '0 0 10px' }}>
-        Quick check · {index + 1}/{questions.length}
+    <div style={{ padding: '36px 44px' }}>
+      <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent)', margin: '0 0 18px' }}>
+        Quick Check · {index + 1}/{questions.length}
       </p>
-      <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.5, margin: '0 0 14px' }}>
-        {q.question}
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="glass" style={{ borderRadius: 12, padding: '40px 44px', marginBottom: 24, minHeight: 160, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <p style={{ fontSize: 21, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>
+          {q.question}
+        </p>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {q.options.map((opt, i) => {
           const showFeedback = picked !== null
           const isCorrect = i === q.correctIndex
           const isPicked = picked === i
-          const color = !showFeedback ? 'var(--border)' : isCorrect ? 'rgba(34,197,94,0.5)' : isPicked ? 'rgba(239,68,68,0.5)' : 'var(--border)'
+          const badgeBg = !showFeedback ? 'var(--accent)' : isCorrect ? 'var(--success)' : isPicked ? 'var(--danger)' : 'var(--accent)'
+          const border  = !showFeedback ? 'var(--border)' : isCorrect ? 'var(--success)' : isPicked ? 'var(--danger)' : 'var(--border)'
+          const bg      = showFeedback && isCorrect ? 'rgba(34,197,94,0.08)' : showFeedback && isPicked ? 'rgba(239,68,68,0.08)' : 'var(--bg-elevated)'
+          const textColor = showFeedback ? (isCorrect ? 'var(--success)' : isPicked ? 'var(--danger)' : 'var(--text-secondary)') : 'var(--text-secondary)'
           return (
             <button
               key={i}
               onClick={() => pick(i)}
               disabled={picked !== null}
               style={{
-                textAlign: 'left', padding: '10px 12px', fontSize: 13,
-                background: showFeedback && isCorrect ? 'rgba(34,197,94,0.08)' : showFeedback && isPicked ? 'rgba(239,68,68,0.08)' : 'var(--bg-surface)',
-                border: `0.5px solid ${color}`, borderRadius: 8,
-                color: showFeedback ? (isCorrect ? 'var(--success)' : isPicked ? 'var(--danger)' : 'var(--text-muted)') : 'var(--text-secondary)',
-                cursor: picked === null ? 'pointer' : 'default',
+                display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left', padding: '18px 20px',
+                background: bg, border: `0.5px solid ${border}`, borderRadius: 10,
+                cursor: picked === null ? 'pointer' : 'default', fontSize: 14, lineHeight: 1.55,
+                color: textColor,
               }}
             >
-              {opt}
+              <span style={{
+                flexShrink: 0, width: 26, height: 26, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-mono)',
+                background: badgeBg, color: 'white',
+              }}>
+                {OPTION_LETTERS[i]}
+              </span>
+              <span style={{ flex: 1 }}>{opt}</span>
             </button>
           )
         })}
@@ -469,7 +484,10 @@ function VideoLibrary({ progress, saveProgress }) {
         })}
       </div>
 
-      {/* Video modal — locked while playing: no backdrop close, no X, no skip ahead */}
+      {/* Video modal — fully locked start to finish: no backdrop close, no X,
+          no skip ahead. The mini-quiz that follows the video is part of this
+          same locked flow (Prompt 193) — it only ever closes itself via
+          onDone, never by user dismissal. */}
       {activeVideo && (
         <div
           style={{
@@ -478,26 +496,28 @@ function VideoLibrary({ progress, saveProgress }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: 24,
           }}
-          onClick={e => { if (stage !== 'playing') closeVideo() }}
         >
           <div
-            style={{ width: '100%', maxWidth: 720, background: 'var(--bg-surface)', borderRadius: 14, overflow: 'hidden', border: '0.5px solid var(--border)' }}
-            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: stage === 'quiz' ? 900 : 720,
+              maxHeight: stage === 'quiz' ? '88vh' : undefined,
+              background: 'var(--bg-surface)', borderRadius: 14,
+              overflowY: stage === 'quiz' ? 'auto' : 'hidden', overflowX: 'hidden',
+              border: '0.5px solid var(--border)',
+            }}
           >
-            <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid var(--border)' }}>
-              <div>
+            {stage === 'playing' && (
+              <div style={{ padding: '14px 20px', borderBottom: '0.5px solid var(--border)' }}>
                 <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{activeVideo.title}</p>
                 <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
                   {activeVideo.category} · {activeVideo.duration}
-                  {stage === 'playing' && <span style={{ color: 'var(--warning)' }}> · locked until finished</span>}
+                  <span style={{ color: 'var(--warning)' }}> · locked until finished</span>
+                </p>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '6px 0 0' }}>
+                  You'll have a quick {buildMiniQuiz(activeVideo).length}-question check after this video.
                 </p>
               </div>
-              {stage !== 'playing' && (
-                <button onClick={closeVideo} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>
-                  <X size={16} />
-                </button>
-              )}
-            </div>
+            )}
 
             {stage === 'playing' ? (
               <div style={{ position: 'relative', paddingTop: '56.25%' }}>
@@ -1268,7 +1288,6 @@ function FinalQuizTab({ watchedCount, passed, onPass }) {
   // player (Prompt 174): full-screen overlay, no backdrop-click-to-close and
   // no X while in progress. Only the finished result screen can be dismissed.
   const q = questions[index]
-  const LETTERS = ['A', 'B', 'C', 'D']
   const selectedForCurrent = answers[index]
   const correct = answers.reduce(
     (acc, ans, qi) => acc + (ans != null && questions[qi].options[ans].correct ? 1 : 0), 0)
@@ -1362,7 +1381,7 @@ function FinalQuizTab({ watchedCount, passed, onPass }) {
                       fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-mono)',
                       background: 'var(--accent)', color: 'var(--text-primary)',
                     }}>
-                      {LETTERS[i]}
+                      {OPTION_LETTERS[i]}
                     </span>
                     <span style={{ flex: 1 }}>{opt.text}</span>
                   </button>
