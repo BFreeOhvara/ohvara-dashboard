@@ -356,12 +356,15 @@ export default function MyLeads() {
   const filtered = useMemo(() => {
     if (!leads) return []
     let list = activeFilter === 'All' ? leads : leads.filter(l => l.status === activeFilter)
-    const q = search.trim().toLowerCase()
-    if (q) {
-      list = list.filter(l =>
-        [l.business_name, l.contact_name, l.phone, l.city, l.niche]
-          .some(v => v && String(v).toLowerCase().includes(q))
-      )
+    const tokens = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+    if (tokens.length) {
+      list = list.filter(l => {
+        const haystack = [l.business_name, l.contact_name, l.phone, l.city, l.niche]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+        return tokens.every(t => haystack.includes(t))
+      })
     }
     return list
   }, [leads, activeFilter, search])
