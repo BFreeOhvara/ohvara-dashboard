@@ -55,7 +55,7 @@ export default function MyCalls() {
   })
 
   return (
-    <div>
+    <div style={{ height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
           My Calls
@@ -78,7 +78,7 @@ export default function MyCalls() {
           </p>
         </div>
       ) : (
-        <div className="glass scrollbar-thin" style={{ borderRadius: 12, maxHeight: 560, overflowY: 'auto' }}>
+        <div className="glass scrollbar-thin" style={{ borderRadius: 12, flex: 1, minHeight: 0, overflowY: 'auto' }}>
           {calls.map((c, i) => {
             const color = GRADE_COLOR[c.grade] || 'var(--text-muted)'
             const dim   = GRADE_DIM[c.grade]   || 'var(--bg-elevated)'

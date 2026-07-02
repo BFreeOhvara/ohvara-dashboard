@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { Play, BookOpen, Mic, FileText, Lock, Shuffle, ChevronLeft, ChevronRight, Check, X, ClipboardCheck, Loader2, PhoneOff, RotateCcw, Award } from 'lucide-react'
+import { Play, BookOpen, Mic, FileText, Lock, Shuffle, ChevronLeft, ChevronRight, Check, X, ClipboardCheck, Loader2, PhoneOff, RotateCcw, Award, AlertCircle } from 'lucide-react'
 import { FLASHCARDS, CATEGORY_LABELS, CATEGORY_COLORS } from '../../data/flashcards'
 import { supabase } from '../../lib/supabase'
 import { useCapability } from '../../contexts/SecretsContext'
@@ -133,6 +133,53 @@ const FINAL_EXAM_QUESTIONS = [
 // Shared A/B/C/D badge letters — used by both the mini-quiz and final exam
 // option lists so the two stay visually identical (Prompt 193).
 const OPTION_LETTERS = ['A', 'B', 'C', 'D']
+
+// ── ErrorToast — one-off inline validation message, same slide-in/out visual
+// pattern as NotificationToast.jsx (position, card style, dismiss timing) but
+// not routed through the notifications table/bell (Prompt 199).
+function ErrorToast({ message, onDone }) {
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const toVisible = setTimeout(() => setVisible(true), 10)
+    const toExit = setTimeout(() => setVisible(false), 4500)
+    const toDone = setTimeout(() => onDone(), 4850)
+    return () => { clearTimeout(toVisible); clearTimeout(toExit); clearTimeout(toDone) }
+  }, [onDone])
+
+  return createPortal(
+    <div style={{ position: 'fixed', top: 16, right: 16, zIndex: 10000, pointerEvents: 'none' }}>
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', gap: 10,
+        padding: '11px 14px',
+        background: '#13131F',
+        border: '0.5px solid var(--border)',
+        borderRadius: 10,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+        width: 300,
+        pointerEvents: 'auto',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateX(0)' : 'translateX(110%)',
+        transition: 'opacity 0.3s ease, transform 0.3s ease',
+      }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+          background: 'var(--danger-dim)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <AlertCircle size={13} style={{ color: 'var(--danger)' }} />
+        </div>
+        <p style={{
+          flex: 1, fontSize: 12.5, color: 'var(--text-primary)',
+          margin: 0, lineHeight: 1.45, paddingTop: 4,
+        }}>
+          {message}
+        </p>
+      </div>
+    </div>,
+    document.body
+  )
+}
 
 function buildMiniQuiz(video) {
   return MINI_QUIZ_CONTENT[video.id] || []
@@ -344,6 +391,11 @@ function VideoLibrary({ progress, saveProgress }) {
 
   return (
     <div>
+      {/* Heads-up notice — static copy, shown before any video is picked (Prompt 198) */}
+      <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 10 }}>
+        Heads up — you'll get a quick mini quiz after every video.
+      </p>
+
       {/* Progress strip */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 12,
@@ -513,9 +565,6 @@ function VideoLibrary({ progress, saveProgress }) {
                   {activeVideo.category} · {activeVideo.duration}
                   <span style={{ color: 'var(--warning)' }}> · locked until finished</span>
                 </p>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '6px 0 0' }}>
-                  You'll have a quick {buildMiniQuiz(activeVideo).length}-question check after this video.
-                </p>
               </div>
             )}
 
@@ -545,6 +594,11 @@ function FlashcardDeck({ onAllMastered }) {
   const [deck, setDeck]         = useState(() => FLASHCARDS)
   const [index, setIndex]       = useState(0)
   const [flipped, setFlipped]   = useState(false)
+  // Tracks whether the current card has been flipped to its answer face at
+  // least once — required before it can be marked mastered (Prompt 199).
+  // Resets whenever the card in view changes; does NOT reset just from
+  // flipping back to the front, so re-flipping doesn't lose credit.
+  const [viewed, setViewed]     = useState(false)
   const [mastered, setMastered] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem(LS_MASTERED) || '[]')) } catch { return new Set() }
   })
@@ -563,12 +617,14 @@ function FlashcardDeck({ onAllMastered }) {
     setDeck(shuffle(FLASHCARDS))
     setIndex(0)
     setFlipped(false)
+    setViewed(false)
   }
 
   function handleFilter(key) {
     setFilter(key)
     setIndex(0)
     setFlipped(false)
+    setViewed(false)
   }
 
   function navigate(dir) {
@@ -581,14 +637,25 @@ function FlashcardDeck({ onAllMastered }) {
         return (i - 1 + filteredDeck.length) % filteredDeck.length
       })
       setAnimDir(null)
+      setViewed(false)
     }, 180)
   }
 
+  function handleFlip() {
+    setFlipped(v => {
+      const next = !v
+      if (next) setViewed(true)
+      return next
+    })
+  }
+
+  // One-way: requires the card to have been flipped/viewed first, and once
+  // mastered there's no toggling back (Prompt 199).
   function handleMaster() {
-    if (!card) return
+    if (!card || !viewed || mastered.has(card.id)) return
     setMastered(prev => {
       const next = new Set(prev)
-      if (next.has(card.id)) { next.delete(card.id) } else { next.add(card.id) }
+      next.add(card.id)
       saveMastered(next)
       if (next.size >= FLASHCARDS.length) {
         setAllMasteredMsg(true)
@@ -700,7 +767,7 @@ function FlashcardDeck({ onAllMastered }) {
         <div
           className={`fc-container ${animDir === 'next' ? 'fc-slide-left' : animDir === 'prev' ? 'fc-slide-right' : ''}`}
           style={{ maxWidth: 560, margin: '0 auto', cursor: 'pointer', userSelect: 'none' }}
-          onClick={() => setFlipped(v => !v)}
+          onClick={handleFlip}
         >
           <div className={`fc-inner ${flipped ? 'is-flipped' : ''}`} style={{ minHeight: 220 }}>
             {/* Front face */}
@@ -793,9 +860,11 @@ function FlashcardDeck({ onAllMastered }) {
             <ChevronLeft size={16} />
           </button>
 
-          {/* Master button */}
+          {/* Master button — disabled until the card's been flipped; once
+              mastered it's a static indicator, not a toggle (Prompt 199) */}
           <button
             onClick={handleMaster}
+            disabled={isMastered || !viewed}
             style={{
               flex: 1, height: 40,
               background: isMastered ? 'rgba(34,197,94,0.1)' : 'var(--bg-surface)',
@@ -803,12 +872,14 @@ function FlashcardDeck({ onAllMastered }) {
               borderRadius: 8,
               fontSize: 13, fontWeight: 500,
               color: isMastered ? 'var(--success)' : 'var(--text-secondary)',
-              cursor: 'pointer', transition: 'all 0.15s',
+              cursor: isMastered ? 'default' : viewed ? 'pointer' : 'not-allowed',
+              opacity: !isMastered && !viewed ? 0.45 : 1,
+              transition: 'all 0.15s',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             }}
           >
             <Check size={13} />
-            {isMastered ? 'Mastered ✓' : 'Mark Mastered'}
+            {isMastered ? 'Mastered ✓' : viewed ? 'Mark Mastered' : 'Flip card first'}
           </button>
 
           {/* Next */}
@@ -1162,7 +1233,7 @@ function QuizTab({ progress, saveProgress }) {
 // ── FinalQuizTab — 30 questions covering all 8 videos, gates completion ──────
 // Combined with flashcard mastery via onPass (see TrainingCenter below).
 
-function FinalQuizTab({ watchedCount, passed, onPass }) {
+function FinalQuizTab({ watchedCount, passed, onPass, flashcardsMastered }) {
   const [questions, setQuestions] = useState(null)
   const [index, setIndex]   = useState(0)
   // Answers persist per question index (answers[qIndex] = chosen option index),
@@ -1170,6 +1241,7 @@ function FinalQuizTab({ watchedCount, passed, onPass }) {
   // without losing prior picks. Score is only computed at finish time.
   const [answers, setAnswers] = useState([])
   const [finished, setFinished] = useState(false)
+  const [toastMsg, setToastMsg] = useState(null)
 
   const locked = watchedCount < TRAINING_VIDEOS.length
 
@@ -1178,6 +1250,17 @@ function FinalQuizTab({ watchedCount, passed, onPass }) {
     setIndex(0)
     setAnswers([])
     setFinished(false)
+  }
+
+  // Videos are already guaranteed watched here (the `locked` full-screen gate
+  // above covers that) — this adds the flashcard-mastery half of the gate,
+  // surfaced as a slide-in toast rather than a hard lock screen (Prompt 199).
+  function handleStartClick() {
+    if (!flashcardsMastered) {
+      setToastMsg('Watch all 8 videos and master all flashcards before taking the Final Exam.')
+      return
+    }
+    start()
   }
 
   // Clicking an answer only *selects* it — no advance, no right/wrong reveal.
@@ -1270,7 +1353,7 @@ function FinalQuizTab({ watchedCount, passed, onPass }) {
         </div>
 
         <button
-          onClick={start}
+          onClick={handleStartClick}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 8, height: 42, padding: '0 24px',
             background: 'var(--accent)', border: 'none', borderRadius: 10,
@@ -1280,6 +1363,8 @@ function FinalQuizTab({ watchedCount, passed, onPass }) {
           <Play size={15} />
           Start Final Exam
         </button>
+
+        {toastMsg && <ErrorToast message={toastMsg} onDone={() => setToastMsg(null)} />}
       </div>
     )
   }
@@ -1487,12 +1572,13 @@ function RoleplayComingSoon() {
   )
 }
 
-function AIRoleplay({ progress, saveProgress }) {
+function AIRoleplay({ progress, saveProgress, examPassed }) {
   const hasRetell = useCapability('has_retell')
   const [phase, setPhase]           = useState('idle') // idle | connecting | live | scoring | scored | error
   const [transcript, setTranscript] = useState([])
   const [score, setScore]           = useState(null)
   const [error, setError]           = useState('')
+  const [toastMsg, setToastMsg]     = useState(null)
   const clientRef     = useRef(null)
   const transcriptRef = useRef([])
   const scrollRef     = useRef(null)
@@ -1514,6 +1600,17 @@ function AIRoleplay({ progress, saveProgress }) {
   const mmss = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`
   // "Mike is thinking" when the rep spoke last and no AI reply has landed yet
   const aiThinking = phase === 'live' && transcript.length > 0 && transcript[transcript.length - 1]?.role === 'user'
+
+  // Gates the initial entry point — reusable for the idle-phase Start button
+  // rather than folded into startCall itself, since retries after a passing
+  // exam shouldn't need to re-check (Prompt 199).
+  function handleStartClick() {
+    if (!examPassed) {
+      setToastMsg('Pass the Final Exam before starting AI Roleplay.')
+      return
+    }
+    startCall()
+  }
 
   async function startCall() {
     setPhase('connecting')
@@ -1864,7 +1961,7 @@ function AIRoleplay({ progress, saveProgress }) {
       )}
       <div>
         <button
-          onClick={startCall}
+          onClick={handleStartClick}
           className="hover:!brightness-110"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -1882,6 +1979,7 @@ function AIRoleplay({ progress, saveProgress }) {
       <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 14 }}>
         Uses your microphone — allow access when the browser asks.
       </p>
+      {toastMsg && <ErrorToast message={toastMsg} onDone={() => setToastMsg(null)} />}
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   )
@@ -2031,9 +2129,9 @@ export default function TrainingCenter() {
       {/* Tab content */}
       {tab === 'videos'     && <VideoLibrary progress={progress} saveProgress={saveProgress} />}
       {tab === 'flashcards' && <FlashcardDeck onAllMastered={handleAllFlashcardsMastered} />}
-      {tab === 'final-exam' && <FinalQuizTab watchedCount={watchedCount} passed={finalQuizPassed} onPass={handleFinalQuizPassed} />}
+      {tab === 'final-exam' && <FinalQuizTab watchedCount={watchedCount} passed={finalQuizPassed} onPass={handleFinalQuizPassed} flashcardsMastered={flashcardsMastered} />}
       {tab === 'script'     && <DiscoveryScript />}
-      {tab === 'roleplay'   && <AIRoleplay progress={progress} saveProgress={saveProgress} />}
+      {tab === 'roleplay'   && <AIRoleplay progress={progress} saveProgress={saveProgress} examPassed={finalQuizPassed} />}
     </div>
   )
 }

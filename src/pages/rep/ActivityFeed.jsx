@@ -39,13 +39,13 @@ export default function ActivityFeed() {
   }))
 
   return (
-    <div>
+    <div style={{ height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
       <div className="mb-6">
         <h1 className="text-xl font-medium text-[var(--text-primary)]">Activity Feed</h1>
         <p className="text-[var(--text-muted)] text-sm mt-0.5">Call outcomes — booked, follow-up, no answer, not interested</p>
       </div>
 
-      <Card>
+      <Card style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         {isLoading ? (
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
@@ -58,7 +58,7 @@ export default function ActivityFeed() {
             <p className="text-[var(--text-muted)] text-sm">No activity yet</p>
           </div>
         ) : (
-          <div className="space-y-1 scrollbar-thin" style={{ maxHeight: 560, overflowY: 'auto' }}>
+          <div className="space-y-1 scrollbar-thin" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
             {items.map(item => (
               <FeedItem key={item.id} item={item} />
             ))}
