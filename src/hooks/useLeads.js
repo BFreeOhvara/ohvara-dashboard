@@ -7,12 +7,33 @@ export function useMyLeads() {
   return useQuery({
     queryKey: ['leads', 'my', profile?.id],
     queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0]
+      // Show the rep's most recent batch instead of requiring an exact
+      // match against an independently-computed "today". The old version
+      // filtered on `batch_date = <UTC calendar date>`, which flips at UTC
+      // midnight — but assign_daily_batches() (the cron that actually
+      // advances batch_date) doesn't run until 06:05 UTC. That ~6h5m gap
+      // made the dashboard render empty every night even though the
+      // on-screen countdown still showed time remaining (see
+      // brain/LIVE_STATE Prompt 195 in the vault for the full root cause).
+      // Looking up the latest batch_date first means the rep always sees
+      // their current batch until the cron genuinely supersedes it — this
+      // also survives a delayed/failed cron run, not just the known window.
+      const { data: latest, error: latestErr } = await supabase
+        .from('leads')
+        .select('batch_date')
+        .eq('assigned_rep_id', profile.id)
+        .not('batch_date', 'is', null)
+        .order('batch_date', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (latestErr) throw latestErr
+      if (!latest) return []
+
       const { data, error } = await supabase
         .from('leads')
         .select('*')
         .eq('assigned_rep_id', profile.id)
-        .eq('batch_date', today)
+        .eq('batch_date', latest.batch_date)
         .order('created_at', { ascending: true })
       if (error) throw error
       return data
