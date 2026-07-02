@@ -39,7 +39,10 @@ export default function ActivityFeed() {
   }))
 
   return (
-    <div style={{ height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+    // 60px = one FeedItem row's rendered footprint (56px box + 4px space-y-1
+    // gap, measured from live CSS) — shaves exactly one row off the bottom
+    // per Prompt 202, so the box no longer ends flush with the last row.
+    <div style={{ height: 'calc(100vh - 48px - 60px)', display: 'flex', flexDirection: 'column' }}>
       <div className="mb-6">
         <h1 className="text-xl font-medium text-[var(--text-primary)]">Activity Feed</h1>
         <p className="text-[var(--text-muted)] text-sm mt-0.5">Call outcomes — booked, follow-up, no answer, not interested</p>

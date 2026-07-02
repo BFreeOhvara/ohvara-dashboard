@@ -55,7 +55,10 @@ export default function MyCalls() {
   })
 
   return (
-    <div style={{ height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
+    // 72px = one call row's rendered footprint (14px+14px padding + border,
+    // measured from live CSS) — shaves exactly one row off the bottom per
+    // Prompt 202, matching ActivityFeed's same-viewport-formula adjustment.
+    <div style={{ height: 'calc(100vh - 48px - 72px)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
           My Calls
