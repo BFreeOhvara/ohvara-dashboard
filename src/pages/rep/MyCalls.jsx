@@ -42,7 +42,7 @@ export default function MyCalls() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('calls')
-        .select('id, created_at, outcome, grade, feedback_good, feedback_improve, graded_at, duration_seconds, twilio_recording_url, lead:leads ( business_name )')
+        .select('id, created_at, outcome, grade, feedback_good, feedback_good_quote, feedback_improve, feedback_improve_quote, feedback_improve_example, graded_at, duration_seconds, twilio_recording_url, lead:leads ( business_name )')
         .eq('rep_id', profile.id)
         .not('graded_at', 'is', null)
         .order('created_at', { ascending: false })
@@ -125,7 +125,7 @@ export default function MyCalls() {
                     </span>
                   </div>
                   <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
-                    Your calls are recorded.
+                    {c.outcome || '—'}
                   </p>
                 </div>
               </div>
@@ -159,8 +159,11 @@ function CallDetailModal({ call: c, onClose }) {
       onClick={onClose}
     >
       <div
-        className="glass"
-        style={{ width: '100%', maxWidth: 440, borderRadius: 14, padding: 24, position: 'relative' }}
+        style={{
+          width: '100%', maxWidth: 960, maxHeight: '88vh', overflowY: 'auto',
+          background: '#0E0E1A', border: '0.5px solid var(--border)', borderRadius: 14,
+          boxShadow: '0 24px 64px rgba(0,0,0,0.6)', padding: 28, position: 'relative',
+        }}
         onClick={e => e.stopPropagation()}
       >
         <button
@@ -216,17 +219,53 @@ function CallDetailModal({ call: c, onClose }) {
           </span>
         </div>
 
-        {/* Feedback */}
-        {c.feedback_good && (
-          <p style={{ fontSize: 13, color: 'var(--success)', margin: '0 0 8px', lineHeight: 1.5 }}>
-            ✓ {c.feedback_good}
-          </p>
-        )}
-        {c.feedback_improve && (
-          <p style={{ fontSize: 13, color: improveColor, margin: 0, lineHeight: 1.5 }}>
-            ↗ {c.feedback_improve}
-          </p>
-        )}
+        {/* Feedback — bordered cards, richer detail from migration 064 */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {c.feedback_good && (
+            <div style={{
+              background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+              borderRadius: 10, padding: 16,
+            }}>
+              <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--success)', margin: 0, lineHeight: 1.5 }}>
+                ✓ {c.feedback_good}
+              </p>
+              {c.feedback_good_quote && (
+                <p style={{
+                  fontSize: 12, color: 'var(--text-secondary)', margin: '10px 0 0',
+                  lineHeight: 1.5, paddingLeft: 10, borderLeft: '2px solid rgba(34,197,94,0.3)',
+                }}>
+                  "What you said" — {c.feedback_good_quote}
+                </p>
+              )}
+            </div>
+          )}
+          {c.feedback_improve && (
+            <div style={{
+              background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+              borderRadius: 10, padding: 16,
+            }}>
+              <p style={{ fontSize: 13, fontWeight: 500, color: improveColor, margin: 0, lineHeight: 1.5 }}>
+                ↗ {c.feedback_improve}
+              </p>
+              {c.feedback_improve_quote && (
+                <p style={{
+                  fontSize: 12, color: 'var(--text-secondary)', margin: '10px 0 0',
+                  lineHeight: 1.5, paddingLeft: 10, borderLeft: `2px solid ${improveColor}55`,
+                }}>
+                  "What you said" — {c.feedback_improve_quote}
+                </p>
+              )}
+              {c.feedback_improve_example && (
+                <p style={{
+                  fontSize: 12, color: 'var(--success)', margin: '8px 0 0',
+                  lineHeight: 1.5, paddingLeft: 10, borderLeft: '2px solid rgba(34,197,94,0.3)',
+                }}>
+                  "Try instead" — {c.feedback_improve_example}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>,
     document.body
