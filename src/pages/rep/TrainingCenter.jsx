@@ -134,18 +134,23 @@ const FINAL_EXAM_QUESTIONS = [
 // option lists so the two stay visually identical (Prompt 193).
 const OPTION_LETTERS = ['A', 'B', 'C', 'D']
 
-// ── ErrorToast — one-off inline validation message, same slide-in/out visual
-// pattern as NotificationToast.jsx (position, card style, dismiss timing) but
-// not routed through the notifications table/bell (Prompt 199).
+// ── ErrorToast — one-off inline validation message, same mechanics as
+// NotificationToast.jsx's ToastCard (position, card style, exit-only slide
+// animation, dismiss timing) but not routed through the notifications
+// table/bell (Prompt 199). `onDone` is captured in a ref so the mount effect
+// only runs once — the caller passes a fresh inline arrow every render, and
+// depending on it directly would tear down/reschedule the dismiss timers on
+// every re-render instead of once (Prompt 200 fix).
 function ErrorToast({ message, onDone }) {
-  const [visible, setVisible] = useState(false)
+  const [exiting, setExiting] = useState(false)
+  const onDoneRef = useRef(onDone)
+  useEffect(() => { onDoneRef.current = onDone })
 
   useEffect(() => {
-    const toVisible = setTimeout(() => setVisible(true), 10)
-    const toExit = setTimeout(() => setVisible(false), 4500)
-    const toDone = setTimeout(() => onDone(), 4850)
-    return () => { clearTimeout(toVisible); clearTimeout(toExit); clearTimeout(toDone) }
-  }, [onDone])
+    const toExit = setTimeout(() => setExiting(true), 4500)
+    const toDone = setTimeout(() => onDoneRef.current(), 4850)
+    return () => { clearTimeout(toExit); clearTimeout(toDone) }
+  }, [])
 
   return createPortal(
     <div style={{ position: 'fixed', top: 16, right: 16, zIndex: 10000, pointerEvents: 'none' }}>
@@ -158,8 +163,8 @@ function ErrorToast({ message, onDone }) {
         boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
         width: 300,
         pointerEvents: 'auto',
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateX(0)' : 'translateX(110%)',
+        opacity: exiting ? 0 : 1,
+        transform: exiting ? 'translateX(110%)' : 'translateX(0)',
         transition: 'opacity 0.3s ease, transform 0.3s ease',
       }}>
         <div style={{
