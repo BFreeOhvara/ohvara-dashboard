@@ -58,7 +58,7 @@ export default function ActivityFeed() {
             <p className="text-[var(--text-muted)] text-sm">No activity yet</p>
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-1 scrollbar-thin" style={{ maxHeight: 560, overflowY: 'auto' }}>
             {items.map(item => (
               <FeedItem key={item.id} item={item} />
             ))}
@@ -69,8 +69,10 @@ export default function ActivityFeed() {
   )
 }
 
-// Same status color scheme as the Call Now modal / Badge
-const STATUS_COLORS = {
+// Same status color scheme as the Call Now modal / Badge. Exported so My
+// Calls can reuse the exact same outcome → color mapping instead of a
+// second copy that could drift (Prompt 194).
+export const STATUS_COLORS = {
   'New':                { color: '#38BDF8', dim: 'rgba(56,189,248,0.10)' },
   'Appointment Booked': { color: '#22C55E', dim: 'rgba(34,197,94,0.10)' },
   'No Answer':          { color: '#94A3B8', dim: 'rgba(148,163,184,0.10)' },

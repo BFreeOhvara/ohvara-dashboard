@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Phone, Loader2, X, Play } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { STATUS_COLORS } from './ActivityFeed'
 
 const GRADE_COLOR = {
   'A+': 'var(--success)', 'A': 'var(--success)', 'A-': 'var(--success)',
@@ -77,7 +78,7 @@ export default function MyCalls() {
           </p>
         </div>
       ) : (
-        <div className="glass" style={{ borderRadius: 12, overflow: 'hidden' }}>
+        <div className="glass scrollbar-thin" style={{ borderRadius: 12, maxHeight: 560, overflowY: 'auto' }}>
           {calls.map((c, i) => {
             const color = GRADE_COLOR[c.grade] || 'var(--text-muted)'
             const dim   = GRADE_DIM[c.grade]   || 'var(--bg-elevated)'
@@ -124,8 +125,11 @@ export default function MyCalls() {
                       {fmtDate(c.created_at)}
                     </span>
                   </div>
-                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
-                    {c.outcome || '—'}
+                  <p style={{
+                    fontSize: 12, margin: 0, lineHeight: 1.5,
+                    color: c.outcome ? (STATUS_COLORS[c.outcome]?.color || 'var(--text-muted)') : 'var(--text-muted)',
+                  }}>
+                    {c.outcome ? `Outcome: ${c.outcome}` : '—'}
                   </p>
                 </div>
               </div>
