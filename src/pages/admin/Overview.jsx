@@ -90,11 +90,27 @@ function RepRow({ rep }) {
   const todayLeadsQ = useQuery({
     queryKey: ['rep-today-leads', rep.id],
     queryFn: async () => {
+      // Look up the rep's most recent batch_date instead of filtering on an
+      // independently-computed "today" — assign_daily_batches() doesn't
+      // advance batch_date until 06:05 UTC, so a computed UTC-midnight
+      // "today" goes empty for ~6h every night. Mirrors the useMyLeads() fix
+      // in src/hooks/useLeads.js (brain/LIVE_STATE Prompt 195 in the vault).
+      const { data: latest, error: latestErr } = await supabase
+        .from('leads')
+        .select('batch_date')
+        .eq('assigned_rep_id', rep.id)
+        .not('batch_date', 'is', null)
+        .order('batch_date', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (latestErr) throw latestErr
+      if (!latest) return []
+
       const { data, error } = await supabase
         .from('leads')
         .select('id, business_name, niche, city, status')
         .eq('assigned_rep_id', rep.id)
-        .eq('batch_date', new Date().toISOString().split('T')[0])
+        .eq('batch_date', latest.batch_date)
         .order('status')
       if (error) throw error
       return data
