@@ -264,8 +264,10 @@ function MyPayouts({ connected }) {
             const cutDollars = Math.round(p.amount_cents / 100).toLocaleString()
             const isPaid = p.status === 'paid'
             const fmtDate = iso => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            // Paid rows show both dates so you can see how long the deal sat
+            // before payout; pending rows only have a close date so far.
             const dateLabel = isPaid && p.paid_at
-              ? `Paid on ${fmtDate(p.paid_at)}`
+              ? `Closed on ${fmtDate(p.appointment?.closed_at || p.created_at)} · Paid on ${fmtDate(p.paid_at)}`
               : `Closed on ${fmtDate(p.created_at)}`
             return (
               <div key={p.id} style={{
