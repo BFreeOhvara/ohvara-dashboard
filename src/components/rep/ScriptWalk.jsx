@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useCallback } from 'react'
 import { ChevronRight, ChevronLeft, RotateCcw, CornerDownRight, ArrowRight, CheckCircle2, CalendarCheck } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { CATEGORY_COLORS } from '../../lib/discoveryScript'
 
 // In live mode, action steps (coaching notes) are skipped transparently — they
 // should never appear as standalone pages a rep might accidentally read aloud.
@@ -144,10 +145,12 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
     commit({ sectionId: 'opener', stack: [{ steps: flow.opener.steps, index: 0 }] })
   }
 
-  // In live mode, a say step immediately preceding a fork (only action steps
-  // between) shows as one combined screen instead of two separate taps.
+  // A say step immediately preceding a fork (only action steps between) shows
+  // as one combined screen instead of two separate taps — every say-then-fork
+  // pair, in both live and practice mode (Prompt 204 fix 1: this used to be
+  // gated to mode === 'live' only, which is why Practice never combined).
   let nextForkForSay = null
-  if (mode === 'live' && step?.type === 'say') {
+  if (step?.type === 'say') {
     let i = top.index + 1
     while (i < top.steps.length && top.steps[i]?.type === 'action') i++
     if (top.steps[i]?.type === 'fork') nextForkForSay = { fork: top.steps[i], forkIdx: i }
@@ -188,7 +191,7 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
         )}
 
         {step && step.type === 'say' && (
-          mode === 'live' && nextForkForSay
+          nextForkForSay
             ? <SayWithFork step={step} fork={nextForkForSay.fork} accent={accent} capturedValues={capturedValues} onCapture={captureField} renderText={renderText} onPick={opt => advanceThenPick(nextForkForSay.forkIdx, opt)} />
             : <SayCard step={step} accent={accent} capturedValues={capturedValues} onCapture={captureField} renderText={renderText} onNext={advance} />
         )}
@@ -237,6 +240,7 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
 // One spoken line — the words to read, big and clear, with a Next advance.
 function SayCard({ step, accent, onNext, capturedValues, onCapture, renderText }) {
   const display = renderText ? renderText(step.text) : step.text
+  const [rawCapture, setRawCapture] = useState('')
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: 0 }}>
@@ -253,8 +257,16 @@ function SayCard({ step, accent, onNext, capturedValues, onCapture, renderText }
           <input
             type="number"
             min="0"
-            value={capturedValues?.[step.capture.field] ?? ''}
-            onChange={e => onCapture?.(step.capture.field, e.target.value)}
+            value={step.capture.multiplier ? rawCapture : (capturedValues?.[step.capture.field] ?? '')}
+            onChange={e => {
+              const v = e.target.value
+              if (step.capture.multiplier) {
+                setRawCapture(v)
+                onCapture?.(step.capture.field, v === '' ? '' : String(Math.round(Number(v) * step.capture.multiplier)))
+              } else {
+                onCapture?.(step.capture.field, v)
+              }
+            }}
             placeholder={step.capture.placeholder}
             style={{ height: 40, padding: '0 12px', background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 8, fontSize: 15, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', boxSizing: 'border-box' }}
           />
@@ -360,25 +372,30 @@ function RouteCard({ step, accent, flow, onGo }) {
   )
 }
 
-// A decision point — the prospect responded, tap which way it went.
+// A decision point — the prospect responded, tap which way it went. Each
+// option is colored by its response CATEGORY (good/hesitant/bad), not a
+// verbatim quote — untagged options fall back to the section's accent.
 function Fork({ step, accent, onPick }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: 0 }}>What did they do?</p>
       <p style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{step.q}</p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 2 }}>
-        {step.options.map((opt, i) => (
-          <button
-            key={i}
-            onClick={() => onPick(opt)}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, textAlign: 'left', padding: '14px 16px', background: 'var(--bg-elevated)', border: `0.5px solid ${accent}55`, borderRadius: 11, cursor: 'pointer', color: 'var(--text-primary)', fontSize: 14.5, fontWeight: 500 }}
-            onMouseEnter={e => { e.currentTarget.style.background = accent + '1A'; e.currentTarget.style.borderColor = accent }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.borderColor = accent + '55' }}
-          >
-            {opt.label}
-            <ChevronRight size={16} color={accent} style={{ flexShrink: 0 }} />
-          </button>
-        ))}
+        {step.options.map((opt, i) => {
+          const c = CATEGORY_COLORS[opt.category] || accent
+          return (
+            <button
+              key={i}
+              onClick={() => onPick(opt)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, textAlign: 'left', padding: '14px 16px', background: 'var(--bg-elevated)', border: `0.5px solid ${c}55`, borderLeft: `3px solid ${c}`, borderRadius: 11, cursor: 'pointer', color: 'var(--text-primary)', fontSize: 14.5, fontWeight: 500 }}
+              onMouseEnter={e => { e.currentTarget.style.background = c + '1A'; e.currentTarget.style.borderColor = c }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.borderColor = c + '55' }}
+            >
+              {opt.label}
+              <ChevronRight size={16} color={c} style={{ flexShrink: 0 }} />
+            </button>
+          )
+        })}
       </div>
     </div>
   )
@@ -459,8 +476,10 @@ function NextButton({ accent, onClick, label }) {
 
 // Combined say + fork screen — the spoken question and the response buttons on
 // one screen so reps never tap through a standalone say just to reach the fork.
+// Options are colored by response CATEGORY (good/hesitant/bad), same as Fork.
 function SayWithFork({ step, fork, accent, onPick, capturedValues, onCapture, renderText }) {
   const display = renderText ? renderText(step.text) : step.text
+  const [rawCapture, setRawCapture] = useState('')
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: 0 }}>
@@ -477,8 +496,16 @@ function SayWithFork({ step, fork, accent, onPick, capturedValues, onCapture, re
           <input
             type="number"
             min="0"
-            value={capturedValues?.[step.capture.field] ?? ''}
-            onChange={e => onCapture?.(step.capture.field, e.target.value)}
+            value={step.capture.multiplier ? rawCapture : (capturedValues?.[step.capture.field] ?? '')}
+            onChange={e => {
+              const v = e.target.value
+              if (step.capture.multiplier) {
+                setRawCapture(v)
+                onCapture?.(step.capture.field, v === '' ? '' : String(Math.round(Number(v) * step.capture.multiplier)))
+              } else {
+                onCapture?.(step.capture.field, v)
+              }
+            }}
             placeholder={step.capture.placeholder}
             style={{ height: 40, padding: '0 12px', background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 8, fontSize: 15, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', boxSizing: 'border-box' }}
           />
@@ -487,18 +514,21 @@ function SayWithFork({ step, fork, accent, onPick, capturedValues, onCapture, re
       <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: '4px 0 0' }}>What did they do?</p>
       {fork.q && <p style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{fork.q}</p>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 2 }}>
-        {fork.options.map((opt, i) => (
-          <button
-            key={i}
-            onClick={() => onPick(opt)}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, textAlign: 'left', padding: '14px 16px', background: 'var(--bg-elevated)', border: `0.5px solid ${accent}55`, borderRadius: 11, cursor: 'pointer', color: 'var(--text-primary)', fontSize: 14.5, fontWeight: 500 }}
-            onMouseEnter={e => { e.currentTarget.style.background = accent + '1A'; e.currentTarget.style.borderColor = accent }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.borderColor = accent + '55' }}
-          >
-            {opt.label}
-            <ChevronRight size={16} color={accent} style={{ flexShrink: 0 }} />
-          </button>
-        ))}
+        {fork.options.map((opt, i) => {
+          const c = CATEGORY_COLORS[opt.category] || accent
+          return (
+            <button
+              key={i}
+              onClick={() => onPick(opt)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, textAlign: 'left', padding: '14px 16px', background: 'var(--bg-elevated)', border: `0.5px solid ${c}55`, borderLeft: `3px solid ${c}`, borderRadius: 11, cursor: 'pointer', color: 'var(--text-primary)', fontSize: 14.5, fontWeight: 500 }}
+              onMouseEnter={e => { e.currentTarget.style.background = c + '1A'; e.currentTarget.style.borderColor = c }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.borderColor = c + '55' }}
+            >
+              {opt.label}
+              <ChevronRight size={16} color={c} style={{ flexShrink: 0 }} />
+            </button>
+          )
+        })}
       </div>
     </div>
   )

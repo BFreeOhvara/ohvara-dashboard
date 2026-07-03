@@ -8,12 +8,25 @@
 // LINE MARKERS (renderers style these):
 //   plain string     a spoken line                      → bullet
 //   BRANCH — ...     a decision point (fork)             → fork header
-//   ↳ IF ...: ...    a fork option (indented = child)    → indented option
+//   ↳ IF ... [TAG]: ...  a fork option (indented = child) → indented option
+//                    optional [GOOD] / [HESITANT] / [BAD] tag colors the
+//                    option by response CATEGORY (not verbatim quote) — see
+//                    CATEGORY_COLORS. Untagged options fall back to the
+//                    section's accent color (used for pure logistics choices
+//                    like "which day," not sentiment triage).
 //   ▸ ...            a rep action (set status, log)      → action chip
 //   → ...            route to another section            → route step
 //   ⊞ ...            data-collect step (inline)          → number inputs
 //
 // `kind`: 'opener' pins to top, 'branch' scrolls middle, 'close' pins bottom.
+
+// Response-category colors for fork options (Prompt 204) — the 4 existing
+// DESIGN.md semantic tokens only, no invented colors (Prompt 134 lesson).
+export const CATEGORY_COLORS = {
+  good:     'var(--success)',
+  hesitant: 'var(--warning)',
+  bad:      'var(--danger)',
+}
 
 export const DATA_COLLECT_FIELDS = [
   { key: 'calls_missed_per_week', label: 'Missed calls / week',   placeholder: '8' },
@@ -28,63 +41,57 @@ const DATA_COLLECT_STEP = {
 }
 
 export const FIXED_OPENER =
-  `"Hey, is this [Business Name]?"`
+  `"Hey, is this [Business Name]? I saw y'all had an Indeed listing up for a [receptionist / dispatcher / front desk]. I was wondering who I should speak to about that?"`
 
 export const DISCOVERY_SCRIPT = [
   {
     id: 'opener', kind: 'opener', short: 'Opener',
-    title: 'Open the Call', trigger: 'Same words, every call — confirm the business and ask who to speak with',
-    goal: 'Get to the decision maker. If transferred, re-intro with their name. Any pushback — permission frame, then bridge.',
+    title: 'Open the Call', trigger: 'Same words, every call — confirm the business, flag the listing, ask who to speak with',
+    goal: 'Get to the decision maker in one line. If transferred, re-intro with their name. Any pushback — permission frame, then bridge.',
     color: 'var(--accent)', dim: 'rgba(108,99,255,0.08)', border: 'rgba(108,99,255,0.25)',
     lines: [
-      `"Hey, is this [Business Name]?"`,
-      `BRANCH — Do they confirm?`,
-      `↳ IF Yes / speaking: "Hey — I saw y'all had an Indeed listing up. I was wondering who I should speak to about that?"`,
-      `   BRANCH — What do they say?`,
-      `   ↳ IF That's me / you got them: "Quick question — while that search is going, what's actually happening right now when a call comes in and nobody's free to grab it?"`,
+      `"Hey, is this [Business Name]? I saw y'all had an Indeed listing up for a [receptionist / dispatcher / front desk]. I was wondering who I should speak to about that?"`,
+      `BRANCH — What do they say?`,
+      `↳ IF That's me / you got them [GOOD]: "Quick question — while that search is going, what's actually happening right now when a call comes in and nobody's free to grab it?"`,
+      `   → Go to Vitals Check`,
+      `↳ IF Let me transfer you / that's [Name] [HESITANT]: "Hey [Name] — yeah, I was just asking about your listing for a [receptionist / dispatcher / front desk]. Quick question about how you're handling calls while that search is going — you got a minute?"`,
+      `   BRANCH — Do they engage?`,
+      `   ↳ IF Sure / yeah [GOOD]: "Quick question — while that search is going, what's actually happening right now when a call comes in and nobody's free to grab it?"`,
       `      → Go to Vitals Check`,
-      `   ↳ IF Let me transfer you / that's [Name]: "Hey [Name] — yeah, I was just asking about your listing for a [receptionist / dispatcher / front desk]. Quick question about how you're handling calls while that search is going — you got a minute?"`,
-      `      BRANCH — Do they engage?`,
-      `      ↳ IF Sure / yeah: "Quick question — while that search is going, what's actually happening right now when a call comes in and nobody's free to grab it?"`,
+      `   ↳ IF What is this? / I'm busy [HESITANT]: "I know this is out of nowhere — you can totally tell me you're slammed and I'll let you go. Quick question first though: while you're looking for that person, who's catching the phones when your team's tied up?"`,
+      `      BRANCH — Do they engage now?`,
+      `      ↳ IF They engage [GOOD]: "Quick question — while that search is going, what's actually happening right now when a call comes in and nobody's free to grab it?"`,
       `         → Go to Vitals Check`,
-      `      ↳ IF What is this? / I'm busy: "I know this is out of nowhere — you can totally tell me you're slammed and I'll let you go. Quick question first though: while you're looking for that person, who's catching the phones when your team's tied up?"`,
-      `         BRANCH — Do they engage now?`,
-      `         ↳ IF They engage: "Quick question — while that search is going, what's actually happening right now when a call comes in and nobody's free to grab it?"`,
-      `            → Go to Vitals Check`,
-      `         ↳ IF Not interested: ▸ Set status Not Interested.`,
-      `   ↳ IF What's this about?: "I know this is out of nowhere — you can totally tell me you're slammed and I'll let you go. Quick question first though: while you're looking for that person, who's catching the phones when your team's tied up?"`,
-      `      BRANCH — Do they engage?`,
-      `      ↳ IF They engage: "Quick question — while that search is going, what's actually happening right now when a call comes in and nobody's free to grab it?"`,
-      `         → Go to Vitals Check`,
-      `      ↳ IF Not interested: ▸ Set status Not Interested.`,
-      `↳ IF Wrong number / not them: ▸ Set status Not Interested.`,
+      `      ↳ IF Not interested [BAD]: ▸ Set status Not Interested.`,
+      `↳ IF What's this about? [HESITANT]: "I know this is out of nowhere — you can totally tell me you're slammed and I'll let you go. Quick question first though: while you're looking for that person, who's catching the phones when your team's tied up?"`,
+      `   BRANCH — Do they engage?`,
+      `   ↳ IF They engage [GOOD]: "Quick question — while that search is going, what's actually happening right now when a call comes in and nobody's free to grab it?"`,
+      `      → Go to Vitals Check`,
+      `   ↳ IF Not interested [BAD]: ▸ Set status Not Interested.`,
     ],
-    tips: `You're someone who saw their job listing, not a pitch machine. Two paths: owner answers → ask "who should I speak to?" → if it's them, bridge. If transferred → re-intro with their name and the listing. Any pushback → permission frame, then bridge.`,
+    tips: `One line does double duty — confirms the business AND flags the listing, straight into "who should I speak to." No separate ask, no wrong-number branch to click (that's not a fork, just mark Not Interested and move on). If transferred, re-intro with their name and the listing in one breath. Any pushback → permission frame, then bridge.`,
   },
 
   {
     id: 'vitals', kind: 'branch', short: 'Vitals',
     title: 'Vitals Check', trigger: `They answered the bridge question — now map their situation`,
-    goal: 'Understand the setup: who covers calls, volume, leakage, ticket value, what they\'ve tried, why now.',
+    goal: 'Understand the setup: who covers calls, how many slip per day, ticket value, what they\'ve tried, why now.',
     color: 'var(--accent)', dim: 'rgba(108,99,255,0.08)', border: 'rgba(108,99,255,0.25)',
     lines: [
       `"Most [niche] owners I talk to, their crew's out on jobs and the calls are the thing that slips through the cracks the most — even after they've tried to fix it. Is that kind of the situation, or is it something different for you?"`,
-      `"Walk me through what happens right now when a call comes in — who picks it up?"`,
-      `"On a normal day, how many calls are you getting in?"`,
-      `"And when nobody gets to it, where does it go — voicemail, a cell? Does it ever just not get picked up at all?"`,
-      `"How often does that happen — in a given week?"`,
+      `"Walk me through what happens right now when a call comes in — who picks it up, and where does it go if nobody's free? Voicemail, a cell, does it ever just not get answered at all?"`,
+      `"How many calls would you say you're missing a day?"`,
       `"Do you have a rough sense of what one of those calls is worth if it turns into a job?"`,
       `"So if a handful of those are slipping through every week — what's that running you a month?"`,
       `"What's kept you from solving it before now — just the timing, or is it harder than it looks to find the right person?"`,
       `"What made now the time to post for this — was there a specific moment, or has it just been building?"`,
-      `⊞ Log the numbers — calls missed per week + average ticket`,
       `→ Go to Pain Amplification`,
     ],
     captures: [
-      { match: 'how many calls are you getting', field: 'calls_missed_per_week', label: 'Missed calls / week', placeholder: 'e.g. 10' },
+      { match: 'missing a day', field: 'calls_missed_per_week', label: 'Missed calls / day — paste their number, no math', placeholder: 'e.g. 3', multiplier: 7 },
       { match: 'what one of those calls is worth', field: 'avg_ticket', label: 'Avg job value ($)', placeholder: 'e.g. 300' },
     ],
-    tips: `Ask and listen. Goal: clear picture of who covers calls, how many slip per week, rough ticket value, and what they've tried. Every answer feeds what our team builds for them. Don't skip the "why now" — it tells you how motivated they are.`,
+    tips: `Ask and listen. Goal: clear picture of who covers calls, how many slip per day, rough ticket value, and what they've tried. Type in exactly the number they say — the app converts it, no mental math mid-call. Every answer feeds what our team builds for them. Don't skip the "why now" — it tells you how motivated they are.`,
   },
 
   {
@@ -95,19 +102,19 @@ export const DISCOVERY_SCRIPT = [
     lines: [
       `"So on one side — what's been slipping. On the other — every call caught, every job booked. What does that gap actually look like?"`,
       `BRANCH — How engaged are they?`,
-      `↳ IF They gave real numbers / engaged: "So just to make sure I've got this right — when it goes to voicemail, that's not just a missed call. That's probably a job that goes to whoever picks up next. Is that kind of what you're seeing?"`,
+      `↳ IF They gave real numbers / engaged [GOOD]: "So just to make sure I've got this right — when it goes to voicemail, that's not just a missed call. That's probably a job that goes to whoever picks up next. Is that kind of what you're seeing?"`,
       `   BRANCH — Do they confirm?`,
-      `   ↳ IF Yeah, exactly / sometimes: "So on one side — [their number] calls a week going unanswered, [their estimate] per job. On the other side, every one of those gets picked up, every estimate gets booked. What does that gap look like over a month?"`,
+      `   ↳ IF Yeah, exactly / sometimes [GOOD]: "So on one side — [their number] calls a week going unanswered, [their estimate] per job. On the other side, every one of those gets picked up, every estimate gets booked. What does that gap look like over a month?"`,
       `      "If nothing changed — same volume, same leakage — what does that add up to by this time next year?"`,
       `      "And if that gap closed — every call answered, no jobs slipping — what would that actually change for [Business Name] day to day?"`,
       `      → Go to Handoff`,
-      `↳ IF Vague / not sure / minimizing: "Most [niche] owners I talk to, even when they feel on top of it, are losing three to five jobs a week they never even know about. Does that resonate at all, or do you feel like you've got it covered?"`,
+      `↳ IF Vague / not sure / minimizing [HESITANT]: "Most [niche] owners I talk to, even when they feel on top of it, are losing three to five jobs a week they never even know about. Does that resonate at all, or do you feel like you've got it covered?"`,
       `   BRANCH — Does it land?`,
-      `   ↳ IF Yeah, probably / fair: "So on one side — [their number] calls a week going unanswered, [their estimate] per job. On the other side, every one of those gets picked up, every estimate gets booked. What does that gap look like over a month?"`,
+      `   ↳ IF Yeah, probably / fair [GOOD]: "So on one side — [their number] calls a week going unanswered, [their estimate] per job. On the other side, every one of those gets picked up, every estimate gets booked. What does that gap look like over a month?"`,
       `      "If nothing changed — same volume, same leakage — what does that add up to by this time next year?"`,
       `      "And if that gap closed — every call answered, no jobs slipping — what would that actually change for [Business Name] day to day?"`,
       `      → Go to Handoff`,
-      `   ↳ IF We're fine / not a big deal: → Go to Handoff`,
+      `   ↳ IF We're fine / not a big deal [BAD]: → Go to Handoff`,
     ],
     tips: `You're not closing — you're helping them see the math. Use their own numbers back at them. If they minimize, name the pattern ("three to five jobs a week they never even know about") and let them confirm or deny. Then move to handoff regardless.`,
   },
@@ -122,11 +129,11 @@ export const DISCOVERY_SCRIPT = [
       `"They're going to review your situation before the call and put together what would actually make sense for [Business Name] — not some generic package. It's 15 minutes."`,
       `"Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
       `BRANCH — How do they respond?`,
-      `↳ IF They pick a time: → Go to Close (lock the time and confirm)`,
-      `↳ IF Neither / let me think / just send info: → Go to Objections`,
-      `↳ IF No time this week: → Go to Objections`,
-      `↳ IF Who is this / what company?: → Go to Objections`,
-      `↳ IF How much does it cost?: → Go to Objections`,
+      `↳ IF They pick a time [GOOD]: → Go to Close (lock the time and confirm)`,
+      `↳ IF Neither / let me think / just send info [HESITANT]: → Go to Objections`,
+      `↳ IF No time this week [HESITANT]: → Go to Objections`,
+      `↳ IF Who is this / what company? [HESITANT]: → Go to Objections`,
+      `↳ IF How much does it cost? [HESITANT]: → Go to Objections`,
     ],
     tips: `Two windows — never open-ended. If they pick one, move straight to Close. If they push back, go to Objections — it's one extra step, not a rejection. Stay calm.`,
   },
@@ -138,30 +145,30 @@ export const DISCOVERY_SCRIPT = [
     color: 'var(--danger)', dim: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)',
     lines: [
       `BRANCH — What's the objection?`,
-      `↳ IF Just send me info / want to see something first: "Yeah, totally — I can do that. The thing is, anything I send is going to be pretty generic. The stuff that actually matters is specific to what you just told me about your setup — that's exactly what our team would be working from. Easier to just grab 15 minutes and have them walk you through it directly."`,
+      `↳ IF Just send me info / want to see something first [HESITANT]: "Yeah, totally — I can do that. The thing is, anything I send is going to be pretty generic. The stuff that actually matters is specific to what you just told me about your setup — that's exactly what our team would be working from. Easier to just grab 15 minutes and have them walk you through it directly."`,
       `   BRANCH — Do they agree?`,
-      `   ↳ IF Okay, fair: "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
+      `   ↳ IF Okay, fair [GOOD]: "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
       `      → Go to Close`,
-      `   ↳ IF I still want to see something: "Can I ask — are you actually going to read it? Because I know how packed inboxes get, and I don't want to put something together that just disappears in there. That's why I'd rather get you 15 minutes with someone who can actually answer your questions."`,
+      `   ↳ IF I still want to see something first [HESITANT]: "Can I ask — are you actually going to read it? Because I know how packed inboxes get, and I don't want to put something together that just disappears in there. That's why I'd rather get you 15 minutes with someone who can actually answer your questions."`,
       `      BRANCH — Still pushing for it?`,
-      `      ↳ IF Okay fine: "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
+      `      ↳ IF Okay fine [GOOD]: "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
       `         → Go to Close`,
-      `      ↳ IF Yeah, still want it: "Okay — I'll send it over today. And I'm going to drop a 15-minute placeholder on your calendar for [day]. If you read it and it's not worth your time, just decline — no hard feelings. If it's interesting, we're already set."`,
+      `      ↳ IF Yeah, still want it [HESITANT]: "Okay — I'll send it over today. And I'm going to drop a 15-minute placeholder on your calendar for [day]. If you read it and it's not worth your time, just decline — no hard feelings. If it's interesting, we're already set."`,
       `         ▸ Set status Follow-Up (send email + placeholder).`,
-      `↳ IF No time this week / I'm slammed: "No problem — what works better, [Tuesday of next week] or [Wednesday of next week]?"`,
+      `↳ IF No time this week / I'm slammed [HESITANT]: "No problem — what works better, [Tuesday of next week] or [Wednesday of next week]?"`,
       `   BRANCH — Do they pick a day?`,
-      `   ↳ IF Picks a day: "Does morning or afternoon work better on [day]?"`,
+      `   ↳ IF Picks a day [GOOD]: "Does morning or afternoon work better on [day]?"`,
       `      → Go to Close`,
-      `   ↳ IF Those don't work either: "Got it — what's a better week for you?"`,
+      `   ↳ IF Those don't work either [HESITANT]: "Got it — what's a better week for you?"`,
       `      ▸ Set status Follow-Up (log the week they gave).`,
-      `↳ IF Who is this / what company?: "We work with [niche] businesses specifically on the call-coverage issue we just walked through. Our team builds out what that looks like for your exact setup — that's the point of the call."`,
+      `↳ IF Who is this / what company? [HESITANT]: "We work with [niche] businesses specifically on the call-coverage issue we just walked through. Our team builds out what that looks like for your exact setup — that's the point of the call."`,
       `   "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
       `   → Go to Close`,
-      `↳ IF How much does it cost?: "Honestly depends on your call volume and setup — which is exactly what our team figures out on the call. That's why I didn't want to guess at a number before they've seen your actual situation."`,
+      `↳ IF How much does it cost? [HESITANT]: "Honestly depends on your call volume and setup — which is exactly what our team figures out on the call. That's why I didn't want to guess at a number before they've seen your actual situation."`,
       `   BRANCH — Do they push for a ballpark?`,
-      `   ↳ IF Okay: "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
+      `   ↳ IF Okay [GOOD]: "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
       `      → Go to Close`,
-      `   ↳ IF I just need a ballpark: "The range is wide depending on what you need, which is exactly why the call is worth 15 minutes — they'll give you a real number based on what you just told me."`,
+      `   ↳ IF I just need a ballpark [HESITANT]: "The range is wide depending on what you need, which is exactly why the call is worth 15 minutes — they'll give you a real number based on what you just told me."`,
       `      "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
       `      → Go to Close`,
     ],
@@ -293,16 +300,20 @@ function parseSteps(lines, start, baseIndent, lead, rep) {
         if (optIndent === null) optIndent = oind
         if (oind !== optIndent) break
         const body = ot.replace(/^↳\s*/, '')
-        const m = body.match(/^IF\s+([^:]+):\s*(.*)$/i) || body.match(/^([^:]{1,32}):\s+(.*)$/)
+        // Optional [GOOD]/[HESITANT]/[BAD] response-category tag (Prompt 204,
+        // fix 4) — colors the option by category, not by verbatim quote.
+        const mTag = body.match(/^IF\s+([^:]+?)\s*\[(GOOD|HESITANT|BAD)\]\s*:\s*(.*)$/i)
+        const m = mTag || body.match(/^IF\s+([^:]+):\s*(.*)$/i) || body.match(/^([^:]{1,32}):\s+(.*)$/)
         const label = m ? optionLabel(m[1]) : shorten(body)
-        const rest = m ? m[2] : body
+        const rest = mTag ? mTag[3] : (m ? m[2] : body)
+        const category = mTag ? mTag[2].toLowerCase() : null
         const optSteps = []
         if (rest && rest.trim()) optSteps.push(makeStep(rest.trim(), lead, rep))
         i++
         const child = parseSteps(lines, i, optIndent + 1, lead, rep)
         optSteps.push(...child.steps)
         i = child.next
-        options.push({ label, steps: optSteps })
+        options.push({ label, steps: optSteps, category })
       }
       steps.push({ type: 'fork', q, options })
       continue
@@ -320,7 +331,7 @@ function attachCaptures(steps, captures) {
     if (s.type === 'say' && captures) {
       for (const c of captures) {
         if (s.text.toLowerCase().includes(c.match.toLowerCase())) {
-          s.capture = { field: c.field, label: c.label, placeholder: c.placeholder }
+          s.capture = { field: c.field, label: c.label, placeholder: c.placeholder, multiplier: c.multiplier }
           break
         }
       }

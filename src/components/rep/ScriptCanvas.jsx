@@ -6,6 +6,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import { X as XIcon } from 'lucide-react'
 import { ScriptWalk } from './ScriptWalk'
+import { CATEGORY_COLORS } from '../../lib/discoveryScript'
 
 // ── ScriptCanvas ─────────────────────────────────────────────────────────────
 // Interactive zoomable map of the call script. Prompt 61 changes:
@@ -15,8 +16,8 @@ import { ScriptWalk } from './ScriptWalk'
 //     starting from that node's section; Exit returns to the canvas.
 
 const NODE_W = 240
-const COL = NODE_W + 70   // horizontal column unit
-const ROW = 156           // vertical step unit
+const COL = NODE_W + 90   // horizontal column unit (Prompt 204 fix 5 — wider gap between sibling columns)
+const ROW = 174           // vertical step unit (was 156 — more room so edge labels don't crowd the node below)
 const BRANCH_GAP_Y = 210  // opener bottom → branch header row
 const CLOSE_GAP_Y = 120   // tallest branch bottom → close header
 
@@ -57,19 +58,23 @@ function buildGraph(flow) {
   let counter = 0
   const nextId = () => `n${counter++}`
 
-  function pushEdge(srcTail, targetId, label) {
+  // Edge color defaults to grey; a fork-option edge carries its response
+  // CATEGORY color instead (Prompt 204 fix 4 — the actual rendered "Flowchart"
+  // is this ReactFlow canvas, not the unused ScriptFlowchart.jsx).
+  function pushEdge(srcTail, targetId, label, color) {
+    const edgeColor = srcTail.color ?? color ?? EDGE_GREY
     edges.push({
       id: `e${counter++}`,
       source: srcTail.id,
       target: targetId,
       label: (srcTail.label ?? label) || undefined,
       type: 'smoothstep',
-      style: { stroke: EDGE_GREY, strokeWidth: 1.5 },
-      labelStyle: { fontSize: 10, fill: '#9090AA', fontWeight: 600 },
+      style: { stroke: edgeColor, strokeWidth: 1.5 },
+      labelStyle: { fontSize: 10, fill: edgeColor === EDGE_GREY ? '#9090AA' : edgeColor, fontWeight: 600 },
       labelBgStyle: { fill: '#13131F' },
       labelBgPadding: [5, 3],
       labelBgBorderRadius: 4,
-      markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: EDGE_GREY },
+      markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: edgeColor },
     })
   }
 
@@ -80,9 +85,10 @@ function buildGraph(flow) {
 
   // Lay out a sequence of steps within a horizontal band. sectionId tracks
   // which section owns these steps so nodes can route ScriptWalk on click.
-  function placeSteps(steps, bandLeftPx, bandCols, startY, incomingTails, incomingLabel, accent, visited = new Set(), sectionId = 'opener') {
+  function placeSteps(steps, bandLeftPx, bandCols, startY, incomingTails, incomingLabel, incomingColor, accent, visited = new Set(), sectionId = 'opener') {
     let tails = incomingTails
     let label = incomingLabel
+    let color = incomingColor
     let y = startY
     const centerX = bandLeftPx + (bandCols * COL) / 2 - NODE_W / 2
 
@@ -98,13 +104,14 @@ function buildGraph(flow) {
           // Clicking this node in practice mode jumps to the target branch.
           const id = nextId()
           makeNode(id, 'goTo', { label: routeLabel(flow, step.target), targetSectionId: step.target, accent }, centerX, y, sectionId)
-          for (const t of tails) pushEdge(t, id, label)
+          for (const t of tails) pushEdge(t, id, label, color)
           y += ROW
         } else {
           // Forward route (to close or terminal)
-          for (const t of tails) pushEdge(t, tgt, label ?? routeLabel(flow, step.target))
+          for (const t of tails) pushEdge(t, tgt, label ?? routeLabel(flow, step.target), color)
         }
         label = null
+        color = null
         tails = []
         si++
         continue
@@ -113,20 +120,22 @@ function buildGraph(flow) {
       if (step.type === 'fork') {
         const id = nextId()
         makeNode(id, 'fork', { q: step.q, accent }, centerX, y, sectionId)
-        for (const t of tails) pushEdge(t, id, label)
+        for (const t of tails) pushEdge(t, id, label, color)
         label = null
+        color = null
 
         const optY = y + ROW
         let optLeftCols = 0
         const optTails = []
         let maxEndY = optY
         for (const opt of step.options) {
+          const optColor = CATEGORY_COLORS[opt.category]
           const optCols = Math.max(1, measureSteps(opt.steps, flow, visited))
           const optLeftPx = bandLeftPx + optLeftCols * COL
           if (opt.steps.length === 0) {
-            optTails.push({ id, label: opt.label })
+            optTails.push({ id, label: opt.label, color: optColor })
           } else {
-            const r = placeSteps(opt.steps, optLeftPx, optCols, optY, [{ id }], opt.label, accent, visited, sectionId)
+            const r = placeSteps(opt.steps, optLeftPx, optCols, optY, [{ id }], opt.label, optColor, accent, visited, sectionId)
             for (const tt of r.tails) optTails.push(tt)
             maxEndY = Math.max(maxEndY, r.endY)
           }
@@ -141,8 +150,9 @@ function buildGraph(flow) {
       if (step.type === 'data_collect') {
         const id = nextId()
         makeNode(id, 'dataCollect', { fields: step.fields, label: step.label, hint: step.hint, accent }, centerX, y, sectionId)
-        for (const t of tails) pushEdge(t, id, label)
+        for (const t of tails) pushEdge(t, id, label, color)
         label = null
+        color = null
         tails = [{ id }]
         y += ROW
         si++
@@ -159,20 +169,22 @@ function buildGraph(flow) {
           // Say + fork combined into one node — no intermediate arrow.
           const id = nextId()
           makeNode(id, 'sayFork', { text: step.text, sub: step.sub, q: nextFork.q, accent }, centerX, y, sectionId)
-          for (const t of tails) pushEdge(t, id, label)
+          for (const t of tails) pushEdge(t, id, label, color)
           label = null
+          color = null
 
           const optY = y + ROW
           let optLeftCols = 0
           const optTails = []
           let maxEndY = optY
           for (const opt of nextFork.options) {
+            const optColor = CATEGORY_COLORS[opt.category]
             const optCols = Math.max(1, measureSteps(opt.steps, flow, visited))
             const optLeftPx = bandLeftPx + optLeftCols * COL
             if (opt.steps.length === 0) {
-              optTails.push({ id, label: opt.label })
+              optTails.push({ id, label: opt.label, color: optColor })
             } else {
-              const r = placeSteps(opt.steps, optLeftPx, optCols, optY, [{ id }], opt.label, accent, visited, sectionId)
+              const r = placeSteps(opt.steps, optLeftPx, optCols, optY, [{ id }], opt.label, optColor, accent, visited, sectionId)
               for (const tt of r.tails) optTails.push(tt)
               maxEndY = Math.max(maxEndY, r.endY)
             }
@@ -187,8 +199,9 @@ function buildGraph(flow) {
         // Standalone say (no adjacent fork)
         const id = nextId()
         makeNode(id, 'say', { text: step.text, sub: step.sub, accent }, centerX, y, sectionId)
-        for (const t of tails) pushEdge(t, id, label)
+        for (const t of tails) pushEdge(t, id, label, color)
         label = null
+        color = null
         tails = [{ id }]
         y += ROW
         si++
@@ -198,8 +211,9 @@ function buildGraph(flow) {
       // action (and any other step type) — single node
       const id = nextId()
       makeNode(id, step.type, { text: step.text, sub: step.sub, accent }, centerX, y, sectionId)
-      for (const t of tails) pushEdge(t, id, label)
+      for (const t of tails) pushEdge(t, id, label, color)
       label = null
+      color = null
       tails = [{ id }]
       y += ROW
       si++
@@ -218,7 +232,7 @@ function buildGraph(flow) {
     const hid = headerNodeId(b.id)
     makeNode(hid, 'branchHeader', { branch: b }, hx, BRANCH_GAP_Y, b.id)
     pushEdge({ id: 'opener' }, hid, b.short)
-    const r = placeSteps(b.steps, bandLeftPx, cols, BRANCH_GAP_Y + ROW, [{ id: hid }], null, b.color, new Set(), b.id)
+    const r = placeSteps(b.steps, bandLeftPx, cols, BRANCH_GAP_Y + ROW, [{ id: hid }], null, null, b.color, new Set(), b.id)
     maxBranchEndY = Math.max(maxBranchEndY, r.endY)
     leftCols += cols
   }
@@ -233,7 +247,7 @@ function buildGraph(flow) {
   const closeY = maxBranchEndY + CLOSE_GAP_Y
   const closeBandLeft = totalW / 2 - (closeCols * COL) / 2
   makeNode('close-header', 'close', { close: flow.close }, totalW / 2 - NODE_W / 2, closeY, 'close')
-  placeSteps(flow.close.steps, closeBandLeft, closeCols, closeY + ROW, [{ id: 'close-header' }], null, flow.close.color, new Set(), 'close')
+  placeSteps(flow.close.steps, closeBandLeft, closeCols, closeY + ROW, [{ id: 'close-header' }], null, null, flow.close.color, new Set(), 'close')
 
   return { nodes, edges }
 }
@@ -459,7 +473,7 @@ function CanvasInner({ flow, onPractice }) {
         onInit={onInit}
         fitView
         fitViewOptions={{ padding: 0.15 }}
-        minZoom={0.2}
+        minZoom={0.32}
         maxZoom={1.75}
         translateExtent={translateExtent}
         proOptions={{ hideAttribution: true }}

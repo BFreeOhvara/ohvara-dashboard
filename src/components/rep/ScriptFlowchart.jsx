@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useLayoutEffect, useRef, useState } from 'react'
+import { CATEGORY_COLORS } from '../../lib/discoveryScript'
 
 // ── ScriptFlowchart ──────────────────────────────────────────────────────────
 // Full recursive branching tree of the call script. Every fork splits into
@@ -113,24 +114,29 @@ function ForkNode({ step, color, flow }) {
         <span style={{ fontSize: 10.5, color: 'var(--text-secondary)', lineHeight: 1.45 }}>{step.q}</span>
       </div>
 
-      <VC h={8} />
+      <VC h={10} />
 
       {/* Separate option boxes — own border/radius/background each, divided
-          by a gap instead of a shared outer border with a divider line. */}
-      <div style={{ display: 'flex', width: '100%', boxSizing: 'border-box', gap: 8, alignItems: 'flex-start' }}>
+          by a gap instead of a shared outer border with a divider line.
+          Each has a real min-width floor (Prompt 204 fix 5) so dense branches
+          (e.g. Booking Objections' 4-5-way forks) never get squeezed below a
+          readable size — the row scrolls horizontally instead of overlapping. */}
+      <div style={{ display: 'flex', width: '100%', boxSizing: 'border-box', gap: 10, alignItems: 'flex-start', overflowX: 'auto', paddingBottom: 4 }}>
         {step.options.map((opt, i) => {
           const shown = visibleSteps(opt.steps)
+          const optColor = CATEGORY_COLORS[opt.category] || color
           return (
             <div key={i} style={{
-              flex: 1, minWidth: 0, boxSizing: 'border-box',
+              flex: '1 1 150px', minWidth: 150, flexShrink: 0, boxSizing: 'border-box',
               background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
-              borderRadius: 8, padding: '8px 7px',
+              borderTop: `2px solid ${optColor}`, borderRadius: 8, padding: '8px 7px',
               display: 'flex', flexDirection: 'column', alignItems: 'center',
             }}>
-              {/* Option label */}
+              {/* Option label — colored by response category (good/hesitant/
+                  bad), not by verbatim quote (Prompt 204 fix 4) */}
               <span style={{
-                fontSize: 9.5, fontWeight: 600, color: color,
-                background: color + '15', border: `0.5px solid ${color}44`,
+                fontSize: 9.5, fontWeight: 600, color: optColor,
+                background: optColor + '15', border: `0.5px solid ${optColor}44`,
                 borderRadius: 4, padding: '2px 7px', whiteSpace: 'nowrap',
                 maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
                 textAlign: 'center', display: 'block',
@@ -321,7 +327,7 @@ export function ScriptFlowchart({ flow }) {
         <div
           ref={containerRef}
           style={{
-            position: 'relative', minWidth: 900, maxWidth: 1200, margin: '0 auto',
+            position: 'relative', minWidth: 1100, width: 'max-content', margin: '0 auto',
             display: 'flex', flexDirection: 'column', alignItems: 'center',
           }}
         >
@@ -346,11 +352,19 @@ export function ScriptFlowchart({ flow }) {
           {/* Rail */}
           <div style={{ width: '100%', height: 2, background: 'var(--border)' }} />
 
-          {/* Five response branches */}
+          {/* Five response branches. Column min was `minmax(0, 1fr)` — an
+              explicit 0 floor, which is the actual overlap bug (Prompt 204
+              fix 5): dense branches like Booking Objections (a 4-way fork
+              nested inside its own column) need more than an even 1/5 share,
+              and a 0-floor column lets that content spill outside its track
+              and visually overlap the neighbor instead of growing the row.
+              `minmax(max-content, 1fr)` gives each column at least its real
+              content width — the row (and the page's own overflowX scroll)
+              grows to fit instead of clipping/overlapping. */}
           <div style={{
             width: '100%', display: 'grid',
-            gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-            gap: 10, alignItems: 'start',
+            gridTemplateColumns: 'repeat(5, minmax(max-content, 1fr))',
+            gap: 18, alignItems: 'start',
           }}>
             {flow.branches.map(b => (
               <BranchColumn key={b.id} branch={b} flow={flow} />
