@@ -2,9 +2,9 @@
 const STATUS_STYLES = {
   // Lead statuses — semantic colors per design spec
   'New': {
-    background: 'transparent',
-    color: 'var(--text-secondary)',
-    border: '0.5px solid var(--border)',
+    background: 'var(--info-dim)',
+    color: 'var(--info)',
+    border: '0.5px solid rgba(56,189,248,0.20)',
   },
   'Contacted': {
     background: 'var(--info-dim)',
