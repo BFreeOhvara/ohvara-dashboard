@@ -115,10 +115,13 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
     return true
   }
 
-  function advance() {
+  // Jump the top frame's index straight to `targetIndex` (used by advance()
+  // for +1, and by a screen-break say-chain's Next to skip past every line
+  // in the merged block at once instead of one at a time).
+  function advanceTo(targetIndex) {
     const ns = cloneStack()
     let t = ns[ns.length - 1]
-    t.index++
+    t.index = targetIndex
     // popping an exhausted option frame steps the parent past its fork
     while (ns.length > 1 && t.index >= t.steps.length) {
       ns.pop()
@@ -128,6 +131,9 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
     if (mode === 'live') applyLiveSkip(ns)
     if (followRouteIfNeeded(ns, state)) return
     commit({ ...state, stack: ns })
+  }
+  function advance() {
+    advanceTo(top.index + 1)
   }
   function chooseOption(opt) {
     if (!opt.steps || !opt.steps.length) return advance()
@@ -181,12 +187,26 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
   // data_collect instead of a fork are deliberately NOT merged here: Vitals'
   // three capture questions and Close's outro are paced one line at a time
   // on purpose, not an instance of this bug.
+  //
+  // A step authored with a trailing `[[BREAK]]` (Prompt 215) caps the run
+  // right there instead of letting it reach the fork — Handoff's 3-line
+  // pitch is long enough that reading it as one block feels like too much,
+  // so it splits into bridge+pitch (one merged block, plain Next) then the
+  // ask (its own merged-with-fork screen) rather than all 3 on one screen.
   let sayChainForFork = null
+  let sayChainPlain = null
   if (step?.type === 'say') {
     let i = top.index
-    while (i < top.steps.length && top.steps[i]?.type === 'say') i++
-    if (top.steps[i]?.type === 'fork') {
+    let brokeEarly = false
+    while (i < top.steps.length && top.steps[i]?.type === 'say') {
+      const brk = top.steps[i].screenBreak
+      i++
+      if (brk) { brokeEarly = true; break }
+    }
+    if (!brokeEarly && top.steps[i]?.type === 'fork') {
       sayChainForFork = { says: top.steps.slice(top.index, i), fork: top.steps[i], forkIdx: i }
+    } else if (brokeEarly) {
+      sayChainPlain = { says: top.steps.slice(top.index, i), nextIndex: i }
     }
   }
 
@@ -227,7 +247,9 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
         {step && step.type === 'say' && (
           sayChainForFork
             ? <SayWithFork says={sayChainForFork.says} fork={sayChainForFork.fork} accent={accent} capturedValues={capturedValues} onCapture={captureField} onCaptureLocal={captureLocal} renderText={renderText} onPick={opt => advanceThenPick(sayChainForFork.forkIdx, opt)} />
-            : <SayCard step={step} accent={accent} capturedValues={capturedValues} onCapture={captureField} onCaptureLocal={captureLocal} renderText={renderText} onNext={advance} />
+            : sayChainPlain
+              ? <SayChain says={sayChainPlain.says} accent={accent} capturedValues={capturedValues} onCapture={captureField} onCaptureLocal={captureLocal} renderText={renderText} onNext={() => advanceTo(sayChainPlain.nextIndex)} />
+              : <SayCard step={step} accent={accent} capturedValues={capturedValues} onCapture={captureField} onCaptureLocal={captureLocal} renderText={renderText} onNext={advance} />
         )}
 
         {step && step.type === 'action' && (
@@ -264,42 +286,78 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
   )
 }
 
+// One capture input for a say step's `capture` config — multiplier fields
+// echo the raw typed value locally while the converted value is what's saved.
+function CaptureInput({ capture, capturedValues, onCapture, onCaptureLocal }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <label style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', fontWeight: 600 }}>
+        {capture.label}
+      </label>
+      <input
+        type="number"
+        min="0"
+        value={capture.multiplier
+          ? (capturedValues?.[capture.rawField || (capture.field + '_raw')] ?? '')
+          : (capturedValues?.[capture.field] ?? '')}
+        onChange={e => {
+          const v = e.target.value
+          if (capture.multiplier) {
+            onCaptureLocal?.(capture.rawField || (capture.field + '_raw'), v)
+            onCapture?.(capture.field, v === '' ? '' : String(Math.round(Number(v) * capture.multiplier)))
+          } else {
+            onCapture?.(capture.field, v)
+          }
+        }}
+        placeholder={capture.placeholder}
+        style={{ height: 40, padding: '0 12px', background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 8, fontSize: 15, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', boxSizing: 'border-box' }}
+      />
+    </div>
+  )
+}
+
+// One or more spoken lines as a single continuous card (Prompt 215) — a
+// merged chain reads as one moment, not N stacked bordered boxes.
+function SayBlock({ says, accent, renderText }) {
+  return (
+    <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderLeft: `3px solid ${accent}`, borderRadius: 12, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {says.map((s, i) => {
+        const display = renderText ? renderText(s.text) : s.text
+        return <p key={i} style={{ fontSize: 17, lineHeight: 1.55, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{display}</p>
+      })}
+    </div>
+  )
+}
+
 // One spoken line — the words to read, big and clear, with a Next advance.
 function SayCard({ step, accent, onNext, capturedValues, onCapture, onCaptureLocal, renderText }) {
-  const display = renderText ? renderText(step.text) : step.text
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: 0 }}>
         {step.sub ? 'Then say' : 'Say this'}
       </p>
-      <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderLeft: `3px solid ${accent}`, borderRadius: 12, padding: '18px 20px' }}>
-        <p style={{ fontSize: 17, lineHeight: 1.55, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{display}</p>
-      </div>
+      <SayBlock says={[step]} accent={accent} renderText={renderText} />
       {step.capture && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', fontWeight: 600 }}>
-            {step.capture.label}
-          </label>
-          <input
-            type="number"
-            min="0"
-            value={step.capture.multiplier
-              ? (capturedValues?.[step.capture.rawField || (step.capture.field + '_raw')] ?? '')
-              : (capturedValues?.[step.capture.field] ?? '')}
-            onChange={e => {
-              const v = e.target.value
-              if (step.capture.multiplier) {
-                onCaptureLocal?.(step.capture.rawField || (step.capture.field + '_raw'), v)
-                onCapture?.(step.capture.field, v === '' ? '' : String(Math.round(Number(v) * step.capture.multiplier)))
-              } else {
-                onCapture?.(step.capture.field, v)
-              }
-            }}
-            placeholder={step.capture.placeholder}
-            style={{ height: 40, padding: '0 12px', background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 8, fontSize: 15, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', boxSizing: 'border-box' }}
-          />
-        </div>
+        <CaptureInput capture={step.capture} capturedValues={capturedValues} onCapture={onCapture} onCaptureLocal={onCaptureLocal} />
       )}
+      <NextButton accent={accent} onClick={onNext} label="Next" />
+    </div>
+  )
+}
+
+// A merged run of 2+ SAY lines capped by an authored [[BREAK]] before it
+// reaches a fork (Prompt 215) — one continuous block, ending in a plain Next
+// that skips past the whole run at once rather than one line at a time.
+function SayChain({ says, accent, onNext, capturedValues, onCapture, onCaptureLocal, renderText }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: 0 }}>
+        {says[0].sub ? 'Then say' : 'Say this'}
+      </p>
+      <SayBlock says={says} accent={accent} renderText={renderText} />
+      {says.map((s, i) => s.capture && (
+        <CaptureInput key={i} capture={s.capture} capturedValues={capturedValues} onCapture={onCapture} onCaptureLocal={onCaptureLocal} />
+      ))}
       <NextButton accent={accent} onClick={onNext} label="Next" />
     </div>
   )
@@ -513,41 +571,10 @@ function SayWithFork({ says, fork, accent, onPick, capturedValues, onCapture, on
       <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: 0 }}>
         {says[0].sub ? 'Then say' : 'Say this'}
       </p>
-      {says.map((sayStep, si) => {
-        const display = renderText ? renderText(sayStep.text) : sayStep.text
-        return (
-          <div key={si} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderLeft: `3px solid ${accent}`, borderRadius: 12, padding: '18px 20px' }}>
-              <p style={{ fontSize: 17, lineHeight: 1.55, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{display}</p>
-            </div>
-            {sayStep.capture && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', fontWeight: 600 }}>
-                  {sayStep.capture.label}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={sayStep.capture.multiplier
-                    ? (capturedValues?.[sayStep.capture.rawField || (sayStep.capture.field + '_raw')] ?? '')
-                    : (capturedValues?.[sayStep.capture.field] ?? '')}
-                  onChange={e => {
-                    const v = e.target.value
-                    if (sayStep.capture.multiplier) {
-                      onCaptureLocal?.(sayStep.capture.rawField || (sayStep.capture.field + '_raw'), v)
-                      onCapture?.(sayStep.capture.field, v === '' ? '' : String(Math.round(Number(v) * sayStep.capture.multiplier)))
-                    } else {
-                      onCapture?.(sayStep.capture.field, v)
-                    }
-                  }}
-                  placeholder={sayStep.capture.placeholder}
-                  style={{ height: 40, padding: '0 12px', background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 8, fontSize: 15, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', boxSizing: 'border-box' }}
-                />
-              </div>
-            )}
-          </div>
-        )
-      })}
+      <SayBlock says={says} accent={accent} renderText={renderText} />
+      {says.map((s, i) => s.capture && (
+        <CaptureInput key={i} capture={s.capture} capturedValues={capturedValues} onCapture={onCapture} onCaptureLocal={onCaptureLocal} />
+      ))}
       <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: '4px 0 0' }}>What did they do?</p>
       {fork.q && <p style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{fork.q}</p>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 2 }}>
