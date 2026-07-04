@@ -5,7 +5,9 @@
 // CEO framing (setter isn't the closer — "our team"), Indeed listing instead
 // of a generic hook, and the setter always books the 15-minute call rather
 // than closing on the spot. Every spoken line is exactly what the setter reads.
-// Dynamic tokens: [Business Name], [First Name], [niche] filled from the lead.
+// Dynamic tokens: [Business Name], [First Name], [niche], [job title] (from
+// the lead's posting_title, falling back to "front desk role" if unset —
+// e.g. Maps-sourced leads with no scraped Indeed posting) filled from the lead.
 // In-call tokens: [Name], [day], [time], [time+1hr], [owner], [Tuesday morning],
 // [Wednesday afternoon], [Tuesday next week], [Wednesday next week] stay
 // literal as rep guidance during the call. [their number], [monthly], [annual],
@@ -63,7 +65,7 @@ export const DISCOVERY_SCRIPT = [
     lines: [
       `"Hey, is this [Business Name]?"`,
       `BRANCH — Do they confirm or get transferred?`,
-      `↳ IF Yeah / speaking: "This is [Rep Name] — I saw you're hiring for a [receptionist / dispatcher / front desk]. That usually means calls are slipping somewhere, or your team's stretched thin. Got a quick minute before you go through the whole hiring process?"`,
+      `↳ IF Yeah / speaking: "This is [Rep Name] — I saw you're hiring for a [job title]. That usually means calls are slipping somewhere, or your team's stretched thin. Got a quick minute before you go through the whole hiring process?"`,
       `   BRANCH — How do they respond?`,
       `   ↳ IF Sure / yeah [GOOD]: "Quick question — are missed calls part of why you're posting for this role? Yes or no?"`,
       `      BRANCH — How do they answer?`,
@@ -86,7 +88,7 @@ export const DISCOVERY_SCRIPT = [
       `            ↳ IF Genuinely solid, no gap [BAD]: "Okay, well, that's a different story then. Okay man, well have a good day, good luck to you."`,
       `               ▸ Set status Not Interested.`,
       `      ↳ IF Still shuts it down [BAD]: ▸ Set status Not Interested.`,
-      `↳ IF Transferred: "Hey [Name] — I saw your Indeed listing for a [receptionist]. That's usually a sign calls are slipping somewhere — got a quick sec?"`,
+      `↳ IF Transferred: "Hey [Name] — I saw your Indeed listing for a [job title]. That's usually a sign calls are slipping somewhere — got a quick sec?"`,
       `   BRANCH — Do they engage?`,
       `   ↳ IF Engages: "Quick question — are missed calls part of why you're posting for this role? Yes or no?"`,
       `      BRANCH — How do they answer?`,
@@ -119,7 +121,7 @@ export const DISCOVERY_SCRIPT = [
     goal: 'Monthly call volume for rapport, then the direct daily-miss number, then ticket value. Three questions, no more.',
     color: 'var(--accent)', dim: 'rgba(108,99,255,0.08)', border: 'rgba(108,99,255,0.25)',
     lines: [
-      `"Out of curiosity — don't mind the question, it'll make sense in a second, and you can hang up if this sounds irrelevant — how many calls do you think you get in a month?"`,
+      `"Out of curiosity — how many calls do you think you get in a month?"`,
       `"Ballpark, how many do you think you're missing a day?"`,
       `"And what do you charge a client typically — like [$250] bucks?"`,
       `→ Go to Pain Amplification`,
@@ -241,11 +243,13 @@ function fillTokens(text, lead, rep) {
   const biz       = lead.business_name || 'the business'
   const niche     = lead.niche || 'service'
   const city      = lead.city || 'your area'
+  const jobTitle  = lead.posting_title || 'front desk role'
   const repName = (rep?.full_name || '').trim() || '[Rep Name]'
   return text
     .replace(/\[Business Name\]/gi, biz)
     .replace(/\[niche\]/gi, niche)
     .replace(/\[city\]/gi, city)
+    .replace(/\[job title\]/gi, jobTitle)
     .replace(/\[Rep Name\]/gi, repName)
 }
 

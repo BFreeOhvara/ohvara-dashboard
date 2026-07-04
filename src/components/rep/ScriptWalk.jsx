@@ -65,17 +65,17 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
 
   // Replace in-call placeholders with captured values at render time.
   // [their number] is the raw daily missed-call count (as the setter typed
-  // it); [monthly]/[annual] are computed from the ×7'd weekly figure (the
-  // same field the live pricing formula reads) so the pain numbers stay
-  // consistent with what actually prices the deal.
+  // it); [monthly]/[annual] use a workweek-based formula (daily × 5 workdays
+  // × 4 weeks × ticket, then ×12 for annual) — Prompt 210. This is separate
+  // from calls_missed_per_week, which still feeds the real recommend-stack
+  // pricing formula unchanged (daily × 7) until Brayden explicitly confirms
+  // that assumption should change too.
   function renderText(text) {
     const ticket = capturedValues.avg_ticket !== undefined && capturedValues.avg_ticket !== ''
       ? Number(capturedValues.avg_ticket) : null
     const missedDay = capturedValues.calls_missed_per_day !== undefined && capturedValues.calls_missed_per_day !== ''
       ? Number(capturedValues.calls_missed_per_day) : null
-    const missedWeek = capturedValues.calls_missed_per_week !== undefined && capturedValues.calls_missed_per_week !== ''
-      ? Number(capturedValues.calls_missed_per_week) : null
-    const monthly = missedWeek != null && ticket != null ? Math.round(missedWeek * 4.33 * ticket) : null
+    const monthly = missedDay != null && ticket != null ? Math.round(missedDay * 5 * 4 * ticket) : null
     const annual = monthly != null ? monthly * 12 : null
     return text
       .replace(/\[their number\]/gi, missedDay != null ? String(missedDay) : '[their number]')
