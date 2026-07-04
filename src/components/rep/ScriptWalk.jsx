@@ -56,12 +56,33 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
     }, 600)
   }, [leadId, mode, onDataCollect])
 
+  // Local-only capture (no DB column, no Supabase save) — used to echo back
+  // exactly what the setter typed for a `capture.multiplier` field (e.g. the
+  // raw daily missed-call count) while the converted value goes to captureField.
+  const captureLocal = useCallback((field, value) => {
+    setCapturedValues(prev => ({ ...prev, [field]: value }))
+  }, [])
+
   // Replace in-call placeholders with captured values at render time.
+  // [their number] is the raw daily missed-call count (as the setter typed
+  // it); [monthly]/[annual] are computed from the ×7'd weekly figure (the
+  // same field the live pricing formula reads) so the pain numbers stay
+  // consistent with what actually prices the deal.
   function renderText(text) {
+    const ticket = capturedValues.avg_ticket !== undefined && capturedValues.avg_ticket !== ''
+      ? Number(capturedValues.avg_ticket) : null
+    const missedDay = capturedValues.calls_missed_per_day !== undefined && capturedValues.calls_missed_per_day !== ''
+      ? Number(capturedValues.calls_missed_per_day) : null
+    const missedWeek = capturedValues.calls_missed_per_week !== undefined && capturedValues.calls_missed_per_week !== ''
+      ? Number(capturedValues.calls_missed_per_week) : null
+    const monthly = missedWeek != null && ticket != null ? Math.round(missedWeek * 4.33 * ticket) : null
+    const annual = monthly != null ? monthly * 12 : null
     return text
-      .replace(/\[their number\]/gi, capturedValues.calls_missed_per_week || '[their number]')
-      .replace(/\[their estimate\]/gi,
-        capturedValues.avg_ticket ? `$${capturedValues.avg_ticket}` : '[their estimate]')
+      .replace(/\[their number\]/gi, missedDay != null ? String(missedDay) : '[their number]')
+      .replace(/\[monthly\]/gi, monthly != null ? monthly.toLocaleString() : '[monthly]')
+      .replace(/\[annual\]/gi, annual != null ? annual.toLocaleString() : '[annual]')
+      .replace(/\[\$ticket\]/gi, ticket != null ? `$${ticket}` : '[$ticket]')
+      .replace(/\[their estimate\]/gi, ticket != null ? `$${ticket}` : '[their estimate]')
   }
 
   const section = flow.byId[state.sectionId]
@@ -192,8 +213,8 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
 
         {step && step.type === 'say' && (
           nextForkForSay
-            ? <SayWithFork step={step} fork={nextForkForSay.fork} accent={accent} capturedValues={capturedValues} onCapture={captureField} renderText={renderText} onPick={opt => advanceThenPick(nextForkForSay.forkIdx, opt)} />
-            : <SayCard step={step} accent={accent} capturedValues={capturedValues} onCapture={captureField} renderText={renderText} onNext={advance} />
+            ? <SayWithFork step={step} fork={nextForkForSay.fork} accent={accent} capturedValues={capturedValues} onCapture={captureField} onCaptureLocal={captureLocal} renderText={renderText} onPick={opt => advanceThenPick(nextForkForSay.forkIdx, opt)} />
+            : <SayCard step={step} accent={accent} capturedValues={capturedValues} onCapture={captureField} onCaptureLocal={captureLocal} renderText={renderText} onNext={advance} />
         )}
 
         {step && step.type === 'action' && (
@@ -238,9 +259,8 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
 }
 
 // One spoken line — the words to read, big and clear, with a Next advance.
-function SayCard({ step, accent, onNext, capturedValues, onCapture, renderText }) {
+function SayCard({ step, accent, onNext, capturedValues, onCapture, onCaptureLocal, renderText }) {
   const display = renderText ? renderText(step.text) : step.text
-  const [rawCapture, setRawCapture] = useState('')
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: 0 }}>
@@ -257,11 +277,13 @@ function SayCard({ step, accent, onNext, capturedValues, onCapture, renderText }
           <input
             type="number"
             min="0"
-            value={step.capture.multiplier ? rawCapture : (capturedValues?.[step.capture.field] ?? '')}
+            value={step.capture.multiplier
+              ? (capturedValues?.[step.capture.rawField || (step.capture.field + '_raw')] ?? '')
+              : (capturedValues?.[step.capture.field] ?? '')}
             onChange={e => {
               const v = e.target.value
               if (step.capture.multiplier) {
-                setRawCapture(v)
+                onCaptureLocal?.(step.capture.rawField || (step.capture.field + '_raw'), v)
                 onCapture?.(step.capture.field, v === '' ? '' : String(Math.round(Number(v) * step.capture.multiplier)))
               } else {
                 onCapture?.(step.capture.field, v)
@@ -477,9 +499,8 @@ function NextButton({ accent, onClick, label }) {
 // Combined say + fork screen — the spoken question and the response buttons on
 // one screen so reps never tap through a standalone say just to reach the fork.
 // Options are colored by response CATEGORY (good/hesitant/bad), same as Fork.
-function SayWithFork({ step, fork, accent, onPick, capturedValues, onCapture, renderText }) {
+function SayWithFork({ step, fork, accent, onPick, capturedValues, onCapture, onCaptureLocal, renderText }) {
   const display = renderText ? renderText(step.text) : step.text
-  const [rawCapture, setRawCapture] = useState('')
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: 0 }}>
@@ -496,11 +517,13 @@ function SayWithFork({ step, fork, accent, onPick, capturedValues, onCapture, re
           <input
             type="number"
             min="0"
-            value={step.capture.multiplier ? rawCapture : (capturedValues?.[step.capture.field] ?? '')}
+            value={step.capture.multiplier
+              ? (capturedValues?.[step.capture.rawField || (step.capture.field + '_raw')] ?? '')
+              : (capturedValues?.[step.capture.field] ?? '')}
             onChange={e => {
               const v = e.target.value
               if (step.capture.multiplier) {
-                setRawCapture(v)
+                onCaptureLocal?.(step.capture.rawField || (step.capture.field + '_raw'), v)
                 onCapture?.(step.capture.field, v === '' ? '' : String(Math.round(Number(v) * step.capture.multiplier)))
               } else {
                 onCapture?.(step.capture.field, v)
