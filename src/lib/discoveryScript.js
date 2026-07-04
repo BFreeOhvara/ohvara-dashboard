@@ -5,9 +5,9 @@
 // CEO framing (setter isn't the closer — "our team"), Indeed listing instead
 // of a generic hook, and the setter always books the 15-minute call rather
 // than closing on the spot. Every spoken line is exactly what the setter reads.
-// Dynamic tokens: [Business Name], [First Name], [niche], [job title] (from
-// the lead's posting_title, falling back to "front desk role" if unset —
-// e.g. Maps-sourced leads with no scraped Indeed posting) filled from the lead.
+// Dynamic tokens: [Business Name], [First Name], [job title] (from the
+// lead's posting_title, falling back to "front desk role" if unset — e.g.
+// Maps-sourced leads with no scraped Indeed posting) filled from the lead.
 // In-call tokens: [Name], [day], [time], [time+1hr], [owner], [Tuesday morning],
 // [Wednesday afternoon], [Tuesday next week], [Wednesday next week] stay
 // literal as rep guidance during the call. [their number], [monthly], [annual],
@@ -67,7 +67,16 @@ export const DISCOVERY_SCRIPT = [
       `BRANCH — Do they confirm or get transferred?`,
       `↳ IF Yeah / speaking: "Hey — I saw you were hiring for a [job title]. I was wondering who I should speak to about that."`,
       `   BRANCH — How do they respond?`,
-      `   ↳ IF That's me [GOOD]: "Quick question — are missed calls part of the reason you're posting for this role, or are you just growing or something like that?"`,
+      `   ↳ IF That's me [GOOD]: "Quick question — are missed calls part of the reason you're posting for this role, or are you just growing?"`,
+      `      BRANCH — How do they answer?`,
+      `      ↳ IF Yeah [GOOD]: → Go to Vitals Check`,
+      `      ↳ IF Kind of / it's part of it [HESITANT]: → Go to Vitals Check`,
+      `      ↳ IF No, we've got it covered, just growing [BAD]: "You're pretty on top of it, I got you — is it more that calls just aren't the bottleneck right now, or you've got someone dedicated catching every one?"`,
+      `         BRANCH — Does a gap surface?`,
+      `         ↳ IF Answers, any gap surfaces [HESITANT]: → Go to Vitals Check`,
+      `         ↳ IF Genuinely solid, no gap [BAD]: "Okay, well, that's a different story then. Okay man, well have a good day, good luck to you."`,
+      `            ▸ Set status Not Interested.`,
+      `   ↳ IF Transferring [GOOD]: "Quick question — are missed calls part of the reason you're posting for this role, or are you just growing?"`,
       `      BRANCH — How do they answer?`,
       `      ↳ IF Yeah [GOOD]: → Go to Vitals Check`,
       `      ↳ IF Kind of / it's part of it [HESITANT]: → Go to Vitals Check`,
@@ -78,7 +87,7 @@ export const DISCOVERY_SCRIPT = [
       `            ▸ Set status Not Interested.`,
       `   ↳ IF What's this about? / pushback [BAD]: "Nothing to sell you here yet — genuinely just want to see if it's actually calls slipping, or something else, before you spend time and money hiring for it."`,
       `      BRANCH — Do they engage?`,
-      `      ↳ IF Engages [GOOD]: "Quick question — are missed calls part of the reason you're posting for this role, or are you just growing or something like that?"`,
+      `      ↳ IF Engages [GOOD]: "Quick question — are missed calls part of the reason you're posting for this role, or are you just growing?"`,
       `         BRANCH — How do they answer?`,
       `         ↳ IF Yeah [GOOD]: → Go to Vitals Check`,
       `         ↳ IF Kind of / it's part of it [HESITANT]: → Go to Vitals Check`,
@@ -90,7 +99,7 @@ export const DISCOVERY_SCRIPT = [
       `      ↳ IF Still shuts it down [BAD]: ▸ Set status Not Interested.`,
       `↳ IF Transferred: "Hey [Name] — I saw your Indeed listing for a [job title]. That's usually a sign calls are slipping somewhere — got a quick sec?"`,
       `   BRANCH — Do they engage?`,
-      `   ↳ IF Engages: "Quick question — are missed calls part of the reason you're posting for this role, or are you just growing or something like that?"`,
+      `   ↳ IF Engages: "Quick question — are missed calls part of the reason you're posting for this role, or are you just growing?"`,
       `      BRANCH — How do they answer?`,
       `      ↳ IF Yeah [GOOD]: → Go to Vitals Check`,
       `      ↳ IF Kind of / it's part of it [HESITANT]: → Go to Vitals Check`,
@@ -101,7 +110,7 @@ export const DISCOVERY_SCRIPT = [
       `            ▸ Set status Not Interested.`,
       `   ↳ IF Pushback: "Nothing to sell you here yet — genuinely just want to see if it's actually calls slipping, or something else, before you spend time and money hiring for it."`,
       `      BRANCH — Do they engage?`,
-      `      ↳ IF Engages [GOOD]: "Quick question — are missed calls part of the reason you're posting for this role, or are you just growing or something like that?"`,
+      `      ↳ IF Engages [GOOD]: "Quick question — are missed calls part of the reason you're posting for this role, or are you just growing?"`,
       `         BRANCH — How do they answer?`,
       `         ↳ IF Yeah [GOOD]: → Go to Vitals Check`,
       `         ↳ IF Kind of / it's part of it [HESITANT]: → Go to Vitals Check`,
@@ -117,7 +126,16 @@ export const DISCOVERY_SCRIPT = [
       `      BRANCH — How do they answer?`,
       `      ↳ IF Yes [GOOD]: "Hey — I saw you were hiring for a [job title]. I was wondering who I should speak to about that."`,
       `         BRANCH — How do they respond?`,
-      `         ↳ IF That's me [GOOD]: "Quick question — are missed calls part of the reason you're posting for this role, or are you just growing or something like that?"`,
+      `         ↳ IF That's me [GOOD]: "Quick question — are missed calls part of the reason you're posting for this role, or are you just growing?"`,
+      `            BRANCH — How do they answer?`,
+      `            ↳ IF Yeah [GOOD]: → Go to Vitals Check`,
+      `            ↳ IF Kind of / it's part of it [HESITANT]: → Go to Vitals Check`,
+      `            ↳ IF No, we've got it covered, just growing [BAD]: "You're pretty on top of it, I got you — is it more that calls just aren't the bottleneck right now, or you've got someone dedicated catching every one?"`,
+      `               BRANCH — Does a gap surface?`,
+      `               ↳ IF Answers, any gap surfaces [HESITANT]: → Go to Vitals Check`,
+      `               ↳ IF Genuinely solid, no gap [BAD]: "Okay, well, that's a different story then. Okay man, well have a good day, good luck to you."`,
+      `                  ▸ Set status Not Interested.`,
+      `         ↳ IF Transferring [GOOD]: "Quick question — are missed calls part of the reason you're posting for this role, or are you just growing?"`,
       `            BRANCH — How do they answer?`,
       `            ↳ IF Yeah [GOOD]: → Go to Vitals Check`,
       `            ↳ IF Kind of / it's part of it [HESITANT]: → Go to Vitals Check`,
@@ -128,7 +146,7 @@ export const DISCOVERY_SCRIPT = [
       `                  ▸ Set status Not Interested.`,
       `         ↳ IF What's this about? / pushback [BAD]: "Nothing to sell you here yet — genuinely just want to see if it's actually calls slipping, or something else, before you spend time and money hiring for it."`,
       `            BRANCH — Do they engage?`,
-      `            ↳ IF Engages [GOOD]: "Quick question — are missed calls part of the reason you're posting for this role, or are you just growing or something like that?"`,
+      `            ↳ IF Engages [GOOD]: "Quick question — are missed calls part of the reason you're posting for this role, or are you just growing?"`,
       `               BRANCH — How do they answer?`,
       `               ↳ IF Yeah [GOOD]: → Go to Vitals Check`,
       `               ↳ IF Kind of / it's part of it [HESITANT]: → Go to Vitals Check`,
@@ -195,8 +213,8 @@ export const DISCOVERY_SCRIPT = [
     goal: 'Pass everything to "our team," describe the AI receptionist plainly, then ask for one of two specific windows.',
     color: 'var(--success)', dim: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.25)',
     lines: [
-      `"I don't want to waste your time here. I have a team that works with [niche] businesses, and I do this based on you and your pain — if you're missing [their number] calls a day and your average client's worth [$ticket], that's $[annual] you're leaving on the table every year from calls that just don't get picked up."`,
-      `"It'd be like an AI receptionist. Not some robot press-one thing — a real human, we can even make it your voice — and it funnels the calls you'd otherwise miss straight through. It can also do missed-call text-back. It answers questions and books appointments straight to your calendar, so all you have to do is show up to the meeting — and it means you might not even need to finish out this hire the way you'd planned."`,
+      `"I don't want to waste your time here. I have a team that works with businesses just like yours. If you're missing [their number] calls a day and your average client's worth [$ticket], that's $[annual] you're leaving on the table every year from calls that just don't get picked up."`,
+      `"Basically, instead of filling this role with a person, we'd build you an AI receptionist made for exactly this — not some robot press-one thing, a real human feel, we can even make it your voice — it catches the calls you'd otherwise miss, does missed-call text-back, answers questions, and books appointments straight to your calendar. All you'd have to do is show up to the meeting — and it means you might not even need to finish out this hire the way you'd planned."`,
       `"Take 15 minutes. Worst case scenario, you get to see what it looks like and stop wasting your time. Best case scenario, our team shows you exactly how you're leaving money on the table and how to fix it. How's that sound? [Tuesday morning] or [Wednesday afternoon]?"`,
       `BRANCH — How do they respond?`,
       `↳ IF Picks a time [GOOD]: → Go to Close (lock the time and confirm)`,
