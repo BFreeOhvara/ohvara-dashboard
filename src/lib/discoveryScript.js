@@ -218,33 +218,17 @@ export const DISCOVERY_SCRIPT = [
       `"Take 15 minutes. Worst case scenario, you get to see what it looks like and stop wasting your time. Best case scenario, our team shows you exactly how you're leaving money on the table and how to fix it. How's that sound? [Tuesday morning] or [Wednesday afternoon]?"`,
       `BRANCH — How do they respond?`,
       `↳ IF Picks a time [GOOD]: → Go to Close (lock the time and confirm)`,
-      `↳ IF Just send me some info: → Go to Objections`,
-      `↳ IF I don't have time this week: → Go to Objections`,
-      `↳ IF Who is this / what company?: → Go to Objections`,
-      `↳ IF How much does this cost?: → Go to Objections`,
-    ],
-    tips: `The handoff line packs in their own numbers — [their number]/[$ticket]/[annual] fill in live from what they told you. The product description is the most direct lift from the source call — don't embellish past it, it's already accurate to what we ship. Only one option is a real yes; the rest go to Objections where each gets its own resolution.`,
-  },
-
-  {
-    id: 'objections', kind: 'branch', short: 'Objections',
-    title: 'Booking Objections', trigger: `They pushed back — pick what they actually said, handle it, loop back to book`,
-    goal: 'Handle each objection on its own terms. Most re-ask for the time; one legitimate objection (too busy, genuinely no capacity) gets a clean exit instead of a push.',
-    color: 'var(--danger)', dim: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)',
-    lines: [
-      `BRANCH — What's the objection?`,
-      `↳ IF Too busy / on a job: "Okay, well, if you're that busy, why are you on the phone with me and not on the job or taking care of something more important?"`,
-      `   BRANCH — Do they re-engage?`,
-      `   ↳ IF Re-engages [GOOD]: "Take 15 minutes. Worst case scenario, you get to see what it looks like and stop wasting your time. Best case scenario, our team shows you exactly how you're leaving money on the table and how to fix it. How's that sound? [Tuesday morning] or [Wednesday afternoon]?"`,
-      `      → Go to Close`,
-      `   ↳ IF Genuinely a real "we don't want more clients right now" [BAD]: "All right, man — you have a good one, take care."`,
-      `      ▸ Set status Not Interested.`,
-      `↳ IF Just send me some info / want to see something first: "I could send that over, but honestly — when was the last time an email did more for you than an actual conversation? Let's hop on a quick call instead, [time] tomorrow — I'll show you, there's nothing to buy."`,
+      `↳ IF Just send me some info: "I could send that over, but honestly — when was the last time an email did more for you than an actual conversation? Let's hop on a quick call instead, [time] tomorrow — I'll show you, there's nothing to buy."`,
       `   BRANCH — Do they agree?`,
       `   ↳ IF Okay, fair [GOOD]: "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
       `      → Go to Close`,
       `   ↳ IF Still wants info first [HESITANT]: "Fair enough — I'll send it over today. And I'm going to drop a 15-minute placeholder on your calendar for [day]. If you read it and it's not worth your time, just decline, no hard feelings. If it's interesting, we're already set."`,
       `      ▸ Set status Follow-Up (send info + placeholder).`,
+      `↳ IF I don't have time this week: "No problem — what works better, [Tuesday next week] or [Wednesday next week]?"`,
+      `   BRANCH — Do they pick a day?`,
+      `   ↳ IF Picks a day [GOOD]: → Go to Close`,
+      `   ↳ IF Those don't work either [BAD]: "Got it — what's a better week for you?"`,
+      `      ▸ Set status Follow-Up (log the week they gave).`,
       `↳ IF Who is this / what company?: "Who would be responsible for looking at any possible hidden gaps in your call flow system that could be causing you guys to miss out on thousands of dollars every month? Is that you?"`,
       `   BRANCH — Are they the decision maker?`,
       `   ↳ IF That's me: → Go to Vitals Check`,
@@ -253,11 +237,6 @@ export const DISCOVERY_SCRIPT = [
       `      ↳ IF Gives a window: ▸ Set status Follow-Up (log the callback window).`,
       `      ↳ IF Only reachable by email: "No worries — what's the best email?"`,
       `         ▸ Set status Follow-Up (logged email, thanked and exited).`,
-      `↳ IF I don't have time this week: "No problem — what works better, [Tuesday next week] or [Wednesday next week]?"`,
-      `   BRANCH — Do they pick a day?`,
-      `   ↳ IF Picks a day [GOOD]: → Go to Close`,
-      `   ↳ IF Those don't work either [BAD]: "Got it — what's a better week for you?"`,
-      `      ▸ Set status Follow-Up (log the week they gave).`,
       `↳ IF How much does this cost?: "Honestly depends on your call volume and setup — which is exactly what our team figures out on the call. Didn't want to guess at a number before they've seen your actual situation."`,
       `   BRANCH — Do they push for a ballpark?`,
       `   ↳ IF Okay [GOOD]: "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
@@ -266,7 +245,7 @@ export const DISCOVERY_SCRIPT = [
       `      "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
       `      → Go to Close`,
     ],
-    tips: `"Too busy" gets the direct callout ("why are you on the phone with me") — but a genuine capacity objection ("we don't want more clients right now") gets a clean, immediate exit, not another push. Everything else redirects to the 15-minute call. A gatekeeper who turns out to BE the decision maker skips straight back to Vitals — no need to re-ask the yes/no qualifier at that point.`,
+    tips: `The handoff line packs in their own numbers — [their number]/[$ticket]/[annual] fill in live from what they told you. The product description is the most direct lift from the source call — don't embellish past it, it's already accurate to what we ship. Only one option is a real yes; the other 4 land directly on that objection's real response — no redundant "what's the objection" re-ask, since Handoff already knows which one it was.`,
   },
 
   {
@@ -343,7 +322,6 @@ function routeTarget(t) {
   if (/vitals/i.test(t))     return 'vitals'
   if (/pain/i.test(t))       return 'pain'
   if (/handoff/i.test(t))    return 'handoff'
-  if (/objection/i.test(t))  return 'objections'
   if (/opener/i.test(t))     return 'opener'
   const b = t.match(/BRANCH\s*([A-E])/i)
   if (b) return 'branch' + b[1].toUpperCase()
