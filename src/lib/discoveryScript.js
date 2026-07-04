@@ -156,7 +156,7 @@ export const DISCOVERY_SCRIPT = [
       `→ Go to Pain Amplification`,
     ],
     captures: [
-      { match: 'missing a day', field: 'calls_missed_per_week', rawField: 'calls_missed_per_day', label: 'Missed calls / day — paste their number, no math', placeholder: 'e.g. 3', multiplier: 7 },
+      { match: 'missing a day', field: 'calls_missed_per_week', rawField: 'calls_missed_per_day', label: 'Missed calls / day — paste their number, no math', placeholder: 'e.g. 3', multiplier: 5 },
       { match: 'charge a client', field: 'avg_ticket', label: 'Avg job value ($)', placeholder: 'e.g. 250' },
     ],
     tips: `Monthly volume is a warm-up, not a capture — it just gets them talking before the real numbers. The daily-miss question is the one that matters: type in exactly what they say, the app converts it, no math on the call. Ticket value closes out the set.`,

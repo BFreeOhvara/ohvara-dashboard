@@ -66,10 +66,10 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
   // Replace in-call placeholders with captured values at render time.
   // [their number] is the raw daily missed-call count (as the setter typed
   // it); [monthly]/[annual] use a workweek-based formula (daily × 5 workdays
-  // × 4 weeks × ticket, then ×12 for annual) — Prompt 210. This is separate
-  // from calls_missed_per_week, which still feeds the real recommend-stack
-  // pricing formula unchanged (daily × 7) until Brayden explicitly confirms
-  // that assumption should change too.
+  // × 4 weeks × ticket, then ×12 for annual) — Prompt 210. calls_missed_per_week
+  // (the real recommend-stack pricing input) also moved to daily × 5 — Prompt
+  // 211, Brayden's explicit call — so both the spoken pain number and the
+  // real quoted price now share the same workweek basis.
   function renderText(text) {
     const ticket = capturedValues.avg_ticket !== undefined && capturedValues.avg_ticket !== ''
       ? Number(capturedValues.avg_ticket) : null
