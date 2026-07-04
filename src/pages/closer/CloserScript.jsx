@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { buildScriptFlow } from '../../lib/discoveryScript'
 import { buildCloserScriptFlow } from '../../lib/closerScript'
-import { ScriptCanvas } from '../../components/rep/ScriptCanvas'
+import { ScriptOutline } from '../../components/rep/ScriptOutline'
 
 const DEMO_LEAD = { business_name: 'the business', niche: 'service', city: 'your area' }
 
@@ -33,7 +33,7 @@ export default function CloserScript() {
           Script
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3 }}>
-          Click any node to practice from that step · scroll to zoom · drag to pan
+          Expand a section to read it, or click "Practice this section" to walk it one line at a time
         </p>
       </div>
 
@@ -61,9 +61,9 @@ export default function CloserScript() {
         ))}
       </div>
 
-      {/* Canvas — fills remaining height */}
+      {/* Outline — fills remaining height */}
       <div style={{ flex: 1, minHeight: 0 }}>
-        <ScriptCanvas flow={tab === 'setter' ? setterFlow : closerFlow} />
+        <ScriptOutline flow={tab === 'setter' ? setterFlow : closerFlow} />
       </div>
     </div>
   )

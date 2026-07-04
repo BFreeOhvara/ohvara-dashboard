@@ -10,7 +10,7 @@ import {
   TOTAL_VIDEOS, QUIZ_QUESTIONS, QUIZ_PASS_PCT, ROLEPLAY_PASS_SCORE, ROLEPLAY_PASS_GRADE, gradeFromScore,
 } from '../../hooks/useTraining'
 import { buildScriptFlow } from '../../lib/discoveryScript'
-import { ScriptCanvas } from '../../components/rep/ScriptCanvas'
+import { ScriptOutline } from '../../components/rep/ScriptOutline'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -909,13 +909,13 @@ function FlashcardDeck({ onAllMastered }) {
 }
 
 // ── DiscoveryScript ───────────────────────────────────────────────────────────
-// The Script tab. One interactive canvas (Prompt 48, React Flow) that both maps
-// the whole decision tree AND runs the click-through practice on the same
-// surface — derived from the shared DISCOVERY_SCRIPT so it can't drift from the
-// live Call modal.
+// The Script tab. A collapsible text outline (Prompt 208 — replaces the React
+// Flow node-graph canvas) that both maps the whole decision tree AND runs the
+// click-through practice on the same surface — derived from the shared
+// DISCOVERY_SCRIPT so it can't drift from the live Call modal.
 
 function DiscoveryScript() {
-  // A neutral demo lead so the canvas reads naturally without a real lead.
+  // A neutral demo lead so the outline reads naturally without a real lead.
   const flow = useMemo(
     () => buildScriptFlow({ business_name: 'the business', niche: 'service', city: 'your area' }, null),
     []
@@ -924,13 +924,14 @@ function DiscoveryScript() {
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 160px)' }}>
       <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16, maxWidth: 720, flexShrink: 0 }}>
-        This is the call script — a decision tree every rep follows. Scroll to zoom, drag to pan.{' '}
-        <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Click any node</strong> to
-        practice from that step, one line at a time. The Call Now button on each lead runs this same
-        walk, personalized to that business.
+        This is the call script — a decision tree every rep follows. Expand any section to see every
+        line and branch.{' '}
+        <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Click "Practice this section"</strong> to
+        walk it one line at a time. The Call Now button on each lead runs this same walk, personalized
+        to that business.
       </p>
       <div style={{ flex: 1, minHeight: 0 }}>
-        <ScriptCanvas flow={flow} />
+        <ScriptOutline flow={flow} />
       </div>
     </div>
   )
