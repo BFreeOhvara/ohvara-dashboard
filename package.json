@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.102.0",
+    "@dagrejs/dagre": "^3.0.0",
     "@fontsource/geist": "^5.2.9",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@supabase/supabase-js": "^2.107.0",

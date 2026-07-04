@@ -4,6 +4,7 @@ import {
   Handle, Position, MarkerType,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import dagre from '@dagrejs/dagre'
 import { X as XIcon } from 'lucide-react'
 import { ScriptWalk } from './ScriptWalk'
 import { CATEGORY_COLORS } from '../../lib/discoveryScript'
@@ -14,12 +15,27 @@ import { CATEGORY_COLORS } from '../../lib/discoveryScript'
 //   - No node dragging (nodesDraggable={false})
 //   - Clicking any node replaces the canvas with a ScriptWalk practice view
 //     starting from that node's section; Exit returns to the canvas.
+//
+// Prompt 206 layout rework: the old fixed COL/ROW grid overlapped tall nodes
+// (v3's long SAY lines wrap far past a fixed row height) and left big gaps
+// after short ones. Layout is now a real auto-layout pass:
+//   - each node's height is ESTIMATED from its actual text length (mirroring
+//     the node components' CSS: width, font size, line height, clamp), so
+//     spacing is driven by real content, not constants;
+//   - each section (opener included — its full v3 decision tree used to be
+//     invisible, only its first line rendered) is laid out by dagre (tidy
+//     layered DAG layout), then the section blocks are arranged left-to-right
+//     in actual call order with the Close funnel centered below;
+//   - identical repeated subtrees inside a section (the script DSL inlines
+//     e.g. the opener's qualifier subtree 4×) are DEDUPED by content hash —
+//     later occurrences draw an edge back to the first placement instead of
+//     re-laying an identical copy, so the graph shows the true call DAG.
 
 const NODE_W = 240
-const COL = NODE_W + 90   // horizontal column unit (Prompt 204 fix 5 — wider gap between sibling columns)
-const ROW = 174           // vertical step unit (was 156 — more room so edge labels don't crowd the node below)
-const BRANCH_GAP_Y = 210  // opener bottom → branch header row
-const CLOSE_GAP_Y = 120   // tallest branch bottom → close header
+const HEADER_W = 300
+const SECTION_GAP = 170  // horizontal gap between section blocks
+const CLOSE_GAP_Y = 180  // below the tallest section block → close header
+const SAY_CLAMP = 5      // long SAY lines clamp to 5 lines on canvas (full text in practice mode)
 
 const EDGE_GREY = '#3A3A4A'
 
@@ -28,20 +44,46 @@ function unquote(t) {
   return s.length >= 2 && s[0] === '"' && s[s.length - 1] === '"' ? s.slice(1, -1) : s
 }
 
-// Subtree width in columns: a linear chain is 1; a fork is the sum of its
-// option widths; a chain's width is the max width of any step in it.
-// Routes to other branches are back-ref arrows, not inlined subtrees, so they
-// don't contribute width.
-function measureSteps(steps, flow, visited) {
-  let w = 1
-  for (const s of steps) {
-    if (s.type === 'fork') {
-      let fw = 0
-      for (const opt of s.options) fw += Math.max(1, measureSteps(opt.steps, flow, visited))
-      w = Math.max(w, fw)
-    }
+// Estimated wrapped-line count for text rendered at a given box width and
+// font size. Uses a conservative average char width (0.62em) plus word-break
+// slack so estimates err TALL — an overestimate costs a little whitespace, an
+// underestimate overlaps the node below.
+function estLines(text, widthPx, fontSize, clamp) {
+  const perLine = Math.max(8, Math.floor(widthPx / (fontSize * 0.62)))
+  const lines = Math.max(1, Math.ceil((text || '').length / (perLine * 0.92)))
+  return clamp ? Math.min(lines, clamp) : lines
+}
+
+// Estimated rendered size per node type — mirrors each component's CSS
+// (padding 10/12, tag row ~14px, known font sizes and line heights).
+function estSize(type, data) {
+  const PAD = 20, TAG = 14
+  switch (type) {
+    case 'say':
+      return { w: NODE_W, h: PAD + TAG + estLines(unquote(data.text), 214, 11.5, SAY_CLAMP) * 17.25 }
+    case 'sayFork':
+      return {
+        w: NODE_W,
+        h: PAD + TAG + estLines(unquote(data.text), 214, 11.5, SAY_CLAMP) * 17.25
+          + 21 /* divider + margins */ + Math.max(estLines(data.q, 166, 11, 3) * 16, 18),
+      }
+    case 'fork':
+      return { w: NODE_W, h: PAD + Math.max(estLines(data.q, 166, 11, 3) * 16, 18) }
+    case 'action':
+      return { w: NODE_W, h: PAD + estLines(data.text, 200, 11, 3) * 16 }
+    case 'goTo':
+      return { w: NODE_W, h: 38 }
+    case 'dataCollect':
+      return { w: NODE_W, h: PAD + TAG + estLines(data.hint, 214, 10.5) * 15 + (data.fields?.length || 0) * 28 + 24 }
+    case 'opener':
+      return { w: HEADER_W, h: PAD + 24 + estLines(unquote(data.text), 274, 13) * 19.5 }
+    case 'branchHeader':
+      return { w: NODE_W, h: PAD + 24 + estLines(data.branch?.trigger, 214, 9.5) * 13 }
+    case 'close':
+      return { w: HEADER_W, h: PAD + TAG + estLines(data.close?.goal, 274, 11.5) * 17.25 }
+    default:
+      return { w: NODE_W, h: 60 }
   }
-  return w
 }
 
 const headerNodeId = (sectionId) => (sectionId === 'close' ? 'close-header' : `header-${sectionId}`)
@@ -49,6 +91,7 @@ const routeLabel = (flow, target) => {
   const t = flow.byId[target]
   return t?.kind === 'close' ? '→ Close' : `→ ${t?.title || target}`
 }
+const truncLabel = (l) => (l && l.length > 30 ? l.slice(0, 28).trimEnd() + '…' : l)
 
 // Build React Flow nodes + edges from the derived flow. sectionId is stored
 // in each node's data so clicking a node can start ScriptWalk at that section.
@@ -59,15 +102,14 @@ function buildGraph(flow) {
   const nextId = () => `n${counter++}`
 
   // Edge color defaults to grey; a fork-option edge carries its response
-  // CATEGORY color instead (Prompt 204 fix 4 — the actual rendered "Flowchart"
-  // is this ReactFlow canvas, not the unused ScriptFlowchart.jsx).
+  // CATEGORY color instead (Prompt 204 fix 4).
   function pushEdge(srcTail, targetId, label, color) {
     const edgeColor = srcTail.color ?? color ?? EDGE_GREY
     edges.push({
       id: `e${counter++}`,
       source: srcTail.id,
       target: targetId,
-      label: (srcTail.label ?? label) || undefined,
+      label: truncLabel(srcTail.label ?? label) || undefined,
       type: 'smoothstep',
       style: { stroke: edgeColor, strokeWidth: 1.5 },
       labelStyle: { fontSize: 10, fill: edgeColor === EDGE_GREY ? '#9090AA' : edgeColor, fontWeight: 600 },
@@ -78,176 +120,160 @@ function buildGraph(flow) {
     })
   }
 
-  function makeNode(id, type, data, x, y, sectionId) {
-    nodes.push({ id, type, position: { x, y }, data: { dim: false, active: false, pickable: false, sectionId, ...data } })
-    return id
-  }
+  // Lay out ONE section as its own dagre subgraph. Returns the block's
+  // dimensions; node positions land in `nodes` offset by (offsetX, offsetY)
+  // once the block's placement is known (deferred via a records list).
+  function layoutSection(section, headerType, headerData, accent) {
+    const g = new dagre.graphlib.Graph()
+    g.setGraph({ rankdir: 'TB', nodesep: 56, ranksep: 72, marginx: 8, marginy: 8 })
+    g.setDefaultEdgeLabel(() => ({}))
 
-  // Lay out a sequence of steps within a horizontal band. sectionId tracks
-  // which section owns these steps so nodes can route ScriptWalk on click.
-  function placeSteps(steps, bandLeftPx, bandCols, startY, incomingTails, incomingLabel, incomingColor, accent, visited = new Set(), sectionId = 'opener') {
-    let tails = incomingTails
-    let label = incomingLabel
-    let color = incomingColor
-    let y = startY
-    const centerX = bandLeftPx + (bandCols * COL) / 2 - NODE_W / 2
+    const records = []  // { id, type, data }
+    const memo = new Map()  // content hash of a step-sequence slice → nodeId
 
-    let si = 0
-    while (si < steps.length) {
-      const step = steps[si]
+    function addNode(type, data) {
+      const id = nextId()
+      const { w, h } = estSize(type, data)
+      records.push({ id, type, data: { ...data, estH: h } })
+      g.setNode(id, { width: w, height: h })
+      return id
+    }
+    // Header first so dagre ranks it at the top.
+    const hid = headerNodeId(section.id)
+    {
+      const { w, h } = estSize(headerType, headerData)
+      records.push({ id: hid, type: headerType, data: { ...headerData, estH: h } })
+      g.setNode(hid, { width: w, height: h })
+    }
 
-      if (step.type === 'route') {
-        const targetSection = flow.byId[step.target]
-        const tgt = headerNodeId(step.target)
-        if (targetSection?.kind === 'branch') {
-          // Terminal "Go to X" node — no long cross-canvas arrow drawn.
-          // Clicking this node in practice mode jumps to the target branch.
-          const id = nextId()
-          makeNode(id, 'goTo', { label: routeLabel(flow, step.target), targetSectionId: step.target, accent }, centerX, y, sectionId)
-          for (const t of tails) pushEdge(t, id, label, color)
-          y += ROW
-        } else {
-          // Forward route (to close or terminal)
-          for (const t of tails) pushEdge(t, tgt, label ?? routeLabel(flow, step.target), color)
-        }
-        label = null
-        color = null
-        tails = []
-        si++
-        continue
+    function connect(tails, targetId) {
+      for (const t of tails) {
+        pushEdge(t, targetId)
+        if (g.hasNode(t.id)) g.setEdge(t.id, targetId)
       }
+    }
 
-      if (step.type === 'fork') {
-        const id = nextId()
-        makeNode(id, 'fork', { q: step.q, accent }, centerX, y, sectionId)
-        for (const t of tails) pushEdge(t, id, label, color)
-        label = null
-        color = null
+    // Walk a step sequence, emitting nodes + edges. Dedup: before placing
+    // steps[si..], hash the remaining slice — if an identical slice was
+    // already placed in this section, edge into its first node and stop.
+    function emitChain(steps, incomingTails, si = 0) {
+      let tails = incomingTails
+      while (si < steps.length) {
+        const sliceKey = JSON.stringify(steps.slice(si))
+        if (memo.has(sliceKey)) {
+          connect(tails, memo.get(sliceKey))
+          return []
+        }
+        const step = steps[si]
 
-        const optY = y + ROW
-        let optLeftCols = 0
-        const optTails = []
-        let maxEndY = optY
-        for (const opt of step.options) {
-          const optColor = CATEGORY_COLORS[opt.category]
-          const optCols = Math.max(1, measureSteps(opt.steps, flow, visited))
-          const optLeftPx = bandLeftPx + optLeftCols * COL
-          if (opt.steps.length === 0) {
-            optTails.push({ id, label: opt.label, color: optColor })
+        if (step.type === 'route') {
+          const targetSection = flow.byId[step.target]
+          if (targetSection && targetSection.kind !== 'close') {
+            // Terminal "Go to X" pill — no long cross-canvas arrow. Clicking
+            // it starts practice at the target section.
+            const id = addNode('goTo', { label: routeLabel(flow, step.target), targetSectionId: step.target, accent, sectionId: section.id })
+            memo.set(sliceKey, id)
+            connect(tails, id)
           } else {
-            const r = placeSteps(opt.steps, optLeftPx, optCols, optY, [{ id }], opt.label, optColor, accent, visited, sectionId)
-            for (const tt of r.tails) optTails.push(tt)
-            maxEndY = Math.max(maxEndY, r.endY)
+            // Funnel edge to the close header (cross-section, not in dagre).
+            for (const t of tails) pushEdge(t, headerNodeId('close'), t.label ?? routeLabel(flow, step.target))
           }
-          optLeftCols += optCols
+          return []
         }
-        tails = optTails
-        y = maxEndY
-        si++
-        continue
-      }
 
-      if (step.type === 'data_collect') {
-        const id = nextId()
-        makeNode(id, 'dataCollect', { fields: step.fields, label: step.label, hint: step.hint, accent }, centerX, y, sectionId)
-        for (const t of tails) pushEdge(t, id, label, color)
-        label = null
-        color = null
-        tails = [{ id }]
-        y += ROW
-        si++
-        continue
-      }
+        if (step.type === 'fork' || step.type === 'say' || step.type === 'action' || step.type === 'data_collect') {
+          let nodeId, fork = null, nextSi = si + 1
 
-      if (step.type === 'say') {
-        // Peek ahead past any action steps for an immediately adjacent fork.
-        let j = si + 1
-        while (j < steps.length && steps[j]?.type === 'action') j++
-        const nextFork = steps[j]?.type === 'fork' ? steps[j] : null
-
-        if (nextFork) {
-          // Say + fork combined into one node — no intermediate arrow.
-          const id = nextId()
-          makeNode(id, 'sayFork', { text: step.text, sub: step.sub, q: nextFork.q, accent }, centerX, y, sectionId)
-          for (const t of tails) pushEdge(t, id, label, color)
-          label = null
-          color = null
-
-          const optY = y + ROW
-          let optLeftCols = 0
-          const optTails = []
-          let maxEndY = optY
-          for (const opt of nextFork.options) {
-            const optColor = CATEGORY_COLORS[opt.category]
-            const optCols = Math.max(1, measureSteps(opt.steps, flow, visited))
-            const optLeftPx = bandLeftPx + optLeftCols * COL
-            if (opt.steps.length === 0) {
-              optTails.push({ id, label: opt.label, color: optColor })
+          if (step.type === 'say') {
+            // Peek past interstitial actions for an adjacent fork → combined node.
+            let j = si + 1
+            while (j < steps.length && steps[j]?.type === 'action') j++
+            if (steps[j]?.type === 'fork') {
+              fork = steps[j]
+              nodeId = addNode('sayFork', { text: step.text, sub: step.sub, q: fork.q, accent, sectionId: section.id })
+              nextSi = j + 1
             } else {
-              const r = placeSteps(opt.steps, optLeftPx, optCols, optY, [{ id }], opt.label, optColor, accent, visited, sectionId)
-              for (const tt of r.tails) optTails.push(tt)
-              maxEndY = Math.max(maxEndY, r.endY)
+              nodeId = addNode('say', { text: step.text, sub: step.sub, accent, sectionId: section.id })
             }
-            optLeftCols += optCols
+          } else if (step.type === 'fork') {
+            fork = step
+            nodeId = addNode('fork', { q: step.q, accent, sectionId: section.id })
+          } else if (step.type === 'data_collect') {
+            nodeId = addNode('dataCollect', { fields: step.fields, label: step.label, hint: step.hint, accent, sectionId: section.id })
+          } else {
+            nodeId = addNode('action', { text: step.text, sub: step.sub, accent, sectionId: section.id })
           }
-          tails = optTails
-          y = maxEndY
-          si = j + 1  // skip say + interstitial actions + fork
+
+          memo.set(sliceKey, nodeId)
+          connect(tails, nodeId)
+
+          if (fork) {
+            const passthrough = []
+            for (const opt of fork.options) {
+              const optColor = CATEGORY_COLORS[opt.category]
+              const tail = { id: nodeId, label: opt.label, color: optColor }
+              if (!opt.steps || opt.steps.length === 0) passthrough.push(tail)
+              else passthrough.push(...emitChain(opt.steps, [tail]))
+            }
+            tails = passthrough
+          } else {
+            tails = [{ id: nodeId }]
+          }
+          si = nextSi
           continue
         }
 
-        // Standalone say (no adjacent fork)
-        const id = nextId()
-        makeNode(id, 'say', { text: step.text, sub: step.sub, accent }, centerX, y, sectionId)
-        for (const t of tails) pushEdge(t, id, label, color)
-        label = null
-        color = null
-        tails = [{ id }]
-        y += ROW
-        si++
-        continue
+        si++  // unknown step type — skip
       }
-
-      // action (and any other step type) — single node
-      const id = nextId()
-      makeNode(id, step.type, { text: step.text, sub: step.sub, accent }, centerX, y, sectionId)
-      for (const t of tails) pushEdge(t, id, label, color)
-      label = null
-      color = null
-      tails = [{ id }]
-      y += ROW
-      si++
+      return tails
     }
 
-    return { tails, endY: y }
+    emitChain(section.steps, [{ id: hid }])
+    dagre.layout(g)
+
+    // dagre returns centers; convert to top-left, collect block extents.
+    let maxX = 0, maxY = 0
+    const placed = records.map(r => {
+      const gn = g.node(r.id)
+      const x = gn.x - gn.width / 2
+      const y = gn.y - gn.height / 2
+      maxX = Math.max(maxX, x + gn.width)
+      maxY = Math.max(maxY, y + gn.height)
+      return { ...r, x, y }
+    })
+    return { placed, width: maxX, height: maxY }
   }
 
-  // Branches laid out left-to-right, each in a band sized by its subtree width.
-  let leftCols = 0
-  let maxBranchEndY = BRANCH_GAP_Y
-  for (const b of flow.branches) {
-    const cols = Math.max(1, measureSteps(b.steps, flow))
-    const bandLeftPx = leftCols * COL
-    const hx = bandLeftPx + (cols * COL) / 2 - NODE_W / 2
-    const hid = headerNodeId(b.id)
-    makeNode(hid, 'branchHeader', { branch: b }, hx, BRANCH_GAP_Y, b.id)
-    pushEdge({ id: 'opener' }, hid, b.short)
-    const r = placeSteps(b.steps, bandLeftPx, cols, BRANCH_GAP_Y + ROW, [{ id: hid }], null, null, b.color, new Set(), b.id)
-    maxBranchEndY = Math.max(maxBranchEndY, r.endY)
-    leftCols += cols
-  }
-  const totalW = leftCols * COL
-
-  // Opener centered over the full branch row.
+  // Sections in actual call order, left → right: the opener's full decision
+  // tree, then Vitals → Pain → Handoff → Objections. Close centered below.
   const openerLine = flow.opener.steps[0]?.text || flow.opener.goal
-  makeNode('opener', 'opener', { text: openerLine, accent: flow.opener.color }, totalW / 2 - NODE_W / 2, 0, 'opener')
+  const blocks = []
+  blocks.push(layoutSection(
+    { ...flow.opener, steps: flow.opener.steps.slice(1) },  // first line lives in the header card
+    'opener', { text: openerLine, accent: flow.opener.color, sectionId: 'opener' }, flow.opener.color,
+  ))
+  for (const b of flow.branches) {
+    blocks.push(layoutSection(b, 'branchHeader', { branch: b, sectionId: b.id }, b.color))
+  }
 
-  // Close centered below the tallest branch, with its own step tree beneath.
-  const closeCols = Math.max(1, measureSteps(flow.close.steps, flow))
-  const closeY = maxBranchEndY + CLOSE_GAP_Y
-  const closeBandLeft = totalW / 2 - (closeCols * COL) / 2
-  makeNode('close-header', 'close', { close: flow.close }, totalW / 2 - NODE_W / 2, closeY, 'close')
-  placeSteps(flow.close.steps, closeBandLeft, closeCols, closeY + ROW, [{ id: 'close-header' }], null, null, flow.close.color, new Set(), 'close')
+  let offsetX = 0
+  let maxBlockH = 0
+  for (const blk of blocks) {
+    for (const r of blk.placed) {
+      nodes.push({ id: r.id, type: r.type, position: { x: r.x + offsetX, y: r.y }, data: { dim: false, active: false, pickable: false, ...r.data } })
+    }
+    offsetX += blk.width + SECTION_GAP
+    maxBlockH = Math.max(maxBlockH, blk.height)
+  }
+  const totalW = offsetX - SECTION_GAP
+
+  // Close block, centered horizontally, below everything — the funnel target.
+  const closeBlk = layoutSection(flow.close, 'close', { close: flow.close, sectionId: 'close' }, flow.close.color)
+  const closeX = totalW / 2 - closeBlk.width / 2
+  const closeY = maxBlockH + CLOSE_GAP_Y
+  for (const r of closeBlk.placed) {
+    nodes.push({ id: r.id, type: r.type, position: { x: r.x + closeX, y: r.y + closeY }, data: { dim: false, active: false, pickable: false, ...r.data } })
+  }
 
   return { nodes, edges }
 }
@@ -285,12 +311,19 @@ function Tag({ color, children }) {
   )
 }
 
+// Long SAY lines clamp on the canvas (SAY_CLAMP lines, full text on hover
+// via title + always in practice mode) so node heights stay predictable and
+// the layout estimator can't be blown out by one long paragraph.
+const clampStyle = (lines) => ({
+  display: '-webkit-box', WebkitLineClamp: lines, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+})
+
 function SayNode({ data }) {
   return (
     <div style={shell(data, data.accent)}>
       <Handles />
       <Tag color={data.accent}>{data.sub ? 'Then say' : 'Say'}</Tag>
-      <p style={{ fontSize: 11.5, fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>
+      <p title={unquote(data.text)} style={{ fontSize: 11.5, fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5, margin: 0, ...clampStyle(SAY_CLAMP) }}>
         {unquote(data.text)}
       </p>
     </div>
@@ -303,7 +336,7 @@ function ActionNode({ data }) {
       <Handles />
       <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
         <span style={{ fontSize: 11, color: 'var(--warning)', fontWeight: 700, marginTop: 1, flexShrink: 0 }}>▸</span>
-        <span style={{ fontSize: 11, color: 'var(--text-primary)', lineHeight: 1.45 }}>{data.text}</span>
+        <span title={data.text} style={{ fontSize: 11, color: 'var(--text-primary)', lineHeight: 1.45, ...clampStyle(3) }}>{data.text}</span>
       </div>
     </div>
   )
@@ -340,12 +373,12 @@ function SayForkNode({ data }) {
     <div style={shell(data, data.accent, { background: `${data.accent}0D` })}>
       <Handles />
       <Tag color={data.accent}>{data.sub ? 'Then say' : 'Say'}</Tag>
-      <p style={{ fontSize: 11.5, fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5, margin: '0 0 10px', borderBottom: '0.5px solid var(--border)', paddingBottom: 10 }}>
+      <p title={unquote(data.text)} style={{ fontSize: 11.5, fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.5, margin: '0 0 10px', borderBottom: '0.5px solid var(--border)', paddingBottom: 10, ...clampStyle(SAY_CLAMP) }}>
         {unquote(data.text)}
       </p>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
         <span style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--accent)', background: 'rgba(108,99,255,0.20)', borderRadius: 3, padding: '1px 5px', flexShrink: 0, marginTop: 1, whiteSpace: 'nowrap' }}>if/else</span>
-        {data.q && <span style={{ fontSize: 11, color: 'var(--text-primary)', lineHeight: 1.45 }}>{data.q}</span>}
+        {data.q && <span title={data.q} style={{ fontSize: 11, color: 'var(--text-primary)', lineHeight: 1.45, ...clampStyle(3) }}>{data.q}</span>}
       </div>
     </div>
   )
@@ -369,7 +402,7 @@ function ForkNode({ data }) {
       <Handles />
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
         <span style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--accent)', background: 'rgba(108,99,255,0.20)', borderRadius: 3, padding: '1px 5px', flexShrink: 0, marginTop: 1, whiteSpace: 'nowrap' }}>if/else</span>
-        <span style={{ fontSize: 11, color: 'var(--text-primary)', lineHeight: 1.45 }}>{data.q}</span>
+        <span title={data.q} style={{ fontSize: 11, color: 'var(--text-primary)', lineHeight: 1.45, ...clampStyle(3) }}>{data.q}</span>
       </div>
     </div>
   )
@@ -445,8 +478,8 @@ function CanvasInner({ flow, onPractice }) {
     for (const n of graph.nodes) {
       minX = Math.min(minX, n.position.x)
       minY = Math.min(minY, n.position.y)
-      maxX = Math.max(maxX, n.position.x + NODE_W + 60)
-      maxY = Math.max(maxY, n.position.y + 150)
+      maxX = Math.max(maxX, n.position.x + HEADER_W)
+      maxY = Math.max(maxY, n.position.y + (n.data.estH || 150))
     }
     const margin = 400
     return [[minX - margin, minY - margin], [maxX + margin, maxY + margin]]
@@ -472,8 +505,8 @@ function CanvasInner({ flow, onPractice }) {
         onNodeClick={onNodeClick}
         onInit={onInit}
         fitView
-        fitViewOptions={{ padding: 0.15 }}
-        minZoom={0.32}
+        fitViewOptions={{ padding: 0.1 }}
+        minZoom={0.18}
         maxZoom={1.75}
         translateExtent={translateExtent}
         proOptions={{ hideAttribution: true }}
