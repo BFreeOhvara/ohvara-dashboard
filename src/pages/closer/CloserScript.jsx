@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { buildScriptFlow } from '../../lib/discoveryScript'
 import { buildCloserScriptFlow } from '../../lib/closerScript'
-import { ScriptOutline } from '../../components/rep/ScriptOutline'
+import { ScriptWalk } from '../../components/rep/ScriptWalk'
 
 const DEMO_LEAD = { business_name: 'the business', niche: 'service', city: 'your area' }
 
@@ -33,7 +33,7 @@ export default function CloserScript() {
           Script
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3 }}>
-          Expand a section to read it, or click "Practice this section" to walk it one line at a time
+          Practice the script one line at a time — pick what the prospect says, see what comes next.
         </p>
       </div>
 
@@ -61,9 +61,11 @@ export default function CloserScript() {
         ))}
       </div>
 
-      {/* Outline — fills remaining height */}
-      <div style={{ flex: 1, minHeight: 0 }}>
-        <ScriptOutline flow={tab === 'setter' ? setterFlow : closerFlow} />
+      {/* Practice — fills remaining height. Keyed on tab so switching between
+          Closer/Setter remounts ScriptWalk with fresh state instead of reusing
+          stale stack/index positions from the other script's step tree. */}
+      <div style={{ flex: 1, minHeight: 0, border: '0.5px solid var(--border)', borderRadius: 14, overflow: 'hidden', background: '#0A0A12' }}>
+        <ScriptWalk key={tab} flow={tab === 'setter' ? setterFlow : closerFlow} mode="practice" />
       </div>
     </div>
   )

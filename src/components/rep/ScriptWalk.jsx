@@ -144,6 +144,10 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
   }
   // Jump from a combined say+fork screen: advance past both the say step (at
   // top.index) and the fork step (at forkIdx), then enter the chosen option.
+  // Must also check followRouteIfNeeded (Prompt 209 fix) — an option whose
+  // first step is a route (e.g. the qualifier's [GOOD] path straight to
+  // Vitals) used to land on a standalone "Go to Vitals" RouteCard here
+  // because this path never called it, unlike advance()/chooseOption().
   function advanceThenPick(forkIdx, opt) {
     const ns = cloneStack()
     let t = ns[ns.length - 1]
@@ -155,6 +159,7 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
     }
     if (opt.steps?.length) ns.push({ steps: opt.steps, index: 0 })
     if (mode === 'live') applyLiveSkip(ns)
+    if (followRouteIfNeeded(ns, state)) return
     commit({ ...state, stack: ns })
   }
   function back() {
@@ -229,13 +234,6 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
           <RouteCard step={step} accent={accent} flow={flow} onGo={() => navigateTo(step.target)} />
         )}
 
-        {/* Coach note for the current track — hidden in the live Call modal
-            (Prompt 49); kept for the practice walk. */}
-        {mode !== 'live' && section.tips && !atChooser && (
-          <p style={{ fontSize: 11.5, color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.55, margin: '16px 4px 0' }}>
-            💡 {section.tips}
-          </p>
-        )}
       </div>
 
       {/* Controls — Back / Restart */}
@@ -409,9 +407,9 @@ function Fork({ step, accent, onPick }) {
             <button
               key={i}
               onClick={() => onPick(opt)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, textAlign: 'left', padding: '14px 16px', background: 'var(--bg-elevated)', border: `0.5px solid ${c}55`, borderLeft: `3px solid ${c}`, borderRadius: 11, cursor: 'pointer', color: 'var(--text-primary)', fontSize: 14.5, fontWeight: 500 }}
-              onMouseEnter={e => { e.currentTarget.style.background = c + '1A'; e.currentTarget.style.borderColor = c }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.borderColor = c + '55' }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, textAlign: 'left', padding: '14px 16px', background: 'var(--bg-elevated)', border: `1px solid ${c}`, borderLeft: `3px solid ${c}`, borderRadius: 11, cursor: 'pointer', color: 'var(--text-primary)', fontSize: 14.5, fontWeight: 500, transition: 'filter 120ms ease' }}
+              onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(1.15)' }}
+              onMouseLeave={e => { e.currentTarget.style.filter = 'none' }}
             >
               {opt.label}
               <ChevronRight size={16} color={c} style={{ flexShrink: 0 }} />
@@ -543,9 +541,9 @@ function SayWithFork({ step, fork, accent, onPick, capturedValues, onCapture, on
             <button
               key={i}
               onClick={() => onPick(opt)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, textAlign: 'left', padding: '14px 16px', background: 'var(--bg-elevated)', border: `0.5px solid ${c}55`, borderLeft: `3px solid ${c}`, borderRadius: 11, cursor: 'pointer', color: 'var(--text-primary)', fontSize: 14.5, fontWeight: 500 }}
-              onMouseEnter={e => { e.currentTarget.style.background = c + '1A'; e.currentTarget.style.borderColor = c }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.borderColor = c + '55' }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, textAlign: 'left', padding: '14px 16px', background: 'var(--bg-elevated)', border: `1px solid ${c}`, borderLeft: `3px solid ${c}`, borderRadius: 11, cursor: 'pointer', color: 'var(--text-primary)', fontSize: 14.5, fontWeight: 500, transition: 'filter 120ms ease' }}
+              onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(1.15)' }}
+              onMouseLeave={e => { e.currentTarget.style.filter = 'none' }}
             >
               {opt.label}
               <ChevronRight size={16} color={c} style={{ flexShrink: 0 }} />
