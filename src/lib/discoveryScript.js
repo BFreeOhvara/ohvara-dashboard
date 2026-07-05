@@ -214,7 +214,7 @@ export const DISCOVERY_SCRIPT = [
     color: 'var(--success)', dim: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.25)',
     lines: [
       `"I don't want to waste your time here. Like I said — that's $[annual] a year you're leaving on the table just from calls that don't get picked up. Here's what I'd do for you:"`,
-      `"Basically, instead of filling this role with a person, we'd build you an AI receptionist made for exactly this — not some robot press-one thing, a real human feel, we can even make it your voice — it catches the calls you'd otherwise miss, does missed-call text-back, answers questions, and books appointments straight to your calendar. All you'd have to do is show up to the meeting — and it means you might not even need to finish out this hire the way you'd planned." [[BREAK]]`,
+      `"instead of filling this role with a person, we'd build you a system made exactly for this — it catches the calls you'd otherwise miss, does missed-call text-back, answers questions, and books appointments straight to your calendar. All you'd have to do is show up to the meeting — and it means you might not even need to finish out this hire the way you'd planned." [[BREAK]]`,
       `"Take 15 minutes. Worst case scenario, you get to see what it looks like and stop wasting your time. Best case scenario, our team shows you exactly how you're leaving money on the table and how to fix it. How's that sound? [Tuesday morning] or [Wednesday afternoon]?"`,
       `BRANCH — How do they respond?`,
       `↳ IF Picks a time [GOOD]: → Go to Close (lock the time and confirm)`,
