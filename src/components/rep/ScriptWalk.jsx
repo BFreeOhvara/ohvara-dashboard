@@ -317,14 +317,14 @@ function CaptureInput({ capture, capturedValues, onCapture, onCaptureLocal }) {
 }
 
 // One or more spoken lines as a single continuous card (Prompt 215) — a
-// merged chain reads as one moment, not N stacked bordered boxes.
+// merged chain reads as one moment, not N stacked bordered boxes. The lines
+// join into one flat string with a plain space (Prompt 216) so they render
+// as a single flowing paragraph, not separate <p> blocks with a visible gap.
 function SayBlock({ says, accent, renderText }) {
+  const text = says.map(s => renderText ? renderText(s.text) : s.text).join(' ')
   return (
-    <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderLeft: `3px solid ${accent}`, borderRadius: 12, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {says.map((s, i) => {
-        const display = renderText ? renderText(s.text) : s.text
-        return <p key={i} style={{ fontSize: 17, lineHeight: 1.55, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{display}</p>
-      })}
+    <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderLeft: `3px solid ${accent}`, borderRadius: 12, padding: '18px 20px' }}>
+      <p style={{ fontSize: 17, lineHeight: 1.55, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>{text}</p>
     </div>
   )
 }
