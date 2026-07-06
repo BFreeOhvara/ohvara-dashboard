@@ -158,20 +158,18 @@ export default function MyStats() {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant={viewMode === 'all' ? 'primary' : 'ghost'}
+            variant={viewMode === 'all' ? 'primary' : 'secondary'}
             size="sm"
             onClick={selectAllTime}
           >
             All Time
           </Button>
-          <div style={{ opacity: viewMode === 'all' ? 0.5 : 1, transition: 'opacity 0.1s' }}>
-            <DayFilterBar
-              selectedDate={selectedDate}
-              todayStr={todayStr}
-              onChange={selectDay}
-              firstCallDateStr={firstCallDateStr}
-            />
-          </div>
+          <DayFilterBar
+            selectedDate={selectedDate}
+            todayStr={todayStr}
+            onChange={selectDay}
+            firstCallDateStr={firstCallDateStr}
+          />
         </div>
       </div>
 
