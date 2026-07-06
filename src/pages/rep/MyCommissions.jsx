@@ -295,7 +295,7 @@ export default function MyCommissions() {
         )}
       </div>
 
-      <MyPayouts connected={connected} />
+      <MyPayouts connected={connected} hasCustomRange={hasCustomRange} rangeStart={rangeStart} rangeEnd={rangeEnd} />
     </div>
   )
 }
@@ -303,9 +303,29 @@ export default function MyCommissions() {
 // Stripe Connect bank-link + payout history. Reps connect their bank once
 // (Stripe handles KYC + 1099), then watch each closed deal's 10% move
 // pending → paid here.
-function MyPayouts({ connected }) {
+// Same "closed" date shown in each row's dateLabel below — paid rows prefer
+// the appointment's actual close date, everything else falls back to the
+// payout's own created_at. Shared by filtering and display so a range pick
+// can never disagree with what the row itself says (Prompt 241).
+function payoutClosedDate(p) {
+  return p.status === 'paid' && p.paid_at ? (p.appointment?.closed_at || p.created_at) : p.created_at
+}
+
+function MyPayouts({ connected, hasCustomRange, rangeStart, rangeEnd }) {
   const { profile } = useAuth()
   const { data: payouts } = useMyPayouts(profile?.id)
+
+  // Filters to whichever window the 3 KPI boxes above are already scoped to
+  // (Prompt 241) — All Time (everything), a picked day, or a picked range,
+  // inclusive of both endpoints. The 5-row scroll cap and Last 30 Days chart
+  // are unaffected.
+  const scopedPayouts = useMemo(() => {
+    const rows = payouts || []
+    if (!hasCustomRange) return rows
+    const from = new Date(rangeStart + 'T00:00:00')
+    const to   = new Date(rangeEnd   + 'T23:59:59')
+    return rows.filter(p => { const d = new Date(payoutClosedDate(p)); return d >= from && d <= to })
+  }, [payouts, hasCustomRange, rangeStart, rangeEnd])
 
   return (
     <div className="glass" style={{ padding: '18px 20px', borderRadius: 12, marginTop: 16 }}>
@@ -326,13 +346,15 @@ function MyPayouts({ connected }) {
         )}
       </div>
 
-      {(payouts?.length ?? 0) === 0 ? (
+      {scopedPayouts.length === 0 ? (
         <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', margin: '8px 0' }}>
-          No payouts yet — a pending payout appears here when the closer signs a deal you booked.
+          {(payouts?.length ?? 0) === 0
+            ? 'No payouts yet — a pending payout appears here when the closer signs a deal you booked.'
+            : 'No payouts in this range.'}
         </p>
       ) : (
         <div className="scrollbar-thin" style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: PAYOUT_ROW_HEIGHT * 5, overflowY: 'auto' }}>
-          {payouts.map(p => {
+          {scopedPayouts.map(p => {
             const biz = p.appointment?.lead?.business_name || 'Closed deal'
             const dealValueCents = p.deal_value_cents ?? (p.amount_cents * 10)
             const dealDollars = Math.round(dealValueCents / 100).toLocaleString()
@@ -342,8 +364,8 @@ function MyPayouts({ connected }) {
             // Paid rows show both dates so you can see how long the deal sat
             // before payout; pending rows only have a close date so far.
             const dateLabel = isPaid && p.paid_at
-              ? `Closed on ${fmtDate(p.appointment?.closed_at || p.created_at)} · Paid on ${fmtDate(p.paid_at)}`
-              : `Closed on ${fmtDate(p.created_at)}`
+              ? `Closed on ${fmtDate(payoutClosedDate(p))} · Paid on ${fmtDate(p.paid_at)}`
+              : `Closed on ${fmtDate(payoutClosedDate(p))}`
             return (
               <div key={p.id} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
