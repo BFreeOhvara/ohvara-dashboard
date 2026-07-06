@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useMyAppointments } from '../../hooks/useAppointments'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
-import { formatInTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
+import { formatInTimezone, inferTimezoneFromState, timezoneAbbr, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { KPICard } from '../../components/ui/KPICard'
 import { Badge } from '../../components/ui/Badge'
 
@@ -54,8 +54,23 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })
 }
 
-function fmtDateTime(iso, tz) {
-  return formatInTimezone(iso, tz, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+// Prompt 224: shows the CLIENT's local time (inferred from the lead's
+// state), explicitly labeled, rather than a bare time silently converted
+// to the viewing closer's own zone — a bare "Jul 6, 2:00 PM" could
+// previously be misread as either. Nate's own equivalent (his profile.timezone,
+// Settings > Regional) is available on hover rather than taking up column
+// width in this fixed 150px cell.
+function fmtDateTime(iso, leadState) {
+  if (!iso) return '—'
+  const clientTz = inferTimezoneFromState(leadState)
+  return `${formatInTimezone(iso, clientTz, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} ${timezoneAbbr(clientTz)}`
+}
+
+function apptTimeTitle(iso, leadState, viewerTz) {
+  if (!iso) return undefined
+  const clientTz = inferTimezoneFromState(leadState)
+  const yours = formatInTimezone(iso, viewerTz, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+  return `Client's local time. Your time: ${yours} ${timezoneAbbr(viewerTz)}`
 }
 
 function QueueTable({ columns, rows, renderRow, emptyText, emptyIcon: EmptyIcon }) {
@@ -104,7 +119,7 @@ function PendingTab({ rows, tz }) {
           <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
           <div style={cell('0 0 140px', { fontFamily: 'var(--font-mono)' })}>{a.lead?.phone || '—'}</div>
           <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
-          <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at, tz)}</div>
+          <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })} title={apptTimeTitle(a.scheduled_at, a.lead?.state, tz)}>{fmtDateTime(a.scheduled_at, a.lead?.state)}</div>
         </div>
       )}
     />
@@ -171,7 +186,7 @@ function NoShowTab({ rows, tz }) {
           <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
           <div style={cell('0 0 140px', { fontFamily: 'var(--font-mono)' })}>{a.lead?.phone || '—'}</div>
           <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
-          <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at, tz)}</div>
+          <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })} title={apptTimeTitle(a.scheduled_at, a.lead?.state, tz)}>{fmtDateTime(a.scheduled_at, a.lead?.state)}</div>
         </div>
       )}
     />
@@ -192,7 +207,7 @@ function NeedsReschedulingTab({ rows, tz }) {
           <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
           <div style={cell('0 0 140px', { fontFamily: 'var(--font-mono)' })}>{a.lead?.phone || '—'}</div>
           <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
-          <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at, tz)}</div>
+          <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })} title={apptTimeTitle(a.scheduled_at, a.lead?.state, tz)}>{fmtDateTime(a.scheduled_at, a.lead?.state)}</div>
         </div>
       )}
     />
@@ -236,7 +251,7 @@ function AllTab({ rows, tz }) {
           <div style={cell('0 0 110px')}>{a.lead?.city || '—'}</div>
           <div style={cell('0 0 140px', { fontFamily: 'var(--font-mono)' })}>{a.lead?.phone || '—'}</div>
           <div style={cell('0 0 120px')}>{a.rep?.full_name || '—'}</div>
-          <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })}>{fmtDateTime(a.scheduled_at, tz)}</div>
+          <div style={cell('0 0 150px', { fontFamily: 'var(--font-mono)' })} title={apptTimeTitle(a.scheduled_at, a.lead?.state, tz)}>{fmtDateTime(a.scheduled_at, a.lead?.state)}</div>
           <div style={cell('0 0 110px')}><AllStatusBadge status={a.status} outcome={a.outcome} /></div>
         </div>
       )}

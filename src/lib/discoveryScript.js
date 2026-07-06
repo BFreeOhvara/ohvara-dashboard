@@ -7,7 +7,9 @@
 // than closing on the spot. Every spoken line is exactly what the setter reads.
 // Dynamic tokens: [Business Name], [First Name], [job title] (from the
 // lead's posting_title, falling back to "front desk role" if unset — e.g.
-// Maps-sourced leads with no scraped Indeed posting) filled from the lead.
+// Maps-sourced leads with no scraped Indeed posting), [city], [state] (Prompt
+// 224 — confirm-time states the lead's real location back before locking an
+// appointment time) filled from the lead.
 // In-call tokens: [Name], [day], [time], [time+1hr], [owner], [Tuesday morning],
 // [Wednesday afternoon], [Tuesday next week], [Wednesday next week] stay
 // literal as rep guidance during the call. [their number], [monthly], [annual],
@@ -196,7 +198,7 @@ export const DISCOVERY_SCRIPT = [
     lines: [
       `"Look, I don't want to waste your time — that's $[annual] a year slipping through the cracks. So instead of filling this role, we'll build you a system made exactly for this — it catches the calls you'd otherwise miss, answers questions, and books appointments straight to your calendar. All you have to do is show up. Take 15 minutes — worst case, you see exactly what it looks like. Best case, we plug that money hole for you. How's that sound?"`,
       `BRANCH — How do they respond?`,
-      `↳ IF Good / shows interest [GOOD]: "Good — so does [Tuesday morning] or [Wednesday afternoon] work best for you?"`,
+      `↳ IF Good / shows interest [GOOD]: "Good — looks like you guys are out in [city], [state] — does [Tuesday morning] or [Wednesday afternoon] work best for you?"`,
       `   BRANCH — Do they pick a time?`,
       `   ↳ IF Picks a time [GOOD]: → Go to Close`,
       `   ↳ IF Still hesitant [HESITANT]: ▸ Set status Follow-Up.`,
@@ -266,9 +268,20 @@ function fillTokens(text, lead, rep) {
   const city      = lead.city || 'your area'
   const jobTitle  = lead.posting_title || 'front desk role'
   const repName = (rep?.full_name || '').trim() || '[Rep Name]'
+  // Prompt 224 — confirm-time states the lead's location back before locking
+  // an appointment time (personalization + implicit timezone confirmation).
+  // "[city], [state]" is replaced as one composite token so a missing state
+  // doesn't leave a dangling comma — falls back to whichever of city/state
+  // is present, or "your area" if neither is (real data is 100% populated
+  // on both as of this prompt, so this fallback is a safety net, not the
+  // common case).
+  const cityState = lead.city && lead.state
+    ? `${lead.city}, ${lead.state}`
+    : (lead.city || lead.state || 'your area')
   return text
     .replace(/\[Business Name\]/gi, biz)
     .replace(/\[niche\]/gi, niche)
+    .replace(/\[city\], \[state\]/gi, cityState)
     .replace(/\[city\]/gi, city)
     .replace(/\[job title\]/gi, jobTitle)
     .replace(/\[Rep Name\]/gi, repName)

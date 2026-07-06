@@ -33,6 +33,19 @@ const TZ_SHORT_LABELS = {
   'America/Boise': 'Mountain', 'America/Detroit': 'Eastern', 'America/Indiana/Indianapolis': 'Eastern',
 }
 
+// Compact 2-3 letter form for tight table cells (Prompt 224 — CloserPipeline's
+// fixed-width "Scheduled" column has no room for "Eastern"/"Mountain (AZ)").
+const TZ_ABBR = {
+  'America/New_York': 'ET', 'America/Chicago': 'CT', 'America/Denver': 'MT',
+  'America/Phoenix': 'MT', 'America/Los_Angeles': 'PT',
+  'America/Anchorage': 'AKT', 'Pacific/Honolulu': 'HT',
+  'America/Boise': 'MT', 'America/Detroit': 'ET', 'America/Indiana/Indianapolis': 'ET',
+}
+
+export function timezoneAbbr(tz) {
+  return TZ_ABBR[tz] || tz || 'CT'
+}
+
 export function inferTimezoneFromState(state) {
   if (!state) return DEFAULT_TIMEZONE
   return STATE_TIMEZONES[state.trim().toUpperCase()] || DEFAULT_TIMEZONE

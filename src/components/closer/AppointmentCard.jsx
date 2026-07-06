@@ -2,13 +2,19 @@ import { useState } from 'react'
 import { MapPin, Phone, Calendar, Star, Globe, ChevronRight } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { useAuth } from '../../hooks/useAuth'
-import { formatInTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
+import { formatInTimezone, inferTimezoneFromState, timezoneAbbr, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { CallModal as AppointmentCardModal } from './AppointmentCardModal'
 
 export function AppointmentCard({ appt }) {
   const { profile } = useAuth()
   const lead = appt.lead
   const viewerTz = profile?.timezone || DEFAULT_TIMEZONE
+  // Prompt 224: the time shown is the CLIENT's local time (inferred from
+  // lead.state — same mechanism CallModal.jsx already uses when a rep books
+  // it), explicitly labeled so it's never misread as the viewer's own zone.
+  // Nate's own equivalent only shown if it actually differs.
+  const clientTz = inferTimezoneFromState(lead?.state)
+  const showsViewerEquivalent = lead && clientTz !== viewerTz
 
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -57,9 +63,16 @@ export function AppointmentCard({ appt }) {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             {appt.scheduled_at && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-secondary)' }}>
-                <Calendar size={11} />
-                {formatInTimezone(appt.scheduled_at, viewerTz, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+              <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <Calendar size={11} />
+                  {formatInTimezone(appt.scheduled_at, clientTz, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} {timezoneAbbr(clientTz)}
+                </span>
+                {showsViewerEquivalent && (
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                    yours: {formatInTimezone(appt.scheduled_at, viewerTz, { hour: 'numeric', minute: '2-digit' })} {timezoneAbbr(viewerTz)}
+                  </span>
+                )}
               </span>
             )}
             <Badge label={appt.status} />
