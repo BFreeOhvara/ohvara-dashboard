@@ -23,9 +23,19 @@ function toUtcDateStr(ts) {
   return new Date(ts).toISOString().slice(0, 10)
 }
 
+function addUtcDays(dateStr, delta) {
+  const d = new Date(`${dateStr}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + delta)
+  return toUtcDateStr(d.getTime())
+}
+
 export default function ActivityFeed() {
   const { profile } = useAuth()
-  const [selectedDate, setSelectedDate] = useState(null) // 'YYYY-MM-DD' (UTC) or null = full feed
+  // Prompt 225: default to today (not "All days") — todayStr tracks the
+  // real current UTC day live; selectedDate is null only after the user
+  // explicitly clears back to "All days" via the X.
+  const [todayStr, setTodayStr] = useState(() => toUtcDateStr(Date.now()))
+  const [selectedDate, setSelectedDate] = useState(() => toUtcDateStr(Date.now())) // 'YYYY-MM-DD' (UTC) or null = full feed
   const [calOpen, setCalOpen] = useState(false)
   const now = new Date()
   const [calViewYear, setCalViewYear] = useState(now.getUTCFullYear())
@@ -42,6 +52,29 @@ export default function ActivityFeed() {
     }
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  // Live day-rollover — if the tab is left open across the UTC day boundary,
+  // "today" (and whatever's filtered by it) advances on its own. Only
+  // nudges selectedDate forward if it was still tracking today at the
+  // moment of rollover; a manually-picked past day (or "All days") is left
+  // alone. Checked on an interval and on tab focus/visibility-change —
+  // no websocket needed for something this infrequent.
+  useEffect(() => {
+    function checkRollover() {
+      const nowStr = toUtcDateStr(Date.now())
+      setTodayStr(prevToday => {
+        if (nowStr === prevToday) return prevToday
+        setSelectedDate(prevSelected => prevSelected === prevToday ? nowStr : prevSelected)
+        return nowStr
+      })
+    }
+    const interval = setInterval(checkRollover, 60_000)
+    document.addEventListener('visibilitychange', checkRollover)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', checkRollover)
+    }
   }, [])
 
   function prevMonth() {
@@ -61,6 +94,18 @@ export default function ActivityFeed() {
   function clearFilter() {
     setSelectedDate(null)
     setCalOpen(false)
+  }
+
+  // Prev/next day-step arrows — one day at a time, complementing the
+  // calendar-jump dropdown. Only meaningful when a specific day is
+  // selected (not "All days"); next never steps into the future.
+  function stepDay(delta) {
+    if (!selectedDate) return
+    const next = addUtcDays(selectedDate, delta)
+    if (next > todayStr) return
+    setSelectedDate(next)
+    setCalViewYear(+next.slice(0, 4))
+    setCalViewMonth(+next.slice(5, 7))
   }
 
   const { data: calls, isLoading } = useQuery({
@@ -94,6 +139,9 @@ export default function ActivityFeed() {
     ? `${MONTH_NAMES[+selectedDate.slice(5, 7) - 1].slice(0, 3)} ${+selectedDate.slice(8)}`
     : 'All days'
 
+  const canStepBack = !!selectedDate
+  const canStepForward = !!selectedDate && selectedDate < todayStr
+
   return (
     // 60px = one FeedItem row's rendered footprint (56px box + 4px space-y-1
     // gap, measured from live CSS) — shaves exactly one row off the bottom
@@ -105,7 +153,22 @@ export default function ActivityFeed() {
           <p className="text-[var(--text-muted)] text-sm mt-0.5">Call outcomes — booked, follow-up, no answer, not interested</p>
         </div>
 
-        <div style={{ position: 'relative' }} ref={calBtnRef}>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 4 }} ref={calBtnRef}>
+          <button
+            onClick={() => stepDay(-1)}
+            disabled={!canStepBack}
+            title="Previous day"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 28, height: 34, background: 'var(--bg-surface)',
+              border: '0.5px solid var(--border)', borderRadius: 8,
+              color: 'var(--text-muted)', cursor: canStepBack ? 'pointer' : 'not-allowed',
+              opacity: canStepBack ? 1 : 0.4,
+            }}
+          >
+            <ChevronLeft size={13} />
+          </button>
+
           <button
             onClick={() => setCalOpen(o => !o)}
             style={{
@@ -128,6 +191,21 @@ export default function ActivityFeed() {
                 <X size={11} />
               </span>
             )}
+          </button>
+
+          <button
+            onClick={() => stepDay(1)}
+            disabled={!canStepForward}
+            title="Next day"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 28, height: 34, background: 'var(--bg-surface)',
+              border: '0.5px solid var(--border)', borderRadius: 8,
+              color: 'var(--text-muted)', cursor: canStepForward ? 'pointer' : 'not-allowed',
+              opacity: canStepForward ? 1 : 0.4,
+            }}
+          >
+            <ChevronRight size={13} />
           </button>
 
           {calOpen && (
@@ -161,9 +239,15 @@ export default function ActivityFeed() {
             ))}
           </div>
         ) : !items.length ? (
-          <div className="text-center py-10">
-            <Bell className="text-[var(--text-muted)] mx-auto mb-2" size={24} />
-            <p className="text-[var(--text-muted)] text-sm">{selectedDate ? 'No activity on this day' : 'No activity yet'}</p>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <Bell className="text-[var(--text-muted)] mb-2" size={24} />
+            <p className="text-[var(--text-muted)] text-sm">
+              {!selectedDate
+                ? 'No activity yet'
+                : selectedDate === todayStr
+                ? 'No activity today'
+                : `No activity on ${MONTH_NAMES[+selectedDate.slice(5, 7) - 1].slice(0, 3)} ${+selectedDate.slice(8)}`}
+            </p>
           </div>
         ) : (
           <div className="space-y-1 scrollbar-thin" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
