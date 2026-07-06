@@ -176,21 +176,24 @@ export function useMyCommission(repId) {
   })
 }
 
-export function useRepStats(repId, period = 'week') {
+export function useRepStats(repId, period = 'week', customRange = null) {
   return useQuery({
-    queryKey: ['stats', repId, period],
+    queryKey: ['stats', repId, period, period === 'custom' ? customRange : null],
     // Stats refetch on every invalidation (CallModal invalidates ['stats']
     // whenever an outcome is logged) — keep them fresh, never cached stale.
     staleTime: 0,
     queryFn: async () => {
-      const cutoff = getPeriodCutoff(period)
+      const { from, to } = getPeriodRange(period, customRange)
+
+      let callsQuery = supabase
+        .from('calls')
+        .select('id, duration_seconds, outcome, created_at')
+        .eq('rep_id', repId)
+      if (from) callsQuery = callsQuery.gte('created_at', from)
+      if (to) callsQuery = callsQuery.lte('created_at', to)
 
       const [callsRes, totalRes] = await Promise.all([
-        supabase
-          .from('calls')
-          .select('id, duration_seconds, outcome, created_at')
-          .eq('rep_id', repId)
-          .gte('created_at', cutoff),
+        callsQuery,
         supabase
           .from('leads')
           .select('id')
@@ -398,12 +401,22 @@ export function useBadgeActivity(repId) {
   })
 }
 
-function getPeriodCutoff(period) {
-  // 'day' is the UTC calendar day, NOT a rolling 24h window — it must match
-  // useTodayCallStats exactly so MyStats Day view equals the Calls Today KPI.
-  if (period === 'day') return new Date().toISOString().split('T')[0] + 'T00:00:00Z'
-  const d = new Date()
-  if (period === 'week')  d.setDate(d.getDate() - 7)
-  else if (period === 'month') d.setMonth(d.getMonth() - 1)
-  return d.toISOString()
+// Returns { from, to } — `to: null` means "through now". 'all' and an
+// incomplete/unset 'custom' range both return no bounds (all-time).
+function getPeriodRange(period, customRange) {
+  if (period === 'day') {
+    // UTC calendar day, NOT a rolling 24h window — must match
+    // useTodayCallStats exactly so MyStats Day view equals the Calls Today KPI.
+    return { from: new Date().toISOString().split('T')[0] + 'T00:00:00Z', to: null }
+  }
+  if (period === 'week' || period === 'month') {
+    const d = new Date()
+    if (period === 'week') d.setDate(d.getDate() - 7)
+    else d.setMonth(d.getMonth() - 1)
+    return { from: d.toISOString(), to: null }
+  }
+  if (period === 'custom' && customRange?.from && customRange?.to) {
+    return { from: customRange.from + 'T00:00:00', to: customRange.to + 'T23:59:59' }
+  }
+  return { from: null, to: null }
 }

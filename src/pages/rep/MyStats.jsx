@@ -1,12 +1,22 @@
 import { useState } from 'react'
-import { Phone, Calendar, TrendingUp, Clock } from 'lucide-react'
+import { Phone, Calendar, TrendingUp, Clock, X } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
 import { useRepStats, useRepDailyActivity, useCompletedDays, useTodayCallStats, DAILY_BATCH_TARGET } from '../../hooks/useProfiles'
 import { StatCard } from '../../components/ui/StatCard'
 import { Button } from '../../components/ui/Button'
+import { RangeCalendar, useRangeCalendar } from '../../components/ui/RangeCalendar'
 
-const PERIODS = ['day', 'week', 'month']
+// 'all' is first/default per Brayden's live review (Prompt 233) — "it starts
+// with all time". 'custom' reveals the shared RangeCalendar (same picker as
+// MyCommissions) instead of a fixed lookback window.
+const PERIODS = [
+  { key: 'all', label: 'All Time' },
+  { key: 'day', label: 'Day' },
+  { key: 'week', label: 'Week' },
+  { key: 'month', label: 'Month' },
+  { key: 'custom', label: 'Custom' },
+]
 const SS_PERIOD = 'ohvara_mystats_period'
 
 function ChartTooltip({ active, payload, label }) {
@@ -114,9 +124,15 @@ function CompletedDaysHeatmap({ days }) {
 
 export default function MyStats() {
   const { profile } = useAuth()
-  // Period selection survives tab switches via sessionStorage — Day is the default view
-  const [period, setPeriod] = useState(() => sessionStorage.getItem(SS_PERIOD) || 'day')
-  const { data: stats, isLoading } = useRepStats(profile?.id, period)
+  // Period selection survives tab switches via sessionStorage — All Time is the default view
+  const [period, setPeriod] = useState(() => sessionStorage.getItem(SS_PERIOD) || 'all')
+  const {
+    rangeStart, rangeEnd, hoverDate, setHoverDate,
+    calViewYear, calViewMonth, hasCustomRange, calBtnLabel,
+    clearRange, handleDayClick, prevMonth, nextMonth,
+  } = useRangeCalendar()
+  const customRange = hasCustomRange ? { from: rangeStart, to: rangeEnd } : null
+  const { data: stats, isLoading } = useRepStats(profile?.id, period, customRange)
   const { data: daily } = useRepDailyActivity(profile?.id)
   const { data: completedDays } = useCompletedDays(profile?.id, 21)
   const { data: today } = useTodayCallStats(profile?.id)
@@ -143,16 +159,48 @@ export default function MyStats() {
         <div className="flex gap-1">
           {PERIODS.map(p => (
             <Button
-              key={p}
-              variant={period === p ? 'primary' : 'ghost'}
+              key={p.key}
+              variant={period === p.key ? 'primary' : 'ghost'}
               size="sm"
-              onClick={() => changePeriod(p)}
+              onClick={() => changePeriod(p.key)}
             >
-              {p.charAt(0).toUpperCase() + p.slice(1)}
+              {p.label}
             </Button>
           ))}
         </div>
       </div>
+
+      {period === 'custom' && (
+        <div className="glass" style={{ marginBottom: 20, borderRadius: 12, padding: '4px 16px 4px 16px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ paddingTop: 16 }}>
+            <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
+              {hasCustomRange ? calBtnLabel : !rangeStart ? 'Click a start date' : 'Click an end date'}
+            </p>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '4px 0 0' }}>
+              {hasCustomRange ? 'Stats below scoped to this range' : 'Showing all-time until a range is picked'}
+            </p>
+            {hasCustomRange && (
+              <button
+                onClick={clearRange}
+                style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}
+              >
+                <X size={11} /> Clear range
+              </button>
+            )}
+          </div>
+          <RangeCalendar
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            hoverDate={hoverDate}
+            onDayClick={handleDayClick}
+            onDayHover={setHoverDate}
+            viewYear={calViewYear}
+            viewMonth={calViewMonth}
+            onPrev={prevMonth}
+            onNext={nextMonth}
+          />
+        </div>
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
