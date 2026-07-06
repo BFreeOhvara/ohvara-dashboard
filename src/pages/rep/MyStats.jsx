@@ -1,16 +1,11 @@
-import { useState } from 'react'
-import { Phone, Calendar, TrendingUp, Clock } from 'lucide-react'
+import { Phone, Calendar, TrendingUp, Clock, Calendar as CalendarIcon, X } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
 import { useRepStats, useRepDailyActivity, useCompletedDays, useTodayCallStats, DAILY_BATCH_TARGET } from '../../hooks/useProfiles'
 import { StatCard } from '../../components/ui/StatCard'
 import { Button } from '../../components/ui/Button'
-import { DayFilterBar, useDayFilter } from '../../components/ui/DayFilterBar'
-
-// Prompt 234: replaced the Day/Week/Month/Custom tabs with the same shared
-// single-day DayFilterBar used on Activity Feed/My Calls, plus a standalone
-// All Time toggle — only two states now, not five.
-const SS_VIEW_MODE = 'ohvara_mystats_view_mode'
+import { RangeCalendar, useRangeCalendar } from '../../components/ui/RangeCalendar'
+import { toUtcDateStr } from '../../components/ui/DayFilterBar'
 
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -117,35 +112,35 @@ function CompletedDaysHeatmap({ days }) {
 
 export default function MyStats() {
   const { profile } = useAuth()
-  const { todayStr, selectedDate, setSelectedDate, firstCallDateStr } = useDayFilter(profile?.id)
-  // Defaults to 'day' (today, via useDayFilter) per Brayden: "that's what it's
-  // on by default." Only two states now — a specific day, or All Time.
-  const [viewMode, setViewMode] = useState(() => sessionStorage.getItem(SS_VIEW_MODE) || 'day')
-  const isToday = selectedDate === todayStr
+  // Prompt 238: reversed Prompt 234's DayFilterBar choice — reuses the exact
+  // same RangeCalendar/useRangeCalendar as MyCommissions (single day OR a
+  // contiguous range, one click each end) instead of a third hand-rolled
+  // variant. No range picked → falls back to All Time, mirroring Commissions'
+  // own default exactly; clicking All Time just clears the range so the
+  // trigger/calendar never show a stale pick while it's active (Prompt 236).
+  const {
+    rangeStart, rangeEnd, hoverDate, setHoverDate,
+    calOpen, setCalOpen, calViewYear, calViewMonth,
+    calBtnRef, calPanelRef, hasCustomRange, calBtnLabel,
+    clearRange, handleDayClick, prevMonth, nextMonth,
+  } = useRangeCalendar()
 
-  function selectDay(dateStr) {
-    setSelectedDate(dateStr)
-    setViewMode('day')
-    sessionStorage.setItem(SS_VIEW_MODE, 'day')
-  }
-  function selectAllTime() {
-    setViewMode('all')
-    sessionStorage.setItem(SS_VIEW_MODE, 'all')
-  }
+  const todayStr = toUtcDateStr(Date.now())
+  const isSingleDay = hasCustomRange && rangeStart === rangeEnd
+  const isToday = isSingleDay && rangeStart === todayStr
 
-  // 'day' mode reuses the 'custom' period's {from,to} bounds with the same
-  // start/end date — a single-day range — rather than adding a third period type.
-  const dayRange = viewMode === 'day' ? { from: selectedDate, to: selectedDate } : null
-  const { data: stats, isLoading } = useRepStats(profile?.id, viewMode === 'all' ? 'all' : 'custom', dayRange)
+  const customRange = hasCustomRange ? { from: rangeStart, to: rangeEnd } : null
+  const { data: stats, isLoading } = useRepStats(profile?.id, hasCustomRange ? 'custom' : 'all', customRange)
   const { data: daily } = useRepDailyActivity(profile?.id)
   const { data: completedDays } = useCompletedDays(profile?.id, 21)
   const { data: today } = useTodayCallStats(profile?.id)
 
   // Single source of truth: today's headline numbers come from the same
   // rep_today_metrics RPC as the My Leads KPIs, so "Total Dials" here ===
-  // "Calls Today" on My Leads exactly. Only applies when the selected day is
-  // actually today — a past day falls through to the plain scoped query.
-  const display = viewMode === 'day' && isToday && today
+  // "Calls Today" on My Leads exactly. Only applies when the picked range is
+  // a single day that happens to be today — anything else falls through to
+  // the plain scoped query.
+  const display = isToday && today
     ? { totalDials: today.calls, bookedCount: today.booked, bookingRate: String(today.bookingRate), avgCallDuration: stats?.avgCallDuration }
     : stats
 
@@ -158,18 +153,65 @@ export default function MyStats() {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant={viewMode === 'all' ? 'primary' : 'secondary'}
+            variant={!hasCustomRange ? 'primary' : 'secondary'}
             size="sm"
-            onClick={selectAllTime}
+            onClick={clearRange}
           >
             All Time
           </Button>
-          <DayFilterBar
-            selectedDate={selectedDate}
-            todayStr={todayStr}
-            onChange={selectDay}
-            firstCallDateStr={firstCallDateStr}
-          />
+
+          <div style={{ position: 'relative' }} ref={calBtnRef}>
+            <button
+              onClick={() => setCalOpen(o => !o)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                height: 28, padding: '0 12px',
+                background: hasCustomRange || calOpen ? 'var(--bg-elevated)' : 'var(--bg-surface)',
+                border: `0.5px solid ${hasCustomRange ? 'var(--accent)' : 'var(--border)'}`,
+                borderRadius: 8, cursor: 'pointer',
+                fontSize: 12, color: hasCustomRange ? 'var(--accent)' : 'var(--text-muted)',
+                transition: 'all 0.1s',
+              }}
+            >
+              <CalendarIcon size={12} />
+              {calBtnLabel}
+              {hasCustomRange && (
+                <span
+                  onClick={e => { e.stopPropagation(); clearRange() }}
+                  style={{ marginLeft: 2, display: 'flex', alignItems: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}
+                >
+                  <X size={11} />
+                </span>
+              )}
+            </button>
+
+            {calOpen && (
+              <div
+                ref={calPanelRef}
+                style={{
+                  position: 'absolute', top: '100%', right: 0, marginTop: 6, zIndex: 200,
+                  background: '#13131F', border: '0.5px solid var(--border)',
+                  borderRadius: 10, boxShadow: '0 16px 40px rgba(0,0,0,0.4)',
+                  minWidth: 224,
+                }}
+              >
+                <div style={{ padding: '8px 12px 0', fontSize: 11, color: 'var(--text-muted)' }}>
+                  {!rangeStart ? 'Click a start date' : !rangeEnd ? 'Click an end date' : null}
+                </div>
+                <RangeCalendar
+                  rangeStart={rangeStart}
+                  rangeEnd={rangeEnd}
+                  hoverDate={hoverDate}
+                  onDayClick={handleDayClick}
+                  onDayHover={setHoverDate}
+                  viewYear={calViewYear}
+                  viewMonth={calViewMonth}
+                  onPrev={prevMonth}
+                  onNext={nextMonth}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
