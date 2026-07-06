@@ -220,16 +220,20 @@ function shuffle(arr) {
 // own seekbar, but we snap any forward seek back to the furthest-watched
 // point every second, and disable keyboard shortcuts (arrow-key skip).
 // `startAt` resumes a previously-exited video from its saved position
-// (Prompt 232 item E) — the anti-skip floor starts there too, not at 0, so
-// resuming never re-opens the ability to skip ahead of where they'd gotten.
-// `getCurrentTime` is exposed via ref so the exit control can read the live
-// position at the moment the rep backs out, without threading it through
-// state on every tick.
+// (Prompt 232 item E) — where playback picks up on reopen.
+// `maxWatched` (Prompt 239) is a separate high-water mark — the furthest
+// point ever reached, which only ever increases. The anti-skip-forward
+// ceiling seeds from `maxWatched`, not `startAt`, so a rep who rewinds
+// before exiting (or reopens after rewinding) can still freely re-skip
+// forward up to ground they've already earned, without re-lowering the
+// ceiling itself. `getCurrentTime`/`getMaxWatched` are exposed via ref so
+// the exit control can read both live values when the rep backs out,
+// without threading them through state on every tick.
 
-const LockedVideoPlayer = forwardRef(function LockedVideoPlayer({ video, onEnded, startAt = 0 }, ref) {
+const LockedVideoPlayer = forwardRef(function LockedVideoPlayer({ video, onEnded, startAt = 0, maxWatched = 0 }, ref) {
   const containerRef = useRef(null)
   const playerRef    = useRef(null)
-  const maxTimeRef   = useRef(startAt)
+  const maxTimeRef   = useRef(Math.max(startAt, maxWatched))
   const endedRef     = useRef(false)
 
   useImperativeHandle(ref, () => ({
@@ -240,11 +244,12 @@ const LockedVideoPlayer = forwardRef(function LockedVideoPlayer({ video, onEnded
       }
       return maxTimeRef.current
     },
+    getMaxWatched: () => maxTimeRef.current,
   }), [])
 
   useEffect(() => {
     let cancelled = false
-    maxTimeRef.current = startAt
+    maxTimeRef.current = Math.max(startAt, maxWatched)
     endedRef.current = false
 
     function createPlayer() {
@@ -283,7 +288,7 @@ const LockedVideoPlayer = forwardRef(function LockedVideoPlayer({ video, onEnded
       cancelled = true
       try { playerRef.current?.destroy?.() } catch { /* ignore */ }
     }
-  }, [video.youtubeId, startAt])
+  }, [video.youtubeId, startAt, maxWatched])
 
   // Block scrubbing ahead — snap back to furthest-watched position
   useEffect(() => {
@@ -371,6 +376,28 @@ function MiniQuiz({ video, onDone }) {
   )
 }
 
+// Per-video position entries used to be a bare number (last exit position,
+// Prompt 232E). Prompt 239 splits that into `{ position, maxWatched }` so
+// rewinding before exit can't drag the anti-skip ceiling backward. Existing
+// rows still hold the old bare-number shape — normalize on read so both
+// shapes coexist without a column migration; the object shape gets written
+// back on the next save.
+function normalizePositionEntry(raw) {
+  if (typeof raw === 'number') return { position: raw, maxWatched: raw }
+  if (raw && typeof raw === 'object') {
+    const position = typeof raw.position === 'number' ? raw.position : 0
+    const maxWatched = typeof raw.maxWatched === 'number' ? Math.max(raw.maxWatched, position) : position
+    return { position, maxWatched }
+  }
+  return { position: 0, maxWatched: 0 }
+}
+
+function normalizePositions(raw) {
+  const out = {}
+  for (const [id, v] of Object.entries(raw || {})) out[id] = normalizePositionEntry(v)
+  return out
+}
+
 // ── VideoLibrary ──────────────────────────────────────────────────────────────
 
 function VideoLibrary({ progress, saveProgress }) {
@@ -382,14 +409,14 @@ function VideoLibrary({ progress, saveProgress }) {
     try { fromLs = JSON.parse(localStorage.getItem(LS_VIDEOS) || '[]') } catch { /* ignore */ }
     return [...new Set([...fromDb, ...fromLs])]
   })
-  // Per-video resume position in seconds, keyed by video id (Prompt 232 item
-  // E) — lets a rep exit mid-watch and pick up where they left off, same
-  // watched/localStorage-merge pattern as above.
+  // Per-video position, keyed by video id (Prompt 232 item E, reshaped by
+  // Prompt 239) — `position` is where playback resumes, `maxWatched` is the
+  // furthest-ever-reached high-water mark that seeds the anti-skip ceiling.
   const [positions, setPositions] = useState(() => {
     const fromDb = progress?.video_positions && typeof progress.video_positions === 'object' ? progress.video_positions : {}
     let fromLs = {}
     try { fromLs = JSON.parse(localStorage.getItem(LS_VIDEO_POSITIONS) || '{}') } catch { /* ignore */ }
-    return { ...fromLs, ...fromDb }
+    return normalizePositions({ ...fromLs, ...fromDb })
   })
   const [activeVideo, setActiveVideo] = useState(null)
   // 'playing' while locked, 'quiz' once the video ends and the mini quiz shows
@@ -402,13 +429,14 @@ function VideoLibrary({ progress, saveProgress }) {
     if (fromDb.length) setWatched(prev => prev.length === new Set([...prev, ...fromDb]).size ? prev : [...new Set([...prev, ...fromDb])])
     const fromDbPositions = progress?.video_positions
     if (fromDbPositions && typeof fromDbPositions === 'object') {
-      setPositions(prev => ({ ...fromDbPositions, ...prev }))
+      setPositions(prev => ({ ...normalizePositions(fromDbPositions), ...prev }))
     }
   }, [progress])
 
-  function savePosition(id, seconds) {
+  function savePosition(id, seconds, maxWatched) {
     setPositions(prev => {
-      const next = { ...prev, [id]: seconds }
+      const prevEntry = prev[id] || { position: 0, maxWatched: 0 }
+      const next = { ...prev, [id]: { position: seconds, maxWatched: Math.max(prevEntry.maxWatched, maxWatched, seconds) } }
       localStorage.setItem(LS_VIDEO_POSITIONS, JSON.stringify(next))
       saveProgress({ video_positions: next })
       return next
@@ -444,11 +472,14 @@ function VideoLibrary({ progress, saveProgress }) {
 
   // Exit mid-watch — saves the live playback position so the next open of
   // this same video resumes from here, then closes the modal. Only reachable
-  // during the 'playing' stage; the anti-skip-forward floor still applies on
-  // resume since LockedVideoPlayer seeds maxTimeRef from the saved position.
+  // during the 'playing' stage. Saves current position and furthest-reached
+  // separately (Prompt 239) — the anti-skip-forward ceiling on resume comes
+  // from maxWatched, not the exit position, so exiting after a rewind can't
+  // drag the ceiling backward.
   function exitVideo() {
     const t = playerRef.current?.getCurrentTime?.()
-    if (activeVideo && typeof t === 'number' && t > 0) savePosition(activeVideo.id, t)
+    const maxWatched = playerRef.current?.getMaxWatched?.() ?? 0
+    if (activeVideo && typeof t === 'number' && t > 0) savePosition(activeVideo.id, t, maxWatched)
     closeVideo()
   }
 
@@ -660,7 +691,8 @@ function VideoLibrary({ progress, saveProgress }) {
                   <LockedVideoPlayer
                     ref={playerRef}
                     video={activeVideo}
-                    startAt={positions[activeVideo.id] || 0}
+                    startAt={positions[activeVideo.id]?.position || 0}
+                    maxWatched={positions[activeVideo.id]?.maxWatched || 0}
                     onEnded={() => setStage('quiz')}
                   />
                 </div>
