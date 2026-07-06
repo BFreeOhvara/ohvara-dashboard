@@ -13,7 +13,6 @@ import { CallModal } from '../../components/rep/CallModal'
 import { Badge } from '../../components/ui/Badge'
 import { KPICard } from '../../components/ui/KPICard'
 import { LiveClock } from '../../components/ui/LiveClock'
-import { nextLocalMidnightUtcMs, DEFAULT_TIMEZONE } from '../../lib/timezones'
 
 const STATUS_FILTERS = ['New', 'Appointment Booked', 'Follow-Up', 'No Answer', 'Not Interested', 'All']
 
@@ -38,19 +37,6 @@ function computeKPIs(leads) {
   const total  = leads.length
   const called = leads.filter(l => l.status !== 'New').length
   return { called, total }
-}
-
-// Batch reset countdown target — Prompt 226 made assign_daily_batches()
-// per-rep-timezone-aware (a rep's batch resets at THEIR OWN local midnight,
-// checked every 15 min by the cron), replacing the single hardcoded UTC
-// instant this used to count down to. Countdown now targets the rep's own
-// profile.timezone (Settings > Regional) instead.
-function formatResetCountdown(nowMs, timeZone) {
-  const next = nextLocalMidnightUtcMs(timeZone || DEFAULT_TIMEZONE, nowMs)
-  const totalMinutes = Math.floor((next - nowMs) / 60000)
-  if (totalMinutes < 1) return 'Leads refreshing'
-  if (totalMinutes < 60) return `Leads refresh ${totalMinutes}m`
-  return `Leads refresh ${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`
 }
 
 // Count of the rep's leads with status Follow-Up whose follow_up_at lands on
@@ -339,7 +325,6 @@ export default function MyLeads() {
     scrollRestored.current = true
   }, [isLoading])
 
-  const resetCountdown = useMemo(() => formatResetCountdown(now, profile?.timezone), [now, profile?.timezone])
   const kpis = useMemo(() => computeKPIs(leads), [leads])
   const newCount = useMemo(() => leads ? leads.filter(l => l.status === 'New').length : null, [leads])
   // Recompute on each `now` tick so the count rolls over with the day / as
@@ -386,9 +371,6 @@ export default function MyLeads() {
           <LiveClock timezone={profile?.timezone} />
           <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
             {today}
-          </span>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-            {resetCountdown}
           </span>
         </div>
       </div>

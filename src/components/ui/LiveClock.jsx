@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Clock } from 'lucide-react'
 import { formatInTimezone, timezoneAbbr, DEFAULT_TIMEZONE } from '../../lib/timezones'
 
 // Actually-ticking clock (1s interval) tied to the viewing user's own
 // Settings > Regional timezone — not a static timestamp that only updates
-// on page refresh (Prompt 227).
+// on page refresh (Prompt 227). 24-hour, no seconds, plain text (Prompt 229).
 export function LiveClock({ timezone }) {
   const [nowMs, setNowMs] = useState(() => Date.now())
 
@@ -15,16 +14,14 @@ export function LiveClock({ timezone }) {
 
   const tz = timezone || DEFAULT_TIMEZONE
   const time = formatInTimezone(new Date(nowMs).toISOString(), tz, {
-    hour: 'numeric', minute: '2-digit', second: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
   })
 
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 6,
       fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)',
       fontVariantNumeric: 'tabular-nums',
     }}>
-      <Clock size={12} />
       {time} {timezoneAbbr(tz)}
     </span>
   )
