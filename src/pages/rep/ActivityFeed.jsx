@@ -82,8 +82,8 @@ export default function ActivityFeed() {
           </div>
         ) : (
           <div className="space-y-1 scrollbar-thin" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-            {items.map(item => (
-              <FeedItem key={item.id} item={item} />
+            {items.map((item, i) => (
+              <FeedItem key={item.id} item={item} isLast={i === items.length - 1} />
             ))}
           </div>
         )}
@@ -103,7 +103,7 @@ export const STATUS_COLORS = {
   'Follow-Up':          { color: '#F59E0B', dim: 'rgba(245,158,11,0.10)' },
 }
 
-function FeedItem({ item }) {
+function FeedItem({ item, isLast }) {
   const sc = item.status ? STATUS_COLORS[item.status] : null
 
   const icons = {
@@ -113,7 +113,10 @@ function FeedItem({ item }) {
   return (
     <div
       className="flex items-start gap-3 px-2 py-2.5 rounded-lg hover:bg-[var(--bg-2)] transition-colors"
-      style={sc ? { borderLeft: `2px solid ${sc.color}` } : { borderLeft: '2px solid transparent' }}
+      style={{
+        borderLeft: sc ? `2px solid ${sc.color}` : '2px solid transparent',
+        borderBottom: isLast ? 'none' : '0.5px solid var(--border)',
+      }}
     >
       <div
         className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"

@@ -82,7 +82,7 @@ export default function MyCalls() {
           <Loader2 size={20} style={{ color: 'var(--text-muted)', animation: 'spin 1s linear infinite' }} />
         </div>
       ) : calls.length === 0 ? (
-        <div className="glass" style={{ padding: '40px 24px', borderRadius: 12, textAlign: 'center' }}>
+        <div className="glass" style={{ borderRadius: 12, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
           <Phone size={20} style={{ color: 'var(--text-muted)', margin: '0 auto 8px', display: 'block' }} />
           <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '0 0 4px' }}>
             {selectedDate === todayStr
@@ -105,7 +105,7 @@ export default function MyCalls() {
                 onClick={() => setOpenCall(c)}
                 style={{
                   padding: '14px 18px', cursor: 'pointer',
-                  borderBottom: i < calls.length - 1 ? '0.5px solid var(--border)' : 'none',
+                  borderBottom: '0.5px solid var(--border)',
                   display: 'flex', alignItems: 'center', gap: 14,
                   animationDelay: `${i * 0.03}s`,
                   transition: 'background-color 100ms',
