@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
   // If the recording callback fires before Done, this row won't exist yet.
   const { data: callRow } = await admin
     .from('calls')
-    .select('id, rep_id, lead:leads ( business_name )')
+    .select('id, rep_id, lead:leads ( business_name ), rep:profiles!rep_id ( notification_prefs )')
     .eq('twilio_call_sid', callSid)
     .maybeSingle()
 
@@ -159,19 +159,24 @@ Return ONLY valid JSON with no markdown fences:
     graded_at:        new Date().toISOString(),
   }).eq('id', callRow.id)
 
-  // ── 5. Insert bell notification for the rep ──────────────────────────────
-  const bizName = (callRow.lead as { business_name?: string } | null)?.business_name || 'your call'
-  await admin.from('notifications').insert({
-    profile_id: callRow.rep_id,
-    type: 'call_graded',
-    message: `Your call with ${bizName} was graded: ${grade}`,
-    data: {
-      call_id:          callRow.id,
-      grade,
-      feedback_good:    feedbackGood,
-      feedback_improve: feedbackImprove,
-    },
-  })
+  // ── 5. Insert bell notification for the rep (Prompt 226 — respect Settings
+  //       > Notifications toggle; empty/missing = enabled, matching the
+  //       opt-out default used everywhere else this category list is gated) ──
+  const notifPrefs = (callRow.rep as { notification_prefs?: Record<string, boolean> } | null)?.notification_prefs
+  if (notifPrefs?.call_graded !== false) {
+    const bizName = (callRow.lead as { business_name?: string } | null)?.business_name || 'your call'
+    await admin.from('notifications').insert({
+      profile_id: callRow.rep_id,
+      type: 'call_graded',
+      message: `Your call with ${bizName} was graded: ${grade}`,
+      data: {
+        call_id:          callRow.id,
+        grade,
+        feedback_good:    feedbackGood,
+        feedback_improve: feedbackImprove,
+      },
+    })
+  }
 
   console.log('[grade-call] Done —', callRow.id, grade)
   return json({ success: true, call_id: callRow.id, grade })

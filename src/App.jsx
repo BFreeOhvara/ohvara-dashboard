@@ -7,6 +7,7 @@ import { DashboardLayout } from './components/layout/DashboardLayout'
 
 import Login from './pages/Login'
 import ClientPreview from './pages/ClientPreview'
+import Settings from './pages/Settings'
 import { BackgroundOrbs } from './components/BackgroundOrbs'
 
 // Rep pages
@@ -76,6 +77,13 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/preview/:appointmentId" element={<ClientPreview />} />
             <Route path="/" element={<RoleRedirect />} />
+
+            {/* Settings — shared across every role (Prompt 226) */}
+            <Route path="/settings" element={
+              <ProtectedRoute allowedRoles={['rep', 'closer', 'admin', 'client']}>
+                <DashboardLayout><Settings /></DashboardLayout>
+              </ProtectedRoute>
+            } />
 
             {/* Rep routes */}
             <Route path="/rep" element={

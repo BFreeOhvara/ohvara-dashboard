@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { useNotificationPrefs, isNotificationCategoryEnabled } from './useSettings'
 
 // ── Appointment booked notifier ──────────────────────────────────────────────
 // Listens for realtime INSERTs on appointments where closer_id = closerId.
@@ -8,6 +9,7 @@ import { supabase } from '../lib/supabase'
 export function useAppointmentBookedNotifier(closerId) {
   const qc = useQueryClient()
   const notifiedThisSession = useRef(new Set())
+  const { data: prefs } = useNotificationPrefs(closerId)
 
   useEffect(() => {
     if (!closerId) return
@@ -20,6 +22,7 @@ export function useAppointmentBookedNotifier(closerId) {
         const apptId = payload.new?.id
         if (!apptId || notifiedThisSession.current.has(apptId)) return
         notifiedThisSession.current.add(apptId)
+        if (!isNotificationCategoryEnabled(prefs, 'appointment_booked')) return
 
         let bizName = 'a new lead'
         if (payload.new?.lead_id) {
@@ -46,7 +49,7 @@ export function useAppointmentBookedNotifier(closerId) {
       })
       .subscribe()
     return () => supabase.removeChannel(channel)
-  }, [closerId, qc])
+  }, [closerId, qc, prefs])
 }
 
 // ── Call recording graded notifier ───────────────────────────────────────────
@@ -82,9 +85,11 @@ export function useCloserCallGradedNotifier(closerId) {
 export function useAppointmentReminder5MinNotifier(closerId) {
   const qc = useQueryClient()
   const notifiedThisSession = useRef(new Set())
+  const { data: prefs } = useNotificationPrefs(closerId)
 
   useEffect(() => {
     if (!closerId) return
+    if (!isNotificationCategoryEnabled(prefs, 'appointment_reminder_5min')) return
 
     async function check() {
       const now = new Date()
@@ -126,5 +131,5 @@ export function useAppointmentReminder5MinNotifier(closerId) {
     check()
     const timer = setInterval(check, 60_000)
     return () => clearInterval(timer)
-  }, [closerId, qc])
+  }, [closerId, qc, prefs])
 }

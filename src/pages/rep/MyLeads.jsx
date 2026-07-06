@@ -12,6 +12,7 @@ import {
 import { CallModal } from '../../components/rep/CallModal'
 import { Badge } from '../../components/ui/Badge'
 import { KPICard } from '../../components/ui/KPICard'
+import { nextLocalMidnightUtcMs, DEFAULT_TIMEZONE } from '../../lib/timezones'
 
 const STATUS_FILTERS = ['New', 'Appointment Booked', 'Follow-Up', 'No Answer', 'Not Interested', 'All']
 
@@ -38,23 +39,14 @@ function computeKPIs(leads) {
   return { called, total }
 }
 
-// Batch reset countdown target — 06:05 UTC (1:05 AM Central). Brayden
-// rescheduled the live `daily-batch-assign` cron via the Supabase SQL editor
-// on 2026-06-22 (confirmed directly in chat, not via a relayed prompt — see
-// Memories same date for the back-and-forth this resolved). Migration
-// 016's committed schedule line still literally reads '5 0 * * *' (00:05
-// UTC) and was not updated to match — if this drifts again, update here.
-const BATCH_RESET_UTC_HOUR = 6
-const BATCH_RESET_UTC_MINUTE = 5
-
-function formatResetCountdown(nowMs) {
-  const now = new Date(nowMs)
-  const next = new Date(Date.UTC(
-    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(),
-    BATCH_RESET_UTC_HOUR, BATCH_RESET_UTC_MINUTE, 0, 0
-  ))
-  if (next.getTime() <= nowMs) next.setUTCDate(next.getUTCDate() + 1)
-  const totalMinutes = Math.floor((next.getTime() - nowMs) / 60000)
+// Batch reset countdown target — Prompt 226 made assign_daily_batches()
+// per-rep-timezone-aware (a rep's batch resets at THEIR OWN local midnight,
+// checked every 15 min by the cron), replacing the single hardcoded UTC
+// instant this used to count down to. Countdown now targets the rep's own
+// profile.timezone (Settings > Regional) instead.
+function formatResetCountdown(nowMs, timeZone) {
+  const next = nextLocalMidnightUtcMs(timeZone || DEFAULT_TIMEZONE, nowMs)
+  const totalMinutes = Math.floor((next - nowMs) / 60000)
   if (totalMinutes < 1) return 'Leads refreshing'
   if (totalMinutes < 60) return `Leads refresh ${totalMinutes}m`
   return `Leads refresh ${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`
@@ -346,7 +338,7 @@ export default function MyLeads() {
     scrollRestored.current = true
   }, [isLoading])
 
-  const resetCountdown = useMemo(() => formatResetCountdown(now), [now])
+  const resetCountdown = useMemo(() => formatResetCountdown(now, profile?.timezone), [now, profile?.timezone])
   const kpis = useMemo(() => computeKPIs(leads), [leads])
   const newCount = useMemo(() => leads ? leads.filter(l => l.status === 'New').length : null, [leads])
   // Recompute on each `now` tick so the count rolls over with the day / as

@@ -4,7 +4,7 @@ import {
   Users, Phone, BarChart2, Target, Bell,
   Calendar, DollarSign, TrendingUp, BookOpen,
   LayoutDashboard, List, Columns, RefreshCw, Database, LogOut,
-  Zap, Search, PhoneCall, GitBranch, MessageSquare, Home, Wallet
+  Zap, Search, PhoneCall, GitBranch, MessageSquare, Home, Wallet, Settings
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { NotificationBell } from '../admin/NotificationBell'
@@ -175,6 +175,22 @@ export function Sidebar() {
               {profile?.username || profile?.email}
             </p>
           </div>
+          <NavLink
+            to="/settings"
+            title="Settings"
+            className={({ isActive }) => clsx(
+              'tab-transition',
+              isActive ? '' : ''
+            )}
+            style={({ isActive }) => ({
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 26, height: 26, borderRadius: 6, flexShrink: 0,
+              color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+              background: isActive ? 'var(--bg-elevated)' : 'transparent',
+            })}
+          >
+            <Settings size={15} />
+          </NavLink>
         </div>
         <button
           onClick={handleSignOut}

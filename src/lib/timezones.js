@@ -111,3 +111,20 @@ export function utcIsoToZonedDatetimeLocal(iso, timeZone) {
   const parts = dtf.formatToParts(d).reduce((acc, p) => { acc[p.type] = p.value; return acc }, {})
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
 }
+
+// The UTC epoch ms of the next local midnight in `timeZone`, as of `nowMs`
+// (Prompt 226 — the batch-reset countdown now tracks each rep's own
+// timezone instead of a single hardcoded UTC instant, matching the
+// per-rep-aware assign_daily_batches() cron).
+export function nextLocalMidnightUtcMs(timeZone, nowMs) {
+  const tz = timeZone || DEFAULT_TIMEZONE
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+  })
+  const parts = dtf.formatToParts(new Date(nowMs)).reduce((acc, p) => { acc[p.type] = p.value; return acc }, {})
+  const tomorrow = new Date(Date.UTC(+parts.year, +parts.month - 1, +parts.day + 1))
+  const y = tomorrow.getUTCFullYear()
+  const m = String(tomorrow.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(tomorrow.getUTCDate()).padStart(2, '0')
+  return new Date(zonedTimeToUtcIso(`${y}-${m}-${d}T00:00`, tz)).getTime()
+}

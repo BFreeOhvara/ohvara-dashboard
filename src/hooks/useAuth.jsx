@@ -115,10 +115,20 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut()
   }
 
+  // Re-fetch the current user's own profile row without the blocking loader
+  // that a user-change would trigger — Settings (Prompt 226) calls this
+  // after a self-service save so profile fields update in place instead of
+  // requiring a full page reload (the pattern MyCommissions/RevenueTracker
+  // use for the Stripe onboarding flag).
+  async function refreshProfile() {
+    if (!session?.user?.id) return
+    await fetchProfile(session.user.id, false)
+  }
+
   const loading = session === undefined || profileLoading
 
   return (
-    <AuthContext.Provider value={{ session, profile, signIn, signOut, loading }}>
+    <AuthContext.Provider value={{ session, profile, signIn, signOut, loading, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )
