@@ -233,18 +233,23 @@ function SingleDayCalendar({ selectedDate, onDayClick, viewYear, viewMonth, onPr
           const isToday = dateStr === today
           const isFirstCall = dateStr === firstCallDateStr
           const future = dateStr > today
+          // Selected-day blue takes visual priority — the star only renders
+          // when the start day isn't also the currently selected day, so the
+          // two markers (selection vs. "day one") never compete for the same
+          // background (Prompt 232D's distinctness requirement).
+          const showStar = isFirstCall && !isSelected
           return (
             <div
               key={dateStr}
               onClick={() => !future && onDayClick(dateStr)}
-              title={isFirstCall ? 'Your first graded call' : undefined}
+              title={isFirstCall ? 'Your start day' : undefined}
               style={{
                 position: 'relative',
                 textAlign: 'center', fontSize: 12,
                 padding: '5px 0', borderRadius: 4,
                 cursor: future ? 'default' : 'pointer',
-                background: isSelected ? 'var(--accent)' : isFirstCall ? 'var(--warning)' : 'transparent',
-                color: isSelected || isFirstCall
+                background: isSelected ? 'var(--accent)' : 'transparent',
+                color: isSelected || showStar
                   ? '#fff'
                   : future
                   ? 'var(--text-muted)'
@@ -255,7 +260,16 @@ function SingleDayCalendar({ selectedDate, onDayClick, viewYear, viewMonth, onPr
                 transition: 'background 80ms',
               }}
             >
-              {+dateStr.slice(8)}
+              {showStar && (
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="var(--warning)"
+                  style={{ position: 'absolute', inset: 0, margin: 'auto', width: '90%', height: '90%', zIndex: 0 }}
+                >
+                  <polygon points="12 1.5, 15.09 8.26, 22 9.27, 17 14.14, 18.18 21.02, 12 17.77, 5.82 21.02, 7 14.14, 2 9.27, 8.91 8.26" />
+                </svg>
+              )}
+              <span style={{ position: 'relative', zIndex: 1 }}>{+dateStr.slice(8)}</span>
             </div>
           )
         })}
