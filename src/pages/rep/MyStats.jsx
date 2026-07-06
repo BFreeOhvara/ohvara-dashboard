@@ -1,23 +1,16 @@
 import { useState } from 'react'
-import { Phone, Calendar, TrendingUp, Clock, X } from 'lucide-react'
+import { Phone, Calendar, TrendingUp, Clock } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
 import { useRepStats, useRepDailyActivity, useCompletedDays, useTodayCallStats, DAILY_BATCH_TARGET } from '../../hooks/useProfiles'
 import { StatCard } from '../../components/ui/StatCard'
 import { Button } from '../../components/ui/Button'
-import { RangeCalendar, useRangeCalendar } from '../../components/ui/RangeCalendar'
+import { DayFilterBar, useDayFilter } from '../../components/ui/DayFilterBar'
 
-// 'all' is first/default per Brayden's live review (Prompt 233) — "it starts
-// with all time". 'custom' reveals the shared RangeCalendar (same picker as
-// MyCommissions) instead of a fixed lookback window.
-const PERIODS = [
-  { key: 'all', label: 'All Time' },
-  { key: 'day', label: 'Day' },
-  { key: 'week', label: 'Week' },
-  { key: 'month', label: 'Month' },
-  { key: 'custom', label: 'Custom' },
-]
-const SS_PERIOD = 'ohvara_mystats_period'
+// Prompt 234: replaced the Day/Week/Month/Custom tabs with the same shared
+// single-day DayFilterBar used on Activity Feed/My Calls, plus a standalone
+// All Time toggle — only two states now, not five.
+const SS_VIEW_MODE = 'ohvara_mystats_view_mode'
 
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -124,30 +117,37 @@ function CompletedDaysHeatmap({ days }) {
 
 export default function MyStats() {
   const { profile } = useAuth()
-  // Period selection survives tab switches via sessionStorage — All Time is the default view
-  const [period, setPeriod] = useState(() => sessionStorage.getItem(SS_PERIOD) || 'all')
-  const {
-    rangeStart, rangeEnd, hoverDate, setHoverDate,
-    calViewYear, calViewMonth, hasCustomRange, calBtnLabel,
-    clearRange, handleDayClick, prevMonth, nextMonth,
-  } = useRangeCalendar()
-  const customRange = hasCustomRange ? { from: rangeStart, to: rangeEnd } : null
-  const { data: stats, isLoading } = useRepStats(profile?.id, period, customRange)
+  const { todayStr, selectedDate, setSelectedDate, firstCallDateStr } = useDayFilter(profile?.id)
+  // Defaults to 'day' (today, via useDayFilter) per Brayden: "that's what it's
+  // on by default." Only two states now — a specific day, or All Time.
+  const [viewMode, setViewMode] = useState(() => sessionStorage.getItem(SS_VIEW_MODE) || 'day')
+  const isToday = selectedDate === todayStr
+
+  function selectDay(dateStr) {
+    setSelectedDate(dateStr)
+    setViewMode('day')
+    sessionStorage.setItem(SS_VIEW_MODE, 'day')
+  }
+  function selectAllTime() {
+    setViewMode('all')
+    sessionStorage.setItem(SS_VIEW_MODE, 'all')
+  }
+
+  // 'day' mode reuses the 'custom' period's {from,to} bounds with the same
+  // start/end date — a single-day range — rather than adding a third period type.
+  const dayRange = viewMode === 'day' ? { from: selectedDate, to: selectedDate } : null
+  const { data: stats, isLoading } = useRepStats(profile?.id, viewMode === 'all' ? 'all' : 'custom', dayRange)
   const { data: daily } = useRepDailyActivity(profile?.id)
   const { data: completedDays } = useCompletedDays(profile?.id, 21)
   const { data: today } = useTodayCallStats(profile?.id)
 
-  // Single source of truth: the Day view's headline numbers come from the
-  // same rep_today_metrics RPC as the My Leads KPIs, so "Total Dials" on Day
-  // === "Calls Today" on My Leads exactly.
-  const display = period === 'day' && today
+  // Single source of truth: today's headline numbers come from the same
+  // rep_today_metrics RPC as the My Leads KPIs, so "Total Dials" here ===
+  // "Calls Today" on My Leads exactly. Only applies when the selected day is
+  // actually today — a past day falls through to the plain scoped query.
+  const display = viewMode === 'day' && isToday && today
     ? { totalDials: today.calls, bookedCount: today.booked, bookingRate: String(today.bookingRate), avgCallDuration: stats?.avgCallDuration }
     : stats
-
-  function changePeriod(p) {
-    setPeriod(p)
-    sessionStorage.setItem(SS_PERIOD, p)
-  }
 
   return (
     <div>
@@ -156,51 +156,24 @@ export default function MyStats() {
           <h1 className="text-xl font-medium text-[var(--text-primary)]">My Stats</h1>
           <p className="text-[var(--text-muted)] text-sm mt-0.5">Your personal performance metrics</p>
         </div>
-        <div className="flex gap-1">
-          {PERIODS.map(p => (
-            <Button
-              key={p.key}
-              variant={period === p.key ? 'primary' : 'ghost'}
-              size="sm"
-              onClick={() => changePeriod(p.key)}
-            >
-              {p.label}
-            </Button>
-          ))}
+        <div className="flex items-center gap-2">
+          <Button
+            variant={viewMode === 'all' ? 'primary' : 'ghost'}
+            size="sm"
+            onClick={selectAllTime}
+          >
+            All Time
+          </Button>
+          <div style={{ opacity: viewMode === 'all' ? 0.5 : 1, transition: 'opacity 0.1s' }}>
+            <DayFilterBar
+              selectedDate={selectedDate}
+              todayStr={todayStr}
+              onChange={selectDay}
+              firstCallDateStr={firstCallDateStr}
+            />
+          </div>
         </div>
       </div>
-
-      {period === 'custom' && (
-        <div className="glass" style={{ marginBottom: 20, borderRadius: 12, padding: '4px 16px 4px 16px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-          <div style={{ paddingTop: 16 }}>
-            <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
-              {hasCustomRange ? calBtnLabel : !rangeStart ? 'Click a start date' : 'Click an end date'}
-            </p>
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '4px 0 0' }}>
-              {hasCustomRange ? 'Stats below scoped to this range' : 'Showing all-time until a range is picked'}
-            </p>
-            {hasCustomRange && (
-              <button
-                onClick={clearRange}
-                style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}
-              >
-                <X size={11} /> Clear range
-              </button>
-            )}
-          </div>
-          <RangeCalendar
-            rangeStart={rangeStart}
-            rangeEnd={rangeEnd}
-            hoverDate={hoverDate}
-            onDayClick={handleDayClick}
-            onDayHover={setHoverDate}
-            viewYear={calViewYear}
-            viewMonth={calViewMonth}
-            onPrev={prevMonth}
-            onNext={nextMonth}
-          />
-        </div>
-      )}
 
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
