@@ -20,6 +20,34 @@ function addUtcDays(dateStr, delta) {
   return toUtcDateStr(d.getTime())
 }
 
+// Rep's first-ever graded call date, for the "day one" star marker shown on
+// every calendar in the app (Prompt 231/232C's DayFilterBar grid, Prompt
+// 240's RangeCalendar grid) — one query shared by both so the star is
+// backed by a single source of truth instead of two hand-rolled copies.
+// Scoped to graded calls only — raw `calls` rows can be blank leftover
+// seed/test data (no outcome, no grade) that never represented a real dial.
+// repId is always the logged-in rep's own id (profile.id), never a fixed
+// account, so this is per-rep-dynamic by construction — a new rep's first
+// graded call becomes their own star automatically.
+export function useFirstGradedCallDate(repId) {
+  return useQuery({
+    queryKey: ['first-graded-call-date', repId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('calls')
+        .select('created_at')
+        .eq('rep_id', repId)
+        .not('grade', 'is', null)
+        .order('created_at', { ascending: true })
+        .limit(1)
+      if (error) throw error
+      return data?.[0] ? toUtcDateStr(data[0].created_at) : null
+    },
+    enabled: !!repId,
+    staleTime: Infinity,
+  }).data
+}
+
 // Tracks "today" (UTC calendar day) live and keeps selectedDate pinned to it
 // across a UTC midnight rollover, unless the user has stepped to a different
 // day. Always returns a real date string — never null/"all days".
@@ -46,26 +74,7 @@ export function useDayFilter(repId) {
     }
   }, [])
 
-  const { data: firstCallDateStr } = useQuery({
-    queryKey: ['first-graded-call-date', repId],
-    queryFn: async () => {
-      // Prompt 232 item C: scoped to graded calls only — raw `calls` rows can
-      // be blank leftover seed/test data (no outcome, no grade) that never
-      // represented a real dial. "First call" for the star marker means the
-      // first call that actually completed and got graded.
-      const { data, error } = await supabase
-        .from('calls')
-        .select('created_at')
-        .eq('rep_id', repId)
-        .not('grade', 'is', null)
-        .order('created_at', { ascending: true })
-        .limit(1)
-      if (error) throw error
-      return data?.[0] ? toUtcDateStr(data[0].created_at) : null
-    },
-    enabled: !!repId,
-    staleTime: Infinity,
-  })
+  const firstCallDateStr = useFirstGradedCallDate(repId)
 
   return { todayStr, selectedDate, setSelectedDate, firstCallDateStr }
 }

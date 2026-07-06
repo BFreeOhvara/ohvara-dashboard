@@ -123,7 +123,8 @@ export default function MyStats() {
     calOpen, setCalOpen, calViewYear, calViewMonth,
     calBtnRef, calPanelRef, hasCustomRange, calBtnLabel,
     clearRange, handleDayClick, prevMonth, nextMonth,
-  } = useRangeCalendar()
+    firstCallDateStr,
+  } = useRangeCalendar(profile?.id)
 
   const todayStr = toUtcDateStr(Date.now())
   const isSingleDay = hasCustomRange && rangeStart === rangeEnd
@@ -208,6 +209,7 @@ export default function MyStats() {
                   viewMonth={calViewMonth}
                   onPrev={prevMonth}
                   onNext={nextMonth}
+                  firstCallDateStr={firstCallDateStr}
                 />
               </div>
             )}

@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useEffect } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { toUtcDateStr } from './DayFilterBar'
+import { toUtcDateStr, useFirstGradedCallDate } from './DayFilterBar'
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const DAY_LABELS = ['Su','Mo','Tu','We','Th','Fr','Sa']
@@ -14,8 +14,11 @@ export function fmtRangeLabel(iso) {
 // Contiguous start+end click-to-select range state — shared behavior for
 // every 2-endpoint range picker in the app (MyCommissions, MyStats) so they
 // stay pixel-for-pixel and behaviorally identical instead of drifting.
-export function useRangeCalendar() {
+// repId (optional) fetches the rep's first-graded-call date for the "day
+// one" star marker (Prompt 240) — same source DayFilterBar's calendar uses.
+export function useRangeCalendar(repId) {
   const now = new Date()
+  const firstCallDateStr = useFirstGradedCallDate(repId)
   const [rangeStart, setRangeStart] = useState(null)
   const [rangeEnd, setRangeEnd] = useState(null)
   const [hoverDate, setHoverDate] = useState(null)
@@ -80,13 +83,14 @@ export function useRangeCalendar() {
     calOpen, setCalOpen, calViewYear, calViewMonth,
     calBtnRef, calPanelRef, hasCustomRange, calBtnLabel,
     clearRange, handleDayClick, prevMonth, nextMonth,
+    firstCallDateStr,
   }
 }
 
 // Presentational month grid — contiguous start+end click-to-select with
 // hover preview (Prompt 231D, extracted to shared in Prompt 233 so My Stats
 // doesn't become a third hand-rolled variant of the same picker).
-export function RangeCalendar({ rangeStart, rangeEnd, hoverDate, onDayClick, onDayHover, viewYear, viewMonth, onPrev, onNext }) {
+export function RangeCalendar({ rangeStart, rangeEnd, hoverDate, onDayClick, onDayHover, viewYear, viewMonth, onPrev, onNext, firstCallDateStr }) {
   const today = toUtcDateStr(Date.now())
 
   const cells = useMemo(() => {
@@ -151,13 +155,22 @@ export function RangeCalendar({ rangeStart, rangeEnd, hoverDate, onDayClick, onD
           const edge = isEdge(dateStr)
           const isToday = dateStr === today
           const future = dateStr > today
+          const isFirstCall = dateStr === firstCallDateStr
+          // Star suppressed whenever this day is part of the current
+          // selection/preview (edge or in-range) — a range picker highlights
+          // more than one cell, so "selected" here means covered by the
+          // active pick or hover-preview, not just an exact single-day match
+          // (Prompt 240, mirrors DayFilterBar's single-day suppress rule).
+          const showStar = isFirstCall && !edge && !inRange
           return (
             <div
               key={dateStr}
               onClick={() => !future && onDayClick(dateStr)}
               onMouseEnter={() => !future && onDayHover(dateStr)}
               onMouseLeave={() => onDayHover(null)}
+              title={isFirstCall ? 'Your start day' : undefined}
               style={{
+                position: 'relative',
                 textAlign: 'center', fontSize: 12,
                 padding: '5px 0', borderRadius: 4,
                 cursor: future ? 'default' : 'pointer',
@@ -166,18 +179,27 @@ export function RangeCalendar({ rangeStart, rangeEnd, hoverDate, onDayClick, onD
                   : inRange
                   ? 'rgba(108,99,255,0.18)'
                   : 'transparent',
-                color: edge
+                color: edge || showStar
                   ? '#fff'
                   : future
                   ? 'var(--text-muted)'
                   : isToday
                   ? 'var(--accent)'
                   : 'var(--text-primary)',
-                fontWeight: edge || isToday ? 600 : 400,
+                fontWeight: edge || isToday || isFirstCall ? 600 : 400,
                 transition: 'background 80ms',
               }}
             >
-              {+dateStr.slice(8)}
+              {showStar && (
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="var(--warning)"
+                  style={{ position: 'absolute', inset: 0, margin: 'auto', width: '90%', height: '90%', zIndex: 0 }}
+                >
+                  <polygon points="12 1.5, 15.09 8.26, 22 9.27, 17 14.14, 18.18 21.02, 12 17.77, 5.82 21.02, 7 14.14, 2 9.27, 8.91 8.26" />
+                </svg>
+              )}
+              <span style={{ position: 'relative', zIndex: 1 }}>{+dateStr.slice(8)}</span>
             </div>
           )
         })}
