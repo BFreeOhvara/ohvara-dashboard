@@ -21,7 +21,7 @@ export default function ActivityFeed() {
   // CURRENT_DATE with zero per-rep timezone adjustment. Browser-local would
   // disagree with what the rest of the dashboard considers "today" (Prompt 223
   // investigation, see brain/Memories.md).
-  const { todayStr, selectedDate, setSelectedDate } = useDayFilter()
+  const { todayStr, selectedDate, setSelectedDate, firstCallDateStr } = useDayFilter(profile?.id)
 
   const { data: calls, isLoading } = useQuery({
     queryKey: ['activity', profile?.id],
@@ -61,7 +61,7 @@ export default function ActivityFeed() {
           <p className="text-[var(--text-muted)] text-sm mt-0.5">Call outcomes — booked, follow-up, no answer, not interested</p>
         </div>
 
-        <DayFilterBar selectedDate={selectedDate} todayStr={todayStr} onChange={setSelectedDate} />
+        <DayFilterBar selectedDate={selectedDate} todayStr={todayStr} onChange={setSelectedDate} firstCallDateStr={firstCallDateStr} />
       </div>
 
       <Card style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
@@ -82,8 +82,8 @@ export default function ActivityFeed() {
           </div>
         ) : (
           <div className="space-y-1 scrollbar-thin" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-            {items.map((item, i) => (
-              <FeedItem key={item.id} item={item} isLast={i === items.length - 1} />
+            {items.map((item) => (
+              <FeedItem key={item.id} item={item} />
             ))}
           </div>
         )}
@@ -103,7 +103,7 @@ export const STATUS_COLORS = {
   'Follow-Up':          { color: '#F59E0B', dim: 'rgba(245,158,11,0.10)' },
 }
 
-function FeedItem({ item, isLast }) {
+function FeedItem({ item }) {
   const sc = item.status ? STATUS_COLORS[item.status] : null
 
   const icons = {
@@ -115,7 +115,7 @@ function FeedItem({ item, isLast }) {
       className="flex items-start gap-3 px-2 py-2.5 rounded-lg hover:bg-[var(--bg-2)] transition-colors"
       style={{
         borderLeft: sc ? `2px solid ${sc.color}` : '2px solid transparent',
-        borderBottom: isLast ? 'none' : '0.5px solid var(--border)',
+        borderBottom: '0.5px solid var(--border)',
       }}
     >
       <div

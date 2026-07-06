@@ -444,10 +444,10 @@ export default function Overview() {
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <LiveClock timezone={tz} />
             <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
               {today}
             </span>
+            <LiveClock timezone={tz} />
           </div>
         </div>
 

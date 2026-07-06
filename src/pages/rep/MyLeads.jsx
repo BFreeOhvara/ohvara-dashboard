@@ -368,10 +368,10 @@ export default function MyLeads() {
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <LiveClock timezone={profile?.timezone} />
           <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
             {today}
           </span>
+          <LiveClock timezone={profile?.timezone} />
         </div>
       </div>
 

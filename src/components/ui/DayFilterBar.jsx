@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Star } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
 
 // Shared single-day-only calendar filter — Activity Feed (Prompt 223/225) and
 // My Calls (Prompt 227) both use this. No "all days" escape hatch: callers
@@ -21,7 +23,9 @@ function addUtcDays(dateStr, delta) {
 // Tracks "today" (UTC calendar day) live and keeps selectedDate pinned to it
 // across a UTC midnight rollover, unless the user has stepped to a different
 // day. Always returns a real date string — never null/"all days".
-export function useDayFilter() {
+// repId (optional) also fetches the rep's first-ever call date, for the
+// "day one" star marker in DayFilterBar's calendar grid (Prompt 231).
+export function useDayFilter(repId) {
   const [todayStr, setTodayStr] = useState(() => toUtcDateStr(Date.now()))
   const [selectedDate, setSelectedDate] = useState(() => toUtcDateStr(Date.now()))
 
@@ -42,10 +46,26 @@ export function useDayFilter() {
     }
   }, [])
 
-  return { todayStr, selectedDate, setSelectedDate }
+  const { data: firstCallDateStr } = useQuery({
+    queryKey: ['first-call-date', repId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('calls')
+        .select('created_at')
+        .eq('rep_id', repId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+      if (error) throw error
+      return data?.[0] ? toUtcDateStr(data[0].created_at) : null
+    },
+    enabled: !!repId,
+    staleTime: Infinity,
+  })
+
+  return { todayStr, selectedDate, setSelectedDate, firstCallDateStr }
 }
 
-export function DayFilterBar({ selectedDate, todayStr, onChange }) {
+export function DayFilterBar({ selectedDate, todayStr, onChange, firstCallDateStr }) {
   const [calOpen, setCalOpen] = useState(false)
   const now = new Date()
   const [calViewYear, setCalViewYear] = useState(now.getUTCFullYear())
@@ -152,6 +172,7 @@ export function DayFilterBar({ selectedDate, todayStr, onChange }) {
             viewMonth={calViewMonth}
             onPrev={prevMonth}
             onNext={nextMonth}
+            firstCallDateStr={firstCallDateStr}
           />
         </div>
       )}
@@ -159,7 +180,7 @@ export function DayFilterBar({ selectedDate, todayStr, onChange }) {
   )
 }
 
-function SingleDayCalendar({ selectedDate, onDayClick, viewYear, viewMonth, onPrev, onNext }) {
+function SingleDayCalendar({ selectedDate, onDayClick, viewYear, viewMonth, onPrev, onNext, firstCallDateStr }) {
   const today = new Date().toISOString().slice(0, 10)
 
   const cells = useMemo(() => {
@@ -205,12 +226,15 @@ function SingleDayCalendar({ selectedDate, onDayClick, viewYear, viewMonth, onPr
           if (!dateStr) return <div key={i} />
           const isSelected = dateStr === selectedDate
           const isToday = dateStr === today
+          const isFirstCall = dateStr === firstCallDateStr
           const future = dateStr > today
           return (
             <div
               key={dateStr}
               onClick={() => !future && onDayClick(dateStr)}
+              title={isFirstCall ? 'Your first call' : undefined}
               style={{
+                position: 'relative',
                 textAlign: 'center', fontSize: 12,
                 padding: '5px 0', borderRadius: 4,
                 cursor: future ? 'default' : 'pointer',
@@ -227,6 +251,13 @@ function SingleDayCalendar({ selectedDate, onDayClick, viewYear, viewMonth, onPr
               }}
             >
               {+dateStr.slice(8)}
+              {isFirstCall && (
+                <Star
+                  size={7}
+                  fill="var(--warning)"
+                  style={{ color: 'var(--warning)', position: 'absolute', top: 1, right: 2 }}
+                />
+              )}
             </div>
           )
         })}

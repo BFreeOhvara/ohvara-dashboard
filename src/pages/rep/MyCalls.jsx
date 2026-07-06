@@ -24,6 +24,26 @@ const GRADE_DIM = {
 // "What to work on" severity: A/B range stays yellow, C+ and below escalates to red.
 const IMPROVE_SEVERE = new Set(['C+', 'C', 'C-', 'D', 'F'])
 
+// grade is stored as a letter only (migration 052 — no numeric score column),
+// so the all-time average (Prompt 231 item E) maps letters to a standard
+// 4.3-scale GPA value, averages, then rounds back to the nearest letter.
+// Flagging this as an assumption since there's no numeric source of truth.
+const GRADE_SCALE = {
+  'A+': 4.3, 'A': 4.0, 'A-': 3.7,
+  'B+': 3.3, 'B': 3.0, 'B-': 2.7,
+  'C+': 2.3, 'C': 2.0, 'C-': 1.7,
+  'D': 1.0, 'F': 0.0,
+}
+
+function nearestLetter(avg) {
+  let best = null, bestDiff = Infinity
+  for (const [letter, val] of Object.entries(GRADE_SCALE)) {
+    const diff = Math.abs(val - avg)
+    if (diff < bestDiff) { bestDiff = diff; best = letter }
+  }
+  return best
+}
+
 function fmtDate(iso) {
   return new Date(iso).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
@@ -40,7 +60,7 @@ function fmtDuration(totalSeconds) {
 export default function MyCalls() {
   const { profile } = useAuth()
   const [openCall, setOpenCall] = useState(null)
-  const { todayStr, selectedDate, setSelectedDate } = useDayFilter()
+  const { todayStr, selectedDate, setSelectedDate, firstCallDateStr } = useDayFilter(profile?.id)
 
   const { data: allCalls = [], isLoading } = useQuery({
     queryKey: ['my-calls', profile?.id],
@@ -60,6 +80,29 @@ export default function MyCalls() {
 
   const calls = allCalls.filter(c => toUtcDateStr(c.created_at) === selectedDate)
 
+  // Separate, unbounded query — the 50-row-limited `allCalls` above is for the
+  // per-day list only and would under-count a rep with 50+ graded calls.
+  const { data: allGrades = [] } = useQuery({
+    queryKey: ['my-calls-all-grades', profile?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('calls')
+        .select('grade')
+        .eq('rep_id', profile.id)
+        .not('graded_at', 'is', null)
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!profile?.id,
+  })
+
+  const avgGrade = (() => {
+    const vals = allGrades.map(c => GRADE_SCALE[c.grade]).filter(v => v != null)
+    if (!vals.length) return null
+    const mean = vals.reduce((s, v) => s + v, 0) / vals.length
+    return { letter: nearestLetter(mean), count: vals.length }
+  })()
+
   return (
     // 72px = one call row's rendered footprint (14px+14px padding + border,
     // measured from live CSS) — shaves exactly one row off the bottom per
@@ -74,7 +117,25 @@ export default function MyCalls() {
             AI-graded call recordings — letter grade + two coaching lines per call
           </p>
         </div>
-        <DayFilterBar selectedDate={selectedDate} todayStr={todayStr} onChange={setSelectedDate} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div
+            title="Average grade across every graded call you've ever had"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              height: 34, padding: '0 12px',
+              background: 'var(--bg-surface)', border: '0.5px solid var(--border)', borderRadius: 8,
+            }}
+          >
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>All-Time Avg</span>
+            <span style={{
+              fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-mono)',
+              color: avgGrade ? (GRADE_COLOR[avgGrade.letter] || 'var(--text-primary)') : 'var(--text-muted)',
+            }}>
+              {avgGrade ? avgGrade.letter : '—'}
+            </span>
+          </div>
+          <DayFilterBar selectedDate={selectedDate} todayStr={todayStr} onChange={setSelectedDate} firstCallDateStr={firstCallDateStr} />
+        </div>
       </div>
 
       {isLoading ? (

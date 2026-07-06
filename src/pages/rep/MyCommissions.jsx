@@ -1,12 +1,130 @@
-import { useMemo, useEffect } from 'react'
-import { DollarSign, Briefcase, TrendingUp, Landmark, CheckCircle2, Loader2 } from 'lucide-react'
+import { useMemo, useEffect, useState, useRef } from 'react'
+import { DollarSign, Briefcase, Target, Landmark, CheckCircle2, Loader2, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
 import { useMyCommission } from '../../hooks/useProfiles'
 import { useMyPayouts, useConnectOnboard, useCheckOnboardStatus } from '../../hooks/usePayouts'
 import { KPICard } from '../../components/ui/KPICard'
+import { toUtcDateStr } from '../../components/ui/DayFilterBar'
 
 const CHART_DAYS = 30
+// Measured rendered row footprint (10px+10px padding + 3 text lines + border,
+// confirmed 77.5px live) — caps the Payouts list to exactly 5 visible rows
+// before it scrolls internally.
+const PAYOUT_ROW_HEIGHT = 77.5
+
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const DAY_LABELS = ['Su','Mo','Tu','We','Th','Fr','Sa']
+
+function fmtRangeLabel(iso) {
+  const [, m, d] = iso.split('-')
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  return `${months[+m - 1]} ${+d}`
+}
+
+// Contiguous start+end click-to-select range calendar with hover preview —
+// same interaction pattern as the closer dashboard's RevenueTracker.jsx
+// MiniCalendar (Prompt 231 item D), reimplemented here since that component
+// isn't exported/shared.
+function RangeCalendar({ rangeStart, rangeEnd, hoverDate, onDayClick, onDayHover, viewYear, viewMonth, onPrev, onNext }) {
+  const today = toUtcDateStr(Date.now())
+
+  const cells = useMemo(() => {
+    const firstDay = new Date(Date.UTC(viewYear, viewMonth - 1, 1))
+    const startOffset = firstDay.getUTCDay()
+    const daysInMonth = new Date(Date.UTC(viewYear, viewMonth, 0)).getUTCDate()
+    const grid = []
+    for (let i = 0; i < 42; i++) {
+      const dayNum = i - startOffset + 1
+      if (dayNum < 1 || dayNum > daysInMonth) {
+        grid.push(null)
+      } else {
+        const mm = String(viewMonth).padStart(2, '0')
+        const dd = String(dayNum).padStart(2, '0')
+        grid.push(`${viewYear}-${mm}-${dd}`)
+      }
+    }
+    return grid
+  }, [viewYear, viewMonth])
+
+  function isInRange(dateStr) {
+    if (!dateStr) return false
+    if (rangeStart && rangeEnd) return dateStr >= rangeStart && dateStr <= rangeEnd
+    if (rangeStart && !rangeEnd && hoverDate) {
+      const [a, b] = hoverDate < rangeStart ? [hoverDate, rangeStart] : [rangeStart, hoverDate]
+      return dateStr >= a && dateStr <= b
+    }
+    return false
+  }
+
+  function isEdge(dateStr) {
+    if (!dateStr) return false
+    if (rangeStart && rangeEnd) return dateStr === rangeStart || dateStr === rangeEnd
+    if (rangeStart && !rangeEnd) return dateStr === rangeStart || (hoverDate && dateStr === hoverDate)
+    return false
+  }
+
+  return (
+    <div style={{ padding: 12, userSelect: 'none' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <button onClick={onPrev} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2, display: 'flex' }}>
+          <ChevronLeft size={14} />
+        </button>
+        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>
+          {MONTH_NAMES[viewMonth - 1]} {viewYear}
+        </span>
+        <button onClick={onNext} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2, display: 'flex' }}>
+          <ChevronRight size={14} />
+        </button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, marginBottom: 4 }}>
+        {DAY_LABELS.map(d => (
+          <div key={d} style={{ textAlign: 'center', fontSize: 10, color: 'var(--text-muted)', padding: '2px 0' }}>{d}</div>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
+        {cells.map((dateStr, i) => {
+          if (!dateStr) return <div key={i} />
+          const inRange = isInRange(dateStr)
+          const edge = isEdge(dateStr)
+          const isToday = dateStr === today
+          const future = dateStr > today
+          return (
+            <div
+              key={dateStr}
+              onClick={() => !future && onDayClick(dateStr)}
+              onMouseEnter={() => !future && onDayHover(dateStr)}
+              onMouseLeave={() => onDayHover(null)}
+              style={{
+                textAlign: 'center', fontSize: 12,
+                padding: '5px 0', borderRadius: 4,
+                cursor: future ? 'default' : 'pointer',
+                background: edge
+                  ? 'var(--accent)'
+                  : inRange
+                  ? 'rgba(108,99,255,0.18)'
+                  : 'transparent',
+                color: edge
+                  ? '#fff'
+                  : future
+                  ? 'var(--text-muted)'
+                  : isToday
+                  ? 'var(--accent)'
+                  : 'var(--text-primary)',
+                fontWeight: edge || isToday ? 600 : 400,
+                transition: 'background 80ms',
+              }}
+            >
+              {+dateStr.slice(8)}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 function StatusChip({ status }) {
   const isPaid = status === 'paid'
@@ -43,6 +161,58 @@ export default function MyCommissions() {
   const connected = !!profile?.stripe_onboarding_complete
   const onboard = useConnectOnboard()
   const checkStatus = useCheckOnboardStatus()
+
+  const now = new Date()
+  const [rangeStart, setRangeStart] = useState(null)
+  const [rangeEnd, setRangeEnd] = useState(null)
+  const [hoverDate, setHoverDate] = useState(null)
+  const [calOpen, setCalOpen] = useState(false)
+  const [calViewYear, setCalViewYear] = useState(now.getUTCFullYear())
+  const [calViewMonth, setCalViewMonth] = useState(now.getUTCMonth() + 1)
+  const calBtnRef = useRef(null)
+  const calPanelRef = useRef(null)
+
+  const hasCustomRange = !!(rangeStart && rangeEnd)
+
+  function clearRange() {
+    setRangeStart(null)
+    setRangeEnd(null)
+    setHoverDate(null)
+    setCalOpen(false)
+  }
+
+  function handleDayClick(dateStr) {
+    if (!rangeStart || rangeEnd) {
+      setRangeStart(dateStr)
+      setRangeEnd(null)
+    } else {
+      const [a, b] = dateStr < rangeStart ? [dateStr, rangeStart] : [rangeStart, dateStr]
+      setRangeStart(a)
+      setRangeEnd(b)
+      setCalOpen(false)
+      setHoverDate(null)
+    }
+  }
+
+  function prevMonth() {
+    if (calViewMonth === 1) { setCalViewMonth(12); setCalViewYear(y => y - 1) }
+    else setCalViewMonth(m => m - 1)
+  }
+  function nextMonth() {
+    if (calViewMonth === 12) { setCalViewMonth(1); setCalViewYear(y => y + 1) }
+    else setCalViewMonth(m => m + 1)
+  }
+
+  useEffect(() => {
+    function onClick(e) {
+      if (
+        calBtnRef.current && !calBtnRef.current.contains(e.target) &&
+        calPanelRef.current && !calPanelRef.current.contains(e.target)
+      ) setCalOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
 
   async function startOnboarding() {
     try {
@@ -109,13 +279,27 @@ export default function MyCommissions() {
     return days
   }, [commission])
 
-  const thisWeek = useMemo(() => {
-    const cutoff = new Date()
-    cutoff.setDate(cutoff.getDate() - 7)
-    return (commission?.rows || [])
-      .filter(r => new Date(r.created_at) >= cutoff)
-      .reduce((sum, r) => sum + Number(r.amount || 0), 0)
-  }, [commission])
+  // All 3 KPI boxes recompute over the selected range; with no range picked
+  // they fall back to all-time totals (Prompt 231 item D — the old KPI 3 was
+  // a static, unfiltered "Last 7 Days" figure that never responded to
+  // anything; replaced with a real range-scoped average).
+  const scopedRows = useMemo(() => {
+    const rows = commission?.rows || []
+    if (!hasCustomRange) return rows
+    const from = new Date(rangeStart + 'T00:00:00')
+    const to   = new Date(rangeEnd   + 'T23:59:59')
+    return rows.filter(r => { const d = new Date(r.created_at); return d >= from && d <= to })
+  }, [commission, hasCustomRange, rangeStart, rangeEnd])
+
+  const scopedTotal = scopedRows.reduce((sum, r) => sum + Number(r.amount || 0), 0)
+  const scopedDeals = scopedRows.length
+  const scopedAvg = scopedDeals ? scopedTotal / scopedDeals : null
+
+  const calBtnLabel = hasCustomRange
+    ? `${fmtRangeLabel(rangeStart)} – ${fmtRangeLabel(rangeEnd)}`
+    : rangeStart
+    ? `${fmtRangeLabel(rangeStart)} – …`
+    : 'Custom Range'
 
   return (
     <div>
@@ -128,9 +312,9 @@ export default function MyCommissions() {
         </p>
       </div>
 
-      {/* Connect bank button — own row above KPI cards, right-aligned */}
-      {!connected && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+      {/* Connect bank + custom-range calendar — own row above KPI cards, right-aligned */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+        {!connected && (
           <button
             onClick={startOnboarding}
             disabled={onboard.isPending}
@@ -145,32 +329,85 @@ export default function MyCommissions() {
               ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Opening…</>
               : <><Landmark size={14} /> Connect bank</>}
           </button>
-        </div>
-      )}
+        )}
 
-      {/* KPI row */}
+        <div style={{ position: 'relative' }} ref={calBtnRef}>
+          <button
+            onClick={() => setCalOpen(o => !o)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              height: 36, padding: '0 12px',
+              background: hasCustomRange || calOpen ? 'var(--bg-elevated)' : 'var(--bg-surface)',
+              border: `0.5px solid ${hasCustomRange ? 'var(--accent)' : 'var(--border)'}`,
+              borderRadius: 8, cursor: 'pointer',
+              fontSize: 12, color: hasCustomRange ? 'var(--accent)' : 'var(--text-muted)',
+              transition: 'all 0.1s',
+            }}
+          >
+            <CalendarIcon size={12} />
+            {calBtnLabel}
+            {hasCustomRange && (
+              <span
+                onClick={e => { e.stopPropagation(); clearRange() }}
+                style={{ marginLeft: 2, display: 'flex', alignItems: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={11} />
+              </span>
+            )}
+          </button>
+
+          {calOpen && (
+            <div
+              ref={calPanelRef}
+              style={{
+                position: 'absolute', top: '100%', right: 0, marginTop: 6, zIndex: 200,
+                background: '#13131F', border: '0.5px solid var(--border)',
+                borderRadius: 10, boxShadow: '0 16px 40px rgba(0,0,0,0.4)',
+                minWidth: 224,
+              }}
+            >
+              <div style={{ padding: '8px 12px 0', fontSize: 11, color: 'var(--text-muted)' }}>
+                {!rangeStart ? 'Click a start date' : !rangeEnd ? 'Click an end date' : null}
+              </div>
+              <RangeCalendar
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                hoverDate={hoverDate}
+                onDayClick={handleDayClick}
+                onDayHover={setHoverDate}
+                viewYear={calViewYear}
+                viewMonth={calViewMonth}
+                onPrev={prevMonth}
+                onNext={nextMonth}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* KPI row — all 3 recompute over the selected range; all-time when no range is picked */}
       <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'flex-start' }}>
         <KPICard
           label="Total Earned"
-          value={Math.floor(commission?.total ?? 0)}
+          value={Math.floor(scopedTotal)}
           prefix="$"
-          sub="All time"
-          subColor={(commission?.total ?? 0) > 0 ? 'var(--success)' : undefined}
-          accent={(commission?.total ?? 0) > 0}
+          sub={hasCustomRange ? calBtnLabel : 'All time'}
+          subColor={scopedTotal > 0 ? 'var(--success)' : undefined}
+          accent={scopedTotal > 0}
           icon={DollarSign}
         />
         <KPICard
           label="Closed Deals"
-          value={commission?.deals ?? 0}
+          value={scopedDeals}
           sub="10% per close"
           icon={Briefcase}
         />
         <KPICard
-          label="Last 7 Days"
-          value={Math.floor(thisWeek)}
+          label="Avg Per Deal"
+          value={scopedAvg != null ? Math.floor(scopedAvg) : 0}
           prefix="$"
-          sub={thisWeek > 0 ? 'Keep it rolling' : 'Book more appointments'}
-          icon={TrendingUp}
+          sub={scopedDeals ? 'Per closed deal' : 'No deals in range'}
+          icon={Target}
         />
       </div>
 
@@ -256,7 +493,7 @@ function MyPayouts({ connected }) {
           No payouts yet — a pending payout appears here when the closer signs a deal you booked.
         </p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div className="scrollbar-thin" style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: PAYOUT_ROW_HEIGHT * 5, overflowY: 'auto' }}>
           {payouts.map(p => {
             const biz = p.appointment?.lead?.business_name || 'Closed deal'
             const dealValueCents = p.deal_value_cents ?? (p.amount_cents * 10)
