@@ -7,6 +7,7 @@ import { formatInTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { Phone, Calendar, TrendingUp, DollarSign, ChevronDown, ChevronUp, Clock } from 'lucide-react'
 import { Badge } from '../../components/ui/Badge'
 import { KPICard } from '../../components/ui/KPICard'
+import { LiveClock } from '../../components/ui/LiveClock'
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, Tooltip, CartesianGrid,
@@ -442,9 +443,12 @@ export default function Overview() {
               Live across all reps and closers
             </p>
           </div>
-          <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
-            {today}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <LiveClock timezone={tz} />
+            <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+              {today}
+            </span>
+          </div>
         </div>
 
         {/* KPI row — glass + countup */}

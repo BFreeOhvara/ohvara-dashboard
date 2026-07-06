@@ -5,6 +5,9 @@ import { Phone, Loader2, X, Play } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { STATUS_COLORS } from './ActivityFeed'
+import { DayFilterBar, useDayFilter, toUtcDateStr } from '../../components/ui/DayFilterBar'
+
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
 const GRADE_COLOR = {
   'A+': 'var(--success)', 'A': 'var(--success)', 'A-': 'var(--success)',
@@ -37,8 +40,9 @@ function fmtDuration(totalSeconds) {
 export default function MyCalls() {
   const { profile } = useAuth()
   const [openCall, setOpenCall] = useState(null)
+  const { todayStr, selectedDate, setSelectedDate } = useDayFilter()
 
-  const { data: calls = [], isLoading } = useQuery({
+  const { data: allCalls = [], isLoading } = useQuery({
     queryKey: ['my-calls', profile?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -54,18 +58,23 @@ export default function MyCalls() {
     enabled: !!profile?.id,
   })
 
+  const calls = allCalls.filter(c => toUtcDateStr(c.created_at) === selectedDate)
+
   return (
     // 72px = one call row's rendered footprint (14px+14px padding + border,
     // measured from live CSS) — shaves exactly one row off the bottom per
     // Prompt 202, matching ActivityFeed's same-viewport-formula adjustment.
     <div style={{ height: 'calc(100vh - 48px - 72px)', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
-          My Calls
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-          AI-graded call recordings — letter grade + two coaching lines per call
-        </p>
+      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div>
+          <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
+            My Calls
+          </h1>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
+            AI-graded call recordings — letter grade + two coaching lines per call
+          </p>
+        </div>
+        <DayFilterBar selectedDate={selectedDate} todayStr={todayStr} onChange={setSelectedDate} />
       </div>
 
       {isLoading ? (
@@ -75,7 +84,11 @@ export default function MyCalls() {
       ) : calls.length === 0 ? (
         <div className="glass" style={{ padding: '40px 24px', borderRadius: 12, textAlign: 'center' }}>
           <Phone size={20} style={{ color: 'var(--text-muted)', margin: '0 auto 8px', display: 'block' }} />
-          <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '0 0 4px' }}>No graded calls yet</p>
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '0 0 4px' }}>
+            {selectedDate === todayStr
+              ? 'No graded calls today'
+              : `No graded calls on ${MONTH_NAMES[+selectedDate.slice(5, 7) - 1].slice(0, 3)} ${+selectedDate.slice(8)}`}
+          </p>
           <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
             Grades appear here about 30–60 seconds after each recorded call ends.
           </p>

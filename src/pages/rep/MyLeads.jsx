@@ -12,6 +12,7 @@ import {
 import { CallModal } from '../../components/rep/CallModal'
 import { Badge } from '../../components/ui/Badge'
 import { KPICard } from '../../components/ui/KPICard'
+import { LiveClock } from '../../components/ui/LiveClock'
 import { nextLocalMidnightUtcMs, DEFAULT_TIMEZONE } from '../../lib/timezones'
 
 const STATUS_FILTERS = ['New', 'Appointment Booked', 'Follow-Up', 'No Answer', 'Not Interested', 'All']
@@ -382,6 +383,7 @@ export default function MyLeads() {
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <LiveClock timezone={profile?.timezone} />
           <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
             {today}
           </span>

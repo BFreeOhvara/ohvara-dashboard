@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Loader2, Check } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
-import { useUpdateOwnProfile, useChangeOwnPassword, useNotificationPrefs, useInvalidateNotificationPrefs, isNotificationCategoryEnabled } from '../hooks/useSettings'
+import { useUpdateOwnProfile, useChangeOwnPassword } from '../hooks/useSettings'
 import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../lib/timezones'
-import { notificationCategoriesForRole } from '../lib/notificationCategories'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
 import { Input, Select } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
@@ -23,32 +22,6 @@ function SavedTick({ show }) {
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--success)' }}>
       <Check size={13} /> Saved
     </span>
-  )
-}
-
-function Toggle({ checked, onChange, disabled }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      style={{
-        width: 34, height: 20, borderRadius: 999, position: 'relative', flexShrink: 0,
-        border: '0.5px solid var(--border)',
-        background: checked ? 'var(--accent)' : 'var(--bg-elevated)',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.5 : 1,
-        transition: 'background-color 100ms ease',
-      }}
-    >
-      <span style={{
-        position: 'absolute', top: 2, left: checked ? 16 : 2,
-        width: 14, height: 14, borderRadius: '50%', background: '#fff',
-        transition: 'left 100ms ease',
-      }} />
-    </button>
   )
 }
 
@@ -210,45 +183,6 @@ function PayoutsSection({ profile }) {
   )
 }
 
-function NotificationsSection({ profile }) {
-  const categories = notificationCategoriesForRole(profile.role)
-  const { data: prefs } = useNotificationPrefs(profile.id)
-  const update = useUpdateOwnProfile()
-  const invalidatePrefs = useInvalidateNotificationPrefs()
-
-  async function toggle(key, nextValue) {
-    const updatedPrefs = { ...(prefs || {}), [key]: nextValue }
-    await update.mutateAsync({ profileId: profile.id, updates: { notification_prefs: updatedPrefs } })
-    invalidatePrefs(profile.id)
-  }
-
-  if (!categories.length) return null
-
-  return (
-    <Card className="mb-5">
-      <CardHeader>
-        <CardTitle>Notifications</CardTitle>
-      </CardHeader>
-      <div>
-        {categories.map(c => (
-          <SectionRow
-            key={c.key}
-            label={c.label}
-            description={c.description}
-            control={
-              <Toggle
-                checked={isNotificationCategoryEnabled(prefs, c.key)}
-                onChange={val => toggle(c.key, val)}
-                disabled={update.isPending}
-              />
-            }
-          />
-        ))}
-      </div>
-    </Card>
-  )
-}
-
 function CallingSection({ profile }) {
   const update = useUpdateOwnProfile()
   const { refreshProfile } = useAuth()
@@ -300,7 +234,6 @@ export default function Settings() {
   if (!profile) return null
 
   const showPayouts = profile.role === 'rep' || profile.role === 'closer'
-  const showNotifications = notificationCategoriesForRole(profile.role).length > 0
   const showCalling = profile.role === 'rep' || profile.role === 'closer'
 
   return (
@@ -310,14 +243,13 @@ export default function Settings() {
           Settings
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-          Manage your account, timezone, and notification preferences
+          Manage your account and timezone
         </p>
       </div>
 
       <RegionalSection profile={profile} />
       <AccountSection profile={profile} />
       {showPayouts && <PayoutsSection profile={profile} />}
-      {showNotifications && <NotificationsSection profile={profile} />}
       {showCalling && <CallingSection profile={profile} />}
     </div>
   )

@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import { useNotificationPrefs, isNotificationCategoryEnabled } from './useSettings'
 
 // ── Message reply notifier ───────────────────────────────────────────────────
 // Subscribes to realtime UPDATEs on the messages table for this rep's sent
@@ -34,7 +33,6 @@ export function useMessageReplyNotifier(repId) {
 // inserts a "Deal closed!" notification with the dollar amount and business name.
 export function useDealClosedNotifier(repId) {
   const qc = useQueryClient()
-  const { data: prefs } = useNotificationPrefs(repId)
 
   useEffect(() => {
     if (!repId) return
@@ -42,7 +40,6 @@ export function useDealClosedNotifier(repId) {
       .channel(`deal-closed-${repId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'commission_payouts', filter: `rep_id=eq.${repId}` },
         async (payload) => {
-          if (!isNotificationCategoryEnabled(prefs, 'deal_closed')) return
           const raw = payload.new
           let biz = 'a new deal'
           let amountCents = raw.amount_cents
@@ -66,7 +63,7 @@ export function useDealClosedNotifier(repId) {
         })
       .subscribe()
     return () => supabase.removeChannel(channel)
-  }, [repId, qc, prefs])
+  }, [repId, qc])
 }
 
 // Badge definitions — must stay in sync with BADGE_GROUPS in MyGoals.jsx.
@@ -121,12 +118,10 @@ const ALL_BADGES = [
 export function useBadgeNotifier(repId, badgeCtx) {
   const qc = useQueryClient()
   const hasChecked = useRef(false)
-  const { data: prefs } = useNotificationPrefs(repId)
 
   useEffect(() => {
     if (!repId || !badgeCtx?.month || !badgeCtx?.activity) return
     if (hasChecked.current) return
-    if (!isNotificationCategoryEnabled(prefs, 'badge')) return
     hasChecked.current = true
 
     const earned = ALL_BADGES.filter(b => b.condition(badgeCtx))
@@ -178,39 +173,6 @@ export function useCallGradedNotifier(repId) {
   }, [repId, qc])
 }
 
-// ── Leads unlocked notifier ──────────────────────────────────────────────────
-// Fires once when the first lead is assigned to a rep whose training is complete.
-// Only fires if training_completed = true so subsequent daily batches don't re-fire.
-export function useLeadsUnlockedNotifier(repId, trainingCompleted) {
-  const qc = useQueryClient()
-  const firedRef = useRef(false)
-  const { data: prefs } = useNotificationPrefs(repId)
-
-  useEffect(() => {
-    if (!repId || !trainingCompleted) return
-    const channel = supabase
-      .channel(`leads-unlocked-${repId}`)
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'leads',
-        filter: `assigned_rep_id=eq.${repId}`,
-      }, async () => {
-        if (firedRef.current) return
-        firedRef.current = true
-        if (!isNotificationCategoryEnabled(prefs, 'leads_unlocked')) return
-        await supabase.from('notifications').insert({
-          profile_id: repId,
-          type: 'leads_unlocked',
-          message: 'Your leads are ready — start calling.',
-          data: {},
-        })
-        qc.invalidateQueries({ queryKey: ['rep-notifications', repId] })
-        qc.invalidateQueries({ queryKey: ['rep-notifications-unread', repId] })
-      })
-      .subscribe()
-    return () => supabase.removeChannel(channel)
-  }, [repId, trainingCompleted, qc, prefs])
-}
-
 // ── Follow-up notifier ───────────────────────────────────────────────────────
 // Fires once per lead when its follow_up_at is within 5 minutes.
 // Dedup key is `${leadId}:5` (session + DB both checked).
@@ -221,11 +183,9 @@ const FOLLOW_UP_THRESHOLDS_MIN = [5]
 export function useFollowUpNotifier(repId, leads = [], existingNotifications = []) {
   const qc = useQueryClient()
   const notifiedThisSession = useRef(new Set())
-  const { data: prefs } = useNotificationPrefs(repId)
 
   useEffect(() => {
     if (!repId || !leads.length) return
-    if (!isNotificationCategoryEnabled(prefs, 'follow_up')) return
 
     const now = Date.now()
 
@@ -263,5 +223,5 @@ export function useFollowUpNotifier(repId, leads = [], existingNotifications = [
       qc.invalidateQueries({ queryKey: ['rep-notifications', repId] })
       qc.invalidateQueries({ queryKey: ['rep-notifications-unread', repId] })
     })
-  }, [repId, leads, existingNotifications, qc, prefs])
+  }, [repId, leads, existingNotifications, qc])
 }
