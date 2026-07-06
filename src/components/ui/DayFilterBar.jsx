@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Star } from 'lucide-react'
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 // Shared single-day-only calendar filter — Activity Feed (Prompt 223/225) and
@@ -47,12 +47,17 @@ export function useDayFilter(repId) {
   }, [])
 
   const { data: firstCallDateStr } = useQuery({
-    queryKey: ['first-call-date', repId],
+    queryKey: ['first-graded-call-date', repId],
     queryFn: async () => {
+      // Prompt 232 item C: scoped to graded calls only — raw `calls` rows can
+      // be blank leftover seed/test data (no outcome, no grade) that never
+      // represented a real dial. "First call" for the star marker means the
+      // first call that actually completed and got graded.
       const { data, error } = await supabase
         .from('calls')
         .select('created_at')
         .eq('rep_id', repId)
+        .not('grade', 'is', null)
         .order('created_at', { ascending: true })
         .limit(1)
       if (error) throw error
@@ -232,32 +237,25 @@ function SingleDayCalendar({ selectedDate, onDayClick, viewYear, viewMonth, onPr
             <div
               key={dateStr}
               onClick={() => !future && onDayClick(dateStr)}
-              title={isFirstCall ? 'Your first call' : undefined}
+              title={isFirstCall ? 'Your first graded call' : undefined}
               style={{
                 position: 'relative',
                 textAlign: 'center', fontSize: 12,
                 padding: '5px 0', borderRadius: 4,
                 cursor: future ? 'default' : 'pointer',
-                background: isSelected ? 'var(--accent)' : 'transparent',
-                color: isSelected
+                background: isSelected ? 'var(--accent)' : isFirstCall ? 'var(--warning)' : 'transparent',
+                color: isSelected || isFirstCall
                   ? '#fff'
                   : future
                   ? 'var(--text-muted)'
                   : isToday
                   ? 'var(--accent)'
                   : 'var(--text-primary)',
-                fontWeight: isSelected || isToday ? 600 : 400,
+                fontWeight: isSelected || isToday || isFirstCall ? 600 : 400,
                 transition: 'background 80ms',
               }}
             >
               {+dateStr.slice(8)}
-              {isFirstCall && (
-                <Star
-                  size={7}
-                  fill="var(--warning)"
-                  style={{ color: 'var(--warning)', position: 'absolute', top: 1, right: 2 }}
-                />
-              )}
             </div>
           )
         })}

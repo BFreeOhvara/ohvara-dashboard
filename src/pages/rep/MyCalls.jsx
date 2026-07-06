@@ -121,14 +121,14 @@ export default function MyCalls() {
           <div
             title="Average grade across every graded call you've ever had"
             style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              height: 34, padding: '0 12px',
+              display: 'flex', alignItems: 'center', gap: 8,
+              height: 44, padding: '0 16px',
               background: 'var(--bg-surface)', border: '0.5px solid var(--border)', borderRadius: 8,
             }}
           >
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>All-Time Avg</span>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>All-Time Avg</span>
             <span style={{
-              fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-mono)',
+              fontSize: 20, fontWeight: 700, fontFamily: 'var(--font-mono)',
               color: avgGrade ? (GRADE_COLOR[avgGrade.letter] || 'var(--text-primary)') : 'var(--text-muted)',
             }}>
               {avgGrade ? avgGrade.letter : '—'}

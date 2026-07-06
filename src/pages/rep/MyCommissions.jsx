@@ -296,7 +296,9 @@ export default function MyCommissions() {
   const scopedAvg = scopedDeals ? scopedTotal / scopedDeals : null
 
   const calBtnLabel = hasCustomRange
-    ? `${fmtRangeLabel(rangeStart)} – ${fmtRangeLabel(rangeEnd)}`
+    ? rangeStart === rangeEnd
+      ? fmtRangeLabel(rangeStart)
+      : `${fmtRangeLabel(rangeStart)} – ${fmtRangeLabel(rangeEnd)}`
     : rangeStart
     ? `${fmtRangeLabel(rangeStart)} – …`
     : 'Custom Range'

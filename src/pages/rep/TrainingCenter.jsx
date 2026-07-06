@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from 'react'
 import { createPortal } from 'react-dom'
 import { Play, BookOpen, Mic, FileText, Lock, Shuffle, ChevronLeft, ChevronRight, Check, X, ClipboardCheck, Loader2, PhoneOff, RotateCcw, Award, AlertCircle } from 'lucide-react'
 import { FLASHCARDS, CATEGORY_LABELS, CATEGORY_COLORS } from '../../data/flashcards'
@@ -15,6 +15,7 @@ import { ScriptWalk } from '../../components/rep/ScriptWalk'
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const LS_VIDEOS           = 'ohvara_training_videos'
+const LS_VIDEO_POSITIONS  = 'ohvara_training_video_positions'
 const LS_MASTERED         = 'ohvara_flashcard_mastered'
 const LS_FINAL_QUIZ_PASS  = 'ohvara_final_quiz_passed'
 
@@ -218,23 +219,42 @@ function shuffle(arr) {
 // Only player chrome allowed is fullscreen + volume. We can't strip YouTube's
 // own seekbar, but we snap any forward seek back to the furthest-watched
 // point every second, and disable keyboard shortcuts (arrow-key skip).
+// `startAt` resumes a previously-exited video from its saved position
+// (Prompt 232 item E) — the anti-skip floor starts there too, not at 0, so
+// resuming never re-opens the ability to skip ahead of where they'd gotten.
+// `getCurrentTime` is exposed via ref so the exit control can read the live
+// position at the moment the rep backs out, without threading it through
+// state on every tick.
 
-function LockedVideoPlayer({ video, onEnded }) {
+const LockedVideoPlayer = forwardRef(function LockedVideoPlayer({ video, onEnded, startAt = 0 }, ref) {
   const containerRef = useRef(null)
   const playerRef    = useRef(null)
-  const maxTimeRef   = useRef(0)
+  const maxTimeRef   = useRef(startAt)
   const endedRef     = useRef(false)
+
+  useImperativeHandle(ref, () => ({
+    getCurrentTime: () => {
+      const p = playerRef.current
+      if (p && typeof p.getCurrentTime === 'function') {
+        try { return p.getCurrentTime() } catch { /* ignore */ }
+      }
+      return maxTimeRef.current
+    },
+  }), [])
 
   useEffect(() => {
     let cancelled = false
-    maxTimeRef.current = 0
+    maxTimeRef.current = startAt
     endedRef.current = false
 
     function createPlayer() {
       if (cancelled || !containerRef.current) return
       playerRef.current = new window.YT.Player(containerRef.current, {
         videoId: video.youtubeId,
-        playerVars: { autoplay: 1, controls: 1, modestbranding: 1, rel: 0, fs: 1, disablekb: 1, playsinline: 1 },
+        playerVars: {
+          autoplay: 1, controls: 1, modestbranding: 1, rel: 0, fs: 1, disablekb: 1, playsinline: 1,
+          start: Math.floor(startAt),
+        },
         events: {
           onStateChange: (e) => {
             if (e.data === window.YT.PlayerState.ENDED && !endedRef.current) {
@@ -263,7 +283,7 @@ function LockedVideoPlayer({ video, onEnded }) {
       cancelled = true
       try { playerRef.current?.destroy?.() } catch { /* ignore */ }
     }
-  }, [video.youtubeId])
+  }, [video.youtubeId, startAt])
 
   // Block scrubbing ahead — snap back to furthest-watched position
   useEffect(() => {
@@ -281,7 +301,7 @@ function LockedVideoPlayer({ video, onEnded }) {
   }, [])
 
   return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
-}
+})
 
 // ── MiniQuiz — per-video, formative only, never blocks progress ──────────────
 
@@ -362,17 +382,52 @@ function VideoLibrary({ progress, saveProgress }) {
     try { fromLs = JSON.parse(localStorage.getItem(LS_VIDEOS) || '[]') } catch { /* ignore */ }
     return [...new Set([...fromDb, ...fromLs])]
   })
+  // Per-video resume position in seconds, keyed by video id (Prompt 232 item
+  // E) — lets a rep exit mid-watch and pick up where they left off, same
+  // watched/localStorage-merge pattern as above.
+  const [positions, setPositions] = useState(() => {
+    const fromDb = progress?.video_positions && typeof progress.video_positions === 'object' ? progress.video_positions : {}
+    let fromLs = {}
+    try { fromLs = JSON.parse(localStorage.getItem(LS_VIDEO_POSITIONS) || '{}') } catch { /* ignore */ }
+    return { ...fromLs, ...fromDb }
+  })
   const [activeVideo, setActiveVideo] = useState(null)
   // 'playing' while locked, 'quiz' once the video ends and the mini quiz shows
   const [stage, setStage] = useState('playing')
+  const playerRef = useRef(null)
 
   // DB row loads async — merge it in when it arrives
   useEffect(() => {
     const fromDb = Array.isArray(progress?.videos_watched) ? progress.videos_watched : []
     if (fromDb.length) setWatched(prev => prev.length === new Set([...prev, ...fromDb]).size ? prev : [...new Set([...prev, ...fromDb])])
+    const fromDbPositions = progress?.video_positions
+    if (fromDbPositions && typeof fromDbPositions === 'object') {
+      setPositions(prev => ({ ...fromDbPositions, ...prev }))
+    }
   }, [progress])
 
+  function savePosition(id, seconds) {
+    setPositions(prev => {
+      const next = { ...prev, [id]: seconds }
+      localStorage.setItem(LS_VIDEO_POSITIONS, JSON.stringify(next))
+      saveProgress({ video_positions: next })
+      return next
+    })
+  }
+
+  function clearPosition(id) {
+    setPositions(prev => {
+      if (!(id in prev)) return prev
+      const next = { ...prev }
+      delete next[id]
+      localStorage.setItem(LS_VIDEO_POSITIONS, JSON.stringify(next))
+      saveProgress({ video_positions: next })
+      return next
+    })
+  }
+
   function markWatched(id) {
+    clearPosition(id)
     setWatched(prev => {
       if (prev.includes(id)) return prev
       const next = [...prev, id]
@@ -385,6 +440,16 @@ function VideoLibrary({ progress, saveProgress }) {
   function openVideo(v) {
     setActiveVideo(v)
     setStage('playing')
+  }
+
+  // Exit mid-watch — saves the live playback position so the next open of
+  // this same video resumes from here, then closes the modal. Only reachable
+  // during the 'playing' stage; the anti-skip-forward floor still applies on
+  // resume since LockedVideoPlayer seeds maxTimeRef from the saved position.
+  function exitVideo() {
+    const t = playerRef.current?.getCurrentTime?.()
+    if (activeVideo && typeof t === 'number' && t > 0) savePosition(activeVideo.id, t)
+    closeVideo()
   }
 
   function closeVideo() {
@@ -541,10 +606,12 @@ function VideoLibrary({ progress, saveProgress }) {
         })}
       </div>
 
-      {/* Video modal — fully locked start to finish: no backdrop close, no X,
-          no skip ahead. The mini-quiz that follows the video is part of this
-          same locked flow (Prompt 193) — it only ever closes itself via
-          onDone, never by user dismissal. */}
+      {/* Video modal — no backdrop close, no skip ahead. An exit control
+          (Prompt 232 item E) lets the rep back out mid-watch and resume
+          later from that position; it does not relax the anti-skip-forward
+          restriction. The mini-quiz that follows the video is still fully
+          locked (Prompt 193) — it only ever closes itself via onDone, never
+          by user dismissal. */}
       {activeVideo && (
         <div
           style={{
@@ -564,12 +631,26 @@ function VideoLibrary({ progress, saveProgress }) {
             }}
           >
             {stage === 'playing' && (
-              <div style={{ padding: '14px 20px', borderBottom: '0.5px solid var(--border)' }}>
-                <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{activeVideo.title}</p>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
-                  {activeVideo.category} · {activeVideo.duration}
-                  <span style={{ color: 'var(--warning)' }}> · locked until finished</span>
-                </p>
+              <div style={{ padding: '14px 20px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{activeVideo.title}</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                    {activeVideo.category} · {activeVideo.duration}
+                    <span style={{ color: 'var(--warning)' }}> · no skipping ahead</span>
+                  </p>
+                </div>
+                <button
+                  onClick={exitVideo}
+                  title="Exit — your progress will be saved"
+                  style={{
+                    flexShrink: 0, width: 26, height: 26, borderRadius: 6,
+                    background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'var(--text-muted)', cursor: 'pointer',
+                  }}
+                >
+                  <X size={13} />
+                </button>
               </div>
             )}
 
@@ -577,7 +658,9 @@ function VideoLibrary({ progress, saveProgress }) {
               <div style={{ position: 'relative', paddingTop: '56.25%' }}>
                 <div style={{ position: 'absolute', inset: 0 }}>
                   <LockedVideoPlayer
+                    ref={playerRef}
                     video={activeVideo}
+                    startAt={positions[activeVideo.id] || 0}
                     onEnded={() => setStage('quiz')}
                   />
                 </div>
