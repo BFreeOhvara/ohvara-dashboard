@@ -40,6 +40,16 @@ export const CATEGORY_COLORS = {
   bad:      'var(--danger)',
 }
 
+// Outcome-name colors for ScriptWalk's merged terminal screen (Prompt 248) —
+// reuses the same 3 CATEGORY_COLORS tokens, keyed by the literal status name
+// a `▸ Set status X` action ends on (not a fork response category —
+// "Appointment Booked" is Close's own terminal outcome, not a response tag).
+export const OUTCOME_COLORS = {
+  'Appointment Booked': CATEGORY_COLORS.good,
+  'Follow-Up': CATEGORY_COLORS.hesitant,
+  'Not Interested': CATEGORY_COLORS.bad,
+}
+
 // Legacy inline data-collect step (⊞ marker) — unused by v3 (which captures
 // via the `captures` array on say-lines instead) but kept as a supported
 // marker type for future script authors.
@@ -464,14 +474,22 @@ function flowHasRoute(steps) {
   return false
 }
 
+// Pulls the status name out of a `▸ Set status X[.…]` action's text — shared
+// by flowOutcome (section-wide scan, below) and ScriptWalk's per-path
+// terminal card (Prompt 248), so both read a status action the same way.
+export function extractSetStatus(actionText) {
+  const m = actionText.match(/set status\s+([A-Za-z][A-Za-z -]*?)(?:\s*\(|\.|$)/i)
+  return m ? m[1].trim() : null
+}
+
 // The status a path ends on, read from its last "Set status X" action.
 function flowOutcome(steps) {
   let found = null
   const scan = arr => {
     for (const s of arr) {
       if (s.type === 'action') {
-        const m = s.text.match(/set status\s+([A-Za-z][A-Za-z -]*?)(?:\s*\(|\.|$)/i)
-        if (m) found = m[1].trim()
+        const m = extractSetStatus(s.text)
+        if (m) found = m
       }
       if (s.type === 'fork') s.options.forEach(o => scan(o.steps))
     }

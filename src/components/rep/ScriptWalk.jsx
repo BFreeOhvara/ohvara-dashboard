@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useCallback } from 'react'
 import { ChevronRight, ChevronLeft, RotateCcw, CornerDownRight, ArrowRight, CheckCircle2, CalendarCheck } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { CATEGORY_COLORS } from '../../lib/discoveryScript'
+import { CATEGORY_COLORS, OUTCOME_COLORS, extractSetStatus } from '../../lib/discoveryScript'
 
 // In live mode, action steps (coaching notes) are skipped transparently — they
 // should never appear as standalone pages a rep might accidentally read aloud.
@@ -210,6 +210,24 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
     }
   }
 
+  // A say line immediately followed by its terminal `▸ Set status X` action
+  // (no fork in between, action is the LAST step of this path) merges onto
+  // one screen — the "Next"-to-a-mostly-blank-action-screen tap added
+  // nothing new to read (Prompt 248). Deliberately only the ONE
+  // immediately-preceding say line, not a full run: Close's 2-line outro
+  // still paces its first line one at a time per the sayChainForFork/Plain
+  // comment above — only the very last line, right before the outcome,
+  // folds into the terminal card with it. An action with NO preceding say
+  // at all (a fork option whose entire body is the action, e.g. "Still
+  // shuts it down") gets the same merged-terminal treatment on its own.
+  const sayBeforeTerminal = (!sayChainForFork && !sayChainPlain && step?.type === 'say'
+    && top.steps[top.index + 1]?.type === 'action' && top.index + 1 === top.steps.length - 1)
+    ? { say: step, action: top.steps[top.index + 1] }
+    : null
+  const standaloneTerminalAction = (step?.type === 'action' && top.index === top.steps.length - 1)
+    ? step
+    : null
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
 
@@ -245,15 +263,19 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
         )}
 
         {step && step.type === 'say' && (
-          sayChainForFork
-            ? <SayWithFork says={sayChainForFork.says} fork={sayChainForFork.fork} accent={accent} capturedValues={capturedValues} onCapture={captureField} onCaptureLocal={captureLocal} renderText={renderText} onPick={opt => advanceThenPick(sayChainForFork.forkIdx, opt)} />
-            : sayChainPlain
-              ? <SayChain says={sayChainPlain.says} accent={accent} capturedValues={capturedValues} onCapture={captureField} onCaptureLocal={captureLocal} renderText={renderText} onNext={() => advanceTo(sayChainPlain.nextIndex)} />
-              : <SayCard step={step} accent={accent} capturedValues={capturedValues} onCapture={captureField} onCaptureLocal={captureLocal} renderText={renderText} onNext={advance} />
+          sayBeforeTerminal
+            ? <TerminalCard says={[sayBeforeTerminal.say]} action={sayBeforeTerminal.action} accent={accent} mode={mode} isClose={section.kind === 'close'} onRestart={restart} renderText={renderText} capturedValues={capturedValues} onCapture={captureField} onCaptureLocal={captureLocal} />
+            : sayChainForFork
+              ? <SayWithFork says={sayChainForFork.says} fork={sayChainForFork.fork} accent={accent} capturedValues={capturedValues} onCapture={captureField} onCaptureLocal={captureLocal} renderText={renderText} onPick={opt => advanceThenPick(sayChainForFork.forkIdx, opt)} />
+              : sayChainPlain
+                ? <SayChain says={sayChainPlain.says} accent={accent} capturedValues={capturedValues} onCapture={captureField} onCaptureLocal={captureLocal} renderText={renderText} onNext={() => advanceTo(sayChainPlain.nextIndex)} />
+                : <SayCard step={step} accent={accent} capturedValues={capturedValues} onCapture={captureField} onCaptureLocal={captureLocal} renderText={renderText} onNext={advance} />
         )}
 
         {step && step.type === 'action' && (
-          <ActionCard step={step} accent={accent} onNext={advance} />
+          standaloneTerminalAction
+            ? <TerminalCard says={[]} action={standaloneTerminalAction} accent={accent} mode={mode} isClose={section.kind === 'close'} onRestart={restart} />
+            : <ActionCard step={step} accent={accent} onNext={advance} />
         )}
 
         {step && step.type === 'data_collect' && (
@@ -542,6 +564,78 @@ function Terminal({ section, mode, onRestart }) {
       <button
         onClick={onRestart}
         style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 9, padding: '8px 16px', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 12.5, fontWeight: 500 }}
+      >
+        <RotateCcw size={13} /> Start over
+      </button>
+    </div>
+  )
+}
+
+// A trailing say-line (if any) merged with its terminal `▸ Set status X`
+// action onto ONE screen (Prompt 248) — replaces the old say-screen →
+// blank-action-screen → separate Terminal-screen sequence for every path
+// that ends this way. `says` is empty for a fork option whose entire body
+// was the action (no line to say). Colored by the SPECIFIC action just
+// reached via extractSetStatus/OUTCOME_COLORS — not `section.outcome`
+// (Terminal's source above), which scans the whole section and can report
+// the wrong outcome on a section with more than one kind of ending (e.g.
+// Opener ends in both Not Interested and Follow-Up depending on path). The
+// button stays the same generic "Start over" Terminal already had — no new
+// label, no new status-write side effect (Brayden's explicit constraint).
+// Pre-tinted background tokens paired with OUTCOME_COLORS' solid colors —
+// `color + '14'`-style alpha-suffix concatenation onto a `var(--x)` string
+// is invalid CSS (the whole declaration silently drops, background renders
+// transparent) — confirmed live via getComputedStyle while building this;
+// the codebase has this same broken pattern elsewhere already (ActionCard's
+// "Do this" box, Terminal's icon circle, MyCalls' grade badges) but fixing
+// those is out of scope here. These `-dim` tokens are real, pre-defined
+// custom properties (index.css) already used correctly elsewhere (e.g.
+// MyCalls' GRADE_DIM) — safe to reference directly.
+const OUTCOME_DIM = {
+  'Appointment Booked': 'var(--success-dim)',
+  'Follow-Up': 'var(--warning-dim)',
+  'Not Interested': 'var(--danger-dim)',
+}
+
+function TerminalCard({ says, action, accent, mode, isClose, onRestart, renderText, capturedValues, onCapture, onCaptureLocal }) {
+  const outcome = isClose ? 'Appointment Booked' : extractSetStatus(action.text)
+  const color = OUTCOME_COLORS[outcome] || accent
+  const dim = OUTCOME_DIM[outcome] || 'var(--accent-dim)'
+  const message = isClose
+    ? mode === 'live'
+      ? 'Once they pick a time, set Appointment Booked on the left, enter the time, and hit Done.'
+      : 'This is where you book Nate — set the appointment and you’re done.'
+    : outcome
+      ? mode === 'live'
+        ? `Set the status to "${outcome}" on the left and hit Done.`
+        : `This path ends on "${outcome}".`
+      : 'Set the call outcome and hit Done.'
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {says.length > 0 && (
+        <>
+          <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: accent, fontWeight: 700, margin: 0 }}>
+            {says[0].sub ? 'Then say' : 'Say this'}
+          </p>
+          <SayBlock says={says} accent={accent} renderText={renderText} />
+          {says.map((s, i) => s.capture && (
+            <CaptureInput key={i} capture={s.capture} capturedValues={capturedValues} onCapture={onCapture} onCaptureLocal={onCaptureLocal} />
+          ))}
+        </>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', textAlign: 'center', background: dim, border: `0.5px solid ${color}`, borderRadius: 12, padding: '20px' }}>
+        {isClose ? <CalendarCheck size={22} color={color} /> : <CheckCircle2 size={22} color={color} />}
+        <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+          {isClose ? 'Lock the appointment' : (outcome || 'End of this path')}
+        </p>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+          {message}
+        </p>
+      </div>
+      <button
+        onClick={onRestart}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 9, padding: '10px 16px', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 12.5, fontWeight: 500 }}
       >
         <RotateCcw size={13} /> Start over
       </button>
