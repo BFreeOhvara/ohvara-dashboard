@@ -54,8 +54,8 @@ export default function MyCommissions() {
     calOpen, setCalOpen, calViewYear, calViewMonth,
     calBtnRef, calPanelRef, hasCustomRange, calBtnLabel,
     clearRange, handleDayClick, prevMonth, nextMonth,
-    firstCallDateStr,
-  } = useRangeCalendar(profile?.id)
+    firstCallDateStr, todayStr,
+  } = useRangeCalendar(profile?.id, profile?.timezone)
 
   async function startOnboarding() {
     try {
@@ -217,6 +217,7 @@ export default function MyCommissions() {
                 onPrev={prevMonth}
                 onNext={nextMonth}
                 firstCallDateStr={firstCallDateStr}
+                todayStr={todayStr}
               />
             </div>
           )}

@@ -125,6 +125,16 @@ export function utcIsoToZonedDatetimeLocal(iso, timeZone) {
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
 }
 
+// The calendar day (YYYY-MM-DD) that `nowMs` falls on from the perspective of
+// `timeZone` — the rep's own local day, not the UTC day. en-CA locale formats
+// dates as YYYY-MM-DD natively, so no manual part-assembly needed (Prompt 244
+// — every calendar's "today"/future-day logic switches from UTC calendar day
+// to this, sourced from the same profiles.timezone LiveClock/the per-rep
+// batch reset already use).
+export function zonedDateStr(nowMs, timeZone) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: timeZone || DEFAULT_TIMEZONE }).format(new Date(nowMs))
+}
+
 // The UTC epoch ms of the next local midnight in `timeZone`, as of `nowMs`
 // (Prompt 226 — the batch-reset countdown now tracks each rep's own
 // timezone instead of a single hardcoded UTC instant, matching the

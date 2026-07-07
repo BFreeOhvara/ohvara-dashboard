@@ -5,7 +5,8 @@ import { Phone, Loader2, X, Play } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { STATUS_COLORS } from './ActivityFeed'
-import { DayFilterBar, useDayFilter, toUtcDateStr } from '../../components/ui/DayFilterBar'
+import { DayFilterBar, useDayFilter } from '../../components/ui/DayFilterBar'
+import { zonedDateStr } from '../../lib/timezones'
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
@@ -60,7 +61,8 @@ function fmtDuration(totalSeconds) {
 export default function MyCalls() {
   const { profile } = useAuth()
   const [openCall, setOpenCall] = useState(null)
-  const { todayStr, selectedDate, setSelectedDate, firstCallDateStr } = useDayFilter(profile?.id)
+  // Bucketed by the rep's own local calendar day, not UTC (Prompt 244).
+  const { todayStr, selectedDate, setSelectedDate, firstCallDateStr } = useDayFilter(profile?.id, profile?.timezone)
 
   const { data: allCalls = [], isLoading } = useQuery({
     queryKey: ['my-calls', profile?.id],
@@ -78,7 +80,7 @@ export default function MyCalls() {
     enabled: !!profile?.id,
   })
 
-  const calls = allCalls.filter(c => toUtcDateStr(c.created_at) === selectedDate)
+  const calls = allCalls.filter(c => zonedDateStr(new Date(c.created_at).getTime(), profile?.timezone) === selectedDate)
 
   // Separate, unbounded query — the 50-row-limited `allCalls` above is for the
   // per-day list only and would under-count a rep with 50+ graded calls.

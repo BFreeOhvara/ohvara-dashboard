@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { DEFAULT_TIMEZONE, zonedDateStr } from '../../lib/timezones'
 
 // Shared single-day-only calendar filter — Activity Feed (Prompt 223/225) and
 // My Calls (Prompt 227) both use this. No "all days" escape hatch: callers
@@ -28,10 +29,13 @@ function addUtcDays(dateStr, delta) {
 // seed/test data (no outcome, no grade) that never represented a real dial.
 // repId is always the logged-in rep's own id (profile.id), never a fixed
 // account, so this is per-rep-dynamic by construction — a new rep's first
-// graded call becomes their own star automatically.
-export function useFirstGradedCallDate(repId) {
+// graded call becomes their own star automatically. Bucketed by the rep's
+// own local calendar day (profiles.timezone), not UTC (Prompt 244) — the
+// star marks "the day they started" from the rep's own point of view, same
+// as every other "today"-relative marker on these calendars.
+export function useFirstGradedCallDate(repId, timezone) {
   return useQuery({
-    queryKey: ['first-graded-call-date', repId],
+    queryKey: ['first-graded-call-date', repId, timezone],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('calls')
@@ -41,49 +45,56 @@ export function useFirstGradedCallDate(repId) {
         .order('created_at', { ascending: true })
         .limit(1)
       if (error) throw error
-      return data?.[0] ? toUtcDateStr(data[0].created_at) : null
+      return data?.[0] ? zonedDateStr(new Date(data[0].created_at).getTime(), timezone) : null
     },
     enabled: !!repId,
     staleTime: Infinity,
   }).data
 }
 
-// Tracks "today" (UTC calendar day) live and keeps selectedDate pinned to it
-// across a UTC midnight rollover, unless the user has stepped to a different
-// day. Always returns a real date string — never null/"all days".
-// repId (optional) also fetches the rep's first-ever call date, for the
-// "day one" star marker in DayFilterBar's calendar grid (Prompt 231).
-export function useDayFilter(repId) {
-  const [todayStr, setTodayStr] = useState(() => toUtcDateStr(Date.now()))
-  const [selectedDate, setSelectedDate] = useState(() => toUtcDateStr(Date.now()))
+// Tracks "today" (the rep's own local calendar day, via profiles.timezone —
+// Prompt 244, previously UTC calendar day) live and keeps selectedDate
+// pinned to it across a local-midnight rollover, unless the user has stepped
+// to a different day. Always returns a real date string — never null/"all
+// days". repId (optional) also fetches the rep's first-ever call date, for
+// the "day one" star marker in DayFilterBar's calendar grid (Prompt 231).
+export function useDayFilter(repId, timezone) {
+  const tz = timezone || DEFAULT_TIMEZONE
+  const [todayStr, setTodayStr] = useState(() => zonedDateStr(Date.now(), tz))
+  const [selectedDate, setSelectedDate] = useState(() => zonedDateStr(Date.now(), tz))
 
   useEffect(() => {
     function checkRollover() {
-      const nowStr = toUtcDateStr(Date.now())
+      const nowStr = zonedDateStr(Date.now(), tz)
       setTodayStr(prevToday => {
         if (nowStr === prevToday) return prevToday
         setSelectedDate(prevSelected => prevSelected === prevToday ? nowStr : prevSelected)
         return nowStr
       })
     }
+    // Also re-check immediately when tz resolves/changes (e.g. profile loads
+    // after the initial DEFAULT_TIMEZONE-seeded render), not just on the
+    // 60s interval/visibility-change triggers below.
+    checkRollover()
     const interval = setInterval(checkRollover, 60_000)
     document.addEventListener('visibilitychange', checkRollover)
     return () => {
       clearInterval(interval)
       document.removeEventListener('visibilitychange', checkRollover)
     }
-  }, [])
+  }, [tz])
 
-  const firstCallDateStr = useFirstGradedCallDate(repId)
+  const firstCallDateStr = useFirstGradedCallDate(repId, tz)
 
   return { todayStr, selectedDate, setSelectedDate, firstCallDateStr }
 }
 
 export function DayFilterBar({ selectedDate, todayStr, onChange, firstCallDateStr }) {
   const [calOpen, setCalOpen] = useState(false)
-  const now = new Date()
-  const [calViewYear, setCalViewYear] = useState(now.getUTCFullYear())
-  const [calViewMonth, setCalViewMonth] = useState(now.getUTCMonth() + 1)
+  // Initial visible month follows the caller's (already tz-corrected) todayStr,
+  // not a fresh UTC-based `new Date()` (Prompt 244).
+  const [calViewYear, setCalViewYear] = useState(() => +todayStr.slice(0, 4))
+  const [calViewMonth, setCalViewMonth] = useState(() => +todayStr.slice(5, 7))
   const calBtnRef = useRef(null)
   const calPanelRef = useRef(null)
 
@@ -181,6 +192,7 @@ export function DayFilterBar({ selectedDate, todayStr, onChange, firstCallDateSt
         >
           <SingleDayCalendar
             selectedDate={selectedDate}
+            todayStr={todayStr}
             onDayClick={handleDayClick}
             viewYear={calViewYear}
             viewMonth={calViewMonth}
@@ -194,8 +206,8 @@ export function DayFilterBar({ selectedDate, todayStr, onChange, firstCallDateSt
   )
 }
 
-function SingleDayCalendar({ selectedDate, onDayClick, viewYear, viewMonth, onPrev, onNext, firstCallDateStr }) {
-  const today = new Date().toISOString().slice(0, 10)
+function SingleDayCalendar({ selectedDate, todayStr, onDayClick, viewYear, viewMonth, onPrev, onNext, firstCallDateStr }) {
+  const today = todayStr
 
   const cells = useMemo(() => {
     const firstDay = new Date(Date.UTC(viewYear, viewMonth - 1, 1))

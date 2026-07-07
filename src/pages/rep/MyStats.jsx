@@ -5,7 +5,6 @@ import { useRepStats, useRepDailyActivity, useCompletedDays, useTodayCallStats, 
 import { StatCard } from '../../components/ui/StatCard'
 import { Button } from '../../components/ui/Button'
 import { RangeCalendar, useRangeCalendar } from '../../components/ui/RangeCalendar'
-import { toUtcDateStr } from '../../components/ui/DayFilterBar'
 
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -123,10 +122,9 @@ export default function MyStats() {
     calOpen, setCalOpen, calViewYear, calViewMonth,
     calBtnRef, calPanelRef, hasCustomRange, calBtnLabel,
     clearRange, handleDayClick, prevMonth, nextMonth,
-    firstCallDateStr,
-  } = useRangeCalendar(profile?.id)
+    firstCallDateStr, todayStr,
+  } = useRangeCalendar(profile?.id, profile?.timezone)
 
-  const todayStr = toUtcDateStr(Date.now())
   const isSingleDay = hasCustomRange && rangeStart === rangeEnd
   const isToday = isSingleDay && rangeStart === todayStr
 
@@ -210,6 +208,7 @@ export default function MyStats() {
                   onPrev={prevMonth}
                   onNext={nextMonth}
                   firstCallDateStr={firstCallDateStr}
+                  todayStr={todayStr}
                 />
               </div>
             )}

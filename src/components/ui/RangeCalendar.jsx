@@ -1,6 +1,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { toUtcDateStr, useFirstGradedCallDate } from './DayFilterBar'
+import { useFirstGradedCallDate } from './DayFilterBar'
+import { DEFAULT_TIMEZONE, zonedDateStr } from '../../lib/timezones'
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const DAY_LABELS = ['Su','Mo','Tu','We','Th','Fr','Sa']
@@ -16,15 +17,19 @@ export function fmtRangeLabel(iso) {
 // stay pixel-for-pixel and behaviorally identical instead of drifting.
 // repId (optional) fetches the rep's first-graded-call date for the "day
 // one" star marker (Prompt 240) — same source DayFilterBar's calendar uses.
-export function useRangeCalendar(repId) {
-  const now = new Date()
-  const firstCallDateStr = useFirstGradedCallDate(repId)
+// timezone (optional, profile.timezone) sources "today" for future-day
+// disabling and the initial visible month — the rep's own local calendar
+// day, not UTC (Prompt 244).
+export function useRangeCalendar(repId, timezone) {
+  const tz = timezone || DEFAULT_TIMEZONE
+  const todayStr = zonedDateStr(Date.now(), tz)
+  const firstCallDateStr = useFirstGradedCallDate(repId, tz)
   const [rangeStart, setRangeStart] = useState(null)
   const [rangeEnd, setRangeEnd] = useState(null)
   const [hoverDate, setHoverDate] = useState(null)
   const [calOpen, setCalOpen] = useState(false)
-  const [calViewYear, setCalViewYear] = useState(now.getUTCFullYear())
-  const [calViewMonth, setCalViewMonth] = useState(now.getUTCMonth() + 1)
+  const [calViewYear, setCalViewYear] = useState(() => +todayStr.slice(0, 4))
+  const [calViewMonth, setCalViewMonth] = useState(() => +todayStr.slice(5, 7))
   const calBtnRef = useRef(null)
   const calPanelRef = useRef(null)
 
@@ -83,15 +88,15 @@ export function useRangeCalendar(repId) {
     calOpen, setCalOpen, calViewYear, calViewMonth,
     calBtnRef, calPanelRef, hasCustomRange, calBtnLabel,
     clearRange, handleDayClick, prevMonth, nextMonth,
-    firstCallDateStr,
+    firstCallDateStr, todayStr,
   }
 }
 
 // Presentational month grid — contiguous start+end click-to-select with
 // hover preview (Prompt 231D, extracted to shared in Prompt 233 so My Stats
 // doesn't become a third hand-rolled variant of the same picker).
-export function RangeCalendar({ rangeStart, rangeEnd, hoverDate, onDayClick, onDayHover, viewYear, viewMonth, onPrev, onNext, firstCallDateStr }) {
-  const today = toUtcDateStr(Date.now())
+export function RangeCalendar({ rangeStart, rangeEnd, hoverDate, onDayClick, onDayHover, viewYear, viewMonth, onPrev, onNext, firstCallDateStr, todayStr }) {
+  const today = todayStr
 
   const cells = useMemo(() => {
     const firstDay = new Date(Date.UTC(viewYear, viewMonth - 1, 1))

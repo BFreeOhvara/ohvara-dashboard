@@ -3,7 +3,8 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { Bell, Phone } from 'lucide-react'
 import { Card } from '../../components/ui/Card'
-import { DayFilterBar, useDayFilter, toUtcDateStr } from '../../components/ui/DayFilterBar'
+import { DayFilterBar, useDayFilter } from '../../components/ui/DayFilterBar'
+import { zonedDateStr } from '../../lib/timezones'
 
 // The feed is strictly outcome-driven: a calls row exists only when a lead
 // was moved to a real outcome (Appointment Booked / No Answer / Not
@@ -16,12 +17,13 @@ const MONTH_NAMES = ['January','February','March','April','May','June','July','A
 export default function ActivityFeed() {
   const { profile } = useAuth()
   // Single-day-only, always (Prompt 227) — no "All days" escape hatch.
-  // Buckets by UTC calendar date, matching the boundary assign_daily_batches()
-  // (pg_cron, supabase/migrations/016_daily_batch_cron.sql) actually uses —
-  // CURRENT_DATE with zero per-rep timezone adjustment. Browser-local would
-  // disagree with what the rest of the dashboard considers "today" (Prompt 223
-  // investigation, see brain/Memories.md).
-  const { todayStr, selectedDate, setSelectedDate, firstCallDateStr } = useDayFilter(profile?.id)
+  // Buckets by the rep's own local calendar day (profiles.timezone), matching
+  // the per-rep-timezone-aware assign_daily_batches() reset (Prompt 226) and
+  // every other "today"-relative marker in the app — not UTC calendar date,
+  // which silently drifted a day ahead after ~7pm Central (Prompt 244; see
+  // brain/Memories.md for the investigation that superseded Prompt 223's
+  // original UTC-bucketing rationale).
+  const { todayStr, selectedDate, setSelectedDate, firstCallDateStr } = useDayFilter(profile?.id, profile?.timezone)
 
   const { data: calls, isLoading } = useQuery({
     queryKey: ['activity', profile?.id],
@@ -48,7 +50,7 @@ export default function ActivityFeed() {
       status: c.outcome,
       time: c.created_at,
     }))
-    .filter(item => toUtcDateStr(item.time) === selectedDate)
+    .filter(item => zonedDateStr(new Date(item.time).getTime(), profile?.timezone) === selectedDate)
 
   return (
     // 60px = one FeedItem row's rendered footprint (56px box + 4px space-y-1
