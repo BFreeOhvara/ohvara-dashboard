@@ -196,7 +196,7 @@ export const DISCOVERY_SCRIPT = [
     goal: 'Pass everything to "our team," describe the AI receptionist plainly, then ask for one of two specific windows.',
     color: 'var(--success)', dim: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.25)',
     lines: [
-      `"Look, I don't want to waste your time — that's $[annual] a year slipping through the cracks. So instead of filling this role, we'll build you a system made exactly for this — it catches the calls you'd otherwise miss, answers questions, and books appointments straight to your calendar. All you have to do is show up. Take 15 minutes — worst case, you see exactly what it looks like. Best case, we plug that money hole for you. How's that sound?"`,
+      `"Look, I don't want to waste your time — like I said, that's money slipping through the cracks. So here's what I'll do for you: we'll build you a system made exactly for this — it catches the calls you'd otherwise miss, answers questions 24/7, and books straight to your calendar. All you have to do is show up. Take 15 minutes — worst case, you see exactly what it looks like. Best case, we get that money hole plugged and you're not wasting any more time. How's that sound?"`,
       `BRANCH — How do they respond?`,
       `↳ IF Good / shows interest [GOOD]: "Good — looks like you guys are out in [city], [state] — does [Tuesday morning] or [Wednesday afternoon] work best for you?"`,
       `   BRANCH — Do they pick a time?`,
@@ -251,8 +251,8 @@ export const DISCOVERY_SCRIPT = [
     goal: 'State the day/time back, get their best number, remind them our team already has everything. Stop talking.',
     color: 'var(--accent)', dim: 'rgba(108,99,255,0.10)', border: 'rgba(108,99,255,0.30)',
     lines: [
-      `"[Day] at [time] — I'm going to see what I can do for you. There's nothing, you don't got to buy anything. What's the best number so I can send you a quick text right now to confirm?"`,
-      `"Got it. Our team will have everything you told me today in front of them before the call — you won't have to re-explain anything."`,
+      `"[Day] at [time] — I've got you locked in for that. What's a good number to grab you at real quick to confirm?"`,
+      `"Got it. Our team will have everything you told me today in front of them before the call — you won't have to re-explain anything. Thank you for your time — talk soon."`,
       `▸ Set status Appointment Booked. Log the time and number.`,
     ],
     tips: `Say the day/time back, get the number, then stop. Nothing to sell after the yes.`,
