@@ -236,9 +236,7 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
           clutter mid-call); kept for the practice walk. */}
       {mode !== 'live' && (
         <div style={{ flexShrink: 0, padding: '12px 18px 10px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ width: 20, height: 20, borderRadius: 6, background: accent, color: '#0E0E1A', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            {section.short}
-          </span>
+          <span style={{ width: 20, height: 20, borderRadius: 6, background: accent, color: '#0E0E1A', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} />
           <div style={{ minWidth: 0, flex: 1 }}>
             <p style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{section.title}</p>
             {section.trigger && <p style={{ fontSize: 10.5, color: 'var(--text-muted)', margin: '1px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{section.trigger}</p>}
