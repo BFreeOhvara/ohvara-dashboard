@@ -252,7 +252,7 @@ export const DISCOVERY_SCRIPT = [
       `            ▸ Set status Follow-Up (log the callback window they gave).`,
       `         ↳ IF Not a good fit [BAD]: "All good, man — appreciate your time. Take care."`,
       `            ▸ Set status Not Interested.`,
-      `↳ IF Just send me some info [HESITANT]: "I could send that over, but honestly — when was the last time an email did more for you than an actual conversation? Let's hop on a quick call instead, [time] tomorrow — I'll show you, there's nothing to buy."`,
+      `↳ IF Just send me some info [HESITANT]: "Yeah, 100% — but honestly, when's the last time an email did more for you than an actual conversation? Let's hop on a quick call instead — our team will walk you through exactly how this can benefit your situation. All you gotta do is listen. How's that sound?"`,
       `   BRANCH — Do they agree?`,
       `   ↳ IF Okay, fair [GOOD]: "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
       `      BRANCH — Do they pick a time?`,
