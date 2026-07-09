@@ -238,15 +238,13 @@ export const DISCOVERY_SCRIPT = [
     lines: [
       `"Look, I don't want to waste your time — like I said, that's money slipping through the cracks. So here's what I'll do for you: we'll build you a system made exactly for this — it catches the calls you'd otherwise miss, answers questions 24/7, and books straight to your calendar. All you have to do is show up. Take 15 minutes — worst case, you see exactly what it looks like. Best case, we get that money hole plugged and you're not wasting any more time. Sounds like a win-win to me — what do you think?"`,
       `BRANCH — How do they respond?`,
-      `↳ IF Good / shows interest [GOOD]: "Good — looks like you guys are out in [city], [state] — does [Tuesday morning] or [Wednesday afternoon] work best for you?"`,
-      `   BRANCH — Do they pick a time?`,
-      `   ↳ IF Picks a time [GOOD]: → Go to Close`,
+      `↳ IF Good / shows interest [GOOD]: "Good — looks like you guys are out in [city], [state]. Do mornings or afternoons work better for you?"`,
+      ...timeOfDayOfferFlow('   '),
       `   ↳ IF Still hesitant [HESITANT]: "No worries — like I was saying, it's just 15 minutes. They'll show you exactly how the system works and how it'd actually help your situation. Just hear them out — how's that sound?"`,
       `      BRANCH — Do they engage this time?`,
-      `      ↳ IF Engages [GOOD]: "Okay, perfect — does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
-      `         BRANCH — Do they pick a time?`,
-      `         ↳ IF Picks a time [GOOD]: → Go to Close`,
-      `         ↳ IF Still hesitant [HESITANT]: "No worries — is it more of a timing thing, or is this just not a good fit right now?"`,
+      `      ↳ IF Engages [GOOD]: "Okay, perfect — do mornings or afternoons work better for you?"`,
+      ...timeOfDayOfferFlow('      '),
+      `      ↳ IF Still hesitant [HESITANT]: "No worries — is it more of a timing thing, or is this just not a good fit right now?"`,
       `            BRANCH — Which is it?`,
       `            ↳ IF Timing thing [HESITANT]: "Got it — what's a better time to check back in?"`,
       `               ▸ Set status Follow-Up (log the callback window they gave).`,
@@ -260,9 +258,8 @@ export const DISCOVERY_SCRIPT = [
       `            ▸ Set status Not Interested.`,
       `↳ IF Just send me some info [HESITANT]: "Yeah, 100% — but honestly, when's the last time an email did more for you than an actual conversation? Let's hop on a quick call instead — our team will walk you through exactly how this can benefit your situation. All you gotta do is listen. How's that sound?"`,
       `   BRANCH — Do they agree?`,
-      `   ↳ IF Okay, fair [GOOD]: "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
-      `      BRANCH — Do they pick a time?`,
-      `      ↳ IF Picks a time [GOOD]: → Go to Close`,
+      `   ↳ IF Okay, fair [GOOD]: "Do mornings or afternoons work better for you?"`,
+      ...timeOfDayOfferFlow('      '),
       `      ↳ IF Still hesitant [HESITANT]: "Honestly, I don't really have anything solid to send you — our team walks you through it more like a live presentation, tailored to your situation. How about this — is there a better time to reach out and check back in, see what's going on from there?"`,
       `         BRANCH — Do they give a time, or say they're not interested?`,
       `         ↳ IF Gives a time [HESITANT]: ▸ Set status Follow-Up (log the callback window they gave).`,
@@ -283,32 +280,29 @@ export const DISCOVERY_SCRIPT = [
       `         ▸ Set status Not Interested.`,
       `↳ IF Who is this / what company? [BAD]: "Oh — this is [Rep Name] with Ohvara. We build systems that help businesses just like yours stop missing calls and losing money because of it. I mean, we haven't spoken for very long, but you don't strike me as the type of person that wants to lose money, right?"`,
       `   BRANCH — How do they respond?`,
-      `   ↳ IF Agrees [GOOD]: "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
-      `      BRANCH — Do they pick a time?`,
-      `      ↳ IF Picks a time [GOOD]: → Go to Close`,
+      `   ↳ IF Agrees [GOOD]: "Do mornings or afternoons work better for you?"`,
+      ...timeOfDayOfferFlow('      '),
       `      ↳ IF Still hesitant [HESITANT]: "No worries — I'll send some info over, and if the numbers make sense, we can find time later."`,
       `         ▸ Set status Follow-Up (log pricing pushback, send info).`,
       `   ↳ IF Still hesitant [HESITANT]: "No worries — if you don't mind me asking, what's kind of holding you back?"`,
       `      BRANCH — Do they open up, or say they're not interested?`,
       `      ↳ IF Opens up [HESITANT]: "It's really just 15 minutes to see if it's even worth pursuing — no pressure, no commitment. If it's not a fit, we part ways, no hard feelings."`,
       `         BRANCH — Do they engage this time?`,
-      `         ↳ IF Engages [GOOD]: "Okay, perfect — does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
-      `            → Go to Close`,
+      `         ↳ IF Engages [GOOD]: "Okay, perfect — do mornings or afternoons work better for you?"`,
+      ...timeOfDayOfferFlow('            '),
       `         ↳ IF Still hesitant [HESITANT]: "No worries — is there a better time for me to check back in?"`,
       `            ▸ Set status Follow-Up (log the callback window they gave).`,
       `      ↳ IF Not interested [BAD]: "All good, man — appreciate your time. Take care."`,
       `         ▸ Set status Not Interested.`,
       `↳ IF How much does this cost? [BAD]: "Honestly depends on your call volume and setup — which is exactly what our team figures out on the call. Didn't want to guess at a number before they've seen your actual situation. Does that sound fair?"`,
       `   BRANCH — Do they push for a ballpark?`,
-      `   ↳ IF Okay [GOOD]: "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
-      `      BRANCH — Do they pick a time?`,
-      `      ↳ IF Picks a time [GOOD]: → Go to Close`,
+      `   ↳ IF Okay [GOOD]: "Do mornings or afternoons work better for you?"`,
+      ...timeOfDayOfferFlow('      '),
       `      ↳ IF Still hesitant [HESITANT]: "No worries — I'll send some info over, and if the numbers make sense, we can find time later."`,
       `         ▸ Set status Follow-Up (log pricing pushback, send info).`,
       `   ↳ IF Just need a ballpark [HESITANT]: "The range is wide depending on what you need, which is exactly why the call is worth 15 minutes — they'll give you a real number based on what you just told me."`,
-      `      "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
-      `      BRANCH — Do they pick a time?`,
-      `      ↳ IF Picks a time [GOOD]: → Go to Close`,
+      `      "Do mornings or afternoons work better for you?"`,
+      ...timeOfDayOfferFlow('      '),
       `      ↳ IF Still hesitant [HESITANT]: "No worries — I'll send some info over, and if the numbers make sense, we can find time later."`,
       `         ▸ Set status Follow-Up (log pricing pushback, send info).`,
     ],
@@ -383,6 +377,39 @@ function nextCalendarWeekOccurrence(todayStr, targetDow) {
   return monthDayText(addDaysToDateStr(thisWeekMondayStr, 7 + targetOffsetFromMonday))
 }
 
+// Local wall-clock hour (0-23) in `timeZone` at `nowMs` — used to pick the
+// [afternoon offer] branch below (Prompt 264: "later today" only reads
+// naturally before 5pm local; past that it offers tomorrow afternoon instead).
+function zonedHour(nowMs, timeZone) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timeZone || DEFAULT_TIMEZONE, hourCycle: 'h23', hour: '2-digit',
+  }).formatToParts(new Date(nowMs))
+  return Number(parts.find(p => p.type === 'hour').value)
+}
+
+// Time-of-day-aware morning/afternoon offer flow (Prompt 264) — replaces the
+// old static "[Tuesday morning] or [Wednesday afternoon]" line at every
+// Handoff site that offers a day/time. Generated once and spliced into each
+// site via spread rather than hand-copied 7x: this DSL has no cross-section
+// node references (verbatim duplication is the established pattern per
+// Prompt 256), but a 3-step branch is too easy to drift out of sync if
+// hand-copied at every site, so the block itself is shared while each site
+// still gets its own literal, independent set of array entries at build time
+// (no runtime references between sites — same as if it had been typed out
+// by hand). `indent` matches the depth of the site's existing "BRANCH — Do
+// they pick a time?" line it replaces.
+function timeOfDayOfferFlow(indent) {
+  return [
+    `${indent}BRANCH — Mornings or afternoons?`,
+    `${indent}↳ IF Mornings [GOOD]: "Does tomorrow morning work for you?"`,
+    `${indent}   "What time works best for you?"`,
+    `${indent}   → Go to Close`,
+    `${indent}↳ IF Afternoon [GOOD]: "[afternoon offer]"`,
+    `${indent}   "What time works best for you?"`,
+    `${indent}   → Go to Close`,
+  ]
+}
+
 // Substitute a lead's real details into the tree's tokens.
 // In-call placeholders ([Name], [day], [time], [time+1hr], [owner]) stay
 // literal as rep guidance — they're captured FROM the prospect's own words
@@ -405,6 +432,13 @@ function fillTokens(text, lead, rep) {
     ? `${lead.city}, ${lead.state}`
     : (lead.city || lead.state || 'your area')
   const todayStr = zonedDateStr(Date.now(), rep?.timezone || DEFAULT_TIMEZONE)
+  const repTimezone = rep?.timezone || DEFAULT_TIMEZONE
+  // Prompt 264 — the afternoon arm of the morning/afternoon offer flow reads
+  // naturally as "later today" only before 5pm local; past that, offering
+  // "later today" is asking for a same-day slot that's mostly already gone.
+  const afternoonOffer = zonedHour(Date.now(), repTimezone) < 17
+    ? 'Are you free later today?'
+    : 'Does tomorrow afternoon work for you?'
   return text
     .replace(/\[Business Name\]/gi, biz)
     .replace(/\[niche\]/gi, niche)
@@ -416,6 +450,7 @@ function fillTokens(text, lead, rep) {
     .replace(/\[Wednesday afternoon\]/gi, `Wednesday afternoon, ${nextOccurrence(todayStr, 3)}`)
     .replace(/\[Tuesday next week\]/gi, `Tuesday, ${nextCalendarWeekOccurrence(todayStr, 2)}`)
     .replace(/\[Wednesday next week\]/gi, `Wednesday, ${nextCalendarWeekOccurrence(todayStr, 3)}`)
+    .replace(/\[afternoon offer\]/gi, afternoonOffer)
 }
 
 // One section's lines + its coach tip, joined to text. Marker lines
