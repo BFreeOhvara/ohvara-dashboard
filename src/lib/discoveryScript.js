@@ -272,7 +272,7 @@ export const DISCOVERY_SCRIPT = [
       `   ↳ IF Picks a day [GOOD]: → Go to Close`,
       `   ↳ IF Those don't work either [BAD]: "Got it — what's a better week for you?"`,
       `      ▸ Set status Follow-Up (log the week they gave).`,
-      `↳ IF Who is this / what company? [BAD]: "Who would be responsible for looking at any possible hidden gaps in your call flow system that could be causing you guys to miss out on thousands of dollars every month? Is that you?"`,
+      `↳ IF Who is this / what company? [BAD]: "Oh — this is [Rep Name] with Ohvara. We build systems that help businesses just like yours stop missing calls and losing money because of it. I mean, we haven't spoken for very long, but you don't strike me as the type of person that wants to lose money, right?"`,
       `   BRANCH — Are they the decision maker?`,
       `   ↳ IF That's me: "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
       `      BRANCH — Do they pick a time?`,
