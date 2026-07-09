@@ -5,16 +5,20 @@
 // CEO framing (setter isn't the closer — "our team"), Indeed listing instead
 // of a generic hook, and the setter always books the 15-minute call rather
 // than closing on the spot. Every spoken line is exactly what the setter reads.
-// Dynamic tokens: [Business Name], [First Name], [job title] (from the
-// lead's posting_title, falling back to "front desk role" if unset — e.g.
+// Dynamic tokens: [Business Name], [job title] (from the lead's
+// posting_title, falling back to "front desk role" if unset — e.g.
 // Maps-sourced leads with no scraped Indeed posting), [city], [state] (Prompt
 // 224 — confirm-time states the lead's real location back before locking an
-// appointment time) filled from the lead.
-// In-call tokens: [Name], [day], [time], [time+1hr], [owner], [Tuesday morning],
-// [Wednesday afternoon], [Tuesday next week], [Wednesday next week] stay
-// literal as rep guidance during the call. [their number], [monthly], [annual],
-// [$ticket] are computed live from the setter's own captured vitals — see
-// renderText() in ScriptWalk.jsx.
+// appointment time) filled from the lead. [Tuesday morning], [Wednesday
+// afternoon], [Tuesday next week], [Wednesday next week] (Prompt 256) are
+// computed from the rep's real local calendar day (profiles.timezone) —
+// the rendered text is exactly what the rep should say aloud, no day-of-week
+// math required live on the call.
+// In-call tokens: [Name], [day], [time], [time+1hr], [owner] stay literal as
+// rep guidance during the call — they're captured FROM the prospect's own
+// words live on the call, not something computable ahead of time. [their
+// number], [monthly], [annual], [$ticket] are computed live from the
+// setter's own captured vitals — see renderText() in ScriptWalk.jsx.
 //
 // LINE MARKERS (renderers style these):
 //   plain string     a spoken line                      → bullet
@@ -31,6 +35,8 @@
 //   ⊞ ...            data-collect step (inline)          → number inputs
 //
 // `kind`: 'opener' pins to top, 'branch' scrolls middle, 'close' pins bottom.
+
+import { DEFAULT_TIMEZONE, zonedDateStr } from './timezones'
 
 // Response-category colors for fork options (Prompt 204) — the 4 existing
 // DESIGN.md semantic tokens only, no invented colors (Prompt 134 lesson).
@@ -318,9 +324,65 @@ export const DISCOVERY_SCRIPT = [
   },
 ]
 
+// Day-offering date math (Prompt 256) — [Tuesday morning]/[Wednesday
+// afternoon]/[Tuesday next week]/[Wednesday next week] used to render as
+// literal bracket text, forcing the rep to do day-of-week math live on the
+// call. Computed here from the rep's own local calendar day (profiles.timezone,
+// same zonedDateStr() pattern as every other "today" in this codebase since
+// Prompt 244) so the rendered text is exactly what the rep should say aloud.
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+
+function ordinal(day) {
+  if (day % 10 === 1 && day % 100 !== 11) return `${day}st`
+  if (day % 10 === 2 && day % 100 !== 12) return `${day}nd`
+  if (day % 10 === 3 && day % 100 !== 13) return `${day}rd`
+  return `${day}th`
+}
+
+// Adds `days` to a "YYYY-MM-DD" calendar date, returning its parts. Pure
+// calendar-date math (Date.UTC, no timezone conversion) — zonedDateStr()
+// already resolved which local calendar day "today" is.
+function addDaysToDateStr(dateStr, days) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d + days))
+  return { year: dt.getUTCFullYear(), month: dt.getUTCMonth(), day: dt.getUTCDate(), dow: dt.getUTCDay() }
+}
+
+function monthDayText({ month, day }) {
+  return `${MONTH_NAMES[month]} ${ordinal(day)}`
+}
+
+// Next occurrence of `targetDow` (0=Sun..6=Sat) strictly after today — if
+// today already IS that weekday, jumps a full week rather than offering a
+// same-day ask (Eagle's simpler rule, chosen to avoid a same-day offer
+// reading as pushy — see Prompt 256).
+function nextOccurrence(todayStr, targetDow) {
+  const today = addDaysToDateStr(todayStr, 0)
+  const offset = ((targetDow - today.dow + 7) % 7) || 7
+  return monthDayText(addDaysToDateStr(todayStr, offset))
+}
+
+// The `targetDow` in the NEXT calendar week (Mon–Sun), never this week —
+// distinct from nextOccurrence() because "[Tuesday next week]" is only used
+// in the "I don't have time this week" branch, where offering something
+// still in the current week would contradict what the prospect just said.
+function nextCalendarWeekOccurrence(todayStr, targetDow) {
+  const today = addDaysToDateStr(todayStr, 0)
+  const daysToThisWeekMonday = today.dow === 0 ? -6 : 1 - today.dow
+  const thisWeekMonday = addDaysToDateStr(todayStr, daysToThisWeekMonday)
+  const thisWeekMondayStr = `${thisWeekMonday.year}-${String(thisWeekMonday.month + 1).padStart(2, '0')}-${String(thisWeekMonday.day).padStart(2, '0')}`
+  const targetOffsetFromMonday = (targetDow - 1 + 7) % 7
+  return monthDayText(addDaysToDateStr(thisWeekMondayStr, 7 + targetOffsetFromMonday))
+}
+
 // Substitute a lead's real details into the tree's tokens.
-// In-call placeholders ([Name], [day], [time], [time+1hr], [owner],
-// [Tuesday morning], etc.) stay literal as rep guidance during the call.
+// In-call placeholders ([Name], [day], [time], [time+1hr], [owner]) stay
+// literal as rep guidance — they're captured FROM the prospect's own words
+// live on the call, not something computable ahead of time. The day-offering
+// tokens ([Tuesday morning] etc.) ARE computable and are filled below.
 function fillTokens(text, lead, rep) {
   const biz       = lead.business_name || 'the business'
   const niche     = lead.niche || 'service'
@@ -337,6 +399,7 @@ function fillTokens(text, lead, rep) {
   const cityState = lead.city && lead.state
     ? `${lead.city}, ${lead.state}`
     : (lead.city || lead.state || 'your area')
+  const todayStr = zonedDateStr(Date.now(), rep?.timezone || DEFAULT_TIMEZONE)
   return text
     .replace(/\[Business Name\]/gi, biz)
     .replace(/\[niche\]/gi, niche)
@@ -344,6 +407,10 @@ function fillTokens(text, lead, rep) {
     .replace(/\[city\]/gi, city)
     .replace(/\[job title\]/gi, jobTitle)
     .replace(/\[Rep Name\]/gi, repName)
+    .replace(/\[Tuesday morning\]/gi, `Tuesday morning, ${nextOccurrence(todayStr, 2)}`)
+    .replace(/\[Wednesday afternoon\]/gi, `Wednesday afternoon, ${nextOccurrence(todayStr, 3)}`)
+    .replace(/\[Tuesday next week\]/gi, `Tuesday, ${nextCalendarWeekOccurrence(todayStr, 2)}`)
+    .replace(/\[Wednesday next week\]/gi, `Wednesday, ${nextCalendarWeekOccurrence(todayStr, 3)}`)
 }
 
 // One section's lines + its coach tip, joined to text. Marker lines
