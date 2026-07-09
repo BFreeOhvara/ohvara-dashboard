@@ -298,7 +298,7 @@ export const DISCOVERY_SCRIPT = [
       `            ▸ Set status Follow-Up (log the callback window they gave).`,
       `      ↳ IF Not interested [BAD]: "All good, man — appreciate your time. Take care."`,
       `         ▸ Set status Not Interested.`,
-      `↳ IF How much does this cost? [BAD]: "Honestly depends on your call volume and setup — which is exactly what our team figures out on the call. Didn't want to guess at a number before they've seen your actual situation."`,
+      `↳ IF How much does this cost? [BAD]: "Honestly depends on your call volume and setup — which is exactly what our team figures out on the call. Didn't want to guess at a number before they've seen your actual situation. Does that sound fair?"`,
       `   BRANCH — Do they push for a ballpark?`,
       `   ↳ IF Okay [GOOD]: "Does [Tuesday morning] or [Wednesday afternoon] work better for you?"`,
       `      BRANCH — Do they pick a time?`,
