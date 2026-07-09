@@ -445,7 +445,7 @@ function fillTokens(text, lead, rep) {
   // naturally as "later today" only before 5pm local; past that, offering
   // "later today" is asking for a same-day slot that's mostly already gone.
   const afternoonOffer = zonedHour(Date.now(), repTimezone) < 17
-    ? 'Are you free later today?'
+    ? 'Does later this afternoon work for you?'
     : 'Does tomorrow afternoon work for you?'
   return text
     .replace(/\[Business Name\]/gi, biz)
