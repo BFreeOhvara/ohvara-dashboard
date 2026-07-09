@@ -288,7 +288,7 @@ export const DISCOVERY_SCRIPT = [
       `      ↳ IF Picks a time [GOOD]: → Go to Close`,
       `      ↳ IF Still hesitant [HESITANT]: "No worries — I'll send some info over, and if the numbers make sense, we can find time later."`,
       `         ▸ Set status Follow-Up (log pricing pushback, send info).`,
-      `   ↳ IF Still hesitant [HESITANT]: "No worries — is there a better time for me to check back in?"`,
+      `   ↳ IF Still hesitant [HESITANT]: "No worries — what's kind of holding you back? Is it just feeling like a bit much to commit to right now?"`,
       `      BRANCH — Do they give a time, or say they're not interested?`,
       `      ↳ IF Gives a time [HESITANT]: ▸ Set status Follow-Up (log the callback window they gave).`,
       `      ↳ IF Not interested [BAD]: "All good, man — appreciate your time. Take care."`,
