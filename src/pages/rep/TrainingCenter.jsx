@@ -1699,6 +1699,12 @@ function AIRoleplay({ progress, saveProgress, examPassed }) {
   const clientRef     = useRef(null)
   const transcriptRef = useRef([])
   const scrollRef     = useRef(null)
+  // Same neutral demo-lead flow as the Script tab (Prompt 209) — reused here
+  // (Prompt 277) so the reference panel never drifts from the real script.
+  const scriptFlow = useMemo(
+    () => buildScriptFlow({ business_name: 'the business', niche: 'service', city: 'your area' }, null),
+    []
+  )
 
   useEffect(() => () => { clientRef.current?.stopCall?.() }, [])
 
@@ -1908,7 +1914,8 @@ function AIRoleplay({ progress, saveProgress, examPassed }) {
   // ── Live call / connecting / scoring ──
   if (phase === 'connecting' || phase === 'live' || phase === 'scoring') {
     return (
-      <div style={{ maxWidth: 560, margin: '0 auto' }}>
+      <div style={{ maxWidth: 960, margin: '0 auto', display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      <div style={{ flex: '1 1 560px', minWidth: 320, maxWidth: 560 }}>
         <div className="glass" style={{ borderRadius: 14, padding: '20px 22px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 16 }}>
           {/* Persona avatar — pulsing ring while the call is live */}
           <div style={{ position: 'relative', width: 52, height: 52, flexShrink: 0 }}>
@@ -2018,6 +2025,15 @@ function AIRoleplay({ progress, saveProgress, examPassed }) {
             </>
           )}
         </div>
+      </div>
+
+      {/* Script reference — same ScriptWalk shell as the Script tab and the
+          live Call modal (Prompt 277), a synthetic generic lead since there's
+          no real business here. Always visible alongside the call rather than
+          a toggle, so the rep can glance at it without breaking flow. */}
+      <div style={{ flex: '1 1 320px', minWidth: 300, maxWidth: 380, height: 426, border: '0.5px solid var(--border)', borderRadius: 14, overflow: 'hidden', background: '#0A0A12' }}>
+        <ScriptWalk flow={scriptFlow} mode="practice" />
+      </div>
       </div>
     )
   }
