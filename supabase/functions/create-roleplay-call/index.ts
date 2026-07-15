@@ -1,15 +1,59 @@
 // Creates a Retell web call for training roleplay sessions.
 // The AI plays "Mike" — a grumpy but genuine HVAC owner in Dallas who
 // has real missed-call pain. Rep must: opener → pain questions → handle objection → book.
+//
+// Response variety + randomized vitals (Prompt 272): the persona prompt below is a
+// template with {{var}} placeholders that Retell resolves per-call via
+// retell_llm_dynamic_variables (all string values — Retell requirement). Each call
+// picks one of 3 phrasing variants per behavior rule and a fresh vitals pair, so the
+// same fork doesn't sound identical call to call. This ONLY takes effect once the
+// underlying Retell LLM is rebuilt from this template — clearing RETELL_ROLEPLAY_AGENT_ID
+// forces the `if (!agentId)` branch below to recreate it fresh on the next call.
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// 3 realistic phrasing variants per non-terminal fork — picked randomly per call
+// (server-side) so the rep hears real variety instead of the identical line every time.
+const OPENER_VARIANTS = [
+  "Yeah, who's this?",
+  'Yep, what do you need?',
+  "Mike speaking — what's up?",
+]
+const INDEED_VARIANTS = [
+  'Yeah, been looking. Hard to find someone decent.',
+  'Oh yeah, that posting — still trying to fill it, actually.',
+  "Yeah, we're hiring. You know somebody?",
+]
+const OBJECTION_VARIANTS = [
+  "I'm not really interested, to be honest.",
+  'Can you just send me an email instead?',
+  "I don't really have time to deal with this right now.",
+]
+const ENGAGE_VARIANTS = [
+  'Fine. 15 minutes. What time?',
+  "Alright, alright — 15 minutes, that's it. When were you thinking?",
+  "Okay, you've got my attention. What's the next step?",
+]
+const PUSHBACK_PITCH_VARIANTS = [
+  "Yeah I don't have time for a pitch. You trying to book a call or sell me something right now?",
+  "Hold on — are we booking a time or are you just gonna talk at me?",
+  "I don't need the sales pitch, man. What do you actually need from me?",
+]
+
+function pick(variants: string[]): string {
+  return variants[Math.floor(Math.random() * variants.length)]
+}
+
+function randInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
 const ROLEPLAY_AGENT_PROMPT = `You are playing the role of Mike Johnson, an HVAC company owner in Dallas, TX.
 
-You have a 4-person team — two techs, one helper, and yourself. You get about 30 calls a week but miss maybe 8-10 because everyone's on jobs.
+You have a 4-person team — two techs, one helper, and yourself. You get about {{calls_per_month}} calls a month but miss maybe {{missed_per_day}} a day because everyone's on jobs.
 
 PERSONALITY:
 - Gruff and busy, not rude but definitely skeptical
@@ -18,20 +62,15 @@ PERSONALITY:
 - But you're genuinely losing jobs to missed calls and it frustrates you
 
 BEHAVIOR RULES:
-1. Answer gruffly: "Yeah, who's this?" or "Yep, what do you need?"
+1. Answer gruffly: "{{opener_response}}"
 2. Don't volunteer info — they have to ask the right questions
-3. If they reference Indeed → soften a bit: "Yeah, been looking. Hard to find someone decent."
-4. If they ask about missed calls → open up: "Honestly yeah, probably losing 2-3 jobs a week."
-5. After rep asks a good pain question → throw ONE objection: "I'm not interested" or "Just send me an email"
-6. If they handle the objection well → agree to a 15-min call: "Fine. 15 minutes. What time?"
-7. If they pitch the product instead of asking questions → cut them off: "Yeah I don't have time for a pitch. You trying to book a call or sell me something right now?"
-8. If they're bad → stay skeptical but hang up after 2 minutes: "Look I gotta go."
-9. Keep responses to 1-3 sentences — you're a busy guy on a job site.
-
-AT END OF CALL: After you agree to a call OR after the rep hangs up, say "End of roleplay." Then score the rep:
-SCORE: Opener [0-2], Pain Discovery [0-3], Objection Handling [0-2], Booking Ask [0-2], Tone [0-3]
-TOTAL: X/12
-FEEDBACK: [2-3 sentences on what they did well and what to fix next time]`
+3. If they reference Indeed → soften a bit: "{{indeed_response}}"
+4. If they ask about missed calls → open up with real numbers based on what you just told them (~{{calls_per_month}} calls a month, ~{{missed_per_day}} missed a day)
+5. After rep asks a good pain question → throw ONE objection: "{{objection_line}}"
+6. If they handle the objection well → agree to a 15-min call: "{{engage_response}}"
+7. If they pitch the product instead of asking questions → cut them off: "{{pushback_pitch_response}}"
+8. If they're genuinely struggling and can't recover the call, don't hang up — stay skeptical but keep the door open: ask them to check back at a better time instead ("Look, now's not a good time — call back another time"). Every call ends in either a booked 15-minute call or a real callback window, never a dead hang-up or flat "not interested, goodbye."
+9. Keep responses to 1-3 sentences — you're a busy guy on a job site.`
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -106,13 +145,25 @@ Deno.serve(async (req) => {
     }
 
     // ── Step 2: Create web call ───────────────────────────────────────────────
+    // Fresh pick every call — this is what makes the practice call sound different
+    // from the last one instead of reciting the same fixed persona verbatim.
+    const dynamicVariables = {
+      calls_per_month: String(randInt(15, 60)),
+      missed_per_day: String(randInt(1, 6)),
+      opener_response: pick(OPENER_VARIANTS),
+      indeed_response: pick(INDEED_VARIANTS),
+      objection_line: pick(OBJECTION_VARIANTS),
+      engage_response: pick(ENGAGE_VARIANTS),
+      pushback_pitch_response: pick(PUSHBACK_PITCH_VARIANTS),
+    }
+
     const callRes = await fetch('https://api.retellai.com/v2/create-web-call', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${retellApiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ agent_id: agentId }),
+      body: JSON.stringify({ agent_id: agentId, retell_llm_dynamic_variables: dynamicVariables }),
     })
 
     if (!callRes.ok) {
