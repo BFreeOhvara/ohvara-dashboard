@@ -300,7 +300,7 @@ export const DISCOVERY_SCRIPT = [
       ...timeOfDayOfferFlow('      '),
       `      ↳ IF Still hesitant [HESITANT]: "No worries — I'll send some info over, and if the numbers make sense, we can find time later."`,
       `         ▸ Set status Follow-Up (log pricing pushback, send info).`,
-      `   ↳ IF Just need a ballpark [HESITANT]: "The range is wide depending on what you need, which is exactly why the call is worth 15 minutes — they'll give you a real number based on what you just told me."`,
+      `   ↳ IF Just need a ballpark [HESITANT]: "The range is wide depending on what you need — just set aside 15 minutes, hear the team out, and they'll give you an accurate number based on your exact situation. You can decide from there."`,
       `      "So — do mornings or afternoons work better for you?"`,
       ...timeOfDayOfferFlow('      '),
       `      ↳ IF Still hesitant [HESITANT]: "No worries — if you don't mind me asking, what's kind of holding you back?"`,
