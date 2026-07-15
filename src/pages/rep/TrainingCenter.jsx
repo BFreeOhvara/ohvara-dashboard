@@ -2120,15 +2120,18 @@ export default function TrainingCenter() {
   const saveProgress = (patch) => saveMutation.mutate(patch)
 
   // Combined gate: profiles.training_completed set only when both flashcards
-  // mastered AND final exam passed. Tracked client-side via localStorage since
-  // no DB column exists for final quiz state yet — Falcon to add migration if
-  // server-side persistence is needed later.
+  // mastered AND final exam passed.
   const [flashcardsMastered, setFlashcardsMastered] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem(LS_MASTERED) || '[]')).size >= FLASHCARDS.length } catch { return false }
   })
-  const [finalQuizPassed, setFinalQuizPassed] = useState(
+  // Final exam pass is persisted to training_progress.final_exam_passed_at
+  // (Prompt 276 fix) so it survives across browsers/devices instead of living
+  // only in localStorage — the localStorage flag is kept purely as an
+  // optimistic layer for the instant after passing, before the query refetches.
+  const [finalQuizPassedLocal, setFinalQuizPassedLocal] = useState(
     () => localStorage.getItem(LS_FINAL_QUIZ_PASS) === '1'
   )
+  const finalQuizPassed = finalQuizPassedLocal || !!progress?.final_exam_passed_at
 
   async function maybeCompleteTraining(nextFC, nextFQ) {
     if (!profile?.id || profile?.training_completed) return
@@ -2144,7 +2147,8 @@ export default function TrainingCenter() {
 
   function handleFinalQuizPassed() {
     localStorage.setItem(LS_FINAL_QUIZ_PASS, '1')
-    setFinalQuizPassed(true)
+    setFinalQuizPassedLocal(true)
+    if (!progress?.final_exam_passed_at) saveProgress({ final_exam_passed_at: new Date().toISOString() })
     maybeCompleteTraining(flashcardsMastered, true)
   }
 
