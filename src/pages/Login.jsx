@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
-import { Zap } from 'lucide-react'
+import ohvaraLogo from '../assets/ohvara-logo.png'
 
 export default function Login() {
   const { signIn, session, profile, loading } = useAuth()
@@ -51,9 +51,7 @@ export default function Login() {
       <div className="w-full max-w-[380px] page-enter">
         {/* Brand mark */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-[10px] bg-[var(--accent)] mb-4">
-            <Zap size={22} className="text-white" fill="white" />
-          </div>
+          <img src={ohvaraLogo} alt="Ohvara" className="inline-block w-12 h-12 rounded-[10px] mb-4 object-cover" />
           <h1 className="text-2xl font-medium text-[var(--text-primary)] tracking-tight">Ohvara</h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">Outreach Dashboard</p>
         </div>

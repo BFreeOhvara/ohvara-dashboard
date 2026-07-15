@@ -10,6 +10,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { NotificationBell } from '../admin/NotificationBell'
 import { RepNotificationBell } from '../rep/RepNotificationBell'
 import { CloserNotificationBell } from '../closer/CloserNotificationBell'
+import ohvaraLogo from '../../assets/ohvara-logo.png'
 
 const NAV = {
   rep: [
@@ -84,15 +85,11 @@ export function Sidebar() {
       {/* Brand */}
       <div style={{ padding: '20px 16px 16px', borderBottom: '0.5px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 28, height: 28,
-            borderRadius: 6,
-            background: 'var(--accent)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-          }}>
-            <Zap size={14} color="white" fill="white" />
-          </div>
+          <img
+            src={ohvaraLogo}
+            alt="Ohvara"
+            style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
+          />
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1, margin: 0 }}>
               Ohvara

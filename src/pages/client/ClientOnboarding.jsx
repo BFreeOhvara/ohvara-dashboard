@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle, Loader2, Zap } from 'lucide-react'
+import { CheckCircle, Loader2 } from 'lucide-react'
 import { useMyClient, useMyOnboarding, useSubmitOnboarding } from '../../hooks/useClientPortal'
+import ohvaraLogo from '../../assets/ohvara-logo.png'
 
 // Ported from the standalone ohvara-client-portal's Onboarding.jsx — same
 // one-question-at-a-time flow, restyled onto this app's design tokens
@@ -178,9 +179,11 @@ export default function ClientOnboarding() {
 function Brand({ name }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32 }}>
-      <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <Zap size={20} color="white" fill="white" />
-      </div>
+      <img
+        src={ohvaraLogo}
+        alt="Ohvara"
+        style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }}
+      />
       {name && <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{name}</span>}
     </div>
   )
