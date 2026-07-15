@@ -6,6 +6,8 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 
 import Login from './pages/Login'
+import Join from './pages/Join'
+import ResetPassword from './pages/ResetPassword'
 import ClientPreview from './pages/ClientPreview'
 import Settings from './pages/Settings'
 import { BackgroundOrbs } from './components/BackgroundOrbs'
@@ -75,6 +77,8 @@ export default function App() {
           <BackgroundOrbs />
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/join/:token" element={<Join />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/preview/:appointmentId" element={<ClientPreview />} />
             <Route path="/" element={<RoleRedirect />} />
 

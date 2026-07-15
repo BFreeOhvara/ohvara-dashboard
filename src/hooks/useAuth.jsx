@@ -94,7 +94,11 @@ export function AuthProvider({ children }) {
   }
 
   async function signIn(username, password) {
-    const email = `${username}@ohvara.internal`
+    // Legacy accounts log in by bare username (mapped to the synthetic
+    // @ohvara.internal address); invite-flow accounts (Prompt 282) have real
+    // emails and type those directly — an @ in the input means "use as-is".
+    const input = username.trim()
+    const email = input.includes('@') ? input : `${input}@ohvara.internal`
     const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
 

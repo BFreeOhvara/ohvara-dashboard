@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { supabase } from '../lib/supabase'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import ohvaraLogo from '../assets/ohvara-logo.png'
@@ -12,6 +13,14 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
   const [submitting, setSubmitting] = useState(false)
+  // Forgot-password (Prompt 282) — only works for invite-flow accounts with
+  // real emails; legacy synthetic @ohvara.internal addresses can't receive
+  // mail, and nothing sends at all until Resend/SMTP is configured.
+  const [forgotMode, setForgotMode]   = useState(false)
+  const [resetEmail, setResetEmail]   = useState('')
+  const [resetSent, setResetSent]     = useState(false)
+  const [resetError, setResetError]   = useState('')
+  const [resetSending, setResetSending] = useState(false)
 
   useEffect(() => {
     if (loading || !profile) return
@@ -43,6 +52,27 @@ export default function Login() {
     if (e.key === 'Enter') handleSubmit()
   }
 
+  async function handleReset() {
+    setResetError('')
+    const email = resetEmail.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setResetError('Enter the email address on your account')
+      return
+    }
+    setResetSending(true)
+    try {
+      const { error: rpError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
+      if (rpError) throw rpError
+      setResetSent(true)
+    } catch (err) {
+      setResetError(err.message || 'Could not send the reset email — try again')
+    } finally {
+      setResetSending(false)
+    }
+  }
+
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
@@ -58,13 +88,53 @@ export default function Login() {
 
         {/* Login card */}
         <div className="glass-accent" style={{ padding: 24 }}>
+          {forgotMode ? (
+            <div className="space-y-4">
+              {resetSent ? (
+                <div className="text-center py-2">
+                  <p className="text-sm font-medium text-[var(--text-primary)] mb-2">Check your email</p>
+                  <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                    If an account exists for <span className="font-mono text-[var(--text-secondary)]">{resetEmail.trim()}</span>,
+                    a password reset link is on its way.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <Input
+                    label="Email"
+                    type="email"
+                    value={resetEmail}
+                    onChange={e => setResetEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    autoFocus
+                    autoComplete="email"
+                    onKeyDown={e => { if (e.key === 'Enter') handleReset() }}
+                  />
+                  {resetError && (
+                    <div className="flex items-start gap-2.5 text-xs bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-3 py-2.5">
+                      <span className="text-[#EF4444] leading-relaxed">{resetError}</span>
+                    </div>
+                  )}
+                  <Button onClick={handleReset} className="w-full" size="md" disabled={resetSending}>
+                    {resetSending ? 'Sending…' : 'Send Reset Link'}
+                  </Button>
+                </>
+              )}
+              <button
+                onClick={() => { setForgotMode(false); setResetSent(false); setResetError('') }}
+                className="block w-full text-center text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                Back to sign in
+              </button>
+            </div>
+          ) : (
           <div className="space-y-4" onKeyDown={handleKeyDown}>
             <Input
-              label="Username"
+              label="Username or Email"
               type="text"
               value={username}
               onChange={e => setUsername(e.target.value)}
-              placeholder="jsmith"
+              placeholder="jsmith or you@example.com"
               autoFocus
               autoComplete="username"
             />
@@ -90,7 +160,15 @@ export default function Login() {
             <Button onClick={handleSubmit} className="w-full" size="md" disabled={submitting || loading}>
               {submitting ? 'Signing in…' : loading && session ? 'Loading…' : 'Sign In'}
             </Button>
+
+            <button
+              onClick={() => setForgotMode(true)}
+              className="block w-full text-center text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+            >
+              Forgot password?
+            </button>
           </div>
+          )}
         </div>
 
         <p className="text-center text-xs text-[var(--text-muted)] mt-6">

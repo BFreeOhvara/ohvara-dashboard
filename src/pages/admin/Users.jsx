@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react'
-import { useAllProfiles, useCreateProfile, useToggleUserActive, useDeleteUser, useRepCredentials } from '../../hooks/useProfiles'
+import { useAllProfiles, useCreateProfile, useToggleUserActive, useDeleteUser, useRepCredentials, usePendingInvites, useCreateInvite, useRevokeInvite } from '../../hooks/useProfiles'
+import { useAuth } from '../../hooks/useAuth'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Input, Select } from '../../components/ui/Input'
 import { Card } from '../../components/ui/Card'
-import { UserPlus, X, CheckCircle, Copy, Check, Search, Trash2, AlertTriangle, KeyRound, Eye, EyeOff } from 'lucide-react'
+import { UserPlus, X, CheckCircle, Copy, Check, Search, Trash2, AlertTriangle, KeyRound, Eye, EyeOff, Link2 } from 'lucide-react'
 import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../../lib/timezones'
 
 function CredentialsReveal({ profileId }) {
@@ -37,6 +38,105 @@ function CredentialsReveal({ profileId }) {
   )
 }
 
+// Invite generation panel (Prompt 282) — admin picks a role, gets a single-use
+// /join/<token> link to send however they like (text, Slack — no email infra
+// needed for the invite itself). The invited person sets their own name,
+// email, phone, and password; admin never sees the password.
+function InvitePanel({ onClose }) {
+  const { profile } = useAuth()
+  const { data: invites } = usePendingInvites()
+  const createInvite = useCreateInvite()
+  const revokeInvite = useRevokeInvite()
+  const [role, setRole]           = useState('rep')
+  const [error, setError]         = useState('')
+  const [copiedId, setCopiedId]   = useState(null)
+
+  const linkFor = (token) => `${window.location.origin}/join/${token}`
+
+  async function handleGenerate() {
+    setError('')
+    try {
+      const invite = await createInvite.mutateAsync({ role, createdBy: profile.id })
+      handleCopy(invite)
+    } catch (err) {
+      setError(err.message || 'Failed to create invite')
+    }
+  }
+
+  function handleCopy(invite) {
+    navigator.clipboard.writeText(linkFor(invite.token))
+    setCopiedId(invite.id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  function daysLeft(expiresAt) {
+    const days = Math.ceil((new Date(expiresAt) - new Date()) / 86400000)
+    return days <= 1 ? 'expires today' : `${days}d left`
+  }
+
+  return (
+    <Card className="mb-5">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <p className="text-sm font-medium text-[var(--text-primary)]">Invite Link</p>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5">
+            Single-use, 7-day expiry. They pick their own password — you only pick the role.
+          </p>
+        </div>
+        <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-1">
+          <X size={16} />
+        </button>
+      </div>
+      <div className="flex items-end gap-3">
+        <div className="w-40">
+          <Select label="Role" value={role} onChange={e => setRole(e.target.value)}>
+            <option value="rep">Rep</option>
+            <option value="closer">Closer</option>
+            <option value="admin">Admin</option>
+          </Select>
+        </div>
+        <Button onClick={handleGenerate} size="sm" disabled={createInvite.isPending}>
+          <Link2 size={13} />
+          {createInvite.isPending ? 'Generating…' : 'Generate & Copy Link'}
+        </Button>
+      </div>
+      {error && <p className="text-xs text-[#EF4444] mt-2">{error}</p>}
+
+      {invites?.length > 0 && (
+        <div className="mt-4 pt-3 border-t border-[var(--border)]">
+          <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-medium mb-2">
+            Pending invites
+          </p>
+          <div className="space-y-1.5">
+            {invites.map(inv => (
+              <div key={inv.id} className="flex items-center gap-3 text-xs">
+                <Badge label={inv.role} />
+                <span className="font-mono text-[10px] text-[var(--text-muted)] truncate max-w-[240px]">
+                  …/join/{inv.token.slice(0, 12)}…
+                </span>
+                <span className="text-[var(--text-muted)]">{daysLeft(inv.expires_at)}</span>
+                <button
+                  onClick={() => handleCopy(inv)}
+                  className="flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                >
+                  {copiedId === inv.id ? <><Check size={11} className="text-[#22C55E]" />Copied</> : <><Copy size={11} />Copy</>}
+                </button>
+                <button
+                  onClick={() => revokeInvite.mutate(inv.id)}
+                  className="text-[var(--text-muted)] hover:text-[#EF4444] transition-colors"
+                  title="Revoke invite"
+                >
+                  <Trash2 size={11} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  )
+}
+
 function formatDate(iso) {
   if (!iso) return <span className="text-[var(--text-muted)] opacity-40">Never</span>
   const d = new Date(iso)
@@ -56,6 +156,7 @@ export default function Users() {
   const deleteUser    = useDeleteUser()
 
   const [showForm,     setShowForm]     = useState(false)
+  const [showInvite,   setShowInvite]   = useState(false)
   const [form,         setForm]         = useState({ username: '', password: '', full_name: '', role: 'rep', timezone: DEFAULT_TIMEZONE })
   const [formError,    setFormError]    = useState('')
   const [createdCreds, setCreatedCreds] = useState(null)
@@ -123,11 +224,20 @@ export default function Users() {
             {profiles?.length ?? '…'} accounts · {profiles?.filter(p => p.is_active).length ?? '…'} active
           </p>
         </div>
-        <Button onClick={() => { setShowForm(v => !v); setCreatedCreds(null) }} size="sm">
-          <UserPlus size={14} />
-          New User
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={() => { setShowInvite(v => !v); setShowForm(false) }} size="sm">
+            <Link2 size={14} />
+            Invite Link
+          </Button>
+          <Button onClick={() => { setShowForm(v => !v); setShowInvite(false); setCreatedCreds(null) }} size="sm">
+            <UserPlus size={14} />
+            New User
+          </Button>
+        </div>
       </div>
+
+      {/* Invite generation */}
+      {showInvite && <InvitePanel onClose={() => setShowInvite(false)} />}
 
       {/* Credential handoff */}
       {createdCreds && (

@@ -93,6 +93,63 @@ export function useCreateProfile() {
   })
 }
 
+// ── Invite-token self-registration (Prompt 282) ──────────────────────────────
+// Admin generates a single-use /join/<token> link scoped to a role; the
+// invited person registers themselves via the claim-invite edge function.
+// All three hooks hit rep_invites directly — RLS restricts them to admins.
+
+export function usePendingInvites() {
+  return useQuery({
+    queryKey: ['rep_invites', 'pending'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('rep_invites')
+        .select('id, token, role, created_at, expires_at')
+        .is('used_at', null)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data || []
+    },
+  })
+}
+
+export function useCreateInvite() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ role, createdBy }) => {
+      // 32 bytes of CSPRNG hex — the token IS the credential, so it never
+      // comes from Math.random or anything guessable.
+      const bytes = new Uint8Array(32)
+      crypto.getRandomValues(bytes)
+      const token = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+      const { data, error } = await supabase
+        .from('rep_invites')
+        .insert({ token, role, created_by: createdBy })
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['rep_invites'] })
+    },
+  })
+}
+
+export function useRevokeInvite() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (inviteId) => {
+      const { error } = await supabase.from('rep_invites').delete().eq('id', inviteId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['rep_invites'] })
+    },
+  })
+}
+
 export function useToggleUserActive() {
   const qc = useQueryClient()
   return useMutation({
