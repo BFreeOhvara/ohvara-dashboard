@@ -49,12 +49,48 @@ function AndroidSteps() {
   )
 }
 
+// Explicit iPhone/Android switch for the mobile view (Prompt 296) — replaces
+// the old silent auto-detected single-platform branch so a rep can see the
+// other platform's steps too (e.g. to help a teammate), instead of only ever
+// seeing whichever OS their own device reports. Defaults to auto-detection.
+function PlatformToggle({ platform, onChange }) {
+  return (
+    <div style={{
+      display: 'flex', gap: 4, marginBottom: 18,
+      background: 'var(--bg-surface)', border: '0.5px solid var(--border)',
+      borderRadius: 9, padding: 3,
+    }}>
+      {[['ios', 'iPhone'], ['android', 'Android']].map(([key, label]) => {
+        const active = platform === key
+        return (
+          <button
+            key={key}
+            onClick={() => onChange(key)}
+            style={{
+              flex: 1, height: 30, borderRadius: 6, border: 'none',
+              background: active ? 'var(--bg-elevated)' : 'transparent',
+              color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+              fontSize: 12.5, fontWeight: active ? 500 : 400,
+              cursor: 'pointer', transition: 'all 0.12s',
+            }}
+          >
+            {label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 export function MobileAppModal({ onClose }) {
   const deferredPrompt = useInstallPrompt()
   const [qrDataUrl, setQrDataUrl] = useState(null)
   const [installing, setInstalling] = useState(false)
   const mobile = isMobileDevice()
   const ios = isIOS()
+  // Explicit toggle (Prompt 296) — starts on whichever platform auto-detection
+  // already picks, but the rep can switch it either direction.
+  const [platform, setPlatform] = useState(() => (ios ? 'ios' : 'android'))
 
   useEffect(() => {
     if (mobile) return
@@ -78,7 +114,7 @@ export function MobileAppModal({ onClose }) {
           6% alpha, nearly see-through against the dimmed backdrop; overriding
           just the background keeps the accent border/glow it already had,
           matching the same opaque surface CallPrepModal/CallModal use. */}
-      <div className="glass-accent" style={{ position: 'relative', width: '100%', maxWidth: 360, padding: 24, borderRadius: 14, textAlign: 'center', background: '#0E0E1A' }}>
+      <div className="glass-accent" style={{ position: 'relative', width: '100%', maxWidth: mobile ? 360 : 480, padding: 24, borderRadius: 14, textAlign: 'center', background: '#0E0E1A' }}>
         <button
           onClick={onClose}
           style={{ position: 'absolute', top: 14, right: 14, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}
@@ -104,15 +140,17 @@ export function MobileAppModal({ onClose }) {
 
             {/* Desktop can't know which OS the scanning phone runs, so both
                 platforms' install steps show here instead of only after
-                scanning (Prompt 291). */}
-            <div style={{ marginTop: 22, paddingTop: 18, borderTop: '0.5px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                scanning (Prompt 291) — side-by-side columns so the two sets
+                of steps compare directly instead of stacking one after the
+                other (Prompt 296). */}
+            <div style={{ marginTop: 22, paddingTop: 18, borderTop: '0.5px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, textAlign: 'left' }}>
               <div>
                 <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 10px' }}>
                   iPhone
                 </p>
                 <IOSSteps />
               </div>
-              <div>
+              <div style={{ borderLeft: '0.5px solid var(--border)', paddingLeft: 20 }}>
                 <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 10px' }}>
                   Android
                 </p>
@@ -122,41 +160,46 @@ export function MobileAppModal({ onClose }) {
           </>
         )}
 
-        {mobile && deferredPrompt && (
+        {mobile && (
           <>
-            <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px' }}>Install Ohvara</p>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 18px', lineHeight: 1.5 }}>
-              Add Ohvara to your home screen for one-tap access, just like a native app.
-            </p>
-            <button
-              onClick={handleInstall}
-              disabled={installing}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                width: '100%', height: 42, background: 'var(--accent)', border: 'none',
-                borderRadius: 10, fontSize: 13.5, fontWeight: 600, color: 'white',
-                cursor: installing ? 'not-allowed' : 'pointer', opacity: installing ? 0.7 : 1,
-              }}
-            >
-              {installing ? 'Installing…' : 'Install App'}
-            </button>
-          </>
-        )}
+            <PlatformToggle platform={platform} onChange={setPlatform} />
 
-        {mobile && !deferredPrompt && ios && (
-          <>
-            <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px' }}>Add to Home Screen</p>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 16px', lineHeight: 1.5 }}>
-              iPhone and iPad don't support one-tap install — a couple of taps in Safari does the same thing:
-            </p>
-            <IOSSteps />
-          </>
-        )}
-
-        {mobile && !deferredPrompt && !ios && (
-          <>
-            <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px' }}>Add to Home Screen</p>
-            <AndroidSteps />
+            {platform === 'android' && deferredPrompt ? (
+              <>
+                <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px' }}>Install Ohvara</p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 18px', lineHeight: 1.5 }}>
+                  Add Ohvara to your home screen for one-tap access, just like a native app.
+                </p>
+                <button
+                  onClick={handleInstall}
+                  disabled={installing}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    width: '100%', height: 42, background: 'var(--accent)', border: 'none',
+                    borderRadius: 10, fontSize: 13.5, fontWeight: 600, color: 'white',
+                    cursor: installing ? 'not-allowed' : 'pointer', opacity: installing ? 0.7 : 1,
+                  }}
+                >
+                  {installing ? 'Installing…' : 'Install App'}
+                </button>
+              </>
+            ) : platform === 'ios' ? (
+              <>
+                <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px' }}>Add to Home Screen</p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 16px', lineHeight: 1.5 }}>
+                  iPhone and iPad don't support one-tap install — a couple of taps in Safari does the same thing:
+                </p>
+                <IOSSteps />
+              </>
+            ) : (
+              <>
+                <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px' }}>Add to Home Screen</p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 16px', lineHeight: 1.5 }}>
+                  A couple of taps in your browser does the same thing:
+                </p>
+                <AndroidSteps />
+              </>
+            )}
           </>
         )}
       </div>

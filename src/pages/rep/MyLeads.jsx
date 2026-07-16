@@ -211,6 +211,25 @@ function LeadRow({ lead, onOpen, now, animDelay = 0 }) {
   )
 }
 
+// Real padlock rendered as a cutout — a semi-transparent shade with the lock
+// shape punched transparent through it, rather than a solid icon sitting on
+// top (Prompt 296: the old dashed-circle + phone-handset icon didn't read as
+// a lock at all). Reuses lucide's own Lock geometry (body rect + shackle
+// stroke) as the SVG mask's hidden shapes, so the shade shows everywhere
+// except exactly where the padlock silhouette sits.
+function LockedCutoutIcon() {
+  return (
+    <svg width={56} height={56} viewBox="0 0 24 24" style={{ display: 'block' }}>
+      <mask id="myleads-lock-cutout">
+        <rect width="24" height="24" fill="white" />
+        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" fill="black" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </mask>
+      <rect width="24" height="24" rx="6" fill="rgba(0,0,0,0.55)" mask="url(#myleads-lock-cutout)" />
+    </svg>
+  )
+}
+
 export default function MyLeads() {
   const { profile } = useAuth()
   const { data: rawLeads, isLoading: rawLoading } = useMyLeads()
@@ -566,21 +585,24 @@ export default function MyLeads() {
             </div>
           ) : (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 240, padding: '48px 16px', textAlign: 'center', position: 'relative' }}>
-            <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-              <Phone size={18} color="var(--text-muted)" />
-            </div>
             {locked ? (
               <>
+                <div style={{ marginBottom: 14 }}>
+                  <LockedCutoutIcon />
+                </div>
                 <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', margin: 0 }}>
                   Complete training to unlock your leads
                 </p>
                 <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                  They'll appear here automatically the moment you pass the last check —{' '}
+                  They'll appear here on your next scheduled lead reset once training is complete —{' '}
                   <Link to="/rep/training" style={{ color: 'var(--accent)' }}>Go to Training Center</Link>
                 </p>
               </>
             ) : (
               <>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <Phone size={18} color="var(--text-muted)" />
+                </div>
                 <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', margin: 0 }}>
                   {activeFilter === 'All' ? 'No leads assigned today' : `No ${activeFilter} leads`}
                 </p>

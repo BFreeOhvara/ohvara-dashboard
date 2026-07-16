@@ -401,8 +401,8 @@ export default function Settings() {
         </button>
       </div>
 
-      <RegionalSection profile={profile} />
       <AccountSection profile={profile} />
+      <RegionalSection profile={profile} />
       {showPayouts && <PayoutsSection profile={profile} />}
     </div>
   )
