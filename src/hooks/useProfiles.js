@@ -118,11 +118,19 @@ export function useCreateInvite() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ role, createdBy }) => {
-      // 32 bytes of CSPRNG hex — the token IS the credential, so it never
-      // comes from Math.random or anything guessable.
-      const bytes = new Uint8Array(32)
+      // 12 chars from a 64-symbol URL-safe alphabet — still CSPRNG, still the
+      // credential itself. 72 bits of entropy (byte % 64 is unbiased since 256
+      // divides evenly by 64) — investigated in Prompt 294: claim-invite has
+      // no rate-limiting at all, but 2^72 guesses is computationally
+      // infeasible even fully unthrottled, and the 7-day expiry bounds the
+      // realistic guessing window further. Dramatically shorter than the old
+      // 64-char hex while just as secure in practice. Existing unclaimed
+      // invites keep working unchanged — `token` has no length constraint and
+      // claim-invite validates by equality, not format.
+      const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
+      const bytes = new Uint8Array(12)
       crypto.getRandomValues(bytes)
-      const token = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+      const token = Array.from(bytes, b => ALPHABET[b % 64]).join('')
       const { data, error } = await supabase
         .from('rep_invites')
         .insert({ token, role, created_by: createdBy })

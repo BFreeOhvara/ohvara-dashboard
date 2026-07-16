@@ -112,7 +112,7 @@ function InvitePanel({ onClose }) {
               <div key={inv.id} className="flex items-center gap-3 text-xs">
                 <Badge label={inv.role} />
                 <span className="font-mono text-[10px] text-[var(--text-muted)] truncate max-w-[240px]">
-                  …/join/{inv.token.slice(0, 12)}…
+                  /join/{inv.token}
                 </span>
                 <span className="text-[var(--text-muted)]">{daysLeft(inv.expires_at)}</span>
                 <button
