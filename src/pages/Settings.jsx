@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Loader2, Check, X, Lock } from 'lucide-react'
+import { Loader2, Check, X, Lock, Moon, Sun, KeyRound } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useUpdateOwnProfile } from '../hooks/useSettings'
@@ -35,6 +35,65 @@ function SectionRow({ label, description, control }) {
       </div>
       {control}
     </div>
+  )
+}
+
+// Appearance (Prompt 281) — dark/light theme toggle. The persisted value in
+// localStorage is applied pre-paint by index.html's boot script; this section
+// just flips the data-theme attribute live and keeps storage in sync. Dark is
+// the default (no attribute).
+function AppearanceSection() {
+  const [theme, setThemeState] = useState(() =>
+    document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
+  )
+
+  function apply(next) {
+    setThemeState(next)
+    if (next === 'light') document.documentElement.dataset.theme = 'light'
+    else delete document.documentElement.dataset.theme
+    try { localStorage.setItem('ohvara_theme', next) } catch { /* storage unavailable — theme still applies this session */ }
+  }
+
+  const OPTIONS = [
+    { value: 'dark',  label: 'Dark',  Icon: Moon },
+    { value: 'light', label: 'Light', Icon: Sun },
+  ]
+
+  return (
+    <Card className="mb-5">
+      <CardHeader>
+        <CardTitle>Appearance</CardTitle>
+      </CardHeader>
+      <SectionRow
+        label="Theme"
+        description="Applies immediately and sticks on this device."
+        control={
+          <div style={{ display: 'flex', gap: 4, background: 'var(--bg-surface)', border: '0.5px solid var(--border)', borderRadius: 9, padding: 3 }}>
+            {OPTIONS.map(({ value, label, Icon }) => {
+              const active = theme === value
+              return (
+                <button
+                  key={value}
+                  onClick={() => apply(value)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '6px 14px', borderRadius: 7, border: 'none',
+                    background: active ? 'var(--bg-elevated)' : 'transparent',
+                    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+                    fontSize: 12, fontWeight: active ? 500 : 400,
+                    cursor: 'pointer', transition: 'all 0.12s',
+                    boxShadow: active ? '0 1px 4px rgba(0,0,0,0.15)' : 'none',
+                  }}
+                >
+                  <Icon size={13} style={{ color: active ? 'var(--accent)' : 'inherit' }} />
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        }
+      />
+    </Card>
   )
 }
 
@@ -79,6 +138,113 @@ function RegionalSection({ profile }) {
   )
 }
 
+// Self-service password change (Prompt 281) — one modal: verify the current
+// password (signInWithPassword against the session's own email, same step-up
+// as the payout gate), then updateUser({ password }). Matters most for
+// invite-flow accounts: admin doesn't know their password and email resets
+// stay dead until Resend is configured. Portaled per the Prompt 185 gotcha.
+function ChangePasswordModal({ onClose }) {
+  const { session } = useAuth()
+  const [form, setForm] = useState({ current: '', next: '', confirm: '' })
+  const [error, setError]   = useState('')
+  const [saving, setSaving] = useState(false)
+  const [done, setDone]     = useState(false)
+
+  async function handleSave() {
+    setError('')
+    if (!form.current) return setError('Enter your current password')
+    if (form.next.length < 8) return setError('New password must be at least 8 characters')
+    if (form.next !== form.confirm) return setError('New passwords do not match')
+    setSaving(true)
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: session.user.email,
+      password: form.current,
+    })
+    if (authError) {
+      setError('Current password is incorrect.')
+      setSaving(false)
+      return
+    }
+    const { error: updError } = await supabase.auth.updateUser({ password: form.next })
+    if (updError) {
+      setError(updError.message || 'Could not update the password — try again')
+      setSaving(false)
+      return
+    }
+    setDone(true)
+  }
+
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
+      <div className="glass-accent" style={{ position: 'relative', width: '100%', maxWidth: 360, padding: 24, borderRadius: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <KeyRound size={16} color="var(--accent)" />
+          </div>
+          <div>
+            <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Change password</p>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '3px 0 0', lineHeight: 1.5 }}>
+              {done ? 'All set.' : 'Confirm your current password, then pick a new one.'}
+            </p>
+          </div>
+        </div>
+        {done ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-xs bg-[#22C55E]/8 border border-[#22C55E]/20 rounded-lg px-3 py-2.5">
+              <Check size={13} className="text-[var(--success)] flex-shrink-0" />
+              <span style={{ color: 'var(--success)' }}>Password updated — use it next time you sign in.</span>
+            </div>
+            <div className="flex justify-end">
+              <Button size="sm" onClick={onClose}>Done</Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4" onKeyDown={e => { if (e.key === 'Enter') handleSave() }}>
+            <Input
+              label="Current Password"
+              type="password"
+              value={form.current}
+              onChange={e => setForm(f => ({ ...f, current: e.target.value }))}
+              placeholder="••••••••"
+              autoFocus
+              autoComplete="current-password"
+            />
+            <Input
+              label="New Password"
+              type="password"
+              value={form.next}
+              onChange={e => setForm(f => ({ ...f, next: e.target.value }))}
+              placeholder="Min 8 characters"
+              autoComplete="new-password"
+            />
+            <Input
+              label="Confirm New Password"
+              type="password"
+              value={form.confirm}
+              onChange={e => setForm(f => ({ ...f, confirm: e.target.value }))}
+              placeholder="••••••••"
+              autoComplete="new-password"
+            />
+            {error && (
+              <div className="flex items-start gap-2.5 text-xs bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-3 py-2.5">
+                <span className="text-[#EF4444] leading-relaxed">{error}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2 justify-end">
+              <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+              <Button size="sm" onClick={handleSave} disabled={saving}>
+                {saving ? <Loader2 size={13} className="animate-spin" /> : 'Update Password'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 function AccountSection({ profile }) {
   const update = useUpdateOwnProfile()
   const { refreshProfile } = useAuth()
@@ -88,6 +254,7 @@ function AccountSection({ profile }) {
     phone: profile.phone || '',
   })
   const [saved, setSaved] = useState(false)
+  const [changingPw, setChangingPw] = useState(false)
 
   const dirty = form.full_name !== (profile.full_name || '') || form.email !== (profile.email || '') || form.phone !== (profile.phone || '')
 
@@ -114,6 +281,19 @@ function AccountSection({ profile }) {
           <SavedTick show={saved && !dirty} />
         </div>
       </div>
+      <div style={{ marginTop: 14 }}>
+        <SectionRow
+          label="Password"
+          description="Change the password you sign in with."
+          control={
+            <Button size="sm" variant="secondary" onClick={() => setChangingPw(true)}>
+              <KeyRound size={13} />
+              Change password
+            </Button>
+          }
+        />
+      </div>
+      {changingPw && <ChangePasswordModal onClose={() => setChangingPw(false)} />}
     </Card>
   )
 }
@@ -266,6 +446,7 @@ export default function Settings() {
         </button>
       </div>
 
+      <AppearanceSection />
       <RegionalSection profile={profile} />
       <AccountSection profile={profile} />
       {showPayouts && <PayoutsSection profile={profile} />}

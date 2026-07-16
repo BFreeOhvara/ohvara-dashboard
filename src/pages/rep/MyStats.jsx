@@ -71,7 +71,7 @@ function CompletedDaysHeatmap({ days }) {
                   style={{
                     width: '100%', height: '100%', borderRadius: 5,
                     background: cellColor(d),
-                    border: '0.5px solid rgba(255,255,255,0.06)',
+                    border: '0.5px solid var(--border)',
                     transition: 'transform 80ms ease, box-shadow 80ms ease',
                     cursor: 'default',
                   }}
@@ -97,9 +97,9 @@ function CompletedDaysHeatmap({ days }) {
 
       {/* legend — swatches call cellColor directly so they can't drift from the actual cells */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
-        <div style={{ width: 12, height: 12, borderRadius: 3, background: cellColor(null), border: '0.5px solid rgba(255,255,255,0.06)' }} />
+        <div style={{ width: 12, height: 12, borderRadius: 3, background: cellColor(null), border: '0.5px solid var(--border)' }} />
         {[0.2, 0.45, 0.7].map(r => (
-          <div key={r} style={{ width: 12, height: 12, borderRadius: 3, background: cellColor({ dialed: Math.round(r * DAILY_BATCH_TARGET), completed: false }), border: '0.5px solid rgba(255,255,255,0.06)' }} />
+          <div key={r} style={{ width: 12, height: 12, borderRadius: 3, background: cellColor({ dialed: Math.round(r * DAILY_BATCH_TARGET), completed: false }), border: '0.5px solid var(--border)' }} />
         ))}
         <div style={{ width: 12, height: 12, borderRadius: 3, background: cellColor({ dialed: DAILY_BATCH_TARGET, completed: true, bookings: 0 }) }} />
         <div style={{ width: 12, height: 12, borderRadius: 3, background: cellColor({ dialed: DAILY_BATCH_TARGET, completed: true, bookings: 2 }) }} />
@@ -263,7 +263,7 @@ export default function MyStats() {
                   <stop offset="100%" stopColor="#22C55E" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis
                 dataKey="label"
                 tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
@@ -277,7 +277,7 @@ export default function MyStats() {
                 tickLine={false}
                 width={28}
               />
-              <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.15)', strokeDasharray: '3 3' }} />
+              <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'var(--border-hover)', strokeDasharray: '3 3' }} />
               <Legend
                 wrapperStyle={{ fontSize: 12, color: 'var(--text-secondary)' }}
                 iconType="circle"

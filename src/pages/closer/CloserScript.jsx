@@ -64,7 +64,7 @@ export default function CloserScript() {
       {/* Practice — fills remaining height. Keyed on tab so switching between
           Closer/Setter remounts ScriptWalk with fresh state instead of reusing
           stale stack/index positions from the other script's step tree. */}
-      <div style={{ flex: 1, minHeight: 0, border: '0.5px solid var(--border)', borderRadius: 14, overflow: 'hidden', background: '#0A0A12' }}>
+      <div style={{ flex: 1, minHeight: 0, border: '0.5px solid var(--border)', borderRadius: 14, overflow: 'hidden', background: 'var(--bg-inset)' }}>
         <ScriptWalk key={tab} flow={tab === 'setter' ? setterFlow : closerFlow} mode="practice" />
       </div>
     </div>

@@ -5,6 +5,16 @@
     <link rel="icon" type="image/png" href="/ohvara-favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ohvara</title>
+    <!-- Theme boot (Prompt 281) — applies the persisted theme before first
+         paint so a light-mode user never sees a dark flash. Dark is the
+         default; only "light" sets the attribute. -->
+    <script>
+      try {
+        if (localStorage.getItem('ohvara_theme') === 'light') {
+          document.documentElement.dataset.theme = 'light'
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

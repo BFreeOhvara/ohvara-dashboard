@@ -287,7 +287,7 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
       </div>
 
       {/* Controls — Back / Restart */}
-      <div style={{ flexShrink: 0, padding: '10px 18px', borderTop: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0C0C16' }}>
+      <div style={{ flexShrink: 0, padding: '10px 18px', borderTop: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-inset)' }}>
         <button
           onClick={back}
           disabled={!history.length}

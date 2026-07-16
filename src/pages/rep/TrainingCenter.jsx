@@ -1041,7 +1041,7 @@ function DiscoveryScript() {
         Practice the call script one line at a time — pick what the prospect says, see what comes
         next. The Call Now button on each lead runs this same walk, personalized to that business.
       </p>
-      <div style={{ flex: 1, minHeight: 0, border: '0.5px solid var(--border)', borderRadius: 14, overflow: 'hidden', background: '#0A0A12' }}>
+      <div style={{ flex: 1, minHeight: 0, border: '0.5px solid var(--border)', borderRadius: 14, overflow: 'hidden', background: 'var(--bg-inset)' }}>
         <ScriptWalk flow={flow} mode="practice" />
       </div>
     </div>
@@ -2031,7 +2031,7 @@ function AIRoleplay({ progress, saveProgress, examPassed }) {
           live Call modal (Prompt 277), a synthetic generic lead since there's
           no real business here. Always visible alongside the call rather than
           a toggle, so the rep can glance at it without breaking flow. */}
-      <div style={{ flex: '1 1 320px', minWidth: 300, maxWidth: 380, height: 426, border: '0.5px solid var(--border)', borderRadius: 14, overflow: 'hidden', background: '#0A0A12' }}>
+      <div style={{ flex: '1 1 320px', minWidth: 300, maxWidth: 380, height: 426, border: '0.5px solid var(--border)', borderRadius: 14, overflow: 'hidden', background: 'var(--bg-inset)' }}>
         <ScriptWalk flow={scriptFlow} mode="practice" />
       </div>
       </div>

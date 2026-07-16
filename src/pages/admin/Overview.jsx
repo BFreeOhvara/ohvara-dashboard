@@ -337,7 +337,7 @@ function AnalyticsRow() {
                 <stop offset="100%" stopColor="#22C55E" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis dataKey="day" tick={{ fontSize: 10, fill: '#55556A' }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 10, fill: '#55556A' }} axisLine={false} tickLine={false} allowDecimals={false} />
             <Tooltip content={<ChartTooltip />} />
@@ -354,7 +354,7 @@ function AnalyticsRow() {
         </p>
         <ResponsiveContainer width="100%" height={100}>
           <BarChart data={pipelineData || []} margin={{ top: 0, right: 0, bottom: 0, left: -28 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
             <XAxis dataKey="status" tick={{ fontSize: 10, fill: '#55556A' }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 10, fill: '#55556A' }} axisLine={false} tickLine={false} allowDecimals={false} />
             <Tooltip content={<ChartTooltip />} />

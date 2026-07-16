@@ -261,7 +261,7 @@ export default function MyCommissions() {
         <div style={{ width: '100%', height: 240 }}>
           <ResponsiveContainer>
             <BarChart data={daily}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis
                 dataKey="label"
                 tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
@@ -277,7 +277,7 @@ export default function MyCommissions() {
                 width={40}
                 tickFormatter={v => `$${v}`}
               />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: 'var(--bg-surface)' }} />
               <Bar
                 dataKey="earned"
                 name="Earned"
