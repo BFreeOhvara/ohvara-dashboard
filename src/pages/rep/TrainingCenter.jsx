@@ -16,8 +16,6 @@ import { ScriptWalk } from '../../components/rep/ScriptWalk'
 
 const LS_VIDEOS           = 'ohvara_training_videos'
 const LS_VIDEO_POSITIONS  = 'ohvara_training_video_positions'
-const LS_MASTERED         = 'ohvara_flashcard_mastered'
-const LS_FINAL_QUIZ_PASS  = 'ohvara_final_quiz_passed'
 
 // 8 topics locked 2026-06-30 — see brain/training-videos.md. Durations
 // verified live via Chrome on 2026-06-30, all under 10 minutes.
@@ -709,7 +707,7 @@ function VideoLibrary({ progress, saveProgress }) {
 
 // ── FlashcardDeck ─────────────────────────────────────────────────────────────
 
-function FlashcardDeck({ onAllMastered }) {
+function FlashcardDeck({ progress, saveProgress, onAllMastered }) {
   const [filter, setFilter]     = useState('all')
   const [deck, setDeck]         = useState(() => FLASHCARDS)
   const [index, setIndex]       = useState(0)
@@ -719,18 +717,32 @@ function FlashcardDeck({ onAllMastered }) {
   // Resets whenever the card in view changes; does NOT reset just from
   // flipping back to the front, so re-flipping doesn't lose credit.
   const [viewed, setViewed]     = useState(false)
+  // Mastery lives in training_progress.flashcards_mastered, scoped by
+  // rep_id — same pattern as videos_watched. Previously this was an
+  // unscoped localStorage set with no per-user boundary at all, so a
+  // brand-new account on a browser that had mastered cards before
+  // inherited that mastery (Prompt 283 bug). No localStorage fallback
+  // here on purpose: unlike videos, flashcards never had legitimate
+  // pre-DB progress worth preserving.
   const [mastered, setMastered] = useState(() => {
-    try { return new Set(JSON.parse(localStorage.getItem(LS_MASTERED) || '[]')) } catch { return new Set() }
+    const fromDb = Array.isArray(progress?.flashcards_mastered) ? progress.flashcards_mastered : []
+    return new Set(fromDb)
   })
   const [animDir, setAnimDir]   = useState(null) // 'left' | 'right'
   const [allMasteredMsg, setAllMasteredMsg] = useState(false)
+
+  // DB row loads async — merge it in when it arrives (mirrors VideoLibrary).
+  useEffect(() => {
+    const fromDb = Array.isArray(progress?.flashcards_mastered) ? progress.flashcards_mastered : []
+    if (fromDb.length) setMastered(prev => prev.size === new Set([...prev, ...fromDb]).size ? prev : new Set([...prev, ...fromDb]))
+  }, [progress])
 
   const filteredDeck = deck.filter(c => filter === 'all' || c.category === filter)
   const card = filteredDeck[index] || null
   const masteredInDeck = filteredDeck.filter(c => mastered.has(c.id)).length
 
   function saveMastered(next) {
-    localStorage.setItem(LS_MASTERED, JSON.stringify([...next]))
+    saveProgress({ flashcards_mastered: [...next] })
   }
 
   function handleShuffle() {
@@ -808,6 +820,25 @@ function FlashcardDeck({ onAllMastered }) {
         @keyframes fcSlideRight { from { opacity: 1; transform: translateX(0);    } to { opacity: 0; transform: translateX(20px);  } }
         .cat-pill { padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: all 0.12s; }
       `}</style>
+
+      {/* Mastery progress strip — matches VideoLibrary's X/8 watched bar */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12,
+        background: 'var(--bg-surface)', border: '0.5px solid var(--border)',
+        borderRadius: 10, padding: '10px 16px', marginBottom: 20,
+      }}>
+        <div style={{ flex: 1, height: 4, background: 'var(--bg-elevated)', borderRadius: 2, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%',
+            width: `${(mastered.size / FLASHCARDS.length) * 100}%`,
+            background: 'var(--success)', borderRadius: 2,
+            transition: 'width 0.4s ease',
+          }} />
+        </div>
+        <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', flexShrink: 0 }}>
+          {mastered.size} / {FLASHCARDS.length} mastered
+        </span>
+      </div>
 
       {/* Controls row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
@@ -1369,12 +1400,17 @@ function FinalQuizTab({ watchedCount, passed, onPass, flashcardsMastered }) {
     setFinished(false)
   }
 
-  // Videos are already guaranteed watched here (the `locked` full-screen gate
-  // above covers that) — this adds the flashcard-mastery half of the gate,
-  // surfaced as a slide-in toast rather than a hard lock screen (Prompt 199).
+  // Gate at the action level, not a full-screen lock (Prompt 283) — the real
+  // exam landing page always renders; clicking Start when a prerequisite
+  // isn't met surfaces a slide-in toast instead (same pattern the flashcard
+  // half of this gate already used, Prompt 199).
   function handleStartClick() {
+    if (locked) {
+      setToastMsg(`Watch all 8 videos first — ${watchedCount}/${TRAINING_VIDEOS.length} watched.`)
+      return
+    }
     if (!flashcardsMastered) {
-      setToastMsg('Watch all 8 videos and master all flashcards before taking the Final Exam.')
+      setToastMsg('Master all flashcards before taking the Final Exam.')
       return
     }
     start()
@@ -1411,16 +1447,6 @@ function FinalQuizTab({ watchedCount, passed, onPass, flashcardsMastered }) {
   function exit() {
     setQuestions(null)
     setFinished(false)
-  }
-
-  if (locked) {
-    return (
-      <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '56px 24px' }}>
-        <Lock size={26} color="var(--accent)" style={{ marginBottom: 14 }} />
-        <h2 style={{ fontSize: 17, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 8px' }}>Watch all 8 videos first</h2>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{watchedCount}/{TRAINING_VIDEOS.length} watched — the final exam unlocks once every video is complete.</p>
-      </div>
-    )
   }
 
   if (!questions) {
@@ -2136,17 +2162,22 @@ export default function TrainingCenter() {
   const saveProgress = (patch) => saveMutation.mutate(patch)
 
   // Combined gate: profiles.training_completed set only when both flashcards
-  // mastered AND final exam passed.
-  const [flashcardsMastered, setFlashcardsMastered] = useState(() => {
-    try { return new Set(JSON.parse(localStorage.getItem(LS_MASTERED) || '[]')).size >= FLASHCARDS.length } catch { return false }
-  })
+  // mastered AND final exam passed. Mastery is DB-backed (training_progress.
+  // flashcards_mastered, per rep_id) — flashcardsMasteredLocal is purely an
+  // optimistic flag for the instant after mastering the last card, before
+  // the query refetches; it starts false every mount (Prompt 283 — the old
+  // version read an unscoped localStorage key here, which is exactly what
+  // caused a brand-new account to inherit another account's mastery).
+  const [flashcardsMasteredLocal, setFlashcardsMasteredLocal] = useState(false)
+  const flashcardsMastered = flashcardsMasteredLocal ||
+    (Array.isArray(progress?.flashcards_mastered) && progress.flashcards_mastered.length >= FLASHCARDS.length)
   // Final exam pass is persisted to training_progress.final_exam_passed_at
-  // (Prompt 276 fix) so it survives across browsers/devices instead of living
-  // only in localStorage — the localStorage flag is kept purely as an
-  // optimistic layer for the instant after passing, before the query refetches.
-  const [finalQuizPassedLocal, setFinalQuizPassedLocal] = useState(
-    () => localStorage.getItem(LS_FINAL_QUIZ_PASS) === '1'
-  )
+  // (Prompt 276 fix) so it survives across browsers/devices. finalQuizPassedLocal
+  // is the same same-session-optimistic pattern as flashcardsMasteredLocal above
+  // — it used to read an unscoped localStorage flag on mount (Prompt 283: same
+  // class of bug as the flashcards one), which falsely showed "passed" for a
+  // brand-new account on a browser that had passed it before.
+  const [finalQuizPassedLocal, setFinalQuizPassedLocal] = useState(false)
   const finalQuizPassed = finalQuizPassedLocal || !!progress?.final_exam_passed_at
 
   async function maybeCompleteTraining(nextFC, nextFQ) {
@@ -2157,12 +2188,11 @@ export default function TrainingCenter() {
   }
 
   function handleAllFlashcardsMastered() {
-    setFlashcardsMastered(true)
+    setFlashcardsMasteredLocal(true)
     maybeCompleteTraining(true, finalQuizPassed)
   }
 
   function handleFinalQuizPassed() {
-    localStorage.setItem(LS_FINAL_QUIZ_PASS, '1')
     setFinalQuizPassedLocal(true)
     if (!progress?.final_exam_passed_at) saveProgress({ final_exam_passed_at: new Date().toISOString() })
     maybeCompleteTraining(flashcardsMastered, true)
@@ -2265,7 +2295,7 @@ export default function TrainingCenter() {
 
       {/* Tab content */}
       {tab === 'videos'     && <VideoLibrary progress={progress} saveProgress={saveProgress} />}
-      {tab === 'flashcards' && <FlashcardDeck onAllMastered={handleAllFlashcardsMastered} />}
+      {tab === 'flashcards' && <FlashcardDeck progress={progress} saveProgress={saveProgress} onAllMastered={handleAllFlashcardsMastered} />}
       {tab === 'final-exam' && <FinalQuizTab watchedCount={watchedCount} passed={finalQuizPassed} onPass={handleFinalQuizPassed} flashcardsMastered={flashcardsMastered} />}
       {tab === 'script'     && <DiscoveryScript />}
       {tab === 'roleplay'   && <AIRoleplay progress={progress} saveProgress={saveProgress} examPassed={finalQuizPassed} />}

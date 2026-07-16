@@ -106,14 +106,18 @@ function RegionalSection({ profile }) {
   const dirty = timezone !== (profile.timezone || DEFAULT_TIMEZONE)
 
   async function save() {
-    await update.mutateAsync({ profileId: profile.id, updates: { timezone } })
+    // timezone_confirmed_at (Prompt 283) marks that the rep has explicitly
+    // set this themselves — profiles.timezone defaults every row to
+    // 'America/Chicago' with no way otherwise to tell "genuinely Central"
+    // from "never touched Settings". MyLeads' header prompt reads this.
+    await update.mutateAsync({ profileId: profile.id, updates: { timezone, timezone_confirmed_at: new Date().toISOString() } })
     await refreshProfile()
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
 
   return (
-    <Card className="mb-5">
+    <Card className="mb-5" id="regional">
       <CardHeader>
         <CardTitle>Regional</CardTitle>
       </CardHeader>
@@ -416,6 +420,14 @@ export default function Settings() {
   if (!profile) return null
 
   const showPayouts = profile.role === 'rep' || profile.role === 'closer'
+
+  // Deep-link support (MyLeads' "Select Time Zone and Settings" prompt,
+  // Prompt 283) — client-side routing doesn't auto-scroll to a #hash the
+  // way a full page load would.
+  useEffect(() => {
+    if (!location.hash) return
+    document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'start' })
+  }, [location.hash])
 
   function close() {
     if (location.key !== 'default') navigate(-1)

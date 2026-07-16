@@ -1,14 +1,11 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { Phone, PhoneCall, Target, BarChart2, Lock, Check, GraduationCap, AlarmClock, X, Search } from 'lucide-react'
+import { Phone, PhoneCall, Target, BarChart2, Lock, Check, AlarmClock, X, Search } from 'lucide-react'
 import { useMyLeads } from '../../hooks/useLeads'
 import { useTodayCallStats } from '../../hooks/useProfiles'
 import { useAuth } from '../../hooks/useAuth'
-import {
-  useTrainingProgress, trainingChecks, isTrainingComplete,
-  TOTAL_VIDEOS, QUIZ_PASS_PCT, ROLEPLAY_PASS_GRADE,
-} from '../../hooks/useTraining'
+import { useTrainingProgress, isTrainingComplete } from '../../hooks/useTraining'
 import { CallModal } from '../../components/rep/CallModal'
 import { Badge } from '../../components/ui/Badge'
 import { KPICard } from '../../components/ui/KPICard'
@@ -166,115 +163,21 @@ function LeadRow({ lead, onOpen, now, animDelay = 0 }) {
   )
 }
 
-// Locked state shown until the rep passes all three training checks.
-// Progress lives in training_progress; unlock is automatic the moment
-// the last check passes (no admin action, no reload needed).
-function TrainingGate({ progress }) {
-  const checks = trainingChecks(progress)
-  const items = [
-    {
-      label: 'Watch all training videos',
-      detail: `${checks.videosWatched} / ${TOTAL_VIDEOS} watched`,
-      done: checks.videosDone,
-    },
-    {
-      label: `Pass the flashcard quiz (${QUIZ_PASS_PCT}%+)`,
-      detail: progress?.quiz_score != null
-        ? `Best attempt: ${Math.round((progress.quiz_score / (progress.quiz_total || 1)) * 100)}%`
-        : 'Not attempted yet',
-      done: checks.quizDone,
-    },
-    {
-      label: `Pass the AI roleplay (${ROLEPLAY_PASS_GRADE} or higher)`,
-      detail: progress?.roleplay_grade
-        ? `Last grade: ${progress.roleplay_grade}`
-        : 'Not attempted yet',
-      done: checks.roleplayDone,
-    },
-  ]
-  const doneCount = items.filter(i => i.done).length
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 48px)' }}>
-      <div className="glass" style={{ maxWidth: 520, width: '100%', borderRadius: 14, padding: '36px 32px', textAlign: 'center' }}>
-        <div style={{
-          width: 56, height: 56, borderRadius: 14, margin: '0 auto 18px',
-          background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Lock size={24} color="var(--accent)" />
-        </div>
-        <h1 style={{ fontSize: 19, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 8px', letterSpacing: '-0.01em' }}>
-          Complete training to unlock your leads
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 22px' }}>
-          Your 150 daily leads are waiting. Pass all three training steps and they unlock automatically.
-        </p>
-
-        {/* Overall progress */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-          <div style={{ flex: 1, height: 6, background: 'var(--bg-elevated)', borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{
-              height: '100%', width: `${(doneCount / 3) * 100}%`,
-              background: doneCount === 3 ? 'var(--success)' : 'var(--accent)',
-              borderRadius: 3, transition: 'width 0.4s ease',
-            }} />
-          </div>
-          <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', flexShrink: 0 }}>
-            {doneCount} / 3
-          </span>
-        </div>
-
-        {/* Checklist */}
-        <div style={{ textAlign: 'left', marginBottom: 24 }}>
-          {items.map((item, i) => (
-            <div key={i} style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '12px 14px', marginBottom: 8,
-              background: item.done ? 'rgba(34,197,94,0.06)' : 'var(--bg-surface)',
-              border: `0.5px solid ${item.done ? 'rgba(34,197,94,0.25)' : 'var(--border)'}`,
-              borderRadius: 10,
-            }}>
-              <div style={{
-                width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                background: item.done ? 'var(--success)' : 'var(--bg-elevated)',
-                border: item.done ? 'none' : '0.5px solid var(--border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                {item.done && <Check size={12} color="white" />}
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 13, fontWeight: 500, color: item.done ? 'var(--success)' : 'var(--text-primary)', margin: 0 }}>
-                  {item.label}
-                </p>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>{item.detail}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <Link
-          to="/rep/training"
-          style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            height: 42, padding: '0 24px',
-            background: 'var(--accent)', borderRadius: 10,
-            fontSize: 14, fontWeight: 500, color: 'white', textDecoration: 'none',
-          }}
-        >
-          <GraduationCap size={16} />
-          Go to Training Center
-        </Link>
-      </div>
-    </div>
-  )
-}
-
 export default function MyLeads() {
   const { profile } = useAuth()
-  const { data: leads, isLoading } = useMyLeads()
-  const { data: callStats } = useTodayCallStats(profile?.id)
+  const { data: rawLeads, isLoading: rawLoading } = useMyLeads()
+  const { data: rawCallStats } = useTodayCallStats(profile?.id)
   const { data: training, isLoading: trainingLoading } = useTrainingProgress()
+  // Onboarding gate: leads stay locked until videos + quiz + roleplay pass.
+  // Reps ARE actually assigned a batch in the DB regardless of training
+  // status (assign_daily_batches has no training filter) — this page just
+  // renders as if there's nothing there yet, rather than a separate
+  // blocking card (Prompt 283), so a locked rep sees the exact page shape
+  // they'll see once unlocked.
+  const locked = !trainingLoading && !isTrainingComplete(training)
+  const leads = locked ? [] : rawLeads
+  const isLoading = locked ? false : rawLoading
+  const callStats = locked ? null : rawCallStats
   // Filter + scroll position survive tab switches via sessionStorage
   const [activeFilter, setActiveFilter] = useState(() => sessionStorage.getItem(SS_FILTER) || 'New')
   const [search, setSearch] = useState('')
@@ -349,9 +252,8 @@ export default function MyLeads() {
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
-  // Onboarding gate: leads stay locked until videos + quiz + roleplay pass
+  // Avoid a flash of the locked shell before we know the real gate state.
   if (trainingLoading) return null
-  if (!isTrainingComplete(training)) return <TrainingGate progress={training} />
 
   return (
     // Page fills the viewport (parent <main> has 24px padding); the leads
@@ -371,7 +273,21 @@ export default function MyLeads() {
           <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
             {today}
           </span>
-          <LiveClock timezone={profile?.timezone} />
+          {profile?.timezone_confirmed_at ? (
+            <LiveClock timezone={profile?.timezone} />
+          ) : (
+            <Link
+              to="/settings#regional"
+              style={{
+                fontSize: 12, fontWeight: 500, color: 'var(--accent)',
+                background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
+                borderRadius: 20, padding: '4px 12px', textDecoration: 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Select Time Zone and Settings
+            </Link>
+          )}
         </div>
       </div>
 
@@ -511,7 +427,21 @@ export default function MyLeads() {
       </div>
 
       {/* Table — glass surface, scrolls internally */}
-      <div className="glass" style={{ overflow: 'hidden', borderRadius: 10, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <div className="glass" style={{ position: 'relative', overflow: 'hidden', borderRadius: 10, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* Locked watermark — outline-only, low-opacity, sits behind the empty
+            state rather than a separate blocking card (Prompt 283) */}
+        {locked && (
+          <Lock
+            size={160}
+            strokeWidth={0.75}
+            style={{
+              position: 'absolute', top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
+              color: 'var(--text-muted)', opacity: 0.06,
+              pointerEvents: 'none',
+            }}
+          />
+        )}
         {/* Table header */}
         <div style={{
           display: 'flex', alignItems: 'center',
@@ -582,16 +512,30 @@ export default function MyLeads() {
               )}
             </div>
           ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 240, padding: '48px 16px', textAlign: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 240, padding: '48px 16px', textAlign: 'center', position: 'relative' }}>
             <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
               <Phone size={18} color="var(--text-muted)" />
             </div>
-            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', margin: 0 }}>
-              {activeFilter === 'All' ? 'No leads assigned today' : `No ${activeFilter} leads`}
-            </p>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-              {activeFilter === 'All' ? 'Check back after the nightly batch runs.' : 'Try a different filter.'}
-            </p>
+            {locked ? (
+              <>
+                <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', margin: 0 }}>
+                  Complete training to unlock your leads
+                </p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                  They'll appear here automatically the moment you pass the last check —{' '}
+                  <Link to="/rep/training" style={{ color: 'var(--accent)' }}>Go to Training Center</Link>
+                </p>
+              </>
+            ) : (
+              <>
+                <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', margin: 0 }}>
+                  {activeFilter === 'All' ? 'No leads assigned today' : `No ${activeFilter} leads`}
+                </p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                  {activeFilter === 'All' ? 'Check back after the nightly batch runs.' : 'Try a different filter.'}
+                </p>
+              </>
+            )}
           </div>
           )
         ) : (
