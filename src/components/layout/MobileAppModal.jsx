@@ -27,7 +27,13 @@ function Step({ n, children }) {
 function IOSSteps() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <Step n={1}>Tap the <Share size={12} style={{ verticalAlign: -1, margin: '0 2px' }} /> Share icon in Safari's toolbar</Step>
+      <Step n={1}>
+        Tap the{' '}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, whiteSpace: 'nowrap' }}>
+          <Share size={12} style={{ verticalAlign: -1 }} /> Share icon
+        </span>{' '}
+        in Safari's toolbar
+      </Step>
       <Step n={2}>Scroll down and tap <strong style={{ color: 'var(--text-primary)' }}>Add to Home Screen</strong></Step>
       <Step n={3}>Tap <strong style={{ color: 'var(--text-primary)' }}>Add</strong> to confirm</Step>
     </div>

@@ -307,8 +307,9 @@ export default function MyLeads() {
     // Page fills the viewport (parent <main> has 24px padding); the leads
     // table scrolls internally instead of the whole page.
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 48px)' }}>
-      {/* Top bar */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+      {/* Top bar — stacks on mobile so the date/clock never has to squeeze
+          next to the title and wrap (Prompt 295) */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2" style={{ marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
             My Leads
@@ -340,8 +341,9 @@ export default function MyLeads() {
       </div>
 
       {/* KPI row — counters come from the calls table (UTC day) so all
-          three reset together at midnight UTC, same clock as the batch cron */}
-      <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+          three reset together at midnight UTC, same clock as the batch cron.
+          Mobile: 2x2 grid; desktop: original flex row. */}
+      <div className="stagger kpi-grid" style={{ gap: 12, marginBottom: 20 }}>
         <KPICard
           label="Calls Today"
           value={callStats?.calls ?? 0}
@@ -403,9 +405,11 @@ export default function MyLeads() {
         </div>
       )}
 
-      {/* Status filter row — underline tabs (left) + search input floated right,
-          its own element outside both the tabs box and the table box */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+      {/* Status filter row — underline tabs + search input. Stacks on mobile
+          (Prompt 295) — a fixed-width search box was squeezing the tabs down
+          to 1-2 visible before they ran out of room; full-width rows for
+          both fixes that without needing a separate overflow pattern. */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3" style={{ marginBottom: 16 }}>
       <div style={{
         display: 'flex',
         gap: 0,
@@ -459,14 +463,15 @@ export default function MyLeads() {
           )
         })}
       </div>
-        <div style={{ position: 'relative', flexShrink: 0 }}>
+        <div className="relative flex-shrink-0 w-full sm:w-[200px]">
           <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search leads"
+            className="w-full"
             style={{
-              height: 32, padding: '0 10px 0 28px', width: 200,
+              height: 32, padding: '0 10px 0 28px',
               background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
               borderRadius: 8, fontSize: 12, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', outline: 'none',
             }}

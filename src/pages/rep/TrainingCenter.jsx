@@ -562,7 +562,7 @@ function VideoLibrary({ progress, saveProgress }) {
                       loading="lazy"
                       style={{
                         display: 'block', width: '100%', height: '100%',
-                        objectFit: 'cover',
+                        objectFit: 'cover', objectPosition: 'top',
                       }}
                     />
                     {/* Play overlay — white semi-transparent circle + CSS triangle */}
@@ -2252,13 +2252,17 @@ export default function TrainingCenter() {
         </div>
       )}
 
-      {/* Tab bar */}
-      <div style={{
-        display: 'flex', gap: 4, marginBottom: 24,
-        background: 'var(--bg-surface)', border: '0.5px solid var(--border)',
-        borderRadius: 10, padding: 4,
-        width: 'fit-content', flexWrap: 'wrap',
-      }}>
+      {/* Tab bar — horizontal scroll on mobile instead of wrapping to 3 rows
+          inside a fit-content box (which left a large dead-space gap on the
+          right); wraps to a tidy fit-content row again at md+ (Prompt 295) */}
+      <div
+        className="flex gap-1 w-full overflow-x-auto scrollbar-thin md:w-fit md:flex-wrap md:overflow-visible"
+        style={{
+          marginBottom: 24,
+          background: 'var(--bg-surface)', border: '0.5px solid var(--border)',
+          borderRadius: 10, padding: 4,
+        }}
+      >
         {TABS.map(t => {
           const active = tab === t.id
           const Icon   = t.icon
@@ -2267,13 +2271,14 @@ export default function TrainingCenter() {
               key={t.id}
               onClick={() => setTab(t.id)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 7,
+                display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0,
                 padding: '7px 14px', borderRadius: 7, border: 'none',
                 background: active ? 'var(--bg-elevated)' : 'transparent',
                 color: active ? 'var(--text-primary)' : 'var(--text-muted)',
                 fontSize: 13, fontWeight: active ? 500 : 400,
                 cursor: 'pointer', transition: 'all 0.12s',
                 boxShadow: active ? '0 1px 4px rgba(0,0,0,0.2)' : 'none',
+                whiteSpace: 'nowrap',
               }}
             >
               <Icon size={13} style={{ color: active ? 'var(--accent)' : 'inherit' }} />

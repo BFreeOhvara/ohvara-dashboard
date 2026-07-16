@@ -330,6 +330,37 @@
     box-shadow: 0 0 6px var(--accent);
   }
 
+  /* ── KPI card grid — mobile: 2-col grid so cards get real width instead of
+     shrinking to the point of text collision; desktop: original flex row.
+     Padding/value size also shrink on mobile — can't be done via inline
+     style since inline always wins over media queries, so KPICard moved
+     those two properties here instead (Prompt 295). ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+  @media (min-width: 768px) {
+    .kpi-grid { display: flex; }
+  }
+  /* Odd-card-out (3-card rows) spans the full second row instead of sitting
+     alone in a half-width cell. */
+  .kpi-grid-span-last > *:last-child {
+    grid-column: span 2;
+  }
+  @media (min-width: 768px) {
+    .kpi-grid-span-last > *:last-child { grid-column: auto; }
+  }
+  .kpi-card {
+    padding: 14px 14px;
+  }
+  .kpi-card .kpi-value {
+    font-size: 22px;
+  }
+  @media (min-width: 768px) {
+    .kpi-card { padding: 18px 20px; }
+    .kpi-card .kpi-value { font-size: 32px; }
+  }
+
   /* ── Call Now button ── */
   .btn-call {
     background: var(--accent);

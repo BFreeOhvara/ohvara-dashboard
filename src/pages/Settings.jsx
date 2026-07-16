@@ -26,9 +26,11 @@ function SavedTick({ show }) {
   )
 }
 
+// Stacks on mobile so the control (a button, often multi-word) never has to
+// squeeze into a shrunk flex slot next to the label and text-wrap (Prompt 295).
 function SectionRow({ label, description, control }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '10px 0', borderBottom: '0.5px solid var(--border)' }}>
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4" style={{ padding: '10px 0', borderBottom: '0.5px solid var(--border)' }}>
       <div style={{ minWidth: 0 }}>
         <p style={{ fontSize: 13, color: 'var(--text-primary)', margin: 0 }}>{label}</p>
         {description && <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>{description}</p>}
@@ -66,7 +68,7 @@ function RegionalSection({ profile }) {
         Sets your timezone explicitly — not inferred from your browser or device. This is what your
         daily lead reset and appointment times are based on, so get it right once and it stays locked in.
       </p>
-      <div className="grid grid-cols-2 gap-3 items-end">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
         <Select label="Timezone" value={timezone} onChange={e => setTimezone(e.target.value)}>
           {SELECTABLE_TIMEZONES.map(tz => (
             <option key={tz.value} value={tz.value}>{tz.label}</option>
@@ -215,7 +217,7 @@ function AccountSection({ profile }) {
       <CardHeader>
         <CardTitle>Account</CardTitle>
       </CardHeader>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input label="Full Name" value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} />
         <Input label="Username" value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} />
         <Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />

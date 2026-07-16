@@ -37,8 +37,8 @@ export function KPICard({
 
   return (
     <div
-      className={accent ? 'glass-accent' : 'glass'}
-      style={{ padding: '18px 20px', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}
+      className={`kpi-card ${accent ? 'glass-accent' : 'glass'}`}
+      style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}
     >
       {/* Label row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
@@ -56,9 +56,8 @@ export function KPICard({
 
       {/* Main value */}
       <div
-        className="count-up"
+        className="kpi-value count-up"
         style={{
-          fontSize: 32,
           fontWeight: 500,
           lineHeight: 1,
           letterSpacing: '-0.02em',

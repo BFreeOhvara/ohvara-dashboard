@@ -224,8 +224,9 @@ export default function MyCommissions() {
         </div>
       </div>
 
-      {/* KPI row — all 3 recompute over the selected range; all-time when no range is picked */}
-      <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'flex-start' }}>
+      {/* KPI row — all 3 recompute over the selected range; all-time when no range is picked.
+          Mobile: 2-col grid (3rd card spans the full 2nd row); desktop: original flex row. */}
+      <div className="stagger kpi-grid kpi-grid-span-last" style={{ gap: 12, marginBottom: 20, alignItems: 'flex-start' }}>
         <KPICard
           label="Total Earned"
           value={Math.floor(scopedTotal)}
