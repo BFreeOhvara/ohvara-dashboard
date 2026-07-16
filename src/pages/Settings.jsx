@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Loader2, Check, X } from 'lucide-react'
+import { Loader2, Check, X, Lock } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useUpdateOwnProfile } from '../hooks/useSettings'
 import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../lib/timezones'
@@ -116,10 +118,82 @@ function AccountSection({ profile }) {
   )
 }
 
+// Step-up auth before the payout flow (Prompt 280) — re-verifies the CURRENT
+// password via signInWithPassword against the session's own email (works for
+// both legacy synthetic-email and invite-flow real-email accounts; Supabase's
+// reauthenticate() is email-nonce-based and useless until SMTP exists).
+// Portaled to document.body — required for any fixed-position modal in this
+// app (the .page-enter transform gotcha, see Prompt 185).
+function PasswordConfirmModal({ onConfirm, onClose }) {
+  const { session } = useAuth()
+  const [password, setPassword] = useState('')
+  const [error, setError]       = useState('')
+  const [checking, setChecking] = useState(false)
+
+  async function handleConfirm() {
+    setError('')
+    if (!password) { setError('Enter your password'); return }
+    setChecking(true)
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: session.user.email,
+      password,
+    })
+    if (authError) {
+      setError('Incorrect password — try again.')
+      setChecking(false)
+      return
+    }
+    onConfirm()
+  }
+
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
+      <div className="glass-accent" style={{ position: 'relative', width: '100%', maxWidth: 360, padding: 24, borderRadius: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Lock size={16} color="var(--accent)" />
+          </div>
+          <div>
+            <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Confirm your password</p>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '3px 0 0', lineHeight: 1.5 }}>
+              Payout settings are sensitive — re-enter your password to continue.
+            </p>
+          </div>
+        </div>
+        <div className="space-y-4" onKeyDown={e => { if (e.key === 'Enter') handleConfirm() }}>
+          <Input
+            label="Password"
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="••••••••"
+            autoFocus
+            autoComplete="current-password"
+          />
+          {error && (
+            <div className="flex items-start gap-2.5 text-xs bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-3 py-2.5">
+              <span className="text-[#EF4444] leading-relaxed">{error}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 justify-end">
+            <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+            <Button size="sm" onClick={handleConfirm} disabled={checking}>
+              {checking ? <Loader2 size={13} className="animate-spin" /> : 'Confirm'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 function PayoutsSection({ profile }) {
   const navigate = useNavigate()
   const connected = !!profile.stripe_onboarding_complete
   const dest = profile.role === 'closer' ? '/closer/revenue' : '/rep/commissions'
+  const [confirming, setConfirming] = useState(false)
 
   return (
     <Card className="mb-5">
@@ -139,12 +213,18 @@ function PayoutsSection({ profile }) {
             }}>
               {connected ? 'Connected' : 'Not Connected'}
             </span>
-            <Button size="sm" variant="secondary" onClick={() => navigate(dest)}>
+            <Button size="sm" variant="secondary" onClick={() => setConfirming(true)}>
               Manage payout account
             </Button>
           </div>
         }
       />
+      {confirming && (
+        <PasswordConfirmModal
+          onConfirm={() => navigate(dest)}
+          onClose={() => setConfirming(false)}
+        />
+      )}
     </Card>
   )
 }
