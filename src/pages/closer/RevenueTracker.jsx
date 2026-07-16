@@ -649,8 +649,10 @@ function DealsSection({ closerId }) {
         <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0', margin: 0 }}>No closed deals yet</p>
       ) : (
         <div>
-          {/* Header row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 160px 130px', padding: '0 0 8px', borderBottom: '0.5px solid var(--border)', marginBottom: 4 }}>
+          {/* Header row — desktop only; the fixed 140/160/130px columns
+              (430px+) overflowed on mobile with no fallback (Prompt 298).
+              Mobile switches to a stacked 2-line card below. */}
+          <div className="hidden md:grid" style={{ gridTemplateColumns: '1fr 140px 160px 130px', padding: '0 0 8px', borderBottom: '0.5px solid var(--border)', marginBottom: 4 }}>
             {[['BUSINESS','left'],['TOTAL DEAL','right'],['YOUR CUT (45%)','right'],['DATE','right']].map(([h, align]) => (
               <span key={h} style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: align }}>{h}</span>
             ))}
@@ -665,20 +667,28 @@ function DealsSection({ closerId }) {
               : d.created_at
               ? new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
               : '—'
+            const borderStyle = { borderBottom: i < deals.length - 1 ? '0.5px solid var(--border)' : 'none' }
             return (
-              <div
-                key={d.id}
-                style={{
-                  display: 'grid', gridTemplateColumns: '1fr 140px 160px 130px',
-                  alignItems: 'center',
-                  padding: '10px 0',
-                  borderBottom: i < deals.length - 1 ? '0.5px solid var(--border)' : 'none',
-                }}
-              >
-                <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{biz}</span>
-                <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', textAlign: 'right' }}>{totalFmt}</span>
-                <span style={{ fontSize: 13, color: 'var(--success)', fontFamily: 'var(--font-mono)', fontWeight: 500, textAlign: 'right' }}>{cutFmt}</span>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'right' }}>{closeDate}</span>
+              <div key={d.id}>
+                {/* Desktop row */}
+                <div className="hidden md:grid" style={{ gridTemplateColumns: '1fr 140px 160px 130px', alignItems: 'center', padding: '10px 0', ...borderStyle }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{biz}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', textAlign: 'right' }}>{totalFmt}</span>
+                  <span style={{ fontSize: 13, color: 'var(--success)', fontFamily: 'var(--font-mono)', fontWeight: 500, textAlign: 'right' }}>{cutFmt}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'right' }}>{closeDate}</span>
+                </div>
+
+                {/* Mobile card */}
+                <div className="flex md:hidden" style={{ flexDirection: 'column', gap: 4, padding: '10px 0', ...borderStyle }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{biz}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>{closeDate}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                    Total {totalFmt} · Your cut{' '}
+                    <span style={{ color: 'var(--success)', fontWeight: 500 }}>{cutFmt}</span>
+                  </div>
+                </div>
               </div>
             )
           })}

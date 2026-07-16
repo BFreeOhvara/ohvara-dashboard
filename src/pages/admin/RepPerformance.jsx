@@ -13,7 +13,7 @@ export default function RepPerformance() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl font-medium text-[var(--text-primary)]">Rep Performance</h1>
           <p className="text-[var(--text-muted)] text-sm mt-0.5">Per-rep analytics filterable by period</p>
@@ -59,7 +59,7 @@ function RepPerformanceRow({ rep, period }) {
         </div>
         <Badge label={rep.is_active ? 'active' : 'inactive'} variant={rep.is_active ? 'green' : 'red'} />
       </div>
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Metric icon={Phone} label="Dials" value={stats?.totalDials ?? '—'} color="text-[var(--accent)]" />
         <Metric icon={Calendar} label="Booked" value={stats?.bookedCount ?? '—'} color="text-[var(--success)]" />
         <Metric icon={TrendingUp} label="Book Rate" value={stats ? `${stats.bookingRate}%` : '—'} color="text-[var(--info)]" />

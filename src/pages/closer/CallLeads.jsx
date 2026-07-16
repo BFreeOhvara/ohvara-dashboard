@@ -108,6 +108,7 @@ export default function CallLeads() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search business, niche, city, phone…"
+              className="w-full sm:w-[220px]"
               style={{
                 height: 30, padding: '0 10px',
                 background: 'var(--bg-elevated)',
@@ -115,18 +116,22 @@ export default function CallLeads() {
                 borderRadius: 6, fontSize: 12,
                 color: 'var(--text-primary)',
                 fontFamily: 'var(--font-sans)',
-                width: 220,
                 outline: 'none',
               }}
             />
           </div>
         </div>
 
-        {/* Table — glass surface with internally-scrollable rows */}
+        {/* Table — glass surface with internally-scrollable rows. Desktop
+            keeps the fixed-column table; mobile switches to self-labeling
+            stacked cards inside LeadRow (Prompt 298 — the fixed `flex:'0 0
+            Npx'` columns totaled 620px+ and were clipped by this container's
+            `overflow:'hidden'`, unreachable on a phone; same fix pattern
+            already shipped on the rep side's My Leads). */}
         <div className="glass" style={{ overflow: 'hidden', borderRadius: 10 }}>
-          {/* Header row */}
-          <div style={{
-            display: 'flex', alignItems: 'center',
+          {/* Header row — desktop only; mobile cards are self-labeling */}
+          <div className="hidden md:flex" style={{
+            alignItems: 'center',
             background: 'var(--bg-elevated)',
             borderBottom: '0.5px solid var(--border)',
           }}>
@@ -317,9 +322,7 @@ function LeadRow({ lead, onScriptOpen }) {
       <div
         className="table-row-animated"
         style={{
-          display: 'flex', alignItems: 'center',
           borderBottom: '0.5px solid var(--border)',
-          minHeight: 44,
           transition: 'background-color 100ms',
           cursor: 'pointer',
         }}
@@ -327,48 +330,88 @@ function LeadRow({ lead, onScriptOpen }) {
         onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
         onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
       >
-        {/* Business */}
-        <div style={{ flex: '1 1 0', minWidth: 0, padding: '10px 16px' }}>
-          <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {lead.business_name}
-          </p>
-          {lead.city && (
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-              {lead.city}{lead.state ? `, ${lead.state}` : ''}
+        {/* Desktop table row — unchanged at md+ */}
+        <div className="hidden md:flex" style={{ alignItems: 'center', minHeight: 44 }}>
+          {/* Business */}
+          <div style={{ flex: '1 1 0', minWidth: 0, padding: '10px 16px' }}>
+            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {lead.business_name}
             </p>
-          )}
+            {lead.city && (
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+                {lead.city}{lead.state ? `, ${lead.state}` : ''}
+              </p>
+            )}
+          </div>
+
+          {/* Niche */}
+          <div style={{ flex: '0 0 110px', padding: '10px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {lead.niche || '—'}
+          </div>
+
+          {/* Phone */}
+          <div style={{ flex: '0 0 120px', padding: '10px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {lead.phone || '—'}
+          </div>
+
+          {/* City */}
+          <div style={{ flex: '0 0 140px', padding: '10px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {lead.city || '—'}
+          </div>
+
+          {/* Status */}
+          <div style={{ flex: '0 0 110px', padding: '10px 8px' }}>
+            <Badge label={lead.status} />
+          </div>
+
+          {/* Action — stopPropagation so button click doesn't also fire the row onClick */}
+          <div
+            style={{ flex: '0 0 140px', padding: '8px 16px 8px 0', display: 'flex', justifyContent: 'flex-end' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <CallButton
+              lead={lead}
+              onScriptOpen={onScriptOpen}
+              onCallEnd={() => {}}
+            />
+          </div>
         </div>
 
-        {/* Niche */}
-        <div style={{ flex: '0 0 110px', padding: '10px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {lead.niche || '—'}
-        </div>
+        {/* Mobile card — below md, self-labeling (Prompt 298, same pattern as
+            the rep side's My Leads) */}
+        <div className="flex md:hidden" style={{ flexDirection: 'column', gap: 10, padding: '14px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
+                {lead.business_name}
+              </p>
+              {lead.city && (
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+                  {lead.city}{lead.state ? `, ${lead.state}` : ''}
+                </p>
+              )}
+            </div>
+            <div style={{ flexShrink: 0 }}>
+              <Badge label={lead.status} />
+            </div>
+          </div>
 
-        {/* Phone */}
-        <div style={{ flex: '0 0 120px', padding: '10px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {lead.phone || '—'}
-        </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {lead.niche || '—'}
+            </div>
+            <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {lead.phone || '—'}
+            </div>
+          </div>
 
-        {/* City */}
-        <div style={{ flex: '0 0 140px', padding: '10px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {lead.city || '—'}
-        </div>
-
-        {/* Status */}
-        <div style={{ flex: '0 0 110px', padding: '10px 8px' }}>
-          <Badge label={lead.status} />
-        </div>
-
-        {/* Action — stopPropagation so button click doesn't also fire the row onClick */}
-        <div
-          style={{ flex: '0 0 140px', padding: '8px 16px 8px 0', display: 'flex', justifyContent: 'flex-end' }}
-          onClick={e => e.stopPropagation()}
-        >
-          <CallButton
-            lead={lead}
-            onScriptOpen={onScriptOpen}
-            onCallEnd={() => {}}
-          />
+          <div onClick={e => e.stopPropagation()}>
+            <CallButton
+              lead={lead}
+              onScriptOpen={onScriptOpen}
+              onCallEnd={() => {}}
+            />
+          </div>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Send, MessageSquare } from 'lucide-react'
+import { Send, MessageSquare, ChevronLeft } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useReps, useClosers, useAdmins } from '../../hooks/useProfiles'
@@ -277,9 +277,17 @@ export function MessageCenter({ role }) {
     return [...managerConvs, ...repConvs]
   }, [isRep, repMessages, inboxMessages, mutualSentMessages, allReps, managerProfiles, mutualRecipient])
 
+  // Auto-select the rep's first contact thread once on load only — not on
+  // every `selectedKey === null`, otherwise the mobile back button (which
+  // clears selectedKey to return to the list, Prompt 298) would immediately
+  // re-select it and the list would never be reachable on a phone.
+  const repAutoSelected = useRef(false)
   useEffect(() => {
-    if (isRep && !selectedKey && conversations.length) setSelectedKey(conversations[0].key)
-  }, [isRep, selectedKey, conversations])
+    if (isRep && !repAutoSelected.current && conversations.length) {
+      setSelectedKey(conversations[0].key)
+      repAutoSelected.current = true
+    }
+  }, [isRep, conversations])
 
   const selected = conversations.find(c => c.key === selectedKey) || null
 
@@ -318,8 +326,15 @@ export function MessageCenter({ role }) {
 
       <div className="glass" style={{ display: 'flex', flex: 1, minHeight: 0, borderRadius: 0, overflow: 'hidden' }}>
 
-        {/* Left — conversation list */}
-        <div style={{ width: 280, flexShrink: 0, borderRight: '0.5px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
+        {/* Left — conversation list. Mobile: full-width, shown only when no
+            thread is selected (list/thread master-detail toggle, Prompt 298
+            — the fixed 280px column used to render permanently alongside the
+            thread, squeezing it into a ~100px sliver on a phone). Desktop:
+            unchanged fixed 280px column, always visible alongside the thread. */}
+        <div
+          className={`${selected ? 'hidden' : 'flex'} md:flex w-full md:w-[280px]`}
+          style={{ flexShrink: 0, borderRight: '0.5px solid var(--border)', flexDirection: 'column' }}
+        >
           <div style={{ padding: '12px 14px', borderBottom: '0.5px solid var(--border)', flexShrink: 0 }}>
             <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', margin: 0, fontWeight: 500 }}>
               {isRep ? 'Contacts' : 'Conversations'}
@@ -339,8 +354,11 @@ export function MessageCenter({ role }) {
           </div>
         </div>
 
-        {/* Middle — thread */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* Middle — thread. Mobile: hidden entirely while the list is showing
+            (the list panel above takes full width in that state instead);
+            shown full-width once a conversation is picked. Desktop: always
+            visible alongside the list, unchanged. */}
+        <div className={`${selected ? 'flex' : 'hidden'} md:flex`} style={{ flex: 1, minWidth: 0, flexDirection: 'column' }}>
           {!selected ? (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
               <MessageSquare size={24} style={{ opacity: 0.4, marginBottom: 8 }} />
@@ -349,6 +367,13 @@ export function MessageCenter({ role }) {
           ) : (
             <>
               <div style={{ padding: '12px 16px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                <button
+                  onClick={() => setSelectedKey(null)}
+                  className="md:hidden"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', padding: 0, flexShrink: 0 }}
+                >
+                  <ChevronLeft size={20} />
+                </button>
                 <Avatar name={selected.name} size={28} />
                 <div>
                   <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{selected.name}</p>

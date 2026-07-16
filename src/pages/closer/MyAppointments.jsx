@@ -71,7 +71,7 @@ export default function MyAppointments() {
       </div>
 
       {/* KPI row — glass + countup */}
-      <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+      <div className="stagger" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
         <KPICard
           label="Today's Appointments"
           value={kpis?.todayAppts ?? pending.length}

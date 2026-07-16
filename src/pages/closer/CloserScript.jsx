@@ -37,14 +37,19 @@ export default function CloserScript() {
         </p>
       </div>
 
-      {/* Sub-tabs */}
-      <div style={{ display: 'flex', gap: 2, borderBottom: '0.5px solid var(--border)', marginBottom: 14, flexShrink: 0 }}>
+      {/* Sub-tabs — the sub-labels are full sentences meant to read on one
+          line each, so this scrolls horizontally rather than wrapping mid-
+          sentence (Prompt 298: previously had no overflow handling at all —
+          two `whiteSpace:'nowrap'` labels needing 600px+ combined would just
+          overflow the page on a 342px-wide phone). Same pattern as the
+          Training Center tab bar fix (Prompt 295). */}
+      <div className="overflow-x-auto scrollbar-thin" style={{ display: 'flex', gap: 2, borderBottom: '0.5px solid var(--border)', marginBottom: 14, flexShrink: 0 }}>
         {TABS.map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+              display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0,
               padding: '10px 18px', background: 'none', cursor: 'pointer',
               border: 'none',
               borderBottom: tab === t.key ? '2px solid var(--accent)' : '2px solid transparent',

@@ -82,19 +82,23 @@ export default function Payouts() {
 
       {showCreate && <CreatePayoutForm reps={reps} create={create} onDone={() => setShowCreate(false)} />}
 
-      {/* Filters */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+      {/* Filters — wraps on mobile instead of the search box permanently
+          eating ~240px of a 342px row and squeezing the status buttons
+          (Prompt 298, same "search box vs. filters" bug already fixed on
+          the rep side's My Leads) */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 14 }}>
         <input
           value={repFilter}
           onChange={e => setRepFilter(e.target.value)}
           placeholder="Filter by rep name…"
+          className="w-full sm:w-[240px]"
           style={{
-            height: 34, padding: '0 12px', flex: '0 0 240px',
+            height: 34, padding: '0 12px',
             background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
             borderRadius: 8, fontSize: 13, color: 'var(--text-primary)',
           }}
         />
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {STATUS_FILTERS.map(s => (
             <button
               key={s}
@@ -113,10 +117,13 @@ export default function Payouts() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table — desktop keeps the fixed 5-col grid; mobile switches to
+          self-labeling stacked cards (Prompt 298: the old grid gave the
+          Action column ~68px at 342px width, nowhere near enough for an
+          "Approve & Pay" button). */}
       <div className="glass" style={{ borderRadius: 12, overflow: 'hidden' }}>
-        <div style={{
-          display: 'grid', gridTemplateColumns: '1.2fr 1.4fr 0.8fr 0.8fr 1fr',
+        <div className="hidden md:grid" style={{
+          gridTemplateColumns: '1.2fr 1.4fr 0.8fr 0.8fr 1fr',
           gap: 12, padding: '12px 16px', borderBottom: '0.5px solid var(--border)',
           fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)',
         }}>
@@ -132,54 +139,85 @@ export default function Payouts() {
         ) : filtered.map(p => {
           const repOnboarded = !!p.rep?.stripe_onboarding_complete
           const canPay = p.status !== 'paid'
+          const payAction = canPay ? (
+            <button
+              onClick={() => handlePay(p)}
+              disabled={payingId === p.id || !repOnboarded}
+              title={repOnboarded ? '' : "Rep hasn't connected their bank yet"}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px',
+                borderRadius: 7, whiteSpace: 'nowrap',
+                background: repOnboarded ? 'var(--success)' : 'var(--bg-elevated)',
+                color: repOnboarded ? 'white' : 'var(--text-muted)',
+                fontSize: 12, fontWeight: 500,
+                cursor: (payingId === p.id || !repOnboarded) ? 'not-allowed' : 'pointer',
+                border: repOnboarded ? 'none' : '0.5px solid var(--border)',
+              }}
+            >
+              {payingId === p.id
+                ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Paying…</>
+                : <><DollarSign size={13} /> Approve &amp; Pay</>}
+            </button>
+          ) : (
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {p.paid_at ? new Date(p.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Paid'}
+            </span>
+          )
+          const warnings = (
+            <>
+              {!repOnboarded && canPay && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--warning)' }}>
+                  <AlertCircle size={10} /> Bank not connected
+                </span>
+              )}
+              {rowError[p.id] && (
+                <span style={{ fontSize: 10, color: 'var(--danger)', textAlign: 'right' }}>{rowError[p.id]}</span>
+              )}
+            </>
+          )
           return (
-            <div key={p.id} style={{
-              display: 'grid', gridTemplateColumns: '1.2fr 1.4fr 0.8fr 0.8fr 1fr',
-              gap: 12, padding: '12px 16px', borderBottom: '0.5px solid var(--border)', alignItems: 'center',
-            }}>
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {p.rep?.full_name || '—'}
-              </span>
-              <span style={{ fontSize: 13, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {p.appointment?.lead?.business_name || 'Closed deal'}
-              </span>
-              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
-                {fmtUsd(p.amount_cents)}
-              </span>
-              <span><StatusChip status={p.status} /></span>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                {canPay ? (
-                  <button
-                    onClick={() => handlePay(p)}
-                    disabled={payingId === p.id || !repOnboarded}
-                    title={repOnboarded ? '' : "Rep hasn't connected their bank yet"}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px',
-                      borderRadius: 7, whiteSpace: 'nowrap',
-                      background: repOnboarded ? 'var(--success)' : 'var(--bg-elevated)',
-                      color: repOnboarded ? 'white' : 'var(--text-muted)',
-                      fontSize: 12, fontWeight: 500,
-                      cursor: (payingId === p.id || !repOnboarded) ? 'not-allowed' : 'pointer',
-                      border: repOnboarded ? 'none' : '0.5px solid var(--border)',
-                    }}
-                  >
-                    {payingId === p.id
-                      ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Paying…</>
-                      : <><DollarSign size={13} /> Approve &amp; Pay</>}
-                  </button>
-                ) : (
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                    {p.paid_at ? new Date(p.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Paid'}
+            <div key={p.id} style={{ borderBottom: '0.5px solid var(--border)' }}>
+              {/* Desktop row */}
+              <div className="hidden md:grid" style={{
+                gridTemplateColumns: '1.2fr 1.4fr 0.8fr 0.8fr 1fr',
+                gap: 12, padding: '12px 16px', alignItems: 'center',
+              }}>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {p.rep?.full_name || '—'}
+                </span>
+                <span style={{ fontSize: 13, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {p.appointment?.lead?.business_name || 'Closed deal'}
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
+                  {fmtUsd(p.amount_cents)}
+                </span>
+                <span><StatusChip status={p.status} /></span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                  {payAction}
+                  {warnings}
+                </div>
+              </div>
+
+              {/* Mobile card */}
+              <div className="flex md:hidden" style={{ flexDirection: 'column', gap: 8, padding: '12px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {p.rep?.full_name || '—'}
+                    </p>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {p.appointment?.lead?.business_name || 'Closed deal'}
+                    </p>
+                  </div>
+                  <div style={{ flexShrink: 0 }}><StatusChip status={p.status} /></div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
+                    {fmtUsd(p.amount_cents)}
                   </span>
-                )}
-                {!repOnboarded && canPay && (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--warning)' }}>
-                    <AlertCircle size={10} /> Bank not connected
-                  </span>
-                )}
-                {rowError[p.id] && (
-                  <span style={{ fontSize: 10, color: 'var(--danger)', textAlign: 'right' }}>{rowError[p.id]}</span>
-                )}
+                  {payAction}
+                </div>
+                {warnings}
               </div>
             </div>
           )

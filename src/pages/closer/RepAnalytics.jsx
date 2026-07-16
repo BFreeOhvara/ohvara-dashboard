@@ -52,7 +52,7 @@ function RepRow({ rep, period }) {
   return (
     <div className="glass" style={{ padding: 16 }}>
       <p className="text-sm font-medium text-[var(--text-primary)] mb-3">{rep.full_name}</p>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatCard label="Dials" value={stats?.totalDials ?? '—'} icon={Phone} color="indigo" />
         <StatCard label="Booked" value={stats?.bookedCount ?? '—'} icon={Calendar} color="green" />
         <StatCard label="Booking Rate" value={stats ? `${stats.bookingRate}%` : '—'} icon={TrendingUp} color="blue" />

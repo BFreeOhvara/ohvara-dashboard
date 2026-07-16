@@ -881,14 +881,15 @@ export default function LeadPipeline() {
 
         {/* Page-level filters — apply to every tab */}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative' }}>
+          <div className="relative w-full sm:w-auto">
             <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search business, niche, city, phone…"
+              className="w-full sm:w-[240px]"
               style={{
-                height: 32, padding: '0 10px 0 28px', width: 240,
+                height: 32, padding: '0 10px 0 28px',
                 background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
                 borderRadius: 6, fontSize: 12, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', outline: 'none',
               }}

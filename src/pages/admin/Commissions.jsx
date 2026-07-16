@@ -338,8 +338,8 @@ export default function Commissions() {
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {dealsNeedingComms.map(deal => (
-              <div key={deal.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                <div>
+              <div key={deal.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <div style={{ minWidth: 0 }}>
                   <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{deal.lead?.business_name || 'Unknown'}</span>
                   <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>
                     {deal.closed_tier || 'pro'} · {formatDate(deal.closed_at || deal.updated_at)}
@@ -371,8 +371,8 @@ export default function Commissions() {
         ) : closedDeals.length === 0 ? (
           <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No closed deals yet.</p>
         ) : (
-          <div style={{ background: 'var(--bg-surface)', border: '0.5px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+          <div className="scrollbar-thin" style={{ background: 'var(--bg-surface)', border: '0.5px solid var(--border)', borderRadius: 10, overflowX: 'auto' }}>
+            <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ background: 'var(--bg-elevated)' }}>
                   {['Business', 'Closer', 'Date', 'Recurring'].map(h => (
@@ -491,6 +491,7 @@ export default function Commissions() {
                 {/* Summary row */}
                 <button
                   onClick={() => setExpandedRep(isOpen ? null : person?.id)}
+                  className="flex-wrap"
                   style={{
                     width: '100%', display: 'flex', alignItems: 'center',
                     gap: 14, padding: '14px 16px',
@@ -505,15 +506,15 @@ export default function Commissions() {
                   }}>
                     {person?.full_name?.charAt(0) || '?'}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
+                  <div style={{ flex: '1 1 120px', minWidth: 0 }}>
+                    <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {person?.full_name || 'Unknown'}
                     </p>
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {person?.role} · @{person?.username}
                     </p>
                   </div>
-                  <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexShrink: 0 }}>
                     <div style={{ textAlign: 'right' }}>
                       <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Setup</p>
                       <p style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', margin: 0 }}>${fmt(totalSetup)}</p>
@@ -541,8 +542,8 @@ export default function Commissions() {
 
                 {/* Drill-down */}
                 {isOpen && (
-                  <div style={{ borderTop: '0.5px solid var(--border)' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <div className="scrollbar-thin" style={{ borderTop: '0.5px solid var(--border)', overflowX: 'auto' }}>
+                    <table style={{ width: '100%', minWidth: 640, borderCollapse: 'collapse', fontSize: 12 }}>
                       <thead>
                         <tr style={{ background: 'var(--bg-elevated)' }}>
                           {['Business', 'Type', 'Tier', 'Amount', 'Status', 'Date', ''].map(h => (

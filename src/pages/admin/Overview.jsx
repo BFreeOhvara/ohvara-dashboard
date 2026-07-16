@@ -319,7 +319,7 @@ function AnalyticsRow() {
   }
 
   return (
-    <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
       {/* 7-day activity */}
       <div className="glass" style={{ flex: 1, padding: '14px 16px 10px', borderRadius: 10, minWidth: 0 }}>
         <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', margin: '0 0 12px' }}>
@@ -347,8 +347,9 @@ function AnalyticsRow() {
         </ResponsiveContainer>
       </div>
 
-      {/* Pipeline bar chart */}
-      <div className="glass" style={{ flex: '0 0 240px', padding: '14px 16px 10px', borderRadius: 10 }}>
+      {/* Pipeline bar chart — full width on mobile (stacks below the 7-day
+          chart instead of squeezing it, Prompt 298), fixed 240px at md+ */}
+      <div className="glass w-full md:flex-none md:w-[240px]" style={{ padding: '14px 16px 10px', borderRadius: 10 }}>
         <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', margin: '0 0 12px' }}>
           Pipeline
         </p>
@@ -430,11 +431,11 @@ export default function Overview() {
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
   return (
-    <div style={{ display: 'flex', gap: 20, minHeight: 0 }}>
+    <div className="flex flex-col md:flex-row" style={{ gap: 20, minHeight: 0 }}>
       {/* Left — KPIs + rep table */}
       <div style={{ flex: 1, minWidth: 0 }}>
         {/* Top bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2" style={{ marginBottom: 20 }}>
           <div>
             <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
               Overview
@@ -452,7 +453,11 @@ export default function Overview() {
         </div>
 
         {/* KPI row — glass + countup */}
-        <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+        {/* .kpi-grid (Prompt 295) — mobile 2-col grid, desktop flex row.
+            Plain `flexWrap:'wrap'` doesn't actually wrap here since each
+            KPICard has `minWidth:0` and just shrinks to fit instead of
+            wrapping (caught visually in Prompt 298 verification). */}
+        <div className="stagger kpi-grid" style={{ gap: 12, marginBottom: 20 }}>
           <KpiCard label="Calls Today"    value={kpis?.callsToday}  icon={Phone}     iconColor="var(--info)" />
           <KpiCard label="Booked Today"   value={kpis?.bookedToday} icon={Calendar}  iconColor="var(--success)" subColor={kpis?.bookedToday > 0 ? 'var(--success)' : undefined} />
           <KpiCard
@@ -475,48 +480,56 @@ export default function Overview() {
         {/* Analytics charts */}
         <AnalyticsRow />
 
-        {/* Rep performance table */}
-        <div className="glass" style={{ overflow: 'hidden', borderRadius: 10 }}>
-          {/* Header */}
-          <div style={{
-            display: 'flex', alignItems: 'center',
-            borderBottom: '0.5px solid var(--border)',
-            background: 'var(--bg-elevated)',
-          }}>
-            <div style={{ flex: '1 1 0', padding: '8px 16px' }} className="section-label">Rep</div>
-            <div style={{ flex: '0 0 100px', padding: '8px 8px' }} className="section-label">Calls Today</div>
-            <div style={{ flex: '0 0 80px', padding: '8px 8px' }} className="section-label">Booked</div>
-            <div style={{ flex: '0 0 100px', padding: '8px 8px' }} className="section-label">Connect %</div>
-            <div style={{ flex: '0 0 90px', padding: '8px 8px' }} className="section-label">Status</div>
-            <div style={{ flex: '0 0 44px' }} />
-          </div>
+        {/* Rep performance table — horizontal scroll on narrow screens
+            (Prompt 298: fixed 100/80/100/90/44px columns totaled 414px+ and
+            were clipped by this container's old `overflow:'hidden'`; each
+            row also has an inline expand/collapse detail panel, so a full
+            mobile-card rebuild would duplicate that logic — the scrollable-
+            table pattern already used by LeadPipeline/CloserPipeline's
+            QueueTable is the lower-risk fix here). */}
+        <div className="glass scrollbar-thin" style={{ overflowX: 'auto', borderRadius: 10 }}>
+          <div style={{ minWidth: 560 }}>
+            {/* Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center',
+              borderBottom: '0.5px solid var(--border)',
+              background: 'var(--bg-elevated)',
+            }}>
+              <div style={{ flex: '1 1 0', padding: '8px 16px' }} className="section-label">Rep</div>
+              <div style={{ flex: '0 0 100px', padding: '8px 8px' }} className="section-label">Calls Today</div>
+              <div style={{ flex: '0 0 80px', padding: '8px 8px' }} className="section-label">Booked</div>
+              <div style={{ flex: '0 0 100px', padding: '8px 8px' }} className="section-label">Connect %</div>
+              <div style={{ flex: '0 0 90px', padding: '8px 8px' }} className="section-label">Status</div>
+              <div style={{ flex: '0 0 44px' }} />
+            </div>
 
-          {repsLoading ? (
-            <div>
-              {[...Array(4)].map((_, i) => (
-                <div key={i} style={{ height: 48, borderBottom: '0.5px solid var(--border)', padding: '14px 16px' }}>
-                  <div style={{ height: 14, width: '40%', background: 'var(--bg-elevated)', borderRadius: 4 }} />
-                </div>
-              ))}
-            </div>
-          ) : !reps?.length ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center' }}>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No reps found.</p>
-            </div>
-          ) : (
-            reps.map(rep => <RepRow key={rep.id} rep={rep} />)
-          )}
+            {repsLoading ? (
+              <div>
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} style={{ height: 48, borderBottom: '0.5px solid var(--border)', padding: '14px 16px' }}>
+                    <div style={{ height: 14, width: '40%', background: 'var(--bg-elevated)', borderRadius: 4 }} />
+                  </div>
+                ))}
+              </div>
+            ) : !reps?.length ? (
+              <div style={{ padding: '32px 16px', textAlign: 'center' }}>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No reps found.</p>
+              </div>
+            ) : (
+              reps.map(rep => <RepRow key={rep.id} rep={rep} />)
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Right — recent bookings feed */}
-      <div className="glass" style={{
-        flexShrink: 0, width: 300,
-        overflow: 'hidden', borderRadius: 10,
-        display: 'flex', flexDirection: 'column',
-        maxHeight: 'calc(100vh - 48px)',
-        position: 'sticky', top: 0,
-      }}>
+      {/* Right — recent bookings feed. Full width and capped-height on
+          mobile (stacks below the rep table instead of forcing the whole
+          2-col shell to overflow horizontally, Prompt 298); fixed 300px
+          sticky sidebar unchanged at md+. */}
+      <div
+        className="glass w-full md:w-[300px] flex-shrink-0 flex flex-col max-h-[420px] md:max-h-[calc(100vh-48px)] md:sticky md:top-0"
+        style={{ overflow: 'hidden', borderRadius: 10 }}
+      >
         <div style={{
           padding: '12px 16px', borderBottom: '0.5px solid var(--border)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',

@@ -102,30 +102,37 @@ function ResultsTable({ results, selectedIds, onToggle, onToggleAll }) {
       borderRadius: 8, overflow: 'hidden',
       marginTop: 16,
     }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex', alignItems: 'center',
-        borderBottom: '0.5px solid var(--border)',
-        background: 'var(--bg-elevated)',
-      }}>
-        <div style={{ flex: '0 0 36px', padding: '8px 8px 8px 12px', display: 'flex', alignItems: 'center' }}>
-          <input
-            type="checkbox"
-            checked={allSelected}
-            onChange={() => onToggleAll(allSelected)}
-            style={{ cursor: 'pointer', accentColor: 'var(--accent)' }}
-          />
-        </div>
-        <div style={{ flex: '1 1 0', padding: '8px 8px' }} className="section-label">Business</div>
-        <div style={{ flex: '0 0 110px', padding: '8px 8px' }} className="section-label">Niche</div>
-        <div style={{ flex: '0 0 100px', padding: '8px 8px' }} className="section-label">City</div>
-        <div style={{ flex: '0 0 130px', padding: '8px 8px' }} className="section-label">Est. Monthly Cost</div>
-        <div style={{ flex: '0 0 120px', padding: '8px 8px' }} className="section-label">Phone</div>
-        <div style={{ flex: '0 0 80px', padding: '8px 16px 8px 8px', textAlign: 'right' }} className="section-label">Status</div>
-      </div>
+      {/* Horizontal scroll on narrow screens (Prompt 298: fixed columns
+          totaled 576px+ with NO overflow handling at all — unlike
+          LeadPipeline's equivalent table, this one just clipped). Row-
+          selection checkboxes make a full mobile-card rebuild higher risk
+          than the scrollable-table pattern already used elsewhere. */}
+      <div className="overflow-x-auto scrollbar-thin">
+        <div style={{ minWidth: 700 }}>
+          {/* Header */}
+          <div style={{
+            display: 'flex', alignItems: 'center',
+            borderBottom: '0.5px solid var(--border)',
+            background: 'var(--bg-elevated)',
+          }}>
+            <div style={{ flex: '0 0 36px', padding: '8px 8px 8px 12px', display: 'flex', alignItems: 'center' }}>
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={() => onToggleAll(allSelected)}
+                style={{ cursor: 'pointer', accentColor: 'var(--accent)' }}
+              />
+            </div>
+            <div style={{ flex: '1 1 0', padding: '8px 8px' }} className="section-label">Business</div>
+            <div style={{ flex: '0 0 110px', padding: '8px 8px' }} className="section-label">Niche</div>
+            <div style={{ flex: '0 0 100px', padding: '8px 8px' }} className="section-label">City</div>
+            <div style={{ flex: '0 0 130px', padding: '8px 8px' }} className="section-label">Est. Monthly Cost</div>
+            <div style={{ flex: '0 0 120px', padding: '8px 8px' }} className="section-label">Phone</div>
+            <div style={{ flex: '0 0 80px', padding: '8px 16px 8px 8px', textAlign: 'right' }} className="section-label">Status</div>
+          </div>
 
-      {/* Rows */}
-      <div style={{ maxHeight: 480, overflowY: 'auto' }} className="scrollbar-thin">
+          {/* Rows */}
+          <div style={{ maxHeight: 480, overflowY: 'auto' }} className="scrollbar-thin">
         {results.map((r, i) => {
           const isNew      = !r.already_in_db
           const isSelected = selectedIds.has(i)
@@ -194,6 +201,8 @@ function ResultsTable({ results, selectedIds, onToggle, onToggleAll }) {
             </div>
           )
         })}
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -283,7 +292,7 @@ function IndeedTab() {
         border: '0.5px solid var(--border)',
         borderRadius: 8, padding: '16px', marginBottom: 16,
       }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 12, marginBottom: 16 }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:[grid-template-columns:1fr_1fr_auto]" style={{ gap: 12, marginBottom: 16 }}>
           <div>
             <p className="section-label" style={{ marginBottom: 6 }}>Location</p>
             <input
@@ -342,12 +351,12 @@ function IndeedTab() {
 
       {/* Results header */}
       {results.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
             Found <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{results.length}</span> results ·{' '}
             <span style={{ color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>{newCount}</span> new
           </p>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             {importMsg && (
               <span style={{ fontSize: 12, color: importMsg.startsWith('✅') ? 'var(--success)' : 'var(--danger)' }}>
                 {importMsg}

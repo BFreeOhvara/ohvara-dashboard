@@ -30,7 +30,7 @@ export default function LeadSources() {
         <p className="text-[var(--text-muted)] text-sm mt-0.5">Indeed is the only active source — Google Maps is legacy/inactive</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <StatCard label="Total Leads" value={total} icon={Database} color="indigo" />
         <StatCard label="Indeed (active)" value={counts?.indeed || 0} icon={Briefcase} color="green" sub={`${indeedPct}% of total`} />
         <StatCard label="Google Maps (legacy)" value={counts?.google_maps || 0} icon={MapPin} color="blue" sub="inactive — historical only" />

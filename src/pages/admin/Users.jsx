@@ -87,7 +87,7 @@ function InvitePanel({ onClose }) {
           <X size={16} />
         </button>
       </div>
-      <div className="flex items-end gap-3">
+      <div className="flex flex-wrap items-end gap-3">
         <div className="w-40">
           <Select label="Role" value={role} onChange={e => setRole(e.target.value)}>
             <option value="rep">Rep</option>
@@ -109,9 +109,9 @@ function InvitePanel({ onClose }) {
           </p>
           <div className="space-y-1.5">
             {invites.map(inv => (
-              <div key={inv.id} className="flex items-center gap-3 text-xs">
+              <div key={inv.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
                 <Badge label={inv.role} />
-                <span className="font-mono text-[10px] text-[var(--text-muted)] truncate max-w-[240px]">
+                <span className="font-mono text-[10px] text-[var(--text-muted)] truncate max-w-[160px] sm:max-w-[240px]">
                   /join/{inv.token}
                 </span>
                 <span className="text-[var(--text-muted)]">{daysLeft(inv.expires_at)}</span>
@@ -361,8 +361,10 @@ export default function Users() {
         </select>
       </div>
 
-      {/* User table */}
-      <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] overflow-hidden">
+      {/* User table — scrolls horizontally on narrow screens instead of
+          clipping (Prompt 298: was `overflow-hidden`, a 6-column table has
+          no way to fit 342px of mobile content width) */}
+      <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] overflow-x-auto scrollbar-thin">
         {isLoading ? (
           <div className="p-8 flex justify-center">
             <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
