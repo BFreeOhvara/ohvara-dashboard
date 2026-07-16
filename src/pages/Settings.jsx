@@ -195,13 +195,13 @@ function AccountSection({ profile }) {
   const { refreshProfile } = useAuth()
   const [form, setForm] = useState({
     full_name: profile.full_name || '',
+    username: profile.username || '',
     email: profile.email || '',
-    phone: profile.phone || '',
   })
   const [saved, setSaved] = useState(false)
   const [changingPw, setChangingPw] = useState(false)
 
-  const dirty = form.full_name !== (profile.full_name || '') || form.email !== (profile.email || '') || form.phone !== (profile.phone || '')
+  const dirty = form.full_name !== (profile.full_name || '') || form.username !== (profile.username || '') || form.email !== (profile.email || '')
 
   async function save() {
     await update.mutateAsync({ profileId: profile.id, updates: form })
@@ -217,8 +217,8 @@ function AccountSection({ profile }) {
       </CardHeader>
       <div className="grid grid-cols-2 gap-3">
         <Input label="Full Name" value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} />
+        <Input label="Username" value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} />
         <Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-        <Input label="Phone" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="(555) 555-5555" />
         <div className="flex items-end gap-2">
           <Button size="sm" onClick={save} disabled={!dirty || update.isPending}>
             {update.isPending ? <Loader2 size={13} className="animate-spin" /> : 'Save'}
