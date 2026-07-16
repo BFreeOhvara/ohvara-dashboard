@@ -174,7 +174,8 @@ export function ScriptWalk({ flow, mode = 'live', leadId, startSectionId, onData
     setHistory(h => h.slice(0, -1))
   }
   function restart() {
-    commit({ sectionId: 'opener', stack: [{ steps: flow.opener.steps, index: 0 }] })
+    setHistory([])
+    setState({ sectionId: 'opener', stack: [{ steps: flow.opener.steps, index: 0 }] })
   }
 
   // A run of consecutive plain-SAY steps immediately followed by a fork shows

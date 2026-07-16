@@ -348,11 +348,16 @@ function MyPayouts({ connected, hasCustomRange, rangeStart, rangeEnd }) {
       </div>
 
       {scopedPayouts.length === 0 ? (
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', margin: '8px 0' }}>
-          {(payouts?.length ?? 0) === 0
-            ? 'No payouts yet — a pending payout appears here when the closer signs a deal you booked.'
-            : 'No payouts in this range.'}
-        </p>
+        <div style={{
+          minHeight: PAYOUT_ROW_HEIGHT * 5, display: 'flex',
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>
+            {(payouts?.length ?? 0) === 0
+              ? 'No payouts yet — a pending payout appears here when the closer signs a deal you booked.'
+              : 'No payouts in this range.'}
+          </p>
+        </div>
       ) : (
         <div className="scrollbar-thin" style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: PAYOUT_ROW_HEIGHT * 5, overflowY: 'auto' }}>
           {scopedPayouts.map(p => {

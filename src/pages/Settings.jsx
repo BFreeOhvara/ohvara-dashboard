@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Loader2, Check, X, Lock, Moon, Sun, KeyRound } from 'lucide-react'
+import { Loader2, Check, X, Lock, KeyRound } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useUpdateOwnProfile } from '../hooks/useSettings'
@@ -35,65 +35,6 @@ function SectionRow({ label, description, control }) {
       </div>
       {control}
     </div>
-  )
-}
-
-// Appearance (Prompt 281) — dark/light theme toggle. The persisted value in
-// localStorage is applied pre-paint by index.html's boot script; this section
-// just flips the data-theme attribute live and keeps storage in sync. Dark is
-// the default (no attribute).
-function AppearanceSection() {
-  const [theme, setThemeState] = useState(() =>
-    document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
-  )
-
-  function apply(next) {
-    setThemeState(next)
-    if (next === 'light') document.documentElement.dataset.theme = 'light'
-    else delete document.documentElement.dataset.theme
-    try { localStorage.setItem('ohvara_theme', next) } catch { /* storage unavailable — theme still applies this session */ }
-  }
-
-  const OPTIONS = [
-    { value: 'dark',  label: 'Dark',  Icon: Moon },
-    { value: 'light', label: 'Light', Icon: Sun },
-  ]
-
-  return (
-    <Card className="mb-5">
-      <CardHeader>
-        <CardTitle>Appearance</CardTitle>
-      </CardHeader>
-      <SectionRow
-        label="Theme"
-        description="Applies immediately and sticks on this device."
-        control={
-          <div style={{ display: 'flex', gap: 4, background: 'var(--bg-surface)', border: '0.5px solid var(--border)', borderRadius: 9, padding: 3 }}>
-            {OPTIONS.map(({ value, label, Icon }) => {
-              const active = theme === value
-              return (
-                <button
-                  key={value}
-                  onClick={() => apply(value)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '6px 14px', borderRadius: 7, border: 'none',
-                    background: active ? 'var(--bg-elevated)' : 'transparent',
-                    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
-                    fontSize: 12, fontWeight: active ? 500 : 400,
-                    cursor: 'pointer', transition: 'all 0.12s',
-                    boxShadow: active ? '0 1px 4px rgba(0,0,0,0.15)' : 'none',
-                  }}
-                >
-                  <Icon size={13} style={{ color: active ? 'var(--accent)' : 'inherit' }} />
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-        }
-      />
-    </Card>
   )
 }
 
@@ -458,7 +399,6 @@ export default function Settings() {
         </button>
       </div>
 
-      <AppearanceSection />
       <RegionalSection profile={profile} />
       <AccountSection profile={profile} />
       {showPayouts && <PayoutsSection profile={profile} />}
