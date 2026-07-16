@@ -211,21 +211,37 @@ function LeadRow({ lead, onOpen, now, animDelay = 0 }) {
   )
 }
 
-// Real padlock rendered as a cutout — a semi-transparent shade with the lock
+// Real padlock rendered as a cutout — a translucent shade with the lock
 // shape punched transparent through it, rather than a solid icon sitting on
 // top (Prompt 296: the old dashed-circle + phone-handset icon didn't read as
 // a lock at all). Reuses lucide's own Lock geometry (body rect + shackle
-// stroke) as the SVG mask's hidden shapes, so the shade shows everywhere
+// stroke) as the SVG mask's hidden shape, so the shade shows everywhere
 // except exactly where the padlock silhouette sits.
-function LockedCutoutIcon() {
+//
+// Sized as a full-area veil, not a small icon (Prompt 297 — Brayden's own
+// mockup: a large translucent black rectangle standing in for the whole
+// locked content region, with a big lock hollowed out of the middle, not a
+// small watermark). Absolutely positioned to fill its parent; the text
+// content is layered on top via z-index. `preserveAspectRatio="xMidYMid
+// slice"` scales the (arbitrary) 400x260 design canvas to cover the real
+// box at any aspect ratio, so the lock cutout stays centered and
+// proportionally large whether this renders on a wide desktop table or a
+// narrow mobile card, without hand-tuning per breakpoint.
+function LockedVeil() {
   return (
-    <svg width={56} height={56} viewBox="0 0 24 24" style={{ display: 'block' }}>
-      <mask id="myleads-lock-cutout">
-        <rect width="24" height="24" fill="white" />
-        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" fill="black" />
-        <path d="M7 11V7a5 5 0 0 1 10 0v4" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      viewBox="0 0 400 260"
+      preserveAspectRatio="xMidYMid slice"
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+    >
+      <mask id="myleads-lock-veil-cutout">
+        <rect width="400" height="260" fill="white" />
+        <g transform="translate(131,58) scale(6)">
+          <rect width="18" height="11" x="3" y="11" rx="2" ry="2" fill="black" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
       </mask>
-      <rect width="24" height="24" rx="6" fill="rgba(0,0,0,0.55)" mask="url(#myleads-lock-cutout)" />
+      <rect width="400" height="260" fill="rgba(0,0,0,0.55)" mask="url(#myleads-lock-veil-cutout)" />
     </svg>
   )
 }
@@ -587,13 +603,11 @@ export default function MyLeads() {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 240, padding: '48px 16px', textAlign: 'center', position: 'relative' }}>
             {locked ? (
               <>
-                <div style={{ marginBottom: 14 }}>
-                  <LockedCutoutIcon />
-                </div>
-                <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', margin: 0 }}>
+                <LockedVeil />
+                <p style={{ position: 'relative', zIndex: 1, fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', margin: 0 }}>
                   Complete training to unlock your leads
                 </p>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                <p style={{ position: 'relative', zIndex: 1, fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
                   They'll appear here on your next scheduled lead reset once training is complete —{' '}
                   <Link to="/rep/training" style={{ color: 'var(--accent)' }}>Go to Training Center</Link>
                 </p>
