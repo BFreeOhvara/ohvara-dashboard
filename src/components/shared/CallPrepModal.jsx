@@ -202,15 +202,14 @@ export function CallPrepModal({
         </button>
       </div>
 
-      {/* Body — two columns */}
-      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+      {/* Body — two columns at md+; stacks single-column below md (Prompt 289) */}
+      <div className="flex flex-col md:flex-row overflow-y-auto md:overflow-y-visible" style={{ flex: 1, minHeight: 0 }}>
 
-        {/* LEFT column */}
+        {/* LEFT column — full width + bottom-border when stacked; fixed 340px + right-border at md+ (unchanged from before) */}
         <div
-          className="scrollbar-thin"
+          className="scrollbar-thin w-full md:w-[340px] md:flex-shrink-0 border-b-[0.5px] md:border-b-0 md:border-r-[0.5px] border-[color:var(--border)]"
           style={{
-            flex: '0 0 340px', minWidth: 0,
-            borderRight: '0.5px solid var(--border)',
+            minWidth: 0,
             overflowY: 'auto',
             padding: '16px 18px',
           }}
