@@ -4,16 +4,18 @@
 //   supabase functions deploy claim-invite --no-verify-jwt --project-ref jjextitmbptoaolacocs
 // The signup page runs pre-auth, and this project's new-format publishable key
 // (sb_publishable_*) is not a JWT, so JWT verification can't gate this. The
-// invite token itself is the secret: 32 bytes of CSPRNG hex, single-use,
-// 7-day expiry, admin-only to create.
+// invite token itself is the secret: a 12-char URL-safe CSPRNG ID (Prompt 294
+// shortened it from the original 32-byte hex — still ~72 bits, effectively
+// unguessable), single-use, 7-day expiry, admin-only to create.
 //
 // Two actions:
 //   { action: 'check', token }  → { valid, role } — the signup page's load gate
-//   { action: 'claim', token, full_name, email, phone, password }
+//   { action: 'claim', token, full_name, username, email, password }
 //     → validates the token again, creates the auth user with the REAL email
-//       (not the legacy @ohvara.internal synthetic), marks the invite used.
-//       NEVER writes rep_credentials — that table is legacy/client-flow only
-//       (Brayden's decision, 2026-07-15).
+//       (not the legacy @ohvara.internal synthetic) plus a self-chosen
+//       username (Prompt 284 — phone was dropped from this form), marks the
+//       invite used. NEVER writes rep_credentials — that table is
+//       legacy/client-flow only (Brayden's decision, 2026-07-15).
 
 import { createClient } from 'npm:@supabase/supabase-js'
 
@@ -76,9 +78,13 @@ Deno.serve(async (req) => {
       return json({ error: 'This invite link is invalid, expired, or already used.' }, 400)
     }
 
-    const { full_name, email, phone, password } = body
-    if (!full_name?.trim() || !email?.trim() || !password) {
+    const { full_name, username, email, password } = body
+    if (!full_name?.trim() || !username?.trim() || !email?.trim() || !password) {
       return json({ error: 'Missing required fields' }, 400)
+    }
+    // Same rule admin-create-user already enforces for legacy usernames (Prompt 284).
+    if (!/^[a-z0-9_-]+$/.test(username.trim())) {
+      return json({ error: 'Username may only contain lowercase letters, numbers, underscores, and hyphens' }, 400)
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       return json({ error: 'Enter a valid email address' }, 400)
@@ -87,31 +93,35 @@ Deno.serve(async (req) => {
       return json({ error: 'Password must be at least 8 characters' }, 400)
     }
 
+    // Explicit pre-check: profiles.username is unique, but the auth email
+    // here is the rep's real address, not a username-derived synthetic one
+    // (unlike legacy accounts) — so a duplicate username wouldn't collide at
+    // the auth layer, only later at the DB constraint inside handle_new_user,
+    // which would surface as an opaque "Database error saving new user"
+    // instead of a clear message.
+    const { data: existingUsername } = await adminClient
+      .from('profiles')
+      .select('id')
+      .eq('username', username.trim())
+      .maybeSingle()
+    if (existingUsername) {
+      return json({ error: 'That username is already taken.' }, 400)
+    }
+
     // email_confirm: true — no email provider is configured yet (Resend setup
     // pending), so accounts are auto-confirmed and can log in immediately.
-    // The handle_new_user trigger creates the profiles row from this metadata
-    // (username stays null for real-email accounts — login is by email).
+    // The handle_new_user trigger creates the profiles row from this metadata.
     const { data, error } = await adminClient.auth.admin.createUser({
       email: email.trim().toLowerCase(),
       password,
       email_confirm: true,
-      user_metadata: { full_name: full_name.trim(), role: invite.role },
+      user_metadata: { full_name: full_name.trim(), role: invite.role, username: username.trim() },
     })
     if (error) {
       const msg = /already.*registered|already.*exists/i.test(error.message)
         ? 'An account with this email already exists.'
         : error.message
       return json({ error: msg }, 400)
-    }
-
-    // Phone lives on profiles, not auth — set it after the trigger has run.
-    // Non-fatal: the account exists either way.
-    if (phone?.trim()) {
-      const { error: phoneError } = await adminClient
-        .from('profiles')
-        .update({ phone: phone.trim() })
-        .eq('id', data.user.id)
-      if (phoneError) console.error('profiles.phone update failed:', phoneError.message)
     }
 
     // Single-use: mark consumed. If this somehow fails the token would stay

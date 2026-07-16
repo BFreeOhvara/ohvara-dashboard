@@ -94,11 +94,20 @@ export function AuthProvider({ children }) {
   }
 
   async function signIn(username, password) {
-    // Legacy accounts log in by bare username (mapped to the synthetic
-    // @ohvara.internal address); invite-flow accounts (Prompt 282) have real
-    // emails and type those directly — an @ in the input means "use as-is".
+    // An @ in the input means "use as-is" (email login, unchanged). For a
+    // bare username, legacy accounts map to the synthetic @ohvara.internal
+    // address — but invite-flow accounts (Prompt 284) have a chosen username
+    // AND a different real email on file, which can't be derived, only
+    // looked up. resolve_login_email (migration 069) is a narrow RPC that
+    // returns just that profile's email for a username match; only fall back
+    // to the synthetic pattern if no such profile exists, so legacy logins
+    // (apex11 etc.) are untouched.
     const input = username.trim()
-    const email = input.includes('@') ? input : `${input}@ohvara.internal`
+    let email = input
+    if (!input.includes('@')) {
+      const { data: resolvedEmail } = await supabase.rpc('resolve_login_email', { p_username: input })
+      email = resolvedEmail || `${input}@ohvara.internal`
+    }
     const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
 
