@@ -6,6 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#080810" />
     <title>Ohvara</title>
+
+    <!-- Open Graph / link-unfurl preview (Prompt 294 Part A). Generic and
+         static on purpose — this is a client-rendered SPA with a catch-all
+         Vercel rewrite to this same index.html for every route (including
+         /join/<token>), so unfurl bots that don't execute JS still see these
+         tags verbatim for any shared link, invite or otherwise. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Ohvara" />
+    <meta property="og:title" content="You're Invited to Ohvara" />
+    <meta property="og:description" content="Set up your account to get started." />
+    <meta property="og:image" content="https://ohvara-dashboard.vercel.app/ohvara-favicon.png" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="You're Invited to Ohvara" />
+    <meta name="twitter:description" content="Set up your account to get started." />
+    <meta name="twitter:image" content="https://ohvara-dashboard.vercel.app/ohvara-favicon.png" />
   </head>
   <body>
     <div id="root"></div>
