@@ -21,6 +21,28 @@ function Step({ n, children }) {
   )
 }
 
+// Shared step copy — used by the mobile-only iOS/Android branches below AND
+// the desktop QR view's combined instructions (Prompt 291), so there's one
+// source of these words instead of two copies that can drift apart.
+function IOSSteps() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Step n={1}>Tap the <Share size={12} style={{ verticalAlign: -1, margin: '0 2px' }} /> Share icon in Safari's toolbar</Step>
+      <Step n={2}>Scroll down and tap <strong style={{ color: 'var(--text-primary)' }}>Add to Home Screen</strong></Step>
+      <Step n={3}>Tap <strong style={{ color: 'var(--text-primary)' }}>Add</strong> to confirm</Step>
+    </div>
+  )
+}
+
+function AndroidSteps() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Step n={1}>Open your browser's menu (usually <Plus size={12} style={{ verticalAlign: -1, margin: '0 2px' }} /> or ⋮)</Step>
+      <Step n={2}>Tap <strong style={{ color: 'var(--text-primary)' }}>Add to Home screen</strong> or <strong style={{ color: 'var(--text-primary)' }}>Install app</strong></Step>
+    </div>
+  )
+}
+
 export function MobileAppModal({ onClose }) {
   const deferredPrompt = useInstallPrompt()
   const [qrDataUrl, setQrDataUrl] = useState(null)
@@ -46,7 +68,11 @@ export function MobileAppModal({ onClose }) {
   return createPortal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
-      <div className="glass-accent" style={{ position: 'relative', width: '100%', maxWidth: 360, padding: 24, borderRadius: 14, textAlign: 'center' }}>
+      {/* Solid background (Prompt 291) — .glass-accent's own fill is only
+          6% alpha, nearly see-through against the dimmed backdrop; overriding
+          just the background keeps the accent border/glow it already had,
+          matching the same opaque surface CallPrepModal/CallModal use. */}
+      <div className="glass-accent" style={{ position: 'relative', width: '100%', maxWidth: 360, padding: 24, borderRadius: 14, textAlign: 'center', background: '#0E0E1A' }}>
         <button
           onClick={onClose}
           style={{ position: 'absolute', top: 14, right: 14, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}
@@ -69,6 +95,24 @@ export function MobileAppModal({ onClose }) {
             ) : (
               <div style={{ width: 200, height: 200, margin: '0 auto', borderRadius: 10, background: 'var(--bg-elevated)' }} />
             )}
+
+            {/* Desktop can't know which OS the scanning phone runs, so both
+                platforms' install steps show here instead of only after
+                scanning (Prompt 291). */}
+            <div style={{ marginTop: 22, paddingTop: 18, borderTop: '0.5px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 10px' }}>
+                  iPhone
+                </p>
+                <IOSSteps />
+              </div>
+              <div>
+                <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 10px' }}>
+                  Android
+                </p>
+                <AndroidSteps />
+              </div>
+            </div>
           </>
         )}
 
@@ -99,21 +143,14 @@ export function MobileAppModal({ onClose }) {
             <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 16px', lineHeight: 1.5 }}>
               iPhone and iPad don't support one-tap install — a couple of taps in Safari does the same thing:
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <Step n={1}>Tap the <Share size={12} style={{ verticalAlign: -1, margin: '0 2px' }} /> Share icon in Safari's toolbar</Step>
-              <Step n={2}>Scroll down and tap <strong style={{ color: 'var(--text-primary)' }}>Add to Home Screen</strong></Step>
-              <Step n={3}>Tap <strong style={{ color: 'var(--text-primary)' }}>Add</strong> to confirm</Step>
-            </div>
+            <IOSSteps />
           </>
         )}
 
         {mobile && !deferredPrompt && !ios && (
           <>
             <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px' }}>Add to Home Screen</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <Step n={1}>Open your browser's menu (usually <Plus size={12} style={{ verticalAlign: -1, margin: '0 2px' }} /> or ⋮)</Step>
-              <Step n={2}>Tap <strong style={{ color: 'var(--text-primary)' }}>Add to Home screen</strong> or <strong style={{ color: 'var(--text-primary)' }}>Install app</strong></Step>
-            </div>
+            <AndroidSteps />
           </>
         )}
       </div>
