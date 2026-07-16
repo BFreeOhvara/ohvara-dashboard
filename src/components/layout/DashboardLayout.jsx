@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
+import { Menu } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { ActiveCallProvider } from '../../contexts/ActiveCallContext'
 import { NotificationToast } from '../rep/NotificationToast'
@@ -13,14 +15,41 @@ function ToastMount() {
 export function DashboardLayout({ children }) {
   const { pathname } = useLocation()
   const isFullWidth = pathname.includes('/messages')
+  // Prompt 287 fix — sidebar is an off-canvas drawer below `md`, opened via
+  // this bar's hamburger. Closes on every route change so navigating away
+  // never leaves it stuck open over the new page.
+  const [navOpen, setNavOpen] = useState(false)
+  useEffect(() => { setNavOpen(false) }, [pathname])
 
   return (
     <ActiveCallProvider>
       <div className="min-h-screen bg-[var(--bg-base)]">
-        <Sidebar />
-        {/* ml matches the fixed sidebar width (240px) */}
+        <Sidebar open={navOpen} onClose={() => setNavOpen(false)} />
+
+        {/* Mobile-only top bar — sidebar is off-canvas below `md`, so this
+            is the only way to open it there. Fixed (not sticky) so it never
+            fights with the full-width Messages layout's own scroll/height. */}
+        <div
+          className="md:hidden fixed top-0 inset-x-0 flex items-center gap-3"
+          style={{ height: 52, padding: '0 16px', background: 'var(--bg-base)', borderBottom: '0.5px solid var(--border)', zIndex: 80 }}
+        >
+          <button
+            onClick={() => setNavOpen(true)}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 32, height: 32, borderRadius: 8,
+              background: 'var(--bg-elevated)', border: 'none',
+              color: 'var(--text-secondary)', cursor: 'pointer',
+            }}
+          >
+            <Menu size={18} />
+          </button>
+          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Ohvara</span>
+        </div>
+
+        {/* ml matches the fixed sidebar width (240px) at md+; pt clears the mobile top bar below md */}
         <main
-          className={`ml-[240px] scrollbar-thin ${isFullWidth ? 'h-screen overflow-hidden flex flex-col' : 'min-h-screen overflow-auto'}`}
+          className={`md:ml-[240px] pt-[52px] md:pt-0 scrollbar-thin ${isFullWidth ? 'h-screen overflow-hidden flex flex-col' : 'min-h-screen overflow-auto'}`}
         >
           <div
             key={pathname}

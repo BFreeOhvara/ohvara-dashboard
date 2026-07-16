@@ -85,7 +85,12 @@ const NAV = {
 
 const ROLE_LABELS = { rep: 'Setter Portal', closer: 'Closer Portal', admin: 'Admin', client: 'Client Portal' }
 
-export function Sidebar() {
+// Prompt 287 fix — the sidebar is fixed-width and was eating 64% of any
+// phone-width viewport (240px of 375px) with no way to get it out of the
+// way. Below `md` it's now an off-canvas drawer (translated fully offscreen
+// unless `open`), toggled by DashboardLayout's mobile top bar; at `md` and
+// up it behaves exactly as before (always visible, `open`/`onClose` inert).
+export function Sidebar({ open = false, onClose }) {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const links = NAV[profile?.role] || []
@@ -100,21 +105,30 @@ export function Sidebar() {
     : '?'
 
   return (
-    <aside
-      className="sidebar-glass"
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        bottom: 0,
-        width: 240,
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        overflow: 'hidden',
-        zIndex: 100,
-      }}
-    >
+    <>
+      {open && (
+        <div
+          className="md:hidden"
+          onClick={onClose}
+          style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.5)' }}
+        />
+      )}
+      <aside
+        className={clsx('sidebar-glass', 'md:translate-x-0', open ? 'translate-x-0' : '-translate-x-full')}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          bottom: 0,
+          width: 240,
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100vh',
+          overflow: 'hidden',
+          zIndex: 100,
+          transition: 'transform 200ms ease',
+        }}
+      >
       {/* Brand */}
       <div style={{ padding: '20px 16px 16px', borderBottom: '0.5px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -144,6 +158,7 @@ export function Sidebar() {
             key={to}
             to={to}
             end={to === '/rep' || to === '/closer' || to === '/admin' || to === '/client'}
+            onClick={onClose}
             className={({ isActive }) =>
               clsx(
                 'nav-item tab-transition',
@@ -210,6 +225,7 @@ export function Sidebar() {
           <NavLink
             to="/settings"
             title="Settings"
+            onClick={onClose}
             className={({ isActive }) => clsx(
               'tab-transition',
               isActive ? '' : ''
@@ -245,6 +261,7 @@ export function Sidebar() {
           Sign Out
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   )
 }
