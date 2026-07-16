@@ -1,16 +1,49 @@
+import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import {
   Users, Phone, BarChart2, Target, Bell,
   Calendar, DollarSign, TrendingUp, BookOpen,
   LayoutDashboard, List, Columns, RefreshCw, Database, LogOut,
-  Zap, Search, PhoneCall, GitBranch, MessageSquare, Home, Wallet, Settings
+  Zap, Search, PhoneCall, GitBranch, MessageSquare, Home, Wallet, Settings,
+  Smartphone,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { NotificationBell } from '../admin/NotificationBell'
 import { RepNotificationBell } from '../rep/RepNotificationBell'
 import { CloserNotificationBell } from '../closer/CloserNotificationBell'
+import { MobileAppModal } from './MobileAppModal'
+import { isStandalone } from '../../lib/platform'
 import ohvaraLogo from '../../assets/ohvara-logo.png'
+
+// Hidden once the app is already running installed (standalone display
+// mode) — nothing left to offer at that point.
+function MobileAppBox() {
+  const [open, setOpen] = useState(false)
+  if (isStandalone()) return null
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          width: 'calc(100% - 16px)', margin: '0 8px 8px',
+          padding: '9px 10px',
+          background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+          borderRadius: 8, cursor: 'pointer', textAlign: 'left',
+          fontSize: 12, color: 'var(--text-secondary)',
+          transition: 'border-color 100ms',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)' }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
+      >
+        <Smartphone size={13} color="var(--accent)" style={{ flexShrink: 0 }} />
+        Mobile App
+      </button>
+      {open && <MobileAppModal onClose={() => setOpen(false)} />}
+    </>
+  )
+}
 
 const NAV = {
   rep: [
@@ -150,6 +183,8 @@ export function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      <MobileAppBox />
 
       {/* User + sign out */}
       <div style={{ padding: '8px 8px', borderTop: '0.5px solid var(--border)' }}>

@@ -4,6 +4,9 @@ import { AuthProvider, useAuth } from './hooks/useAuth'
 import { SecretsProvider } from './contexts/SecretsContext'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
+// Side-effect import — attaches the beforeinstallprompt listener at app
+// boot (Prompt 286) so it's never missed while the user is still on Login.
+import './lib/installPrompt'
 
 import Login from './pages/Login'
 import Join from './pages/Join'
