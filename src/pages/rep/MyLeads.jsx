@@ -78,18 +78,44 @@ function formatCountdown(due, now) {
 // Reminder fires this long before a follow-up's due time.
 const FOLLOW_UP_REMIND_MS = 5 * 60 * 1000
 
-// Individual table row — clicking anywhere opens the Call Now modal.
+// Individual lead — desktop renders as a table row, below `md` as a stacked
+// card (business name anchors it, status is immediately visible, secondary
+// fields sit in a muted two-column grid, Call Now is a full-width tap target).
+// Clicking anywhere (either layout) opens the Call Now modal.
 // `now` (epoch ms, ticked by the parent) drives the live follow-up countdown.
 function LeadRow({ lead, onOpen, now, animDelay = 0 }) {
   const followUpDue = lead.status === 'Follow-Up' && lead.follow_up_at
     ? new Date(lead.follow_up_at).getTime()
     : null
+  const followUpOrContactLine = followUpDue ? (
+    <p style={{
+      fontSize: 11, color: 'var(--warning)', fontWeight: 500, marginTop: 2,
+      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+    }}>
+      {followUpDue > now
+        ? `⏳ Follow-up ${formatCountdown(followUpDue, now)}`
+        : '📅 Follow-up due now'}
+      {lead.follow_up_notes ? ` — ${lead.follow_up_notes}` : ''}
+    </p>
+  ) : lead.contact_name ? (
+    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      {lead.contact_name}
+    </p>
+  ) : null
+  const appointmentLine = lead.status === 'Appointment Booked' && lead.appointment_at ? (
+    <p style={{
+      fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--success)',
+      margin: '3px 0 0', whiteSpace: 'nowrap',
+    }}>
+      {formatAppointment(lead.appointment_at)}
+    </p>
+  ) : null
+
   return (
     <div
       className="table-row-animated"
       onClick={() => onOpen(lead)}
       style={{
-        display: 'flex', alignItems: 'center', gap: 0,
         borderBottom: '0.5px solid var(--border)',
         background: 'transparent',
         transition: 'background-color 100ms',
@@ -99,61 +125,83 @@ function LeadRow({ lead, onOpen, now, animDelay = 0 }) {
       onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
       onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
     >
-      {/* Business name + contact (or returned-follow-up flag) */}
-      <div style={{ flex: '1 1 0', minWidth: 0, padding: '12px 16px', minHeight: 44 }}>
-        <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
-          {lead.business_name}
-        </p>
-        {followUpDue ? (
-          <p style={{
-            fontSize: 11, color: 'var(--warning)', fontWeight: 500, marginTop: 2,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            {followUpDue > now
-              ? `⏳ Follow-up ${formatCountdown(followUpDue, now)}`
-              : '📅 Follow-up due now'}
-            {lead.follow_up_notes ? ` — ${lead.follow_up_notes}` : ''}
+      {/* Desktop table row — unchanged at md+ */}
+      <div className="hidden md:flex" style={{ alignItems: 'center', gap: 0 }}>
+        {/* Business name + contact (or returned-follow-up flag) */}
+        <div style={{ flex: '1 1 0', minWidth: 0, padding: '12px 16px', minHeight: 44 }}>
+          <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
+            {lead.business_name}
           </p>
-        ) : lead.contact_name ? (
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {lead.contact_name}
-          </p>
-        ) : null}
+          {followUpOrContactLine}
+        </div>
+
+        {/* Niche */}
+        <div style={{ flex: '0 0 120px', padding: '12px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minHeight: 44 }}>
+          {lead.niche || '—'}
+        </div>
+
+        {/* City */}
+        <div style={{ flex: '0 0 100px', padding: '12px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minHeight: 44 }}>
+          {lead.city || '—'}
+        </div>
+
+        {/* Phone */}
+        <div style={{ flex: '0 0 130px', padding: '12px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minHeight: 44 }}>
+          {lead.phone || '—'}
+        </div>
+
+        {/* Status — booked leads also show the scheduled appointment time */}
+        <div style={{ flex: '0 0 110px', padding: '12px 8px', minHeight: 44 }}>
+          <Badge label={lead.status} />
+          {appointmentLine}
+        </div>
+
+        {/* Actions */}
+        <div style={{ flex: '0 0 120px', padding: '8px 16px 8px 0', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minHeight: 44 }}>
+          <button
+            className="btn-call"
+            onClick={e => { e.stopPropagation(); onOpen(lead) }}
+          >
+            <Phone size={11} />
+            Call Now
+          </button>
+        </div>
       </div>
 
-      {/* Niche */}
-      <div style={{ flex: '0 0 120px', padding: '12px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minHeight: 44 }}>
-        {lead.niche || '—'}
-      </div>
+      {/* Mobile card — below md */}
+      <div className="flex md:hidden" style={{ flexDirection: 'column', gap: 10, padding: '14px 16px' }}>
+        {/* Business name anchors the card; status badge stays immediately visible */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
+              {lead.business_name}
+            </p>
+            {followUpOrContactLine}
+          </div>
+          <div style={{ flexShrink: 0, textAlign: 'right' }}>
+            <Badge label={lead.status} />
+            {appointmentLine}
+          </div>
+        </div>
 
-      {/* City */}
-      <div style={{ flex: '0 0 100px', padding: '12px 8px', fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minHeight: 44 }}>
-        {lead.city || '—'}
-      </div>
+        {/* Secondary fields — muted two-column grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {lead.niche || '—'}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {lead.city || '—'}
+          </div>
+          <div style={{ gridColumn: '1 / -1', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {lead.phone || '—'}
+          </div>
+        </div>
 
-      {/* Phone */}
-      <div style={{ flex: '0 0 130px', padding: '12px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minHeight: 44 }}>
-        {lead.phone || '—'}
-      </div>
-
-      {/* Status — booked leads also show the scheduled appointment time */}
-      <div style={{ flex: '0 0 110px', padding: '12px 8px', minHeight: 44 }}>
-        <Badge label={lead.status} />
-        {lead.status === 'Appointment Booked' && lead.appointment_at && (
-          <p style={{
-            fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--success)',
-            margin: '3px 0 0', whiteSpace: 'nowrap',
-          }}>
-            {formatAppointment(lead.appointment_at)}
-          </p>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div style={{ flex: '0 0 120px', padding: '8px 16px 8px 0', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minHeight: 44 }}>
+        {/* Call Now — full-width tap target, one tap away */}
         <button
           className="btn-call"
           onClick={e => { e.stopPropagation(); onOpen(lead) }}
+          style={{ width: '100%', justifyContent: 'center' }}
         >
           <Phone size={11} />
           Call Now
@@ -442,9 +490,9 @@ export default function MyLeads() {
             }}
           />
         )}
-        {/* Table header */}
-        <div style={{
-          display: 'flex', alignItems: 'center',
+        {/* Table header — desktop only; cards below md are self-labeling */}
+        <div className="hidden md:flex" style={{
+          alignItems: 'center',
           borderBottom: '0.5px solid var(--border)',
           padding: '0',
           background: 'var(--bg-elevated)',
