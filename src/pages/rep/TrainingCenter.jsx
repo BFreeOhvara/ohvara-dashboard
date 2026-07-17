@@ -7,7 +7,7 @@ import { useCapability } from '../../contexts/SecretsContext'
 import { useAuth } from '../../hooks/useAuth'
 import {
   useTrainingProgress, useSaveTrainingProgress, trainingChecks, isTrainingComplete,
-  TOTAL_VIDEOS, QUIZ_QUESTIONS, QUIZ_PASS_PCT, ROLEPLAY_PASS_SCORE, ROLEPLAY_PASS_GRADE, gradeFromScore,
+  TOTAL_VIDEOS, TOTAL_FLASHCARDS, QUIZ_QUESTIONS, QUIZ_PASS_PCT, ROLEPLAY_PASS_SCORE, ROLEPLAY_PASS_GRADE, gradeFromScore,
 } from '../../hooks/useTraining'
 import { buildScriptFlow } from '../../lib/discoveryScript'
 import { ScriptWalk } from '../../components/rep/ScriptWalk'
@@ -2203,16 +2203,14 @@ export default function TrainingCenter() {
   const watchedCount = checks.videosWatched
   // Prompt 303: chips are purely informational now (no goTab / onClick —
   // Brayden didn't want them switching tabs), and 2 labels dropped their
-  // specific thresholds. Flashcards is NOT included here on purpose: it's
-  // tracked (training_progress.flashcards_mastered) but not wired into
-  // trainingChecks/isTrainingComplete, i.e. it isn't actually part of the
-  // real lead-unlock gate today — adding a chip for it would visually imply
-  // a requirement that doesn't block anything, so it's left out pending
-  // Brayden's call on whether flashcards should become a real 4th gate.
+  // specific thresholds. Prompt 304: flashcards is now a real 4th gate
+  // requirement (Brayden's explicit call) — chip added with the same
+  // live-count pattern as Videos.
   const gateSteps = [
-    { label: `Videos ${watchedCount}/${TOTAL_VIDEOS}`, done: checks.videosDone },
-    { label: 'Pass Final Exam',                        done: finalQuizPassed },
-    { label: 'Pass AI Roleplay',                        done: checks.roleplayDone },
+    { label: `Videos ${watchedCount}/${TOTAL_VIDEOS}`,                   done: checks.videosDone },
+    { label: `Master Flashcards ${checks.flashcardsMastered}/${TOTAL_FLASHCARDS}`, done: checks.flashcardsDone },
+    { label: 'Pass Final Exam',                                          done: finalQuizPassed },
+    { label: 'Pass AI Roleplay',                                         done: checks.roleplayDone },
   ]
 
   return (
