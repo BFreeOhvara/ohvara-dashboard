@@ -30,15 +30,23 @@ export function trainingChecks(progress) {
   const videosWatched = Array.isArray(progress?.videos_watched) ? progress.videos_watched.length : 0
   return {
     videosWatched,
-    videosDone:   videosWatched >= TOTAL_VIDEOS,
-    quizDone:     !!progress?.quiz_passed_at,
-    roleplayDone: !!progress?.roleplay_passed_at,
+    videosDone:    videosWatched >= TOTAL_VIDEOS,
+    // Prompt 303: was named quizDone and read `quiz_passed_at`, a field
+    // only the orphaned 20-question QuizTab (TrainingCenter.jsx, never
+    // mounted by any tab) ever wrote. The live final-exam flow
+    // (FinalQuizTab, the 'final-exam' tab) writes `final_exam_passed_at`
+    // instead — so this check could never become true through any
+    // reachable UI, meaning no rep could ever actually clear the gate no
+    // matter how much training they finished. Renamed to match what it
+    // actually checks and reads the field the real flow writes.
+    finalExamDone: !!progress?.final_exam_passed_at,
+    roleplayDone:  !!progress?.roleplay_passed_at,
   }
 }
 
 export function isTrainingComplete(progress) {
   const c = trainingChecks(progress)
-  return c.videosDone && c.quizDone && c.roleplayDone
+  return c.videosDone && c.finalExamDone && c.roleplayDone
 }
 
 export function useTrainingProgress() {

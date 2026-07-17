@@ -2201,10 +2201,18 @@ export default function TrainingCenter() {
   const checks   = trainingChecks(progress)
   const complete = isTrainingComplete(progress)
   const watchedCount = checks.videosWatched
+  // Prompt 303: chips are purely informational now (no goTab / onClick —
+  // Brayden didn't want them switching tabs), and 2 labels dropped their
+  // specific thresholds. Flashcards is NOT included here on purpose: it's
+  // tracked (training_progress.flashcards_mastered) but not wired into
+  // trainingChecks/isTrainingComplete, i.e. it isn't actually part of the
+  // real lead-unlock gate today — adding a chip for it would visually imply
+  // a requirement that doesn't block anything, so it's left out pending
+  // Brayden's call on whether flashcards should become a real 4th gate.
   const gateSteps = [
-    { label: `Videos ${watchedCount}/${TOTAL_VIDEOS}`, done: checks.videosDone,   goTab: 'videos' },
-    { label: `Final Exam ${FINAL_QUIZ_PASS_PCT}%+`,    done: finalQuizPassed,     goTab: 'final-exam' },
-    { label: `Roleplay ${ROLEPLAY_PASS_GRADE}+`,        done: checks.roleplayDone, goTab: 'roleplay' },
+    { label: `Videos ${watchedCount}/${TOTAL_VIDEOS}`, done: checks.videosDone },
+    { label: 'Pass Final Exam',                        done: finalQuizPassed },
+    { label: 'Pass AI Roleplay',                        done: checks.roleplayDone },
   ]
 
   return (
@@ -2232,21 +2240,20 @@ export default function TrainingCenter() {
           </span>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {gateSteps.map((s, i) => (
-              <button
+              <div
                 key={i}
-                onClick={() => setTab(s.goTab)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '4px 10px', borderRadius: 6,
                   background: s.done ? 'rgba(34,197,94,0.1)' : 'var(--bg-surface)',
                   border: `0.5px solid ${s.done ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`,
-                  fontSize: 11, fontWeight: 500, cursor: 'pointer',
+                  fontSize: 11, fontWeight: 500, cursor: 'default',
                   color: s.done ? 'var(--success)' : 'var(--text-secondary)',
                 }}
               >
                 {s.done ? <Check size={11} /> : <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--text-dim)' }} />}
                 {s.label}
-              </button>
+              </div>
             ))}
           </div>
         </div>
