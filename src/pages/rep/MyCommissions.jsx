@@ -81,10 +81,10 @@ export default function MyCommissions() {
         window.opener.postMessage('stripe-onboarding-complete', window.location.origin)
         window.close()
       } else {
-        checkStatus.mutateAsync().finally(() => window.location.assign('/rep/commissions'))
+        checkStatus.mutateAsync().finally(() => window.location.assign('/setter/commissions'))
       }
     } else {
-      window.history.replaceState({}, '', '/rep/commissions')
+      window.history.replaceState({}, '', '/setter/commissions')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -94,7 +94,7 @@ export default function MyCommissions() {
     function handleMessage(e) {
       if (e.origin !== window.location.origin) return
       if (e.data !== 'stripe-onboarding-complete') return
-      checkStatus.mutateAsync().finally(() => window.history.replaceState({}, '', '/rep/commissions'))
+      checkStatus.mutateAsync().finally(() => window.history.replaceState({}, '', '/setter/commissions'))
     }
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)

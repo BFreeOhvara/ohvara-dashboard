@@ -47,34 +47,34 @@ function MobileAppBox() {
 
 const NAV = {
   rep: [
-    { to: '/rep',             label: 'My Leads',       icon: Phone },
-    { to: '/rep/training',    label: 'Training',       icon: BookOpen },
-    { to: '/rep/calls',       label: 'My Calls',       icon: PhoneCall },
-    { to: '/rep/stats',       label: 'My Stats',       icon: BarChart2 },
-    { to: '/rep/goals',       label: 'My Goals',       icon: Target },
-    { to: '/rep/commissions', label: 'My Commissions', icon: DollarSign },
-    { to: '/rep/feed',        label: 'Activity',       icon: Bell },
-    { to: '/rep/messages',    label: 'Messages',       icon: MessageSquare },
+    { to: '/setter',             label: 'My Leads',       icon: Phone },
+    { to: '/setter/training',    label: 'Training',       icon: BookOpen },
+    { to: '/setter/calls',       label: 'My Calls',       icon: PhoneCall },
+    { to: '/setter/stats',       label: 'My Stats',       icon: BarChart2 },
+    { to: '/setter/goals',       label: 'My Goals',       icon: Target },
+    { to: '/setter/commissions', label: 'My Commissions', icon: DollarSign },
+    { to: '/setter/feed',        label: 'Activity',       icon: Bell },
+    { to: '/setter/messages',    label: 'Messages',       icon: MessageSquare },
   ],
   closer: [
-    { to: '/closer',                   label: 'Appointments',  icon: Calendar },
-    { to: '/closer/call-leads',        label: 'My Leads',      icon: Phone },
-    { to: '/closer/script',            label: 'Script',        icon: BookOpen },
-    { to: '/closer/pipeline',          label: 'Pipeline',      icon: GitBranch },
-    { to: '/closer/calls',             label: 'My Calls',      icon: PhoneCall },
-    { to: '/closer/stats',             label: 'My Stats',      icon: Target },
-    { to: '/closer/reps',              label: 'Rep Activity',  icon: BarChart2 },
-    { to: '/closer/revenue',           label: 'Revenue',       icon: TrendingUp },
-    { to: '/closer/messages',          label: 'Messages',      icon: MessageSquare },
+    { to: '/closer',                   label: 'Appointments',    icon: Calendar },
+    { to: '/closer/call-leads',        label: 'My Leads',        icon: Phone },
+    { to: '/closer/script',            label: 'Script',          icon: BookOpen },
+    { to: '/closer/pipeline',          label: 'Pipeline',        icon: GitBranch },
+    { to: '/closer/calls',             label: 'My Calls',        icon: PhoneCall },
+    { to: '/closer/stats',             label: 'My Stats',        icon: Target },
+    { to: '/closer/reps',              label: 'Setter Activity', icon: BarChart2 },
+    { to: '/closer/revenue',           label: 'Revenue',         icon: TrendingUp },
+    { to: '/closer/messages',          label: 'Messages',        icon: MessageSquare },
   ],
   admin: [
-    { to: '/admin',              label: 'Overview',        icon: LayoutDashboard },
-    { to: '/admin/reps',         label: 'Rep Performance', icon: BarChart2 },
-    { to: '/admin/pipeline',     label: 'Pipeline',        icon: Columns },
-    { to: '/admin/users',        label: 'Users',           icon: Users },
-    { to: '/admin/commissions',  label: 'Commissions',     icon: DollarSign },
-    { to: '/admin/payouts',      label: 'Payouts',         icon: Wallet },
-    { to: '/admin/messages',     label: 'Messages',        icon: MessageSquare },
+    { to: '/admin',              label: 'Overview',           icon: LayoutDashboard },
+    { to: '/admin/reps',         label: 'Setter Performance', icon: BarChart2 },
+    { to: '/admin/pipeline',     label: 'Pipeline',           icon: Columns },
+    { to: '/admin/users',        label: 'Users',              icon: Users },
+    { to: '/admin/commissions',  label: 'Commissions',        icon: DollarSign },
+    { to: '/admin/payouts',      label: 'Payouts',            icon: Wallet },
+    { to: '/admin/messages',     label: 'Messages',           icon: MessageSquare },
   ],
   client: [
     { to: '/client',             label: 'Overview',    icon: Home },
@@ -83,7 +83,12 @@ const NAV = {
   ],
 }
 
-const ROLE_LABELS = { rep: 'Setter Portal', closer: 'Closer Portal', admin: 'Admin', client: 'Client Portal' }
+// Sidebar-specific "X Portal" subtitle chrome — not the same as the shared
+// bare role label (roleLabels.js), since admin deliberately doesn't get a
+// "Portal" suffix here. Already said "Setter Portal" for rep correctly
+// before Prompt 299 — kept as-is, just renamed from the old `ROLE_LABELS`
+// to stop colliding in name (not value) with the shared module.
+const PORTAL_LABELS = { rep: 'Setter Portal', closer: 'Closer Portal', admin: 'Admin', client: 'Client Portal' }
 
 // Prompt 287 fix — the sidebar is fixed-width and was eating 64% of any
 // phone-width viewport (240px of 375px) with no way to get it out of the
@@ -142,7 +147,7 @@ export function Sidebar({ open = false, onClose }) {
               Ohvara
             </p>
             <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1 }}>
-              {ROLE_LABELS[profile?.role] || ''}
+              {PORTAL_LABELS[profile?.role] || ''}
             </p>
           </div>
           {profile?.role === 'admin' && <NotificationBell />}
@@ -157,7 +162,7 @@ export function Sidebar({ open = false, onClose }) {
           <NavLink
             key={to}
             to={to}
-            end={to === '/rep' || to === '/closer' || to === '/admin' || to === '/client'}
+            end={to === '/setter' || to === '/closer' || to === '/admin' || to === '/client'}
             onClick={onClose}
             className={({ isActive }) =>
               clsx(

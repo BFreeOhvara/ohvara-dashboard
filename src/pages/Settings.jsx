@@ -15,7 +15,7 @@ import { Button } from '../components/ui/Button'
 // gate), Account, Payouts (rep/closer only — a pointer to the existing
 // Stripe Connect flow, not a new form).
 
-const ROLE_HOME = { rep: '/rep', closer: '/closer', admin: '/admin', client: '/client' }
+const ROLE_HOME = { rep: '/setter', closer: '/closer', admin: '/admin', client: '/client' }
 
 function SavedTick({ show }) {
   if (!show) return null
@@ -319,7 +319,7 @@ function PasswordConfirmModal({ onConfirm, onClose }) {
 function PayoutsSection({ profile }) {
   const navigate = useNavigate()
   const connected = !!profile.stripe_onboarding_complete
-  const dest = profile.role === 'closer' ? '/closer/revenue' : '/rep/commissions'
+  const dest = profile.role === 'closer' ? '/closer/revenue' : '/setter/commissions'
   const [confirming, setConfirming] = useState(false)
 
   return (

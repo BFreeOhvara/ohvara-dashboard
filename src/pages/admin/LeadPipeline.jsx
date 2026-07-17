@@ -444,7 +444,7 @@ function NewTab({ filters }) {
         <KPICard label="New, Uncalled" value={allRows?.length ?? 0} sub="assigned, awaiting first call" icon={FilePlus2} />
       </div>
       <QueueTable
-        columns={[['Business', '1 1 0'], ['Niche', '0 0 130px'], ['City', '0 0 120px'], ['Rep Assigned', '0 0 130px'], ['Batch Date', '0 0 130px']]}
+        columns={[['Business', '1 1 0'], ['Niche', '0 0 130px'], ['City', '0 0 120px'], ['Setter Assigned', '0 0 130px'], ['Batch Date', '0 0 130px']]}
         rows={rows}
         emptyText={isLoading ? 'Loading…' : 'No uncalled New leads.'}
         renderRow={r => (
@@ -527,7 +527,7 @@ function FollowUpTab({ filters }) {
         <KPICard label="Due Today" value={dueToday} sub="return today" icon={PhoneMissed} />
       </div>
       <QueueTable
-        columns={[['Business', '1 1 0'], ['Rep Assigned', '0 0 120px'], ['Follow-Up At', '0 0 150px'], ['Reason', '1 1 0'], ['Status', '0 0 100px']]}
+        columns={[['Business', '1 1 0'], ['Setter Assigned', '0 0 120px'], ['Follow-Up At', '0 0 150px'], ['Reason', '1 1 0'], ['Status', '0 0 100px']]}
         rows={rows}
         emptyText={isLoading ? 'Loading…' : 'No follow-ups scheduled.'}
         renderRow={r => (
@@ -835,10 +835,10 @@ function AppointmentSettingView({ filters }) {
       {filterTab === 'all' && (
         <div>
           <div className="stagger" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-            <KPICard label="Rep-Assigned Total" value={allRows?.length ?? 0} sub="across all reps" icon={Phone} />
+            <KPICard label="Setter-Assigned Total" value={allRows?.length ?? 0} sub="across all setters" icon={Phone} />
           </div>
           <QueueTable
-            columns={[['Business', '1 1 0'], ['Niche', '0 0 130px'], ['City', '0 0 120px'], ['Rep Assigned', '0 0 140px'], ['Status', '0 0 140px'], ['Batch Date', '0 0 120px']]}
+            columns={[['Business', '1 1 0'], ['Niche', '0 0 130px'], ['City', '0 0 120px'], ['Setter Assigned', '0 0 140px'], ['Status', '0 0 140px'], ['Batch Date', '0 0 120px']]}
             rows={applyFilters(allRows, filters, r => r.assigned_rep?.full_name)}
             emptyText={loadingAll ? 'Loading…' : 'No rep-assigned leads.'}
             renderRow={r => (

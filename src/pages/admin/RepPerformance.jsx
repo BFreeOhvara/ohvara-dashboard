@@ -15,8 +15,8 @@ export default function RepPerformance() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-xl font-medium text-[var(--text-primary)]">Rep Performance</h1>
-          <p className="text-[var(--text-muted)] text-sm mt-0.5">Per-rep analytics filterable by period</p>
+          <h1 className="text-xl font-medium text-[var(--text-primary)]">Setter Performance</h1>
+          <p className="text-[var(--text-muted)] text-sm mt-0.5">Per-setter analytics filterable by period</p>
         </div>
         <div className="flex gap-1">
           {PERIODS.map(p => (

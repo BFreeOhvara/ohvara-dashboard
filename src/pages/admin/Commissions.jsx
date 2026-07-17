@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DollarSign, TrendingUp, Users, Check, ChevronDown, ChevronRight, RefreshCw } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { roleLabel } from '../../lib/roleLabels'
 
 // ── Commission constants ───────────────────────────────────────────────────────
 // NOTE: TIER_MONTHLY below is a closest-tier fallback for recurring commission
@@ -511,7 +512,7 @@ export default function Commissions() {
                       {person?.full_name || 'Unknown'}
                     </p>
                     <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {person?.role} · @{person?.username}
+                      {roleLabel(person?.role)} · @{person?.username}
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexShrink: 0 }}>

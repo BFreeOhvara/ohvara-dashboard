@@ -16,7 +16,7 @@ export function ProtectedRoute({ children, allowedRoles }) {
 
   if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
     // Redirect to their own dashboard
-    if (profile.role === 'rep') return <Navigate to="/rep" replace />
+    if (profile.role === 'rep') return <Navigate to="/setter" replace />
     if (profile.role === 'closer') return <Navigate to="/closer" replace />
     if (profile.role === 'admin') return <Navigate to="/admin" replace />
     if (profile.role === 'client') return <Navigate to="/client" replace />

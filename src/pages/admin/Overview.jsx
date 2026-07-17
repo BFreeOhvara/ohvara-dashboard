@@ -495,7 +495,7 @@ export default function Overview() {
               borderBottom: '0.5px solid var(--border)',
               background: 'var(--bg-elevated)',
             }}>
-              <div style={{ flex: '1 1 0', padding: '8px 16px' }} className="section-label">Rep</div>
+              <div style={{ flex: '1 1 0', padding: '8px 16px' }} className="section-label">Setter</div>
               <div style={{ flex: '0 0 100px', padding: '8px 8px' }} className="section-label">Calls Today</div>
               <div style={{ flex: '0 0 80px', padding: '8px 8px' }} className="section-label">Booked</div>
               <div style={{ flex: '0 0 100px', padding: '8px 8px' }} className="section-label">Connect %</div>

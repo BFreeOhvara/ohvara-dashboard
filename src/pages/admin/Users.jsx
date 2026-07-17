@@ -7,6 +7,7 @@ import { Input, Select } from '../../components/ui/Input'
 import { Card } from '../../components/ui/Card'
 import { UserPlus, X, CheckCircle, Copy, Check, Search, Trash2, AlertTriangle, KeyRound, Eye, EyeOff, Link2 } from 'lucide-react'
 import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../../lib/timezones'
+import { roleLabel } from '../../lib/roleLabels'
 
 function CredentialsReveal({ profileId }) {
   const { data, isLoading, error } = useRepCredentials(profileId, true)
@@ -90,7 +91,7 @@ function InvitePanel({ onClose }) {
       <div className="flex flex-wrap items-end gap-3">
         <div className="w-40">
           <Select label="Role" value={role} onChange={e => setRole(e.target.value)}>
-            <option value="rep">Rep</option>
+            <option value="rep">Setter</option>
             <option value="closer">Closer</option>
             <option value="admin">Admin</option>
           </Select>
@@ -110,7 +111,7 @@ function InvitePanel({ onClose }) {
           <div className="space-y-1.5">
             {invites.map(inv => (
               <div key={inv.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
-                <Badge label={inv.role} />
+                <Badge label={inv.role} text={roleLabel(inv.role)} />
                 <span className="font-mono text-[10px] text-[var(--text-muted)] truncate max-w-[160px] sm:max-w-[240px]">
                   /join/{inv.token}
                 </span>
@@ -299,7 +300,7 @@ export default function Users() {
               value={form.role}
               onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
             >
-              <option value="rep">Rep</option>
+              <option value="rep">Setter</option>
               <option value="closer">Closer</option>
               <option value="admin">Admin</option>
             </Select>
@@ -346,7 +347,7 @@ export default function Users() {
           onChange={e => setRoleFilter(e.target.value)}
         >
           <option value="all">All roles</option>
-          <option value="rep">Rep</option>
+          <option value="rep">Setter</option>
           <option value="closer">Closer</option>
           <option value="admin">Admin</option>
         </select>
@@ -406,7 +407,7 @@ export default function Users() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <Badge label={p.role} />
+                    <Badge label={p.role} text={roleLabel(p.role)} />
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${p.is_active ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>

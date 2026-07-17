@@ -64,7 +64,7 @@ function RoleRedirect() {
   const { profile, loading } = useAuth()
   if (loading) return null
   if (!profile) return <Navigate to="/login" replace />
-  if (profile.role === 'rep') return <Navigate to="/rep" replace />
+  if (profile.role === 'rep') return <Navigate to="/setter" replace />
   if (profile.role === 'closer') return <Navigate to="/closer" replace />
   if (profile.role === 'admin') return <Navigate to="/admin" replace />
   if (profile.role === 'client') return <Navigate to="/client" replace />
@@ -92,47 +92,60 @@ export default function App() {
               </ProtectedRoute>
             } />
 
-            {/* Rep routes */}
-            <Route path="/rep" element={
+            {/* Setter routes (Prompt 299 — renamed from /rep; internal role
+                value/rep_id columns/hook names deliberately untouched, this
+                is a display/URL-only rename) */}
+            <Route path="/setter" element={
               <ProtectedRoute allowedRoles={['rep']}>
                 <DashboardLayout><MyLeads /></DashboardLayout>
               </ProtectedRoute>
             } />
-            <Route path="/rep/training" element={
+            <Route path="/setter/training" element={
               <ProtectedRoute allowedRoles={['rep']}>
                 <DashboardLayout><TrainingCenter /></DashboardLayout>
               </ProtectedRoute>
             } />
-            <Route path="/rep/stats" element={
+            <Route path="/setter/stats" element={
               <ProtectedRoute allowedRoles={['rep']}>
                 <DashboardLayout><MyStats /></DashboardLayout>
               </ProtectedRoute>
             } />
-            <Route path="/rep/goals" element={
+            <Route path="/setter/goals" element={
               <ProtectedRoute allowedRoles={['rep']}>
                 <DashboardLayout><MyGoals /></DashboardLayout>
               </ProtectedRoute>
             } />
-            <Route path="/rep/commissions" element={
+            <Route path="/setter/commissions" element={
               <ProtectedRoute allowedRoles={['rep']}>
                 <DashboardLayout><MyCommissions /></DashboardLayout>
               </ProtectedRoute>
             } />
-            <Route path="/rep/feed" element={
+            <Route path="/setter/feed" element={
               <ProtectedRoute allowedRoles={['rep']}>
                 <DashboardLayout><ActivityFeed /></DashboardLayout>
               </ProtectedRoute>
             } />
-            <Route path="/rep/messages" element={
+            <Route path="/setter/messages" element={
               <ProtectedRoute allowedRoles={['rep']}>
                 <DashboardLayout><RepMessages /></DashboardLayout>
               </ProtectedRoute>
             } />
-            <Route path="/rep/calls" element={
+            <Route path="/setter/calls" element={
               <ProtectedRoute allowedRoles={['rep']}>
                 <DashboardLayout><MyCalls /></DashboardLayout>
               </ProtectedRoute>
             } />
+
+            {/* Old /rep/* bookmarks/links — redirect to the new /setter/*
+                path instead of hard-breaking them (Prompt 299) */}
+            <Route path="/rep" element={<Navigate to="/setter" replace />} />
+            <Route path="/rep/training" element={<Navigate to="/setter/training" replace />} />
+            <Route path="/rep/stats" element={<Navigate to="/setter/stats" replace />} />
+            <Route path="/rep/goals" element={<Navigate to="/setter/goals" replace />} />
+            <Route path="/rep/commissions" element={<Navigate to="/setter/commissions" replace />} />
+            <Route path="/rep/feed" element={<Navigate to="/setter/feed" replace />} />
+            <Route path="/rep/messages" element={<Navigate to="/setter/messages" replace />} />
+            <Route path="/rep/calls" element={<Navigate to="/setter/calls" replace />} />
 
             {/* Closer routes */}
             <Route path="/closer" element={

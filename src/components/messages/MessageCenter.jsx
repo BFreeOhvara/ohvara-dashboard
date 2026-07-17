@@ -11,8 +11,8 @@ import {
 
 const HEADER = {
   rep:    { title: 'Messages', subtitle: 'Dashboard questions go to Brayden · sales questions go to Nate' },
-  closer: { title: 'Messages', subtitle: 'Rep questions + Brayden direct messages' },
-  admin:  { title: 'Messages', subtitle: 'Rep questions + Nate direct messages' },
+  closer: { title: 'Messages', subtitle: 'Setter questions + Brayden direct messages' },
+  admin:  { title: 'Messages', subtitle: 'Setter questions + Nate direct messages' },
 }
 
 function timeAgo(ts) {
@@ -227,11 +227,11 @@ export function MessageCenter({ role }) {
     const managerIds = new Set(managerProfiles.map(p => p.id))
     const bySender = {}
     for (const rep of allReps) {
-      bySender[rep.id] = { key: rep.id, name: rep.full_name, role: 'Rep', messages: [], isManager: false }
+      bySender[rep.id] = { key: rep.id, name: rep.full_name, role: 'Setter', messages: [], isManager: false }
     }
     for (const m of inboxMessages || []) {
       if (managerIds.has(m.sender_id)) continue // handled in manager thread below
-      if (!bySender[m.sender_id]) bySender[m.sender_id] = { key: m.sender_id, name: m.sender_name, role: 'Rep', messages: [], isManager: false }
+      if (!bySender[m.sender_id]) bySender[m.sender_id] = { key: m.sender_id, name: m.sender_name, role: 'Setter', messages: [], isManager: false }
       bySender[m.sender_id].messages.push(m)
     }
 

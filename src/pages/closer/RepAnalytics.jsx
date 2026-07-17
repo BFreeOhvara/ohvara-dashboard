@@ -15,7 +15,7 @@ export default function RepAnalytics() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-medium text-[var(--text-primary)]">Rep Analytics</h1>
+          <h1 className="text-xl font-medium text-[var(--text-primary)]">Setter Activity</h1>
           <p className="text-[var(--text-muted)] text-sm mt-0.5">Read-only view of all appointment setter performance</p>
         </div>
         <div className="flex gap-1">

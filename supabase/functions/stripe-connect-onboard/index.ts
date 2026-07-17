@@ -97,8 +97,8 @@ Deno.serve(async (req) => {
     const base = Deno.env.get('DASHBOARD_URL') || 'https://ohvara-dashboard.vercel.app'
     const link = await stripe('account_links', stripeKey, {
       account: accountId,
-      refresh_url: `${base}/rep/commissions?onboarding=refresh`,
-      return_url: `${base}/rep/commissions?onboarding=complete`,
+      refresh_url: `${base}/setter/commissions?onboarding=refresh`,
+      return_url: `${base}/setter/commissions?onboarding=complete`,
       type: 'account_onboarding',
     })
 

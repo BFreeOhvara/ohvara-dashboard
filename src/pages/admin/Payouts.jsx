@@ -127,7 +127,7 @@ export default function Payouts() {
           gap: 12, padding: '12px 16px', borderBottom: '0.5px solid var(--border)',
           fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)',
         }}>
-          <span>Rep</span><span>Business</span><span>Amount</span><span>Status</span><span style={{ textAlign: 'right' }}>Action</span>
+          <span>Setter</span><span>Business</span><span>Amount</span><span>Status</span><span style={{ textAlign: 'right' }}>Action</span>
         </div>
 
         {isLoading ? (
@@ -143,7 +143,7 @@ export default function Payouts() {
             <button
               onClick={() => handlePay(p)}
               disabled={payingId === p.id || !repOnboarded}
-              title={repOnboarded ? '' : "Rep hasn't connected their bank yet"}
+              title={repOnboarded ? '' : "Setter hasn't connected their bank yet"}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px',
                 borderRadius: 7, whiteSpace: 'nowrap',

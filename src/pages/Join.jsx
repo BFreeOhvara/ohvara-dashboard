@@ -88,8 +88,6 @@ export default function Join() {
     if (e.key === 'Enter') handleSubmit()
   }
 
-  const ROLE_LABELS = { rep: 'Rep', closer: 'Closer', admin: 'Admin' }
-
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
@@ -100,7 +98,11 @@ export default function Join() {
           <img src={ohvaraLogo} alt="Ohvara" className="inline-block w-12 h-12 rounded-[10px] mb-4 object-cover" />
           <h1 className="text-2xl font-medium text-[var(--text-primary)] tracking-tight">Join Ohvara</h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">
-            {invite ? `You've been invited as a ${ROLE_LABELS[invite.role] || invite.role}` : 'Outreach Dashboard'}
+            {/* Deliberately role-agnostic (Prompt 299, Brayden's amendment) —
+                every other "Rep"->"Setter" spot in the app gets renamed, but
+                this one line drops the role mention entirely on his explicit
+                request, not just relabeled. */}
+            {invite ? "You've been invited to join Ohvara" : 'Outreach Dashboard'}
           </p>
         </div>
 

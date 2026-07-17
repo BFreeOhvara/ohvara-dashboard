@@ -606,7 +606,7 @@ export default function MyLeads() {
                     </p>
                   </div>
                 </div>
-                <Button onClick={() => navigate('/rep/training')} style={{ marginTop: 14 }}>
+                <Button onClick={() => navigate('/setter/training')} style={{ marginTop: 14 }}>
                   Go to Training Center
                 </Button>
               </>

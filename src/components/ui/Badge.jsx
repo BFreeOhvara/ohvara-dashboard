@@ -83,7 +83,13 @@ const FALLBACK = {
   border: '0.5px solid var(--border)',
 }
 
-export function Badge({ label, variant }) {
+// `label` is also the STATUS_STYLES color-lookup key (e.g. the raw 'rep'
+// role value, kept untouched so the role→color map above still resolves) —
+// `text`, if passed, overrides only what's displayed (Prompt 299: role
+// badges need to print "Setter" while still coloring off the stored 'rep'
+// key). Falls back to `label` when `text` isn't given, so every existing
+// call site is unaffected.
+export function Badge({ label, variant, text }) {
   const key = label ?? variant
   const s = STATUS_STYLES[key] || FALLBACK
   return (
@@ -100,7 +106,7 @@ export function Badge({ label, variant }) {
       color: s.color,
       border: s.border,
     }}>
-      {label}
+      {text ?? label}
     </span>
   )
 }
