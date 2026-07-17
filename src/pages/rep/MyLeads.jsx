@@ -240,20 +240,25 @@ function LeadRow({ lead, onOpen, now, animDelay = 0 }) {
 // `pointer-events:none` — masked-out (transparent) regions of an SVG are
 // still hit-tested as "painted" by default, so the veil silently ate every
 // click over the button's area even though nothing was visible there.
-const LOCK_W = 300
-const LOCK_H = 190
-// Body rect's box, in the same local pixel space as the lock cutout above —
-// this is now sized to hold both the heading (one line) and the button
-// stacked inside it (see the flex column positioned against this same box
-// below), not just the heading. calc() offsets re-center this local box
-// against the full-bleed shade's own 50%/50%.
-const LOCK_BODY = { left: 20, top: 66, width: 260, height: 104 }
-// Shackle arc, scaled up from Prompt 300's radius-34/leg-22 to match the
-// larger body, centered on the body's horizontal midpoint.
-const SHACKLE_R = 36
-const SHACKLE_LEG = 22
+// Prompt 306: 302's 260×104 body (~2.5:1 wide rectangle) with a thin
+// radius-36 shackle no longer read as a padlock ("funky"/"wonky" per
+// Brayden). Body is now a true square, shackle span ~53% of the body's
+// width (a normal padlock's shackle-to-body ratio) with a thicker stroke
+// to match the larger scale — kept large overall (grown, not shrunk) per
+// Brayden's explicit "keep the lock the same scale, make it larger" ask.
+// The body's generous size leaves the heading+button vertically centered
+// with visible padding above/below rather than packed edge-to-edge —
+// intentional, since a square tall enough to comfortably hold both at a
+// legible size is necessarily taller than the content strictly needs.
+const LOCK_BODY = { left: 20, top: 145, width: 300, height: 300 }
+const SHACKLE_R = 80
+const SHACKLE_LEG = 45
 const SHACKLE_CX = LOCK_BODY.left + LOCK_BODY.width / 2
 const SHACKLE_PATH = `M${SHACKLE_CX - SHACKLE_R} ${LOCK_BODY.top} V${LOCK_BODY.top - SHACKLE_LEG} a${SHACKLE_R} ${SHACKLE_R} 0 0 1 ${SHACKLE_R * 2} 0 V${LOCK_BODY.top}`
+// Overall local box: body width + left/right margin; body height + the
+// shackle's own space above it + top/bottom margins.
+const LOCK_W = LOCK_BODY.left * 2 + LOCK_BODY.width
+const LOCK_H = LOCK_BODY.top + LOCK_BODY.height + 20
 
 function LockedVeil() {
   return (
@@ -261,8 +266,8 @@ function LockedVeil() {
       <mask id="myleads-lock-veil-cutout">
         <rect x="0" y="0" width="100%" height="100%" fill="white" />
         <svg x="50%" y="50%" width={LOCK_W} height={LOCK_H} style={{ transform: `translate(${-LOCK_W / 2}px, ${-LOCK_H / 2}px)` }}>
-          <rect x={LOCK_BODY.left} y={LOCK_BODY.top} width={LOCK_BODY.width} height={LOCK_BODY.height} rx={16} fill="black" />
-          <path d={SHACKLE_PATH} fill="none" stroke="black" strokeWidth={16} strokeLinecap="round" />
+          <rect x={LOCK_BODY.left} y={LOCK_BODY.top} width={LOCK_BODY.width} height={LOCK_BODY.height} rx={20} fill="black" />
+          <path d={SHACKLE_PATH} fill="none" stroke="black" strokeWidth={26} strokeLinecap="round" />
         </svg>
       </mask>
       <rect x="0" y="0" width="100%" height="100%" rx={14} fill="rgba(0,0,0,0.55)" mask="url(#myleads-lock-veil-cutout)" />
