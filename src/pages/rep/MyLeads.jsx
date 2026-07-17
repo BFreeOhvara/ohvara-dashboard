@@ -250,11 +250,21 @@ function LeadRow({ lead, onOpen, now, animDelay = 0 }) {
 // with visible padding above/below rather than packed edge-to-edge —
 // intentional, since a square tall enough to comfortably hold both at a
 // legible size is necessarily taller than the content strictly needs.
+// Prompt 307: 306's shackle legs stopped exactly at the body's top edge —
+// the stroke's round end-cap only buried ~13px (half the 26px stroke
+// width) into the body, so the arch read as a separate piece perched on
+// top rather than fused into it. Legs now plunge SHACKLE_OVERLAP (60px,
+// well past the cap radius and the body's own corner curvature) below the
+// top edge, so the union of shackle-stroke + body-rect is dominated by
+// the body's straight silhouette right at the seam — no visible notch or
+// gap, single continuous padlock outline, matching the reference image.
 const LOCK_BODY = { left: 20, top: 145, width: 300, height: 300 }
 const SHACKLE_R = 80
 const SHACKLE_LEG = 45
+const SHACKLE_OVERLAP = 60
 const SHACKLE_CX = LOCK_BODY.left + LOCK_BODY.width / 2
-const SHACKLE_PATH = `M${SHACKLE_CX - SHACKLE_R} ${LOCK_BODY.top} V${LOCK_BODY.top - SHACKLE_LEG} a${SHACKLE_R} ${SHACKLE_R} 0 0 1 ${SHACKLE_R * 2} 0 V${LOCK_BODY.top}`
+const SHACKLE_LEG_BOTTOM = LOCK_BODY.top + SHACKLE_OVERLAP
+const SHACKLE_PATH = `M${SHACKLE_CX - SHACKLE_R} ${SHACKLE_LEG_BOTTOM} V${LOCK_BODY.top - SHACKLE_LEG} a${SHACKLE_R} ${SHACKLE_R} 0 0 1 ${SHACKLE_R * 2} 0 V${SHACKLE_LEG_BOTTOM}`
 // Overall local box: body width + left/right margin; body height + the
 // shackle's own space above it + top/bottom margins.
 const LOCK_W = LOCK_BODY.left * 2 + LOCK_BODY.width
