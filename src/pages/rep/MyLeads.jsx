@@ -222,27 +222,34 @@ function LeadRow({ lead, onOpen, now, animDelay = 0 }) {
 // it read as two overlapping locks (the veil plus Prompt 283's separate low-
 // opacity watermark Lock icon, which was never removed and sat behind it —
 // deleted in Prompt 300) and asked for one smaller, precisely centered lock
-// instead of a dynamically-scaled full-bleed one. Rebuilt hand-drawn at a
-// fixed pixel size (own viewBox, own coordinate system chosen so the body
-// rect is roomy enough to hold the heading text) — a normal centered flex
-// child now, not an absolutely-positioned cover layer, so its size and
-// centering are exact regardless of the parent's aspect ratio.
+// instead of a dynamically-scaled full-bleed one. Prompt 300 rebuilt the
+// lock hand-drawn at a fixed pixel size but, in the process, also shrank the
+// whole veil down to just the lock's own small bounding box, losing the
+// full-area black shade Brayden wanted kept. Prompt 301: keep the fixed,
+// undistorted lock geometry, but render the shade full-bleed again (own
+// viewBox-less SVG at 100%/100%) with the fixed-size lock cutout centered
+// inside it via a nested viewport (percentage x/y + a -50%/-50% pixel
+// offset), so the cutout's pixel size never changes but the shade always
+// covers the whole locked content area regardless of the parent's size.
 const LOCK_W = 170
 const LOCK_H = 150
-// Body rect's box, in the same pixel space as the SVG above (viewBox is 1:1
-// with its rendered size) — used to position the heading text precisely
-// inside the lock's body/block area rather than the shackle loop.
+// Body rect's box, in the same local pixel space as the lock cutout above —
+// used to position the heading text precisely inside the lock's body/block
+// area rather than the shackle loop (see the calc() offsets below, which
+// re-center this local box against the full-bleed shade's own 50%/50%).
 const LOCK_BODY = { left: 15, top: 65, width: 139, height: 65 }
 
 function LockedVeil() {
   return (
-    <svg width={LOCK_W} height={LOCK_H} viewBox={`0 0 ${LOCK_W} ${LOCK_H}`} style={{ display: 'block' }}>
+    <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0, display: 'block' }}>
       <mask id="myleads-lock-veil-cutout">
-        <rect width={LOCK_W} height={LOCK_H} fill="white" />
-        <rect x={LOCK_BODY.left} y={LOCK_BODY.top} width={LOCK_BODY.width} height={LOCK_BODY.height} rx={12} fill="black" />
-        <path d="M51 65 V43 a34 34 0 0 1 68 0 V65" fill="none" stroke="black" strokeWidth={15} strokeLinecap="round" />
+        <rect x="0" y="0" width="100%" height="100%" fill="white" />
+        <svg x="50%" y="50%" width={LOCK_W} height={LOCK_H} style={{ transform: `translate(${-LOCK_W / 2}px, ${-LOCK_H / 2}px)` }}>
+          <rect x={LOCK_BODY.left} y={LOCK_BODY.top} width={LOCK_BODY.width} height={LOCK_BODY.height} rx={12} fill="black" />
+          <path d="M51 65 V43 a34 34 0 0 1 68 0 V65" fill="none" stroke="black" strokeWidth={15} strokeLinecap="round" />
+        </svg>
       </mask>
-      <rect width={LOCK_W} height={LOCK_H} rx={14} fill="rgba(0,0,0,0.55)" mask="url(#myleads-lock-veil-cutout)" />
+      <rect x="0" y="0" width="100%" height="100%" rx={14} fill="rgba(0,0,0,0.55)" mask="url(#myleads-lock-veil-cutout)" />
     </svg>
   )
 }
@@ -591,21 +598,25 @@ export default function MyLeads() {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 240, padding: locked ? '24px 16px' : '48px 16px', textAlign: 'center', position: 'relative' }}>
             {locked ? (
               <>
-                {/* Single centered lock, heading text inside its body (not
-                    the shackle loop), a real button below — collapsed from
-                    the old lock+heading+subtext+text-link stack (Prompt 300). */}
-                <div style={{ position: 'relative', width: LOCK_W, height: LOCK_H }}>
-                  <LockedVeil />
-                  <div style={{
-                    position: 'absolute',
-                    left: LOCK_BODY.left, top: LOCK_BODY.top, width: LOCK_BODY.width, height: LOCK_BODY.height,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px',
-                  }}>
-                    <p style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--text-secondary)', lineHeight: 1.3, margin: 0 }}>
-                      Complete Training to Unlock Your Leads
-                    </p>
-                  </div>
+                {/* Full-area shade with a single, fixed-size centered lock
+                    cutout, heading text inside its body (not the shackle
+                    loop), a real button below — full coverage restored in
+                    Prompt 301 after Prompt 300 shrank it to the lock's own
+                    small box; the fixed, undistorted lock geometry and the
+                    single-lock/button improvements from 300 are kept. */}
+                <LockedVeil />
+                <div style={{
+                  position: 'absolute',
+                  left: `calc(50% - ${LOCK_W / 2 - LOCK_BODY.left}px)`,
+                  top: `calc(50% - ${LOCK_H / 2 - LOCK_BODY.top}px)`,
+                  width: LOCK_BODY.width, height: LOCK_BODY.height,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px',
+                }}>
+                  <p style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--text-secondary)', lineHeight: 1.3, margin: 0 }}>
+                    Complete Training to Unlock Your Leads
+                  </p>
                 </div>
+                <div style={{ height: LOCK_H }} />
                 <Button onClick={() => navigate('/setter/training')} style={{ marginTop: 14 }}>
                   Go to Training Center
                 </Button>
