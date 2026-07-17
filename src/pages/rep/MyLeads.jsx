@@ -1,13 +1,14 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Link } from 'react-router-dom'
-import { Phone, PhoneCall, Target, BarChart2, Lock, Check, AlarmClock, X, Search } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Phone, PhoneCall, Target, BarChart2, Check, AlarmClock, X, Search } from 'lucide-react'
 import { useMyLeads } from '../../hooks/useLeads'
 import { useTodayCallStats } from '../../hooks/useProfiles'
 import { useAuth } from '../../hooks/useAuth'
 import { useTrainingProgress, isTrainingComplete } from '../../hooks/useTraining'
 import { CallModal } from '../../components/rep/CallModal'
 import { Badge } from '../../components/ui/Badge'
+import { Button } from '../../components/ui/Button'
 import { KPICard } from '../../components/ui/KPICard'
 import { LiveClock } from '../../components/ui/LiveClock'
 
@@ -214,39 +215,40 @@ function LeadRow({ lead, onOpen, now, animDelay = 0 }) {
 // Real padlock rendered as a cutout — a translucent shade with the lock
 // shape punched transparent through it, rather than a solid icon sitting on
 // top (Prompt 296: the old dashed-circle + phone-handset icon didn't read as
-// a lock at all). Reuses lucide's own Lock geometry (body rect + shackle
-// stroke) as the SVG mask's hidden shape, so the shade shows everywhere
-// except exactly where the padlock silhouette sits.
+// a lock at all).
 //
-// Sized as a full-area veil, not a small icon (Prompt 297 — Brayden's own
-// mockup: a large translucent black rectangle standing in for the whole
-// locked content region, with a big lock hollowed out of the middle, not a
-// small watermark). Absolutely positioned to fill its parent; the text
-// content is layered on top via z-index. `preserveAspectRatio="xMidYMid
-// slice"` scales the (arbitrary) 400x260 design canvas to cover the real
-// box at any aspect ratio, so the lock cutout stays centered and
-// proportionally large whether this renders on a wide desktop table or a
-// narrow mobile card, without hand-tuning per breakpoint.
+// Prompt 297 made this a full-area veil that scaled to cover its parent at
+// any aspect ratio (`preserveAspectRatio="xMidYMid slice"`) — Brayden found
+// it read as two overlapping locks (the veil plus Prompt 283's separate low-
+// opacity watermark Lock icon, which was never removed and sat behind it —
+// deleted in Prompt 300) and asked for one smaller, precisely centered lock
+// instead of a dynamically-scaled full-bleed one. Rebuilt hand-drawn at a
+// fixed pixel size (own viewBox, own coordinate system chosen so the body
+// rect is roomy enough to hold the heading text) — a normal centered flex
+// child now, not an absolutely-positioned cover layer, so its size and
+// centering are exact regardless of the parent's aspect ratio.
+const LOCK_W = 170
+const LOCK_H = 150
+// Body rect's box, in the same pixel space as the SVG above (viewBox is 1:1
+// with its rendered size) — used to position the heading text precisely
+// inside the lock's body/block area rather than the shackle loop.
+const LOCK_BODY = { left: 15, top: 65, width: 139, height: 65 }
+
 function LockedVeil() {
   return (
-    <svg
-      viewBox="0 0 400 260"
-      preserveAspectRatio="xMidYMid slice"
-      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-    >
+    <svg width={LOCK_W} height={LOCK_H} viewBox={`0 0 ${LOCK_W} ${LOCK_H}`} style={{ display: 'block' }}>
       <mask id="myleads-lock-veil-cutout">
-        <rect width="400" height="260" fill="white" />
-        <g transform="translate(131,58) scale(6)">
-          <rect width="18" height="11" x="3" y="11" rx="2" ry="2" fill="black" />
-          <path d="M7 11V7a5 5 0 0 1 10 0v4" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </g>
+        <rect width={LOCK_W} height={LOCK_H} fill="white" />
+        <rect x={LOCK_BODY.left} y={LOCK_BODY.top} width={LOCK_BODY.width} height={LOCK_BODY.height} rx={12} fill="black" />
+        <path d="M51 65 V43 a34 34 0 0 1 68 0 V65" fill="none" stroke="black" strokeWidth={15} strokeLinecap="round" />
       </mask>
-      <rect width="400" height="260" fill="rgba(0,0,0,0.55)" mask="url(#myleads-lock-veil-cutout)" />
+      <rect width={LOCK_W} height={LOCK_H} rx={14} fill="rgba(0,0,0,0.55)" mask="url(#myleads-lock-veil-cutout)" />
     </svg>
   )
 }
 
 export default function MyLeads() {
+  const navigate = useNavigate()
   const { profile } = useAuth()
   const { data: rawLeads, isLoading: rawLoading } = useMyLeads()
   const { data: rawCallStats } = useTodayCallStats(profile?.id)
@@ -516,20 +518,6 @@ export default function MyLeads() {
 
       {/* Table — glass surface, scrolls internally */}
       <div className="glass" style={{ position: 'relative', overflow: 'hidden', borderRadius: 10, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        {/* Locked watermark — outline-only, low-opacity, sits behind the empty
-            state rather than a separate blocking card (Prompt 283) */}
-        {locked && (
-          <Lock
-            size={160}
-            strokeWidth={0.75}
-            style={{
-              position: 'absolute', top: '50%', left: '50%',
-              transform: 'translate(-50%, -50%)',
-              color: 'var(--text-muted)', opacity: 0.06,
-              pointerEvents: 'none',
-            }}
-          />
-        )}
         {/* Table header — desktop only; cards below md are self-labeling */}
         <div className="hidden md:flex" style={{
           alignItems: 'center',
@@ -600,17 +588,27 @@ export default function MyLeads() {
               )}
             </div>
           ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 240, padding: '48px 16px', textAlign: 'center', position: 'relative' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 240, padding: locked ? '24px 16px' : '48px 16px', textAlign: 'center', position: 'relative' }}>
             {locked ? (
               <>
-                <LockedVeil />
-                <p style={{ position: 'relative', zIndex: 1, fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', margin: 0 }}>
-                  Complete training to unlock your leads
-                </p>
-                <p style={{ position: 'relative', zIndex: 1, fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                  They'll appear here on your next scheduled lead reset once training is complete —{' '}
-                  <Link to="/rep/training" style={{ color: 'var(--accent)' }}>Go to Training Center</Link>
-                </p>
+                {/* Single centered lock, heading text inside its body (not
+                    the shackle loop), a real button below — collapsed from
+                    the old lock+heading+subtext+text-link stack (Prompt 300). */}
+                <div style={{ position: 'relative', width: LOCK_W, height: LOCK_H }}>
+                  <LockedVeil />
+                  <div style={{
+                    position: 'absolute',
+                    left: LOCK_BODY.left, top: LOCK_BODY.top, width: LOCK_BODY.width, height: LOCK_BODY.height,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px',
+                  }}>
+                    <p style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--text-secondary)', lineHeight: 1.3, margin: 0 }}>
+                      Complete Training to Unlock Your Leads
+                    </p>
+                  </div>
+                </div>
+                <Button onClick={() => navigate('/rep/training')} style={{ marginTop: 14 }}>
+                  Go to Training Center
+                </Button>
               </>
             ) : (
               <>
