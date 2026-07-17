@@ -231,22 +231,38 @@ function LeadRow({ lead, onOpen, now, animDelay = 0 }) {
 // inside it via a nested viewport (percentage x/y + a -50%/-50% pixel
 // offset), so the cutout's pixel size never changes but the shade always
 // covers the whole locked content area regardless of the parent's size.
-const LOCK_W = 170
-const LOCK_H = 150
+// Prompt 302: the body/base rectangle grows into a real card (wide enough
+// for the heading to sit on one line, tall enough to hold the heading AND
+// the button stacked inside it) — shackle scaled up proportionally to sit
+// on top of it. Also root-caused "Go to Training Center" doing nothing:
+// the veil's outer <svg> is `position:absolute, inset:0` covering the
+// whole locked-content box (same box the button sits in) with no
+// `pointer-events:none` — masked-out (transparent) regions of an SVG are
+// still hit-tested as "painted" by default, so the veil silently ate every
+// click over the button's area even though nothing was visible there.
+const LOCK_W = 300
+const LOCK_H = 190
 // Body rect's box, in the same local pixel space as the lock cutout above —
-// used to position the heading text precisely inside the lock's body/block
-// area rather than the shackle loop (see the calc() offsets below, which
-// re-center this local box against the full-bleed shade's own 50%/50%).
-const LOCK_BODY = { left: 15, top: 65, width: 139, height: 65 }
+// this is now sized to hold both the heading (one line) and the button
+// stacked inside it (see the flex column positioned against this same box
+// below), not just the heading. calc() offsets re-center this local box
+// against the full-bleed shade's own 50%/50%.
+const LOCK_BODY = { left: 20, top: 66, width: 260, height: 104 }
+// Shackle arc, scaled up from Prompt 300's radius-34/leg-22 to match the
+// larger body, centered on the body's horizontal midpoint.
+const SHACKLE_R = 36
+const SHACKLE_LEG = 22
+const SHACKLE_CX = LOCK_BODY.left + LOCK_BODY.width / 2
+const SHACKLE_PATH = `M${SHACKLE_CX - SHACKLE_R} ${LOCK_BODY.top} V${LOCK_BODY.top - SHACKLE_LEG} a${SHACKLE_R} ${SHACKLE_R} 0 0 1 ${SHACKLE_R * 2} 0 V${LOCK_BODY.top}`
 
 function LockedVeil() {
   return (
-    <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0, display: 'block' }}>
+    <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0, display: 'block', pointerEvents: 'none' }}>
       <mask id="myleads-lock-veil-cutout">
         <rect x="0" y="0" width="100%" height="100%" fill="white" />
         <svg x="50%" y="50%" width={LOCK_W} height={LOCK_H} style={{ transform: `translate(${-LOCK_W / 2}px, ${-LOCK_H / 2}px)` }}>
-          <rect x={LOCK_BODY.left} y={LOCK_BODY.top} width={LOCK_BODY.width} height={LOCK_BODY.height} rx={12} fill="black" />
-          <path d="M51 65 V43 a34 34 0 0 1 68 0 V65" fill="none" stroke="black" strokeWidth={15} strokeLinecap="round" />
+          <rect x={LOCK_BODY.left} y={LOCK_BODY.top} width={LOCK_BODY.width} height={LOCK_BODY.height} rx={16} fill="black" />
+          <path d={SHACKLE_PATH} fill="none" stroke="black" strokeWidth={16} strokeLinecap="round" />
         </svg>
       </mask>
       <rect x="0" y="0" width="100%" height="100%" rx={14} fill="rgba(0,0,0,0.55)" mask="url(#myleads-lock-veil-cutout)" />
@@ -599,27 +615,28 @@ export default function MyLeads() {
             {locked ? (
               <>
                 {/* Full-area shade with a single, fixed-size centered lock
-                    cutout, heading text inside its body (not the shackle
-                    loop), a real button below — full coverage restored in
-                    Prompt 301 after Prompt 300 shrank it to the lock's own
-                    small box; the fixed, undistorted lock geometry and the
-                    single-lock/button improvements from 300 are kept. */}
+                    cutout — full coverage kept from Prompt 301. Prompt 302:
+                    the body is now a real card that holds BOTH the heading
+                    (one line) and the button stacked inside its own bounds,
+                    instead of the button living below the lock in normal
+                    flow. Veil has pointer-events:none (Prompt 302 fix) so
+                    it no longer swallows clicks meant for the button. */}
                 <LockedVeil />
                 <div style={{
                   position: 'absolute',
                   left: `calc(50% - ${LOCK_W / 2 - LOCK_BODY.left}px)`,
                   top: `calc(50% - ${LOCK_H / 2 - LOCK_BODY.top}px)`,
                   width: LOCK_BODY.width, height: LOCK_BODY.height,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+                  padding: '0 16px',
                 }}>
-                  <p style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--text-secondary)', lineHeight: 1.3, margin: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', lineHeight: 1.3, margin: 0, whiteSpace: 'nowrap' }}>
                     Complete Training to Unlock Your Leads
                   </p>
+                  <Button onClick={() => navigate('/setter/training')}>
+                    Go to Training Center
+                  </Button>
                 </div>
-                <div style={{ height: LOCK_H }} />
-                <Button onClick={() => navigate('/setter/training')} style={{ marginTop: 14 }}>
-                  Go to Training Center
-                </Button>
               </>
             ) : (
               <>
