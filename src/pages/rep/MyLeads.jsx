@@ -258,17 +258,39 @@ function LeadRow({ lead, onOpen, now, animDelay = 0 }) {
 // top edge, so the union of shackle-stroke + body-rect is dominated by
 // the body's straight silhouette right at the seam — no visible notch or
 // gap, single continuous padlock outline, matching the reference image.
-const LOCK_BODY = { left: 20, top: 145, width: 300, height: 300 }
-const SHACKLE_R = 80
-const SHACKLE_LEG = 45
-const SHACKLE_OVERLAP = 60
+// Prompt 308: 4 rounds of hand-tuning custom LOCK_BODY/SHACKLE_R numbers
+// still hadn't converged on proportions that read as a normal padlock
+// ("arch too skinny", "square unnecessarily large" per Brayden). Instead
+// of guessing more numbers, the body/shackle geometry below is now scaled
+// directly off lucide-react's own `Lock` icon path (`rect width=18
+// height=11 x=3 y=11 rx=2` + `path d="M7 11V7a5 5 0 0 1 10 0v4"`, the
+// exact icon already used elsewhere in this app) — a real, professionally
+// -proportioned padlock silhouette instead of arbitrary hand-tuned ones.
+// The body is now a wide rounded rectangle (18:11, matching the icon)
+// rather than a square, which directly addresses "square is unnecessarily
+// large" — same overall lock width as before, but shorter. Stroke width
+// is bumped past the icon's own default (2 units) to 2.75 units,
+// addressing "arch too skinny". SHACKLE_OVERLAP (kept from Prompt 307,
+// scaled proportionally) still buries the legs into the body so the union
+// reads as one continuous silhouette with no seam.
+const ICON_SCALE = 16 // lucide icons are drawn on a 24×24 grid; this is the px-per-grid-unit scale-up
+const LOCK_BODY = { left: 3 * ICON_SCALE, top: 11 * ICON_SCALE, width: 18 * ICON_SCALE, height: 11 * ICON_SCALE }
+const BODY_RX = 2 * ICON_SCALE
+const SHACKLE_R = ((17 - 7) / 2) * ICON_SCALE
+const SHACKLE_LEG = (11 - 7) * ICON_SCALE
+const SHACKLE_STROKE = 2.75 * ICON_SCALE
+const SHACKLE_OVERLAP = 35
 const SHACKLE_CX = LOCK_BODY.left + LOCK_BODY.width / 2
 const SHACKLE_LEG_BOTTOM = LOCK_BODY.top + SHACKLE_OVERLAP
 const SHACKLE_PATH = `M${SHACKLE_CX - SHACKLE_R} ${SHACKLE_LEG_BOTTOM} V${LOCK_BODY.top - SHACKLE_LEG} a${SHACKLE_R} ${SHACKLE_R} 0 0 1 ${SHACKLE_R * 2} 0 V${SHACKLE_LEG_BOTTOM}`
 // Overall local box: body width + left/right margin; body height + the
-// shackle's own space above it + top/bottom margins.
+// shackle's own space above it + a matching bottom margin (the arc's apex
+// sits exactly LOCK_BODY.top - SHACKLE_LEG - SHACKLE_R above the body top,
+// so mirroring that same distance below the body keeps the box visually
+// symmetric top-to-bottom).
 const LOCK_W = LOCK_BODY.left * 2 + LOCK_BODY.width
-const LOCK_H = LOCK_BODY.top + LOCK_BODY.height + 20
+const LOCK_TOP_MARGIN = LOCK_BODY.top - SHACKLE_LEG - SHACKLE_R
+const LOCK_H = LOCK_BODY.top + LOCK_BODY.height + LOCK_TOP_MARGIN
 
 function LockedVeil() {
   return (
@@ -276,8 +298,8 @@ function LockedVeil() {
       <mask id="myleads-lock-veil-cutout">
         <rect x="0" y="0" width="100%" height="100%" fill="white" />
         <svg x="50%" y="50%" width={LOCK_W} height={LOCK_H} style={{ transform: `translate(${-LOCK_W / 2}px, ${-LOCK_H / 2}px)` }}>
-          <rect x={LOCK_BODY.left} y={LOCK_BODY.top} width={LOCK_BODY.width} height={LOCK_BODY.height} rx={20} fill="black" />
-          <path d={SHACKLE_PATH} fill="none" stroke="black" strokeWidth={26} strokeLinecap="round" />
+          <rect x={LOCK_BODY.left} y={LOCK_BODY.top} width={LOCK_BODY.width} height={LOCK_BODY.height} rx={BODY_RX} fill="black" />
+          <path d={SHACKLE_PATH} fill="none" stroke="black" strokeWidth={SHACKLE_STROKE} strokeLinecap="round" />
         </svg>
       </mask>
       <rect x="0" y="0" width="100%" height="100%" rx={14} fill="rgba(0,0,0,0.55)" mask="url(#myleads-lock-veil-cutout)" />
