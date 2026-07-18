@@ -11,6 +11,7 @@ import { ScriptWalk } from './ScriptWalk'
 import { inferTimezoneFromState, zonedTimeToUtcIso, timezoneLabel, utcIsoToZonedDatetimeLocal } from '../../lib/timezones'
 import { useActiveCall } from '../../contexts/ActiveCallContext'
 import { CallPrepModal, Field } from '../shared/CallPrepModal'
+import { ErrorToast } from '../shared/ErrorToast'
 
 // The only statuses a rep can set from the call modal — color coordinated.
 // `note` tells the rep exactly where the lead routes (pipeline behavior).
@@ -214,6 +215,11 @@ export function CallModal({ lead, onClose }) {
   const callSidRef  = useRef(null)
   const [postCallCallId, setPostCallCallId] = useState(null)
   const [postCallState, setPostCallState]   = useState(null)
+  // Has the rep actually placed the call this modal session? Gates status
+  // changes (Prompt 310) — set true the moment they hit the call button,
+  // via either the Twilio in-browser path or the tel: fallback link.
+  const [callStarted, setCallStarted] = useState(false)
+  const [toastMsg, setToastMsg]       = useState('')
 
   // Twilio Device setup — fetch token + register once per lead.
   useEffect(() => {
@@ -278,6 +284,7 @@ export function CallModal({ lead, onClose }) {
   async function startCall() {
     const device = deviceRef.current
     if (!device || !lead.phone) return
+    setCallStarted(true)
     setMuted(false)
     setCallSeconds(0)
     setCallState('connecting')
@@ -635,13 +642,14 @@ export function CallModal({ lead, onClose }) {
       </button>
       {callState === 'error' && (
         <p style={{ fontSize: 11, color: 'var(--danger)', margin: '6px 0 0', textAlign: 'center' }}>
-          Call failed — try again, or use <a href={telHref} style={{ color: 'var(--accent)' }}>your phone</a>.
+          Call failed — try again, or use <a href={telHref} onClick={() => setCallStarted(true)} style={{ color: 'var(--accent)' }}>your phone</a>.
         </p>
       )}
     </>
   ) : (
     <a
       href={telHref}
+      onClick={() => setCallStarted(true)}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         height: 44,
@@ -696,7 +704,10 @@ export function CallModal({ lead, onClose }) {
           statusOptions={STATUS_OPTIONS}
           status={status}
           statusTouched={statusTouched}
-          onStatusSelect={v => { setStatus(v); setStatusTouched(true) }}
+          onStatusSelect={v => {
+            if (v !== 'New' && !callStarted) { setToastMsg('You have to make the call first'); return }
+            setStatus(v); setStatusTouched(true)
+          }}
           statusNote={statusNote}
           statusAddon={statusAddon}
           notes={notes}
@@ -712,6 +723,7 @@ export function CallModal({ lead, onClose }) {
           <ScriptWalk flow={flow} mode="live" leadId={lead.id} onDataCollect={handleDataCollect} />
         </CallPrepModal>
       </ModalErrorBoundary>
+      {toastMsg && <ErrorToast message={toastMsg} onDone={() => setToastMsg('')} />}
     </div>,
     document.body
   )
