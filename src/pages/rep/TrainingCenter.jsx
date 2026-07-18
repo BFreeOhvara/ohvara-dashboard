@@ -560,9 +560,11 @@ function VideoLibrary({ progress, saveProgress }) {
                       src={`https://img.youtube.com/vi/${v.youtubeId}/hqdefault.jpg`}
                       alt={v.title}
                       loading="lazy"
+                      width={480}
+                      height={360}
                       style={{
                         display: 'block', width: '100%', height: '100%',
-                        objectFit: 'cover', objectPosition: 'top',
+                        objectFit: 'cover', objectPosition: 'center',
                       }}
                     />
                     {/* Play overlay — white semi-transparent circle + CSS triangle */}

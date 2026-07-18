@@ -1,6 +1,7 @@
 // Creates a Retell web call for training roleplay sessions.
 // The AI plays "Mike" — a grumpy but genuine HVAC owner in Dallas who
-// has real missed-call pain. Rep must: opener → pain questions → handle objection → book.
+// has real call-handling pain. Rep must: opener → broad pain-discovery gate →
+// handle objection → book.
 //
 // Response variety + randomized vitals (Prompt 272): the persona prompt below is a
 // template with {{var}} placeholders that Retell resolves per-call via
@@ -9,6 +10,15 @@
 // same fork doesn't sound identical call to call. This ONLY takes effect once the
 // underlying Retell LLM is rebuilt from this template — clearing RETELL_ROLEPLAY_AGENT_ID
 // forces the `if (!agentId)` branch below to recreate it fresh on the next call.
+//
+// Prompt 309(b) — Mike no longer only ever has missed-call pain. The live script's
+// opener (discoveryScript.js) was reworked to a broad, non-presumptive gate question
+// ("how's it going handling calls day-to-day?") instead of asserting missed calls, so
+// the roleplay persona now surfaces ONE of 5 pain angles at random (missed calls,
+// scheduling chaos, slow response, unreliable coverage, cost of hiring) — reps need to
+// practice recognizing whichever pain Mike actually names, not just the one they expect.
+// Whatever pain surfaces, the quantifying numbers stay calls-missed/day-based (that's
+// still what drives the pricing formula), so rule 5 below always converges there.
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,6 +36,17 @@ const INDEED_VARIANTS = [
   'Yeah, been looking. Hard to find someone decent.',
   'Oh yeah, that posting — still trying to fill it, actually.',
   "Yeah, we're hiring. You know somebody?",
+]
+// One of these fires per call (Prompt 309b) — Mike opens up about a DIFFERENT
+// pain angle each time when asked the broad "how's it going handling calls
+// day-to-day" gate question, so reps practice recognizing whichever one lands
+// instead of only ever hearing about missed calls.
+const PAIN_VARIANTS = [
+  "Honestly, some calls slip through when we're all out on jobs — can't always get to the phone in time.",
+  "Scheduling's the real headache, if I'm being honest — hard to keep track of who's where and when.",
+  "We're a little slow getting back to people sometimes, not gonna lie — by the time we call back they've moved on.",
+  "My office gal isn't always reliable, honestly — calls out sick and stuff just doesn't get answered.",
+  "That's actually why I'm hiring for this — I can't keep up with the phones myself anymore.",
 ]
 const OBJECTION_VARIANTS = [
   "I'm not really interested, to be honest.",
@@ -53,24 +74,25 @@ function randInt(min: number, max: number): number {
 
 const ROLEPLAY_AGENT_PROMPT = `You are playing the role of Mike Johnson, an HVAC company owner in Dallas, TX.
 
-You have a 4-person team — two techs, one helper, and yourself. You get about {{calls_per_month}} calls a month but miss maybe {{missed_per_day}} a day because everyone's on jobs.
+You have a 4-person team — two techs, one helper, and yourself. You get about {{calls_per_month}} calls a month. Your real day-to-day headache, if someone asks the right open question: {{pain_response}}
 
 PERSONALITY:
 - Gruff and busy, not rude but definitely skeptical
 - You don't have time for sales pitches
 - You've been burned by software before
-- But you're genuinely losing jobs to missed calls and it frustrates you
+- But you're genuinely frustrated by that headache and what it's costing you
 
 BEHAVIOR RULES:
 1. Answer gruffly: "{{opener_response}}"
 2. Don't volunteer info — they have to ask the right questions
 3. If they reference Indeed → soften a bit: "{{indeed_response}}"
-4. If they ask about missed calls → open up with real numbers based on what you just told them (~{{calls_per_month}} calls a month, ~{{missed_per_day}} missed a day)
-5. After rep asks a good pain question → throw ONE objection: "{{objection_line}}"
-6. If they handle the objection well → agree to a 15-min call: "{{engage_response}}"
-7. If they pitch the product instead of asking questions → cut them off: "{{pushback_pitch_response}}"
-8. If they're genuinely struggling and can't recover the call, don't hang up — stay skeptical but keep the door open: ask them to check back at a better time instead ("Look, now's not a good time — call back another time"). Every call ends in either a booked 15-minute call or a real callback window, never a dead hang-up or flat "not interested, goodbye."
-9. Keep responses to 1-3 sentences — you're a busy guy on a job site.`
+4. If they ask a broad, open question about how you're handling calls day-to-day (NOT a leading "you're missing calls, right?") → open up about your real pain: "{{pain_response}}". If they instead ask a leading yes/no question presuming a specific problem, just answer it plainly, don't volunteer extra.
+5. If they follow up asking to quantify it (how many calls, how often, etc.) → give real numbers based on what you just told them (~{{calls_per_month}} calls a month, ~{{missed_per_day}} missed or mishandled a day) — whatever pain you named, the numbers are about calls not getting handled
+6. After rep asks a good pain question → throw ONE objection: "{{objection_line}}"
+7. If they handle the objection well → agree to a 15-min call: "{{engage_response}}"
+8. If they pitch the product instead of asking questions → cut them off: "{{pushback_pitch_response}}"
+9. If they're genuinely struggling and can't recover the call, don't hang up — stay skeptical but keep the door open: ask them to check back at a better time instead ("Look, now's not a good time — call back another time"). Every call ends in either a booked 15-minute call or a real callback window, never a dead hang-up or flat "not interested, goodbye."
+10. Keep responses to 1-3 sentences — you're a busy guy on a job site.`
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -152,6 +174,7 @@ Deno.serve(async (req) => {
       missed_per_day: String(randInt(1, 6)),
       opener_response: pick(OPENER_VARIANTS),
       indeed_response: pick(INDEED_VARIANTS),
+      pain_response: pick(PAIN_VARIANTS),
       objection_line: pick(OBJECTION_VARIANTS),
       engage_response: pick(ENGAGE_VARIANTS),
       pushback_pitch_response: pick(PUSHBACK_PITCH_VARIANTS),
