@@ -17,8 +17,21 @@
 // the roleplay persona now surfaces ONE of 5 pain angles at random (missed calls,
 // scheduling chaos, slow response, unreliable coverage, cost of hiring) — reps need to
 // practice recognizing whichever pain Mike actually names, not just the one they expect.
-// Whatever pain surfaces, the quantifying numbers stay calls-missed/day-based (that's
-// still what drives the pricing formula), so rule 5 below always converges there.
+// (Prompt 317 below changes what happens AFTER the pain is named — the quantifying
+// numbers no longer converge on calls-missed/day for every angle.)
+//
+// Prompt 317 — the live script's money question is no longer one fixed
+// missed-calls ask for every angle (discoveryScript.js's new Urgency Check
+// routes calls-slipping/slow-response/coverage to the unchanged Vitals math,
+// scheduling chaos to its own double-booking/wasted-time question, and cost
+// of hiring to a reflect-their-own-labor-cost line with no numbers-ask at
+// all). Mike now: (a) confirms an urgency tie-in to the Indeed listing right
+// after naming his pain (rule 4b), then (b) gives a quantify follow-up
+// that's LINKED to which specific pain he named (PAIN_ANGLES pairs each pain
+// line with its own quantify response), not a flat random pick from a
+// separate array that could mismatch — e.g. naming "scheduling" but then
+// quantifying in missed-calls numbers, which would train reps on a
+// combination the real script never produces.
 //
 // Prompt 316 — real-call feedback fixes after 315 went live (v20):
 // (a) Turn-taking: Retell docs (docs.retellai.com/build/single-multi-prompt/
@@ -85,15 +98,44 @@ const INDEED_VARIANTS = [
   'Oh yeah, that posting — still trying to fill it, actually.',
   "Yeah, we're hiring. You know somebody?",
 ]
-// Pain gate -> "Named a specific pain" (Prompt 309b): one of these fires per
-// call so reps practice recognizing whichever pain angle lands, not just
-// missed calls.
-const PAIN_GATE_NAMED_VARIANTS = [
-  "Honestly, some calls slip through when we're all out on jobs — can't always get to the phone in time.",
-  "Scheduling's the real headache, if I'm being honest — hard to keep track of who's where and when.",
-  "We're a little slow getting back to people sometimes, not gonna lie — by the time we call back they've moved on.",
-  "My office gal isn't always reliable, honestly — calls out sick and stuff just doesn't get answered.",
-  "That's actually why I'm hiring for this — I can't keep up with the phones myself anymore.",
+// Pain gate -> "Named a specific pain" (Prompt 309b), each paired with its
+// OWN quantify follow-up (Prompt 317) so the two always match — reps should
+// never hear "scheduling's the headache" followed by missed-calls-per-day
+// numbers, since the real script's Urgency Check routes each angle to a
+// different money question. The 3 calls-shaped angles (slipping/slow
+// response/unreliable coverage) share the same quantify text — the real
+// script's Vitals math is identical for all three ("a call didn't get
+// answered", just different causes); calls_per_month/missed_per_day are
+// substituted into it below with real random numbers before it's sent, same
+// as the old flat calls-based rule 5 did.
+const PAIN_ANGLES = [
+  {
+    pain: "Honestly, some calls slip through when we're all out on jobs — can't always get to the phone in time.",
+    quantify: 'calls' as const,
+  },
+  {
+    pain: "Scheduling's the real headache, if I'm being honest — hard to keep track of who's where and when.",
+    quantify: "Yeah, actually — probably a couple appointments a month end up double-booked or mixed up, and my office gal probably burns a few hours a week just untangling the calendar because of it.",
+  },
+  {
+    pain: "We're a little slow getting back to people sometimes, not gonna lie — by the time we call back they've moved on.",
+    quantify: 'calls' as const,
+  },
+  {
+    pain: "My office gal isn't always reliable, honestly — calls out sick and stuff just doesn't get answered.",
+    quantify: 'calls' as const,
+  },
+  {
+    pain: "That's actually why I'm hiring for this — I can't keep up with the phones myself anymore.",
+    quantify: "Yeah, no kidding — between the pay and everything else, filling this role isn't cheap either, so trust me, I hear you.",
+  },
+]
+// Urgency Check -> confirms Mike is already actively trying to solve this
+// (he is — he's posting the job). Same question fires regardless of angle.
+const URGENCY_VARIANTS = [
+  "Yeah, pretty much — figured getting some help in here would actually handle it.",
+  "That's the idea, yeah. Hoping whoever we hire can get a handle on it.",
+  "Yeah, exactly — that's part of why I'm trying to fill this role.",
 ]
 // Pain gate -> "Kind of / a little of everything".
 const PAIN_GATE_VAGUE_VARIANTS = [
@@ -204,7 +246,7 @@ const PUSHBACK_PITCH_VARIANTS = [
   "I don't need the sales pitch, man. What do you actually need from me?",
 ]
 
-function pick(variants: string[]): string {
+function pick<T>(variants: T[]): T {
   return variants[Math.floor(Math.random() * variants.length)]
 }
 
@@ -229,7 +271,8 @@ BEHAVIOR RULES (each objection/resistance has a hard limit on how many times you
 2. Don't volunteer info — they have to ask the right questions.
 3. If they reference Indeed → soften a bit: "{{indeed_response}}"
 4. If they ask a broad, open question about how you're handling calls day-to-day (NOT a leading "you're missing calls, right?") → answer with ONE of these, your pick based on how the conversation's gone: (a) open up about your real pain: "{{pain_response}}", or (b) vaguely: "{{pain_vague_response}}", or (c) — at most once — deflect first: "{{pain_defensive_response}}". If they push back on the deflection with something like "has anyone actually counted?", you concede: "{{pain_concede_response}}" — never repeat the deflection a second time. If they instead ask a leading yes/no question presuming a specific problem, just answer it plainly, don't volunteer extra.
-5. If they follow up asking to quantify it (how many calls, how often, etc.) → give real numbers based on what you just told them (~{{calls_per_month}} calls a month, ~{{missed_per_day}} missed or mishandled a day) — whatever pain you named, the numbers are about calls not getting handled.
+4b. If, right after you name your pain, they ask something like whether that's part of why you're posting this job listing → confirm: "{{urgency_response}}"
+5. If they follow up asking to quantify it (how many calls, how often, appointments mixed up, what you're paying for the hire, etc.) → respond with: "{{quantify_response}}" — this already matches whatever pain you named above, don't invent different numbers.
 6. If instead of asking the gate question well they seem vague or salesy, you can push back once: "{{pushback_whats_this_response}}". If they disarm you (something like "nothing to sell you, genuinely just a quick question"), engage with the pain question. If you're still not convinced, you get ONE more stonewall, max: "{{pushback_stonewall_response}}" — but on their SECOND disarm attempt you must engage, no third stonewall exists.
 7. Once the rep does the math out loud and asks if it matters to you, respond with ONE of: (a) genuinely moved: "{{amp_engaged_response}}", or (b) minimize it — allowed ONCE only: "{{amp_minimize_response}}", or (c) accuse them of selling — allowed up to TWICE: "{{amp_pushback_response}}". Whichever resistance you pick, when the rep comes back with their follow-up (the "why would I go to you" question, or asking again if it matters), you concede: "{{amp_reengage_response}}" — you cannot minimize or accuse a second/third time, you must move forward.
 8. After the pitch/handoff, throw exactly ONE objection: "{{objection_line}}"
@@ -322,12 +365,23 @@ Deno.serve(async (req) => {
     // ── Step 2: Create web call ───────────────────────────────────────────────
     // Fresh pick every call — this is what makes the practice call sound different
     // from the last one instead of reciting the same fixed persona verbatim.
+    // Pick ONE angle and derive its matching quantify response together, so
+    // pain_response and quantify_response can never mismatch (Prompt 317).
+    const callsPerMonth = randInt(15, 60)
+    const missedPerDay = randInt(1, 6)
+    const angle = pick(PAIN_ANGLES)
+    const quantifyResponse = angle.quantify === 'calls'
+      ? `Sure — probably ${missedPerDay} calls a day slip through or don't get handled right, out of about ${callsPerMonth} a month.`
+      : angle.quantify
+
     const dynamicVariables = {
-      calls_per_month: String(randInt(15, 60)),
-      missed_per_day: String(randInt(1, 6)),
+      calls_per_month: String(callsPerMonth),
+      missed_per_day: String(missedPerDay),
       opener_response: pick(OPENER_VARIANTS),
       indeed_response: pick(INDEED_VARIANTS),
-      pain_response: pick(PAIN_GATE_NAMED_VARIANTS),
+      pain_response: angle.pain,
+      quantify_response: quantifyResponse,
+      urgency_response: pick(URGENCY_VARIANTS),
       pain_vague_response: pick(PAIN_GATE_VAGUE_VARIANTS),
       pain_defensive_response: pick(PAIN_GATE_DEFENSIVE_VARIANTS),
       pain_concede_response: pick(PAIN_GATE_CONCEDE_VARIANTS),

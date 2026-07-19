@@ -19,6 +19,21 @@
 // actual current flow instead of a frozen paraphrase of it — score
 // dimensions (opener/painDiscovery/objectionHandling/bookingAsk/tone) are
 // unchanged, only the description of what "good" means per dimension.
+//
+// Prompt 317 — discoveryScript.js's money question is no longer one fixed
+// missed-calls ask for every angle: after a pain is confirmed, the rep now
+// asks a shared urgency question (Urgency Check) that bridges to the Indeed
+// listing, THEN a money question that branches by which specific angle was
+// named. Calls-slipping/slow-response/unreliable-coverage still share the
+// old Vitals math unchanged; scheduling chaos gets its own double-booking/
+// wasted-time question and pain-amplification line (time and a bounced
+// customer, not a dollar figure); cost-of-hiring skips a numbers-ask
+// entirely and reflects the prospect's OWN already-posted labor cost back at
+// them. The old rubric only described the calls-based path as if it were
+// the only one — grading a rep who correctly took the scheduling or
+// cost-of-hiring branch against calls-based Vitals language would read as a
+// miss. painDiscovery's description below now covers Urgency Check + all
+// three money-question variants, not just the calls-based one.
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -84,8 +99,11 @@ Deno.serve(async (req) => {
 The rep was calling a prospect (Mike, HVAC owner) who was advertising for a receptionist on Indeed. The real script the rep is trained on has 5 stages, in this order:
 
 1. Opener — confirm the business, reference the Indeed posting, then ask ONE broad, non-presumptive gate question about how they handle calls day-to-day (never a leading "you're missing calls, right?"). The rep should stop probing as soon as ONE pain angle is confirmed — any of: calls slipping through, scheduling chaos, slow response, unreliable coverage, or cost of hiring. Continuing to drill for more after one lands is a mistake, not a strength; a genuinely solid "we've got it covered, no gap" answer is a valid call-ending outcome, not a rep failure.
-2. Vitals — exactly 3 quick numbers, once a pain is confirmed: monthly call volume, how many calls are missed/mishandled per day, and average ticket value. No more than that.
-3. Pain Amplification — the rep states the dollar cost (monthly/annual) plainly using those numbers, then asks a single question checking whether it matters to the prospect. Not a hard sell.
+2. Urgency Check — one quick question bridging to the fact they're actively posting this job listing, confirming they're already trying to solve it. Same question regardless of which pain angle was named.
+3. Money Question (branches by angle, all three variants are correct — do not penalize a rep for asking a different money question than you expected):
+   - Calls slipping / slow response / unreliable coverage: exactly 3 Vitals numbers (monthly call volume, missed/mishandled calls per day, average ticket value), then a Pain Amplification line stating the dollar cost (monthly/annual) plainly, then a single question checking whether it matters to the prospect. Not a hard sell.
+   - Scheduling chaos: a question about how many appointments get double-booked/mixed up per month and how much time gets burned untangling the calendar, then a pain-amplification line about lost time and a bounced customer — NOT a dollar figure, this angle is intentionally not calls-based.
+   - Cost of hiring: no numbers-ask at all — the rep should reflect the prospect's own already-posted labor cost back at them rather than asking them to state a number. A rep correctly skipping straight to that reflection here is doing it right, not skipping a step.
 4. Handoff & Book — the rep hands off to "our team," pitches the AI receptionist in plain terms, and handles exactly ONE objection if one comes up (info-first, no time this week, who-is-this, cost, or general hesitation are all valid real objections — handling any one of them well is a pass, the transcript won't contain all of them in a single call).
 5. Close — confirm the picked day/time back, get a callback number, stop talking. A short, clean close is correct, not incomplete.
 
