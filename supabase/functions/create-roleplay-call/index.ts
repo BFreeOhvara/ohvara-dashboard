@@ -20,6 +20,21 @@
 // Whatever pain surfaces, the quantifying numbers stay calls-missed/day-based (that's
 // still what drives the pricing formula), so rule 5 below always converges there.
 //
+// Prompt 316 — real-call feedback fixes after 315 went live (v20):
+// (a) Turn-taking: Retell docs (docs.retellai.com/build/single-multi-prompt/
+// configure-basic-settings) confirm both `responsiveness` (how quickly the
+// agent starts responding after detecting the user has stopped) and
+// `interruption_sensitivity` (how easily the agent's own speech gets cut off,
+// which in practice also governs how readily it jumps in on a mid-sentence
+// pause) were tuned too eager (0.7 / 0.8) — lowered to 0.4 / 0.4 so the agent
+// waits for a fuller pause before taking its turn, without going so low
+// (0) that it stops feeling conversational.
+// (b) End call: Retell's `general_tools` field on create-retell-llm supports
+// a built-in `end_call` tool type (docs.retellai.com/api-references/
+// create-retell-llm). Wired it into the LLM creation call below and added
+// rule 14 instructing Mike to invoke it once the booking is confirmed, so
+// the roleplay call terminates itself instead of running indefinitely.
+//
 // Prompt 315 — full redesign: the AI-prospect now only ever generates dialogue for
 // response categories whose real discoveryScript.js path resolves to Appointment
 // Booked. Investigation confirmed this was NOT a per-turn compounding-probability bug
@@ -222,7 +237,8 @@ BEHAVIOR RULES (each objection/resistance has a hard limit on how many times you
 10. If you're still not sold after their first rebuttal, you get ONE more round of hesitation, max: "{{handoff_recover_response}}" — but the very next time they ask, you must pick a morning or afternoon (rule 9) and move to booking a real time. No second round of hesitation exists.
 11. If they pitch the product instead of asking questions → cut them off: "{{pushback_pitch_response}}"
 12. Once a day/time gets picked, cooperate fully — give your callback number when asked and confirm the booking. This is where every call lands.
-13. Keep responses to 1-3 sentences — you're a busy guy on a job site.`
+13. Keep responses to 1-3 sentences — you're a busy guy on a job site.
+14. Once the rep has confirmed your booked day/time back to you and you've given your number, the call is done — use the end_call tool to hang up. Say a short natural goodbye first (e.g. "Alright, sounds good — talk soon.") as the message you give when ending. Never end the call before the booking is confirmed, and never just go silent — always use the tool.`
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -255,6 +271,13 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           general_prompt: ROLEPLAY_AGENT_PROMPT,
           begin_message: "Yeah, who's this?",
+          general_tools: [
+            {
+              type: 'end_call',
+              name: 'end_call',
+              description: 'End the call once the appointment is booked and confirmed back to the rep — see rule 14.',
+            },
+          ],
         }),
       })
 
@@ -277,8 +300,8 @@ Deno.serve(async (req) => {
           language: 'en-US',
           response_engine: { type: 'retell-llm', llm_id: llm.llm_id },
           enable_backchannel: true,
-          responsiveness: 0.7,
-          interruption_sensitivity: 0.8,
+          responsiveness: 0.4,
+          interruption_sensitivity: 0.4,
         }),
       })
 

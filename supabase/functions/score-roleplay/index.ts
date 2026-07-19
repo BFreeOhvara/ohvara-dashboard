@@ -1,5 +1,24 @@
 // Scores a rep's roleplay call transcript using Claude.
 // Takes the conversation transcript and returns structured feedback.
+//
+// Prompt 316(c) — root cause of "grading doesn't match the script" was NOT a
+// bug in how scoring runs; it's that the grading prompt below hardcoded a
+// STALE summary of what a good call looks like, frozen from before Prompt
+// 309/312/315 reworked the live script. It told Claude the rep should "ask
+// pain questions (missed calls, after-hours coverage, cost of a hire)" —
+// three specific probes to check off — when the real discoveryScript.js
+// opener (src/lib/discoveryScript.js) asks ONE broad, non-presumptive gate
+// question and stops at the FIRST confirmed pain angle, of which there are
+// 5 (calls slipping, scheduling chaos, slow response, unreliable coverage,
+// cost of hiring) — "after-hours coverage" isn't even one of them. A rep who
+// followed the real script correctly (one broad question, stop at one
+// confirmed pain) would read to the old rubric as having under-asked. The
+// rubric also never mentioned Vitals (3 numbers) or Pain Amplification (the
+// dollar-math + "does it matter" check) as distinct steps, or that Handoff
+// only ever throws exactly one objection. Rewritten below to match the
+// actual current flow instead of a frozen paraphrase of it — score
+// dimensions (opener/painDiscovery/objectionHandling/bookingAsk/tone) are
+// unchanged, only the description of what "good" means per dimension.
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -60,15 +79,17 @@ Deno.serve(async (req) => {
       .map(t => `${t.role === 'user' ? 'REP' : 'PROSPECT'}: ${t.content}`)
       .join('\n')
 
-    const prompt = `You are a sales coach reviewing a cold call roleplay transcript.
+    const prompt = `You are a sales coach reviewing a cold call roleplay transcript, grading against our team's actual current script — not a generic cold-call rubric.
 
-The rep was calling a prospect (Mike, HVAC owner) who was advertising for a receptionist on Indeed. The rep's goal was to:
-1. Deliver a clean opener referencing Indeed
-2. Ask pain questions (missed calls, after-hours coverage, cost of a hire)
-3. Handle one objection
-4. Book a 15-minute discovery call
+The rep was calling a prospect (Mike, HVAC owner) who was advertising for a receptionist on Indeed. The real script the rep is trained on has 5 stages, in this order:
 
-Score this call on each dimension (integers only):
+1. Opener — confirm the business, reference the Indeed posting, then ask ONE broad, non-presumptive gate question about how they handle calls day-to-day (never a leading "you're missing calls, right?"). The rep should stop probing as soon as ONE pain angle is confirmed — any of: calls slipping through, scheduling chaos, slow response, unreliable coverage, or cost of hiring. Continuing to drill for more after one lands is a mistake, not a strength; a genuinely solid "we've got it covered, no gap" answer is a valid call-ending outcome, not a rep failure.
+2. Vitals — exactly 3 quick numbers, once a pain is confirmed: monthly call volume, how many calls are missed/mishandled per day, and average ticket value. No more than that.
+3. Pain Amplification — the rep states the dollar cost (monthly/annual) plainly using those numbers, then asks a single question checking whether it matters to the prospect. Not a hard sell.
+4. Handoff & Book — the rep hands off to "our team," pitches the AI receptionist in plain terms, and handles exactly ONE objection if one comes up (info-first, no time this week, who-is-this, cost, or general hesitation are all valid real objections — handling any one of them well is a pass, the transcript won't contain all of them in a single call).
+5. Close — confirm the picked day/time back, get a callback number, stop talking. A short, clean close is correct, not incomplete.
+
+Score this call on each dimension (integers only), judged against the ACTUAL flow above, not a generic sales-call template:
 
 TRANSCRIPT:
 ${formatted}
