@@ -43,6 +43,17 @@
 // first answer already covered it is doing it right, not asking fewer
 // questions than they should — the old "same question regardless" framing
 // would have read a clean single-question pass as under-asking.
+//
+// Prompt 319 — the Money Question stage (calls-shaped/scheduling variants
+// only, not hiring-cost) now opens with a one-beat yes/no confirm ("are you
+// actually missing calls?" / "is scheduling actually the main headache?")
+// before the quantifying question, since a prospect can land on an angle
+// loosely at the opener gate and then say no when asked to actually quantify
+// it. A rep who gets a "no" here and correctly re-asks a short "is it more
+// X or Y" instead of forcing a number is doing real pain-discovery, not
+// missing a beat — score it the same as (or better than) a rep who never hit
+// a "no" at all. Only score it down if the rep pushes ahead and forces a
+// number anyway after a prospect denies the gate.
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -110,9 +121,9 @@ The rep was calling a prospect (Mike, HVAC owner) who was advertising for a rece
 1. Opener — confirm the business, reference the Indeed posting, then ask ONE broad, non-presumptive gate question about how they handle calls day-to-day (never a leading "you're missing calls, right?"). The rep should stop probing as soon as ONE pain angle is confirmed — any of: calls slipping through, scheduling chaos, slow response, unreliable coverage, or cost of hiring. Continuing to drill for more after one lands is a mistake, not a strength; a genuinely solid "we've got it covered, no gap" answer is a valid call-ending outcome, not a rep failure.
 2. Urgency Check — adaptive, not a fixed single line. The rep always asks a primary question tying urgency to the fact they're already hiring for this ("how long's this been going on?"). A follow-up question (either about what's happening in the meantime, or how soon they want the role filled) only gets asked if the prospect's first answer was thin — didn't already establish duration plus some sense of ongoing cost or timeline. A rep who correctly skips the follow-up because the first answer already covered it should score the SAME as one who asked it and got a thin answer — don't penalize skipping it as under-asking, and don't penalize asking both back-to-back regardless of the answer as over-asking only if the first answer was genuinely thin.
 3. Money Question (branches by angle, all three variants are correct — do not penalize a rep for asking a different money question than you expected):
-   - Calls slipping / slow response / unreliable coverage: exactly 3 Vitals numbers (monthly call volume, missed/mishandled calls per day, average ticket value), then a Pain Amplification line stating the dollar cost (monthly/annual) plainly, then a single question checking whether it matters to the prospect. Not a hard sell.
-   - Scheduling chaos: a question about how many appointments get double-booked/mixed up per month and how much time gets burned untangling the calendar, then a pain-amplification line about lost time and a bounced customer — NOT a dollar figure, this angle is intentionally not calls-based.
-   - Cost of hiring: no numbers-ask at all — the rep should reflect the prospect's own already-posted labor cost back at them rather than asking them to state a number. A rep correctly skipping straight to that reflection here is doing it right, not skipping a step.
+   - Calls slipping / slow response / unreliable coverage: a one-beat yes/no confirm ("are you actually missing calls?") before quantifying — required, don't dock a rep for asking it. On a "yes," exactly 3 Vitals numbers (monthly call volume, missed/mishandled calls per day, average ticket value), then a Pain Amplification line stating the dollar cost (monthly/annual) plainly, then a single question checking whether it matters to the prospect. On a "no," the rep should re-ask a short "is it more X or Y" instead of forcing a number — this is a correct pain-discovery recovery, not a missed beat; only dock points if the rep forces a number in anyway after a genuine denial.
+   - Scheduling chaos: same confirm-first pattern ("is scheduling actually the main headache?") before its own quantifying question about how many appointments get double-booked/mixed up per month and how much time gets burned untangling the calendar, then a pain-amplification line about lost time and a bounced customer — NOT a dollar figure, this angle is intentionally not calls-based. Same rule on a "no": re-asking instead of forcing a number is correct.
+   - Cost of hiring: no confirm gate and no numbers-ask at all — the rep should reflect the prospect's own already-posted labor cost back at them rather than asking them to state a number. A rep correctly skipping straight to that reflection here is doing it right, not skipping a step.
 4. Handoff & Book — the rep hands off to "our team," pitches the AI receptionist in plain terms, and handles exactly ONE objection if one comes up (info-first, no time this week, who-is-this, cost, or general hesitation are all valid real objections — handling any one of them well is a pass, the transcript won't contain all of them in a single call).
 5. Close — confirm the picked day/time back, get a callback number, stop talking. A short, clean close is correct, not incomplete.
 

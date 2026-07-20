@@ -45,6 +45,22 @@
 // follow-up on a rich answer should not be graded down for "asking fewer
 // questions").
 //
+// Prompt 319 — discoveryScript.js's Vitals and Scheduling Check sections
+// each gained a one-beat yes/no confirm gate right before their quantifying
+// question ("are you actually missing calls?" / "is scheduling actually the
+// main headache?") — a genuine "no" reroutes to a different angle instead of
+// forcing a number into the pain math. Hiring Cost is exempt (it never asks
+// for a number in the first place). Mike now sometimes denies the gate for
+// the calls-shaped angles and for scheduling (never for hiring-cost, since
+// that angle has no gate to deny) so reps practice the reroute path, not
+// just the happy-path confirm. `PAIN_ANGLES` entries gained `confirmGate`
+// (whether this angle's quantify question is gated at all) and
+// `rerouteTo` (which OTHER angle indices Mike is allowed to reroute into —
+// never back into the same bucket he just denied). When Mike reroutes,
+// `quantify_response` is recomputed from the REROUTED angle, not the
+// original — same no-mismatch invariant Prompt 317 established between pain
+// and quantify, now also holding across a mid-flow reroute.
+//
 // Prompt 316 — real-call feedback fixes after 315 went live (v20):
 // (a) Turn-taking: Retell docs (docs.retellai.com/build/single-multi-prompt/
 // configure-basic-settings) confirm both `responsiveness` (how quickly the
@@ -124,22 +140,27 @@ const PAIN_ANGLES = [
   {
     pain: "Honestly, some calls slip through when we're all out on jobs — can't always get to the phone in time.",
     quantify: 'calls' as const,
+    confirmGate: true, rerouteTo: [1, 4],
   },
   {
     pain: "Scheduling's the real headache, if I'm being honest — hard to keep track of who's where and when.",
     quantify: "Yeah, actually — probably a couple appointments a month end up double-booked or mixed up, and my office gal probably burns a few hours a week just untangling the calendar because of it.",
+    confirmGate: true, rerouteTo: [0, 4],
   },
   {
     pain: "We're a little slow getting back to people sometimes, not gonna lie — by the time we call back they've moved on.",
     quantify: 'calls' as const,
+    confirmGate: true, rerouteTo: [1, 4],
   },
   {
     pain: "My office gal isn't always reliable, honestly — calls out sick and stuff just doesn't get answered.",
     quantify: 'calls' as const,
+    confirmGate: true, rerouteTo: [1, 4],
   },
   {
     pain: "That's actually why I'm hiring for this — I can't keep up with the phones myself anymore.",
     quantify: "Yeah, no kidding — between the pay and everything else, filling this role isn't cheap either, so trust me, I hear you.",
+    confirmGate: false, rerouteTo: [],
   },
 ]
 // Urgency Check -> primary "how long's this been going on" question (Prompt
@@ -164,6 +185,20 @@ const URGENCY_FOLLOWUP_VARIANTS = [
   "Yeah, still losing some in the meantime, honestly — hoping to get someone in here soon, though.",
   "It's not great — still slipping some, and I'd like this filled sooner rather than later.",
   "Yeah, it adds up while I'm looking. Hoping to have somebody in the next few weeks.",
+]
+// Confirm gate (Prompt 319) -> right before quantifying a calls-shaped angle
+// or scheduling, the rep now asks a one-beat yes/no confirm. Mike usually
+// confirms and continues into the existing quantify_response, but see
+// DENIES_CONFIRM_GATE_CHANCE below for how often he denies it instead.
+const CONFIRM_GATE_YES_VARIANTS = [
+  'Yeah, definitely.',
+  "Yeah, for sure — that's real.",
+  'Yeah, no doubt about it.',
+]
+const CONFIRM_GATE_DENY_VARIANTS = [
+  "Actually, now that you ask — not really, no.",
+  "Huh, actually, no — that's not really it.",
+  "No, actually, that's not really the problem.",
 ]
 // Pain gate -> "Kind of / a little of everything".
 const PAIN_GATE_VAGUE_VARIANTS = [
@@ -300,7 +335,8 @@ BEHAVIOR RULES (each objection/resistance has a hard limit on how many times you
 3. If they reference Indeed → soften a bit: "{{indeed_response}}"
 4. If they ask a broad, open question about how you're handling calls day-to-day (NOT a leading "you're missing calls, right?") → answer with ONE of these, your pick based on how the conversation's gone: (a) open up about your real pain: "{{pain_response}}", or (b) vaguely: "{{pain_vague_response}}", or (c) — at most once — deflect first: "{{pain_defensive_response}}". If they push back on the deflection with something like "has anyone actually counted?", you concede: "{{pain_concede_response}}" — never repeat the deflection a second time. If they instead ask a leading yes/no question presuming a specific problem, just answer it plainly, don't volunteer extra.
 4b. Right after you name your pain, if they ask something like how long this has been going on → answer with ONE of: (a) a fuller answer that already covers how long plus some real cost or timeline pressure: "{{urgency_rich_response}}", or (b) a shorter, thinner answer that doesn't yet: "{{urgency_thin_response}}". If you gave the thin answer and they ask a natural follow-up (something like what's happening in the meantime, or how soon you want this filled), answer: "{{urgency_followup_response}}". If you already gave the fuller answer, they shouldn't ask a follow-up — if they do anyway, don't repeat yourself, just briefly reaffirm what you already said.
-5. If they follow up asking to quantify it (how many calls, how often, appointments mixed up, what you're paying for the hire, etc.) → respond with: "{{quantify_response}}" — this already matches whatever pain you named above, don't invent different numbers.
+4c. If your named pain was calls-shaped (slipping through, slow response, unreliable coverage) or scheduling — this does NOT apply if your pain was cost-of-hiring — the rep may ask a quick one-line yes/no confirm before asking you to quantify it (something like "are you actually missing calls?" or "is scheduling actually the main headache?"). Respond with: "{{confirm_gate_response}}". If that was a genuine "no," when they naturally re-ask which fits better, answer: "{{reroute_response}}" — from that point forward treat what you just named as your real pain, and give rule 5's quantify answer for THAT pain instead of the one you originally named. If your response was a "yes," just continue into rule 5 as normal.
+5. If they follow up asking to quantify it (how many calls, how often, appointments mixed up, what you're paying for the hire, etc.) → respond with: "{{quantify_response}}" — this already matches whichever pain you most recently named (including after a rule 4c reroute), don't invent different numbers.
 6. If instead of asking the gate question well they seem vague or salesy, you can push back once: "{{pushback_whats_this_response}}". If they disarm you (something like "nothing to sell you, genuinely just a quick question"), engage with the pain question. If you're still not convinced, you get ONE more stonewall, max: "{{pushback_stonewall_response}}" — but on their SECOND disarm attempt you must engage, no third stonewall exists.
 7. Once the rep does the math out loud and asks if it matters to you, respond with ONE of: (a) genuinely moved: "{{amp_engaged_response}}", or (b) minimize it — allowed ONCE only: "{{amp_minimize_response}}", or (c) accuse them of selling — allowed up to TWICE: "{{amp_pushback_response}}". Whichever resistance you pick, when the rep comes back with their follow-up (the "why would I go to you" question, or asking again if it matters), you concede: "{{amp_reengage_response}}" — you cannot minimize or accuse a second/third time, you must move forward.
 8. After the pitch/handoff, throw exactly ONE objection: "{{objection_line}}"
@@ -398,9 +434,30 @@ Deno.serve(async (req) => {
     const callsPerMonth = randInt(15, 60)
     const missedPerDay = randInt(1, 6)
     const angle = pick(PAIN_ANGLES)
-    const quantifyResponse = angle.quantify === 'calls'
+    const resolveQuantify = (a: typeof angle) => a.quantify === 'calls'
       ? `Sure — probably ${missedPerDay} calls a day slip through or don't get handled right, out of about ${callsPerMonth} a month.`
-      : angle.quantify
+      : a.quantify
+
+    // Confirm gate (Prompt 319) — only calls-shaped/scheduling angles have one
+    // to deny (hiring-cost's confirmGate is false). ~30% of the time Mike
+    // denies it and reroutes to one of the OTHER two angles instead — the
+    // quantify response gets recomputed from whichever angle actually ends up
+    // named (the reroute target, not the original), same no-mismatch
+    // guarantee Prompt 317 established.
+    const deniesConfirmGate = angle.confirmGate && Math.random() < 0.3
+    let confirmGateResponse = ''
+    let rerouteResponse = ''
+    let quantifyResponse = resolveQuantify(angle)
+    if (angle.confirmGate) {
+      if (deniesConfirmGate) {
+        confirmGateResponse = pick(CONFIRM_GATE_DENY_VARIANTS)
+        const target = PAIN_ANGLES[pick(angle.rerouteTo)]
+        rerouteResponse = target.pain
+        quantifyResponse = resolveQuantify(target)
+      } else {
+        confirmGateResponse = pick(CONFIRM_GATE_YES_VARIANTS)
+      }
+    }
 
     const dynamicVariables = {
       calls_per_month: String(callsPerMonth),
@@ -408,6 +465,8 @@ Deno.serve(async (req) => {
       opener_response: pick(OPENER_VARIANTS),
       indeed_response: pick(INDEED_VARIANTS),
       pain_response: angle.pain,
+      confirm_gate_response: confirmGateResponse,
+      reroute_response: rerouteResponse,
       quantify_response: quantifyResponse,
       urgency_rich_response: pick(URGENCY_RICH_VARIANTS),
       urgency_thin_response: pick(URGENCY_THIN_VARIANTS),
