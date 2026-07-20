@@ -77,15 +77,15 @@ export const FIXED_OPENER =
 export const DISCOVERY_SCRIPT = [
   {
     id: 'opener', kind: 'opener', short: 'Opener',
-    title: 'Open the Call', trigger: 'Same words, every call — confirm the business, hook on the Indeed listing, gate on a broad pain-discovery question',
-    goal: 'Confirm → hook → disarm any pushback → a broad, non-presumptive gate on call-handling day-to-day (not a leading "you\'re missing calls, right?"). Any of several pain angles — missed calls, scheduling chaos, slow response, unreliable coverage, cost of hiring — confirms and moves on; only a genuinely solid "no gap" answer ends the call. Any real resistance gets one disarm attempt, then a clean exit — never a hard sell.',
+    title: 'Open the Call', trigger: 'Same words, every call — confirm the business, hook on the Indeed listing, gate on a bounded pain-discovery menu',
+    goal: 'Confirm → hook → disarm any pushback → a bounded, non-presumptive gate menu on call-handling day-to-day (not a leading "you\'re missing calls, right?"). Any of several pain angles — missed calls, scheduling chaos, slow response, unreliable coverage, cost of hiring — confirms and moves on; only a genuinely solid "no gap" answer ends the call. Any real resistance gets one disarm attempt, then a clean exit — never a hard sell.',
     color: 'var(--accent)', dim: 'rgba(108,99,255,0.08)', border: 'rgba(108,99,255,0.25)',
     lines: [
       `"Hey, is this [Business Name]?"`,
       `BRANCH — Do they confirm?`,
       `↳ IF Yeah / speaking [GOOD]: "Hey — I saw you were hiring for a [job title]. I was wondering who I should speak to about that."`,
       `   BRANCH — How do they respond?`,
-      `   ↳ IF That's me [GOOD]: "Quick question — how's it going handling calls day-to-day? Is anything kind of a headache, or does it feel pretty dialed in?"`,
+      `   ↳ IF That's me [GOOD]: "So which is it — calls piling up, scheduling's a mess, or you're just outgrowing what you've got?"`,
       `      BRANCH — How do they answer?`,
       `      ↳ IF Named a specific pain (calls slipping, scheduling, slow response, coverage, or hiring cost) [GOOD]: → Go to Urgency Check`,
       `      ↳ IF Kind of / a little of everything [HESITANT]: → Go to Urgency Check`,
@@ -94,7 +94,7 @@ export const DISCOVERY_SCRIPT = [
       `         ↳ IF Answers, any gap surfaces [HESITANT]: → Go to Urgency Check`,
       `         ↳ IF Genuinely solid, no gap [BAD]: "Okay, well — thank you for your time. Good luck with everything."`,
       `            ▸ Set status Not Interested.`,
-      `   ↳ IF Transferring [HESITANT]: "Hey — I saw y'all were hiring for a [job title]. I don't know if you can help me, but quick question — how's it going handling calls day-to-day? Is anything kind of a headache, or does it feel pretty dialed in?"`,
+      `   ↳ IF Transferring [HESITANT]: "Hey — I saw y'all were hiring for a [job title]. I don't know if you can help me, but which is it — calls piling up, scheduling's a mess, or you're just outgrowing what you've got?"`,
       `      BRANCH — How do they answer?`,
       `      ↳ IF Named a specific pain (calls slipping, scheduling, slow response, coverage, or hiring cost) [GOOD]: → Go to Urgency Check`,
       `      ↳ IF Kind of / a little of everything [HESITANT]: → Go to Urgency Check`,
@@ -107,7 +107,7 @@ export const DISCOVERY_SCRIPT = [
       `      ▸ Set status Follow-Up.`,
       `   ↳ IF What's this about? / pushback [BAD]: "Nothing to sell you here yet — genuinely just want to see if it's actually calls slipping, or something else, before you spend time and money hiring for it."`,
       `      BRANCH — Do they engage?`,
-      `      ↳ IF Engages [GOOD]: "Quick question — how's it going handling calls day-to-day? Is anything kind of a headache, or does it feel pretty dialed in?"`,
+      `      ↳ IF Engages [GOOD]: "So which is it — calls piling up, scheduling's a mess, or you're just outgrowing what you've got?"`,
       `         BRANCH — How do they answer?`,
       `         ↳ IF Named a specific pain (calls slipping, scheduling, slow response, coverage, or hiring cost) [GOOD]: → Go to Urgency Check`,
       `         ↳ IF Kind of / a little of everything [HESITANT]: → Go to Urgency Check`,
@@ -118,7 +118,7 @@ export const DISCOVERY_SCRIPT = [
       `               ▸ Set status Not Interested.`,
       `      ↳ IF Still shuts it down [BAD]: "Totally fair — I'll let you go. Just curious though, are you all catching every call that comes in, or does one ever slip through?"`,
       `         BRANCH — Do they engage this time?`,
-      `         ↳ IF Engages [GOOD]: "Quick question — how's it going handling calls day-to-day? Is anything kind of a headache, or does it feel pretty dialed in?"`,
+      `         ↳ IF Engages [GOOD]: "So which is it — calls piling up, scheduling's a mess, or you're just outgrowing what you've got?"`,
       `            BRANCH — How do they answer?`,
       `            ↳ IF Named a specific pain (calls slipping, scheduling, slow response, coverage, or hiring cost) [GOOD]: → Go to Urgency Check`,
       `            ↳ IF Kind of / a little of everything [HESITANT]: → Go to Urgency Check`,
@@ -135,7 +135,7 @@ export const DISCOVERY_SCRIPT = [
       `      BRANCH — How do they answer?`,
       `      ↳ IF Yes [GOOD]: "Okay, perfect — I'm wondering who I should speak to about that."`,
       `         BRANCH — How do they respond?`,
-      `         ↳ IF That's me [GOOD]: "Quick question — how's it going handling calls day-to-day? Is anything kind of a headache, or does it feel pretty dialed in?"`,
+      `         ↳ IF That's me [GOOD]: "So which is it — calls piling up, scheduling's a mess, or you're just outgrowing what you've got?"`,
       `            BRANCH — How do they answer?`,
       `            ↳ IF Named a specific pain (calls slipping, scheduling, slow response, coverage, or hiring cost) [GOOD]: → Go to Urgency Check`,
       `            ↳ IF Kind of / a little of everything [HESITANT]: → Go to Urgency Check`,
@@ -144,7 +144,7 @@ export const DISCOVERY_SCRIPT = [
       `               ↳ IF Answers, any gap surfaces [HESITANT]: → Go to Urgency Check`,
       `               ↳ IF Genuinely solid, no gap [BAD]: "Okay, well — thank you for your time. Good luck with everything."`,
       `                  ▸ Set status Not Interested.`,
-      `         ↳ IF Transferring [HESITANT]: "Hey — I saw y'all were hiring for a [job title]. I don't know if you can help me, but quick question — how's it going handling calls day-to-day? Is anything kind of a headache, or does it feel pretty dialed in?"`,
+      `         ↳ IF Transferring [HESITANT]: "Hey — I saw y'all were hiring for a [job title]. I don't know if you can help me, but which is it — calls piling up, scheduling's a mess, or you're just outgrowing what you've got?"`,
       `            BRANCH — How do they answer?`,
       `            ↳ IF Named a specific pain (calls slipping, scheduling, slow response, coverage, or hiring cost) [GOOD]: → Go to Urgency Check`,
       `            ↳ IF Kind of / a little of everything [HESITANT]: → Go to Urgency Check`,
@@ -157,7 +157,7 @@ export const DISCOVERY_SCRIPT = [
       `            ▸ Set status Follow-Up.`,
       `         ↳ IF What's this about? / pushback [BAD]: "Nothing to sell you here yet — genuinely just want to see if it's actually calls slipping, or something else, before you spend time and money hiring for it."`,
       `            BRANCH — Do they engage?`,
-      `            ↳ IF Engages [GOOD]: "Quick question — how's it going handling calls day-to-day? Is anything kind of a headache, or does it feel pretty dialed in?"`,
+      `            ↳ IF Engages [GOOD]: "So which is it — calls piling up, scheduling's a mess, or you're just outgrowing what you've got?"`,
       `               BRANCH — How do they answer?`,
       `               ↳ IF Named a specific pain (calls slipping, scheduling, slow response, coverage, or hiring cost) [GOOD]: → Go to Urgency Check`,
       `               ↳ IF Kind of / a little of everything [HESITANT]: → Go to Urgency Check`,
@@ -168,7 +168,7 @@ export const DISCOVERY_SCRIPT = [
       `                     ▸ Set status Not Interested.`,
       `            ↳ IF Still shuts it down [BAD]: "Totally fair — I'll let you go. Just curious though, are you all catching every call that comes in, or does one ever slip through?"`,
       `               BRANCH — Do they engage this time?`,
-      `               ↳ IF Engages [GOOD]: "Quick question — how's it going handling calls day-to-day? Is anything kind of a headache, or does it feel pretty dialed in?"`,
+      `               ↳ IF Engages [GOOD]: "So which is it — calls piling up, scheduling's a mess, or you're just outgrowing what you've got?"`,
       `                  BRANCH — How do they answer?`,
       `                  ↳ IF Named a specific pain (calls slipping, scheduling, slow response, coverage, or hiring cost) [GOOD]: → Go to Urgency Check`,
       `                  ↳ IF Kind of / a little of everything [HESITANT]: → Go to Urgency Check`,
@@ -184,25 +184,27 @@ export const DISCOVERY_SCRIPT = [
       `   ↳ IF Genuinely wrong number/business [BAD]: "Ah, my bad — wrong number. Have a good one."`,
       `      ▸ Set status Not Interested.`,
     ],
-    tips: `Confirm → Indeed hook → one clean disarm if they push back ("nothing to sell you, genuinely just a quick question") → the broad gate question. Any named pain — missed calls, scheduling, slow response, unreliable coverage, cost of hiring — moves forward on ONE confirmed pain; don't keep drilling once something lands. Only a genuinely solid "we've got it covered" gets the on-top-of-it check, and only a real no-gap answer there ends the call. Two disarm attempts max, then let them go.`,
+    tips: `Confirm → Indeed hook → one clean disarm if they push back ("nothing to sell you, genuinely just a quick question") → the bounded pain-gate menu. Any named pain — missed calls, scheduling, slow response, unreliable coverage, cost of hiring — moves forward on ONE confirmed pain; don't keep drilling once something lands. Only a genuinely solid "we've got it covered" gets the on-top-of-it check, and only a real no-gap answer there ends the call. Two disarm attempts max, then let them go.`,
   },
 
   {
     id: 'urgency', kind: 'branch', short: 'Urgency',
-    title: 'Urgency Check', trigger: `Pain named at the gate — confirm they're actually doing something about it, then route to the money question that matches what they said`,
-    goal: 'One shared urgency question that bridges to the Indeed listing they\'re already running, then branch to whichever pain-quantifying question actually fits the angle confirmed at the gate — not one generic missed-calls ask for everybody.',
+    title: 'Urgency Check', trigger: `Pain named at the gate — an adaptive urgency question (primary + a conditional follow-up), then route to the money question that matches what they said`,
+    goal: 'A primary urgency question always asked, ties to the fact they\'re already hiring for it (evidence, not a question to prove). Only if that answer is thin does ONE of two follow-ups fire — never both, never a fixed checklist. Then branch to whichever pain-quantifying question actually fits the angle confirmed at the gate — not one generic missed-calls ask for everybody.',
     color: 'var(--accent)', dim: 'rgba(108,99,255,0.08)', border: 'rgba(108,99,255,0.25)',
     lines: [
-      `"Gotcha — I mean, that's probably part of why you're posting this [job title] listing too, right? Trying to get somebody in there to actually fix it?"`,
-      `BRANCH — Which pain came up at the gate question?`,
-      `↳ IF Calls slipping through / not getting answered [GOOD]: → Go to Vitals Check`,
-      `↳ IF Slow to respond / follow up [GOOD]: → Go to Vitals Check`,
-      `↳ IF Coverage gaps — nights, weekends, no-shows [GOOD]: → Go to Vitals Check`,
-      `↳ IF Scheduling — double-bookings, mix-ups, wasted time [GOOD]: → Go to Scheduling Check`,
-      `↳ IF Cost of hiring / trying to avoid the hire altogether [GOOD]: → Go to Hiring Cost Check`,
-      `↳ IF Kind of / a little of everything [HESITANT]: → Go to Vitals Check`,
+      `"So this has been enough of a problem that you're out there hiring for it — how long's this been going on?"`,
+      `BRANCH — Does that already cover duration plus some sense of ongoing cost or timeline, or is it thin?`,
+      `↳ IF Already covers it [GOOD]:`,
+      ...painAngleBranchFlow('   '),
+      `↳ IF Thin — doesn't establish it yet [HESITANT]:`,
+      `   BRANCH — Pick ONE follow-up, not both — whichever fits what's missing`,
+      `   ↳ IF Cost of the gap [HESITANT]: "And while you're looking, what's happening in the meantime — still losing jobs/calls?"`,
+      ...painAngleBranchFlow('      '),
+      `   ↳ IF Timeline pressure [HESITANT]: "So this hire's your fix for it right now — how soon are you hoping to get someone in the seat?"`,
+      ...painAngleBranchFlow('      '),
     ],
-    tips: `Same urgency line every time, regardless of which pain they named — it just confirms they're already actively trying to solve this (they are, they're posting a job for it). Which option you tap next isn't a new question to ask out loud, it's just routing to the right money question based on whatever they already told you at the gate. Calls slipping / slow response / coverage gaps are really all "a call didn't get answered" — same Vitals math for all three.`,
+    tips: `Primary line always fires and uses the fact they're hiring as leverage — evidence we already have, not something to make them prove. Only ask a follow-up if the answer is thin — doesn't already give you duration plus some sense of ongoing cost or a timeline. Pick ONE follow-up, never both — asking every question regardless of their answer reads as an interrogation, not a conversation. Whichever path fires, which pain angle you route to next isn't a new question to ask out loud, it's just routing to the right money question based on whatever they already told you at the gate. Calls slipping / slow response / coverage gaps are really all "a call didn't get answered" — same Vitals math for all three.`,
   },
 
   {
@@ -509,6 +511,25 @@ function timeOfDayOfferFlow(indent) {
     `${indent}↳ IF Afternoon [GOOD]: "[afternoon offer]"`,
     `${indent}   "What time works best for you?"`,
     `${indent}   → Go to Close`,
+  ]
+}
+
+// Which-pain-angle routing block (Prompt 318) — Urgency Check's adaptive
+// primary+conditional-follow-up structure (below) reaches this same routing
+// decision from 3 different leaves (answer already covered it, or one of two
+// follow-up variants fired), so it's generated once and spliced in via spread
+// rather than hand-copied 3x — same rationale as timeOfDayOfferFlow above.
+// Routing itself is untouched from Prompt 317: still the 5 named angles +
+// "kind of everything" catchall, still Vitals/Scheduling/Hiring Cost.
+function painAngleBranchFlow(indent) {
+  return [
+    `${indent}BRANCH — Which pain came up at the gate question?`,
+    `${indent}↳ IF Calls slipping through / not getting answered [GOOD]: → Go to Vitals Check`,
+    `${indent}↳ IF Slow to respond / follow up [GOOD]: → Go to Vitals Check`,
+    `${indent}↳ IF Coverage gaps — nights, weekends, no-shows [GOOD]: → Go to Vitals Check`,
+    `${indent}↳ IF Scheduling — double-bookings, mix-ups, wasted time [GOOD]: → Go to Scheduling Check`,
+    `${indent}↳ IF Cost of hiring / trying to avoid the hire altogether [GOOD]: → Go to Hiring Cost Check`,
+    `${indent}↳ IF Kind of / a little of everything [HESITANT]: → Go to Vitals Check`,
   ]
 }
 

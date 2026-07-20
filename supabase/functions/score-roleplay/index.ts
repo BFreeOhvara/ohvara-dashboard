@@ -34,6 +34,15 @@
 // cost-of-hiring branch against calls-based Vitals language would read as a
 // miss. painDiscovery's description below now covers Urgency Check + all
 // three money-question variants, not just the calls-based one.
+//
+// Prompt 318 — Urgency Check itself is no longer one fixed bridge line. It's
+// adaptive: a primary line always fires ("how long's this been going on?"),
+// and a conditional follow-up (one of two variants) only fires if that
+// answer doesn't already cover duration plus some sense of ongoing cost or
+// timeline. A rep who correctly skips the follow-up because the prospect's
+// first answer already covered it is doing it right, not asking fewer
+// questions than they should — the old "same question regardless" framing
+// would have read a clean single-question pass as under-asking.
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -99,7 +108,7 @@ Deno.serve(async (req) => {
 The rep was calling a prospect (Mike, HVAC owner) who was advertising for a receptionist on Indeed. The real script the rep is trained on has 5 stages, in this order:
 
 1. Opener — confirm the business, reference the Indeed posting, then ask ONE broad, non-presumptive gate question about how they handle calls day-to-day (never a leading "you're missing calls, right?"). The rep should stop probing as soon as ONE pain angle is confirmed — any of: calls slipping through, scheduling chaos, slow response, unreliable coverage, or cost of hiring. Continuing to drill for more after one lands is a mistake, not a strength; a genuinely solid "we've got it covered, no gap" answer is a valid call-ending outcome, not a rep failure.
-2. Urgency Check — one quick question bridging to the fact they're actively posting this job listing, confirming they're already trying to solve it. Same question regardless of which pain angle was named.
+2. Urgency Check — adaptive, not a fixed single line. The rep always asks a primary question tying urgency to the fact they're already hiring for this ("how long's this been going on?"). A follow-up question (either about what's happening in the meantime, or how soon they want the role filled) only gets asked if the prospect's first answer was thin — didn't already establish duration plus some sense of ongoing cost or timeline. A rep who correctly skips the follow-up because the first answer already covered it should score the SAME as one who asked it and got a thin answer — don't penalize skipping it as under-asking, and don't penalize asking both back-to-back regardless of the answer as over-asking only if the first answer was genuinely thin.
 3. Money Question (branches by angle, all three variants are correct — do not penalize a rep for asking a different money question than you expected):
    - Calls slipping / slow response / unreliable coverage: exactly 3 Vitals numbers (monthly call volume, missed/mishandled calls per day, average ticket value), then a Pain Amplification line stating the dollar cost (monthly/annual) plainly, then a single question checking whether it matters to the prospect. Not a hard sell.
    - Scheduling chaos: a question about how many appointments get double-booked/mixed up per month and how much time gets burned untangling the calendar, then a pain-amplification line about lost time and a bounced customer — NOT a dollar figure, this angle is intentionally not calls-based.

@@ -33,6 +33,18 @@
 // quantifying in missed-calls numbers, which would train reps on a
 // combination the real script never produces.
 //
+// Prompt 318 — the live script's urgency question (discoveryScript.js's
+// Urgency Check) is no longer one fixed bridge line every call. It's now
+// adaptive: a primary line always fires ("how long's this been going on?"),
+// and ONE of two follow-ups only fires if that answer doesn't already cover
+// duration plus some sense of ongoing cost or timeline. Mike now randomly
+// gives either a fuller ("rich") answer that already covers it — skipping
+// the follow-up entirely — or a thinner one that invites it, so reps
+// practice both paths instead of always getting the same shape of answer.
+// score-roleplay's rubric was updated to match (rep correctly skipping the
+// follow-up on a rich answer should not be graded down for "asking fewer
+// questions").
+//
 // Prompt 316 — real-call feedback fixes after 315 went live (v20):
 // (a) Turn-taking: Retell docs (docs.retellai.com/build/single-multi-prompt/
 // configure-basic-settings) confirm both `responsiveness` (how quickly the
@@ -130,12 +142,28 @@ const PAIN_ANGLES = [
     quantify: "Yeah, no kidding — between the pay and everything else, filling this role isn't cheap either, so trust me, I hear you.",
   },
 ]
-// Urgency Check -> confirms Mike is already actively trying to solve this
-// (he is — he's posting the job). Same question fires regardless of angle.
-const URGENCY_VARIANTS = [
-  "Yeah, pretty much — figured getting some help in here would actually handle it.",
-  "That's the idea, yeah. Hoping whoever we hire can get a handle on it.",
-  "Yeah, exactly — that's part of why I'm trying to fill this role.",
+// Urgency Check -> primary "how long's this been going on" question (Prompt
+// 318). Mike gives EITHER a fuller answer that already covers duration plus
+// some real cost/timeline (the rep's follow-up never fires) OR a thinner one
+// that invites it — picked randomly per call so reps see both shapes.
+const URGENCY_RICH_VARIANTS = [
+  "Yeah, this has been going on probably six months now — and every week it doesn't get fixed, I feel it.",
+  "Honestly, a good while now — long enough that it's actually costing me business at this point.",
+  "Few months at least, and it's getting worse, not better — that's why I finally posted this.",
+]
+const URGENCY_THIN_VARIANTS = [
+  "Yeah, a while I guess.",
+  "Eh, it's been going on for some time.",
+  "Long enough, yeah.",
+]
+// Urgency Check -> the conditional follow-up (ONLY fires if Mike gave a thin
+// answer above). Written to work whether the rep asks the cost-of-the-gap
+// version or the timeline-pressure version — Mike doesn't know in advance
+// which one's coming, and either version is really asking the same thing.
+const URGENCY_FOLLOWUP_VARIANTS = [
+  "Yeah, still losing some in the meantime, honestly — hoping to get someone in here soon, though.",
+  "It's not great — still slipping some, and I'd like this filled sooner rather than later.",
+  "Yeah, it adds up while I'm looking. Hoping to have somebody in the next few weeks.",
 ]
 // Pain gate -> "Kind of / a little of everything".
 const PAIN_GATE_VAGUE_VARIANTS = [
@@ -271,7 +299,7 @@ BEHAVIOR RULES (each objection/resistance has a hard limit on how many times you
 2. Don't volunteer info — they have to ask the right questions.
 3. If they reference Indeed → soften a bit: "{{indeed_response}}"
 4. If they ask a broad, open question about how you're handling calls day-to-day (NOT a leading "you're missing calls, right?") → answer with ONE of these, your pick based on how the conversation's gone: (a) open up about your real pain: "{{pain_response}}", or (b) vaguely: "{{pain_vague_response}}", or (c) — at most once — deflect first: "{{pain_defensive_response}}". If they push back on the deflection with something like "has anyone actually counted?", you concede: "{{pain_concede_response}}" — never repeat the deflection a second time. If they instead ask a leading yes/no question presuming a specific problem, just answer it plainly, don't volunteer extra.
-4b. If, right after you name your pain, they ask something like whether that's part of why you're posting this job listing → confirm: "{{urgency_response}}"
+4b. Right after you name your pain, if they ask something like how long this has been going on → answer with ONE of: (a) a fuller answer that already covers how long plus some real cost or timeline pressure: "{{urgency_rich_response}}", or (b) a shorter, thinner answer that doesn't yet: "{{urgency_thin_response}}". If you gave the thin answer and they ask a natural follow-up (something like what's happening in the meantime, or how soon you want this filled), answer: "{{urgency_followup_response}}". If you already gave the fuller answer, they shouldn't ask a follow-up — if they do anyway, don't repeat yourself, just briefly reaffirm what you already said.
 5. If they follow up asking to quantify it (how many calls, how often, appointments mixed up, what you're paying for the hire, etc.) → respond with: "{{quantify_response}}" — this already matches whatever pain you named above, don't invent different numbers.
 6. If instead of asking the gate question well they seem vague or salesy, you can push back once: "{{pushback_whats_this_response}}". If they disarm you (something like "nothing to sell you, genuinely just a quick question"), engage with the pain question. If you're still not convinced, you get ONE more stonewall, max: "{{pushback_stonewall_response}}" — but on their SECOND disarm attempt you must engage, no third stonewall exists.
 7. Once the rep does the math out loud and asks if it matters to you, respond with ONE of: (a) genuinely moved: "{{amp_engaged_response}}", or (b) minimize it — allowed ONCE only: "{{amp_minimize_response}}", or (c) accuse them of selling — allowed up to TWICE: "{{amp_pushback_response}}". Whichever resistance you pick, when the rep comes back with their follow-up (the "why would I go to you" question, or asking again if it matters), you concede: "{{amp_reengage_response}}" — you cannot minimize or accuse a second/third time, you must move forward.
@@ -381,7 +409,9 @@ Deno.serve(async (req) => {
       indeed_response: pick(INDEED_VARIANTS),
       pain_response: angle.pain,
       quantify_response: quantifyResponse,
-      urgency_response: pick(URGENCY_VARIANTS),
+      urgency_rich_response: pick(URGENCY_RICH_VARIANTS),
+      urgency_thin_response: pick(URGENCY_THIN_VARIANTS),
+      urgency_followup_response: pick(URGENCY_FOLLOWUP_VARIANTS),
       pain_vague_response: pick(PAIN_GATE_VAGUE_VARIANTS),
       pain_defensive_response: pick(PAIN_GATE_DEFENSIVE_VARIANTS),
       pain_concede_response: pick(PAIN_GATE_CONCEDE_VARIANTS),
