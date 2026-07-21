@@ -109,9 +109,7 @@ export default function MyCalls() {
     // 72px = one call row's rendered footprint (14px+14px padding + border,
     // measured from live CSS) — shaves exactly one row off the bottom per
     // Prompt 202, matching ActivityFeed's same-viewport-formula adjustment.
-    // Mobile (Prompt 322): height comes from mobile-scroll-page instead —
-    // same nested-scroll-box rule applied to My Leads, extended here.
-    <div className="mobile-scroll-page" style={{ display: 'flex', flexDirection: 'column', '--mobile-scroll-h': 'calc(100vh - 48px - 72px)' }}>
+    <div style={{ height: 'calc(100vh - 48px - 72px)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ marginBottom: 24, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
           <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
@@ -159,7 +157,7 @@ export default function MyCalls() {
           </p>
         </div>
       ) : (
-        <div className="glass scrollbar-thin mobile-scroll-list" style={{ borderRadius: 12 }}>
+        <div className="glass scrollbar-thin" style={{ borderRadius: 12, flex: 1, minHeight: 0, overflowY: 'auto' }}>
           {calls.map((c, i) => {
             const color = GRADE_COLOR[c.grade] || 'var(--text-muted)'
             const dim   = GRADE_DIM[c.grade]   || 'var(--bg-elevated)'

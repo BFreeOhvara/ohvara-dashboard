@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, createContext, useContext } from 'react'
 import { supabase } from '../lib/supabase'
-import { isStandalone } from '../lib/platform'
 
 const AuthContext = createContext(null)
 
@@ -14,27 +13,10 @@ export function AuthProvider({ children }) {
   const profileUserId = useRef(null)
 
   useEffect(() => {
-    let cancelled = false
-
-    async function loadInitialSession() {
-      let { data: { session } } = await supabase.auth.getSession()
-      // Cold-launch guard (Prompt 320) — an installed PWA's storage layer can
-      // still be warming up a beat after the page's JS starts running; a
-      // normal browser tab never hits this since its storage is already hot
-      // from the previous navigation. One short retry, standalone-mode only,
-      // so a real persisted session isn't mistaken for "logged out" on a
-      // true cold start.
-      if (!session && isStandalone()) {
-        await new Promise(r => setTimeout(r, 400))
-        if (cancelled) return
-        ;({ data: { session } } = await supabase.auth.getSession())
-      }
-      if (cancelled) return
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       if (session) fetchProfile(session.user.id, false)
-    }
-
-    loadInitialSession()
+    })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
@@ -65,7 +47,6 @@ export function AuthProvider({ children }) {
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
-      cancelled = true
       subscription.unsubscribe()
       document.removeEventListener('visibilitychange', onVisibility)
     }

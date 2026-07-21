@@ -401,12 +401,9 @@ export default function MyLeads() {
   if (trainingLoading) return null
 
   return (
-    // Desktop: page fills the viewport (parent <main> has 24px padding);
-    // the leads table scrolls internally. Mobile: height comes from the
-    // mobile-scroll-page class instead (auto — whole page scrolls, see
-    // index.css Prompt 322 note) since inline styles always win over that
-    // class's media query otherwise.
-    <div className="mobile-scroll-page" style={{ display: 'flex', flexDirection: 'column', '--mobile-scroll-h': 'calc(100vh - 48px)' }}>
+    // Page fills the viewport (parent <main> has 24px padding); the leads
+    // table scrolls internally instead of the whole page.
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 48px)' }}>
       {/* Top bar — stacks on mobile so the date/clock never has to squeeze
           next to the title and wrap (Prompt 295) */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2" style={{ marginBottom: 20 }}>
@@ -422,26 +419,21 @@ export default function MyLeads() {
           <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
             {today}
           </span>
-          {/* Prompt 322: clock/TZ-link moved up into the mobile top bar
-              (DashboardLayout) — hidden here below md so it's not shown
-              twice; desktop unchanged, still shown here. */}
-          <span className="hidden md:inline-flex" style={{ alignItems: 'center' }}>
-            {profile?.timezone_confirmed_at ? (
-              <LiveClock timezone={profile?.timezone} />
-            ) : (
-              <Link
-                to="/settings#regional"
-                style={{
-                  fontSize: 12, fontWeight: 500, color: 'var(--accent)',
-                  background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
-                  borderRadius: 20, padding: '4px 12px', textDecoration: 'none',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Select Time Zone and Settings
-              </Link>
-            )}
-          </span>
+          {profile?.timezone_confirmed_at ? (
+            <LiveClock timezone={profile?.timezone} />
+          ) : (
+            <Link
+              to="/settings#regional"
+              style={{
+                fontSize: 12, fontWeight: 500, color: 'var(--accent)',
+                background: 'var(--accent-dim)', border: '0.5px solid var(--accent-border)',
+                borderRadius: 20, padding: '4px 12px', textDecoration: 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Select Time Zone and Settings
+            </Link>
+          )}
         </div>
       </div>
 
@@ -515,15 +507,11 @@ export default function MyLeads() {
           to 1-2 visible before they ran out of room; full-width rows for
           both fixes that without needing a separate overflow pattern. */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3" style={{ marginBottom: 16 }}>
-      {/* Prompt 322: was horizontal-scroll/cut-off on mobile — Brayden's "no
-          scroll boxes on mobile" rule extends to this too. Below md it now
-          wraps to a second row instead (myleads-tabs/-tab in index.css);
-          desktop unchanged. First-pass call on the wrap approach — flag
-          back for a visual check like the other mobile items. */}
-      <div className="myleads-tabs" style={{
+      <div style={{
         display: 'flex',
         gap: 0,
         borderBottom: '0.5px solid var(--border)',
+        overflowX: 'auto',
         flex: 1,
         minWidth: 0,
       }}>
@@ -534,14 +522,16 @@ export default function MyLeads() {
           return (
             <button
               key={f}
-              className="myleads-tab"
               onClick={() => changeFilter(f)}
               style={{
+                height: 36,
+                padding: '0 12px',
                 background: 'transparent',
                 border: 'none',
                 borderBottom: isActive ? `2px solid ${tabColor}` : '2px solid transparent',
                 marginBottom: -0.5,
                 color: tabColor,
+                fontSize: 13,
                 fontWeight: isActive ? 500 : 400,
                 cursor: 'pointer',
                 fontFamily: 'var(--font-sans)',
@@ -586,10 +576,8 @@ export default function MyLeads() {
         </div>
       </div>
 
-      {/* Table — glass surface, scrolls internally on desktop; flows with
-          the normal page scroll on mobile (mobile-scroll-wrap, see
-          index.css Prompt 322 note) */}
-      <div className="glass mobile-scroll-wrap" style={{ position: 'relative', borderRadius: 10, display: 'flex', flexDirection: 'column' }}>
+      {/* Table — glass surface, scrolls internally */}
+      <div className="glass" style={{ position: 'relative', overflow: 'hidden', borderRadius: 10, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         {/* Table header — desktop only; cards below md are self-labeling */}
         <div className="hidden md:flex" style={{
           alignItems: 'center',
@@ -606,12 +594,11 @@ export default function MyLeads() {
           <div style={{ flex: '0 0 120px', padding: '8px 16px 8px 0', textAlign: 'right' }} className="section-label">Action</div>
         </div>
 
-        {/* Rows — internal scroll on desktop (position persisted to
-            sessionStorage); on mobile flows with the page instead
-            (mobile-scroll-list) */}
+        {/* Rows — internal scroll; position persisted to sessionStorage */}
         <div
           ref={scrollRef}
-          className="scrollbar-thin mobile-scroll-list"
+          className="scrollbar-thin"
+          style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}
           onScroll={e => sessionStorage.setItem(SS_SCROLL, String(e.currentTarget.scrollTop))}
         >
         {isLoading ? (

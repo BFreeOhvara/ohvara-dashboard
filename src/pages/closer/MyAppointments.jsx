@@ -94,10 +94,9 @@ export default function MyAppointments() {
         />
       </div>
 
-      {/* Appointment list — scrollable box on desktop; flows with the
-          normal page scroll on mobile (Prompt 322, mobile-scroll-list-h) */}
+      {/* Appointment list — scrollable box */}
       <div className="glass" style={{ borderRadius: 12, overflow: 'hidden' }}>
-        <div className="scrollbar-thin mobile-scroll-list-h" style={{ '--mobile-scroll-h': '560px' }}>
+        <div className="scrollbar-thin" style={{ height: 560, overflowY: 'auto' }}>
           {isLoading ? (
             <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[...Array(3)].map((_, i) => (

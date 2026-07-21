@@ -41,13 +41,7 @@ export function CloserNotificationBell({ profileId }) {
   useEffect(() => {
     if (open && ref.current) {
       const rect = ref.current.getBoundingClientRect()
-      // Prompt 322: bell now also renders in the mobile top bar, right at
-      // the screen edge — `rect.right + 8` alone would push this 340px
-      // panel mostly off-screen there. Clamp so it never runs past the
-      // viewport; unchanged in practice for the sidebar's left-edge bell,
-      // which always has plenty of room to its right.
-      const left = Math.min(rect.right + 8, window.innerWidth - 340 - 8)
-      setCoords({ top: rect.top - 4, left: Math.max(left, 8) })
+      setCoords({ top: rect.top - 4, left: rect.right + 8 })
     }
   }, [open])
 

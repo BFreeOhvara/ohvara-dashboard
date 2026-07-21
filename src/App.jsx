@@ -1,12 +1,9 @@
-import { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { SecretsProvider } from './contexts/SecretsContext'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
-import { SplashScreen } from './components/SplashScreen'
-import { isStandalone } from './lib/platform'
 // Side-effect import — attaches the beforeinstallprompt listener at app
 // boot (Prompt 286) so it's never missed while the user is still on Login.
 import './lib/installPrompt'
@@ -65,7 +62,18 @@ const qc = new QueryClient({
 
 function RoleRedirect() {
   const { profile, loading } = useAuth()
-  if (loading) return null
+  // Prompt 323 investigation — this is the installed PWA's start_url ('/'),
+  // so every cold launch hits this loading branch first. It used to render
+  // nothing at all here (unlike ProtectedRoute's matching branch, which
+  // shows a spinner) — a genuine blank screen for however long auth takes
+  // to resolve, on the one route guaranteed to run on every app open.
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-base)]">
+        <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
   if (!profile) return <Navigate to="/login" replace />
   if (profile.role === 'rep') return <Navigate to="/setter" replace />
   if (profile.role === 'closer') return <Navigate to="/closer" replace />
@@ -75,18 +83,11 @@ function RoleRedirect() {
 }
 
 export default function App() {
-  // Computed once for the app's lifetime (Prompt 320) — React Router's
-  // client-side navigation never remounts App, so a single lazy useState
-  // initializer already guarantees the splash shows exactly once per cold
-  // launch, not on every internal navigation.
-  const [showSplash, setShowSplash] = useState(() => isStandalone())
-
   return (
     <QueryClientProvider client={qc}>
       <AuthProvider>
         <SecretsProvider>
         <BrowserRouter>
-          {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
           <BackgroundOrbs />
           <Routes>
             <Route path="/login" element={<Login />} />
