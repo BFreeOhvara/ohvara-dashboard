@@ -30,6 +30,18 @@ export default function Login() {
     else                                navigate('/setter', { replace: true })
   }, [profile, loading, navigate])
 
+  // Pinch-zoom disable, page-scoped (Prompt 322) — the viewport meta tag
+  // normally lives once in index.html and applies site-wide; swapping its
+  // content on mount/unmount here keeps the zoom-lock genuinely limited to
+  // this page instead of disabling zoom everywhere. Only affects mobile
+  // touch browsers — desktop zoom controls ignore these directives.
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="viewport"]')
+    const original = meta?.getAttribute('content')
+    if (meta) meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no')
+    return () => { if (meta && original) meta.setAttribute('content', original) }
+  }, [])
+
   useEffect(() => {
     if (!loading && session && !profile && !submitting) {
       setError('Signed in but profile failed to load — check the browser console for details.')
@@ -75,7 +87,7 @@ export default function Login() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4"
+      className="login-viewport flex items-center justify-center px-4"
       style={{ background: 'var(--bg-base)' }}
     >
       <div className="w-full max-w-[380px] page-enter">

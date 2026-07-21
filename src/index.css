@@ -404,4 +404,74 @@
     transform: none;
     box-shadow: none;
   }
+
+  /* ── Mobile-only nested-scroll removal (Prompt 322) — Brayden's rule:
+     "nothing can be in a box that you scroll in on mobile." Desktop keeps
+     each page's existing page-locked height + internally-scrolling list
+     exactly as-is; below `md` the whole page flows normally instead. These
+     properties can't live inline because an inline style always wins over
+     a media query (same reason KPICard's padding/font moved out earlier).
+     Per-page desktop height differs, so it's passed in via the
+     --mobile-scroll-h custom property (set inline per instance) rather
+     than duplicating near-identical classes per page. ── */
+  .login-viewport {
+    min-height: 100vh;
+  }
+  .mobile-scroll-page {
+    height: var(--mobile-scroll-h, auto);
+  }
+  .mobile-scroll-wrap {
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+  }
+  .mobile-scroll-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .mobile-scroll-list-h {
+    height: var(--mobile-scroll-h, auto);
+    overflow-y: auto;
+  }
+  .myleads-tabs {
+    overflow-x: auto;
+  }
+  .myleads-tab {
+    height: 36px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+  @media (max-width: 767px) {
+    .login-viewport {
+      height: 100dvh;
+      min-height: 100dvh;
+      overflow: hidden;
+    }
+    .mobile-scroll-page {
+      height: auto;
+    }
+    .mobile-scroll-wrap {
+      overflow: visible;
+      flex: none;
+    }
+    .mobile-scroll-list {
+      flex: none;
+      overflow-y: visible;
+    }
+    .mobile-scroll-list-h {
+      height: auto;
+      overflow-y: visible;
+    }
+    .myleads-tabs {
+      overflow-x: visible;
+      flex-wrap: wrap;
+      row-gap: 4px;
+    }
+    .myleads-tab {
+      height: 32px;
+      padding: 0 9px;
+      font-size: 12px;
+    }
+  }
 }

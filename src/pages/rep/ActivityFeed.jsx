@@ -56,7 +56,9 @@ export default function ActivityFeed() {
     // 60px = one FeedItem row's rendered footprint (56px box + 4px space-y-1
     // gap, measured from live CSS) — shaves exactly one row off the bottom
     // per Prompt 202, so the box no longer ends flush with the last row.
-    <div style={{ height: 'calc(100vh - 48px - 60px)', display: 'flex', flexDirection: 'column' }}>
+    // Mobile (Prompt 322): height comes from mobile-scroll-page instead —
+    // same nested-scroll-box rule applied to My Leads, extended here.
+    <div className="mobile-scroll-page" style={{ display: 'flex', flexDirection: 'column', '--mobile-scroll-h': 'calc(100vh - 48px - 60px)' }}>
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-xl font-medium text-[var(--text-primary)]">Activity Feed</h1>
@@ -66,7 +68,7 @@ export default function ActivityFeed() {
         <DayFilterBar selectedDate={selectedDate} todayStr={todayStr} onChange={setSelectedDate} firstCallDateStr={firstCallDateStr} />
       </div>
 
-      <Card style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <Card className="mobile-scroll-wrap" style={{ display: 'flex', flexDirection: 'column' }}>
         {isLoading ? (
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
@@ -83,7 +85,7 @@ export default function ActivityFeed() {
             </p>
           </div>
         ) : (
-          <div className="space-y-1 scrollbar-thin" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <div className="space-y-1 scrollbar-thin mobile-scroll-list">
             {items.map((item) => (
               <FeedItem key={item.id} item={item} />
             ))}

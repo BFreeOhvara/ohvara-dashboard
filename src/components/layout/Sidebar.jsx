@@ -150,9 +150,15 @@ export function Sidebar({ open = false, onClose }) {
               {PORTAL_LABELS[profile?.role] || ''}
             </p>
           </div>
-          {profile?.role === 'admin' && <NotificationBell />}
-          {profile?.role === 'rep' && <RepNotificationBell profileId={profile.id} />}
-          {profile?.role === 'closer' && <CloserNotificationBell profileId={profile.id} />}
+          {/* Prompt 322: bell moved to the mobile top bar (DashboardLayout)
+              so it's reachable without opening the hamburger drawer —
+              hidden here below md, unchanged at md+ where the sidebar is
+              always visible anyway. */}
+          <span className="hidden md:block">
+            {profile?.role === 'admin' && <NotificationBell />}
+            {profile?.role === 'rep' && <RepNotificationBell profileId={profile.id} />}
+            {profile?.role === 'closer' && <CloserNotificationBell profileId={profile.id} />}
+          </span>
         </div>
       </div>
 
