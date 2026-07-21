@@ -42,6 +42,27 @@ export function useMyLeads() {
   })
 }
 
+// Rep-facing "Request Leads" escape valve (Prompt 324) — mirrors the closer
+// side's useRequestLeads (CloserLeads.jsx) but calls request_rep_leads
+// (migration 071) and invalidates the same ['leads','my',repId] key useMyLeads
+// reads, so a successful request shows up immediately without a manual refetch.
+export function useRequestRepLeads() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ repId, count }) => {
+      const { data, error } = await supabase.rpc('request_rep_leads', {
+        p_rep_id: repId,
+        p_count: count,
+      })
+      if (error) throw error
+      return data // number of leads assigned
+    },
+    onSuccess: (_, { repId }) => {
+      qc.invalidateQueries({ queryKey: ['leads', 'my', repId] })
+    },
+  })
+}
+
 export function useAllLeads(filters = {}) {
   return useQuery({
     queryKey: ['leads', 'all', filters],

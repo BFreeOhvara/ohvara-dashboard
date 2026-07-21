@@ -135,6 +135,16 @@ export function zonedDateStr(nowMs, timeZone) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: timeZone || DEFAULT_TIMEZONE }).format(new Date(nowMs))
 }
 
+// True if `nowMs` falls on a Saturday or Sunday from the perspective of
+// `timeZone` (Prompt 324 — weekend lead-pause). Mirrors the isodow check
+// assign_daily_batches() runs server-side against the rep's own local
+// calendar day, so the frontend's "is it the weekend" read never disagrees
+// with the cron's.
+export function isWeekendInTimezone(nowMs, timeZone) {
+  const day = new Intl.DateTimeFormat('en-US', { timeZone: timeZone || DEFAULT_TIMEZONE, weekday: 'short' }).format(new Date(nowMs))
+  return day === 'Sat' || day === 'Sun'
+}
+
 // The UTC epoch ms of the next local midnight in `timeZone`, as of `nowMs`
 // (Prompt 226 — the batch-reset countdown now tracks each rep's own
 // timezone instead of a single hardcoded UTC instant, matching the

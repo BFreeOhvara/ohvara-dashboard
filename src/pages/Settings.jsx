@@ -9,6 +9,7 @@ import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../lib/timezones'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
 import { Input, Select } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
+import { Switch } from '../components/ui/Switch'
 
 // Settings (Prompt 226) — Regional (self-service timezone, the whole reason
 // this page exists — drives assign_daily_batches()'s per-rep local-midnight
@@ -45,6 +46,7 @@ function RegionalSection({ profile }) {
   const { refreshProfile } = useAuth()
   const [timezone, setTimezone] = useState(profile.timezone || DEFAULT_TIMEZONE)
   const [saved, setSaved] = useState(false)
+  const [weekendPending, setWeekendPending] = useState(false)
 
   const dirty = timezone !== (profile.timezone || DEFAULT_TIMEZONE)
 
@@ -57,6 +59,18 @@ function RegionalSection({ profile }) {
     await refreshProfile()
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  // Weekend leads (Prompt 324) — off by default (assign_daily_batches skips
+  // a rep's own local Sat/Sun unless this is on). Rep-only: closers/admins
+  // aren't touched by that cron at all. Instant toggle, no separate Save —
+  // matches how immediate a batch-pause preference should feel, unlike the
+  // timezone field above which is deliberately a considered, confirmed action.
+  async function toggleWeekendLeads(next) {
+    setWeekendPending(true)
+    await update.mutateAsync({ profileId: profile.id, updates: { weekend_leads_enabled: next } })
+    await refreshProfile()
+    setWeekendPending(false)
   }
 
   return (
@@ -81,6 +95,21 @@ function RegionalSection({ profile }) {
           <SavedTick show={saved && !dirty} />
         </div>
       </div>
+      {profile.role === 'rep' && (
+        <div style={{ marginTop: 14 }}>
+          <SectionRow
+            label="Weekend leads"
+            description="Off by default — your batch pauses Saturday and Sunday. Turn on to keep getting a fresh batch every day, or use Request Leads on My Leads to pull extra any time."
+            control={
+              <Switch
+                checked={!!profile.weekend_leads_enabled}
+                onChange={toggleWeekendLeads}
+                disabled={weekendPending}
+              />
+            }
+          />
+        </div>
+      )}
     </Card>
   )
 }

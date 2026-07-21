@@ -2,10 +2,11 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { Phone, PhoneCall, Target, BarChart2, Check, AlarmClock, X, Search } from 'lucide-react'
-import { useMyLeads } from '../../hooks/useLeads'
+import { useMyLeads, useRequestRepLeads } from '../../hooks/useLeads'
 import { useTodayCallStats } from '../../hooks/useProfiles'
 import { useAuth } from '../../hooks/useAuth'
 import { useTrainingProgress, isTrainingComplete } from '../../hooks/useTraining'
+import { isWeekendInTimezone } from '../../lib/timezones'
 import { CallModal } from '../../components/rep/CallModal'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
@@ -320,9 +321,6 @@ export default function MyLeads() {
   // blocking card (Prompt 283), so a locked rep sees the exact page shape
   // they'll see once unlocked.
   const locked = !trainingLoading && !isTrainingComplete(training)
-  const leads = locked ? [] : rawLeads
-  const isLoading = locked ? false : rawLoading
-  const callStats = locked ? null : rawCallStats
   // Filter + scroll position survive tab switches via sessionStorage
   const [activeFilter, setActiveFilter] = useState(() => sessionStorage.getItem(SS_FILTER) || 'New')
   const [search, setSearch] = useState('')
@@ -332,6 +330,8 @@ export default function MyLeads() {
   const remindedRef = useRef(new Set())
   const scrollRef = useRef(null)
   const scrollRestored = useRef(false)
+  const requestLeads = useRequestRepLeads()
+  const [requestResult, setRequestResult] = useState(null)
 
   // Ticks the follow-up countdowns + drives the reminder check. 15s keeps the
   // list cheap while firing the reminder within 15s of the 5-min mark.
@@ -340,6 +340,36 @@ export default function MyLeads() {
     const id = setInterval(() => setNow(Date.now()), 15000)
     return () => clearInterval(id)
   }, [])
+
+  // Weekend pause (Prompt 324): assign_daily_batches() skips a rep's own
+  // local Sat/Sun by default, but useMyLeads (src/hooks/useLeads.js)
+  // deliberately shows the LATEST batch_date it can find rather than
+  // requiring an exact match to "today" (that leniency exists on purpose,
+  // to survive normal cron lag — see that hook's own comment). Left alone,
+  // a rep would keep seeing Friday's leftover batch all weekend instead of
+  // getting the day off. So: if it's the rep's weekend and they haven't
+  // opted in, AND the most-recent batch loaded isn't actually today's (UTC,
+  // the same calendar day assign_daily_batches/request_rep_leads key off),
+  // treat it as stale and render empty — exactly like the training lock
+  // already does for a different reason. The instant a rep uses Request
+  // Leads below, request_rep_leads stamps batch_date = current_date on the
+  // leads it grabs, useMyLeads' latest-batch lookup picks that date up, and
+  // this flips back to false on its own — no separate "unpause" state to track.
+  const isWeekend = isWeekendInTimezone(now, profile?.timezone)
+  const weekendOptedOut = isWeekend && !profile?.weekend_leads_enabled
+  const todayUtcStr = new Date(now).toISOString().slice(0, 10)
+  const batchIsToday = !!(rawLeads && rawLeads.length && rawLeads[0].batch_date === todayUtcStr)
+  const weekendPaused = weekendOptedOut && !batchIsToday
+
+  const leads = locked ? [] : weekendPaused ? [] : rawLeads
+  const isLoading = locked ? false : rawLoading
+  const callStats = locked ? null : rawCallStats
+
+  async function handleRequestLeads() {
+    if (requestLeads.isPending || !profile?.id) return
+    const assigned = await requestLeads.mutateAsync({ repId: profile.id, count: 150 })
+    setRequestResult(assigned)
+  }
 
   // Follow-up reminder: pop up ~5 min before a Follow-Up lead's due time.
   // DEFERRED while the call modal is open (mid-call) or another reminder is
@@ -674,6 +704,30 @@ export default function MyLeads() {
                     Go to Training Center
                   </Button>
                 </div>
+              </>
+            ) : weekendPaused ? (
+              // Plain empty state — no lock, no training copy (Prompt 324's
+              // explicit ask, distinct from the `locked` veil above). Always
+              // paired with Request Leads so a rep who wants to work the
+              // weekend anyway isn't stuck waiting for Monday.
+              <>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <Phone size={18} color="var(--text-muted)" />
+                </div>
+                <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', margin: 0 }}>
+                  No leads today — enjoy the weekend
+                </p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '4px 0 18px' }}>
+                  Your batch is paused Saturdays and Sundays. Want to work anyway?
+                </p>
+                <Button onClick={handleRequestLeads} disabled={requestLeads.isPending}>
+                  {requestLeads.isPending ? 'Requesting…' : 'Request Leads'}
+                </Button>
+                {requestResult !== null && (
+                  <p style={{ fontSize: 12, color: requestResult > 0 ? 'var(--success)' : 'var(--text-muted)', marginTop: 10 }}>
+                    {requestResult > 0 ? `+${requestResult} leads assigned` : 'No leads available in the pool right now'}
+                  </p>
+                )}
               </>
             ) : (
               <>
