@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { SecretsProvider } from './contexts/SecretsContext'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
+import { SplashScreen } from './components/SplashScreen'
+import { isStandalone } from './lib/platform'
 // Side-effect import — attaches the beforeinstallprompt listener at app
 // boot (Prompt 286) so it's never missed while the user is still on Login.
 import './lib/installPrompt'
@@ -72,11 +75,18 @@ function RoleRedirect() {
 }
 
 export default function App() {
+  // Computed once for the app's lifetime (Prompt 320) — React Router's
+  // client-side navigation never remounts App, so a single lazy useState
+  // initializer already guarantees the splash shows exactly once per cold
+  // launch, not on every internal navigation.
+  const [showSplash, setShowSplash] = useState(() => isStandalone())
+
   return (
     <QueryClientProvider client={qc}>
       <AuthProvider>
         <SecretsProvider>
         <BrowserRouter>
+          {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
           <BackgroundOrbs />
           <Routes>
             <Route path="/login" element={<Login />} />

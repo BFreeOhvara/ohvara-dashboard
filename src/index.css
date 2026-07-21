@@ -124,6 +124,20 @@
   0%, 60%, 100% { transform: translateY(0);   opacity: 0.4; }
   30%           { transform: translateY(-4px); opacity: 1; }
 }
+
+/* Mobile PWA cold-launch splash (Prompt 320) — deliberately longer than the
+   Motion section's normal 200ms ceiling, which governs repeated in-app UI
+   transitions, not a one-time pre-UI branding beat shown once per install
+   launch (Brayden's explicit Supercell-style ask). */
+@keyframes splashLogoIn {
+  0%   { opacity: 0; transform: scale(0.82); }
+  60%  { opacity: 1; transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes splashPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.75; }
+}
 .quiz-reveal { animation: quizReveal 0.45s cubic-bezier(0.4, 0, 0.2, 1); }
 .quiz-option { transition: all 0.18s ease; }
 .quiz-option:hover {
