@@ -1,26 +1,70 @@
-import { useMemo, useState } from 'react'
-import { Search, SlidersHorizontal, X } from 'lucide-react'
+import { useMemo, useState, useRef, useEffect } from 'react'
+import { Search, Filter, X, Bell } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useHierarchy } from '../../hooks/useHierarchy'
 import {
   usePolicies, useUpdatePolicy, pendingEffectuation,
-  POLICY_STATUSES, CANCELLATION_STATUSES, PRE_SUBMISSION_STATUSES,
+  POLICY_STATUSES, PRE_SUBMISSION_STATUSES,
 } from '../../hooks/usePolicies'
-import { Badge } from '../../components/ui/Badge'
-import { Button } from '../../components/ui/Button'
-import { Select } from '../../components/ui/Input'
 import { PolicyModal } from '../../components/agent/PolicyModal'
 import { money, fullName, formatDate } from '../../lib/policyFormat'
 
-// My Policies — the closer's whole book of business.
+// My Policies — literal port of the export's "Closer · My Pipeline" screen
+// (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines 647-751):
+// effective-date prompt banners, a search + Filters-popover toolbar with
+// active-filter chips, then one spacious table (Policy # / Customer / Product
+// / Carrier / AP / Reported / Status / Next action) and the reserve footnote.
 //
-// Current-state view across all time, filtered by status (Round 3: no
-// day-scoping here, unlike the event-log pages). Status filters live behind a
-// Filters control rather than a permanent pill row, and search lives on the
-// page rather than in the global header (Round 32).
+// Per-status colors are NOT in the export — they live in `data3.js`, which was
+// never handed over — so they're mapped onto the design system's own semantic
+// tokens below. Flagged; swap if the real palette differs when data3.js lands.
 
-const EMPTY_FILTERS = {
-  status: '', cancellation: '', carrier: '', product: '', state: '', from: '', to: '',
+const MONO = "'JetBrains Mono',monospace"
+
+const STATUS_STYLE = {
+  'Submitted':      { color: 'var(--info)',    dim: 'var(--info-dim)',    bd: 'var(--info-bd)' },
+  'In Effect':      { color: 'var(--success)', dim: 'var(--success-dim)', bd: 'var(--success-bd)' },
+  'Undrafted':      { color: 'var(--danger)',  dim: 'var(--danger-dim)',  bd: 'var(--danger-bd)' },
+  'Follow-up':      { color: 'var(--warning)', dim: 'var(--warning-dim)', bd: 'var(--warning-bd)' },
+  'Not Interested': { color: 'var(--text-muted)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
+}
+const CANC_STYLE = {
+  'Cancellation Pending':  { color: 'var(--warning)', dim: 'var(--warning-dim)', bd: 'var(--warning-bd)' },
+  'Cancellation Complete': { color: 'var(--success)', dim: 'var(--success-dim)', bd: 'var(--success-bd)' },
+}
+
+const EMPTY_FILTERS = { status: '', product: '', carrier: '', state: '', reported: '' }
+
+const th = {
+  textAlign: 'left', padding: '13px 20px', fontSize: 10.5, fontWeight: 700,
+  letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)',
+  borderBottom: 'var(--border-w) solid var(--border)',
+}
+const cell = { padding: 20, borderBottom: 'var(--border-w) solid var(--border)' }
+
+const selectStyle = {
+  width: '100%', height: 32, background: 'var(--bg-base)',
+  border: 'var(--border-w) solid var(--border)', borderRadius: 6,
+  padding: '0 8px', fontSize: 12, color: 'var(--text-primary)',
+}
+
+// What this policy is actually waiting on. Derived from real fields only —
+// nothing here is a canned string.
+function nextAction(p, today) {
+  if (p.status === 'Submitted' && p.effective_date && p.effective_date <= today && !p.effectuation_answered_at) {
+    return 'Confirm whether it went into effect'
+  }
+  if (p.status === 'Submitted' && p.effective_date) return `Effective ${formatDate(p.effective_date)}`
+  if (p.cancellation_status === 'Cancellation Pending') {
+    return p.cancellation_call_at
+      ? `3-way call ${new Date(p.cancellation_call_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+      : 'Schedule the 3-way cancellation call'
+  }
+  if (p.status === 'In Effect' && p.cancellation_status === 'Cancellation Complete') return 'Complete — commission released'
+  if (p.status === 'In Effect') return 'Old policy still needs cancelling'
+  if (p.status === 'Undrafted') return 'Re-work or close out'
+  if (p.status === 'Follow-up') return 'Follow up with the client'
+  return '—'
 }
 
 export default function MyPolicies() {
@@ -28,8 +72,6 @@ export default function MyPolicies() {
   const isAdmin = profile?.role === 'admin'
   const { downline } = useHierarchy(profile?.id, isAdmin)
 
-  // Admin always sees the company-wide book. A closer defaults to their own
-  // and can widen to their team only if they actually have recruits.
   const [scope, setScope] = useState('own')
   const effectiveScope = isAdmin ? 'all' : scope
   const { data: policies = [], isLoading } = usePolicies(
@@ -38,72 +80,169 @@ export default function MyPolicies() {
 
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState(EMPTY_FILTERS)
-  const [showFilters, setShowFilters] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [selected, setSelected] = useState(null)
+  const popRef = useRef(null)
 
-  const activeFilterCount = Object.values(filters).filter(Boolean).length
+  useEffect(() => {
+    if (!filtersOpen) return
+    const onDown = e => { if (popRef.current && !popRef.current.contains(e.target)) setFiltersOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [filtersOpen])
 
-  const carriers = useMemo(
-    () => [...new Set(policies.map(p => p.carrier_name).filter(Boolean))].sort(),
-    [policies]
-  )
-  const products = useMemo(
-    () => [...new Set(policies.map(p => p.product_type).filter(Boolean))].sort(),
-    [policies]
-  )
-  const states = useMemo(
-    () => [...new Set(policies.map(p => p.state).filter(Boolean))].sort(),
-    [policies]
-  )
+  const today = new Date().toISOString().slice(0, 10)
+
+  const options = useMemo(() => ({
+    carriers: [...new Set(policies.map(p => p.carrier_name).filter(Boolean))].sort(),
+    products: [...new Set(policies.map(p => p.product_type).filter(Boolean))].sort(),
+    states: [...new Set(policies.map(p => p.state).filter(Boolean))].sort(),
+  }), [policies])
 
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase()
+    const daysAgo = iso => (Date.now() - new Date(iso).getTime()) / 86400000
     return policies.filter(p => {
       if (q) {
-        const hay = [
-          p.policy_number, p.client_first_name, p.client_last_name,
-          p.client_phone, p.carrier_name, p.product_type,
-        ].filter(Boolean).join(' ').toLowerCase()
+        const hay = [p.policy_number, p.client_first_name, p.client_last_name, p.client_phone, p.carrier_name, p.product_type]
+          .filter(Boolean).join(' ').toLowerCase()
         if (!hay.includes(q)) return false
       }
       if (filters.status && p.status !== filters.status) return false
-      if (filters.cancellation && p.cancellation_status !== filters.cancellation) return false
-      if (filters.carrier && p.carrier_name !== filters.carrier) return false
       if (filters.product && p.product_type !== filters.product) return false
+      if (filters.carrier && p.carrier_name !== filters.carrier) return false
       if (filters.state && p.state !== filters.state) return false
-      const sold = p.policy_sold_date || p.created_at?.slice(0, 10)
-      if (filters.from && (!sold || sold < filters.from)) return false
-      if (filters.to && (!sold || sold > filters.to)) return false
+      if (filters.reported) {
+        const sold = p.policy_sold_date || p.created_at?.slice(0, 10)
+        if (!sold) return false
+        const d = daysAgo(sold)
+        if (filters.reported === '7' && d > 7) return false
+        if (filters.reported === '14' && d > 14) return false
+        if (filters.reported === 'older' && d <= 14) return false
+      }
       return true
     })
   }, [policies, search, filters])
 
   const needsEffectuation = useMemo(
-    () => pendingEffectuation(policies).filter(p => p.agent_id === profile?.id),
-    [policies, profile?.id]
+    () => pendingEffectuation(policies).filter(p => isAdmin || p.agent_id === profile?.id),
+    [policies, profile?.id, isAdmin]
   )
 
+  const REPORTED_LABELS = { 7: 'Last 7 days', 14: 'Last 14 days', older: 'Older than 14 days' }
+  const activeChips = [
+    filters.status && { key: 'status', label: filters.status },
+    filters.product && { key: 'product', label: filters.product },
+    filters.carrier && { key: 'carrier', label: filters.carrier },
+    filters.state && { key: 'state', label: filters.state },
+    filters.reported && { key: 'reported', label: REPORTED_LABELS[filters.reported] },
+  ].filter(Boolean)
+
   return (
-    <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <h1 style={{ fontSize: 20, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
-            My Policies
-          </h1>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>
-            {isLoading ? 'Loading…' : `${rows.length} of ${policies.length} ${policies.length === 1 ? 'policy' : 'policies'}`}
-          </p>
+    <div>
+      <EffectuationPrompts policies={needsEffectuation} />
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, height: 34, padding: '0 12px',
+          background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
+          borderRadius: 6, flex: 1, maxWidth: 360,
+        }}>
+          <Search size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by name, carrier, policy #…"
+            style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', color: 'var(--text-primary)', fontSize: 12.5, outline: 'none' }}
+          />
         </div>
 
+        <div style={{ position: 'relative' }} ref={popRef}>
+          <button
+            onClick={() => setFiltersOpen(v => !v)}
+            style={{
+              height: 34, padding: '0 14px',
+              border: `1px solid ${activeChips.length ? 'var(--accent-border)' : 'var(--border)'}`,
+              borderRadius: 6,
+              background: activeChips.length ? 'var(--accent-dim)' : 'var(--bg-surface)',
+              color: activeChips.length ? 'var(--accent)' : 'var(--text-secondary)',
+              fontSize: 12.5, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 7,
+            }}
+          >
+            <Filter size={13} />
+            Filters
+            {activeChips.length > 0 && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8,
+                background: 'var(--accent)', color: '#fff', fontSize: 10, fontFamily: MONO,
+              }}>
+                {activeChips.length}
+              </span>
+            )}
+          </button>
+
+          {filtersOpen && (
+            <div style={{
+              position: 'absolute', top: 40, left: 0, width: 300,
+              background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)',
+              borderRadius: 10, padding: 16, zIndex: 30,
+              boxShadow: '0 12px 32px rgba(0,0,0,0.28)', animation: 'fadeUp 120ms ease-out',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>Filter policies</span>
+                <button
+                  onClick={() => setFilters(EMPTY_FILTERS)}
+                  style={{ border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 11, fontWeight: 700, padding: 0 }}
+                >
+                  Clear all
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <FilterSelect
+                  label="Status" value={filters.status}
+                  onChange={v => setFilters(f => ({ ...f, status: v }))}
+                  options={[['', 'All statuses'], ...POLICY_STATUSES.map(s => [
+                    s, PRE_SUBMISSION_STATUSES.includes(s) ? `${s} (not yet in use)` : s,
+                  ])]}
+                />
+                <FilterSelect
+                  label="Product" value={filters.product}
+                  onChange={v => setFilters(f => ({ ...f, product: v }))}
+                  options={[['', 'All products'], ...options.products.map(p => [p, p])]}
+                />
+                <FilterSelect
+                  label="Carrier" value={filters.carrier}
+                  onChange={v => setFilters(f => ({ ...f, carrier: v }))}
+                  options={[['', 'All carriers'], ...options.carriers.map(c => [c, c])]}
+                />
+                <FilterSelect
+                  label="State" value={filters.state}
+                  onChange={v => setFilters(f => ({ ...f, state: v }))}
+                  options={[['', 'All states'], ...options.states.map(s => [s, s])]}
+                />
+                <FilterSelect
+                  label="Reported" value={filters.reported}
+                  onChange={v => setFilters(f => ({ ...f, reported: v }))}
+                  options={[['', 'Any time'], ['7', 'Last 7 days'], ['14', 'Last 14 days'], ['older', 'Older than 14 days']]}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+          {isLoading ? 'Loading…' : `${rows.length} of ${policies.length} ${policies.length === 1 ? 'policy' : 'policies'}`}
+        </span>
+
         {!isAdmin && downline.length > 0 && (
-          <div style={{ display: 'flex', gap: 4, padding: 3, background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 8 }}>
+          <div style={{ display: 'flex', gap: 2, padding: 2, background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)', borderRadius: 6, marginLeft: 'auto' }}>
             {[['own', 'You'], ['team', 'Team']].map(([key, label]) => (
               <button
                 key={key}
                 onClick={() => setScope(key)}
                 style={{
-                  padding: '6px 14px', borderRadius: 6, fontSize: 12,
-                  fontWeight: scope === key ? 500 : 400, cursor: 'pointer', border: 'none',
+                  border: 'none', borderRadius: 4, padding: '4px 10px', fontSize: 11, fontWeight: 700,
                   background: scope === key ? 'var(--accent-dim)' : 'transparent',
                   color: scope === key ? 'var(--accent)' : 'var(--text-muted)',
                 }}
@@ -115,128 +254,125 @@ export default function MyPolicies() {
         )}
       </div>
 
-      <EffectuationPrompt policies={needsEffectuation} />
-
-      {/* Search + Filters (Round 32) */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <div style={{ position: 'relative', flex: 1, minWidth: 220 }}>
-          <Search size={14} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search by client, policy #, carrier…"
-            style={{
-              width: '100%', padding: '9px 12px 9px 32px',
-              background: 'var(--bg-base)', border: '0.5px solid var(--border)',
-              borderRadius: 8, fontSize: 13, color: 'var(--text-primary)', outline: 'none',
-            }}
-          />
-        </div>
-        <Button variant="secondary" size="md" onClick={() => setShowFilters(v => !v)}>
-          <SlidersHorizontal size={13} />
-          Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
-        </Button>
-        {activeFilterCount > 0 && (
-          <Button variant="ghost" size="md" onClick={() => setFilters(EMPTY_FILTERS)}>
-            <X size={13} /> Clear
-          </Button>
-        )}
-      </div>
-
-      {showFilters && (
-        <div className="glass" style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 14 }}>
-          <Select label="Status" value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}>
-            <option value="">Any status</option>
-            {POLICY_STATUSES.map(s => (
-              <option key={s} value={s}>
-                {/* Both pre-submission statuses are unreachable until live-call
-                    handling lands — say so rather than looking broken. */}
-                {s}{PRE_SUBMISSION_STATUSES.includes(s) ? ' (not yet in use)' : ''}
-              </option>
-            ))}
-          </Select>
-          <Select label="Cancellation" value={filters.cancellation} onChange={e => setFilters(f => ({ ...f, cancellation: e.target.value }))}>
-            <option value="">Any</option>
-            {CANCELLATION_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-          </Select>
-          <Select label="Carrier" value={filters.carrier} onChange={e => setFilters(f => ({ ...f, carrier: e.target.value }))}>
-            <option value="">Any carrier</option>
-            {carriers.map(c => <option key={c} value={c}>{c}</option>)}
-          </Select>
-          <Select label="Product" value={filters.product} onChange={e => setFilters(f => ({ ...f, product: e.target.value }))}>
-            <option value="">Any product</option>
-            {products.map(c => <option key={c} value={c}>{c}</option>)}
-          </Select>
-          <Select label="State" value={filters.state} onChange={e => setFilters(f => ({ ...f, state: e.target.value }))}>
-            <option value="">Any state</option>
-            {states.map(c => <option key={c} value={c}>{c}</option>)}
-          </Select>
-          <div className="flex flex-col gap-1.5">
-            <label className="section-label">Sold from</label>
-            <input type="date" value={filters.from} onChange={e => setFilters(f => ({ ...f, from: e.target.value }))} className="date-field" />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="section-label">Sold to</label>
-            <input type="date" value={filters.to} onChange={e => setFilters(f => ({ ...f, to: e.target.value }))} className="date-field" />
-          </div>
-        </div>
-      )}
-
-      {/* Rows — deliberately spacious (Round 32 item 2), and no nested scroll
-          box: the page itself scrolls, per the standing mobile rule. */}
-      {isLoading ? (
-        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Loading policies…</p>
-      ) : rows.length === 0 ? (
-        <div className="glass" style={{ padding: 40, textAlign: 'center' }}>
-          <p style={{ fontSize: 14, color: 'var(--text-primary)', margin: 0 }}>
-            {policies.length === 0 ? 'No policies yet' : 'No policies match these filters'}
-          </p>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '6px 0 0' }}>
-            {policies.length === 0
-              ? 'Submitted deals land here from the New Submission form.'
-              : 'Try clearing a filter or widening the date range.'}
-          </p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {rows.map(p => (
+      {activeChips.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+          {activeChips.map(c => (
             <button
-              key={p.id}
-              onClick={() => setSelected(p)}
-              className="glass policy-row"
+              key={c.key}
+              onClick={() => setFilters(f => ({ ...f, [c.key]: '' }))}
               style={{
-                display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
-                width: '100%', padding: '16px 18px', textAlign: 'left', cursor: 'pointer',
+                height: 26, padding: '0 6px 0 10px', border: '1px solid var(--accent-border)',
+                borderRadius: 6, background: 'var(--accent-dim)', color: 'var(--accent)',
+                fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6,
               }}
             >
-              <div style={{ flex: '1 1 180px', minWidth: 0 }}>
-                <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
-                  {fullName(p)}
-                </p>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '3px 0 0' }}>
-                  {p.carrier_name || 'No carrier'}{p.policy_number ? ` · ${p.policy_number}` : ''}
-                </p>
-              </div>
-              <div style={{ flex: '0 1 130px' }}>
-                <p className="section-label" style={{ margin: 0 }}>Annual Premium</p>
-                <p style={{ fontFamily: 'var(--font-mono)', fontSize: 14, color: 'var(--text-primary)', margin: '3px 0 0' }}>
-                  {money(p.annual_premium)}
-                </p>
-              </div>
-              <div style={{ flex: '0 1 120px' }}>
-                <p className="section-label" style={{ margin: 0 }}>Sold</p>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '3px 0 0' }}>
-                  {formatDate(p.policy_sold_date)}
-                </p>
-              </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flex: '0 0 auto' }}>
-                <Badge label={p.status} />
-                {p.cancellation_status && <Badge label={p.cancellation_status} />}
-              </div>
+              {c.label}<X size={11} />
             </button>
           ))}
         </div>
       )}
+
+      <div style={{
+        background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
+        borderRadius: 8, overflow: 'hidden',
+      }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={th}>Policy #</th>
+                <th style={th}>Customer</th>
+                <th style={th}>Product</th>
+                <th style={th}>Carrier</th>
+                <th style={{ ...th, textAlign: 'right' }}>AP</th>
+                <th style={{ ...th, textAlign: 'right' }}>Reported</th>
+                <th style={th}>Status</th>
+                <th style={th}>Next action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ ...cell, fontSize: 13, color: 'var(--text-muted)' }}>
+                    {isLoading
+                      ? 'Loading policies…'
+                      : policies.length === 0
+                        ? 'No policies yet — submitted deals land here from the New Submission form.'
+                        : 'No policies match these filters.'}
+                  </td>
+                </tr>
+              ) : rows.map(p => {
+                const st = STATUS_STYLE[p.status] || STATUS_STYLE['Submitted']
+                const cc = CANC_STYLE[p.cancellation_status]
+                return (
+                  <tr
+                    key={p.id}
+                    onClick={() => setSelected(p)}
+                    style={{ cursor: 'pointer' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                  >
+                    <td style={{ ...cell, fontSize: 11.5, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
+                      {p.policy_number || '—'}
+                    </td>
+                    <td style={{ ...cell, minWidth: 160 }}>
+                      <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                        {fullName(p)}
+                      </span>
+                      <span style={{ display: 'block', marginTop: 3, fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
+                        {[p.state, p.client_phone].filter(Boolean).join(' · ') || '—'}
+                      </span>
+                    </td>
+                    <td style={cell}>
+                      <span style={{
+                        display: 'inline-flex', padding: '3px 8px', borderRadius: 4, fontSize: 10.5, fontWeight: 700,
+                        background: 'var(--bg-elevated)', color: 'var(--text-secondary)',
+                        border: '1px solid var(--border)', whiteSpace: 'nowrap',
+                      }}>
+                        {p.product_type || '—'}
+                      </span>
+                    </td>
+                    <td style={{ ...cell, fontSize: 12.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                      {p.carrier_name || '—'}
+                    </td>
+                    <td style={{ ...cell, textAlign: 'right', fontSize: 12.5, color: 'var(--text-primary)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
+                      {money(p.annual_premium)}
+                    </td>
+                    <td style={{ ...cell, textAlign: 'right', fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
+                      {formatDate(p.policy_sold_date)}
+                    </td>
+                    <td style={cell}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                        <span style={{
+                          display: 'inline-flex', padding: '3px 8px', borderRadius: 4, fontSize: 10.5, fontWeight: 700,
+                          background: st.dim, color: st.color, border: `1px solid ${st.bd}`, whiteSpace: 'nowrap',
+                        }}>
+                          {p.status}
+                        </span>
+                        {cc && (
+                          <span style={{
+                            display: 'inline-flex', padding: '2px 7px', borderRadius: 4, fontSize: 9.5, fontWeight: 700,
+                            background: cc.dim, color: cc.color, border: `1px solid ${cc.bd}`, whiteSpace: 'nowrap',
+                          }}>
+                            {p.cancellation_status}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td style={{ ...cell, fontSize: 12, color: 'var(--text-secondary)', maxWidth: 230, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {nextAction(p, today)}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p style={{ margin: '10px 2px 0', fontSize: 11, color: 'var(--text-muted)' }}>
+        A policy isn't complete until the old one is cancelled on the 3-way call — commission stays in reserve until then. Click any row for the full record.
+      </p>
 
       {selected && (
         <PolicyModal
@@ -249,33 +385,62 @@ export default function MyPolicies() {
   )
 }
 
-// Effective-Date-triggered prompt (Round 46). Fires on or after the effective
-// date already captured at submission; the answer moves the record to In
-// Effect or Undrafted and is stamped so it never asks twice.
-function EffectuationPrompt({ policies }) {
+function FilterSelect({ label, value, onChange, options }) {
+  return (
+    <label style={{ display: 'block' }}>
+      <span style={{
+        display: 'block', marginBottom: 5, fontSize: 10, fontWeight: 700,
+        letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)',
+      }}>
+        {label}
+      </span>
+      <select value={value} onChange={e => onChange(e.target.value)} style={selectStyle}>
+        {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+      </select>
+    </label>
+  )
+}
+
+// Effective-date prompts — one banner per policy that hit its effective date,
+// exactly as the export stacks them (lines 649-660).
+function EffectuationPrompts({ policies }) {
   const update = useUpdatePolicy()
   if (!policies.length) return null
-  const p = policies[0]
 
-  function answer(status) {
+  function answer(p, status) {
     update.mutate({ id: p.id, status, effectuation_answered_at: new Date().toISOString() })
   }
 
   return (
-    <div className="glass-accent" style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-      <div style={{ flex: 1, minWidth: 220 }}>
-        <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
-          Did this policy go into effect?
-        </p>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '4px 0 0' }}>
-          {fullName(p)} · {p.carrier_name || 'No carrier'} · effective {formatDate(p.effective_date)}
-          {policies.length > 1 ? ` · ${policies.length - 1} more waiting` : ''}
-        </p>
-      </div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <Button size="sm" variant="success" disabled={update.isPending} onClick={() => answer('In Effect')}>Yes</Button>
-        <Button size="sm" variant="secondary" disabled={update.isPending} onClick={() => answer('Undrafted')}>No</Button>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+      {policies.map(p => (
+        <div
+          key={p.id}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
+            background: 'var(--warning-dim)', border: '1px solid var(--warning-bd)', borderRadius: 8,
+          }}
+        >
+          <Bell size={15} style={{ color: 'var(--warning)', flexShrink: 0 }} />
+          <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-primary)' }}>
+            <strong>{fullName(p)}</strong> reached its effective date ({formatDate(p.effective_date)}) — did this policy go into effect?
+          </span>
+          <button
+            onClick={() => answer(p, 'In Effect')}
+            disabled={update.isPending}
+            style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700 }}
+          >
+            Yes
+          </button>
+          <button
+            onClick={() => answer(p, 'Undrafted')}
+            disabled={update.isPending}
+            style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700 }}
+          >
+            No
+          </button>
+        </div>
+      ))}
     </div>
   )
 }
