@@ -6,7 +6,10 @@
 // (sb_publishable_*) is not a JWT, so JWT verification can't gate this. The
 // invite token itself is the secret: a 12-char URL-safe CSPRNG ID (Prompt 294
 // shortened it from the original 32-byte hex — still ~72 bits, effectively
-// unguessable), single-use, 7-day expiry, admin-only to create.
+// unguessable), single-use, 7-day expiry. Creation is no longer admin-only
+// as of migration 072 (Prompt 326): any closer can mint a 'closer' invite so
+// team owners self-service their own downline; minting any other role still
+// requires admin.
 //
 // Two actions:
 //   { action: 'check', token }  → { valid, role } — the signup page's load gate
