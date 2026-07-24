@@ -1,23 +1,29 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import {
-  Users, Phone, BarChart2, Target, Bell,
-  Calendar, DollarSign, TrendingUp, BookOpen,
-  LayoutDashboard, List, Columns, RefreshCw, Database, LogOut,
-  Zap, Search, PhoneCall, GitBranch, MessageSquare, Home, Wallet, Settings,
-  Smartphone, FileText, Radio, Calculator, Send, Building2, Stethoscope,
+  Users, BarChart2, Bell, DollarSign, BookOpen, LayoutDashboard, Columns,
+  LogOut, Zap, PhoneCall, GitBranch, MessageSquare, Home, Wallet, Settings,
+  Smartphone, FileText, Headphones, Calculator, Globe, Shield, Award,
+  Megaphone, GraduationCap, ChevronRight, Phone, Target,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { NotificationBell } from '../admin/NotificationBell'
-import { RepNotificationBell } from '../rep/RepNotificationBell'
-import { CloserNotificationBell } from '../closer/CloserNotificationBell'
 import { MobileAppModal } from './MobileAppModal'
 import { isStandalone } from '../../lib/platform'
 import ohvaraLogo from '../../assets/ohvara-logo.png'
 
-// Hidden once the app is already running installed (standalone display
-// mode) — nothing left to offer at that point.
+// Sidebar — a literal port of the approved Claude Design export's `<aside>`
+// (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines 57-112).
+// Navy fill, collapsible to 64px, grouped nav with an accent rail on the
+// active item, closer duty widget, profile row, sign out. Sizes/paddings are
+// the export's, not re-derived — don't "clean them up" (Prompt 327).
+//
+// Icons: the export references an icon sprite (`sprite.svg`) that was never
+// handed over, so each sprite name below is mapped to its lucide equivalent
+// by name. Flagged in the session log — swap to the real sprite when it lands.
+
+// Hidden once the app is already running installed (standalone display mode).
+// Rep-only: it's a setter-era affordance and isn't in the approved design.
 function MobileAppBox() {
   const [open, setOpen] = useState(false)
   if (isStandalone()) return null
@@ -27,17 +33,14 @@ function MobileAppBox() {
         onClick={() => setOpen(true)}
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
-          width: 'calc(100% - 16px)', margin: '0 8px 8px',
-          padding: '9px 10px',
-          background: 'var(--bg-elevated)', border: '0.5px solid var(--border)',
+          width: 'calc(100% - 20px)', margin: '0 10px 10px',
+          padding: '9px 11px',
+          background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)',
           borderRadius: 8, cursor: 'pointer', textAlign: 'left',
           fontSize: 12, color: 'var(--text-secondary)',
-          transition: 'border-color 100ms',
         }}
-        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)' }}
-        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
       >
-        <Smartphone size={13} color="var(--accent)" style={{ flexShrink: 0 }} />
+        <Smartphone size={13} style={{ flexShrink: 0 }} />
         Mobile App
       </button>
       {open && <MobileAppModal onClose={() => setOpen(false)} />}
@@ -45,79 +48,95 @@ function MobileAppBox() {
   )
 }
 
+// Groups and order are the export's NAVDEF verbatim (closer + admin).
 const NAV = {
   rep: [
-    { to: '/setter',             label: 'My Leads',       icon: Phone },
-    { to: '/setter/training',    label: 'Training',       icon: BookOpen },
-    { to: '/setter/calls',       label: 'My Calls',       icon: PhoneCall },
-    { to: '/setter/stats',       label: 'My Stats',       icon: BarChart2 },
-    { to: '/setter/goals',       label: 'My Goals',       icon: Target },
-    { to: '/setter/commissions', label: 'My Commissions', icon: DollarSign },
-    { to: '/setter/feed',        label: 'Activity',       icon: Bell },
-    { to: '/setter/messages',    label: 'Messages',       icon: MessageSquare },
+    { group: 'Today', items: [
+      { to: '/setter', label: 'My Leads', icon: Phone },
+      { to: '/setter/calls', label: 'My Calls', icon: PhoneCall },
+    ] },
+    { group: 'Growth', items: [
+      { to: '/setter/stats', label: 'My Stats', icon: BarChart2 },
+      { to: '/setter/goals', label: 'My Goals', icon: Target },
+      { to: '/setter/commissions', label: 'My Commissions', icon: DollarSign },
+      { to: '/setter/training', label: 'Training', icon: BookOpen },
+    ] },
+    { group: 'Account', items: [
+      { to: '/setter/feed', label: 'Activity', icon: Bell },
+      { to: '/setter/messages', label: 'Messages', icon: MessageSquare },
+    ] },
   ],
-  // Insurance agent nav (Prompt 326). The old SMB closer nav — Appointments,
-  // Setter Activity, Revenue and friends — belongs to the wound-down
-  // business; those routes still exist and still work by URL, they're just
-  // no longer what an agent sees on login. Grouping follows Round 38:
-  // pipeline pages under Sales, mid-work utilities under Tools.
   closer: [
-    { section: 'Sales' },
-    { to: '/agent',              label: 'Overview',        icon: LayoutDashboard },
-    { to: '/agent/policies',     label: 'My Policies',     icon: FileText },
-    { to: '/agent/calls',        label: 'My Calls',        icon: PhoneCall },
-    { to: '/agent/live',         label: 'Live Call',       icon: Radio },
-    { section: 'Tools' },
-    { to: '/agent/quoter',       label: 'Quoter',          icon: Calculator },
-    { to: '/agent/submissions',  label: 'Submissions',     icon: Send },
-    { to: '/agent/carriers',     label: 'Carrier Portals', icon: Building2 },
-    { to: '/agent/underwriting', label: 'Underwriting',    icon: Stethoscope },
-    { section: 'Growth' },
-    { to: '/agent/stats',        label: 'Stats',           icon: BarChart2 },
-    { to: '/agent/hierarchy',    label: 'Hierarchy',       icon: GitBranch },
-    { to: '/agent/training',     label: 'Training',        icon: BookOpen },
-    { to: '/agent/commissions',  label: 'Commissions',     icon: DollarSign },
+    { group: 'Today', items: [
+      { to: '/agent', label: 'Overview', icon: Home },
+      { to: '/agent/live', label: 'Live Call', icon: Headphones },
+    ] },
+    { group: 'Sales', items: [
+      { to: '/agent/calls', label: 'My Calls', icon: PhoneCall },
+      { to: '/agent/policies', label: 'My Policies', icon: GitBranch },
+    ] },
+    { group: 'Tools', items: [
+      { to: '/agent/quoter', label: 'Quoter', icon: Zap },
+      { to: '/agent/underwriting', label: 'Underwriting', icon: Shield },
+      { to: '/agent/submissions', label: 'Submissions', icon: FileText },
+      { to: '/agent/carriers', label: 'Carrier Portals', icon: Globe },
+    ] },
+    { group: 'Growth', items: [
+      { to: '/agent/stats', label: 'Stats', icon: BarChart2 },
+      { to: '/agent/hierarchy', label: 'Hierarchy', icon: Users },
+      { to: '/agent/training', label: 'Training Center', icon: GraduationCap },
+      { to: '/agent/commissions', label: 'Commissions', icon: DollarSign },
+    ] },
+    { group: 'Account', items: [
+      { to: '/settings', label: 'Settings', icon: Settings },
+    ] },
   ],
   admin: [
-    { section: 'Insurance' },
-    { to: '/agent',              label: 'Book Overview',      icon: LayoutDashboard },
-    { to: '/agent/policies',     label: 'All Policies',       icon: FileText },
-    { to: '/agent/carriers',     label: 'Carrier Portals',    icon: Building2 },
-    { to: '/agent/hierarchy',    label: 'Hierarchy',          icon: GitBranch },
-    { section: 'Platform' },
-    { to: '/admin',              label: 'Overview',           icon: Columns },
-    { to: '/admin/reps',         label: 'Setter Performance', icon: BarChart2 },
-    { to: '/admin/pipeline',     label: 'Pipeline',           icon: List },
-    { to: '/admin/users',        label: 'Users',              icon: Users },
-    { to: '/admin/commissions',  label: 'Commissions',        icon: DollarSign },
-    { to: '/admin/payouts',      label: 'Payouts',            icon: Wallet },
-    { to: '/admin/messages',     label: 'Messages',           icon: MessageSquare },
+    { group: 'Monitor', items: [
+      { to: '/admin', label: 'Overview', icon: LayoutDashboard },
+      { to: '/admin/call-pipeline', label: 'Call Pipeline', icon: Columns },
+      { to: '/admin/roster', label: 'Closer Roster', icon: Users },
+      { to: '/admin/leaderboard', label: 'Leaderboard', icon: Award },
+      { to: '/agent/hierarchy', label: 'Hierarchy', icon: GitBranch },
+    ] },
+    { group: 'Revenue', items: [
+      { to: '/admin/commissions', label: 'Commissions', icon: Wallet },
+      { to: '/admin/lead-sources', label: 'Lead Sources', icon: Megaphone },
+    ] },
+    { group: 'Manage', items: [
+      { to: '/admin/users', label: 'Users & Access', icon: Shield },
+      { to: '/settings', label: 'Settings', icon: Settings },
+    ] },
   ],
   client: [
-    { to: '/client',             label: 'Overview',    icon: Home },
-    { to: '/client/automations', label: 'Automations', icon: Zap },
-    { to: '/client/messages',    label: 'Messages',    icon: MessageSquare },
+    { group: 'Portal', items: [
+      { to: '/client', label: 'Overview', icon: Home },
+      { to: '/client/automations', label: 'Automations', icon: Zap },
+      { to: '/client/messages', label: 'Messages', icon: MessageSquare },
+    ] },
   ],
 }
 
-// Sidebar-specific "X Portal" subtitle chrome — not the same as the shared
-// bare role label (roleLabels.js), since admin deliberately doesn't get a
-// "Portal" suffix here. Already said "Setter Portal" for rep correctly
-// before Prompt 299 — kept as-is, just renamed from the old `ROLE_LABELS`
-// to stop colliding in name (not value) with the shared module.
-// 'Agent Portal' as of the insurance pivot (Prompt 326) — the closer role is
-// now an insurance agent. Display-only; the stored role value is untouched.
-const PORTAL_LABELS = { rep: 'Setter Portal', closer: 'Agent Portal', admin: 'Admin', client: 'Client Portal' }
+// Export's `portalLabel`: admin is bare "Admin", the agent role reads as a
+// portal. rep/client keep their own wording from the pre-pivot app.
+const PORTAL_LABELS = { rep: 'Setter Portal', closer: 'Closer Portal', admin: 'Admin', client: 'Client Portal' }
 
-// Prompt 287 fix — the sidebar is fixed-width and was eating 64% of any
-// phone-width viewport (240px of 375px) with no way to get it out of the
-// way. Below `md` it's now an off-canvas drawer (translated fully offscreen
-// unless `open`), toggled by DashboardLayout's mobile top bar; at `md` and
-// up it behaves exactly as before (always visible, `open`/`onClose` inert).
-export function Sidebar({ open = false, onClose }) {
+const COLLAPSE_KEY = 'ohvara-sidebar-collapsed'
+const DUTY_KEY = 'ohvara-duty'
+
+export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
-  const links = NAV[profile?.role] || []
+  const groups = NAV[profile?.role] || []
+
+  // Duty toggle is part of the approved design and belongs to Live Call,
+  // which has no backend yet — so it persists locally and drives nothing
+  // server-side. Flagged; wire it to real transfer routing when Live Call
+  // gets built.
+  const [duty, setDuty] = useState(() => localStorage.getItem(DUTY_KEY) !== 'off')
+  useEffect(() => { localStorage.setItem(DUTY_KEY, duty ? 'on' : 'off') }, [duty])
+
+  const expanded = !collapsed
 
   async function handleSignOut() {
     await signOut()
@@ -140,162 +159,183 @@ export function Sidebar({ open = false, onClose }) {
       <aside
         className={clsx('sidebar-glass', 'md:translate-x-0', open ? 'translate-x-0' : '-translate-x-full')}
         style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          bottom: 0,
-          width: 240,
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100vh',
-          overflow: 'hidden',
-          zIndex: 100,
-          transition: 'transform 200ms ease',
+          position: 'fixed', top: 0, left: 0, bottom: 0,
+          width: expanded ? 224 : 64,
+          display: 'flex', flexDirection: 'column',
+          height: '100vh', overflow: 'hidden', zIndex: 100,
+          transition: 'transform 200ms ease, width 150ms',
         }}
       >
-      {/* Brand */}
-      <div style={{ padding: '20px 16px 16px', borderBottom: '0.5px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img
-            src={ohvaraLogo}
-            alt="Ohvara"
-            style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
-          />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1, margin: 0 }}>
-              Ohvara
-            </p>
-            <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1 }}>
-              {PORTAL_LABELS[profile?.role] || ''}
-            </p>
-          </div>
-          {profile?.role === 'admin' && <NotificationBell />}
-          {profile?.role === 'rep' && <RepNotificationBell profileId={profile.id} />}
-          {profile?.role === 'closer' && <CloserNotificationBell profileId={profile.id} />}
+        {/* Brand + collapse toggle */}
+        <div style={{
+          height: 60, padding: '0 14px',
+          borderBottom: 'var(--border-w) solid var(--sidebar-border)',
+          display: 'flex', alignItems: 'center', gap: 10,
+          justifyContent: expanded ? 'flex-start' : 'center',
+        }}>
+          {expanded && (
+            <>
+              <img src={ohvaraLogo} alt="Ohvara" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.1 }}>Ohvara</p>
+                <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)', lineHeight: 1 }}>
+                  {PORTAL_LABELS[profile?.role] || ''}
+                </p>
+              </div>
+            </>
+          )}
+          <button
+            onClick={onToggleCollapse}
+            title={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
+            className="hidden md:inline-flex"
+            style={{
+              alignItems: 'center', justifyContent: 'center',
+              width: 28, height: 28,
+              border: '1px solid var(--border)', borderRadius: 7,
+              background: 'var(--bg-elevated)', color: 'var(--text-primary)', flexShrink: 0,
+            }}
+          >
+            <ChevronRight size={20} strokeWidth={2.75} style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+          </button>
         </div>
-      </div>
 
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: '10px 10px', overflowY: 'auto' }} className="scrollbar-thin">
-        {links.map(({ to, label, icon: Icon, section }, i) => section ? (
-          // Group header (Prompt 326) — a label, not a link. First one skips
-          // the top margin so the nav doesn't start with a gap.
-          <p
-            key={`section-${section}`}
-            className="section-label"
-            style={{ margin: i === 0 ? '2px 0 6px' : '14px 0 6px', paddingLeft: 14 }}
-          >
-            {section}
-          </p>
-        ) : (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/setter' || to === '/closer' || to === '/admin' || to === '/client' || to === '/agent'}
-            onClick={onClose}
-            className={({ isActive }) =>
-              clsx(
-                'nav-item tab-transition',
-                isActive ? 'nav-active' : ''
-              )
-            }
-            style={{ display: 'block', textDecoration: 'none', marginBottom: 3 }}
-          >
-            {({ isActive }) => (
-              <span style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '12px 12px 12px 14px',
-                borderRadius: 8,
-                fontSize: 14,
-                fontWeight: isActive ? 500 : 400,
-                color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
-                position: 'relative',
-                background: isActive ? 'var(--bg-elevated)' : 'transparent',
-                minHeight: 44,
-              }}>
-                {isActive && (
-                  <span style={{
-                    position: 'absolute',
-                    left: 0, top: 8, bottom: 8,
-                    width: 2,
-                    background: 'var(--accent)',
-                    borderRadius: '0 2px 2px 0',
-                  }} />
-                )}
-                <Icon size={16} style={{ flexShrink: 0, color: isActive ? 'var(--accent)' : 'inherit' }} />
-                <span style={{ flex: 1 }}>{label}</span>
-                {isActive && <span className="nav-active-dot" />}
-              </span>
-            )}
-          </NavLink>
-        ))}
-      </nav>
+        {/* Nav */}
+        <nav style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 8px' }} className="scrollbar-thin">
+          {groups.map(g => (
+            <div key={g.group} style={{ marginBottom: 20 }}>
+              {expanded && (
+                <p style={{
+                  margin: '2px 0 5px', padding: '0 8px', fontSize: 10, fontWeight: 700,
+                  letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--text-muted)',
+                }}>
+                  {g.group}
+                </p>
+              )}
+              {g.items.map(({ to, label, icon: Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === '/agent' || to === '/admin' || to === '/setter' || to === '/client'}
+                  onClick={onClose}
+                  title={label}
+                  style={{ display: 'block', textDecoration: 'none' }}
+                >
+                  {({ isActive }) => (
+                    <span
+                      style={{
+                        display: 'flex', alignItems: 'center',
+                        justifyContent: expanded ? 'flex-start' : 'center',
+                        gap: 9, width: '100%', padding: '9px 10px', marginBottom: 2,
+                        border: 'none', borderRadius: 6,
+                        background: isActive ? 'var(--bg-elevated)' : 'transparent',
+                        color: 'var(--text-primary)',
+                        fontSize: 13, fontWeight: isActive ? 500 : 400,
+                        textAlign: 'left', position: 'relative',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = isActive ? 'var(--bg-elevated)' : 'transparent' }}
+                    >
+                      <span style={{
+                        position: 'absolute', left: -10, top: 6, bottom: 6, width: 2,
+                        borderRadius: '0 2px 2px 0',
+                        background: isActive ? 'var(--accent)' : 'transparent',
+                      }} />
+                      <Icon size={15} style={{ flexShrink: 0, color: isActive ? 'var(--accent)' : 'currentColor' }} />
+                      {expanded && (
+                        <>
+                          <span style={{ flex: 1 }}>{label}</span>
+                          {to === '/agent/live' && duty && (
+                            <span style={{
+                              width: 6, height: 6, borderRadius: '50%', background: 'var(--success)',
+                              animation: 'pulseDot 2.4s ease-in-out infinite',
+                            }} />
+                          )}
+                        </>
+                      )}
+                    </span>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          ))}
+        </nav>
 
-      <MobileAppBox />
-
-      {/* User + sign out */}
-      <div style={{ padding: '8px 8px', borderTop: '0.5px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px 10px' }}>
+        {/* Duty widget — closers only, expanded only (export: showDutyWidget) */}
+        {profile?.role === 'closer' && expanded && (
           <div style={{
-            width: 26, height: 26,
-            borderRadius: '50%',
-            background: 'var(--accent-dim)',
-            border: '0.5px solid var(--accent-border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
+            display: 'flex', alignItems: 'center', gap: 8,
+            margin: '0 10px 10px', padding: '9px 11px',
+            background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)', borderRadius: 8,
           }}>
-            <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--accent)' }}>{initials}</span>
+            <span style={{ flex: 1, fontSize: 12, color: 'var(--text-secondary)' }}>
+              {duty ? 'Available for transfers' : 'Off duty'}
+            </span>
+            <div
+              onClick={() => setDuty(d => !d)}
+              style={{
+                width: 32, height: 18, borderRadius: 9,
+                background: duty ? 'var(--success)' : 'var(--bg-base)',
+                position: 'relative', cursor: 'pointer', transition: 'background 120ms', flexShrink: 0,
+              }}
+            >
+              <span style={{
+                position: 'absolute', top: 2, left: duty ? 16 : 2,
+                width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left 120ms',
+              }} />
+            </div>
           </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {profile?.full_name}
-            </p>
-            <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '1px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {profile?.username || profile?.email}
-            </p>
-          </div>
-          <NavLink
-            to="/settings"
-            title="Settings"
-            onClick={onClose}
-            className={({ isActive }) => clsx(
-              'tab-transition',
-              isActive ? '' : ''
-            )}
-            style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 26, height: 26, borderRadius: 6, flexShrink: 0,
-              color: isActive ? 'var(--accent)' : 'var(--text-muted)',
-              background: isActive ? 'var(--bg-elevated)' : 'transparent',
-            })}
+        )}
+
+        {profile?.role === 'rep' && expanded && <MobileAppBox />}
+
+        {/* Profile + sign out */}
+        <div style={{ borderTop: 'var(--border-w) solid var(--sidebar-border)' }}>
+          <div
+            onClick={() => { onClose?.(); navigate('/settings') }}
+            style={{ padding: 10, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
           >
-            <Settings size={15} />
-          </NavLink>
+            <span style={{
+              width: 26, height: 26, borderRadius: '50%',
+              background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 10, fontWeight: 700, color: 'var(--accent)', flexShrink: 0,
+            }}>
+              {initials}
+            </span>
+            {expanded && (
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {profile?.full_name}
+                </p>
+                <p style={{ margin: '1px 0 0', fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {profile?.username || profile?.email}
+                </p>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={handleSignOut}
+            title="Sign out"
+            style={{
+              display: 'flex', alignItems: 'center',
+              justifyContent: expanded ? 'flex-start' : 'center',
+              gap: 9, width: 'calc(100% - 20px)', margin: '0 10px 10px',
+              padding: '8px 11px', border: 'none', borderRadius: 6,
+              background: 'transparent', color: 'var(--text-muted)',
+              fontSize: 12.5, fontWeight: 700,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
+          >
+            <LogOut size={14} style={{ flexShrink: 0 }} />
+            {expanded && <span>Sign out</span>}
+          </button>
         </div>
-        <button
-          onClick={handleSignOut}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            width: '100%', padding: '12px 12px',
-            minHeight: 44,
-            borderRadius: 8,
-            fontSize: 14,
-            color: 'var(--text-muted)',
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            transition: 'color 100ms, background-color 100ms',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--bg-elevated)' }}
-          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent' }}
-        >
-          <LogOut size={16} />
-          Sign Out
-        </button>
-      </div>
       </aside>
     </>
   )
 }
+
+export { COLLAPSE_KEY }

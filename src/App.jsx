@@ -13,7 +13,6 @@ import Join from './pages/Join'
 import ResetPassword from './pages/ResetPassword'
 import ClientPreview from './pages/ClientPreview'
 import Settings from './pages/Settings'
-import { BackgroundOrbs } from './components/BackgroundOrbs'
 
 // Rep pages
 import MyLeads from './pages/rep/MyLeads'
@@ -46,7 +45,10 @@ import AgentHierarchy from './pages/agent/Hierarchy'
 import {
   Quoter, LiveCall, MyCallsPlaceholder, TrainingPlaceholder,
   CommissionsPlaceholder, UnderwritingPlaceholder, StatsPlaceholder,
+  CallPipelinePlaceholder, CloserRosterPlaceholder, LeaderboardPlaceholder,
+  AdminCommissionsPlaceholder, LeadSourcesPlaceholder,
 } from './pages/agent/Placeholders'
+import InsuranceOverview from './pages/admin/InsuranceOverview'
 
 // Admin pages
 import Overview from './pages/admin/Overview'
@@ -103,7 +105,6 @@ export default function App() {
       <AuthProvider>
         <SecretsProvider>
         <BrowserRouter>
-          <BackgroundOrbs />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/join/:token" element={<Join />} />
@@ -289,10 +290,43 @@ export default function App() {
               </ProtectedRoute>
             } />
 
-            {/* Admin routes */}
+            {/* Admin routes — the insurance operation. The retired SMB/setter
+                admin pages are still routed below under /admin/legacy/* so
+                wind-down data stays reachable, but they're off the nav
+                entirely (Prompt 327: full replacement, not a merge). */}
             <Route path="/admin" element={
               <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardLayout><InsuranceOverview /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/call-pipeline" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardLayout><CallPipelinePlaceholder /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/roster" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardLayout><CloserRosterPlaceholder /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/leaderboard" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardLayout><LeaderboardPlaceholder /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/lead-sources" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardLayout><LeadSourcesPlaceholder /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/legacy/overview" element={
+              <ProtectedRoute allowedRoles={['admin']}>
                 <DashboardLayout><Overview /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/legacy/commissions" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardLayout><Commissions /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/admin/reps" element={
@@ -326,8 +360,8 @@ export default function App() {
               </ProtectedRoute>
             } />
             <Route path="/admin/commissions" element={
-              <ProtectedRoute allowedRoles={['admin', 'closer']}>
-                <DashboardLayout><Commissions /></DashboardLayout>
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardLayout><AdminCommissionsPlaceholder /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/admin/payouts" element={
