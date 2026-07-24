@@ -301,6 +301,37 @@
     transition: all 0.8s cubic-bezier(0.16,1,0.3,1);
   }
 
+  /* ── Insurance pipeline (Prompt 326) ── */
+  /* My Policies rows are buttons, so they need the glass surface's border to
+     react on hover the way a table row would. */
+  .policy-row {
+    border-color: var(--border);
+    transition: border-color 100ms ease, background-color 100ms ease;
+  }
+  .policy-row:hover {
+    border-color: var(--border-hover);
+  }
+  /* Native date inputs, styled to match Input.jsx's baseInput. Kept as its
+     own class rather than an <Input type="date"> so the calendar indicator
+     can be recolored for the dark canvas. */
+  .date-field {
+    width: 100%;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 100ms ease;
+  }
+  .date-field:hover  { border-color: var(--border-hover); }
+  .date-field:focus  { border-color: var(--accent); }
+  .date-field::-webkit-calendar-picker-indicator {
+    filter: invert(0.7);
+    cursor: pointer;
+  }
+
   /* ── Nav ── */
   .table-row-hover {
     transition: background-color 100ms ease;

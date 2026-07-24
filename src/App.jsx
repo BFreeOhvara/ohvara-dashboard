@@ -35,6 +35,19 @@ import CloserMyStats from './pages/closer/CloserMyStats'
 import CloserScript from './pages/closer/CloserScript'
 import LeadScraperCloser from './pages/admin/LeadScraper'
 
+// Insurance agent pages (Prompt 326) — the pivoted product. Shared by the
+// closer role (their own book) and admin (company-wide, same components,
+// scope switched by role inside each page).
+import AgentOverview from './pages/agent/AgentOverview'
+import AgentPolicies from './pages/agent/MyPolicies'
+import AgentSubmissions from './pages/agent/Submissions'
+import CarrierPortals from './pages/agent/CarrierPortals'
+import AgentHierarchy from './pages/agent/Hierarchy'
+import {
+  Quoter, LiveCall, MyCallsPlaceholder, TrainingPlaceholder,
+  CommissionsPlaceholder, UnderwritingPlaceholder, StatsPlaceholder,
+} from './pages/agent/Placeholders'
+
 // Admin pages
 import Overview from './pages/admin/Overview'
 import RepPerformance from './pages/admin/RepPerformance'
@@ -76,7 +89,9 @@ function RoleRedirect() {
   }
   if (!profile) return <Navigate to="/login" replace />
   if (profile.role === 'rep') return <Navigate to="/setter" replace />
-  if (profile.role === 'closer') return <Navigate to="/closer" replace />
+  // Closers land on the insurance dashboard as of the pivot (Prompt 326) —
+  // /closer/* still resolves for anything that links there directly.
+  if (profile.role === 'closer') return <Navigate to="/agent" replace />
   if (profile.role === 'admin') return <Navigate to="/admin" replace />
   if (profile.role === 'client') return <Navigate to="/client" replace />
   return <Navigate to="/login" replace />
@@ -157,6 +172,70 @@ export default function App() {
             <Route path="/rep/feed" element={<Navigate to="/setter/feed" replace />} />
             <Route path="/rep/messages" element={<Navigate to="/setter/messages" replace />} />
             <Route path="/rep/calls" element={<Navigate to="/setter/calls" replace />} />
+
+            {/* Insurance agent routes (Prompt 326). Admin shares them — each
+                page widens its own scope to company-wide for that role. */}
+            <Route path="/agent" element={
+              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+                <DashboardLayout><AgentOverview /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/policies" element={
+              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+                <DashboardLayout><AgentPolicies /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/submissions" element={
+              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+                <DashboardLayout><AgentSubmissions /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/carriers" element={
+              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+                <DashboardLayout><CarrierPortals /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/hierarchy" element={
+              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+                <DashboardLayout><AgentHierarchy /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            {/* In the nav, not wired to anything yet (Round 33) */}
+            <Route path="/agent/quoter" element={
+              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+                <DashboardLayout><Quoter /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/live" element={
+              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+                <DashboardLayout><LiveCall /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/calls" element={
+              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+                <DashboardLayout><MyCallsPlaceholder /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/training" element={
+              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+                <DashboardLayout><TrainingPlaceholder /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/commissions" element={
+              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+                <DashboardLayout><CommissionsPlaceholder /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/underwriting" element={
+              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+                <DashboardLayout><UnderwritingPlaceholder /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/stats" element={
+              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+                <DashboardLayout><StatsPlaceholder /></DashboardLayout>
+              </ProtectedRoute>
+            } />
 
             {/* Closer routes */}
             <Route path="/closer" element={

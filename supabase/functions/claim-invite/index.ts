@@ -34,7 +34,7 @@ function json(body: unknown, status = 200) {
 async function fetchValidInvite(adminClient: ReturnType<typeof createClient>, token: string) {
   const { data, error } = await adminClient
     .from('rep_invites')
-    .select('id, role, expires_at, used_at')
+    .select('id, role, expires_at, used_at, created_by')
     .eq('token', token)
     .maybeSingle()
   if (error || !data) return null
@@ -123,6 +123,18 @@ Deno.serve(async (req) => {
         : error.message
       return json({ error: msg }, 400)
     }
+
+    // Hierarchy (Prompt 326): whoever's link this was becomes the new
+    // account's direct upline. handle_new_user already created the profiles
+    // row from the metadata above, so this is an update, not an insert.
+    // Non-fatal — a missing upline shows up as an unparented node on the
+    // Hierarchy page, which is fixable there; failing the whole signup over
+    // it would be worse.
+    const { error: uplineError } = await adminClient
+      .from('profiles')
+      .update({ upline_id: invite.created_by })
+      .eq('id', data.user.id)
+    if (uplineError) console.error('profiles upline_id update failed:', uplineError.message)
 
     // Single-use: mark consumed. If this somehow fails the token would stay
     // claimable, so treat it as fatal enough to log loudly — but the account

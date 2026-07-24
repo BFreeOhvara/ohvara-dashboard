@@ -52,6 +52,21 @@ const STATUS_STYLES = {
     border: '0.5px solid rgba(239,68,68,0.20)',
   },
 
+  // Policy pipeline — final status model (Prompt 326, Round 46). 'Not
+  // Interested' already has an entry above and resolves to the same danger
+  // treatment, so it isn't repeated here.
+  'Follow-up':             { background: 'var(--warning-dim)', color: 'var(--warning)', border: '0.5px solid rgba(245,158,11,0.20)' },
+  'Submitted':             { background: 'var(--info-dim)',    color: 'var(--info)',    border: '0.5px solid rgba(56,189,248,0.20)' },
+  'In Effect':             { background: 'var(--success-dim)', color: 'var(--success)', border: '0.5px solid rgba(34,197,94,0.20)' },
+  // Undrafted isn't a failure the way Not Interested is — the policy just
+  // didn't draft, possibly temporarily — so it reads neutral, not red.
+  'Undrafted':             { background: 'var(--bg-elevated)', color: 'var(--text-dim)', border: '0.5px solid var(--border)' },
+
+  // Cancellation of the OLD policy — a separate attribute, shown as its own
+  // badge alongside the main status, never merged into it.
+  'Cancellation Pending':  { background: 'var(--warning-dim)', color: 'var(--warning)', border: '0.5px solid rgba(245,158,11,0.20)' },
+  'Cancellation Complete': { background: 'var(--success-dim)', color: 'var(--success)', border: '0.5px solid rgba(34,197,94,0.20)' },
+
   // Appointment outcomes
   'closed':   { background: 'var(--success-dim)', color: 'var(--success)', border: '0.5px solid rgba(34,197,94,0.20)' },
   'lost':     { background: 'var(--danger-dim)',  color: 'var(--danger)',  border: '0.5px solid rgba(239,68,68,0.20)' },

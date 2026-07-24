@@ -6,7 +6,7 @@ import {
   Calendar, DollarSign, TrendingUp, BookOpen,
   LayoutDashboard, List, Columns, RefreshCw, Database, LogOut,
   Zap, Search, PhoneCall, GitBranch, MessageSquare, Home, Wallet, Settings,
-  Smartphone,
+  Smartphone, FileText, Radio, Calculator, Send, Building2, Stethoscope,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { NotificationBell } from '../admin/NotificationBell'
@@ -56,21 +56,38 @@ const NAV = {
     { to: '/setter/feed',        label: 'Activity',       icon: Bell },
     { to: '/setter/messages',    label: 'Messages',       icon: MessageSquare },
   ],
+  // Insurance agent nav (Prompt 326). The old SMB closer nav — Appointments,
+  // Setter Activity, Revenue and friends — belongs to the wound-down
+  // business; those routes still exist and still work by URL, they're just
+  // no longer what an agent sees on login. Grouping follows Round 38:
+  // pipeline pages under Sales, mid-work utilities under Tools.
   closer: [
-    { to: '/closer',                   label: 'Appointments',    icon: Calendar },
-    { to: '/closer/call-leads',        label: 'My Leads',        icon: Phone },
-    { to: '/closer/script',            label: 'Script',          icon: BookOpen },
-    { to: '/closer/pipeline',          label: 'Pipeline',        icon: GitBranch },
-    { to: '/closer/calls',             label: 'My Calls',        icon: PhoneCall },
-    { to: '/closer/stats',             label: 'My Stats',        icon: Target },
-    { to: '/closer/reps',              label: 'Setter Activity', icon: BarChart2 },
-    { to: '/closer/revenue',           label: 'Revenue',         icon: TrendingUp },
-    { to: '/closer/messages',          label: 'Messages',        icon: MessageSquare },
+    { section: 'Sales' },
+    { to: '/agent',              label: 'Overview',        icon: LayoutDashboard },
+    { to: '/agent/policies',     label: 'My Policies',     icon: FileText },
+    { to: '/agent/calls',        label: 'My Calls',        icon: PhoneCall },
+    { to: '/agent/live',         label: 'Live Call',       icon: Radio },
+    { section: 'Tools' },
+    { to: '/agent/quoter',       label: 'Quoter',          icon: Calculator },
+    { to: '/agent/submissions',  label: 'Submissions',     icon: Send },
+    { to: '/agent/carriers',     label: 'Carrier Portals', icon: Building2 },
+    { to: '/agent/underwriting', label: 'Underwriting',    icon: Stethoscope },
+    { section: 'Growth' },
+    { to: '/agent/stats',        label: 'Stats',           icon: BarChart2 },
+    { to: '/agent/hierarchy',    label: 'Hierarchy',       icon: GitBranch },
+    { to: '/agent/training',     label: 'Training',        icon: BookOpen },
+    { to: '/agent/commissions',  label: 'Commissions',     icon: DollarSign },
   ],
   admin: [
-    { to: '/admin',              label: 'Overview',           icon: LayoutDashboard },
+    { section: 'Insurance' },
+    { to: '/agent',              label: 'Book Overview',      icon: LayoutDashboard },
+    { to: '/agent/policies',     label: 'All Policies',       icon: FileText },
+    { to: '/agent/carriers',     label: 'Carrier Portals',    icon: Building2 },
+    { to: '/agent/hierarchy',    label: 'Hierarchy',          icon: GitBranch },
+    { section: 'Platform' },
+    { to: '/admin',              label: 'Overview',           icon: Columns },
     { to: '/admin/reps',         label: 'Setter Performance', icon: BarChart2 },
-    { to: '/admin/pipeline',     label: 'Pipeline',           icon: Columns },
+    { to: '/admin/pipeline',     label: 'Pipeline',           icon: List },
     { to: '/admin/users',        label: 'Users',              icon: Users },
     { to: '/admin/commissions',  label: 'Commissions',        icon: DollarSign },
     { to: '/admin/payouts',      label: 'Payouts',            icon: Wallet },
@@ -88,7 +105,9 @@ const NAV = {
 // "Portal" suffix here. Already said "Setter Portal" for rep correctly
 // before Prompt 299 — kept as-is, just renamed from the old `ROLE_LABELS`
 // to stop colliding in name (not value) with the shared module.
-const PORTAL_LABELS = { rep: 'Setter Portal', closer: 'Closer Portal', admin: 'Admin', client: 'Client Portal' }
+// 'Agent Portal' as of the insurance pivot (Prompt 326) — the closer role is
+// now an insurance agent. Display-only; the stored role value is untouched.
+const PORTAL_LABELS = { rep: 'Setter Portal', closer: 'Agent Portal', admin: 'Admin', client: 'Client Portal' }
 
 // Prompt 287 fix — the sidebar is fixed-width and was eating 64% of any
 // phone-width viewport (240px of 375px) with no way to get it out of the
@@ -158,11 +177,21 @@ export function Sidebar({ open = false, onClose }) {
 
       {/* Nav */}
       <nav style={{ flex: 1, padding: '10px 10px', overflowY: 'auto' }} className="scrollbar-thin">
-        {links.map(({ to, label, icon: Icon }) => (
+        {links.map(({ to, label, icon: Icon, section }, i) => section ? (
+          // Group header (Prompt 326) — a label, not a link. First one skips
+          // the top margin so the nav doesn't start with a gap.
+          <p
+            key={`section-${section}`}
+            className="section-label"
+            style={{ margin: i === 0 ? '2px 0 6px' : '14px 0 6px', paddingLeft: 14 }}
+          >
+            {section}
+          </p>
+        ) : (
           <NavLink
             key={to}
             to={to}
-            end={to === '/setter' || to === '/closer' || to === '/admin' || to === '/client'}
+            end={to === '/setter' || to === '/closer' || to === '/admin' || to === '/client' || to === '/agent'}
             onClick={onClose}
             className={({ isActive }) =>
               clsx(
