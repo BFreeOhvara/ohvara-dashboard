@@ -138,8 +138,8 @@ function CarrierCard({ carrier: c, isAdmin, onDelete }) {
                 // flex sizing — a flex item's default min-height:auto is derived from
                 // its intrinsic aspect ratio, which was letting cover-mode logos render
                 // taller than the 84px banner and get cropped off-center (anchored high).
-                ? { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }
-                : { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', objectPosition: 'center' }}
+                ? { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', transform: `scale(${(c.logo_zoom_pct ?? 100) / 100})` }
+                : { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', objectPosition: 'center', transform: `scale(${(c.logo_zoom_pct ?? 100) / 100})` }}
             />
           : <CarrierInitials name={c.name} />}
         {isAdmin && (
