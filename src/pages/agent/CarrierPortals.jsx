@@ -125,7 +125,7 @@ function CarrierCard({ carrier: c, isAdmin, onDelete }) {
   return (
     <div style={{ ...card, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <div style={{
-        position: 'relative', height: 84,
+        position: 'relative', height: 84, overflow: 'hidden',
         padding: c.logo_fit_mode === 'cover' ? 0 : '6px 14px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: '#fff', borderBottom: 'var(--border-w) solid var(--border)',
@@ -134,8 +134,12 @@ function CarrierCard({ carrier: c, isAdmin, onDelete }) {
           ? <img
               src={c.logo_url} alt={`${c.name} logo`}
               style={c.logo_fit_mode === 'cover'
-                ? { width: '100%', height: '100%', objectFit: 'cover' }
-                : { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                // Absolutely positioned so it fills the banner exactly, independent of
+                // flex sizing — a flex item's default min-height:auto is derived from
+                // its intrinsic aspect ratio, which was letting cover-mode logos render
+                // taller than the 84px banner and get cropped off-center (anchored high).
+                ? { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }
+                : { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', objectPosition: 'center' }}
             />
           : <CarrierInitials name={c.name} />}
         {isAdmin && (
