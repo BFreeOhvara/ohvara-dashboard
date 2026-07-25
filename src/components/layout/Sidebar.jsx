@@ -119,7 +119,7 @@ const NAV = {
 
 // Export's `portalLabel`: admin is bare "Admin", the agent role reads as a
 // portal. rep/client keep their own wording from the pre-pivot app.
-const PORTAL_LABELS = { rep: 'Setter Portal', closer: 'Closer Portal', admin: 'Admin', client: 'Client Portal' }
+const PORTAL_LABELS = { rep: 'Setter Portal', closer: 'Agent Portal', admin: 'Admin', client: 'Client Portal' }
 
 const COLLAPSE_KEY = 'ohvara-sidebar-collapsed'
 const DUTY_KEY = 'ohvara-duty'
