@@ -114,7 +114,7 @@ function AccountMenu({ profile, expanded, duty, setDuty, onNavigate, onSignOut }
       >
         <span style={{
           width: 26, height: 26, borderRadius: '50%',
-          background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
+          background: 'var(--text-primary)', border: '1px solid var(--accent-border)',
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 10, fontWeight: 700, color: 'var(--accent)', flexShrink: 0,
         }}>
@@ -122,7 +122,7 @@ function AccountMenu({ profile, expanded, duty, setDuty, onNavigate, onSignOut }
         </span>
         {expanded && (
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {profile?.full_name}
             </p>
             <p style={{ margin: '1px 0 0', fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -151,7 +151,7 @@ function AccountMenu({ profile, expanded, duty, setDuty, onNavigate, onSignOut }
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 14px 10px' }}>
             <span style={{
               width: 28, height: 28, borderRadius: '50%',
-              background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
+              background: 'var(--text-primary)', border: '1px solid var(--accent-border)',
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 11, fontWeight: 700, color: 'var(--accent)', flexShrink: 0,
             }}>
@@ -365,7 +365,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
             style={{
               alignItems: 'center', justifyContent: 'center',
               width: 28, height: 28,
-              border: '1px solid var(--border)', borderRadius: 7,
+              border: '1px solid var(--sidebar-border)', borderRadius: 7,
               background: 'var(--bg-elevated)', color: 'var(--text-primary)', flexShrink: 0,
             }}
           >
