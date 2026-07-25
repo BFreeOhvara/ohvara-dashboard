@@ -49,13 +49,15 @@ function MobileAppBox() {
   )
 }
 
-// Account footer row (Prompt 338) — a hover-highlighted row that opens a
-// popover anchored ABOVE it (the footer sits at the bottom of the sidebar)
-// instead of navigating straight to Settings. Portaled to document.body like
-// NotificationBell (components/admin/NotificationBell.jsx) — the sidebar
-// `<aside>` is `position:fixed` with `overflow:hidden` for its own scroll
-// containment, which would otherwise clip the popover to the sidebar's width
-// no matter its z-index.
+// Account footer row (Prompt 338, permanent highlight added Prompt 339) —
+// always carries the same `--bg-elevated` treatment an active nav item gets,
+// like a permanently-styled card rather than a hover/open-only state. Clicking
+// it opens a popover anchored ABOVE it (the footer sits at the bottom of the
+// sidebar) instead of navigating straight to Settings. Portaled to
+// document.body like NotificationBell (components/admin/NotificationBell.jsx)
+// — the sidebar `<aside>` is `position:fixed` with `overflow:hidden` for its
+// own scroll containment, which would otherwise clip the popover to the
+// sidebar's width no matter its z-index.
 function AccountMenu({ profile, expanded, duty, setDuty, onNavigate, onSignOut }) {
   const [open, setOpen] = useState(false)
   const rowRef = useRef(null)
@@ -107,10 +109,8 @@ function AccountMenu({ profile, expanded, duty, setDuty, onNavigate, onSignOut }
         style={{
           display: 'flex', alignItems: 'center', gap: 8, padding: 8,
           borderRadius: 6, cursor: 'pointer',
-          background: open ? 'var(--bg-elevated)' : 'transparent',
+          background: 'var(--bg-elevated)',
         }}
-        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
-        onMouseLeave={e => { e.currentTarget.style.background = open ? 'var(--bg-elevated)' : 'transparent' }}
       >
         <span style={{
           width: 26, height: 26, borderRadius: '50%',
@@ -428,10 +428,10 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
 
         {profile?.role === 'rep' && expanded && <MobileAppBox />}
 
-        {/* Account footer (Prompt 338) — hover-highlighted row opens a
-            popover anchored above it (name/username header, the duty toggle
-            folded in for closers, Profile, Sign out) instead of navigating
-            straight to Settings. */}
+        {/* Account footer (Prompt 338, permanent highlight Prompt 339) —
+            always-highlighted row opens a popover anchored above it
+            (name/username header, the duty toggle folded in for closers,
+            Profile, Sign out) instead of navigating straight to Settings. */}
         <div style={{ borderTop: 'var(--border-w) solid var(--sidebar-border)' }}>
           <AccountMenu
             profile={profile}

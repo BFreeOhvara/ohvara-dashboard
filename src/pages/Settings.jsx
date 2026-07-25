@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { Bell, Globe, Palette, Shield, Wallet, Check, Loader2, Moon, Sun } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
+import { Bell, Globe, Palette, Shield, Check, Loader2, Moon, Sun } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
@@ -8,7 +8,7 @@ import { useUpdateOwnProfile } from '../hooks/useSettings'
 import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../lib/timezones'
 import { Switch } from '../components/ui/Switch'
 import {
-  card, cardTitle, control, fieldLabel, primaryBtn, ghostBtn,
+  card, cardTitle, control, primaryBtn,
 } from '../lib/exportStyles'
 import { GapNote } from '../components/ui/ExportForm'
 import { SavedTick } from '../components/ui/SavedTick'
@@ -21,16 +21,18 @@ import { SavedTick } from '../components/ui/SavedTick'
 // distinct from clicking "Settings" in the main nav, rather than the same
 // screen via two doors.
 //
-// What's real: timezone, weekend leads, theme, password change, and the
-// Stripe payout pointer. Everything the export draws that this database can't
-// back yet renders as an honest gap note instead of a plausible-looking fake
-// value — per-alert notification toggles, date format, table density and 2FA
-// all fall in that bucket. None of them are silently substituted.
+// What's real: timezone, weekend leads, theme, and password change.
+// Everything the export draws that this database can't back yet renders as an
+// honest gap note instead of a plausible-looking fake value — per-alert
+// notification toggles, date format, table density and 2FA all fall in that
+// bucket. None of them are silently substituted.
 //
-// Two deviations worth naming: the export has no Payouts tab (Stripe Connect
-// is real and reachable nowhere else, so it's kept for rep/closer), and the
-// legacy close (X) button is gone — Settings is a normal nav destination in
-// the approved design.
+// One deviation worth naming: the legacy close (X) button is gone — Settings
+// is a normal nav destination in the approved design.
+//
+// Payouts tab removed (Prompt 339) — current pay model is carrier-direct with
+// no bank-account-connect step, so the Stripe payout pointer had nothing left
+// to do.
 
 const TABS = [
   { key: 'notifs',     label: 'Notifications', icon: Bell },
@@ -56,9 +58,6 @@ export default function Settings() {
 
   if (!profile) return null
 
-  const showPayouts = profile.role === 'rep' || profile.role === 'closer'
-  const tabs = showPayouts ? [...TABS, { key: 'payouts', label: 'Payouts', icon: Wallet }] : TABS
-
   // The export's 220px rail sits beside the panel; below md it stacks and the
   // tabs run as a scrollable row, or the panel gets squeezed to ~150px on a
   // phone.
@@ -68,7 +67,7 @@ export default function Settings() {
       style={{ alignItems: 'start', maxWidth: 940 }}
     >
       <div className="flex-row overflow-x-auto md:flex-col scrollbar-thin" style={{ display: 'flex', gap: 2, minWidth: 0 }}>
-        {tabs.map(t => {
+        {TABS.map(t => {
           const on = tab === t.key
           const Icon = t.icon
           return (
@@ -96,7 +95,6 @@ export default function Settings() {
         {tab === 'regional'   && <RegionalPanel profile={profile} />}
         {tab === 'appearance' && <AppearancePanel />}
         {tab === 'security'   && <SecurityPanel />}
-        {tab === 'payouts'    && <PayoutsPanel profile={profile} />}
       </div>
     </div>
   )
@@ -347,69 +345,3 @@ function SecurityPanel() {
   )
 }
 
-// ── Payouts (not in the export — Stripe Connect is real and lives nowhere
-// else in the approved nav) ─────────────────────────────────────────────────
-function PayoutsPanel({ profile }) {
-  const navigate = useNavigate()
-  const { session } = useAuth()
-  const connected = !!profile.stripe_onboarding_complete
-  const dest = profile.role === 'closer' ? '/closer/revenue' : '/setter/commissions'
-
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [checking, setChecking] = useState(false)
-
-  // Step-up auth before payout settings (Prompt 280) — re-verify the current
-  // password rather than trusting an already-open session.
-  async function open() {
-    setError('')
-    if (!password) return setError('Enter your password')
-    setChecking(true)
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: session.user.email,
-      password,
-    })
-    setChecking(false)
-    if (authError) return setError('Incorrect password — try again.')
-    navigate(dest)
-  }
-
-  return (
-    <div style={{ ...card, padding: '20px 22px' }}>
-      <p style={cardTitle}>Payouts</p>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>Payout account</p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-            {connected ? 'Connected via Stripe' : 'Not connected yet'}
-          </p>
-        </div>
-        <span style={{
-          display: 'inline-flex', padding: '3px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700,
-          color: connected ? 'var(--success)' : 'var(--warning)',
-          background: connected ? 'var(--success-dim)' : 'var(--warning-dim)',
-          border: `1px solid ${connected ? 'var(--success-bd)' : 'var(--warning-bd)'}`,
-        }}>
-          {connected ? 'Connected' : 'Not connected'}
-        </span>
-      </div>
-
-      <p style={fieldLabel}>Confirm your password to continue</p>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', maxWidth: 520 }}>
-        <input
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') open() }}
-          style={{ ...inputBase, flex: 1, minWidth: 200 }}
-        />
-        <button onClick={open} disabled={checking} style={{ ...ghostBtn, height: 34 }}>
-          {checking ? 'Checking…' : 'Manage payout account'}
-        </button>
-      </div>
-      {error && <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--danger)' }}>{error}</p>}
-    </div>
-  )
-}
