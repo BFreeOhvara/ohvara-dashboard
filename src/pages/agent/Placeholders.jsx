@@ -8,15 +8,6 @@ import { ComingSoon } from '../../components/agent/ComingSoon'
 // deliberately deferred behind the real-wiring pages rather than shipped as
 // invented sample data on launch day. They render the placeholder for now.
 
-export function Quoter() {
-  return (
-    <ComingSoon
-      title="Quoter"
-      description="Pulling live carrier quotes needs an account with a real quoting toolkit. Once that's connected, quoting happens here."
-    />
-  )
-}
-
 export function LiveCall() {
   return (
     <ComingSoon

@@ -24,7 +24,7 @@ const TITLES = {
   '/agent/live': ['Live Call', 'Duty status & incoming transfers'],
   '/agent/calls': ['My Calls', 'One day at a time · transcripts for calls over 10 min · includes your activity feed'],
   '/agent/policies': ['My Policies', 'Your whole book of business'],
-  '/agent/quoter': ['Quoter', 'Multi-carrier instant quoting'],
+  '/agent/quoter': ['Quoter', 'InsuranceToolkits — multi-carrier instant quoting'],
   '/agent/underwriting': ['Underwriting', 'AI chat assistant for carrier placement based on client health'],
   '/agent/submissions': ['Submissions', 'Start a new business submission with a carrier'],
   '/agent/carriers': ['Carrier Portals', 'Every carrier login in one directory'],
@@ -58,7 +58,7 @@ function HeaderBell() {
 
 export function DashboardLayout({ children }) {
   const { pathname } = useLocation()
-  const isFullWidth = pathname.includes('/messages')
+  const isFullWidth = pathname.includes('/messages') || pathname.includes('/quoter')
 
   const [navOpen, setNavOpen] = useState(false)
   useEffect(() => { setNavOpen(false) }, [pathname])

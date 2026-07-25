@@ -43,19 +43,15 @@ import AgentSubmissions from './pages/agent/Submissions'
 import CarrierPortals from './pages/agent/CarrierPortals'
 import AgentHierarchy from './pages/agent/Hierarchy'
 import {
-  Quoter, LiveCall, MyCallsPlaceholder, TrainingPlaceholder,
+  LiveCall, MyCallsPlaceholder, TrainingPlaceholder,
   CommissionsPlaceholder, UnderwritingPlaceholder, StatsPlaceholder,
   CallPipelinePlaceholder, CloserRosterPlaceholder, LeaderboardPlaceholder,
   AdminCommissionsPlaceholder, LeadSourcesPlaceholder,
 } from './pages/agent/Placeholders'
+import Quoter from './pages/agent/Quoter'
 import InsuranceOverview from './pages/admin/InsuranceOverview'
 
 // Admin pages
-import Overview from './pages/admin/Overview'
-import RepPerformance from './pages/admin/RepPerformance'
-import LeadPipeline from './pages/admin/LeadPipeline'
-import LeadSources from './pages/admin/LeadSources'
-import LeadScraper from './pages/admin/LeadScraper'
 import Users from './pages/admin/Users'
 import Commissions from './pages/admin/Commissions'
 import Payouts from './pages/admin/Payouts'
@@ -201,7 +197,6 @@ export default function App() {
                 <DashboardLayout><AgentHierarchy /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* In the nav, not wired to anything yet (Round 33) */}
             <Route path="/agent/quoter" element={
               <ProtectedRoute allowedRoles={['closer', 'admin']}>
                 <DashboardLayout><Quoter /></DashboardLayout>
@@ -291,9 +286,9 @@ export default function App() {
             } />
 
             {/* Admin routes — the insurance operation. The retired SMB/setter
-                admin pages are still routed below under /admin/legacy/* so
-                wind-down data stays reachable, but they're off the nav
-                entirely (Prompt 327: full replacement, not a merge). */}
+                admin pages (Overview, Commissions, RepPerformance,
+                LeadPipeline, LeadSources, LeadScraper) were removed
+                entirely in Prompt 328 along with their legacy data. */}
             <Route path="/admin" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <DashboardLayout><InsuranceOverview /></DashboardLayout>
@@ -317,36 +312,6 @@ export default function App() {
             <Route path="/admin/lead-sources" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <DashboardLayout><LeadSourcesPlaceholder /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/legacy/overview" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><Overview /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/legacy/commissions" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><Commissions /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/reps" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><RepPerformance /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/pipeline" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><LeadPipeline /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/sources" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><LeadSources /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/scraper" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><LeadScraper /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/admin/users" element={
