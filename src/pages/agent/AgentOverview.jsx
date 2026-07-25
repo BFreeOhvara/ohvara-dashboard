@@ -16,6 +16,12 @@ import { money, moneyShort, fullName, todayISO } from '../../lib/policyFormat'
 
 const MONO = "'JetBrains Mono',monospace"
 
+// Seven-segment/LCD digital-clock font (Prompt 342) — self-hosted via
+// @fontsource/dseg7-classic (imported in index.css) since it isn't on Google
+// Fonts. Scoped to the clock text only, not the shared MONO constant above
+// (that's used elsewhere for policy numbers/money, unrelated to this ask).
+const CLOCK_FONT = "'DSEG7 Classic',monospace"
+
 export default function AgentOverview() {
   const { profile } = useAuth()
   const navigate = useNavigate()
@@ -144,11 +150,16 @@ export default function AgentOverview() {
             {clock.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </span>
           <div style={{
-            fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em', lineHeight: 1, color: '#fff',
-            fontFamily: MONO, fontVariantNumeric: 'tabular-nums',
             background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '9px 16px', whiteSpace: 'nowrap',
           }}>
-            {clock.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
+            <span style={{
+              display: 'inline-block',
+              fontSize: 30, fontWeight: 700, letterSpacing: '0.02em', lineHeight: 1, color: '#fff',
+              fontFamily: CLOCK_FONT, fontVariantNumeric: 'tabular-nums',
+              transform: 'scaleY(1.15)', transformOrigin: 'center',
+            }}>
+              {clock.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
+            </span>
           </div>
         </div>
       </div>
