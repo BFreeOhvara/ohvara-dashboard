@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import {
   Users, BarChart2, Bell, DollarSign, BookOpen, LayoutDashboard, Columns,
   LogOut, Zap, PhoneCall, GitBranch, MessageSquare, Home, Wallet, Settings,
   Smartphone, FileText, Headphones, Calculator, Globe, Shield, Award,
-  Megaphone, GraduationCap, ChevronRight, Phone, Target,
+  Megaphone, GraduationCap, ChevronRight, Phone, Target, User,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { MobileAppModal } from './MobileAppModal'
@@ -45,6 +46,159 @@ function MobileAppBox() {
       </button>
       {open && <MobileAppModal onClose={() => setOpen(false)} />}
     </>
+  )
+}
+
+// Account footer row (Prompt 338) — a hover-highlighted row that opens a
+// popover anchored ABOVE it (the footer sits at the bottom of the sidebar)
+// instead of navigating straight to Settings. Portaled to document.body like
+// NotificationBell (components/admin/NotificationBell.jsx) — the sidebar
+// `<aside>` is `position:fixed` with `overflow:hidden` for its own scroll
+// containment, which would otherwise clip the popover to the sidebar's width
+// no matter its z-index.
+function AccountMenu({ profile, expanded, duty, setDuty, onNavigate, onSignOut }) {
+  const [open, setOpen] = useState(false)
+  const rowRef = useRef(null)
+  const panelRef = useRef(null)
+  const [coords, setCoords] = useState(null)
+
+  useEffect(() => {
+    if (open && rowRef.current) {
+      const rect = rowRef.current.getBoundingClientRect()
+      setCoords({ bottom: window.innerHeight - rect.top + 8, left: rect.left })
+    }
+  }, [open])
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (
+        rowRef.current && !rowRef.current.contains(e.target) &&
+        panelRef.current && !panelRef.current.contains(e.target)
+      ) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const initials = profile?.full_name
+    ? profile.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+    : '?'
+
+  function go(path) {
+    setOpen(false)
+    onNavigate(path)
+  }
+
+  const menuItemStyle = {
+    display: 'flex', alignItems: 'center', gap: 9, width: '100%',
+    padding: '8px 14px', border: 'none', background: 'transparent',
+    color: 'var(--text-primary)', fontSize: 12.5, fontWeight: 500,
+    textAlign: 'left', cursor: 'pointer',
+  }
+
+  return (
+    <div style={{ padding: 10 }}>
+      <div
+        ref={rowRef}
+        onClick={() => setOpen(v => !v)}
+        title={expanded ? undefined : (profile?.full_name || 'Account')}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8, padding: 8,
+          borderRadius: 6, cursor: 'pointer',
+          background: open ? 'var(--bg-elevated)' : 'transparent',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
+        onMouseLeave={e => { e.currentTarget.style.background = open ? 'var(--bg-elevated)' : 'transparent' }}
+      >
+        <span style={{
+          width: 26, height: 26, borderRadius: '50%',
+          background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 10, fontWeight: 700, color: 'var(--accent)', flexShrink: 0,
+        }}>
+          {initials}
+        </span>
+        {expanded && (
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {profile?.full_name}
+            </p>
+            <p style={{ margin: '1px 0 0', fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {profile?.username || profile?.email}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {open && coords && createPortal(
+        <div
+          ref={panelRef}
+          style={{
+            position: 'fixed', bottom: coords.bottom, left: coords.left, width: 220,
+            background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
+            borderRadius: 8, overflow: 'hidden', zIndex: 9999, padding: '6px 0',
+          }}
+        >
+          {/* Identity header — non-clickable, just display */}
+          <div style={{ padding: '8px 14px 10px' }}>
+            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {profile?.full_name}
+            </p>
+            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {profile?.username || profile?.email}
+            </p>
+          </div>
+
+          {/* Duty toggle — closers only, folded in from its old standalone
+              row (export: showDutyWidget) */}
+          {profile?.role === 'closer' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px' }}>
+              <span style={{ flex: 1, fontSize: 12, color: 'var(--text-secondary)' }}>
+                {duty ? 'Available for transfers' : 'Off duty'}
+              </span>
+              <div
+                onClick={() => setDuty(d => !d)}
+                style={{
+                  width: 32, height: 18, borderRadius: 9,
+                  background: duty ? 'var(--success)' : 'var(--bg-base)',
+                  position: 'relative', cursor: 'pointer', transition: 'background 120ms', flexShrink: 0,
+                }}
+              >
+                <span style={{
+                  position: 'absolute', top: 2, left: duty ? 16 : 2,
+                  width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left 120ms',
+                }} />
+              </div>
+            </div>
+          )}
+
+          <div style={{ borderTop: 'var(--border-w) solid var(--border)', margin: '4px 0' }} />
+
+          <button
+            onClick={() => go('/profile')}
+            style={menuItemStyle}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+          >
+            <User size={14} style={{ flexShrink: 0, color: 'var(--text-muted)' }} />
+            Profile
+          </button>
+
+          <button
+            onClick={() => { setOpen(false); onSignOut() }}
+            style={menuItemStyle}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+          >
+            <LogOut size={14} style={{ flexShrink: 0, color: 'var(--text-muted)' }} />
+            Sign out
+          </button>
+        </div>,
+        document.body
+      )}
+    </div>
   )
 }
 
@@ -142,10 +296,6 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
     await signOut()
     navigate('/login')
   }
-
-  const initials = profile?.full_name
-    ? profile.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
-    : '?'
 
   return (
     <>
@@ -276,78 +426,21 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
           ))}
         </nav>
 
-        {/* Duty widget — closers only, expanded only (export: showDutyWidget) */}
-        {profile?.role === 'closer' && expanded && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            margin: '0 10px 10px', padding: '9px 11px',
-            background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)', borderRadius: 8,
-          }}>
-            <span style={{ flex: 1, fontSize: 12, color: 'var(--text-secondary)' }}>
-              {duty ? 'Available for transfers' : 'Off duty'}
-            </span>
-            <div
-              onClick={() => setDuty(d => !d)}
-              style={{
-                width: 32, height: 18, borderRadius: 9,
-                background: duty ? 'var(--success)' : 'var(--bg-base)',
-                position: 'relative', cursor: 'pointer', transition: 'background 120ms', flexShrink: 0,
-              }}
-            >
-              <span style={{
-                position: 'absolute', top: 2, left: duty ? 16 : 2,
-                width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left 120ms',
-              }} />
-            </div>
-          </div>
-        )}
-
         {profile?.role === 'rep' && expanded && <MobileAppBox />}
 
-        {/* Profile + sign out */}
+        {/* Account footer (Prompt 338) — hover-highlighted row opens a
+            popover anchored above it (name/username header, the duty toggle
+            folded in for closers, Profile, Sign out) instead of navigating
+            straight to Settings. */}
         <div style={{ borderTop: 'var(--border-w) solid var(--sidebar-border)' }}>
-          <div
-            onClick={() => { onClose?.(); navigate('/settings') }}
-            style={{ padding: 10, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-          >
-            <span style={{
-              width: 26, height: 26, borderRadius: '50%',
-              background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 10, fontWeight: 700, color: 'var(--accent)', flexShrink: 0,
-            }}>
-              {initials}
-            </span>
-            {expanded && (
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {profile?.full_name}
-                </p>
-                <p style={{ margin: '1px 0 0', fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {profile?.username || profile?.email}
-                </p>
-              </div>
-            )}
-          </div>
-          <button
-            onClick={handleSignOut}
-            title="Sign out"
-            style={{
-              display: 'flex', alignItems: 'center',
-              justifyContent: expanded ? 'flex-start' : 'center',
-              gap: 9, width: 'calc(100% - 20px)', margin: '0 10px 10px',
-              padding: '8px 11px', border: 'none', borderRadius: 6,
-              background: 'transparent', color: 'var(--text-muted)',
-              fontSize: 12.5, fontWeight: 700,
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
-          >
-            <LogOut size={14} style={{ flexShrink: 0 }} />
-            {expanded && <span>Sign out</span>}
-          </button>
+          <AccountMenu
+            profile={profile}
+            expanded={expanded}
+            duty={duty}
+            setDuty={setDuty}
+            onNavigate={path => { onClose?.(); navigate(path) }}
+            onSignOut={handleSignOut}
+          />
         </div>
       </aside>
     </>

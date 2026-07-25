@@ -76,7 +76,9 @@ export default function AgentOverview() {
   }, [policies])
 
   // Monthly goal progress — real submitted AP this month vs. the closer's
-  // own target (Settings → Profile, `monthly_ap_goal`; defaults to 20000).
+  // own target (set on the Profile page, `monthly_ap_goal`; defaults to
+  // 20000). Profile moved out of Settings' tabs to its own route in Prompt
+  // 338 — this comment/copy updated to match.
   const goal = useMemo(() => {
     const target = Number(profile?.monthly_ap_goal) || 20000
     const submittedAP = bookMetrics(policies, { month }).submittedAP
@@ -233,7 +235,7 @@ export default function AgentOverview() {
         }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Monthly goal</span>
           <p style={{ margin: '4px 0 20px', fontSize: 11, color: 'var(--text-muted)' }}>
-            Submitted AP this month vs. your target · set it in Settings → Profile
+            Submitted AP this month vs. your target · set it on your Profile page
           </p>
           <div style={{
             fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--text-primary)',

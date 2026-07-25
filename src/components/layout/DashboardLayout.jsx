@@ -38,7 +38,8 @@ const TITLES = {
   '/admin/commissions': ['Commissions', 'Balances & reserves across all closers'],
   '/admin/lead-sources': ['Lead Sources', 'Google Ads & landing page performance'],
   '/admin/users': ['Users & Access', 'Accounts, roles and invites'],
-  '/settings': ['Settings', 'Profile, notifications, regional & appearance'],
+  '/settings': ['Settings', 'Notifications, regional & appearance'],
+  '/profile': ['Profile', 'Your name, contact info, and account details'],
 }
 
 function ToastMount() {

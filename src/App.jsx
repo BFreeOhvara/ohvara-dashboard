@@ -13,6 +13,7 @@ import Join from './pages/Join'
 import ResetPassword from './pages/ResetPassword'
 import ClientPreview from './pages/ClientPreview'
 import Settings from './pages/Settings'
+import Profile from './pages/Profile'
 
 // Rep pages
 import MyLeads from './pages/rep/MyLeads'
@@ -112,6 +113,15 @@ export default function App() {
             <Route path="/settings" element={
               <ProtectedRoute allowedRoles={['rep', 'closer', 'admin', 'client']}>
                 <DashboardLayout><Settings /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+
+            {/* Profile — split out of Settings (Prompt 338) so the sidebar
+                footer's account popover has its own distinct destination,
+                shared across every role same as Settings. */}
+            <Route path="/profile" element={
+              <ProtectedRoute allowedRoles={['rep', 'closer', 'admin', 'client']}>
+                <DashboardLayout><Profile /></DashboardLayout>
               </ProtectedRoute>
             } />
 
