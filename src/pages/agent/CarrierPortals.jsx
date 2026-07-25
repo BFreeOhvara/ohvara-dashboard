@@ -1,23 +1,21 @@
 import { useState } from 'react'
-import { ArrowRight, Plus, Trash2 } from 'lucide-react'
+import { ExternalLink, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCarriers, useSaveCarrier, useDeleteCarrier } from '../../hooks/useCarriers'
 import { MONO, card, grid3, primaryBtn, ghostBtn } from '../../lib/exportStyles'
 import { TextField, GapNote } from '../../components/ui/ExportForm'
 
-// Carrier Portals — literal port of the export's "Closer · Carrier Portals"
-// screen (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines
-// 1456-1471): one 820px card, a titled header strip, then a divided row per
-// carrier — name, phone, Open Portal.
+// Carrier Portals — Prompt 331 card grid, replacing the directory-list layout
+// from Prompt 327/328 to match Brayden's Liberated Financial reference.
 //
-// Flagged deviations:
-//  · The export's row carries a single phone number; the real `carriers` table
-//    holds two (new business + agent service), which is the distinction that
-//    actually matters on a call. Both render, labelled.
-//  · Admin add/remove isn't in the export at all. It has to be here: the
-//    directory ships EMPTY on purpose — which carriers the team is appointed
-//    with, and their real URLs and numbers, is still an open question back to
-//    Brayden, and inventing plausible carriers would be worse than none.
+// "Open portal" is a plain new-tab link, not an in-dashboard iframe embed.
+// Every one of the 12 real carrier login pages was checked for
+// X-Frame-Options / CSP frame-ancestors before building this — all of them
+// (the 10 that could be reached from this environment) send explicit
+// anti-framing headers, standard practice for a login page. There's no
+// carrier here an iframe route could actually serve, so building one would
+// be dead code. Flagged back to Brayden — if a carrier's real portal ever
+// turns out to allow framing, this is the file to revisit.
 const BLANK = { name: '', portal_url: '', new_business_phone: '', agent_service_phone: '' }
 
 export default function CarrierPortals() {
@@ -49,65 +47,34 @@ export default function CarrierPortals() {
   }
 
   return (
-    <div style={{ maxWidth: 820 }}>
-      <div style={{ background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: '16px 24px', borderBottom: 'var(--border-w) solid var(--border)',
-        }}>
-          <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Carrier portals</span>
-          {isAdmin && (
-            <button onClick={() => setAdding(v => !v)} style={{ ...ghostBtn, height: 30 }}>
-              <Plus size={12} /> Add carrier
-            </button>
-          )}
-        </div>
-
-        {isLoading ? (
-          <p style={{ margin: 0, padding: '18px 24px', fontSize: 12.5, color: 'var(--text-muted)' }}>Loading carriers…</p>
-        ) : carriers.length === 0 ? (
-          <div style={{ padding: '40px 24px', textAlign: 'center' }}>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>No carriers yet</p>
-            <p style={{ margin: '6px auto 0', maxWidth: 420, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-              {isAdmin
-                ? 'Add the carriers the team is actually appointed with, with their portal link and the numbers to call.'
-                : 'Ask an admin to add the carriers your team is appointed with.'}
-            </p>
-          </div>
-        ) : carriers.map(c => (
-          <div
-            key={c.id}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
-              padding: '13px 24px', borderBottom: 'var(--border-w) solid var(--border)',
-            }}
-          >
-            <span style={{ flex: 1, minWidth: 140, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-              {c.name}
-            </span>
-            <PhoneCell label="New business" value={c.new_business_phone} />
-            <PhoneCell label="Agent service" value={c.agent_service_phone} />
-            {c.portal_url ? (
-              <a href={c.portal_url} target="_blank" rel="noreferrer" style={{ ...ghostBtn, height: 30, textDecoration: 'none' }}>
-                Open Portal <ArrowRight size={11} />
-              </a>
-            ) : (
-              <button disabled title="No portal URL on file for this carrier" style={{ ...ghostBtn, height: 30, opacity: 0.5 }}>
-                Open Portal <ArrowRight size={11} />
-              </button>
-            )}
-            {isAdmin && (
-              <button
-                onClick={() => del.mutate(c.id)}
-                title="Remove carrier"
-                style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', display: 'inline-flex', padding: 2 }}
-              >
-                <Trash2 size={13} />
-              </button>
-            )}
-          </div>
-        ))}
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+          {carriers.length} carrier{carriers.length === 1 ? '' : 's'}
+        </span>
+        {isAdmin && (
+          <button onClick={() => setAdding(v => !v)} style={ghostBtn}>
+            <Plus size={12} /> Add carrier
+          </button>
+        )}
       </div>
+
+      {isLoading ? (
+        <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-muted)' }}>Loading carriers…</p>
+      ) : carriers.length === 0 ? (
+        <div style={{ ...card, textAlign: 'center', padding: '40px 24px' }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>No carriers yet</p>
+          <p style={{ margin: '6px auto 0', maxWidth: 420, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+            {isAdmin
+              ? 'Add the carriers the team is actually appointed with, with their portal link and the numbers to call.'
+              : 'Ask an admin to add the carriers your team is appointed with.'}
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
+          {carriers.map(c => <CarrierCard key={c.id} carrier={c} isAdmin={isAdmin} onDelete={() => del.mutate(c.id)} />)}
+        </div>
+      )}
 
       {isAdmin && adding && (
         <div style={{ ...card, marginTop: 16 }}>
@@ -128,7 +95,8 @@ export default function CarrierPortals() {
           </div>
           <GapNote>
             Only real appointed carriers belong here — this directory feeds the provider field on New Submission
-            and the "verify in portal" link.
+            and the "verify in portal" link. Logo, core-carrier flag, and portal system name can be set later
+            directly in the database.
           </GapNote>
         </div>
       )}
@@ -136,17 +104,94 @@ export default function CarrierPortals() {
   )
 }
 
-function PhoneCell({ label, value }) {
+function CarrierInitials({ name }) {
+  const initials = name.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
+  return (
+    <span style={{
+      width: 40, height: 40, borderRadius: 8, flexShrink: 0,
+      background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 14, fontWeight: 700, color: 'var(--accent)',
+    }}>
+      {initials || '?'}
+    </span>
+  )
+}
+
+function CarrierCard({ carrier: c, isAdmin, onDelete }) {
+  return (
+    <div style={{ ...card, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        {c.logo_url
+          ? <img src={c.logo_url} alt={`${c.name} logo`} style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'contain', background: '#fff', flexShrink: 0 }} />
+          : <CarrierInitials name={c.name} />}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{c.name}</span>
+            {c.is_core_carrier && (
+              <span style={{
+                fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+                padding: '2px 6px', borderRadius: 4,
+                background: 'var(--accent-dim)', border: '1px solid var(--accent-border)', color: 'var(--accent)',
+              }}>
+                Core carrier
+              </span>
+            )}
+          </div>
+          {c.portal_name && (
+            <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-muted)' }}>{c.portal_name}</p>
+          )}
+        </div>
+        {isAdmin && (
+          <button
+            onClick={onDelete}
+            title="Remove carrier"
+            style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', display: 'inline-flex', padding: 2, flexShrink: 0 }}
+          >
+            <Trash2 size={13} />
+          </button>
+        )}
+      </div>
+
+      <div style={{ borderTop: 'var(--border-w) solid var(--border)' }} />
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <PhoneRow label="New business" value={c.new_business_phone} />
+        <PhoneRow label="Agent service" value={c.agent_service_phone} />
+      </div>
+
+      {c.portal_url ? (
+        <a
+          href={c.portal_url} target="_blank" rel="noreferrer"
+          style={{ ...ghostBtn, justifyContent: 'center', textDecoration: 'none', marginTop: 'auto' }}
+        >
+          Open portal <ExternalLink size={11} />
+        </a>
+      ) : (
+        <button disabled title="No portal URL on file for this carrier" style={{ ...ghostBtn, justifyContent: 'center', opacity: 0.5, marginTop: 'auto' }}>
+          Open portal <ExternalLink size={11} />
+        </button>
+      )}
+      {c.portal_url && (
+        <p style={{ margin: '-6px 0 0', fontSize: 9.5, color: 'var(--text-dim)', textAlign: 'center' }}>
+          Opens in a new tab
+        </p>
+      )}
+    </div>
+  )
+}
+
+function PhoneRow({ label, value }) {
   if (!value) return null
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
-      <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{label}</span>
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+      <span style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{label}</span>
       <a
         href={`tel:${value.replace(/[^\d+]/g, '')}`}
         style={{ fontSize: 11.5, color: 'var(--text-secondary)', fontFamily: MONO, textDecoration: 'none' }}
       >
         {value}
       </a>
-    </span>
+    </div>
   )
 }

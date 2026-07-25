@@ -1,13 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
-// Carrier directory behind the Carrier Portals page (migration 072).
-//
-// Ships EMPTY on purpose. Which carriers Nate/Jordan/Rego are actually
-// appointed with — and their real portal URLs and new-business / agent-service
-// numbers — is an open question flagged back to Brayden (Prompt 326). Admin
-// enters the real rows from the page itself rather than the app shipping
-// invented carriers that look real.
+// Carrier directory behind the Carrier Portals page (migration 072, real
+// data seeded in 078 per Prompt 331). Admin can still add/remove carriers
+// from the page itself for anything not in the seeded set.
 
 export function useCarriers() {
   return useQuery({
