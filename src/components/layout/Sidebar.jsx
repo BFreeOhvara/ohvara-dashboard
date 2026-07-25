@@ -95,7 +95,7 @@ function AccountMenu({ profile, expanded, duty, setDuty, onNavigate, onSignOut }
 
   const menuItemStyle = {
     display: 'flex', alignItems: 'center', gap: 9, width: '100%',
-    padding: '8px 14px', border: 'none', background: 'transparent',
+    padding: '7px 14px', border: 'none', background: 'transparent',
     color: 'var(--text-primary)', fontSize: 12.5, fontWeight: 500,
     textAlign: 'left', cursor: 'pointer',
   }
@@ -136,45 +136,61 @@ function AccountMenu({ profile, expanded, duty, setDuty, onNavigate, onSignOut }
         <div
           ref={panelRef}
           style={{
-            position: 'fixed', bottom: coords.bottom, left: coords.left, width: 220,
+            position: 'fixed', bottom: coords.bottom, left: coords.left, width: 248,
             background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
-            borderRadius: 8, overflow: 'hidden', zIndex: 9999, padding: '6px 0',
+            borderRadius: 8, overflow: 'hidden', zIndex: 9999, padding: '5px 0',
           }}
         >
-          {/* Identity header — non-clickable, just display */}
-          <div style={{ padding: '8px 14px 10px' }}>
-            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {profile?.full_name}
-            </p>
-            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {profile?.username || profile?.email}
-            </p>
+          {/* Identity header — non-clickable, just display. Avatar sits
+              inline next to name/username (one row, not stacked above), and
+              the closer duty toggle (was its own row below) is folded into
+              this same row on the right — both changes keep the row's
+              height flat instead of adding rows, since that total height is
+              what determines whether the popup clears the Settings nav item
+              sitting directly above the footer row (Prompt 340). */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 14px 10px' }}>
+            <span style={{
+              width: 28, height: 28, borderRadius: '50%',
+              background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, fontWeight: 700, color: 'var(--accent)', flexShrink: 0,
+            }}>
+              {initials}
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {profile?.full_name}
+              </p>
+              <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {profile?.username || profile?.email}
+              </p>
+            </div>
+            {profile?.role === 'closer' && (
+              <div
+                title={duty ? 'Available for transfers' : 'Off duty'}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0 }}
+              >
+                <div
+                  onClick={() => setDuty(d => !d)}
+                  style={{
+                    width: 30, height: 17, borderRadius: 9,
+                    background: duty ? 'var(--success)' : 'var(--bg-base)',
+                    position: 'relative', cursor: 'pointer', transition: 'background 120ms', flexShrink: 0,
+                  }}
+                >
+                  <span style={{
+                    position: 'absolute', top: 2, left: duty ? 15 : 2,
+                    width: 13, height: 13, borderRadius: '50%', background: '#fff', transition: 'left 120ms',
+                  }} />
+                </div>
+                <span style={{ fontSize: 8.5, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                  {duty ? 'On duty' : 'Off duty'}
+                </span>
+              </div>
+            )}
           </div>
 
-          {/* Duty toggle — closers only, folded in from its old standalone
-              row (export: showDutyWidget) */}
-          {profile?.role === 'closer' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px' }}>
-              <span style={{ flex: 1, fontSize: 12, color: 'var(--text-secondary)' }}>
-                {duty ? 'Available for transfers' : 'Off duty'}
-              </span>
-              <div
-                onClick={() => setDuty(d => !d)}
-                style={{
-                  width: 32, height: 18, borderRadius: 9,
-                  background: duty ? 'var(--success)' : 'var(--bg-base)',
-                  position: 'relative', cursor: 'pointer', transition: 'background 120ms', flexShrink: 0,
-                }}
-              >
-                <span style={{
-                  position: 'absolute', top: 2, left: duty ? 16 : 2,
-                  width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left 120ms',
-                }} />
-              </div>
-            </div>
-          )}
-
-          <div style={{ borderTop: 'var(--border-w) solid var(--border)', margin: '4px 0' }} />
+          <div style={{ borderTop: 'var(--border-w) solid var(--border)', margin: '3px 0' }} />
 
           <button
             onClick={() => go('/profile')}
@@ -333,10 +349,10 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
         }}>
           {expanded && (
             <>
-              <img src={ohvaraLogo} alt="Ohvara" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+              <img src={ohvaraLogo} alt="Ohvara" style={{ width: 34, height: 34, borderRadius: 7, objectFit: 'cover', flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.1 }}>Ohvara</p>
-                <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)', lineHeight: 1 }}>
+                <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.1 }}>Ohvara</p>
+                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1 }}>
                   {PORTAL_LABELS[profile?.role] || ''}
                 </p>
               </div>
@@ -403,7 +419,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
                         border: 'none', borderRadius: 6,
                         background: isActive ? 'var(--bg-elevated)' : 'transparent',
                         color: 'var(--text-primary)',
-                        fontSize: 13, fontWeight: isActive ? 500 : 400,
+                        fontSize: 14.5, fontWeight: isActive ? 500 : 400,
                         textAlign: 'left', position: 'relative',
                       }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
@@ -414,7 +430,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
                         borderRadius: '0 2px 2px 0',
                         background: isActive ? 'var(--accent)' : 'transparent',
                       }} />
-                      <Icon size={15} style={{ flexShrink: 0, color: isActive ? 'var(--accent)' : 'currentColor' }} />
+                      <Icon size={17} style={{ flexShrink: 0, color: isActive ? 'var(--accent)' : 'currentColor' }} />
                       {expanded && (
                         <>
                           <span style={{ flex: 1 }}>{label}</span>
