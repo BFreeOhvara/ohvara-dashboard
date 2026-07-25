@@ -108,10 +108,7 @@ function CarrierInitials({ name }) {
   const initials = name.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
   return (
     <span style={{
-      width: 40, height: 40, borderRadius: 8, flexShrink: 0,
-      background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 14, fontWeight: 700, color: 'var(--accent)',
+      fontSize: 22, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.02em',
     }}>
       {initials || '?'}
     </span>
@@ -120,63 +117,62 @@ function CarrierInitials({ name }) {
 
 function CarrierCard({ carrier: c, isAdmin, onDelete }) {
   return (
-    <div style={{ ...card, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+    <div style={{ ...card, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div style={{
+        position: 'relative', height: 84, padding: '10px 16px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: '#fff', borderBottom: 'var(--border-w) solid var(--border)',
+      }}>
         {c.logo_url
-          ? <img src={c.logo_url} alt={`${c.name} logo`} style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'contain', background: '#fff', flexShrink: 0 }} />
+          ? <img src={c.logo_url} alt={`${c.name} logo`} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
           : <CarrierInitials name={c.name} />}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{c.name}</span>
-            {c.is_core_carrier && (
-              <span style={{
-                fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
-                padding: '2px 6px', borderRadius: 4,
-                background: 'var(--accent-dim)', border: '1px solid var(--accent-border)', color: 'var(--accent)',
-              }}>
-                Core carrier
-              </span>
-            )}
-          </div>
-          {c.portal_name && (
-            <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-muted)' }}>{c.portal_name}</p>
-          )}
-        </div>
         {isAdmin && (
           <button
             onClick={onDelete}
             title="Remove carrier"
-            style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', display: 'inline-flex', padding: 2, flexShrink: 0 }}
+            style={{
+              position: 'absolute', top: 6, right: 6, border: 'none', background: 'rgba(0,0,0,0.06)',
+              color: 'var(--text-muted)', display: 'inline-flex', padding: 4, borderRadius: 6,
+            }}
           >
-            <Trash2 size={13} />
+            <Trash2 size={12} />
           </button>
         )}
       </div>
 
-      <div style={{ borderTop: 'var(--border-w) solid var(--border)' }} />
+      <div style={{ padding: '14px 20px 18px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
+        <div>
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{c.name}</span>
+          {c.portal_name && (
+            <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-muted)' }}>{c.portal_name}</p>
+          )}
+        </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <PhoneRow label="New business" value={c.new_business_phone} />
-        <PhoneRow label="Agent service" value={c.agent_service_phone} />
+        <div style={{ borderTop: 'var(--border-w) solid var(--border)' }} />
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <PhoneRow label="New business" value={c.new_business_phone} />
+          <PhoneRow label="Agent service" value={c.agent_service_phone} />
+        </div>
+
+        {c.portal_url ? (
+          <a
+            href={c.portal_url} target="_blank" rel="noreferrer"
+            style={{ ...ghostBtn, justifyContent: 'center', textDecoration: 'none', marginTop: 'auto' }}
+          >
+            Open portal <ExternalLink size={11} />
+          </a>
+        ) : (
+          <button disabled title="No portal URL on file for this carrier" style={{ ...ghostBtn, justifyContent: 'center', opacity: 0.5, marginTop: 'auto' }}>
+            Open portal <ExternalLink size={11} />
+          </button>
+        )}
+        {c.portal_url && (
+          <p style={{ margin: '-6px 0 0', fontSize: 9.5, color: 'var(--text-dim)', textAlign: 'center' }}>
+            Opens in a new tab
+          </p>
+        )}
       </div>
-
-      {c.portal_url ? (
-        <a
-          href={c.portal_url} target="_blank" rel="noreferrer"
-          style={{ ...ghostBtn, justifyContent: 'center', textDecoration: 'none', marginTop: 'auto' }}
-        >
-          Open portal <ExternalLink size={11} />
-        </a>
-      ) : (
-        <button disabled title="No portal URL on file for this carrier" style={{ ...ghostBtn, justifyContent: 'center', opacity: 0.5, marginTop: 'auto' }}>
-          Open portal <ExternalLink size={11} />
-        </button>
-      )}
-      {c.portal_url && (
-        <p style={{ margin: '-6px 0 0', fontSize: 9.5, color: 'var(--text-dim)', textAlign: 'center' }}>
-          Opens in a new tab
-        </p>
-      )}
     </div>
   )
 }
