@@ -1,17 +1,24 @@
 import { useState } from 'react'
-import { ExternalLink, Phone, Plus, Trash2 } from 'lucide-react'
+import { ArrowRight, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCarriers, useSaveCarrier, useDeleteCarrier } from '../../hooks/useCarriers'
-import { Button } from '../../components/ui/Button'
-import { Input } from '../../components/ui/Input'
+import { MONO, card, grid3, primaryBtn, ghostBtn } from '../../lib/exportStyles'
+import { TextField, GapNote } from '../../components/ui/ExportForm'
 
-// Carrier Portals — its own page as of Round 38 (split out of Submissions).
+// Carrier Portals — literal port of the export's "Closer · Carrier Portals"
+// screen (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines
+// 1456-1471): one 820px card, a titled header strip, then a divided row per
+// carrier — name, phone, Open Portal.
 //
-// Ships with an empty directory on purpose: which carriers the team is
-// actually appointed with, and their real portal URLs and phone numbers, is
-// an open question flagged back to Brayden. Admin fills it in here rather
-// than the app shipping invented carriers that look real.
-const BLANK = { name: '', portal_url: '', new_business_phone: '', agent_service_phone: '', notes: '' }
+// Flagged deviations:
+//  · The export's row carries a single phone number; the real `carriers` table
+//    holds two (new business + agent service), which is the distinction that
+//    actually matters on a call. Both render, labelled.
+//  · Admin add/remove isn't in the export at all. It has to be here: the
+//    directory ships EMPTY on purpose — which carriers the team is appointed
+//    with, and their real URLs and numbers, is still an open question back to
+//    Brayden, and inventing plausible carriers would be worse than none.
+const BLANK = { name: '', portal_url: '', new_business_phone: '', agent_service_phone: '' }
 
 export default function CarrierPortals() {
   const { profile } = useAuth()
@@ -33,7 +40,6 @@ export default function CarrierPortals() {
         portal_url: form.portal_url.trim() || null,
         new_business_phone: form.new_business_phone.trim() || null,
         agent_service_phone: form.agent_service_phone.trim() || null,
-        notes: form.notes.trim() || null,
       },
       {
         onSuccess: () => { setForm(BLANK); setAdding(false) },
@@ -43,109 +49,104 @@ export default function CarrierPortals() {
   }
 
   return (
-    <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <h1 style={{ fontSize: 20, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
-            Carrier Portals
-          </h1>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>
-            Portal links and the numbers to call for new business or agent service.
-          </p>
+    <div style={{ maxWidth: 820 }}>
+      <div style={{ background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '16px 24px', borderBottom: 'var(--border-w) solid var(--border)',
+        }}>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Carrier portals</span>
+          {isAdmin && (
+            <button onClick={() => setAdding(v => !v)} style={{ ...ghostBtn, height: 30 }}>
+              <Plus size={12} /> Add carrier
+            </button>
+          )}
         </div>
-        {isAdmin && (
-          <Button size="md" onClick={() => setAdding(v => !v)}>
-            <Plus size={14} /> Add carrier
-          </Button>
-        )}
+
+        {isLoading ? (
+          <p style={{ margin: 0, padding: '18px 24px', fontSize: 12.5, color: 'var(--text-muted)' }}>Loading carriers…</p>
+        ) : carriers.length === 0 ? (
+          <div style={{ padding: '40px 24px', textAlign: 'center' }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>No carriers yet</p>
+            <p style={{ margin: '6px auto 0', maxWidth: 420, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+              {isAdmin
+                ? 'Add the carriers the team is actually appointed with, with their portal link and the numbers to call.'
+                : 'Ask an admin to add the carriers your team is appointed with.'}
+            </p>
+          </div>
+        ) : carriers.map(c => (
+          <div
+            key={c.id}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+              padding: '13px 24px', borderBottom: 'var(--border-w) solid var(--border)',
+            }}
+          >
+            <span style={{ flex: 1, minWidth: 140, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+              {c.name}
+            </span>
+            <PhoneCell label="New business" value={c.new_business_phone} />
+            <PhoneCell label="Agent service" value={c.agent_service_phone} />
+            {c.portal_url ? (
+              <a href={c.portal_url} target="_blank" rel="noreferrer" style={{ ...ghostBtn, height: 30, textDecoration: 'none' }}>
+                Open Portal <ArrowRight size={11} />
+              </a>
+            ) : (
+              <button disabled title="No portal URL on file for this carrier" style={{ ...ghostBtn, height: 30, opacity: 0.5 }}>
+                Open Portal <ArrowRight size={11} />
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                onClick={() => del.mutate(c.id)}
+                title="Remove carrier"
+                style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', display: 'inline-flex', padding: 2 }}
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
+        ))}
       </div>
 
       {isAdmin && adding && (
-        <div className="glass" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
-            <Input label="Carrier Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Carrier" />
-            <Input label="Portal URL" value={form.portal_url} onChange={e => setForm(f => ({ ...f, portal_url: e.target.value }))} placeholder="https://…" />
-            <Input label="New Business Phone" value={form.new_business_phone} onChange={e => setForm(f => ({ ...f, new_business_phone: e.target.value }))} placeholder="(555) 010-0000" />
-            <Input label="Agent Service Phone" value={form.agent_service_phone} onChange={e => setForm(f => ({ ...f, agent_service_phone: e.target.value }))} placeholder="(555) 010-0000" />
+        <div style={{ ...card, marginTop: 16 }}>
+          <div style={grid3}>
+            <TextField label="Carrier name" placeholder="Carrier" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+            <TextField label="Portal URL" placeholder="https://…" value={form.portal_url} onChange={e => setForm(f => ({ ...f, portal_url: e.target.value }))} />
+            <TextField label="New business phone" mono placeholder="(602) 555-0184" value={form.new_business_phone} onChange={e => setForm(f => ({ ...f, new_business_phone: e.target.value }))} />
+            <TextField label="Agent service phone" mono placeholder="(602) 555-0184" value={form.agent_service_phone} onChange={e => setForm(f => ({ ...f, agent_service_phone: e.target.value }))} />
           </div>
-          {error && <p style={{ fontSize: 12, color: 'var(--danger)', margin: 0 }}>{error}</p>}
+          {error && <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--danger)' }}>{error}</p>}
           <div style={{ display: 'flex', gap: 8 }}>
-            <Button size="md" onClick={submit} disabled={save.isPending}>
+            <button onClick={submit} disabled={save.isPending} style={{ ...primaryBtn, opacity: save.isPending ? 0.6 : 1 }}>
               {save.isPending ? 'Saving…' : 'Save carrier'}
-            </Button>
-            <Button size="md" variant="ghost" onClick={() => { setAdding(false); setForm(BLANK); setError('') }}>
+            </button>
+            <button onClick={() => { setAdding(false); setForm(BLANK); setError('') }} style={{ ...ghostBtn, height: 36 }}>
               Cancel
-            </Button>
+            </button>
           </div>
-        </div>
-      )}
-
-      {isLoading ? (
-        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Loading carriers…</p>
-      ) : carriers.length === 0 ? (
-        <div className="glass" style={{ padding: 40, textAlign: 'center' }}>
-          <p style={{ fontSize: 14, color: 'var(--text-primary)', margin: 0 }}>No carriers added yet</p>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '6px 0 0', lineHeight: 1.6 }}>
-            {isAdmin
-              ? 'Add the carriers the team is appointed with, along with their portal link and phone numbers.'
-              : 'Ask an admin to add the carriers your team is appointed with.'}
-          </p>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
-          {carriers.map(c => (
-            <div key={c.id} className="glass" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-                <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{c.name}</p>
-                {isAdmin && (
-                  <button
-                    onClick={() => del.mutate(c.id)}
-                    title="Remove carrier"
-                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2 }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                <PhoneLine label="New business" value={c.new_business_phone} />
-                <PhoneLine label="Agent service" value={c.agent_service_phone} />
-              </div>
-
-              {c.portal_url && (
-                <a
-                  href={c.portal_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    fontSize: 12, color: 'var(--accent)', textDecoration: 'none', marginTop: 2,
-                  }}
-                >
-                  <ExternalLink size={13} /> Open Portal
-                </a>
-              )}
-            </div>
-          ))}
+          <GapNote>
+            Only real appointed carriers belong here — this directory feeds the provider field on New Submission
+            and the "verify in portal" link.
+          </GapNote>
         </div>
       )}
     </div>
   )
 }
 
-function PhoneLine({ label, value }) {
+function PhoneCell({ label, value }) {
   if (!value) return null
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <Phone size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{label}</span>
+    <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
+      <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{label}</span>
       <a
         href={`tel:${value.replace(/[^\d+]/g, '')}`}
-        style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-primary)', textDecoration: 'none', marginLeft: 'auto' }}
+        style={{ fontSize: 11.5, color: 'var(--text-secondary)', fontFamily: MONO, textDecoration: 'none' }}
       >
         {value}
       </a>
-    </div>
+    </span>
   )
 }

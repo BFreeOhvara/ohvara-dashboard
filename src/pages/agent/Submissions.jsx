@@ -1,69 +1,82 @@
 import { useMemo, useState } from 'react'
-import { Check, CalendarClock } from 'lucide-react'
+import { CheckCircle2, ArrowRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCarriers } from '../../hooks/useCarriers'
 import { usePolicies, useCreatePolicy, useUpdatePolicy, POLICY_STATUSES, PRE_SUBMISSION_STATUSES } from '../../hooks/usePolicies'
-import { Button } from '../../components/ui/Button'
-import { Input, Select, Textarea } from '../../components/ui/Input'
-import { Badge } from '../../components/ui/Badge'
 import { ComingSoon } from '../../components/agent/ComingSoon'
+import {
+  MONO, card, cardTitle, control, fieldLabel, grid3, primaryBtn, ghostBtn,
+} from '../../lib/exportStyles'
+import { Field, TextField, SelectField, GapNote } from '../../components/ui/ExportForm'
 import { money, fullName, formatDate, todayISO } from '../../lib/policyFormat'
 
-// Submissions — three tabs (Round 33 / Round 38: the carrier-portal grid was
-// pulled out into its own page, so it isn't a tab here).
+// Submissions — literal port of the export's "Closer · Submissions" screen
+// (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines
+// 1307-1454): underlined tab strip, the Round 33 new-business form laid out
+// three fields to a row, the auto annual-premium readout, and the projected-
+// commission strip under a divider. Wired to the real `policies` table.
+//
+// Flagged deviations from the export, none of them silent substitutions:
+//  · Insurance provider / product type / insurance type are hard <select>s in
+//    the export, fed by `data3.js` (never handed over) and by a carrier
+//    directory that is still empty on purpose. Kept as free text + datalist so
+//    a real submission is never blocked on data Brayden hasn't supplied.
+//  · State and Notes aren't in the export's grid, but both are real columns
+//    and My Policies filters on state — kept, styled identically.
+//  · Projected commission renders an em-dash: comp-grid rates by
+//    carrier/product/tier don't exist yet, so any figure would be invented.
+//  · The export's cancellation tab books against nothing. Real bookings need
+//    to know WHICH policy, so a policy picker leads that form, and what's
+//    already booked is listed underneath.
+
 const TABS = [
   { key: 'new',          label: 'New Submission' },
-  { key: 'cancellation', label: 'Cancellation Calendar' },
   { key: 'contracting',  label: 'Contracting Submission' },
+  { key: 'cancellation', label: 'Cancellation Calendar' },
 ]
 
 export default function Submissions() {
   const [tab, setTab] = useState('new')
 
   return (
-    <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div>
-        <h1 style={{ fontSize: 20, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
-          Submissions
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>
-          Submit a sold policy and schedule the 3-way cancellation call.
-        </p>
-      </div>
-
-      <div style={{ display: 'flex', gap: 4, padding: 3, background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 8, alignSelf: 'flex-start', flexWrap: 'wrap' }}>
-        {TABS.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            style={{
-              padding: '7px 14px', borderRadius: 6, fontSize: 12,
-              fontWeight: tab === t.key ? 500 : 400, cursor: 'pointer', border: 'none',
-              background: tab === t.key ? 'var(--accent-dim)' : 'transparent',
-              color: tab === t.key ? 'var(--accent)' : 'var(--text-muted)',
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
+    <div style={{ maxWidth: 1100 }}>
+      <div style={{
+        display: 'flex', gap: 2, flexWrap: 'wrap',
+        borderBottom: 'var(--border-w) solid var(--border)', marginBottom: 20,
+      }}>
+        {TABS.map(t => {
+          const on = tab === t.key
+          return (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              style={{
+                border: 'none', background: 'transparent', padding: '9px 14px',
+                fontSize: 12.5, fontWeight: on ? 700 : 500,
+                color: on ? 'var(--text-primary)' : 'var(--text-muted)',
+                borderBottom: `2px solid ${on ? 'var(--accent)' : 'transparent'}`,
+                marginBottom: -1,
+              }}
+            >
+              {t.label}
+            </button>
+          )
+        })}
       </div>
 
       {tab === 'new' && <NewSubmission />}
-      {tab === 'cancellation' && <CancellationCalendar />}
       {tab === 'contracting' && (
         <ComingSoon
-          title="Contracting Submission"
-          description="New-agent carrier contracting — NPN, license state, and carrier appointment history — will land here."
+          title="Coming soon"
+          description="Contracting submission workflow will land here — NPN, license state and carrier appointment history."
         />
       )}
+      {tab === 'cancellation' && <CancellationCalendar />}
     </div>
   )
 }
 
 // ── New Submission ──────────────────────────────────────────────────────────
-// Field list is the real reference form (Round 33), not invented. Annual
-// premium is computed from monthly and displayed read-only — the database
-// generates the stored value, this is just the live preview of it.
 const BLANK = {
   policy_sold_date: todayISO(),
   policy_number: '',
@@ -86,11 +99,16 @@ function NewSubmission() {
   const create = useCreatePolicy()
   const [form, setForm] = useState(BLANK)
   const [error, setError] = useState('')
-  const [saved, setSaved] = useState(false)
+  const [saved, setSaved] = useState(null)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const monthly = Number(form.monthly_premium || 0)
   const annual = monthly * 12
+
+  // Only a carrier already in the directory can carry a portal link.
+  const carrier = carriers.find(
+    c => c.name.toLowerCase() === form.carrier_name.trim().toLowerCase()
+  )
 
   function submit() {
     setError('')
@@ -101,11 +119,6 @@ function NewSubmission() {
       return setError('Enter a monthly premium')
     }
 
-    // carrier_id is set only when the typed name matches a carrier already in
-    // the directory — free text still submits, since the directory is empty
-    // until Brayden supplies the real appointed carriers.
-    const match = carriers.find(c => c.name.toLowerCase() === form.carrier_name.trim().toLowerCase())
-
     create.mutate({
       agent_id: profile.id,
       policy_sold_date: form.policy_sold_date || null,
@@ -114,7 +127,7 @@ function NewSubmission() {
       client_first_name: form.client_first_name.trim(),
       client_last_name: form.client_last_name.trim(),
       client_phone: form.client_phone.trim() || null,
-      carrier_id: match?.id || null,
+      carrier_id: carrier?.id || null,
       carrier_name: form.carrier_name.trim() || null,
       product_type: form.product_type.trim() || null,
       insurance_type: form.insurance_type.trim() || null,
@@ -124,96 +137,165 @@ function NewSubmission() {
       notes: form.notes.trim() || null,
     }, {
       onSuccess: () => {
+        setSaved(`${form.client_first_name.trim()} ${form.client_last_name.trim()}${form.carrier_name.trim() ? ` · ${form.carrier_name.trim()}` : ''}`)
         setForm(BLANK)
-        setSaved(true)
-        setTimeout(() => setSaved(false), 4000)
       },
       onError: err => setError(err.message || 'Could not save this submission'),
     })
   }
 
   return (
-    <div className="glass" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
-        <div className="flex flex-col gap-1.5">
-          <label className="section-label">Policy Sold Date</label>
-          <input type="date" className="date-field" value={form.policy_sold_date} onChange={e => set('policy_sold_date', e.target.value)} />
-        </div>
-        {/* Agent Name is the submitting agent, not a free choice — an agent
-            can only ever write their own rows (RLS policies_insert). */}
-        <Input label="Agent Name" value={profile?.full_name || ''} readOnly />
-        <Input label="Policy #" value={form.policy_number} onChange={e => set('policy_number', e.target.value)} placeholder="Carrier policy number" />
-        <Select label="Lead Status" value={form.status} onChange={e => set('status', e.target.value)}>
+    <div style={{ ...card, marginBottom: 20 }}>
+      <p style={cardTitle}>New business submission</p>
+
+      <div style={grid3}>
+        <TextField
+          label="Policy sold date" type="date" mono
+          value={form.policy_sold_date} onChange={e => set('policy_sold_date', e.target.value)}
+        />
+        {/* Not a free choice — RLS (policies_insert) only ever lets an agent
+            write their own rows, so this is the signed-in agent, read-only. */}
+        <TextField label="Agent name" value={profile?.full_name || ''} readOnly />
+        <TextField
+          label="Policy #" mono placeholder="e.g. 4471209"
+          value={form.policy_number} onChange={e => set('policy_number', e.target.value)}
+        />
+      </div>
+
+      <div style={grid3}>
+        <SelectField label="Lead status" value={form.status} onChange={e => set('status', e.target.value)}>
           {POLICY_STATUSES.filter(s => !PRE_SUBMISSION_STATUSES.includes(s)).map(s => (
             <option key={s} value={s}>{s}</option>
           ))}
-        </Select>
+        </SelectField>
+        <TextField
+          label="Client first name" placeholder="First name"
+          value={form.client_first_name} onChange={e => set('client_first_name', e.target.value)}
+        />
+        <TextField
+          label="Client last name" placeholder="Last name"
+          value={form.client_last_name} onChange={e => set('client_last_name', e.target.value)}
+        />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
-        <Input label="Client First Name" value={form.client_first_name} onChange={e => set('client_first_name', e.target.value)} placeholder="Jordan" />
-        <Input label="Client Last Name" value={form.client_last_name} onChange={e => set('client_last_name', e.target.value)} placeholder="Smith" />
-        <Input label="Client Phone" value={form.client_phone} onChange={e => set('client_phone', e.target.value)} placeholder="(555) 010-1234" />
-        <Input label="State" value={form.state} onChange={e => set('state', e.target.value)} placeholder="TX" maxLength={2} />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
-        <div className="flex flex-col gap-1.5">
-          <label className="section-label">Insurance Provider</label>
-          {/* A datalist, not a hard dropdown: the carrier directory is empty
-              until the real appointed carriers are supplied, and a submission
-              must never be blocked on that. */}
+      <div style={grid3}>
+        <TextField
+          label="Client phone" mono placeholder="(602) 555-0184"
+          value={form.client_phone} onChange={e => set('client_phone', e.target.value)}
+        />
+        <Field label="Insurance provider">
           <input
             list="carrier-options"
             value={form.carrier_name}
             onChange={e => set('carrier_name', e.target.value)}
             placeholder="Carrier name"
-            className="date-field"
+            style={control}
           />
           <datalist id="carrier-options">
             {carriers.map(c => <option key={c.id} value={c.name} />)}
           </datalist>
-        </div>
-        <Input label="Product Type" value={form.product_type} onChange={e => set('product_type', e.target.value)} placeholder="Term, Whole Life, IUL…" />
-        <Input label="Insurance Type" value={form.insurance_type} onChange={e => set('insurance_type', e.target.value)} placeholder="Life" />
-        <div className="flex flex-col gap-1.5">
-          <label className="section-label">Effective Date</label>
-          <input type="date" className="date-field" value={form.effective_date} onChange={e => set('effective_date', e.target.value)} />
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, alignItems: 'end' }}>
-        <Input
-          label="Monthly Premium"
-          type="number"
-          min="0"
-          step="0.01"
-          value={form.monthly_premium}
-          onChange={e => set('monthly_premium', e.target.value)}
-          placeholder="0.00"
+        </Field>
+        <TextField
+          label="Product type" placeholder="Term, Whole Life, IUL…"
+          value={form.product_type} onChange={e => set('product_type', e.target.value)}
         />
-        <div>
-          <p className="section-label" style={{ margin: 0 }}>Annual Premium (auto)</p>
-          <p style={{ fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: '8px 0 0' }}>
-            {money(annual)}
-          </p>
-        </div>
       </div>
 
-      <Textarea label="Notes" rows={3} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Anything worth remembering about this deal" />
+      <div style={grid3}>
+        <TextField
+          label="Insurance type" placeholder="Life"
+          value={form.insurance_type} onChange={e => set('insurance_type', e.target.value)}
+        />
+        <TextField
+          label="Effective date" type="date" mono
+          value={form.effective_date} onChange={e => set('effective_date', e.target.value)}
+        />
+        <TextField
+          label="Monthly premium ($)" mono type="number" min="0" step="0.01" placeholder="118"
+          value={form.monthly_premium} onChange={e => set('monthly_premium', e.target.value)}
+        />
+      </div>
 
-      {error && (
-        <p style={{ fontSize: 12, color: 'var(--danger)', margin: 0 }}>{error}</p>
-      )}
+      <div style={grid3}>
+        <TextField
+          label="State" mono maxLength={2} placeholder="TX"
+          value={form.state} onChange={e => set('state', e.target.value)}
+        />
+        <Field label="Notes" style={{ gridColumn: 'span 2' }}>
+          <textarea
+            rows={2}
+            value={form.notes}
+            onChange={e => set('notes', e.target.value)}
+            placeholder="Anything worth remembering about this deal"
+            style={{ ...control, height: 'auto', padding: '8px 10px', resize: 'vertical' }}
+          />
+        </Field>
+      </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Button size="lg" onClick={submit} disabled={create.isPending}>
-          {create.isPending ? 'Submitting…' : 'Submit Policy'}
-        </Button>
+      {error && <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--danger)' }}>{error}</p>}
+
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, paddingTop: 2, flexWrap: 'wrap' }}>
+        <Field label="Annual premium (auto)">
+          <div style={{
+            height: 34, minWidth: 140, display: 'flex', alignItems: 'center', padding: '0 10px',
+            background: 'var(--bg-panel)', border: 'var(--border-w) solid var(--border)',
+            borderRadius: 6, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', fontFamily: MONO,
+          }}>
+            {money(annual)}
+          </div>
+        </Field>
+        <div style={{ flex: 1 }} />
+        <button onClick={submit} disabled={create.isPending} style={{ ...primaryBtn, opacity: create.isPending ? 0.6 : 1 }}>
+          {create.isPending ? 'Logging…' : 'Log Submission'}
+        </button>
         {saved && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--success)' }}>
-            <Check size={13} /> Submitted — it's in My Policies
-          </span>
+          <>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--success)', fontWeight: 700 }}>
+              <CheckCircle2 size={13} /> Logged — {saved} · it's in My Policies
+            </span>
+            <button
+              onClick={() => setSaved(null)}
+              style={{ border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 11.5, padding: 0 }}
+            >
+              New submission
+            </button>
+          </>
+        )}
+      </div>
+
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', gap: 14, marginTop: 16, paddingTop: 14,
+        borderTop: 'var(--border-w) solid var(--border)', flexWrap: 'wrap',
+      }}>
+        <div>
+          <p style={fieldLabel}>Projected commission</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-muted)', fontFamily: MONO }}>—</span>
+            <span style={{
+              display: 'inline-flex', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700,
+              background: 'var(--warning-dim)', color: 'var(--warning)', border: '1px solid var(--warning-bd)',
+            }}>
+              Projected
+            </span>
+          </div>
+          <GapNote>
+            No figure yet — comp-grid rates by carrier, product and contract tier haven't been loaded, so
+            anything shown here would be made up. It becomes a confirmed commission once the policy is active.
+          </GapNote>
+        </div>
+        <div style={{ flex: 1 }} />
+        {carrier?.portal_url ? (
+          <a href={carrier.portal_url} target="_blank" rel="noreferrer" style={{ ...ghostBtn, height: 32, textDecoration: 'none' }}>
+            Verify in {carrier.name} portal <ArrowRight size={11} />
+          </a>
+        ) : (
+          <button
+            disabled
+            title={form.carrier_name.trim() ? 'No portal URL on file for this carrier — add it on Carrier Portals' : 'Pick a carrier first'}
+            style={{ ...ghostBtn, height: 32, opacity: 0.5 }}
+          >
+            Verify in carrier portal <ArrowRight size={11} />
+          </button>
         )}
       </div>
     </div>
@@ -222,13 +304,26 @@ function NewSubmission() {
 
 // ── Cancellation Calendar ───────────────────────────────────────────────────
 // The old policy can only be cancelled on a live 3-way call (closer + client +
-// old carrier), so every sold deal needs one booked. This schedules that call
-// against the policy record and lists what's already on the books.
+// old carrier), so every replacement deal needs one booked against it.
+const SLOTS = ['9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM']
+
+function slotToISO(dateStr, slot) {
+  const [time, meridiem] = slot.split(' ')
+  const [h, m] = time.split(':').map(Number)
+  const hour = meridiem === 'PM' && h !== 12 ? h + 12 : meridiem === 'AM' && h === 12 ? 0 : h
+  const [y, mo, d] = dateStr.split('-').map(Number)
+  return new Date(y, mo - 1, d, hour, m).toISOString()
+}
+
 function CancellationCalendar() {
   const { profile } = useAuth()
   const { data: policies = [] } = usePolicies(profile?.id)
   const update = useUpdatePolicy()
-  const [draft, setDraft] = useState({})
+
+  const [policyId, setPolicyId] = useState('')
+  const [date, setDate] = useState(todayISO())
+  const [slot, setSlot] = useState('')
+  const [booked, setBooked] = useState(null)
 
   const { unscheduled, scheduled } = useMemo(() => {
     const open = policies.filter(p => p.cancellation_status !== 'Cancellation Complete')
@@ -240,95 +335,142 @@ function CancellationCalendar() {
     }
   }, [policies])
 
-  function book(policy) {
-    const value = draft[policy.id]
-    if (!value) return
+  const ready = policyId && date && slot
+
+  function confirm() {
+    if (!ready) return
+    const policy = unscheduled.find(p => p.id === policyId)
     update.mutate({
-      id: policy.id,
-      cancellation_call_at: new Date(value).toISOString(),
+      id: policyId,
+      cancellation_call_at: slotToISO(date, slot),
       // Booking the call is what puts the old policy into a pending state —
       // Complete is set by hand once the carrier confirms on the call.
-      cancellation_status: policy.cancellation_status || 'Cancellation Pending',
+      cancellation_status: policy?.cancellation_status || 'Cancellation Pending',
     }, {
-      onSuccess: () => setDraft(d => ({ ...d, [policy.id]: '' })),
+      onSuccess: () => {
+        setBooked({ name: fullName(policy), date, slot })
+        setPolicyId(''); setSlot('')
+      },
     })
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div className="glass" style={{ padding: 20 }}>
-        <h2 style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
-          Needs a cancellation call
-        </h2>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '4px 0 16px' }}>
-          Every replacement deal needs a live 3-way call with the old carrier before it's actually done.
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 640 }}>
+      <div style={card}>
+        <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+          Book the 3-way cancellation call
         </p>
-        {unscheduled.length === 0 ? (
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>Nothing waiting to be scheduled.</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {unscheduled.map(p => (
-              <div key={p.id} style={{
-                display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-                padding: '12px 14px', borderRadius: 8,
-                background: 'var(--bg-base)', border: '0.5px solid var(--border)',
-              }}>
-                <div style={{ flex: '1 1 180px', minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{fullName(p)}</p>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '3px 0 0' }}>
-                    {p.carrier_name || 'No carrier'} · sold {formatDate(p.policy_sold_date)}
-                  </p>
-                </div>
-                <input
-                  type="datetime-local"
-                  className="date-field"
-                  style={{ width: 210 }}
-                  value={draft[p.id] || ''}
-                  onChange={e => setDraft(d => ({ ...d, [p.id]: e.target.value }))}
-                />
-                <Button size="sm" onClick={() => book(p)} disabled={!draft[p.id] || update.isPending}>
-                  Schedule
-                </Button>
-              </div>
-            ))}
+        <p style={{ margin: '0 0 18px', fontSize: 11.5, color: 'var(--text-muted)' }}>
+          Pick a date and time to conference in the client and the old carrier to confirm cancellation.
+        </p>
+
+        {booked ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '32px 0', textAlign: 'center' }}>
+            <CheckCircle2 size={22} style={{ color: 'var(--success)' }} />
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+              Booked — {booked.name} · {formatDate(booked.date)} at {booked.slot}
+            </p>
+            <button
+              onClick={() => setBooked(null)}
+              style={{ border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 11.5, padding: 0 }}
+            >
+              Book another
+            </button>
           </div>
+        ) : unscheduled.length === 0 ? (
+          <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-muted)' }}>
+            Nothing waiting to be scheduled — every open policy already has a call on the books.
+          </p>
+        ) : (
+          <>
+            <div style={{ marginBottom: 16 }}>
+              <p style={fieldLabel}>Policy</p>
+              <select value={policyId} onChange={e => setPolicyId(e.target.value)} style={{ ...control, padding: '0 8px', maxWidth: 420 }}>
+                <option value="">Which deal is this call for?</option>
+                {unscheduled.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {fullName(p)}{p.carrier_name ? ` · ${p.carrier_name}` : ''} · sold {formatDate(p.policy_sold_date)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <p style={fieldLabel}>Date</p>
+              <input
+                type="date" value={date} min={todayISO()} onChange={e => setDate(e.target.value)}
+                style={{ ...control, width: 'auto', fontFamily: MONO }}
+              />
+            </div>
+
+            <p style={fieldLabel}>Available times</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 8 }}>
+              {SLOTS.map(s => {
+                const on = slot === s
+                return (
+                  <button
+                    key={s}
+                    onClick={() => setSlot(s)}
+                    style={{
+                      height: 34, borderRadius: 6, fontSize: 12, fontWeight: 700,
+                      border: `1px solid ${on ? 'var(--accent-border)' : 'var(--border)'}`,
+                      background: on ? 'var(--accent-dim)' : 'var(--bg-elevated)',
+                      color: on ? 'var(--accent)' : 'var(--text-secondary)',
+                    }}
+                  >
+                    {s}
+                  </button>
+                )
+              })}
+            </div>
+            <GapNote>
+              Every slot shows as open — there's no shared calendar behind this yet, so nothing here knows
+              what else is on your day.
+            </GapNote>
+
+            <button
+              onClick={confirm}
+              disabled={!ready || update.isPending}
+              style={{ ...primaryBtn, marginTop: 18, opacity: ready && !update.isPending ? 1 : 0.5 }}
+            >
+              {update.isPending ? 'Booking…' : 'Confirm booking'}
+            </button>
+          </>
         )}
       </div>
 
-      <div className="glass" style={{ padding: 20 }}>
-        <h2 style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Scheduled</h2>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '4px 0 16px' }}>
-          Upcoming 3-way calls, soonest first.
+      {/* Not in the export — its mockup has no real bookings to show. Without
+          this there's no way to see or close out a call you already booked. */}
+      <div style={card}>
+        <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>On the books</p>
+        <p style={{ margin: '0 0 16px', fontSize: 11.5, color: 'var(--text-muted)' }}>
+          Upcoming 3-way calls, soonest first. Mark one complete once the old carrier confirms on the call.
         </p>
         {scheduled.length === 0 ? (
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>No calls booked yet.</p>
+          <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-muted)' }}>No calls booked yet.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {scheduled.map(p => (
               <div key={p.id} style={{
                 display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-                padding: '12px 14px', borderRadius: 8,
-                background: 'var(--bg-base)', border: '0.5px solid var(--border)',
+                padding: '11px 14px', borderRadius: 7,
+                background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)',
               }}>
-                <CalendarClock size={15} style={{ color: 'var(--accent)', flexShrink: 0 }} />
                 <div style={{ flex: '1 1 180px', minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{fullName(p)}</p>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '3px 0 0' }}>
+                  <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>{fullName(p)}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: 10.5, color: 'var(--text-muted)', fontFamily: MONO }}>
                     {new Date(p.cancellation_call_at).toLocaleString('en-US', {
-                      weekday: 'short', month: 'short', day: 'numeric',
-                      hour: 'numeric', minute: '2-digit',
+                      weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
                     })}
                   </p>
                 </div>
-                {p.cancellation_status && <Badge label={p.cancellation_status} />}
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={update.isPending || p.cancellation_status === 'Cancellation Complete'}
+                <button
                   onClick={() => update.mutate({ id: p.id, cancellation_status: 'Cancellation Complete' })}
+                  disabled={update.isPending}
+                  style={{ ...ghostBtn, height: 28 }}
                 >
                   Mark complete
-                </Button>
+                </button>
               </div>
             ))}
           </div>

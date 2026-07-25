@@ -1,487 +1,415 @@
-import { useState, useMemo } from 'react'
-import { useAllProfiles, useCreateProfile, useToggleUserActive, useDeleteUser, useRepCredentials, usePendingInvites, useCreateInvite, useRevokeInvite } from '../../hooks/useProfiles'
+import { useMemo, useState } from 'react'
+import { Search, Users as UsersIcon, Copy, Check, Trash2, AlertTriangle, KeyRound, Eye, EyeOff, X } from 'lucide-react'
+import {
+  useAllProfiles, useCreateProfile, useToggleUserActive, useDeleteUser,
+  useRepCredentials, usePendingInvites, useCreateInvite, useRevokeInvite,
+} from '../../hooks/useProfiles'
 import { useAuth } from '../../hooks/useAuth'
-import { Badge } from '../../components/ui/Badge'
-import { Button } from '../../components/ui/Button'
-import { Input, Select } from '../../components/ui/Input'
-import { Card } from '../../components/ui/Card'
-import { UserPlus, X, CheckCircle, Copy, Check, Search, Trash2, AlertTriangle, KeyRound, Eye, EyeOff, Link2 } from 'lucide-react'
 import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { roleLabel } from '../../lib/roleLabels'
+import { MONO, card, grid3, primaryBtn, ghostBtn } from '../../lib/exportStyles'
+import { TextField, SelectField, GapNote } from '../../components/ui/ExportForm'
 
-function CredentialsReveal({ profileId }) {
-  const { data, isLoading, error } = useRepCredentials(profileId, true)
-  const [showUser, setShowUser] = useState(false)
-  const [showPass, setShowPass] = useState(false)
+// Users & Access — literal port of the export's "Admin · Users" screen
+// (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines
+// 1044-1093): search + Invite user toolbar, one bordered table (User / Role /
+// Status / 2FA / Last active / actions), and the pending-invite bar beneath
+// it.
+//
+// Flagged deviations:
+//  · The export's per-row "Edit" button has no screen behind it — there's no
+//    admin profile-edit form in this app — so the row keeps the actions that
+//    are real: reveal login, deactivate/reactivate, delete.
+//  · 2FA renders an em-dash for every user. Supabase MFA isn't enabled on the
+//    project, so a green check would be a lie.
+//  · "Resend" on an invite needs email infrastructure that doesn't exist —
+//    invites are shared by hand, so it's Copy instead.
+//  · The export has no create-user form. Kept behind a second button: it's
+//    the only way to make the first account (Nate's), before any invite
+//    link can exist.
 
-  if (isLoading) {
-    return <p className="text-[10px] text-[var(--text-muted)] mt-1.5">Loading…</p>
-  }
-  if (error || !data) {
-    return <p className="text-[10px] text-[#EF4444] mt-1.5">No saved login for this account.</p>
-  }
+const th = {
+  padding: '11px 16px', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
+  textTransform: 'uppercase', color: 'var(--text-muted)', textAlign: 'left',
+  borderBottom: 'var(--border-w) solid var(--border)', whiteSpace: 'nowrap',
+}
+const td = { padding: '12px 16px', borderBottom: 'var(--border-w) solid var(--border)' }
 
+const ROLE_STYLE = {
+  admin:  { color: 'var(--accent)',  dim: 'var(--accent-dim)',  bd: 'var(--accent-border)' },
+  closer: { color: 'var(--info)',    dim: 'var(--info-dim)',    bd: 'var(--info-bd)' },
+  rep:    { color: 'var(--text-secondary)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
+  client: { color: 'var(--text-secondary)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
+}
+
+function Pill({ children, style }) {
   return (
-    <div className="flex items-center gap-3 mt-1.5 font-mono text-[10px]">
-      <span className="flex items-center gap-1 text-[var(--text-muted)]">
-        User: <span className="text-[var(--text-secondary)]">{showUser ? data.username : '••••••••'}</span>
-        <button onClick={() => setShowUser(v => !v)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
-          {showUser ? <EyeOff size={11} /> : <Eye size={11} />}
-        </button>
-      </span>
-      <span className="flex items-center gap-1 text-[var(--text-muted)]">
-        Pass: <span className="text-[var(--text-secondary)]">{showPass ? data.password : '••••••••'}</span>
-        <button onClick={() => setShowPass(v => !v)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
-          {showPass ? <EyeOff size={11} /> : <Eye size={11} />}
-        </button>
-      </span>
-    </div>
+    <span style={{
+      display: 'inline-flex', padding: '2px 7px', borderRadius: 4,
+      fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', ...style,
+    }}>
+      {children}
+    </span>
   )
 }
 
-// Invite generation panel (Prompt 282) — admin picks a role, gets a single-use
-// /join/<token> link to send however they like (text, Slack — no email infra
-// needed for the invite itself). The invited person sets their own name,
-// email, phone, and password; admin never sees the password.
-function InvitePanel({ onClose }) {
-  const { profile } = useAuth()
-  const { data: invites } = usePendingInvites()
-  const createInvite = useCreateInvite()
-  const revokeInvite = useRevokeInvite()
-  const [role, setRole]           = useState('rep')
-  const [error, setError]         = useState('')
-  const [copiedId, setCopiedId]   = useState(null)
-
-  const linkFor = (token) => `${window.location.origin}/join/${token}`
-
-  async function handleGenerate() {
-    setError('')
-    try {
-      const invite = await createInvite.mutateAsync({ role, createdBy: profile.id })
-      handleCopy(invite)
-    } catch (err) {
-      setError(err.message || 'Failed to create invite')
-    }
-  }
-
-  function handleCopy(invite) {
-    navigator.clipboard.writeText(linkFor(invite.token))
-    setCopiedId(invite.id)
-    setTimeout(() => setCopiedId(null), 2000)
-  }
-
-  function daysLeft(expiresAt) {
-    const days = Math.ceil((new Date(expiresAt) - new Date()) / 86400000)
-    return days <= 1 ? 'expires today' : `${days}d left`
-  }
-
-  return (
-    <Card className="mb-5">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <p className="text-sm font-medium text-[var(--text-primary)]">Invite Link</p>
-          <p className="text-xs text-[var(--text-muted)] mt-0.5">
-            Single-use, 7-day expiry. They pick their own password — you only pick the role.
-          </p>
-        </div>
-        <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-1">
-          <X size={16} />
-        </button>
-      </div>
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="w-40">
-          <Select label="Role" value={role} onChange={e => setRole(e.target.value)}>
-            <option value="rep">Setter</option>
-            <option value="closer">Closer</option>
-            <option value="admin">Admin</option>
-          </Select>
-        </div>
-        <Button onClick={handleGenerate} size="sm" disabled={createInvite.isPending}>
-          <Link2 size={13} />
-          {createInvite.isPending ? 'Generating…' : 'Generate & Copy Link'}
-        </Button>
-      </div>
-      {error && <p className="text-xs text-[#EF4444] mt-2">{error}</p>}
-
-      {invites?.length > 0 && (
-        <div className="mt-4 pt-3 border-t border-[var(--border)]">
-          <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-medium mb-2">
-            Pending invites
-          </p>
-          <div className="space-y-1.5">
-            {invites.map(inv => (
-              <div key={inv.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
-                <Badge label={inv.role} text={roleLabel(inv.role)} />
-                <span className="font-mono text-[10px] text-[var(--text-muted)] truncate max-w-[160px] sm:max-w-[240px]">
-                  /join/{inv.token}
-                </span>
-                <span className="text-[var(--text-muted)]">{daysLeft(inv.expires_at)}</span>
-                <button
-                  onClick={() => handleCopy(inv)}
-                  className="flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-                >
-                  {copiedId === inv.id ? <><Check size={11} className="text-[#22C55E]" />Copied</> : <><Copy size={11} />Copy</>}
-                </button>
-                <button
-                  onClick={() => revokeInvite.mutate(inv.id)}
-                  className="text-[var(--text-muted)] hover:text-[#EF4444] transition-colors"
-                  title="Revoke invite"
-                >
-                  <Trash2 size={11} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </Card>
-  )
-}
-
-function formatDate(iso) {
-  if (!iso) return <span className="text-[var(--text-muted)] opacity-40">Never</span>
-  const d = new Date(iso)
-  const now = new Date()
-  const diff = now - d
-  if (diff < 60000)       return 'Just now'
-  if (diff < 3600000)     return `${Math.floor(diff / 60000)}m ago`
-  if (diff < 86400000)    return `${Math.floor(diff / 3600000)}h ago`
+function lastActive(iso) {
+  if (!iso) return 'Never'
+  const diff = Date.now() - new Date(iso).getTime()
+  if (diff < 60000) return 'Just now'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
   if (diff < 7 * 86400000) return `${Math.floor(diff / 86400000)}d ago`
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined })
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
+
+const initialsOf = name =>
+  (name || '?').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
 export default function Users() {
+  const { profile } = useAuth()
   const { data: profiles, isLoading } = useAllProfiles()
   const createProfile = useCreateProfile()
-  const toggleActive  = useToggleUserActive()
-  const deleteUser    = useDeleteUser()
+  const toggleActive = useToggleUserActive()
+  const deleteUser = useDeleteUser()
+  const { data: invites = [] } = usePendingInvites()
+  const createInvite = useCreateInvite()
+  const revokeInvite = useRevokeInvite()
 
-  const [showForm,     setShowForm]     = useState(false)
-  const [showInvite,   setShowInvite]   = useState(false)
-  const [form,         setForm]         = useState({ username: '', password: '', full_name: '', role: 'rep', timezone: DEFAULT_TIMEZONE })
-  const [formError,    setFormError]    = useState('')
+  const [search, setSearch] = useState('')
+  const [inviteRole, setInviteRole] = useState('closer')
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [formOpen, setFormOpen] = useState(false)
+  const [form, setForm] = useState({ username: '', password: '', full_name: '', role: 'closer', timezone: DEFAULT_TIMEZONE })
+  const [formError, setFormError] = useState('')
   const [createdCreds, setCreatedCreds] = useState(null)
-  const [copied,       setCopied]       = useState(false)
+  const [copied, setCopied] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [viewingCreds, setViewingCreds] = useState(null)
 
-  const [search,       setSearch]       = useState('')
-  const [roleFilter,   setRoleFilter]   = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
-
-  const [confirmDelete, setConfirmDelete] = useState(null) // profile object
-  const [viewingCreds,  setViewingCreds]  = useState(null) // profile id with login panel open
-
-  // Filtered profiles
-  const filtered = useMemo(() => {
+  const rows = useMemo(() => {
     if (!profiles) return []
-    return profiles.filter(p => {
-      const matchSearch = !search ||
-        p.full_name.toLowerCase().includes(search.toLowerCase()) ||
-        (p.username || '').toLowerCase().includes(search.toLowerCase())
-      const matchRole = roleFilter === 'all' || p.role === roleFilter
-      const matchStatus = statusFilter === 'all'
-        || (statusFilter === 'active' && p.is_active)
-        || (statusFilter === 'inactive' && !p.is_active)
-      return matchSearch && matchRole && matchStatus
-    })
-  }, [profiles, search, roleFilter, statusFilter])
+    const q = search.trim().toLowerCase()
+    if (!q) return profiles
+    return profiles.filter(p =>
+      [p.full_name, p.username, p.email].filter(Boolean).join(' ').toLowerCase().includes(q)
+    )
+  }, [profiles, search])
+
+  const linkFor = token => `${window.location.origin}/join/${token}`
+
+  async function copyLink(inv) {
+    try {
+      await navigator.clipboard.writeText(linkFor(inv.token))
+      setCopied(inv.id)
+      setTimeout(() => setCopied(null), 2000)
+    } catch { /* clipboard can be blocked — the link is on screen anyway */ }
+  }
+
+  async function generateInvite() {
+    setFormError('')
+    try {
+      const inv = await createInvite.mutateAsync({ role: inviteRole, createdBy: profile.id })
+      copyLink(inv)
+    } catch (err) {
+      setFormError(err.message || 'Failed to create invite')
+    }
+  }
 
   async function handleCreate() {
     setFormError('')
     try {
       await createProfile.mutateAsync(form)
       setCreatedCreds({ username: form.username, password: form.password, full_name: form.full_name })
-      setShowForm(false)
-      setForm({ username: '', password: '', full_name: '', role: 'rep', timezone: DEFAULT_TIMEZONE })
+      setFormOpen(false)
+      setForm({ username: '', password: '', full_name: '', role: 'closer', timezone: DEFAULT_TIMEZONE })
     } catch (err) {
       setFormError(err.message || 'Failed to create user')
     }
   }
 
-  function handleCopy() {
-    navigator.clipboard.writeText(
-      `Username: ${createdCreds.username}\nPassword: ${createdCreds.password}`
-    )
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  async function handleToggle(profile) {
-    await toggleActive.mutateAsync({ userId: profile.id, isActive: !profile.is_active })
-  }
-
-  async function handleDelete() {
-    if (!confirmDelete) return
-    await deleteUser.mutateAsync({ userId: confirmDelete.id })
-    setConfirmDelete(null)
-  }
-
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1>Users</h1>
-          <p className="text-[var(--text-muted)] text-sm mt-1">
-            {profiles?.length ?? '…'} accounts · {profiles?.filter(p => p.is_active).length ?? '…'} active
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={() => { setShowInvite(v => !v); setShowForm(false) }} size="sm">
-            <Link2 size={14} />
-            Invite Link
-          </Button>
-          <Button onClick={() => { setShowForm(v => !v); setShowInvite(false); setCreatedCreds(null) }} size="sm">
-            <UserPlus size={14} />
-            New User
-          </Button>
-        </div>
-      </div>
-
-      {/* Invite generation */}
-      {showInvite && <InvitePanel onClose={() => setShowInvite(false)} />}
-
-      {/* Credential handoff */}
-      {createdCreds && (
-        <div className="flex items-start justify-between gap-3 bg-[#22C55E]/8 border border-[#22C55E]/20 rounded-[10px] px-4 py-3 mb-4">
-          <div className="flex items-start gap-2.5">
-            <CheckCircle size={15} className="text-[#22C55E] flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-[var(--text-primary)]">{createdCreds.full_name} — account ready</p>
-              <p className="text-xs text-[var(--text-muted)] mt-1">
-                Username: <span className="font-mono text-[var(--text-secondary)]">{createdCreds.username}</span>
-                <span className="mx-2 opacity-40">·</span>
-                Password: <span className="font-mono text-[var(--text-secondary)]">{createdCreds.password}</span>
-              </p>
-            </div>
-          </div>
-          <Button variant="secondary" size="sm" onClick={handleCopy} className="flex-shrink-0">
-            {copied ? <><Check size={12} />Copied</> : <><Copy size={12} />Copy</>}
-          </Button>
-        </div>
-      )}
-
-      {/* Create user form */}
-      {showForm && (
-        <Card className="mb-5">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-medium text-[var(--text-primary)]">Create New User</p>
-            <button onClick={() => setShowForm(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-1">
-              <X size={16} />
-            </button>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Full Name"
-              value={form.full_name}
-              onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
-              placeholder="Jordan Smith"
-              required
-            />
-            <Input
-              label="Username"
-              value={form.username}
-              onChange={e => setForm(f => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') }))}
-              placeholder="jsmith"
-              autoComplete="off"
-              required
-            />
-            <Input
-              label="Password"
-              type="password"
-              value={form.password}
-              onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-              placeholder="Min 8 characters"
-              autoComplete="new-password"
-              required
-              minLength={8}
-            />
-            <Select
-              label="Role"
-              value={form.role}
-              onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
-            >
-              <option value="rep">Setter</option>
-              <option value="closer">Closer</option>
-              <option value="admin">Admin</option>
-            </Select>
-            <Select
-              label="Timezone"
-              value={form.timezone}
-              onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}
-            >
-              {SELECTABLE_TIMEZONES.map(tz => (
-                <option key={tz.value} value={tz.value}>{tz.label}</option>
-              ))}
-            </Select>
-            {formError && (
-              <div className="col-span-2">
-                <p className="text-xs text-[#EF4444]">{formError}</p>
-              </div>
-            )}
-            <div className="col-span-2 flex items-center gap-2 pt-1">
-              <Button onClick={handleCreate} size="sm" disabled={createProfile.isPending}>
-                {createProfile.isPending ? 'Creating…' : 'Create User'}
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => setShowForm(false)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Filters */}
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <div className="relative flex-1 min-w-[200px] max-w-xs">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 7, height: 30, padding: '0 10px',
+          background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
+          borderRadius: 6, width: 240,
+        }}>
+          <Search size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           <input
-            className="w-full bg-[var(--bg-1)] border border-[var(--border)] rounded-lg pl-8 pr-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[#6C63FF]/30 transition-all"
-            placeholder="Search name or username…"
             value={search}
             onChange={e => setSearch(e.target.value)}
+            placeholder="Search users…"
+            style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }}
           />
         </div>
-        <select
-          className="bg-[var(--bg-1)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
-          value={roleFilter}
-          onChange={e => setRoleFilter(e.target.value)}
+        <div style={{ flex: 1 }} />
+        <button onClick={() => { setFormOpen(v => !v); setInviteOpen(false); setCreatedCreds(null) }} style={{ ...ghostBtn, height: 30 }}>
+          New user
+        </button>
+        <button
+          onClick={() => { setInviteOpen(v => !v); setFormOpen(false) }}
+          style={{ ...primaryBtn, height: 30, padding: '0 14px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
         >
-          <option value="all">All roles</option>
-          <option value="rep">Setter</option>
-          <option value="closer">Closer</option>
-          <option value="admin">Admin</option>
-        </select>
-        <select
-          className="bg-[var(--bg-1)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-        >
-          <option value="all">All statuses</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
+          <UsersIcon size={12} /> Invite user
+        </button>
       </div>
 
-      {/* User table — scrolls horizontally on narrow screens instead of
-          clipping (Prompt 298: was `overflow-hidden`, a 6-column table has
-          no way to fit 342px of mobile content width) */}
-      <div className="bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] overflow-x-auto scrollbar-thin">
-        {isLoading ? (
-          <div className="p-8 flex justify-center">
-            <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+      {inviteOpen && (
+        <div style={{ ...card, marginBottom: 16 }}>
+          <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Invite link</p>
+          <p style={{ margin: '0 0 14px', fontSize: 11.5, color: 'var(--text-muted)' }}>
+            Single-use, 7-day expiry. They pick their own password — you only pick the role. Whoever claims it
+            joins under you in the hierarchy.
+          </p>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
+            <SelectField label="Role" value={inviteRole} onChange={e => setInviteRole(e.target.value)} style={{ width: 160 }}>
+              <option value="closer">Closer</option>
+              <option value="rep">Setter</option>
+              <option value="admin">Admin</option>
+            </SelectField>
+            <button onClick={generateInvite} disabled={createInvite.isPending} style={{ ...primaryBtn, height: 34, opacity: createInvite.isPending ? 0.6 : 1 }}>
+              {createInvite.isPending ? 'Generating…' : 'Generate & copy link'}
+            </button>
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="p-10 text-center">
-            <p className="text-[var(--text-muted)] text-sm">No users match this filter</p>
+        </div>
+      )}
+
+      {formOpen && (
+        <div style={{ ...card, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
+            <p style={{ margin: 0, flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Create user directly</p>
+            <button onClick={() => setFormOpen(false)} style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', display: 'inline-flex', padding: 2 }}>
+              <X size={14} />
+            </button>
           </div>
-        ) : (
-          <table className="w-full text-sm">
+          <div style={grid3}>
+            <TextField label="Full name" placeholder="Nate Rivera" value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} />
+            <TextField label="Username" mono placeholder="nrivera" value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') }))} />
+            <TextField label="Password" type="password" placeholder="Min 8 characters" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+            <SelectField label="Role" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
+              <option value="closer">Closer</option>
+              <option value="rep">Setter</option>
+              <option value="admin">Admin</option>
+            </SelectField>
+            <SelectField label="Timezone" value={form.timezone} onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}>
+              {SELECTABLE_TIMEZONES.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
+            </SelectField>
+          </div>
+          <button onClick={handleCreate} disabled={createProfile.isPending} style={{ ...primaryBtn, height: 34, opacity: createProfile.isPending ? 0.6 : 1 }}>
+            {createProfile.isPending ? 'Creating…' : 'Create user'}
+          </button>
+          <GapNote>
+            An account made here has no upline, so it starts its own chain on Hierarchy. Invite links are the
+            normal path — they stamp the recruiter automatically.
+          </GapNote>
+        </div>
+      )}
+
+      {formError && <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--danger)' }}>{formError}</p>}
+
+      {createdCreds && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16,
+          padding: '14px 18px', borderRadius: 8,
+          background: 'var(--success-dim)', border: '1px solid var(--success-bd)',
+        }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+              {createdCreds.full_name} — account ready
+            </p>
+            <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
+              {createdCreds.username} · {createdCreds.password}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(`Username: ${createdCreds.username}\nPassword: ${createdCreds.password}`)
+              setCopied('creds'); setTimeout(() => setCopied(null), 2000)
+            }}
+            style={{ ...ghostBtn, height: 28 }}
+          >
+            {copied === 'creds' ? <><Check size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
+          </button>
+        </div>
+      )}
+
+      <div style={{ background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr className="border-b border-[var(--border)]">
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] font-medium">User</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] font-medium">Role</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] font-medium">Status</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] font-medium">Joined</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] font-medium">Last Login</th>
-                <th className="px-4 py-3 text-right text-xs text-[var(--text-muted)] font-medium">Actions</th>
+              <tr>
+                <th style={th}>User</th>
+                <th style={th}>Role</th>
+                <th style={th}>Status</th>
+                <th style={{ ...th, textAlign: 'center' }}>2FA</th>
+                <th style={{ ...th, textAlign: 'right' }}>Last active</th>
+                <th style={{ ...th, textAlign: 'right' }} />
               </tr>
             </thead>
             <tbody>
-              {filtered.map(p => (
-                <tr key={p.id} className="border-b border-[var(--border)]/40 hover:bg-[var(--bg-2)] transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0
-                        ${p.is_active ? 'bg-[var(--accent-subtle)] text-[var(--accent)]' : 'bg-[var(--bg-3)] text-[var(--text-muted)]'}`}>
-                        {p.full_name.charAt(0).toUpperCase()}
+              {isLoading ? (
+                <tr><td colSpan={6} style={{ ...td, fontSize: 12.5, color: 'var(--text-muted)' }}>Loading users…</td></tr>
+              ) : rows.length === 0 ? (
+                <tr><td colSpan={6} style={{ ...td, fontSize: 12.5, color: 'var(--text-muted)' }}>No users match this search.</td></tr>
+              ) : rows.map(u => {
+                const rs = ROLE_STYLE[u.role] || ROLE_STYLE.rep
+                return (
+                  <tr key={u.id}>
+                    <td style={td}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{
+                          width: 26, height: 26, borderRadius: '50%',
+                          background: u.is_active ? 'var(--accent-dim)' : 'var(--bg-elevated)',
+                          border: `1px solid ${u.is_active ? 'var(--accent-border)' : 'var(--border)'}`,
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 9, fontWeight: 700, color: u.is_active ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0,
+                        }}>
+                          {initialsOf(u.full_name)}
+                        </span>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>{u.full_name}</p>
+                          <p style={{ margin: '1px 0 0', fontSize: 10.5, color: 'var(--text-muted)', fontFamily: MONO }}>
+                            {u.username ? `@${u.username}` : u.email || 'no username'}
+                          </p>
+                          {viewingCreds === u.id && <CredentialsReveal profileId={u.id} />}
+                        </div>
                       </div>
-                      <div>
-                        <p className={`font-medium text-[var(--text-primary)] text-sm leading-tight ${!p.is_active ? 'opacity-60' : ''}`}>
-                          {p.full_name}
-                        </p>
-                        <p className="font-mono text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">
-                          {p.username ? `@${p.username}` : <span className="opacity-40">no username</span>}
-                        </p>
-                        {viewingCreds === p.id && <CredentialsReveal profileId={p.id} />}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge label={p.role} text={roleLabel(p.role)} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${p.is_active ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${p.is_active ? 'bg-[#22C55E]' : 'bg-[#EF4444]'}`} />
-                      {p.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-[var(--text-muted)] text-xs">
-                    {formatDate(p.created_at)}
-                  </td>
-                  <td className="px-4 py-3 text-[var(--text-muted)] text-xs">
-                    {formatDate(p.last_login_at)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
+                    </td>
+                    <td style={td}>
+                      <Pill style={{ background: rs.dim, color: rs.color, border: `1px solid ${rs.bd}` }}>{roleLabel(u.role)}</Pill>
+                    </td>
+                    <td style={td}>
+                      <Pill style={u.is_active
+                        ? { background: 'var(--success-dim)', color: 'var(--success)', border: '1px solid var(--success-bd)' }
+                        : { background: 'var(--danger-dim)', color: 'var(--danger)', border: '1px solid var(--danger-bd)' }}>
+                        {u.is_active ? 'Active' : 'Inactive'}
+                      </Pill>
+                    </td>
+                    <td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)', fontFamily: MONO, fontSize: 12 }}>—</td>
+                    <td style={{ ...td, textAlign: 'right', fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
+                      {lastActive(u.last_login_at)}
+                    </td>
+                    <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <button
-                        onClick={() => setViewingCreds(v => v === p.id ? null : p.id)}
-                        className={`p-1.5 rounded-lg transition-all ${viewingCreds === p.id ? 'text-[var(--accent)] bg-[var(--accent-subtle)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-3)]'}`}
-                        title="View login"
+                        onClick={() => setViewingCreds(v => (v === u.id ? null : u.id))}
+                        title="Reveal saved login"
+                        style={{
+                          height: 26, width: 26, marginRight: 6, borderRadius: 6,
+                          border: 'var(--border-w) solid var(--border)',
+                          background: viewingCreds === u.id ? 'var(--accent-dim)' : 'transparent',
+                          color: viewingCreds === u.id ? 'var(--accent)' : 'var(--text-muted)',
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        }}
                       >
-                        <KeyRound size={13} />
+                        <KeyRound size={12} />
                       </button>
-                      <Button
-                        variant={p.is_active ? 'secondary' : 'ghost'}
-                        size="sm"
-                        onClick={() => handleToggle(p)}
+                      <button
+                        onClick={() => toggleActive.mutate({ userId: u.id, isActive: !u.is_active })}
                         disabled={toggleActive.isPending}
+                        style={{
+                          height: 26, padding: '0 10px', marginRight: 6, borderRadius: 6, fontSize: 11,
+                          border: u.is_active ? '1px solid var(--danger-bd)' : 'var(--border-w) solid var(--border)',
+                          background: u.is_active ? 'var(--danger-dim)' : 'transparent',
+                          color: u.is_active ? 'var(--danger)' : 'var(--text-secondary)',
+                        }}
                       >
-                        {p.is_active ? 'Deactivate' : 'Reactivate'}
-                      </Button>
-                      <button
-                        onClick={() => setConfirmDelete(p)}
-                        className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-all"
-                        title="Delete account"
-                      >
-                        <Trash2 size={13} />
+                        {u.is_active ? 'Deactivate' : 'Reactivate'}
                       </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      <button
+                        onClick={() => setConfirmDelete(u)}
+                        title="Delete account"
+                        style={{ height: 26, width: 26, borderRadius: 6, border: 'var(--border-w) solid var(--border)', background: 'transparent', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
-        )}
+        </div>
       </div>
 
-      {/* Delete confirmation modal */}
+      <GapNote>
+        2FA reads as an em-dash for everyone — MFA isn't enabled on this Supabase project, so no account can
+        have it yet.
+      </GapNote>
+
+      {invites.length > 0 && invites.map(inv => (
+        <div
+          key={inv.id}
+          style={{
+            marginTop: 14, ...card, padding: '16px 20px',
+            display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+          }}
+        >
+          <UsersIcon size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+          <span style={{ flex: 1, minWidth: 200, fontSize: 12, color: 'var(--text-secondary)' }}>
+            Pending invite — <span style={{ color: 'var(--text-primary)' }}>{roleLabel(inv.role)}</span>, expires{' '}
+            {new Date(inv.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </span>
+          <button onClick={() => copyLink(inv)} style={{ ...ghostBtn, height: 26, background: 'transparent' }}>
+            {copied === inv.id ? <><Check size={11} /> Copied</> : <><Copy size={11} /> Copy link</>}
+          </button>
+          <button onClick={() => revokeInvite.mutate(inv.id)} style={{ ...ghostBtn, height: 26, background: 'transparent' }}>
+            Revoke
+          </button>
+        </div>
+      ))}
+
       {confirmDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmDelete(null)} />
-          <div className="relative bg-[var(--bg-1)] border border-[var(--border)] rounded-[10px] p-6 w-full max-w-sm page-enter">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-9 h-9 rounded-[10px] bg-[#EF4444]/10 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle size={18} className="text-[#EF4444]" />
-              </div>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} onClick={() => setConfirmDelete(null)} />
+          <div style={{
+            position: 'relative', width: '100%', maxWidth: 380, padding: 24, borderRadius: 12,
+            background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+              <span style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--danger-dim)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <AlertTriangle size={17} style={{ color: 'var(--danger)' }} />
+              </span>
               <div>
-                <p className="text-sm font-medium text-[var(--text-primary)]">Delete account permanently?</p>
-                <p className="text-xs text-[var(--text-muted)] mt-1">
-                  <span className="text-[var(--text-secondary)] font-medium">{confirmDelete.full_name}</span>
-                  {confirmDelete.username ? ` (@${confirmDelete.username})` : ''} will be permanently removed from auth and profiles. This cannot be undone.
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Delete account permanently?</p>
+                <p style={{ margin: '4px 0 0', fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                  {confirmDelete.full_name} will be removed from auth and profiles. Anyone they recruited keeps
+                  their own account but loses this upline. This can't be undone.
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 justify-end">
-              <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(null)}>
-                Cancel
-              </Button>
-              <Button variant="danger" size="sm" onClick={handleDelete} disabled={deleteUser.isPending}>
-                {deleteUser.isPending ? 'Deleting…' : 'Delete Account'}
-              </Button>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setConfirmDelete(null)} style={{ ...ghostBtn, height: 32 }}>Cancel</button>
+              <button
+                onClick={async () => { await deleteUser.mutateAsync({ userId: confirmDelete.id }); setConfirmDelete(null) }}
+                disabled={deleteUser.isPending}
+                style={{ height: 32, padding: '0 14px', borderRadius: 6, border: '1px solid var(--danger-bd)', background: 'var(--danger-dim)', color: 'var(--danger)', fontSize: 12, fontWeight: 700 }}
+              >
+                {deleteUser.isPending ? 'Deleting…' : 'Delete account'}
+              </button>
             </div>
           </div>
         </div>
       )}
     </div>
+  )
+}
+
+function CredentialsReveal({ profileId }) {
+  const { data, isLoading, error } = useRepCredentials(profileId, true)
+  const [show, setShow] = useState(false)
+
+  if (isLoading) return <p style={{ margin: '4px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>Loading…</p>
+  if (error || !data) return <p style={{ margin: '4px 0 0', fontSize: 10, color: 'var(--danger)' }}>No saved login for this account.</p>
+
+  return (
+    <p style={{ margin: '4px 0 0', fontSize: 10, color: 'var(--text-muted)', fontFamily: MONO, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      {show ? `${data.username} · ${data.password}` : '•••••••• · ••••••••'}
+      <button onClick={() => setShow(v => !v)} style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', display: 'inline-flex', padding: 0 }}>
+        {show ? <EyeOff size={11} /> : <Eye size={11} />}
+      </button>
+    </p>
   )
 }

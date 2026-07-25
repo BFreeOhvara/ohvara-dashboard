@@ -8,6 +8,7 @@ import { NotificationBell } from '../admin/NotificationBell'
 import { RepNotificationBell } from '../rep/RepNotificationBell'
 import { CloserNotificationBell } from '../closer/CloserNotificationBell'
 import { useAuth } from '../../hooks/useAuth'
+import { useTheme } from '../../hooks/useTheme'
 
 // Shell — literal port of the export's right-hand column (lines 114-161):
 // a 60px sticky header carrying the page title/subtitle, theme toggle and
@@ -16,8 +17,6 @@ import { useAuth } from '../../hooks/useAuth'
 // Deliberately NOT ported: the export's "Viewing as Closer / Admin" switcher.
 // That's a mockup affordance for demoing both roles in one file — real roles
 // come from the signed-in profile.
-
-const THEME_KEY = 'ohvara-theme'
 
 // Export's TITLES map, keyed by route instead of by mockup page id.
 const TITLES = {
@@ -67,11 +66,8 @@ export function DashboardLayout({ children }) {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1')
   useEffect(() => { localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0') }, [collapsed])
 
-  const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || 'dark')
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem(THEME_KEY, theme)
-  }, [theme])
+  // Shared with Settings → Appearance, which sets the same theme.
+  const [theme, setTheme] = useTheme()
 
   const [title, sub] = TITLES[pathname] || ['', '']
 
@@ -125,7 +121,7 @@ export function DashboardLayout({ children }) {
               <span style={{ marginLeft: 10, fontSize: 11, color: 'var(--text-muted)' }}>{sub}</span>
             </div>
             <button
-              onClick={() => setTheme(t => (t === 'dark' ? 'light' : 'dark'))}
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               title="Toggle light / dark"
               style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
