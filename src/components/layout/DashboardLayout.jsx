@@ -74,11 +74,18 @@ function AccountChip() {
       }}>
         {initials}
       </span>
-      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+      <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
         {profile?.full_name || ''}
       </span>
     </div>
   )
+}
+
+// Short vertical rule between the bell and the account chip — decorative
+// only, doesn't touch the header's top/bottom edges (matches Brayden's
+// Eterna Insurance reference: bell | divider | avatar + name).
+function HeaderDivider() {
+  return <span aria-hidden="true" style={{ width: 1, height: 24, background: 'var(--border)', flexShrink: 0 }} />
 }
 
 export function DashboardLayout({ children }) {
@@ -143,6 +150,7 @@ export function DashboardLayout({ children }) {
               <span style={{ marginLeft: 10, fontSize: 11, color: 'var(--text-muted)' }}>{sub}</span>
             </div>
             <HeaderBell />
+            <HeaderDivider />
             <AccountChip />
           </header>
 

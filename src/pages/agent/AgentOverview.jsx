@@ -163,7 +163,7 @@ export default function AgentOverview() {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 20, alignItems: 'start', marginTop: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 20 }}>
         {/* Needs your attention — real pipeline-state worklist */}
         <div style={{
           background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8,
@@ -176,8 +176,9 @@ export default function AgentOverview() {
             <button
               onClick={() => navigate('/agent/policies')}
               style={{
-                border: 'none', background: 'transparent', color: 'var(--accent)',
-                fontSize: 11.5, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, padding: 0,
+                border: 'none', borderRadius: 6, background: 'var(--accent)', color: '#fff',
+                fontSize: 11.5, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '7px 12px',
               }}
             >
               View my policies <ArrowRight size={11} />

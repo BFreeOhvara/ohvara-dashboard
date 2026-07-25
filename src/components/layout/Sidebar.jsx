@@ -162,7 +162,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
           position: 'fixed', top: 0, left: 0, bottom: 0,
           width: expanded ? 224 : 64,
           display: 'flex', flexDirection: 'column',
-          height: '100vh', overflow: 'hidden', zIndex: 100,
+          overflow: 'hidden', zIndex: 100,
           transition: 'transform 200ms ease, width 150ms',
         }}
       >
@@ -203,10 +203,22 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
             overflow:auto (Prompt 329): without it the child can't shrink
             below its intrinsic content height, so it either pushes past the
             aside's own overflow:hidden clip or renders a scrollbar sized off
-            the wrong available height instead of the flex-allotted space. */}
+            the wrong available height instead of the flex-allotted space.
+            Prompt 330: minHeight:0 alone didn't fully kill the scrollbar —
+            two real sources of a few extra pixels of content height were
+            still there: (1) the aside had both `bottom:0` AND an explicit
+            `height:'100vh'`, an over-constrained pair where 100vh can be a
+            device-pixel or two off from the aside's true rendered height on
+            Windows (DPI scaling / scrollbar-gutter rounding), so nav's
+            allotted flex space and its actual content could disagree by a
+            hair; (2) the last nav group carried a trailing `marginBottom:20`
+            that served no visual purpose (nav's own bottom padding already
+            separates it from the duty widget below) but did add to nav's
+            scrollHeight. Fixed both — aside now sizes purely from
+            top:0/bottom:0, and only non-last groups get the 20px gap. */}
         <nav style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '10px 10px 8px' }} className="scrollbar-thin">
-          {groups.map(g => (
-            <div key={g.group} style={{ marginBottom: 20 }}>
+          {groups.map((g, i) => (
+            <div key={g.group} style={{ marginBottom: i === groups.length - 1 ? 0 : 20 }}>
               {expanded && (
                 <p style={{
                   margin: '2px 0 5px', padding: '0 8px', fontSize: 10, fontWeight: 700,
