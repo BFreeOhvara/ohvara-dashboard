@@ -136,7 +136,7 @@ export function DashboardLayout({ children }) {
             travels as a CSS var so the media query can own the margin. */}
         <div
           className="app-main flex-1 flex flex-col min-w-0 pt-[52px] md:pt-0"
-          style={{ '--sb-w': collapsed ? '64px' : '260px' }}
+          style={{ '--sb-w': collapsed ? '64px' : '270px' }}
         >
           <header
             className="hidden md:flex"

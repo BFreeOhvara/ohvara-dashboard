@@ -310,15 +310,15 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
         className={clsx('sidebar-glass', 'md:translate-x-0', open ? 'translate-x-0' : '-translate-x-full')}
         style={{
           position: 'fixed', top: 0, left: 0, bottom: 0,
-          // Expanded width widened from the export's 224 to 260 (Prompt 339)
-          // to match Eterna's visibly wider rail — Brayden approved an
-          // eyeballed estimate from screenshots rather than a measured value
-          // since Eterna is magic-link-only (no password to hand over for a
-          // dev-tools measurement). Collapsed width (64) is untouched — no
-          // collapsed state exists on Eterna to compare against. Keep this in
-          // sync with DashboardLayout.jsx's `--sb-w` and index.css's
-          // `.app-main` fallback if it changes again.
-          width: expanded ? 260 : 64,
+          // Expanded width widened from the export's 224 to 260, then 270
+          // (Prompt 339) to match Eterna's visibly wider rail — Brayden
+          // approved an eyeballed estimate from screenshots rather than a
+          // measured value since Eterna is magic-link-only (no password to
+          // hand over for a dev-tools measurement). Collapsed width (64) is
+          // untouched — no collapsed state exists on Eterna to compare
+          // against. Keep this in sync with DashboardLayout.jsx's `--sb-w`
+          // and index.css's `.app-main` fallback if it changes again.
+          width: expanded ? 270 : 64,
           display: 'flex', flexDirection: 'column',
           overflow: 'hidden', zIndex: 100,
           transition: 'transform 200ms ease, width 150ms',

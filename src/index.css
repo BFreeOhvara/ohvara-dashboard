@@ -255,7 +255,7 @@ aside { --bg-elevated:#153761; }
      (below md the sidebar is an off-canvas drawer and takes no space). */
   .app-main { margin-left: 0; transition: margin-left 150ms; }
   @media (min-width: 768px) {
-    .app-main { margin-left: var(--sb-w, 260px); }
+    .app-main { margin-left: var(--sb-w, 270px); }
   }
 
   /* ── Page & element entrances ── */
