@@ -18,6 +18,12 @@ import { TextField, GapNote } from '../../components/ui/ExportForm'
 // turns out to allow framing, this is the file to revisit.
 const BLANK = { name: '', portal_url: '', new_business_phone: '', agent_service_phone: '' }
 
+const portalBtn = {
+  border: 'none', borderRadius: 6, background: 'var(--accent)', color: '#fff',
+  fontSize: 11.5, fontWeight: 700, display: 'inline-flex', alignItems: 'center',
+  justifyContent: 'center', gap: 6, padding: '9px 12px', textDecoration: 'none',
+}
+
 export default function CarrierPortals() {
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
@@ -119,12 +125,18 @@ function CarrierCard({ carrier: c, isAdmin, onDelete }) {
   return (
     <div style={{ ...card, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <div style={{
-        position: 'relative', height: 84, padding: '10px 16px',
+        position: 'relative', height: 84,
+        padding: c.logo_fit_mode === 'cover' ? 0 : '6px 14px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: '#fff', borderBottom: 'var(--border-w) solid var(--border)',
       }}>
         {c.logo_url
-          ? <img src={c.logo_url} alt={`${c.name} logo`} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+          ? <img
+              src={c.logo_url} alt={`${c.name} logo`}
+              style={c.logo_fit_mode === 'cover'
+                ? { width: '100%', height: '100%', objectFit: 'cover' }
+                : { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+            />
           : <CarrierInitials name={c.name} />}
         {isAdmin && (
           <button
@@ -156,21 +168,13 @@ function CarrierCard({ carrier: c, isAdmin, onDelete }) {
         </div>
 
         {c.portal_url ? (
-          <a
-            href={c.portal_url} target="_blank" rel="noreferrer"
-            style={{ ...ghostBtn, justifyContent: 'center', textDecoration: 'none', marginTop: 'auto' }}
-          >
+          <a href={c.portal_url} target="_blank" rel="noreferrer" style={{ ...portalBtn, marginTop: 'auto' }}>
             Open portal <ExternalLink size={11} />
           </a>
         ) : (
-          <button disabled title="No portal URL on file for this carrier" style={{ ...ghostBtn, justifyContent: 'center', opacity: 0.5, marginTop: 'auto' }}>
+          <button disabled title="No portal URL on file for this carrier" style={{ ...portalBtn, opacity: 0.5, marginTop: 'auto' }}>
             Open portal <ExternalLink size={11} />
           </button>
-        )}
-        {c.portal_url && (
-          <p style={{ margin: '-6px 0 0', fontSize: 9.5, color: 'var(--text-dim)', textAlign: 'center' }}>
-            Opens in a new tab
-          </p>
         )}
       </div>
     </div>
