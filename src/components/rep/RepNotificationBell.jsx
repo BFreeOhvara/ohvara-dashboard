@@ -49,10 +49,15 @@ export function RepNotificationBell({ profileId }) {
   // positioned outside that box. Render the panel into a portal instead,
   // positioned via the bell's own bounding rect, so it isn't a descendant of
   // the clipped container at all.
+  //
+  // Bell now lives in the header's top-right (Prompt 329) — anchor the
+  // panel's right edge to the bell's right edge and drop it down below the
+  // bell, so it opens leftward/downward and stays fully on-screen instead of
+  // running off the right edge of the viewport.
   useEffect(() => {
     if (open && ref.current) {
       const rect = ref.current.getBoundingClientRect()
-      setCoords({ top: rect.top - 4, left: rect.right + 8 })
+      setCoords({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
     }
   }, [open])
 
@@ -112,7 +117,7 @@ export function RepNotificationBell({ profileId }) {
         <div
           ref={panelRef}
           style={{
-            position: 'fixed', top: coords.top, left: coords.left,
+            position: 'fixed', top: coords.top, right: coords.right,
             width: 340, maxHeight: 420,
             // Solid, not the translucent/backdrop-blur `glass` token — this
             // panel needs to fully cover whatever's behind it.

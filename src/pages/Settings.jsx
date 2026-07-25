@@ -200,11 +200,55 @@ function ProfilePanel({ profile }) {
         <SavedTick show={saved && !dirty} />
       </div>
 
+      {profile.role === 'closer' && <MonthlyGoalField profile={profile} />}
+
       <GapNote>
         The approved design also shows a profile photo, NPN (producer number) and licensed states. `profiles`
         has no column for any of the three yet — they need a migration, so nothing is shown rather than a
         placeholder that looks like real license data.
       </GapNote>
+    </div>
+  )
+}
+
+// Overview's monthly goal progress box (Prompt 329) needs a per-closer
+// target to compare submitted AP against — `monthly_ap_goal` defaults to
+// 20000 for everyone until a closer sets their own here.
+function MonthlyGoalField({ profile }) {
+  const update = useUpdateOwnProfile()
+  const { refreshProfile } = useAuth()
+  const [value, setValue] = useState(String(profile.monthly_ap_goal ?? 20000))
+  const [saved, setSaved] = useState(false)
+
+  const dirty = Number(value) !== Number(profile.monthly_ap_goal ?? 20000)
+
+  async function save() {
+    const goal = Math.max(0, Number(value) || 0)
+    await update.mutateAsync({ profileId: profile.id, updates: { monthly_ap_goal: goal } })
+    await refreshProfile()
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  return (
+    <div style={{ paddingTop: 16, marginTop: 4, borderTop: 'var(--border-w) solid var(--border)' }}>
+      <p style={softLabel}>Monthly AP goal — drives the progress bar on your Overview</p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <input
+          type="number" min="0" step="100"
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          style={{ ...inputBase, width: 160, fontFamily: MONO }}
+        />
+        <button
+          onClick={save}
+          disabled={!dirty || update.isPending}
+          style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 12, opacity: !dirty || update.isPending ? 0.5 : 1 }}
+        >
+          {update.isPending ? <Loader2 size={13} className="animate-spin" /> : 'Save'}
+        </button>
+        <SavedTick show={saved && !dirty} />
+      </div>
     </div>
   )
 }

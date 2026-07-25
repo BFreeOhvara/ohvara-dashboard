@@ -24,7 +24,6 @@ import ActivityFeed from './pages/rep/ActivityFeed'
 import MyCalls from './pages/rep/MyCalls'
 
 // Closer pages
-import MyAppointments from './pages/closer/MyAppointments'
 import CloserMyCalls from './pages/closer/MyCalls'
 import RevenueTracker from './pages/closer/RevenueTracker'
 import RepAnalytics from './pages/closer/RepAnalytics'
@@ -42,8 +41,9 @@ import AgentPolicies from './pages/agent/MyPolicies'
 import AgentSubmissions from './pages/agent/Submissions'
 import CarrierPortals from './pages/agent/CarrierPortals'
 import AgentHierarchy from './pages/agent/Hierarchy'
+import AgentMyCalls from './pages/agent/MyCalls'
 import {
-  LiveCall, MyCallsPlaceholder, TrainingPlaceholder,
+  LiveCall, TrainingPlaceholder,
   CommissionsPlaceholder, UnderwritingPlaceholder, StatsPlaceholder,
   CallPipelinePlaceholder, CloserRosterPlaceholder, LeaderboardPlaceholder,
   AdminCommissionsPlaceholder, LeadSourcesPlaceholder,
@@ -209,7 +209,7 @@ export default function App() {
             } />
             <Route path="/agent/calls" element={
               <ProtectedRoute allowedRoles={['closer', 'admin']}>
-                <DashboardLayout><MyCallsPlaceholder /></DashboardLayout>
+                <DashboardLayout><AgentMyCalls /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/training" element={
@@ -233,12 +233,11 @@ export default function App() {
               </ProtectedRoute>
             } />
 
-            {/* Closer routes */}
-            <Route path="/closer" element={
-              <ProtectedRoute allowedRoles={['closer']}>
-                <DashboardLayout><MyAppointments /></DashboardLayout>
-              </ProtectedRoute>
-            } />
+            {/* Closer routes. /closer itself was the pre-pivot landing page
+                (MyAppointments) — deleted in Prompt 329 now that Login and
+                ProtectedRoute both send closers to /agent; redirect any
+                stale bookmark straight to the real Overview. */}
+            <Route path="/closer" element={<Navigate to="/agent" replace />} />
             <Route path="/closer/revenue" element={
               <ProtectedRoute allowedRoles={['closer']}>
                 <DashboardLayout><RevenueTracker /></DashboardLayout>

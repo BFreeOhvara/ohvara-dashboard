@@ -17,15 +17,6 @@ export function LiveCall() {
   )
 }
 
-export function MyCallsPlaceholder() {
-  return (
-    <ComingSoon
-      title="My Calls"
-      description="Your call history and activity feed land here once calls run through the dashboard."
-    />
-  )
-}
-
 export function TrainingPlaceholder() {
   return (
     <ComingSoon

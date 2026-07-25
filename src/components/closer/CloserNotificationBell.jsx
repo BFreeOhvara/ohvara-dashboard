@@ -37,11 +37,14 @@ export function CloserNotificationBell({ profileId }) {
   useAppointmentReminder5MinNotifier(profileId)
   useCloserCallGradedNotifier(profileId)
 
-  // Portal positioning — same technique as RepNotificationBell to escape sidebar clipping
+  // Portal positioning — same technique as RepNotificationBell to escape sidebar
+  // clipping. Bell now lives in the header's top-right (Prompt 329) — anchor the
+  // panel's right edge to the bell's right edge and drop it below the bell so it
+  // opens leftward/downward and stays on-screen.
   useEffect(() => {
     if (open && ref.current) {
       const rect = ref.current.getBoundingClientRect()
-      setCoords({ top: rect.top - 4, left: rect.right + 8 })
+      setCoords({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
     }
   }, [open])
 
@@ -98,7 +101,7 @@ export function CloserNotificationBell({ profileId }) {
         <div
           ref={panelRef}
           style={{
-            position: 'fixed', top: coords.top, left: coords.left,
+            position: 'fixed', top: coords.top, right: coords.right,
             width: 340, maxHeight: 420,
             background: '#13131F', border: '0.5px solid var(--border)',
             borderRadius: 10, overflow: 'hidden',

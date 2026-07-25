@@ -199,8 +199,12 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
           </button>
         </div>
 
-        {/* Nav */}
-        <nav style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 8px' }} className="scrollbar-thin">
+        {/* Nav — minHeight:0 is required on a flex-column child with its own
+            overflow:auto (Prompt 329): without it the child can't shrink
+            below its intrinsic content height, so it either pushes past the
+            aside's own overflow:hidden clip or renders a scrollbar sized off
+            the wrong available height instead of the flex-allotted space. */}
+        <nav style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '10px 10px 8px' }} className="scrollbar-thin">
           {groups.map(g => (
             <div key={g.group} style={{ marginBottom: 20 }}>
               {expanded && (

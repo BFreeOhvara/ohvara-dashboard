@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Menu, Sun, Moon } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { Sidebar, COLLAPSE_KEY } from './Sidebar'
 import { ActiveCallProvider } from '../../contexts/ActiveCallContext'
 import { NotificationToast } from '../rep/NotificationToast'
@@ -8,11 +8,10 @@ import { NotificationBell } from '../admin/NotificationBell'
 import { RepNotificationBell } from '../rep/RepNotificationBell'
 import { CloserNotificationBell } from '../closer/CloserNotificationBell'
 import { useAuth } from '../../hooks/useAuth'
-import { useTheme } from '../../hooks/useTheme'
 
 // Shell — literal port of the export's right-hand column (lines 114-161):
-// a 60px sticky header carrying the page title/subtitle, theme toggle and
-// notification bell, over a 32/40/72 padded main capped at 1440px.
+// a 60px sticky header carrying the page title/subtitle, notification bell
+// and account chip, over a 32/40/72 padded main capped at 1440px.
 //
 // Deliberately NOT ported: the export's "Viewing as Closer / Admin" switcher.
 // That's a mockup affordance for demoing both roles in one file — real roles
@@ -22,7 +21,7 @@ import { useTheme } from '../../hooks/useTheme'
 const TITLES = {
   '/agent': ['Overview', 'Your day at a glance'],
   '/agent/live': ['Live Call', 'Duty status & incoming transfers'],
-  '/agent/calls': ['My Calls', 'One day at a time · transcripts for calls over 10 min · includes your activity feed'],
+  '/agent/calls': ['My Calls', 'Schedule, activity, and graded calls'],
   '/agent/policies': ['My Policies', 'Your whole book of business'],
   '/agent/quoter': ['Quoter', 'InsuranceToolkits — multi-carrier instant quoting'],
   '/agent/underwriting': ['Underwriting', 'AI chat assistant for carrier placement based on client health'],
@@ -56,6 +55,32 @@ function HeaderBell() {
   return null
 }
 
+// Display-only chip (avatar initials + name) next to the header bell —
+// matches the bell+avatar+name pattern on Brayden's Eterna reference
+// dashboard. Not a menu; the sidebar-footer account row still owns
+// settings/sign-out.
+function AccountChip() {
+  const { profile } = useAuth()
+  const initials = profile?.full_name
+    ? profile.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+    : '?'
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+      <span style={{
+        width: 26, height: 26, borderRadius: '50%',
+        background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 10, fontWeight: 700, color: 'var(--accent)', flexShrink: 0,
+      }}>
+        {initials}
+      </span>
+      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+        {profile?.full_name || ''}
+      </span>
+    </div>
+  )
+}
+
 export function DashboardLayout({ children }) {
   const { pathname } = useLocation()
   const isFullWidth = pathname.includes('/messages') || pathname.includes('/quoter')
@@ -65,9 +90,6 @@ export function DashboardLayout({ children }) {
 
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1')
   useEffect(() => { localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0') }, [collapsed])
-
-  // Shared with Settings → Appearance, which sets the same theme.
-  const [theme, setTheme] = useTheme()
 
   const [title, sub] = TITLES[pathname] || ['', '']
 
@@ -120,24 +142,13 @@ export function DashboardLayout({ children }) {
               <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{title}</span>
               <span style={{ marginLeft: 10, fontSize: 11, color: 'var(--text-muted)' }}>{sub}</span>
             </div>
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              title="Toggle light / dark"
-              style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: 30, height: 30,
-                border: 'var(--border-w) solid var(--border)', borderRadius: 6,
-                background: 'var(--bg-surface)', color: 'var(--text-secondary)',
-              }}
-            >
-              {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-            </button>
             <HeaderBell />
+            <AccountChip />
           </header>
 
           <main
             className={`scrollbar-thin ${isFullWidth ? 'h-screen overflow-hidden flex flex-col' : ''}`}
-            style={isFullWidth ? undefined : { flex: 1, padding: '32px 40px 72px', maxWidth: 1440, width: '100%' }}
+            style={isFullWidth ? undefined : { flex: 1, padding: '32px 40px 72px', maxWidth: 1440, width: '100%', margin: '0 auto' }}
           >
             <div
               key={pathname}

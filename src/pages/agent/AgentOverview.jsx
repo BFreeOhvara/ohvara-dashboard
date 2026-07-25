@@ -4,8 +4,8 @@ import {
   FileText, TrendingUp, CheckCircle, DollarSign, Phone, Target, ArrowRight,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { usePolicies } from '../../hooks/usePolicies'
-import { money, fullName, todayISO } from '../../lib/policyFormat'
+import { usePolicies, pendingEffectuation, bookMetrics } from '../../hooks/usePolicies'
+import { money, moneyShort, fullName, todayISO } from '../../lib/policyFormat'
 
 // Closer · Overview — literal port of the approved Claude Design export
 // (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines 163-227).
@@ -48,24 +48,40 @@ export default function AgentOverview() {
     }
   }, [policies, today, month])
 
-  // Only cancellation calls have a real scheduled time in the schema. Paramed
-  // exams and callbacks are in the export's sample data but have no source
-  // yet — they'll slot into this same table when they do.
-  const schedule = useMemo(
-    () => policies
-      .filter(p => (p.cancellation_call_at || '').slice(0, 10) === today)
-      .sort((a, b) => a.cancellation_call_at.localeCompare(b.cancellation_call_at))
+  // "Needs your attention" (Prompt 329) — a real pipeline-state worklist,
+  // not a schedule. Two sources: policies past their Effective Date still
+  // awaiting the Yes/No effectuation confirmation, and policies sitting in
+  // Cancellation Pending. Same `pendingEffectuation` helper My Policies uses
+  // for its own banner, so the two screens can't drift on the definition.
+  const attention = useMemo(() => {
+    const effectuation = pendingEffectuation(policies, new Date()).map(p => ({
+      id: `eff-${p.id}`,
+      tag: 'CONFIRM EFFECTIVE', color: 'var(--info)', dim: 'var(--info-dim)', bd: 'var(--info-bd)',
+      name: fullName(p),
+      detail: `Effective ${p.effective_date} — did it go into effect?`,
+      policyNo: p.policy_number || '—',
+    }))
+    const cancellations = policies
+      .filter(p => p.cancellation_status === 'Cancellation Pending')
       .map(p => ({
-        id: p.id,
-        time: new Date(p.cancellation_call_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        tag: 'CANCEL CALL',
-        color: 'var(--warning)', dim: 'var(--warning-dim)', bd: 'var(--warning-bd)',
+        id: `canc-${p.id}`,
+        tag: 'CANCELLATION PENDING', color: 'var(--warning)', dim: 'var(--warning-dim)', bd: 'var(--warning-bd)',
         name: fullName(p),
-        detail: `3-way call w/ ${p.carrier_name || 'carrier'}`,
+        detail: p.cancellation_call_at
+          ? `3-way call ${new Date(p.cancellation_call_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+          : 'Schedule the 3-way cancellation call',
         policyNo: p.policy_number || '—',
-      })),
-    [policies, today]
-  )
+      }))
+    return [...effectuation, ...cancellations]
+  }, [policies])
+
+  // Monthly goal progress — real submitted AP this month vs. the closer's
+  // own target (Settings → Profile, `monthly_ap_goal`; defaults to 20000).
+  const goal = useMemo(() => {
+    const target = Number(profile?.monthly_ap_goal) || 20000
+    const submittedAP = bookMetrics(policies, { month }).submittedAP
+    return { target, submittedAP, pct: target ? Math.min(100, Math.round((submittedAP / target) * 100)) : 0 }
+  }, [policies, month, profile?.monthly_ap_goal])
 
   const greeting = (() => {
     const h = clock.getHours()
@@ -147,66 +163,95 @@ export default function AgentOverview() {
         />
       </div>
 
-      <div style={{
-        background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
-        borderRadius: 8, marginTop: 20,
-      }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 20, alignItems: 'start', marginTop: 20 }}>
+        {/* Needs your attention — real pipeline-state worklist */}
         <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '18px 26px', borderBottom: 'var(--border-w) solid var(--border)',
+          background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8,
         }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>What's on today's schedule</span>
-          <button
-            onClick={() => navigate('/agent/policies')}
-            style={{
-              border: 'none', background: 'transparent', color: 'var(--accent)',
-              fontSize: 11.5, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, padding: 0,
-            }}
-          >
-            View my policies <ArrowRight size={11} />
-          </button>
-        </div>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '18px 26px', borderBottom: 'var(--border-w) solid var(--border)',
+          }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Needs your attention</span>
+            <button
+              onClick={() => navigate('/agent/policies')}
+              style={{
+                border: 'none', background: 'transparent', color: 'var(--accent)',
+                fontSize: 11.5, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, padding: 0,
+              }}
+            >
+              View my policies <ArrowRight size={11} />
+            </button>
+          </div>
 
-        <div style={{
-          display: 'grid', gridTemplateColumns: '80px 110px 1fr 1.8fr 130px', gap: 12,
-          padding: '12px 26px', borderBottom: 'var(--border-w) solid var(--border)',
-        }}>
-          {['Time', 'Type', 'Name', 'Detail', 'Policy #'].map(h => (
-            <span key={h} style={{
-              fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
-              textTransform: 'uppercase', color: 'var(--text-secondary)',
-            }}>
-              {h}
-            </span>
+          <div style={{
+            display: 'grid', gridTemplateColumns: '160px 1fr 1.8fr 130px', gap: 12,
+            padding: '12px 26px', borderBottom: 'var(--border-w) solid var(--border)',
+          }}>
+            {['Type', 'Name', 'Detail', 'Policy #'].map(h => (
+              <span key={h} style={{
+                fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+                textTransform: 'uppercase', color: 'var(--text-secondary)',
+              }}>
+                {h}
+              </span>
+            ))}
+          </div>
+
+          {attention.length === 0 ? (
+            <div style={{ padding: '22px 26px', fontSize: 13, color: 'var(--text-muted)' }}>
+              {isLoading ? 'Loading…' : 'Nothing needs attention right now.'}
+            </div>
+          ) : attention.map((a, i) => (
+            <div
+              key={a.id}
+              style={{
+                display: 'grid', gridTemplateColumns: '160px 1fr 1.8fr 130px', gap: 12,
+                alignItems: 'center', padding: '16px 26px',
+                borderBottom: i < attention.length - 1 ? 'var(--border-w) solid var(--border)' : 'none',
+              }}
+            >
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', alignSelf: 'start',
+                padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
+                background: a.dim, color: a.color, border: `var(--border-w) solid ${a.bd}`,
+              }}>
+                {a.tag}
+              </span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{a.name}</span>
+              <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{a.detail}</span>
+              <span style={{ fontSize: 14, color: 'var(--text-secondary)', fontFamily: MONO }}>{a.policyNo}</span>
+            </div>
           ))}
         </div>
 
-        {schedule.length === 0 ? (
-          <div style={{ padding: '22px 26px', fontSize: 13, color: 'var(--text-muted)' }}>
-            {isLoading ? 'Loading…' : 'Nothing scheduled today.'}
+        {/* Monthly goal progress */}
+        <div style={{
+          background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8,
+          padding: '20px 24px',
+        }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Monthly goal</span>
+          <p style={{ margin: '4px 0 20px', fontSize: 11, color: 'var(--text-muted)' }}>
+            Submitted AP this month vs. your target · set it in Settings → Profile
+          </p>
+          <div style={{
+            fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--text-primary)',
+            fontFamily: MONO, fontVariantNumeric: 'tabular-nums', marginBottom: 12,
+          }}>
+            {isLoading ? '—' : moneyShort(goal.submittedAP)}
+            <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-muted)' }}> of {moneyShort(goal.target)}</span>
           </div>
-        ) : schedule.map((s, i) => (
-          <div
-            key={s.id}
-            style={{
-              display: 'grid', gridTemplateColumns: '80px 110px 1fr 1.8fr 130px', gap: 12,
-              alignItems: 'center', padding: '18px 26px',
-              borderBottom: i < schedule.length - 1 ? 'var(--border-w) solid var(--border)' : 'none',
-            }}
-          >
-            <span style={{ fontSize: 15, color: 'var(--text-secondary)', fontFamily: MONO }}>{s.time}</span>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', alignSelf: 'start',
-              padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
-              background: s.dim, color: s.color, border: `var(--border-w) solid ${s.bd}`,
-            }}>
-              {s.tag}
-            </span>
-            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{s.name}</span>
-            <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{s.detail}</span>
-            <span style={{ fontSize: 14, color: 'var(--text-secondary)', fontFamily: MONO }}>{s.policyNo}</span>
+          <div style={{ height: 10, borderRadius: 5, background: 'var(--bg-elevated)', overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', borderRadius: 5,
+              background: goal.pct >= 100 ? 'var(--success)' : 'var(--accent)',
+              width: `${isLoading ? 0 : goal.pct}%`, transition: 'width 300ms ease-out',
+            }} />
           </div>
-        ))}
+          <p style={{ margin: '10px 0 0', fontSize: 11.5, color: 'var(--text-muted)' }}>
+            {isLoading ? '—' : `${goal.pct}% of goal`}
+          </p>
+        </div>
       </div>
     </div>
   )

@@ -25,7 +25,7 @@ export default function Login() {
   useEffect(() => {
     if (loading || !profile) return
     if (profile.role === 'admin')       navigate('/admin',  { replace: true })
-    else if (profile.role === 'closer') navigate('/closer', { replace: true })
+    else if (profile.role === 'closer') navigate('/agent',  { replace: true })
     else if (profile.role === 'client') navigate('/client', { replace: true })
     else                                navigate('/setter', { replace: true })
   }, [profile, loading, navigate])
