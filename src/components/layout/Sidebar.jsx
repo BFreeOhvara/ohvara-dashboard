@@ -72,8 +72,8 @@ const NAV = {
       { to: '/agent/live', label: 'Live Call', icon: Headphones },
     ] },
     { group: 'Sales', items: [
-      { to: '/agent/calls', label: 'My Calls', icon: PhoneCall },
       { to: '/agent/policies', label: 'My Policies', icon: GitBranch },
+      { to: '/agent/calls', label: 'My Calls', icon: PhoneCall },
     ] },
     { group: 'Tools', items: [
       { to: '/agent/quoter', label: 'Quoter', icon: Zap },
