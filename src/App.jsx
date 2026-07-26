@@ -41,7 +41,7 @@ import AgentOverview from './pages/agent/AgentOverview'
 import AgentPolicies from './pages/agent/MyPolicies'
 import AgentSubmissions from './pages/agent/Submissions'
 import CarrierPortals from './pages/agent/CarrierPortals'
-import AgentHierarchy from './pages/agent/Hierarchy'
+import Team from './pages/agent/Team'
 import AgentMyCalls from './pages/agent/MyCalls'
 import AgentPerformance from './pages/agent/Performance'
 import {
@@ -205,7 +205,7 @@ export default function App() {
             } />
             <Route path="/agent/hierarchy" element={
               <ProtectedRoute allowedRoles={['closer', 'admin']}>
-                <DashboardLayout><AgentHierarchy /></DashboardLayout>
+                <DashboardLayout><Team /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/quoter" element={

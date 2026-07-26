@@ -253,7 +253,7 @@ const NAV = {
     ] },
     { group: 'Growth', items: [
       { to: '/agent/stats', label: 'Performance', icon: BarChart2 },
-      { to: '/agent/hierarchy', label: 'Hierarchy', icon: Users },
+      { to: '/agent/hierarchy', label: 'Team', icon: Users },
       { to: '/agent/training', label: 'Training Center', icon: GraduationCap },
       { to: '/agent/commissions', label: 'Commissions', icon: DollarSign },
     ] },
@@ -267,7 +267,7 @@ const NAV = {
       { to: '/admin/call-pipeline', label: 'Call Pipeline', icon: Columns },
       { to: '/admin/roster', label: 'Closer Roster', icon: Users },
       { to: '/admin/leaderboard', label: 'Leaderboard', icon: Award },
-      { to: '/agent/hierarchy', label: 'Hierarchy', icon: GitBranch },
+      { to: '/agent/hierarchy', label: 'Team', icon: GitBranch },
     ] },
     { group: 'Revenue', items: [
       { to: '/admin/commissions', label: 'Commissions', icon: Wallet },

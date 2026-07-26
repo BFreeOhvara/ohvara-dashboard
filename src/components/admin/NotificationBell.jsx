@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Bell, CheckCheck, Zap, User, Activity } from 'lucide-react'
+import { Bell, CheckCheck, Zap, User, Activity, MessageSquare } from 'lucide-react'
 import { useNotifications, useUnreadCount, useMarkNotificationRead, useMarkAllRead } from '../../hooks/useNotifications'
 
 const TYPE_ICONS = {
-  new_client:  { icon: User,     color: 'var(--success)', bg: 'var(--success-dim)' },
-  client_live: { icon: Zap,      color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
-  default:     { icon: Activity, color: 'var(--info)',    bg: 'var(--info-dim)'    },
+  new_client:   { icon: User,          color: 'var(--success)', bg: 'var(--success-dim)' },
+  client_live:  { icon: Zap,           color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
+  team_message: { icon: MessageSquare, color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
+  default:      { icon: Activity,      color: 'var(--info)',    bg: 'var(--info-dim)'    },
 }
 
 function fmtTime(iso) {
