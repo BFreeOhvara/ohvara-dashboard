@@ -1,10 +1,10 @@
 import { useMemo, useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import {
-  FileText, TrendingUp, DollarSign, Phone, Target, ArrowRight,
+  FileText, TrendingUp, DollarSign, Phone, Target,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePolicies, pendingEffectuation, bookMetrics } from '../../hooks/usePolicies'
+import { useFollowUps } from '../../hooks/useFollowUps'
 import { money, moneyShort, fullName, todayISO } from '../../lib/policyFormat'
 
 // Closer · Overview — literal port of the approved Claude Design export
@@ -15,6 +15,11 @@ import { money, moneyShort, fullName, todayISO } from '../../lib/policyFormat'
 // number (Prompt 327).
 
 const MONO = "'JetBrains Mono',monospace"
+
+// Fixed row height for "Needs your attention" (Prompt 347) — every row is
+// forced to this height via minHeight+border-box so the 5-row scroll cap
+// below is an exact pixel figure, not an estimate.
+const ATTENTION_ROW_H = 42
 
 // Seven-segment/LCD digital-clock font (Prompt 342) — self-hosted via
 // @fontsource/dseg7-classic (imported in index.css) since it isn't on Google
@@ -32,9 +37,9 @@ function localISO(value) {
 
 export default function AgentOverview() {
   const { profile } = useAuth()
-  const navigate = useNavigate()
   const isAdmin = profile?.role === 'admin'
   const { data: policies = [], isLoading } = usePolicies(isAdmin ? null : profile?.id)
+  const { data: followUps = [] } = useFollowUps(profile?.id)
 
   const [clock, setClock] = useState(() => new Date())
   useEffect(() => {
@@ -69,18 +74,21 @@ export default function AgentOverview() {
     }
   }, [policies, today, month])
 
-  // "Needs your attention" (Prompt 329) — a real pipeline-state worklist,
-  // not a schedule. Two sources: policies past their Effective Date still
-  // awaiting the Yes/No effectuation confirmation, and policies sitting in
-  // Cancellation Pending. Same `pendingEffectuation` helper My Policies uses
-  // for its own banner, so the two screens can't drift on the definition.
+  // "Needs your attention" (Prompt 329, unified in Prompt 347) — a real
+  // pipeline-state worklist, not a schedule. Three sources: policies past
+  // their Effective Date still awaiting the Yes/No effectuation
+  // confirmation, policies sitting in Cancellation Pending with a call
+  // booked today, and follow-ups (My Calls → Schedule, `closer_followups`)
+  // due today. Same `pendingEffectuation` helper My Policies uses for its
+  // own banner, so the two screens can't drift on the definition.
   //
-  // Cancellation calls only ever show same-day (Prompt 346) — a closer
-  // always books the call on the spot, so there's no "not yet scheduled"
-  // state worth a UI branch; this list is a today-only reminder, not an
-  // upcoming schedule (that's My Calls → Schedule's job). Confirm Effective
-  // items intentionally do NOT get the same day-of filter — they're an
-  // accumulating overdue backlog, not a today-only reminder.
+  // Cancellation calls and follow-ups only ever show same-day (Prompt 346,
+  // extended to follow-ups in 347) — a closer always books the call on the
+  // spot, so there's no "not yet scheduled" state worth a UI branch; this
+  // list is a today-only reminder, not an upcoming schedule (that's My
+  // Calls → Schedule's job). Confirm Effective items intentionally do NOT
+  // get the same day-of filter — they're an accumulating overdue backlog,
+  // not a today-only reminder.
   const attention = useMemo(() => {
     const effectuation = pendingEffectuation(policies, new Date()).map(p => ({
       id: `eff-${p.id}`,
@@ -96,8 +104,16 @@ export default function AgentOverview() {
         name: fullName(p),
         detail: `Cancellation call at ${new Date(p.cancellation_call_at).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}`,
       }))
-    return [...effectuation, ...cancellations]
-  }, [policies, today])
+    const followups = followUps
+      .filter(f => f.scheduled_at && localISO(f.scheduled_at) === today)
+      .map(f => ({
+        id: `fu-${f.id}`,
+        tag: 'FOLLOW-UP', color: 'var(--success)', dim: 'var(--success-dim)', bd: 'var(--success-bd)',
+        name: f.client_name,
+        detail: `Follow-up at ${new Date(f.scheduled_at).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}`,
+      }))
+    return [...effectuation, ...cancellations, ...followups]
+  }, [policies, followUps, today])
 
   // Monthly goal progress — real submitted AP this month vs. the closer's
   // own target (set on the Profile page, `monthly_ap_goal`; defaults to
@@ -126,19 +142,20 @@ export default function AgentOverview() {
       subColor: 'var(--text-muted)',
     },
     {
+      // Prompt 344: was "Policies Active — This Month" (same cohort as the
+      // "Active AP" tile that used to sit to its left, just count vs.
+      // dollars — a real duplicate). Replaced with a distinct monthly
+      // submissions count, the natural companion to "Submitted AP — Today"
+      // above. Prompt 347 swapped this tile ahead of Active AP.
+      label: 'Policies Submitted — This Month', icon: FileText,
+      value: isLoading ? '—' : String(k.submittedMonthCount),
+      sub: 'Submitted this month', subColor: 'var(--text-muted)',
+    },
+    {
       label: 'Active AP — This Month', icon: TrendingUp,
       value: isLoading ? '—' : money(k.activeMonthAP),
       sub: `${k.activeMonthCount} polic${k.activeMonthCount === 1 ? 'y' : 'ies'} went active this month`,
       subColor: 'var(--text-muted)',
-    },
-    {
-      // Prompt 344: was "Policies Active — This Month" (same cohort as the
-      // "Active AP" tile to its left, just count vs. dollars — a real
-      // duplicate). Replaced with a distinct monthly submissions count, the
-      // natural companion to "Submitted AP — Today" above.
-      label: 'Policies Submitted — This Month', icon: FileText,
-      value: isLoading ? '—' : String(k.submittedMonthCount),
-      sub: 'Submitted this month', subColor: 'var(--text-muted)',
     },
     {
       label: 'Average Premium — This Month', icon: DollarSign,
@@ -199,25 +216,21 @@ export default function AgentOverview() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 20 }}>
-        {/* Needs your attention — real pipeline-state worklist */}
+        {/* Needs your attention — real pipeline-state worklist. Prompt 347:
+            dropped the "View my policies" CTA (doesn't fit every row type
+            now that follow-ups/cancellation calls share the feed with
+            policy rows) and capped the box at 5 visible rows with an
+            internal scroll — the header stays pinned, only data rows
+            scroll, so the card's footprint never grows past a 5-row feed
+            regardless of real backlog size. */}
         <div style={{
           background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8,
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}>
           <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '14px 22px', borderBottom: 'var(--border-w) solid var(--border)',
+            padding: '14px 22px', borderBottom: 'var(--border-w) solid var(--border)', flexShrink: 0,
           }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Needs your attention</span>
-            <button
-              onClick={() => navigate('/agent/policies')}
-              style={{
-                border: 'none', borderRadius: 6, background: 'var(--accent)', color: '#fff',
-                fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4,
-                padding: '6px 11px',
-              }}
-            >
-              View my policies <ArrowRight size={10} />
-            </button>
           </div>
 
           {/* Prompt 344: Policy # column dropped — anyone acting on a row
@@ -226,7 +239,7 @@ export default function AgentOverview() {
               reads lighter than the amount of info in it warrants. */}
           <div style={{
             display: 'grid', gridTemplateColumns: '150px 1fr 1.8fr', gap: 12,
-            padding: '9px 22px', borderBottom: 'var(--border-w) solid var(--border)',
+            padding: '9px 22px', borderBottom: 'var(--border-w) solid var(--border)', flexShrink: 0,
           }}>
             {['Type', 'Name', 'Detail'].map(h => (
               <span key={h} style={{
@@ -238,34 +251,36 @@ export default function AgentOverview() {
             ))}
           </div>
 
-          {attention.length === 0 ? (
-            <div style={{ padding: '18px 22px', fontSize: 13, color: 'var(--text-muted)' }}>
-              {isLoading ? 'Loading…' : 'Nothing needs attention right now.'}
-            </div>
-          ) : attention.map((a, i) => (
-            <div
-              key={a.id}
-              style={{
-                display: 'grid', gridTemplateColumns: '150px 1fr 1.8fr', gap: 12,
-                alignItems: 'center', padding: '11px 22px',
-                borderBottom: i < attention.length - 1 ? 'var(--border-w) solid var(--border)' : 'none',
-              }}
-            >
-              <span style={{
-                // justifySelf: without it this grid item stretches to fill
-                // the full 150px Type column (Prompt 346) — reads as the
-                // pill having way more padding than its text needs, when
-                // really the pill itself was oversized.
-                display: 'inline-flex', alignItems: 'center', alignSelf: 'start', justifySelf: 'start',
-                padding: '2px 7px', borderRadius: 4, fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap',
-                background: a.dim, color: a.color, border: `var(--border-w) solid ${a.bd}`,
-              }}>
-                {a.tag}
-              </span>
-              <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>{a.name}</span>
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{a.detail}</span>
-            </div>
-          ))}
+          <div style={{ maxHeight: ATTENTION_ROW_H * 5, overflowY: 'auto' }}>
+            {attention.length === 0 ? (
+              <div style={{ padding: '18px 22px', fontSize: 13, color: 'var(--text-muted)' }}>
+                {isLoading ? 'Loading…' : 'Nothing needs attention right now.'}
+              </div>
+            ) : attention.map((a, i) => (
+              <div
+                key={a.id}
+                style={{
+                  display: 'grid', gridTemplateColumns: '150px 1fr 1.8fr', gap: 12,
+                  alignItems: 'center', padding: '11px 22px', minHeight: ATTENTION_ROW_H, boxSizing: 'border-box',
+                  borderBottom: i < attention.length - 1 ? 'var(--border-w) solid var(--border)' : 'none',
+                }}
+              >
+                <span style={{
+                  // justifySelf: without it this grid item stretches to fill
+                  // the full 150px Type column (Prompt 346) — reads as the
+                  // pill having way more padding than its text needs, when
+                  // really the pill itself was oversized.
+                  display: 'inline-flex', alignItems: 'center', alignSelf: 'start', justifySelf: 'start',
+                  padding: '2px 7px', borderRadius: 4, fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap',
+                  background: a.dim, color: a.color, border: `var(--border-w) solid ${a.bd}`,
+                }}>
+                  {a.tag}
+                </span>
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>{a.name}</span>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{a.detail}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Monthly goal progress */}
