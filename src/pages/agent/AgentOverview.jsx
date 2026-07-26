@@ -17,9 +17,24 @@ import { money, moneyShort, fullName, todayISO } from '../../lib/policyFormat'
 const MONO = "'JetBrains Mono',monospace"
 
 // Fixed row height for "Needs your attention" (Prompt 347) — every row is
-// forced to this height via minHeight+border-box so the 5-row scroll cap
-// below is an exact pixel figure, not an estimate.
+// forced to this height via a fixed height+border-box so the 5-row scroll
+// cap below is an exact pixel figure, not an estimate.
+//
+// Prompt 349 fix: Prompt 347 used `minHeight` here, which is only a floor —
+// this card's real width (it shares a 2-column grid with "Monthly goal") only
+// gives the Name/Detail columns ~76px/~137px, so almost any real name or
+// detail string wrapped to 2 lines and grew the row to ~63.5px measured live,
+// well past the 42px the container's `ATTENTION_ROW_H * 5` cap assumed —
+// exactly Brayden's "clips mid-row" screenshot. Switched to a real fixed
+// `height` plus ATTENTION_CLIP's single-line truncation below so a row's
+// height can no longer depend on which name/detail happens to be in it.
 const ATTENTION_ROW_H = 42
+
+// Forces Name/Detail to a single line with an ellipsis instead of wrapping —
+// `minWidth: 0` is required for a CSS Grid item to actually shrink below its
+// content's intrinsic width (grid's default `min-width: auto` would otherwise
+// let the text overflow the track instead of truncating).
+const ATTENTION_CLIP = { overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', minWidth: 0 }
 
 // Elegant serif clock font (Prompt 350, replaces Prompt 342's DSEG7
 // seven-segment choice — Brayden didn't like the digital/LCD look after
@@ -93,7 +108,10 @@ export default function AgentOverview() {
   const attention = useMemo(() => {
     const effectuation = pendingEffectuation(policies, new Date()).map(p => ({
       id: `eff-${p.id}`,
-      tag: 'CONFIRM EFFECTIVE', color: 'var(--info)', dim: 'var(--info-dim)', bd: 'var(--info-bd)',
+      // Prompt 349: purple, not blue — blue is now FOLLOW-UP's color (below),
+      // matching My Calls → Schedule's own blue for its FOLLOW-UP badge. Two
+      // different concepts can't share a color across pages.
+      tag: 'CONFIRM EFFECTIVE', color: 'var(--purple)', dim: 'var(--purple-dim)', bd: 'var(--purple-bd)',
       name: fullName(p),
       detail: 'Confirm effectuation status',
     }))
@@ -109,7 +127,11 @@ export default function AgentOverview() {
       .filter(f => f.scheduled_at && localISO(f.scheduled_at) === today)
       .map(f => ({
         id: `fu-${f.id}`,
-        tag: 'FOLLOW-UP', color: 'var(--success)', dim: 'var(--success-dim)', bd: 'var(--success-bd)',
+        // Prompt 349: blue (var(--info)), matching My Calls → Schedule's own
+        // FOLLOW-UP badge color, so the same concept reads the same color on
+        // both pages (was green, colliding with nothing but still worth
+        // aligning now that Confirm Effective moved off blue onto purple).
+        tag: 'FOLLOW-UP', color: 'var(--info)', dim: 'var(--info-dim)', bd: 'var(--info-bd)',
         name: f.client_name,
         detail: `Follow-up at ${new Date(f.scheduled_at).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}`,
       }))
@@ -270,7 +292,7 @@ export default function AgentOverview() {
                 key={a.id}
                 style={{
                   display: 'grid', gridTemplateColumns: '150px 1fr 1.8fr', gap: 12,
-                  alignItems: 'center', padding: '11px 22px', minHeight: ATTENTION_ROW_H, boxSizing: 'border-box',
+                  alignItems: 'center', padding: '11px 22px', height: ATTENTION_ROW_H, boxSizing: 'border-box',
                   borderBottom: i < attention.length - 1 ? 'var(--border-w) solid var(--border)' : 'none',
                 }}
               >
@@ -285,8 +307,8 @@ export default function AgentOverview() {
                 }}>
                   {a.tag}
                 </span>
-                <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>{a.name}</span>
-                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{a.detail}</span>
+                <span style={{ ...ATTENTION_CLIP, fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>{a.name}</span>
+                <span style={{ ...ATTENTION_CLIP, fontSize: 13, color: 'var(--text-secondary)' }}>{a.detail}</span>
               </div>
             ))}
           </div>
