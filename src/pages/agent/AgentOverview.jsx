@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  FileText, TrendingUp, CheckCircle, DollarSign, Phone, Target, ArrowRight,
+  FileText, TrendingUp, DollarSign, Phone, Target, ArrowRight,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePolicies, pendingEffectuation, bookMetrics } from '../../hooks/usePolicies'
@@ -43,11 +43,18 @@ export default function AgentOverview() {
     const activeThisMonth = policies.filter(
       p => p.status === 'In Effect' && (p.effective_date || '').slice(0, 7) === month
     )
+    // Submitted this month (Prompt 344) — same "policy_sold_date, falling back
+    // to created_at" window bookMetrics() uses for its own submittedAP, so
+    // this tile can't drift from Stats' definition of "submitted."
+    const submittedThisMonth = policies.filter(
+      p => (p.policy_sold_date || p.created_at?.slice(0, 10) || '').slice(0, 7) === month
+    )
     return {
       submittedTodayAP: ap(submittedToday),
       submittedTodayCount: submittedToday.length,
       activeMonthAP: ap(activeThisMonth),
       activeMonthCount: activeThisMonth.length,
+      submittedMonthCount: submittedThisMonth.length,
       avgPremium: activeThisMonth.length
         ? activeThisMonth.reduce((s, p) => s + Number(p.monthly_premium || 0), 0) / activeThisMonth.length
         : 0,
@@ -65,7 +72,6 @@ export default function AgentOverview() {
       tag: 'CONFIRM EFFECTIVE', color: 'var(--info)', dim: 'var(--info-dim)', bd: 'var(--info-bd)',
       name: fullName(p),
       detail: `Effective ${p.effective_date} — did it go into effect?`,
-      policyNo: p.policy_number || '—',
     }))
     const cancellations = policies
       .filter(p => p.cancellation_status === 'Cancellation Pending')
@@ -76,7 +82,6 @@ export default function AgentOverview() {
         detail: p.cancellation_call_at
           ? `3-way call ${new Date(p.cancellation_call_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
           : 'Schedule the 3-way cancellation call',
-        policyNo: p.policy_number || '—',
       }))
     return [...effectuation, ...cancellations]
   }, [policies])
@@ -114,9 +119,13 @@ export default function AgentOverview() {
       subColor: 'var(--text-muted)',
     },
     {
-      label: 'Policies Active — This Month', icon: CheckCircle,
-      value: isLoading ? '—' : String(k.activeMonthCount),
-      sub: 'Went active this month', subColor: 'var(--success)',
+      // Prompt 344: was "Policies Active — This Month" (same cohort as the
+      // "Active AP" tile to its left, just count vs. dollars — a real
+      // duplicate). Replaced with a distinct monthly submissions count, the
+      // natural companion to "Submitted AP — Today" above.
+      label: 'Policies Submitted — This Month', icon: FileText,
+      value: isLoading ? '—' : String(k.submittedMonthCount),
+      sub: 'Submitted this month', subColor: 'var(--text-muted)',
     },
     {
       label: 'Average Premium — This Month', icon: DollarSign,
@@ -183,28 +192,32 @@ export default function AgentOverview() {
         }}>
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '18px 26px', borderBottom: 'var(--border-w) solid var(--border)',
+            padding: '14px 22px', borderBottom: 'var(--border-w) solid var(--border)',
           }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Needs your attention</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Needs your attention</span>
             <button
               onClick={() => navigate('/agent/policies')}
               style={{
                 border: 'none', borderRadius: 6, background: 'var(--accent)', color: '#fff',
-                fontSize: 11.5, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4,
-                padding: '7px 12px',
+                fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '6px 11px',
               }}
             >
-              View my policies <ArrowRight size={11} />
+              View my policies <ArrowRight size={10} />
             </button>
           </div>
 
+          {/* Prompt 344: Policy # column dropped — anyone acting on a row
+              clicks through to My Policies anyway, so it was dead weight
+              here. Row/type sizing also trimmed down a notch so this block
+              reads lighter than the amount of info in it warrants. */}
           <div style={{
-            display: 'grid', gridTemplateColumns: '160px 1fr 1.8fr 130px', gap: 12,
-            padding: '12px 26px', borderBottom: 'var(--border-w) solid var(--border)',
+            display: 'grid', gridTemplateColumns: '150px 1fr 1.8fr', gap: 12,
+            padding: '9px 22px', borderBottom: 'var(--border-w) solid var(--border)',
           }}>
-            {['Type', 'Name', 'Detail', 'Policy #'].map(h => (
+            {['Type', 'Name', 'Detail'].map(h => (
               <span key={h} style={{
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+                fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em',
                 textTransform: 'uppercase', color: 'var(--text-secondary)',
               }}>
                 {h}
@@ -213,28 +226,27 @@ export default function AgentOverview() {
           </div>
 
           {attention.length === 0 ? (
-            <div style={{ padding: '22px 26px', fontSize: 13, color: 'var(--text-muted)' }}>
+            <div style={{ padding: '18px 22px', fontSize: 13, color: 'var(--text-muted)' }}>
               {isLoading ? 'Loading…' : 'Nothing needs attention right now.'}
             </div>
           ) : attention.map((a, i) => (
             <div
               key={a.id}
               style={{
-                display: 'grid', gridTemplateColumns: '160px 1fr 1.8fr 130px', gap: 12,
-                alignItems: 'center', padding: '16px 26px',
+                display: 'grid', gridTemplateColumns: '150px 1fr 1.8fr', gap: 12,
+                alignItems: 'center', padding: '11px 22px',
                 borderBottom: i < attention.length - 1 ? 'var(--border-w) solid var(--border)' : 'none',
               }}
             >
               <span style={{
                 display: 'inline-flex', alignItems: 'center', alignSelf: 'start',
-                padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
+                padding: '2px 7px', borderRadius: 4, fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap',
                 background: a.dim, color: a.color, border: `var(--border-w) solid ${a.bd}`,
               }}>
                 {a.tag}
               </span>
-              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{a.name}</span>
-              <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{a.detail}</span>
-              <span style={{ fontSize: 14, color: 'var(--text-secondary)', fontFamily: MONO }}>{a.policyNo}</span>
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>{a.name}</span>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{a.detail}</span>
             </div>
           ))}
         </div>
