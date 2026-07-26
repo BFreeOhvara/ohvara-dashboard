@@ -21,11 +21,12 @@ const MONO = "'JetBrains Mono',monospace"
 // below is an exact pixel figure, not an estimate.
 const ATTENTION_ROW_H = 42
 
-// Seven-segment/LCD digital-clock font (Prompt 342) — self-hosted via
-// @fontsource/dseg7-classic (imported in index.css) since it isn't on Google
-// Fonts. Scoped to the clock text only, not the shared MONO constant above
-// (that's used elsewhere for policy numbers/money, unrelated to this ask).
-const CLOCK_FONT = "'DSEG7 Classic',monospace"
+// Elegant serif clock font (Prompt 350, replaces Prompt 342's DSEG7
+// seven-segment choice — Brayden didn't like the digital/LCD look after
+// living with it) — self-hosted via @fontsource/playfair-display (imported
+// in main.jsx). Scoped to the clock text only, not the shared MONO constant
+// above (that's used elsewhere for policy numbers/money, unrelated here).
+const CLOCK_FONT = "'Playfair Display',serif"
 
 // Local calendar date (not UTC) for a timestamptz value — matches todayISO()'s
 // own local-time convention, so "same day" comparisons on cancellation_call_at
@@ -134,6 +135,12 @@ export default function AgentOverview() {
 
   const firstName = profile?.full_name?.split(' ')[0] || 'there'
 
+  // Split "2:45:30 PM" into the digits and the AM/PM suffix (Prompt 350) so
+  // AM/PM can render at roughly half the digit size — same treatment for
+  // both, this isn't an AM-vs-PM styling difference.
+  const clockStr = clock.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })
+  const [, clockDigits, clockAmPm] = clockStr.match(/^(.*?)\s*([AP]M)$/i) || [null, clockStr, '']
+
   const row1 = [
     {
       label: 'Submitted AP — Today', icon: FileText,
@@ -195,9 +202,11 @@ export default function AgentOverview() {
               display: 'inline-block',
               fontSize: 30, fontWeight: 700, letterSpacing: '0.02em', lineHeight: 1, color: '#fff',
               fontFamily: CLOCK_FONT, fontVariantNumeric: 'tabular-nums',
-              transform: 'scaleY(1.15)', transformOrigin: 'center',
             }}>
-              {clock.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
+              {clockDigits}
+              {clockAmPm && (
+                <span style={{ fontSize: 15, marginLeft: 3 }}>{clockAmPm}</span>
+              )}
             </span>
           </div>
         </div>
