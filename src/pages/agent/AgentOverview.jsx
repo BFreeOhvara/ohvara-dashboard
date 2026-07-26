@@ -246,14 +246,18 @@ export default function AgentOverview() {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: 20, marginTop: 20 }}>
         {/* Needs your attention — real pipeline-state worklist. Prompt 347:
             dropped the "View my policies" CTA (doesn't fit every row type
             now that follow-ups/cancellation calls share the feed with
             policy rows) and capped the box at 5 visible rows with an
             internal scroll — the header stays pinned, only data rows
             scroll, so the card's footprint never grows past a 5-row feed
-            regardless of real backlog size. */}
+            regardless of real backlog size. Prompt 354: split widened from
+            an even 1fr/1fr to 1.8fr/1fr (~64/36) — "Monthly goal" is just a
+            number + progress bar and doesn't need half the row, while this
+            card's Name/Detail columns were genuinely ellipsis-truncating at
+            common laptop widths. */}
         <div style={{
           background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8,
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
