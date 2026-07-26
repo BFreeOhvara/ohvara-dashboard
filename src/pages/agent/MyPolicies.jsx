@@ -1,8 +1,9 @@
-import { useMemo, useState, useRef, useEffect } from 'react'
-import { Search, Filter, X } from 'lucide-react'
+import { useMemo, useState, useRef, useEffect, Fragment } from 'react'
+import { Search, Filter, X, Bell, ExternalLink } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useHierarchy } from '../../hooks/useHierarchy'
-import { usePolicies, LIVE_POLICY_STATUSES } from '../../hooks/usePolicies'
+import { usePolicies, LIVE_POLICY_STATUSES, useUpdatePolicy, pendingEffectuation } from '../../hooks/usePolicies'
+import { useCarriers } from '../../hooks/useCarriers'
 import { PolicyModal } from '../../components/agent/PolicyModal'
 import { money, fullName, formatDate } from '../../lib/policyFormat'
 
@@ -55,6 +56,8 @@ export default function MyPolicies() {
   const { data: policies = [], isLoading } = usePolicies(
     effectiveScope === 'own' ? profile?.id : null
   )
+  const update = useUpdatePolicy()
+  const { data: carriers = [] } = useCarriers()
 
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState(EMPTY_FILTERS)
@@ -78,7 +81,7 @@ export default function MyPolicies() {
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase()
     const daysAgo = iso => (Date.now() - new Date(iso).getTime()) / 86400000
-    return policies.filter(p => {
+    const filtered = policies.filter(p => {
       if (!LIVE_POLICY_STATUSES.includes(p.status)) return false
       if (q) {
         const hay = [p.policy_number, p.client_first_name, p.client_last_name, p.client_phone, p.carrier_name, p.product_type]
@@ -99,7 +102,27 @@ export default function MyPolicies() {
       }
       return true
     })
+    // Prompt 351: rows still awaiting effectuation confirmation surface to
+    // the top, so there's no hunting for them by search/scroll. `.sort` is
+    // stable in every JS engine this app targets, so everything else keeps
+    // whatever order usePolicies already returned it in.
+    const pendingIds = new Set(pendingEffectuation(filtered).map(p => p.id))
+    return [...filtered].sort((a, b) => (pendingIds.has(a.id) ? 0 : 1) - (pendingIds.has(b.id) ? 0 : 1))
   }, [policies, search, filters])
+
+  const pendingIds = useMemo(() => new Set(pendingEffectuation(rows).map(p => p.id)), [rows])
+
+  function answerEffectuation(policy, status) {
+    update.mutate({ id: policy.id, status, effectuation_answered_at: new Date().toISOString() })
+  }
+
+  // Carrier Portals (Prompt 331) is the one source of truth for portal_url —
+  // match on carrier_id first (the real relation), carrier_name as a fallback
+  // for older rows saved before that column existed.
+  function carrierPortalUrl(policy) {
+    const c = carriers.find(c => c.id === policy.carrier_id) || carriers.find(c => c.name === policy.carrier_name)
+    return c?.portal_url || null
+  }
 
   const REPORTED_LABELS = { 7: 'Last 7 days', 14: 'Last 14 days', older: 'Older than 14 days' }
   const activeChips = [
@@ -270,52 +293,71 @@ export default function MyPolicies() {
                 </tr>
               ) : rows.map(p => {
                 const st = STATUS_STYLE[p.status] || STATUS_STYLE['Submitted']
+                const pending = pendingIds.has(p.id)
+                // Second line lives inside the same visual row box as the
+                // first — the top <tr>'s cells drop their bottom border so
+                // there's no divider, and the confirmation banner below
+                // supplies the row's actual outer border instead.
+                const topCell = pending ? { ...cell, borderBottom: 'none' } : cell
                 return (
-                  <tr
-                    key={p.id}
-                    onClick={() => setSelected(p)}
-                    style={{ cursor: 'pointer' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-                  >
-                    <td style={{ ...cell, fontSize: 11.5, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
-                      {p.policy_number || '—'}
-                    </td>
-                    <td style={{ ...cell, minWidth: 160 }}>
-                      <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-                        {fullName(p)}
-                      </span>
-                      <span style={{ display: 'block', marginTop: 3, fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
-                        {[p.state, p.client_phone].filter(Boolean).join(' · ') || '—'}
-                      </span>
-                    </td>
-                    <td style={cell}>
-                      <span style={{
-                        display: 'inline-flex', padding: '3px 8px', borderRadius: 4, fontSize: 10.5, fontWeight: 700,
-                        background: 'var(--bg-elevated)', color: 'var(--text-secondary)',
-                        border: '1px solid var(--border)', whiteSpace: 'nowrap',
-                      }}>
-                        {p.product_type || '—'}
-                      </span>
-                    </td>
-                    <td style={{ ...cell, fontSize: 12.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                      {p.carrier_name || '—'}
-                    </td>
-                    <td style={{ ...cell, textAlign: 'right', fontSize: 12.5, color: 'var(--text-primary)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
-                      {money(p.annual_premium)}
-                    </td>
-                    <td style={{ ...cell, textAlign: 'right', fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
-                      {formatDate(p.policy_sold_date)}
-                    </td>
-                    <td style={cell}>
-                      <span style={{
-                        display: 'inline-flex', padding: '3px 8px', borderRadius: 4, fontSize: 10.5, fontWeight: 700,
-                        background: st.dim, color: st.color, border: `1px solid ${st.bd}`, whiteSpace: 'nowrap',
-                      }}>
-                        {p.status}
-                      </span>
-                    </td>
-                  </tr>
+                  <Fragment key={p.id}>
+                    <tr
+                      onClick={() => setSelected(p)}
+                      style={{ cursor: 'pointer' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                    >
+                      <td style={{ ...topCell, fontSize: 11.5, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
+                        {p.policy_number || '—'}
+                      </td>
+                      <td style={{ ...topCell, minWidth: 160 }}>
+                        <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                          {fullName(p)}
+                        </span>
+                        <span style={{ display: 'block', marginTop: 3, fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
+                          {[p.state, p.client_phone].filter(Boolean).join(' · ') || '—'}
+                        </span>
+                      </td>
+                      <td style={topCell}>
+                        <span style={{
+                          display: 'inline-flex', padding: '3px 8px', borderRadius: 4, fontSize: 10.5, fontWeight: 700,
+                          background: 'var(--bg-elevated)', color: 'var(--text-secondary)',
+                          border: '1px solid var(--border)', whiteSpace: 'nowrap',
+                        }}>
+                          {p.product_type || '—'}
+                        </span>
+                      </td>
+                      <td style={{ ...topCell, fontSize: 12.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                        {p.carrier_name || '—'}
+                      </td>
+                      <td style={{ ...topCell, textAlign: 'right', fontSize: 12.5, color: 'var(--text-primary)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
+                        {money(p.annual_premium)}
+                      </td>
+                      <td style={{ ...topCell, textAlign: 'right', fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
+                        {formatDate(p.policy_sold_date)}
+                      </td>
+                      <td style={topCell}>
+                        <span style={{
+                          display: 'inline-flex', padding: '3px 8px', borderRadius: 4, fontSize: 10.5, fontWeight: 700,
+                          background: st.dim, color: st.color, border: `1px solid ${st.bd}`, whiteSpace: 'nowrap',
+                        }}>
+                          {p.status}
+                        </span>
+                      </td>
+                    </tr>
+                    {pending && (
+                      <tr>
+                        <td colSpan={7} style={{ padding: '0 20px 14px', borderBottom: 'var(--border-w) solid var(--border)' }}>
+                          <EffectuationRow
+                            policy={p}
+                            portalUrl={carrierPortalUrl(p)}
+                            pending={update.isPending}
+                            onAnswer={status => answerEffectuation(p, status)}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 )
               })}
             </tbody>
@@ -333,6 +375,53 @@ export default function MyPolicies() {
           canEdit={isAdmin || selected.agent_id === profile?.id}
           onClose={() => setSelected(null)}
         />
+      )}
+    </div>
+  )
+}
+
+// Inline effectuation confirmation (Prompt 351) — the same Yes/No the
+// PolicyModal banner offers (Prompt 345), just reachable without opening
+// the record first. `onAnswer` stops propagation itself isn't needed here:
+// this renders in its own <tr>, separate from the row's onClick.
+function EffectuationRow({ policy, portalUrl, pending, onAnswer }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+      padding: '12px 16px', background: 'var(--warning-dim)',
+      border: '1px solid var(--warning-bd)', borderRadius: 8,
+    }}>
+      <Bell size={15} style={{ color: 'var(--warning)', flexShrink: 0 }} />
+      <span style={{ flex: 1, minWidth: 220, fontSize: 12.5, color: 'var(--text-primary)' }}>
+        Reached its effective date ({formatDate(policy.effective_date)}) — did this policy go into effect?
+      </span>
+      <button
+        onClick={() => onAnswer('In Effect')}
+        disabled={pending}
+        style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700 }}
+      >
+        Yes
+      </button>
+      <button
+        onClick={() => onAnswer('Undrafted')}
+        disabled={pending}
+        style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700 }}
+      >
+        No
+      </button>
+      {portalUrl ? (
+        <a
+          href={portalUrl}
+          target="_blank"
+          rel="noreferrer"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 700, color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}
+        >
+          Not sure? Check {policy.carrier_name || 'carrier'} portal <ExternalLink size={11} />
+        </a>
+      ) : (
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+          No portal on file for {policy.carrier_name || 'this carrier'}
+        </span>
       )}
     </div>
   )
