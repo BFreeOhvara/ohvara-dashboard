@@ -22,6 +22,14 @@ const MONO = "'JetBrains Mono',monospace"
 // (that's used elsewhere for policy numbers/money, unrelated to this ask).
 const CLOCK_FONT = "'DSEG7 Classic',monospace"
 
+// Local calendar date (not UTC) for a timestamptz value — matches todayISO()'s
+// own local-time convention, so "same day" comparisons on cancellation_call_at
+// (Prompt 346) can't drift a day off from what the closer sees on their clock.
+function localISO(value) {
+  const d = new Date(value)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export default function AgentOverview() {
   const { profile } = useAuth()
   const navigate = useNavigate()
@@ -66,25 +74,30 @@ export default function AgentOverview() {
   // awaiting the Yes/No effectuation confirmation, and policies sitting in
   // Cancellation Pending. Same `pendingEffectuation` helper My Policies uses
   // for its own banner, so the two screens can't drift on the definition.
+  //
+  // Cancellation calls only ever show same-day (Prompt 346) — a closer
+  // always books the call on the spot, so there's no "not yet scheduled"
+  // state worth a UI branch; this list is a today-only reminder, not an
+  // upcoming schedule (that's My Calls → Schedule's job). Confirm Effective
+  // items intentionally do NOT get the same day-of filter — they're an
+  // accumulating overdue backlog, not a today-only reminder.
   const attention = useMemo(() => {
     const effectuation = pendingEffectuation(policies, new Date()).map(p => ({
       id: `eff-${p.id}`,
       tag: 'CONFIRM EFFECTIVE', color: 'var(--info)', dim: 'var(--info-dim)', bd: 'var(--info-bd)',
       name: fullName(p),
-      detail: `Effective ${p.effective_date} — did it go into effect?`,
+      detail: 'Confirm effectuation status',
     }))
     const cancellations = policies
-      .filter(p => p.cancellation_status === 'Cancellation Pending')
+      .filter(p => p.cancellation_status === 'Cancellation Pending' && p.cancellation_call_at && localISO(p.cancellation_call_at) === today)
       .map(p => ({
         id: `canc-${p.id}`,
         tag: 'CANCELLATION PENDING', color: 'var(--warning)', dim: 'var(--warning-dim)', bd: 'var(--warning-bd)',
         name: fullName(p),
-        detail: p.cancellation_call_at
-          ? `3-way call ${new Date(p.cancellation_call_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
-          : 'Schedule the 3-way cancellation call',
+        detail: `Cancellation call at ${new Date(p.cancellation_call_at).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}`,
       }))
     return [...effectuation, ...cancellations]
-  }, [policies])
+  }, [policies, today])
 
   // Monthly goal progress — real submitted AP this month vs. the closer's
   // own target (set on the Profile page, `monthly_ap_goal`; defaults to
@@ -239,7 +252,11 @@ export default function AgentOverview() {
               }}
             >
               <span style={{
-                display: 'inline-flex', alignItems: 'center', alignSelf: 'start',
+                // justifySelf: without it this grid item stretches to fill
+                // the full 150px Type column (Prompt 346) — reads as the
+                // pill having way more padding than its text needs, when
+                // really the pill itself was oversized.
+                display: 'inline-flex', alignItems: 'center', alignSelf: 'start', justifySelf: 'start',
                 padding: '2px 7px', borderRadius: 4, fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap',
                 background: a.dim, color: a.color, border: `var(--border-w) solid ${a.bd}`,
               }}>
