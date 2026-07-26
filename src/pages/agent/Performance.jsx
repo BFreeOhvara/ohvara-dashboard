@@ -266,9 +266,9 @@ function LeaderboardTab() {
       ) : (
         <>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, marginBottom: 20 }}>
-            {top3[1] && <PodiumCard row={top3[1]} place="2ND PLACE" color={placeColor(2)} size="sm" />}
-            {top3[0] && <PodiumCard row={top3[0]} place="TOP PERFORMER" color={placeColor(1)} size="lg" />}
-            {top3[2] && <PodiumCard row={top3[2]} place="3RD PLACE" color={placeColor(3)} size="sm" />}
+            <PodiumCard row={top3[1]} place="2ND PLACE" color={placeColor(2)} size="sm" />
+            <PodiumCard row={top3[0]} place="TOP PERFORMER" color={placeColor(1)} size="lg" />
+            <PodiumCard row={top3[2]} place="3RD PLACE" color={placeColor(3)} size="sm" />
           </div>
 
           <div style={{ background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
@@ -294,7 +294,7 @@ function LeaderboardTab() {
                 </tr>
               </thead>
               <tbody>
-                {standings.map(r => (
+                {rest.map(r => (
                   <tr key={r.id}>
                     <td style={tdStyle}>#{r.rank}</td>
                     <td style={{ ...tdStyle, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>{r.name}</td>
@@ -317,28 +317,44 @@ const tdStyle = {
   fontSize: 11.5, color: 'var(--text-secondary)', fontFamily: MONO,
 }
 
+// row is undefined when fewer than 3 closers have submissions in this
+// window (Prompt 356) — the podium always shows 3 boxes, an empty slot
+// renders as a muted N/A placeholder rather than being omitted.
 function PodiumCard({ row, place, color, size }) {
   const lg = size === 'lg'
+  const empty = !row
   return (
     <div style={{
-      flex: 1, background: 'var(--bg-surface)', border: `1.5px solid ${color}`, borderRadius: 10,
+      flex: 1, background: 'var(--bg-surface)', border: `1.5px solid ${empty ? 'var(--border)' : color}`, borderRadius: 10,
       padding: lg ? '38px 20px 24px' : '20px 18px', display: 'flex', flexDirection: 'column',
       alignItems: 'center', textAlign: 'center', gap: lg ? 8 : 7,
-      boxShadow: lg ? '0 8px 24px rgba(0,0,0,0.18)' : 'none', position: lg ? 'relative' : 'static',
+      boxShadow: lg && !empty ? '0 8px 24px rgba(0,0,0,0.18)' : 'none', position: lg ? 'relative' : 'static',
+      opacity: empty ? 0.55 : 1,
     }}>
-      <span style={{ display: 'inline-flex', padding: lg ? '3px 10px' : '3px 9px', borderRadius: 5, fontSize: lg ? 10 : 9.5, fontWeight: 700, letterSpacing: '0.06em', background: color, color: '#fff' }}>
+      <span style={{
+        display: 'inline-flex', padding: lg ? '3px 10px' : '3px 9px', borderRadius: 5, fontSize: lg ? 10 : 9.5, fontWeight: 700, letterSpacing: '0.06em',
+        background: empty ? 'var(--bg-elevated)' : color, color: empty ? 'var(--text-muted)' : '#fff',
+      }}>
         {place}
       </span>
       <span style={{
         width: lg ? 60 : 48, height: lg ? 60 : 48, borderRadius: '50%', background: 'var(--bg-elevated)',
-        border: `${lg ? 2.5 : 2}px solid ${color}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: lg ? 18 : 15, fontWeight: 700, color: 'var(--text-primary)', marginTop: 4,
+        border: `${lg ? 2.5 : 2}px solid ${empty ? 'var(--border)' : color}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: lg ? 18 : 15, fontWeight: 700, color: 'var(--text-muted)', marginTop: 4,
       }}>
-        {initialsOf(row.name)}
+        {empty ? '—' : initialsOf(row.name)}
       </span>
-      <span style={{ fontSize: lg ? 15 : 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>{row.name}</span>
-      <span style={{ fontSize: lg ? 26 : 20, fontWeight: 700, color: 'var(--success)', fontFamily: MONO }}>{moneyShort(row.ap)}</span>
-      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{moneyShort(row.avg)} avg · {row.families} famil{row.families === 1 ? 'y' : 'ies'}</span>
+      <span style={{ fontSize: lg ? 15 : 13.5, fontWeight: 700, color: empty ? 'var(--text-muted)' : 'var(--text-primary)' }}>
+        {empty ? 'N/A' : row.name}
+      </span>
+      {empty ? (
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>No closer yet</span>
+      ) : (
+        <>
+          <span style={{ fontSize: lg ? 26 : 20, fontWeight: 700, color: 'var(--success)', fontFamily: MONO }}>{moneyShort(row.ap)}</span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{moneyShort(row.avg)} avg · {row.families} famil{row.families === 1 ? 'y' : 'ies'}</span>
+        </>
+      )}
     </div>
   )
 }
