@@ -204,11 +204,11 @@ function AccountMenu({ profile, expanded, duty, setDuty, onNavigate, onSignOut }
 
           <button
             onClick={() => { setOpen(false); onSignOut() }}
-            style={menuItemStyle}
+            style={{ ...menuItemStyle, color: 'var(--danger)' }}
             onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
           >
-            <LogOut size={14} style={{ flexShrink: 0, color: 'var(--text-muted)' }} />
+            <LogOut size={14} style={{ flexShrink: 0, color: 'var(--danger)' }} />
             Sign out
           </button>
         </div>,
