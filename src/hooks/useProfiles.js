@@ -96,7 +96,15 @@ export function useCreateProfile() {
 // ── Invite-token self-registration (Prompt 282) ──────────────────────────────
 // Admin generates a single-use /join/<token> link scoped to a role; the
 // invited person registers themselves via the claim-invite edge function.
-// All three hooks hit rep_invites directly — RLS restricts them to admins.
+// All three hooks hit rep_invites directly. NOTE: this comment used to say
+// "RLS restricts them to admins" — true for migration 067's original
+// policies, but migration 072 (insurance pivot) loosened rep_invites_insert
+// to `created_by = auth.uid() and (is_admin() or role = 'closer')`, i.e. any
+// authenticated agent can insert their own 'closer' invite today. The North
+// Star note that invite generation should be admin-only (2026-07-26) is only
+// enforced client-side so far (InvitePanel moved to the admin-only Hierarchy
+// view) — tightening this INSERT policy back to admin-only needs a migration,
+// which the auto-mode classifier blocked pending Brayden's explicit go-ahead.
 
 export function usePendingInvites() {
   return useQuery({

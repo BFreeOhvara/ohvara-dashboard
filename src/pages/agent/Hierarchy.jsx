@@ -9,9 +9,9 @@ import { GapNote } from '../../components/ui/ExportForm'
 // Hierarchy — literal port of the export's two Hierarchy screens (vault:
 // media/claude-design-export-ohvara-dashboard-v3.html): "Closer · Hierarchy"
 // (lines 229-314) and "Admin · Hierarchy" (lines 316-375). A closer sees two
-// stat cards, the invite-link panel, and a centred upline → you → downline
-// tree; admin sees network/team counts and one expandable card per recruiting
-// chain.
+// stat cards and a centred upline → you → downline tree; admin sees
+// network/team counts, the invite-link panel, and one expandable card per
+// recruiting chain.
 //
 // Flagged deviations:
 //  · The export's "+ Add recruit manually" form isn't ported. Creating an
@@ -23,6 +23,14 @@ import { GapNote } from '../../components/ui/ExportForm'
 //  · The export shows a single permanent invite link. Real links are
 //    single-use with a 7-day expiry, so the panel lists what's live and can
 //    mint another.
+//  · North Star (2026-07-26): invite-link generation restricted to admin
+//    only — for Ohvara's own small team, Brayden invites everyone directly,
+//    nobody else mints invites. InvitePanel moved from the closer view to
+//    the admin view accordingly. NOTE: this is a client-side/UI restriction
+//    only — the live `rep_invites_insert` RLS policy (migration 072) still
+//    lets any authenticated agent insert their own 'closer' invite; tightening
+//    that policy needs a migration, which the auto-mode classifier blocked
+//    pending Brayden's explicit go-ahead (flagged separately, not applied).
 
 const initialsOf = name =>
   (name || '?').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()
@@ -97,8 +105,6 @@ function CloserHierarchy({ self, upline, downline }) {
         </div>
       </div>
 
-      <InvitePanel />
-
       <div style={{ ...card, padding: '36px 28px 28px' }}>
         {boss && (
           <>
@@ -137,7 +143,7 @@ function CloserHierarchy({ self, upline, downline }) {
 
         {direct.length === 0 ? (
           <p style={{ margin: '18px 0 0', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
-            You haven't recruited anyone yet — share your invite link above to get started.
+            Nobody's been added under you yet.
           </p>
         ) : (
           <>
@@ -311,6 +317,8 @@ function AdminHierarchy({ agents }) {
           <p style={statNote}>Independent recruiting chains from the top</p>
         </div>
       </div>
+
+      <InvitePanel />
 
       {roots.length === 0 ? (
         <div style={card}>
