@@ -39,28 +39,9 @@ const GOLD = 'var(--warning)'
 const SILVER = '#9CA3AF'
 const BRONZE = '#B87333'
 
-const pad2 = n => String(n).padStart(2, '0')
-
-function addMonthsToKey(mk, n) {
-  const [y, m] = mk.split('-').map(Number)
-  const d = new Date(y, m - 1 + n, 1)
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`
-}
-
 function monthLabel(mk) {
   const [y, m] = mk.split('-').map(Number)
   return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-}
-
-function monthRange(from, to) {
-  const [a, b] = from <= to ? [from, to] : [to, from]
-  const out = []
-  let cur = a
-  while (cur <= b) {
-    out.push(cur)
-    cur = addMonthsToKey(cur, 1)
-  }
-  return out
 }
 
 function initialsOf(name) {
@@ -159,30 +140,14 @@ function ProductionTab() {
   const scopeWord = scope === 'you' ? 'your' : "the team's"
   const asOfLabel = asOf === today ? 'today' : formatDate(asOf)
 
-  // ── Persistency — independent period control ──────────────────────────────
-  const [persMode, setPersMode] = useState('thismonth')
-  const [persFrom, setPersFrom] = useState(addMonthsToKey(todayMonthKey, -2))
-  const [persTo, setPersTo] = useState(todayMonthKey)
-
-  const persMonths = persMode === 'thismonth' ? [todayMonthKey]
-    : persMode === 'lastmonth' ? [addMonthsToKey(todayMonthKey, -1)]
-    : monthRange(persFrom, persTo)
-
+  // ── Persistency — always current rolling windows, no period control ───────
+  // (Prompt 352: removed the This Month/Last Month/Custom Range picker — the
+  // 30/3/6/12-month windows are inherently "as of today" and there's no
+  // clean meaning for "persistency as of last month" at this stage.)
   const persistency = useMemo(
-    () => persistencyWindows(scopedPolicies, persMonths, todayMonthKey),
-    [scopedPolicies, persMonths, todayMonthKey]
+    () => persistencyWindows(scopedPolicies, [todayMonthKey], todayMonthKey),
+    [scopedPolicies, todayMonthKey]
   )
-
-  const persLabel = persMode === 'thismonth' ? `${monthLabel(todayMonthKey)} (this month)`
-    : persMode === 'lastmonth' ? `${monthLabel(addMonthsToKey(todayMonthKey, -1))} (last month)`
-    : persMonths.length > 1 ? `${monthLabel(persMonths[0])} – ${monthLabel(persMonths[persMonths.length - 1])}`
-    : monthLabel(persMonths[0])
-
-  const monthOptions = useMemo(() => {
-    const opts = []
-    for (let i = 11; i >= 0; i--) opts.push(addMonthsToKey(todayMonthKey, -i))
-    return opts
-  }, [todayMonthKey])
 
   const v = x => (isLoading ? '—' : x)
 
@@ -254,40 +219,8 @@ function ProductionTab() {
         />
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 10 }}>
+      <div style={{ marginBottom: 10 }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Persistency</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <Segmented
-            size="sm"
-            value={persMode}
-            onChange={setPersMode}
-            options={[
-              { value: 'thismonth', label: 'This Month' },
-              { value: 'lastmonth', label: 'Last Month' },
-              { value: 'custom', label: 'Custom Range' },
-            ]}
-          />
-          {persMode === 'custom' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <select
-                value={persFrom}
-                onChange={e => setPersFrom(e.target.value)}
-                style={selectStyle}
-              >
-                {monthOptions.map(mk => <option key={mk} value={mk}>{monthLabel(mk)}</option>)}
-              </select>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>to</span>
-              <select
-                value={persTo}
-                onChange={e => setPersTo(e.target.value)}
-                style={selectStyle}
-              >
-                {monthOptions.map(mk => <option key={mk} value={mk}>{monthLabel(mk)}</option>)}
-              </select>
-            </div>
-          )}
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{persLabel}</span>
-        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
@@ -308,11 +241,6 @@ function ProductionTab() {
       <GapNote>6- and 12-month windows unlock as the book ages.</GapNote>
     </div>
   )
-}
-
-const selectStyle = {
-  height: 26, background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
-  borderRadius: 6, padding: '0 6px', fontSize: 10.5, fontWeight: 700, color: 'var(--text-primary)',
 }
 
 // ── Leaderboard tab ─────────────────────────────────────────────────────────
