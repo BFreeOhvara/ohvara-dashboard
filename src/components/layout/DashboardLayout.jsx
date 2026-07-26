@@ -27,7 +27,7 @@ const TITLES = {
   '/agent/underwriting': ['Underwriting', 'AI chat assistant for carrier placement based on client health'],
   '/agent/submissions': ['Submissions', 'Start a new business submission with a carrier'],
   '/agent/carriers': ['Carrier Portals', 'Every carrier login in one directory'],
-  '/agent/stats': ['Stats', 'Production, persistency, and leaderboard — switch the view'],
+  '/agent/stats': ['Performance', 'Production, persistency, and leaderboard — switch the view'],
   '/agent/hierarchy': ['Hierarchy', 'Your upline, your direct recruits, and your invite link'],
   '/agent/training': ['Training Center', 'Videos · scripts · knowledge checks · roleplay'],
   '/agent/commissions': ['Commissions', 'Balance & reserve — comp model is a placeholder'],

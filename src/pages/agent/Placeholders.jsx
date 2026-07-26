@@ -3,10 +3,11 @@ import { ComingSoon } from '../../components/agent/ComingSoon'
 // Pages that stay in the nav but aren't wired to anything for launch
 // (Round 33). Each is a real route so the sidebar never dead-ends.
 //
-// Underwriting and Stats were spec'd for a full polished non-functional UI
-// (Round 39) — that build is UI-only work with no backend behind it, so it's
-// deliberately deferred behind the real-wiring pages rather than shipped as
-// invented sample data on launch day. They render the placeholder for now.
+// Underwriting was spec'd for a full polished non-functional UI (Round 39) —
+// that build is UI-only work with no backend behind it, so it's deliberately
+// deferred behind the real-wiring pages rather than shipped as invented
+// sample data on launch day. It renders the placeholder for now. (Stats —
+// same round — shipped for real in Prompt 348 as Performance.)
 
 export function LiveCall() {
   return (
@@ -40,15 +41,6 @@ export function UnderwritingPlaceholder() {
     <ComingSoon
       title="Underwriting"
       description="Describe a client's health conditions and get a provisional carrier-placement ranking back. Lands here after launch."
-    />
-  )
-}
-
-export function StatsPlaceholder() {
-  return (
-    <ComingSoon
-      title="Stats"
-      description="Production drill-downs, persistency windows, and the leaderboard land here after launch."
     />
   )
 }

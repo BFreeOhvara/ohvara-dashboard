@@ -252,7 +252,7 @@ const NAV = {
       { to: '/agent/carriers', label: 'Carrier Portals', icon: Globe },
     ] },
     { group: 'Growth', items: [
-      { to: '/agent/stats', label: 'Stats', icon: BarChart2 },
+      { to: '/agent/stats', label: 'Performance', icon: BarChart2 },
       { to: '/agent/hierarchy', label: 'Hierarchy', icon: Users },
       { to: '/agent/training', label: 'Training Center', icon: GraduationCap },
       { to: '/agent/commissions', label: 'Commissions', icon: DollarSign },

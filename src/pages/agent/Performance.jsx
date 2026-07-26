@@ -1,0 +1,443 @@
+import { useMemo, useState } from 'react'
+import {
+  Wallet, TrendingUp, CheckCircle2, Users, DollarSign,
+  Phone, Target, Activity, LogOut, Clock,
+} from 'lucide-react'
+import { useAuth } from '../../hooks/useAuth'
+import { usePolicies, productionSnapshot, productionFlow, persistencyWindows } from '../../hooks/usePolicies'
+import { money, moneyShort, formatDate, todayISO } from '../../lib/policyFormat'
+import { usePeriodPicker, PeriodPicker } from '../../components/agent/ProductionPeriodPicker'
+import { GapNote } from '../../components/ui/ExportForm'
+
+// Performance — Production + Leaderboard (Prompt 348), replacing the
+// StatsPlaceholder. Structure/content match the Claude Design v3 mockup
+// (media/claude-design-export-ohvara-dashboard-v3.html, lines 377-617);
+// visual tokens follow this app's own DESIGN.md, same rule as every other
+// mockup-referenced build.
+//
+// Two real data gaps, rendered as "—" rather than invented (same convention
+// AgentOverview's Calls Taken tiles already use): call data doesn't exist
+// in-app (calls happen on the closer's own phone), so Calls Taken and Close
+// Rate (which divides by it) have no source. Approval Rate IS real — it's
+// submitted-vs-in-force from `policies`, the same ratio bookMetrics() calls
+// placedRate.
+//
+// Leaderboard visibility follows the existing policies_select RLS
+// (can_view_agent → self + downline, or everything for admin) rather than a
+// new company-wide query — a closer's board is scoped to their own team, not
+// every branch, because that's the real security boundary today (see
+// hooks/useHierarchy.js's own "KNOWN GAP" note). Opening it company-wide for
+// every closer would need that RLS policy revisited — flagged, not built
+// around.
+//
+// Not built: the mockup's per-closer "2× Top spot / NEW" badge chips. There's
+// no ranking-history table to compute them from — adding fabricated badges
+// would be worse than omitting them.
+
+const MONO = "'JetBrains Mono',monospace"
+const GOLD = 'var(--warning)'
+const SILVER = '#9CA3AF'
+const BRONZE = '#B87333'
+
+const pad2 = n => String(n).padStart(2, '0')
+
+function addMonthsToKey(mk, n) {
+  const [y, m] = mk.split('-').map(Number)
+  const d = new Date(y, m - 1 + n, 1)
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`
+}
+
+function monthLabel(mk) {
+  const [y, m] = mk.split('-').map(Number)
+  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+}
+
+function monthRange(from, to) {
+  const [a, b] = from <= to ? [from, to] : [to, from]
+  const out = []
+  let cur = a
+  while (cur <= b) {
+    out.push(cur)
+    cur = addMonthsToKey(cur, 1)
+  }
+  return out
+}
+
+function initialsOf(name) {
+  return (name || '?').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()
+}
+
+export default function Performance() {
+  const [subTab, setSubTab] = useState('production')
+
+  return (
+    <div style={{ maxWidth: 1280 }}>
+      <Segmented
+        style={{ marginBottom: 24 }}
+        value={subTab}
+        onChange={setSubTab}
+        options={[
+          { value: 'production', label: 'Production' },
+          { value: 'leaderboard', label: 'Leaderboard' },
+        ]}
+      />
+      {subTab === 'production' ? <ProductionTab /> : <LeaderboardTab />}
+    </div>
+  )
+}
+
+function Segmented({ options, value, onChange, size = 'md', style }) {
+  const pad = size === 'sm' ? '4px 10px' : '6px 16px'
+  const font = size === 'sm' ? 10.5 : 12
+  return (
+    <div style={{
+      display: 'flex', gap: 2, background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)',
+      borderRadius: 6, padding: 2, width: 'fit-content', ...style,
+    }}>
+      {options.map(o => {
+        const on = value === o.value
+        return (
+          <button
+            key={o.value}
+            onClick={() => onChange(o.value)}
+            style={{
+              border: 'none', borderRadius: 4, padding: pad, fontSize: font, fontWeight: 700,
+              background: on ? 'var(--accent)' : 'transparent', color: on ? '#fff' : 'var(--text-muted)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {o.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function Tile({ icon: Icon, label, value, valueColor = 'var(--text-primary)', sub }) {
+  return (
+    <div style={{ background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8, padding: '18px 20px', minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+        <Icon size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
+          {label}
+        </span>
+      </div>
+      <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', color: valueColor, fontFamily: MONO, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflowWrap: 'anywhere' }}>
+        {value}
+      </div>
+      {sub && <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>{sub}</p>}
+    </div>
+  )
+}
+
+// ── Production tab ───────────────────────────────────────────────────────────
+function ProductionTab() {
+  const { profile } = useAuth()
+  const isAdmin = profile?.role === 'admin'
+  const today = todayISO()
+  const todayMonthKey = today.slice(0, 7)
+
+  // usePolicies(null) already returns everything RLS lets this account see —
+  // self + downline for a closer, everything for admin (policies_select →
+  // can_view_agent → downline_of()). That's exactly what "Team" should mean
+  // (Prompt 348 point 5), so no separate hierarchy query is needed here:
+  // "You" narrows to this account's own rows, "Team" is the unfiltered set.
+  const { data: allVisible = [], isLoading } = usePolicies(null)
+  const [scope, setScope] = useState('you')
+  const scopedPolicies = useMemo(
+    () => (scope === 'you' ? allVisible.filter(p => p.agent_id === profile?.id) : allVisible),
+    [allVisible, scope, profile?.id]
+  )
+
+  const picker = usePeriodPicker(today)
+  const { bounds, asOf } = picker
+
+  const snapshot = useMemo(() => productionSnapshot(scopedPolicies, asOf), [scopedPolicies, asOf])
+  const flow = useMemo(() => productionFlow(scopedPolicies, bounds.lo, bounds.hi), [scopedPolicies, bounds])
+
+  const scopeWord = scope === 'you' ? 'your' : "the team's"
+  const asOfLabel = asOf === today ? 'today' : formatDate(asOf)
+
+  // ── Persistency — independent period control ──────────────────────────────
+  const [persMode, setPersMode] = useState('thismonth')
+  const [persFrom, setPersFrom] = useState(addMonthsToKey(todayMonthKey, -2))
+  const [persTo, setPersTo] = useState(todayMonthKey)
+
+  const persMonths = persMode === 'thismonth' ? [todayMonthKey]
+    : persMode === 'lastmonth' ? [addMonthsToKey(todayMonthKey, -1)]
+    : monthRange(persFrom, persTo)
+
+  const persistency = useMemo(
+    () => persistencyWindows(scopedPolicies, persMonths, todayMonthKey),
+    [scopedPolicies, persMonths, todayMonthKey]
+  )
+
+  const persLabel = persMode === 'thismonth' ? `${monthLabel(todayMonthKey)} (this month)`
+    : persMode === 'lastmonth' ? `${monthLabel(addMonthsToKey(todayMonthKey, -1))} (last month)`
+    : persMonths.length > 1 ? `${monthLabel(persMonths[0])} – ${monthLabel(persMonths[persMonths.length - 1])}`
+    : monthLabel(persMonths[0])
+
+  const monthOptions = useMemo(() => {
+    const opts = []
+    for (let i = 11; i >= 0; i--) opts.push(addMonthsToKey(todayMonthKey, -i))
+    return opts
+  }, [todayMonthKey])
+
+  const v = x => (isLoading ? '—' : x)
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+        <Segmented
+          size="sm"
+          value={scope}
+          onChange={setScope}
+          options={[{ value: 'you', label: 'You' }, { value: 'team', label: 'Team' }]}
+        />
+        <PeriodPicker {...picker} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 16, marginBottom: 16 }}>
+        <Tile
+          icon={Wallet} label="Active AP"
+          value={v(moneyShort(snapshot.activeAP))}
+          sub={`${snapshot.policiesActive} in-force polic${snapshot.policiesActive === 1 ? 'y' : 'ies'} · ${scopeWord} book as of ${asOfLabel}`}
+        />
+        <Tile
+          icon={TrendingUp} label="Submitted AP" valueColor="var(--success)"
+          value={v(moneyShort(flow.submittedAP))}
+          sub={`${flow.submittedCount} app${flow.submittedCount === 1 ? '' : 's'} submitted · ${picker.label}`}
+        />
+        <Tile
+          icon={CheckCircle2} label="Issued AP" valueColor="var(--success)"
+          value={v(moneyShort(flow.issuedAP))}
+          sub={`approved & placed in force · ${picker.label}`}
+        />
+        <Tile
+          icon={Users} label="Policies Active"
+          value={v(String(snapshot.policiesActive))}
+          sub={`${scopeWord} in-force book as of ${asOfLabel}`}
+        />
+        <Tile
+          icon={DollarSign} label="Average Premium"
+          value={v(flow.avgMonthlyPremium ? `${money(flow.avgMonthlyPremium)}/mo` : '—')}
+          sub={`avg. across submitted apps · ${picker.label}`}
+        />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 16, marginBottom: 24 }}>
+        <Tile
+          icon={Phone} label="Calls Taken"
+          value="—"
+          sub="Not tracked in-app yet"
+        />
+        <Tile
+          icon={Target} label="Close Rate"
+          value="—"
+          sub="Needs call tracking"
+        />
+        <Tile
+          icon={Activity} label="Approval Rate"
+          value={v(flow.approvalRate === null ? '—' : `${Math.round(flow.approvalRate)}%`)}
+          sub="apps approved ÷ apps submitted"
+        />
+        <Tile
+          icon={LogOut} label="Fall-off Rate" valueColor="var(--danger)"
+          value={v(snapshot.fallOffRate === null ? '—' : `${Math.round(snapshot.fallOffRate)}%`)}
+          sub={`of the book issued through ${asOfLabel}`}
+        />
+        <Tile
+          icon={Clock} label="Average Days to Issue"
+          value={v(snapshot.avgDaysToIssue === null ? '—' : Math.round(snapshot.avgDaysToIssue))}
+          sub={`submitted → effective, as of ${asOfLabel}`}
+        />
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 10 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Persistency</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <Segmented
+            size="sm"
+            value={persMode}
+            onChange={setPersMode}
+            options={[
+              { value: 'thismonth', label: 'This Month' },
+              { value: 'lastmonth', label: 'Last Month' },
+              { value: 'custom', label: 'Custom Range' },
+            ]}
+          />
+          {persMode === 'custom' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <select
+                value={persFrom}
+                onChange={e => setPersFrom(e.target.value)}
+                style={selectStyle}
+              >
+                {monthOptions.map(mk => <option key={mk} value={mk}>{monthLabel(mk)}</option>)}
+              </select>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>to</span>
+              <select
+                value={persTo}
+                onChange={e => setPersTo(e.target.value)}
+                style={selectStyle}
+              >
+                {monthOptions.map(mk => <option key={mk} value={mk}>{monthLabel(mk)}</option>)}
+              </select>
+            </div>
+          )}
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{persLabel}</span>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
+        {persistency.map(p => (
+          <div key={p.window} style={{ background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8, padding: '18px 20px' }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
+              {p.window}
+            </span>
+            <div style={{ marginTop: 10, fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)', fontFamily: MONO }}>
+              {isLoading ? '—' : p.rolling === null ? '—' : `${p.rolling}%`}
+            </div>
+            <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+              {isLoading || p.allTime === null ? '—' : `${p.allTime}%`} all-time
+            </p>
+          </div>
+        ))}
+      </div>
+      <GapNote>6- and 12-month windows unlock as the book ages.</GapNote>
+    </div>
+  )
+}
+
+const selectStyle = {
+  height: 26, background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
+  borderRadius: 6, padding: '0 6px', fontSize: 10.5, fontWeight: 700, color: 'var(--text-primary)',
+}
+
+// ── Leaderboard tab ─────────────────────────────────────────────────────────
+function LeaderboardTab() {
+  const { data: allVisible = [], isLoading } = usePolicies(null)
+  const [boardMode, setBoardMode] = useState('daily')
+
+  const today = todayISO()
+  const [lo, hi] = boardMode === 'daily' ? [today, today] : [today.slice(0, 7) + '-01', today]
+
+  const standings = useMemo(() => {
+    const byAgent = new Map()
+    for (const p of allVisible) {
+      const d = (p.policy_sold_date || p.created_at?.slice(0, 10) || '')
+      if (d < lo || d > hi) continue
+      const id = p.agent_id
+      const name = p.agent?.full_name || 'Unknown'
+      if (!byAgent.has(id)) byAgent.set(id, { id, name, ap: 0, families: 0 })
+      const row = byAgent.get(id)
+      row.ap += Number(p.annual_premium || 0)
+      row.families += 1
+    }
+    return [...byAgent.values()]
+      .sort((a, b) => b.ap - a.ap)
+      .map((r, i) => ({ ...r, rank: i + 1, avg: r.families ? r.ap / r.families : 0 }))
+  }, [allVisible, lo, hi])
+
+  const top3 = standings.slice(0, 3)
+  const rest = standings.slice(3)
+  const placeColor = rank => (rank === 1 ? GOLD : rank === 2 ? SILVER : BRONZE)
+  const periodLabel = boardMode === 'daily' ? `Today · ${formatDate(today)}` : monthLabel(today.slice(0, 7))
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
+        <Segmented
+          value={boardMode}
+          onChange={setBoardMode}
+          options={[{ value: 'daily', label: 'Daily' }, { value: 'monthly', label: 'Monthly' }]}
+        />
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{periodLabel} · ranked by submitted AP</span>
+      </div>
+
+      {isLoading ? (
+        <p style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Loading…</p>
+      ) : standings.length === 0 ? (
+        <div style={{ background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8, padding: '32px 24px', textAlign: 'center' }}>
+          <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-muted)' }}>No submissions in this window yet.</p>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, marginBottom: 20 }}>
+            {top3[1] && <PodiumCard row={top3[1]} place="2ND PLACE" color={placeColor(2)} size="sm" />}
+            {top3[0] && <PodiumCard row={top3[0]} place="TOP PERFORMER" color={placeColor(1)} size="lg" />}
+            {top3[2] && <PodiumCard row={top3[2]} place="3RD PLACE" color={placeColor(3)} size="sm" />}
+          </div>
+
+          <div style={{ background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: 'var(--border-w) solid var(--border)' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Full standings</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>submitted AP · {periodLabel}</span>
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  {['Rank', 'Closer', 'Families', 'Avg / family', 'Submitted AP'].map((h, i) => (
+                    <th
+                      key={h}
+                      style={{
+                        textAlign: i >= 2 ? 'right' : 'left', padding: '10px 16px', fontSize: 10, fontWeight: 700,
+                        letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)',
+                        borderBottom: 'var(--border-w) solid var(--border)',
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {standings.map(r => (
+                  <tr key={r.id}>
+                    <td style={tdStyle}>#{r.rank}</td>
+                    <td style={{ ...tdStyle, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>{r.name}</td>
+                    <td style={{ ...tdStyle, textAlign: 'right' }}>{r.families}</td>
+                    <td style={{ ...tdStyle, textAlign: 'right' }}>{moneyShort(r.avg)}</td>
+                    <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, color: 'var(--success)' }}>{moneyShort(r.ap)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+const tdStyle = {
+  padding: '11px 16px', borderBottom: 'var(--border-w) solid var(--border)',
+  fontSize: 11.5, color: 'var(--text-secondary)', fontFamily: MONO,
+}
+
+function PodiumCard({ row, place, color, size }) {
+  const lg = size === 'lg'
+  return (
+    <div style={{
+      flex: 1, background: 'var(--bg-surface)', border: `1.5px solid ${color}`, borderRadius: 10,
+      padding: lg ? '38px 20px 24px' : '20px 18px', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', textAlign: 'center', gap: lg ? 8 : 7,
+      boxShadow: lg ? '0 8px 24px rgba(0,0,0,0.18)' : 'none', position: lg ? 'relative' : 'static',
+    }}>
+      <span style={{ display: 'inline-flex', padding: lg ? '3px 10px' : '3px 9px', borderRadius: 5, fontSize: lg ? 10 : 9.5, fontWeight: 700, letterSpacing: '0.06em', background: color, color: '#fff' }}>
+        {place}
+      </span>
+      <span style={{
+        width: lg ? 60 : 48, height: lg ? 60 : 48, borderRadius: '50%', background: 'var(--bg-elevated)',
+        border: `${lg ? 2.5 : 2}px solid ${color}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: lg ? 18 : 15, fontWeight: 700, color: 'var(--text-primary)', marginTop: 4,
+      }}>
+        {initialsOf(row.name)}
+      </span>
+      <span style={{ fontSize: lg ? 15 : 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>{row.name}</span>
+      <span style={{ fontSize: lg ? 26 : 20, fontWeight: 700, color: 'var(--success)', fontFamily: MONO }}>{moneyShort(row.ap)}</span>
+      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{moneyShort(row.avg)} avg · {row.families} famil{row.families === 1 ? 'y' : 'ies'}</span>
+    </div>
+  )
+}

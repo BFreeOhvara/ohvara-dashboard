@@ -43,9 +43,10 @@ import AgentSubmissions from './pages/agent/Submissions'
 import CarrierPortals from './pages/agent/CarrierPortals'
 import AgentHierarchy from './pages/agent/Hierarchy'
 import AgentMyCalls from './pages/agent/MyCalls'
+import AgentPerformance from './pages/agent/Performance'
 import {
   LiveCall, TrainingPlaceholder,
-  CommissionsPlaceholder, UnderwritingPlaceholder, StatsPlaceholder,
+  CommissionsPlaceholder, UnderwritingPlaceholder,
   CallPipelinePlaceholder, CloserRosterPlaceholder, LeaderboardPlaceholder,
   AdminCommissionsPlaceholder, LeadSourcesPlaceholder,
 } from './pages/agent/Placeholders'
@@ -239,7 +240,7 @@ export default function App() {
             } />
             <Route path="/agent/stats" element={
               <ProtectedRoute allowedRoles={['closer', 'admin']}>
-                <DashboardLayout><StatsPlaceholder /></DashboardLayout>
+                <DashboardLayout><AgentPerformance /></DashboardLayout>
               </ProtectedRoute>
             } />
 

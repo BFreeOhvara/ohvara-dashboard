@@ -141,3 +141,122 @@ export function bookMetrics(policies, { month } = {}) {
     pendingCancellations: rows.filter(p => p.cancellation_status === 'Cancellation Pending').length,
   }
 }
+
+// ── Performance · Production tab metrics (Prompt 348) ────────────────────────
+// Snapshot metrics read the book "as of" a date — a cumulative state, not an
+// activity count inside a window. Flow metrics aggregate real activity that
+// happened between periodStart and periodEnd. Split confirmed with Brayden
+// 2026-07-26: Active AP, Policies Active and Fall-off Rate are snapshot;
+// Submitted AP, Issued AP, Average Premium and Approval Rate are flow.
+//
+// There's no status-history table — the schema only has each policy's
+// CURRENT status/cancellation_status, not when it changed. "As of a past
+// date" is approximated by gating on effective_date <= asOf against those
+// current fields (a policy already issued by that date, read with today's
+// status). That can't detect a policy that was active on asOf and has since
+// lapsed as of a LATER asOf query, or vice versa mid-window — acceptable
+// given the book is small and young; flagged here rather than silently
+// treated as exact.
+export function productionSnapshot(policies, asOf) {
+  const rows = (policies || []).filter(p => p.effective_date && p.effective_date <= asOf)
+  const active = rows.filter(p => p.status === 'In Effect')
+  const cancelled = rows.filter(p => p.cancellation_status === 'Cancellation Complete')
+  const ap = list => list.reduce((s, p) => s + Number(p.annual_premium || 0), 0)
+
+  const withBothDates = rows.filter(p => p.policy_sold_date && p.effective_date)
+  const avgDaysToIssue = withBothDates.length
+    ? withBothDates.reduce((s, p) => s + daysBetween(p.policy_sold_date, p.effective_date), 0) / withBothDates.length
+    : null
+
+  return {
+    activeAP: ap(active),
+    policiesActive: active.length,
+    // Ratio against the whole issued book up to this date, not a count within
+    // a window — Brayden's own framing for why this sits on the snapshot side.
+    fallOffRate: rows.length ? (cancelled.length / rows.length) * 100 : null,
+    avgDaysToIssue,
+  }
+}
+
+function daysBetween(a, b) {
+  return Math.round((new Date(`${b}T00:00:00`) - new Date(`${a}T00:00:00`)) / 86400000)
+}
+
+export function productionFlow(policies, periodStart, periodEnd) {
+  const rows = policies || []
+  const inPeriod = d => !!d && d >= periodStart && d <= periodEnd
+  const submitted = rows.filter(p => inPeriod(p.policy_sold_date || p.created_at?.slice(0, 10)))
+  const issued = rows.filter(p => p.status === 'In Effect' && inPeriod(p.effective_date))
+  const ap = list => list.reduce((s, p) => s + Number(p.annual_premium || 0), 0)
+
+  return {
+    submittedAP: ap(submitted),
+    submittedCount: submitted.length,
+    issuedAP: ap(issued),
+    issuedCount: issued.length,
+    avgMonthlyPremium: submitted.length
+      ? submitted.reduce((s, p) => s + Number(p.monthly_premium || 0), 0) / submitted.length
+      : 0,
+    // Same ratio as bookMetrics()'s placedRate (apps that made it into force
+    // over apps submitted), scoped to this window instead of a calendar month
+    // so the two can't drift on what "approved" means.
+    approvalRate: submitted.length
+      ? (submitted.filter(p => p.status === 'In Effect').length / submitted.length) * 100
+      : null,
+  }
+}
+
+// ── Persistency (Prompt 348) ─────────────────────────────────────────────────
+// Cohort persistency: for a reporting month `mk` and a window of N months,
+// the cohort is every policy that went into effect N months before `mk` — old
+// enough to have crossed that window by the reporting month. Persistency is
+// what fraction of that cohort is still in force (not cancelled) today, read
+// off the same current-status fields productionSnapshot uses (same caveat:
+// no history table, so this is "still in force now," not "was in force
+// exactly N months after issue").
+const PERSISTENCY_WINDOWS = [
+  { window: '30-day', months: 1 },
+  { window: '3-month', months: 3 },
+  { window: '6-month', months: 6 },
+  { window: '12-month', months: 12 },
+]
+
+function shiftMonth(mk, n) {
+  const [y, m] = mk.split('-').map(Number)
+  const d = new Date(y, m - 1 - n, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+function cohortPersistency(policies, cohortMonth) {
+  const rows = (policies || []).filter(p => (p.effective_date || '').slice(0, 7) === cohortMonth)
+  if (!rows.length) return null
+  return (rows.filter(p => p.status === 'In Effect').length / rows.length) * 100
+}
+
+function avg(vals) {
+  return vals.length ? Math.round(vals.reduce((s, v) => s + v, 0) / vals.length) : null
+}
+
+// `months`: the selected reporting month(s) — an array of 'YYYY-MM' (This
+// Month / Last Month are single-element, Custom Range can span several).
+// `todayMonth`: 'YYYY-MM' for the real current month, so "all-time" can't
+// reach into cohorts that haven't crossed the window yet.
+export function persistencyWindows(policies, months, todayMonth) {
+  const cohortMonthsWithData = [...new Set(
+    (policies || []).map(p => (p.effective_date || '').slice(0, 7)).filter(Boolean)
+  )]
+
+  return PERSISTENCY_WINDOWS.map(({ window, months: n }) => {
+    const rolling = avg(
+      months.map(mk => cohortPersistency(policies, shiftMonth(mk, n))).filter(v => v !== null)
+    )
+    const cutoff = shiftMonth(todayMonth, n)
+    const allTime = avg(
+      cohortMonthsWithData
+        .filter(cm => cm <= cutoff)
+        .map(cm => cohortPersistency(policies, cm))
+        .filter(v => v !== null)
+    )
+    return { window, rolling, allTime }
+  })
+}
