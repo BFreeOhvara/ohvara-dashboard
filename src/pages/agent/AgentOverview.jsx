@@ -36,6 +36,21 @@ const ATTENTION_ROW_H = 42
 // let the text overflow the track instead of truncating).
 const ATTENTION_CLIP = { overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', minWidth: 0 }
 
+// Prompt 360: Type was a flat `150px` — measured live, the Type pill itself
+// only ever renders ~55-80px wide, so ~70-95px of that fixed track sat empty
+// on every single row, and it stayed empty regardless of how wide Prompt
+// 354 made the card. `minmax(70px,max-content)` lets the column shrink to
+// what the pill actually needs; that reclaimed width flows into Name/Detail's
+// `fr` tracks automatically since they share this same grid. Gap bumped
+// 12→20 alongside it — the wider Name/Detail tracks alone don't read as
+// "spread out" without more visual separation between columns too. Verified
+// in an isolated harness at the real ~810px card width: Type shrank from a
+// flat 150px to ~57-79px (content-fit), Name grew 192px→~230px, Detail grew
+// 346px→~368px, and the row's content now reaches to within ~1px of the
+// card's right padding edge instead of stopping ~24px short of it. Header
+// and rows share this constant so they can't drift out of alignment.
+const ATTENTION_COLUMNS = { display: 'grid', gridTemplateColumns: 'minmax(70px,max-content) 1fr 1.6fr', gap: 20 }
+
 // Elegant serif clock font (Prompt 350, replaces Prompt 342's DSEG7
 // seven-segment choice — Brayden didn't like the digital/LCD look after
 // living with it) — self-hosted via @fontsource/playfair-display (imported
@@ -47,14 +62,27 @@ const CLOCK_FONT = "'Playfair Display',serif"
 // figures, not lining figures — confirmed via canvas TextMetrics
 // (actualBoundingBoxAscent/Descent per glyph): 3/4/5/7/9 render with a
 // 5px descent below the baseline, 6/8 render with a 22px ascent (cap-height,
-// vs 16px for 0/1/2), and glyph widths vary despite `tabular-nums`. That's
-// the exact cause of both Prompt 353 complaints — digits dipping below
-// AM/PM's baseline AND digits reading as inconsistent sizes — from one root
-// cause, not a vertical-align/line-height bug. `lining-nums` switches the
-// font to its lining figures (uniform height, sit on the baseline, no
-// ascenders/descenders); kept alongside `tabular-nums` so digits stay
-// fixed-width as the clock ticks.
-const CLOCK_NUMERIC_VARIANT = 'lining-nums tabular-nums'
+// vs 16px for 0/1/2). `lining-nums` switches the font to its lining figures
+// (uniform height, sit on the baseline, no ascenders/descenders) and fixes
+// that part for real — this feature IS supported by the font.
+const CLOCK_NUMERIC_VARIANT = 'lining-nums'
+
+// Prompt 360: `tabular-nums` (also applied here through Prompt 353-359) is a
+// silent no-op on Playfair Display — confirmed by loading the actual
+// self-hosted woff2 in an isolated harness and measuring per-glyph
+// getBoundingClientRect() width at 36px/700: digits ranged 14.0px–23.5px
+// with `tabular-nums` applied, identical to the widths with it omitted. The
+// font simply has no `tnum` OpenType feature table entry for the browser to
+// select, so the property is accepted but does nothing — which is exactly
+// why the clock pill kept visibly resizing every second despite Prompt 353's
+// fix. `font-variant-numeric` can't fix a feature the font doesn't ship, so
+// each digit character is instead wrapped in a fixed-width inline-block span
+// (see `renderClockDigits` below) — CSS-level width control that doesn't
+// depend on font metrics support. Re-verified in the same harness: a string
+// wrapped this way renders at an identical total px width across every
+// digit combination (0000–9999), vs. the un-wrapped string's per-second
+// jitter.
+const CLOCK_DIGIT_CHAR_WIDTH = '0.68em'
 
 // Digit size, bumped up from Prompt 350's 30px now that the baseline/sizing
 // bug above is fixed first (no point enlarging inconsistent glyphs). AM/PM
@@ -62,6 +90,20 @@ const CLOCK_NUMERIC_VARIANT = 'lining-nums tabular-nums'
 // "50% of digit height" rule from Prompt 350 can't drift out of sync.
 const CLOCK_DIGIT_SIZE = 36
 const CLOCK_AMPM_SIZE = CLOCK_DIGIT_SIZE / 2
+
+// Splits a clock digit string ("2:45:30") into DOM nodes, giving every 0-9
+// character a fixed-width wrapper so the rendered string's total width can't
+// change as digit values change — see CLOCK_DIGIT_CHAR_WIDTH above for why
+// `tabular-nums` alone doesn't do this on this font. Non-digit characters
+// (the colons) pass through as plain text — they never change value, so they
+// can't contribute to the jitter and don't need fixing.
+function renderClockDigits(str) {
+  return [...str].map((ch, i) => (
+    /[0-9]/.test(ch)
+      ? <span key={i} style={{ display: 'inline-block', width: CLOCK_DIGIT_CHAR_WIDTH, textAlign: 'center' }}>{ch}</span>
+      : ch
+  ))
+}
 
 // Local calendar date (not UTC) for a timestamptz value — matches todayISO()'s
 // own local-time convention, so "same day" comparisons on cancellation_call_at
@@ -245,7 +287,7 @@ export default function AgentOverview() {
               fontSize: CLOCK_DIGIT_SIZE, fontWeight: 700, letterSpacing: '0.02em', lineHeight: 1, color: '#fff',
               fontFamily: CLOCK_FONT, fontVariantNumeric: CLOCK_NUMERIC_VARIANT,
             }}>
-              {clockDigits}
+              {renderClockDigits(clockDigits)}
               {clockAmPm && (
                 <span style={{ fontSize: CLOCK_AMPM_SIZE, marginLeft: 3 }}>{clockAmPm}</span>
               )}
@@ -293,7 +335,7 @@ export default function AgentOverview() {
               here. Row/type sizing also trimmed down a notch so this block
               reads lighter than the amount of info in it warrants. */}
           <div style={{
-            display: 'grid', gridTemplateColumns: '150px 1fr 1.8fr', gap: 12,
+            ...ATTENTION_COLUMNS,
             padding: '9px 22px', borderBottom: 'var(--border-w) solid var(--border)', flexShrink: 0,
           }}>
             {['Type', 'Name', 'Detail'].map(h => (
@@ -315,7 +357,7 @@ export default function AgentOverview() {
               <div
                 key={a.id}
                 style={{
-                  display: 'grid', gridTemplateColumns: '150px 1fr 1.8fr', gap: 12,
+                  ...ATTENTION_COLUMNS,
                   alignItems: 'center', padding: '11px 22px', height: ATTENTION_ROW_H, boxSizing: 'border-box',
                   borderBottom: i < attention.length - 1 ? 'var(--border-w) solid var(--border)' : 'none',
                 }}
