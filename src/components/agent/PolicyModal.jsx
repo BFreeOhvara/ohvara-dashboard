@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Trash2 } from 'lucide-react'
+import { X, Trash2, Bell } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Select } from '../ui/Input'
-import { POLICY_STATUSES, CANCELLATION_STATUSES, useUpdatePolicy, useDeletePolicy } from '../../hooks/usePolicies'
+import {
+  LIVE_POLICY_STATUSES, CANCELLATION_STATUSES,
+  useUpdatePolicy, useDeletePolicy, pendingEffectuation,
+} from '../../hooks/usePolicies'
 import { money, fullName, formatDate } from '../../lib/policyFormat'
 
 // Row-click detail popup for My Policies.
@@ -16,6 +19,13 @@ export function PolicyModal({ policy, canEdit, onClose }) {
   const update = useUpdatePolicy()
   const del = useDeletePolicy()
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  // Moved here from My Policies' list-view banner (Prompt 345) — same
+  // condition, same mutation, just relocated onto the record itself.
+  const needsEffectuation = canEdit && policy && pendingEffectuation([policy]).length > 0
+  function answerEffectuation(status) {
+    update.mutate({ id: policy.id, status, effectuation_answered_at: new Date().toISOString() })
+  }
 
   // Scroll-lock the page behind the modal (Round 37 item 2). Restores the
   // original value rather than blanking it, so a page that had its own
@@ -86,6 +96,32 @@ export function PolicyModal({ policy, canEdit, onClose }) {
           </button>
         </div>
 
+        {needsEffectuation && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', margin: '18px 0 0',
+            background: 'var(--warning-dim)', border: '1px solid var(--warning-bd)', borderRadius: 8,
+          }}>
+            <Bell size={15} style={{ color: 'var(--warning)', flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-primary)' }}>
+              Reached its effective date ({formatDate(policy.effective_date)}) — did this policy go into effect?
+            </span>
+            <button
+              onClick={() => answerEffectuation('In Effect')}
+              disabled={update.isPending}
+              style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700 }}
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => answerEffectuation('Undrafted')}
+              disabled={update.isPending}
+              style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700 }}
+            >
+              No
+            </button>
+          </div>
+        )}
+
         {/* Premium block — money always mono */}
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', margin: '22px 0 20px' }}>
           <Figure label="Monthly Premium" value={money(policy.monthly_premium)} />
@@ -125,7 +161,7 @@ export function PolicyModal({ policy, canEdit, onClose }) {
                 value={policy.status}
                 onChange={e => update.mutate({ id: policy.id, status: e.target.value })}
               >
-                {POLICY_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                {LIVE_POLICY_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
               </Select>
               <Select
                 label="Cancellation (old policy)"

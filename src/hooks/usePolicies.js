@@ -26,6 +26,12 @@ export const CANCELLATION_STATUSES = [
 // offer them so the day that lands, nothing needs rebuilding.
 export const PRE_SUBMISSION_STATUSES = ['Follow-up', 'Not Interested']
 
+// Statuses that represent a real policy record (Prompt 345). Follow-up and
+// Not Interested are pre-submission call outcomes, not policies — they live
+// on My Calls → Schedule / nowhere, respectively — so My Policies and its
+// edit controls restrict to these three everywhere they touch status.
+export const LIVE_POLICY_STATUSES = POLICY_STATUSES.filter(s => !PRE_SUBMISSION_STATUSES.includes(s))
+
 const SELECT = `
   id, agent_id, policy_sold_date, policy_number,
   client_first_name, client_last_name, client_phone,

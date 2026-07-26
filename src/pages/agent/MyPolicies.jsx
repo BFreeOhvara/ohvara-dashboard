@@ -1,36 +1,33 @@
 import { useMemo, useState, useRef, useEffect } from 'react'
-import { Search, Filter, X, Bell } from 'lucide-react'
+import { Search, Filter, X } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useHierarchy } from '../../hooks/useHierarchy'
-import {
-  usePolicies, useUpdatePolicy, pendingEffectuation,
-  POLICY_STATUSES, PRE_SUBMISSION_STATUSES,
-} from '../../hooks/usePolicies'
+import { usePolicies, LIVE_POLICY_STATUSES } from '../../hooks/usePolicies'
 import { PolicyModal } from '../../components/agent/PolicyModal'
 import { money, fullName, formatDate } from '../../lib/policyFormat'
 
 // My Policies — literal port of the export's "Closer · My Pipeline" screen
 // (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines 647-751):
-// effective-date prompt banners, a search + Filters-popover toolbar with
-// active-filter chips, then one spacious table (Policy # / Customer / Product
-// / Carrier / AP / Reported / Status / Next action) and the reserve footnote.
+// a search + Filters-popover toolbar with active-filter chips, then one
+// spacious table (Policy # / Customer / Product / Carrier / AP / Reported /
+// Status) and the reserve footnote.
 //
 // Per-status colors are NOT in the export — they live in `data3.js`, which was
 // never handed over — so they're mapped onto the design system's own semantic
 // tokens below. Flagged; swap if the real palette differs when data3.js lands.
+//
+// Scope (Prompt 345): this page only ever shows real policies — In Effect,
+// Submitted, Undrafted (LIVE_POLICY_STATUSES). Follow-up/Not Interested are
+// pre-submission call outcomes, not policies, so they're filtered out below
+// regardless of what's in the table — Follow-up rows belong on My Calls →
+// Schedule, Not Interested rows have no home at all.
 
 const MONO = "'JetBrains Mono',monospace"
 
 const STATUS_STYLE = {
-  'Submitted':      { color: 'var(--info)',    dim: 'var(--info-dim)',    bd: 'var(--info-bd)' },
-  'In Effect':      { color: 'var(--success)', dim: 'var(--success-dim)', bd: 'var(--success-bd)' },
-  'Undrafted':      { color: 'var(--danger)',  dim: 'var(--danger-dim)',  bd: 'var(--danger-bd)' },
-  'Follow-up':      { color: 'var(--warning)', dim: 'var(--warning-dim)', bd: 'var(--warning-bd)' },
-  'Not Interested': { color: 'var(--text-muted)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
-}
-const CANC_STYLE = {
-  'Cancellation Pending':  { color: 'var(--warning)', dim: 'var(--warning-dim)', bd: 'var(--warning-bd)' },
-  'Cancellation Complete': { color: 'var(--success)', dim: 'var(--success-dim)', bd: 'var(--success-bd)' },
+  'Submitted': { color: 'var(--info)',    dim: 'var(--info-dim)',    bd: 'var(--info-bd)' },
+  'In Effect': { color: 'var(--success)', dim: 'var(--success-dim)', bd: 'var(--success-bd)' },
+  'Undrafted': { color: 'var(--danger)',  dim: 'var(--danger-dim)',  bd: 'var(--danger-bd)' },
 }
 
 const EMPTY_FILTERS = { status: '', product: '', carrier: '', state: '', reported: '' }
@@ -46,25 +43,6 @@ const selectStyle = {
   width: '100%', height: 32, background: 'var(--bg-base)',
   border: 'var(--border-w) solid var(--border)', borderRadius: 6,
   padding: '0 8px', fontSize: 12, color: 'var(--text-primary)',
-}
-
-// What this policy is actually waiting on. Derived from real fields only —
-// nothing here is a canned string.
-function nextAction(p, today) {
-  if (p.status === 'Submitted' && p.effective_date && p.effective_date <= today && !p.effectuation_answered_at) {
-    return 'Confirm whether it went into effect'
-  }
-  if (p.status === 'Submitted' && p.effective_date) return `Effective ${formatDate(p.effective_date)}`
-  if (p.cancellation_status === 'Cancellation Pending') {
-    return p.cancellation_call_at
-      ? `3-way call ${new Date(p.cancellation_call_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
-      : 'Schedule the 3-way cancellation call'
-  }
-  if (p.status === 'In Effect' && p.cancellation_status === 'Cancellation Complete') return 'Complete — commission released'
-  if (p.status === 'In Effect') return 'Old policy still needs cancelling'
-  if (p.status === 'Undrafted') return 'Re-work or close out'
-  if (p.status === 'Follow-up') return 'Follow up with the client'
-  return '—'
 }
 
 export default function MyPolicies() {
@@ -91,8 +69,6 @@ export default function MyPolicies() {
     return () => document.removeEventListener('mousedown', onDown)
   }, [filtersOpen])
 
-  const today = new Date().toISOString().slice(0, 10)
-
   const options = useMemo(() => ({
     carriers: [...new Set(policies.map(p => p.carrier_name).filter(Boolean))].sort(),
     products: [...new Set(policies.map(p => p.product_type).filter(Boolean))].sort(),
@@ -103,6 +79,7 @@ export default function MyPolicies() {
     const q = search.trim().toLowerCase()
     const daysAgo = iso => (Date.now() - new Date(iso).getTime()) / 86400000
     return policies.filter(p => {
+      if (!LIVE_POLICY_STATUSES.includes(p.status)) return false
       if (q) {
         const hay = [p.policy_number, p.client_first_name, p.client_last_name, p.client_phone, p.carrier_name, p.product_type]
           .filter(Boolean).join(' ').toLowerCase()
@@ -124,11 +101,6 @@ export default function MyPolicies() {
     })
   }, [policies, search, filters])
 
-  const needsEffectuation = useMemo(
-    () => pendingEffectuation(policies).filter(p => isAdmin || p.agent_id === profile?.id),
-    [policies, profile?.id, isAdmin]
-  )
-
   const REPORTED_LABELS = { 7: 'Last 7 days', 14: 'Last 14 days', older: 'Older than 14 days' }
   const activeChips = [
     filters.status && { key: 'status', label: filters.status },
@@ -140,8 +112,6 @@ export default function MyPolicies() {
 
   return (
     <div>
-      <EffectuationPrompts policies={needsEffectuation} />
-
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8, height: 34, padding: '0 12px',
@@ -202,9 +172,7 @@ export default function MyPolicies() {
                 <FilterSelect
                   label="Status" value={filters.status}
                   onChange={v => setFilters(f => ({ ...f, status: v }))}
-                  options={[['', 'All statuses'], ...POLICY_STATUSES.map(s => [
-                    s, PRE_SUBMISSION_STATUSES.includes(s) ? `${s} (not yet in use)` : s,
-                  ])]}
+                  options={[['', 'All statuses'], ...LIVE_POLICY_STATUSES.map(s => [s, s])]}
                 />
                 <FilterSelect
                   label="Product" value={filters.product}
@@ -287,13 +255,12 @@ export default function MyPolicies() {
                 <th style={{ ...th, textAlign: 'right' }}>AP</th>
                 <th style={{ ...th, textAlign: 'right' }}>Reported</th>
                 <th style={th}>Status</th>
-                <th style={th}>Next action</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ ...cell, fontSize: 13, color: 'var(--text-muted)' }}>
+                  <td colSpan={7} style={{ ...cell, fontSize: 13, color: 'var(--text-muted)' }}>
                     {isLoading
                       ? 'Loading policies…'
                       : policies.length === 0
@@ -303,7 +270,6 @@ export default function MyPolicies() {
                 </tr>
               ) : rows.map(p => {
                 const st = STATUS_STYLE[p.status] || STATUS_STYLE['Submitted']
-                const cc = CANC_STYLE[p.cancellation_status]
                 return (
                   <tr
                     key={p.id}
@@ -342,25 +308,12 @@ export default function MyPolicies() {
                       {formatDate(p.policy_sold_date)}
                     </td>
                     <td style={cell}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-                        <span style={{
-                          display: 'inline-flex', padding: '3px 8px', borderRadius: 4, fontSize: 10.5, fontWeight: 700,
-                          background: st.dim, color: st.color, border: `1px solid ${st.bd}`, whiteSpace: 'nowrap',
-                        }}>
-                          {p.status}
-                        </span>
-                        {cc && (
-                          <span style={{
-                            display: 'inline-flex', padding: '2px 7px', borderRadius: 4, fontSize: 9.5, fontWeight: 700,
-                            background: cc.dim, color: cc.color, border: `1px solid ${cc.bd}`, whiteSpace: 'nowrap',
-                          }}>
-                            {p.cancellation_status}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td style={{ ...cell, fontSize: 12, color: 'var(--text-secondary)', maxWidth: 230, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {nextAction(p, today)}
+                      <span style={{
+                        display: 'inline-flex', padding: '3px 8px', borderRadius: 4, fontSize: 10.5, fontWeight: 700,
+                        background: st.dim, color: st.color, border: `1px solid ${st.bd}`, whiteSpace: 'nowrap',
+                      }}>
+                        {p.status}
+                      </span>
                     </td>
                   </tr>
                 )
@@ -398,49 +351,5 @@ function FilterSelect({ label, value, onChange, options }) {
         {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
       </select>
     </label>
-  )
-}
-
-// Effective-date prompts — one banner per policy that hit its effective date,
-// exactly as the export stacks them (lines 649-660).
-function EffectuationPrompts({ policies }) {
-  const update = useUpdatePolicy()
-  if (!policies.length) return null
-
-  function answer(p, status) {
-    update.mutate({ id: p.id, status, effectuation_answered_at: new Date().toISOString() })
-  }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-      {policies.map(p => (
-        <div
-          key={p.id}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
-            background: 'var(--warning-dim)', border: '1px solid var(--warning-bd)', borderRadius: 8,
-          }}
-        >
-          <Bell size={15} style={{ color: 'var(--warning)', flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-primary)' }}>
-            <strong>{fullName(p)}</strong> reached its effective date ({formatDate(p.effective_date)}) — did this policy go into effect?
-          </span>
-          <button
-            onClick={() => answer(p, 'In Effect')}
-            disabled={update.isPending}
-            style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700 }}
-          >
-            Yes
-          </button>
-          <button
-            onClick={() => answer(p, 'Undrafted')}
-            disabled={update.isPending}
-            style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700 }}
-          >
-            No
-          </button>
-        </div>
-      ))}
-    </div>
   )
 }
