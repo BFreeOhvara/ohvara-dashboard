@@ -43,6 +43,26 @@ const ATTENTION_CLIP = { overflow: 'hidden', whiteSpace: 'nowrap', textOverflow:
 // above (that's used elsewhere for policy numbers/money, unrelated here).
 const CLOCK_FONT = "'Playfair Display',serif"
 
+// Prompt 353: Playfair Display's default numerals are old-style (text)
+// figures, not lining figures — confirmed via canvas TextMetrics
+// (actualBoundingBoxAscent/Descent per glyph): 3/4/5/7/9 render with a
+// 5px descent below the baseline, 6/8 render with a 22px ascent (cap-height,
+// vs 16px for 0/1/2), and glyph widths vary despite `tabular-nums`. That's
+// the exact cause of both Prompt 353 complaints — digits dipping below
+// AM/PM's baseline AND digits reading as inconsistent sizes — from one root
+// cause, not a vertical-align/line-height bug. `lining-nums` switches the
+// font to its lining figures (uniform height, sit on the baseline, no
+// ascenders/descenders); kept alongside `tabular-nums` so digits stay
+// fixed-width as the clock ticks.
+const CLOCK_NUMERIC_VARIANT = 'lining-nums tabular-nums'
+
+// Digit size, bumped up from Prompt 350's 30px now that the baseline/sizing
+// bug above is fixed first (no point enlarging inconsistent glyphs). AM/PM
+// is derived as exactly half rather than a second hardcoded number, so the
+// "50% of digit height" rule from Prompt 350 can't drift out of sync.
+const CLOCK_DIGIT_SIZE = 36
+const CLOCK_AMPM_SIZE = CLOCK_DIGIT_SIZE / 2
+
 // Local calendar date (not UTC) for a timestamptz value — matches todayISO()'s
 // own local-time convention, so "same day" comparisons on cancellation_call_at
 // (Prompt 346) can't drift a day off from what the closer sees on their clock.
@@ -222,12 +242,12 @@ export default function AgentOverview() {
           }}>
             <span style={{
               display: 'inline-block',
-              fontSize: 30, fontWeight: 700, letterSpacing: '0.02em', lineHeight: 1, color: '#fff',
-              fontFamily: CLOCK_FONT, fontVariantNumeric: 'tabular-nums',
+              fontSize: CLOCK_DIGIT_SIZE, fontWeight: 700, letterSpacing: '0.02em', lineHeight: 1, color: '#fff',
+              fontFamily: CLOCK_FONT, fontVariantNumeric: CLOCK_NUMERIC_VARIANT,
             }}>
               {clockDigits}
               {clockAmPm && (
-                <span style={{ fontSize: 15, marginLeft: 3 }}>{clockAmPm}</span>
+                <span style={{ fontSize: CLOCK_AMPM_SIZE, marginLeft: 3 }}>{clockAmPm}</span>
               )}
             </span>
           </div>
