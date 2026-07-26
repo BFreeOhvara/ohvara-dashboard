@@ -8,6 +8,7 @@ import { usePolicies, productionSnapshot, productionFlow, persistencyWindows } f
 import { money, moneyShort, formatDate, todayISO } from '../../lib/policyFormat'
 import { usePeriodPicker, PeriodPicker } from '../../components/agent/ProductionPeriodPicker'
 import { GapNote } from '../../components/ui/ExportForm'
+import { Segmented } from '../../components/ui/Segmented'
 
 // Performance — Production + Leaderboard (Prompt 348), replacing the
 // StatsPlaceholder. Structure/content match the Claude Design v3 mockup
@@ -63,34 +64,6 @@ export default function Performance() {
         ]}
       />
       {subTab === 'production' ? <ProductionTab /> : <LeaderboardTab />}
-    </div>
-  )
-}
-
-function Segmented({ options, value, onChange, size = 'md', style }) {
-  const pad = size === 'sm' ? '4px 10px' : '6px 16px'
-  const font = size === 'sm' ? 10.5 : 12
-  return (
-    <div style={{
-      display: 'flex', gap: 2, background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)',
-      borderRadius: 6, padding: 2, width: 'fit-content', ...style,
-    }}>
-      {options.map(o => {
-        const on = value === o.value
-        return (
-          <button
-            key={o.value}
-            onClick={() => onChange(o.value)}
-            style={{
-              border: 'none', borderRadius: 4, padding: pad, fontSize: font, fontWeight: 700,
-              background: on ? 'var(--accent)' : 'transparent', color: on ? '#fff' : 'var(--text-muted)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {o.label}
-          </button>
-        )
-      })}
     </div>
   )
 }

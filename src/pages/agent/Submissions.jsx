@@ -2,19 +2,23 @@ import { useMemo, useState } from 'react'
 import { CheckCircle2, ArrowRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCarriers } from '../../hooks/useCarriers'
-import { usePolicies, useCreatePolicy, useUpdatePolicy, POLICY_STATUSES, PRE_SUBMISSION_STATUSES } from '../../hooks/usePolicies'
+import { usePolicies, useCreatePolicy, useUpdatePolicy } from '../../hooks/usePolicies'
 import { ComingSoon } from '../../components/agent/ComingSoon'
 import {
   MONO, card, cardTitle, control, fieldLabel, grid3, primaryBtn, ghostBtn,
 } from '../../lib/exportStyles'
 import { Field, TextField, SelectField, GapNote } from '../../components/ui/ExportForm'
+import { Segmented } from '../../components/ui/Segmented'
 import { money, fullName, formatDate, todayISO } from '../../lib/policyFormat'
+import { US_STATES } from '../../lib/usStates'
 
 // Submissions — literal port of the export's "Closer · Submissions" screen
 // (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines
-// 1307-1454): underlined tab strip, the Round 33 new-business form laid out
-// three fields to a row, the auto annual-premium readout, and the projected-
-// commission strip under a divider. Wired to the real `policies` table.
+// 1307-1454): the Round 33 new-business form laid out three fields to a row,
+// the auto annual-premium readout, and the projected-commission strip under
+// a divider. Wired to the real `policies` table. Tab strip switched from the
+// export's underlined style to the shared `Segmented` pill toggle (Prompt
+// 361) for consistency with Performance's Production/Leaderboard tabs.
 //
 // Flagged deviations from the export, none of them silent substitutions:
 //  · Insurance provider / product type / insurance type are hard <select>s in
@@ -22,7 +26,10 @@ import { money, fullName, formatDate, todayISO } from '../../lib/policyFormat'
 //    directory that is still empty on purpose. Kept as free text + datalist so
 //    a real submission is never blocked on data Brayden hasn't supplied.
 //  · State and Notes aren't in the export's grid, but both are real columns
-//    and My Policies filters on state — kept, styled identically.
+//    and My Policies filters on state — kept, styled identically. State is a
+//    hard <select> (Prompt 361, real closed 50-state+DC universe, no
+//    data-availability risk the way carrier names have) rather than the
+//    carrier field's free-text + datalist pattern.
 //  · Projected commission renders an em-dash: comp-grid rates by
 //    carrier/product/tier don't exist yet, so any figure would be invented.
 //  · The export's cancellation tab books against nothing. Real bookings need
@@ -30,9 +37,9 @@ import { money, fullName, formatDate, todayISO } from '../../lib/policyFormat'
 //    already booked is listed underneath.
 
 const TABS = [
-  { key: 'new',          label: 'New Submission' },
-  { key: 'contracting',  label: 'Contracting Submission' },
-  { key: 'cancellation', label: 'Cancellation Calendar' },
+  { value: 'new',          label: 'New Submission' },
+  { value: 'contracting',  label: 'Contracting Submission' },
+  { value: 'cancellation', label: 'Cancellation Calendar' },
 ]
 
 export default function Submissions() {
@@ -40,29 +47,7 @@ export default function Submissions() {
 
   return (
     <div style={{ maxWidth: 1100 }}>
-      <div style={{
-        display: 'flex', gap: 2, flexWrap: 'wrap',
-        borderBottom: 'var(--border-w) solid var(--border)', marginBottom: 20,
-      }}>
-        {TABS.map(t => {
-          const on = tab === t.key
-          return (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              style={{
-                border: 'none', background: 'transparent', padding: '9px 14px',
-                fontSize: 12.5, fontWeight: on ? 700 : 500,
-                color: on ? 'var(--text-primary)' : 'var(--text-muted)',
-                borderBottom: `2px solid ${on ? 'var(--accent)' : 'transparent'}`,
-                marginBottom: -1,
-              }}
-            >
-              {t.label}
-            </button>
-          )
-        })}
-      </div>
+      <Segmented value={tab} onChange={setTab} options={TABS} style={{ marginBottom: 20 }} />
 
       {tab === 'new' && <NewSubmission />}
       {tab === 'contracting' && (
@@ -80,7 +65,6 @@ export default function Submissions() {
 const BLANK = {
   policy_sold_date: todayISO(),
   policy_number: '',
-  status: 'Submitted',
   client_first_name: '',
   client_last_name: '',
   client_phone: '',
@@ -123,7 +107,10 @@ function NewSubmission() {
       agent_id: profile.id,
       policy_sold_date: form.policy_sold_date || null,
       policy_number: form.policy_number.trim() || null,
-      status: form.status,
+      // Always Submitted on creation — there's no scenario where a New
+      // Submission starts as anything else (Prompt 361), so this is hardcoded
+      // at the write rather than left as a UI choice.
+      status: 'Submitted',
       client_first_name: form.client_first_name.trim(),
       client_last_name: form.client_last_name.trim(),
       client_phone: form.client_phone.trim() || null,
@@ -131,7 +118,7 @@ function NewSubmission() {
       carrier_name: form.carrier_name.trim() || null,
       product_type: form.product_type.trim() || null,
       insurance_type: form.insurance_type.trim() || null,
-      state: form.state.trim().toUpperCase() || null,
+      state: form.state || null,
       effective_date: form.effective_date || null,
       monthly_premium: monthly,
       notes: form.notes.trim() || null,
@@ -153,32 +140,21 @@ function NewSubmission() {
           label="Policy sold date" type="date" mono
           value={form.policy_sold_date} onChange={e => set('policy_sold_date', e.target.value)}
         />
-        {/* Not a free choice — RLS (policies_insert) only ever lets an agent
-            write their own rows, so this is the signed-in agent, read-only. */}
-        <TextField label="Agent name" value={profile?.full_name || ''} readOnly />
         <TextField
           label="Policy #" mono placeholder="e.g. 4471209"
           value={form.policy_number} onChange={e => set('policy_number', e.target.value)}
         />
-      </div>
-
-      <div style={grid3}>
-        <SelectField label="Lead status" value={form.status} onChange={e => set('status', e.target.value)}>
-          {POLICY_STATUSES.filter(s => !PRE_SUBMISSION_STATUSES.includes(s)).map(s => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </SelectField>
         <TextField
           label="Client first name" placeholder="First name"
           value={form.client_first_name} onChange={e => set('client_first_name', e.target.value)}
         />
+      </div>
+
+      <div style={grid3}>
         <TextField
           label="Client last name" placeholder="Last name"
           value={form.client_last_name} onChange={e => set('client_last_name', e.target.value)}
         />
-      </div>
-
-      <div style={grid3}>
         <TextField
           label="Client phone" mono placeholder="(602) 555-0184"
           value={form.client_phone} onChange={e => set('client_phone', e.target.value)}
@@ -195,13 +171,13 @@ function NewSubmission() {
             {carriers.map(c => <option key={c.id} value={c.name} />)}
           </datalist>
         </Field>
+      </div>
+
+      <div style={grid3}>
         <TextField
           label="Product type" placeholder="Term, Whole Life, IUL…"
           value={form.product_type} onChange={e => set('product_type', e.target.value)}
         />
-      </div>
-
-      <div style={grid3}>
         <TextField
           label="Insurance type" placeholder="Life"
           value={form.insurance_type} onChange={e => set('insurance_type', e.target.value)}
@@ -210,18 +186,21 @@ function NewSubmission() {
           label="Effective date" type="date" mono
           value={form.effective_date} onChange={e => set('effective_date', e.target.value)}
         />
-        <TextField
-          label="Monthly premium ($)" mono type="number" min="0" step="0.01" placeholder="118"
-          value={form.monthly_premium} onChange={e => set('monthly_premium', e.target.value)}
-        />
       </div>
 
       <div style={grid3}>
         <TextField
-          label="State" mono maxLength={2} placeholder="TX"
-          value={form.state} onChange={e => set('state', e.target.value)}
+          label="Monthly premium ($)" mono type="number" min="0" step="0.01" placeholder="118"
+          value={form.monthly_premium} onChange={e => set('monthly_premium', e.target.value)}
         />
-        <Field label="Notes" style={{ gridColumn: 'span 2' }}>
+        <SelectField label="State" value={form.state} onChange={e => set('state', e.target.value)}>
+          <option value="">Select a state</option>
+          {US_STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
+        </SelectField>
+      </div>
+
+      <div style={grid3}>
+        <Field label="Notes" style={{ gridColumn: 'span 3' }}>
           <textarea
             rows={2}
             value={form.notes}
