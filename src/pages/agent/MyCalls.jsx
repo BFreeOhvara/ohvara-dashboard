@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   Plus, Trash2, Phone, Bell, FileText, CheckCircle, RotateCcw, XCircle, Clock,
-  MessageSquare, UserPlus, UserCheck, Target, Ban, RefreshCw, DollarSign, GraduationCap, Award,
+  MessageSquare, UserPlus, UserCheck, Target, Ban, RefreshCw,
   ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
@@ -244,43 +244,41 @@ function Schedule() {
 // is what a status change already implies, not invented history.
 const EVENT_ICON = {
   submitted: FileText, effect: CheckCircle, undrafted: XCircle, followup: RotateCcw,
-  cancelbooked: Phone, cancelcomplete: CheckCircle, effconfirmed: CheckCircle,
+  cancelbooked: Phone, cancelcomplete: CheckCircle,
   followuplogged: Bell, teammsg: MessageSquare, invitesent: UserPlus, inviteaccepted: UserCheck,
   goalcrossed: Target,
   // Prompt 365 overshoot-catalog preview types (nate44 only, see PREVIEW_TYPES below).
   cancelsave: CheckCircle, declined: Ban, lapsed: XCircle, reinstated: RefreshCw,
-  followupdone: CheckCircle, payout: DollarSign, training: GraduationCap, persistency: Award,
+  followupdone: CheckCircle,
 }
 const EVENT_COLOR = {
   submitted: 'var(--info)', effect: 'var(--success)', undrafted: 'var(--danger)', followup: 'var(--warning)',
-  cancelbooked: 'var(--warning)', cancelcomplete: 'var(--success)', effconfirmed: 'var(--success)',
+  cancelbooked: 'var(--warning)', cancelcomplete: 'var(--success)',
   followuplogged: 'var(--info)', teammsg: 'var(--info)', invitesent: 'var(--info)', inviteaccepted: 'var(--success)',
   goalcrossed: 'var(--success)',
   cancelsave: 'var(--success)', declined: 'var(--danger)', lapsed: 'var(--danger)', reinstated: 'var(--success)',
-  followupdone: 'var(--success)', payout: 'var(--success)', training: 'var(--info)', persistency: 'var(--success)',
+  followupdone: 'var(--success)',
 }
 
 // Prompt 365 — Brayden asked for one sample row of every activity type that
 // could plausibly belong in this feed, deliberately overshooting so he can
-// tell CC/Falcon what to prune. These 8 have NO real schema backing today —
-// no enum value, no table, no timestamp column exists anywhere to derive
-// them from (full audit in the LIVE_STATE.md close-out entry). Hardcoded
+// tell CC/Falcon what to prune. Prompt 368 cut 4 of the original 8 (effectuation
+// confirmed, payout, training, persistency); the remaining 5 have NO real schema
+// backing today — no enum value, no table, no timestamp column exists anywhere to
+// derive them from (full audit in the LIVE_STATE.md close-out entry). Hardcoded
 // with fake timestamps and gated to the nate44 test account only, so no real
-// agent's feed ever shows fabricated activity. This is a review-pass
-// artifact, not a shipped feature — delete this list (and the one line that
-// merges it in below) once Brayden has said what to keep.
+// agent's feed ever shows fabricated activity. "declined"/"lapsed" are pending a
+// real mechanism (Prompt 369); "cancelsave"/"followupdone" await Brayden's opinion.
+// Delete each row (and eventually this whole list) as its real version lands.
 function previewCatalog() {
   const day = 86400000
   const now = Date.now()
   return [
     { id: 'preview-cancelsave',   type: 'cancelsave',   label: 'Cancellation call completed — client stayed', sub: 'Save — kept the policy in force', at: new Date(now - 1 * day).toISOString() },
-    { id: 'preview-declined',     type: 'declined',     label: 'Policy declined by carrier', sub: 'Application did not pass underwriting', at: new Date(now - 2 * day).toISOString() },
+    { id: 'preview-declined',     type: 'declined',     label: 'Policy not approved by carrier', sub: 'Application did not pass underwriting', at: new Date(now - 2 * day).toISOString() },
     { id: 'preview-lapsed',       type: 'lapsed',       label: 'Policy lapsed', sub: 'Non-payment — no cancellation call involved', at: new Date(now - 3 * day).toISOString() },
     { id: 'preview-reinstated',   type: 'reinstated',   label: 'Policy reinstated', sub: 'Came back into force after a lapse', at: new Date(now - 4 * day).toISOString() },
     { id: 'preview-followupdone', type: 'followupdone', label: 'Follow-up completed', sub: 'Marked resolved', at: new Date(now - 5 * day).toISOString() },
-    { id: 'preview-payout',       type: 'payout',       label: 'Commission payout logged', sub: '$412.00 transferred', at: new Date(now - 6 * day).toISOString() },
-    { id: 'preview-training',     type: 'training',     label: 'Training module completed', sub: 'Objection Handling — Module 3', at: new Date(now - 7 * day).toISOString() },
-    { id: 'preview-persistency',  type: 'persistency',  label: 'Persistency milestone crossed', sub: '12-month cohort reached 90%', at: new Date(now - 8 * day).toISOString() },
   ].map(e => ({ ...e, preview: true }))
 }
 
@@ -310,7 +308,6 @@ function Activity({ day, today }) {
       if (p.status === 'Follow-up') out.push({ id: `${p.id}-fu`, type: 'followup', label: `Marked follow-up — ${name}`, sub: p.notes || '', at: p.updated_at })
       if (p.cancellation_call_at) out.push({ id: `${p.id}-cb`, type: 'cancelbooked', label: `Cancellation call booked — ${name}`, sub: p.carrier_name || '', at: p.cancellation_call_at })
       if (p.cancellation_status === 'Cancellation Complete') out.push({ id: `${p.id}-cc`, type: 'cancelcomplete', label: `Cancellation completed — ${name}`, sub: 'Commission released from reserve', at: p.updated_at })
-      if (p.effectuation_answered_at) out.push({ id: `${p.id}-ec`, type: 'effconfirmed', label: `Effectuation confirmed — ${name}`, sub: '', at: p.effectuation_answered_at })
     }
 
     // Follow-up logged (Prompt 365) — real, closer_followups.created_at was
