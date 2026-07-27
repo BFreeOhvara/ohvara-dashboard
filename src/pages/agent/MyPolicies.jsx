@@ -384,31 +384,46 @@ export default function MyPolicies() {
 // PolicyModal banner offers (Prompt 345), just reachable without opening
 // the record first. `onAnswer` stops propagation itself isn't needed here:
 // this renders in its own <tr>, separate from the row's onClick.
+// Prompt 364 — was a flex row with `flexWrap: 'wrap'`, so Yes/No's start x
+// depended on the message text's own rendered width (worse, on which item
+// the wrap broke before — the actual reason two rows measured 39px apart
+// despite identical container width). Grid tracks don't reflow like that:
+// columns 2 (buttons) and 3 (portal link) get a track size that's constant
+// regardless of what's in column 1, so their start x can never drift.
+// Column 3's fixed width is sized off the longest of the 12 real carrier
+// names (migration 078/080/082) — "National Life Group" / "American
+// Amicable" — measured live, not guessed, so no real carrier ever wraps.
+const EFFECTUATION_GRID = '1fr max-content 260px'
+
 function EffectuationRow({ policy, portalUrl, pending, onAnswer }) {
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+      display: 'grid', gridTemplateColumns: EFFECTUATION_GRID, alignItems: 'center', gap: 16,
       padding: '12px 16px', background: 'var(--warning-dim)',
       border: '1px solid var(--warning-bd)', borderRadius: 8,
     }}>
-      <Bell size={15} style={{ color: 'var(--warning)', flexShrink: 0 }} />
-      <span style={{ flex: 1, minWidth: 220, fontSize: 12.5, color: 'var(--text-primary)' }}>
-        Reached its effective date ({formatDate(policy.effective_date)}) — did this policy go into effect?
-      </span>
-      <button
-        onClick={() => onAnswer('In Effect')}
-        disabled={pending}
-        style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700 }}
-      >
-        Yes
-      </button>
-      <button
-        onClick={() => onAnswer('Undrafted')}
-        disabled={pending}
-        style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700 }}
-      >
-        No
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+        <Bell size={15} style={{ color: 'var(--warning)', flexShrink: 0 }} />
+        <span style={{ fontSize: 12.5, color: 'var(--text-primary)' }}>
+          Reached its effective date ({formatDate(policy.effective_date)}) — did this policy go into effect?
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          onClick={() => onAnswer('In Effect')}
+          disabled={pending}
+          style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' }}
+        >
+          Yes
+        </button>
+        <button
+          onClick={() => onAnswer('Undrafted')}
+          disabled={pending}
+          style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' }}
+        >
+          No
+        </button>
+      </div>
       {portalUrl ? (
         <a
           href={portalUrl}
