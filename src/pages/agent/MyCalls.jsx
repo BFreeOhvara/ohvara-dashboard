@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import {
   Plus, Trash2, Phone, Bell, FileText, CheckCircle, RotateCcw, XCircle, Clock,
   MessageSquare, UserPlus, UserCheck, Target, Ban, RefreshCw, DollarSign, GraduationCap, Award,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePolicies } from '../../hooks/usePolicies'
@@ -34,15 +35,72 @@ const TABS = [
   { value: 'graded',   label: 'Graded calls' },
 ]
 
+// Local calendar date arithmetic (not UTC) matching todayISO()'s own
+// local-time convention — same reasoning as AgentOverview.jsx's localISO().
+function addDaysLocal(dateStr, n) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  dt.setDate(dt.getDate() + n)
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+}
+function dayLabel(dateStr, today) {
+  if (dateStr === today) return 'Today'
+  return new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+const arrowBtnStyle = {
+  border: 'none', background: 'transparent', padding: 4,
+  display: 'inline-flex', color: 'var(--text-secondary)', cursor: 'pointer',
+}
+
+// Activity tab's day-stepper (Prompt 367) — same inline prev/next-arrow
+// pattern as Performance's Daily mode (ProductionPeriodPicker.jsx's
+// PeriodPicker), just without the Daily/Monthly/All Time mode toggle since
+// Activity only ever needs a single day, no popover/calendar/custom range.
+function ActivityDayStepper({ day, today, onPrev, onNext }) {
+  const canNext = day < today
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center',
+      border: 'var(--border-w) solid var(--border)', borderRadius: 6, background: 'var(--bg-elevated)',
+    }}>
+      <button onClick={onPrev} title="Previous day" style={arrowBtnStyle}><ChevronLeft size={14} /></button>
+      <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-primary)', minWidth: 92, textAlign: 'center', whiteSpace: 'nowrap' }}>
+        {dayLabel(day, today)}
+      </span>
+      <button
+        onClick={onNext}
+        disabled={!canNext}
+        title="Next day"
+        style={{ ...arrowBtnStyle, color: canNext ? 'var(--text-secondary)' : 'var(--text-muted)', opacity: canNext ? 1 : 0.4, cursor: canNext ? 'pointer' : 'default' }}
+      >
+        <ChevronRight size={14} />
+      </button>
+    </div>
+  )
+}
+
 export default function MyCalls() {
   const [tab, setTab] = useState('schedule')
+  const today = todayISO()
+  const [activityDay, setActivityDay] = useState(today)
 
   return (
     <div style={{ maxWidth: 1100 }}>
-      <Segmented value={tab} onChange={setTab} options={TABS} style={{ marginBottom: 20 }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <Segmented value={tab} onChange={setTab} options={TABS} />
+        {tab === 'activity' && (
+          <ActivityDayStepper
+            day={activityDay}
+            today={today}
+            onPrev={() => setActivityDay(d => addDaysLocal(d, -1))}
+            onNext={() => setActivityDay(d => (d < today ? addDaysLocal(d, 1) : d))}
+          />
+        )}
+      </div>
 
       {tab === 'schedule' && <Schedule />}
-      {tab === 'activity' && <Activity />}
+      {tab === 'activity' && <Activity day={activityDay} today={today} />}
       {tab === 'graded'   && <GradedCalls />}
     </div>
   )
@@ -226,7 +284,16 @@ function previewCatalog() {
   ].map(e => ({ ...e, preview: true }))
 }
 
-function Activity() {
+// Local calendar date (not UTC) for a timestamptz value — matches
+// todayISO()'s own local-time convention (same pattern as AgentOverview.jsx's
+// localISO()), so the day-stepper's "same day" bucketing can't drift off
+// from what the agent sees on their own clock.
+function localISO(value) {
+  const d = new Date(value)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function Activity({ day, today }) {
   const { profile } = useAuth()
   const { data: policies = [], isLoading } = usePolicies(profile?.id)
   const { data: followUps = [] } = useFollowUps(profile?.id)
@@ -284,57 +351,86 @@ function Activity() {
       }
     }
 
-    const real = out.filter(e => e.at)
-    const withPreview = profile?.username === 'nate44' ? [...real, ...previewCatalog()] : real
+    // Day-stepper filter (Prompt 367) — only rows whose real timestamp falls
+    // on the selected calendar day. Preview rows (below) are exempt — they
+    // exist purely for nate44's review pass and bypass this entirely.
+    const real = out.filter(e => e.at && localISO(e.at) === day)
+
+    // nate44 review-mode dedup (Prompt 366), now scoped to the selected day
+    // since 367 added real day-filtering on top — collapse to one row per
+    // distinct type (most recent within the day) rather than every real row.
+    let realDisplay = real
+    if (profile?.username === 'nate44') {
+      const seen = new Set()
+      realDisplay = [...real]
+        .sort((a, b) => b.at.localeCompare(a.at))
+        .filter(e => {
+          if (seen.has(e.type)) return false
+          seen.add(e.type)
+          return true
+        })
+    }
+
+    const withPreview = profile?.username === 'nate44' ? [...realDisplay, ...previewCatalog()] : realDisplay
     return withPreview.sort((a, b) => b.at.localeCompare(a.at))
-  }, [policies, followUps, sentInvites, teamMessages, profile?.id, profile?.username, profile?.monthly_ap_goal])
+  }, [policies, followUps, sentInvites, teamMessages, profile?.id, profile?.username, profile?.monthly_ap_goal, day])
+
+  const hasReal = events.some(e => !e.preview)
 
   return (
     <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
       {isLoading ? (
         <p style={{ margin: 0, padding: '22px 24px', fontSize: 12.5, color: 'var(--text-muted)' }}>Loading…</p>
-      ) : events.length === 0 ? (
-        <p style={{ margin: 0, padding: '22px 24px', fontSize: 12.5, color: 'var(--text-muted)' }}>
-          No pipeline activity yet — it fills in as your policies move through status changes.
-        </p>
-      ) : events.map((e, i) => {
-        const Icon = EVENT_ICON[e.type] || Clock
-        const color = EVENT_COLOR[e.type] || 'var(--text-muted)'
-        return (
-          <div
-            key={e.id}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 12, padding: '13px 24px',
-              borderBottom: i < events.length - 1 ? 'var(--border-w) solid var(--border)' : 'none',
-            }}
-          >
-            <span style={{
-              width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-              background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      ) : (
+        <>
+          {!hasReal && (
+            <p style={{
+              margin: 0, padding: '22px 24px', fontSize: 12.5, color: 'var(--text-muted)',
+              borderBottom: events.length > 0 ? 'var(--border-w) solid var(--border)' : 'none',
             }}>
-              <Icon size={13} style={{ color }} />
-            </span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                {e.label}
-                {e.preview && (
-                  <span style={{
-                    fontSize: 9, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
-                    padding: '2px 6px', borderRadius: 3, whiteSpace: 'nowrap',
-                    background: 'var(--warning-dim)', color: 'var(--warning)', border: 'var(--border-w) solid var(--warning-bd)',
-                  }}>
-                    Preview — not real data
-                  </span>
-                )}
-              </p>
-              {e.sub && <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>{e.sub}</p>}
-            </div>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
-              {new Date(e.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-            </span>
-          </div>
-        )
-      })}
+              No activity on {dayLabel(day, today)}.
+            </p>
+          )}
+          {events.map((e, i) => {
+            const Icon = EVENT_ICON[e.type] || Clock
+            const color = EVENT_COLOR[e.type] || 'var(--text-muted)'
+            return (
+              <div
+                key={e.id}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '13px 24px',
+                  borderBottom: i < events.length - 1 ? 'var(--border-w) solid var(--border)' : 'none',
+                }}
+              >
+                <span style={{
+                  width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                  background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Icon size={13} style={{ color }} />
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {e.label}
+                    {e.preview && (
+                      <span style={{
+                        fontSize: 9, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
+                        padding: '2px 6px', borderRadius: 3, whiteSpace: 'nowrap',
+                        background: 'var(--warning-dim)', color: 'var(--warning)', border: 'var(--border-w) solid var(--warning-bd)',
+                      }}>
+                        Preview — not real data
+                      </span>
+                    )}
+                  </p>
+                  {e.sub && <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>{e.sub}</p>}
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
+                  {new Date(e.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                </span>
+              </div>
+            )
+          })}
+        </>
+      )}
     </div>
   )
 }
