@@ -3,10 +3,10 @@ import { createPortal } from 'react-dom'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import {
-  Users, BarChart2, Bell, DollarSign, BookOpen, LayoutDashboard, Columns,
-  LogOut, Zap, PhoneCall, GitBranch, MessageSquare, Home, Wallet, Settings,
+  Users, BarChart2, Bell, DollarSign, BookOpen,
+  LogOut, Zap, PhoneCall, GitBranch, MessageSquare, Home, Settings,
   Smartphone, FileText, Headphones, Calculator, Globe, Shield, Award,
-  Megaphone, GraduationCap, ChevronRight, Phone, Target, User,
+  GraduationCap, ChevronRight, Phone, Target, User,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { MobileAppModal } from './MobileAppModal'
@@ -261,20 +261,37 @@ const NAV = {
       { to: '/settings', label: 'Settings', icon: Settings },
     ] },
   ],
+  // Prompt 371: identical to `closer` below — same groups, same /agent/*
+  // routes (each page already widens its own scope for isAdmin internally,
+  // same pattern as Overview/Team/Performance) — with the sole addition of
+  // Users & Access, admin's one genuinely extra capability (account
+  // create/deactivate/delete + role-scoped invites; the Team page's own
+  // invite panel only ever mints closer invites). Overview points at
+  // '/admin' rather than '/agent' since that's the route admin actually
+  // lands on (RoleRedirect), but it renders the exact same AgentOverview.
   admin: [
-    { group: 'Monitor', items: [
-      { to: '/admin', label: 'Overview', icon: LayoutDashboard },
-      { to: '/admin/call-pipeline', label: 'Call Pipeline', icon: Columns },
-      { to: '/admin/roster', label: 'Closer Roster', icon: Users },
-      { to: '/admin/leaderboard', label: 'Leaderboard', icon: Award },
-      { to: '/agent/hierarchy', label: 'Team', icon: GitBranch },
+    { group: 'Today', items: [
+      { to: '/admin', label: 'Overview', icon: Home },
+      { to: '/agent/live', label: 'Live Call', icon: Headphones },
     ] },
-    { group: 'Revenue', items: [
-      { to: '/admin/commissions', label: 'Commissions', icon: Wallet },
-      { to: '/admin/lead-sources', label: 'Lead Sources', icon: Megaphone },
+    { group: 'Sales', items: [
+      { to: '/agent/policies', label: 'My Policies', icon: GitBranch },
+      { to: '/agent/calls', label: 'My Calls', icon: PhoneCall },
     ] },
-    { group: 'Manage', items: [
-      { to: '/admin/users', label: 'Users & Access', icon: Shield },
+    { group: 'Tools', items: [
+      { to: '/agent/quoter', label: 'Quoter', icon: Zap },
+      { to: '/agent/underwriting', label: 'Underwriting', icon: Shield },
+      { to: '/agent/submissions', label: 'Submissions', icon: FileText },
+      { to: '/agent/carriers', label: 'Carrier Portals', icon: Globe },
+    ] },
+    { group: 'Growth', items: [
+      { to: '/agent/stats', label: 'Performance', icon: BarChart2 },
+      { to: '/agent/hierarchy', label: 'Team', icon: Users },
+      { to: '/agent/training', label: 'Training Center', icon: GraduationCap },
+      { to: '/agent/commissions', label: 'Commissions', icon: DollarSign },
+    ] },
+    { group: 'Account', items: [
+      { to: '/admin/users', label: 'Users & Access', icon: Award },
       { to: '/settings', label: 'Settings', icon: Settings },
     ] },
   ],

@@ -6,6 +6,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { usePolicies, pendingEffectuation, bookMetrics } from '../../hooks/usePolicies'
 import { useFollowUps } from '../../hooks/useFollowUps'
 import { money, moneyShort, fullName, todayISO } from '../../lib/policyFormat'
+import { excludeTestAccounts } from '../../lib/testAccounts'
 
 // Closer · Overview — literal port of the approved Claude Design export
 // (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines 163-227).
@@ -123,7 +124,15 @@ function localISO(value) {
 export default function AgentOverview() {
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
-  const { data: policies = [], isLoading } = usePolicies(isAdmin ? null : profile?.id)
+  const { data: rawPolicies = [], isLoading } = usePolicies(isAdmin ? null : profile?.id)
+  // Prompt 371: admin's Overview is now company-wide real reporting, so
+  // nate44's fabricated policies can't bleed into its KPI tiles or "Needs
+  // your attention" feed. Not admin scope is already narrowed to profile.id
+  // above, so a normal closer (or nate44 itself) is unaffected either way.
+  const policies = useMemo(
+    () => (isAdmin ? excludeTestAccounts(rawPolicies, profile?.id) : rawPolicies),
+    [rawPolicies, isAdmin, profile?.id]
+  )
   const { data: followUps = [] } = useFollowUps(profile?.id)
 
   const [clock, setClock] = useState(() => new Date())

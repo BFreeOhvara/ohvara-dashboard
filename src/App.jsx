@@ -47,11 +47,8 @@ import AgentPerformance from './pages/agent/Performance'
 import {
   LiveCall, TrainingPlaceholder,
   CommissionsPlaceholder, UnderwritingPlaceholder,
-  CallPipelinePlaceholder, CloserRosterPlaceholder, LeaderboardPlaceholder,
-  AdminCommissionsPlaceholder, LeadSourcesPlaceholder,
 } from './pages/agent/Placeholders'
 import Quoter from './pages/agent/Quoter'
-import InsuranceOverview from './pages/admin/InsuranceOverview'
 
 // Admin pages
 import Users from './pages/admin/Users'
@@ -295,33 +292,22 @@ export default function App() {
               </ProtectedRoute>
             } />
 
-            {/* Admin routes — the insurance operation. The retired SMB/setter
-                admin pages (Overview, Commissions, RepPerformance,
-                LeadPipeline, LeadSources, LeadScraper) were removed
-                entirely in Prompt 328 along with their legacy data. */}
+            {/* Admin routes. Prompt 371: admin's Overview is now the exact
+                same AgentOverview component tree a closer sees (widening its
+                own scope internally via isAdmin, same pattern as every other
+                shared /agent/* page) — the standalone InsuranceOverview and
+                the Call Pipeline/Closer Roster/Leaderboard/Lead
+                Sources/Commissions ComingSoon placeholders it used to sit
+                alongside (Prompt 327) were a separate, never-fully-retired
+                admin-only nav branch that read as "a different app" to
+                Brayden. Real equivalents already live on the shared
+                /agent/stats (production + leaderboard) and /agent/carriers
+                pages. Users & Access stays — it's genuinely admin-only
+                account management (create/deactivate/delete, role-scoped
+                invites), not a duplicate of anything on the closer side. */}
             <Route path="/admin" element={
               <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><InsuranceOverview /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/call-pipeline" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><CallPipelinePlaceholder /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/roster" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><CloserRosterPlaceholder /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/leaderboard" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><LeaderboardPlaceholder /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/lead-sources" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><LeadSourcesPlaceholder /></DashboardLayout>
+                <DashboardLayout><AgentOverview /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/admin/users" element={
@@ -332,11 +318,6 @@ export default function App() {
             <Route path="/admin/messages" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <DashboardLayout><AdminMessages /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/commissions" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><AdminCommissionsPlaceholder /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/admin/payouts" element={

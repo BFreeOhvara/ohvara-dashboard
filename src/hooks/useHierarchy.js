@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { isTestAccount } from '../lib/testAccounts'
 
 // Agent hierarchy behind the Hierarchy page (Round 31, migration 072).
 //
@@ -15,6 +16,11 @@ import { supabase } from '../lib/supabase'
 
 // Full profile set, then walked into a tree client-side. Three agents at
 // launch — a recursive server call per view would cost more than it saves.
+//
+// Test accounts (Prompt 371) are dropped from this shared list entirely, so
+// they never appear in admin's company-wide tree/member count. A test
+// account viewing its OWN Hierarchy page still works — Hierarchy.jsx already
+// falls back to the signed-in profile when `self` isn't found in this list.
 function useAgents() {
   return useQuery({
     queryKey: ['profiles', 'hierarchy'],
@@ -25,7 +31,7 @@ function useAgents() {
         .in('role', ['closer', 'admin'])
         .order('created_at')
       if (error) throw error
-      return data || []
+      return (data || []).filter(a => !isTestAccount(a.id))
     },
   })
 }

@@ -9,6 +9,7 @@ import { money, moneyShort, formatDate, todayISO } from '../../lib/policyFormat'
 import { usePeriodPicker, PeriodPicker } from '../../components/agent/ProductionPeriodPicker'
 import { GapNote } from '../../components/ui/ExportForm'
 import { Segmented } from '../../components/ui/Segmented'
+import { excludeTestAccounts } from '../../lib/testAccounts'
 
 // Performance — Production + Leaderboard (Prompt 348), replacing the
 // StatsPlaceholder. Structure/content match the Claude Design v3 mockup
@@ -99,8 +100,14 @@ function ProductionTab() {
   // "You" narrows to this account's own rows, "Team" is the unfiltered set.
   const { data: allVisible = [], isLoading } = usePolicies(null)
   const [scope, setScope] = useState('you')
+  // Prompt 371: "Team" is a real company-wide rollup once admin's actual
+  // team is live, so test-account (nate44) policies are excluded from it —
+  // same rule as Leaderboard below. "You" is unaffected either way, since
+  // it's already scoped to this account's own agent_id.
   const scopedPolicies = useMemo(
-    () => (scope === 'you' ? allVisible.filter(p => p.agent_id === profile?.id) : allVisible),
+    () => (scope === 'you'
+      ? allVisible.filter(p => p.agent_id === profile?.id)
+      : excludeTestAccounts(allVisible, profile?.id)),
     [allVisible, scope, profile?.id]
   )
 
@@ -218,15 +225,20 @@ function ProductionTab() {
 
 // ── Leaderboard tab ─────────────────────────────────────────────────────────
 function LeaderboardTab() {
+  const { profile } = useAuth()
   const { data: allVisible = [], isLoading } = usePolicies(null)
   const [boardMode, setBoardMode] = useState('daily')
 
   const today = todayISO()
   const [lo, hi] = boardMode === 'daily' ? [today, today] : [today.slice(0, 7) + '-01', today]
 
+  // Prompt 371: standings are a real ranking once admin's actual team is
+  // live, so nate44's fabricated policies can't inflate/appear in it.
+  const eligible = useMemo(() => excludeTestAccounts(allVisible, profile?.id), [allVisible, profile?.id])
+
   const standings = useMemo(() => {
     const byAgent = new Map()
-    for (const p of allVisible) {
+    for (const p of eligible) {
       const d = (p.policy_sold_date || p.created_at?.slice(0, 10) || '')
       if (d < lo || d > hi) continue
       const id = p.agent_id
@@ -239,7 +251,7 @@ function LeaderboardTab() {
     return [...byAgent.values()]
       .sort((a, b) => b.ap - a.ap)
       .map((r, i) => ({ ...r, rank: i + 1, avg: r.families ? r.ap / r.families : 0 }))
-  }, [allVisible, lo, hi])
+  }, [eligible, lo, hi])
 
   const top3 = standings.slice(0, 3)
   const rest = standings.slice(3)
