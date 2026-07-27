@@ -14,6 +14,8 @@ export const POLICY_STATUSES = [
   'Submitted',
   'In Effect',
   'Undrafted',
+  'Not Approved',
+  'Lapsed',
 ]
 
 export const CANCELLATION_STATUSES = [
@@ -32,13 +34,23 @@ export const PRE_SUBMISSION_STATUSES = ['Follow-up', 'Not Interested']
 // edit controls restrict to these three everywhere they touch status.
 export const LIVE_POLICY_STATUSES = POLICY_STATUSES.filter(s => !PRE_SUBMISSION_STATUSES.includes(s))
 
+// Terminal "something went wrong, agent needs to follow up" outcomes (Prompt
+// 369) — held out of My Policies' main list into the new Needs Follow-up
+// tab, same three-way split as PRE_SUBMISSION_STATUSES above.
+export const NEEDS_FOLLOWUP_STATUSES = ['Undrafted', 'Not Approved', 'Lapsed']
+
+// What actually shows in My Policies' default list: a real, still-live
+// policy that hasn't fallen into Needs Follow-up.
+export const ACTIVE_LIST_STATUSES = LIVE_POLICY_STATUSES.filter(s => !NEEDS_FOLLOWUP_STATUSES.includes(s))
+
 const SELECT = `
   id, agent_id, policy_sold_date, policy_number,
   client_first_name, client_last_name, client_phone,
   carrier_id, carrier_name, product_type, insurance_type, state,
   effective_date, monthly_premium, annual_premium,
   status, cancellation_status, cancellation_call_at,
-  effectuation_answered_at, notes, created_at, updated_at,
+  effectuation_answered_at, pending_underwriting, next_lapse_check_at, archived_at,
+  notes, created_at, updated_at,
   agent:profiles!policies_agent_id_fkey ( id, full_name )
 `
 
@@ -96,16 +108,66 @@ export function useDeletePolicy() {
   })
 }
 
+// "Still on the book" (lapse check-in, Yes): advances next_lapse_check_at by
+// one calendar month, same day-of-month as effective_date. Day-of-month
+// clamping for short months lives in the DB function (migration 085), not
+// duplicated here in JS.
+export function useAdvanceLapseCheck() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.rpc('advance_policy_lapse_check', { p_id: id })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['policies'] }),
+  })
+}
+
+// "Back on the books" for a Lapsed row (Needs Follow-up tab): reinstates to
+// In Effect and resets the check-in to the next future occurrence from
+// today (migration 085's reactivate_lapsed_policy).
+export function useReactivateLapsedPolicy() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.rpc('reactivate_lapsed_policy', { p_id: id })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['policies'] }),
+  })
+}
+
 // Rows the effective-date prompt should fire on: submitted, effective date
 // has arrived, and the agent hasn't answered "did this go into effect?" yet
 // (Round 46). Answering stamps effectuation_answered_at so it never re-asks.
+// Excludes pending_underwriting rows (Prompt 369) — a policy still awaiting
+// a carrier decision shouldn't also be asked whether it went into effect.
 export function pendingEffectuation(policies, today = new Date()) {
   const cutoff = today.toISOString().slice(0, 10)
   return (policies || []).filter(p =>
     p.status === 'Submitted' &&
+    !p.pending_underwriting &&
     p.effective_date &&
     p.effective_date <= cutoff &&
     !p.effectuation_answered_at
+  )
+}
+
+// Ongoing (non-date-gated) underwriting-decision banner (Prompt 369): fires
+// for any Submitted policy still waiting on a carrier decision, no matter
+// how far off its effective date is.
+export function pendingUnderwriting(policies) {
+  return (policies || []).filter(p => p.status === 'Submitted' && p.pending_underwriting)
+}
+
+// Recurring monthly lapse check-in (Prompt 369): In Effect policies whose
+// next_lapse_check_at has arrived.
+export function pendingLapseCheck(policies, today = new Date()) {
+  const cutoff = today.toISOString().slice(0, 10)
+  return (policies || []).filter(p =>
+    p.status === 'In Effect' &&
+    p.next_lapse_check_at &&
+    p.next_lapse_check_at.slice(0, 10) <= cutoff
   )
 }
 
@@ -160,7 +222,10 @@ export function bookMetrics(policies, { month } = {}) {
 export function productionSnapshot(policies, asOf) {
   const rows = (policies || []).filter(p => p.effective_date && p.effective_date <= asOf)
   const active = rows.filter(p => p.status === 'In Effect')
-  const cancelled = rows.filter(p => p.cancellation_status === 'Cancellation Complete')
+  // Prompt 369: a policy stops being active either via the 3-way-call
+  // cancellation flow OR by lapsing (non-payment, no call involved) — both
+  // count as fall-off.
+  const cancelled = rows.filter(p => p.cancellation_status === 'Cancellation Complete' || p.status === 'Lapsed')
   const ap = list => list.reduce((s, p) => s + Number(p.annual_premium || 0), 0)
 
   const withBothDates = rows.filter(p => p.policy_sold_date && p.effective_date)

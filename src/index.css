@@ -68,6 +68,9 @@
   --purple:       #A855F7;
   --purple-dim:   rgba(168,85,247,0.10);
   --purple-bd:    rgba(168,85,247,0.25);
+  --pink:         #EC4899;
+  --pink-dim:     rgba(236,72,153,0.10);
+  --pink-bd:      rgba(236,72,153,0.25);
 
   /* Typography */
   --font-sans: 'Geist', 'Inter', system-ui, sans-serif;
@@ -109,6 +112,7 @@
   --danger:#8A1F1F;  --danger-dim:#FBDCDC;  --danger-bd:rgba(138,31,31,0.35);
   --info:#16408A;    --info-dim:#DCE8FB;    --info-bd:rgba(22,64,138,0.35);
   --purple:#5B21B6;  --purple-dim:#EDE4FB;  --purple-bd:rgba(91,33,182,0.35);
+  --pink:#9D174D;    --pink-dim:#FCE4EE;    --pink-bd:rgba(157,23,77,0.35);
 }
 
 /* The sidebar carries its own scale in both modes — it sits on navy (dark)

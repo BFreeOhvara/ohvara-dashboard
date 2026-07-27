@@ -74,6 +74,9 @@ const BLANK = {
   state: '',
   effective_date: '',
   monthly_premium: '',
+  // Prompt 369: drives `pending_underwriting` — the only way "Not Approved"
+  // is ever reachable, since carrier decisions aren't otherwise observable.
+  underwriting_decision: 'immediate',
   notes: '',
 }
 
@@ -121,6 +124,7 @@ function NewSubmission() {
       state: form.state || null,
       effective_date: form.effective_date || null,
       monthly_premium: monthly,
+      pending_underwriting: form.underwriting_decision === 'needs_underwriting',
       notes: form.notes.trim() || null,
     }, {
       onSuccess: () => {
@@ -196,6 +200,14 @@ function NewSubmission() {
         <SelectField label="State" value={form.state} onChange={e => set('state', e.target.value)}>
           <option value="">Select a state</option>
           {US_STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
+        </SelectField>
+        <SelectField
+          label="Was this approved immediately, or does it need underwriting?"
+          value={form.underwriting_decision}
+          onChange={e => set('underwriting_decision', e.target.value)}
+        >
+          <option value="immediate">Approved immediately</option>
+          <option value="needs_underwriting">Needs underwriting</option>
         </SelectField>
       </div>
 

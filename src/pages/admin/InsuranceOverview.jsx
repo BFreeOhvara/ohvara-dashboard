@@ -44,7 +44,10 @@ export default function InsuranceOverview() {
     const soldMonth = policies.filter(p => (p.policy_sold_date || '').slice(0, 7) === month)
     const effMonth = policies.filter(p => p.status === 'In Effect' && (p.effective_date || '').slice(0, 7) === month)
     const cancelled = policies.filter(p => p.cancellation_status === 'Cancellation Complete' && (p.policy_sold_date || '').slice(0, 7) === month)
-    const inUnderwriting = policies.filter(p => p.status === 'Submitted').length
+    // Prompt 369: now a real, agent-reported flag rather than "assume every
+    // Submitted row is in underwriting" (which over-counted rows just
+    // waiting on their effective date, not actually with a carrier).
+    const inUnderwriting = policies.filter(p => p.pending_underwriting).length
     return {
       apToday: ap(soldToday), countToday: soldToday.length,
       apMonth: ap(soldMonth), countMonth: soldMonth.length, inUnderwriting,

@@ -1,10 +1,15 @@
 import { useMemo, useState, useRef, useEffect, Fragment } from 'react'
-import { Search, Filter, X, Bell, ExternalLink } from 'lucide-react'
+import { Search, Filter, X, Bell, Hourglass, ExternalLink } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useHierarchy } from '../../hooks/useHierarchy'
-import { usePolicies, LIVE_POLICY_STATUSES, useUpdatePolicy, pendingEffectuation } from '../../hooks/usePolicies'
+import {
+  usePolicies, ACTIVE_LIST_STATUSES, NEEDS_FOLLOWUP_STATUSES,
+  useUpdatePolicy, pendingEffectuation, pendingUnderwriting, pendingLapseCheck,
+  useAdvanceLapseCheck, useReactivateLapsedPolicy,
+} from '../../hooks/usePolicies'
 import { useCarriers } from '../../hooks/useCarriers'
 import { PolicyModal } from '../../components/agent/PolicyModal'
+import { Segmented } from '../../components/ui/Segmented'
 import { money, fullName, formatDate } from '../../lib/policyFormat'
 
 // My Policies — literal port of the export's "Closer · My Pipeline" screen
@@ -26,10 +31,17 @@ import { money, fullName, formatDate } from '../../lib/policyFormat'
 const MONO = "'JetBrains Mono',monospace"
 
 const STATUS_STYLE = {
-  'Submitted': { color: 'var(--info)',    dim: 'var(--info-dim)',    bd: 'var(--info-bd)' },
-  'In Effect': { color: 'var(--success)', dim: 'var(--success-dim)', bd: 'var(--success-bd)' },
-  'Undrafted': { color: 'var(--danger)',  dim: 'var(--danger-dim)',  bd: 'var(--danger-bd)' },
+  'Submitted':    { color: 'var(--info)',    dim: 'var(--info-dim)',    bd: 'var(--info-bd)' },
+  'In Effect':    { color: 'var(--success)', dim: 'var(--success-dim)', bd: 'var(--success-bd)' },
+  'Undrafted':    { color: 'var(--danger)',  dim: 'var(--danger-dim)',  bd: 'var(--danger-bd)' },
+  'Not Approved': { color: 'var(--danger)',  dim: 'var(--danger-dim)',  bd: 'var(--danger-bd)' },
+  'Lapsed':       { color: 'var(--danger)',  dim: 'var(--danger-dim)',  bd: 'var(--danger-bd)' },
 }
+
+const TABS = [
+  { value: 'active',   label: 'Active' },
+  { value: 'followup', label: 'Needs Follow-up' },
+]
 
 const EMPTY_FILTERS = { status: '', product: '', carrier: '', state: '', reported: '' }
 
@@ -57,8 +69,11 @@ export default function MyPolicies() {
     effectiveScope === 'own' ? profile?.id : null
   )
   const update = useUpdatePolicy()
+  const advanceLapseCheck = useAdvanceLapseCheck()
+  const reactivateLapsed = useReactivateLapsedPolicy()
   const { data: carriers = [] } = useCarriers()
 
+  const [tab, setTab] = useState('active')
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState(EMPTY_FILTERS)
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -82,7 +97,10 @@ export default function MyPolicies() {
     const q = search.trim().toLowerCase()
     const daysAgo = iso => (Date.now() - new Date(iso).getTime()) / 86400000
     const filtered = policies.filter(p => {
-      if (!LIVE_POLICY_STATUSES.includes(p.status)) return false
+      // Prompt 369: Undrafted/Not Approved/Lapsed moved to the Needs
+      // Follow-up tab, and anything archived is done regardless of status.
+      if (!ACTIVE_LIST_STATUSES.includes(p.status)) return false
+      if (p.archived_at) return false
       if (q) {
         const hay = [p.policy_number, p.client_first_name, p.client_last_name, p.client_phone, p.carrier_name, p.product_type]
           .filter(Boolean).join(' ').toLowerCase()
@@ -103,17 +121,39 @@ export default function MyPolicies() {
       return true
     })
     // Prompt 351: rows still awaiting effectuation confirmation surface to
-    // the top, so there's no hunting for them by search/scroll. `.sort` is
-    // stable in every JS engine this app targets, so everything else keeps
-    // whatever order usePolicies already returned it in.
-    const pendingIds = new Set(pendingEffectuation(filtered).map(p => p.id))
+    // the top, so there's no hunting for them by search/scroll. Prompt 369
+    // adds two more banner types (underwriting decision, lapse check-in) to
+    // the same top-of-list treatment. `.sort` is stable in every JS engine
+    // this app targets, so everything else keeps whatever order usePolicies
+    // already returned it in.
+    const pendingIds = new Set([
+      ...pendingEffectuation(filtered).map(p => p.id),
+      ...pendingUnderwriting(filtered).map(p => p.id),
+      ...pendingLapseCheck(filtered).map(p => p.id),
+    ])
     return [...filtered].sort((a, b) => (pendingIds.has(a.id) ? 0 : 1) - (pendingIds.has(b.id) ? 0 : 1))
   }, [policies, search, filters])
 
-  const pendingIds = useMemo(() => new Set(pendingEffectuation(rows).map(p => p.id)), [rows])
+  const effIds = useMemo(() => new Set(pendingEffectuation(rows).map(p => p.id)), [rows])
+  const uwIds = useMemo(() => new Set(pendingUnderwriting(rows).map(p => p.id)), [rows])
+  const lapseIds = useMemo(() => new Set(pendingLapseCheck(rows).map(p => p.id)), [rows])
 
   function answerEffectuation(policy, status) {
     update.mutate({ id: policy.id, status, effectuation_answered_at: new Date().toISOString() })
+  }
+
+  // "Has the carrier's decision come back — was it approved?" Yes clears the
+  // flag (policy proceeds normally); No is the only path to Not Approved.
+  function answerUnderwriting(policy, approved) {
+    update.mutate({ id: policy.id, pending_underwriting: false, status: approved ? policy.status : 'Not Approved' })
+  }
+
+  // "Is it still on the book, or did it lapse?" Yes pushes the check-in
+  // forward a month (migration 085's advance_policy_lapse_check); No sets
+  // status to Lapsed directly — no separate RPC needed for that half.
+  function answerLapseCheck(policy, stillActive) {
+    if (stillActive) advanceLapseCheck.mutate(policy.id)
+    else update.mutate({ id: policy.id, status: 'Lapsed' })
   }
 
   // Carrier Portals (Prompt 331) is the one source of truth for portal_url —
@@ -135,6 +175,24 @@ export default function MyPolicies() {
 
   return (
     <div>
+      <Segmented value={tab} onChange={setTab} options={TABS} style={{ marginBottom: 14 }} />
+
+      {tab === 'followup' && (
+        <NeedsFollowUpTab
+          policies={policies}
+          isLoading={isLoading}
+          onSelect={setSelected}
+          onReactivate={p => {
+            if (p.status === 'Lapsed') reactivateLapsed.mutate(p.id)
+            else update.mutate({ id: p.id, status: 'Submitted' })
+          }}
+          onArchive={p => update.mutate({ id: p.id, archived_at: new Date().toISOString() })}
+          pending={update.isPending || reactivateLapsed.isPending}
+        />
+      )}
+
+      {tab === 'active' && (
+      <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8, height: 34, padding: '0 12px',
@@ -195,7 +253,7 @@ export default function MyPolicies() {
                 <FilterSelect
                   label="Status" value={filters.status}
                   onChange={v => setFilters(f => ({ ...f, status: v }))}
-                  options={[['', 'All statuses'], ...LIVE_POLICY_STATUSES.map(s => [s, s])]}
+                  options={[['', 'All statuses'], ...ACTIVE_LIST_STATUSES.map(s => [s, s])]}
                 />
                 <FilterSelect
                   label="Product" value={filters.product}
@@ -293,7 +351,10 @@ export default function MyPolicies() {
                 </tr>
               ) : rows.map(p => {
                 const st = STATUS_STYLE[p.status] || STATUS_STYLE['Submitted']
-                const pending = pendingIds.has(p.id)
+                const needsEff = effIds.has(p.id)
+                const needsUw = uwIds.has(p.id)
+                const needsLapse = lapseIds.has(p.id)
+                const pending = needsEff || needsUw || needsLapse
                 // Second line lives inside the same visual row box as the
                 // first — the top <tr>'s cells drop their bottom border so
                 // there's no divider, and the confirmation banner below
@@ -348,12 +409,28 @@ export default function MyPolicies() {
                     {pending && (
                       <tr>
                         <td colSpan={7} style={{ padding: '0 20px 14px', borderBottom: 'var(--border-w) solid var(--border)' }}>
-                          <EffectuationRow
-                            policy={p}
-                            portalUrl={carrierPortalUrl(p)}
-                            pending={update.isPending}
-                            onAnswer={status => answerEffectuation(p, status)}
-                          />
+                          {needsEff && (
+                            <EffectuationRow
+                              policy={p}
+                              portalUrl={carrierPortalUrl(p)}
+                              pending={update.isPending}
+                              onAnswer={status => answerEffectuation(p, status)}
+                            />
+                          )}
+                          {needsUw && (
+                            <UnderwritingRow
+                              policy={p}
+                              pending={update.isPending}
+                              onAnswer={approved => answerUnderwriting(p, approved)}
+                            />
+                          )}
+                          {needsLapse && (
+                            <LapseCheckRow
+                              policy={p}
+                              pending={update.isPending || advanceLapseCheck.isPending}
+                              onAnswer={stillActive => answerLapseCheck(p, stillActive)}
+                            />
+                          )}
                         </td>
                       </tr>
                     )}
@@ -368,6 +445,8 @@ export default function MyPolicies() {
       <p style={{ margin: '10px 2px 0', fontSize: 11, color: 'var(--text-muted)' }}>
         A policy isn't complete until the old one is cancelled on the 3-way call — commission stays in reserve until then. Click any row for the full record.
       </p>
+      </>
+      )}
 
       {selected && (
         <PolicyModal
@@ -438,6 +517,171 @@ function EffectuationRow({ policy, portalUrl, pending, onAnswer }) {
           No portal on file for {policy.carrier_name || 'this carrier'}
         </span>
       )}
+    </div>
+  )
+}
+
+// Underwriting decision banner (Prompt 369) — deliberately NOT the yellow/
+// Bell effectuation look. Brayden's explicit concern was agents misclicking
+// the wrong Yes/No box because two banners looked too similar, so this one
+// gets its own color (--pink, added alongside this prompt) and icon
+// (Hourglass, not Bell) and a 2-column grid (no carrier-portal column —
+// that's specific to confirming effectuation, not a carrier decision).
+const UNDERWRITING_GRID = '1fr max-content'
+
+function UnderwritingRow({ policy, pending, onAnswer }) {
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: UNDERWRITING_GRID, alignItems: 'center', gap: 16,
+      padding: '12px 16px', background: 'var(--pink-dim)',
+      border: '1px solid var(--pink-bd)', borderRadius: 8,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+        <Hourglass size={15} style={{ color: 'var(--pink)', flexShrink: 0 }} />
+        <span style={{ fontSize: 12.5, color: 'var(--text-primary)' }}>
+          Submitted for underwriting — has {policy.carrier_name || "the carrier"}'s decision come back? Was it approved?
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          onClick={() => onAnswer(true)}
+          disabled={pending}
+          style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' }}
+        >
+          Yes
+        </button>
+        <button
+          onClick={() => onAnswer(false)}
+          disabled={pending}
+          style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' }}
+        >
+          No
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Lapse check-in banner (Prompt 369) — same yellow/Bell/Yes-No look as
+// EffectuationRow (schema item 3: "reuse the exact same visual banner
+// component"), just different copy and no carrier-portal column.
+function LapseCheckRow({ policy, pending, onAnswer }) {
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: UNDERWRITING_GRID, alignItems: 'center', gap: 16,
+      padding: '12px 16px', background: 'var(--warning-dim)',
+      border: '1px solid var(--warning-bd)', borderRadius: 8,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+        <Bell size={15} style={{ color: 'var(--warning)', flexShrink: 0 }} />
+        <span style={{ fontSize: 12.5, color: 'var(--text-primary)' }}>
+          Is {fullName(policy)}'s policy still on the book, or did it lapse?
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          onClick={() => onAnswer(true)}
+          disabled={pending}
+          style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' }}
+        >
+          Yes
+        </button>
+        <button
+          onClick={() => onAnswer(false)}
+          disabled={pending}
+          style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' }}
+        >
+          No
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Needs Follow-up tab (Prompt 369) — Undrafted/Not Approved/Lapsed policies
+// that aren't archived. Simpler than the Active tab's table: no search/
+// filter toolbar, just the list plus the two row actions.
+function NeedsFollowUpTab({ policies, isLoading, onSelect, onReactivate, onArchive, pending }) {
+  const rows = useMemo(() => policies
+    .filter(p => NEEDS_FOLLOWUP_STATUSES.includes(p.status) && !p.archived_at)
+    .sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || '')),
+  [policies])
+
+  const REACTIVATE_LABEL = { 'Undrafted': 'Back on the books', 'Not Approved': 'Back on the books', 'Lapsed': 'Back on the books' }
+
+  return (
+    <div style={{
+      background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
+      borderRadius: 8, overflow: 'hidden',
+    }}>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={th}>Customer</th>
+              <th style={th}>Carrier</th>
+              <th style={{ ...th, textAlign: 'right' }}>AP</th>
+              <th style={th}>Status</th>
+              <th style={th}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ ...cell, fontSize: 13, color: 'var(--text-muted)' }}>
+                  {isLoading ? 'Loading policies…' : 'Nothing needs follow-up right now.'}
+                </td>
+              </tr>
+            ) : rows.map(p => {
+              const st = STATUS_STYLE[p.status] || STATUS_STYLE['Undrafted']
+              return (
+                <tr key={p.id}>
+                  <td style={{ ...cell, minWidth: 160, cursor: 'pointer' }} onClick={() => onSelect(p)}>
+                    <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                      {fullName(p)}
+                    </span>
+                    <span style={{ display: 'block', marginTop: 3, fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
+                      {p.policy_number || '—'}
+                    </span>
+                  </td>
+                  <td style={{ ...cell, fontSize: 12.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    {p.carrier_name || '—'}
+                  </td>
+                  <td style={{ ...cell, textAlign: 'right', fontSize: 12.5, color: 'var(--text-primary)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
+                    {money(p.annual_premium)}
+                  </td>
+                  <td style={cell}>
+                    <span style={{
+                      display: 'inline-flex', padding: '3px 8px', borderRadius: 4, fontSize: 10.5, fontWeight: 700,
+                      background: st.dim, color: st.color, border: `1px solid ${st.bd}`, whiteSpace: 'nowrap',
+                    }}>
+                      {p.status}
+                    </span>
+                  </td>
+                  <td style={{ ...cell, whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => onReactivate(p)}
+                        disabled={pending}
+                        style={{ height: 26, padding: '0 10px', border: 'none', borderRadius: 6, background: 'var(--accent)', color: '#fff', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}
+                      >
+                        {REACTIVATE_LABEL[p.status]}
+                      </button>
+                      <button
+                        onClick={() => onArchive(p)}
+                        disabled={pending}
+                        style={{ height: 26, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}
+                      >
+                        Mark as gone
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Trash2, Bell } from 'lucide-react'
+import { X, Trash2, Bell, Hourglass } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Select } from '../ui/Input'
 import {
   LIVE_POLICY_STATUSES, CANCELLATION_STATUSES,
   useUpdatePolicy, useDeletePolicy, pendingEffectuation,
+  pendingUnderwriting, pendingLapseCheck, useAdvanceLapseCheck,
 } from '../../hooks/usePolicies'
 import { money, fullName, formatDate } from '../../lib/policyFormat'
 
@@ -18,6 +19,7 @@ import { money, fullName, formatDate } from '../../lib/policyFormat'
 export function PolicyModal({ policy, canEdit, onClose }) {
   const update = useUpdatePolicy()
   const del = useDeletePolicy()
+  const advanceLapseCheck = useAdvanceLapseCheck()
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   // Moved here from My Policies' list-view banner (Prompt 345) — same
@@ -25,6 +27,19 @@ export function PolicyModal({ policy, canEdit, onClose }) {
   const needsEffectuation = canEdit && policy && pendingEffectuation([policy]).length > 0
   function answerEffectuation(status) {
     update.mutate({ id: policy.id, status, effectuation_answered_at: new Date().toISOString() })
+  }
+
+  // Prompt 369 — same two new banners as My Policies' list row, same
+  // conditions, relocated onto the record itself (same pattern as
+  // effectuation above).
+  const needsUnderwriting = canEdit && policy && pendingUnderwriting([policy]).length > 0
+  function answerUnderwriting(approved) {
+    update.mutate({ id: policy.id, pending_underwriting: false, status: approved ? policy.status : 'Not Approved' })
+  }
+  const needsLapseCheck = canEdit && policy && pendingLapseCheck([policy]).length > 0
+  function answerLapseCheck(stillActive) {
+    if (stillActive) advanceLapseCheck.mutate(policy.id)
+    else update.mutate({ id: policy.id, status: 'Lapsed' })
   }
 
   // Scroll-lock the page behind the modal (Round 37 item 2). Restores the
@@ -115,6 +130,63 @@ export function PolicyModal({ policy, canEdit, onClose }) {
             <button
               onClick={() => answerEffectuation('Undrafted')}
               disabled={update.isPending}
+              style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700 }}
+            >
+              No
+            </button>
+          </div>
+        )}
+
+        {/* Underwriting decision banner (Prompt 369) — deliberately NOT the
+            yellow/Bell effectuation look above (Brayden's explicit misclick
+            concern): --pink + Hourglass instead. */}
+        {needsUnderwriting && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', margin: '18px 0 0',
+            background: 'var(--pink-dim)', border: '1px solid var(--pink-bd)', borderRadius: 8,
+          }}>
+            <Hourglass size={15} style={{ color: 'var(--pink)', flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-primary)' }}>
+              Submitted for underwriting — has {policy.carrier_name || 'the carrier'}'s decision come back? Was it approved?
+            </span>
+            <button
+              onClick={() => answerUnderwriting(true)}
+              disabled={update.isPending}
+              style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700 }}
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => answerUnderwriting(false)}
+              disabled={update.isPending}
+              style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700 }}
+            >
+              No
+            </button>
+          </div>
+        )}
+
+        {/* Lapse check-in banner (Prompt 369) — same yellow/Bell look as the
+            effectuation banner (schema item 3: reuse the exact same visual). */}
+        {needsLapseCheck && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', margin: '18px 0 0',
+            background: 'var(--warning-dim)', border: '1px solid var(--warning-bd)', borderRadius: 8,
+          }}>
+            <Bell size={15} style={{ color: 'var(--warning)', flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-primary)' }}>
+              Is this policy still on the book, or did it lapse?
+            </span>
+            <button
+              onClick={() => answerLapseCheck(true)}
+              disabled={update.isPending || advanceLapseCheck.isPending}
+              style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700 }}
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => answerLapseCheck(false)}
+              disabled={update.isPending || advanceLapseCheck.isPending}
               style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700 }}
             >
               No

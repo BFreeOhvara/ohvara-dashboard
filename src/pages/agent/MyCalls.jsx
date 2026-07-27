@@ -248,37 +248,39 @@ const EVENT_ICON = {
   followuplogged: Bell, teammsg: MessageSquare, invitesent: UserPlus, inviteaccepted: UserCheck,
   goalcrossed: Target,
   // Prompt 365 overshoot-catalog preview types (nate44 only, see PREVIEW_TYPES below).
-  cancelsave: CheckCircle, declined: Ban, lapsed: XCircle, reinstated: RefreshCw,
+  cancelsave: CheckCircle, reinstated: RefreshCw,
   followupdone: CheckCircle,
+  // Prompt 369 — real, replaces the preview-only 'declined' type.
+  not_approved: Ban, lapsed: XCircle,
 }
 const EVENT_COLOR = {
   submitted: 'var(--info)', effect: 'var(--success)', undrafted: 'var(--danger)', followup: 'var(--warning)',
   cancelbooked: 'var(--warning)', cancelcomplete: 'var(--success)',
   followuplogged: 'var(--info)', teammsg: 'var(--info)', invitesent: 'var(--info)', inviteaccepted: 'var(--success)',
   goalcrossed: 'var(--success)',
-  cancelsave: 'var(--success)', declined: 'var(--danger)', lapsed: 'var(--danger)', reinstated: 'var(--success)',
+  cancelsave: 'var(--success)', reinstated: 'var(--success)',
   followupdone: 'var(--success)',
+  not_approved: 'var(--danger)', lapsed: 'var(--danger)',
 }
 
 // Prompt 365 — Brayden asked for one sample row of every activity type that
 // could plausibly belong in this feed, deliberately overshooting so he can
-// tell CC/Falcon what to prune. Prompt 368 cut 4 of the original 8 (effectuation
-// confirmed, payout, training, persistency); the remaining 5 have NO real schema
-// backing today — no enum value, no table, no timestamp column exists anywhere to
-// derive them from (full audit in the LIVE_STATE.md close-out entry). Hardcoded
-// with fake timestamps and gated to the nate44 test account only, so no real
-// agent's feed ever shows fabricated activity. "declined"/"lapsed" are pending a
-// real mechanism (Prompt 369); "cancelsave"/"followupdone" await Brayden's opinion.
-// Delete each row (and eventually this whole list) as its real version lands.
+// tell CC/Falcon what to prune. Prompt 368 cut 4 of the original 8
+// (effectuation confirmed, payout, training, persistency); Prompt 369 wired
+// real mechanisms for "declined"/"lapsed" and removed those 2 preview rows
+// (the real events now use types 'not_approved'/'lapsed' — see the events
+// useMemo above). The remaining 3 still have NO real schema backing —
+// "cancelsave"/"followupdone" and "reinstated" await Brayden's opinion.
+// Hardcoded with fake timestamps and gated to the nate44 test account only,
+// so no real agent's feed ever shows fabricated activity. Delete each row
+// (and eventually this whole list) as its real version lands.
 function previewCatalog() {
   const day = 86400000
   const now = Date.now()
   return [
     { id: 'preview-cancelsave',   type: 'cancelsave',   label: 'Cancellation call completed — client stayed', sub: 'Save — kept the policy in force', at: new Date(now - 1 * day).toISOString() },
-    { id: 'preview-declined',     type: 'declined',     label: 'Policy not approved by carrier', sub: 'Application did not pass underwriting', at: new Date(now - 2 * day).toISOString() },
-    { id: 'preview-lapsed',       type: 'lapsed',       label: 'Policy lapsed', sub: 'Non-payment — no cancellation call involved', at: new Date(now - 3 * day).toISOString() },
-    { id: 'preview-reinstated',   type: 'reinstated',   label: 'Policy reinstated', sub: 'Came back into force after a lapse', at: new Date(now - 4 * day).toISOString() },
-    { id: 'preview-followupdone', type: 'followupdone', label: 'Follow-up completed', sub: 'Marked resolved', at: new Date(now - 5 * day).toISOString() },
+    { id: 'preview-reinstated',   type: 'reinstated',   label: 'Policy reinstated', sub: 'Came back into force after a lapse', at: new Date(now - 2 * day).toISOString() },
+    { id: 'preview-followupdone', type: 'followupdone', label: 'Follow-up completed', sub: 'Marked resolved', at: new Date(now - 3 * day).toISOString() },
   ].map(e => ({ ...e, preview: true }))
 }
 
@@ -308,6 +310,11 @@ function Activity({ day, today }) {
       if (p.status === 'Follow-up') out.push({ id: `${p.id}-fu`, type: 'followup', label: `Marked follow-up — ${name}`, sub: p.notes || '', at: p.updated_at })
       if (p.cancellation_call_at) out.push({ id: `${p.id}-cb`, type: 'cancelbooked', label: `Cancellation call booked — ${name}`, sub: p.carrier_name || '', at: p.cancellation_call_at })
       if (p.cancellation_status === 'Cancellation Complete') out.push({ id: `${p.id}-cc`, type: 'cancelcomplete', label: `Cancellation completed — ${name}`, sub: 'Commission released from reserve', at: p.updated_at })
+      // Not approved / lapsed (Prompt 369) — real, no dedicated timestamp
+      // column exists so this reuses updated_at, same convention as
+      // 'undrafted' above.
+      if (p.status === 'Not Approved') out.push({ id: `${p.id}-na`, type: 'not_approved', label: `Policy not approved by carrier — ${name}`, sub: p.carrier_name || '', at: p.updated_at })
+      if (p.status === 'Lapsed') out.push({ id: `${p.id}-lapsed`, type: 'lapsed', label: `Policy lapsed — ${name}`, sub: p.policy_number || '', at: p.updated_at })
     }
 
     // Follow-up logged (Prompt 365) — real, closer_followups.created_at was
