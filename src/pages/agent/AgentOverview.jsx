@@ -36,20 +36,27 @@ const ATTENTION_ROW_H = 42
 // let the text overflow the track instead of truncating).
 const ATTENTION_CLIP = { overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', minWidth: 0 }
 
-// Prompt 360: Type was a flat `150px` — measured live, the Type pill itself
-// only ever renders ~55-80px wide, so ~70-95px of that fixed track sat empty
-// on every single row, and it stayed empty regardless of how wide Prompt
-// 354 made the card. `minmax(70px,max-content)` lets the column shrink to
-// what the pill actually needs; that reclaimed width flows into Name/Detail's
-// `fr` tracks automatically since they share this same grid. Gap bumped
-// 12→20 alongside it — the wider Name/Detail tracks alone don't read as
-// "spread out" without more visual separation between columns too. Verified
-// in an isolated harness at the real ~810px card width: Type shrank from a
-// flat 150px to ~57-79px (content-fit), Name grew 192px→~230px, Detail grew
-// 346px→~368px, and the row's content now reaches to within ~1px of the
-// card's right padding edge instead of stopping ~24px short of it. Header
-// and rows share this constant so they can't drift out of alignment.
-const ATTENTION_COLUMNS = { display: 'grid', gridTemplateColumns: 'minmax(70px,max-content) 1fr 1.6fr', gap: 20 }
+// Prompt 360 made Type `minmax(70px,max-content)` so the column would shrink
+// to whatever a given row's pill needed — verified at the time only against
+// the FOLLOW-UP tag (~57-79px). Prompt 363: each data row below is rendered
+// as its OWN independent `display:grid` div (not one shared grid across
+// rows), so `max-content` gets resolved separately per row against THAT
+// row's own badge width. Live-measured with real seeded data (nate44) across
+// all 3 real tag strings: FOLLOW-UP = 77.86px, CONFIRM EFFECTIVE = 120.89px,
+// CANCELLATION PENDING = 142.58px — so Name's start x drifted 430.9 / 473.9 /
+// 495.6px across rows, and Detail's drifted 603.3 / 629.8 / 643.2px,
+// depending purely on which tag happened to be in that row (confirmed via
+// `getBoundingClientRect` on the live page, not assumed). `max-content` is
+// the wrong tool here since it re-measures per row instead of sharing one
+// column width; switched to a plain fixed px sized to the widest of the 3
+// real tag strings (142.58px measured) plus a small buffer for font-load/
+// sub-pixel variance, so Type is identical on every row regardless of which
+// tag it holds — Name and Detail then land at the same x on every row since
+// their `fr` tracks compute from the same fixed remainder every time. Gap
+// bumped 20→24 for the breathing room Prompt 363 asked for now that Type
+// isn't stealing shared space per-row. Header and rows share this constant
+// so they can't drift out of alignment with each other either.
+const ATTENTION_COLUMNS = { display: 'grid', gridTemplateColumns: '150px 1fr 1.6fr', gap: 24 }
 
 // Elegant serif clock font (Prompt 350, replaces Prompt 342's DSEG7
 // seven-segment choice — Brayden didn't like the digital/LCD look after
