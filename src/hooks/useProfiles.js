@@ -106,6 +106,25 @@ export function useCreateProfile() {
 // view) — tightening this INSERT policy back to admin-only needs a migration,
 // which the auto-mode classifier blocked pending Brayden's explicit go-ahead.
 
+// My Calls Activity feed (Prompt 365) — invites THIS agent personally sent
+// (and whether each was accepted), not the global pending list
+// `usePendingInvites` already covers for Hierarchy's own UI.
+export function useSentInvites(agentId) {
+  return useQuery({
+    queryKey: ['rep_invites', 'sent-by', agentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('rep_invites')
+        .select('id, role, created_at, used_at, used_by')
+        .eq('created_by', agentId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!agentId,
+  })
+}
+
 export function usePendingInvites() {
   return useQuery({
     queryKey: ['rep_invites', 'pending'],

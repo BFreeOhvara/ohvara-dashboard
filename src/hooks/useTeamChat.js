@@ -73,6 +73,24 @@ export function useDmConversationId(myId, otherId) {
   })
 }
 
+// My Calls Activity feed (Prompt 365) — most recent messages across every
+// conversation this agent can see (RLS already scopes rows to the shared
+// channel plus their own DMs), not one conversation's full history.
+export function useRecentTeamMessages(limit = 15) {
+  return useQuery({
+    queryKey: ['team-messages', 'recent', limit],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('team_messages')
+        .select('id, sender_id, sender_name, body, created_at, conversation_id, team_conversations(type)')
+        .order('created_at', { ascending: false })
+        .limit(limit)
+      if (error) throw error
+      return data || []
+    },
+  })
+}
+
 export function useTeamMessages(conversationId) {
   const qc = useQueryClient()
 
