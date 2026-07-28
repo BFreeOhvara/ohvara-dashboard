@@ -5,7 +5,13 @@
 // block framing entirely (ERR_BLOCKED_BY_RESPONSE). `/fex/lite` embeds
 // correctly, so the "Open in new tab" fallback for frame-busting is no
 // longer needed — Brayden asked for it removed.
-const QUOTER_URL = 'https://app.insurancetoolkits.com/fex/lite'
+//
+// Prompt 372: the bare URL alone rendered the widget's own UI but showed an
+// "Invalid Token" badge and returned no quotes — InsuranceToolkits requires a
+// real per-account embed token as a query param, not just the base path.
+// Token lives in .env.local (VITE_INSURANCETOOLKITS_EMBED_TOKEN), never
+// hardcoded here.
+const QUOTER_URL = `https://app.insurancetoolkits.com/fex/lite?token=${import.meta.env.VITE_INSURANCETOOLKITS_EMBED_TOKEN}`
 
 export default function Quoter() {
   return (
