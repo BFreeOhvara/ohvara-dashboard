@@ -109,7 +109,7 @@ export default function MyPolicies() {
       if (!ACTIVE_LIST_STATUSES.includes(p.status)) return false
       if (p.archived_at) return false
       if (q) {
-        const hay = [p.policy_number, p.client_first_name, p.client_last_name, p.client_phone, p.carrier_name, p.product_type]
+        const hay = [p.policy_number, p.client_first_name, p.client_last_name, p.client_phone, p.carrier_name, p.product_name, p.product_type]
           .filter(Boolean).join(' ').toLowerCase()
         if (!hay.includes(q)) return false
       }
@@ -392,7 +392,7 @@ export default function MyPolicies() {
                           background: 'var(--bg-elevated)', color: 'var(--text-secondary)',
                           border: '1px solid var(--border)', whiteSpace: 'nowrap',
                         }}>
-                          {p.product_type || '—'}
+                          {p.product_type || p.product_name || '—'}
                         </span>
                       </td>
                       <td style={{ ...topCell, fontSize: 12.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>

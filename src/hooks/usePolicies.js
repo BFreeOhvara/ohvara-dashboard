@@ -46,7 +46,7 @@ export const ACTIVE_LIST_STATUSES = LIVE_POLICY_STATUSES.filter(s => !NEEDS_FOLL
 const SELECT = `
   id, agent_id, policy_sold_date, policy_number,
   client_first_name, client_last_name, client_phone,
-  carrier_id, carrier_name, product_type, insurance_type, state,
+  carrier_id, carrier_name, product_type, product_name, insurance_type, state,
   effective_date, monthly_premium, annual_premium,
   status, cancellation_status, cancellation_call_at,
   effectuation_answered_at, pending_underwriting, next_lapse_check_at, archived_at,

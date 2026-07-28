@@ -1,0 +1,12 @@
+-- Prompt 378: New Submission's Product field moves from free text to a real
+-- dropdown of specific products sourced from commission_schedule (migration
+-- 086) — e.g. "F&G Everlast (18-80)", not the broad "IUL"/"Term"/"Whole Life"
+-- category `product_type` already held. `product_type` has no room for both
+-- ideas at once, and nothing in the schema captured the specific product
+-- before this — real schema gap, not something to overload an existing
+-- column for. `product_name` holds the specific product string (from the
+-- dropdown, or free text for the 3 carriers still awaiting real comp data);
+-- `product_type` keeps its existing role as the short category, now
+-- auto-derived from the selected product's commission_schedule.type instead
+-- of typed by hand.
+alter table policies add column if not exists product_name text;

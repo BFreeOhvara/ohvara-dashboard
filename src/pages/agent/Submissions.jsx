@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { CheckCircle2 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCarriers } from '../../hooks/useCarriers'
+import { useCommissionSchedule } from '../../hooks/useCommissionSchedule'
 import { usePolicies, useCreatePolicy, useUpdatePolicy } from '../../hooks/usePolicies'
 import { ComingSoon } from '../../components/agent/ComingSoon'
 import {
@@ -23,15 +24,24 @@ import { US_STATES } from '../../lib/usStates'
 // this form; the real Compensation Grid page (Prompt 370) covers that need.
 //
 // Flagged deviations from the export, none of them silent substitutions:
-//  · Insurance provider / product type / insurance type are hard <select>s in
-//    the export, fed by `data3.js` (never handed over) and by a carrier
-//    directory that is still empty on purpose. Kept as free text + datalist so
-//    a real submission is never blocked on data Brayden hasn't supplied.
+//  · Insurance provider / product type were free-text + datalist through
+//    Prompt 359 (the carrier directory was still empty then). Prompt 378
+//    replaces both with real dependent `SelectField`s once the carrier
+//    directory (migration 078/080/082) and the Compensation Grid's real
+//    comp data (migration 086, Prompt 370) landed — Product is empty/
+//    disabled until a Carrier is picked, then lists that carrier's real
+//    products from `commission_schedule`. This intentionally drops the old
+//    free-text escape hatch for an unlisted carrier — Brayden's ask, not a
+//    silent regression; if he wants a manual "Other" fallback later he'll
+//    ask. The 3 carriers still `commission_schedule`-empty (Aflac,
+//    Baltimore Life, Chubb — "AWAITING REAL DATA" placeholder rows) fall
+//    back to free-text Product automatically, keyed off whether real rows
+//    exist for that carrier rather than a hardcoded carrier-name check, so
+//    the fallback stops applying the moment real data lands for one of them.
+//  · Insurance type is still free text — the export's hard `<select>` here
+//    is fed by `data3.js`, never handed over.
 //  · State and Notes aren't in the export's grid, but both are real columns
-//    and My Policies filters on state — kept, styled identically. State is a
-//    hard <select> (Prompt 361, real closed 50-state+DC universe, no
-//    data-availability risk the way carrier names have) rather than the
-//    carrier field's free-text + datalist pattern.
+//    and My Policies filters on state — kept, styled identically.
 //  · The export's cancellation tab books against nothing. Real bookings need
 //    to know WHICH policy, so a policy picker leads that form, and what's
 //    already booked is listed underneath.
@@ -69,7 +79,7 @@ const BLANK = {
   client_last_name: '',
   client_phone: '',
   carrier_name: '',
-  product_type: '',
+  product_name: '',
   insurance_type: '',
   state: '',
   effective_date: '',
@@ -83,6 +93,7 @@ const BLANK = {
 function NewSubmission() {
   const { profile } = useAuth()
   const { data: carriers = [] } = useCarriers()
+  const { data: commissionRows = [] } = useCommissionSchedule()
   const create = useCreatePolicy()
   const [form, setForm] = useState(BLANK)
   const [error, setError] = useState('')
@@ -96,6 +107,29 @@ function NewSubmission() {
   const carrier = carriers.find(
     c => c.name.toLowerCase() === form.carrier_name.trim().toLowerCase()
   )
+
+  // Prompt 378: products for the selected carrier, and whether that carrier
+  // has any real comp data at all — driven by the data itself (does at least
+  // one row have a non-null `pct`), not a hardcoded list of the 3 carriers
+  // still waiting on Brayden, so this stops applying the moment real rows
+  // land for one of them.
+  const carrierProducts = useMemo(() => {
+    const seen = new Map()
+    for (const r of commissionRows) {
+      if (r.carrier !== form.carrier_name) continue
+      if (r.pct == null) continue
+      if (!seen.has(r.product)) seen.set(r.product, r.type)
+    }
+    return [...seen.entries()].map(([product, type]) => ({ product, type })).sort((a, b) => a.product.localeCompare(b.product))
+  }, [commissionRows, form.carrier_name])
+  const carrierHasRealData = form.carrier_name && carrierProducts.length > 0
+
+  // The chosen product's broad category (IUL/TL/WL/…), looked up for
+  // whichever carrier+product is currently selected — stored on submit as
+  // `product_type` so filters/badges elsewhere keep working off a short
+  // code instead of the specific product string (that goes to the new
+  // `product_name` column instead, see migration 088).
+  const selectedProductType = carrierProducts.find(p => p.product === form.product_name)?.type || null
 
   function submit() {
     setError('')
@@ -119,7 +153,8 @@ function NewSubmission() {
       client_phone: form.client_phone.trim() || null,
       carrier_id: carrier?.id || null,
       carrier_name: form.carrier_name.trim() || null,
-      product_type: form.product_type.trim() || null,
+      product_name: form.product_name.trim() || null,
+      product_type: selectedProductType,
       insurance_type: form.insurance_type.trim() || null,
       state: form.state || null,
       effective_date: form.effective_date || null,
@@ -163,25 +198,33 @@ function NewSubmission() {
           label="Client phone" mono placeholder="(602) 555-0184"
           value={form.client_phone} onChange={e => set('client_phone', e.target.value)}
         />
-        <Field label="Insurance provider">
-          <input
-            list="carrier-options"
-            value={form.carrier_name}
-            onChange={e => set('carrier_name', e.target.value)}
-            placeholder="Carrier name"
-            style={control}
-          />
-          <datalist id="carrier-options">
-            {carriers.map(c => <option key={c.id} value={c.name} />)}
-          </datalist>
-        </Field>
+        <SelectField
+          label="Insurance provider"
+          value={form.carrier_name}
+          onChange={e => setForm(f => ({ ...f, carrier_name: e.target.value, product_name: '' }))}
+        >
+          <option value="">Select a carrier</option>
+          {carriers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+        </SelectField>
       </div>
 
       <div style={grid3}>
-        <TextField
-          label="Product type" placeholder="Term, Whole Life, IUL…"
-          value={form.product_type} onChange={e => set('product_type', e.target.value)}
-        />
+        {carrierHasRealData ? (
+          <SelectField
+            label="Product type"
+            value={form.product_name}
+            onChange={e => set('product_name', e.target.value)}
+          >
+            <option value="">Select a product</option>
+            {carrierProducts.map(p => <option key={p.product} value={p.product}>{p.product}</option>)}
+          </SelectField>
+        ) : (
+          <TextField
+            label="Product type" placeholder={form.carrier_name ? 'No comp data yet — enter the product name' : 'Choose a carrier first'}
+            disabled={!form.carrier_name}
+            value={form.product_name} onChange={e => set('product_name', e.target.value)}
+          />
+        )}
         <TextField
           label="Insurance type" placeholder="Life"
           value={form.insurance_type} onChange={e => set('insurance_type', e.target.value)}

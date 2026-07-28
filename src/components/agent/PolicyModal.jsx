@@ -64,6 +64,7 @@ export function PolicyModal({ policy, canEdit, onClose }) {
     ['Client',          fullName(policy)],
     ['Phone',           policy.client_phone || '—'],
     ['Carrier',         policy.carrier_name || '—'],
+    ['Product',         policy.product_name || '—'],
     ['Product Type',    policy.product_type || '—'],
     ['Insurance Type',  policy.insurance_type || '—'],
     ['State',           policy.state || '—'],
