@@ -44,10 +44,10 @@ import CarrierPortals from './pages/agent/CarrierPortals'
 import Team from './pages/agent/Team'
 import AgentMyCalls from './pages/agent/MyCalls'
 import AgentPerformance from './pages/agent/Performance'
-import CompensationGrid from './pages/agent/CompensationGrid'
+import AgentCommissions from './pages/agent/Commissions'
 import {
   LiveCall, TrainingPlaceholder,
-  CommissionsPlaceholder, UnderwritingPlaceholder,
+  UnderwritingPlaceholder,
 } from './pages/agent/Placeholders'
 import Quoter from './pages/agent/Quoter'
 
@@ -228,7 +228,7 @@ export default function App() {
             } />
             <Route path="/agent/commissions" element={
               <ProtectedRoute allowedRoles={['closer', 'admin']}>
-                <DashboardLayout><CommissionsPlaceholder /></DashboardLayout>
+                <DashboardLayout><AgentCommissions /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/underwriting" element={
@@ -241,11 +241,10 @@ export default function App() {
                 <DashboardLayout><AgentPerformance /></DashboardLayout>
               </ProtectedRoute>
             } />
-            <Route path="/agent/compensation-grid" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin']}>
-                <DashboardLayout><CompensationGrid /></DashboardLayout>
-              </ProtectedRoute>
-            } />
+            {/* Prompt 376: folded into the Commissions sub-tab above — kept
+                as a redirect so any existing bookmark still lands somewhere
+                real, same convention as the /closer redirect below. */}
+            <Route path="/agent/compensation-grid" element={<Navigate to="/agent/commissions" replace />} />
 
             {/* Closer routes. /closer itself was the pre-pivot landing page
                 (MyAppointments) — deleted in Prompt 329 now that Login and

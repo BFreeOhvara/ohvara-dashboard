@@ -30,7 +30,7 @@ const TITLES = {
   '/agent/stats': ['Performance', 'Production, persistency, and leaderboard — switch the view'],
   '/agent/hierarchy': ['Team', 'Your hierarchy, team chat, and DMs'],
   '/agent/training': ['Training Center', 'Videos · scripts · knowledge checks · roleplay'],
-  '/agent/commissions': ['Commissions', 'Balance & reserve — comp model is a placeholder'],
+  '/agent/commissions': ['Commissions', 'Compensation grid & balance — switch the view'],
   '/admin': ['Overview', 'Your day at a glance'],
   '/admin/users': ['Users & Access', 'Accounts, roles and invites'],
   '/settings': ['Settings', 'Notifications, regional & appearance'],
