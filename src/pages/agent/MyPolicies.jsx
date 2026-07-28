@@ -63,10 +63,17 @@ export default function MyPolicies() {
   const isAdmin = profile?.role === 'admin'
   const { downline } = useHierarchy(profile?.id, isAdmin)
 
+  // Prompt 379: this page is "MY Policies" — it must default every role,
+  // admin included, to their own book (`agent_id = auth.uid()`) rather than
+  // relying on RLS's broader admin visibility to decide what renders here.
+  // Admin's RLS access is intentionally wide for company-wide views
+  // elsewhere (Performance, Overview) — that's not a license for this
+  // specific "my own stuff" page to skip the explicit scope. Admin still
+  // gets the You/Team toggle below so "everyone" stays one click away, it
+  // just isn't the default anymore.
   const [scope, setScope] = useState('own')
-  const effectiveScope = isAdmin ? 'all' : scope
   const { data: policies = [], isLoading } = usePolicies(
-    effectiveScope === 'own' ? profile?.id : null
+    scope === 'own' ? profile?.id : null
   )
   const update = useUpdatePolicy()
   const advanceLapseCheck = useAdvanceLapseCheck()
@@ -284,9 +291,9 @@ export default function MyPolicies() {
           {isLoading ? 'Loading…' : `${rows.length} of ${policies.length} ${policies.length === 1 ? 'policy' : 'policies'}`}
         </span>
 
-        {!isAdmin && downline.length > 0 && (
+        {(isAdmin || downline.length > 0) && (
           <div style={{ display: 'flex', gap: 2, padding: 2, background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)', borderRadius: 6, marginLeft: 'auto' }}>
-            {[['own', 'You'], ['team', 'Team']].map(([key, label]) => (
+            {[['own', 'You'], ['team', isAdmin ? 'Everyone' : 'Team']].map(([key, label]) => (
               <button
                 key={key}
                 onClick={() => setScope(key)}

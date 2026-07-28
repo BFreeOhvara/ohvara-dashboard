@@ -21,15 +21,15 @@ function fmtTime(iso) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export function NotificationBell() {
+export function NotificationBell({ profileId }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   const panelRef = useRef(null)
   const [coords, setCoords] = useState(null)
-  const { data: notifications = [] } = useNotifications(20)
-  const { data: unreadCount = 0 } = useUnreadCount()
-  const markRead = useMarkNotificationRead()
-  const markAll = useMarkAllRead()
+  const { data: notifications = [] } = useNotifications(profileId, 20)
+  const { data: unreadCount = 0 } = useUnreadCount(profileId)
+  const markRead = useMarkNotificationRead(profileId)
+  const markAll = useMarkAllRead(profileId)
 
   // The sidebar (`<aside>`) is `position: fixed` with `overflow: hidden` for
   // its own scroll containment — any dropdown rendered as its DOM descendant

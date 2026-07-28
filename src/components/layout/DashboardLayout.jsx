@@ -45,7 +45,7 @@ function ToastMount() {
 
 function HeaderBell() {
   const { profile } = useAuth()
-  if (profile?.role === 'admin')  return <NotificationBell />
+  if (profile?.role === 'admin')  return <NotificationBell profileId={profile.id} />
   if (profile?.role === 'rep')    return <RepNotificationBell profileId={profile.id} />
   if (profile?.role === 'closer') return <CloserNotificationBell profileId={profile.id} />
   return null
