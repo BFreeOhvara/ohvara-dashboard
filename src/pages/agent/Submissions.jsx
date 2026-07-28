@@ -80,14 +80,12 @@ const BLANK = {
   client_phone: '',
   carrier_name: '',
   product_name: '',
-  insurance_type: '',
   state: '',
   effective_date: '',
   monthly_premium: '',
   // Prompt 369: drives `pending_underwriting` — the only way "Not Approved"
   // is ever reachable, since carrier decisions aren't otherwise observable.
   underwriting_decision: 'immediate',
-  notes: '',
 }
 
 function NewSubmission() {
@@ -155,12 +153,15 @@ function NewSubmission() {
       carrier_name: form.carrier_name.trim() || null,
       product_name: form.product_name.trim() || null,
       product_type: selectedProductType,
-      insurance_type: form.insurance_type.trim() || null,
+      // Prompt 380: every policy Ohvara writes is life insurance — no longer
+      // asked on the form, hardcoded here instead so PolicyModal's Insurance
+      // Type row (and anything else reading this column) keeps real data
+      // instead of going blank.
+      insurance_type: 'Life',
       state: form.state || null,
       effective_date: form.effective_date || null,
       monthly_premium: monthly,
       pending_underwriting: form.underwriting_decision === 'needs_underwriting',
-      notes: form.notes.trim() || null,
     }, {
       onSuccess: () => {
         setSaved(`${form.client_first_name.trim()} ${form.client_last_name.trim()}${form.carrier_name.trim() ? ` · ${form.carrier_name.trim()}` : ''}`)
@@ -226,10 +227,6 @@ function NewSubmission() {
           />
         )}
         <TextField
-          label="Insurance type" placeholder="Life"
-          value={form.insurance_type} onChange={e => set('insurance_type', e.target.value)}
-        />
-        <TextField
           label="Effective date" type="date" mono
           value={form.effective_date} onChange={e => set('effective_date', e.target.value)}
         />
@@ -245,25 +242,13 @@ function NewSubmission() {
           {US_STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
         </SelectField>
         <SelectField
-          label="Was this approved immediately, or does it need underwriting?"
+          label="Is this policy already approved or in underwriting?"
           value={form.underwriting_decision}
           onChange={e => set('underwriting_decision', e.target.value)}
         >
-          <option value="immediate">Approved immediately</option>
-          <option value="needs_underwriting">Needs underwriting</option>
+          <option value="immediate">Approved</option>
+          <option value="needs_underwriting">In Underwriting</option>
         </SelectField>
-      </div>
-
-      <div style={grid3}>
-        <Field label="Notes" style={{ gridColumn: 'span 3' }}>
-          <textarea
-            rows={2}
-            value={form.notes}
-            onChange={e => set('notes', e.target.value)}
-            placeholder="Anything worth remembering about this deal"
-            style={{ ...control, height: 'auto', padding: '8px 10px', resize: 'vertical' }}
-          />
-        </Field>
       </div>
 
       {error && <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--danger)' }}>{error}</p>}
