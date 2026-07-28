@@ -4,6 +4,7 @@ import { Menu } from 'lucide-react'
 import { Sidebar, COLLAPSE_KEY } from './Sidebar'
 import { ActiveCallProvider } from '../../contexts/ActiveCallContext'
 import { NotificationToast } from '../rep/NotificationToast'
+import { BugReportButton } from '../shared/BugReportButton'
 import { NotificationBell } from '../admin/NotificationBell'
 import { RepNotificationBell } from '../rep/RepNotificationBell'
 import { CloserNotificationBell } from '../closer/CloserNotificationBell'
@@ -164,6 +165,7 @@ export function DashboardLayout({ children }) {
           </main>
         </div>
         <ToastMount />
+        <BugReportButton />
       </div>
     </ActiveCallProvider>
   )
