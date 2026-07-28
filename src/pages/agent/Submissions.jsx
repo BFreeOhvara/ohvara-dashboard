@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CheckCircle2, ArrowRight } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCarriers } from '../../hooks/useCarriers'
 import { usePolicies, useCreatePolicy, useUpdatePolicy } from '../../hooks/usePolicies'
@@ -14,11 +14,13 @@ import { US_STATES } from '../../lib/usStates'
 
 // Submissions — literal port of the export's "Closer · Submissions" screen
 // (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines
-// 1307-1454): the Round 33 new-business form laid out three fields to a row,
-// the auto annual-premium readout, and the projected-commission strip under
-// a divider. Wired to the real `policies` table. Tab strip switched from the
-// export's underlined style to the shared `Segmented` pill toggle (Prompt
-// 361) for consistency with Performance's Production/Leaderboard tabs.
+// 1307-1454): the Round 33 new-business form laid out three fields to a row
+// and the auto annual-premium readout. Wired to the real `policies` table.
+// Tab strip switched from the export's underlined style to the shared
+// `Segmented` pill toggle (Prompt 361) for consistency with Performance's
+// Production/Leaderboard tabs. The export's own projected-commission strip
+// (Prompt 373) was dropped — Brayden didn't ask for a live preview widget on
+// this form; the real Compensation Grid page (Prompt 370) covers that need.
 //
 // Flagged deviations from the export, none of them silent substitutions:
 //  · Insurance provider / product type / insurance type are hard <select>s in
@@ -30,8 +32,6 @@ import { US_STATES } from '../../lib/usStates'
 //    hard <select> (Prompt 361, real closed 50-state+DC universe, no
 //    data-availability risk the way carrier names have) rather than the
 //    carrier field's free-text + datalist pattern.
-//  · Projected commission renders an em-dash: comp-grid rates by
-//    carrier/product/tier don't exist yet, so any figure would be invented.
 //  · The export's cancellation tab books against nothing. Real bookings need
 //    to know WHICH policy, so a policy picker leads that form, and what's
 //    already booked is listed underneath.
@@ -251,42 +251,6 @@ function NewSubmission() {
               New submission
             </button>
           </>
-        )}
-      </div>
-
-      <div style={{
-        display: 'flex', alignItems: 'flex-start', gap: 14, marginTop: 16, paddingTop: 14,
-        borderTop: 'var(--border-w) solid var(--border)', flexWrap: 'wrap',
-      }}>
-        <div>
-          <p style={fieldLabel}>Projected commission</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-muted)', fontFamily: MONO }}>—</span>
-            <span style={{
-              display: 'inline-flex', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700,
-              background: 'var(--warning-dim)', color: 'var(--warning)', border: '1px solid var(--warning-bd)',
-            }}>
-              Projected
-            </span>
-          </div>
-          <GapNote>
-            No figure yet — comp-grid rates by carrier, product and contract tier haven't been loaded, so
-            anything shown here would be made up. It becomes a confirmed commission once the policy is active.
-          </GapNote>
-        </div>
-        <div style={{ flex: 1 }} />
-        {carrier?.portal_url ? (
-          <a href={carrier.portal_url} target="_blank" rel="noreferrer" style={{ ...ghostBtn, height: 32, textDecoration: 'none' }}>
-            Verify in {carrier.name} portal <ArrowRight size={11} />
-          </a>
-        ) : (
-          <button
-            disabled
-            title={form.carrier_name.trim() ? 'No portal URL on file for this carrier — add it on Carrier Portals' : 'Pick a carrier first'}
-            style={{ ...ghostBtn, height: 32, opacity: 0.5 }}
-          >
-            Verify in carrier portal <ArrowRight size={11} />
-          </button>
         )}
       </div>
     </div>
