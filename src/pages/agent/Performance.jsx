@@ -227,7 +227,7 @@ function ProductionTab() {
 function LeaderboardTab() {
   const { profile } = useAuth()
   const { data: allVisible = [], isLoading } = usePolicies(null)
-  const [boardMode, setBoardMode] = useState('daily')
+  const [boardMode, setBoardMode] = useState('monthly')
 
   const today = todayISO()
   const [lo, hi] = boardMode === 'daily' ? [today, today] : [today.slice(0, 7) + '-01', today]
@@ -271,10 +271,6 @@ function LeaderboardTab() {
 
       {isLoading ? (
         <p style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Loading…</p>
-      ) : standings.length === 0 ? (
-        <div style={{ background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8, padding: '32px 24px', textAlign: 'center' }}>
-          <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-muted)' }}>No submissions in this window yet.</p>
-        </div>
       ) : (
         <>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, marginBottom: 20 }}>
