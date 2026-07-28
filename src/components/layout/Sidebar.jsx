@@ -256,6 +256,7 @@ const NAV = {
       { to: '/agent/hierarchy', label: 'Team', icon: Users },
       { to: '/agent/training', label: 'Training Center', icon: GraduationCap },
       { to: '/agent/commissions', label: 'Commissions', icon: DollarSign },
+      { to: '/agent/compensation-grid', label: 'Compensation Grid', icon: Calculator },
     ] },
     { group: 'Account', items: [
       { to: '/settings', label: 'Settings', icon: Settings },
@@ -289,6 +290,7 @@ const NAV = {
       { to: '/agent/hierarchy', label: 'Team', icon: Users },
       { to: '/agent/training', label: 'Training Center', icon: GraduationCap },
       { to: '/agent/commissions', label: 'Commissions', icon: DollarSign },
+      { to: '/agent/compensation-grid', label: 'Compensation Grid', icon: Calculator },
     ] },
     { group: 'Account', items: [
       { to: '/admin/users', label: 'Users & Access', icon: Award },

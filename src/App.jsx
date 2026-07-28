@@ -44,6 +44,7 @@ import CarrierPortals from './pages/agent/CarrierPortals'
 import Team from './pages/agent/Team'
 import AgentMyCalls from './pages/agent/MyCalls'
 import AgentPerformance from './pages/agent/Performance'
+import CompensationGrid from './pages/agent/CompensationGrid'
 import {
   LiveCall, TrainingPlaceholder,
   CommissionsPlaceholder, UnderwritingPlaceholder,
@@ -238,6 +239,11 @@ export default function App() {
             <Route path="/agent/stats" element={
               <ProtectedRoute allowedRoles={['closer', 'admin']}>
                 <DashboardLayout><AgentPerformance /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/compensation-grid" element={
+              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+                <DashboardLayout><CompensationGrid /></DashboardLayout>
               </ProtectedRoute>
             } />
 
