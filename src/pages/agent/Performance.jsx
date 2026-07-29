@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   Wallet, TrendingUp, CheckCircle2, Users, DollarSign,
-  Phone, Target, Activity, LogOut, Clock,
+  Phone, Target, Activity, LogOut, Clock, CreditCard,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePolicies, productionSnapshot, productionFlow, persistencyWindows } from '../../hooks/usePolicies'
@@ -174,7 +174,7 @@ function ProductionTab() {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 16, marginBottom: 24 }}>
         <Tile
           icon={Phone} label="Calls Taken"
           value="—"
@@ -199,6 +199,11 @@ function ProductionTab() {
           icon={Clock} label="Average Days to Issue"
           value={v(snapshot.avgDaysToIssue === null ? '—' : Math.round(snapshot.avgDaysToIssue))}
           sub={`submitted → effective, as of ${asOfLabel}`}
+        />
+        <Tile
+          icon={CreditCard} label="First Premium Applied Rate"
+          value={v(snapshot.firstPremiumAppliedRate === null ? '—' : `${Math.round(snapshot.firstPremiumAppliedRate)}%`)}
+          sub={`drafted ÷ cleared underwriting, as of ${asOfLabel}`}
         />
       </div>
 

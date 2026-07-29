@@ -233,6 +233,18 @@ export function productionSnapshot(policies, asOf) {
     ? withBothDates.reduce((s, p) => s + daysBetween(p.policy_sold_date, p.effective_date), 0) / withBothDates.length
     : null
 
+  // Prompt 385: of policies that cleared underwriting (migration 085's
+  // Undrafted status only exists for a policy that got that far), what
+  // fraction actually got a first premium draft to succeed. In Effect and
+  // Lapsed both had a successful first draft at some point (Lapsed just
+  // stopped paying later, which is fall-off, not a draft failure) — only
+  // Undrafted represents a draft that never went through. Excludes anything
+  // that never reached "approved" (Submitted, Not Approved, etc.) since
+  // those never attempted a draft at all — same snapshot scope as
+  // fallOffRate above, not a window-based flow metric.
+  const draftEligible = rows.filter(p => p.status === 'In Effect' || p.status === 'Lapsed' || p.status === 'Undrafted')
+  const draftedOk = draftEligible.filter(p => p.status === 'In Effect' || p.status === 'Lapsed')
+
   return {
     activeAP: ap(active),
     policiesActive: active.length,
@@ -240,6 +252,7 @@ export function productionSnapshot(policies, asOf) {
     // a window — Brayden's own framing for why this sits on the snapshot side.
     fallOffRate: rows.length ? (cancelled.length / rows.length) * 100 : null,
     avgDaysToIssue,
+    firstPremiumAppliedRate: draftEligible.length ? (draftedOk.length / draftEligible.length) * 100 : null,
   }
 }
 
