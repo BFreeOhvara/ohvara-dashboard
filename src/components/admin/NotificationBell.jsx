@@ -1,13 +1,34 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Bell, CheckCheck, Zap, User, Activity, MessageSquare } from 'lucide-react'
+import {
+  Bell, CheckCheck, Zap, User, Activity,
+  UserPlus, PhoneMissed, FileText, CheckCircle2, Hourglass, XCircle,
+  CalendarClock, DollarSign, MessagesSquare, MessageCircle, Users,
+  Bug, Trophy, Target, FileCheck2, Building2, BellRing,
+} from 'lucide-react'
 import { useNotifications, useUnreadCount, useMarkNotificationRead, useMarkAllRead } from '../../hooks/useNotifications'
 
 const TYPE_ICONS = {
-  new_client:   { icon: User,          color: 'var(--success)', bg: 'var(--success-dim)' },
-  client_live:  { icon: Zap,           color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
-  team_message: { icon: MessageSquare, color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
-  default:      { icon: Activity,      color: 'var(--info)',    bg: 'var(--info-dim)'    },
+  new_client:                 { icon: User,           color: 'var(--success)', bg: 'var(--success-dim)' },
+  client_live:                { icon: Zap,            color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
+  new_lead_assigned:          { icon: UserPlus,       color: 'var(--success)', bg: 'var(--success-dim)' },
+  missed_call:                { icon: PhoneMissed,    color: 'var(--danger)',  bg: 'var(--danger-dim)'  },
+  policy_submitted:           { icon: FileText,       color: 'var(--info)',    bg: 'var(--info-dim)'    },
+  policy_approved:            { icon: CheckCircle2,   color: 'var(--success)', bg: 'var(--success-dim)' },
+  policy_underwriting:        { icon: Hourglass,      color: 'var(--warning)', bg: 'var(--warning-dim)' },
+  policy_not_approved:        { icon: XCircle,        color: 'var(--danger)',  bg: 'var(--danger-dim)'  },
+  policy_lapse_checkin:       { icon: CalendarClock,  color: 'var(--warning)', bg: 'var(--warning-dim)' },
+  commission_posted:          { icon: DollarSign,     color: 'var(--success)', bg: 'var(--success-dim)' },
+  team_message:                { icon: MessagesSquare, color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
+  direct_message:              { icon: MessageCircle,  color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
+  new_team_member:            { icon: Users,          color: 'var(--success)', bg: 'var(--success-dim)' },
+  bug_report_submitted:       { icon: Bug,            color: 'var(--danger)',  bg: 'var(--danger-dim)'  },
+  leaderboard_rank_change:    { icon: Trophy,         color: 'var(--warning)', bg: 'var(--warning-dim)' },
+  monthly_goal_milestone:     { icon: Target,         color: 'var(--success)', bg: 'var(--success-dim)' },
+  contracting_status_update:  { icon: FileCheck2,     color: 'var(--info)',    bg: 'var(--info-dim)'    },
+  new_carrier_added:          { icon: Building2,      color: 'var(--info)',    bg: 'var(--info-dim)'    },
+  activity_reminder:          { icon: BellRing,       color: 'var(--warning)', bg: 'var(--warning-dim)' },
+  default:                    { icon: Activity,       color: 'var(--info)',    bg: 'var(--info-dim)'    },
 }
 
 function fmtTime(iso) {
