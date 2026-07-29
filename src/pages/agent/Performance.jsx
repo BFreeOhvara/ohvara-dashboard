@@ -133,7 +133,10 @@ function ProductionTab() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+      {/* Prompt 386: alignItems flex-start so the You/Team toggle sits level
+          with PeriodPicker's own toggle row (its top row) instead of being
+          vertically centered against the now-two-row block below it. */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <Segmented
           size="sm"
           value={scope}

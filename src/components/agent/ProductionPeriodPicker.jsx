@@ -88,9 +88,18 @@ const arrowBtnStyle = {
   display: 'inline-flex', color: 'var(--text-secondary)', cursor: 'pointer',
 }
 
+// Prompt 386: the mode toggle and the date nav used to share one flex row,
+// so the date nav's own width (present in Daily/Monthly, gone in All Time)
+// changed the row's total width — and since this sits flush-right next to
+// the You/Team toggle (Performance.jsx's `justify-content: space-between`
+// header), a width change there visibly shifted the toggle buttons
+// left/right. Split into two independently-positioned rows: the toggle's
+// row never changes size, and the date-nav row below it always renders
+// (just visually hidden in All Time) so it keeps its reserved height —
+// nothing above it can ever move.
 export function PeriodPicker({ mode, setMode, label, canNext, prevArrow, nextArrow }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, marginTop: -4 }}>
       <Segmented
         size="sm"
         value={mode}
@@ -102,24 +111,23 @@ export function PeriodPicker({ mode, setMode, label, canNext, prevArrow, nextArr
         ]}
       />
 
-      {mode !== 'alltime' && (
-        <div style={{
-          display: 'flex', alignItems: 'center',
-          border: 'var(--border-w) solid var(--border)', borderRadius: 6, background: 'var(--bg-elevated)',
-        }}>
-          <button onClick={prevArrow} style={arrowBtnStyle}><ChevronLeft size={14} /></button>
-          <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-primary)', minWidth: 92, textAlign: 'center', whiteSpace: 'nowrap' }}>
-            {label}
-          </span>
-          <button
-            onClick={nextArrow}
-            disabled={!canNext}
-            style={{ ...arrowBtnStyle, color: canNext ? 'var(--text-secondary)' : 'var(--text-muted)', opacity: canNext ? 1 : 0.4, cursor: canNext ? 'pointer' : 'default' }}
-          >
-            <ChevronRight size={14} />
-          </button>
-        </div>
-      )}
+      <div style={{
+        display: 'flex', alignItems: 'center',
+        border: 'var(--border-w) solid var(--border)', borderRadius: 6, background: 'var(--bg-elevated)',
+        visibility: mode === 'alltime' ? 'hidden' : 'visible',
+      }}>
+        <button onClick={prevArrow} style={arrowBtnStyle}><ChevronLeft size={14} /></button>
+        <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-primary)', minWidth: 92, textAlign: 'center', whiteSpace: 'nowrap' }}>
+          {label}
+        </span>
+        <button
+          onClick={nextArrow}
+          disabled={!canNext}
+          style={{ ...arrowBtnStyle, color: canNext ? 'var(--text-secondary)' : 'var(--text-muted)', opacity: canNext ? 1 : 0.4, cursor: canNext ? 'pointer' : 'default' }}
+        >
+          <ChevronRight size={14} />
+        </button>
+      </div>
     </div>
   )
 }
