@@ -8,7 +8,7 @@ import { ComingSoon } from '../../components/agent/ComingSoon'
 import {
   MONO, card, cardTitle, control, fieldLabel, grid3, primaryBtn, ghostBtn,
 } from '../../lib/exportStyles'
-import { Field, TextField, SelectField, GapNote } from '../../components/ui/ExportForm'
+import { Field, TextField, SelectField, AnchoredSelectField, GapNote } from '../../components/ui/ExportForm'
 import { Segmented } from '../../components/ui/Segmented'
 import { money, fullName, formatDate, todayISO } from '../../lib/policyFormat'
 import { US_STATES } from '../../lib/usStates'
@@ -237,10 +237,13 @@ function NewSubmission() {
           label="Monthly premium ($)" mono type="number" min="0" step="0.01" placeholder="118"
           value={form.monthly_premium} onChange={e => set('monthly_premium', e.target.value)}
         />
-        <SelectField label="State" value={form.state} onChange={e => set('state', e.target.value)}>
-          <option value="">Select a state</option>
-          {US_STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
-        </SelectField>
+        <AnchoredSelectField
+          label="State"
+          value={form.state}
+          onChange={val => set('state', val)}
+          placeholder="Select a state"
+          options={US_STATES.map(s => ({ value: s.code, label: s.name }))}
+        />
         <SelectField
           label="Is this policy already approved or in underwriting?"
           value={form.underwriting_decision}
