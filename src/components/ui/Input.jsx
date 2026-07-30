@@ -19,17 +19,6 @@ export function Input({ className, label, error, ...props }) {
   )
 }
 
-export function Select({ className, label, children, ...props }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      {label && <label className="section-label">{label}</label>}
-      <select className={clsx(baseInput, 'cursor-pointer', className)} {...props}>
-        {children}
-      </select>
-    </div>
-  )
-}
-
 export function Textarea({ className, label, ...props }) {
   return (
     <div className="flex flex-col gap-1.5">

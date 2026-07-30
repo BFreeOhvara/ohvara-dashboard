@@ -8,7 +8,7 @@ import { ComingSoon } from '../../components/agent/ComingSoon'
 import {
   MONO, card, cardTitle, control, fieldLabel, grid3, primaryBtn, ghostBtn,
 } from '../../lib/exportStyles'
-import { Field, TextField, SelectField, AnchoredSelectField, GapNote } from '../../components/ui/ExportForm'
+import { Field, TextField, AnchoredSelectField, GapNote } from '../../components/ui/ExportForm'
 import { Segmented } from '../../components/ui/Segmented'
 import { money, fullName, formatDate, todayISO } from '../../lib/policyFormat'
 import { US_STATES } from '../../lib/usStates'
@@ -26,7 +26,7 @@ import { US_STATES } from '../../lib/usStates'
 // Flagged deviations from the export, none of them silent substitutions:
 //  · Insurance provider / product type were free-text + datalist through
 //    Prompt 359 (the carrier directory was still empty then). Prompt 378
-//    replaces both with real dependent `SelectField`s once the carrier
+//    replaces both with real dependent dropdowns once the carrier
 //    directory (migration 078/080/082) and the Compensation Grid's real
 //    comp data (migration 086, Prompt 370) landed — Product is empty/
 //    disabled until a Carrier is picked, then lists that carrier's real
@@ -199,26 +199,24 @@ function NewSubmission() {
           label="Client phone" mono placeholder="(602) 555-0184"
           value={form.client_phone} onChange={e => set('client_phone', e.target.value)}
         />
-        <SelectField
+        <AnchoredSelectField
           label="Insurance provider"
           value={form.carrier_name}
-          onChange={e => setForm(f => ({ ...f, carrier_name: e.target.value, product_name: '' }))}
-        >
-          <option value="">Select a carrier</option>
-          {carriers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-        </SelectField>
+          onChange={val => setForm(f => ({ ...f, carrier_name: val, product_name: '' }))}
+          placeholder="Select a carrier"
+          options={carriers.map(c => ({ value: c.name, label: c.name }))}
+        />
       </div>
 
       <div style={grid3}>
         {carrierHasRealData ? (
-          <SelectField
+          <AnchoredSelectField
             label="Product type"
             value={form.product_name}
-            onChange={e => set('product_name', e.target.value)}
-          >
-            <option value="">Select a product</option>
-            {carrierProducts.map(p => <option key={p.product} value={p.product}>{p.product}</option>)}
-          </SelectField>
+            onChange={val => set('product_name', val)}
+            placeholder="Select a product"
+            options={carrierProducts.map(p => ({ value: p.product, label: p.product }))}
+          />
         ) : (
           <TextField
             label="Product type" placeholder={form.carrier_name ? 'No comp data yet — enter the product name' : 'Choose a carrier first'}
@@ -244,14 +242,15 @@ function NewSubmission() {
           placeholder="Select a state"
           options={US_STATES.map(s => ({ value: s.code, label: s.name }))}
         />
-        <SelectField
+        <AnchoredSelectField
           label="Is this policy already approved or in underwriting?"
           value={form.underwriting_decision}
-          onChange={e => set('underwriting_decision', e.target.value)}
-        >
-          <option value="immediate">Approved</option>
-          <option value="needs_underwriting">In Underwriting</option>
-        </SelectField>
+          onChange={val => set('underwriting_decision', val)}
+          options={[
+            { value: 'immediate', label: 'Approved' },
+            { value: 'needs_underwriting', label: 'In Underwriting' },
+          ]}
+        />
       </div>
 
       {error && <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--danger)' }}>{error}</p>}
@@ -369,16 +368,17 @@ function CancellationCalendar() {
           </p>
         ) : (
           <>
-            <div style={{ marginBottom: 16 }}>
-              <p style={fieldLabel}>Policy</p>
-              <select value={policyId} onChange={e => setPolicyId(e.target.value)} style={{ ...control, padding: '0 8px', maxWidth: 420 }}>
-                <option value="">Which deal is this call for?</option>
-                {unscheduled.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {fullName(p)}{p.carrier_name ? ` · ${p.carrier_name}` : ''} · sold {formatDate(p.policy_sold_date)}
-                  </option>
-                ))}
-              </select>
+            <div style={{ marginBottom: 16, maxWidth: 420 }}>
+              <AnchoredSelectField
+                label="Policy"
+                value={policyId}
+                onChange={setPolicyId}
+                placeholder="Which deal is this call for?"
+                options={unscheduled.map(p => ({
+                  value: p.id,
+                  label: `${fullName(p)}${p.carrier_name ? ` · ${p.carrier_name}` : ''} · sold ${formatDate(p.policy_sold_date)}`,
+                }))}
+              />
             </div>
 
             <div style={{ marginBottom: 16 }}>

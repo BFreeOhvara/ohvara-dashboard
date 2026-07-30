@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { DollarSign, Plus, Loader2, AlertCircle } from 'lucide-react'
 import { useReps } from '../../hooks/useProfiles'
 import { useAllPayouts, usePayCommission, useCreatePayout } from '../../hooks/usePayouts'
+import { AnchoredSelectField } from '../../components/ui/ExportForm'
 
 const STATUS = {
   pending:  { label: 'Pending',  color: '#F59E0B', dim: 'rgba(245,158,11,0.12)' },
@@ -262,10 +263,10 @@ function CreatePayoutForm({ reps, create, onDone }) {
     <div className="glass" style={{ padding: '16px', borderRadius: 12, marginBottom: 14 }}>
       <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 10px' }}>Create payout (back-fill)</p>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        <select value={repId} onChange={e => setRepId(e.target.value)} style={{ ...inputStyle, flex: '0 0 200px' }}>
-          <option value="">Select rep…</option>
-          {(reps || []).map(r => <option key={r.id} value={r.id}>{r.full_name}</option>)}
-        </select>
+        <AnchoredSelectField
+          value={repId} onChange={setRepId} placeholder="Select rep…" style={{ flex: '0 0 200px' }}
+          options={(reps || []).map(r => ({ value: r.id, label: r.full_name }))}
+        />
         <input
           value={appointmentId} onChange={e => setAppointmentId(e.target.value)}
           placeholder="Appointment ID (uuid)" style={{ ...inputStyle, flex: '1 1 260px' }}

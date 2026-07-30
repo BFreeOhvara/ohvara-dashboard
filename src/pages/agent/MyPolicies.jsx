@@ -10,6 +10,7 @@ import {
 import { useCarriers } from '../../hooks/useCarriers'
 import { PolicyModal } from '../../components/agent/PolicyModal'
 import { Segmented } from '../../components/ui/Segmented'
+import { AnchoredSelectField } from '../../components/ui/ExportForm'
 import { money, fullName, formatDate } from '../../lib/policyFormat'
 
 // My Policies — literal port of the export's "Closer · My Pipeline" screen
@@ -51,12 +52,6 @@ const th = {
   borderBottom: 'var(--border-w) solid var(--border)',
 }
 const cell = { padding: 20, borderBottom: 'var(--border-w) solid var(--border)' }
-
-const selectStyle = {
-  width: '100%', height: 32, background: 'var(--bg-base)',
-  border: 'var(--border-w) solid var(--border)', borderRadius: 6,
-  padding: '0 8px', fontSize: 12, color: 'var(--text-primary)',
-}
 
 export default function MyPolicies() {
   const { profile } = useAuth()
@@ -695,16 +690,11 @@ function NeedsFollowUpTab({ policies, isLoading, onSelect, onReactivate, onArchi
 
 function FilterSelect({ label, value, onChange, options }) {
   return (
-    <label style={{ display: 'block' }}>
-      <span style={{
-        display: 'block', marginBottom: 5, fontSize: 10, fontWeight: 700,
-        letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)',
-      }}>
-        {label}
-      </span>
-      <select value={value} onChange={e => onChange(e.target.value)} style={selectStyle}>
-        {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-      </select>
-    </label>
+    <AnchoredSelectField
+      label={label}
+      value={value}
+      onChange={onChange}
+      options={options.map(([v, l]) => ({ value: v, label: l }))}
+    />
   )
 }

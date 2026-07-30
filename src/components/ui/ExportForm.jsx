@@ -24,14 +24,9 @@ export function TextField({ label, mono, style, ...props }) {
   )
 }
 
-export function SelectField({ label, children, style, ...props }) {
-  return (
-    <Field label={label}>
-      <select {...props} style={{ ...control, padding: '0 8px', ...style }}>{children}</select>
-    </Field>
-  )
-}
-
+// Prompt 388: every dropdown in the app now uses this one component — the
+// native-select-backed SelectField above was retired since a native
+// <select>'s option panel can't be restyled to match (browser/OS chrome).
 // Prompt 387: a native <select>'s open direction is chosen by the browser,
 // and that heuristic isn't "is there room below" — it's closer to "which
 // half of the viewport is the trigger in." A select low on a long form
@@ -56,7 +51,7 @@ export function AnchoredSelectField({ label, value, onChange, options, placehold
 
   return (
     <div ref={ref} style={{ position: 'relative', ...style }}>
-      <p style={fieldLabel}>{label}</p>
+      {label && <p style={fieldLabel}>{label}</p>}
       <button
         type="button"
         onClick={() => setOpen(o => !o)}

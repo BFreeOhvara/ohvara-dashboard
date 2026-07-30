@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { X, Trash2, Bell, Hourglass } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
-import { Select } from '../ui/Input'
+import { AnchoredSelectField } from '../ui/ExportForm'
 import {
   LIVE_POLICY_STATUSES, CANCELLATION_STATUSES,
   useUpdatePolicy, useDeletePolicy, pendingEffectuation,
@@ -229,21 +229,21 @@ export function PolicyModal({ policy, canEdit, onClose }) {
         {canEdit && (
           <div style={{ marginTop: 22, paddingTop: 18, borderTop: '0.5px solid var(--border)' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
-              <Select
+              <AnchoredSelectField
                 label="Status"
                 value={policy.status}
-                onChange={e => update.mutate({ id: policy.id, status: e.target.value })}
-              >
-                {LIVE_POLICY_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-              </Select>
-              <Select
+                onChange={val => update.mutate({ id: policy.id, status: val })}
+                options={LIVE_POLICY_STATUSES.map(s => ({ value: s, label: s }))}
+              />
+              <AnchoredSelectField
                 label="Cancellation (old policy)"
                 value={policy.cancellation_status || ''}
-                onChange={e => update.mutate({ id: policy.id, cancellation_status: e.target.value || null })}
-              >
-                <option value="">Not started</option>
-                {CANCELLATION_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-              </Select>
+                onChange={val => update.mutate({ id: policy.id, cancellation_status: val || null })}
+                options={[
+                  { value: '', label: 'Not started' },
+                  ...CANCELLATION_STATUSES.map(s => ({ value: s, label: s })),
+                ]}
+              />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18 }}>

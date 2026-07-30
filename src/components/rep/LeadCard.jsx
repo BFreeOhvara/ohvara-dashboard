@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { MapPin, Phone, Mail, ChevronDown, ChevronUp, Save } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
-import { Select, Textarea } from '../ui/Input'
+import { Textarea } from '../ui/Input'
+import { AnchoredSelectField } from '../ui/ExportForm'
 import { CallButton } from './CallButton'
 import { useUpdateLeadStatus } from '../../hooks/useLeads'
 
@@ -84,13 +85,12 @@ export function LeadCard({ lead, onScriptOpen }) {
             </div>
           )}
 
-          <Select
+          <AnchoredSelectField
             label="Status"
             value={status}
-            onChange={e => setStatus(e.target.value)}
-          >
-            {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-          </Select>
+            onChange={setStatus}
+            options={STATUSES.map(s => ({ value: s, label: s }))}
+          />
 
           <Textarea
             label="Call Notes"

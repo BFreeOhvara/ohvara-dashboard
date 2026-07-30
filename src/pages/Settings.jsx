@@ -10,7 +10,7 @@ import { Switch } from '../components/ui/Switch'
 import {
   card, cardTitle, control, primaryBtn,
 } from '../lib/exportStyles'
-import { GapNote } from '../components/ui/ExportForm'
+import { GapNote, AnchoredSelectField } from '../components/ui/ExportForm'
 import { SavedTick } from '../components/ui/SavedTick'
 
 // Settings — literal port of the export's Settings screen (vault:
@@ -175,9 +175,10 @@ function RegionalPanel({ profile }) {
 
       <p style={softLabel}>Timezone — call schedules &amp; reminders display in this zone</p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
-        <select value={timezone} onChange={e => setTimezone(e.target.value)} style={{ ...inputBase, width: 320, padding: '0 10px' }}>
-          {SELECTABLE_TIMEZONES.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
-        </select>
+        <AnchoredSelectField
+          value={timezone} onChange={setTimezone} style={{ width: 320 }}
+          options={SELECTABLE_TIMEZONES.map(tz => ({ value: tz.value, label: tz.label }))}
+        />
         <button
           onClick={save}
           disabled={!dirty || update.isPending}

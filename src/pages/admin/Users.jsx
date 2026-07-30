@@ -8,7 +8,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { roleLabel } from '../../lib/roleLabels'
 import { MONO, card, grid3, primaryBtn, ghostBtn } from '../../lib/exportStyles'
-import { TextField, SelectField, GapNote } from '../../components/ui/ExportForm'
+import { TextField, AnchoredSelectField, GapNote } from '../../components/ui/ExportForm'
 
 // Users & Access — literal port of the export's "Admin · Users" screen
 // (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines
@@ -164,11 +164,14 @@ export default function Users() {
             joins under you in the hierarchy.
           </p>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
-            <SelectField label="Role" value={inviteRole} onChange={e => setInviteRole(e.target.value)} style={{ width: 160 }}>
-              <option value="closer">Closer</option>
-              <option value="rep">Setter</option>
-              <option value="admin">Admin</option>
-            </SelectField>
+            <AnchoredSelectField
+              label="Role" value={inviteRole} onChange={setInviteRole} style={{ width: 160 }}
+              options={[
+                { value: 'closer', label: 'Closer' },
+                { value: 'rep', label: 'Setter' },
+                { value: 'admin', label: 'Admin' },
+              ]}
+            />
             <button onClick={generateInvite} disabled={createInvite.isPending} style={{ ...primaryBtn, height: 34, opacity: createInvite.isPending ? 0.6 : 1 }}>
               {createInvite.isPending ? 'Generating…' : 'Generate & copy link'}
             </button>
@@ -188,14 +191,18 @@ export default function Users() {
             <TextField label="Full name" placeholder="Nate Rivera" value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} />
             <TextField label="Username" mono placeholder="nrivera" value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') }))} />
             <TextField label="Password" type="password" placeholder="Min 8 characters" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
-            <SelectField label="Role" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
-              <option value="closer">Closer</option>
-              <option value="rep">Setter</option>
-              <option value="admin">Admin</option>
-            </SelectField>
-            <SelectField label="Timezone" value={form.timezone} onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}>
-              {SELECTABLE_TIMEZONES.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
-            </SelectField>
+            <AnchoredSelectField
+              label="Role" value={form.role} onChange={val => setForm(f => ({ ...f, role: val }))}
+              options={[
+                { value: 'closer', label: 'Closer' },
+                { value: 'rep', label: 'Setter' },
+                { value: 'admin', label: 'Admin' },
+              ]}
+            />
+            <AnchoredSelectField
+              label="Timezone" value={form.timezone} onChange={val => setForm(f => ({ ...f, timezone: val }))}
+              options={SELECTABLE_TIMEZONES.map(tz => ({ value: tz.value, label: tz.label }))}
+            />
           </div>
           <button onClick={handleCreate} disabled={createProfile.isPending} style={{ ...primaryBtn, height: 34, opacity: createProfile.isPending ? 0.6 : 1 }}>
             {createProfile.isPending ? 'Creating…' : 'Create user'}

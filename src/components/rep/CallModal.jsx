@@ -12,6 +12,7 @@ import { inferTimezoneFromState, zonedTimeToUtcIso, timezoneLabel, utcIsoToZoned
 import { useActiveCall } from '../../contexts/ActiveCallContext'
 import { CallPrepModal, Field } from '../shared/CallPrepModal'
 import { ErrorToast } from '../shared/ErrorToast'
+import { AnchoredSelectField } from '../ui/ExportForm'
 
 // The only statuses a rep can set from the call modal — color coordinated.
 // `note` tells the rep exactly where the lead routes (pipeline behavior).
@@ -502,17 +503,18 @@ export function CallModal({ lead, onClose }) {
             Discovery — for the custom stack
           </p>
           <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>What's costing them most?</label>
-          <select
+          <AnchoredSelectField
             value={primaryPain}
-            onChange={e => setPrimaryPain(e.target.value)}
-            style={{ width: '100%', height: 34, padding: '0 10px', marginBottom: 8, background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 7, fontSize: 13, color: 'var(--text-primary)', boxSizing: 'border-box' }}
-          >
-            <option value="">Select…</option>
-            <option value="missed_calls">Missed calls</option>
-            <option value="slow_response">Slow response</option>
-            <option value="no_shows">No-shows</option>
-            <option value="never_booked">Leads who called but never booked</option>
-          </select>
+            onChange={setPrimaryPain}
+            placeholder="Select…"
+            style={{ marginBottom: 8 }}
+            options={[
+              { value: 'missed_calls', label: 'Missed calls' },
+              { value: 'slow_response', label: 'Slow response' },
+              { value: 'no_shows', label: 'No-shows' },
+              { value: 'never_booked', label: 'Leads who called but never booked' },
+            ]}
+          />
           <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>What do they have today to handle that?</label>
           <input
             type="text" value={currentSetup}
