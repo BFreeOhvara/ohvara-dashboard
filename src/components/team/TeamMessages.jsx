@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { Send, MessageSquare, ChevronLeft, Users } from 'lucide-react'
+import { Send, MessageSquare, ChevronLeft, Users, MoreHorizontal, Copy, Trash2 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import {
   useTeamChannel, useTeamMembers, useDmConversationId, useTeamMessages, useSendTeamMessage,
+  useDeleteTeamMessage,
 } from '../../hooks/useTeamChat'
 
 // Team chat (Prompt 357) — the Messages sub-tab of the Team page. One shared
@@ -70,10 +71,73 @@ function ConversationRow({ name, subtitle, active, icon, onClick }) {
   )
 }
 
-function Bubble({ side, name, text, timestamp }) {
+// Prompt 391 — per-message "⋯" menu, hover-revealed (Tailwind group/group-
+// hover; forced visible via `open` so it doesn't vanish mid-interaction if
+// the mouse drifts off the row). Copy is always offered; Delete only when
+// `canDelete` (sender's own message, or admin — mirrors migration 092's RLS,
+// which is the real gate either way).
+const menuItemStyle = {
+  display: 'flex', alignItems: 'center', gap: 7, width: '100%', padding: '8px 12px',
+  border: 'none', background: 'transparent', textAlign: 'left', fontSize: 12, fontWeight: 600,
+  color: 'var(--text-secondary)', whiteSpace: 'nowrap',
+}
+
+function MessageMenu({ text, canDelete, onDelete, align }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    function onDown(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+
+  return (
+    <div ref={ref} style={{ position: 'relative', alignSelf: 'flex-end', marginBottom: 4 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={open ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
+        title="Message actions"
+        style={{
+          width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          border: 'none', background: 'transparent', color: 'var(--text-muted)', borderRadius: 5,
+          cursor: 'pointer', transition: 'opacity 120ms',
+        }}
+      >
+        <MoreHorizontal size={14} />
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: '100%', [align]: 0, marginTop: 4, zIndex: 20,
+          minWidth: 116, background: '#13131F', border: '0.5px solid var(--border)',
+          borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.35)', overflow: 'hidden',
+        }}>
+          <button
+            onClick={() => { navigator.clipboard?.writeText(text); setOpen(false) }}
+            style={menuItemStyle}
+          >
+            <Copy size={12} /> Copy
+          </button>
+          {canDelete && (
+            <button
+              onClick={() => { onDelete(); setOpen(false) }}
+              style={{ ...menuItemStyle, color: 'var(--danger)' }}
+            >
+              <Trash2 size={12} /> Delete
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Bubble({ side, name, text, timestamp, canDelete, onDelete }) {
   const isRight = side === 'right'
   return (
-    <div style={{ display: 'flex', gap: 8, flexDirection: isRight ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
+    <div className="group" style={{ display: 'flex', gap: 6, flexDirection: isRight ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
       <Avatar name={name} size={26} />
       <div style={{ maxWidth: '70%' }}>
         <div style={{
@@ -90,6 +154,7 @@ function Bubble({ side, name, text, timestamp }) {
           {timeAgo(timestamp)}
         </p>
       </div>
+      <MessageMenu text={text} canDelete={canDelete} onDelete={onDelete} align={isRight ? 'left' : 'right'} />
     </div>
   )
 }
@@ -97,9 +162,10 @@ function Bubble({ side, name, text, timestamp }) {
 // Thread pane — shared by the channel and every DM once a conversation id is
 // known. `conversationId` is undefined for a DM until useDmConversationId's
 // get-or-create query resolves.
-function Thread({ conversationId, name, subtitle, onBack, myId, myName }) {
+function Thread({ conversationId, name, subtitle, onBack, myId, myName, isAdmin }) {
   const { data: messages = [], isLoading } = useTeamMessages(conversationId)
   const send = useSendTeamMessage()
+  const del = useDeleteTeamMessage()
   const [draft, setDraft] = useState('')
   const bottomRef = useRef(null)
 
@@ -137,7 +203,15 @@ function Thread({ conversationId, name, subtitle, onBack, myId, myName }) {
           </p>
         ) : (
           messages.map(m => (
-            <Bubble key={m.id} side={m.sender_id === myId ? 'right' : 'left'} name={m.sender_name} text={m.body} timestamp={m.created_at} />
+            <Bubble
+              key={m.id}
+              side={m.sender_id === myId ? 'right' : 'left'}
+              name={m.sender_name}
+              text={m.body}
+              timestamp={m.created_at}
+              canDelete={m.sender_id === myId || isAdmin}
+              onDelete={() => del.mutate({ id: m.id, conversation_id: conversationId })}
+            />
           ))
         )}
         <div ref={bottomRef} />
@@ -177,7 +251,7 @@ function Thread({ conversationId, name, subtitle, onBack, myId, myName }) {
 // Resolves the DM conversation id for whichever member is selected — a
 // separate component so the get-or-create hook only runs for the active
 // selection, not once per row in the member list.
-function DmThread({ myId, myName, member, onBack }) {
+function DmThread({ myId, myName, member, onBack, isAdmin }) {
   const { data: conversationId } = useDmConversationId(myId, member.id)
   return (
     <Thread
@@ -187,6 +261,7 @@ function DmThread({ myId, myName, member, onBack }) {
       onBack={onBack}
       myId={myId}
       myName={myName}
+      isAdmin={isAdmin}
     />
   )
 }
@@ -195,6 +270,7 @@ export function TeamMessages() {
   const { profile } = useAuth()
   const myId = profile?.id
   const myName = profile?.full_name || 'You'
+  const isAdmin = profile?.role === 'admin'
 
   const { data: channel } = useTeamChannel()
   const { data: members = [] } = useTeamMembers(myId)
@@ -202,8 +278,12 @@ export function TeamMessages() {
   // null = nothing selected; 'channel'; or a member object for a DM.
   const [selected, setSelected] = useState(null)
 
+  // Prompt 391: flush edge-to-edge (borderRadius:0, no outer border), same
+  // convention as the dedicated full-bleed /messages route in
+  // components/messages/MessageCenter.jsx — this panel now spans the full
+  // width of Team.jsx's wrapper instead of sitting inset with a visible frame.
   return (
-    <div className="glass" style={{ display: 'flex', flex: 1, minHeight: 0, borderRadius: 8, overflow: 'hidden', border: 'var(--border-w) solid var(--border)' }}>
+    <div className="glass" style={{ display: 'flex', flex: 1, minHeight: 0, borderRadius: 0, overflow: 'hidden' }}>
       {/* Left — Team chat + one row per other team member */}
       <div
         className={`${selected ? 'hidden' : 'flex'} md:flex w-full md:w-[280px]`}
@@ -249,9 +329,10 @@ export function TeamMessages() {
             onBack={() => setSelected(null)}
             myId={myId}
             myName={myName}
+            isAdmin={isAdmin}
           />
         ) : (
-          <DmThread myId={myId} myName={myName} member={selected} onBack={() => setSelected(null)} />
+          <DmThread myId={myId} myName={myName} member={selected} onBack={() => setSelected(null)} isAdmin={isAdmin} />
         )}
       </div>
     </div>

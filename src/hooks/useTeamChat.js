@@ -110,13 +110,15 @@ export function useTeamMessages(conversationId) {
 
   // Realtime — new messages land instantly instead of waiting on a refetch
   // (migration 084 adds team_messages to the realtime publication, matching
-  // migration 052's pattern for `calls`).
+  // migration 052's pattern for `calls`). DELETE included since Prompt 391 —
+  // migration 092 sets REPLICA IDENTITY FULL so the old-record payload still
+  // carries conversation_id for this filter even though it's not the PK.
   useEffect(() => {
     if (!conversationId) return
     const channel = supabase
       .channel(`team-messages-${conversationId}`)
       .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'team_messages',
+        event: '*', schema: 'public', table: 'team_messages',
         filter: `conversation_id=eq.${conversationId}`,
       }, () => {
         qc.invalidateQueries({ queryKey: ['team-messages', conversationId] })
@@ -136,6 +138,23 @@ export function useSendTeamMessage() {
         conversation_id, sender_id, sender_name, body,
       })
       if (error) throw error
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['team-messages', vars.conversation_id] })
+    },
+  })
+}
+
+// Prompt 391 — migration 092's RLS (sender or admin) is the real gate; the
+// frontend's canDelete check just keeps the button from appearing for a
+// message nobody's allowed to remove.
+export function useDeleteTeamMessage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, conversation_id }) => {
+      const { error } = await supabase.from('team_messages').delete().eq('id', id)
+      if (error) throw error
+      return { conversation_id }
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['team-messages', vars.conversation_id] })

@@ -31,7 +31,18 @@ export default function Team() {
         // /*/messages routes), so TeamMessages' internal flex:1 panels need
         // a real bounding height to scroll within instead of growing the
         // whole page.
-        <div style={{ height: 'calc(100vh - 260px)', minHeight: 480, display: 'flex', flexDirection: 'column' }}>
+        //
+        // Prompt 391: negative side/bottom margins cancel DashboardLayout's
+        // main 40px horizontal + 72px bottom padding (both hardcoded inline
+        // styles there, not responsive, so this cancels cleanly at every
+        // breakpoint) so the box spans edge-to-edge and reaches the true
+        // page bottom instead of stopping short of it — height bumped by
+        // the same 72px reclaimed from the bottom padding. The Segmented
+        // tab row above stays exactly where it was; only this box moves.
+        <div style={{
+          height: 'calc(100vh - 188px)', minHeight: 480, display: 'flex', flexDirection: 'column',
+          marginLeft: -40, marginRight: -40, marginBottom: -72,
+        }}>
           <TeamMessages />
         </div>
       )}
