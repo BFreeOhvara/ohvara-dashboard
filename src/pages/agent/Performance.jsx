@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   Wallet, TrendingUp, CheckCircle2, Users, DollarSign,
-  Phone, Target, Activity, LogOut, Clock, CreditCard,
+  Phone, Target, XCircle, LogOut, Clock, CreditCard,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePolicies, productionSnapshot, productionFlow, persistencyWindows } from '../../hooks/usePolicies'
@@ -20,9 +20,11 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // Two real data gaps, rendered as "—" rather than invented (same convention
 // AgentOverview's Calls Taken tiles already use): call data doesn't exist
 // in-app (calls happen on the closer's own phone), so Calls Taken and Close
-// Rate (which divides by it) have no source. Approval Rate IS real — it's
-// submitted-vs-in-force from `policies`, the same ratio bookMetrics() calls
-// placedRate.
+// Rate (which divides by it) have no source. Early Cancellation Rate (Prompt
+// 389, replacing the old Approval Rate) IS real — cancellation_status and
+// cancellation_call_at are reliably tracked via the whole Cancellation
+// Calendar workflow, unlike the near-empty Not Approved bucket Approval Rate
+// depended on.
 //
 // Leaderboard visibility follows the existing policies_select RLS
 // (can_view_agent → self + downline, or everything for admin) rather than a
@@ -186,9 +188,9 @@ function ProductionTab() {
           sub="Needs call tracking"
         />
         <Tile
-          icon={Activity} label="Approval Rate"
-          value={v(flow.approvalRate === null ? '—' : `${Math.round(flow.approvalRate)}%`)}
-          sub="apps approved ÷ apps submitted"
+          icon={XCircle} label="Early Cancellation Rate" valueColor="var(--danger)"
+          value={v(snapshot.earlyCancellationRate === null ? '—' : `${Math.round(snapshot.earlyCancellationRate)}%`)}
+          sub={`cancelled within ~30 days of effective, as of ${asOfLabel}`}
         />
         <Tile
           icon={LogOut} label="Fall-off Rate" valueColor="var(--danger)"

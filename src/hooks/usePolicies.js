@@ -209,7 +209,10 @@ export function bookMetrics(policies, { month } = {}) {
 // activity count inside a window. Flow metrics aggregate real activity that
 // happened between periodStart and periodEnd. Split confirmed with Brayden
 // 2026-07-26: Active AP, Policies Active and Fall-off Rate are snapshot;
-// Submitted AP, Issued AP, Average Premium and Approval Rate are flow.
+// Submitted AP, Issued AP and Average Premium are flow. Early Cancellation
+// Rate (Prompt 389, replacing the old flow-based Approval Rate) is snapshot
+// too — its own formula has no window/submitted-in-period term at all, it's
+// a ratio over the whole book as of a date, same shape as Fall-off Rate.
 //
 // There's no status-history table — the schema only has each policy's
 // CURRENT status/cancellation_status, not when it changed. "As of a past
@@ -245,6 +248,22 @@ export function productionSnapshot(policies, asOf) {
   const draftEligible = rows.filter(p => p.status === 'In Effect' || p.status === 'Lapsed' || p.status === 'Undrafted')
   const draftedOk = draftEligible.filter(p => p.status === 'In Effect' || p.status === 'Lapsed')
 
+  // Prompt 389: replaces Approval Rate in the bottom stat row. ~90% of
+  // policies get an instant approve/decline at point of sale — Not Approved
+  // is too small a sample to be a meaningful metric on a real book.
+  // Cancellations are reliably tracked (the whole Cancellation Calendar
+  // workflow exists for this), so this reads "of policies either in force or
+  // that ever entered the cancellation flow, how many cancelled within
+  // roughly a free-look window of going into effect" — a quality-of-sale
+  // signal instead. Flat 30-day cutoff is a stated approximation: real
+  // free-look periods run 10-30 days and vary by state, and there's no
+  // per-state table in this schema to look that up precisely.
+  const cancellationEligible = rows.filter(p => p.status === 'In Effect' || p.cancellation_status)
+  const earlyCancelled = rows.filter(p => {
+    if (!p.cancellation_status || !p.cancellation_call_at || !p.effective_date) return false
+    return daysBetween(p.effective_date, p.cancellation_call_at.slice(0, 10)) <= 30
+  })
+
   return {
     activeAP: ap(active),
     policiesActive: active.length,
@@ -253,6 +272,7 @@ export function productionSnapshot(policies, asOf) {
     fallOffRate: rows.length ? (cancelled.length / rows.length) * 100 : null,
     avgDaysToIssue,
     firstPremiumAppliedRate: draftEligible.length ? (draftedOk.length / draftEligible.length) * 100 : null,
+    earlyCancellationRate: cancellationEligible.length ? (earlyCancelled.length / cancellationEligible.length) * 100 : null,
   }
 }
 
@@ -275,12 +295,6 @@ export function productionFlow(policies, periodStart, periodEnd) {
     avgMonthlyPremium: submitted.length
       ? submitted.reduce((s, p) => s + Number(p.monthly_premium || 0), 0) / submitted.length
       : 0,
-    // Same ratio as bookMetrics()'s placedRate (apps that made it into force
-    // over apps submitted), scoped to this window instead of a calendar month
-    // so the two can't drift on what "approved" means.
-    approvalRate: submitted.length
-      ? (submitted.filter(p => p.status === 'In Effect').length / submitted.length) * 100
-      : null,
   }
 }
 
