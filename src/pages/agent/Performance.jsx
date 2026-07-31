@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   Wallet, TrendingUp, CheckCircle2, Users, DollarSign,
-  Phone, Target, XCircle, LogOut, Clock, CreditCard,
+  Phone, Target, LogOut, Clock, CreditCard,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePolicies, useTeamPerformancePolicies, productionSnapshot, productionFlow, persistencyWindows } from '../../hooks/usePolicies'
@@ -20,11 +20,15 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // Two real data gaps, rendered as "—" rather than invented (same convention
 // AgentOverview's Calls Taken tiles already use): call data doesn't exist
 // in-app (calls happen on the closer's own phone), so Calls Taken and Close
-// Rate (which divides by it) have no source. Early Cancellation Rate (Prompt
-// 389, replacing the old Approval Rate) IS real — cancellation_status and
-// cancellation_call_at are reliably tracked via the whole Cancellation
-// Calendar workflow, unlike the near-empty Not Approved bucket Approval Rate
-// depended on.
+// Rate (which divides by it) have no source.
+//
+// Prompt 397: Early Cancellation Rate (Prompt 389, replacing the old
+// Approval Rate) was cut with no replacement — none of the swap-in ideas
+// landed, so the bottom row is 5 cards, not 6. productionSnapshot() in
+// usePolicies.js still computes earlyCancellationRate; it's just unused
+// here now. Left in place rather than deleted since the Cancellation
+// Calendar workflow it's derived from is untouched and a future prompt
+// may want it again.
 //
 // Team scope + Leaderboard both read from useTeamPerformancePolicies()
 // (Prompt 396, migration 093) instead of usePolicies(null): the latter is
@@ -179,7 +183,7 @@ function ProductionTab() {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 16, marginBottom: 24 }}>
         <Tile
           icon={Phone} label="Calls Taken"
           value="—"
@@ -189,11 +193,6 @@ function ProductionTab() {
           icon={Target} label="Close Rate"
           value="—"
           sub="Needs call tracking"
-        />
-        <Tile
-          icon={XCircle} label="Early Cancellation Rate" valueColor="var(--danger)"
-          value={v(snapshot.earlyCancellationRate === null ? '—' : `${Math.round(snapshot.earlyCancellationRate)}%`)}
-          sub={`cancelled within ~30 days of effective, as of ${asOfLabel}`}
         />
         <Tile
           icon={LogOut} label="Fall-off Rate" valueColor="var(--danger)"
