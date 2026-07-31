@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { isTestAccount } from '../lib/testAccounts'
 
 // Team chat (Prompt 357) — one shared "Team chat" channel every closer/admin
 // is implicitly in, plus arbitrary 1:1 DMs between any two team members.
@@ -24,7 +25,12 @@ export function useTeamChannel() {
   })
 }
 
-// Team members other than the caller — the DM target list.
+// Team members other than the caller — the DM target list. Prompt 398: test
+// accounts (nate44) are dropped from this shared list entirely, same as
+// useHierarchy's useAgents() (Prompt 371), so nate44 never appears as a DM
+// option in anyone else's Conversations list. Excluding `excludeId` (the
+// caller) already drops nate44 from its own list when it IS the caller, so
+// nate44 can still message the real team for its own testing.
 export function useTeamMembers(excludeId) {
   return useQuery({
     queryKey: ['team-members', excludeId],
@@ -35,7 +41,7 @@ export function useTeamMembers(excludeId) {
         .in('role', ['closer', 'admin'])
         .order('full_name')
       if (error) throw error
-      return (data || []).filter(p => p.id !== excludeId)
+      return (data || []).filter(p => p.id !== excludeId && !isTestAccount(p.id))
     },
     enabled: !!excludeId,
   })

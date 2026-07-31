@@ -12,6 +12,7 @@ import { PolicyModal } from '../../components/agent/PolicyModal'
 import { Segmented } from '../../components/ui/Segmented'
 import { AnchoredSelectField } from '../../components/ui/ExportForm'
 import { money, fullName, formatDate } from '../../lib/policyFormat'
+import { excludeTestAccounts } from '../../lib/testAccounts'
 
 // My Policies — literal port of the export's "Closer · My Pipeline" screen
 // (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines 647-751):
@@ -67,8 +68,17 @@ export default function MyPolicies() {
   // gets the You/Team toggle below so "everyone" stays one click away, it
   // just isn't the default anymore.
   const [scope, setScope] = useState('own')
-  const { data: policies = [], isLoading } = usePolicies(
+  const { data: rawPolicies = [], isLoading } = usePolicies(
     scope === 'own' ? profile?.id : null
+  )
+  // Prompt 398: "Everyone" is a real company-wide rollup once real agents
+  // are live, so nate44's fabricated policies can't bleed into it — same
+  // rule already applied to Performance's Team scope and Leaderboard
+  // (Prompt 371). "own" scope is unaffected either way, already narrowed to
+  // this account's own agent_id.
+  const policies = useMemo(
+    () => (scope === 'own' ? rawPolicies : excludeTestAccounts(rawPolicies, profile?.id)),
+    [rawPolicies, scope, profile?.id]
   )
   const update = useUpdatePolicy()
   const advanceLapseCheck = useAdvanceLapseCheck()
