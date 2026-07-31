@@ -15,7 +15,10 @@ import {
 // just the DB row per Brayden's ask); admins get the company-wide inbox
 // instead, with an unresolved-count badge on the button itself so he
 // notices without opening it.
-const BTN_SIZE = 88
+// Prompt 394: 390 doubled this from 44 to 88, too big — Brayden wants
+// halfway between the original and the doubled size, so 66 (~1.5x original),
+// not a straight revert to 44.
+const BTN_SIZE = 66
 
 const buttonBase = {
   position: 'fixed', bottom: 24, right: 24, zIndex: 9998,
@@ -59,7 +62,7 @@ function ReportForm({ profile }) {
   return (
     <>
       <button onClick={() => setOpen(true)} style={buttonBase} title="Report a bug">
-        <Bug size={36} />
+        <Bug size={27} />
       </button>
 
       {sent && (
@@ -160,7 +163,7 @@ function AdminInbox() {
   return (
     <>
       <button ref={btnRef} onClick={() => setOpen(v => !v)} style={{ ...buttonBase, position: 'fixed' }} title="Bug reports">
-        <Bug size={36} />
+        <Bug size={27} />
         {unresolvedCount > 0 && (
           <span style={{
             position: 'absolute', top: -4, right: -4,
