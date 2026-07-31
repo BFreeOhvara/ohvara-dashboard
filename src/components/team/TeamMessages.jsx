@@ -74,8 +74,8 @@ function ConversationRow({ name, subtitle, active, icon, onClick }) {
 // Prompt 391 — per-message "⋯" menu, hover-revealed (Tailwind group/group-
 // hover; forced visible via `open` so it doesn't vanish mid-interaction if
 // the mouse drifts off the row). Copy is always offered; Delete only when
-// `canDelete` (sender's own message, or admin — mirrors migration 092's RLS,
-// which is the real gate either way).
+// `canDelete` (sender's own message only, per Prompt 400 — mirrors migration
+// 094's RLS, which is the real gate either way).
 const menuItemStyle = {
   display: 'flex', alignItems: 'center', gap: 7, width: '100%', padding: '8px 12px',
   border: 'none', background: 'transparent', textAlign: 'left', fontSize: 12, fontWeight: 600,
@@ -162,7 +162,7 @@ function Bubble({ side, name, text, timestamp, canDelete, onDelete }) {
 // Thread pane — shared by the channel and every DM once a conversation id is
 // known. `conversationId` is undefined for a DM until useDmConversationId's
 // get-or-create query resolves.
-function Thread({ conversationId, name, subtitle, onBack, myId, myName, isAdmin }) {
+function Thread({ conversationId, name, subtitle, onBack, myId, myName }) {
   const { data: messages = [], isLoading } = useTeamMessages(conversationId)
   const send = useSendTeamMessage()
   const del = useDeleteTeamMessage()
@@ -209,7 +209,7 @@ function Thread({ conversationId, name, subtitle, onBack, myId, myName, isAdmin 
               name={m.sender_name}
               text={m.body}
               timestamp={m.created_at}
-              canDelete={m.sender_id === myId || isAdmin}
+              canDelete={m.sender_id === myId}
               onDelete={() => del.mutate({ id: m.id, conversation_id: conversationId })}
             />
           ))
@@ -251,7 +251,7 @@ function Thread({ conversationId, name, subtitle, onBack, myId, myName, isAdmin 
 // Resolves the DM conversation id for whichever member is selected — a
 // separate component so the get-or-create hook only runs for the active
 // selection, not once per row in the member list.
-function DmThread({ myId, myName, member, onBack, isAdmin }) {
+function DmThread({ myId, myName, member, onBack }) {
   const { data: conversationId } = useDmConversationId(myId, member.id)
   return (
     <Thread
@@ -261,7 +261,6 @@ function DmThread({ myId, myName, member, onBack, isAdmin }) {
       onBack={onBack}
       myId={myId}
       myName={myName}
-      isAdmin={isAdmin}
     />
   )
 }
@@ -270,7 +269,6 @@ export function TeamMessages() {
   const { profile } = useAuth()
   const myId = profile?.id
   const myName = profile?.full_name || 'You'
-  const isAdmin = profile?.role === 'admin'
 
   const { data: channel } = useTeamChannel()
   const { data: members = [] } = useTeamMembers(myId)
@@ -329,10 +327,9 @@ export function TeamMessages() {
             onBack={() => setSelected(null)}
             myId={myId}
             myName={myName}
-            isAdmin={isAdmin}
           />
         ) : (
-          <DmThread myId={myId} myName={myName} member={selected} onBack={() => setSelected(null)} isAdmin={isAdmin} />
+          <DmThread myId={myId} myName={myName} member={selected} onBack={() => setSelected(null)} />
         )}
       </div>
     </div>

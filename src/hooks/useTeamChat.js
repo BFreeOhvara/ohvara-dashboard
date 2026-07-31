@@ -145,9 +145,9 @@ export function useSendTeamMessage() {
   })
 }
 
-// Prompt 391 — migration 092's RLS (sender or admin) is the real gate; the
-// frontend's canDelete check just keeps the button from appearing for a
-// message nobody's allowed to remove.
+// Prompt 400 — migration 094's RLS (sender only, no admin override) is the
+// real gate; the frontend's canDelete check just keeps the button from
+// appearing for a message nobody's allowed to remove.
 export function useDeleteTeamMessage() {
   const qc = useQueryClient()
   return useMutation({
