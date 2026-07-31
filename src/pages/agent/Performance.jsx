@@ -4,7 +4,7 @@ import {
   Phone, Target, XCircle, LogOut, Clock, CreditCard,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { usePolicies, productionSnapshot, productionFlow, persistencyWindows } from '../../hooks/usePolicies'
+import { usePolicies, useTeamPerformancePolicies, productionSnapshot, productionFlow, persistencyWindows } from '../../hooks/usePolicies'
 import { money, moneyShort, formatDate, todayISO } from '../../lib/policyFormat'
 import { usePeriodPicker, PeriodPicker } from '../../components/agent/ProductionPeriodPicker'
 import { GapNote } from '../../components/ui/ExportForm'
@@ -26,13 +26,14 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // Calendar workflow, unlike the near-empty Not Approved bucket Approval Rate
 // depended on.
 //
-// Leaderboard visibility follows the existing policies_select RLS
-// (can_view_agent → self + downline, or everything for admin) rather than a
-// new company-wide query — a closer's board is scoped to their own team, not
-// every branch, because that's the real security boundary today (see
-// hooks/useHierarchy.js's own "KNOWN GAP" note). Opening it company-wide for
-// every closer would need that RLS policy revisited — flagged, not built
-// around.
+// Team scope + Leaderboard both read from useTeamPerformancePolicies()
+// (Prompt 396, migration 093) instead of usePolicies(null): the latter is
+// scoped by policies_select -> can_view_agent (self + downline, or
+// everything for admin), so a real closer with no downline was silently
+// seeing only their own single row on both features. The RPC is a SECURITY
+// DEFINER function returning company-wide, non-PII aggregation fields only
+// (no client name/phone/policy number), so every role sees the same
+// standings admin already did, without loosening policies_select itself.
 //
 // Not built: the mockup's per-closer "2× Top spot / NEW" badge chips. There's
 // no ranking-history table to compute them from — adding fabricated badges
@@ -95,22 +96,24 @@ function ProductionTab() {
   const today = todayISO()
   const todayMonthKey = today.slice(0, 7)
 
-  // usePolicies(null) already returns everything RLS lets this account see —
-  // self + downline for a closer, everything for admin (policies_select →
-  // can_view_agent → downline_of()). That's exactly what "Team" should mean
-  // (Prompt 348 point 5), so no separate hierarchy query is needed here:
-  // "You" narrows to this account's own rows, "Team" is the unfiltered set.
-  const { data: allVisible = [], isLoading } = usePolicies(null)
+  // "You" reads usePolicies(null) filtered to this account's own agent_id —
+  // RLS already guarantees an agent can see their own rows, so this stays
+  // correct regardless of downline. "Team" reads useTeamPerformancePolicies()
+  // (Prompt 396) instead: a security-definer RPC returning the same
+  // company-wide aggregate admin always saw, for every role.
+  const { data: ownPolicies = [], isLoading: isLoadingOwn } = usePolicies(null)
+  const { data: teamPolicies = [], isLoading: isLoadingTeam } = useTeamPerformancePolicies()
   const [scope, setScope] = useState('you')
+  const isLoading = scope === 'you' ? isLoadingOwn : isLoadingTeam
   // Prompt 371: "Team" is a real company-wide rollup once admin's actual
   // team is live, so test-account (nate44) policies are excluded from it —
   // same rule as Leaderboard below. "You" is unaffected either way, since
   // it's already scoped to this account's own agent_id.
   const scopedPolicies = useMemo(
     () => (scope === 'you'
-      ? allVisible.filter(p => p.agent_id === profile?.id)
-      : excludeTestAccounts(allVisible, profile?.id)),
-    [allVisible, scope, profile?.id]
+      ? ownPolicies.filter(p => p.agent_id === profile?.id)
+      : excludeTestAccounts(teamPolicies, profile?.id)),
+    [ownPolicies, teamPolicies, scope, profile?.id]
   )
 
   const picker = usePeriodPicker(today)
@@ -236,7 +239,7 @@ function ProductionTab() {
 // ── Leaderboard tab ─────────────────────────────────────────────────────────
 function LeaderboardTab() {
   const { profile } = useAuth()
-  const { data: allVisible = [], isLoading } = usePolicies(null)
+  const { data: allVisible = [], isLoading } = useTeamPerformancePolicies()
   const [boardMode, setBoardMode] = useState('monthly')
 
   const today = todayISO()
@@ -252,7 +255,7 @@ function LeaderboardTab() {
       const d = (p.policy_sold_date || p.created_at?.slice(0, 10) || '')
       if (d < lo || d > hi) continue
       const id = p.agent_id
-      const name = p.agent?.full_name || 'Unknown'
+      const name = p.agent_name || 'Unknown'
       if (!byAgent.has(id)) byAgent.set(id, { id, name, ap: 0, families: 0 })
       const row = byAgent.get(id)
       row.ap += Number(p.annual_premium || 0)

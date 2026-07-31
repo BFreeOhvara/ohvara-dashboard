@@ -69,6 +69,25 @@ export function usePolicies(agentId = null) {
   })
 }
 
+// Company-wide, non-PII policy rows for Performance's Team scope + Leaderboard
+// (Prompt 396, migration 093). RLS's policies_select correctly limits
+// usePolicies(null) to self + downline for a closer (everything for admin
+// only) — Team/Leaderboard need the same company-wide view for every role,
+// so they read from this SECURITY DEFINER RPC instead. It returns only the
+// fields those two features aggregate (no client name/phone/policy number/
+// carrier/product), so opening it to every authenticated user can't leak
+// individual client PII the way loosening policies_select would.
+export function useTeamPerformancePolicies() {
+  return useQuery({
+    queryKey: ['policies', 'team-performance'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('team_performance_policies')
+      if (error) throw error
+      return data || []
+    },
+  })
+}
+
 export function useCreatePolicy() {
   const qc = useQueryClient()
   return useMutation({
