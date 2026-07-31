@@ -15,7 +15,7 @@ import {
 // just the DB row per Brayden's ask); admins get the company-wide inbox
 // instead, with an unresolved-count badge on the button itself so he
 // notices without opening it.
-const BTN_SIZE = 44
+const BTN_SIZE = 88
 
 const buttonBase = {
   position: 'fixed', bottom: 24, right: 24, zIndex: 9998,
@@ -59,7 +59,7 @@ function ReportForm({ profile }) {
   return (
     <>
       <button onClick={() => setOpen(true)} style={buttonBase} title="Report a bug">
-        <Bug size={18} />
+        <Bug size={36} />
       </button>
 
       {sent && (
@@ -160,7 +160,7 @@ function AdminInbox() {
   return (
     <>
       <button ref={btnRef} onClick={() => setOpen(v => !v)} style={{ ...buttonBase, position: 'fixed' }} title="Bug reports">
-        <Bug size={18} />
+        <Bug size={36} />
         {unresolvedCount > 0 && (
           <span style={{
             position: 'absolute', top: -4, right: -4,
