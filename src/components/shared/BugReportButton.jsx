@@ -18,7 +18,9 @@ import {
 // Prompt 394: 390 doubled this from 44 to 88, too big — Brayden wants
 // halfway between the original and the doubled size, so 66 (~1.5x original),
 // not a straight revert to 44.
-const BTN_SIZE = 66
+// Prompt 395: 66 still a little too big — step down further, but not all
+// the way back to 44.
+const BTN_SIZE = 56
 
 const buttonBase = {
   position: 'fixed', bottom: 24, right: 24, zIndex: 9998,
@@ -62,7 +64,7 @@ function ReportForm({ profile }) {
   return (
     <>
       <button onClick={() => setOpen(true)} style={buttonBase} title="Report a bug">
-        <Bug size={27} />
+        <Bug size={23} />
       </button>
 
       {sent && (
@@ -163,7 +165,7 @@ function AdminInbox() {
   return (
     <>
       <button ref={btnRef} onClick={() => setOpen(v => !v)} style={{ ...buttonBase, position: 'fixed' }} title="Bug reports">
-        <Bug size={27} />
+        <Bug size={23} />
         {unresolvedCount > 0 && (
           <span style={{
             position: 'absolute', top: -4, right: -4,
