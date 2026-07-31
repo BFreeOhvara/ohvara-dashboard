@@ -417,13 +417,16 @@ export default function MyPolicies() {
                               portalUrl={carrierPortalUrl(p)}
                               pending={update.isPending}
                               onAnswer={status => answerEffectuation(p, status)}
+                              canAnswer={p.agent_id === profile?.id}
                             />
                           )}
                           {needsUw && (
                             <UnderwritingRow
                               policy={p}
+                              portalUrl={carrierPortalUrl(p)}
                               pending={update.isPending}
                               onAnswer={approved => answerUnderwriting(p, approved)}
+                              canAnswer={p.agent_id === profile?.id}
                             />
                           )}
                           {needsLapse && (
@@ -476,7 +479,7 @@ export default function MyPolicies() {
 // Amicable" — measured live, not guessed, so no real carrier ever wraps.
 const EFFECTUATION_GRID = '1fr max-content 260px'
 
-function EffectuationRow({ policy, portalUrl, pending, onAnswer }) {
+function EffectuationRow({ policy, portalUrl, pending, onAnswer, canAnswer }) {
   return (
     <div style={{
       display: 'grid', gridTemplateColumns: EFFECTUATION_GRID, alignItems: 'center', gap: 16,
@@ -489,18 +492,18 @@ function EffectuationRow({ policy, portalUrl, pending, onAnswer }) {
           Reached its effective date ({formatDate(policy.effective_date)}) — did this policy go into effect?
         </span>
       </div>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 8 }} title={canAnswer ? undefined : 'Only the submitting agent can answer this'}>
         <button
           onClick={() => onAnswer('In Effect')}
-          disabled={pending}
-          style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' }}
+          disabled={pending || !canAnswer}
+          style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', opacity: canAnswer ? 1 : 0.45, cursor: canAnswer ? 'pointer' : 'not-allowed' }}
         >
           Yes
         </button>
         <button
           onClick={() => onAnswer('Undrafted')}
-          disabled={pending}
-          style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' }}
+          disabled={pending || !canAnswer}
+          style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', opacity: canAnswer ? 1 : 0.45, cursor: canAnswer ? 'pointer' : 'not-allowed' }}
         >
           No
         </button>
@@ -527,14 +530,15 @@ function EffectuationRow({ policy, portalUrl, pending, onAnswer }) {
 // Bell effectuation look. Brayden's explicit concern was agents misclicking
 // the wrong Yes/No box because two banners looked too similar, so this one
 // gets its own color (--pink, added alongside this prompt) and icon
-// (Hourglass, not Bell) and a 2-column grid (no carrier-portal column —
-// that's specific to confirming effectuation, not a carrier decision).
-const UNDERWRITING_GRID = '1fr max-content'
-
-function UnderwritingRow({ policy, pending, onAnswer }) {
+// (Hourglass, not Bell). Prompt 399: now shares EFFECTUATION_GRID (and its
+// carrier-portal column) with EffectuationRow so the Yes/No buttons land in
+// the exact same position on both banner types — was its own 2-column grid,
+// which put Yes/No further right than the effectuation banner since there
+// was no third column stealing that space.
+function UnderwritingRow({ policy, portalUrl, pending, onAnswer, canAnswer }) {
   return (
     <div style={{
-      display: 'grid', gridTemplateColumns: UNDERWRITING_GRID, alignItems: 'center', gap: 16,
+      display: 'grid', gridTemplateColumns: EFFECTUATION_GRID, alignItems: 'center', gap: 16,
       padding: '12px 16px', background: 'var(--pink-dim)',
       border: '1px solid var(--pink-bd)', borderRadius: 8,
     }}>
@@ -544,22 +548,36 @@ function UnderwritingRow({ policy, pending, onAnswer }) {
           Submitted for underwriting — has {policy.carrier_name || "the carrier"}'s decision come back? Was it approved?
         </span>
       </div>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 8 }} title={canAnswer ? undefined : 'Only the submitting agent can answer this'}>
         <button
           onClick={() => onAnswer(true)}
-          disabled={pending}
-          style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' }}
+          disabled={pending || !canAnswer}
+          style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', opacity: canAnswer ? 1 : 0.45, cursor: canAnswer ? 'pointer' : 'not-allowed' }}
         >
           Yes
         </button>
         <button
           onClick={() => onAnswer(false)}
-          disabled={pending}
-          style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' }}
+          disabled={pending || !canAnswer}
+          style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', opacity: canAnswer ? 1 : 0.45, cursor: canAnswer ? 'pointer' : 'not-allowed' }}
         >
           No
         </button>
       </div>
+      {portalUrl ? (
+        <a
+          href={portalUrl}
+          target="_blank"
+          rel="noreferrer"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 700, color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}
+        >
+          Not sure? Check {policy.carrier_name || 'carrier'} portal <ExternalLink size={11} />
+        </a>
+      ) : (
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+          No portal on file for {policy.carrier_name || 'this carrier'}
+        </span>
+      )}
     </div>
   )
 }
@@ -567,10 +585,12 @@ function UnderwritingRow({ policy, pending, onAnswer }) {
 // Lapse check-in banner (Prompt 369) — same yellow/Bell/Yes-No look as
 // EffectuationRow (schema item 3: "reuse the exact same visual banner
 // component"), just different copy and no carrier-portal column.
+const NO_PORTAL_GRID = '1fr max-content'
+
 function LapseCheckRow({ policy, pending, onAnswer }) {
   return (
     <div style={{
-      display: 'grid', gridTemplateColumns: UNDERWRITING_GRID, alignItems: 'center', gap: 16,
+      display: 'grid', gridTemplateColumns: NO_PORTAL_GRID, alignItems: 'center', gap: 16,
       padding: '12px 16px', background: 'var(--warning-dim)',
       border: '1px solid var(--warning-bd)', borderRadius: 8,
     }}>

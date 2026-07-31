@@ -4,6 +4,7 @@ import { X, Trash2, Bell, Hourglass } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { AnchoredSelectField } from '../ui/ExportForm'
+import { useAuth } from '../../hooks/useAuth'
 import {
   LIVE_POLICY_STATUSES, CANCELLATION_STATUSES,
   useUpdatePolicy, useDeletePolicy, pendingEffectuation,
@@ -17,14 +18,25 @@ import { money, fullName, formatDate } from '../../lib/policyFormat'
 // wider than tall (Round 37); rendered on --bg-elevated, the established
 // modal/popover surface — never the accent color (Round 36 item 2, DESIGN v13).
 export function PolicyModal({ policy, canEdit, onClose }) {
+  const { profile } = useAuth()
   const update = useUpdatePolicy()
   const del = useDeletePolicy()
   const advanceLapseCheck = useAdvanceLapseCheck()
   const [confirmDelete, setConfirmDelete] = useState(false)
 
+  // Prompt 399 — the submitting agent, and only them, can answer either
+  // banner below; `canEdit` (isAdmin-or-owner) is deliberately NOT the gate
+  // here since it would let admin answer on another agent's behalf while
+  // viewing "Everyone" on My Policies. `canEdit` still governs the unrelated
+  // status/cancellation fields and delete further down.
+  const isOwner = policy?.agent_id === profile?.id
+
   // Moved here from My Policies' list-view banner (Prompt 345) — same
-  // condition, same mutation, just relocated onto the record itself.
-  const needsEffectuation = canEdit && policy && pendingEffectuation([policy]).length > 0
+  // condition, same mutation, just relocated onto the record itself. Prompt
+  // 399: visibility no longer requires `canEdit` — anyone who can open this
+  // record (own row, downline, or admin) sees the banner for awareness, same
+  // as the list-row version; only answering it requires `isOwner`.
+  const needsEffectuation = policy && pendingEffectuation([policy]).length > 0
   function answerEffectuation(status) {
     update.mutate({ id: policy.id, status, effectuation_answered_at: new Date().toISOString() })
   }
@@ -32,7 +44,7 @@ export function PolicyModal({ policy, canEdit, onClose }) {
   // Prompt 369 — same two new banners as My Policies' list row, same
   // conditions, relocated onto the record itself (same pattern as
   // effectuation above).
-  const needsUnderwriting = canEdit && policy && pendingUnderwriting([policy]).length > 0
+  const needsUnderwriting = policy && pendingUnderwriting([policy]).length > 0
   function answerUnderwriting(approved) {
     update.mutate({ id: policy.id, pending_underwriting: false, status: approved ? policy.status : 'Not Approved' })
   }
@@ -123,15 +135,17 @@ export function PolicyModal({ policy, canEdit, onClose }) {
             </span>
             <button
               onClick={() => answerEffectuation('In Effect')}
-              disabled={update.isPending}
-              style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700 }}
+              disabled={update.isPending || !isOwner}
+              title={isOwner ? undefined : 'Only the submitting agent can answer this'}
+              style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700, opacity: isOwner ? 1 : 0.45, cursor: isOwner ? 'pointer' : 'not-allowed' }}
             >
               Yes
             </button>
             <button
               onClick={() => answerEffectuation('Undrafted')}
-              disabled={update.isPending}
-              style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700 }}
+              disabled={update.isPending || !isOwner}
+              title={isOwner ? undefined : 'Only the submitting agent can answer this'}
+              style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700, opacity: isOwner ? 1 : 0.45, cursor: isOwner ? 'pointer' : 'not-allowed' }}
             >
               No
             </button>
@@ -152,15 +166,17 @@ export function PolicyModal({ policy, canEdit, onClose }) {
             </span>
             <button
               onClick={() => answerUnderwriting(true)}
-              disabled={update.isPending}
-              style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700 }}
+              disabled={update.isPending || !isOwner}
+              title={isOwner ? undefined : 'Only the submitting agent can answer this'}
+              style={{ height: 28, padding: '0 14px', border: 'none', borderRadius: 6, background: 'var(--success)', color: '#fff', fontSize: 11.5, fontWeight: 700, opacity: isOwner ? 1 : 0.45, cursor: isOwner ? 'pointer' : 'not-allowed' }}
             >
               Yes
             </button>
             <button
               onClick={() => answerUnderwriting(false)}
-              disabled={update.isPending}
-              style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700 }}
+              disabled={update.isPending || !isOwner}
+              title={isOwner ? undefined : 'Only the submitting agent can answer this'}
+              style={{ height: 28, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700, opacity: isOwner ? 1 : 0.45, cursor: isOwner ? 'pointer' : 'not-allowed' }}
             >
               No
             </button>
