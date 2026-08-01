@@ -29,10 +29,14 @@ const addMonthsToKey = (mk, n) => {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`
 }
 
-export function usePeriodPicker(todayStr) {
+// `defaultMode` (Prompt 402) lets a second caller (Leaderboard) open on
+// Monthly instead of Production's own "All Time" default (Brayden's
+// explicit call, Prompt 348) — everything else about the stepper is shared,
+// not reimplemented.
+export function usePeriodPicker(todayStr, defaultMode = 'alltime') {
   const todayMonthKey = todayStr.slice(0, 7)
 
-  const [mode, setModeState] = useState('alltime') // Default: All Time (Brayden's explicit call, Prompt 348)
+  const [mode, setModeState] = useState(defaultMode)
   const [day, setDay] = useState(todayStr)
   const [monthKey, setMonthKey] = useState(todayMonthKey)
 
@@ -88,6 +92,34 @@ const arrowBtnStyle = {
   display: 'inline-flex', color: 'var(--text-secondary)', cursor: 'pointer',
 }
 
+// The "‹ Aug 2026 ›" stepper row itself — pulled out of PeriodPicker
+// (Prompt 402) so Leaderboard can reuse the exact same nav without also
+// inheriting Production's own Daily/Monthly/All Time mode toggle above it.
+// `hidden` reserves the row's height via `visibility` rather than removing
+// it from the DOM, so a caller that toggles it (Production's All Time mode)
+// can't shift whatever sits above/beside it — same fix Prompt 386 made.
+export function DateNav({ label, canNext, prevArrow, nextArrow, hidden = false }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center',
+      border: 'var(--border-w) solid var(--border)', borderRadius: 6, background: 'var(--bg-elevated)',
+      visibility: hidden ? 'hidden' : 'visible',
+    }}>
+      <button onClick={prevArrow} style={arrowBtnStyle}><ChevronLeft size={14} /></button>
+      <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-primary)', minWidth: 92, textAlign: 'center', whiteSpace: 'nowrap' }}>
+        {label}
+      </span>
+      <button
+        onClick={nextArrow}
+        disabled={!canNext}
+        style={{ ...arrowBtnStyle, color: canNext ? 'var(--text-secondary)' : 'var(--text-muted)', opacity: canNext ? 1 : 0.4, cursor: canNext ? 'pointer' : 'default' }}
+      >
+        <ChevronRight size={14} />
+      </button>
+    </div>
+  )
+}
+
 // Prompt 386: the mode toggle and the date nav used to share one flex row,
 // so the date nav's own width (present in Daily/Monthly, gone in All Time)
 // changed the row's total width — and since this sits flush-right next to
@@ -110,24 +142,7 @@ export function PeriodPicker({ mode, setMode, label, canNext, prevArrow, nextArr
           { value: 'alltime', label: 'All Time' },
         ]}
       />
-
-      <div style={{
-        display: 'flex', alignItems: 'center',
-        border: 'var(--border-w) solid var(--border)', borderRadius: 6, background: 'var(--bg-elevated)',
-        visibility: mode === 'alltime' ? 'hidden' : 'visible',
-      }}>
-        <button onClick={prevArrow} style={arrowBtnStyle}><ChevronLeft size={14} /></button>
-        <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-primary)', minWidth: 92, textAlign: 'center', whiteSpace: 'nowrap' }}>
-          {label}
-        </span>
-        <button
-          onClick={nextArrow}
-          disabled={!canNext}
-          style={{ ...arrowBtnStyle, color: canNext ? 'var(--text-secondary)' : 'var(--text-muted)', opacity: canNext ? 1 : 0.4, cursor: canNext ? 'pointer' : 'default' }}
-        >
-          <ChevronRight size={14} />
-        </button>
-      </div>
+      <DateNav label={label} canNext={canNext} prevArrow={prevArrow} nextArrow={nextArrow} hidden={mode === 'alltime'} />
     </div>
   )
 }

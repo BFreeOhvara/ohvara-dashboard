@@ -6,7 +6,7 @@ import {
 import { useAuth } from '../../hooks/useAuth'
 import { usePolicies, useTeamPerformancePolicies, productionSnapshot, productionFlow, persistencyWindows } from '../../hooks/usePolicies'
 import { money, moneyShort, formatDate, todayISO } from '../../lib/policyFormat'
-import { usePeriodPicker, PeriodPicker } from '../../components/agent/ProductionPeriodPicker'
+import { usePeriodPicker, PeriodPicker, DateNav } from '../../components/agent/ProductionPeriodPicker'
 import { GapNote } from '../../components/ui/ExportForm'
 import { Segmented } from '../../components/ui/Segmented'
 import { excludeTestAccounts } from '../../lib/testAccounts'
@@ -42,16 +42,18 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // Not built: the mockup's per-closer "2× Top spot / NEW" badge chips. There's
 // no ranking-history table to compute them from — adding fabricated badges
 // would be worse than omitting them.
+//
+// Prompt 402: Leaderboard reuses Production's usePeriodPicker/DateNav
+// (ProductionPeriodPicker.jsx) instead of a second hand-rolled stepper — it
+// used to only ever show the current day/month with no way to browse past
+// periods. `defaultMode: 'monthly'` keeps Leaderboard's own default;
+// Production's "All Time" mode is never offered here (Leaderboard's own
+// toggle only has Daily/Monthly), so `picker.mode` can't reach 'alltime'.
 
 const MONO = "'JetBrains Mono',monospace"
 const GOLD = 'var(--warning)'
 const SILVER = '#9CA3AF'
 const BRONZE = '#B87333'
-
-function monthLabel(mk) {
-  const [y, m] = mk.split('-').map(Number)
-  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-}
 
 function initialsOf(name) {
   return (name || '?').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()
@@ -248,10 +250,13 @@ function ProductionTab() {
 function LeaderboardTab() {
   const { profile } = useAuth()
   const { data: allVisible = [], isLoading } = useTeamPerformancePolicies()
-  const [boardMode, setBoardMode] = useState('monthly')
-
   const today = todayISO()
-  const [lo, hi] = boardMode === 'daily' ? [today, today] : [today.slice(0, 7) + '-01', today]
+  // Prompt 402: same stepper Production uses (defaultMode 'monthly' here —
+  // Leaderboard never offers Production's "All Time" option, so `mode` can
+  // only ever be 'daily'/'monthly'), so past days/months are browsable
+  // instead of Leaderboard only ever showing the current period.
+  const picker = usePeriodPicker(today, 'monthly')
+  const { lo, hi } = picker.bounds
 
   // Prompt 371: standings are a real ranking once admin's actual team is
   // live, so nate44's fabricated policies can't inflate/appear in it.
@@ -277,17 +282,26 @@ function LeaderboardTab() {
   const top3 = standings.slice(0, 3)
   const rest = standings.slice(3)
   const placeColor = rank => (rank === 1 ? GOLD : rank === 2 ? SILVER : BRONZE)
-  const periodLabel = boardMode === 'daily' ? `Today · ${formatDate(today)}` : monthLabel(today.slice(0, 7))
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
-        <Segmented
-          value={boardMode}
-          onChange={setBoardMode}
-          options={[{ value: 'daily', label: 'Daily' }, { value: 'monthly', label: 'Monthly' }]}
-        />
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{periodLabel} · ranked by submitted AP</span>
+      {/* Prompt 402: toggle stays fixed top-left/top-right (unchanged from
+          before this prompt); the date nav gets its own row below so
+          stepping through past days/months can't shift the toggle or the
+          "ranked by submitted AP" caption — same fixed two-row principle
+          Prompt 386 established for Production. */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+          <Segmented
+            value={picker.mode}
+            onChange={picker.setMode}
+            options={[{ value: 'daily', label: 'Daily' }, { value: 'monthly', label: 'Monthly' }]}
+          />
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>ranked by submitted AP</span>
+        </div>
+        <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+          <DateNav label={picker.label} canNext={picker.canNext} prevArrow={picker.prevArrow} nextArrow={picker.nextArrow} />
+        </div>
       </div>
 
       {isLoading ? (
@@ -303,7 +317,7 @@ function LeaderboardTab() {
           <div style={{ background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: 'var(--border-w) solid var(--border)' }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Full standings</span>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>submitted AP · {periodLabel}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>submitted AP · {picker.label}</span>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
