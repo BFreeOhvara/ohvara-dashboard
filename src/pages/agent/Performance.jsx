@@ -47,9 +47,10 @@ import { Avatar } from '../../components/ui/Avatar'
 // Prompt 402: Leaderboard reuses Production's usePeriodPicker/DateNav
 // (ProductionPeriodPicker.jsx) instead of a second hand-rolled stepper — it
 // used to only ever show the current day/month with no way to browse past
-// periods. `defaultMode: 'monthly'` keeps Leaderboard's own default;
-// Production's "All Time" mode is never offered here (Leaderboard's own
-// toggle only has Daily/Monthly), so `picker.mode` can't reach 'alltime'.
+// periods. Both tabs default to 'monthly' on load (Prompt 406 aligned
+// Production to match); Production's "All Time" mode is never offered here
+// (Leaderboard's own toggle only has Daily/Monthly), so `picker.mode` can't
+// reach 'alltime'.
 
 const MONO = "'JetBrains Mono',monospace"
 const GOLD = 'var(--warning)'
@@ -126,7 +127,9 @@ function ProductionTab() {
     [ownPolicies, teamPolicies, effectiveScope, profile?.id]
   )
 
-  const picker = usePeriodPicker(today)
+  // Prompt 406: default Production to Monthly on load, same as Leaderboard —
+  // was 'alltime' (Prompt 348's original call), now consistent across both.
+  const picker = usePeriodPicker(today, 'monthly')
   const { bounds, asOf } = picker
 
   const snapshot = useMemo(() => productionSnapshot(scopedPolicies, asOf), [scopedPolicies, asOf])

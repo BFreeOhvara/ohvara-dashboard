@@ -29,10 +29,10 @@ const addMonthsToKey = (mk, n) => {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`
 }
 
-// `defaultMode` (Prompt 402) lets a second caller (Leaderboard) open on
-// Monthly instead of Production's own "All Time" default (Brayden's
-// explicit call, Prompt 348) — everything else about the stepper is shared,
-// not reimplemented.
+// `defaultMode` (Prompt 402) lets each caller pick its own opening mode —
+// Production and Leaderboard both open on Monthly (Prompt 406 aligned
+// Production, which used to default to "All Time" per Prompt 348); the
+// toggle itself is shared, not reimplemented per caller.
 export function usePeriodPicker(todayStr, defaultMode = 'alltime') {
   const todayMonthKey = todayStr.slice(0, 7)
 
