@@ -16,6 +16,7 @@ import { useCarriers } from '../hooks/useCarriers'
 import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../lib/timezones'
 import { US_STATES } from '../lib/usStates'
 import { Switch } from '../components/ui/Switch'
+import { Segmented } from '../components/ui/Segmented'
 import {
   card, cardTitle, control, primaryBtn, ghostBtn, grid3,
 } from '../lib/exportStyles'
@@ -146,6 +147,11 @@ function RegionalPanel({ profile }) {
     setWeekendPending(false)
   }
 
+  async function setDefaultScope(next) {
+    await update.mutateAsync({ profileId: profile.id, updates: { overview_default_scope: next } })
+    await refreshProfile()
+  }
+
   return (
     <div style={{ ...card, padding: '20px 22px' }}>
       <p style={cardTitle}>Regional</p>
@@ -175,6 +181,28 @@ function RegionalPanel({ profile }) {
             </p>
           </div>
           <Switch checked={!!profile.weekend_leads_enabled} onChange={toggleWeekendLeads} disabled={weekendPending} />
+        </div>
+      )}
+
+      {/* Prompt 404: which side of Overview's You/Everyone toggle to open on
+          — only meaningful for the upline/team-visibility role (currently
+          `admin`), the only role that ever sees that toggle. Mostly managing
+          the team rather than selling? Default to Everyone so it's not a
+          click every visit. */}
+      {profile.role === 'admin' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderTop: 'var(--border-w) solid var(--border)', marginBottom: 18 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>Default Overview to</p>
+            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+              Which view Overview opens on — only applies when the You/Everyone toggle is showing.
+            </p>
+          </div>
+          <Segmented
+            size="sm"
+            value={profile.overview_default_scope || 'you'}
+            onChange={setDefaultScope}
+            options={[{ value: 'you', label: 'You' }, { value: 'everyone', label: 'Everyone' }]}
+          />
         </div>
       )}
 

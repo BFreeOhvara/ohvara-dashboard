@@ -108,16 +108,23 @@ function ProductionTab() {
   const { data: ownPolicies = [], isLoading: isLoadingOwn } = usePolicies(null)
   const { data: teamPolicies = [], isLoading: isLoadingTeam } = useTeamPerformancePolicies()
   const [scope, setScope] = useState('you')
-  const isLoading = scope === 'you' ? isLoadingOwn : isLoadingTeam
+  // Prompt 404: an admin/upline account that isn't personally writing
+  // business ("I'm also actively writing business" off on Profile) has
+  // nothing meaningful behind "You" — the toggle hides entirely and this
+  // always reads as Team, same gate as Overview's new You/Everyone toggle.
+  // Regular closers always write business, so this never touches them.
+  const hideScopeToggle = isAdmin && !profile?.also_writes_business
+  const effectiveScope = hideScopeToggle ? 'team' : scope
+  const isLoading = effectiveScope === 'you' ? isLoadingOwn : isLoadingTeam
   // Prompt 371: "Team" is a real company-wide rollup once admin's actual
   // team is live, so test-account (nate44) policies are excluded from it —
   // same rule as Leaderboard below. "You" is unaffected either way, since
   // it's already scoped to this account's own agent_id.
   const scopedPolicies = useMemo(
-    () => (scope === 'you'
+    () => (effectiveScope === 'you'
       ? ownPolicies.filter(p => p.agent_id === profile?.id)
       : excludeTestAccounts(teamPolicies, profile?.id)),
-    [ownPolicies, teamPolicies, scope, profile?.id]
+    [ownPolicies, teamPolicies, effectiveScope, profile?.id]
   )
 
   const picker = usePeriodPicker(today)
@@ -126,7 +133,7 @@ function ProductionTab() {
   const snapshot = useMemo(() => productionSnapshot(scopedPolicies, asOf), [scopedPolicies, asOf])
   const flow = useMemo(() => productionFlow(scopedPolicies, bounds.lo, bounds.hi), [scopedPolicies, bounds])
 
-  const scopeWord = scope === 'you' ? 'your' : "the team's"
+  const scopeWord = effectiveScope === 'you' ? 'your' : "the team's"
   const asOfLabel = asOf === today ? 'today' : formatDate(asOf)
 
   // ── Persistency — always current rolling windows, no period control ───────
@@ -146,12 +153,14 @@ function ProductionTab() {
           with PeriodPicker's own toggle row (its top row) instead of being
           vertically centered against the now-two-row block below it. */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-        <Segmented
-          size="sm"
-          value={scope}
-          onChange={setScope}
-          options={[{ value: 'you', label: 'You' }, { value: 'team', label: 'Team' }]}
-        />
+        {hideScopeToggle ? <div /> : (
+          <Segmented
+            size="sm"
+            value={scope}
+            onChange={setScope}
+            options={[{ value: 'you', label: 'You' }, { value: 'team', label: 'Team' }]}
+          />
+        )}
         <PeriodPicker {...picker} />
       </div>
 

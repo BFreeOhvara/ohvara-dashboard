@@ -1,12 +1,16 @@
 import { useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useUpdateOwnProfile } from '../hooks/useSettings'
-import { Loader2 } from 'lucide-react'
+import { useMonthlyGoal, useSetMonthlyGoal } from '../hooks/useMonthlyGoals'
+import { todayISO } from '../lib/policyFormat'
+import { Loader2, X } from 'lucide-react'
 import {
   MONO, card, cardTitle, control, primaryBtn,
 } from '../lib/exportStyles'
 import { GapNote } from '../components/ui/ExportForm'
 import { SavedTick } from '../components/ui/SavedTick'
+import { Switch } from '../components/ui/Switch'
 
 // Profile — split out of Settings (Prompt 338) so the sidebar footer's
 // account popover has a genuinely distinct destination for "Profile" versus
@@ -26,12 +30,38 @@ const initialsOf = name =>
 
 const ROLE_LABEL = { admin: 'Admin', closer: 'Closer', rep: 'Setter', client: 'Client' }
 
+// Where "X" falls back to when there's no in-app history to go back to
+// (direct URL load, hard refresh) — each role's own home route.
+const ROLE_HOME = { admin: '/admin', closer: '/agent', rep: '/setter', client: '/client' }
+
 export default function Profile() {
   const { profile } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
   if (!profile) return null
+
+  // Prompt 404: Profile is always reached by clicking into it from
+  // somewhere (sidebar footer popover, or the Monthly Goal card's
+  // "set your goal" hotlink) — react-router's location.key is 'default'
+  // only when there's no actual in-app navigation history behind it (a
+  // direct URL load or hard refresh), so that's the one case that needs a
+  // real fallback instead of just going back.
+  function close() {
+    if (location.key !== 'default') navigate(-1)
+    else navigate(ROLE_HOME[profile.role] || '/')
+  }
 
   return (
     <div style={{ maxWidth: 620 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+        <button
+          onClick={close}
+          aria-label="Close"
+          style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}
+        >
+          <X size={18} />
+        </button>
+      </div>
       <ProfilePanel profile={profile} />
     </div>
   )
@@ -121,7 +151,11 @@ function ProfilePanel({ profile }) {
         <SavedTick show={saved && !dirty} />
       </div>
 
-      {profile.role === 'closer' && <MonthlyGoalField profile={profile} />}
+      {profile.role === 'admin' && <WritesBusinessField profile={profile} />}
+
+      {(profile.role === 'closer' || (profile.role === 'admin' && profile.also_writes_business)) && (
+        <MonthlyGoalField profile={profile} />
+      )}
 
       <GapNote>
         The approved design also shows a profile photo, NPN (producer number) and licensed states. `profiles`
@@ -132,44 +166,89 @@ function ProfilePanel({ profile }) {
   )
 }
 
-// Overview's monthly goal progress box (Prompt 329) needs a per-closer
-// target to compare submitted AP against — `monthly_ap_goal` defaults to
-// 20000 for everyone until a closer sets their own here.
+// Overview's monthly goal progress box (Prompt 329, month-scoped in Prompt
+// 404 / migration 095) needs a per-agent target for the CURRENT month to
+// compare submitted AP against — no row means unset, no carryover from last
+// month. Shown to closers always, and to admin/upline accounts only once
+// they've flagged themselves as also writing business (see
+// WritesBusinessField above) — otherwise there's nothing for it to drive.
 function MonthlyGoalField({ profile }) {
-  const update = useUpdateOwnProfile()
-  const { refreshProfile } = useAuth()
-  const [value, setValue] = useState(String(profile.monthly_ap_goal ?? 20000))
+  const month = todayISO().slice(0, 7)
+  const { data: goalRow } = useMonthlyGoal(profile.id, month)
+  const setGoal = useSetMonthlyGoal()
+  const [value, setValue] = useState('')
+  const [touched, setTouched] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  const dirty = Number(value) !== Number(profile.monthly_ap_goal ?? 20000)
+  const current = touched ? value : String(goalRow?.goal ?? '')
+  const dirty = touched && Number(current) !== Number(goalRow?.goal ?? NaN)
 
   async function save() {
-    const goal = Math.max(0, Number(value) || 0)
-    await update.mutateAsync({ profileId: profile.id, updates: { monthly_ap_goal: goal } })
-    await refreshProfile()
+    const goal = Math.max(0, Number(current) || 0)
+    await setGoal.mutateAsync({ profileId: profile.id, month, goal })
+    setTouched(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
 
   return (
     <div style={{ paddingTop: 16, marginTop: 4, borderTop: 'var(--border-w) solid var(--border)' }}>
-      <p style={softLabel}>Monthly AP goal — drives the progress bar on your Overview</p>
+      <p style={softLabel}>
+        This month's AP goal — drives the progress bar on your Overview · resets unset every new month
+      </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <input
           type="number" min="0" step="100"
-          value={value}
-          onChange={e => setValue(e.target.value)}
+          placeholder="Not set"
+          value={current}
+          onChange={e => { setTouched(true); setValue(e.target.value) }}
           style={{ ...inputBase, width: 160, fontFamily: MONO }}
         />
         <button
           onClick={save}
-          disabled={!dirty || update.isPending}
-          style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 12, opacity: !dirty || update.isPending ? 0.5 : 1 }}
+          disabled={!dirty || setGoal.isPending}
+          style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 12, opacity: !dirty || setGoal.isPending ? 0.5 : 1 }}
         >
-          {update.isPending ? <Loader2 size={13} className="animate-spin" /> : 'Save'}
+          {setGoal.isPending ? <Loader2 size={13} className="animate-spin" /> : 'Save'}
         </button>
         <SavedTick show={saved && !dirty} />
       </div>
+    </div>
+  )
+}
+
+// "I'm also actively writing business" (Prompt 404) — off by default for
+// the upline/admin role, since a pure agency manager has nothing behind a
+// personal "You" view. Gates the You/Everyone toggle on Overview and the
+// You/Team toggle on Performance (Prompt 396), and reveals the personal
+// monthly-goal field above once turned on. Doesn't touch regular closers —
+// they always write business.
+function WritesBusinessField({ profile }) {
+  const update = useUpdateOwnProfile()
+  const { refreshProfile } = useAuth()
+  const [pending, setPending] = useState(false)
+
+  async function toggle(next) {
+    setPending(true)
+    await update.mutateAsync({ profileId: profile.id, updates: { also_writes_business: next } })
+    await refreshProfile()
+    setPending(false)
+  }
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 14, padding: '16px 0', marginTop: 4,
+      borderTop: 'var(--border-w) solid var(--border)',
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+          I'm also actively writing business
+        </p>
+        <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+          On shows a personal You view (and goal) alongside your team numbers, on Overview and Performance.
+        </p>
+      </div>
+      <Switch checked={!!profile.also_writes_business} onChange={toggle} disabled={pending} />
     </div>
   )
 }

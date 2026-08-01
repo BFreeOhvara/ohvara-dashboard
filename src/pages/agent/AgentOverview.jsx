@@ -1,12 +1,16 @@
 import { useMemo, useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import {
   FileText, TrendingUp, DollarSign, Phone, Target,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { usePolicies, pendingEffectuation, bookMetrics } from '../../hooks/usePolicies'
+import { usePolicies, useTeamPerformancePolicies, pendingEffectuation, bookMetrics } from '../../hooks/usePolicies'
 import { useFollowUps } from '../../hooks/useFollowUps'
+import { useMonthlyGoal, useTeamMonthlyGoals } from '../../hooks/useMonthlyGoals'
+import { useBugReports } from '../../hooks/useBugReports'
 import { money, moneyShort, fullName, todayISO } from '../../lib/policyFormat'
 import { excludeTestAccounts } from '../../lib/testAccounts'
+import { Segmented } from '../../components/ui/Segmented'
 
 // Closer · Overview — literal port of the approved Claude Design export
 // (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines 163-227).
@@ -124,16 +128,33 @@ function localISO(value) {
 export default function AgentOverview() {
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
-  const { data: rawPolicies = [], isLoading } = usePolicies(isAdmin ? null : profile?.id)
-  // Prompt 371: admin's Overview is now company-wide real reporting, so
-  // nate44's fabricated policies can't bleed into its KPI tiles or "Needs
-  // your attention" feed. Not admin scope is already narrowed to profile.id
-  // above, so a normal closer (or nate44 itself) is unaffected either way.
-  const policies = useMemo(
-    () => (isAdmin ? excludeTestAccounts(rawPolicies, profile?.id) : rawPolicies),
-    [rawPolicies, isAdmin, profile?.id]
+
+  // Prompt 404: the You/Everyone toggle only exists for the upline/
+  // team-visibility role (currently `admin`), and only once they've said
+  // they're still personally writing business — otherwise there's nothing
+  // meaningful behind "You" and the toggle is just dead UI (Profile's new
+  // "I'm also actively writing business" flag, gating this exactly the way
+  // it gates Performance's own You/Team toggle from Prompt 396).
+  const alsoWritesBusiness = !!profile?.also_writes_business
+  const showScopeToggle = isAdmin && alsoWritesBusiness
+  const [scope, setScope] = useState(() => (profile?.overview_default_scope === 'everyone' ? 'everyone' : 'you'))
+  const effectiveScope = showScopeToggle ? scope : (isAdmin ? 'everyone' : 'you')
+
+  // "You" is always this account's own book — same query a closer always
+  // used. "Everyone" (admin/upline only) reuses Prompt 396's
+  // team_performance_policies() aggregate rather than a second company-wide
+  // path, same rule as Performance's Team scope.
+  const { data: ownPolicies = [], isLoading: isLoadingOwn } = usePolicies(profile?.id)
+  const { data: teamPoliciesRaw = [], isLoading: isLoadingTeam } = useTeamPerformancePolicies()
+  const teamPolicies = useMemo(
+    () => excludeTestAccounts(teamPoliciesRaw, profile?.id),
+    [teamPoliciesRaw, profile?.id]
   )
+  const policies = effectiveScope === 'everyone' ? teamPolicies : ownPolicies
+  const isLoading = effectiveScope === 'everyone' ? isLoadingTeam : isLoadingOwn
+
   const { data: followUps = [] } = useFollowUps(profile?.id)
+  const { data: bugReports = [] } = useBugReports()
 
   const [clock, setClock] = useState(() => new Date())
   useEffect(() => {
@@ -168,13 +189,22 @@ export default function AgentOverview() {
     }
   }, [policies, today, month])
 
-  // "Needs your attention" (Prompt 329, unified in Prompt 347) — a real
-  // pipeline-state worklist, not a schedule. Three sources: policies past
-  // their Effective Date still awaiting the Yes/No effectuation
-  // confirmation, policies sitting in Cancellation Pending with a call
-  // booked today, and follow-ups (My Calls → Schedule, `closer_followups`)
-  // due today. Same `pendingEffectuation` helper My Policies uses for its
-  // own banner, so the two screens can't drift on the definition.
+  // "Needs your attention" (Prompt 329, unified in Prompt 347; made
+  // role-aware in Prompt 404) — for a regular closer, a real pipeline-state
+  // worklist, not a schedule: policies past their Effective Date still
+  // awaiting the Yes/No effectuation confirmation, policies sitting in
+  // Cancellation Pending with a call booked today, and follow-ups (My
+  // Calls → Schedule, `closer_followups`) due today. Same
+  // `pendingEffectuation` helper My Policies uses for its own banner, so
+  // the two screens can't drift on the definition.
+  //
+  // For the upline/team-visibility role this box shows items THAT role can
+  // actually act on instead — per Prompt 399, Yes/No is locked to the
+  // submitting agent, so an admin can no longer act on another agent's
+  // effectuation confirmation, and showing it to them is dead weight. The
+  // clearest thing an admin can act on today is pending bug reports (the
+  // Prompt 381 admin inbox). This does NOT change with the You/Everyone
+  // toggle — it's role-scoped, not view-scoped, per Brayden's explicit note.
   //
   // Cancellation calls and follow-ups only ever show same-day (Prompt 346,
   // extended to follow-ups in 347) — a closer always books the call on the
@@ -184,7 +214,17 @@ export default function AgentOverview() {
   // get the same day-of filter — they're an accumulating overdue backlog,
   // not a today-only reminder.
   const attention = useMemo(() => {
-    const effectuation = pendingEffectuation(policies, new Date()).map(p => ({
+    if (isAdmin) {
+      return bugReports
+        .filter(r => r.status === 'new')
+        .map(r => ({
+          id: `bug-${r.id}`,
+          tag: 'BUG REPORT', color: 'var(--danger)', dim: 'var(--danger-dim)', bd: 'var(--danger-bd)',
+          name: r.reporter?.full_name || 'Unknown',
+          detail: r.description,
+        }))
+    }
+    const effectuation = pendingEffectuation(ownPolicies, new Date()).map(p => ({
       id: `eff-${p.id}`,
       // Prompt 349: purple, not blue — blue is now FOLLOW-UP's color (below),
       // matching My Calls → Schedule's own blue for its FOLLOW-UP badge. Two
@@ -193,7 +233,7 @@ export default function AgentOverview() {
       name: fullName(p),
       detail: 'Confirm effectuation status',
     }))
-    const cancellations = policies
+    const cancellations = ownPolicies
       .filter(p => p.cancellation_status === 'Cancellation Pending' && p.cancellation_call_at && localISO(p.cancellation_call_at) === today)
       .map(p => ({
         id: `canc-${p.id}`,
@@ -214,17 +254,37 @@ export default function AgentOverview() {
         detail: `Follow-up at ${new Date(f.scheduled_at).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}`,
       }))
     return [...effectuation, ...cancellations, ...followups]
-  }, [policies, followUps, today])
+  }, [isAdmin, bugReports, ownPolicies, followUps, today])
 
-  // Monthly goal progress — real submitted AP this month vs. the closer's
-  // own target (set on the Profile page, `monthly_ap_goal`; defaults to
-  // 20000). Profile moved out of Settings' tabs to its own route in Prompt
-  // 338 — this comment/copy updated to match.
+  // Monthly goal progress (Prompt 404, migration 095) — month-scoped now
+  // instead of the old standing `profiles.monthly_ap_goal`: "You" reads this
+  // account's own goal for the current month (set on Profile; no row means
+  // they haven't set one yet, rendered as an empty prompt state rather than
+  // a stale/zero number). "Everyone" (admin/upline only) is the sum of every
+  // agent's individual goal that IS set for the month — agents who haven't
+  // set theirs simply don't contribute, the team total is never blocked on
+  // full coverage.
+  const { data: ownGoalRow, isLoading: isLoadingOwnGoal } = useMonthlyGoal(profile?.id, month)
+  const { data: teamGoalRows = [] } = useTeamMonthlyGoals(month)
+  const goalLoading = effectiveScope === 'everyone' ? isLoadingTeam : (isLoadingOwn || isLoadingOwnGoal)
+  const teamGoalTarget = useMemo(
+    () => excludeTestAccounts(teamGoalRows, profile?.id, 'profile_id').reduce((s, r) => s + Number(r.goal || 0), 0),
+    [teamGoalRows, profile?.id]
+  )
   const goal = useMemo(() => {
-    const target = Number(profile?.monthly_ap_goal) || 20000
-    const submittedAP = bookMetrics(policies, { month }).submittedAP
-    return { target, submittedAP, pct: target ? Math.min(100, Math.round((submittedAP / target) * 100)) : 0 }
-  }, [policies, month, profile?.monthly_ap_goal])
+    if (effectiveScope === 'everyone') {
+      const submittedAP = bookMetrics(teamPolicies, { month }).submittedAP
+      const target = teamGoalTarget
+      return { hasGoal: true, target, submittedAP, pct: target ? Math.min(100, Math.round((submittedAP / target) * 100)) : 0 }
+    }
+    const submittedAP = bookMetrics(ownPolicies, { month }).submittedAP
+    const target = Number(ownGoalRow?.goal) || 0
+    return {
+      hasGoal: !!ownGoalRow,
+      target, submittedAP,
+      pct: target ? Math.min(100, Math.round((submittedAP / target) * 100)) : 0,
+    }
+  }, [effectiveScope, teamPolicies, ownPolicies, month, teamGoalTarget, ownGoalRow])
 
   const greeting = (() => {
     const h = clock.getHours()
@@ -316,7 +376,17 @@ export default function AgentOverview() {
         background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
         borderRadius: 8, padding: '28px 32px', marginBottom: 20,
       }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Today at a glance</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Today at a glance</span>
+          {showScopeToggle && (
+            <Segmented
+              size="sm"
+              value={scope}
+              onChange={setScope}
+              options={[{ value: 'you', label: 'You' }, { value: 'everyone', label: 'Everyone' }]}
+            />
+          )}
+        </div>
         <KpiRow items={row1} style={{ marginTop: 22 }} />
         <KpiRow
           items={row2}
@@ -396,32 +466,50 @@ export default function AgentOverview() {
           </div>
         </div>
 
-        {/* Monthly goal progress */}
+        {/* Monthly goal progress — You shows this account's own goal, Everyone
+            (admin/upline only) shows the team goal (Prompt 404). Neither
+            reads/writes goal.pct if the "You" scope has no goal row for this
+            month yet — that renders an empty prompt state instead. */}
         <div style={{
           background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8,
           padding: '20px 24px',
         }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Monthly goal</span>
           <p style={{ margin: '4px 0 20px', fontSize: 11, color: 'var(--text-muted)' }}>
-            Submitted AP this month vs. your target · set it on your Profile page
+            {effectiveScope === 'everyone'
+              ? "Submitted AP this month vs. the team's goal · sum of everyone's individual goal"
+              : 'Submitted AP this month vs. your target · set it on your Profile page'}
           </p>
-          <div style={{
-            fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--text-primary)',
-            fontFamily: MONO, fontVariantNumeric: 'tabular-nums', marginBottom: 12,
-          }}>
-            {isLoading ? '—' : moneyShort(goal.submittedAP)}
-            <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-muted)' }}> of {moneyShort(goal.target)}</span>
-          </div>
-          <div style={{ height: 10, borderRadius: 5, background: 'var(--bg-elevated)', overflow: 'hidden' }}>
-            <div style={{
-              height: '100%', borderRadius: 5,
-              background: goal.pct >= 100 ? 'var(--success)' : 'var(--accent)',
-              width: `${isLoading ? 0 : goal.pct}%`, transition: 'width 300ms ease-out',
-            }} />
-          </div>
-          <p style={{ margin: '10px 0 0', fontSize: 11.5, color: 'var(--text-muted)' }}>
-            {isLoading ? '—' : `${goal.pct}% of goal`}
-          </p>
+          {effectiveScope === 'you' && !goalLoading && !goal.hasGoal ? (
+            <div>
+              <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-secondary)' }}>
+                You haven't set a goal for this month yet.
+              </p>
+              <Link to="/profile" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--accent)' }}>
+                Set your monthly goal →
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div style={{
+                fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--text-primary)',
+                fontFamily: MONO, fontVariantNumeric: 'tabular-nums', marginBottom: 12,
+              }}>
+                {goalLoading ? '—' : moneyShort(goal.submittedAP)}
+                <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-muted)' }}> of {moneyShort(goal.target)}</span>
+              </div>
+              <div style={{ height: 10, borderRadius: 5, background: 'var(--bg-elevated)', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', borderRadius: 5,
+                  background: goal.pct >= 100 ? 'var(--success)' : 'var(--accent)',
+                  width: `${goalLoading ? 0 : goal.pct}%`, transition: 'width 300ms ease-out',
+                }} />
+              </div>
+              <p style={{ margin: '10px 0 0', fontSize: 11.5, color: 'var(--text-muted)' }}>
+                {goalLoading ? '—' : `${goal.pct}% of goal`}
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>
