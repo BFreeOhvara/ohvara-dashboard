@@ -65,25 +65,8 @@ export default function CarrierPortals() {
         )}
       </div>
 
-      {isLoading ? (
-        <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-muted)' }}>Loading carriers…</p>
-      ) : carriers.length === 0 ? (
-        <div style={{ ...card, textAlign: 'center', padding: '40px 24px' }}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>No carriers yet</p>
-          <p style={{ margin: '6px auto 0', maxWidth: 420, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-            {isAdmin
-              ? 'Add the carriers the team is actually appointed with, with their portal link and the numbers to call.'
-              : 'Ask an admin to add the carriers your team is appointed with.'}
-          </p>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
-          {carriers.map(c => <CarrierCard key={c.id} carrier={c} isAdmin={isAdmin} onDelete={() => del.mutate(c.id)} />)}
-        </div>
-      )}
-
       {isAdmin && adding && (
-        <div style={{ ...card, marginTop: 16 }}>
+        <div style={{ ...card, marginBottom: 16 }}>
           <div style={grid3}>
             <TextField label="Carrier name" placeholder="Carrier" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
             <TextField label="Portal URL" placeholder="https://…" value={form.portal_url} onChange={e => setForm(f => ({ ...f, portal_url: e.target.value }))} />
@@ -104,6 +87,23 @@ export default function CarrierPortals() {
             and the "verify in portal" link. Logo, core-carrier flag, and portal system name can be set later
             directly in the database.
           </GapNote>
+        </div>
+      )}
+
+      {isLoading ? (
+        <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-muted)' }}>Loading carriers…</p>
+      ) : carriers.length === 0 ? (
+        <div style={{ ...card, textAlign: 'center', padding: '40px 24px' }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>No carriers yet</p>
+          <p style={{ margin: '6px auto 0', maxWidth: 420, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+            {isAdmin
+              ? 'Add the carriers the team is actually appointed with, with their portal link and the numbers to call.'
+              : 'Ask an admin to add the carriers your team is appointed with.'}
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
+          {carriers.map(c => <CarrierCard key={c.id} carrier={c} isAdmin={isAdmin} onDelete={() => del.mutate(c.id)} />)}
         </div>
       )}
     </div>
