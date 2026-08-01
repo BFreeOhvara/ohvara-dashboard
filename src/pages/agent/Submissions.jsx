@@ -10,7 +10,7 @@ import {
 } from '../../lib/exportStyles'
 import { Field, TextField, AnchoredSelectField, GapNote } from '../../components/ui/ExportForm'
 import { Segmented } from '../../components/ui/Segmented'
-import { money, fullName, formatDate, todayISO } from '../../lib/policyFormat'
+import { money, fullName, formatDate, todayISO, formatPhoneInput, titleCase } from '../../lib/policyFormat'
 import { US_STATES } from '../../lib/usStates'
 
 // Submissions — literal port of the export's "Closer · Submissions" screen
@@ -85,8 +85,33 @@ const BLANK = {
   monthly_premium: '',
   // Prompt 369: drives `pending_underwriting` — the only way "Not Approved"
   // is ever reachable, since carrier decisions aren't otherwise observable.
-  underwriting_decision: 'immediate',
+  // Prompt 401: starts unselected (was defaulted to 'immediate'/Approved) so
+  // an agent has to make an explicit pick instead of silently submitting
+  // under whatever the default happened to be.
+  underwriting_decision: '',
 }
+
+// Prompt 401 — every field but Annual Premium (auto-computed) is required to
+// log a submission. Effective Date is handled separately below rather than
+// listed here: Brayden's explicit call after a code check was that it's only
+// required once Approved is picked — a policy still in underwriting
+// genuinely has no effective date yet, and usePolicies.js's
+// pendingUnderwriting()/pendingEffectuation() already treat "still in
+// underwriting" and "has an effective date to react to" as mutually
+// exclusive states, so forcing one here would just push agents toward
+// placeholder dates.
+const REQUIRED_FIELDS = [
+  ['policy_sold_date', 'Policy sold date'],
+  ['policy_number', 'Policy #'],
+  ['client_first_name', 'Client first name'],
+  ['client_last_name', 'Client last name'],
+  ['client_phone', 'Client phone'],
+  ['carrier_name', 'Insurance provider'],
+  ['product_name', 'Product type'],
+  ['monthly_premium', 'Monthly premium'],
+  ['state', 'State'],
+  ['underwriting_decision', 'Approved / In Underwriting'],
+]
 
 function NewSubmission() {
   const { profile } = useAuth()
@@ -96,8 +121,20 @@ function NewSubmission() {
   const [form, setForm] = useState(BLANK)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(null)
+  // Prompt 401 — which required fields are currently missing, so their
+  // border can highlight red; cleared per-field as soon as the agent edits
+  // it, not just on the next submit attempt.
+  const [fieldErrors, setFieldErrors] = useState(new Set())
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const set = (k, v) => {
+    setForm(f => ({ ...f, [k]: v }))
+    setFieldErrors(errs => {
+      if (!errs.has(k)) return errs
+      const next = new Set(errs)
+      next.delete(k)
+      return next
+    })
+  }
   const monthly = Number(form.monthly_premium || 0)
   const annual = monthly * 12
 
@@ -129,14 +166,31 @@ function NewSubmission() {
   // `product_name` column instead, see migration 088).
   const selectedProductType = carrierProducts.find(p => p.product === form.product_name)?.type || null
 
+  // Prompt 401 — every REQUIRED_FIELDS entry plus Effective Date, but only
+  // when Approved is picked (see the comment on REQUIRED_FIELDS for why).
+  function validate() {
+    const missing = REQUIRED_FIELDS.filter(([key]) =>
+      key === 'monthly_premium' ? (!form.monthly_premium || monthly <= 0) : !String(form[key] || '').trim()
+    )
+    if (form.underwriting_decision === 'immediate' && !form.effective_date) {
+      missing.push(['effective_date', 'Effective date'])
+    }
+    return missing
+  }
+
   function submit() {
     setError('')
-    if (!form.client_first_name.trim() || !form.client_last_name.trim()) {
-      return setError("Enter the client's first and last name")
+    const missing = validate()
+    if (missing.length > 0) {
+      setFieldErrors(new Set(missing.map(([key]) => key)))
+      setError(`Fill in the highlighted field${missing.length > 1 ? 's' : ''} before logging this submission: ${missing.map(([, label]) => label).join(', ')}`)
+      return
     }
-    if (!form.monthly_premium || monthly <= 0) {
-      return setError('Enter a monthly premium')
-    }
+    setFieldErrors(new Set())
+
+    // Prompt 401 — normalized to title case on submit only, not while typing.
+    const firstName = titleCase(form.client_first_name)
+    const lastName = titleCase(form.client_last_name)
 
     create.mutate({
       agent_id: profile.id,
@@ -146,8 +200,8 @@ function NewSubmission() {
       // Submission starts as anything else (Prompt 361), so this is hardcoded
       // at the write rather than left as a UI choice.
       status: 'Submitted',
-      client_first_name: form.client_first_name.trim(),
-      client_last_name: form.client_last_name.trim(),
+      client_first_name: firstName,
+      client_last_name: lastName,
       client_phone: form.client_phone.trim() || null,
       carrier_id: carrier?.id || null,
       carrier_name: form.carrier_name.trim() || null,
@@ -164,7 +218,7 @@ function NewSubmission() {
       pending_underwriting: form.underwriting_decision === 'needs_underwriting',
     }, {
       onSuccess: () => {
-        setSaved(`${form.client_first_name.trim()} ${form.client_last_name.trim()}${form.carrier_name.trim() ? ` · ${form.carrier_name.trim()}` : ''}`)
+        setSaved(`${firstName} ${lastName}${form.carrier_name.trim() ? ` · ${form.carrier_name.trim()}` : ''}`)
         setForm(BLANK)
       },
       onError: err => setError(err.message || 'Could not save this submission'),
@@ -179,14 +233,17 @@ function NewSubmission() {
         <TextField
           label="Policy sold date" type="date" mono
           value={form.policy_sold_date} onChange={e => set('policy_sold_date', e.target.value)}
+          error={fieldErrors.has('policy_sold_date')}
         />
         <TextField
           label="Policy #" mono placeholder="e.g. 4471209"
           value={form.policy_number} onChange={e => set('policy_number', e.target.value)}
+          error={fieldErrors.has('policy_number')}
         />
         <TextField
           label="Client first name" placeholder="First name"
           value={form.client_first_name} onChange={e => set('client_first_name', e.target.value)}
+          error={fieldErrors.has('client_first_name')}
         />
       </div>
 
@@ -194,17 +251,28 @@ function NewSubmission() {
         <TextField
           label="Client last name" placeholder="Last name"
           value={form.client_last_name} onChange={e => set('client_last_name', e.target.value)}
+          error={fieldErrors.has('client_last_name')}
         />
         <TextField
           label="Client phone" mono placeholder="(602) 555-0184"
-          value={form.client_phone} onChange={e => set('client_phone', e.target.value)}
+          value={form.client_phone} onChange={e => set('client_phone', formatPhoneInput(e.target.value))}
+          error={fieldErrors.has('client_phone')}
         />
         <AnchoredSelectField
           label="Insurance provider"
           value={form.carrier_name}
-          onChange={val => setForm(f => ({ ...f, carrier_name: val, product_name: '' }))}
+          onChange={val => {
+            setForm(f => ({ ...f, carrier_name: val, product_name: '' }))
+            setFieldErrors(errs => {
+              if (!errs.has('carrier_name')) return errs
+              const next = new Set(errs)
+              next.delete('carrier_name')
+              return next
+            })
+          }}
           placeholder="Select a carrier"
           options={carriers.map(c => ({ value: c.name, label: c.name }))}
+          error={fieldErrors.has('carrier_name')}
         />
       </div>
 
@@ -216,17 +284,20 @@ function NewSubmission() {
             onChange={val => set('product_name', val)}
             placeholder="Select a product"
             options={carrierProducts.map(p => ({ value: p.product, label: p.product }))}
+            error={fieldErrors.has('product_name')}
           />
         ) : (
           <TextField
             label="Product type" placeholder={form.carrier_name ? 'No comp data yet — enter the product name' : 'Choose a carrier first'}
             disabled={!form.carrier_name}
             value={form.product_name} onChange={e => set('product_name', e.target.value)}
+            error={fieldErrors.has('product_name')}
           />
         )}
         <TextField
           label="Effective date" type="date" mono
           value={form.effective_date} onChange={e => set('effective_date', e.target.value)}
+          error={fieldErrors.has('effective_date')}
         />
       </div>
 
@@ -234,6 +305,7 @@ function NewSubmission() {
         <TextField
           label="Monthly premium ($)" mono type="number" min="0" step="0.01" placeholder="118"
           value={form.monthly_premium} onChange={e => set('monthly_premium', e.target.value)}
+          error={fieldErrors.has('monthly_premium')}
         />
         <AnchoredSelectField
           label="State"
@@ -241,15 +313,18 @@ function NewSubmission() {
           onChange={val => set('state', val)}
           placeholder="Select a state"
           options={US_STATES.map(s => ({ value: s.code, label: s.name }))}
+          error={fieldErrors.has('state')}
         />
         <AnchoredSelectField
           label="Is this policy already approved or in underwriting?"
           value={form.underwriting_decision}
           onChange={val => set('underwriting_decision', val)}
+          placeholder="Select an answer"
           options={[
             { value: 'immediate', label: 'Approved' },
             { value: 'needs_underwriting', label: 'In Underwriting' },
           ]}
+          error={fieldErrors.has('underwriting_decision')}
         />
       </div>
 

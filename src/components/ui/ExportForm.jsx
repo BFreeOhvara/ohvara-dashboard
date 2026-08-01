@@ -16,10 +16,21 @@ export function Field({ label, children, style }) {
   )
 }
 
-export function TextField({ label, mono, style, ...props }) {
+// `error` (Prompt 401) is opt-in and additive — every existing caller that
+// doesn't pass it renders exactly as before, just highlights the border red
+// for pages doing their own required-field validation (currently only
+// Submissions' New Submission form).
+export function TextField({ label, mono, style, error, ...props }) {
   return (
     <Field label={label}>
-      <input {...props} style={{ ...control, ...(mono ? { fontFamily: MONO } : null), ...style }} />
+      <input
+        {...props}
+        style={{
+          ...control, ...(mono ? { fontFamily: MONO } : null),
+          ...(error ? { border: '1px solid var(--danger)' } : null),
+          ...style,
+        }}
+      />
     </Field>
   )
 }
@@ -35,7 +46,7 @@ export function TextField({ label, mono, style, ...props }) {
 // there's no CSS to override a native select's popup direction. This is a
 // real DOM dropdown standing in for one, so it always opens below its own
 // trigger like every other element on the page.
-export function AnchoredSelectField({ label, value, onChange, options, placeholder = 'Select…', style }) {
+export function AnchoredSelectField({ label, value, onChange, options, placeholder = 'Select…', style, error }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -59,6 +70,7 @@ export function AnchoredSelectField({ label, value, onChange, options, placehold
           ...control, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           cursor: 'pointer', textAlign: 'left',
           color: selected ? 'var(--text-primary)' : 'var(--text-muted)',
+          ...(error ? { border: '1px solid var(--danger)' } : null),
         }}
       >
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

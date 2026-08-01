@@ -46,3 +46,23 @@ export function todayISO() {
 export function currentMonth() {
   return todayISO().slice(0, 7)
 }
+
+// Live phone-mask input (Prompt 401) — strips everything but digits from
+// whatever's currently in the field (including the mask's own punctuation,
+// so backspace/paste/mid-string edits all re-derive cleanly) and re-applies
+// (xxx) xxx-xxxx as digits accumulate. The mask owns the punctuation; a
+// non-digit typed anywhere just gets stripped back out on the next render.
+export function formatPhoneInput(raw) {
+  const d = String(raw || '').replace(/\D/g, '').slice(0, 10)
+  if (!d) return ''
+  if (d.length < 4) return `(${d}`
+  if (d.length < 7) return `(${d.slice(0, 3)}) ${d.slice(3)}`
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`
+}
+
+// Title-cases a name on submit (Prompt 401) — not applied while typing, only
+// as a normalization pass right before save. Idempotent, so already-correct
+// input passes through unchanged.
+export function titleCase(str) {
+  return String(str || '').trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
+}
