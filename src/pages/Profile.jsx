@@ -204,6 +204,17 @@ function AvatarUpload({ profile }) {
         >
           {upload.isPending ? <Loader2 size={16} color="#fff" className="animate-spin" /> : <Camera size={16} color="#fff" />}
         </div>
+        {/* Persistent camera badge (Prompt 409) — visible at rest, not just on
+            hover, so the circle reads as clickable/uploadable at a glance. */}
+        {!upload.isPending && (
+          <div style={{
+            position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'var(--accent)', border: '2px solid var(--bg-elevated)',
+          }}>
+            <Camera size={11} color="#fff" />
+          </div>
+        )}
       </button>
       <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />
       {error && (
