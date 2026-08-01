@@ -11,6 +11,7 @@ import {
 import { GapNote } from '../components/ui/ExportForm'
 import { SavedTick } from '../components/ui/SavedTick'
 import { Switch } from '../components/ui/Switch'
+import { Segmented } from '../components/ui/Segmented'
 import { Avatar } from '../components/ui/Avatar'
 
 // Profile — split out of Settings (Prompt 338) so the sidebar footer's
@@ -148,6 +149,10 @@ function ProfilePanel({ profile }) {
         <MonthlyGoalField profile={profile} />
       )}
 
+      {profile.role === 'admin' && profile.also_writes_business && (
+        <DefaultOverviewScopeField profile={profile} />
+      )}
+
       <GapNote>
         The approved design also shows NPN (producer number) and licensed states. `profiles` has no column
         for either yet — they need a migration, so nothing is shown rather than a placeholder that looks
@@ -273,6 +278,43 @@ function MonthlyGoalField({ profile }) {
         </button>
         <SavedTick show={saved && !dirty} />
       </div>
+    </div>
+  )
+}
+
+// "Default Overview to" (Prompt 405, moved here from Settings → Regional) —
+// only meaningful once the You/Everyone toggle on Overview actually exists,
+// which is exactly the same gate as MonthlyGoalField above: admin/upline
+// role AND "I'm also actively writing business" on. Living in Settings
+// independently of that dependency was the redundancy Prompt 405 fixed —
+// this field now shares WritesBusinessField's reveal condition instead of
+// its own separate one.
+function DefaultOverviewScopeField({ profile }) {
+  const update = useUpdateOwnProfile()
+  const { refreshProfile } = useAuth()
+
+  async function setDefaultScope(next) {
+    await update.mutateAsync({ profileId: profile.id, updates: { overview_default_scope: next } })
+    await refreshProfile()
+  }
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 14, padding: '16px 0', marginTop: 4,
+      borderTop: 'var(--border-w) solid var(--border)',
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>Default Overview to</p>
+        <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+          Which view Overview opens on — only applies when the You/Everyone toggle is showing.
+        </p>
+      </div>
+      <Segmented
+        size="sm"
+        value={profile.overview_default_scope || 'you'}
+        onChange={setDefaultScope}
+        options={[{ value: 'you', label: 'You' }, { value: 'everyone', label: 'Everyone' }]}
+      />
     </div>
   )
 }
