@@ -10,6 +10,7 @@ import { useMonthlyGoal, useTeamMonthlyGoals } from '../../hooks/useMonthlyGoals
 import { useBugReports } from '../../hooks/useBugReports'
 import { money, moneyShort, fullName, todayISO } from '../../lib/policyFormat'
 import { excludeTestAccounts } from '../../lib/testAccounts'
+import { formatInTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { Segmented } from '../../components/ui/Segmented'
 
 // Closer · Overview — literal port of the approved Claude Design export
@@ -156,11 +157,19 @@ export default function AgentOverview() {
   const { data: followUps = [] } = useFollowUps(profile?.id)
   const { data: bugReports = [] } = useBugReports()
 
-  const [clock, setClock] = useState(() => new Date())
+  // Prompt 403: the clock reads the account's saved Settings → Regional
+  // timezone (`profile.timezone`), not the device's implicit local zone —
+  // `nowMs` is a plain instant, every rendered piece (greeting, date
+  // heading, digital time) is formatted into `tz` explicitly below via
+  // `formatInTimezone`, same helper `LiveClock` (My Leads) already uses for
+  // the same reason.
+  const tz = profile?.timezone || DEFAULT_TIMEZONE
+  const [nowMs, setNowMs] = useState(() => Date.now())
   useEffect(() => {
-    const t = setInterval(() => setClock(new Date()), 1000)
+    const t = setInterval(() => setNowMs(Date.now()), 1000)
     return () => clearInterval(t)
   }, [])
+  const nowIso = new Date(nowMs).toISOString()
 
   const today = todayISO()
   const month = today.slice(0, 7)
@@ -287,7 +296,7 @@ export default function AgentOverview() {
   }, [effectiveScope, teamPolicies, ownPolicies, month, teamGoalTarget, ownGoalRow])
 
   const greeting = (() => {
-    const h = clock.getHours()
+    const h = Number(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hourCycle: 'h23' }).format(nowMs))
     if (h < 12) return 'Good morning'
     if (h < 18) return 'Good afternoon'
     return 'Good evening'
@@ -298,7 +307,7 @@ export default function AgentOverview() {
   // Split "2:45:30 PM" into the digits and the AM/PM suffix (Prompt 350) so
   // AM/PM can render at roughly half the digit size — same treatment for
   // both, this isn't an AM-vs-PM styling difference.
-  const clockStr = clock.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })
+  const clockStr = formatInTimezone(nowIso, tz, { hour: 'numeric', minute: '2-digit', second: '2-digit' })
   const [, clockDigits, clockAmPm] = clockStr.match(/^(.*?)\s*([AP]M)$/i) || [null, clockStr, '']
 
   const row1 = [
@@ -353,7 +362,7 @@ export default function AgentOverview() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-            {clock.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            {formatInTimezone(nowIso, tz, { weekday: 'long', month: 'long', day: 'numeric' })}
           </span>
           <div style={{
             background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '9px 16px', whiteSpace: 'nowrap',
