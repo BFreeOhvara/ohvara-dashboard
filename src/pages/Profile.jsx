@@ -1,16 +1,17 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { useUpdateOwnProfile } from '../hooks/useSettings'
+import { useUpdateOwnProfile, useUploadAvatar } from '../hooks/useSettings'
 import { useMonthlyGoal, useSetMonthlyGoal } from '../hooks/useMonthlyGoals'
 import { todayISO } from '../lib/policyFormat'
-import { Loader2, X } from 'lucide-react'
+import { Loader2, X, Camera } from 'lucide-react'
 import {
   MONO, card, cardTitle, control, primaryBtn,
 } from '../lib/exportStyles'
 import { GapNote } from '../components/ui/ExportForm'
 import { SavedTick } from '../components/ui/SavedTick'
 import { Switch } from '../components/ui/Switch'
+import { Avatar } from '../components/ui/Avatar'
 
 // Profile — split out of Settings (Prompt 338) so the sidebar footer's
 // account popover has a genuinely distinct destination for "Profile" versus
@@ -24,9 +25,6 @@ import { Switch } from '../components/ui/Switch'
 
 const inputBase = { ...control, background: 'var(--bg-base)', padding: '0 12px' }
 const softLabel = { margin: '0 0 5px', fontSize: 11, color: 'var(--text-muted)' }
-
-const initialsOf = name =>
-  (name || '?').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
 const ROLE_LABEL = { admin: 'Admin', closer: 'Closer', rep: 'Setter', client: 'Client' }
 
@@ -103,14 +101,7 @@ function ProfilePanel({ profile }) {
       <p style={cardTitle}>Profile</p>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-        <span style={{
-          width: 52, height: 52, borderRadius: '50%',
-          background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 17, fontWeight: 700, color: 'var(--accent)', flexShrink: 0,
-        }}>
-          {initialsOf(profile.full_name)}
-        </span>
+        <AvatarUpload profile={profile} />
         <div>
           <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{profile.full_name}</p>
           <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
@@ -158,10 +149,68 @@ function ProfilePanel({ profile }) {
       )}
 
       <GapNote>
-        The approved design also shows a profile photo, NPN (producer number) and licensed states. `profiles`
-        has no column for any of the three yet — they need a migration, so nothing is shown rather than a
-        placeholder that looks like real license data.
+        The approved design also shows NPN (producer number) and licensed states. `profiles` has no column
+        for either yet — they need a migration, so nothing is shown rather than a placeholder that looks
+        like real license data.
       </GapNote>
+    </div>
+  )
+}
+
+// Profile photo upload (Prompt 407) — click the avatar circle to pick a new
+// image; uploads to the `avatars` bucket and updates profiles.avatar_url
+// immediately. Falls back to the shared two-initial colored Avatar
+// (avatar_color, migration 096) when no photo is set, same as every other
+// avatar in the app now renders.
+function AvatarUpload({ profile }) {
+  const upload = useUploadAvatar()
+  const { refreshProfile } = useAuth()
+  const inputRef = useRef(null)
+  const [error, setError] = useState('')
+
+  async function onFile(e) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-selecting the same file next time
+    if (!file) return
+    setError('')
+    try {
+      await upload.mutateAsync({ profileId: profile.id, file })
+      await refreshProfile()
+    } catch (err) {
+      setError(err.message || 'Could not upload your photo')
+    }
+  }
+
+  return (
+    <div style={{ position: 'relative', flexShrink: 0 }}>
+      <button
+        onClick={() => inputRef.current?.click()}
+        disabled={upload.isPending}
+        title="Change profile photo"
+        style={{
+          position: 'relative', width: 52, height: 52, border: 'none', padding: 0,
+          borderRadius: '50%', cursor: upload.isPending ? 'default' : 'pointer', background: 'transparent',
+        }}
+      >
+        <Avatar profile={profile} size={52} style={{ fontSize: 17, border: '1px solid var(--accent-border)' }} />
+        <div style={{
+          position: 'absolute', inset: 0, borderRadius: '50%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.45)', opacity: upload.isPending ? 1 : 0,
+          transition: 'opacity 120ms',
+        }}
+          onMouseEnter={e => { if (!upload.isPending) e.currentTarget.style.opacity = 1 }}
+          onMouseLeave={e => { if (!upload.isPending) e.currentTarget.style.opacity = 0 }}
+        >
+          {upload.isPending ? <Loader2 size={16} color="#fff" className="animate-spin" /> : <Camera size={16} color="#fff" />}
+        </div>
+      </button>
+      <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />
+      {error && (
+        <p style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, fontSize: 10.5, color: 'var(--danger)', whiteSpace: 'nowrap' }}>
+          {error}
+        </p>
+      )}
     </div>
   )
 }

@@ -9,6 +9,7 @@ import {
   GraduationCap, ChevronRight, Phone, Target, User,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import { Avatar } from '../ui/Avatar'
 import { MobileAppModal } from './MobileAppModal'
 import { isStandalone } from '../../lib/platform'
 import ohvaraLogo from '../../assets/ohvara-logo.png'
@@ -84,10 +85,6 @@ function AccountMenu({ profile, expanded, duty, setDuty, onNavigate, onSignOut }
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const initials = profile?.full_name
-    ? profile.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
-    : '?'
-
   function go(path) {
     setOpen(false)
     onNavigate(path)
@@ -112,14 +109,7 @@ function AccountMenu({ profile, expanded, duty, setDuty, onNavigate, onSignOut }
           background: 'var(--bg-elevated)',
         }}
       >
-        <span style={{
-          width: 26, height: 26, borderRadius: '50%',
-          background: 'var(--text-primary)', border: '1px solid var(--accent-border)',
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 10, fontWeight: 700, color: 'var(--accent)', flexShrink: 0,
-        }}>
-          {initials}
-        </span>
+        <Avatar profile={profile} size={26} style={{ border: '1px solid var(--accent-border)' }} />
         {expanded && (
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -149,14 +139,7 @@ function AccountMenu({ profile, expanded, duty, setDuty, onNavigate, onSignOut }
               what determines whether the popup clears the Settings nav item
               sitting directly above the footer row (Prompt 340). */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 14px 10px' }}>
-            <span style={{
-              width: 28, height: 28, borderRadius: '50%',
-              background: 'var(--text-primary)', border: '1px solid var(--accent-border)',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11, fontWeight: 700, color: 'var(--accent)', flexShrink: 0,
-            }}>
-              {initials}
-            </span>
+            <Avatar profile={profile} size={28} style={{ border: '1px solid var(--accent-border)' }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {profile?.full_name}

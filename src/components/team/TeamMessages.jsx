@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Send, MessageSquare, ChevronLeft, Users, MoreHorizontal, Copy, Trash2 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import {
   useTeamChannel, useTeamMembers, useDmConversationId, useTeamMessages, useSendTeamMessage,
   useDeleteTeamMessage,
 } from '../../hooks/useTeamChat'
+import { Avatar } from '../ui/Avatar'
 
 // Team chat (Prompt 357) — the Messages sub-tab of the Team page. One shared
 // "Team chat" channel (everyone closer/admin) plus a DM thread per other
@@ -20,34 +21,7 @@ function timeAgo(ts) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-const AVATAR_PALETTE = [
-  { bg: 'var(--accent-dim)', fg: 'var(--accent)', border: 'var(--accent-border)' },
-  { bg: 'var(--success-dim)', fg: 'var(--success)', border: 'rgba(34,197,94,0.20)' },
-  { bg: 'rgba(56,189,248,0.12)', fg: 'var(--info)', border: 'rgba(56,189,248,0.20)' },
-  { bg: 'var(--warning-dim)', fg: 'var(--warning)', border: 'rgba(245,158,11,0.20)' },
-  { bg: 'var(--danger-dim)', fg: 'var(--danger)', border: 'rgba(239,68,68,0.20)' },
-]
-
-function avatarStyle(name) {
-  const idx = (name || '?').charCodeAt(0) % AVATAR_PALETTE.length
-  return AVATAR_PALETTE[idx]
-}
-
-function Avatar({ name, size = 32, icon: Icon }) {
-  const { bg, fg, border } = avatarStyle(name)
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: '50%', flexShrink: 0,
-      background: bg, color: fg, border: `0.5px solid ${border}`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: Math.round(size * 0.4), fontWeight: 600,
-    }}>
-      {Icon ? <Icon size={Math.round(size * 0.5)} /> : ((name || '?').trim().charAt(0).toUpperCase() || '?')}
-    </div>
-  )
-}
-
-function ConversationRow({ name, subtitle, active, icon, onClick }) {
+function ConversationRow({ name, subtitle, active, icon, avatarUrl, avatarColor, onClick }) {
   return (
     <button
       onClick={onClick}
@@ -58,7 +32,7 @@ function ConversationRow({ name, subtitle, active, icon, onClick }) {
         borderLeft: active ? '2px solid var(--accent)' : '2px solid transparent',
       }}
     >
-      <Avatar name={name} size={34} icon={icon} />
+      <Avatar name={name} avatarUrl={avatarUrl} avatarColor={avatarColor} size={34} icon={icon} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
           {name}
@@ -134,11 +108,11 @@ function MessageMenu({ text, canDelete, onDelete, align }) {
   )
 }
 
-function Bubble({ side, name, text, timestamp, canDelete, onDelete }) {
+function Bubble({ side, name, avatarUrl, avatarColor, text, timestamp, canDelete, onDelete }) {
   const isRight = side === 'right'
   return (
     <div className="group" style={{ display: 'flex', gap: 6, flexDirection: isRight ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
-      <Avatar name={name} size={26} />
+      <Avatar name={name} avatarUrl={avatarUrl} avatarColor={avatarColor} size={26} />
       <div style={{ maxWidth: '70%' }}>
         <div style={{
           padding: '9px 13px', borderRadius: 12,
@@ -162,7 +136,7 @@ function Bubble({ side, name, text, timestamp, canDelete, onDelete }) {
 // Thread pane — shared by the channel and every DM once a conversation id is
 // known. `conversationId` is undefined for a DM until useDmConversationId's
 // get-or-create query resolves.
-function Thread({ conversationId, name, subtitle, onBack, myId, myName }) {
+function Thread({ conversationId, name, subtitle, avatarUrl, avatarColor, onBack, myId, myName, avatarById }) {
   const { data: messages = [], isLoading } = useTeamMessages(conversationId)
   const send = useSendTeamMessage()
   const del = useDeleteTeamMessage()
@@ -189,7 +163,7 @@ function Thread({ conversationId, name, subtitle, onBack, myId, myName }) {
         >
           <ChevronLeft size={20} />
         </button>
-        <Avatar name={name} size={28} icon={subtitle === 'Team chat' ? Users : undefined} />
+        <Avatar name={name} avatarUrl={avatarUrl} avatarColor={avatarColor} size={28} icon={subtitle === 'Team chat' ? Users : undefined} />
         <div>
           <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{name}</p>
           <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>{subtitle}</p>
@@ -202,17 +176,22 @@ function Thread({ conversationId, name, subtitle, onBack, myId, myName }) {
             No messages yet — say hello below.
           </p>
         ) : (
-          messages.map(m => (
-            <Bubble
-              key={m.id}
-              side={m.sender_id === myId ? 'right' : 'left'}
-              name={m.sender_name}
-              text={m.body}
-              timestamp={m.created_at}
-              canDelete={m.sender_id === myId}
-              onDelete={() => del.mutate({ id: m.id, conversation_id: conversationId })}
-            />
-          ))
+          messages.map(m => {
+            const sender = avatarById.get(m.sender_id)
+            return (
+              <Bubble
+                key={m.id}
+                side={m.sender_id === myId ? 'right' : 'left'}
+                name={m.sender_name}
+                avatarUrl={sender?.avatar_url}
+                avatarColor={sender?.avatar_color}
+                text={m.body}
+                timestamp={m.created_at}
+                canDelete={m.sender_id === myId}
+                onDelete={() => del.mutate({ id: m.id, conversation_id: conversationId })}
+              />
+            )
+          })
         )}
         <div ref={bottomRef} />
       </div>
@@ -251,16 +230,19 @@ function Thread({ conversationId, name, subtitle, onBack, myId, myName }) {
 // Resolves the DM conversation id for whichever member is selected — a
 // separate component so the get-or-create hook only runs for the active
 // selection, not once per row in the member list.
-function DmThread({ myId, myName, member, onBack }) {
+function DmThread({ myId, myName, member, onBack, avatarById }) {
   const { data: conversationId } = useDmConversationId(myId, member.id)
   return (
     <Thread
       conversationId={conversationId}
       name={member.full_name}
       subtitle={member.role === 'admin' ? 'Admin' : 'Closer'}
+      avatarUrl={member.avatar_url}
+      avatarColor={member.avatar_color}
       onBack={onBack}
       myId={myId}
       myName={myName}
+      avatarById={avatarById}
     />
   )
 }
@@ -272,6 +254,16 @@ export function TeamMessages() {
 
   const { data: channel } = useTeamChannel()
   const { data: members = [] } = useTeamMembers(myId)
+
+  // Every sender a Bubble in the shared channel could ever show, keyed by
+  // id — self plus every other team member — so chat-bubble avatars don't
+  // need a per-message profile join, just a lookup against data already
+  // loaded for the conversation list.
+  const avatarById = useMemo(() => {
+    const map = new Map(members.map(m => [m.id, m]))
+    if (profile) map.set(profile.id, profile)
+    return map
+  }, [members, profile])
 
   // null = nothing selected; 'channel'; or a member object for a DM.
   const [selected, setSelected] = useState(null)
@@ -305,6 +297,8 @@ export function TeamMessages() {
               key={m.id}
               name={m.full_name}
               subtitle={m.role === 'admin' ? 'Admin' : 'Closer'}
+              avatarUrl={m.avatar_url}
+              avatarColor={m.avatar_color}
               active={selected?.id === m.id}
               onClick={() => setSelected(m)}
             />
@@ -327,9 +321,10 @@ export function TeamMessages() {
             onBack={() => setSelected(null)}
             myId={myId}
             myName={myName}
+            avatarById={avatarById}
           />
         ) : (
-          <DmThread myId={myId} myName={myName} member={selected} onBack={() => setSelected(null)} />
+          <DmThread myId={myId} myName={myName} member={selected} onBack={() => setSelected(null)} avatarById={avatarById} />
         )}
       </div>
     </div>

@@ -37,7 +37,7 @@ export function useTeamMembers(excludeId) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, role')
+        .select('id, full_name, role, avatar_url, avatar_color')
         .in('role', ['closer', 'admin'])
         .order('full_name')
       if (error) throw error

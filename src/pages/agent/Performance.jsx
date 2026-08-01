@@ -10,6 +10,7 @@ import { usePeriodPicker, PeriodPicker, DateNav } from '../../components/agent/P
 import { GapNote } from '../../components/ui/ExportForm'
 import { Segmented } from '../../components/ui/Segmented'
 import { excludeTestAccounts } from '../../lib/testAccounts'
+import { Avatar } from '../../components/ui/Avatar'
 
 // Performance — Production + Leaderboard (Prompt 348), replacing the
 // StatsPlaceholder. Structure/content match the Claude Design v3 mockup
@@ -54,10 +55,6 @@ const MONO = "'JetBrains Mono',monospace"
 const GOLD = 'var(--warning)'
 const SILVER = '#9CA3AF'
 const BRONZE = '#B87333'
-
-function initialsOf(name) {
-  return (name || '?').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()
-}
 
 export default function Performance() {
   const [subTab, setSubTab] = useState('production')
@@ -269,7 +266,12 @@ function LeaderboardTab() {
       if (d < lo || d > hi) continue
       const id = p.agent_id
       const name = p.agent_name || 'Unknown'
-      if (!byAgent.has(id)) byAgent.set(id, { id, name, ap: 0, families: 0 })
+      if (!byAgent.has(id)) {
+        byAgent.set(id, {
+          id, name, ap: 0, families: 0,
+          avatarUrl: p.agent_avatar_url, avatarColor: p.agent_avatar_color,
+        })
+      }
       const row = byAgent.get(id)
       row.ap += Number(p.annual_premium || 0)
       row.families += 1
@@ -380,13 +382,22 @@ function PodiumCard({ row, place, color, size }) {
       }}>
         {place}
       </span>
-      <span style={{
-        width: lg ? 60 : 48, height: lg ? 60 : 48, borderRadius: '50%', background: 'var(--bg-elevated)',
-        border: `${lg ? 2.5 : 2}px solid ${empty ? 'var(--border)' : color}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: lg ? 18 : 15, fontWeight: 700, color: 'var(--text-muted)', marginTop: 4,
-      }}>
-        {empty ? '—' : initialsOf(row.name)}
-      </span>
+      {empty ? (
+        <span style={{
+          width: lg ? 60 : 48, height: lg ? 60 : 48, borderRadius: '50%', background: 'var(--bg-elevated)',
+          border: `${lg ? 2.5 : 2}px solid var(--border)`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: lg ? 18 : 15, fontWeight: 700, color: 'var(--text-muted)', marginTop: 4,
+        }}>
+          —
+        </span>
+      ) : (
+        <div style={{ marginTop: 4 }}>
+          <Avatar
+            name={row.name} avatarUrl={row.avatarUrl} avatarColor={row.avatarColor}
+            size={lg ? 60 : 48} ring={{ color, width: lg ? 2.5 : 2 }}
+          />
+        </div>
+      )}
       <span style={{ fontSize: lg ? 15 : 13.5, fontWeight: 700, color: empty ? 'var(--text-muted)' : 'var(--text-primary)' }}>
         {empty ? 'N/A' : row.name}
       </span>

@@ -8,6 +8,7 @@ import {
   MESSAGE_CATEGORIES,
   useSendMessage, useMyMessages, useInbox, useReplyMessage, useMarkMessageRead,
 } from '../../hooks/useMessages'
+import { Avatar } from '../ui/Avatar'
 
 const HEADER = {
   rep:    { title: 'Messages', subtitle: 'Dashboard questions go to Brayden · sales questions go to Nate' },
@@ -40,33 +41,6 @@ function useRepRecentBookings(repId, enabled) {
   })
 }
 
-const AVATAR_PALETTE = [
-  { bg: 'var(--accent-dim)', fg: 'var(--accent)', border: 'var(--accent-border)' },
-  { bg: 'var(--success-dim)', fg: 'var(--success)', border: 'rgba(34,197,94,0.20)' },
-  { bg: 'rgba(56,189,248,0.12)', fg: 'var(--info)', border: 'rgba(56,189,248,0.20)' },
-  { bg: 'var(--warning-dim)', fg: 'var(--warning)', border: 'rgba(245,158,11,0.20)' },
-  { bg: 'var(--danger-dim)', fg: 'var(--danger)', border: 'rgba(239,68,68,0.20)' },
-]
-
-function avatarStyle(name) {
-  const idx = (name || '?').charCodeAt(0) % AVATAR_PALETTE.length
-  return AVATAR_PALETTE[idx]
-}
-
-function Avatar({ name, size = 32 }) {
-  const { bg, fg, border } = avatarStyle(name)
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: '50%', flexShrink: 0,
-      background: bg, color: fg, border: `0.5px solid ${border}`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: Math.round(size * 0.4), fontWeight: 600,
-    }}>
-      {(name || '?').trim().charAt(0).toUpperCase() || '?'}
-    </div>
-  )
-}
-
 function ConversationRow({ conv, active, onClick }) {
   return (
     <button
@@ -78,7 +52,7 @@ function ConversationRow({ conv, active, onClick }) {
         borderLeft: active ? '2px solid var(--accent)' : '2px solid transparent',
       }}
     >
-      <Avatar name={conv.name} size={34} />
+      <Avatar name={conv.name} avatarUrl={conv.avatarUrl} avatarColor={conv.avatarColor} size={34} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -104,11 +78,11 @@ function ConversationRow({ conv, active, onClick }) {
   )
 }
 
-function Bubble({ side, name, text, timestamp }) {
+function Bubble({ side, name, avatarUrl, avatarColor, text, timestamp }) {
   const isRight = side === 'right'
   return (
     <div style={{ display: 'flex', gap: 8, flexDirection: isRight ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
-      <Avatar name={name} size={26} />
+      <Avatar name={name} avatarUrl={avatarUrl} avatarColor={avatarColor} size={26} />
       <div style={{ maxWidth: '70%' }}>
         <div style={{
           padding: '9px 13px', borderRadius: 12,
@@ -138,7 +112,7 @@ function ContactPanel({ role, selected }) {
       className="hidden lg:flex"
       style={{ width: 240, flexShrink: 0, borderLeft: '0.5px solid var(--border)', flexDirection: 'column', alignItems: 'center', padding: '28px 18px', textAlign: 'center' }}
     >
-      <Avatar name={selected.name} size={56} />
+      <Avatar name={selected.name} avatarUrl={selected.avatarUrl} avatarColor={selected.avatarColor} size={56} />
       <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: '12px 0 2px' }}>{selected.name}</p>
       <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>{selected.role}</p>
       {selected.description && (
@@ -208,7 +182,12 @@ export function MessageCenter({ role }) {
 
   const conversations = useMemo(() => {
     if (isRep) {
+      // Fixed 2-contact view: 'brayden' is always the single admin, 'nate'
+      // the single closer (North Star: all reps + Nate on Profile A until a
+      // second closer is confirmed) — so the contact's avatar is simply
+      // whichever profile is currently the admin/closer.
       return MESSAGE_CATEGORIES.map(c => {
+        const contact = c.value === 'brayden' ? allAdmins[0] : allClosers[0]
         const msgs = (repMessages || [])
           .filter(m => m.recipient === c.value)
           .slice()
@@ -217,6 +196,7 @@ export function MessageCenter({ role }) {
         return {
           key: c.value, name: c.to, role: c.label, description: c.hint, messages: msgs, unread: 0,
           recipientKey: c.value,
+          avatarUrl: contact?.avatar_url, avatarColor: contact?.avatar_color,
           lastMessage: last ? (last.reply_body || last.body) : 'No messages yet',
           lastTimestamp: last ? (last.replied_at || last.created_at) : null,
         }
@@ -227,7 +207,10 @@ export function MessageCenter({ role }) {
     const managerIds = new Set(managerProfiles.map(p => p.id))
     const bySender = {}
     for (const rep of allReps) {
-      bySender[rep.id] = { key: rep.id, name: rep.full_name, role: 'Setter', messages: [], isManager: false }
+      bySender[rep.id] = {
+        key: rep.id, name: rep.full_name, role: 'Setter', messages: [], isManager: false,
+        avatarUrl: rep.avatar_url, avatarColor: rep.avatar_color,
+      }
     }
     for (const m of inboxMessages || []) {
       if (managerIds.has(m.sender_id)) continue // handled in manager thread below
@@ -267,6 +250,7 @@ export function MessageCenter({ role }) {
         messages: allMsgs,
         isManager: true,
         recipientKey: mutualRecipient,
+        avatarUrl: mgr.avatar_url, avatarColor: mgr.avatar_color,
         lastMessage: last ? last.body : 'No messages yet',
         lastTimestamp: last ? last.created_at : null,
         unread: 0,
@@ -275,7 +259,7 @@ export function MessageCenter({ role }) {
 
     // Manager threads float to the top of the list
     return [...managerConvs, ...repConvs]
-  }, [isRep, repMessages, inboxMessages, mutualSentMessages, allReps, managerProfiles, mutualRecipient])
+  }, [isRep, repMessages, inboxMessages, mutualSentMessages, allReps, allAdmins, allClosers, managerProfiles, mutualRecipient])
 
   // Auto-select the rep's first contact thread once on load only — not on
   // every `selectedKey === null`, otherwise the mobile back button (which
@@ -374,7 +358,7 @@ export function MessageCenter({ role }) {
                 >
                   <ChevronLeft size={20} />
                 </button>
-                <Avatar name={selected.name} size={28} />
+                <Avatar name={selected.name} avatarUrl={selected.avatarUrl} avatarColor={selected.avatarColor} size={28} />
                 <div>
                   <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{selected.name}</p>
                   <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>{selected.role}</p>
@@ -388,22 +372,40 @@ export function MessageCenter({ role }) {
                   </p>
                 ) : selected.isManager ? (
                   // Manager mutual thread — each INSERT row is its own chat bubble
-                  selected.messages.map(m => (
-                    <Bubble
-                      key={m.id}
-                      side={m.sender_id === profile.id ? 'right' : 'left'}
-                      name={m.sender_name}
-                      text={m.body}
-                      timestamp={m.created_at}
-                    />
-                  ))
+                  // Manager mutual thread is always exactly 2 participants (me + selected)
+                  selected.messages.map(m => {
+                    const mine = m.sender_id === profile.id
+                    return (
+                      <Bubble
+                        key={m.id}
+                        side={mine ? 'right' : 'left'}
+                        name={m.sender_name}
+                        avatarUrl={mine ? profile.avatar_url : selected.avatarUrl}
+                        avatarColor={mine ? profile.avatar_color : selected.avatarColor}
+                        text={m.body}
+                        timestamp={m.created_at}
+                      />
+                    )
+                  })
                 ) : (
-                  // Rep thread — message row + optional reply slot
+                  // Rep thread — message row + optional reply slot. Also always
+                  // exactly 2 participants: the rep (senderName/self depending
+                  // on who's viewing) and the fixed admin/closer contact.
                   selected.messages.map(m => (
                     <div key={m.id} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      <Bubble side="left" name={senderName} text={m.body} timestamp={m.created_at} />
+                      <Bubble
+                        side="left" name={senderName}
+                        avatarUrl={isRep ? profile.avatar_url : selected.avatarUrl}
+                        avatarColor={isRep ? profile.avatar_color : selected.avatarColor}
+                        text={m.body} timestamp={m.created_at}
+                      />
                       {m.reply_body && (
-                        <Bubble side="right" name={replierName} text={m.reply_body} timestamp={m.replied_at || m.created_at} />
+                        <Bubble
+                          side="right" name={replierName}
+                          avatarUrl={isRep ? selected.avatarUrl : profile.avatar_url}
+                          avatarColor={isRep ? selected.avatarColor : profile.avatar_color}
+                          text={m.reply_body} timestamp={m.replied_at || m.created_at}
+                        />
                       )}
                     </div>
                   ))

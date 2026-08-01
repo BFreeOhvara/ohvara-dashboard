@@ -9,6 +9,7 @@ import { NotificationBell } from '../admin/NotificationBell'
 import { RepNotificationBell } from '../rep/RepNotificationBell'
 import { CloserNotificationBell } from '../closer/CloserNotificationBell'
 import { useAuth } from '../../hooks/useAuth'
+import { Avatar } from '../ui/Avatar'
 
 // Shell — literal port of the export's right-hand column (lines 114-161):
 // a 60px sticky header carrying the page title/subtitle, notification bell
@@ -58,19 +59,9 @@ function HeaderBell() {
 // settings/sign-out.
 function AccountChip() {
   const { profile } = useAuth()
-  const initials = profile?.full_name
-    ? profile.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
-    : '?'
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-      <span style={{
-        width: 26, height: 26, borderRadius: '50%',
-        background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 10, fontWeight: 700, color: 'var(--accent)', flexShrink: 0,
-      }}>
-        {initials}
-      </span>
+      <Avatar profile={profile} size={26} style={{ border: '1px solid var(--accent-border)' }} />
       <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
         {profile?.full_name || ''}
       </span>

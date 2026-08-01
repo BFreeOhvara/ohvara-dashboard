@@ -5,6 +5,7 @@ import { useHierarchy } from '../../hooks/useHierarchy'
 import { usePendingInvites, useCreateInvite, useRevokeInvite } from '../../hooks/useProfiles'
 import { MONO, card, ghostBtn } from '../../lib/exportStyles'
 import { GapNote } from '../../components/ui/ExportForm'
+import { Avatar } from '../../components/ui/Avatar'
 
 // Hierarchy — literal port of the export's two Hierarchy screens (vault:
 // media/claude-design-export-ohvara-dashboard-v3.html): "Closer · Hierarchy"
@@ -31,9 +32,6 @@ import { GapNote } from '../../components/ui/ExportForm'
 //    lets any authenticated agent insert their own 'closer' invite; tightening
 //    that policy needs a migration, which the auto-mode classifier blocked
 //    pending Brayden's explicit go-ahead (flagged separately, not applied).
-
-const initialsOf = name =>
-  (name || '?').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
 const roleLabel = r => (r === 'admin' ? 'Admin' : 'Closer')
 
@@ -121,14 +119,7 @@ function CloserHierarchy({ self, upline, downline }) {
             background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
             borderRadius: 8, padding: '14px 22px', minWidth: 250,
           }}>
-            <span style={{
-              width: 36, height: 36, borderRadius: '50%',
-              background: 'var(--bg-surface)', border: '1px solid var(--accent-border)',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 12, fontWeight: 700, color: 'var(--accent)', flexShrink: 0,
-            }}>
-              {initialsOf(self?.full_name)}
-            </span>
+            <Avatar profile={self} size={36} style={{ border: '1px solid var(--accent-border)' }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
                 {self?.full_name || '—'}{' '}
@@ -178,15 +169,7 @@ function PersonChip({ person, below = 0, size }) {
       borderRadius: 8, padding: sm ? '11px 18px' : '12px 16px',
       minWidth: sm ? 230 : 250,
     }}>
-      <span style={{
-        width: 30, height: 30, borderRadius: '50%',
-        background: sm ? 'var(--bg-panel)' : 'var(--bg-elevated)',
-        border: 'var(--border-w) solid var(--border)',
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 10.5, fontWeight: 700, color: 'var(--text-secondary)', flexShrink: 0,
-      }}>
-        {initialsOf(person.full_name)}
-      </span>
+      <Avatar profile={person} size={30} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{person.full_name}</p>
         <p style={{ margin: '2px 0 0', fontSize: 10.5, color: 'var(--text-muted)' }}>
@@ -334,14 +317,7 @@ function AdminHierarchy({ agents }) {
             return (
               <div key={root.id} style={{ ...card, padding: '22px 24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: children.length && open ? 14 : 0 }}>
-                  <span style={{
-                    width: 32, height: 32, borderRadius: '50%',
-                    background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 11, fontWeight: 700, color: 'var(--accent)', flexShrink: 0,
-                  }}>
-                    {initialsOf(root.full_name)}
-                  </span>
+                  <Avatar profile={root} size={32} style={{ border: '1px solid var(--accent-border)' }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{root.full_name}</p>
                     <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
@@ -390,14 +366,7 @@ function Branch({ agent, childrenOf, joined }) {
         background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)',
         borderRadius: 7, padding: '10px 14px',
       }}>
-        <span style={{
-          width: 26, height: 26, borderRadius: '50%',
-          background: 'var(--bg-panel)', border: 'var(--border-w) solid var(--border)',
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', flexShrink: 0,
-        }}>
-          {initialsOf(agent.full_name)}
-        </span>
+        <Avatar profile={agent} size={26} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>{agent.full_name}</p>
           <p style={{ margin: '1px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>

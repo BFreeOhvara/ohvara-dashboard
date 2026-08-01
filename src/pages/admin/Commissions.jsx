@@ -4,6 +4,7 @@ import { DollarSign, TrendingUp, Users, Check, ChevronDown, ChevronRight, Refres
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { roleLabel } from '../../lib/roleLabels'
+import { Avatar } from '../../components/ui/Avatar'
 
 // ── Commission constants ───────────────────────────────────────────────────────
 // NOTE: TIER_MONTHLY below is a closest-tier fallback for recurring commission
@@ -46,7 +47,7 @@ function useCommissions() {
         .from('commissions')
         .select(`
           *,
-          recipient:profiles!recipient_id(id, full_name, username, role),
+          recipient:profiles!recipient_id(id, full_name, username, role, avatar_url, avatar_color),
           lead:leads(business_name, niche, city),
           appointment:appointments(closed_tier, deal_value, scheduled_at)
         `)
@@ -482,7 +483,6 @@ export default function Commissions() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {recipientSummaries.map(({ person, totalSetup, totalRecurring, totalPaid, pending, rows }) => {
             const isOpen = expandedRep === person?.id
-            const roleColor = person?.role === 'admin' ? 'var(--accent)' : person?.role === 'closer' ? 'var(--warning)' : 'var(--success)'
 
             return (
               <div key={person?.id} style={{
@@ -499,14 +499,7 @@ export default function Commissions() {
                     background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left',
                   }}
                 >
-                  <div style={{
-                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                    background: `${roleColor}18`, border: `0.5px solid ${roleColor}35`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 12, fontWeight: 500, color: roleColor,
-                  }}>
-                    {person?.full_name?.charAt(0) || '?'}
-                  </div>
+                  <Avatar profile={person} size={32} />
                   <div style={{ flex: '1 1 120px', minWidth: 0 }}>
                     <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {person?.full_name || 'Unknown'}

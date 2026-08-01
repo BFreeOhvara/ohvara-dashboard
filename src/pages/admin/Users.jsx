@@ -9,6 +9,7 @@ import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { roleLabel } from '../../lib/roleLabels'
 import { MONO, card, grid3, primaryBtn, ghostBtn } from '../../lib/exportStyles'
 import { TextField, AnchoredSelectField, GapNote } from '../../components/ui/ExportForm'
+import { Avatar } from '../../components/ui/Avatar'
 
 // Users & Access — literal port of the export's "Admin · Users" screen
 // (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines
@@ -62,9 +63,6 @@ function lastActive(iso) {
   if (diff < 7 * 86400000) return `${Math.floor(diff / 86400000)}d ago`
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
-
-const initialsOf = name =>
-  (name || '?').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
 export default function Users() {
   const { profile } = useAuth()
@@ -266,15 +264,7 @@ export default function Users() {
                   <tr key={u.id}>
                     <td style={td}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{
-                          width: 26, height: 26, borderRadius: '50%',
-                          background: u.is_active ? 'var(--accent-dim)' : 'var(--bg-elevated)',
-                          border: `1px solid ${u.is_active ? 'var(--accent-border)' : 'var(--border)'}`,
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 9, fontWeight: 700, color: u.is_active ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0,
-                        }}>
-                          {initialsOf(u.full_name)}
-                        </span>
+                        <Avatar profile={u} size={26} style={{ opacity: u.is_active ? 1 : 0.45 }} />
                         <div style={{ minWidth: 0 }}>
                           <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>{u.full_name}</p>
                           <p style={{ margin: '1px 0 0', fontSize: 10.5, color: 'var(--text-muted)', fontFamily: MONO }}>
