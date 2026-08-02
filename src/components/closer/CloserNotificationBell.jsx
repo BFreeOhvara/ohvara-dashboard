@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Bell, CheckCheck, Calendar, Clock, MessageSquare } from 'lucide-react'
+import { Bell, CheckCheck, Calendar, Clock, MessageSquare, Video } from 'lucide-react'
 import { useRepNotifications, useRepUnreadCount, useRepMarkNotificationRead, useRepMarkAllRead } from '../../hooks/useNotifications'
 import { useAppointmentBookedNotifier, useAppointmentReminder5MinNotifier, useCloserCallGradedNotifier } from '../../hooks/useCloserNotificationTriggers'
 
@@ -8,6 +8,7 @@ const TYPE_STYLES = {
   appointment_booked:        { Icon: Calendar,      color: 'var(--success)', bg: 'var(--success-dim)' },
   appointment_reminder_5min: { Icon: Clock,          color: 'var(--warning)', bg: 'var(--warning-dim)' },
   team_message:               { Icon: MessageSquare, color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
+  live_room_invite:          { Icon: Video,         color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
   default:                   { Icon: Bell,           color: 'var(--info)',    bg: 'var(--info-dim)'    },
 }
 

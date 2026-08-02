@@ -1,14 +1,17 @@
 import { useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import Hierarchy from './Hierarchy'
 import { TeamMessages } from '../../components/team/TeamMessages'
-import { ComingSoon } from '../../components/agent/ComingSoon'
+import { LiveRoom } from '../../components/team/LiveRoom'
 import { Segmented } from '../../components/ui/Segmented'
+import { useAuth } from '../../hooks/useAuth'
 
 // Team (Prompt 357) — "Hierarchy" renamed to "Team" and given two new
 // sub-tabs. Hierarchy's existing upline/downline/invite-link content is
 // unchanged, just nested here instead of standing alone. Messages is a real
-// team chat (migration 084 + useTeamChat.js); Meetings is a placeholder only
-// — an always-on video room was scoped out of this prompt, see LIVE_STATE.
+// team chat (migration 084 + useTeamChat.js). Meetings was a placeholder
+// until Prompt 393 — same hash-deep-link pattern as Settings.jsx
+// (/agent/hierarchy#meetings), used by the Live Room "notify team" button.
 
 const TABS = [
   { value: 'hierarchy', label: 'Hierarchy' },
@@ -17,7 +20,11 @@ const TABS = [
 ]
 
 export default function Team() {
-  const [tab, setTab] = useState('hierarchy')
+  const { profile } = useAuth()
+  const { hash } = useLocation()
+  const hashTab = TABS.some(t => t.value === hash.slice(1)) ? hash.slice(1) : null
+  const [picked, setTab] = useState(null)
+  const tab = picked || hashTab || 'hierarchy'
 
   return (
     <div>
@@ -47,12 +54,7 @@ export default function Team() {
         </div>
       )}
 
-      {tab === 'meetings' && (
-        <ComingSoon
-          title="Coming soon"
-          description="An always-on team room is planned here — join anytime, see who else is in, with a mic/camera toggle. Not built yet."
-        />
-      )}
+      {tab === 'meetings' && <LiveRoom profile={profile} />}
     </div>
   )
 }

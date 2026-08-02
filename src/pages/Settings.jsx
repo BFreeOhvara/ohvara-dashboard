@@ -30,7 +30,7 @@ import { SavedTick } from '../components/ui/SavedTick'
 // rather than the same screen via two doors.
 //
 // What's real: timezone, weekend leads, theme, password change, agent
-// licensing/appointments, and the Zoom integration link. Everything the
+// licensing/appointments, and the Daily.co integration link. Everything the
 // export draws that this database can't back yet renders as an honest gap
 // note instead of a plausible-looking fake value — date format, table
 // density and 2FA all fall in that bucket. None of them are silently
@@ -48,8 +48,10 @@ import { SavedTick } from '../components/ui/SavedTick'
 // own disclaimer text saying so; a toggle that forgets itself is worse than
 // none, so it's gone rather than left disabled. Licensing & Appointments and
 // Integrations added in its place plus a new tab, covering real insurance-
-// agent compliance data (migration 091) and the Zoom Live Room connection
-// (see [[Prompt 393]] in LIVE_STATE, still queued).
+// agent compliance data (migration 091) and the Live Room connection (see
+// [[Prompt 393]] in LIVE_STATE — originally scoped for Zoom, pivoted to
+// Daily.co in migration 097 since per-user Zoom licensing doesn't scale with
+// a growing team).
 
 const TABS = [
   { key: 'regional',     label: 'Regional',                icon: Globe },
@@ -500,10 +502,12 @@ function AppointmentsList({ profile }) {
   )
 }
 
-// ── Integrations (Prompt 392, migration 091) ─────────────────────────────────
-// Zoom is the only real integration today — its room link is what Prompt 393
-// (Team → Meetings Live Room, still queued in LIVE_STATE pending Brayden's
-// real Zoom URL) will read. Editing is admin-only since it's one company-wide
+// ── Integrations (Prompt 392, migration 091; pivoted Zoom→Daily.co in
+// migration 097/Prompt 393) ──────────────────────────────────────────────────
+// Daily.co is the only real integration today — its room URL is what the
+// Team → Meetings Live Room joins. No API key lives here or anywhere
+// client-side; a Daily room only needs its URL to join, same as the Zoom
+// link this replaced. Editing is admin-only since it's one company-wide
 // link, not a per-agent setting.
 function IntegrationsPanel({ profile }) {
   const { data: settings } = useAppSettings()
@@ -513,15 +517,15 @@ function IntegrationsPanel({ profile }) {
   const [editing, setEditing] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  const connected = !!settings?.zoom_room_url
+  const connected = !!settings?.daily_room_url
 
   function startEditing() {
-    setUrl(settings?.zoom_room_url || '')
+    setUrl(settings?.daily_room_url || '')
     setEditing(true)
   }
 
   async function save() {
-    await updateSettings.mutateAsync({ zoom_room_url: url.trim() || null })
+    await updateSettings.mutateAsync({ daily_room_url: url.trim() || null })
     setEditing(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -539,7 +543,7 @@ function IntegrationsPanel({ profile }) {
             <Video size={16} style={{ color: 'var(--text-secondary)' }} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Zoom</p>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Daily.co</p>
             <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
               Powers the always-open Live Room on Team → Meetings
             </p>
@@ -561,7 +565,10 @@ function IntegrationsPanel({ profile }) {
 
         {isAdmin && editing && (
           <div style={{ marginTop: 14, maxWidth: 420 }}>
-            <TextField label="Zoom room URL" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://zoom.us/j/…" />
+            <TextField label="Daily.co room URL" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://your-team.daily.co/live-room" />
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+              Create a free room at daily.co (Rooms → Create room) and paste its URL here.
+            </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
               <button
                 onClick={save}
@@ -571,7 +578,7 @@ function IntegrationsPanel({ profile }) {
                 {updateSettings.isPending ? <Loader2 size={13} className="animate-spin" /> : 'Save'}
               </button>
               <button
-                onClick={() => { setEditing(false); setUrl(settings?.zoom_room_url || '') }}
+                onClick={() => { setEditing(false); setUrl(settings?.daily_room_url || '') }}
                 style={ghostBtn}
               >
                 Cancel

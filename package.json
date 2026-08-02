@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.102.0",
+    "@daily-co/daily-js": "^0.91.0",
+    "@daily-co/daily-react": "^0.26.0",
     "@fontsource/geist": "^5.2.9",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@fontsource/playfair-display": "^5.3.0",
@@ -20,6 +22,7 @@
     "@tanstack/react-query": "^5.101.0",
     "@twilio/voice-sdk": "^2.18.3",
     "clsx": "^2.1.1",
+    "jotai": "^2.20.2",
     "lucide-react": "^1.17.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.6",

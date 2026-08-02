@@ -82,6 +82,38 @@ export function useMarkAllRead(profileId) {
   })
 }
 
+// ── Live Room invite (Prompt 393) ────────────────────────────────────────────
+// Manual, admin-triggered fan-out — not a DB trigger like migration 090's 4
+// real event types, since there's no DB event to hang this on (an admin
+// clicking a button IS the event). Client-side bulk insert relies on
+// migration 087's "Admins insert notifications" RLS policy, which allows an
+// admin to insert a row for any profile_id, not just their own. Scoped to
+// closer+admin — the only two roles that can see Team → Meetings at all
+// (see App.jsx's allowedRoles on /agent/hierarchy).
+export function useNotifyLiveRoom(currentProfileId) {
+  return useMutation({
+    mutationFn: async () => {
+      const { data: recipients, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id')
+        .in('role', ['closer', 'admin'])
+        .neq('id', currentProfileId)
+      if (profilesError) throw profilesError
+      if (!recipients.length) return 0
+
+      const rows = recipients.map(p => ({
+        profile_id: p.id,
+        type: 'live_room_invite',
+        message: 'Live Room is open — join now',
+        data: { link: '/agent/hierarchy#meetings' },
+      }))
+      const { error } = await supabase.from('notifications').insert(rows)
+      if (error) throw error
+      return rows.length
+    },
+  })
+}
+
 // ── Rep notifications (scoped by profile_id) ────────────────────────────────
 
 export function useRepNotifications(profileId, limit = 20) {
