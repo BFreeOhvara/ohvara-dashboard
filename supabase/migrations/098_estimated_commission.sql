@@ -64,9 +64,11 @@ where cs.carrier = p.carrier_name
   and cs.tier = 70
   and cs.pct is not null;
 
--- team_performance_policies() (migration 093, Prompt 396) is the existing
--- company-wide non-PII aggregate — Balance's "Everyone" scope reuses it
--- rather than standing up a second company-wide path. Adds
+-- team_performance_policies() (migration 093, Prompt 396; extended with
+-- agent_avatar_url/agent_avatar_color by migration 096, Prompt 407 — carried
+-- forward here unchanged, the drop+recreate below is NOT dropping those) is
+-- the existing company-wide non-PII aggregate — Balance's "Everyone" scope
+-- reuses it rather than standing up a second company-wide path. Adds
 -- estimated_commission (a derived number, not PII) plus
 -- is_pending_commission (true when this policy's own carrier has no comp
 -- data yet at all) WITHOUT exposing carrier_name/product_name themselves —
@@ -79,6 +81,8 @@ returns table (
   id                    uuid,
   agent_id              uuid,
   agent_name            text,
+  agent_avatar_url      text,
+  agent_avatar_color    text,
   policy_sold_date      date,
   effective_date        date,
   monthly_premium       numeric(10,2),
@@ -96,7 +100,7 @@ security definer
 set search_path = public
 as $$
   select
-    p.id, p.agent_id, pr.full_name,
+    p.id, p.agent_id, pr.full_name, pr.avatar_url, pr.avatar_color,
     p.policy_sold_date, p.effective_date,
     p.monthly_premium, p.annual_premium,
     p.status, p.cancellation_status, p.cancellation_call_at,
