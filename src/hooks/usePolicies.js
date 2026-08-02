@@ -47,7 +47,7 @@ const SELECT = `
   id, agent_id, policy_sold_date, policy_number,
   client_first_name, client_last_name, client_phone,
   carrier_id, carrier_name, product_type, product_name, insurance_type, state,
-  effective_date, monthly_premium, annual_premium,
+  effective_date, monthly_premium, annual_premium, estimated_commission,
   status, cancellation_status, cancellation_call_at,
   effectuation_answered_at, pending_underwriting, next_lapse_check_at, archived_at,
   notes, created_at, updated_at,
@@ -70,11 +70,13 @@ export function usePolicies(agentId = null) {
 }
 
 // Company-wide, non-PII policy rows for Performance's Team scope + Leaderboard
-// (Prompt 396, migration 093). RLS's policies_select correctly limits
+// (Prompt 396, migration 093), also reused by Balance's "Everyone" scope
+// (Prompt 412, migration 098) for its estimated_commission/
+// is_pending_commission fields. RLS's policies_select correctly limits
 // usePolicies(null) to self + downline for a closer (everything for admin
-// only) — Team/Leaderboard need the same company-wide view for every role,
+// only) — these company-wide views need the same visibility for every role,
 // so they read from this SECURITY DEFINER RPC instead. It returns only the
-// fields those two features aggregate (no client name/phone/policy number/
+// fields those features aggregate (no client name/phone/policy number/
 // carrier/product), so opening it to every authenticated user can't leak
 // individual client PII the way loosening policies_select would.
 export function useTeamPerformancePolicies() {
