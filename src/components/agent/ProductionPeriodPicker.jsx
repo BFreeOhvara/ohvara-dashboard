@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { Segmented } from '../ui/Segmented'
 
 // Unified period control behind Performance → Production (Prompt 348).
 //
@@ -120,29 +119,14 @@ export function DateNav({ label, canNext, prevArrow, nextArrow, hidden = false }
   )
 }
 
-// Prompt 386: the mode toggle and the date nav used to share one flex row,
-// so the date nav's own width (present in Daily/Monthly, gone in All Time)
-// changed the row's total width — and since this sits flush-right next to
-// the You/Team toggle (Performance.jsx's `justify-content: space-between`
-// header), a width change there visibly shifted the toggle buttons
-// left/right. Split into two independently-positioned rows: the toggle's
-// row never changes size, and the date-nav row below it always renders
-// (just visually hidden in All Time) so it keeps its reserved height —
-// nothing above it can ever move.
-export function PeriodPicker({ mode, setMode, label, canNext, prevArrow, nextArrow }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, marginTop: -4 }}>
-      <Segmented
-        size="sm"
-        value={mode}
-        onChange={setMode}
-        options={[
-          { value: 'daily', label: 'Daily' },
-          { value: 'monthly', label: 'Monthly' },
-          { value: 'alltime', label: 'All Time' },
-        ]}
-      />
-      <DateNav label={label} canNext={canNext} prevArrow={prevArrow} nextArrow={nextArrow} hidden={mode === 'alltime'} />
-    </div>
-  )
-}
+// Prompt 386 originally bundled the mode toggle + DateNav into one
+// right-aligned column here (a `PeriodPicker` component) so the date nav's
+// own width (present in Daily/Monthly, gone in All Time) couldn't shift the
+// You/Team toggle sitting flush-right next to it. Prompt 414 moved
+// Production's mode toggle to the left instead (matching Leaderboard's own
+// toggle position), so that bundling no longer applies — Performance.jsx
+// now renders its own Segmented (left) and this file's `DateNav` (right)
+// directly, same composition Leaderboard already used. `DateNav`'s `hidden`
+// prop still does the actual shift-prevention work (reserves the box's
+// width/height via `visibility` rather than unmounting it), so removing the
+// wrapper doesn't reintroduce Prompt 386's bug.

@@ -6,7 +6,7 @@ import {
 import { useAuth } from '../../hooks/useAuth'
 import { usePolicies, useTeamPerformancePolicies, productionSnapshot, productionFlow, persistencyWindows } from '../../hooks/usePolicies'
 import { money, moneyShort, formatDate, todayISO } from '../../lib/policyFormat'
-import { usePeriodPicker, PeriodPicker, DateNav } from '../../components/agent/ProductionPeriodPicker'
+import { usePeriodPicker, DateNav } from '../../components/agent/ProductionPeriodPicker'
 import { GapNote } from '../../components/ui/ExportForm'
 import { Segmented } from '../../components/ui/Segmented'
 import { excludeTestAccounts } from '../../lib/testAccounts'
@@ -51,6 +51,12 @@ import { Avatar } from '../../components/ui/Avatar'
 // Production to match); Production's "All Time" mode is never offered here
 // (Leaderboard's own toggle only has Daily/Monthly), so `picker.mode` can't
 // reach 'alltime'.
+//
+// Prompt 414: unified both tabs' header rows — the period toggle (Daily/
+// Monthly[/All Time]) now sits top-left on both tabs at the same default
+// Segmented size (was smaller + right-aligned on Production only), and the
+// right side is a tight label-over-date-nav stack instead of two loosely
+// spaced rows. See each tab's own render comment for the specifics.
 
 const MONO = "'JetBrains Mono',monospace"
 const GOLD = 'var(--warning)'
@@ -156,19 +162,41 @@ function ProductionTab() {
 
   return (
     <div>
-      {/* Prompt 386: alignItems flex-start so the You/Team toggle sits level
-          with PeriodPicker's own toggle row (its top row) instead of being
-          vertically centered against the now-two-row block below it. */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-        {hideScopeToggle ? <div /> : (
+      {/* Prompt 414: unified with Leaderboard's own header row — the
+          Daily/Monthly/All Time toggle now sits top-left (was right-aligned,
+          stacked above its own date nav via the old PeriodPicker component),
+          same left slot and same default Segmented size Leaderboard's own
+          period toggle already uses. The You/Team scope toggle (when shown)
+          sits directly beside it, still on the left. `alignItems: 'center'`
+          is safe now that the right side is just DateNav alone (no longer a
+          two-line stack under a moved toggle) — DateNav's own `hidden` prop
+          still reserves its box's width/height via `visibility` rather than
+          unmounting it, so All Time mode can't shift anything on the left,
+          same fix Prompt 386 originally made. */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {!hideScopeToggle && (
+            <Segmented
+              value={scope}
+              onChange={setScope}
+              options={[{ value: 'you', label: 'You' }, { value: 'team', label: 'Team' }]}
+            />
+          )}
           <Segmented
-            size="sm"
-            value={scope}
-            onChange={setScope}
-            options={[{ value: 'you', label: 'You' }, { value: 'team', label: 'Team' }]}
+            value={picker.mode}
+            onChange={picker.setMode}
+            options={[
+              { value: 'daily', label: 'Daily' },
+              { value: 'monthly', label: 'Monthly' },
+              { value: 'alltime', label: 'All Time' },
+            ]}
           />
-        )}
-        <PeriodPicker {...picker} />
+        </div>
+        <DateNav
+          label={picker.label} canNext={picker.canNext}
+          prevArrow={picker.prevArrow} nextArrow={picker.nextArrow}
+          hidden={picker.mode === 'alltime'}
+        />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 16, marginBottom: 16 }}>
@@ -295,21 +323,23 @@ function LeaderboardTab() {
 
   return (
     <div>
-      {/* Prompt 402: toggle stays fixed top-left/top-right (unchanged from
-          before this prompt); the date nav gets its own row below so
-          stepping through past days/months can't shift the toggle or the
-          "ranked by submitted AP" caption — same fixed two-row principle
-          Prompt 386 established for Production. */}
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-          <Segmented
-            value={picker.mode}
-            onChange={picker.setMode}
-            options={[{ value: 'daily', label: 'Daily' }, { value: 'monthly', label: 'Monthly' }]}
-          />
+      {/* Prompt 414: "ranked by submitted AP" and the date nav used to sit on
+          two separate full-width rows (10px marginTop between them) — pulled
+          into one tight right-side stack (4px gap, label directly over the
+          date nav) that sits in the same row as the toggle, `alignItems:
+          'flex-start'` so the toggle lands level with the stack's TOP line
+          (the caption), same reasoning Prompt 386 used for Production's own
+          toggle-vs-two-line-block alignment. Toggle position itself is
+          unaffected by date-nav stepping — nothing here depends on the date
+          nav's width/content. */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+        <Segmented
+          value={picker.mode}
+          onChange={picker.setMode}
+          options={[{ value: 'daily', label: 'Daily' }, { value: 'monthly', label: 'Monthly' }]}
+        />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>ranked by submitted AP</span>
-        </div>
-        <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
           <DateNav label={picker.label} canNext={picker.canNext} prevArrow={picker.prevArrow} nextArrow={picker.nextArrow} />
         </div>
       </div>
