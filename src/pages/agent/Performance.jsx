@@ -107,7 +107,12 @@ function ProductionTab() {
   // company-wide aggregate admin always saw, for every role.
   const { data: ownPolicies = [], isLoading: isLoadingOwn } = usePolicies(null)
   const { data: teamPolicies = [], isLoading: isLoadingTeam } = useTeamPerformancePolicies()
-  const [scope, setScope] = useState('you')
+  // Prompt 413: initial scope now reads the same "Default view" Profile
+  // setting Overview's own toggle seeds from (renamed from Prompt 405's
+  // Overview-only "Default Overview to" — same column, broadened to every
+  // page with this toggle). Only ever set by an admin/upline account, so a
+  // regular closer's profile has this unset and always lands on "you".
+  const [scope, setScope] = useState(() => (profile?.overview_default_scope === 'everyone' ? 'team' : 'you'))
   // Prompt 404: an admin/upline account that isn't personally writing
   // business ("I'm also actively writing business" off on Profile) has
   // nothing meaningful behind "You" — the toggle hides entirely and this

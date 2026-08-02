@@ -45,7 +45,7 @@ const TABS = [
   { value: 'followup', label: 'Needs Follow-up' },
 ]
 
-const EMPTY_FILTERS = { status: '', product: '', carrier: '', state: '', reported: '' }
+const EMPTY_FILTERS = { status: '', product: '', carrier: '', state: '', reported: '', agentId: '' }
 
 const th = {
   textAlign: 'left', padding: '13px 20px', fontSize: 10.5, fontWeight: 700,
@@ -67,9 +67,26 @@ export default function MyPolicies() {
   // specific "my own stuff" page to skip the explicit scope. Admin still
   // gets the You/Team toggle below so "everyone" stays one click away, it
   // just isn't the default anymore.
-  const [scope, setScope] = useState('own')
+  //
+  // Prompt 413: initial scope now reads the "Default view" Profile setting
+  // (renamed from Prompt 405's Overview-only field — same column, broadened
+  // to every page with this toggle) instead of hardcoding 'own'. Only ever
+  // set by an admin/upline account, so a regular closer's profile has this
+  // unset and always lands on 'own' same as before.
+  const [scope, setScope] = useState(() => (profile?.overview_default_scope === 'everyone' ? 'team' : 'own'))
+  // Prompt 413: an admin/upline account that isn't personally writing
+  // business ("I'm also actively writing business" off on Profile) has
+  // nothing meaningful behind "You" here either — same gate Overview
+  // (Prompt 404) and Performance (Prompt 396) already apply. The toggle
+  // hides entirely and this always reads as Everyone. Regular closers with
+  // a downline always write business, so this never touches them — they
+  // keep the toggle unconditionally.
+  const alsoWritesBusiness = !!profile?.also_writes_business
+  const hideScopeToggle = isAdmin && !alsoWritesBusiness
+  const canToggleScope = isAdmin || downline.length > 0
+  const effectiveScope = hideScopeToggle ? 'team' : scope
   const { data: rawPolicies = [], isLoading } = usePolicies(
-    scope === 'own' ? profile?.id : null
+    effectiveScope === 'own' ? profile?.id : null
   )
   // Prompt 398: "Everyone" is a real company-wide rollup once real agents
   // are live, so nate44's fabricated policies can't bleed into it — same
@@ -77,8 +94,8 @@ export default function MyPolicies() {
   // (Prompt 371). "own" scope is unaffected either way, already narrowed to
   // this account's own agent_id.
   const policies = useMemo(
-    () => (scope === 'own' ? rawPolicies : excludeTestAccounts(rawPolicies, profile?.id)),
-    [rawPolicies, scope, profile?.id]
+    () => (effectiveScope === 'own' ? rawPolicies : excludeTestAccounts(rawPolicies, profile?.id)),
+    [rawPolicies, effectiveScope, profile?.id]
   )
   const update = useUpdatePolicy()
   const advanceLapseCheck = useAdvanceLapseCheck()
@@ -103,6 +120,13 @@ export default function MyPolicies() {
     carriers: [...new Set(policies.map(p => p.carrier_name).filter(Boolean))].sort(),
     products: [...new Set(policies.map(p => p.product_type).filter(Boolean))].sort(),
     states: [...new Set(policies.map(p => p.state).filter(Boolean))].sort(),
+    // Prompt 413: admin-only "Filter by agent" — lets an upline/admin see
+    // which agent closed which deal. Derived from the currently-scoped
+    // policies (same source carrier/product/state already use), so it
+    // naturally narrows to whatever's actually in view.
+    agents: [...new Map(policies.map(p => [p.agent_id, p.agent?.full_name || 'Unknown'])).entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
   }), [policies])
 
   const rows = useMemo(() => {
@@ -122,6 +146,7 @@ export default function MyPolicies() {
       if (filters.product && p.product_type !== filters.product) return false
       if (filters.carrier && p.carrier_name !== filters.carrier) return false
       if (filters.state && p.state !== filters.state) return false
+      if (filters.agentId && p.agent_id !== filters.agentId) return false
       if (filters.reported) {
         const sold = p.policy_sold_date || p.created_at?.slice(0, 10)
         if (!sold) return false
@@ -182,6 +207,7 @@ export default function MyPolicies() {
     filters.product && { key: 'product', label: filters.product },
     filters.carrier && { key: 'carrier', label: filters.carrier },
     filters.state && { key: 'state', label: filters.state },
+    filters.agentId && { key: 'agentId', label: options.agents.find(a => a.id === filters.agentId)?.name || 'Agent' },
     filters.reported && { key: 'reported', label: REPORTED_LABELS[filters.reported] },
   ].filter(Boolean)
 
@@ -282,6 +308,13 @@ export default function MyPolicies() {
                   onChange={v => setFilters(f => ({ ...f, state: v }))}
                   options={[['', 'All states'], ...options.states.map(s => [s, s])]}
                 />
+                {isAdmin && (
+                  <FilterSelect
+                    label="Agent" value={filters.agentId}
+                    onChange={v => setFilters(f => ({ ...f, agentId: v }))}
+                    options={[['', 'All agents'], ...options.agents.map(a => [a.id, a.name])]}
+                  />
+                )}
                 <FilterSelect
                   label="Reported" value={filters.reported}
                   onChange={v => setFilters(f => ({ ...f, reported: v }))}
@@ -296,22 +329,14 @@ export default function MyPolicies() {
           {isLoading ? 'Loading…' : `${rows.length} of ${policies.length} ${policies.length === 1 ? 'policy' : 'policies'}`}
         </span>
 
-        {(isAdmin || downline.length > 0) && (
-          <div style={{ display: 'flex', gap: 2, padding: 2, background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)', borderRadius: 6, marginLeft: 'auto' }}>
-            {[['own', 'You'], ['team', isAdmin ? 'Everyone' : 'Team']].map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => setScope(key)}
-                style={{
-                  border: 'none', borderRadius: 4, padding: '4px 10px', fontSize: 11, fontWeight: 700,
-                  background: scope === key ? 'var(--accent-dim)' : 'transparent',
-                  color: scope === key ? 'var(--accent)' : 'var(--text-muted)',
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+        {canToggleScope && !hideScopeToggle && (
+          <Segmented
+            size="sm"
+            value={scope}
+            onChange={setScope}
+            options={[{ value: 'own', label: 'You' }, { value: 'team', label: isAdmin ? 'Everyone' : 'Team' }]}
+            style={{ marginLeft: 'auto' }}
+          />
         )}
       </div>
 

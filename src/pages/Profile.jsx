@@ -150,7 +150,7 @@ function ProfilePanel({ profile }) {
       )}
 
       {profile.role === 'admin' && profile.also_writes_business && (
-        <DefaultOverviewScopeField profile={profile} />
+        <DefaultViewScopeField profile={profile} />
       )}
 
       <GapNote>
@@ -282,14 +282,17 @@ function MonthlyGoalField({ profile }) {
   )
 }
 
-// "Default Overview to" (Prompt 405, moved here from Settings → Regional) —
-// only meaningful once the You/Everyone toggle on Overview actually exists,
-// which is exactly the same gate as MonthlyGoalField above: admin/upline
-// role AND "I'm also actively writing business" on. Living in Settings
-// independently of that dependency was the redundancy Prompt 405 fixed —
-// this field now shares WritesBusinessField's reveal condition instead of
-// its own separate one.
-function DefaultOverviewScopeField({ profile }) {
+// "Default view" (Prompt 405, moved here from Settings → Regional; renamed
+// + broadened in Prompt 413) — only meaningful once a You/Everyone(/Team)
+// toggle actually exists somewhere for this account, which is exactly the
+// same gate as MonthlyGoalField above: admin/upline role AND "I'm also
+// actively writing business" on. Same `overview_default_scope` column and
+// write path as Prompt 405 — the name was Overview-specific back when
+// Overview was the only page with this toggle; Prompt 413 wired the same
+// setting into My Policies' and Performance's initial scope too, so the
+// label and copy now describe it as the one shared preference it actually
+// is, not an Overview-only setting.
+function DefaultViewScopeField({ profile }) {
   const update = useUpdateOwnProfile()
   const { refreshProfile } = useAuth()
 
@@ -304,9 +307,9 @@ function DefaultOverviewScopeField({ profile }) {
       borderTop: 'var(--border-w) solid var(--border)',
     }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>Default Overview to</p>
+        <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>Default view</p>
         <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-          Which view Overview opens on — only applies when the You/Everyone toggle is showing.
+          Which side you land on for Overview, My Policies, and Performance — only applies when their You/Everyone toggle is showing.
         </p>
       </div>
       <Segmented
