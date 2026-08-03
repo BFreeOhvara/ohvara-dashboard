@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
-// Prompt 392 — singleton company-wide settings row (migration 091). Today
-// this is just the Daily.co Live Room link (Prompt 393, migration 097 —
-// pivoted from the original Zoom plan); other integrations land in the same
-// row as new columns later rather than a new table per integration.
+// Prompt 392 — singleton company-wide settings row (migration 091). Started
+// as just the Daily.co Live Room link (Prompt 393, migration 097 — pivoted
+// from the original Zoom plan); Prompt 415 (migration 099) added the shared
+// Training Center script doc here too, same "one row, new columns" pattern
+// rather than a new table per feature.
 
 export function useAppSettings() {
   return useQuery({

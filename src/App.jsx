@@ -45,8 +45,9 @@ import Team from './pages/agent/Team'
 import AgentMyCalls from './pages/agent/MyCalls'
 import AgentPerformance from './pages/agent/Performance'
 import AgentCommissions from './pages/agent/Commissions'
+import AgentTrainingCenter from './pages/agent/TrainingCenter'
 import {
-  LiveCall, TrainingPlaceholder,
+  LiveCall,
   UnderwritingPlaceholder,
 } from './pages/agent/Placeholders'
 import Quoter from './pages/agent/Quoter'
@@ -223,7 +224,7 @@ export default function App() {
             } />
             <Route path="/agent/training" element={
               <ProtectedRoute allowedRoles={['closer', 'admin']}>
-                <DashboardLayout><TrainingPlaceholder /></DashboardLayout>
+                <DashboardLayout><AgentTrainingCenter /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/commissions" element={

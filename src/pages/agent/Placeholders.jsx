@@ -18,15 +18,6 @@ export function LiveCall() {
   )
 }
 
-export function TrainingPlaceholder() {
-  return (
-    <ComingSoon
-      title="Training Center"
-      description="Onboarding videos, objection handling, and practice roleplay for closers land here."
-    />
-  )
-}
-
 export function CommissionsPlaceholder() {
   return (
     <ComingSoon
