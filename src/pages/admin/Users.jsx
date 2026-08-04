@@ -37,10 +37,11 @@ const th = {
 const td = { padding: '12px 16px', borderBottom: 'var(--border-w) solid var(--border)' }
 
 const ROLE_STYLE = {
-  admin:  { color: 'var(--accent)',  dim: 'var(--accent-dim)',  bd: 'var(--accent-border)' },
-  closer: { color: 'var(--info)',    dim: 'var(--info-dim)',    bd: 'var(--info-bd)' },
-  rep:    { color: 'var(--text-secondary)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
-  client: { color: 'var(--text-secondary)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
+  admin:       { color: 'var(--accent)',  dim: 'var(--accent-dim)',  bd: 'var(--accent-border)' },
+  closer:      { color: 'var(--info)',    dim: 'var(--info-dim)',    bd: 'var(--info-bd)' },
+  rep:         { color: 'var(--text-secondary)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
+  client:      { color: 'var(--text-secondary)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
+  fulfillment: { color: 'var(--warning)', dim: 'var(--warning-dim)', bd: 'var(--warning-bd)' },
 }
 
 function Pill({ children, style }) {
@@ -168,6 +169,7 @@ export default function Users() {
                 { value: 'closer', label: 'Closer' },
                 { value: 'rep', label: 'Setter' },
                 { value: 'admin', label: 'Admin' },
+                { value: 'fulfillment', label: 'Fulfillment' },
               ]}
             />
             <button onClick={generateInvite} disabled={createInvite.isPending} style={{ ...primaryBtn, height: 34, opacity: createInvite.isPending ? 0.6 : 1 }}>
@@ -195,6 +197,7 @@ export default function Users() {
                 { value: 'closer', label: 'Closer' },
                 { value: 'rep', label: 'Setter' },
                 { value: 'admin', label: 'Admin' },
+                { value: 'fulfillment', label: 'Fulfillment' },
               ]}
             />
             <AnchoredSelectField

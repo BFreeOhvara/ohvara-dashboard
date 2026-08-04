@@ -23,6 +23,10 @@ export const CANCELLATION_STATUSES = [
   'Cancellation Complete',
 ]
 
+// Prompt 418 — Fulfillment Team handoff stages (migration 102). Null when
+// fulfillment_assigned is false (the default self-write flow).
+export const FULFILLMENT_STAGES = ['Pending', 'In Progress', 'Complete']
+
 // Pre-submission outcomes have no data source until live-call handling is
 // wired in (North Star "Pipeline Status Model") — the filter chips still
 // offer them so the day that lands, nothing needs rebuilding.
@@ -84,6 +88,35 @@ export function useTeamPerformancePolicies() {
     queryKey: ['policies', 'team-performance'],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('team_performance_policies')
+      if (error) throw error
+      return data || []
+    },
+  })
+}
+
+// Prompt 418 — Fulfillment Queue: every policy handed off to Fulfillment,
+// regardless of which agent submitted it. RLS's new `fulfillment_select_assigned`
+// policy (migration 103) is what actually opens this up to the fulfillment
+// role — can_view_agent() alone wouldn't (fulfillment isn't the owner, isn't
+// admin, isn't in anyone's downline). Admin already sees everything via
+// can_view_agent(), so this query works unchanged for both roles.
+const FULFILLMENT_SELECT = `
+  id, agent_id, client_first_name, client_last_name, client_phone,
+  carrier_name, product_name, monthly_premium, annual_premium, state, notes,
+  scheduled_call_at, fulfillment_stage, assigned_fulfillment_id, created_at,
+  agent:profiles!policies_agent_id_fkey ( id, full_name ),
+  assigned:profiles!policies_assigned_fulfillment_id_fkey ( id, full_name )
+`
+
+export function useFulfillmentQueue() {
+  return useQuery({
+    queryKey: ['policies', 'fulfillment-queue'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('policies')
+        .select(FULFILLMENT_SELECT)
+        .eq('fulfillment_assigned', true)
+        .order('scheduled_call_at', { ascending: true, nullsFirst: false })
       if (error) throw error
       return data || []
     },

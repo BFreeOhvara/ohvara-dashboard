@@ -51,6 +51,7 @@ import {
   UnderwritingPlaceholder,
 } from './pages/agent/Placeholders'
 import Quoter from './pages/agent/Quoter'
+import FulfillmentQueue from './pages/fulfillment/FulfillmentQueue'
 
 // Admin pages
 import Users from './pages/admin/Users'
@@ -93,6 +94,7 @@ function RoleRedirect() {
   if (profile.role === 'closer') return <Navigate to="/agent" replace />
   if (profile.role === 'admin') return <Navigate to="/admin" replace />
   if (profile.role === 'client') return <Navigate to="/client" replace />
+  if (profile.role === 'fulfillment') return <Navigate to="/fulfillment" replace />
   return <Navigate to="/login" replace />
 }
 
@@ -111,7 +113,7 @@ export default function App() {
 
             {/* Settings — shared across every role (Prompt 226) */}
             <Route path="/settings" element={
-              <ProtectedRoute allowedRoles={['rep', 'closer', 'admin', 'client']}>
+              <ProtectedRoute allowedRoles={['rep', 'closer', 'admin', 'client', 'fulfillment']}>
                 <DashboardLayout><Settings /></DashboardLayout>
               </ProtectedRoute>
             } />
@@ -120,7 +122,7 @@ export default function App() {
                 footer's account popover has its own distinct destination,
                 shared across every role same as Settings. */}
             <Route path="/profile" element={
-              <ProtectedRoute allowedRoles={['rep', 'closer', 'admin', 'client']}>
+              <ProtectedRoute allowedRoles={['rep', 'closer', 'admin', 'client', 'fulfillment']}>
                 <DashboardLayout><Profile /></DashboardLayout>
               </ProtectedRoute>
             } />
@@ -334,6 +336,13 @@ export default function App() {
             <Route path="/closer/commissions" element={
               <ProtectedRoute allowedRoles={['admin', 'closer']}>
                 <DashboardLayout><Commissions /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+
+            {/* Fulfillment routes (Prompt 418) — fulfillment + admin only. */}
+            <Route path="/fulfillment" element={
+              <ProtectedRoute allowedRoles={['fulfillment', 'admin']}>
+                <DashboardLayout><FulfillmentQueue /></DashboardLayout>
               </ProtectedRoute>
             } />
 

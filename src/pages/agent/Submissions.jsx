@@ -10,6 +10,7 @@ import {
 } from '../../lib/exportStyles'
 import { Field, TextField, AnchoredSelectField, GapNote } from '../../components/ui/ExportForm'
 import { Segmented } from '../../components/ui/Segmented'
+import { Switch } from '../../components/ui/Switch'
 import { money, fullName, formatDate, todayISO, formatPhoneInput, titleCase } from '../../lib/policyFormat'
 import { US_STATES } from '../../lib/usStates'
 
@@ -89,6 +90,9 @@ const BLANK = {
   // an agent has to make an explicit pick instead of silently submitting
   // under whatever the default happened to be.
   underwriting_decision: '',
+  // Prompt 418 — only used when sendToFulfillment is on; the callback time
+  // the agent books for the client with the Fulfillment Team.
+  scheduled_call_at: '',
 }
 
 // Prompt 401 — every field but Annual Premium (auto-computed) is required to
@@ -113,6 +117,14 @@ const REQUIRED_FIELDS = [
   ['underwriting_decision', 'Approved / In Underwriting'],
 ]
 
+// Prompt 418 — when routing to Fulfillment, Policy #/Effective date/
+// Underwriting decision aren't knowable yet (Fulfillment hasn't written the
+// policy), so they drop out; Callback time takes their place as the one new
+// required field.
+const FULFILLMENT_REQUIRED_FIELDS = REQUIRED_FIELDS
+  .filter(([key]) => !['policy_number', 'underwriting_decision'].includes(key))
+  .concat([['scheduled_call_at', 'Callback time']])
+
 function NewSubmission() {
   const { profile } = useAuth()
   const { data: carriers = [] } = useCarriers()
@@ -121,6 +133,10 @@ function NewSubmission() {
   const [form, setForm] = useState(BLANK)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(null)
+  // Prompt 418 — off by default, so today's self-write behavior is
+  // untouched unless the agent explicitly opts into routing this deal to
+  // the Fulfillment Team.
+  const [sendToFulfillment, setSendToFulfillment] = useState(false)
   // Prompt 401 — which required fields are currently missing, so their
   // border can highlight red; cleared per-field as soon as the agent edits
   // it, not just on the next submit attempt.
@@ -168,11 +184,14 @@ function NewSubmission() {
 
   // Prompt 401 — every REQUIRED_FIELDS entry plus Effective Date, but only
   // when Approved is picked (see the comment on REQUIRED_FIELDS for why).
+  // Prompt 418 — swaps to FULFILLMENT_REQUIRED_FIELDS (no effective-date
+  // rule at all, since underwriting_decision is never asked in that mode).
   function validate() {
-    const missing = REQUIRED_FIELDS.filter(([key]) =>
+    const fields = sendToFulfillment ? FULFILLMENT_REQUIRED_FIELDS : REQUIRED_FIELDS
+    const missing = fields.filter(([key]) =>
       key === 'monthly_premium' ? (!form.monthly_premium || monthly <= 0) : !String(form[key] || '').trim()
     )
-    if (form.underwriting_decision === 'immediate' && !form.effective_date) {
+    if (!sendToFulfillment && form.underwriting_decision === 'immediate' && !form.effective_date) {
       missing.push(['effective_date', 'Effective date'])
     }
     return missing
@@ -195,7 +214,9 @@ function NewSubmission() {
     create.mutate({
       agent_id: profile.id,
       policy_sold_date: form.policy_sold_date || null,
-      policy_number: form.policy_number.trim() || null,
+      // Prompt 418 — not knowable yet when Fulfillment is writing the
+      // policy; stays null until they issue it.
+      policy_number: sendToFulfillment ? null : (form.policy_number.trim() || null),
       // Always Submitted on creation — there's no scenario where a New
       // Submission starts as anything else (Prompt 361), so this is hardcoded
       // at the write rather than left as a UI choice.
@@ -213,12 +234,22 @@ function NewSubmission() {
       // instead of going blank.
       insurance_type: 'Life',
       state: form.state || null,
-      effective_date: form.effective_date || null,
+      effective_date: sendToFulfillment ? null : (form.effective_date || null),
       monthly_premium: monthly,
-      pending_underwriting: form.underwriting_decision === 'needs_underwriting',
+      // Prompt 418 — no underwriting decision is asked in Fulfillment mode
+      // (Fulfillment hasn't written the policy yet, so there's nothing to
+      // have a carrier decision on); the ongoing pendingUnderwriting()
+      // banner shouldn't fire on the selling agent for a deal they didn't
+      // write.
+      pending_underwriting: sendToFulfillment ? false : form.underwriting_decision === 'needs_underwriting',
+      fulfillment_assigned: sendToFulfillment,
+      fulfillment_stage: sendToFulfillment ? 'Pending' : null,
+      scheduled_call_at: sendToFulfillment && form.scheduled_call_at
+        ? new Date(form.scheduled_call_at).toISOString()
+        : null,
     }, {
       onSuccess: () => {
-        setSaved(`${firstName} ${lastName}${form.carrier_name.trim() ? ` · ${form.carrier_name.trim()}` : ''}`)
+        setSaved(`${firstName} ${lastName}${form.carrier_name.trim() ? ` · ${form.carrier_name.trim()}` : ''}${sendToFulfillment ? ' · sent to Fulfillment' : ''}`)
         setForm(BLANK)
       },
       onError: err => setError(err.message || 'Could not save this submission'),
@@ -229,17 +260,40 @@ function NewSubmission() {
     <div style={{ ...card, marginBottom: 20 }}>
       <p style={cardTitle}>New business submission</p>
 
+      {/* Prompt 418 — optional handoff to the Fulfillment Team. Off by
+          default: today's self-write flow is unchanged unless the agent
+          explicitly opts in. Ownership/commission always stays with the
+          submitting agent regardless of this toggle. */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18,
+        padding: '12px 14px', borderRadius: 7,
+        background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)',
+      }}>
+        <Switch checked={sendToFulfillment} onChange={setSendToFulfillment} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+            Send to Fulfillment Team
+          </p>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+            The client already has a policy Ohvara is replacing — Fulfillment writes and gets it approved, then
+            cancels the old one. You keep full ownership and commission on this deal.
+          </p>
+        </div>
+      </div>
+
       <div style={grid3}>
         <TextField
           label="Policy sold date" type="date" mono
           value={form.policy_sold_date} onChange={e => set('policy_sold_date', e.target.value)}
           error={fieldErrors.has('policy_sold_date')}
         />
-        <TextField
-          label="Policy #" mono placeholder="e.g. 4471209"
-          value={form.policy_number} onChange={e => set('policy_number', e.target.value)}
-          error={fieldErrors.has('policy_number')}
-        />
+        {!sendToFulfillment && (
+          <TextField
+            label="Policy #" mono placeholder="e.g. 4471209"
+            value={form.policy_number} onChange={e => set('policy_number', e.target.value)}
+            error={fieldErrors.has('policy_number')}
+          />
+        )}
         <TextField
           label="Client first name" placeholder="First name"
           value={form.client_first_name} onChange={e => set('client_first_name', e.target.value)}
@@ -294,11 +348,19 @@ function NewSubmission() {
             error={fieldErrors.has('product_name')}
           />
         )}
-        <TextField
-          label="Effective date" type="date" mono
-          value={form.effective_date} onChange={e => set('effective_date', e.target.value)}
-          error={fieldErrors.has('effective_date')}
-        />
+        {sendToFulfillment ? (
+          <TextField
+            label="Callback time" type="datetime-local" mono
+            value={form.scheduled_call_at} onChange={e => set('scheduled_call_at', e.target.value)}
+            error={fieldErrors.has('scheduled_call_at')}
+          />
+        ) : (
+          <TextField
+            label="Effective date" type="date" mono
+            value={form.effective_date} onChange={e => set('effective_date', e.target.value)}
+            error={fieldErrors.has('effective_date')}
+          />
+        )}
       </div>
 
       <div style={grid3}>
@@ -315,17 +377,19 @@ function NewSubmission() {
           options={US_STATES.map(s => ({ value: s.code, label: s.name }))}
           error={fieldErrors.has('state')}
         />
-        <AnchoredSelectField
-          label="Is this policy already approved or in underwriting?"
-          value={form.underwriting_decision}
-          onChange={val => set('underwriting_decision', val)}
-          placeholder="Select an answer"
-          options={[
-            { value: 'immediate', label: 'Approved' },
-            { value: 'needs_underwriting', label: 'In Underwriting' },
-          ]}
-          error={fieldErrors.has('underwriting_decision')}
-        />
+        {!sendToFulfillment && (
+          <AnchoredSelectField
+            label="Is this policy already approved or in underwriting?"
+            value={form.underwriting_decision}
+            onChange={val => set('underwriting_decision', val)}
+            placeholder="Select an answer"
+            options={[
+              { value: 'immediate', label: 'Approved' },
+              { value: 'needs_underwriting', label: 'In Underwriting' },
+            ]}
+            error={fieldErrors.has('underwriting_decision')}
+          />
+        )}
       </div>
 
       {error && <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--danger)' }}>{error}</p>}

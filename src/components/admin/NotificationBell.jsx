@@ -4,7 +4,7 @@ import {
   Bell, CheckCheck, Zap, User, Activity,
   UserPlus, PhoneMissed, FileText, CheckCircle2, Hourglass, XCircle,
   CalendarClock, DollarSign, MessagesSquare, MessageCircle, Users,
-  Bug, Trophy, Target, FileCheck2, Building2, BellRing, Video,
+  Bug, Trophy, Target, FileCheck2, Building2, BellRing, Video, ClipboardCheck,
 } from 'lucide-react'
 import { useNotifications, useUnreadCount, useMarkNotificationRead, useMarkAllRead } from '../../hooks/useNotifications'
 
@@ -29,6 +29,7 @@ const TYPE_ICONS = {
   new_carrier_added:          { icon: Building2,      color: 'var(--info)',    bg: 'var(--info-dim)'    },
   activity_reminder:          { icon: BellRing,       color: 'var(--warning)', bg: 'var(--warning-dim)' },
   live_room_invite:           { icon: Video,          color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
+  fulfillment_complete:       { icon: ClipboardCheck, color: 'var(--success)', bg: 'var(--success-dim)' },
   default:                    { icon: Activity,       color: 'var(--info)',    bg: 'var(--info-dim)'    },
 }
 

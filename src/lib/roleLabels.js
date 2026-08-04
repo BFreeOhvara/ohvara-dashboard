@@ -8,6 +8,7 @@ export const ROLE_LABELS = {
   closer: 'Closer',
   admin: 'Admin',
   client: 'Client',
+  fulfillment: 'Fulfillment',
 }
 
 export function roleLabel(role) {

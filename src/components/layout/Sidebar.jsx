@@ -6,7 +6,7 @@ import {
   Users, BarChart2, Bell, DollarSign, BookOpen,
   LogOut, Zap, PhoneCall, GitBranch, MessageSquare, Home, Settings,
   Smartphone, FileText, Headphones, Globe, Shield, Award,
-  GraduationCap, ChevronRight, Phone, Target, User,
+  GraduationCap, ChevronRight, Phone, Target, User, ClipboardList,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../ui/Avatar'
@@ -275,6 +275,18 @@ const NAV = {
     ] },
     { group: 'Account', items: [
       { to: '/admin/users', label: 'Users & Access', icon: Award },
+      { to: '/fulfillment', label: 'Fulfillment Queue', icon: ClipboardList },
+      { to: '/settings', label: 'Settings', icon: Settings },
+    ] },
+  ],
+  // Prompt 418 — fulfillment is a scoped back-end role: one page (the
+  // queue) plus the shared Settings everyone gets, nothing from the
+  // closer/admin agent nav.
+  fulfillment: [
+    { group: 'Today', items: [
+      { to: '/fulfillment', label: 'Fulfillment Queue', icon: ClipboardList },
+    ] },
+    { group: 'Account', items: [
       { to: '/settings', label: 'Settings', icon: Settings },
     ] },
   ],
@@ -289,7 +301,7 @@ const NAV = {
 
 // Export's `portalLabel`: admin is bare "Admin", the agent role reads as a
 // portal. rep/client keep their own wording from the pre-pivot app.
-const PORTAL_LABELS = { rep: 'Setter Portal', closer: 'Agent Portal', admin: 'Admin', client: 'Client Portal' }
+const PORTAL_LABELS = { rep: 'Setter Portal', closer: 'Agent Portal', admin: 'Admin', client: 'Client Portal', fulfillment: 'Fulfillment Portal' }
 
 const COLLAPSE_KEY = 'ohvara-sidebar-collapsed'
 const DUTY_KEY = 'ohvara-duty'
@@ -405,7 +417,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
                 <NavLink
                   key={to}
                   to={to}
-                  end={to === '/agent' || to === '/admin' || to === '/setter' || to === '/client'}
+                  end={to === '/agent' || to === '/admin' || to === '/setter' || to === '/client' || to === '/fulfillment'}
                   onClick={onClose}
                   title={label}
                   style={{ display: 'block', textDecoration: 'none' }}

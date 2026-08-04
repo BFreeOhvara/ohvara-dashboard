@@ -20,6 +20,7 @@ export function ProtectedRoute({ children, allowedRoles }) {
     if (profile.role === 'closer') return <Navigate to="/agent" replace />
     if (profile.role === 'admin') return <Navigate to="/admin" replace />
     if (profile.role === 'client') return <Navigate to="/client" replace />
+    if (profile.role === 'fulfillment') return <Navigate to="/fulfillment" replace />
   }
 
   return children
