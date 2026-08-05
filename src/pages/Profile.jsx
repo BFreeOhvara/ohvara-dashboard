@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, lazy, Suspense } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { useUpdateOwnProfile, useUploadAvatar } from '../hooks/useSettings'
+import { useUpdateOwnProfile, useUploadAvatar, useRemoveAvatar } from '../hooks/useSettings'
 import { useMonthlyGoal, useSetMonthlyGoal } from '../hooks/useMonthlyGoals'
 import { todayISO } from '../lib/policyFormat'
 import { Loader2, X, Camera } from 'lucide-react'
@@ -13,6 +13,14 @@ import { SavedTick } from '../components/ui/SavedTick'
 import { Switch } from '../components/ui/Switch'
 import { Segmented } from '../components/ui/Segmented'
 import { Avatar } from '../components/ui/Avatar'
+// Prompt 422 — lazy, not a top-level import: react-easy-crop pushed the
+// main bundle just over vite-plugin-pwa's 2 MiB precache limit (a hard
+// build failure, not just the pre-existing chunk-size warning). It's only
+// ever needed inside this one rarely-opened modal, so it belongs in its own
+// chunk rather than in every user's initial load.
+const AvatarCropModal = lazy(() =>
+  import('../components/ui/AvatarCropModal').then(m => ({ default: m.AvatarCropModal }))
+)
 
 // Profile — split out of Settings (Prompt 338) so the sidebar footer's
 // account popover has a genuinely distinct destination for "Profile" versus
@@ -167,22 +175,52 @@ function ProfilePanel({ profile }) {
 // immediately. Falls back to the shared two-initial colored Avatar
 // (avatar_color, migration 096) when no photo is set, same as every other
 // avatar in the app now renders.
+// Prompt 422 — a picked file now opens a crop/zoom modal instead of
+// uploading as-is (whatever was picked used to land off-center or
+// stretched into the circle); a "Remove photo" action also drops the
+// upload back to the initials fallback, deleting the stored file too.
 function AvatarUpload({ profile }) {
   const upload = useUploadAvatar()
+  const remove = useRemoveAvatar()
   const { refreshProfile } = useAuth()
   const inputRef = useRef(null)
   const [error, setError] = useState('')
+  const [pendingImage, setPendingImage] = useState(null) // object URL awaiting crop confirm
 
-  async function onFile(e) {
+  const busy = upload.isPending || remove.isPending
+
+  function onFile(e) {
     const file = e.target.files?.[0]
     e.target.value = '' // allow re-selecting the same file next time
     if (!file) return
     setError('')
+    setPendingImage(URL.createObjectURL(file))
+  }
+
+  function closeCropModal() {
+    if (pendingImage) URL.revokeObjectURL(pendingImage)
+    setPendingImage(null)
+  }
+
+  async function onCropConfirm(blob) {
+    setError('')
     try {
+      const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' })
       await upload.mutateAsync({ profileId: profile.id, file })
       await refreshProfile()
+      closeCropModal()
     } catch (err) {
       setError(err.message || 'Could not upload your photo')
+    }
+  }
+
+  async function onRemove() {
+    setError('')
+    try {
+      await remove.mutateAsync({ profileId: profile.id })
+      await refreshProfile()
+    } catch (err) {
+      setError(err.message || 'Could not remove your photo')
     }
   }
 
@@ -190,28 +228,28 @@ function AvatarUpload({ profile }) {
     <div style={{ position: 'relative', flexShrink: 0 }}>
       <button
         onClick={() => inputRef.current?.click()}
-        disabled={upload.isPending}
+        disabled={busy}
         title="Change profile photo"
         style={{
           position: 'relative', width: 52, height: 52, border: 'none', padding: 0,
-          borderRadius: '50%', cursor: upload.isPending ? 'default' : 'pointer', background: 'transparent',
+          borderRadius: '50%', cursor: busy ? 'default' : 'pointer', background: 'transparent',
         }}
       >
         <Avatar profile={profile} size={52} style={{ fontSize: 17, border: '1px solid var(--accent-border)' }} />
         <div style={{
           position: 'absolute', inset: 0, borderRadius: '50%',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.45)', opacity: upload.isPending ? 1 : 0,
+          background: 'rgba(0,0,0,0.45)', opacity: busy ? 1 : 0,
           transition: 'opacity 120ms',
         }}
-          onMouseEnter={e => { if (!upload.isPending) e.currentTarget.style.opacity = 1 }}
-          onMouseLeave={e => { if (!upload.isPending) e.currentTarget.style.opacity = 0 }}
+          onMouseEnter={e => { if (!busy) e.currentTarget.style.opacity = 1 }}
+          onMouseLeave={e => { if (!busy) e.currentTarget.style.opacity = 0 }}
         >
-          {upload.isPending ? <Loader2 size={16} color="#fff" className="animate-spin" /> : <Camera size={16} color="#fff" />}
+          {busy ? <Loader2 size={16} color="#fff" className="animate-spin" /> : <Camera size={16} color="#fff" />}
         </div>
         {/* Persistent camera badge (Prompt 409) — visible at rest, not just on
             hover, so the circle reads as clickable/uploadable at a glance. */}
-        {!upload.isPending && (
+        {!busy && (
           <div style={{
             position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderRadius: '50%',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -222,10 +260,32 @@ function AvatarUpload({ profile }) {
         )}
       </button>
       <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />
+      {profile.avatar_url && (
+        <button
+          onClick={onRemove}
+          disabled={busy}
+          style={{
+            display: 'block', marginTop: 6, border: 'none', background: 'transparent',
+            color: 'var(--text-muted)', fontSize: 10.5, padding: 0, cursor: busy ? 'default' : 'pointer',
+          }}
+        >
+          Remove photo
+        </button>
+      )}
       {error && (
-        <p style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, fontSize: 10.5, color: 'var(--danger)', whiteSpace: 'nowrap' }}>
+        <p style={{ marginTop: 4, fontSize: 10.5, color: 'var(--danger)', whiteSpace: 'nowrap' }}>
           {error}
         </p>
+      )}
+      {pendingImage && (
+        <Suspense fallback={null}>
+          <AvatarCropModal
+            imageSrc={pendingImage}
+            onCancel={closeCropModal}
+            onConfirm={onCropConfirm}
+            saving={upload.isPending}
+          />
+        </Suspense>
       )}
     </div>
   )

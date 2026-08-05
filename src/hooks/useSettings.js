@@ -40,3 +40,29 @@ export function useUploadAvatar() {
     },
   })
 }
+
+// ── Remove avatar (Prompt 422) ───────────────────────────────────────────────
+// Deletes the stored file(s) too, not just the column — otherwise every
+// removal leaves an orphaned object in the bucket. Lists the user's own
+// folder rather than assuming a fixed extension, since a re-upload can swap
+// file type between sessions (upload's upsert-by-fixed-path only avoids
+// orphans when the extension stays the same).
+export function useRemoveAvatar() {
+  return useMutation({
+    mutationFn: async ({ profileId }) => {
+      const { data: files, error: listError } = await supabase.storage
+        .from('avatars')
+        .list(profileId)
+      if (listError) throw listError
+
+      if (files?.length) {
+        const paths = files.map(f => `${profileId}/${f.name}`)
+        const { error: removeError } = await supabase.storage.from('avatars').remove(paths)
+        if (removeError) throw removeError
+      }
+
+      const { error: updateError } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', profileId)
+      if (updateError) throw updateError
+    },
+  })
+}
