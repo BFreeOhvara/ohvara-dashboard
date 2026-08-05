@@ -10,8 +10,14 @@ export default defineConfig({
     // 'autoUpdate' means a new deploy silently swaps in on next navigation,
     // no user-facing "update available" prompt (matches how the SPA already
     // ships — no version-pinning concerns here).
+    // Prompt 420 — injectRegister disabled here; main.jsx registers the SW
+    // itself via the `virtual:pwa-register` module so it can force open
+    // tabs to actually reload once a new service worker takes over (see
+    // main.jsx comment for why the plain auto-injected registration wasn't
+    // enough).
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: false,
       includeAssets: ['ohvara-favicon.png'],
       manifest: {
         name: 'Ohvara',
