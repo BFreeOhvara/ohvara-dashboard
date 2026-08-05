@@ -48,9 +48,19 @@ function ToastMount() {
 
 function HeaderBell() {
   const { profile } = useAuth()
-  if (profile?.role === 'admin')  return <NotificationBell profileId={profile.id} />
-  if (profile?.role === 'rep')    return <RepNotificationBell profileId={profile.id} />
-  if (profile?.role === 'closer') return <CloserNotificationBell profileId={profile.id} />
+  if (profile?.role === 'admin')       return <NotificationBell profileId={profile.id} />
+  if (profile?.role === 'rep')         return <RepNotificationBell profileId={profile.id} />
+  // Prompt 424: fulfillment wasn't wired into any branch here at all — the
+  // bell wasn't hidden by the header, HeaderBell just fell through to null
+  // for this role. Reuses CloserNotificationBell (generic profile-id-keyed
+  // notification list; its closer-specific trigger hooks filter on
+  // closer_id/rep_id, which simply never match a fulfillment profile —
+  // harmless no-ops, not errors) since it already has the fulfillment_complete
+  // icon mapped (Prompt 418) and now team_message too now that Team is in
+  // this role's nav.
+  if (profile?.role === 'closer' || profile?.role === 'fulfillment') {
+    return <CloserNotificationBell profileId={profile.id} />
+  }
   return null
 }
 

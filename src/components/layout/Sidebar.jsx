@@ -279,14 +279,40 @@ const NAV = {
       { to: '/settings', label: 'Settings', icon: Settings },
     ] },
   ],
-  // Prompt 418 — fulfillment is a scoped back-end role: one page (the
-  // queue) plus the shared Settings everyone gets, nothing from the
-  // closer/admin agent nav.
+  // Prompt 424 — reversed Prompt 418's scoped-down nav (Brayden: "I want
+  // pretty much everything there... literally everything... I want the
+  // carrier portals there"). Same shell as closer (same groups, same
+  // /agent/* routes — each of those pages already widens/narrows its own
+  // scope internally per role, same pattern admin uses), with Fulfillment
+  // Queue folded into Account instead of being the only nav item. RLS scoping
+  // from 418 (fulfillment_select_assigned etc.) is untouched — this is nav
+  // visibility only. Pages that are "my own data" (My Policies, Performance,
+  // Commissions) will legitimately show empty states here since a
+  // Fulfillment account has no agent_id-owned policies — expected, same as
+  // any brand-new closer with zero policies.
   fulfillment: [
     { group: 'Today', items: [
-      { to: '/fulfillment', label: 'Fulfillment Queue', icon: ClipboardList },
+      { to: '/agent', label: 'Overview', icon: Home },
+      { to: '/agent/live', label: 'Live Call', icon: Headphones },
+    ] },
+    { group: 'Sales', items: [
+      { to: '/agent/policies', label: 'My Policies', icon: GitBranch },
+      { to: '/agent/calls', label: 'My Calls', icon: PhoneCall },
+    ] },
+    { group: 'Tools', items: [
+      { to: '/agent/quoter', label: 'Quoter', icon: Zap },
+      { to: '/agent/underwriting', label: 'Underwriting', icon: Shield },
+      { to: '/agent/submissions', label: 'Submissions', icon: FileText },
+      { to: '/agent/carriers', label: 'Carrier Portals', icon: Globe },
+    ] },
+    { group: 'Growth', items: [
+      { to: '/agent/stats', label: 'Performance', icon: BarChart2 },
+      { to: '/agent/hierarchy', label: 'Team', icon: Users },
+      { to: '/agent/training', label: 'Training Center', icon: GraduationCap },
+      { to: '/agent/commissions', label: 'Commissions', icon: DollarSign },
     ] },
     { group: 'Account', items: [
+      { to: '/fulfillment', label: 'Fulfillment Queue', icon: ClipboardList },
       { to: '/settings', label: 'Settings', icon: Settings },
     ] },
   ],

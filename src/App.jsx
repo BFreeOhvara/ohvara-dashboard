@@ -183,64 +183,67 @@ export default function App() {
             <Route path="/rep/calls" element={<Navigate to="/setter/calls" replace />} />
 
             {/* Insurance agent routes (Prompt 326). Admin shares them — each
-                page widens its own scope to company-wide for that role. */}
+                page widens its own scope to company-wide for that role.
+                Prompt 424: fulfillment shares them too, same pattern — each
+                page already narrows to "own data" (empty for fulfillment,
+                same as a brand-new closer) rather than erroring. */}
             <Route path="/agent" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+              <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
                 <DashboardLayout><AgentOverview /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/policies" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+              <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
                 <DashboardLayout><AgentPolicies /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/submissions" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+              <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
                 <DashboardLayout><AgentSubmissions /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/carriers" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+              <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
                 <DashboardLayout><CarrierPortals /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/hierarchy" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+              <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
                 <DashboardLayout><Team /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/quoter" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+              <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
                 <DashboardLayout><Quoter /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/live" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+              <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
                 <DashboardLayout><LiveCall /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/calls" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+              <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
                 <DashboardLayout><AgentMyCalls /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/training" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+              <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
                 <DashboardLayout><AgentTrainingCenter /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/commissions" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+              <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
                 <DashboardLayout><AgentCommissions /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/underwriting" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+              <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
                 <DashboardLayout><UnderwritingPlaceholder /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/stats" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+              <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
                 <DashboardLayout><AgentPerformance /></DashboardLayout>
               </ProtectedRoute>
             } />
