@@ -64,20 +64,30 @@ const SILVER = '#9CA3AF'
 const BRONZE = '#B87333'
 
 export default function Performance() {
+  const { profile } = useAuth()
+  // Prompt 425: fulfillment doesn't write policies, so Production (AP,
+  // submitted/issued, persistency — all policy-authorship metrics) has
+  // nothing meaningful to show them. Skip the tab toggle entirely and land
+  // straight on Leaderboard, which they were explicitly asked to keep
+  // ("I want them to be able to see leaderboard").
+  const isFulfillment = profile?.role === 'fulfillment'
   const [subTab, setSubTab] = useState('production')
+  const activeTab = isFulfillment ? 'leaderboard' : subTab
 
   return (
     <div style={{ maxWidth: 1280 }}>
-      <Segmented
-        style={{ marginBottom: 24 }}
-        value={subTab}
-        onChange={setSubTab}
-        options={[
-          { value: 'production', label: 'Production' },
-          { value: 'leaderboard', label: 'Leaderboard' },
-        ]}
-      />
-      {subTab === 'production' ? <ProductionTab /> : <LeaderboardTab />}
+      {!isFulfillment && (
+        <Segmented
+          style={{ marginBottom: 24 }}
+          value={subTab}
+          onChange={setSubTab}
+          options={[
+            { value: 'production', label: 'Production' },
+            { value: 'leaderboard', label: 'Leaderboard' },
+          ]}
+        />
+      )}
+      {activeTab === 'production' ? <ProductionTab /> : <LeaderboardTab />}
     </div>
   )
 }

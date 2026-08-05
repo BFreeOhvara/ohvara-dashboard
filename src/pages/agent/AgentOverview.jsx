@@ -2,9 +2,10 @@ import { useMemo, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   FileText, TrendingUp, DollarSign, Phone, Target,
+  ClipboardList, UserCheck, Clock, CheckCircle2,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { usePolicies, useTeamPerformancePolicies, pendingEffectuation, bookMetrics } from '../../hooks/usePolicies'
+import { usePolicies, useTeamPerformancePolicies, useFulfillmentQueue, pendingEffectuation, bookMetrics } from '../../hooks/usePolicies'
 import { useFollowUps } from '../../hooks/useFollowUps'
 import { useMonthlyGoal, useTeamMonthlyGoals } from '../../hooks/useMonthlyGoals'
 import { useBugReports } from '../../hooks/useBugReports'
@@ -126,8 +127,191 @@ function localISO(value) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+// Prompt 425: fulfillment gets an entirely different Overview (queue-shaped
+// stats, not AP/close-rate), so the page branches at the top level to two
+// sibling components instead of threading a third role through every hook
+// below — same pattern Performance.jsx uses for Production vs Leaderboard
+// and Hierarchy.jsx for admin vs closer. Each branch owns its own hook
+// sequence, which is what keeps this rules-of-hooks-safe (role is fixed for
+// the life of a signed-in session/mount, so which branch renders can't
+// change out from under React mid-render).
 export default function AgentOverview() {
   const { profile } = useAuth()
+  if (profile?.role === 'fulfillment') return <FulfillmentOverview profile={profile} />
+  return <ClosingOverview profile={profile} />
+}
+
+// Greeting + date + digital clock header — identical for every role that
+// reaches this page, factored out so FulfillmentOverview doesn't need to
+// duplicate the clock's font/digit-width workarounds (see the CLOCK_*
+// constants above) alongside ClosingOverview.
+function OverviewHeader({ profile, tagline }) {
+  // Prompt 403: reads the account's saved Settings → Regional timezone
+  // (`profile.timezone`), not the device's implicit local zone.
+  const tz = profile?.timezone || DEFAULT_TIMEZONE
+  const [nowMs, setNowMs] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNowMs(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  const nowIso = new Date(nowMs).toISOString()
+
+  const greeting = (() => {
+    const h = Number(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hourCycle: 'h23' }).format(nowMs))
+    if (h < 12) return 'Good morning'
+    if (h < 18) return 'Good afternoon'
+    return 'Good evening'
+  })()
+
+  const firstName = profile?.full_name?.split(' ')[0] || 'there'
+
+  // Split "2:45:30 PM" into the digits and the AM/PM suffix (Prompt 350) so
+  // AM/PM can render at roughly half the digit size.
+  const clockStr = formatInTimezone(nowIso, tz, { hour: 'numeric', minute: '2-digit', second: '2-digit' })
+  const [, clockDigits, clockAmPm] = clockStr.match(/^(.*?)\s*([AP]M)$/i) || [null, clockStr, '']
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, marginBottom: 26, flexWrap: 'wrap' }}>
+      <div>
+        <p style={{ margin: 0, fontSize: 21, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+          {greeting}, {firstName}
+        </p>
+        <p style={{ margin: '5px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
+          {tagline}
+        </p>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+          {formatInTimezone(nowIso, tz, { weekday: 'long', month: 'long', day: 'numeric' })}
+        </span>
+        <div style={{
+          background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '9px 16px', whiteSpace: 'nowrap',
+        }}>
+          <span style={{
+            display: 'inline-block',
+            fontSize: CLOCK_DIGIT_SIZE, fontWeight: 700, letterSpacing: '0.02em', lineHeight: 1, color: '#fff',
+            fontFamily: CLOCK_FONT, fontVariantNumeric: CLOCK_NUMERIC_VARIANT,
+          }}>
+            {renderClockDigits(clockDigits)}
+            {clockAmPm && (
+              <span style={{ fontSize: CLOCK_AMPM_SIZE, marginLeft: 3 }}>{clockAmPm}</span>
+            )}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Fulfillment · Overview (Prompt 425) ─────────────────────────────────────
+// Fulfillment doesn't write policies, so every metric ClosingOverview shows
+// (AP, close rate, monthly goal) is meaningless for this role — replaced
+// with queue-shaped numbers instead, all derivable from useFulfillmentQueue()
+// (the same company-wide `fulfillment_assigned = true` set FulfillmentQueue.jsx
+// itself reads, RLS-gated the same way) rather than new schema. "Completed —
+// today/this month" uses `updated_at` as a proxy for completion time (no
+// dedicated `fulfillment_completed_at` column exists) — accurate as long as a
+// completed row isn't touched again afterward, which nothing in this app
+// currently does.
+function FulfillmentOverview({ profile }) {
+  const { data: rows = [], isLoading } = useFulfillmentQueue()
+  const today = todayISO()
+  const month = today.slice(0, 7)
+
+  const stats = useMemo(() => {
+    const open = rows.filter(p => p.fulfillment_stage === 'Pending')
+    const mine = rows.filter(p => p.assigned_fulfillment_id === profile?.id && p.fulfillment_stage === 'In Progress')
+    const callbacksToday = rows.filter(p => p.scheduled_call_at && localISO(p.scheduled_call_at) === today)
+    const completedByMe = rows.filter(p => p.assigned_fulfillment_id === profile?.id && p.fulfillment_stage === 'Complete')
+    return {
+      openCount: open.length,
+      mineCount: mine.length,
+      callbacksTodayCount: callbacksToday.length,
+      completedTodayCount: completedByMe.filter(p => p.updated_at && localISO(p.updated_at) === today).length,
+      completedMonthCount: completedByMe.filter(p => (p.updated_at || '').slice(0, 7) === month).length,
+    }
+  }, [rows, profile?.id, today, month])
+
+  // Today's callbacks still sitting unclaimed — the one thing this role can
+  // act on directly from Overview instead of digging through the full queue.
+  const needsClaim = useMemo(
+    () => rows
+      .filter(p => p.scheduled_call_at && localISO(p.scheduled_call_at) === today && !p.assigned_fulfillment_id)
+      .sort((a, b) => new Date(a.scheduled_call_at) - new Date(b.scheduled_call_at)),
+    [rows, today]
+  )
+
+  const v = x => (isLoading ? '—' : String(x))
+
+  const row = [
+    { label: 'Open In Queue', icon: ClipboardList, value: v(stats.openCount), sub: 'Unclaimed handoffs', subColor: 'var(--text-muted)' },
+    { label: 'Claimed By Me', icon: UserCheck, value: v(stats.mineCount), sub: 'In progress', subColor: 'var(--text-muted)' },
+    { label: "Today's Callbacks", icon: Clock, value: v(stats.callbacksTodayCount), sub: 'Across the whole team', subColor: 'var(--text-muted)' },
+    {
+      label: 'Completed By Me', icon: CheckCircle2,
+      value: v(stats.completedTodayCount),
+      sub: isLoading ? '—' : `${stats.completedMonthCount} this month`, subColor: 'var(--text-muted)',
+    },
+  ]
+
+  return (
+    <div style={{ maxWidth: 1280 }}>
+      <OverviewHeader profile={profile} tagline="Here's what's waiting in the queue." />
+
+      <div style={{
+        background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
+        borderRadius: 8, padding: '28px 32px', marginBottom: 20,
+      }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Today at a glance</span>
+        <KpiRow items={row} style={{ marginTop: 22 }} />
+      </div>
+
+      <div style={{
+        background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8,
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      }}>
+        <div style={{
+          padding: '14px 22px', borderBottom: 'var(--border-w) solid var(--border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Today's callbacks needing claim</span>
+          <Link to="/fulfillment" style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--accent)' }}>Open queue →</Link>
+        </div>
+        {isLoading ? (
+          <div style={{ padding: '18px 22px', fontSize: 13, color: 'var(--text-muted)' }}>Loading…</div>
+        ) : needsClaim.length === 0 ? (
+          <div style={{ padding: '18px 22px', fontSize: 13, color: 'var(--text-muted)' }}>
+            Nothing unclaimed with a callback today.
+          </div>
+        ) : needsClaim.map((p, i) => (
+          <div
+            key={p.id}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+              padding: '11px 22px',
+              borderBottom: i < needsClaim.length - 1 ? 'var(--border-w) solid var(--border)' : 'none',
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                {fullName(p)}
+              </p>
+              <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+                {[p.carrier_name, p.product_name].filter(Boolean).join(' · ') || 'No carrier/product on file'}
+              </p>
+            </div>
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
+              {new Date(p.scheduled_call_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Closer / Admin · Overview ────────────────────────────────────────────────
+function ClosingOverview({ profile }) {
   const isAdmin = profile?.role === 'admin'
 
   // Prompt 404: the You/Everyone toggle only exists for the upline/
@@ -156,20 +340,6 @@ export default function AgentOverview() {
 
   const { data: followUps = [] } = useFollowUps(profile?.id)
   const { data: bugReports = [] } = useBugReports()
-
-  // Prompt 403: the clock reads the account's saved Settings → Regional
-  // timezone (`profile.timezone`), not the device's implicit local zone —
-  // `nowMs` is a plain instant, every rendered piece (greeting, date
-  // heading, digital time) is formatted into `tz` explicitly below via
-  // `formatInTimezone`, same helper `LiveClock` (My Leads) already uses for
-  // the same reason.
-  const tz = profile?.timezone || DEFAULT_TIMEZONE
-  const [nowMs, setNowMs] = useState(() => Date.now())
-  useEffect(() => {
-    const t = setInterval(() => setNowMs(Date.now()), 1000)
-    return () => clearInterval(t)
-  }, [])
-  const nowIso = new Date(nowMs).toISOString()
 
   const today = todayISO()
   const month = today.slice(0, 7)
@@ -295,21 +465,6 @@ export default function AgentOverview() {
     }
   }, [effectiveScope, teamPolicies, ownPolicies, month, teamGoalTarget, ownGoalRow])
 
-  const greeting = (() => {
-    const h = Number(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hourCycle: 'h23' }).format(nowMs))
-    if (h < 12) return 'Good morning'
-    if (h < 18) return 'Good afternoon'
-    return 'Good evening'
-  })()
-
-  const firstName = profile?.full_name?.split(' ')[0] || 'there'
-
-  // Split "2:45:30 PM" into the digits and the AM/PM suffix (Prompt 350) so
-  // AM/PM can render at roughly half the digit size — same treatment for
-  // both, this isn't an AM-vs-PM styling difference.
-  const clockStr = formatInTimezone(nowIso, tz, { hour: 'numeric', minute: '2-digit', second: '2-digit' })
-  const [, clockDigits, clockAmPm] = clockStr.match(/^(.*?)\s*([AP]M)$/i) || [null, clockStr, '']
-
   const row1 = [
     {
       label: 'Submitted AP — Today', icon: FileText,
@@ -351,35 +506,7 @@ export default function AgentOverview() {
 
   return (
     <div style={{ maxWidth: 1280 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, marginBottom: 26, flexWrap: 'wrap' }}>
-        <div>
-          <p style={{ margin: 0, fontSize: 21, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-            {greeting}, {firstName}
-          </p>
-          <p style={{ margin: '5px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
-            Here's where things stand before your first call.
-          </p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-            {formatInTimezone(nowIso, tz, { weekday: 'long', month: 'long', day: 'numeric' })}
-          </span>
-          <div style={{
-            background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '9px 16px', whiteSpace: 'nowrap',
-          }}>
-            <span style={{
-              display: 'inline-block',
-              fontSize: CLOCK_DIGIT_SIZE, fontWeight: 700, letterSpacing: '0.02em', lineHeight: 1, color: '#fff',
-              fontFamily: CLOCK_FONT, fontVariantNumeric: CLOCK_NUMERIC_VARIANT,
-            }}>
-              {renderClockDigits(clockDigits)}
-              {clockAmPm && (
-                <span style={{ fontSize: CLOCK_AMPM_SIZE, marginLeft: 3 }}>{clockAmPm}</span>
-              )}
-            </span>
-          </div>
-        </div>
-      </div>
+      <OverviewHeader profile={profile} tagline="Here's where things stand before your first call." />
 
       <div style={{
         background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',

@@ -103,7 +103,7 @@ export function useTeamPerformancePolicies() {
 const FULFILLMENT_SELECT = `
   id, agent_id, client_first_name, client_last_name, client_phone,
   carrier_name, product_name, monthly_premium, annual_premium, state, notes,
-  scheduled_call_at, fulfillment_stage, assigned_fulfillment_id, created_at,
+  scheduled_call_at, fulfillment_stage, assigned_fulfillment_id, created_at, updated_at,
   agent:profiles!policies_agent_id_fkey ( id, full_name ),
   assigned:profiles!policies_assigned_fulfillment_id_fkey ( id, full_name )
 `

@@ -184,21 +184,23 @@ export default function App() {
 
             {/* Insurance agent routes (Prompt 326). Admin shares them — each
                 page widens its own scope to company-wide for that role.
-                Prompt 424: fulfillment shares them too, same pattern — each
-                page already narrows to "own data" (empty for fulfillment,
-                same as a brand-new closer) rather than erroring. */}
+                Prompt 424 gave fulfillment the same access as closer/admin
+                across the board; Prompt 425 pulled that back to just what
+                Fulfillment's trimmed nav (Sidebar.jsx) actually links to —
+                My Policies/Submissions/Commissions dropped since Brayden
+                confirmed none of the three apply to this role. */}
             <Route path="/agent" element={
               <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
                 <DashboardLayout><AgentOverview /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/policies" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
+              <ProtectedRoute allowedRoles={['closer', 'admin']}>
                 <DashboardLayout><AgentPolicies /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/submissions" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
+              <ProtectedRoute allowedRoles={['closer', 'admin']}>
                 <DashboardLayout><AgentSubmissions /></DashboardLayout>
               </ProtectedRoute>
             } />
@@ -233,7 +235,7 @@ export default function App() {
               </ProtectedRoute>
             } />
             <Route path="/agent/commissions" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
+              <ProtectedRoute allowedRoles={['closer', 'admin']}>
                 <DashboardLayout><AgentCommissions /></DashboardLayout>
               </ProtectedRoute>
             } />

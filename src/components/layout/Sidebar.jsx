@@ -279,37 +279,37 @@ const NAV = {
       { to: '/settings', label: 'Settings', icon: Settings },
     ] },
   ],
-  // Prompt 424 — reversed Prompt 418's scoped-down nav (Brayden: "I want
-  // pretty much everything there... literally everything... I want the
-  // carrier portals there"). Same shell as closer (same groups, same
-  // /agent/* routes — each of those pages already widens/narrows its own
-  // scope internally per role, same pattern admin uses), with Fulfillment
-  // Queue folded into Account instead of being the only nav item. RLS scoping
-  // from 418 (fulfillment_select_assigned etc.) is untouched — this is nav
-  // visibility only. Pages that are "my own data" (My Policies, Performance,
-  // Commissions) will legitimately show empty states here since a
-  // Fulfillment account has no agent_id-owned policies — expected, same as
-  // any brand-new closer with zero policies.
+  // Prompt 425 — trimmed [[Prompt 424]]'s full Closer-parity nav down to what
+  // Fulfillment actually does (claim a handoff, write it on the carrier's
+  // own portal, cancel the old policy), after Brayden looked at the full
+  // shell live. Dropped: My Policies ("doesn't apply, it's never their
+  // policy" — Fulfillment Queue's own Completed tab is already their
+  // work-history view, so relabeling would just duplicate it), Submissions
+  // ("they don't really need the new submission, they're just gonna be
+  // writing it on the portal"), Commissions (hourly-paid, not
+  // commission-based). Performance stays but lands straight on Leaderboard
+  // (Performance.jsx's own isFulfillment check hides the Production tab —
+  // "the production, they're not writing any policies"). Team + Training
+  // Center kept on my own call (not sales/commission-specific); flag to
+  // Brayden if he wants either gone too. RLS scoping from [[Prompt 418]] is
+  // untouched — this is nav/route visibility only.
   fulfillment: [
     { group: 'Today', items: [
       { to: '/agent', label: 'Overview', icon: Home },
       { to: '/agent/live', label: 'Live Call', icon: Headphones },
     ] },
-    { group: 'Sales', items: [
-      { to: '/agent/policies', label: 'My Policies', icon: GitBranch },
+    { group: 'Calls', items: [
       { to: '/agent/calls', label: 'My Calls', icon: PhoneCall },
     ] },
     { group: 'Tools', items: [
       { to: '/agent/quoter', label: 'Quoter', icon: Zap },
       { to: '/agent/underwriting', label: 'Underwriting', icon: Shield },
-      { to: '/agent/submissions', label: 'Submissions', icon: FileText },
       { to: '/agent/carriers', label: 'Carrier Portals', icon: Globe },
     ] },
     { group: 'Growth', items: [
       { to: '/agent/stats', label: 'Performance', icon: BarChart2 },
       { to: '/agent/hierarchy', label: 'Team', icon: Users },
       { to: '/agent/training', label: 'Training Center', icon: GraduationCap },
-      { to: '/agent/commissions', label: 'Commissions', icon: DollarSign },
     ] },
     { group: 'Account', items: [
       { to: '/fulfillment', label: 'Fulfillment Queue', icon: ClipboardList },
