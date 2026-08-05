@@ -135,7 +135,10 @@ function IntakeDetails({ policyId, canView }) {
           label="Address"
           value={[data.address_street, data.address_city, data.address_state, data.address_zip].filter(Boolean).join(', ')}
         />
-        <PlainField label="Beneficiary" value={[data.beneficiary_name, data.beneficiary_relationship].filter(Boolean).join(' · ')} />
+        <PlainField
+          label={data.beneficiaries?.length > 1 ? 'Beneficiaries' : 'Beneficiary'}
+          value={(data.beneficiaries || []).map(b => `${b.name} (${b.relationship})`).join(', ')}
+        />
         <PlainField label="Bank" value={data.bank_name} />
         <MaskedField
           label="Routing #" value={data.routing_number}
