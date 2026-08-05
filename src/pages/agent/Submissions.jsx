@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, MessageCircleMore, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCarriers } from '../../hooks/useCarriers'
 import { useCommissionSchedule } from '../../hooks/useCommissionSchedule'
 import { usePolicies, useCreatePolicy, useUpdatePolicy } from '../../hooks/usePolicies'
+import { useCreateFulfillmentDetails } from '../../hooks/useFulfillmentDetails'
 import { ComingSoon } from '../../components/agent/ComingSoon'
 import {
   MONO, card, cardTitle, control, fieldLabel, grid3, primaryBtn, ghostBtn,
@@ -125,18 +126,75 @@ const FULFILLMENT_REQUIRED_FIELDS = REQUIRED_FIELDS
   .filter(([key]) => !['policy_number', 'underwriting_decision'].includes(key))
   .concat([['scheduled_call_at', 'Callback time']])
 
+// Prompt 419 — the full Fulfillment intake, required only when
+// sendToFulfillment is on: "everything needed to actually write the policy
+// and cancel the old one" per Brayden's own framing, so every field here is
+// required rather than optional-and-hope-Fulfillment-can-track-it-down.
+const BLANK_DETAILS = {
+  full_legal_name: '', date_of_birth: '', state_of_birth: '', state_of_residence: '',
+  email: '', height: '', weight: '',
+  address_street: '', address_city: '', address_state: '', address_zip: '',
+  drivers_license_number: '',
+  beneficiary_name: '', beneficiary_relationship: '',
+  draft_day: '',
+  bank_name: '', routing_number: '', account_number: '',
+  current_carrier: '',
+}
+
+const DETAILS_REQUIRED_FIELDS = [
+  ['full_legal_name', 'Full legal name'],
+  ['date_of_birth', 'Date of birth'],
+  ['state_of_birth', 'State of birth'],
+  ['state_of_residence', 'State of residence'],
+  ['email', 'Email'],
+  ['height', 'Height'],
+  ['weight', 'Weight'],
+  ['address_street', 'Street address'],
+  ['address_city', 'City'],
+  ['address_state', 'Address state'],
+  ['address_zip', 'ZIP'],
+  ['drivers_license_number', "Driver's license #"],
+  ['beneficiary_name', 'Beneficiary name'],
+  ['beneficiary_relationship', 'Beneficiary relationship'],
+  ['draft_day', 'Draft day'],
+  ['bank_name', 'Bank name'],
+  ['routing_number', 'Routing number'],
+  ['account_number', 'Account number'],
+  ['current_carrier', 'Current carrier being replaced'],
+]
+
+// Brayden's own framing: callback bookings should default to today or
+// tomorrow — "if we're booked out, then we're booked out" is the exception,
+// not the norm. Far out here means the day after tomorrow or later.
+function isFarOut(localDateTimeValue) {
+  if (!localDateTimeValue) return false
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() + 2)
+  cutoff.setHours(0, 0, 0, 0)
+  return new Date(localDateTimeValue) >= cutoff
+}
+
 function NewSubmission() {
   const { profile } = useAuth()
   const { data: carriers = [] } = useCarriers()
   const { data: commissionRows = [] } = useCommissionSchedule()
   const create = useCreatePolicy()
+  const createDetails = useCreateFulfillmentDetails()
   const [form, setForm] = useState(BLANK)
+  const [details, setDetails] = useState(BLANK_DETAILS)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(null)
   // Prompt 418 — off by default, so today's self-write behavior is
   // untouched unless the agent explicitly opts into routing this deal to
   // the Fulfillment Team.
   const [sendToFulfillment, setSendToFulfillment] = useState(false)
+  // Prompt 419 — soft (not hard-blocking) confirm gate for a callback time
+  // more than a day out. showFarOutConfirm surfaces the inline prompt;
+  // confirmFarOut is the agent's explicit "yes, that's right" — cleared any
+  // time the callback time itself changes, so a new far-out pick needs its
+  // own confirm.
+  const [showFarOutConfirm, setShowFarOutConfirm] = useState(false)
+  const [confirmFarOut, setConfirmFarOut] = useState(false)
   // Prompt 401 — which required fields are currently missing, so their
   // border can highlight red; cleared per-field as soon as the agent edits
   // it, not just on the next submit attempt.
@@ -144,6 +202,19 @@ function NewSubmission() {
 
   const set = (k, v) => {
     setForm(f => ({ ...f, [k]: v }))
+    setFieldErrors(errs => {
+      if (!errs.has(k)) return errs
+      const next = new Set(errs)
+      next.delete(k)
+      return next
+    })
+    if (k === 'scheduled_call_at') {
+      setConfirmFarOut(false)
+      setShowFarOutConfirm(false)
+    }
+  }
+  const setDetail = (k, v) => {
+    setDetails(d => ({ ...d, [k]: v }))
     setFieldErrors(errs => {
       if (!errs.has(k)) return errs
       const next = new Set(errs)
@@ -194,9 +265,16 @@ function NewSubmission() {
     if (!sendToFulfillment && form.underwriting_decision === 'immediate' && !form.effective_date) {
       missing.push(['effective_date', 'Effective date'])
     }
+    if (sendToFulfillment) {
+      missing.push(...DETAILS_REQUIRED_FIELDS.filter(([key]) => !String(details[key] || '').trim()))
+    }
     return missing
   }
 
+  // Prompt 419 — split so the far-out confirm button can call doSubmit()
+  // directly. Calling submit() again from that button would re-check
+  // confirmFarOut against this render's stale closure value (React state
+  // updates aren't synchronous), re-triggering the same confirm forever.
   function submit() {
     setError('')
     const missing = validate()
@@ -207,53 +285,99 @@ function NewSubmission() {
     }
     setFieldErrors(new Set())
 
+    // Prompt 419 — soft scheduling gate: further out than tomorrow needs an
+    // explicit "yes, really" before it submits, but never hard-blocks.
+    if (sendToFulfillment && isFarOut(form.scheduled_call_at) && !confirmFarOut) {
+      setShowFarOutConfirm(true)
+      return
+    }
+
+    doSubmit()
+  }
+
+  async function doSubmit() {
     // Prompt 401 — normalized to title case on submit only, not while typing.
     const firstName = titleCase(form.client_first_name)
     const lastName = titleCase(form.client_last_name)
 
-    create.mutate({
-      agent_id: profile.id,
-      policy_sold_date: form.policy_sold_date || null,
-      // Prompt 418 — not knowable yet when Fulfillment is writing the
-      // policy; stays null until they issue it.
-      policy_number: sendToFulfillment ? null : (form.policy_number.trim() || null),
-      // Always Submitted on creation — there's no scenario where a New
-      // Submission starts as anything else (Prompt 361), so this is hardcoded
-      // at the write rather than left as a UI choice.
-      status: 'Submitted',
-      client_first_name: firstName,
-      client_last_name: lastName,
-      client_phone: form.client_phone.trim() || null,
-      carrier_id: carrier?.id || null,
-      carrier_name: form.carrier_name.trim() || null,
-      product_name: form.product_name.trim() || null,
-      product_type: selectedProductType,
-      // Prompt 380: every policy Ohvara writes is life insurance — no longer
-      // asked on the form, hardcoded here instead so PolicyModal's Insurance
-      // Type row (and anything else reading this column) keeps real data
-      // instead of going blank.
-      insurance_type: 'Life',
-      state: form.state || null,
-      effective_date: sendToFulfillment ? null : (form.effective_date || null),
-      monthly_premium: monthly,
-      // Prompt 418 — no underwriting decision is asked in Fulfillment mode
-      // (Fulfillment hasn't written the policy yet, so there's nothing to
-      // have a carrier decision on); the ongoing pendingUnderwriting()
-      // banner shouldn't fire on the selling agent for a deal they didn't
-      // write.
-      pending_underwriting: sendToFulfillment ? false : form.underwriting_decision === 'needs_underwriting',
-      fulfillment_assigned: sendToFulfillment,
-      fulfillment_stage: sendToFulfillment ? 'Pending' : null,
-      scheduled_call_at: sendToFulfillment && form.scheduled_call_at
-        ? new Date(form.scheduled_call_at).toISOString()
-        : null,
-    }, {
-      onSuccess: () => {
-        setSaved(`${firstName} ${lastName}${form.carrier_name.trim() ? ` · ${form.carrier_name.trim()}` : ''}${sendToFulfillment ? ' · sent to Fulfillment' : ''}`)
-        setForm(BLANK)
-      },
-      onError: err => setError(err.message || 'Could not save this submission'),
-    })
+    try {
+      const policy = await create.mutateAsync({
+        agent_id: profile.id,
+        policy_sold_date: form.policy_sold_date || null,
+        // Prompt 418 — not knowable yet when Fulfillment is writing the
+        // policy; stays null until they issue it.
+        policy_number: sendToFulfillment ? null : (form.policy_number.trim() || null),
+        // Always Submitted on creation — there's no scenario where a New
+        // Submission starts as anything else (Prompt 361), so this is hardcoded
+        // at the write rather than left as a UI choice.
+        status: 'Submitted',
+        client_first_name: firstName,
+        client_last_name: lastName,
+        client_phone: form.client_phone.trim() || null,
+        carrier_id: carrier?.id || null,
+        carrier_name: form.carrier_name.trim() || null,
+        product_name: form.product_name.trim() || null,
+        product_type: selectedProductType,
+        // Prompt 380: every policy Ohvara writes is life insurance — no longer
+        // asked on the form, hardcoded here instead so PolicyModal's Insurance
+        // Type row (and anything else reading this column) keeps real data
+        // instead of going blank.
+        insurance_type: 'Life',
+        state: form.state || null,
+        effective_date: sendToFulfillment ? null : (form.effective_date || null),
+        monthly_premium: monthly,
+        // Prompt 418 — no underwriting decision is asked in Fulfillment mode
+        // (Fulfillment hasn't written the policy yet, so there's nothing to
+        // have a carrier decision on); the ongoing pendingUnderwriting()
+        // banner shouldn't fire on the selling agent for a deal they didn't
+        // write.
+        pending_underwriting: sendToFulfillment ? false : form.underwriting_decision === 'needs_underwriting',
+        fulfillment_assigned: sendToFulfillment,
+        fulfillment_stage: sendToFulfillment ? 'Pending' : null,
+        scheduled_call_at: sendToFulfillment && form.scheduled_call_at
+          ? new Date(form.scheduled_call_at).toISOString()
+          : null,
+      })
+
+      // Prompt 419 — second insert, tied to the policy just created. Not
+      // wrapped in a DB transaction (this app doesn't use RPC-wrapped
+      // multi-table writes anywhere else) — if this step fails the policy
+      // row already exists in the Fulfillment Queue with no intake details
+      // yet; the error surfaces below so the agent knows to retry/flag it
+      // rather than assume it went through clean.
+      if (sendToFulfillment) {
+        await createDetails.mutateAsync({
+          policy_id: policy.id,
+          full_legal_name: titleCase(details.full_legal_name),
+          date_of_birth: details.date_of_birth || null,
+          state_of_birth: details.state_of_birth || null,
+          state_of_residence: details.state_of_residence || null,
+          email: details.email.trim(),
+          height: details.height.trim(),
+          weight: details.weight.trim(),
+          address_street: details.address_street.trim(),
+          address_city: titleCase(details.address_city),
+          address_state: details.address_state || null,
+          address_zip: details.address_zip.trim(),
+          drivers_license_number: details.drivers_license_number.trim(),
+          beneficiary_name: titleCase(details.beneficiary_name),
+          beneficiary_relationship: details.beneficiary_relationship.trim(),
+          draft_day: Number(details.draft_day),
+          bank_name: details.bank_name.trim(),
+          routing_number: details.routing_number.trim(),
+          account_number: details.account_number.trim(),
+          current_carrier: details.current_carrier.trim(),
+        })
+      }
+
+      setSaved(`${firstName} ${lastName}${form.carrier_name.trim() ? ` · ${form.carrier_name.trim()}` : ''}${sendToFulfillment ? ' · sent to Fulfillment' : ''}`)
+      setForm(BLANK)
+      setDetails(BLANK_DETAILS)
+      setConfirmFarOut(false)
+      setShowFarOutConfirm(false)
+    } catch (err) {
+      setError(err.message || 'Could not save this submission')
+    }
   }
 
   return (
@@ -265,20 +389,56 @@ function NewSubmission() {
           explicitly opts in. Ownership/commission always stays with the
           submitting agent regardless of this toggle. */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18,
+        display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 18,
         padding: '12px 14px', borderRadius: 7,
         background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)',
       }}>
-        <Switch checked={sendToFulfillment} onChange={setSendToFulfillment} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
-            Send to Fulfillment Team
-          </p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-            The client already has a policy Ohvara is replacing — Fulfillment writes and gets it approved, then
-            cancels the old one. You keep full ownership and commission on this deal.
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Switch
+            checked={sendToFulfillment}
+            onChange={v => {
+              setSendToFulfillment(v)
+              // Prompt 419 — convenience default: seed the intake's own
+              // state fields from whatever's already picked up top, since
+              // they're usually the same value. Only fills empty fields —
+              // never overwrites something the agent already typed.
+              if (v) {
+                setDetails(d => ({
+                  ...d,
+                  state_of_residence: d.state_of_residence || form.state,
+                  address_state: d.address_state || form.state,
+                }))
+              }
+            }}
+          />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+              Send to Fulfillment Team
+            </p>
+            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+              The client already has a policy Ohvara is replacing — Fulfillment writes and gets it approved, then
+              cancels the old one. You keep full ownership and commission on this deal.
+            </p>
+          </div>
         </div>
+
+        {/* Prompt 419 — Brayden doesn't want agents saying "Fulfillment
+            Team" to the client; this is the internal team's own name, not a
+            client-facing one. Read-aloud script hint, distinct from the
+            control label above it. */}
+        {sendToFulfillment && (
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: 8,
+            padding: '9px 12px', borderRadius: 6,
+            background: 'var(--bg-panel)', border: 'var(--border-w) solid var(--border)',
+          }}>
+            <MessageCircleMore size={13} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 1 }} />
+            <p style={{ margin: 0, fontSize: 11.5, color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1.5 }}>
+              Read to the client: "We're going to get you booked with our Underwriting Team to get everything
+              squared away."
+            </p>
+          </div>
+        )}
       </div>
 
       <div style={grid3}>
@@ -349,11 +509,19 @@ function NewSubmission() {
           />
         )}
         {sendToFulfillment ? (
-          <TextField
-            label="Callback time" type="datetime-local" mono
-            value={form.scheduled_call_at} onChange={e => set('scheduled_call_at', e.target.value)}
-            error={fieldErrors.has('scheduled_call_at')}
-          />
+          <div>
+            <TextField
+              label="Callback time" type="datetime-local" mono
+              value={form.scheduled_call_at} onChange={e => set('scheduled_call_at', e.target.value)}
+              error={fieldErrors.has('scheduled_call_at')}
+            />
+            <p style={{
+              margin: '4px 0 0', fontSize: 10.5, lineHeight: 1.4,
+              color: isFarOut(form.scheduled_call_at) ? 'var(--warning)' : 'var(--text-muted)',
+            }}>
+              Suggested: today or tomorrow — further out needs Fulfillment's OK.
+            </p>
+          </div>
         ) : (
           <TextField
             label="Effective date" type="date" mono
@@ -392,6 +560,173 @@ function NewSubmission() {
         )}
       </div>
 
+      {/* Prompt 419 — full Fulfillment intake, everything needed to write
+          the replacement policy and cancel the old one. Lives in its own
+          section since it's a meaningfully different (and more sensitive)
+          set of fields than the deal info above. */}
+      {sendToFulfillment && (
+        <>
+          <p style={{ margin: '4px 0 12px', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+            Fulfillment intake
+          </p>
+
+          <div style={grid3}>
+            <TextField
+              label="Full legal name" placeholder="As it appears on ID"
+              value={details.full_legal_name} onChange={e => setDetail('full_legal_name', e.target.value)}
+              error={fieldErrors.has('full_legal_name')}
+            />
+            <TextField
+              label="Date of birth" type="date" mono
+              value={details.date_of_birth} onChange={e => setDetail('date_of_birth', e.target.value)}
+              error={fieldErrors.has('date_of_birth')}
+            />
+            <AnchoredSelectField
+              label="State of birth"
+              value={details.state_of_birth}
+              onChange={val => setDetail('state_of_birth', val)}
+              placeholder="Select a state"
+              options={US_STATES.map(s => ({ value: s.code, label: s.name }))}
+              error={fieldErrors.has('state_of_birth')}
+            />
+          </div>
+
+          <div style={grid3}>
+            <AnchoredSelectField
+              label="State of residence"
+              value={details.state_of_residence}
+              onChange={val => setDetail('state_of_residence', val)}
+              placeholder="Select a state"
+              options={US_STATES.map(s => ({ value: s.code, label: s.name }))}
+              error={fieldErrors.has('state_of_residence')}
+            />
+            <TextField
+              label="Email" type="email" placeholder="client@example.com"
+              value={details.email} onChange={e => setDetail('email', e.target.value)}
+              error={fieldErrors.has('email')}
+            />
+            <TextField
+              label="Driver's license #" mono
+              value={details.drivers_license_number} onChange={e => setDetail('drivers_license_number', e.target.value)}
+              error={fieldErrors.has('drivers_license_number')}
+            />
+          </div>
+
+          <div style={grid3}>
+            <TextField
+              label="Height" placeholder={`5' 10"`}
+              value={details.height} onChange={e => setDetail('height', e.target.value)}
+              error={fieldErrors.has('height')}
+            />
+            <TextField
+              label="Weight" placeholder="180 lbs"
+              value={details.weight} onChange={e => setDetail('weight', e.target.value)}
+              error={fieldErrors.has('weight')}
+            />
+            <TextField
+              label="Draft day" mono type="number" min="1" max="31" placeholder="1–31"
+              value={details.draft_day} onChange={e => setDetail('draft_day', e.target.value)}
+              error={fieldErrors.has('draft_day')}
+            />
+          </div>
+
+          <div style={grid3}>
+            <TextField
+              label="Street address"
+              value={details.address_street} onChange={e => setDetail('address_street', e.target.value)}
+              error={fieldErrors.has('address_street')}
+            />
+            <TextField
+              label="City"
+              value={details.address_city} onChange={e => setDetail('address_city', e.target.value)}
+              error={fieldErrors.has('address_city')}
+            />
+            <AnchoredSelectField
+              label="Address state"
+              value={details.address_state}
+              onChange={val => setDetail('address_state', val)}
+              placeholder="Select a state"
+              options={US_STATES.map(s => ({ value: s.code, label: s.name }))}
+              error={fieldErrors.has('address_state')}
+            />
+          </div>
+
+          <div style={grid3}>
+            <TextField
+              label="ZIP" mono
+              value={details.address_zip} onChange={e => setDetail('address_zip', e.target.value)}
+              error={fieldErrors.has('address_zip')}
+            />
+            <TextField
+              label="Beneficiary name"
+              value={details.beneficiary_name} onChange={e => setDetail('beneficiary_name', e.target.value)}
+              error={fieldErrors.has('beneficiary_name')}
+            />
+            <TextField
+              label="Beneficiary relationship" placeholder="Spouse, child, etc."
+              value={details.beneficiary_relationship} onChange={e => setDetail('beneficiary_relationship', e.target.value)}
+              error={fieldErrors.has('beneficiary_relationship')}
+            />
+          </div>
+
+          <div style={grid3}>
+            <TextField
+              label="Bank name"
+              value={details.bank_name} onChange={e => setDetail('bank_name', e.target.value)}
+              error={fieldErrors.has('bank_name')}
+            />
+            <TextField
+              label="Routing number" mono
+              value={details.routing_number} onChange={e => setDetail('routing_number', e.target.value)}
+              error={fieldErrors.has('routing_number')}
+            />
+            <TextField
+              label="Account number" mono
+              value={details.account_number} onChange={e => setDetail('account_number', e.target.value)}
+              error={fieldErrors.has('account_number')}
+            />
+          </div>
+
+          {/* Prominent — this is the one number Fulfillment actually calls
+              to cancel the old policy (Brayden: "all you gotta do is call
+              up the carrier and say I want to cancel this policy"). */}
+          <div style={{
+            padding: '12px 14px', marginBottom: 12, borderRadius: 7,
+            background: 'var(--warning-dim)', border: '1px solid var(--warning-bd)',
+          }}>
+            <TextField
+              label="Current carrier being replaced" placeholder="Who they're leaving"
+              value={details.current_carrier} onChange={e => setDetail('current_carrier', e.target.value)}
+              error={fieldErrors.has('current_carrier')}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Prompt 419 — soft confirm, not a hard block: submit() stops here
+          once and waits for an explicit yes before actually saving. */}
+      {showFarOutConfirm && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12,
+          padding: '11px 14px', borderRadius: 7,
+          background: 'var(--warning-dim)', border: '1px solid var(--warning-bd)',
+        }}>
+          <AlertTriangle size={14} style={{ color: 'var(--warning)', flexShrink: 0 }} />
+          <p style={{ flex: 1, minWidth: 200, margin: 0, fontSize: 12, color: 'var(--text-primary)' }}>
+            That's more than a day out — confirm Fulfillment is actually booked through then?
+          </p>
+          <button
+            onClick={() => { setConfirmFarOut(true); setShowFarOutConfirm(false); doSubmit() }}
+            style={{ ...ghostBtn, height: 28, background: 'var(--warning-dim)', color: 'var(--warning)', border: '1px solid var(--warning-bd)' }}
+          >
+            Yes, that's correct
+          </button>
+          <button onClick={() => setShowFarOutConfirm(false)} style={{ ...ghostBtn, height: 28 }}>
+            Change time
+          </button>
+        </div>
+      )}
+
       {error && <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--danger)' }}>{error}</p>}
 
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, paddingTop: 2, flexWrap: 'wrap' }}>
@@ -405,8 +740,12 @@ function NewSubmission() {
           </div>
         </Field>
         <div style={{ flex: 1 }} />
-        <button onClick={submit} disabled={create.isPending} style={{ ...primaryBtn, opacity: create.isPending ? 0.6 : 1 }}>
-          {create.isPending ? 'Logging…' : 'Log Submission'}
+        <button
+          onClick={submit}
+          disabled={create.isPending || createDetails.isPending}
+          style={{ ...primaryBtn, opacity: (create.isPending || createDetails.isPending) ? 0.6 : 1 }}
+        >
+          {(create.isPending || createDetails.isPending) ? 'Logging…' : 'Log Submission'}
         </button>
         {saved && (
           <>

@@ -66,3 +66,13 @@ export function formatPhoneInput(raw) {
 export function titleCase(str) {
   return String(str || '').trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
 }
+
+// Prompt 419 — default display for sensitive Fulfillment intake fields
+// (driver's license, routing/account numbers): last 4 characters visible,
+// everything before it replaced with dots. Callers pair this with an
+// explicit reveal toggle rather than ever defaulting to the real value.
+export function maskLast4(value) {
+  const s = String(value || '')
+  if (s.length <= 4) return '•'.repeat(s.length)
+  return '•'.repeat(s.length - 4) + s.slice(-4)
+}
