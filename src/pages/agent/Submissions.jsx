@@ -14,6 +14,7 @@ import { Segmented } from '../../components/ui/Segmented'
 import { Switch } from '../../components/ui/Switch'
 import { money, fullName, formatDate, todayISO, formatPhoneInput, titleCase } from '../../lib/policyFormat'
 import { US_STATES } from '../../lib/usStates'
+import { SLOTS, slotToISO } from '../../lib/scheduling'
 
 // Submissions — literal port of the export's "Closer · Submissions" screen
 // (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines
@@ -195,6 +196,13 @@ function NewSubmission() {
   // own confirm.
   const [showFarOutConfirm, setShowFarOutConfirm] = useState(false)
   const [confirmFarOut, setConfirmFarOut] = useState(false)
+  // Prompt 421 — Callback time is picked the same way Cancellation Calendar
+  // books its 3-way call: a date plus one of the fixed hourly SLOTS, not a
+  // freeform datetime. These two are the picker's own UI state; the actual
+  // value of record stays form.scheduled_call_at (an ISO string), same as
+  // before, so validate()/submit()/doSubmit() don't need to change at all.
+  const [callbackDate, setCallbackDate] = useState(todayISO())
+  const [callbackSlot, setCallbackSlot] = useState('')
   // Prompt 401 — which required fields are currently missing, so their
   // border can highlight red; cleared per-field as soon as the agent edits
   // it, not just on the next submit attempt.
@@ -212,6 +220,17 @@ function NewSubmission() {
       setConfirmFarOut(false)
       setShowFarOutConfirm(false)
     }
+  }
+  // Prompt 421 — recompute form.scheduled_call_at any time either half of
+  // the picker changes; a slot picked before a date change re-anchors to
+  // the new date automatically instead of silently keeping the old day.
+  const pickCallbackDate = d => {
+    setCallbackDate(d)
+    if (callbackSlot) set('scheduled_call_at', slotToISO(d, callbackSlot))
+  }
+  const pickCallbackSlot = s => {
+    setCallbackSlot(s)
+    set('scheduled_call_at', slotToISO(callbackDate, s))
   }
   const setDetail = (k, v) => {
     setDetails(d => ({ ...d, [k]: v }))
@@ -375,6 +394,8 @@ function NewSubmission() {
       setDetails(BLANK_DETAILS)
       setConfirmFarOut(false)
       setShowFarOutConfirm(false)
+      setCallbackDate(todayISO())
+      setCallbackSlot('')
     } catch (err) {
       setError(err.message || 'Could not save this submission')
     }
@@ -508,21 +529,7 @@ function NewSubmission() {
             error={fieldErrors.has('product_name')}
           />
         )}
-        {sendToFulfillment ? (
-          <div>
-            <TextField
-              label="Callback time" type="datetime-local" mono
-              value={form.scheduled_call_at} onChange={e => set('scheduled_call_at', e.target.value)}
-              error={fieldErrors.has('scheduled_call_at')}
-            />
-            <p style={{
-              margin: '4px 0 0', fontSize: 10.5, lineHeight: 1.4,
-              color: isFarOut(form.scheduled_call_at) ? 'var(--warning)' : 'var(--text-muted)',
-            }}>
-              Suggested: today or tomorrow — further out needs Fulfillment's OK.
-            </p>
-          </div>
-        ) : (
+        {!sendToFulfillment && (
           <TextField
             label="Effective date" type="date" mono
             value={form.effective_date} onChange={e => set('effective_date', e.target.value)}
@@ -530,6 +537,52 @@ function NewSubmission() {
           />
         )}
       </div>
+
+      {/* Prompt 421 — Callback time as a date + fixed-slot picker, same
+          pattern as CancellationCalendar below (lib/scheduling.js). Its own
+          full-width block since a 4-across slot grid doesn't fit a grid3
+          column. */}
+      {sendToFulfillment && (
+        <div style={{ marginBottom: 18 }}>
+          <p style={fieldLabel}>Callback time</p>
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <input
+              type="date" value={callbackDate} min={todayISO()}
+              onChange={e => pickCallbackDate(e.target.value)}
+              style={{ ...control, width: 'auto', fontFamily: MONO }}
+            />
+            <div style={{ flex: 1, minWidth: 280, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+              {SLOTS.map(s => {
+                const on = callbackSlot === s
+                return (
+                  <button
+                    key={s} type="button"
+                    onClick={() => pickCallbackSlot(s)}
+                    style={{
+                      height: 34, borderRadius: 6, fontSize: 12, fontWeight: 700,
+                      border: `1px solid ${on ? 'var(--accent-border)' : (fieldErrors.has('scheduled_call_at') ? 'var(--danger)' : 'var(--border)')}`,
+                      background: on ? 'var(--accent-dim)' : 'var(--bg-elevated)',
+                      color: on ? 'var(--accent)' : 'var(--text-secondary)',
+                    }}
+                  >
+                    {s}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <p style={{
+            margin: '8px 0 0', fontSize: 10.5, lineHeight: 1.4,
+            color: isFarOut(form.scheduled_call_at) ? 'var(--warning)' : 'var(--text-muted)',
+          }}>
+            Suggested: today or tomorrow — further out needs Fulfillment's OK.
+          </p>
+          <GapNote>
+            Every slot shows as open — there's no shared calendar behind this yet, so nothing here knows
+            what else is on your day.
+          </GapNote>
+        </div>
+      )}
 
       <div style={grid3}>
         <TextField
@@ -768,15 +821,8 @@ function NewSubmission() {
 // ── Cancellation Calendar ───────────────────────────────────────────────────
 // The old policy can only be cancelled on a live 3-way call (closer + client +
 // old carrier), so every replacement deal needs one booked against it.
-const SLOTS = ['9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM']
-
-function slotToISO(dateStr, slot) {
-  const [time, meridiem] = slot.split(' ')
-  const [h, m] = time.split(':').map(Number)
-  const hour = meridiem === 'PM' && h !== 12 ? h + 12 : meridiem === 'AM' && h === 12 ? 0 : h
-  const [y, mo, d] = dateStr.split('-').map(Number)
-  return new Date(y, mo - 1, d, hour, m).toISOString()
-}
+// SLOTS/slotToISO now live in lib/scheduling.js (Prompt 421) — the
+// Fulfillment intake's Callback time picker needs the exact same pattern.
 
 function CancellationCalendar() {
   const { profile } = useAuth()
