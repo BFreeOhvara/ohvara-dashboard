@@ -14,8 +14,7 @@ import { Switch } from '../components/ui/Switch'
 import { Segmented } from '../components/ui/Segmented'
 import { Avatar } from '../components/ui/Avatar'
 // Prompt 422 — lazy, not a top-level import: react-easy-crop pushed the
-// main bundle just over vite-plugin-pwa's 2 MiB precache limit (a hard
-// build failure, not just the pre-existing chunk-size warning). It's only
+// main bundle bigger. It's only
 // ever needed inside this one rarely-opened modal, so it belongs in its own
 // chunk rather than in every user's initial load.
 const AvatarCropModal = lazy(() =>
