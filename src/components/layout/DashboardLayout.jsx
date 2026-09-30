@@ -6,7 +6,6 @@ import { ActiveCallProvider } from '../../contexts/ActiveCallContext'
 import { NotificationToast } from '../rep/NotificationToast'
 import { BugReportButton } from '../shared/BugReportButton'
 import { NotificationBell } from '../admin/NotificationBell'
-import { RepNotificationBell } from '../rep/RepNotificationBell'
 import { CloserNotificationBell } from '../closer/CloserNotificationBell'
 import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../ui/Avatar'
@@ -42,14 +41,13 @@ const TITLES = {
 
 function ToastMount() {
   const { profile } = useAuth()
-  if (!profile || !['rep', 'closer'].includes(profile.role)) return null
+  if (!profile || !['closer'].includes(profile.role)) return null
   return <NotificationToast profileId={profile.id} />
 }
 
 function HeaderBell() {
   const { profile } = useAuth()
   if (profile?.role === 'admin')       return <NotificationBell profileId={profile.id} />
-  if (profile?.role === 'rep')         return <RepNotificationBell profileId={profile.id} />
   // Prompt 424: fulfillment wasn't wired into any branch here at all — the
   // bell wasn't hidden by the header, HeaderBell just fell through to null
   // for this role. Reuses CloserNotificationBell (generic profile-id-keyed

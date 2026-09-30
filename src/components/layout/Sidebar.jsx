@@ -203,131 +203,40 @@ function AccountMenu({ profile, expanded, duty, setDuty, onNavigate, onSignOut }
 
 // Groups and order are the export's NAVDEF verbatim (closer + admin).
 const NAV = {
-  rep: [
-    { group: 'Today', items: [
-      { to: '/setter', label: 'My Leads', icon: Phone },
-      { to: '/setter/calls', label: 'My Calls', icon: PhoneCall },
-    ] },
-    { group: 'Growth', items: [
-      { to: '/setter/stats', label: 'My Stats', icon: BarChart2 },
-      { to: '/setter/goals', label: 'My Goals', icon: Target },
-      { to: '/setter/commissions', label: 'My Commissions', icon: DollarSign },
-      { to: '/setter/training', label: 'Training', icon: BookOpen },
-    ] },
-    { group: 'Account', items: [
-      { to: '/setter/feed', label: 'Activity', icon: Bell },
-      { to: '/setter/messages', label: 'Messages', icon: MessageSquare },
-    ] },
-  ],
+  // Prompt 661 — stripped to what each login actually does.
   closer: [
-    { group: 'Today', items: [
-      { to: '/agent', label: 'Overview', icon: Home },
-      { to: '/agent/live', label: 'Live Call', icon: Headphones },
-    ] },
     { group: 'Sales', items: [
-      { to: '/agent/policies', label: 'My Policies', icon: GitBranch },
-      { to: '/agent/calls', label: 'My Calls', icon: PhoneCall },
-    ] },
-    { group: 'Tools', items: [
-      { to: '/agent/quoter', label: 'Quoter', icon: Zap },
-      { to: '/agent/underwriting', label: 'Underwriting', icon: Shield },
       { to: '/agent/submissions', label: 'Submissions', icon: FileText },
-      { to: '/agent/carriers', label: 'Carrier Portals', icon: Globe },
-    ] },
-    { group: 'Growth', items: [
-      { to: '/agent/stats', label: 'Performance', icon: BarChart2 },
-      { to: '/agent/hierarchy', label: 'Team', icon: Users },
-      { to: '/agent/training', label: 'Training Center', icon: GraduationCap },
-      { to: '/agent/commissions', label: 'Commissions', icon: DollarSign },
+      { to: '/agent/policies', label: 'My Policies', icon: GitBranch },
     ] },
     { group: 'Account', items: [
       { to: '/settings', label: 'Settings', icon: Settings },
     ] },
   ],
-  // Prompt 371: identical to `closer` below — same groups, same /agent/*
-  // routes (each page already widens its own scope for isAdmin internally,
-  // same pattern as Overview/Team/Performance) — with the sole addition of
-  // Users & Access, admin's one genuinely extra capability (account
-  // create/deactivate/delete + role-scoped invites; the Team page's own
-  // invite panel only ever mints closer invites). Overview points at
-  // '/admin' rather than '/agent' since that's the route admin actually
-  // lands on (RoleRedirect), but it renders the exact same AgentOverview.
   admin: [
-    { group: 'Today', items: [
-      { to: '/admin', label: 'Overview', icon: Home },
-      { to: '/agent/live', label: 'Live Call', icon: Headphones },
-    ] },
     { group: 'Sales', items: [
-      { to: '/agent/policies', label: 'My Policies', icon: GitBranch },
-      { to: '/agent/calls', label: 'My Calls', icon: PhoneCall },
-    ] },
-    { group: 'Tools', items: [
-      { to: '/agent/quoter', label: 'Quoter', icon: Zap },
-      { to: '/agent/underwriting', label: 'Underwriting', icon: Shield },
       { to: '/agent/submissions', label: 'Submissions', icon: FileText },
-      { to: '/agent/carriers', label: 'Carrier Portals', icon: Globe },
-    ] },
-    { group: 'Growth', items: [
-      { to: '/agent/stats', label: 'Performance', icon: BarChart2 },
-      { to: '/agent/hierarchy', label: 'Team', icon: Users },
-      { to: '/agent/training', label: 'Training Center', icon: GraduationCap },
-      { to: '/agent/commissions', label: 'Commissions', icon: DollarSign },
+      { to: '/agent/policies', label: 'Policies', icon: GitBranch },
     ] },
     { group: 'Account', items: [
       { to: '/admin/users', label: 'Users & Access', icon: Award },
-      { to: '/fulfillment', label: 'Fulfillment Queue', icon: ClipboardList },
+      { to: '/fulfillment', label: 'Cancellations', icon: ClipboardList },
       { to: '/settings', label: 'Settings', icon: Settings },
     ] },
   ],
-  // Prompt 425 — trimmed [[Prompt 424]]'s full Closer-parity nav down to what
-  // Fulfillment actually does (claim a handoff, write it on the carrier's
-  // own portal, cancel the old policy), after Brayden looked at the full
-  // shell live. Dropped: My Policies ("doesn't apply, it's never their
-  // policy" — Fulfillment Queue's own Completed tab is already their
-  // work-history view, so relabeling would just duplicate it), Submissions
-  // ("they don't really need the new submission, they're just gonna be
-  // writing it on the portal"), Commissions (hourly-paid, not
-  // commission-based). Performance stays but lands straight on Leaderboard
-  // (Performance.jsx's own isFulfillment check hides the Production tab —
-  // "the production, they're not writing any policies"). Team + Training
-  // Center kept on my own call (not sales/commission-specific); flag to
-  // Brayden if he wants either gone too. RLS scoping from [[Prompt 418]] is
-  // untouched — this is nav/route visibility only.
   fulfillment: [
-    { group: 'Today', items: [
-      { to: '/agent', label: 'Overview', icon: Home },
-      { to: '/agent/live', label: 'Live Call', icon: Headphones },
-    ] },
-    { group: 'Calls', items: [
-      { to: '/agent/calls', label: 'My Calls', icon: PhoneCall },
-    ] },
-    { group: 'Tools', items: [
-      { to: '/agent/quoter', label: 'Quoter', icon: Zap },
-      { to: '/agent/underwriting', label: 'Underwriting', icon: Shield },
-      { to: '/agent/carriers', label: 'Carrier Portals', icon: Globe },
-    ] },
-    { group: 'Growth', items: [
-      { to: '/agent/stats', label: 'Performance', icon: BarChart2 },
-      { to: '/agent/hierarchy', label: 'Team', icon: Users },
-      { to: '/agent/training', label: 'Training Center', icon: GraduationCap },
+    { group: 'Work', items: [
+      { to: '/fulfillment', label: 'Cancellations', icon: ClipboardList },
     ] },
     { group: 'Account', items: [
-      { to: '/fulfillment', label: 'Fulfillment Queue', icon: ClipboardList },
       { to: '/settings', label: 'Settings', icon: Settings },
-    ] },
-  ],
-  client: [
-    { group: 'Portal', items: [
-      { to: '/client', label: 'Overview', icon: Home },
-      { to: '/client/automations', label: 'Automations', icon: Zap },
-      { to: '/client/messages', label: 'Messages', icon: MessageSquare },
     ] },
   ],
 }
 
 // Export's `portalLabel`: admin is bare "Admin", the agent role reads as a
 // portal. rep/client keep their own wording from the pre-pivot app.
-const PORTAL_LABELS = { rep: 'Setter Portal', closer: 'Agent Portal', admin: 'Admin', client: 'Client Portal', fulfillment: 'Fulfillment Portal' }
+const PORTAL_LABELS = { closer: 'Agent Portal', admin: 'Admin', fulfillment: 'Cancellations' }
 
 const COLLAPSE_KEY = 'ohvara-sidebar-collapsed'
 const DUTY_KEY = 'ohvara-duty'
@@ -487,8 +396,6 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
             </div>
           ))}
         </nav>
-
-        {profile?.role === 'rep' && expanded && <MobileAppBox />}
 
         {/* Account footer (Prompt 338, permanent highlight Prompt 339) —
             always-highlighted row opens a popover anchored above it

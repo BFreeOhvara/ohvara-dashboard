@@ -249,11 +249,22 @@ export default function FulfillmentQueue() {
                     </p>
                   )}
 
+                  {/* Prompt 661 scaffolding — placeholder only, no e-signature
+                      provider behind it yet. */}
+                  <p style={{ flex: '1 1 100%', margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
+                    Client authorization: not yet collected <span style={{ opacity: 0.7 }}>(coming soon)</span>
+                  </p>
+
                   <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
                     {p.fulfillment_stage === 'Complete' ? (
+                      <>
+                      <button disabled title="Coming soon — automatic status ping back to the submitting agent" style={{ ...ghostBtn, height: 32, opacity: 0.5, cursor: 'not-allowed' }}>
+                        Notify agent · soon
+                      </button>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--success)', fontWeight: 700 }}>
                         <CheckCircle2 size={13} /> Done
                       </span>
+                      </>
                     ) : !p.assigned_fulfillment_id ? (
                       <button onClick={() => claim(p)} disabled={update.isPending} style={{ ...primaryBtn, height: 32, opacity: update.isPending ? 0.6 : 1 }}>
                         Claim

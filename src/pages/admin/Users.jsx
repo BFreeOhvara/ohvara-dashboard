@@ -167,9 +167,8 @@ export default function Users() {
               label="Role" value={inviteRole} onChange={setInviteRole} style={{ width: 160 }}
               options={[
                 { value: 'closer', label: 'Closer' },
-                { value: 'rep', label: 'Setter' },
                 { value: 'admin', label: 'Admin' },
-                { value: 'fulfillment', label: 'Fulfillment' },
+                { value: 'fulfillment', label: 'Cancellations' },
               ]}
             />
             <button onClick={generateInvite} disabled={createInvite.isPending} style={{ ...primaryBtn, height: 34, opacity: createInvite.isPending ? 0.6 : 1 }}>
@@ -195,9 +194,8 @@ export default function Users() {
               label="Role" value={form.role} onChange={val => setForm(f => ({ ...f, role: val }))}
               options={[
                 { value: 'closer', label: 'Closer' },
-                { value: 'rep', label: 'Setter' },
                 { value: 'admin', label: 'Admin' },
-                { value: 'fulfillment', label: 'Fulfillment' },
+                { value: 'fulfillment', label: 'Cancellations' },
               ]}
             />
             <AnchoredSelectField
