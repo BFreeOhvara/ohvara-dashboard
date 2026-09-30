@@ -104,6 +104,8 @@ const FULFILLMENT_SELECT = `
   id, agent_id, client_first_name, client_last_name, client_phone,
   carrier_name, product_name, monthly_premium, annual_premium, state, notes,
   scheduled_call_at, fulfillment_stage, assigned_fulfillment_id, created_at, updated_at,
+  fulfillment_claimed_at, fulfillment_completed_at,
+  cancellation_substatus, cancellation_confirmation, cancellation_notes,
   agent:profiles!policies_agent_id_fkey ( id, full_name ),
   assigned:profiles!policies_assigned_fulfillment_id_fkey ( id, full_name )
 `
@@ -120,6 +122,28 @@ export function useFulfillmentQueue() {
       if (error) throw error
       return data || []
     },
+  })
+}
+
+// Prompt 663 — claim is guarded on the row still being unclaimed, so two reps
+// hitting Claim on the same item at once can't silently overwrite each other:
+// the loser's update matches zero rows and gets a clear error instead.
+// Claim/complete timestamps are stamped server-side (migration 106 trigger).
+export function useClaimCancellation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, profileId }) => {
+      const { data, error } = await supabase
+        .from('policies')
+        .update({ assigned_fulfillment_id: profileId, fulfillment_stage: 'In Progress', cancellation_substatus: 'calling' })
+        .eq('id', id)
+        .is('assigned_fulfillment_id', null)
+        .select('id')
+      if (error) throw error
+      if (!data?.length) throw new Error('Someone else just claimed this one.')
+      return data[0]
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),
   })
 }
 
