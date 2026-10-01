@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowLeft, ArrowRight, CheckCircle2, Clock, Phone, User, Eye, EyeOff,
   ShieldAlert, Inbox, Briefcase, AlertTriangle, CircleCheckBig, Send,
-  FileSignature, Undo2, ChevronDown, ChevronUp,
+  FileSignature, Undo2, ChevronDown, ChevronUp, PhoneCall, MessageCircleMore, Loader2,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useFulfillmentQueue, useUpdatePolicy, useClaimCancellation } from '../../hooks/usePolicies'
@@ -11,6 +11,7 @@ import { card, cardTitle, primaryBtn, ghostBtn, fieldLabel, control, MONO } from
 import { Segmented } from '../../components/ui/Segmented'
 import { SavedTick } from '../../components/ui/SavedTick'
 import { money, fullName, formatDate, maskLast4 } from '../../lib/policyFormat'
+import { invokeCallerId, FALLBACK_CODES } from '../../lib/callerId'
 
 // Cancellations (Prompt 663 rebuild of the Prompt 418 Fulfillment Queue).
 //
@@ -340,6 +341,103 @@ function IntakeGrid({ data }) {
   )
 }
 
+// ── calling the client (Prompt 666) ─────────────────────────────────────────
+
+const firstName = name => (name || '').trim().split(/\s+/)[0] || ''
+
+function telHref(phone) {
+  return `tel:${phone.replace(/[^\d+]/g, '')}`
+}
+
+// The agent has verified their number and left it switched on → the client
+// sees the agent's number. Off or unverified → today's plain tel: link.
+function agentCallerIdOn(p) {
+  return !!(p.agent?.caller_id_verified_at && p.agent?.caller_id_enabled)
+}
+
+// "Call client" rings the rep's own phone first (Twilio), then connects them
+// to the client showing the agent's number. If Twilio can't place it (no
+// number bought yet, agent switched it off since the page loaded), it says
+// why and offers the direct dial instead — the rep is never stuck.
+function ClientCallAction({ p, canBridge }) {
+  const [state, setState] = useState({ phase: 'idle' })
+  const agent = firstName(p.agent?.full_name) || 'the agent'
+
+  if (!p.client_phone) {
+    return <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>No client phone on file</span>
+  }
+
+  const directLink = (label, style) => (
+    <a href={telHref(p.client_phone)} style={style}>
+      <Phone size={14} /> {label}
+    </a>
+  )
+  const primaryLink = { ...primaryBtn, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none', fontFamily: MONO }
+
+  if (!canBridge) return directLink(p.client_phone, primaryLink)
+
+  async function call() {
+    setState({ phase: 'calling' })
+    try {
+      await invokeCallerId('start-agent-caller-id-call', { policy_id: p.id })
+      setState({ phase: 'ringing' })
+    } catch (e) {
+      setState({ phase: FALLBACK_CODES.has(e.code) ? 'fallback' : 'error', message: e.message })
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start', maxWidth: 300 }}>
+      <button
+        onClick={call}
+        disabled={state.phase === 'calling'}
+        style={{ ...primaryBtn, display: 'inline-flex', alignItems: 'center', gap: 8, opacity: state.phase === 'calling' ? 0.6 : 1 }}
+      >
+        {state.phase === 'calling' ? <Loader2 size={14} className="animate-spin" /> : <PhoneCall size={14} />}
+        Call client
+      </button>
+      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+        Shows {agent}'s number · <span style={{ fontFamily: MONO }}>{p.client_phone}</span>
+      </span>
+      {state.phase === 'ringing' && (
+        <span style={{ fontSize: 11.5, color: 'var(--success)' }}>
+          Ringing your phone now. Pick up and you'll be connected to {p.client_first_name || 'the client'}.
+        </span>
+      )}
+      {(state.phase === 'fallback' || state.phase === 'error') && (
+        <span style={{ fontSize: 11.5, color: state.phase === 'error' ? 'var(--danger)' : 'var(--warning)', lineHeight: 1.5 }}>
+          {state.message}{' '}
+          {directLink('Dial directly instead', { color: 'var(--accent)', display: 'inline-flex', alignItems: 'center', gap: 4 })}
+          {' '}(shows your own number).
+        </span>
+      )}
+    </div>
+  )
+}
+
+// Same "read this" hint pattern as Book a call. Lives in the work view itself,
+// not just the spec: the client sees the agent's number, so the rep has to be
+// clear they're calling for the agent, never as them.
+function OnBehalfHint({ p, profile }) {
+  const agent = p.agent?.full_name || 'the agent'
+  const me = firstName(profile?.full_name) || 'your name'
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', gap: 8,
+      padding: '9px 12px', borderRadius: 6,
+      background: 'var(--bg-panel)', border: 'var(--border-w) solid var(--border)',
+    }}>
+      <MessageCircleMore size={13} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 1 }} />
+      <p style={{ margin: 0, fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+        <b style={{ color: 'var(--text-primary)', fontStyle: 'normal' }}>
+          The client sees {firstName(agent) || 'the agent'}'s number. You're calling on behalf of {agent}. Never say you are them.
+        </b>{' '}
+        <i>"Hi {p.client_first_name || 'there'}, this is {me} calling on behalf of {agent}. We spoke with you about getting your old policy cancelled."</i>
+      </p>
+    </div>
+  )
+}
+
 // ── focused work view ───────────────────────────────────────────────────────
 
 function Step({ n, title, done, children, last }) {
@@ -407,6 +505,8 @@ function WorkView({ p, now, profile, isAdmin, onBack, onClaimNext, nextAvailable
   }
 
   const callback = fmtCallback(p.scheduled_call_at)
+  const callerIdOn = agentCallerIdOn(p)
+  const canBridge = callerIdOn && (claimedByMe || isAdmin)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -434,21 +534,14 @@ function WorkView({ p, now, profile, isAdmin, onBack, onClaimNext, nextAvailable
           </p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
-          {p.client_phone ? (
-            <a
-              href={`tel:${p.client_phone.replace(/[^\d+]/g, '')}`}
-              style={{ ...primaryBtn, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none', fontFamily: MONO }}
-            >
-              <Phone size={14} /> {p.client_phone}
-            </a>
-          ) : (
-            <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>No client phone on file</span>
-          )}
+          <ClientCallAction p={p} canBridge={canBridge} />
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-secondary)' }}>
             <Clock size={11} /> {callback ? `Callback ${callback}` : 'No callback time set'}
           </span>
         </div>
       </div>
+
+      {canBridge && p.client_phone && !done && <OnBehalfHint p={p} profile={profile} />}
 
       {/* The one thing this team exists to cancel */}
       {canViewIntake && (

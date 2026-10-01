@@ -106,7 +106,7 @@ const FULFILLMENT_SELECT = `
   scheduled_call_at, fulfillment_stage, assigned_fulfillment_id, created_at, updated_at,
   fulfillment_claimed_at, fulfillment_completed_at,
   cancellation_substatus, cancellation_confirmation, cancellation_notes,
-  agent:profiles!policies_agent_id_fkey ( id, full_name ),
+  agent:profiles!policies_agent_id_fkey ( id, full_name, caller_id_verified_at, caller_id_enabled ),
   assigned:profiles!policies_assigned_fulfillment_id_fkey ( id, full_name )
 `
 

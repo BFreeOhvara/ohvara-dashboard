@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import {
-  Globe, Palette, Shield, IdCard, Plug, Check, Loader2, Moon, Sun, Plus, Trash2, Video,
+  Globe, Palette, Shield, IdCard, Plug, Check, Loader2, Moon, Sun, Plus, Trash2, Video, PhoneCall,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -17,8 +17,9 @@ import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../lib/timezones'
 import { US_STATES } from '../lib/usStates'
 import { Switch } from '../components/ui/Switch'
 import {
-  card, cardTitle, control, primaryBtn, ghostBtn, grid3,
+  card, cardTitle, control, primaryBtn, ghostBtn, grid3, MONO,
 } from '../lib/exportStyles'
+import { invokeCallerId, formatUsPhone } from '../lib/callerId'
 import { GapNote, AnchoredSelectField, TextField } from '../components/ui/ExportForm'
 import { SavedTick } from '../components/ui/SavedTick'
 
@@ -59,6 +60,7 @@ const TABS = [
   { key: 'security',     label: 'Security',                  icon: Shield },
   { key: 'licensing',    label: 'Licensing & Appointments',  icon: IdCard },
   { key: 'integrations', label: 'Integrations',              icon: Plug },
+  { key: 'callerid',     label: 'Caller ID',                 icon: PhoneCall, roles: ['agent', 'admin'] },
 ]
 
 const inputBase = { ...control, background: 'var(--bg-base)', padding: '0 12px' }
@@ -72,11 +74,13 @@ export default function Settings() {
   // (Prompt 283) — it links to /settings#regional. Now that the page is
   // tabbed rather than stacked, the hash picks the tab instead of scrolling
   // to it; an explicit click wins from then on.
-  const hashTab = TABS.some(t => t.key === hash.slice(1)) ? hash.slice(1) : null
   const [picked, setTab] = useState(null)
-  const tab = picked || hashTab || 'regional'
 
   if (!profile) return null
+
+  const tabs = TABS.filter(t => !t.roles || t.roles.includes(profile.role))
+  const hashTab = tabs.some(t => t.key === hash.slice(1)) ? hash.slice(1) : null
+  const tab = picked || hashTab || 'regional'
 
   // The export's 220px rail sits beside the panel; below md it stacks and the
   // tabs run as a scrollable row, or the panel gets squeezed to ~150px on a
@@ -87,7 +91,7 @@ export default function Settings() {
       style={{ alignItems: 'start', maxWidth: 940 }}
     >
       <div className="flex-row overflow-x-auto md:flex-col scrollbar-thin" style={{ display: 'flex', gap: 2, minWidth: 0 }}>
-        {TABS.map(t => {
+        {tabs.map(t => {
           const on = tab === t.key
           const Icon = t.icon
           return (
@@ -116,6 +120,7 @@ export default function Settings() {
         {tab === 'security'     && <SecurityPanel />}
         {tab === 'licensing'    && <LicensingPanel profile={profile} />}
         {tab === 'integrations' && <IntegrationsPanel profile={profile} />}
+        {tab === 'callerid'     && <CallerIdPanel profile={profile} />}
       </div>
     </div>
   )
@@ -600,6 +605,205 @@ function IntegrationsPanel({ profile }) {
           this section stays empty rather than shipping speculative settings with no real requirement behind them.
         </GapNote>
       </div>
+    </div>
+  )
+}
+
+// ── Caller ID (Prompt 666, migration 108) ───────────────────────────────────
+// The agent verifies their own cell with Twilio once; after that, when
+// Fulfillment calls one of their clients about a cancellation, the client sees
+// the agent's number (one they already know) and Fulfillment says they're
+// calling on the agent's behalf. Verification is Twilio's own: it calls the
+// number and the agent keys in the code shown here, so nobody can borrow a
+// number they don't hold. The switch is the agent's to flip any time.
+const POLL_MS = 4000
+const POLL_LIMIT_MS = 3 * 60e3
+
+function CallerIdPanel({ profile }) {
+  const { refreshProfile } = useAuth()
+  const update = useUpdateOwnProfile()
+  const [configured, setConfigured] = useState(null)
+  const [phone, setPhone] = useState(formatUsPhone(profile.phone) || '')
+  const [changing, setChanging] = useState(false)
+  const [pending, setPending] = useState(null)        // { code, phone, startedAt }
+  const [timedOut, setTimedOut] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [confirmRemove, setConfirmRemove] = useState(false)
+  const pollRef = useRef(null)
+  // refreshProfile isn't memoized in useAuth; read it through a ref so the
+  // polling interval isn't torn down and rebuilt on every render.
+  const refreshRef = useRef(refreshProfile)
+  useEffect(() => { refreshRef.current = refreshProfile })
+
+  const verified = !!(profile.caller_id_verified_at && profile.caller_id_number)
+  const digits = phone.replace(/\D/g, '')
+
+  useEffect(() => {
+    invokeCallerId('agent-caller-id', { action: 'status' })
+      .then(d => setConfigured(!!d.configured))
+      .catch(() => setConfigured(false))
+  }, [])
+
+  useEffect(() => {
+    if (!pending) return
+    pollRef.current = setInterval(async () => {
+      if (Date.now() - pending.startedAt > POLL_LIMIT_MS) {
+        clearInterval(pollRef.current)
+        setTimedOut(true)
+        return
+      }
+      try {
+        const d = await invokeCallerId('agent-caller-id', { action: 'check' })
+        if (d.verified) {
+          clearInterval(pollRef.current)
+          await refreshRef.current()
+          setPending(null)
+          setChanging(false)
+        }
+      } catch { /* keep polling; one blip shouldn't end the flow */ }
+    }, POLL_MS)
+    return () => clearInterval(pollRef.current)
+  }, [pending])
+
+  async function start() {
+    setError(''); setTimedOut(false); setBusy(true)
+    try {
+      const d = await invokeCallerId('agent-caller-id', { action: 'start', phone })
+      setPending({ code: d.validation_code, phone: d.phone, startedAt: Date.now() })
+    } catch (e) {
+      setError(e.message)
+    }
+    setBusy(false)
+  }
+
+  function cancelPending() {
+    clearInterval(pollRef.current)
+    setPending(null); setTimedOut(false)
+  }
+
+  async function toggle(next) {
+    await update.mutateAsync({ profileId: profile.id, updates: { caller_id_enabled: next } })
+    await refreshProfile()
+  }
+
+  async function remove() {
+    setError(''); setBusy(true)
+    try {
+      await invokeCallerId('agent-caller-id', { action: 'remove' })
+      await refreshProfile()
+      setConfirmRemove(false)
+    } catch (e) {
+      setError(e.message)
+    }
+    setBusy(false)
+  }
+
+  return (
+    <div style={{ ...card, padding: '20px 22px' }}>
+      <p style={cardTitle}>Caller ID</p>
+      <p style={{ margin: '0 0 16px', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 560 }}>
+        When Fulfillment calls one of your clients to work their cancellation, the client sees <b>your</b> number,
+        the one they already know from your call, so they're more likely to pick up. Fulfillment always says
+        they're calling <b>on your behalf</b>. They never say they are you.
+      </p>
+
+      {configured === false && !verified && (
+        <GapNote>
+          Calling isn't connected yet, so there's nothing to verify. This switches on once the phone account is set up.
+        </GapNote>
+      )}
+
+      {/* Verified: the number + the agent's kill switch */}
+      {verified && !changing && !pending && (
+        <>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 8, maxWidth: 560,
+            background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)',
+          }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', fontFamily: MONO }}>
+                {formatUsPhone(profile.caller_id_number)}
+              </p>
+              <p style={{ margin: '3px 0 0', fontSize: 11, color: profile.caller_id_enabled ? 'var(--success)' : 'var(--text-muted)' }}>
+                {profile.caller_id_enabled
+                  ? "On: Fulfillment's calls to your clients show this number"
+                  : 'Off: Fulfillment calls from their own number'}
+              </p>
+            </div>
+            <Switch checked={!!profile.caller_id_enabled} onChange={toggle} disabled={update.isPending} />
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button onClick={() => { setChanging(true); setPhone('') }} style={ghostBtn}>Change number</button>
+            {confirmRemove ? (
+              <>
+                <span style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>Remove this number?</span>
+                <button onClick={remove} disabled={busy} style={{ ...ghostBtn, color: 'var(--danger)' }}>Remove</button>
+                <button onClick={() => setConfirmRemove(false)} style={ghostBtn}>Keep</button>
+              </>
+            ) : (
+              <button onClick={() => setConfirmRemove(true)} style={ghostBtn}><Trash2 size={12} /> Remove</button>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Not verified yet, or changing: enter a number */}
+      {configured && (!verified || changing) && !pending && (
+        <div style={{ maxWidth: 420 }}>
+          <p style={softLabel}>Your cell number</p>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <input
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              placeholder="(602) 555-0143"
+              inputMode="tel"
+              style={{ ...inputBase, fontFamily: MONO, flex: '1 1 180px' }}
+            />
+            <button
+              onClick={start}
+              disabled={busy || digits.length < 10}
+              style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 12, opacity: busy || digits.length < 10 ? 0.5 : 1 }}
+            >
+              {busy ? <Loader2 size={13} className="animate-spin" /> : 'Verify number'}
+            </button>
+            {changing && <button onClick={() => setChanging(false)} style={ghostBtn}>Cancel</button>}
+          </div>
+          <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+            We'll call this number once. Keep your phone handy.
+          </p>
+        </div>
+      )}
+
+      {/* Mid-verification: the code Twilio's call will ask for */}
+      {pending && (
+        <div style={{
+          maxWidth: 420, padding: '16px 18px', borderRadius: 8,
+          background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
+        }}>
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
+            Calling <span style={{ fontFamily: MONO }}>{formatUsPhone(pending.phone)}</span> now. Answer, and when asked, key in:
+          </p>
+          <p style={{ margin: '10px 0', fontSize: 30, fontWeight: 700, letterSpacing: 6, color: 'var(--text-primary)', fontFamily: MONO }}>
+            {pending.code}
+          </p>
+          {timedOut ? (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11.5, color: 'var(--warning)' }}>Didn't hear back from that call.</span>
+              <button onClick={start} disabled={busy} style={ghostBtn}>Call me again</button>
+              <button onClick={cancelPending} style={ghostBtn}>Cancel</button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <Loader2 size={13} className="animate-spin" style={{ color: 'var(--accent)', flexShrink: 0 }} />
+              <span style={{ fontSize: 11.5, color: 'var(--text-secondary)', flex: 1 }}>Waiting for you to enter the code…</span>
+              <button onClick={cancelPending} style={ghostBtn}>Cancel</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {error && <p style={{ margin: '12px 0 0', fontSize: 12, color: 'var(--danger)' }}>{error}</p>}
     </div>
   )
 }
