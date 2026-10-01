@@ -3,10 +3,8 @@ import { createPortal } from 'react-dom'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import {
-  Users, BarChart2, Bell, DollarSign, BookOpen,
-  LogOut, Zap, PhoneCall, GitBranch, MessageSquare, Home, Settings,
-  Smartphone, FileText, Headphones, Globe, Shield, Award,
-  GraduationCap, ChevronRight, Phone, Target, User, ClipboardList,
+  Users, BarChart2, LogOut, Home, Settings, Smartphone, Award,
+  ChevronRight, User, ClipboardList, CalendarPlus,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../ui/Avatar'
@@ -203,20 +201,25 @@ function AccountMenu({ profile, expanded, duty, setDuty, onNavigate, onSignOut }
 
 // Groups and order are the export's NAVDEF verbatim (closer + admin).
 const NAV = {
-  // Prompt 661 — stripped to what each login actually does.
+  // Prompt 665 — agent portal rebuilt around booking Fulfillment calls.
   agent: [
-    { group: 'Sales', items: [
-      { to: '/agent/submissions', label: 'Submissions', icon: FileText },
-      { to: '/agent/policies', label: 'My Policies', icon: GitBranch },
+    { group: 'Work', items: [
+      { to: '/agent', label: 'Overview', icon: Home },
+      { to: '/agent/book', label: 'Book a call', icon: CalendarPlus },
+      { to: '/agent/clients', label: 'My Clients', icon: Users },
+      { to: '/agent/performance', label: 'Performance', icon: BarChart2 },
     ] },
     { group: 'Account', items: [
       { to: '/settings', label: 'Settings', icon: Settings },
     ] },
   ],
   admin: [
-    { group: 'Sales', items: [
-      { to: '/agent/submissions', label: 'Submissions', icon: FileText },
-      { to: '/agent/policies', label: 'Policies', icon: GitBranch },
+    // Prompt 665 — admin follows the agent portal's pages (company-wide
+    // Clients + Performance), minus the agent's personal Overview.
+    { group: 'Agents', items: [
+      { to: '/agent/book', label: 'Book a call', icon: CalendarPlus },
+      { to: '/agent/clients', label: 'Clients', icon: Users },
+      { to: '/agent/performance', label: 'Performance', icon: BarChart2 },
     ] },
     { group: 'Account', items: [
       { to: '/admin/users', label: 'Users & Access', icon: Award },

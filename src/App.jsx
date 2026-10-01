@@ -14,8 +14,10 @@ import ResetPassword from './pages/ResetPassword'
 import Settings from './pages/Settings'
 import Profile from './pages/Profile'
 
-import AgentPolicies from './pages/agent/MyPolicies'
-import AgentSubmissions from './pages/agent/Submissions'
+import AgentOverview from './pages/agent/Overview'
+import AgentBookCall from './pages/agent/BookCall'
+import AgentClients from './pages/agent/Clients'
+import AgentPerformance from './pages/agent/Performance'
 import FulfillmentQueue from './pages/fulfillment/FulfillmentQueue'
 import Users from './pages/admin/Users'
 
@@ -40,7 +42,7 @@ function RoleRedirect() {
     )
   }
   if (!profile) return <Navigate to="/login" replace />
-  if (profile.role === 'agent') return <Navigate to="/agent/submissions" replace />
+  if (profile.role === 'agent') return <Navigate to="/agent" replace />
   if (profile.role === 'admin') return <Navigate to="/admin/users" replace />
   if (profile.role === 'fulfillment') return <Navigate to="/fulfillment" replace />
   return <Navigate to="/login" replace />
@@ -78,17 +80,31 @@ export default function App() {
                 cancellation team's Fulfillment Queue. Pre-pivot setter
                 (rep), old closer, and client routes are gone; old bookmarks
                 fall through to the catch-all redirect. */}
-            <Route path="/agent/submissions" element={
-              <ProtectedRoute allowedRoles={['agent', 'admin']}>
-                <DashboardLayout><AgentSubmissions /></DashboardLayout>
+            {/* Prompt 665 — agent portal: Overview, Book a call, My Clients,
+                Performance. Old Submissions / My Policies URLs redirect to
+                their replacements so bookmarks keep working. */}
+            <Route path="/agent" element={
+              <ProtectedRoute allowedRoles={['agent']}>
+                <DashboardLayout><AgentOverview /></DashboardLayout>
               </ProtectedRoute>
             } />
-            <Route path="/agent/policies" element={
+            <Route path="/agent/book" element={
               <ProtectedRoute allowedRoles={['agent', 'admin']}>
-                <DashboardLayout><AgentPolicies /></DashboardLayout>
+                <DashboardLayout><AgentBookCall /></DashboardLayout>
               </ProtectedRoute>
             } />
-            <Route path="/agent" element={<Navigate to="/agent/submissions" replace />} />
+            <Route path="/agent/clients" element={
+              <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <DashboardLayout><AgentClients /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/performance" element={
+              <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <DashboardLayout><AgentPerformance /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/submissions" element={<Navigate to="/agent/book" replace />} />
+            <Route path="/agent/policies" element={<Navigate to="/agent/clients" replace />} />
             <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
             <Route path="/admin/users" element={
               <ProtectedRoute allowedRoles={['admin']}>
