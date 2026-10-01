@@ -34,14 +34,14 @@ const TITLES = {
   '/agent/commissions': ['Commissions', 'Compensation grid & balance — switch the view'],
   '/admin': ['Overview', 'Your day at a glance'],
   '/admin/users': ['Users & Access', 'Accounts, roles and invites'],
-  '/fulfillment': ['Cancellations', 'Claim one, cancel the old policy, move to the next'],
+  '/fulfillment': ['Fulfillment', 'Claim one, cancel the old policy, move to the next'],
   '/settings': ['Settings', 'Notifications, regional & appearance'],
   '/profile': ['Profile', 'Your name, contact info, and account details'],
 }
 
 function ToastMount() {
   const { profile } = useAuth()
-  if (!profile || !['closer'].includes(profile.role)) return null
+  if (!profile || !['agent'].includes(profile.role)) return null
   return <NotificationToast profileId={profile.id} />
 }
 
@@ -56,7 +56,7 @@ function HeaderBell() {
   // harmless no-ops, not errors) since it already has the fulfillment_complete
   // icon mapped (Prompt 418) and now team_message too now that Team is in
   // this role's nav.
-  if (profile?.role === 'closer' || profile?.role === 'fulfillment') {
+  if (profile?.role === 'agent' || profile?.role === 'fulfillment') {
     return <CloserNotificationBell profileId={profile.id} />
   }
   return null

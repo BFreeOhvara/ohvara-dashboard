@@ -23,7 +23,7 @@ export function useClosers() {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('role', 'closer')
+        .eq('role', 'agent')
         .order('full_name')
       if (error) throw error
       return data || []

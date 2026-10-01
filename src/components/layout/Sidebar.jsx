@@ -148,7 +148,7 @@ function AccountMenu({ profile, expanded, duty, setDuty, onNavigate, onSignOut }
                 {profile?.username || profile?.email}
               </p>
             </div>
-            {profile?.role === 'closer' && (
+            {profile?.role === 'agent' && (
               <div
                 title={duty ? 'Available for transfers' : 'Off duty'}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0 }}
@@ -204,7 +204,7 @@ function AccountMenu({ profile, expanded, duty, setDuty, onNavigate, onSignOut }
 // Groups and order are the export's NAVDEF verbatim (closer + admin).
 const NAV = {
   // Prompt 661 — stripped to what each login actually does.
-  closer: [
+  agent: [
     { group: 'Sales', items: [
       { to: '/agent/submissions', label: 'Submissions', icon: FileText },
       { to: '/agent/policies', label: 'My Policies', icon: GitBranch },
@@ -220,13 +220,13 @@ const NAV = {
     ] },
     { group: 'Account', items: [
       { to: '/admin/users', label: 'Users & Access', icon: Award },
-      { to: '/fulfillment', label: 'Cancellations', icon: ClipboardList },
+      { to: '/fulfillment', label: 'Fulfillment', icon: ClipboardList },
       { to: '/settings', label: 'Settings', icon: Settings },
     ] },
   ],
   fulfillment: [
     { group: 'Work', items: [
-      { to: '/fulfillment', label: 'Cancellations', icon: ClipboardList },
+      { to: '/fulfillment', label: 'Fulfillment', icon: ClipboardList },
     ] },
     { group: 'Account', items: [
       { to: '/settings', label: 'Settings', icon: Settings },
@@ -236,7 +236,7 @@ const NAV = {
 
 // Export's `portalLabel`: admin is bare "Admin", the agent role reads as a
 // portal. rep/client keep their own wording from the pre-pivot app.
-const PORTAL_LABELS = { closer: 'Agent Portal', admin: 'Admin', fulfillment: 'Cancellations' }
+const PORTAL_LABELS = { agent: 'Agent Portal', admin: 'Admin', fulfillment: 'Fulfillment' }
 
 const COLLAPSE_KEY = 'ohvara-sidebar-collapsed'
 const DUTY_KEY = 'ohvara-duty'

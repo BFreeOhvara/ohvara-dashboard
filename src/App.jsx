@@ -40,7 +40,7 @@ function RoleRedirect() {
     )
   }
   if (!profile) return <Navigate to="/login" replace />
-  if (profile.role === 'closer') return <Navigate to="/agent/submissions" replace />
+  if (profile.role === 'agent') return <Navigate to="/agent/submissions" replace />
   if (profile.role === 'admin') return <Navigate to="/admin/users" replace />
   if (profile.role === 'fulfillment') return <Navigate to="/fulfillment" replace />
   return <Navigate to="/login" replace />
@@ -60,7 +60,7 @@ export default function App() {
 
             {/* Settings — shared across every role (Prompt 226) */}
             <Route path="/settings" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
+              <ProtectedRoute allowedRoles={['agent', 'admin', 'fulfillment']}>
                 <DashboardLayout><Settings /></DashboardLayout>
               </ProtectedRoute>
             } />
@@ -69,7 +69,7 @@ export default function App() {
                 footer's account popover has its own distinct destination,
                 shared across every role same as Settings. */}
             <Route path="/profile" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin', 'fulfillment']}>
+              <ProtectedRoute allowedRoles={['agent', 'admin', 'fulfillment']}>
                 <DashboardLayout><Profile /></DashboardLayout>
               </ProtectedRoute>
             } />
@@ -79,12 +79,12 @@ export default function App() {
                 (rep), old closer, and client routes are gone; old bookmarks
                 fall through to the catch-all redirect. */}
             <Route path="/agent/submissions" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+              <ProtectedRoute allowedRoles={['agent', 'admin']}>
                 <DashboardLayout><AgentSubmissions /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/policies" element={
-              <ProtectedRoute allowedRoles={['closer', 'admin']}>
+              <ProtectedRoute allowedRoles={['agent', 'admin']}>
                 <DashboardLayout><AgentPolicies /></DashboardLayout>
               </ProtectedRoute>
             } />

@@ -96,7 +96,7 @@ export function useNotifyLiveRoom(currentProfileId) {
       const { data: recipients, error: profilesError } = await supabase
         .from('profiles')
         .select('id')
-        .in('role', ['closer', 'admin'])
+        .in('role', ['agent', 'admin'])
         .neq('id', currentProfileId)
       if (profilesError) throw profilesError
       if (!recipients.length) return 0

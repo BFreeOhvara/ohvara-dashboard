@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
   if (authError || !user) return json({ error: 'Invalid or expired token' }, 401)
 
   const { data: caller } = await admin.from('profiles').select('role').eq('id', user.id).single()
-  if (caller?.role !== 'closer' && caller?.role !== 'admin') {
+  if (caller?.role !== 'agent' && caller?.role !== 'admin') {
     return json({ error: 'Forbidden — closer or admin only' }, 403)
   }
 

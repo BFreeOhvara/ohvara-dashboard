@@ -38,7 +38,7 @@ const td = { padding: '12px 16px', borderBottom: 'var(--border-w) solid var(--bo
 
 const ROLE_STYLE = {
   admin:       { color: 'var(--accent)',  dim: 'var(--accent-dim)',  bd: 'var(--accent-border)' },
-  closer:      { color: 'var(--info)',    dim: 'var(--info-dim)',    bd: 'var(--info-bd)' },
+  agent:       { color: 'var(--info)',    dim: 'var(--info-dim)',    bd: 'var(--info-bd)' },
   rep:         { color: 'var(--text-secondary)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
   client:      { color: 'var(--text-secondary)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
   fulfillment: { color: 'var(--warning)', dim: 'var(--warning-dim)', bd: 'var(--warning-bd)' },
@@ -76,10 +76,10 @@ export default function Users() {
   const revokeInvite = useRevokeInvite()
 
   const [search, setSearch] = useState('')
-  const [inviteRole, setInviteRole] = useState('closer')
+  const [inviteRole, setInviteRole] = useState('agent')
   const [inviteOpen, setInviteOpen] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
-  const [form, setForm] = useState({ username: '', password: '', full_name: '', role: 'closer', timezone: DEFAULT_TIMEZONE })
+  const [form, setForm] = useState({ username: '', password: '', full_name: '', role: 'agent', timezone: DEFAULT_TIMEZONE })
   const [formError, setFormError] = useState('')
   const [createdCreds, setCreatedCreds] = useState(null)
   const [copied, setCopied] = useState(null)
@@ -121,7 +121,7 @@ export default function Users() {
       await createProfile.mutateAsync(form)
       setCreatedCreds({ username: form.username, password: form.password, full_name: form.full_name })
       setFormOpen(false)
-      setForm({ username: '', password: '', full_name: '', role: 'closer', timezone: DEFAULT_TIMEZONE })
+      setForm({ username: '', password: '', full_name: '', role: 'agent', timezone: DEFAULT_TIMEZONE })
     } catch (err) {
       setFormError(err.message || 'Failed to create user')
     }
@@ -166,9 +166,9 @@ export default function Users() {
             <AnchoredSelectField
               label="Role" value={inviteRole} onChange={setInviteRole} style={{ width: 160 }}
               options={[
-                { value: 'closer', label: 'Closer' },
+                { value: 'agent', label: 'Agent' },
                 { value: 'admin', label: 'Admin' },
-                { value: 'fulfillment', label: 'Cancellations' },
+                { value: 'fulfillment', label: 'Fulfillment' },
               ]}
             />
             <button onClick={generateInvite} disabled={createInvite.isPending} style={{ ...primaryBtn, height: 34, opacity: createInvite.isPending ? 0.6 : 1 }}>
@@ -193,9 +193,9 @@ export default function Users() {
             <AnchoredSelectField
               label="Role" value={form.role} onChange={val => setForm(f => ({ ...f, role: val }))}
               options={[
-                { value: 'closer', label: 'Closer' },
+                { value: 'agent', label: 'Agent' },
                 { value: 'admin', label: 'Admin' },
-                { value: 'fulfillment', label: 'Cancellations' },
+                { value: 'fulfillment', label: 'Fulfillment' },
               ]}
             />
             <AnchoredSelectField

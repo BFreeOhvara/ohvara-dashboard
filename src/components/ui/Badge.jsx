@@ -84,7 +84,7 @@ const STATUS_STYLES = {
 
   // Roles
   'rep':    { background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '0.5px solid var(--border)' },
-  'closer': { background: 'var(--accent-dim)',  color: 'var(--accent)',         border: '0.5px solid var(--accent-border)' },
+  'agent': { background: 'var(--accent-dim)',  color: 'var(--accent)',         border: '0.5px solid var(--accent-border)' },
   'admin':  { background: 'rgba(168,85,247,0.12)', color: 'rgb(192,132,252)',   border: '0.5px solid rgba(168,85,247,0.20)' },
 
   // User active status

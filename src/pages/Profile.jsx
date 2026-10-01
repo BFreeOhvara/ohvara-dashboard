@@ -34,11 +34,11 @@ const AvatarCropModal = lazy(() =>
 const inputBase = { ...control, background: 'var(--bg-base)', padding: '0 12px' }
 const softLabel = { margin: '0 0 5px', fontSize: 11, color: 'var(--text-muted)' }
 
-const ROLE_LABEL = { admin: 'Admin', closer: 'Closer', rep: 'Setter', client: 'Client' }
+const ROLE_LABEL = { admin: 'Admin', agent: 'Agent', rep: 'Setter', client: 'Client' }
 
 // Where "X" falls back to when there's no in-app history to go back to
 // (direct URL load, hard refresh) — each role's own home route.
-const ROLE_HOME = { admin: '/admin', closer: '/agent', rep: '/setter', client: '/client' }
+const ROLE_HOME = { admin: '/admin', agent: '/agent', rep: '/setter', client: '/client' }
 
 export default function Profile() {
   const { profile } = useAuth()
@@ -152,7 +152,7 @@ function ProfilePanel({ profile }) {
 
       {profile.role === 'admin' && <WritesBusinessField profile={profile} />}
 
-      {(profile.role === 'closer' || (profile.role === 'admin' && profile.also_writes_business)) && (
+      {(profile.role === 'agent' || (profile.role === 'admin' && profile.also_writes_business)) && (
         <MonthlyGoalField profile={profile} />
       )}
 

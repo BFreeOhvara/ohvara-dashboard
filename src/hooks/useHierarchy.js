@@ -28,7 +28,7 @@ function useAgents() {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, email, username, role, upline_id, is_active, created_at, avatar_url, avatar_color')
-        .in('role', ['closer', 'admin'])
+        .in('role', ['agent', 'admin'])
         .order('created_at')
       if (error) throw error
       return (data || []).filter(a => !isTestAccount(a.id))

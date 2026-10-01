@@ -5,10 +5,10 @@
 // user-visible text, where the house term for 'rep' is "Setter".
 export const ROLE_LABELS = {
   rep: 'Setter',
-  closer: 'Closer',
+  agent: 'Agent',
   admin: 'Admin',
   client: 'Client',
-  fulfillment: 'Cancellations',
+  fulfillment: 'Fulfillment',
 }
 
 export function roleLabel(role) {
