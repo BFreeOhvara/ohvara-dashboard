@@ -37,7 +37,9 @@ const TITLES = {
   '/agent/commissions': ['Commissions', 'Compensation grid & balance — switch the view'],
   '/admin': ['Overview', 'Your day at a glance'],
   '/admin/users': ['Users & Access', 'Accounts, roles and invites'],
-  '/fulfillment': ['Fulfillment', 'Claim one, cancel the old policy, move to the next'],
+  '/fulfillment': ['Overview', 'How the whole team is doing'],
+  '/fulfillment/desk': ['Fulfillment', 'Claim one, cancel the old policy, move to the next'],
+  '/fulfillment/pipeline': ['Pipeline', 'Every submission across every agent, and where it stands'],
   '/messages': ['Messages', 'Agents and Fulfillment, one conversation per client'],
   '/settings': ['Settings', 'Profile, regional & appearance'],
 }

@@ -4,7 +4,9 @@ import { BUCKETS, BUCKET, bucketOf } from '../../lib/agentBookings'
 // Status filter on My Pipeline. Prompt 672 put a funnel card (Booked → Picked
 // up → Cancelled) above this row; Prompt 680 dropped the card to match
 // Restorix's My Pipeline — statuses at the top, then search, then the list.
-export function Pipeline({ rows, now, bucket, onBucket }) {
+// Prompt 681 — reused by Fulfillment's team-wide Pipeline; `extras` adds
+// filters beyond the four stage buckets (e.g. Needs attention).
+export function Pipeline({ rows, now, bucket, onBucket, extras = [] }) {
   const counts = { waiting: 0, missed: 0, inProgress: 0, cancelled: 0 }
   for (const p of rows) counts[bucketOf(p, now)]++
 
@@ -16,6 +18,12 @@ export function Pipeline({ rows, now, bucket, onBucket }) {
           key={b} on={bucket === b} onClick={() => onBucket(bucket === b ? 'all' : b)}
           label={BUCKET[b].label} count={counts[b]} dot={BUCKET[b].fill}
           warn={b === 'missed' && counts.missed > 0}
+        />
+      ))}
+      {extras.map(x => (
+        <Chip
+          key={x.key} on={bucket === x.key} onClick={() => onBucket(bucket === x.key ? 'all' : x.key)}
+          label={x.label} count={x.count} warn={x.warn && x.count > 0}
         />
       ))}
     </div>

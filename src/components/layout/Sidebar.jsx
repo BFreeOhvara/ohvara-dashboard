@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import {
   Users, LogOut, Home, Settings, Award,
-  ChevronLeft, ClipboardList, CalendarPlus, Trophy, MessageSquare,
+  ChevronLeft, ClipboardList, CalendarPlus, Trophy, MessageSquare, ListFilter,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useUnreadMessageCount, useMessagesRealtime } from '../../hooks/usePolicyMessages'
@@ -120,13 +120,21 @@ const NAV = {
     ] },
     { group: 'Account', items: [
       { to: '/admin/users', label: 'Users & Access', icon: Award },
-      { to: '/fulfillment', label: 'Fulfillment', icon: ClipboardList },
+      { to: '/fulfillment/desk', label: 'Fulfillment', icon: ClipboardList },
       { to: '/settings', label: 'Settings', icon: Settings },
     ] },
   ],
+  // Prompt 681 — same shape as the agent side: Overview landing page, the
+  // desk + a team-wide Pipeline under Work, Messages in its own group.
   fulfillment: [
+    { group: 'Today', items: [
+      { to: '/fulfillment', label: 'Overview', icon: Home },
+    ] },
     { group: 'Work', items: [
-      { to: '/fulfillment', label: 'Fulfillment', icon: ClipboardList },
+      { to: '/fulfillment/desk', label: 'Fulfillment', icon: ClipboardList },
+      { to: '/fulfillment/pipeline', label: 'Pipeline', icon: ListFilter },
+    ] },
+    { group: 'Communications', items: [
       { to: '/messages', label: 'Messages', icon: MessageSquare },
     ] },
     { group: 'Account', items: [

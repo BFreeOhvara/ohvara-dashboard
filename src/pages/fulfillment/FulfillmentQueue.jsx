@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, ArrowRight, CheckCircle2, Clock, Phone, User, Eye, EyeOff,
   ShieldAlert, Inbox, Briefcase, AlertTriangle, CircleCheckBig, Send,
@@ -13,6 +13,7 @@ import { Segmented } from '../../components/ui/Segmented'
 import { SavedTick } from '../../components/ui/SavedTick'
 import { money, fullName, formatDate, maskLast4 } from '../../lib/policyFormat'
 import { invokeCallerId, FALLBACK_CODES } from '../../lib/callerId'
+import { flagsFor } from '../../lib/fulfillmentFlags'
 
 // Cancellations (Prompt 663 rebuild of the Prompt 418 Fulfillment Queue).
 //
@@ -26,10 +27,6 @@ import { invokeCallerId, FALLBACK_CODES } from '../../lib/callerId'
 // intake in policy_fulfillment_details (claim-gated by RLS). Migration 106
 // added claimed/completed timestamps (server-stamped), an in-progress
 // sub-status, and a place for the carrier's confirmation # + working notes.
-
-const HOUR = 3600e3
-const STALE_WAITING_H = 24   // unclaimed this long → flagged
-const STALE_CLAIMED_H = 48   // claimed but not finished this long → flagged
 
 const SUBSTATUS = [
   { value: 'calling',         label: 'Calling carrier' },
@@ -59,10 +56,6 @@ function ago(iso, now) {
   return `${Math.round(h / 24)}d ago`
 }
 
-function hoursSince(iso, now) {
-  return iso ? (now - new Date(iso)) / HOUR : 0
-}
-
 function fmtCallback(iso) {
   if (!iso) return null
   return new Date(iso).toLocaleString('en-US', {
@@ -73,17 +66,6 @@ function fmtCallback(iso) {
 function isToday(iso, now) {
   if (!iso) return false
   return new Date(iso).toDateString() === new Date(now).toDateString()
-}
-
-// One place that decides whether an item needs attention, so the status strip
-// and each row flag agree.
-function flagsFor(p, now) {
-  const done = p.fulfillment_stage === 'Complete'
-  const overdue = !done && p.scheduled_call_at && new Date(p.scheduled_call_at) < now
-  const staleWaiting = !done && !p.assigned_fulfillment_id && hoursSince(p.created_at, now) > STALE_WAITING_H
-  const staleClaimed = !done && p.assigned_fulfillment_id
-    && hoursSince(p.fulfillment_claimed_at || p.updated_at, now) > STALE_CLAIMED_H
-  return { overdue, stale: staleWaiting || staleClaimed }
 }
 
 function useNow(intervalMs = 60e3) {
@@ -767,7 +749,11 @@ export default function FulfillmentQueue() {
   const claim = useClaimCancellation()
   const now = useNow()
   const [view, setView] = useState('desk')
-  const [workingId, setWorkingId] = useState(null)
+  // Prompt 681 — the open item lives in the URL (?open=<id>) so Overview and
+  // Pipeline can link straight into a work view.
+  const [params, setParams] = useSearchParams()
+  const workingId = params.get('open')
+  const setWorkingId = id => setParams(id ? { open: id } : {}, { replace: !id })
   const myId = profile?.id
 
   const g = useMemo(() => {

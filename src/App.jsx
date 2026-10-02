@@ -19,6 +19,8 @@ import AgentBookCall from './pages/agent/BookCall'
 import AgentClients from './pages/agent/Clients'
 import AgentTeam from './pages/agent/Team'
 import FulfillmentQueue from './pages/fulfillment/FulfillmentQueue'
+import FulfillmentOverview from './pages/fulfillment/Overview'
+import FulfillmentPipeline from './pages/fulfillment/Pipeline'
 import Users from './pages/admin/Users'
 
 const qc = new QueryClient({
@@ -118,9 +120,21 @@ export default function App() {
                 <DashboardLayout><Users /></DashboardLayout>
               </ProtectedRoute>
             } />
+            {/* Prompt 681 — Fulfillment gets an Overview landing page and a
+                team-wide Pipeline; the claim desk moved to /fulfillment/desk. */}
             <Route path="/fulfillment" element={
               <ProtectedRoute allowedRoles={['fulfillment', 'admin']}>
+                <DashboardLayout><FulfillmentOverview /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/fulfillment/desk" element={
+              <ProtectedRoute allowedRoles={['fulfillment', 'admin']}>
                 <DashboardLayout><FulfillmentQueue /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/fulfillment/pipeline" element={
+              <ProtectedRoute allowedRoles={['fulfillment', 'admin']}>
+                <DashboardLayout><FulfillmentPipeline /></DashboardLayout>
               </ProtectedRoute>
             } />
 
