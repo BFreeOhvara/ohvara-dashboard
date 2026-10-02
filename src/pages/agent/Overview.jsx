@@ -16,6 +16,9 @@ import { stageOf, isMissed, sameLocalDay, startOfWeek, useNow } from '../../lib/
 // date/clock row, four eyebrow stat tiles, a tinted needs-attention banner,
 // then one "Your calls" table with Today / Coming up group rows instead of
 // two half-width cards.
+//
+// Prompt 672 — each tile opens My Clients on the matching slice of its
+// Pipeline (?range= / ?stage=).
 
 const UPCOMING_LIMIT = 6
 
@@ -79,12 +82,14 @@ export default function Overview() {
       </div>
 
       <StatGrid>
-        <StatTile label="Booked this week" value={isLoading ? '—' : g.bookedThisWeek} sub="since Monday" />
+        <StatTile label="Booked this week" value={isLoading ? '—' : g.bookedThisWeek} sub="since Monday"
+          onClick={() => navigate('/agent/clients?range=week')} />
         <StatTile label="With Fulfillment" value={isLoading ? '—' : g.waiting + g.inProgress}
-          sub={`${g.inProgress} being worked · ${g.waiting} waiting`} />
-        <StatTile label="Cancelled this week" value={isLoading ? '—' : g.cancelledThisWeek} sub="old policy confirmed cancelled" />
+          sub={`${g.inProgress} being worked · ${g.waiting} waiting`} onClick={() => navigate('/agent/clients')} />
+        <StatTile label="Cancelled this week" value={isLoading ? '—' : g.cancelledThisWeek} sub="old policy confirmed cancelled"
+          onClick={() => navigate('/agent/clients?stage=cancelled')} />
         <StatTile label="Not picked up" value={isLoading ? '—' : g.missedAll.length} tone={g.missedAll.length ? 'warning' : 'neutral'}
-          sub="booked time passed, still waiting" />
+          sub="booked time passed, still waiting" onClick={() => navigate('/agent/clients?stage=missed')} />
       </StatGrid>
 
       {g.missed.length > 0 && (

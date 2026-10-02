@@ -4,12 +4,12 @@ import { Search, Phone, CalendarPlus, Check, X } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useAgentBookings, useLegacyPolicyCount, useRescheduleBooking } from '../../hooks/useAgentBookings'
 import { fieldLabel, primaryBtn, ghostBtn, MONO, DISPLAY } from '../../lib/exportStyles'
-import { Segmented } from '../../components/ui/Segmented'
+import { Pipeline } from '../../components/agent/Pipeline'
 import { AnchoredSelectField, GapNote } from '../../components/ui/ExportForm'
 import { ClientRow, EmptyNote, SlotPicker, ListCard } from '../../components/agent/AgentUI'
 import { fullName } from '../../lib/policyFormat'
 import { slotToISO, localDateISO, fmtBooking, isFarOut } from '../../lib/scheduling'
-import { stageOf, SUBSTATUS_LABEL, digits, useNow } from '../../lib/agentBookings'
+import { stageOf, bucketOf, BUCKETS, RANGES, SUBSTATUS_LABEL, digits, useNow, startOfWeek, startOfMonth } from '../../lib/agentBookings'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 
 // My Clients (Prompt 665) — replaces My Policies.
@@ -27,9 +27,17 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // Prompt 669 — restyled to Restorix Portal's design system: segmented status
 // filter, one list card with an eyebrow header (Restorix's tables), and the
 // client detail opening in place under its row instead of as a separate card.
+//
+// Prompt 672 — the funnel view lives here rather than in its own tab: a
+// Pipeline card (Booked → Picked up → Cancelled, plus where everyone stands
+// now) sits above the list, and its legend is the status filter. "Not picked
+// up" is its own bucket now instead of hiding inside Booked. Status and range
+// live in the URL (?stage=missed&range=week) so Overview's tiles link straight
+// to the matching slice. Range is by booking date and scopes the whole page;
+// search only narrows the list.
 
-const FILTERS = ['all', 'booked', 'inProgress', 'cancelled']
-const FILTER_LABEL = { all: 'All', booked: 'Booked', inProgress: 'In progress', cancelled: 'Cancelled' }
+const STAGES = ['all', ...BUCKETS]
+const RANGE_VALUES = RANGES.map(r => r.value)
 
 export default function Clients() {
   const { profile } = useAuth()
@@ -43,7 +51,13 @@ export default function Clients() {
   const { data: legacyCount = 0 } = useLegacyPolicyCount(isAdmin ? null : profile?.id)
   const rows = useMemo(() => (isAdmin ? excludeTestAccounts(raw, profile?.id) : raw), [raw, isAdmin, profile?.id])
 
-  const [filter, setFilter] = useState('all')
+  const filter = STAGES.includes(params.get('stage')) ? params.get('stage') : 'all'
+  const range = RANGE_VALUES.includes(params.get('range')) ? params.get('range') : 'all'
+  const setParam = (key, value, fallback) => {
+    const next = new URLSearchParams(params)
+    if (value === fallback) next.delete(key); else next.set(key, value)
+    setParams(next, { replace: true })
+  }
   const [search, setSearch] = useState('')
   const [agentId, setAgentId] = useState('')
 
@@ -51,18 +65,19 @@ export default function Clients() {
     .map(([id, name]) => ({ value: id, label: name }))
     .sort((a, b) => a.label.localeCompare(b.label)), [rows])
 
-  const counts = useMemo(() => {
-    const c = { all: rows.length, booked: 0, inProgress: 0, cancelled: 0 }
-    for (const p of rows) c[stageOf(p)]++
-    return c
-  }, [rows])
+  // Range + agent scope the pipeline and the list alike.
+  const scoped = useMemo(() => {
+    const from = range === 'week' ? startOfWeek(new Date(now)).getTime()
+      : range === 'month' ? startOfMonth(new Date(now)).getTime() : null
+    return rows.filter(p => (!agentId || p.agent_id === agentId)
+      && (from == null || new Date(p.created_at).getTime() >= from))
+  }, [rows, agentId, range, now])
 
   const list = useMemo(() => {
     const q = search.trim().toLowerCase()
     const qd = digits(q)
-    const filtered = rows.filter(p => {
-      if (filter !== 'all' && stageOf(p) !== filter) return false
-      if (agentId && p.agent_id !== agentId) return false
+    const filtered = scoped.filter(p => {
+      if (filter !== 'all' && bucketOf(p, now) !== filter) return false
       if (q) {
         const hay = [p.client_first_name, p.client_last_name, p.current_carrier, p.agent?.full_name].filter(Boolean).join(' ').toLowerCase()
         if (!hay.includes(q) && !(qd.length >= 3 && digits(p.client_phone).includes(qd))) return false
@@ -74,7 +89,7 @@ export default function Clients() {
     return filtered.sort((a, b) => rank(a) - rank(b) || (rank(a)
       ? (b.fulfillment_completed_at || b.updated_at || '').localeCompare(a.fulfillment_completed_at || a.updated_at || '')
       : (a.scheduled_call_at || '9').localeCompare(b.scheduled_call_at || '9')))
-  }, [rows, filter, search, agentId])
+  }, [scoped, filter, search, now])
 
   const toggle = id => {
     const next = new URLSearchParams(params)
@@ -84,19 +99,11 @@ export default function Clients() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <Segmented
-          value={filter} onChange={setFilter}
-          options={FILTERS.map(f => ({ value: f, label: `${FILTER_LABEL[f]} (${counts[f]})` }))}
-          style={{ maxWidth: '100%', overflowX: 'auto' }}
-        />
-        <div style={{ flex: 1 }} />
-        {!isAdmin && (
-          <button onClick={() => navigate('/agent/book')} style={primaryBtn}>
-            <CalendarPlus size={16} /> Book a call
-          </button>
-        )}
-      </div>
+      <Pipeline
+        rows={scoped} now={now}
+        range={range} onRange={v => setParam('range', v, 'all')}
+        bucket={filter} onBucket={v => setParam('stage', v, 'all')}
+      />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{
@@ -119,8 +126,14 @@ export default function Clients() {
           />
         )}
         <span style={{ fontFamily: MONO, fontSize: 12.5, color: 'var(--text-muted)' }}>
-          {isLoading ? 'Loading…' : `${list.length} of ${rows.length} client${rows.length === 1 ? '' : 's'}`}
+          {isLoading ? 'Loading…' : `${list.length} of ${scoped.length} client${scoped.length === 1 ? '' : 's'}`}
         </span>
+        <div style={{ flex: 1 }} />
+        {!isAdmin && (
+          <button onClick={() => navigate('/agent/book')} style={primaryBtn}>
+            <CalendarPlus size={16} /> Book a call
+          </button>
+        )}
       </div>
 
       <ListCard
@@ -129,6 +142,7 @@ export default function Clients() {
           <EmptyNote>
             {isLoading ? 'Loading clients…'
               : rows.length === 0 ? 'No clients yet — everyone you book a call for shows up here.'
+                : scoped.length === 0 ? `Nobody booked ${range === 'week' ? 'this week' : 'this month'} yet.`
                 : 'No clients match.'}
           </EmptyNote>
         )}

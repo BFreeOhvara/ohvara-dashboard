@@ -4,7 +4,7 @@ import { useAgentBookings } from '../../hooks/useAgentBookings'
 import { card, eyebrow, MONO } from '../../lib/exportStyles'
 import { StatTile, StatGrid, EmptyNote, SectionHead } from '../../components/agent/AgentUI'
 import { GapNote } from '../../components/ui/ExportForm'
-import { stageOf, startOfWeek, startOfMonth, hoursBetween, fmtDuration } from '../../lib/agentBookings'
+import { stageOf, startOfWeek, startOfMonth, hoursBetween, fmtDuration, median } from '../../lib/agentBookings'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 
 // Performance (Prompt 665) — built only from what the bookings themselves
@@ -20,13 +20,6 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // table in Restorix's table shell (eyebrow header band, hairline rows).
 
 const WEEKS = 8
-
-function median(xs) {
-  if (!xs.length) return null
-  const s = [...xs].sort((a, b) => a - b)
-  const m = Math.floor(s.length / 2)
-  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
-}
 
 function summarize(rows, now) {
   const monthStart = startOfMonth(new Date(now)).getTime()

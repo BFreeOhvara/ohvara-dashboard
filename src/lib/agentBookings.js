@@ -36,6 +36,30 @@ export function isMissed(p, now = Date.now()) {
   return stageOf(p) === 'booked' && !!p.scheduled_call_at && new Date(p.scheduled_call_at).getTime() < now
 }
 
+// Prompt 672 — where a client sits right now, with "not picked up" split out
+// of booked so every client lands in exactly one bucket (My Clients' pipeline
+// bar and status filter).
+export const BUCKETS = ['waiting', 'missed', 'inProgress', 'cancelled']
+export const BUCKET = {
+  waiting:    { label: 'Booked',        fill: 'var(--border-strong)' },
+  missed:     { label: 'Not picked up', fill: 'var(--warning)' },
+  inProgress: { label: 'In progress',   fill: 'var(--info)' },
+  cancelled:  { label: 'Cancelled',     fill: 'var(--success)' },
+}
+
+// Pipeline range, by booking date.
+export const RANGES = [
+  { value: 'week', label: 'This week' },
+  { value: 'month', label: 'This month' },
+  { value: 'all', label: 'All time' },
+]
+
+export function bucketOf(p, now = Date.now()) {
+  if (isMissed(p, now)) return 'missed'
+  const s = stageOf(p)
+  return s === 'booked' ? 'waiting' : s
+}
+
 export function isBooking(p) {
   return !!p.fulfillment_assigned
 }
@@ -61,6 +85,13 @@ export function sameLocalDay(iso, d = new Date()) {
 
 export function hoursBetween(a, b) {
   return (new Date(b) - new Date(a)) / 3600e3
+}
+
+export function median(xs) {
+  if (!xs.length) return null
+  const s = [...xs].sort((a, b) => a - b)
+  const m = Math.floor(s.length / 2)
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
 }
 
 export function fmtDuration(hours) {
