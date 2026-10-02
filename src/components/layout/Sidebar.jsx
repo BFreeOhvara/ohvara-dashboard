@@ -3,25 +3,29 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import {
   Users, BarChart2, LogOut, Home, Settings, Award,
-  ChevronLeft, User, ClipboardList, CalendarPlus, GraduationCap,
+  ChevronLeft, ChevronUp, ClipboardList, CalendarPlus, GraduationCap,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../ui/Avatar'
 import { eyebrow } from '../../lib/exportStyles'
 import ohvaraLogo from '../../assets/ohvara-logo.png'
 
-// Sidebar — Prompt 669 restyle to Restorix Portal's Layout.jsx: a 240px rail
-// on the card surface (no more solid navy/teal fill), the logo + wordmark in
-// a 64px header that lines up with the page header's bottom border, eyebrow
-// group labels, rounded nav rows with an accent active state, and the
-// account card pinned to the bottom that expands in place (Restorix's
-// AccountPopover) instead of floating a popover over the nav.
+// Sidebar — Prompt 669 restyle to Restorix Portal's Layout.jsx: a 240px rail,
+// the logo + wordmark in a 64px header that lines up with the page header's
+// bottom border, eyebrow group labels, rounded nav rows with an accent active
+// state, and the account card pinned to the bottom.
 //
-// Kept from the old one: collapsible to 64px on desktop, off-canvas drawer on
-// phones, the agent's duty toggle, Profile + Sign out. The unused
-// MobileAppBox (never rendered since Prompt 661) is gone.
+// Prompt 674 — the rail is back on Ohvara's own navy (teal in light) via
+// --bg-sidebar. The account card is now exactly Restorix's AccountPopover:
+// clicking it slides a panel up out of the card (the card grows upward from
+// the bottom edge) with a Settings shortcut and Sign out. The agent duty
+// toggle is gone (agents have no shifts; nothing server-side ever read it),
+// Profile moved into Settings, and the divider line that sat above the card
+// — which rode up as the card expanded — is removed.
+//
+// Kept: collapsible to 64px on desktop, off-canvas drawer on phones.
 
-function AccountCard({ profile, expanded, duty, setDuty, onNavigate, onSignOut, onExpand }) {
+function AccountCard({ profile, expanded, onNavigate, onSignOut, onExpand }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -48,7 +52,7 @@ function AccountCard({ profile, expanded, duty, setDuty, onNavigate, onSignOut, 
   return (
     <div ref={ref} style={{ padding: 12 }}>
       <div style={{ overflow: 'hidden', borderRadius: 10, border: 'var(--border-w) solid var(--border)', background: 'var(--bg-elevated)' }}>
-        <button onClick={() => setOpen(v => !v)} className="menu-row" style={{ padding: '9px 10px' }}>
+        <button onClick={() => setOpen(v => !v)} aria-expanded={open} className="menu-row" style={{ padding: '9px 10px' }}>
           <Avatar profile={profile} size={30} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -56,30 +60,14 @@ function AccountCard({ profile, expanded, duty, setDuty, onNavigate, onSignOut, 
             </p>
             <p style={{ ...eyebrow, marginTop: 2, color: 'var(--text-muted)', fontSize: 10 }}>{profile?.role}</p>
           </div>
+          <ChevronUp size={15} style={{ flexShrink: 0, color: 'var(--text-muted)', transform: open ? 'none' : 'rotate(180deg)', transition: 'transform 200ms ease-out' }} />
         </button>
 
         <div style={{ display: 'grid', gridTemplateRows: open ? '1fr' : '0fr', transition: 'grid-template-rows 200ms ease-out' }}>
           <div style={{ overflow: 'hidden' }}>
             <div style={{ borderTop: 'var(--border-w) solid var(--border)' }}>
-              {profile?.role === 'agent' && (
-                <div className="menu-row" style={{ cursor: 'default' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: duty ? 'var(--success)' : 'var(--text-dim)', flexShrink: 0, marginLeft: 3 }} />
-                  <span style={{ flex: 1 }}>{duty ? 'On duty' : 'Off duty'}</span>
-                  <button
-                    onClick={() => setDuty(d => !d)} role="switch" aria-checked={duty}
-                    title={duty ? 'Available for transfers' : 'Off duty'}
-                    style={{
-                      width: 32, height: 18, borderRadius: 9, border: 'none', padding: 2, flexShrink: 0,
-                      background: duty ? 'var(--success)' : 'var(--bg-muted)',
-                      display: 'flex', justifyContent: duty ? 'flex-end' : 'flex-start', transition: 'background 120ms',
-                    }}
-                  >
-                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#fff' }} />
-                  </button>
-                </div>
-              )}
-              <button onClick={() => { setOpen(false); onNavigate('/profile') }} className="menu-row">
-                <User size={15} style={{ color: 'var(--text-muted)' }} /> Profile
+              <button onClick={() => { setOpen(false); onNavigate('/settings#profile') }} className="menu-row">
+                <Settings size={15} style={{ color: 'var(--text-muted)' }} /> Profile & settings
               </button>
               <button onClick={() => { setOpen(false); onSignOut() }} className="menu-row" style={{ color: 'var(--danger)' }}>
                 <LogOut size={15} /> Sign out
@@ -135,7 +123,6 @@ const NAV = {
 const PORTAL_LABELS = { agent: 'Agent Portal', admin: 'Admin', fulfillment: 'Fulfillment' }
 
 const COLLAPSE_KEY = 'ohvara-sidebar-collapsed'
-const DUTY_KEY = 'ohvara-duty'
 // Keep in sync with DashboardLayout's --sb-w and index.css's fallbacks.
 export const SIDEBAR_W = 240
 export const SIDEBAR_W_COLLAPSED = 64
@@ -144,11 +131,6 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const groups = NAV[profile?.role] || []
-
-  // Duty toggle drives nothing server-side yet (Live Call has no backend) —
-  // it persists locally only. Wire it to transfer routing when that exists.
-  const [duty, setDuty] = useState(() => localStorage.getItem(DUTY_KEY) !== 'off')
-  useEffect(() => { localStorage.setItem(DUTY_KEY, duty ? 'on' : 'off') }, [duty])
 
   // The phone drawer is always full width — collapsing is a desktop thing.
   const expanded = !collapsed || open
@@ -227,12 +209,10 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
           ))}
         </nav>
 
-        <div style={{ borderTop: 'var(--border-w) solid var(--sidebar-border)' }}>
+        <div style={{ flexShrink: 0 }}>
           <AccountCard
             profile={profile}
             expanded={expanded}
-            duty={duty}
-            setDuty={setDuty}
             onNavigate={path => { onClose?.(); navigate(path) }}
             onSignOut={handleSignOut}
             onExpand={onToggleCollapse}

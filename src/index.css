@@ -6,27 +6,27 @@
    Ohvara Design System
    All components consume via var() — zero hardcoded hex.
    ============================================================ */
-/* Prompt 669 — tokens re-laid on Restorix Portal's design system (the
-   layered base < surface < elevated < muted ladder, 1px hairline borders,
-   neutral text alphas, an eyebrow accent shade) while keeping Ohvara's own
-   brand hues: the v12 blue accent in dark, the logo teal + navy in light.
-   Fonts are self-hosted via @fontsource (main.jsx): Space Grotesk for display
-   headings, Manrope for UI text, JetBrains Mono for every number.
-   Replaces the Claude Design export port (Prompt 327) — the solid navy/teal
-   sidebar and 3px teal light-mode borders are gone. To bring the coloured
-   sidebar back, point --bg-sidebar at the old value (#192C4F dark, #008674
-   light); nothing else depends on it. Contrast checked with the WCAG formula,
-   not eyeballed: light --accent #007A69 is 5.3:1 on white, light
-   --accent-deep #00695B is 6.1:1 on --bg-elevated, dark --accent-deep
-   #A9C0EE is 10:1 on --bg-surface. */
+/* Prompt 669 re-laid the type, radii and surface ladder on Restorix
+   Portal's design system (layered base < surface < elevated < muted, 1px
+   hairlines, an eyebrow accent shade). Fonts are self-hosted via
+   @fontsource (main.jsx): Space Grotesk for display headings, Manrope for UI
+   text, JetBrains Mono for every number.
+   Prompt 674 — the COLOURS are Ohvara's own again, not Restorix's: every
+   value below that existed before 669 is restored verbatim from the
+   pre-669 commit (ea358dd, the Claude Design export port, Prompt 327) —
+   navy sidebar + blue-grey text in dark, teal family in light. Only the
+   tokens 669 introduced (--bg-muted, --accent-deep, --border-strong,
+   --particle-*) are new, and they're derived from that same palette. Light
+   mode keeps 669's 1px borders rather than the export's 3px — that's
+   layout, not colour. */
 :root {
-  /* Surface ladder: page < card < inner row/control < muted */
+  /* Surface hierarchy — solid, per DESIGN.md v10/v13 */
   --bg-base:       #0A0A0F;
-  --bg-sidebar:    #13131A;
+  --bg-sidebar:    #192C4F;
   --bg-surface:    #13131A;
   --bg-elevated:   #1C1C26;
   --bg-muted:      #262634;
-  --bg-panel:      #1C1C26;
+  --bg-panel:      #0F2850;
   --bg-overlay:    #1C1C26;
   /* Inset panels — recessed containers */
   --bg-inset:      #0A0A12;
@@ -41,16 +41,17 @@
   --border-hover:  #3A3A4C;
   --border-strong: #3A3A4C;
   --border-w:      1px;
-  --sidebar-border:#2A2A3A;
-  --hover-bg:      #1C1C26;
+  /* v13 — sidebar-only divider lines, white so they read against the navy */
+  --sidebar-border:#F0F0F5;
+  --hover-bg:      #27272E;
 
   /* Text */
-  --text-primary:   #F0F0F5;
-  --text-secondary: #A3A9B8;
-  --text-muted:     #767C8E;
-  --text-dim:       #555A69;
+  --text-primary:   #FFFFFF;
+  --text-secondary: #93A6C4;
+  --text-muted:     #5E7195;
+  --text-dim:       #45566F;
 
-  /* Accent — v12 blue derived from the brand navy hue */
+  /* Accent — v12 blue derived from the sidebar hue */
   --accent:         #4B79CE;
   --accent-hover:   #6B93D9;
   --accent-deep:    #A9C0EE;
@@ -61,25 +62,26 @@
 
   /* Status — solid + dim + border */
   --success:      #22C55E;
-  --success-dim:  rgba(34,197,94,0.12);
-  --success-bd:   rgba(34,197,94,0.28);
+  --success-dim:  rgba(34,197,94,0.10);
+  --success-bd:   rgba(34,197,94,0.25);
   --warning:      #F59E0B;
-  --warning-dim:  rgba(245,158,11,0.12);
-  --warning-bd:   rgba(245,158,11,0.28);
+  --warning-dim:  rgba(245,158,11,0.10);
+  --warning-bd:   rgba(245,158,11,0.25);
   --danger:       #EF4444;
-  --danger-dim:   rgba(239,68,68,0.12);
-  --danger-bd:    rgba(239,68,68,0.28);
-  --info:         #60A5FA;
-  --info-dim:     rgba(96,165,250,0.12);
-  --info-bd:      rgba(96,165,250,0.28);
+  --danger-dim:   rgba(239,68,68,0.10);
+  --danger-bd:    rgba(239,68,68,0.25);
+  --info:         #3B82F6;
+  --info-dim:     rgba(59,130,246,0.10);
+  --info-bd:      rgba(59,130,246,0.25);
   --purple:       #A855F7;
-  --purple-dim:   rgba(168,85,247,0.12);
-  --purple-bd:    rgba(168,85,247,0.28);
+  --purple-dim:   rgba(168,85,247,0.10);
+  --purple-bd:    rgba(168,85,247,0.25);
   --pink:         #EC4899;
-  --pink-dim:     rgba(236,72,153,0.12);
-  --pink-bd:      rgba(236,72,153,0.28);
+  --pink-dim:     rgba(236,72,153,0.10);
+  --pink-bd:      rgba(236,72,153,0.25);
 
-  /* Particle background (ParticleField) — canvas reads these at runtime */
+  /* Particle background (ParticleField) — canvas reads these at runtime.
+     Ohvara's own accent (blue dark / teal light), not Restorix's blue. */
   --particle-line: 75,121,206;
   --particle-dot:  rgba(107,147,217,0.55);
 
@@ -109,24 +111,39 @@
   --radius-glass: 16px;
 }
 
-/* Light mode — cool navy-tinted canvas, white cards, navy text, teal accent. */
+/* Light mode — teal family, restored from the pre-669 export port. */
 [data-theme="light"] {
-  --bg-base:#E8ECF2; --bg-sidebar:#FFFFFF; --bg-surface:#FFFFFF; --bg-elevated:#F3F6F9; --bg-muted:#DFE5EE;
-  --bg-panel:#F3F6F9; --bg-overlay:#FFFFFF; --bg-inset:#E8ECF2; --bg-deep:#E8ECF2; --bg-1:#FFFFFF; --bg-2:#F3F6F9; --bg-3:#F3F6F9;
-  --accent:#007A69; --accent-hover:#006557; --accent-deep:#00695B;
-  --accent-dim:#D9F1ED; --accent-border:rgba(0,122,105,0.35); --accent-glow:rgba(0,122,105,0.18); --accent-subtle:#EAF7F4;
-  --text-primary:#0A1F44; --text-secondary:#4A5A75; --text-muted:#6B7A92; --text-dim:#97A2B4;
-  --border:rgba(10,31,68,0.12); --border-hover:rgba(10,31,68,0.22); --border-strong:rgba(10,31,68,0.22); --border-w:1px;
-  --sidebar-border:rgba(10,31,68,0.12);
-  --hover-bg:#F3F6F9;
-  --success:#136C37; --success-dim:#DCF3E6; --success-bd:rgba(19,108,55,0.28);
-  --warning:#9A4508; --warning-dim:#FDEFD9; --warning-bd:rgba(154,69,8,0.28);
-  --danger:#B42318;  --danger-dim:#FBE4E1;  --danger-bd:rgba(180,35,24,0.28);
-  --info:#1D4ED8;    --info-dim:#E0E9FD;    --info-bd:rgba(29,78,216,0.28);
-  --purple:#5B21B6;  --purple-dim:#EDE4FB;  --purple-bd:rgba(91,33,182,0.28);
-  --pink:#9D174D;    --pink-dim:#FCE4EE;    --pink-bd:rgba(157,23,77,0.28);
-  --particle-line: 0,122,105;
-  --particle-dot:  rgba(0,191,166,0.55);
+  --bg-base:#F3F4F6; --bg-sidebar:#008674; --bg-surface:#FFFFFF; --bg-elevated:#EAF6F4; --bg-muted:#DCEFEC; --bg-panel:#FFFFFF;
+  --bg-overlay:#EAF6F4; --bg-inset:#F3F4F6; --bg-deep:#F3F4F6; --bg-1:#FFFFFF; --bg-2:#EAF6F4; --bg-3:#EAF6F4;
+  --accent:#024F46; --accent-hover:#013A33; --accent-deep:#024F46; --accent-dim:#D2EFEA; --accent-border:rgba(2,79,70,0.35);
+  --accent-glow:rgba(2,79,70,0.20); --accent-subtle:#D2EFEA;
+  --text-primary:#016F62; --text-secondary:#008674; --text-muted:#2E8B7C; --text-dim:#2E8B7C;
+  --border:rgba(0,134,116,0.36); --border-hover:rgba(0,134,116,0.55); --border-strong:rgba(0,134,116,0.55); --border-w:1px;
+  --sidebar-border:rgba(255,255,255,0.30);
+  --hover-bg:#EAF6F4;
+  --success:#0A5026; --success-dim:#DCF3E4; --success-bd:rgba(10,80,38,0.35);
+  --warning:#7A3608; --warning-dim:#FBE7D2; --warning-bd:rgba(122,54,8,0.35);
+  --danger:#8A1F1F;  --danger-dim:#FBDCDC;  --danger-bd:rgba(138,31,31,0.35);
+  --info:#16408A;    --info-dim:#DCE8FB;    --info-bd:rgba(22,64,138,0.35);
+  --purple:#5B21B6;  --purple-dim:#EDE4FB;  --purple-bd:rgba(91,33,182,0.35);
+  --pink:#9D174D;    --pink-dim:#FCE4EE;    --pink-bd:rgba(157,23,77,0.35);
+  --particle-line: 0,134,116;
+  --particle-dot:  rgba(0,134,116,0.45);
+}
+
+/* The sidebar carries its own scale in both modes — it sits on navy (dark)
+   or teal (light), so surface/border/text tokens are re-pointed inside it
+   (restored from pre-669; --bg-surface/--bg-muted/--accent-deep added for
+   669's icon buttons, menu rows and eyebrow labels). */
+aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accent-deep:#93A6C4; }
+[data-theme="light"] aside {
+  --text-primary:#FFFFFF; --text-secondary:#FFFFFF; --text-muted:#FFFFFF;
+  --border:rgba(255,255,255,0.20); --border-hover:rgba(255,255,255,0.36); --border-strong:rgba(255,255,255,0.36);
+  --bg-surface:#008674; --bg-elevated:rgba(255,255,255,0.14); --bg-muted:rgba(255,255,255,0.22);
+  --accent:#FFFFFF; --accent-deep:#FFFFFF; --accent-dim:rgba(255,255,255,0.18); --accent-border:rgba(255,255,255,0.38);
+  /* Sign out sits on the teal rail now, not a white popover — dark red
+     would be unreadable there, so it goes near-white with a pink cast. */
+  --danger:#FFE4E4;
 }
 [data-theme="light"] body { color-scheme: light; }
 
@@ -286,6 +303,11 @@
   }
   .nav-item:hover { background: var(--bg-elevated); color: var(--text-primary); }
   .nav-item.is-active { background: var(--bg-elevated); color: var(--accent); font-weight: 600; }
+  /* Prompt 674 — on the navy sidebar the blue accent is too dark for text,
+     so the active row keeps white text with an accent icon (the pre-669
+     look). In light mode --accent is white inside the sidebar anyway. */
+  aside .nav-item.is-active { color: var(--text-primary); }
+  aside .nav-item.is-active svg { color: var(--accent); }
   .nav-item.is-collapsed { justify-content: center; padding: 9px 0; }
   .menu-row {
     display: flex; align-items: center; gap: 10px; width: 100%;

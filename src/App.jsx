@@ -12,7 +12,6 @@ import Login from './pages/Login'
 import Join from './pages/Join'
 import ResetPassword from './pages/ResetPassword'
 import Settings from './pages/Settings'
-import Profile from './pages/Profile'
 
 import AgentOverview from './pages/agent/Overview'
 import AgentBookCall from './pages/agent/BookCall'
@@ -68,14 +67,9 @@ export default function App() {
               </ProtectedRoute>
             } />
 
-            {/* Profile — split out of Settings (Prompt 338) so the sidebar
-                footer's account popover has its own distinct destination,
-                shared across every role same as Settings. */}
-            <Route path="/profile" element={
-              <ProtectedRoute allowedRoles={['agent', 'admin', 'fulfillment']}>
-                <DashboardLayout><Profile /></DashboardLayout>
-              </ProtectedRoute>
-            } />
+            {/* Prompt 674 — Profile lives in Settings again (first tab);
+                old /profile links land there. */}
+            <Route path="/profile" element={<Navigate to="/settings#profile" replace />} />
 
             {/* Prompt 661 — app stripped to agent Submissions + the
                 cancellation team's Fulfillment Queue. Pre-pivot setter

@@ -38,8 +38,7 @@ const TITLES = {
   '/admin': ['Overview', 'Your day at a glance'],
   '/admin/users': ['Users & Access', 'Accounts, roles and invites'],
   '/fulfillment': ['Fulfillment', 'Claim one, cancel the old policy, move to the next'],
-  '/settings': ['Settings', 'Notifications, regional & appearance'],
-  '/profile': ['Profile', 'Your name, contact info, and account details'],
+  '/settings': ['Settings', 'Profile, regional & appearance'],
 }
 
 function ToastMount() {

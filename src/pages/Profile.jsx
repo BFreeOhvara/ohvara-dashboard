@@ -1,10 +1,9 @@
 import { useState, useRef, lazy, Suspense } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useUpdateOwnProfile, useUploadAvatar, useRemoveAvatar } from '../hooks/useSettings'
 import { useMonthlyGoal, useSetMonthlyGoal } from '../hooks/useMonthlyGoals'
 import { todayISO } from '../lib/policyFormat'
-import { Loader2, X, Camera } from 'lucide-react'
+import { Loader2, Camera } from 'lucide-react'
 import {
   MONO, card, cardTitle, control, primaryBtn,
 } from '../lib/exportStyles'
@@ -21,10 +20,11 @@ const AvatarCropModal = lazy(() =>
   import('../components/ui/AvatarCropModal').then(m => ({ default: m.AvatarCropModal }))
 )
 
-// Profile — split out of Settings (Prompt 338) so the sidebar footer's
-// account popover has a genuinely distinct destination for "Profile" versus
-// clicking "Settings" in the main nav, rather than the same tabbed screen via
-// two doors. Content ported verbatim from Settings' old Profile tab.
+// Profile — split out of Settings (Prompt 338) as its own page behind the
+// sidebar account popover. Prompt 674 folded it back: ProfilePanel is now the
+// Settings page's first tab (Restorix Portal keeps profile editing in
+// Settings), and /profile redirects to /settings#profile. The standalone page
+// wrapper with its close (X) button is gone.
 //
 // What's real: name, email, phone, username, and (closers only) the monthly
 // AP goal. NPN, licensed states, and a profile photo are in the approved
@@ -36,44 +36,7 @@ const softLabel = { margin: '0 0 5px', fontSize: 11, color: 'var(--text-muted)' 
 
 const ROLE_LABEL = { admin: 'Admin', agent: 'Agent', rep: 'Setter', client: 'Client' }
 
-// Where "X" falls back to when there's no in-app history to go back to
-// (direct URL load, hard refresh) — each role's own home route.
-const ROLE_HOME = { admin: '/admin', agent: '/agent', rep: '/setter', client: '/client' }
-
-export default function Profile() {
-  const { profile } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
-  if (!profile) return null
-
-  // Prompt 404: Profile is always reached by clicking into it from
-  // somewhere (sidebar footer popover, or the Monthly Goal card's
-  // "set your goal" hotlink) — react-router's location.key is 'default'
-  // only when there's no actual in-app navigation history behind it (a
-  // direct URL load or hard refresh), so that's the one case that needs a
-  // real fallback instead of just going back.
-  function close() {
-    if (location.key !== 'default') navigate(-1)
-    else navigate(ROLE_HOME[profile.role] || '/')
-  }
-
-  return (
-    <div style={{ maxWidth: 620 }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
-        <button
-          onClick={close}
-          aria-label="Close"
-          style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}
-        >
-          <X size={18} />
-        </button>
-      </div>
-      <ProfilePanel profile={profile} />
-    </div>
-  )
-}
-
-function ProfilePanel({ profile }) {
+export function ProfilePanel({ profile }) {
   const update = useUpdateOwnProfile()
   const { refreshProfile } = useAuth()
   const [form, setForm] = useState({

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import {
-  Globe, Palette, Shield, IdCard, Plug, Check, Loader2, Moon, Sun, Plus, Trash2, Video, PhoneCall,
+  Globe, Palette, Shield, IdCard, Plug, Check, Loader2, Moon, Sun, Plus, Trash2, Video, PhoneCall, User,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -22,6 +22,7 @@ import {
 import { invokeCallerId, formatUsPhone } from '../lib/callerId'
 import { GapNote, AnchoredSelectField, TextField } from '../components/ui/ExportForm'
 import { SavedTick } from '../components/ui/SavedTick'
+import { ProfilePanel } from './Profile'
 
 // Settings — literal port of the export's Settings screen (vault:
 // media/claude-design-export-ohvara-dashboard-v3.html, lines 1483-1618): a
@@ -39,6 +40,11 @@ import { SavedTick } from '../components/ui/SavedTick'
 //
 // One deviation worth naming: the legacy close (X) button is gone — Settings
 // is a normal nav destination in the approved design.
+//
+// Prompt 674 — Profile folded back in as the first (default) tab, matching
+// Restorix Portal where profile editing lives in Settings. The sidebar
+// account card no longer has a Profile item; /profile redirects to
+// /settings#profile so old links still land.
 //
 // Prompt 669 — restyled to Restorix Portal's Settings hub: the 220px tab rail
 // became one full-width segmented tab bar above a single 768px column, and
@@ -60,6 +66,7 @@ import { SavedTick } from '../components/ui/SavedTick'
 // a growing team).
 
 const TABS = [
+  { key: 'profile',      label: 'Profile',                   icon: User },
   { key: 'regional',     label: 'Regional',                icon: Globe },
   { key: 'appearance',   label: 'Appearance',                icon: Palette },
   { key: 'security',     label: 'Security',                  icon: Shield },
@@ -73,19 +80,20 @@ const softLabel = { margin: '0 0 6px', fontSize: 14, color: 'var(--text-secondar
 
 export default function Settings() {
   const { profile } = useAuth()
-  const { hash } = useLocation()
+  const { hash, key: locKey } = useLocation()
 
-  // Deep link from My Leads' "Select Time Zone and Settings" prompt
-  // (Prompt 283) — it links to /settings#regional. Now that the page is
-  // tabbed rather than stacked, the hash picks the tab instead of scrolling
-  // to it; an explicit click wins from then on.
-  const [picked, setTab] = useState(null)
+  // Deep links (e.g. /settings#regional, or the account card's
+  // /settings#profile) pick the tab from the hash; an explicit click wins
+  // until the next navigation. The click is tied to the location key so
+  // following a deep link while already on Settings still switches tabs.
+  const [picked, setPicked] = useState(null)
+  const setTab = key => setPicked({ locKey, key })
 
   if (!profile) return null
 
   const tabs = TABS.filter(t => !t.roles || t.roles.includes(profile.role))
   const hashTab = tabs.some(t => t.key === hash.slice(1)) ? hash.slice(1) : null
-  const tab = picked || hashTab || 'regional'
+  const tab = (picked?.locKey === locKey && picked.key) || hashTab || 'profile'
 
   // Restorix's tab bar: one bordered box, equal segments on desktop, a
   // sideways-scrolling row on a phone.
@@ -122,6 +130,7 @@ export default function Settings() {
       </div>
 
       <div style={{ minWidth: 0 }}>
+        {tab === 'profile'      && <ProfilePanel profile={profile} />}
         {tab === 'regional'     && <RegionalPanel profile={profile} />}
         {tab === 'appearance'   && <AppearancePanel />}
         {tab === 'security'     && <SecurityPanel />}
@@ -224,10 +233,10 @@ function AppearancePanel() {
       >
         {/* Literal previews of the other theme's tokens (index.css) — they
             can't read var() because they show the theme that isn't active. */}
-        <div style={{ height: 88, background: dark ? '#0A0A0F' : '#E8ECF2', padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ width: '60%', height: 8, borderRadius: 4, background: dark ? '#1C1C26' : '#F3F6F9' }} />
-          <div style={{ width: '85%', height: 8, borderRadius: 4, background: dark ? '#13131A' : '#FFFFFF', border: `1px solid ${dark ? '#2A2A3A' : 'rgba(10,31,68,0.12)'}` }} />
-          <div style={{ width: '38%', height: 8, borderRadius: 4, background: dark ? '#4B79CE' : '#007A69' }} />
+        <div style={{ height: 88, background: dark ? '#0A0A0F' : '#F3F4F6', padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ width: '60%', height: 8, borderRadius: 4, background: dark ? '#192C4F' : '#008674' }} />
+          <div style={{ width: '85%', height: 8, borderRadius: 4, background: dark ? '#13131A' : '#FFFFFF', border: `1px solid ${dark ? '#2A2A3A' : 'rgba(0,134,116,0.36)'}` }} />
+          <div style={{ width: '38%', height: 8, borderRadius: 4, background: dark ? '#4B79CE' : '#024F46' }} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderTop: 'var(--border-w) solid var(--border)' }}>
           {dark ? <Moon size={12} style={{ color: 'var(--text-secondary)' }} /> : <Sun size={12} style={{ color: 'var(--text-secondary)' }} />}
