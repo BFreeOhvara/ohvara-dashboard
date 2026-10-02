@@ -77,7 +77,7 @@ export default function Messages() {
           ) : threads.length === 0 ? (
             <EmptyNote>
               {profile?.role === 'agent'
-                ? 'No messages yet. Open a client in My Clients and tap “Message Fulfillment” to start one.'
+                ? 'No messages yet. Open a client in My Pipeline and tap “Message Fulfillment” to start one.'
                 : 'No messages yet. Open a client in the queue and tap “Message agent” to start one.'}
             </EmptyNote>
           ) : threads.map(t => (

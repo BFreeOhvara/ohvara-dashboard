@@ -6,7 +6,7 @@ import { useCarriers } from '../../hooks/useCarriers'
 import { useAgentBookings, useBookCall } from '../../hooks/useAgentBookings'
 import { card, cardTitle, primaryBtn, ghostBtn, fieldLabel, eyebrow, grid3, MONO, DISPLAY } from '../../lib/exportStyles'
 import { TextField, GapNote } from '../../components/ui/ExportForm'
-import { SlotPicker, ClientRow, EmptyNote, ListCard, ScriptHint } from '../../components/agent/AgentUI'
+import { SlotPicker, ScriptHint } from '../../components/agent/AgentUI'
 import { formatPhoneInput, titleCase } from '../../lib/policyFormat'
 import { SLOTS, slotToISO, localDateISO, isFarOut, fmtBooking } from '../../lib/scheduling'
 import { stageOf, digits, useNow } from '../../lib/agentBookings'
@@ -26,7 +26,8 @@ import { stageOf, digits, useNow } from '../../lib/agentBookings'
 //
 // Prompt 669 — restyled to Restorix Portal's design system: numbered steps,
 // the Today/Tomorrow switch as a segmented control, a tinted footer bar for
-// the booking summary, and the day's calls as a compact list card.
+// the booking summary. (Prompt 680: the day's-calls side panel and the
+// read-to-the-client hint were removed.)
 
 const BLANK = { first: '', last: '', phone: '', carrier: '' }
 
@@ -72,7 +73,7 @@ export default function BookCall() {
   }
 
   // This agent's open bookings — for the "already booked at this time" hint,
-  // the duplicate-client check, and the side panel.
+  // and the duplicate-client check.
   const open = useMemo(() => mine.filter(p => stageOf(p) !== 'cancelled'), [mine])
   const takenCounts = useMemo(() => {
     const m = {}
@@ -82,9 +83,6 @@ export default function BookCall() {
     }
     return m
   }, [open])
-  const onDay = useMemo(() => open
-    .filter(p => p.scheduled_call_at && localDateISO(0, new Date(p.scheduled_call_at)) === date)
-    .sort((a, b) => a.scheduled_call_at.localeCompare(b.scheduled_call_at)), [open, date])
 
   const phoneDigits = digits(form.phone)
   const duplicate = phoneDigits.length === 10 ? open.find(p => digits(p.client_phone) === phoneDigits) : null
@@ -158,11 +156,7 @@ export default function BookCall() {
 
   return (
     <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-      <div style={{ ...card, flex: '2 1 520px', minWidth: 0, padding: '24px 28px' }}>
-        <ScriptHint>
-          Read to the client: "We're going to get you booked with our Underwriting Team to get everything squared away."
-        </ScriptHint>
-
+      <div style={{ ...card, flex: '1 1 520px', minWidth: 0, maxWidth: 820, padding: '24px 28px' }}>
         <Step n={1} title="Who's the client" />
         <div style={grid3}>
           <TextField label="First name" placeholder="First name" autoComplete="off"
@@ -244,14 +238,6 @@ export default function BookCall() {
         </div>
       </div>
 
-      <div style={{ flex: '1 1 300px', minWidth: 0 }}>
-        <p style={{ ...eyebrow, color: 'var(--text-muted)', margin: '4px 0 10px' }}>
-          Your calls {date === localDateISO(0) ? 'today' : date === localDateISO(1) ? 'tomorrow' : `on ${new Date(slotToISO(date, '9:00 AM')).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
-        </p>
-        <ListCard empty={<EmptyNote>Nothing booked yet for this day.</EmptyNote>}>
-          {onDay.map((p, i) => <ClientRow key={p.id} p={p} now={now} timeOnly compact first={i === 0} />)}
-        </ListCard>
-      </div>
     </div>
   )
 }

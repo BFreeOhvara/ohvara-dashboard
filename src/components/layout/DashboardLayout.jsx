@@ -29,7 +29,7 @@ const TITLES = {
   '/agent/quoter': ['Quoter', 'InsuranceToolkits — multi-carrier instant quoting'],
   '/agent/underwriting': ['Underwriting', 'AI chat assistant for carrier placement based on client health'],
   '/agent/book': ['Book a call', 'Get your client on the calendar with Fulfillment'],
-  '/agent/clients': ['Clients', 'Everyone booked with Fulfillment and where each cancellation stands'],
+  '/agent/clients': ['My Pipeline', 'Everyone booked with Fulfillment and where each cancellation stands'],
   '/agent/carriers': ['Carrier Portals', 'Every carrier login in one directory'],
   '/agent/stats': ['Performance', 'Production, persistency, and leaderboard — switch the view'],
   '/agent/hierarchy': ['Team', 'Your hierarchy, team chat, and DMs'],

@@ -12,7 +12,7 @@ import { slotToISO, localDateISO, fmtBooking, isFarOut } from '../../lib/schedul
 import { stageOf, bucketOf, BUCKETS, RANGES, SUBSTATUS_LABEL, digits, useNow, startOfWeek, startOfMonth } from '../../lib/agentBookings'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 
-// My Clients (Prompt 665) — replaces My Policies.
+// My Pipeline (Prompt 665, was My Clients until 680) — replaces My Policies.
 //
 // Naming: "My Policies" read as an in-force book of business, which this
 // dashboard doesn't track (Brayden, 2026-10-01). Every row an agent creates
@@ -28,13 +28,15 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // filter, one list card with an eyebrow header (Restorix's tables), and the
 // client detail opening in place under its row instead of as a separate card.
 //
-// Prompt 672 — the funnel view lives here rather than in its own tab: a
-// Pipeline card (Booked → Picked up → Cancelled, plus where everyone stands
-// now) sits above the list, and its legend is the status filter. "Not picked
-// up" is its own bucket now instead of hiding inside Booked. Status and range
-// live in the URL (?stage=missed&range=week) so Overview's tiles link straight
-// to the matching slice. Range is by booking date and scopes the whole page;
-// search only narrows the list.
+// Prompt 672 — "Not picked up" is its own bucket. Status and range live in the
+// URL (?stage=missed&range=week) so Overview's tiles link straight to the
+// matching slice. Range is by booking date and scopes the whole page; search
+// only narrows the list.
+//
+// Prompt 680 — renamed My Pipeline and simplified to Restorix's shape: status
+// pills with counts, then search, then the list. The funnel card and its range
+// toggle are gone; a range arriving from an Overview tile shows as a removable
+// chip next to the count instead.
 
 const STAGES = ['all', ...BUCKETS]
 const RANGE_VALUES = RANGES.map(r => r.value)
@@ -99,11 +101,7 @@ export default function Clients() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <Pipeline
-        rows={scoped} now={now}
-        range={range} onRange={v => setParam('range', v, 'all')}
-        bucket={filter} onBucket={v => setParam('stage', v, 'all')}
-      />
+      <Pipeline rows={scoped} now={now} bucket={filter} onBucket={v => setParam('stage', v, 'all')} />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{
@@ -128,6 +126,11 @@ export default function Clients() {
         <span style={{ fontFamily: MONO, fontSize: 12.5, color: 'var(--text-muted)' }}>
           {isLoading ? 'Loading…' : `${list.length} of ${scoped.length} client${scoped.length === 1 ? '' : 's'}`}
         </span>
+        {range !== 'all' && (
+          <button onClick={() => setParam('range', 'all', 'all')} style={{ ...ghostBtn, height: 30 }}>
+            {range === 'week' ? 'Booked this week' : 'Booked this month'} <X size={13} />
+          </button>
+        )}
         <div style={{ flex: 1 }} />
         {!isAdmin && (
           <button onClick={() => navigate('/agent/book')} style={primaryBtn}>

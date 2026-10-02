@@ -98,8 +98,11 @@ const NAV = {
     ] },
     { group: 'Work', items: [
       { to: '/agent/book', label: 'Book a call', icon: CalendarPlus },
-      { to: '/agent/clients', label: 'My Clients', icon: Users },
+      { to: '/agent/clients', label: 'My Pipeline', icon: Users },
       { to: '/agent/team', label: 'Team', icon: Trophy },
+    ] },
+    // Prompt 680 — Messages gets its own single-item group, as in Restorix.
+    { group: 'Communications', items: [
       { to: '/messages', label: 'Messages', icon: MessageSquare },
     ] },
     { group: 'Account', items: [
@@ -111,7 +114,7 @@ const NAV = {
     // Clients), minus the agent's personal Overview.
     { group: 'Agents', items: [
       { to: '/agent/book', label: 'Book a call', icon: CalendarPlus },
-      { to: '/agent/clients', label: 'Clients', icon: Users },
+      { to: '/agent/clients', label: 'Pipeline', icon: Users },
       { to: '/agent/team', label: 'Team', icon: Trophy },
       { to: '/messages', label: 'Messages', icon: MessageSquare },
     ] },

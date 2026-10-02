@@ -170,7 +170,7 @@ export default function Team() {
       </div>
 
       <GapNote>
-        Team activity shows who did what and when — never a teammate's client names or numbers. Your own clients are in My Clients.
+        Team activity shows who did what and when — never a teammate's client names or numbers. Your own clients are in My Pipeline.
       </GapNote>
     </div>
   )
