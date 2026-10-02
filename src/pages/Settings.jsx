@@ -86,8 +86,8 @@ export default function Settings() {
   const { profile } = useAuth()
   const { hash, key: locKey } = useLocation()
 
-  // Deep links (e.g. /settings#regional, or the account card's
-  // /settings#profile) pick the tab from the hash; an explicit click wins
+  // Deep links (e.g. /settings#regional, or the old /profile route's
+  // redirect to /settings#profile) pick the tab from the hash; an explicit click wins
   // until the next navigation. The click is tied to the location key so
   // following a deep link while already on Settings still switches tabs.
   const [picked, setPicked] = useState(null)

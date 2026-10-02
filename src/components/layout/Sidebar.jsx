@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import {
   Users, BarChart2, LogOut, Home, Settings, Award,
-  ChevronLeft, ChevronUp, ClipboardList, CalendarPlus, GraduationCap, Trophy,
+  ChevronLeft, ClipboardList, CalendarPlus, GraduationCap, Trophy,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../ui/Avatar'
@@ -22,6 +22,11 @@ import ohvaraLogo from '../../assets/ohvara-logo.png'
 // toggle is gone (agents have no shifts; nothing server-side ever read it),
 // Profile moved into Settings, and the divider line that sat above the card
 // — which rode up as the card expanded — is removed.
+//
+// Prompt 675 — the panel is just Settings + Sign out (the "Profile &
+// settings" label read as two items; Settings already opens on the Profile
+// tab), the card's outline is white instead of grey, and the chevron on the
+// card's right edge is gone.
 //
 // Kept: collapsible to 64px on desktop, off-canvas drawer on phones.
 
@@ -51,7 +56,7 @@ function AccountCard({ profile, expanded, onNavigate, onSignOut, onExpand }) {
 
   return (
     <div ref={ref} style={{ padding: 12 }}>
-      <div style={{ overflow: 'hidden', borderRadius: 10, border: 'var(--border-w) solid var(--border)', background: 'var(--bg-elevated)' }}>
+      <div style={{ overflow: 'hidden', borderRadius: 10, border: 'var(--border-w) solid var(--sidebar-card-border)', background: 'var(--bg-elevated)' }}>
         <button onClick={() => setOpen(v => !v)} aria-expanded={open} className="menu-row" style={{ padding: '9px 10px' }}>
           <Avatar profile={profile} size={30} />
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -60,14 +65,13 @@ function AccountCard({ profile, expanded, onNavigate, onSignOut, onExpand }) {
             </p>
             <p style={{ ...eyebrow, marginTop: 2, color: 'var(--text-muted)', fontSize: 10 }}>{profile?.role}</p>
           </div>
-          <ChevronUp size={15} style={{ flexShrink: 0, color: 'var(--text-muted)', transform: open ? 'none' : 'rotate(180deg)', transition: 'transform 200ms ease-out' }} />
         </button>
 
         <div style={{ display: 'grid', gridTemplateRows: open ? '1fr' : '0fr', transition: 'grid-template-rows 200ms ease-out' }}>
           <div style={{ overflow: 'hidden' }}>
             <div style={{ borderTop: 'var(--border-w) solid var(--border)' }}>
-              <button onClick={() => { setOpen(false); onNavigate('/settings#profile') }} className="menu-row">
-                <Settings size={15} style={{ color: 'var(--text-muted)' }} /> Profile & settings
+              <button onClick={() => { setOpen(false); onNavigate('/settings') }} className="menu-row">
+                <Settings size={15} style={{ color: 'var(--text-muted)' }} /> Settings
               </button>
               <button onClick={() => { setOpen(false); onSignOut() }} className="menu-row" style={{ color: 'var(--danger)' }}>
                 <LogOut size={15} /> Sign out

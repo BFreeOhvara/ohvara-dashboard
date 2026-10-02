@@ -9,13 +9,13 @@ import { NotificationBell } from '../admin/NotificationBell'
 import { CloserNotificationBell } from '../closer/CloserNotificationBell'
 import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../ui/Avatar'
-import ParticleField from '../ui/ParticleField'
 import { BillingGate } from './BillingGate'
 
 // Shell — Prompt 669 restyle to Restorix Portal's Layout.jsx: a 64px sticky
 // header on the card surface (display-font title + subtitle on one line,
-// bell, divider, account chip), Restorix's dot-network background behind the
-// content column, and a 32/24 padded main capped at 1280px.
+// bell, divider, account chip) and a 32/24 padded main capped at 1280px.
+// Prompt 675 dropped Restorix's dot-network background for Ohvara's own
+// static two-glow backdrop (.app-backdrop in index.css).
 //
 // Deliberately NOT ported: the export's "Viewing as Closer / Admin" switcher.
 // That's a mockup affordance for demoing both roles in one file — real roles
@@ -138,7 +138,7 @@ export function DashboardLayout({ children }) {
           className="app-main flex-1 flex flex-col min-w-0 pt-[56px] md:pt-0"
           style={{ '--sb-w': `${collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W}px`, position: 'relative' }}
         >
-          <div className="particle-layer"><ParticleField className="h-full w-full" /></div>
+          <div className="app-backdrop" aria-hidden="true" />
           <header
             className="hidden md:flex"
             style={{

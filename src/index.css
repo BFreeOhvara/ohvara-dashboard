@@ -16,7 +16,7 @@
    pre-669 commit (ea358dd, the Claude Design export port, Prompt 327) —
    navy sidebar + blue-grey text in dark, teal family in light. Only the
    tokens 669 introduced (--bg-muted, --accent-deep, --border-strong,
-   --particle-*) are new, and they're derived from that same palette. Light
+   --backdrop-*, --sidebar-card-border) are new, and they're derived from that same palette. Light
    mode keeps 669's 1px borders rather than the export's 3px — that's
    layout, not colour. */
 :root {
@@ -80,10 +80,13 @@
   --pink-dim:     rgba(236,72,153,0.10);
   --pink-bd:      rgba(236,72,153,0.25);
 
-  /* Particle background (ParticleField) — canvas reads these at runtime.
-     Ohvara's own accent (blue dark / teal light), not Restorix's blue. */
-  --particle-line: 75,121,206;
-  --particle-dot:  rgba(107,147,217,0.55);
+  /* Page backdrop (.app-backdrop) — Prompt 675 replaced Restorix's
+     animated dot network with Ohvara's own: two static glows, the accent
+     blue from the top-right and the sidebar navy from the bottom-left. */
+  --backdrop-glow-a: rgba(75,121,206,0.22);
+  --backdrop-glow-b: rgba(25,44,79,0.85);
+  /* Account card outline in the sidebar footer (Prompt 675) */
+  --sidebar-card-border: #FFFFFF;
 
   /* Typography */
   --font-sans:    'Manrope', system-ui, sans-serif;
@@ -127,8 +130,8 @@
   --info:#16408A;    --info-dim:#DCE8FB;    --info-bd:rgba(22,64,138,0.35);
   --purple:#5B21B6;  --purple-dim:#EDE4FB;  --purple-bd:rgba(91,33,182,0.35);
   --pink:#9D174D;    --pink-dim:#FCE4EE;    --pink-bd:rgba(157,23,77,0.35);
-  --particle-line: 0,134,116;
-  --particle-dot:  rgba(0,134,116,0.45);
+  --backdrop-glow-a: rgba(0,134,116,0.16);
+  --backdrop-glow-b: rgba(2,79,70,0.10);
 }
 
 /* The sidebar carries its own scale in both modes — it sits on navy (dark)
@@ -324,10 +327,15 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
   }
   .icon-btn:hover { border-color: var(--border-strong); color: var(--text-primary); }
 
-  /* Particle background layer — viewport-fixed, offset past the sidebar at
-     md+ (the sidebar is an off-canvas drawer below md). */
-  .particle-layer { position: fixed; top: 0; bottom: 0; right: 0; left: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-  @media (min-width: 768px) { .particle-layer { left: var(--sb-w, 240px); } }
+  /* Page backdrop — viewport-fixed, offset past the sidebar at md+ (the
+     sidebar is an off-canvas drawer below md). Static CSS, no canvas/JS. */
+  .app-backdrop {
+    position: fixed; top: 0; bottom: 0; right: 0; left: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 65% 55% at 100% 0%, var(--backdrop-glow-a) 0%, transparent 72%),
+      radial-gradient(ellipse 60% 55% at 0% 100%, var(--backdrop-glow-b) 0%, transparent 72%);
+  }
+  @media (min-width: 768px) { .app-backdrop { left: var(--sb-w, 240px); } }
 
   /* Content column offset — matches the fixed sidebar's width at md+ only
      (below md the sidebar is an off-canvas drawer and takes no space). */
