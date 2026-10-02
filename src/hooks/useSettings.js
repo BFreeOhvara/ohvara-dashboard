@@ -2,8 +2,10 @@ import { useMutation } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 // ── Own-profile self-service updates (Prompt 226 Settings page) ─────────────
-// profiles_update_self RLS (migration 009) already lets a user write any
-// column on their own row — no new policy needed, no edge function needed.
+// profiles_update_self RLS (migration 009) lets a user write their own row,
+// but triggers block the privileged columns for non-admins: role, is_active,
+// upline_id, Stripe and system bookkeeping (migration 109), and the caller-ID
+// verification fields (migration 108). Self-service fields need nothing extra.
 export function useUpdateOwnProfile() {
   return useMutation({
     mutationFn: async ({ profileId, updates }) => {
