@@ -16,8 +16,6 @@ import Settings from './pages/Settings'
 import AgentOverview from './pages/agent/Overview'
 import AgentBookCall from './pages/agent/BookCall'
 import AgentClients from './pages/agent/Clients'
-import AgentPerformance from './pages/agent/Performance'
-import AgentTraining from './pages/agent/Training'
 import AgentTeam from './pages/agent/Team'
 import FulfillmentQueue from './pages/fulfillment/FulfillmentQueue'
 import Users from './pages/admin/Users'
@@ -77,7 +75,7 @@ export default function App() {
                 (rep), old closer, and client routes are gone; old bookmarks
                 fall through to the catch-all redirect. */}
             {/* Prompt 665 — agent portal: Overview, Book a call, My Clients,
-                Performance. Old Submissions / My Policies URLs redirect to
+                Team. Old Submissions / My Policies URLs redirect to
                 their replacements so bookmarks keep working. */}
             <Route path="/agent" element={
               <ProtectedRoute allowedRoles={['agent']}>
@@ -94,18 +92,6 @@ export default function App() {
                 <DashboardLayout><AgentClients /></DashboardLayout>
               </ProtectedRoute>
             } />
-            <Route path="/agent/performance" element={
-              <ProtectedRoute allowedRoles={['agent', 'admin']}>
-                <DashboardLayout><AgentPerformance /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            {/* Prompt 670 — Training. Admin can open it to review the content
-                and see each agent's progress. */}
-            <Route path="/agent/training" element={
-              <ProtectedRoute allowedRoles={['agent', 'admin']}>
-                <DashboardLayout><AgentTraining /></DashboardLayout>
-              </ProtectedRoute>
-            } />
             {/* Prompt 671 — Team: team-wide leaderboard + activity feed
                 (team_activity() RPC, no teammate client PII). */}
             <Route path="/agent/team" element={
@@ -113,6 +99,9 @@ export default function App() {
                 <DashboardLayout><AgentTeam /></DashboardLayout>
               </ProtectedRoute>
             } />
+            {/* Prompt 678 — Training and Performance removed; old links land on Overview. */}
+            <Route path="/agent/training" element={<Navigate to="/" replace />} />
+            <Route path="/agent/performance" element={<Navigate to="/" replace />} />
             <Route path="/agent/submissions" element={<Navigate to="/agent/book" replace />} />
             <Route path="/agent/policies" element={<Navigate to="/agent/clients" replace />} />
             <Route path="/admin" element={<Navigate to="/admin/users" replace />} />

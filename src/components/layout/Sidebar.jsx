@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import {
-  Users, BarChart2, LogOut, Home, Settings, Award,
-  ChevronLeft, ClipboardList, CalendarPlus, GraduationCap, Trophy,
+  Users, LogOut, Home, Settings, Award,
+  ChevronLeft, ClipboardList, CalendarPlus, Trophy,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../ui/Avatar'
@@ -88,8 +88,9 @@ function AccountCard({ profile, expanded, onSignOut, onExpand }) {
 
 const NAV = {
   // Prompt 665 — agent portal rebuilt around booking Fulfillment calls.
-  // Prompt 676 — grouped the way Restorix Portal's Layout.jsx is (Today /
-  // Work / Performance / Resources / Account) instead of one flat list.
+  // Prompt 676 — grouped the way Restorix Portal's Layout.jsx is instead of
+  // one flat list. Prompt 678 — Training and Performance removed, Team folded
+  // into Work, so no group is empty or single-item (bar Today / Account).
   agent: [
     { group: 'Today', items: [
       { to: '/agent', label: 'Overview', icon: Home },
@@ -97,13 +98,7 @@ const NAV = {
     { group: 'Work', items: [
       { to: '/agent/book', label: 'Book a call', icon: CalendarPlus },
       { to: '/agent/clients', label: 'My Clients', icon: Users },
-    ] },
-    { group: 'Performance', items: [
-      { to: '/agent/performance', label: 'Performance', icon: BarChart2 },
       { to: '/agent/team', label: 'Team', icon: Trophy },
-    ] },
-    { group: 'Resources', items: [
-      { to: '/agent/training', label: 'Training', icon: GraduationCap },
     ] },
     { group: 'Account', items: [
       { to: '/settings', label: 'Settings', icon: Settings },
@@ -111,13 +106,11 @@ const NAV = {
   ],
   admin: [
     // Prompt 665 — admin follows the agent portal's pages (company-wide
-    // Clients + Performance), minus the agent's personal Overview.
+    // Clients), minus the agent's personal Overview.
     { group: 'Agents', items: [
       { to: '/agent/book', label: 'Book a call', icon: CalendarPlus },
       { to: '/agent/clients', label: 'Clients', icon: Users },
-      { to: '/agent/performance', label: 'Performance', icon: BarChart2 },
       { to: '/agent/team', label: 'Team', icon: Trophy },
-      { to: '/agent/training', label: 'Training', icon: GraduationCap },
     ] },
     { group: 'Account', items: [
       { to: '/admin/users', label: 'Users & Access', icon: Award },
