@@ -1,28 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import {
-  Globe, Palette, Shield, IdCard, Plug, Check, Loader2, Moon, Sun, Plus, Trash2, Video, PhoneCall, User, CreditCard,
+  Globe, Palette, Shield, Plug, Check, Loader2, Moon, Sun, Trash2, Video, PhoneCall, User, CreditCard,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import { useUpdateOwnProfile } from '../hooks/useSettings'
-import {
-  useAgentLicenses, useSaveAgentLicense, useDeleteAgentLicense,
-  useAgentAppointments, useSetAgentAppointment,
-} from '../hooks/useLicensing'
 import { useAppSettings, useUpdateAppSettings } from '../hooks/useAppSettings'
-import { useCarriers } from '../hooks/useCarriers'
 import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../lib/timezones'
-import { US_STATES } from '../lib/usStates'
 import { Switch } from '../components/ui/Switch'
 import {
-  card, cardTitle, control, primaryBtn, ghostBtn, grid3, MONO,
+  card, cardTitle, control, primaryBtn, ghostBtn, MONO,
 } from '../lib/exportStyles'
 import { invokeCallerId, formatUsPhone } from '../lib/callerId'
 import { GapNote, AnchoredSelectField, TextField } from '../components/ui/ExportForm'
 import {
-  BILLING_STATUS, TONE_STYLE, formatWeekly, formatBillingDate, invokeBilling,
+  BILLING_STATUS, TONE_STYLE, formatWeekly, formatBillingDate, daysUntil, invokeBilling,
 } from '../lib/billing'
 import { SavedTick } from '../components/ui/SavedTick'
 import { ProfilePanel } from './Profile'
@@ -73,7 +67,6 @@ const TABS = [
   { key: 'regional',     label: 'Regional',                icon: Globe },
   { key: 'appearance',   label: 'Appearance',                icon: Palette },
   { key: 'security',     label: 'Security',                  icon: Shield },
-  { key: 'licensing',    label: 'Licensing & Appointments',  icon: IdCard },
   { key: 'integrations', label: 'Integrations',              icon: Plug },
   { key: 'callerid',     label: 'Caller ID',                 icon: PhoneCall, roles: ['agent', 'admin'] },
   { key: 'billing',      label: 'Billing',                   icon: CreditCard, roles: ['agent'] },
@@ -99,14 +92,14 @@ export default function Settings() {
   const hashTab = tabs.some(t => t.key === hash.slice(1)) ? hash.slice(1) : null
   const tab = (picked?.locKey === locKey && picked.key) || hashTab || 'profile'
 
-  // Restorix's tab bar: one bordered box, equal segments on desktop, a
-  // sideways-scrolling row on a phone.
+  // Restorix's tab bar: one bordered box, equal segments on desktop. Prompt 677:
+  // wraps onto a second row instead of scrolling sideways, so no tab (Caller ID,
+  // Billing) is ever cut off at any width.
   return (
     <div style={{ maxWidth: 880, display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div
-        className="scrollbar-thin"
         style={{
-          display: 'flex', gap: 4, padding: 4, overflowX: 'auto', minWidth: 0,
+          display: 'flex', flexWrap: 'wrap', gap: 4, padding: 4, minWidth: 0,
           border: 'var(--border-w) solid var(--border)', borderRadius: 12, background: 'var(--bg-surface)',
         }}
       >
@@ -119,8 +112,8 @@ export default function Settings() {
               onClick={() => setTab(t.key)}
               className="tab-transition"
               style={{
-                flex: '1 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                padding: '8px 14px', border: 'none', borderRadius: 8, fontSize: 13.5,
+                flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: '8px 12px', border: 'none', borderRadius: 8, fontSize: 13.5,
                 whiteSpace: 'nowrap', fontWeight: on ? 600 : 500,
                 background: on ? 'var(--accent)' : 'transparent',
                 color: on ? '#fff' : 'var(--text-secondary)',
@@ -138,7 +131,6 @@ export default function Settings() {
         {tab === 'regional'     && <RegionalPanel profile={profile} />}
         {tab === 'appearance'   && <AppearancePanel />}
         {tab === 'security'     && <SecurityPanel />}
-        {tab === 'licensing'    && <LicensingPanel profile={profile} />}
         {tab === 'integrations' && <IntegrationsPanel profile={profile} />}
         {tab === 'callerid'     && <CallerIdPanel profile={profile} />}
         {tab === 'billing'      && <BillingPanel profile={profile} />}
@@ -349,183 +341,6 @@ function SecurityPanel() {
           </p>
         </div>
       </div>
-    </div>
-  )
-}
-
-// ── Licensing & Appointments (Prompt 392, migration 091) ────────────────────
-function LicensingPanel({ profile }) {
-  const update = useUpdateOwnProfile()
-  const { refreshProfile } = useAuth()
-  const [npn, setNpn] = useState(profile.npn || '')
-  const [eoCarrier, setEoCarrier] = useState(profile.eo_carrier || '')
-  const [eoExpires, setEoExpires] = useState(profile.eo_policy_expires_on || '')
-  const [saved, setSaved] = useState(false)
-
-  const dirty = npn !== (profile.npn || '')
-    || eoCarrier !== (profile.eo_carrier || '')
-    || eoExpires !== (profile.eo_policy_expires_on || '')
-
-  async function save() {
-    await update.mutateAsync({
-      profileId: profile.id,
-      updates: { npn: npn || null, eo_carrier: eoCarrier || null, eo_policy_expires_on: eoExpires || null },
-    })
-    await refreshProfile()
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ ...card }}>
-        <p style={cardTitle}>Producer info</p>
-        <div style={grid3}>
-          <TextField label="NPN" value={npn} onChange={e => setNpn(e.target.value)} placeholder="National Producer Number" />
-          <TextField label="E&O carrier" value={eoCarrier} onChange={e => setEoCarrier(e.target.value)} placeholder="e.g. Hanover" />
-          <TextField label="E&O policy expires" type="date" value={eoExpires} onChange={e => setEoExpires(e.target.value)} />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            onClick={save}
-            disabled={!dirty || update.isPending}
-            style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 13, opacity: !dirty || update.isPending ? 0.5 : 1 }}
-          >
-            {update.isPending ? <Loader2 size={13} className="animate-spin" /> : 'Save'}
-          </button>
-          <SavedTick show={saved && !dirty} />
-        </div>
-      </div>
-
-      <LicenseList profile={profile} />
-      <AppointmentsList profile={profile} />
-    </div>
-  )
-}
-
-function LicenseList({ profile }) {
-  const { data: licenses = [] } = useAgentLicenses(profile.id)
-  const save = useSaveAgentLicense(profile.id)
-  const del = useDeleteAgentLicense(profile.id)
-  const [adding, setAdding] = useState(false)
-  const [form, setForm] = useState({ state: '', license_number: '', expires_on: '' })
-
-  function submit() {
-    if (!form.state) return
-    save.mutate(
-      { state: form.state, license_number: form.license_number || null, expires_on: form.expires_on || null },
-      { onSuccess: () => { setForm({ state: '', license_number: '', expires_on: '' }); setAdding(false) } }
-    )
-  }
-
-  return (
-    <div style={{ ...card }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <p style={{ ...cardTitle, margin: 0 }}>State licenses</p>
-        {!adding && (
-          <button onClick={() => setAdding(true)} style={ghostBtn}>
-            <Plus size={12} /> Add license
-          </button>
-        )}
-      </div>
-
-      {licenses.length === 0 && !adding && (
-        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>No licenses on file yet.</p>
-      )}
-
-      {licenses.map(l => (
-        <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 0', borderBottom: 'var(--border-w) solid var(--border)' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
-              {US_STATES.find(s => s.code === l.state)?.name || l.state}
-            </p>
-            <p style={{ margin: '2px 0 0', fontSize: 12.5, color: 'var(--text-muted)' }}>
-              {l.license_number ? `#${l.license_number}` : 'No license number on file'}
-              {l.expires_on ? ` · expires ${l.expires_on}` : ''}
-            </p>
-          </div>
-          <button
-            onClick={() => del.mutate(l.id)}
-            title="Remove license"
-            style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', padding: 4, flexShrink: 0 }}
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
-      ))}
-
-      {adding && (
-        <>
-          <div style={{ ...grid3, marginTop: 12, marginBottom: 0 }}>
-            <AnchoredSelectField
-              label="State" value={form.state} onChange={v => setForm(f => ({ ...f, state: v }))}
-              options={US_STATES.map(s => ({ value: s.code, label: s.name }))}
-            />
-            <TextField label="License number" value={form.license_number} onChange={e => setForm(f => ({ ...f, license_number: e.target.value }))} />
-            <TextField label="Expires" type="date" value={form.expires_on} onChange={e => setForm(f => ({ ...f, expires_on: e.target.value }))} />
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button
-              onClick={submit}
-              disabled={!form.state || save.isPending}
-              style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 13, opacity: !form.state || save.isPending ? 0.5 : 1 }}
-            >
-              {save.isPending ? <Loader2 size={13} className="animate-spin" /> : 'Add'}
-            </button>
-            <button
-              onClick={() => { setAdding(false); setForm({ state: '', license_number: '', expires_on: '' }) }}
-              style={ghostBtn}
-            >
-              Cancel
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-// One status dropdown per real carrier (directory-driven, not a fixed list) —
-// appointed_on is set automatically the first time a carrier flips to Active
-// and left alone after, rather than a second field to hand-maintain.
-function AppointmentsList({ profile }) {
-  const { data: carriers = [] } = useCarriers()
-  const { data: appointments = [] } = useAgentAppointments(profile.id)
-  const setAppointment = useSetAgentAppointment(profile.id)
-
-  const byCarrier = Object.fromEntries(appointments.map(a => [a.carrier_id, a]))
-
-  function changeStatus(carrierId, status) {
-    const existing = byCarrier[carrierId]
-    const appointedOn = status === 'active'
-      ? (existing?.appointed_on || new Date().toISOString().slice(0, 10))
-      : existing?.appointed_on
-    setAppointment.mutate({ carrierId, status, appointedOn })
-  }
-
-  return (
-    <div style={{ ...card }}>
-      <p style={cardTitle}>Carrier appointments</p>
-      {carriers.length === 0 && <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>No carriers in the directory yet.</p>}
-      {carriers.map(c => {
-        const appt = byCarrier[c.id]
-        const status = appt?.status || 'pending'
-        return (
-          <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 0', borderBottom: 'var(--border-w) solid var(--border)' }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{c.name}</p>
-              {appt?.appointed_on && (
-                <p style={{ margin: '2px 0 0', fontSize: 12.5, color: 'var(--text-muted)' }}>Appointed {appt.appointed_on}</p>
-              )}
-            </div>
-            <AnchoredSelectField
-              value={status} onChange={v => changeStatus(c.id, v)}
-              options={[{ value: 'pending', label: 'Pending' }, { value: 'active', label: 'Active' }]}
-              style={{ width: 140 }}
-            />
-          </div>
-        )
-      })}
     </div>
   )
 }
@@ -851,6 +666,14 @@ function BillingPanel({ profile }) {
   const graceEnd = formatBillingDate(profile.billing_grace_until)
   const subscribed = ['active', 'past_due', 'canceled'].includes(status)
 
+  // Prompt 677 — time-remaining at a glance: days to the next charge while
+  // active, days of paid access left once cancelled.
+  const days = ['active', 'canceled'].includes(status) ? daysUntil(profile.billing_current_period_end) : null
+  const countdown = days === null ? null : {
+    value: days === 0 ? 'Today' : `${days} ${days === 1 ? 'day' : 'days'}`,
+    caption: status === 'canceled' ? 'until access ends' : `until next ${price} charge`,
+  }
+
   // canceled = cancel-at-period-end, still inside the paid week: renewing goes
   // through the Customer Portal so it un-cancels the same subscription rather
   // than Checkout starting a second one.
@@ -906,6 +729,12 @@ function BillingPanel({ profile }) {
           {meta.label}
         </span>
         <span style={{ flex: 1, minWidth: 200, fontSize: 13.5, color: 'var(--text-secondary)' }}>{detail}</span>
+        {countdown && (
+          <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+            <p style={{ margin: 0, fontFamily: MONO, fontSize: 18, fontWeight: 600, color: 'var(--text-primary)' }}>{countdown.value}</p>
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>{countdown.caption}</p>
+          </div>
+        )}
       </div>
 
       {status !== 'exempt' && configured === false && (

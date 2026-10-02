@@ -65,6 +65,12 @@ export function formatBillingDate(iso) {
   return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
+// Whole days until an ISO timestamp (rounded up, floor 0), or null if unset.
+export function daysUntil(iso, now = Date.now()) {
+  if (!iso) return null
+  return Math.max(0, Math.ceil((new Date(iso).getTime() - now) / 86400000))
+}
+
 // supabase.functions.invoke hides a non-2xx body behind error.context; unwrap
 // it like invokeCallerId does.
 export async function invokeBilling(action) {
