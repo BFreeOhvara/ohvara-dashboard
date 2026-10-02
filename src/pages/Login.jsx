@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth, authDbg } from '../hooks/useAuth'
+import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -23,7 +23,6 @@ export default function Login() {
   const [resetSending, setResetSending] = useState(false)
 
   useEffect(() => {
-    authDbg('Login redirect effect', { loading, role: profile?.role ?? null, hasSession: !!session })
     if (loading || !profile) return
     if (profile.role === 'admin')            navigate('/admin/users',         { replace: true })
     else if (profile.role === 'agent')      navigate('/agent',   { replace: true })
@@ -40,11 +39,8 @@ export default function Login() {
     setError('')
     setSubmitting(true)
     try {
-      authDbg('Login handleSubmit start')
       await signIn(username.trim(), password)
-      authDbg('Login handleSubmit signIn returned')
     } catch (err) {
-      authDbg('Login handleSubmit threw', err?.message)
       setError(err.message || 'Invalid username or password')
     } finally {
       setSubmitting(false)

@@ -3,23 +3,6 @@ import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
-// Temporary sign-in diagnostics (Prompt 667). Enable with ?authdebug=1 on any
-// URL (sticks via localStorage); disable with ?authdebug=0. Remove once the
-// "sign-in succeeds but page doesn't react" bug is root-caused.
-try {
-  const q = new URLSearchParams(window.location.search).get('authdebug')
-  if (q === '1') localStorage.setItem('ohvara_auth_debug', '1')
-  if (q === '0') localStorage.removeItem('ohvara_auth_debug')
-} catch {}
-const T0 = Date.now()
-export function authDbg(...args) {
-  try {
-    if (localStorage.getItem('ohvara_auth_debug') === '1') {
-      console.log(`[authdebug +${Date.now() - T0}ms]`, ...args)
-    }
-  } catch {}
-}
-
 export function AuthProvider({ children }) {
   const [session,        setSession]        = useState(undefined)
   const [profile,        setProfile]        = useState(null)
@@ -31,13 +14,11 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      authDbg('getSession resolved', { hasSession: !!session })
       setSession(session)
       if (session) fetchProfile(session.user.id, false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      authDbg('onAuthStateChange', event, { hasSession: !!session, profileUserId: profileUserId.current })
       setSession(session)
       if (!session) {
         profileUserId.current = null
@@ -76,16 +57,12 @@ export function AuthProvider({ children }) {
     // refetches must not flip `loading` (it swaps the app for a spinner).
     const isNewUser = profileUserId.current !== userId
     if (isNewUser) setProfileLoading(true)
-    authDbg('fetchProfile start', { isNewUser, recordLogin })
-    const hangTimer = setTimeout(() => authDbg('fetchProfile STILL PENDING after 5s'), 5000)
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single()
-      clearTimeout(hangTimer)
-      authDbg('fetchProfile resolved', { hasData: !!data, error: error ? `${error.code} ${error.message}` : null })
 
       if (error) {
         console.error('[useAuth] profiles query failed:', error.code, error.message)
@@ -108,7 +85,6 @@ export function AuthProvider({ children }) {
         }
       }
     } catch (err) {
-      clearTimeout(hangTimer)
       console.error('[useAuth] fetchProfile threw:', err)
       profileUserId.current = null
       setProfile(null)
@@ -132,9 +108,7 @@ export function AuthProvider({ children }) {
       const { data: resolvedEmail } = await supabase.rpc('resolve_login_email', { p_username: input })
       email = resolvedEmail || `${input}@ohvara.internal`
     }
-    authDbg('signIn: calling signInWithPassword')
     const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
-    authDbg('signIn: signInWithPassword resolved', { error: error?.message ?? null, userId: authData?.user?.id })
     if (error) throw error
 
     // Check if account is deactivated before allowing the session through
@@ -144,7 +118,6 @@ export function AuthProvider({ children }) {
       .eq('id', authData.user.id)
       .single()
 
-    authDbg('signIn: is_active check resolved', { is_active: profileData?.is_active })
     if (profileData?.is_active === false) {
       await supabase.auth.signOut()
       throw new Error('Your account has been deactivated. Contact your administrator.')
