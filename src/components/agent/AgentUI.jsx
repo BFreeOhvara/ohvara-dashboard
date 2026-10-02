@@ -1,5 +1,5 @@
 import { Children } from 'react'
-import { AlertTriangle, ChevronRight } from 'lucide-react'
+import { AlertTriangle, ChevronRight, MessageCircleMore } from 'lucide-react'
 import { card, eyebrow, control, MONO } from '../../lib/exportStyles'
 import { SLOTS, slotToISO, localDateISO } from '../../lib/scheduling'
 import { STAGE, SUBSTATUS_LABEL, TONE, stageOf, isMissed } from '../../lib/agentBookings'
@@ -259,6 +259,23 @@ export function SlotPicker({ date, slot, onDate, onSlot, takenCounts = {}, error
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// Tinted callout for a line the agent reads to the client. Used on Book a call
+// and in Training (Prompt 670).
+export function ScriptHint({ children }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', gap: 10, textAlign: 'left',
+      padding: '12px 16px', borderRadius: 12,
+      background: 'var(--accent-subtle)', border: 'var(--border-w) solid var(--accent-border)',
+    }}>
+      <MessageCircleMore size={16} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 2 }} />
+      <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-primary)', fontStyle: 'italic', lineHeight: 1.55 }}>
+        {children}
+      </p>
     </div>
   )
 }

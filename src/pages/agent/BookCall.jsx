@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, MessageCircleMore, AlertTriangle, ArrowRight } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCarriers } from '../../hooks/useCarriers'
 import { useAgentBookings, useBookCall } from '../../hooks/useAgentBookings'
 import { card, cardTitle, primaryBtn, ghostBtn, fieldLabel, eyebrow, grid3, MONO, DISPLAY } from '../../lib/exportStyles'
 import { TextField, GapNote } from '../../components/ui/ExportForm'
-import { SlotPicker, ClientRow, EmptyNote, ListCard } from '../../components/agent/AgentUI'
+import { SlotPicker, ClientRow, EmptyNote, ListCard, ScriptHint } from '../../components/agent/AgentUI'
 import { formatPhoneInput, titleCase } from '../../lib/policyFormat'
 import { SLOTS, slotToISO, localDateISO, isFarOut, fmtBooking } from '../../lib/scheduling'
 import { stageOf, digits, useNow } from '../../lib/agentBookings'
@@ -264,21 +264,6 @@ function Step({ n, title }) {
         background: 'var(--accent-dim)', color: 'var(--accent-deep)', fontFamily: MONO, fontSize: 12, fontWeight: 500,
       }}>{n}</span>
       <p style={{ ...cardTitle, margin: 0, fontSize: 15 }}>{title}</p>
-    </div>
-  )
-}
-
-function ScriptHint({ children }) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'flex-start', gap: 10, textAlign: 'left',
-      padding: '12px 16px', borderRadius: 12,
-      background: 'var(--accent-subtle)', border: 'var(--border-w) solid var(--accent-border)',
-    }}>
-      <MessageCircleMore size={16} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 2 }} />
-      <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-primary)', fontStyle: 'italic', lineHeight: 1.55 }}>
-        {children}
-      </p>
     </div>
   )
 }

@@ -33,7 +33,7 @@ const TITLES = {
   '/agent/carriers': ['Carrier Portals', 'Every carrier login in one directory'],
   '/agent/stats': ['Performance', 'Production, persistency, and leaderboard — switch the view'],
   '/agent/hierarchy': ['Team', 'Your hierarchy, team chat, and DMs'],
-  '/agent/training': ['Training Center', 'Videos · scripts · knowledge checks · roleplay'],
+  '/agent/training': ['Training', 'How the job works, start to finish'],
   '/agent/commissions': ['Commissions', 'Compensation grid & balance — switch the view'],
   '/admin': ['Overview', 'Your day at a glance'],
   '/admin/users': ['Users & Access', 'Accounts, roles and invites'],
