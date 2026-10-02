@@ -16,7 +16,7 @@
    pre-669 commit (ea358dd, the Claude Design export port, Prompt 327) —
    navy sidebar + blue-grey text in dark, teal family in light. Only the
    tokens 669 introduced (--bg-muted, --accent-deep, --border-strong,
-   --backdrop-*, --sidebar-card-border) are new, and they're derived from that same palette. Light
+   --backdrop-*, --sidebar-card-divider) are new, and they're derived from that same palette. Light
    mode keeps 669's 1px borders rather than the export's 3px — that's
    layout, not colour. */
 :root {
@@ -85,8 +85,9 @@
      blue from the top-right and the sidebar navy from the bottom-left. */
   --backdrop-glow-a: rgba(75,121,206,0.22);
   --backdrop-glow-b: rgba(25,44,79,0.85);
-  /* Account card outline in the sidebar footer (Prompt 675) */
-  --sidebar-card-border: #FFFFFF;
+  /* Divider inside the sidebar account card's popup (Prompt 676 — the
+     card's own outline from 675 is gone) */
+  --sidebar-card-divider: #FFFFFF;
 
   /* Typography */
   --font-sans:    'Manrope', system-ui, sans-serif;

@@ -28,9 +28,14 @@ import ohvaraLogo from '../../assets/ohvara-logo.png'
 // tab), the card's outline is white instead of grey, and the chevron on the
 // card's right edge is gone.
 //
+// Prompt 676 — the card has no outline at all (just the --bg-elevated fill,
+// the same as an active nav row), the panel is Sign out only (Settings
+// lives in the Account group), its divider is white, and the agent's flat
+// six-item Work list is split into Restorix-style groups.
+//
 // Kept: collapsible to 64px on desktop, off-canvas drawer on phones.
 
-function AccountCard({ profile, expanded, onNavigate, onSignOut, onExpand }) {
+function AccountCard({ profile, expanded, onSignOut, onExpand }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -56,7 +61,7 @@ function AccountCard({ profile, expanded, onNavigate, onSignOut, onExpand }) {
 
   return (
     <div ref={ref} style={{ padding: 12 }}>
-      <div style={{ overflow: 'hidden', borderRadius: 10, border: 'var(--border-w) solid var(--sidebar-card-border)', background: 'var(--bg-elevated)' }}>
+      <div style={{ overflow: 'hidden', borderRadius: 10, background: 'var(--bg-elevated)' }}>
         <button onClick={() => setOpen(v => !v)} aria-expanded={open} className="menu-row" style={{ padding: '9px 10px' }}>
           <Avatar profile={profile} size={30} />
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -69,10 +74,7 @@ function AccountCard({ profile, expanded, onNavigate, onSignOut, onExpand }) {
 
         <div style={{ display: 'grid', gridTemplateRows: open ? '1fr' : '0fr', transition: 'grid-template-rows 200ms ease-out' }}>
           <div style={{ overflow: 'hidden' }}>
-            <div style={{ borderTop: 'var(--border-w) solid var(--border)' }}>
-              <button onClick={() => { setOpen(false); onNavigate('/settings') }} className="menu-row">
-                <Settings size={15} style={{ color: 'var(--text-muted)' }} /> Settings
-              </button>
+            <div style={{ borderTop: 'var(--border-w) solid var(--sidebar-card-divider)' }}>
               <button onClick={() => { setOpen(false); onSignOut() }} className="menu-row" style={{ color: 'var(--danger)' }}>
                 <LogOut size={15} /> Sign out
               </button>
@@ -84,16 +86,23 @@ function AccountCard({ profile, expanded, onNavigate, onSignOut, onExpand }) {
   )
 }
 
-// Same groups and order as before Prompt 669 — only the look changed.
 const NAV = {
   // Prompt 665 — agent portal rebuilt around booking Fulfillment calls.
+  // Prompt 676 — grouped the way Restorix Portal's Layout.jsx is (Today /
+  // Work / Performance / Resources / Account) instead of one flat list.
   agent: [
-    { group: 'Work', items: [
+    { group: 'Today', items: [
       { to: '/agent', label: 'Overview', icon: Home },
+    ] },
+    { group: 'Work', items: [
       { to: '/agent/book', label: 'Book a call', icon: CalendarPlus },
       { to: '/agent/clients', label: 'My Clients', icon: Users },
+    ] },
+    { group: 'Performance', items: [
       { to: '/agent/performance', label: 'Performance', icon: BarChart2 },
       { to: '/agent/team', label: 'Team', icon: Trophy },
+    ] },
+    { group: 'Resources', items: [
       { to: '/agent/training', label: 'Training', icon: GraduationCap },
     ] },
     { group: 'Account', items: [
@@ -219,7 +228,6 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
           <AccountCard
             profile={profile}
             expanded={expanded}
-            onNavigate={path => { onClose?.(); navigate(path) }}
             onSignOut={handleSignOut}
             onExpand={onToggleCollapse}
           />
