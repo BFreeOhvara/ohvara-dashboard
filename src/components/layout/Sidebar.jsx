@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import {
   Users, BarChart2, LogOut, Home, Settings, Award,
-  ChevronLeft, ChevronUp, ClipboardList, CalendarPlus, GraduationCap,
+  ChevronLeft, ChevronUp, ClipboardList, CalendarPlus, GraduationCap, Trophy,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../ui/Avatar'
@@ -89,6 +89,7 @@ const NAV = {
       { to: '/agent/book', label: 'Book a call', icon: CalendarPlus },
       { to: '/agent/clients', label: 'My Clients', icon: Users },
       { to: '/agent/performance', label: 'Performance', icon: BarChart2 },
+      { to: '/agent/team', label: 'Team', icon: Trophy },
       { to: '/agent/training', label: 'Training', icon: GraduationCap },
     ] },
     { group: 'Account', items: [
@@ -102,6 +103,7 @@ const NAV = {
       { to: '/agent/book', label: 'Book a call', icon: CalendarPlus },
       { to: '/agent/clients', label: 'Clients', icon: Users },
       { to: '/agent/performance', label: 'Performance', icon: BarChart2 },
+      { to: '/agent/team', label: 'Team', icon: Trophy },
       { to: '/agent/training', label: 'Training', icon: GraduationCap },
     ] },
     { group: 'Account', items: [

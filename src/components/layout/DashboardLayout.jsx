@@ -34,6 +34,7 @@ const TITLES = {
   '/agent/stats': ['Performance', 'Production, persistency, and leaderboard — switch the view'],
   '/agent/hierarchy': ['Team', 'Your hierarchy, team chat, and DMs'],
   '/agent/training': ['Training', 'How the job works, start to finish'],
+  '/agent/team': ['Team', "What everyone's booking and closing this week"],
   '/agent/commissions': ['Commissions', 'Compensation grid & balance — switch the view'],
   '/admin': ['Overview', 'Your day at a glance'],
   '/admin/users': ['Users & Access', 'Accounts, roles and invites'],

@@ -18,6 +18,7 @@ import AgentBookCall from './pages/agent/BookCall'
 import AgentClients from './pages/agent/Clients'
 import AgentPerformance from './pages/agent/Performance'
 import AgentTraining from './pages/agent/Training'
+import AgentTeam from './pages/agent/Team'
 import FulfillmentQueue from './pages/fulfillment/FulfillmentQueue'
 import Users from './pages/admin/Users'
 
@@ -103,6 +104,13 @@ export default function App() {
             <Route path="/agent/training" element={
               <ProtectedRoute allowedRoles={['agent', 'admin']}>
                 <DashboardLayout><AgentTraining /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            {/* Prompt 671 — Team: team-wide leaderboard + activity feed
+                (team_activity() RPC, no teammate client PII). */}
+            <Route path="/agent/team" element={
+              <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <DashboardLayout><AgentTeam /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/submissions" element={<Navigate to="/agent/book" replace />} />
