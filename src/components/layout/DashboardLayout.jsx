@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Menu } from 'lucide-react'
-import { Sidebar, COLLAPSE_KEY } from './Sidebar'
+import { Sidebar, COLLAPSE_KEY, SIDEBAR_W, SIDEBAR_W_COLLAPSED } from './Sidebar'
 import { ActiveCallProvider } from '../../contexts/ActiveCallContext'
 import { NotificationToast } from '../rep/NotificationToast'
 import { BugReportButton } from '../shared/BugReportButton'
@@ -9,10 +9,12 @@ import { NotificationBell } from '../admin/NotificationBell'
 import { CloserNotificationBell } from '../closer/CloserNotificationBell'
 import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../ui/Avatar'
+import ParticleField from '../ui/ParticleField'
 
-// Shell — literal port of the export's right-hand column (lines 114-161):
-// a 60px sticky header carrying the page title/subtitle, notification bell
-// and account chip, over a 32/40/72 padded main capped at 1440px.
+// Shell — Prompt 669 restyle to Restorix Portal's Layout.jsx: a 64px sticky
+// header on the card surface (display-font title + subtitle on one line,
+// bell, divider, account chip), Restorix's dot-network background behind the
+// content column, and a 32/24 padded main capped at 1280px.
 //
 // Deliberately NOT ported: the export's "Viewing as Closer / Admin" switcher.
 // That's a mockup affordance for demoing both roles in one file — real roles
@@ -70,9 +72,9 @@ function HeaderBell() {
 function AccountChip() {
   const { profile } = useAuth()
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-      <Avatar profile={profile} size={26} style={{ border: '1px solid var(--accent-border)' }} />
-      <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+      <Avatar profile={profile} size={28} />
+      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
         {profile?.full_name || ''}
       </span>
     </div>
@@ -112,40 +114,41 @@ export function DashboardLayout({ children }) {
             the only way to open it there. */}
         <div
           className="md:hidden fixed top-0 inset-x-0 flex items-center gap-3"
-          style={{ height: 52, padding: '0 16px', background: 'var(--bg-base)', borderBottom: 'var(--border-w) solid var(--border)', zIndex: 80 }}
+          style={{ height: 56, padding: '0 16px', background: 'var(--bg-surface)', borderBottom: 'var(--border-w) solid var(--border)', zIndex: 80 }}
         >
           <button
             onClick={() => setNavOpen(true)}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 32, height: 32, borderRadius: 8,
-              background: 'var(--bg-elevated)', border: 'none',
+              width: 36, height: 36, borderRadius: 999,
+              background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
               color: 'var(--text-secondary)',
             }}
           >
             <Menu size={18} />
           </button>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{title || 'Ohvara'}</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 500, color: 'var(--text-primary)' }}>{title || 'Ohvara'}</span>
         </div>
 
         {/* Sidebar is fixed, so the content column offsets by its width — but
             only at md+, where the sidebar isn't an off-canvas drawer. Width
             travels as a CSS var so the media query can own the margin. */}
         <div
-          className="app-main flex-1 flex flex-col min-w-0 pt-[52px] md:pt-0"
-          style={{ '--sb-w': collapsed ? '64px' : '270px' }}
+          className="app-main flex-1 flex flex-col min-w-0 pt-[56px] md:pt-0"
+          style={{ '--sb-w': `${collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W}px`, position: 'relative' }}
         >
+          <div className="particle-layer"><ParticleField className="h-full w-full" /></div>
           <header
             className="hidden md:flex"
             style={{
               position: 'sticky', top: 0, zIndex: 90,
-              alignItems: 'center', gap: 14, height: 60, padding: '0 28px',
-              background: 'var(--bg-base)', borderBottom: 'var(--border-w) solid var(--border)',
+              alignItems: 'center', gap: 14, height: 64, padding: '0 24px',
+              background: 'var(--bg-surface)', borderBottom: 'var(--border-w) solid var(--border)',
             }}
           >
             <div style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{title}</span>
-              <span style={{ marginLeft: 10, fontSize: 11, color: 'var(--text-muted)' }}>{sub}</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{title}</span>
+              <span style={{ marginLeft: 10, fontSize: 14, color: 'var(--text-secondary)' }}>{sub}</span>
             </div>
             <HeaderBell />
             <HeaderDivider />
@@ -153,8 +156,8 @@ export function DashboardLayout({ children }) {
           </header>
 
           <main
-            className={`scrollbar-thin ${isFullWidth ? 'h-screen overflow-hidden flex flex-col' : ''}`}
-            style={isFullWidth ? undefined : { flex: 1, padding: '32px 40px 72px', maxWidth: 1440, width: '100%', margin: '0 auto' }}
+            className={`scrollbar-thin ${isFullWidth ? 'h-screen overflow-hidden flex flex-col' : 'px-4 md:px-6'}`}
+            style={isFullWidth ? { position: 'relative', zIndex: 1 } : { flex: 1, paddingTop: 32, paddingBottom: 64, maxWidth: 1280, width: '100%', margin: '0 auto', position: 'relative', zIndex: 1 }}
           >
             <div
               key={pathname}

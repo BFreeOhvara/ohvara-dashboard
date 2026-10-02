@@ -1,15 +1,23 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarPlus, CalendarClock, Hourglass, CircleCheckBig, AlertTriangle, ArrowRight } from 'lucide-react'
+import { CalendarPlus, AlertTriangle, ArrowRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
-import { card, cardTitle, primaryBtn, ghostBtn } from '../../lib/exportStyles'
-import { StatTile, StatGrid, ClientRow, EmptyNote } from '../../components/agent/AgentUI'
+import { primaryBtn, ghostBtn, MONO, DISPLAY } from '../../lib/exportStyles'
+import { LiveClock } from '../../components/ui/LiveClock'
+import { StatTile, StatGrid, SectionHead, ListCard, GroupRow, ClientRow, EmptyNote } from '../../components/agent/AgentUI'
 import { stageOf, isMissed, sameLocalDay, startOfWeek, useNow } from '../../lib/agentBookings'
 
 // Agent Overview (Prompt 665) — the landing page. "Your day at a glance":
 // what's booked today, anything Fulfillment hasn't picked up yet, what's
 // coming, and the week's numbers — with Book a call one tap away.
+//
+// Prompt 669 — laid out like Restorix Portal's closer Overview: greeting +
+// date/clock row, four eyebrow stat tiles, a tinted needs-attention banner,
+// then one "Your calls" table with Today / Coming up group rows instead of
+// two half-width cards.
+
+const UPCOMING_LIMIT = 6
 
 export default function Overview() {
   const { profile } = useAuth()
@@ -24,8 +32,8 @@ export default function Overview() {
     const todays = rows
       .filter(p => sameLocalDay(p.scheduled_call_at, today))
       .sort((a, b) => a.scheduled_call_at.localeCompare(b.scheduled_call_at))
-    // Today's misses already show (flagged) in the Today list; the warning
-    // card only needs the older ones. The tile counts all of them.
+    // Today's misses already show (flagged) in the Today group; the attention
+    // list only needs the older ones. The tile counts all of them.
     const missedAll = open.filter(p => isMissed(p, now))
     const missed = missedAll.filter(p => !sameLocalDay(p.scheduled_call_at, today))
     const upcoming = open
@@ -40,77 +48,82 @@ export default function Overview() {
   }, [rows, now])
 
   const firstName = (profile?.full_name || '').split(' ')[0]
-  const greeting = new Date(now).getHours() < 12 ? 'Good morning' : new Date(now).getHours() < 17 ? 'Good afternoon' : 'Good evening'
+  const hour = new Date(now).getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const dateLabel = new Date(now).toLocaleDateString('en-US', {
+    timeZone: profile?.timezone || undefined, weekday: 'long', month: 'short', day: 'numeric',
+  })
+  const open = id => navigate(`/agent/clients?open=${id}`)
+  const upcoming = g.upcoming.slice(0, UPCOMING_LIMIT)
 
   return (
-    <div style={{ maxWidth: 1100, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 220 }}>
-          <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>
+          <p style={{ margin: 0, fontFamily: DISPLAY, fontSize: 26, fontWeight: 500, letterSpacing: '-0.015em', color: 'var(--text-primary)' }}>
             {greeting}{firstName ? `, ${firstName}` : ''}
           </p>
-          <p style={{ margin: '3px 0 0', fontSize: 12.5, color: 'var(--text-muted)' }}>
+          <p style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>
             {isLoading ? 'Loading your calls…'
               : g.todays.length ? `${g.todays.length} call${g.todays.length === 1 ? '' : 's'} on the books today.`
                 : 'Nothing on the books today yet.'}
           </p>
         </div>
-        <button onClick={() => navigate('/agent/book')}
-          style={{ ...primaryBtn, height: 40, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-          <CalendarPlus size={15} /> Book a call
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span className="hidden sm:inline" style={{ fontFamily: MONO, fontSize: 13, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{dateLabel}</span>
+          <span className="hidden sm:inline"><LiveClock timezone={profile?.timezone} /></span>
+          <button onClick={() => navigate('/agent/book')} style={primaryBtn}>
+            <CalendarPlus size={16} /> Book a call
+          </button>
+        </div>
       </div>
 
       <StatGrid>
-        <StatTile icon={CalendarClock} label="Booked this week" value={g.bookedThisWeek} tone={g.bookedThisWeek ? 'accent' : 'neutral'}
-          sub="since Monday" />
-        <StatTile icon={Hourglass} label="With Fulfillment" value={g.waiting + g.inProgress} tone={g.inProgress ? 'info' : 'neutral'}
+        <StatTile label="Booked this week" value={isLoading ? '—' : g.bookedThisWeek} sub="since Monday" />
+        <StatTile label="With Fulfillment" value={isLoading ? '—' : g.waiting + g.inProgress}
           sub={`${g.inProgress} being worked · ${g.waiting} waiting`} />
-        <StatTile icon={CircleCheckBig} label="Cancelled this week" value={g.cancelledThisWeek} tone="success"
-          sub="old policy confirmed cancelled" />
-        <StatTile icon={AlertTriangle} label="Not picked up" value={g.missedAll.length} tone={g.missedAll.length ? 'warning' : 'neutral'}
+        <StatTile label="Cancelled this week" value={isLoading ? '—' : g.cancelledThisWeek} sub="old policy confirmed cancelled" />
+        <StatTile label="Not picked up" value={isLoading ? '—' : g.missedAll.length} tone={g.missedAll.length ? 'warning' : 'neutral'}
           sub="booked time passed, still waiting" />
       </StatGrid>
 
       {g.missed.length > 0 && (
-        <div style={{ ...card, borderColor: 'var(--warning-bd)' }}>
-          <p style={{ ...cardTitle, color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: 7 }}>
-            <AlertTriangle size={14} /> Booked time passed — Fulfillment hasn't picked these up
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {g.missed.map(p => <ClientRow key={p.id} p={p} now={now} onClick={() => navigate(`/agent/clients?open=${p.id}`)} />)}
+        <div>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 16,
+            background: 'var(--warning-dim)', border: 'var(--border-w) solid var(--warning-bd)', color: 'var(--warning)',
+          }}>
+            <AlertTriangle size={18} style={{ flexShrink: 0 }} />
+            <p style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 14, fontWeight: 500 }}>
+              {g.missed.length} booked time{g.missed.length === 1 ? '' : 's'} passed and Fulfillment hasn't picked {g.missed.length === 1 ? 'it' : 'them'} up.
+              Open one to move it or give Fulfillment a heads-up.
+            </p>
           </div>
-          <p style={{ margin: '10px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-            Open one to move it to a new time, or give Fulfillment a heads-up.
-          </p>
+          <ListCard head style={{ marginTop: 10 }}>
+            {g.missed.map((p, i) => <ClientRow key={p.id} p={p} now={now} first={i === 0} onClick={() => open(p.id)} />)}
+          </ListCard>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: 16, alignItems: 'start' }}>
-        <div style={card}>
-          <p style={cardTitle}>Today</p>
-          {g.todays.length === 0 ? (
-            <EmptyNote>No calls today. Book one when your next client says yes.</EmptyNote>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {g.todays.map(p => <ClientRow key={p.id} p={p} now={now} timeOnly onClick={() => navigate(`/agent/clients?open=${p.id}`)} />)}
-            </div>
+      <div>
+        <SectionHead
+          title="Your calls"
+          sub="When Fulfillment is calling your clients"
+          action={(
+            <button onClick={() => navigate('/agent/clients')} style={ghostBtn}>
+              All my clients <ArrowRight size={14} />
+            </button>
           )}
-        </div>
-
-        <div style={card}>
-          <p style={cardTitle}>Coming up</p>
-          {g.upcoming.length === 0 ? (
-            <EmptyNote>Nothing booked past today.</EmptyNote>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {g.upcoming.slice(0, 6).map(p => <ClientRow key={p.id} p={p} now={now} onClick={() => navigate(`/agent/clients?open=${p.id}`)} />)}
-            </div>
-          )}
-          <button onClick={() => navigate('/agent/clients')} style={{ ...ghostBtn, marginTop: 12 }}>
-            All my clients <ArrowRight size={12} />
-          </button>
-        </div>
+        />
+        <ListCard
+          head={g.todays.length > 0 || upcoming.length > 0}
+          empty={<EmptyNote>{isLoading ? 'Loading…' : 'No calls today or coming up. Book one when your next client says yes.'}</EmptyNote>}
+        >
+          {g.todays.length > 0 && <GroupRow label="Today" first />}
+          {g.todays.map(p => <ClientRow key={p.id} p={p} now={now} onClick={() => open(p.id)} />)}
+          {upcoming.length > 0 && <GroupRow label={g.todays.length ? 'Coming up' : 'Coming up · nothing today'} first={g.todays.length === 0} />}
+          {upcoming.map(p => <ClientRow key={p.id} p={p} now={now} onClick={() => open(p.id)} />)}
+        </ListCard>
       </div>
     </div>
   )

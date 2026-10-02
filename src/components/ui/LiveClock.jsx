@@ -21,12 +21,13 @@ export function LiveClock({ timezone }) {
   })
 
   return (
+    // Prompt 669 — Restorix's clock chip (rounded-lg accent fill, mono).
     <span style={{
       display: 'inline-block',
-      fontSize: 12, fontFamily: 'var(--font-mono)', color: '#fff',
+      fontSize: 15, fontWeight: 500, fontFamily: 'var(--font-mono)', color: '#fff',
       fontVariantNumeric: 'tabular-nums',
-      background: 'var(--accent)', borderRadius: 6,
-      padding: '4px 10px',
+      background: 'var(--accent)', borderRadius: 8,
+      padding: '5px 12px',
     }}>
       {time}
     </span>

@@ -40,6 +40,11 @@ import { SavedTick } from '../components/ui/SavedTick'
 // One deviation worth naming: the legacy close (X) button is gone — Settings
 // is a normal nav destination in the approved design.
 //
+// Prompt 669 — restyled to Restorix Portal's Settings hub: the 220px tab rail
+// became one full-width segmented tab bar above a single 768px column, and
+// the panels' type is bumped to the 14px Manrope scale the rest of the app
+// now uses. Every panel's fields, RPCs and behavior are unchanged.
+//
 // Payouts tab removed (Prompt 339) — current pay model is carrier-direct with
 // no bank-account-connect step, so the Stripe payout pointer had nothing left
 // to do.
@@ -64,7 +69,7 @@ const TABS = [
 ]
 
 const inputBase = { ...control, background: 'var(--bg-base)', padding: '0 12px' }
-const softLabel = { margin: '0 0 5px', fontSize: 11, color: 'var(--text-muted)' }
+const softLabel = { margin: '0 0 6px', fontSize: 14, color: 'var(--text-secondary)' }
 
 export default function Settings() {
   const { profile } = useAuth()
@@ -82,15 +87,17 @@ export default function Settings() {
   const hashTab = tabs.some(t => t.key === hash.slice(1)) ? hash.slice(1) : null
   const tab = picked || hashTab || 'regional'
 
-  // The export's 220px rail sits beside the panel; below md it stacks and the
-  // tabs run as a scrollable row, or the panel gets squeezed to ~150px on a
-  // phone.
+  // Restorix's tab bar: one bordered box, equal segments on desktop, a
+  // sideways-scrolling row on a phone.
   return (
-    <div
-      className="grid gap-5 md:gap-8 md:grid-cols-[220px_minmax(0,1fr)]"
-      style={{ alignItems: 'start', maxWidth: 940 }}
-    >
-      <div className="flex-row overflow-x-auto md:flex-col scrollbar-thin" style={{ display: 'flex', gap: 2, minWidth: 0 }}>
+    <div style={{ maxWidth: 880, display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div
+        className="scrollbar-thin"
+        style={{
+          display: 'flex', gap: 4, padding: 4, overflowX: 'auto', minWidth: 0,
+          border: 'var(--border-w) solid var(--border)', borderRadius: 12, background: 'var(--bg-surface)',
+        }}
+      >
         {tabs.map(t => {
           const on = tab === t.key
           const Icon = t.icon
@@ -98,16 +105,16 @@ export default function Settings() {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
+              className="tab-transition"
               style={{
-                display: 'flex', alignItems: 'center', gap: 9, padding: '8px 11px',
-                border: 'none', borderRadius: 6, textAlign: 'left', fontSize: 12.5,
-                whiteSpace: 'nowrap', flexShrink: 0,
-                fontWeight: on ? 700 : 400,
-                background: on ? 'var(--accent-dim)' : 'transparent',
-                color: on ? 'var(--accent)' : 'var(--text-secondary)',
+                flex: '1 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: '8px 14px', border: 'none', borderRadius: 8, fontSize: 13.5,
+                whiteSpace: 'nowrap', fontWeight: on ? 600 : 500,
+                background: on ? 'var(--accent)' : 'transparent',
+                color: on ? '#fff' : 'var(--text-secondary)',
               }}
             >
-              <Icon size={14} style={{ color: on ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0 }} />
+              <Icon size={15} style={{ flexShrink: 0 }} />
               {t.label}
             </button>
           )
@@ -154,7 +161,7 @@ function RegionalPanel({ profile }) {
   }
 
   return (
-    <div style={{ ...card, padding: '20px 22px' }}>
+    <div style={{ ...card }}>
       <p style={cardTitle}>Regional</p>
 
       <p style={softLabel}>Timezone — call schedules &amp; reminders display in this zone</p>
@@ -166,7 +173,7 @@ function RegionalPanel({ profile }) {
         <button
           onClick={save}
           disabled={!dirty || update.isPending}
-          style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 12, opacity: !dirty || update.isPending ? 0.5 : 1 }}
+          style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 13, opacity: !dirty || update.isPending ? 0.5 : 1 }}
         >
           {update.isPending ? <Loader2 size={13} className="animate-spin" /> : 'Save'}
         </button>
@@ -176,8 +183,8 @@ function RegionalPanel({ profile }) {
       {profile.role === 'rep' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderTop: 'var(--border-w) solid var(--border)', marginBottom: 18 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>Weekend leads</p>
-            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Weekend leads</p>
+            <p style={{ margin: '2px 0 0', fontSize: 12.5, color: 'var(--text-muted)' }}>
               Off by default — your batch pauses Saturday and Sunday.
             </p>
           </div>
@@ -186,9 +193,9 @@ function RegionalPanel({ profile }) {
       )}
 
       <p style={softLabel}>Currency</p>
-      <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-primary)' }}>
+      <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)' }}>
         USD — US Dollar
-        <span style={{ marginLeft: 8, fontSize: 10.5, color: 'var(--text-muted)' }}>(fixed for US operations)</span>
+        <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-muted)' }}>(fixed for US operations)</span>
       </p>
 
       <GapNote>
@@ -215,14 +222,16 @@ function AppearancePanel() {
           border: `1px solid ${on ? 'var(--accent)' : 'var(--border)'}`,
         }}
       >
-        <div style={{ height: 88, background: dark ? '#0A0A0F' : '#FAFAFC', padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ width: '60%', height: 8, borderRadius: 3, background: dark ? '#192C4F' : '#F1F1F6' }} />
-          <div style={{ width: '85%', height: 8, borderRadius: 3, background: dark ? '#13131A' : '#FFFFFF', border: `1px solid ${dark ? '#2A2A3A' : '#E4E4EE'}` }} />
-          <div style={{ width: '38%', height: 8, borderRadius: 3, background: '#4B79CE' }} />
+        {/* Literal previews of the other theme's tokens (index.css) — they
+            can't read var() because they show the theme that isn't active. */}
+        <div style={{ height: 88, background: dark ? '#0A0A0F' : '#E8ECF2', padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ width: '60%', height: 8, borderRadius: 4, background: dark ? '#1C1C26' : '#F3F6F9' }} />
+          <div style={{ width: '85%', height: 8, borderRadius: 4, background: dark ? '#13131A' : '#FFFFFF', border: `1px solid ${dark ? '#2A2A3A' : 'rgba(10,31,68,0.12)'}` }} />
+          <div style={{ width: '38%', height: 8, borderRadius: 4, background: dark ? '#4B79CE' : '#007A69' }} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderTop: 'var(--border-w) solid var(--border)' }}>
           {dark ? <Moon size={12} style={{ color: 'var(--text-secondary)' }} /> : <Sun size={12} style={{ color: 'var(--text-secondary)' }} />}
-          <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{dark ? 'Dark' : 'Light'}</span>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{dark ? 'Dark' : 'Light'}</span>
           {on && <Check size={13} style={{ color: 'var(--accent)' }} />}
         </div>
       </div>
@@ -230,9 +239,9 @@ function AppearancePanel() {
   }
 
   return (
-    <div style={{ ...card, padding: '20px 22px' }}>
-      <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Appearance</p>
-      <p style={{ margin: '0 0 14px', fontSize: 11, color: 'var(--text-muted)' }}>
+    <div style={{ ...card }}>
+      <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Appearance</p>
+      <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--text-muted)' }}>
         Theme applies instantly, everywhere, and is remembered on this device.
       </p>
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
@@ -282,7 +291,7 @@ function SecurityPanel() {
   }
 
   return (
-    <div style={{ ...card, padding: '20px 22px' }}>
+    <div style={{ ...card }}>
       <p style={cardTitle}>Security</p>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, maxWidth: 520, marginBottom: 16 }}>
@@ -300,15 +309,15 @@ function SecurityPanel() {
         </label>
       </div>
 
-      {error && <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--danger)' }}>{error}</p>}
+      {error && <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--danger)' }}>{error}</p>}
       {done && (
-        <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--success)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--success)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <Check size={13} /> Password updated — use it next time you sign in.
         </p>
       )}
 
       <div>
-        <button onClick={save} disabled={saving} style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 12, marginBottom: 22, opacity: saving ? 0.6 : 1 }}>
+        <button onClick={save} disabled={saving} style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 13, marginBottom: 22, opacity: saving ? 0.6 : 1 }}>
           {saving ? <Loader2 size={13} className="animate-spin" /> : 'Update password'}
         </button>
       </div>
@@ -320,8 +329,8 @@ function SecurityPanel() {
       }}>
         <Shield size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>Two-factor authentication</p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Two-factor authentication</p>
+          <p style={{ margin: '2px 0 0', fontSize: 12.5, color: 'var(--text-muted)' }}>
             Not available — MFA isn't enabled on this Supabase project, so no account has it.
           </p>
         </div>
@@ -355,7 +364,7 @@ function LicensingPanel({ profile }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ ...card, padding: '20px 22px' }}>
+      <div style={{ ...card }}>
         <p style={cardTitle}>Producer info</p>
         <div style={grid3}>
           <TextField label="NPN" value={npn} onChange={e => setNpn(e.target.value)} placeholder="National Producer Number" />
@@ -366,7 +375,7 @@ function LicensingPanel({ profile }) {
           <button
             onClick={save}
             disabled={!dirty || update.isPending}
-            style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 12, opacity: !dirty || update.isPending ? 0.5 : 1 }}
+            style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 13, opacity: !dirty || update.isPending ? 0.5 : 1 }}
           >
             {update.isPending ? <Loader2 size={13} className="animate-spin" /> : 'Save'}
           </button>
@@ -396,7 +405,7 @@ function LicenseList({ profile }) {
   }
 
   return (
-    <div style={{ ...card, padding: '20px 22px' }}>
+    <div style={{ ...card }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <p style={{ ...cardTitle, margin: 0 }}>State licenses</p>
         {!adding && (
@@ -407,16 +416,16 @@ function LicenseList({ profile }) {
       </div>
 
       {licenses.length === 0 && !adding && (
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>No licenses on file yet.</p>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>No licenses on file yet.</p>
       )}
 
       {licenses.map(l => (
         <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 0', borderBottom: 'var(--border-w) solid var(--border)' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
               {US_STATES.find(s => s.code === l.state)?.name || l.state}
             </p>
-            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+            <p style={{ margin: '2px 0 0', fontSize: 12.5, color: 'var(--text-muted)' }}>
               {l.license_number ? `#${l.license_number}` : 'No license number on file'}
               {l.expires_on ? ` · expires ${l.expires_on}` : ''}
             </p>
@@ -445,7 +454,7 @@ function LicenseList({ profile }) {
             <button
               onClick={submit}
               disabled={!form.state || save.isPending}
-              style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 12, opacity: !form.state || save.isPending ? 0.5 : 1 }}
+              style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 13, opacity: !form.state || save.isPending ? 0.5 : 1 }}
             >
               {save.isPending ? <Loader2 size={13} className="animate-spin" /> : 'Add'}
             </button>
@@ -481,18 +490,18 @@ function AppointmentsList({ profile }) {
   }
 
   return (
-    <div style={{ ...card, padding: '20px 22px' }}>
+    <div style={{ ...card }}>
       <p style={cardTitle}>Carrier appointments</p>
-      {carriers.length === 0 && <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>No carriers in the directory yet.</p>}
+      {carriers.length === 0 && <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>No carriers in the directory yet.</p>}
       {carriers.map(c => {
         const appt = byCarrier[c.id]
         const status = appt?.status || 'pending'
         return (
           <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 0', borderBottom: 'var(--border-w) solid var(--border)' }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>{c.name}</p>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{c.name}</p>
               {appt?.appointed_on && (
-                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>Appointed {appt.appointed_on}</p>
+                <p style={{ margin: '2px 0 0', fontSize: 12.5, color: 'var(--text-muted)' }}>Appointed {appt.appointed_on}</p>
               )}
             </div>
             <AnchoredSelectField
@@ -538,7 +547,7 @@ function IntegrationsPanel({ profile }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ ...card, padding: '20px 22px' }}>
+      <div style={{ ...card }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{
             width: 34, height: 34, borderRadius: 8, background: 'var(--bg-elevated)',
@@ -548,13 +557,13 @@ function IntegrationsPanel({ profile }) {
             <Video size={16} style={{ color: 'var(--text-secondary)' }} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Daily.co</p>
-            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Daily.co</p>
+            <p style={{ margin: '2px 0 0', fontSize: 12.5, color: 'var(--text-muted)' }}>
               Powers the always-open Live Room on Team → Meetings
             </p>
           </div>
           <span style={{
-            fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 4, flexShrink: 0,
+            fontSize: 12, fontWeight: 600, padding: '3px 8px', borderRadius: 4, flexShrink: 0,
             color: connected ? 'var(--success)' : 'var(--text-muted)',
             background: connected ? 'var(--success-dim)' : 'var(--bg-elevated)',
           }}>
@@ -571,14 +580,14 @@ function IntegrationsPanel({ profile }) {
         {isAdmin && editing && (
           <div style={{ marginTop: 14, maxWidth: 420 }}>
             <TextField label="Daily.co room URL" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://your-team.daily.co/live-room" />
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+            <p style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 6 }}>
               Create a free room at daily.co (Rooms → Create room) and paste its URL here.
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
               <button
                 onClick={save}
                 disabled={updateSettings.isPending}
-                style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 12, opacity: updateSettings.isPending ? 0.6 : 1 }}
+                style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 13, opacity: updateSettings.isPending ? 0.6 : 1 }}
               >
                 {updateSettings.isPending ? <Loader2 size={13} className="animate-spin" /> : 'Save'}
               </button>
@@ -598,7 +607,7 @@ function IntegrationsPanel({ profile }) {
         )}
       </div>
 
-      <div style={{ ...card, padding: '20px 22px' }}>
+      <div style={{ ...card }}>
         <p style={cardTitle}>More integrations</p>
         <GapNote>
           A dialer connection (Live Call) is a reasonable future addition here, but nothing's been specified yet —
@@ -700,9 +709,9 @@ function CallerIdPanel({ profile }) {
   }
 
   return (
-    <div style={{ ...card, padding: '20px 22px' }}>
+    <div style={{ ...card }}>
       <p style={cardTitle}>Caller ID</p>
-      <p style={{ margin: '0 0 16px', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 560 }}>
+      <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 560 }}>
         When Fulfillment calls one of your clients to work their cancellation, the client sees <b>your</b> number,
         the one they already know from your call, so they're more likely to pick up. Fulfillment always says
         they're calling <b>on your behalf</b>. They never say they are you.
@@ -722,10 +731,10 @@ function CallerIdPanel({ profile }) {
             background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)',
           }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', fontFamily: MONO }}>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', fontFamily: MONO }}>
                 {formatUsPhone(profile.caller_id_number)}
               </p>
-              <p style={{ margin: '3px 0 0', fontSize: 11, color: profile.caller_id_enabled ? 'var(--success)' : 'var(--text-muted)' }}>
+              <p style={{ margin: '3px 0 0', fontSize: 12.5, color: profile.caller_id_enabled ? 'var(--success)' : 'var(--text-muted)' }}>
                 {profile.caller_id_enabled
                   ? "On: Fulfillment's calls to your clients show this number"
                   : 'Off: Fulfillment calls from their own number'}
@@ -737,7 +746,7 @@ function CallerIdPanel({ profile }) {
             <button onClick={() => { setChanging(true); setPhone('') }} style={ghostBtn}>Change number</button>
             {confirmRemove ? (
               <>
-                <span style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>Remove this number?</span>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Remove this number?</span>
                 <button onClick={remove} disabled={busy} style={{ ...ghostBtn, color: 'var(--danger)' }}>Remove</button>
                 <button onClick={() => setConfirmRemove(false)} style={ghostBtn}>Keep</button>
               </>
@@ -763,13 +772,13 @@ function CallerIdPanel({ profile }) {
             <button
               onClick={start}
               disabled={busy || digits.length < 10}
-              style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 12, opacity: busy || digits.length < 10 ? 0.5 : 1 }}
+              style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 13, opacity: busy || digits.length < 10 ? 0.5 : 1 }}
             >
               {busy ? <Loader2 size={13} className="animate-spin" /> : 'Verify number'}
             </button>
             {changing && <button onClick={() => setChanging(false)} style={ghostBtn}>Cancel</button>}
           </div>
-          <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+          <p style={{ margin: '8px 0 0', fontSize: 12.5, color: 'var(--text-muted)' }}>
             We'll call this number once. Keep your phone handy.
           </p>
         </div>
@@ -781,29 +790,29 @@ function CallerIdPanel({ profile }) {
           maxWidth: 420, padding: '16px 18px', borderRadius: 8,
           background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
         }}>
-          <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
             Calling <span style={{ fontFamily: MONO }}>{formatUsPhone(pending.phone)}</span> now. Answer, and when asked, key in:
           </p>
-          <p style={{ margin: '10px 0', fontSize: 30, fontWeight: 700, letterSpacing: 6, color: 'var(--text-primary)', fontFamily: MONO }}>
+          <p style={{ margin: '10px 0', fontSize: 30, fontWeight: 600, letterSpacing: 6, color: 'var(--text-primary)', fontFamily: MONO }}>
             {pending.code}
           </p>
           {timedOut ? (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 11.5, color: 'var(--warning)' }}>Didn't hear back from that call.</span>
+              <span style={{ fontSize: 13, color: 'var(--warning)' }}>Didn't hear back from that call.</span>
               <button onClick={start} disabled={busy} style={ghostBtn}>Call me again</button>
               <button onClick={cancelPending} style={ghostBtn}>Cancel</button>
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <Loader2 size={13} className="animate-spin" style={{ color: 'var(--accent)', flexShrink: 0 }} />
-              <span style={{ fontSize: 11.5, color: 'var(--text-secondary)', flex: 1 }}>Waiting for you to enter the code…</span>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)', flex: 1 }}>Waiting for you to enter the code…</span>
               <button onClick={cancelPending} style={ghostBtn}>Cancel</button>
             </div>
           )}
         </div>
       )}
 
-      {error && <p style={{ margin: '12px 0 0', fontSize: 12, color: 'var(--danger)' }}>{error}</p>}
+      {error && <p style={{ margin: '12px 0 0', fontSize: 13, color: 'var(--danger)' }}>{error}</p>}
     </div>
   )
 }

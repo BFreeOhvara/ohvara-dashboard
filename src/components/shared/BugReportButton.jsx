@@ -26,7 +26,7 @@ const buttonBase = {
   position: 'fixed', bottom: 24, right: 24, zIndex: 9998,
   width: BTN_SIZE, height: BTN_SIZE, borderRadius: '50%',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: '#13131F', border: '0.5px solid var(--border)',
+  background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
   color: 'var(--text-secondary)', cursor: 'pointer',
   boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
 }
@@ -71,7 +71,7 @@ function ReportForm({ profile }) {
         <div style={{
           position: 'fixed', bottom: 24 + BTN_SIZE + 12, right: 24, zIndex: 9998,
           display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px',
-          background: '#13131F', border: '0.5px solid var(--border)', borderRadius: 8,
+          background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8,
           fontSize: 12.5, color: 'var(--text-primary)', boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
         }}>
           <CheckCircle2 size={14} style={{ color: 'var(--success)' }} /> Bug report sent — thanks!
@@ -86,7 +86,7 @@ function ReportForm({ profile }) {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              width: 340, background: '#13131F', border: '0.5px solid var(--border)',
+              width: 340, background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
               borderRadius: 10, padding: 18, boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
             }}
           >
@@ -185,7 +185,7 @@ function AdminInbox() {
           style={{
             position: 'fixed', bottom: 24 + BTN_SIZE + 12, right: 24, zIndex: 9998,
             width: 380, maxHeight: 480, display: 'flex', flexDirection: 'column',
-            background: '#13131F', border: '0.5px solid var(--border)', borderRadius: 10,
+            background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 10,
             overflow: 'hidden', boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
           }}
         >

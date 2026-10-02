@@ -1,28 +1,34 @@
-/* Google Fonts — must precede @tailwind */
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ============================================================
-   Ohvara Design System — Premium Glass / Linear / Vercel
+   Ohvara Design System
    All components consume via var() — zero hardcoded hex.
-   Glass elements may use backdrop-filter and box-shadow.
    ============================================================ */
-/* Tokens below are a literal port of the approved Claude Design export
-   (`media/claude-design-export-ohvara-dashboard-v3.html` in the vault) —
-   same names, same values, same light-mode and sidebar overrides. Do not
-   "improve" them; the export is the visual source of truth (Prompt 327). */
+/* Prompt 669 — tokens re-laid on Restorix Portal's design system (the
+   layered base < surface < elevated < muted ladder, 1px hairline borders,
+   neutral text alphas, an eyebrow accent shade) while keeping Ohvara's own
+   brand hues: the v12 blue accent in dark, the logo teal + navy in light.
+   Fonts are self-hosted via @fontsource (main.jsx): Space Grotesk for display
+   headings, Manrope for UI text, JetBrains Mono for every number.
+   Replaces the Claude Design export port (Prompt 327) — the solid navy/teal
+   sidebar and 3px teal light-mode borders are gone. To bring the coloured
+   sidebar back, point --bg-sidebar at the old value (#192C4F dark, #008674
+   light); nothing else depends on it. Contrast checked with the WCAG formula,
+   not eyeballed: light --accent #007A69 is 5.3:1 on white, light
+   --accent-deep #00695B is 6.1:1 on --bg-elevated, dark --accent-deep
+   #A9C0EE is 10:1 on --bg-surface. */
 :root {
-  /* Surface hierarchy — solid, per DESIGN.md v10/v13 */
+  /* Surface ladder: page < card < inner row/control < muted */
   --bg-base:       #0A0A0F;
-  --bg-sidebar:    #192C4F;
+  --bg-sidebar:    #13131A;
   --bg-surface:    #13131A;
   --bg-elevated:   #1C1C26;
-  --bg-panel:      #0F2850;
+  --bg-muted:      #262634;
+  --bg-panel:      #1C1C26;
   --bg-overlay:    #1C1C26;
-  /* Inset panels — recessed containers (ScriptWalk shell, script panels) */
+  /* Inset panels — recessed containers */
   --bg-inset:      #0A0A12;
   /* Legacy aliases — kept so existing components don't break */
   --bg-deep:       #0A0A0F;
@@ -33,20 +39,21 @@
   /* Border */
   --border:        #2A2A3A;
   --border-hover:  #3A3A4C;
+  --border-strong: #3A3A4C;
   --border-w:      1px;
-  /* v13 — sidebar-only divider lines, white so they read against the navy */
-  --sidebar-border:#F0F0F5;
-  --hover-bg:      #27272E;
+  --sidebar-border:#2A2A3A;
+  --hover-bg:      #1C1C26;
 
-  /* Typography */
-  --text-primary:   #FFFFFF;
-  --text-secondary: #93A6C4;
-  --text-muted:     #5E7195;
-  --text-dim:       #45566F;
+  /* Text */
+  --text-primary:   #F0F0F5;
+  --text-secondary: #A3A9B8;
+  --text-muted:     #767C8E;
+  --text-dim:       #555A69;
 
-  /* Accent — v12 blue derived from the sidebar hue */
+  /* Accent — v12 blue derived from the brand navy hue */
   --accent:         #4B79CE;
   --accent-hover:   #6B93D9;
+  --accent-deep:    #A9C0EE;
   --accent-glow:    rgba(75,121,206,0.20);
   --accent-subtle:  rgba(75,121,206,0.08);
   --accent-dim:     rgba(75,121,206,0.16);
@@ -54,75 +61,72 @@
 
   /* Status — solid + dim + border */
   --success:      #22C55E;
-  --success-dim:  rgba(34,197,94,0.10);
-  --success-bd:   rgba(34,197,94,0.25);
+  --success-dim:  rgba(34,197,94,0.12);
+  --success-bd:   rgba(34,197,94,0.28);
   --warning:      #F59E0B;
-  --warning-dim:  rgba(245,158,11,0.10);
-  --warning-bd:   rgba(245,158,11,0.25);
+  --warning-dim:  rgba(245,158,11,0.12);
+  --warning-bd:   rgba(245,158,11,0.28);
   --danger:       #EF4444;
-  --danger-dim:   rgba(239,68,68,0.10);
-  --danger-bd:    rgba(239,68,68,0.25);
-  --info:         #3B82F6;
-  --info-dim:     rgba(59,130,246,0.10);
-  --info-bd:      rgba(59,130,246,0.25);
+  --danger-dim:   rgba(239,68,68,0.12);
+  --danger-bd:    rgba(239,68,68,0.28);
+  --info:         #60A5FA;
+  --info-dim:     rgba(96,165,250,0.12);
+  --info-bd:      rgba(96,165,250,0.28);
   --purple:       #A855F7;
-  --purple-dim:   rgba(168,85,247,0.10);
-  --purple-bd:    rgba(168,85,247,0.25);
+  --purple-dim:   rgba(168,85,247,0.12);
+  --purple-bd:    rgba(168,85,247,0.28);
   --pink:         #EC4899;
-  --pink-dim:     rgba(236,72,153,0.10);
-  --pink-bd:      rgba(236,72,153,0.25);
+  --pink-dim:     rgba(236,72,153,0.12);
+  --pink-bd:      rgba(236,72,153,0.28);
+
+  /* Particle background (ParticleField) — canvas reads these at runtime */
+  --particle-line: 75,121,206;
+  --particle-dot:  rgba(107,147,217,0.55);
 
   /* Typography */
-  --font-sans: 'Geist', 'Inter', system-ui, sans-serif;
-  --font-ui:   'Geist', 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', monospace;
-  --text-xs:   11px;
+  --font-sans:    'Manrope', system-ui, sans-serif;
+  --font-ui:      'Manrope', system-ui, sans-serif;
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'IBM Plex Mono', monospace;
+  --text-xs:   12px;
   --text-sm:   13px;
   --text-base: 14px;
   --text-lg:   16px;
   --text-xl:   18px;
   --text-2xl:  22px;
-  --text-3xl:  28px;
+  --text-3xl:  30px;
 
   /* Spacing — 4px grid */
   --sp-1: 4px;  --sp-2: 8px;   --sp-3: 12px;
   --sp-4: 16px; --sp-5: 24px;  --sp-6: 32px;
 
-  /* Radius */
+  /* Radius — card is Restorix's rounded-card (1rem) */
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
-  --radius-xl: 10px;
-  --radius-glass: 12px;
+  --radius-xl: 12px;
+  --radius-card: 16px;
+  --radius-glass: 16px;
 }
 
-/* Light mode — teal family, straight from the export. `--border-w` widening
-   to 3px is deliberate there, not a typo. */
+/* Light mode — cool navy-tinted canvas, white cards, navy text, teal accent. */
 [data-theme="light"] {
-  --bg-base:#F3F4F6; --bg-sidebar:#008674; --bg-surface:#FFFFFF; --bg-elevated:#EAF6F4; --bg-panel:#FFFFFF;
-  --bg-overlay:#EAF6F4; --bg-inset:#F3F4F6; --bg-deep:#F3F4F6; --bg-1:#FFFFFF; --bg-2:#EAF6F4; --bg-3:#EAF6F4;
-  --accent:#024F46; --accent-hover:#013A33; --accent-dim:#D2EFEA; --accent-border:rgba(2,79,70,0.35);
-  --accent-glow:rgba(2,79,70,0.20); --accent-subtle:#D2EFEA;
-  --text-primary:#016F62; --text-secondary:#008674; --text-muted:#2E8B7C; --text-dim:#2E8B7C;
-  --border:rgba(0,134,116,0.36); --border-hover:rgba(0,134,116,0.55); --border-w:3px;
-  --sidebar-border:rgba(255,255,255,0.30);
-  --hover-bg:#EAF6F4;
-  --success:#0A5026; --success-dim:#DCF3E4; --success-bd:rgba(10,80,38,0.35);
-  --warning:#7A3608; --warning-dim:#FBE7D2; --warning-bd:rgba(122,54,8,0.35);
-  --danger:#8A1F1F;  --danger-dim:#FBDCDC;  --danger-bd:rgba(138,31,31,0.35);
-  --info:#16408A;    --info-dim:#DCE8FB;    --info-bd:rgba(22,64,138,0.35);
-  --purple:#5B21B6;  --purple-dim:#EDE4FB;  --purple-bd:rgba(91,33,182,0.35);
-  --pink:#9D174D;    --pink-dim:#FCE4EE;    --pink-bd:rgba(157,23,77,0.35);
-}
-
-/* The sidebar carries its own scale in both modes — it sits on navy (dark)
-   or teal (light), so elevated/border/text tokens are re-pointed inside it. */
-aside { --bg-elevated:#153761; }
-[data-theme="light"] aside {
-  --text-primary:#FFFFFF; --text-secondary:#FFFFFF; --text-muted:#FFFFFF;
-  --border:rgba(255,255,255,0.20); --border-hover:rgba(255,255,255,0.36);
-  --bg-elevated:rgba(255,255,255,0.14);
-  --accent:#FFFFFF; --accent-dim:rgba(255,255,255,0.18); --accent-border:rgba(255,255,255,0.38);
+  --bg-base:#E8ECF2; --bg-sidebar:#FFFFFF; --bg-surface:#FFFFFF; --bg-elevated:#F3F6F9; --bg-muted:#DFE5EE;
+  --bg-panel:#F3F6F9; --bg-overlay:#FFFFFF; --bg-inset:#E8ECF2; --bg-deep:#E8ECF2; --bg-1:#FFFFFF; --bg-2:#F3F6F9; --bg-3:#F3F6F9;
+  --accent:#007A69; --accent-hover:#006557; --accent-deep:#00695B;
+  --accent-dim:#D9F1ED; --accent-border:rgba(0,122,105,0.35); --accent-glow:rgba(0,122,105,0.18); --accent-subtle:#EAF7F4;
+  --text-primary:#0A1F44; --text-secondary:#4A5A75; --text-muted:#6B7A92; --text-dim:#97A2B4;
+  --border:rgba(10,31,68,0.12); --border-hover:rgba(10,31,68,0.22); --border-strong:rgba(10,31,68,0.22); --border-w:1px;
+  --sidebar-border:rgba(10,31,68,0.12);
+  --hover-bg:#F3F6F9;
+  --success:#136C37; --success-dim:#DCF3E6; --success-bd:rgba(19,108,55,0.28);
+  --warning:#9A4508; --warning-dim:#FDEFD9; --warning-bd:rgba(154,69,8,0.28);
+  --danger:#B42318;  --danger-dim:#FBE4E1;  --danger-bd:rgba(180,35,24,0.28);
+  --info:#1D4ED8;    --info-dim:#E0E9FD;    --info-bd:rgba(29,78,216,0.28);
+  --purple:#5B21B6;  --purple-dim:#EDE4FB;  --purple-bd:rgba(91,33,182,0.28);
+  --pink:#9D174D;    --pink-dim:#FCE4EE;    --pink-bd:rgba(157,23,77,0.28);
+  --particle-line: 0,122,105;
+  --particle-dot:  rgba(0,191,166,0.55);
 }
 [data-theme="light"] body { color-scheme: light; }
 
@@ -201,15 +205,15 @@ aside { --bg-elevated:#153761; }
   * { box-sizing: border-box; }
   html { color-scheme: dark; }
 
-  /* 13px / 600 is the export's own body type — the whole design is drawn
-     against it, so page sizes below are relative to this, not to 14/400. */
+  /* Prompt 669 — 14px / 400 Manrope body, matching Restorix Portal. Weight
+     is carried by headings and labels, not by every line of body text. */
   body {
     margin: 0;
     background-color: var(--bg-base);
     color: var(--text-secondary);
     font-family: var(--font-sans);
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 400;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -220,9 +224,9 @@ aside { --bg-elevated:#153761; }
      design is a flat near-black canvas, so they're gone (Prompt 327). */
   #root { min-height: 100vh; position: relative; z-index: 1; }
 
-  h1 { font-size: var(--text-xl); font-weight: 700; color: var(--text-primary); margin: 0; letter-spacing: -0.01em; }
-  h2 { font-size: var(--text-lg); font-weight: 700; color: var(--text-primary); margin: 0; }
-  h3 { font-size: var(--text-base); font-weight: 700; color: var(--text-secondary); margin: 0; }
+  h1 { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 500; color: var(--text-primary); margin: 0; letter-spacing: -0.01em; }
+  h2 { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 500; color: var(--text-primary); margin: 0; }
+  h3 { font-size: var(--text-base); font-weight: 600; color: var(--text-secondary); margin: 0; }
 
   a  { color: inherit; text-decoration: none; }
   button { font-family: inherit; cursor: pointer; }
@@ -235,12 +239,12 @@ aside { --bg-elevated:#153761; }
 
   /* ── Cards ──
      `.glass` keeps its name (dozens of call sites) but is no longer glass:
-     the approved design uses a flat --bg-surface card with a 1px border and
-     an 8px radius. No blur, no lift, no shadow. */
+     a flat --bg-surface card with a 1px border and Restorix's 16px card
+     radius (Prompt 669). No blur, no lift, no shadow. */
   .glass {
     background: var(--bg-surface);
     border: var(--border-w) solid var(--border);
-    border-radius: 8px;
+    border-radius: var(--radius-card);
     transition: border-color 0.15s;
   }
   .glass:hover {
@@ -250,20 +254,64 @@ aside { --bg-elevated:#153761; }
   .glass-accent {
     background: var(--accent-dim);
     border: var(--border-w) solid var(--accent-border);
-    border-radius: 8px;
+    border-radius: var(--radius-card);
   }
 
-  /* Sidebar — solid navy (teal in light mode) per DESIGN.md v10/v13 */
+  /* Prompt 669 — Restorix's eyebrow label: small mono caps in the accent's
+     deep shade. Used for card labels, table heads, nav group headers. */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-deep);
+  }
+  .font-display { font-family: var(--font-display); }
+
+  /* Sidebar surface — matches the card surface (Prompt 669) */
   .sidebar-glass {
     background: var(--bg-sidebar);
     border-right: var(--border-w) solid var(--border) !important;
   }
 
+  /* Prompt 669 — sidebar nav rows, Restorix's NavItemLink: rounded-lg
+     rows, raised-surface fill + accent text when active. Hover lives here
+     (not inline handlers) so it can't stick after a click. */
+  .nav-item {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 8px 12px; border-radius: 8px;
+    font-size: 14px; font-weight: 500; color: var(--text-secondary);
+    transition: background-color 120ms ease, color 120ms ease;
+  }
+  .nav-item:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .nav-item.is-active { background: var(--bg-elevated); color: var(--accent); font-weight: 600; }
+  .nav-item.is-collapsed { justify-content: center; padding: 9px 0; }
+  .menu-row {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 9px 12px; border: none; background: transparent; text-align: left;
+    font-size: 13.5px; font-weight: 500; color: var(--text-primary);
+    transition: background-color 120ms ease;
+  }
+  .menu-row:hover { background: var(--bg-muted); }
+  .icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    border: var(--border-w) solid var(--border); border-radius: 999px;
+    background: var(--bg-surface); color: var(--text-secondary);
+    transition: border-color 120ms ease, color 120ms ease;
+  }
+  .icon-btn:hover { border-color: var(--border-strong); color: var(--text-primary); }
+
+  /* Particle background layer — viewport-fixed, offset past the sidebar at
+     md+ (the sidebar is an off-canvas drawer below md). */
+  .particle-layer { position: fixed; top: 0; bottom: 0; right: 0; left: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  @media (min-width: 768px) { .particle-layer { left: var(--sb-w, 240px); } }
+
   /* Content column offset — matches the fixed sidebar's width at md+ only
      (below md the sidebar is an off-canvas drawer and takes no space). */
   .app-main { margin-left: 0; transition: margin-left 150ms; }
   @media (min-width: 768px) {
-    .app-main { margin-left: var(--sb-w, 270px); }
+    .app-main { margin-left: var(--sb-w, 240px); }
   }
 
   /* ── Page & element entrances ── */

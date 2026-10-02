@@ -11,10 +11,9 @@ export function Switch({ checked, onChange, disabled = false }) {
       disabled={disabled}
       onClick={() => onChange(!checked)}
       style={{
-        width: 36, height: 20, borderRadius: 10, flexShrink: 0,
+        width: 44, height: 24, borderRadius: 12, flexShrink: 0,
         border: 'none', padding: 2, cursor: disabled ? 'not-allowed' : 'pointer',
-        background: checked ? 'var(--accent)' : 'var(--bg-elevated)',
-        boxShadow: checked ? 'none' : 'inset 0 0 0 0.5px var(--border)',
+        background: checked ? 'var(--accent)' : 'var(--bg-muted)',
         opacity: disabled ? 0.5 : 1,
         transition: 'background 0.15s ease',
         display: 'flex', alignItems: 'center',
@@ -22,7 +21,7 @@ export function Switch({ checked, onChange, disabled = false }) {
       }}
     >
       <span style={{
-        width: 16, height: 16, borderRadius: '50%', background: '#fff',
+        width: 20, height: 20, borderRadius: '50%', background: '#fff',
         boxShadow: '0 1px 2px rgba(0,0,0,0.25)',
         transition: 'transform 0.15s ease',
       }} />

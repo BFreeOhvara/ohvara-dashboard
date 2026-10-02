@@ -85,8 +85,8 @@ export function AnchoredSelectField({ label, value, onChange, options, placehold
           style={{
             position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
             maxHeight: 240, overflowY: 'auto',
-            background: '#13131F', border: 'var(--border-w) solid var(--border)', borderRadius: 6,
-            boxShadow: '0 16px 48px rgba(0,0,0,0.4)', zIndex: 20,
+            background: 'var(--bg-overlay)', border: 'var(--border-w) solid var(--border-strong)', borderRadius: 10,
+            boxShadow: '0 16px 40px rgba(0,0,0,0.22)', zIndex: 20, padding: 4,
           }}
         >
           {options.map(o => (
@@ -94,7 +94,7 @@ export function AnchoredSelectField({ label, value, onChange, options, placehold
               key={o.value}
               onClick={() => { onChange(o.value); setOpen(false) }}
               style={{
-                padding: '7px 10px', fontSize: 12.5, cursor: 'pointer',
+                padding: '8px 10px', fontSize: 14, cursor: 'pointer', borderRadius: 6,
                 color: o.value === value ? 'var(--accent)' : 'var(--text-primary)',
                 background: o.value === value ? 'var(--accent-dim)' : 'transparent',
               }}
@@ -114,7 +114,7 @@ export function AnchoredSelectField({ label, value, onChange, options, placehold
 // populate yet. Never substitute invented data for one of these.
 export function GapNote({ children }) {
   return (
-    <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+    <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
       {children}
     </p>
   )

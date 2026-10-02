@@ -3,10 +3,10 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Search, Phone, CalendarPlus, Check, X } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useAgentBookings, useLegacyPolicyCount, useRescheduleBooking } from '../../hooks/useAgentBookings'
-import { card, fieldLabel, primaryBtn, ghostBtn, MONO } from '../../lib/exportStyles'
+import { fieldLabel, primaryBtn, ghostBtn, MONO, DISPLAY } from '../../lib/exportStyles'
 import { Segmented } from '../../components/ui/Segmented'
 import { AnchoredSelectField, GapNote } from '../../components/ui/ExportForm'
-import { ClientRow, EmptyNote, SlotPicker } from '../../components/agent/AgentUI'
+import { ClientRow, EmptyNote, SlotPicker, ListCard } from '../../components/agent/AgentUI'
 import { fullName } from '../../lib/policyFormat'
 import { slotToISO, localDateISO, fmtBooking, isFarOut } from '../../lib/scheduling'
 import { stageOf, SUBSTATUS_LABEL, digits, useNow } from '../../lib/agentBookings'
@@ -23,6 +23,10 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 //
 // Admin lands here too (nav "Clients") and sees every agent's bookings, with
 // an agent filter; the test account is held out of that company-wide view.
+//
+// Prompt 669 — restyled to Restorix Portal's design system: segmented status
+// filter, one list card with an eyebrow header (Restorix's tables), and the
+// client detail opening in place under its row instead of as a separate card.
 
 const FILTERS = ['all', 'booked', 'inProgress', 'cancelled']
 const FILTER_LABEL = { all: 'All', booked: 'Booked', inProgress: 'In progress', cancelled: 'Cancelled' }
@@ -79,8 +83,8 @@ export default function Clients() {
   }
 
   return (
-    <div style={{ maxWidth: 1100, display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <Segmented
           value={filter} onChange={setFilter}
           options={FILTERS.map(f => ({ value: f, label: `${FILTER_LABEL[f]} (${counts[f]})` }))}
@@ -88,55 +92,56 @@ export default function Clients() {
         />
         <div style={{ flex: 1 }} />
         {!isAdmin && (
-          <button onClick={() => navigate('/agent/book')} style={{ ...primaryBtn, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <CalendarPlus size={14} /> Book a call
+          <button onClick={() => navigate('/agent/book')} style={primaryBtn}>
+            <CalendarPlus size={16} /> Book a call
           </button>
         )}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 8, height: 34, padding: '0 12px',
+          display: 'flex', alignItems: 'center', gap: 10, height: 40, padding: '0 14px',
           background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
-          borderRadius: 6, flex: '1 1 220px', maxWidth: 360,
+          borderRadius: 10, flex: '1 1 240px', maxWidth: 380,
         }}>
-          <Search size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+          <Search size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           <input
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search name, phone, carrier…"
-            style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', color: 'var(--text-primary)', fontSize: 12.5, outline: 'none' }}
+            style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}
           />
         </div>
         {isAdmin && agents.length > 1 && (
           <AnchoredSelectField
             value={agentId} onChange={setAgentId}
             options={[{ value: '', label: 'All agents' }, ...agents]}
-            style={{ width: 200 }}
+            style={{ width: 220 }}
           />
         )}
-        <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+        <span style={{ fontFamily: MONO, fontSize: 12.5, color: 'var(--text-muted)' }}>
           {isLoading ? 'Loading…' : `${list.length} of ${rows.length} client${rows.length === 1 ? '' : 's'}`}
         </span>
       </div>
 
-      {list.length === 0 ? (
-        <EmptyNote>
-          {isLoading ? 'Loading clients…'
-            : rows.length === 0 ? 'No clients yet — everyone you book a call for shows up here.'
-              : 'No clients match.'}
-        </EmptyNote>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {list.map(p => (
-            <div key={p.id}>
-              <ClientRow p={p} now={now} showAgent={isAdmin} onClick={() => toggle(p.id)} />
-              {openId === p.id && (
-                <ClientDetail p={p} now={now} canMove={isAdmin || p.agent_id === profile?.id} onClose={() => toggle(p.id)} />
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      <ListCard
+        head
+        empty={(
+          <EmptyNote>
+            {isLoading ? 'Loading clients…'
+              : rows.length === 0 ? 'No clients yet — everyone you book a call for shows up here.'
+                : 'No clients match.'}
+          </EmptyNote>
+        )}
+      >
+        {list.map((p, i) => (
+          <div key={p.id}>
+            <ClientRow p={p} now={now} showAgent={isAdmin} first={i === 0} active={openId === p.id} onClick={() => toggle(p.id)} />
+            {openId === p.id && (
+              <ClientDetail p={p} now={now} canMove={isAdmin || p.agent_id === profile?.id} onClose={() => toggle(p.id)} />
+            )}
+          </div>
+        ))}
+      </ListCard>
 
       {legacyCount > 0 && (
         <GapNote>
@@ -160,25 +165,25 @@ function ClientDetail({ p, now, canMove, onClose }) {
 
   return (
     <div style={{
-      ...card, marginTop: 4, padding: '18px 20px',
-      borderColor: 'var(--accent-border)', borderTopLeftRadius: 4, borderTopRightRadius: 4,
+      padding: '20px 24px 22px', background: 'var(--bg-elevated)',
+      borderTop: 'var(--border-w) solid var(--border)', boxShadow: 'inset 3px 0 0 var(--accent)',
     }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{fullName(p)}</p>
+          <p style={{ margin: 0, fontFamily: DISPLAY, fontSize: 19, fontWeight: 500, letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>{fullName(p)}</p>
           {p.client_phone && (
             <a href={`tel:${digits(p.client_phone)}`} style={{
               display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 4,
-              fontSize: 13, fontFamily: MONO, color: 'var(--accent)', textDecoration: 'none',
+              fontSize: 14, fontFamily: MONO, color: 'var(--accent)', textDecoration: 'none',
             }}>
-              <Phone size={12} /> {p.client_phone}
+              <Phone size={13} /> {p.client_phone}
             </a>
           )}
         </div>
-        <button onClick={onClose} title="Close" style={{ ...ghostBtn, height: 28, padding: '0 8px' }}><X size={13} /></button>
+        <button onClick={onClose} title="Close" className="icon-btn" style={{ width: 32, height: 32 }}><X size={15} /></button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: 14, marginBottom: 18 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: 16, marginBottom: 20 }}>
         <Info label="Fulfillment call" value={fmtBooking(p.scheduled_call_at)} mono />
         <Info label="Leaving" value={p.current_carrier || 'Not noted'} />
         <Info label="Status" value={stage === 'inProgress' ? (SUBSTATUS_LABEL[p.cancellation_substatus] || 'In progress') : stage === 'cancelled' ? 'Cancelled' : 'Waiting for Fulfillment'} />
@@ -186,20 +191,20 @@ function ClientDetail({ p, now, canMove, onClose }) {
       </div>
 
       <p style={fieldLabel}>Progress</p>
-      <ol style={{ listStyle: 'none', margin: '6px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <ol style={{ listStyle: 'none', margin: '8px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
         {steps.map((s, i) => (
-          <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span style={{
-              width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+              width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              background: s.done ? 'var(--success-dim)' : 'transparent',
-              border: `1px solid ${s.done ? 'var(--success-bd)' : 'var(--border)'}`, color: 'var(--success)',
+              background: s.done ? 'var(--success)' : 'var(--bg-surface)',
+              border: s.done ? 'none' : 'var(--border-w) solid var(--border-strong)', color: '#fff',
             }}>
-              {s.done && <Check size={11} />}
+              {s.done && <Check size={13} strokeWidth={3} />}
             </span>
-            <span style={{ fontSize: 12.5, color: s.done ? 'var(--text-primary)' : 'var(--text-muted)' }}>{s.label}</span>
+            <span style={{ fontSize: 14, fontWeight: s.done ? 500 : 400, color: s.done ? 'var(--text-primary)' : 'var(--text-muted)' }}>{s.label}</span>
             {s.done && s.at && (
-              <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>{fmtBooking(s.at)}</span>
+              <span style={{ fontSize: 12.5, color: 'var(--text-muted)', fontFamily: MONO }}>{fmtBooking(s.at)}</span>
             )}
           </li>
         ))}
@@ -209,13 +214,13 @@ function ClientDetail({ p, now, canMove, onClose }) {
         moving
           ? <Reschedule p={p} now={now} onDone={() => setMoving(false)} />
           : (
-            <button onClick={() => setMoving(true)} style={{ ...ghostBtn, marginTop: 18 }}>
+            <button onClick={() => setMoving(true)} style={{ ...ghostBtn, marginTop: 20 }}>
               Move to a different time
             </button>
           )
       )}
       {stage === 'inProgress' && (
-        <p style={{ margin: '16px 0 0', fontSize: 11.5, color: 'var(--text-muted)' }}>
+        <p style={{ margin: '18px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
           Fulfillment has this one — if the time needs to change, ask them directly.
         </p>
       )}
@@ -233,18 +238,18 @@ function Reschedule({ p, now, onDone }) {
   const needsFarOk = isFarOut(iso) && !farOk
 
   return (
-    <div style={{ marginTop: 18, paddingTop: 16, borderTop: 'var(--border-w) solid var(--border)' }}>
+    <div style={{ marginTop: 20, paddingTop: 18, borderTop: 'var(--border-w) solid var(--border)' }}>
       <p style={fieldLabel}>New time</p>
       <SlotPicker date={date} slot={slot} onDate={d => { setDate(d); setSlot(''); setFarOk(false) }}
         onSlot={s => { setSlot(s); setFarOk(false) }} now={now} />
       {needsFarOk && (
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, fontSize: 12, color: 'var(--warning)' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 13, color: 'var(--warning)' }}>
           <input type="checkbox" checked={farOk} onChange={e => setFarOk(e.target.checked)} />
           More than a day out — Fulfillment is booked through then
         </label>
       )}
-      {move.isError && <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--danger)' }}>{move.error?.message}</p>}
-      <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+      {move.isError && <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--danger)' }}>{move.error?.message}</p>}
+      <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
         <button
           disabled={!iso || needsFarOk || move.isPending}
           onClick={() => move.mutate({ id: p.id, scheduledAt: iso }, { onSuccess: onDone })}
@@ -252,7 +257,7 @@ function Reschedule({ p, now, onDone }) {
         >
           {move.isPending ? 'Saving…' : iso ? `Move to ${fmtBooking(iso)}` : 'Pick a time'}
         </button>
-        <button onClick={onDone} style={{ ...ghostBtn, height: 36 }}>Cancel</button>
+        <button onClick={onDone} style={{ ...ghostBtn, height: 40 }}>Cancel</button>
       </div>
     </div>
   )
@@ -262,7 +267,7 @@ function Info({ label, value, mono }) {
   return (
     <div>
       <p style={fieldLabel}>{label}</p>
-      <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-primary)', fontFamily: mono ? MONO : undefined }}>{value}</p>
+      <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', fontFamily: mono ? MONO : undefined }}>{value}</p>
     </div>
   )
 }

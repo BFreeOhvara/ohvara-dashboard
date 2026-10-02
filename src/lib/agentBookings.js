@@ -11,7 +11,10 @@ import { useEffect, useState } from 'react'
 // are bookings; anything else is pre-pivot data.
 
 export const STAGE = {
-  booked:     { label: 'Booked',      tone: 'accent' },
+  // Prompt 669 — Booked was 'accent', which read as the same colour as
+  // In progress (both blue) in dark mode and as Cancelled (teal vs green) in
+  // light. A neutral chip for "waiting" keeps the three stages distinct.
+  booked:     { label: 'Booked',      tone: 'muted' },
   inProgress: { label: 'In progress', tone: 'info' },
   cancelled:  { label: 'Cancelled',   tone: 'success' },
 }
@@ -69,6 +72,7 @@ export function fmtDuration(hours) {
 
 export const TONE = {
   neutral: { color: 'var(--text-secondary)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
+  muted:   { color: 'var(--text-secondary)', dim: 'var(--bg-muted)',    bd: 'var(--border-strong)' },
   accent:  { color: 'var(--accent)',  dim: 'var(--accent-dim)',  bd: 'var(--accent-border)' },
   info:    { color: 'var(--info)',    dim: 'var(--info-dim)',    bd: 'var(--info-bd)' },
   warning: { color: 'var(--warning)', dim: 'var(--warning-dim)', bd: 'var(--warning-bd)' },
