@@ -38,6 +38,7 @@ const TITLES = {
   '/admin': ['Overview', 'Your day at a glance'],
   '/admin/users': ['Users & Access', 'Accounts, roles and invites'],
   '/fulfillment': ['Fulfillment', 'Claim one, cancel the old policy, move to the next'],
+  '/messages': ['Messages', 'Agents and Fulfillment, one conversation per client'],
   '/settings': ['Settings', 'Profile, regional & appearance'],
 }
 
@@ -89,7 +90,7 @@ function HeaderDivider() {
 
 export function DashboardLayout({ children }) {
   const { pathname } = useLocation()
-  const isFullWidth = pathname.includes('/messages') || pathname.includes('/quoter')
+  const isFullWidth = pathname.includes('/quoter')
 
   const [navOpen, setNavOpen] = useState(false)
   useEffect(() => { setNavOpen(false) }, [pathname])

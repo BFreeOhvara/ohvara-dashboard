@@ -12,6 +12,7 @@ import Login from './pages/Login'
 import Join from './pages/Join'
 import ResetPassword from './pages/ResetPassword'
 import Settings from './pages/Settings'
+import Messages from './pages/Messages'
 
 import AgentOverview from './pages/agent/Overview'
 import AgentBookCall from './pages/agent/BookCall'
@@ -63,6 +64,13 @@ export default function App() {
             <Route path="/settings" element={
               <ProtectedRoute allowedRoles={['agent', 'admin', 'fulfillment']}>
                 <DashboardLayout><Settings /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+
+            {/* Prompt 679 — agent <-> Fulfillment messages, per-client threads */}
+            <Route path="/messages" element={
+              <ProtectedRoute allowedRoles={['agent', 'admin', 'fulfillment']}>
+                <DashboardLayout><Messages /></DashboardLayout>
               </ProtectedRoute>
             } />
 

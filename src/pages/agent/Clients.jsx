@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { Search, Phone, CalendarPlus, Check, X } from 'lucide-react'
+import { Search, Phone, CalendarPlus, Check, X, MessageSquare } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useAgentBookings, useLegacyPolicyCount, useRescheduleBooking } from '../../hooks/useAgentBookings'
 import { fieldLabel, primaryBtn, ghostBtn, MONO, DISPLAY } from '../../lib/exportStyles'
@@ -168,6 +168,8 @@ export default function Clients() {
 }
 
 function ClientDetail({ p, now, canMove, onClose }) {
+  const { profile } = useAuth()
+  const navigate = useNavigate()
   const stage = stageOf(p)
   const [moving, setMoving] = useState(false)
 
@@ -194,6 +196,9 @@ function ClientDetail({ p, now, canMove, onClose }) {
             </a>
           )}
         </div>
+        <button onClick={() => navigate(`/messages?thread=${p.id}`)} style={ghostBtn}>
+          <MessageSquare size={14} /> {profile?.role === 'admin' ? 'Open conversation' : 'Message Fulfillment'}
+        </button>
         <button onClick={onClose} title="Close" className="icon-btn" style={{ width: 32, height: 32 }}><X size={15} /></button>
       </div>
 
@@ -235,7 +240,7 @@ function ClientDetail({ p, now, canMove, onClose }) {
       )}
       {stage === 'inProgress' && (
         <p style={{ margin: '18px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
-          Fulfillment has this one — if the time needs to change, ask them directly.
+          Fulfillment has this one — if the time needs to change, message them.
         </p>
       )}
     </div>

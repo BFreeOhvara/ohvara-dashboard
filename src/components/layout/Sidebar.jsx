@@ -3,9 +3,10 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import {
   Users, LogOut, Home, Settings, Award,
-  ChevronLeft, ClipboardList, CalendarPlus, Trophy,
+  ChevronLeft, ClipboardList, CalendarPlus, Trophy, MessageSquare,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import { useUnreadMessageCount, useMessagesRealtime } from '../../hooks/usePolicyMessages'
 import { Avatar } from '../ui/Avatar'
 import { eyebrow } from '../../lib/exportStyles'
 import ohvaraLogo from '../../assets/ohvara-logo.png'
@@ -99,6 +100,7 @@ const NAV = {
       { to: '/agent/book', label: 'Book a call', icon: CalendarPlus },
       { to: '/agent/clients', label: 'My Clients', icon: Users },
       { to: '/agent/team', label: 'Team', icon: Trophy },
+      { to: '/messages', label: 'Messages', icon: MessageSquare },
     ] },
     { group: 'Account', items: [
       { to: '/settings', label: 'Settings', icon: Settings },
@@ -111,6 +113,7 @@ const NAV = {
       { to: '/agent/book', label: 'Book a call', icon: CalendarPlus },
       { to: '/agent/clients', label: 'Clients', icon: Users },
       { to: '/agent/team', label: 'Team', icon: Trophy },
+      { to: '/messages', label: 'Messages', icon: MessageSquare },
     ] },
     { group: 'Account', items: [
       { to: '/admin/users', label: 'Users & Access', icon: Award },
@@ -121,6 +124,7 @@ const NAV = {
   fulfillment: [
     { group: 'Work', items: [
       { to: '/fulfillment', label: 'Fulfillment', icon: ClipboardList },
+      { to: '/messages', label: 'Messages', icon: MessageSquare },
     ] },
     { group: 'Account', items: [
       { to: '/settings', label: 'Settings', icon: Settings },
@@ -139,6 +143,11 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const groups = NAV[profile?.role] || []
+
+  // Prompt 679 — unread Messages badge + the one live subscription that keeps
+  // it (and an open thread) current.
+  useMessagesRealtime(profile?.id)
+  const unreadMessages = useUnreadMessageCount(!!profile?.id)
 
   // The phone drawer is always full width — collapsing is a desktop thing.
   const expanded = !collapsed || open
@@ -206,10 +215,25 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
                     end={to === '/agent' || to === '/fulfillment'}
                     onClick={onClose}
                     title={expanded ? undefined : label}
+                    style={{ position: 'relative' }}
                     className={({ isActive }) => clsx('nav-item', isActive && 'is-active', !expanded && 'is-collapsed')}
                   >
                     <Icon size={17} style={{ flexShrink: 0 }} />
                     {expanded && <span style={{ flex: 1, whiteSpace: 'nowrap' }}>{label}</span>}
+                    {to === '/messages' && unreadMessages > 0 && (
+                      <span
+                        title={`${unreadMessages} unread`}
+                        style={expanded ? {
+                          minWidth: 18, height: 18, padding: '0 5px', borderRadius: 999,
+                          background: 'var(--text-primary)', color: 'var(--bg-sidebar)', fontFamily: 'var(--font-mono)',
+                          fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        } : {
+                          position: 'absolute', top: 6, right: 12, width: 8, height: 8, borderRadius: '50%', background: 'var(--text-primary)',
+                        }}
+                      >
+                        {expanded ? (unreadMessages > 99 ? '99+' : unreadMessages) : null}
+                      </span>
+                    )}
                   </NavLink>
                 ))}
               </div>

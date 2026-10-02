@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, ArrowRight, CheckCircle2, Clock, Phone, User, Eye, EyeOff,
   ShieldAlert, Inbox, Briefcase, AlertTriangle, CircleCheckBig, Send,
@@ -465,6 +466,7 @@ function Step({ n, title, done, children, last }) {
 
 function WorkView({ p, now, profile, isAdmin, onBack, onClaimNext, nextAvailable, claimBusy }) {
   const update = useUpdatePolicy()
+  const navigate = useNavigate()
   const claimedByMe = p.assigned_fulfillment_id === profile?.id
   const canEdit = claimedByMe
   const canViewIntake = claimedByMe || isAdmin
@@ -538,6 +540,9 @@ function WorkView({ p, now, profile, isAdmin, onBack, onClaimNext, nextAvailable
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-secondary)' }}>
             <Clock size={11} /> {callback ? `Callback ${callback}` : 'No callback time set'}
           </span>
+          <button onClick={() => navigate(`/messages?thread=${p.id}`)} style={ghostBtn}>
+            <MessageCircleMore size={13} /> {isAdmin ? 'Open conversation' : 'Message agent'}
+          </button>
         </div>
       </div>
 

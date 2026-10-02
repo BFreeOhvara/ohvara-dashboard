@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { Bell, CheckCheck, Calendar, Clock, MessageSquare, Video, ClipboardCheck } from 'lucide-react'
 import { useRepNotifications, useRepUnreadCount, useRepMarkNotificationRead, useRepMarkAllRead } from '../../hooks/useNotifications'
 import { useAppointmentBookedNotifier, useAppointmentReminder5MinNotifier, useCloserCallGradedNotifier } from '../../hooks/useCloserNotificationTriggers'
@@ -8,6 +9,7 @@ const TYPE_STYLES = {
   appointment_booked:        { Icon: Calendar,      color: 'var(--success)', bg: 'var(--success-dim)' },
   appointment_reminder_5min: { Icon: Clock,          color: 'var(--warning)', bg: 'var(--warning-dim)' },
   team_message:               { Icon: MessageSquare, color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
+  policy_message:            { Icon: MessageSquare, color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
   live_room_invite:          { Icon: Video,         color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
   fulfillment_complete:      { Icon: ClipboardCheck, color: 'var(--success)', bg: 'var(--success-dim)' },
   default:                   { Icon: Bell,           color: 'var(--info)',    bg: 'var(--info-dim)'    },
@@ -26,6 +28,7 @@ function fmtTime(iso) {
 
 export function CloserNotificationBell({ profileId }) {
   const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
   const ref = useRef(null)
   const panelRef = useRef(null)
   const [coords, setCoords] = useState(null)
@@ -165,13 +168,17 @@ export function CloserNotificationBell({ profileId }) {
                       display: 'flex', gap: 10, padding: '10px 14px',
                       borderBottom: i < notifications.length - 1 ? '0.5px solid var(--border)' : 'none',
                       background: n.read ? 'transparent' : 'rgba(108,99,255,0.04)',
-                      cursor: n.read ? 'default' : 'pointer',
+                      cursor: n.read && n.type !== 'policy_message' ? 'default' : 'pointer',
                       transition: 'background 100ms',
                       animationDelay: `${i * 0.03}s`,
                     }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
                     onMouseLeave={e => { e.currentTarget.style.background = n.read ? 'transparent' : 'rgba(108,99,255,0.04)' }}
-                    onClick={() => { if (!n.read) markOne.mutate(n.id) }}
+                    onClick={() => {
+                      if (!n.read) markOne.mutate(n.id)
+                      // Prompt 679 — a message notification opens its thread.
+                      if (n.type === 'policy_message' && n.data?.link) { setOpen(false); navigate(n.data.link) }
+                    }}
                   >
                     {/* Icon */}
                     <div style={{
