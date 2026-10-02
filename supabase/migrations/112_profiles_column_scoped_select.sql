@@ -24,6 +24,10 @@
 -- columns they write. Every edge function reads profiles with the service
 -- role and is unaffected. anon loses all access (login resolves usernames via
 -- the resolve_login_email definer RPC; signup goes through claim-invite).
+--
+-- Applied live in two steps so no deploy window could break sign-in:
+-- 112a_profile_read_rpcs (the two functions below) -> client deploy 1a681a0
+-- -> 112b_profiles_column_scoped_select (the grant changes).
 
 revoke all on public.profiles from anon;
 
