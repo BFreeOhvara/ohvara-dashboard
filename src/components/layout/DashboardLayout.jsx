@@ -10,6 +10,7 @@ import { CloserNotificationBell } from '../closer/CloserNotificationBell'
 import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../ui/Avatar'
 import ParticleField from '../ui/ParticleField'
+import { BillingGate } from './BillingGate'
 
 // Shell — Prompt 669 restyle to Restorix Portal's Layout.jsx: a 64px sticky
 // header on the card surface (display-font title + subtitle on one line,
@@ -164,7 +165,7 @@ export function DashboardLayout({ children }) {
               className={isFullWidth ? 'flex-1 overflow-hidden flex flex-col' : ''}
               style={isFullWidth ? undefined : { animation: 'fadeUp 160ms ease-out' }}
             >
-              {children}
+              <BillingGate>{children}</BillingGate>
             </div>
           </main>
         </div>

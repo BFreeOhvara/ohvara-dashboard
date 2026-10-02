@@ -10,6 +10,7 @@ import { roleLabel } from '../../lib/roleLabels'
 import { MONO, card, grid3, primaryBtn, ghostBtn } from '../../lib/exportStyles'
 import { TextField, AnchoredSelectField, GapNote } from '../../components/ui/ExportForm'
 import { Avatar } from '../../components/ui/Avatar'
+import { BILLING_STATUS, TONE_STYLE, formatBillingDate } from '../../lib/billing'
 
 // Users & Access — literal port of the export's "Admin · Users" screen
 // (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines
@@ -52,6 +53,26 @@ function Pill({ children, style }) {
     }}>
       {children}
     </span>
+  )
+}
+
+// Prompt 673 — agents' $350/week retainer. Only agents are billed; everyone
+// else gets a dash. The line under the pill is the date that matters for
+// that status: next renewal, end of grace, or end of the paid week.
+function BillingCell({ u }) {
+  if (u.role !== 'agent') return <span style={{ color: 'var(--text-muted)', fontFamily: MONO, fontSize: 12 }}>—</span>
+  const status = u.billing_status || 'none'
+  const meta = BILLING_STATUS[status] || BILLING_STATUS.none
+  const when = {
+    active:   u.billing_current_period_end && `renews ${formatBillingDate(u.billing_current_period_end)}`,
+    past_due: u.billing_grace_until && `grace to ${formatBillingDate(u.billing_grace_until)}`,
+    canceled: u.billing_current_period_end && `ends ${formatBillingDate(u.billing_current_period_end)}`,
+  }[status]
+  return (
+    <div>
+      <Pill style={TONE_STYLE[meta.tone]}>{meta.label}</Pill>
+      {when && <p style={{ margin: '3px 0 0', fontSize: 10.5, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>{when}</p>}
+    </div>
   )
 }
 
@@ -249,6 +270,7 @@ export default function Users() {
                 <th style={th}>User</th>
                 <th style={th}>Role</th>
                 <th style={th}>Status</th>
+                <th style={th}>Billing</th>
                 <th style={{ ...th, textAlign: 'center' }}>2FA</th>
                 <th style={{ ...th, textAlign: 'right' }}>Last active</th>
                 <th style={{ ...th, textAlign: 'right' }} />
@@ -256,9 +278,9 @@ export default function Users() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={6} style={{ ...td, fontSize: 12.5, color: 'var(--text-muted)' }}>Loading users…</td></tr>
+                <tr><td colSpan={7} style={{ ...td, fontSize: 12.5, color: 'var(--text-muted)' }}>Loading users…</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={6} style={{ ...td, fontSize: 12.5, color: 'var(--text-muted)' }}>No users match this search.</td></tr>
+                <tr><td colSpan={7} style={{ ...td, fontSize: 12.5, color: 'var(--text-muted)' }}>No users match this search.</td></tr>
               ) : rows.map(u => {
                 const rs = ROLE_STYLE[u.role] || ROLE_STYLE.rep
                 return (
@@ -285,6 +307,7 @@ export default function Users() {
                         {u.is_active ? 'Active' : 'Inactive'}
                       </Pill>
                     </td>
+                    <td style={td}><BillingCell u={u} /></td>
                     <td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)', fontFamily: MONO, fontSize: 12 }}>—</td>
                     <td style={{ ...td, textAlign: 'right', fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
                       {lastActive(u.last_login_at)}
