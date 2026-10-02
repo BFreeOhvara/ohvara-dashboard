@@ -7,7 +7,7 @@ import { formatInTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
 // (same accent as the Call Now button) around the time only — no TZ
 // abbreviation since this always shows the viewer's own local time by
 // construction (Prompt 231 item F, filled per Prompt 232 item A).
-export function LiveClock({ timezone }) {
+export function LiveClock({ timezone, large = false }) {
   const [nowMs, setNowMs] = useState(() => Date.now())
 
   useEffect(() => {
@@ -24,10 +24,10 @@ export function LiveClock({ timezone }) {
     // Prompt 669 — Restorix's clock chip (rounded-lg accent fill, mono).
     <span style={{
       display: 'inline-block',
-      fontSize: 15, fontWeight: 500, fontFamily: 'var(--font-mono)', color: '#fff',
-      fontVariantNumeric: 'tabular-nums',
-      background: 'var(--accent)', borderRadius: 8,
-      padding: '5px 12px',
+      fontSize: large ? 44 : 15, fontWeight: large ? 600 : 500, fontFamily: 'var(--font-mono)', color: '#fff',
+      fontVariantNumeric: 'tabular-nums', lineHeight: large ? 1 : undefined, letterSpacing: large ? '-0.02em' : undefined,
+      background: 'var(--accent)', borderRadius: large ? 14 : 8,
+      padding: large ? '12px 22px' : '5px 12px',
     }}>
       {time}
     </span>

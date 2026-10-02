@@ -4,9 +4,8 @@ import { ArrowRight, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useFulfillmentQueue } from '../../hooks/usePolicies'
 import { useFulfillmentPay, useTimeEntries } from '../../hooks/useFulfillmentPay'
-import { primaryBtn, ghostBtn, eyebrow, MONO, DISPLAY } from '../../lib/exportStyles'
+import { ghostBtn, MONO, DISPLAY } from '../../lib/exportStyles'
 import { LiveClock } from '../../components/ui/LiveClock'
-import { Avatar } from '../../components/ui/Avatar'
 import { StatTile, StatGrid, SectionHead, ListCard, EmptyNote } from '../../components/agent/AgentUI'
 import { FulfillHead, FulfillRow } from '../../components/fulfillment/FulfillUI'
 import { ClockCard } from '../../components/fulfillment/ClockCard'
@@ -16,8 +15,8 @@ import { payPeriod } from '../../lib/payPeriod'
 
 // Fulfillment Overview (Prompt 681) — the Fulfillment role's landing page.
 // A step back from the desk: how the whole team is doing this week and month,
-// what needs attention across everyone, today's calls, and a per-rep
-// breakdown. The desk (/fulfillment/desk) stays the place work actually gets
+// what needs attention across everyone, and today's calls. The desk
+// (/fulfillment/desk) stays the place work actually gets
 // done; every row here opens the item there.
 //
 // Laid out like the agent Overview (greeting + clock row, four eyebrow tiles,
@@ -52,28 +51,7 @@ export default function FulfillmentOverview() {
     // Booked → cancelled, this month: how long a client waits end to end.
     const turnaround = median(doneMonth.map(p => hoursBetween(p.created_at, p.fulfillment_completed_at)))
 
-    const reps = new Map()
-    const rep = (id, name) => {
-      if (!reps.has(id)) reps.set(id, { id, name, onDesk: 0, week: 0, month: 0, hours: [] })
-      return reps.get(id)
-    }
-    for (const p of open) if (p.assigned_fulfillment_id) rep(p.assigned_fulfillment_id, p.assigned?.full_name).onDesk++
-    // A week can start in last month, so walk everything since the earlier boundary.
-    for (const p of since(done, Math.min(weekStart, monthStart))) {
-      if (!p.assigned_fulfillment_id) continue
-      const r = rep(p.assigned_fulfillment_id, p.assigned?.full_name)
-      const t = new Date(p.fulfillment_completed_at).getTime()
-      if (t >= weekStart) r.week++
-      if (t >= monthStart) {
-        r.month++
-        if (p.fulfillment_claimed_at) r.hours.push(hoursBetween(p.fulfillment_claimed_at, p.fulfillment_completed_at))
-      }
-    }
-    const team = [...reps.values()]
-      .map(r => ({ ...r, work: median(r.hours) }))
-      .sort((a, b) => b.week - a.week || b.month - a.month || (a.name || '').localeCompare(b.name || ''))
-
-    return { waiting, attention, attentionOlder, todays, doneWeek, doneMonth, turnaround, team, open }
+    return { waiting, attention, attentionOlder, todays, doneWeek, doneMonth, turnaround, open }
   }, [rows, now])
 
   const firstName = (profile?.full_name || '').split(' ')[0]
@@ -101,10 +79,7 @@ export default function FulfillmentOverview() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span className="hidden sm:inline" style={{ fontFamily: MONO, fontSize: 13, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{dateLabel}</span>
-          <span className="hidden sm:inline"><LiveClock timezone={profile?.timezone} /></span>
-          <button onClick={() => navigate('/fulfillment/desk')} style={primaryBtn}>
-            {isRep ? 'Open my desk' : 'Open the desk'} <ArrowRight size={15} />
-          </button>
+          <LiveClock timezone={profile?.timezone} large />
         </div>
       </div>
 
@@ -161,50 +136,6 @@ export default function FulfillmentOverview() {
           {g.todays.map((p, i) => <FulfillRow key={p.id} p={p} now={now} first={i === 0} onClick={() => open(p.id)} />)}
         </ListCard>
       </div>
-
-      <div>
-        <SectionHead title="The team" sub="Who has what, and what each rep has cancelled" />
-        <ListCard empty={<EmptyNote>{isLoading ? 'Loading…' : 'Nobody has claimed or cancelled anything yet this month.'}</EmptyNote>}>
-          {g.team.length > 0 && (
-            <div className="hidden md:grid md:grid-cols-[minmax(0,1.6fr)_100px_100px_100px_120px] items-center gap-x-4"
-              style={{ ...eyebrow, padding: '11px 20px', background: 'var(--bg-elevated)' }}>
-              <span>Rep</span>
-              <span style={{ justifySelf: 'end' }}>On desk</span>
-              <span style={{ justifySelf: 'end' }}>This week</span>
-              <span style={{ justifySelf: 'end' }}>This month</span>
-              <span style={{ justifySelf: 'end' }}>Claim → done</span>
-            </div>
-          )}
-          {g.team.map((r, i) => (
-            <div key={r.id}
-              className="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1.6fr)_100px_100px_100px_120px] items-center gap-x-4 gap-y-1"
-              style={{ padding: '14px 20px', borderTop: i ? 'var(--border-w) solid var(--border)' : 'none' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                <Avatar profile={{ full_name: r.name }} size={28} />
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {r.name || 'Unknown'}{r.id === profile?.id && <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> (you)</span>}
-                </span>
-              </span>
-              <span className="md:hidden" style={{ fontSize: 12.5, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                <b style={{ fontFamily: MONO, color: 'var(--text-primary)' }}>{r.week}</b> this week · <span style={{ fontFamily: MONO }}>{r.onDesk}</span> on desk
-              </span>
-              <Num value={r.onDesk} />
-              <Num value={r.week} strong />
-              <Num value={r.month} />
-              <Num value={fmtDuration(r.work)} />
-            </div>
-          ))}
-        </ListCard>
-      </div>
     </div>
-  )
-}
-
-function Num({ value, strong }) {
-  return (
-    <span className="hidden md:block"
-      style={{ justifySelf: 'end', fontFamily: MONO, fontSize: 14, fontVariantNumeric: 'tabular-nums', fontWeight: strong ? 600 : 400, color: 'var(--text-primary)' }}>
-      {value}
-    </span>
   )
 }
