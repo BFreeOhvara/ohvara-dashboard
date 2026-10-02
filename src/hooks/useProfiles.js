@@ -1,13 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
+// Full profile rows (email, phone, username, ...) are admin-only since
+// migration 112: authenticated can only SELECT profiles' directory columns
+// directly, and these lists come from the admin_list_profiles() definer RPC
+// (returns nothing for non-admins). Filters/order still apply server-side.
+const adminProfiles = () => supabase.rpc('admin_list_profiles')
+
 export function useReps() {
   return useQuery({
     queryKey: ['profiles', 'reps'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
+      const { data, error } = await adminProfiles()
         .eq('role', 'rep')
         .order('full_name')
       if (error) throw error
@@ -20,9 +24,7 @@ export function useClosers() {
   return useQuery({
     queryKey: ['profiles', 'closers'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
+      const { data, error } = await adminProfiles()
         .eq('role', 'agent')
         .order('full_name')
       if (error) throw error
@@ -35,9 +37,7 @@ export function useAdmins() {
   return useQuery({
     queryKey: ['profiles', 'admins'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
+      const { data, error } = await adminProfiles()
         .eq('role', 'admin')
         .order('full_name')
       if (error) throw error
@@ -50,9 +50,7 @@ export function useAllProfiles() {
   return useQuery({
     queryKey: ['profiles', 'all'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
+      const { data, error } = await adminProfiles()
         .order('created_at', { ascending: true })
       if (error) throw error
       return data

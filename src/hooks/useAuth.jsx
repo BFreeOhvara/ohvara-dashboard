@@ -58,11 +58,12 @@ export function AuthProvider({ children }) {
     const isNewUser = profileUserId.current !== userId
     if (isNewUser) setProfileLoading(true)
     try {
+      // Own full row via a definer RPC — authenticated only has SELECT on
+      // profiles' directory columns since migration 112. get_my_profile()
+      // is keyed on auth.uid(), so userId is only used to track changes.
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
+        .rpc('get_my_profile')
+        .maybeSingle()
 
       if (error) {
         console.error('[useAuth] profiles query failed:', error.code, error.message)
