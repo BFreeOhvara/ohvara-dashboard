@@ -21,6 +21,7 @@ import AgentTeam from './pages/agent/Team'
 import FulfillmentQueue from './pages/fulfillment/FulfillmentQueue'
 import FulfillmentOverview from './pages/fulfillment/Overview'
 import FulfillmentPipeline from './pages/fulfillment/Pipeline'
+import FulfillmentGettingPaid from './pages/fulfillment/GettingPaid'
 import Users from './pages/admin/Users'
 
 const qc = new QueryClient({
@@ -135,6 +136,12 @@ export default function App() {
             <Route path="/fulfillment/pipeline" element={
               <ProtectedRoute allowedRoles={['fulfillment', 'admin']}>
                 <DashboardLayout><FulfillmentPipeline /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            {/* Prompt 683 — the rep's Getting Paid view, promoted out of Settings. */}
+            <Route path="/fulfillment/getting-paid" element={
+              <ProtectedRoute allowedRoles={['fulfillment']}>
+                <DashboardLayout><FulfillmentGettingPaid /></DashboardLayout>
               </ProtectedRoute>
             } />
 

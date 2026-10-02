@@ -4,7 +4,7 @@ import { useClockIn, useClockOut } from '../../hooks/useFulfillmentPay'
 import { fmtShift, sinceLabel } from '../../lib/payPeriod'
 
 // Clock in / clock out (Prompt 681). Shown on the Fulfillment Overview and in
-// Settings → Getting Paid. The server stamps both times; this just says which.
+// Getting Paid. The server stamps both times; this just says which.
 export function ClockCard({ entries = [], pay, now, loading, style }) {
   const open = entries.find(e => !e.clock_out)
   const clockIn = useClockIn()

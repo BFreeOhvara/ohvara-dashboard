@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import {
   Users, LogOut, Home, Settings, Award,
-  ChevronLeft, ClipboardList, CalendarPlus, Trophy, MessageSquare, ListFilter,
+  ChevronLeft, ClipboardList, CalendarPlus, Trophy, MessageSquare, ListFilter, Wallet,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useUnreadMessageCount, useMessagesRealtime } from '../../hooks/usePolicyMessages'
@@ -133,6 +133,7 @@ const NAV = {
     { group: 'Work', items: [
       { to: '/fulfillment/desk', label: 'Fulfillment', icon: ClipboardList },
       { to: '/fulfillment/pipeline', label: 'Pipeline', icon: ListFilter },
+      { to: '/fulfillment/getting-paid', label: 'Getting Paid', icon: Wallet },
     ] },
     { group: 'Communications', items: [
       { to: '/messages', label: 'Messages', icon: MessageSquare },

@@ -15,7 +15,7 @@ import {
 } from '../../lib/payPeriod'
 import { useNow } from '../../lib/agentBookings'
 
-// Settings → Getting Paid (Prompt 681). Tracking only: the rep's scheduled
+// Getting Paid page (Prompt 681, moved out of Settings in 683). Tracking only: the rep's scheduled
 // shift, the hours they clocked this pay period, their hourly rate, and
 // hours × rate. No payroll processor sits behind it — Brayden pays by hand
 // from these numbers. Admin gets the whole team on one table and is the only

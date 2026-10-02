@@ -20,7 +20,7 @@ import {
 } from '../lib/billing'
 import { SavedTick } from '../components/ui/SavedTick'
 import { ProfilePanel } from './Profile'
-import { GettingPaidPanel, FulfillmentPayAdminPanel } from '../components/fulfillment/GettingPaid'
+import { FulfillmentPayAdminPanel } from '../components/fulfillment/GettingPaid'
 
 // Settings — literal port of the export's Settings screen (vault:
 // media/claude-design-export-ohvara-dashboard-v3.html, lines 1483-1618): a
@@ -71,8 +71,8 @@ const TABS = [
   { key: 'integrations', label: 'Integrations',              icon: Plug },
   { key: 'callerid',     label: 'Caller ID',                 icon: PhoneCall, roles: ['agent', 'admin'] },
   { key: 'billing',      label: 'Billing',                   icon: CreditCard, roles: ['agent'] },
-  // Prompt 681 — hours, rate and pay estimate (tracking only, paid by hand).
-  { key: 'pay',          label: 'Getting Paid',              icon: Wallet, roles: ['fulfillment'] },
+  // Prompt 681 — admin sets each Fulfillment rep's rate and shift here. The rep's own
+  // Getting Paid view lives at /fulfillment/getting-paid (Prompt 683).
   { key: 'pay',          label: 'Fulfillment Pay',           icon: Wallet, roles: ['admin'] },
 ]
 
@@ -138,7 +138,7 @@ export default function Settings() {
         {tab === 'integrations' && <IntegrationsPanel profile={profile} />}
         {tab === 'callerid'     && <CallerIdPanel profile={profile} />}
         {tab === 'billing'      && <BillingPanel profile={profile} />}
-        {tab === 'pay' && (profile.role === 'admin' ? <FulfillmentPayAdminPanel /> : <GettingPaidPanel profile={profile} />)}
+        {tab === 'pay' && <FulfillmentPayAdminPanel />}
       </div>
     </div>
   )
