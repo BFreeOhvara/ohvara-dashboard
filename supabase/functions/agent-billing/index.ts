@@ -95,6 +95,7 @@ function formEncode(obj: Record<string, unknown>, prefix = '', out = new URLSear
   return out
 }
 
+// List/retrieve calls must say method: 'GET'; params alone means a POST (create).
 async function stripe(path: string, init: { method?: string; params?: Record<string, unknown> } = {}) {
   const method = init.method || (init.params ? 'POST' : 'GET')
   const qs = method === 'GET' && init.params ? `?${formEncode(init.params)}` : ''
@@ -119,7 +120,7 @@ async function ensurePrice(admin: SupabaseClient): Promise<string> {
   const { data: s } = await admin.from('app_settings').select('agent_billing_weekly_cents').limit(1).maybeSingle()
   const cents = s?.agent_billing_weekly_cents ?? 35000
 
-  const found = await stripe('prices', { params: { lookup_keys: [PRICE_LOOKUP_KEY], active: true, limit: 1 } })
+  const found = await stripe('prices', { method: 'GET', params: { lookup_keys: [PRICE_LOOKUP_KEY], active: true, limit: 1 } })
   const current = found.data?.[0]
   if (current && current.unit_amount === cents && current.recurring?.interval === 'week') return current.id
 
@@ -139,7 +140,7 @@ async function ensurePrice(admin: SupabaseClient): Promise<string> {
 // Our own Customer Portal configuration (found by metadata), so the account's
 // default portal settings can't change what agents are allowed to do.
 async function ensurePortalConfig(): Promise<string> {
-  const list = await stripe('billing_portal/configurations', { params: { active: true, limit: 100 } })
+  const list = await stripe('billing_portal/configurations', { method: 'GET', params: { active: true, limit: 100 } })
   const mine = (list.data || []).find((c: any) => c.metadata?.ohvara === TAG.ohvara)
   if (mine) return mine.id
   const created = await stripe('billing_portal/configurations', {
@@ -227,7 +228,7 @@ async function syncSubscription(admin: SupabaseClient, sub: any, profile?: any) 
 
 // The customer's most relevant subscription: a live one if any, else the newest.
 async function latestSubscription(customerId: string) {
-  const list = await stripe('subscriptions', { params: { customer: customerId, status: 'all', limit: 10 } })
+  const list = await stripe('subscriptions', { method: 'GET', params: { customer: customerId, status: 'all', limit: 10 } })
   const subs = list.data || []
   return subs.find((s: any) => LIVE.includes(s.status)) || subs[0] || null
 }
@@ -356,7 +357,7 @@ Deno.serve(async (req) => {
       if (customerId) {
         // Never start a second subscription. A live one means the webhook
         // missed something: sync it and send them to the portal instead.
-        const list = await stripe('subscriptions', { params: { customer: customerId, status: 'all', limit: 20 } })
+        const list = await stripe('subscriptions', { method: 'GET', params: { customer: customerId, status: 'all', limit: 20 } })
         const live = (list.data || []).find((s: any) => LIVE.includes(s.status))
         if (live) {
           await syncSubscription(admin, live, me)
