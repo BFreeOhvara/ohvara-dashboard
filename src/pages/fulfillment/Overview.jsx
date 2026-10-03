@@ -3,15 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowRight, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useFulfillmentQueue } from '../../hooks/usePolicies'
-import { useFulfillmentPay, useTimeEntries } from '../../hooks/useFulfillmentPay'
 import { ghostBtn, MONO, DISPLAY } from '../../lib/exportStyles'
 import { LiveClock } from '../../components/ui/LiveClock'
 import { StatTile, StatGrid, SectionHead, ListCard, EmptyNote } from '../../components/agent/AgentUI'
 import { FulfillHead, FulfillRow } from '../../components/fulfillment/FulfillUI'
-import { ClockCard } from '../../components/fulfillment/ClockCard'
 import { needsAttention } from '../../lib/fulfillmentFlags'
 import { sameLocalDay, startOfWeek, startOfMonth, median, hoursBetween, fmtDuration, useNow } from '../../lib/agentBookings'
-import { payPeriod } from '../../lib/payPeriod'
 
 // Fulfillment Overview (Prompt 681) — the Fulfillment role's landing page.
 // A step back from the desk: how the whole team is doing this week and month,
@@ -24,12 +21,9 @@ import { payPeriod } from '../../lib/payPeriod'
 
 export default function FulfillmentOverview() {
   const { profile } = useAuth()
-  const isRep = profile?.role === 'fulfillment'
   const navigate = useNavigate()
   const now = useNow(30e3)
   const { data: rows = [], isLoading } = useFulfillmentQueue()
-  const { data: payRows = [] } = useFulfillmentPay(profile?.id, isRep)
-  const { data: entries = [], isLoading: entriesLoading } = useTimeEntries(isRep ? profile.id : null, isRep ? payPeriod(now).start.toISOString() : null)
 
   const g = useMemo(() => {
     const today = new Date(now)
@@ -86,8 +80,6 @@ export default function FulfillmentOverview() {
           <LiveClock timezone={profile?.timezone} large />
         </div>
       </div>
-
-      {isRep && <ClockCard entries={entries} pay={payRows[0]} now={now} loading={entriesLoading} />}
 
       <StatGrid>
         <StatTile label="Cancelled this week" value={dash(g.doneWeek.length)} sub={`${g.doneMonth.length} this month · whole team`}

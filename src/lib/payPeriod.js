@@ -1,7 +1,7 @@
 import { startOfWeek } from './agentBookings'
 
 // Getting Paid (Prompt 681) — pay period + hours math, one place so the rep's
-// panel, the admin table and the Overview clock card can't disagree.
+// panel and the admin table can't disagree.
 //
 // Pay period: weekly, Monday 00:00 to the next Monday 00:00, in the viewer's
 // local time (same week boundary the agent side already uses). Nothing in the
@@ -25,15 +25,34 @@ export function fmtPeriod({ start, end }) {
   return `${start.toLocaleDateString('en-US', o)} – ${last.toLocaleDateString('en-US', o)}`
 }
 
-// Hours of one entry that fall inside [from, to). An open entry runs to `now`.
-export function entryHours(e, from, to, now = Date.now()) {
-  const a = Math.max(new Date(e.clock_in).getTime(), from.getTime())
-  const b = Math.min(e.clock_out ? new Date(e.clock_out).getTime() : now, to.getTime())
-  return Math.max(0, b - a) / 3600e3
+// Prompt 685 — hours are automatic: a rep is assumed to work their scheduled
+// shift (days + start/end in fulfillment_pay), no punching in. One entry per
+// scheduled day in the period, in the viewer's local time. `hours` is what has
+// elapsed so far (today's shift accrues as the day goes); `full` is the whole
+// shift. A past period is entirely elapsed, so hours === full.
+export function shiftSegments(pay, period, now = Date.now()) {
+  if (!pay?.shift_start || !pay?.shift_end || !pay.shift_days?.length) return []
+  const [sh, sm] = pay.shift_start.split(':').map(Number)
+  const [eh, em] = pay.shift_end.split(':').map(Number)
+  const out = []
+  for (let i = 0; i < 7; i++) {
+    const y = period.start.getFullYear(), m = period.start.getMonth(), d = period.start.getDate() + i
+    const day = new Date(y, m, d)
+    if (day >= period.end) break
+    if (!pay.shift_days.includes(day.getDay() === 0 ? 7 : day.getDay())) continue
+    const start = new Date(y, m, d, sh, sm)
+    const end = new Date(y, m, d, eh, em)
+    out.push({
+      start, end,
+      full: (end - start) / 3600e3,
+      hours: Math.max(0, Math.min(end.getTime(), now) - start.getTime()) / 3600e3,
+    })
+  }
+  return out
 }
 
-export function totalHours(entries, period, now = Date.now()) {
-  return (entries || []).reduce((s, e) => s + entryHours(e, period.start, period.end, now), 0)
+export function workedHours(pay, period, now = Date.now()) {
+  return shiftSegments(pay, period, now).reduce((s, g) => s + g.hours, 0)
 }
 
 export function fmtHours(h) {
@@ -73,15 +92,10 @@ export function fmtShift(pay) {
   return `${dayLabel} · ${fmtTime(pay.shift_start)} – ${fmtTime(pay.shift_end)}`
 }
 
-// Scheduled hours in one pay period, for "logged vs scheduled".
+// Scheduled hours in one pay period, for "worked vs scheduled".
 export function scheduledHours(pay) {
   if (!pay?.shift_start) return null
   const [sh, sm] = pay.shift_start.split(':').map(Number)
   const [eh, em] = pay.shift_end.split(':').map(Number)
   return ((eh * 60 + em) - (sh * 60 + sm)) / 60 * (pay.shift_days?.length || 0)
-}
-
-// Live "2h 14m" for an open shift.
-export function sinceLabel(iso, now = Date.now()) {
-  return fmtHours(Math.max(0, now - new Date(iso).getTime()) / 3600e3)
 }

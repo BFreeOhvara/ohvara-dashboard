@@ -1,23 +1,20 @@
 import { useMemo, useState } from 'react'
 import { ChevronRight, Loader2 } from 'lucide-react'
-import { card, cardTitle, eyebrow, fieldLabel, control, primaryBtn, ghostBtn, MONO } from '../../lib/exportStyles'
+import { card, cardTitle, eyebrow, fieldLabel, control, primaryBtn, MONO } from '../../lib/exportStyles'
 import { GapNote } from '../ui/ExportForm'
 import { Segmented } from '../ui/Segmented'
 import { SavedTick } from '../ui/SavedTick'
 import { Avatar } from '../ui/Avatar'
-import { ClockCard } from './ClockCard'
+import { useFulfillmentPay, useFulfillmentReps, useSavePay } from '../../hooks/useFulfillmentPay'
 import {
-  useFulfillmentPay, useTimeEntries, useFulfillmentReps, useSavePay, useAdminCloseEntry,
-} from '../../hooks/useFulfillmentPay'
-import {
-  WEEKDAYS, payPeriod, fmtPeriod, entryHours, totalHours, fmtHours, fmtCents, estimateCents,
+  WEEKDAYS, payPeriod, fmtPeriod, shiftSegments, workedHours, fmtHours, fmtCents, estimateCents,
   fmtShift, scheduledHours, fmtTime,
 } from '../../lib/payPeriod'
 import { useNow } from '../../lib/agentBookings'
 
 // Getting Paid page (Prompt 681, moved out of Settings in 683). Tracking only: the rep's scheduled
-// shift, the hours they clocked this pay period, their hourly rate, and
-// hours × rate. No payroll processor sits behind it — Brayden pays by hand
+// shift, the hours that shift adds up to this pay period (automatic, nothing
+// to punch in; Prompt 685), their hourly rate, and hours × rate. No payroll processor sits behind it — Brayden pays by hand
 // from these numbers. Admin gets the whole team on one table and is the only
 // one who can set a rate or shift (RLS, migration 115).
 
@@ -37,34 +34,37 @@ function Figure({ label, value, sub }) {
   )
 }
 
-const fmtClock = iso => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-const fmtDay = iso => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+const fmtClock = d => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+const fmtDay = d => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 
-function EntryList({ entries, period, now }) {
-  // An open shift always shows, even in the seconds before `now` catches up to it.
-  const rows = entries.filter(e => entryHours(e, period.start, period.end, now) > 0
-    || (!e.clock_out && new Date(e.clock_in) >= period.start && new Date(e.clock_in) < period.end))
+// One row per scheduled shift in the period. Today's row accrues as the day goes.
+function ShiftList({ pay, period, now }) {
+  const rows = shiftSegments(pay, period, now)
   if (!rows.length) {
-    return <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>No time logged in this period.</p>
+    return <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>{pay?.shift_start ? 'No shifts scheduled in this period.' : 'No shift set yet.'}</p>
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
-      {rows.map((e, i) => (
-        <div key={e.id} style={{
-          display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 12, alignItems: 'center',
-          padding: '10px 0', borderTop: i ? 'var(--border-w) solid var(--border)' : 'none',
-        }}>
-          <span style={{ fontSize: 13.5, color: 'var(--text-primary)' }}>
-            {fmtDay(e.clock_in)}
-            <span style={{ fontFamily: MONO, color: 'var(--text-secondary)', marginLeft: 10 }}>
-              {fmtClock(e.clock_in)} – {e.clock_out ? fmtClock(e.clock_out) : 'now'}
+      {rows.map((g, i) => {
+        const live = g.hours > 0 && g.hours < g.full
+        const upcoming = g.hours === 0
+        return (
+          <div key={g.start.getTime()} style={{
+            display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 12, alignItems: 'center',
+            padding: '10px 0', borderTop: i ? 'var(--border-w) solid var(--border)' : 'none',
+          }}>
+            <span style={{ fontSize: 13.5, color: upcoming ? 'var(--text-muted)' : 'var(--text-primary)' }}>
+              {fmtDay(g.start)}
+              <span style={{ fontFamily: MONO, color: 'var(--text-secondary)', marginLeft: 10 }}>
+                {fmtClock(g.start)} – {fmtClock(g.end)}
+              </span>
             </span>
-          </span>
-          <span style={{ fontFamily: MONO, fontSize: 13.5, color: e.clock_out ? 'var(--text-primary)' : 'var(--success)' }}>
-            {fmtHours(entryHours(e, period.start, period.end, now))}
-          </span>
-        </div>
-      ))}
+            <span style={{ fontFamily: MONO, fontSize: 13.5, color: live ? 'var(--success)' : upcoming ? 'var(--text-muted)' : 'var(--text-primary)' }}>
+              {upcoming ? 'upcoming' : fmtHours(g.hours)}
+            </span>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -76,16 +76,13 @@ export function GettingPaidPanel({ profile }) {
   const [which, setWhich] = useState('this')
   const period = usePeriod(which, now)
   const { data: payRows = [], isLoading: payLoading } = useFulfillmentPay(profile.id)
-  const { data: entries = [], isLoading } = useTimeEntries(profile.id, payPeriod(now - 7 * 864e5).start.toISOString())
   const pay = payRows[0]
-  const hours = totalHours(entries, period, now)
+  const hours = workedHours(pay, period, now)
   const sched = scheduledHours(pay)
   const est = estimateCents(hours, pay?.hourly_rate_cents)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <ClockCard entries={entries} pay={pay} now={now} loading={isLoading || payLoading} />
-
       <div style={card}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
           <p style={{ ...cardTitle, margin: 0, flex: 1 }}>
@@ -95,7 +92,7 @@ export function GettingPaidPanel({ profile }) {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: 10 }}>
-          <Figure label="Hours logged" value={fmtHours(hours)} sub={sched != null ? `of ${fmtHours(sched)} scheduled` : 'no shift set'} />
+          <Figure label="Hours worked" value={payLoading ? '—' : fmtHours(hours)} sub={sched != null ? `of ${fmtHours(sched)} scheduled` : 'no shift set'} />
           <Figure label="Hourly rate" value={pay?.hourly_rate_cents != null ? fmtCents(pay.hourly_rate_cents) : '—'} sub={pay?.hourly_rate_cents != null ? 'per hour' : 'not set yet'} />
           <Figure label="Estimated pay" value={est != null ? fmtCents(est) : '—'} sub="hours × rate" />
         </div>
@@ -105,15 +102,16 @@ export function GettingPaidPanel({ profile }) {
         </p>
 
         <GapNote>
-          This is an estimate to check against, not a paycheck. Pay is sent by hand for each weekly period (Monday
-          to Sunday). If a clock-in or clock-out is wrong, message Brayden and he'll fix it.
+          Hours come straight from your scheduled shift, so there's nothing to clock in. This is an estimate to
+          check against, not a paycheck. Pay is sent by hand for each weekly period (Monday to Sunday). If a day
+          wasn't worked as scheduled, message Brayden and he'll adjust it.
         </GapNote>
       </div>
 
       <div style={card}>
-        <p style={cardTitle}>Time log</p>
-        {isLoading ? <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Loading…</p>
-          : <EntryList entries={entries} period={period} now={now} />}
+        <p style={cardTitle}>Shift log</p>
+        {payLoading ? <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Loading…</p>
+          : <ShiftList pay={pay} period={period} now={now} />}
       </div>
     </div>
   )
@@ -128,13 +126,11 @@ export function FulfillmentPayAdminPanel() {
   const [openId, setOpenId] = useState(null)
   const { data: reps = [], isLoading: repsLoading } = useFulfillmentReps()
   const { data: pays = [] } = useFulfillmentPay(null)
-  const { data: entries = [] } = useTimeEntries(null, payPeriod(now - 7 * 864e5).start.toISOString())
 
   const rows = reps.map(r => {
     const pay = pays.find(p => p.profile_id === r.id)
-    const mine = entries.filter(e => e.profile_id === r.id)
-    const hours = totalHours(mine, period, now)
-    return { rep: r, pay, entries: mine, hours, est: estimateCents(hours, pay?.hourly_rate_cents), open: mine.find(e => !e.clock_out) }
+    const hours = workedHours(pay, period, now)
+    return { rep: r, pay, hours, est: estimateCents(hours, pay?.hourly_rate_cents) }
   })
   const totalEst = rows.reduce((s, r) => s + (r.est || 0), 0)
   const totalHrs = rows.reduce((s, r) => s + r.hours, 0)
@@ -148,7 +144,7 @@ export function FulfillmentPayAdminPanel() {
         <Segmented size="sm" value={which} onChange={setWhich} options={PERIODS} />
       </div>
       <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--text-secondary)' }}>
-        What to pay each rep by hand for the period. Click a rep to set their rate and shift.
+        What to pay each rep by hand for the period, from their scheduled shift. Click a rep to set their rate and shift.
       </p>
 
       {repsLoading ? <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Loading…</p>
@@ -170,7 +166,6 @@ export function FulfillmentPayAdminPanel() {
                     <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                       <Avatar profile={r.rep} size={26} />
                       <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.rep.full_name}</span>
-                      {r.open && <span title="On the clock" style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success)', flexShrink: 0 }} />}
                     </span>
                     <span className="hidden md:block" style={{ fontSize: 13, fontFamily: MONO, color: r.pay?.shift_start ? 'var(--text-secondary)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {fmtShift(r.pay) || 'Not set'}
@@ -203,13 +198,11 @@ const toTimeInput = t => (t ? t.slice(0, 5) : '')
 
 function RepPayEditor({ row, period, now }) {
   const save = useSavePay()
-  const close = useAdminCloseEntry()
   const pay = row.pay
   const [rate, setRate] = useState(pay?.hourly_rate_cents != null ? (pay.hourly_rate_cents / 100).toFixed(2) : '')
   const [days, setDays] = useState(pay?.shift_days || [1, 2, 3, 4, 5])
   const [start, setStart] = useState(toTimeInput(pay?.shift_start))
   const [end, setEnd] = useState(toTimeInput(pay?.shift_end))
-  const [closeAt, setCloseAt] = useState('')
   const [saved, setSaved] = useState(false)
 
   const rateNum = rate.trim() === '' ? null : Number(rate)
@@ -268,29 +261,8 @@ function RepPayEditor({ row, period, now }) {
         {save.isError && <span style={{ fontSize: 12.5, color: 'var(--danger)' }}>{save.error?.message}</span>}
       </div>
 
-      {row.open && (
-        <div style={{ marginTop: 18, paddingTop: 14, borderTop: 'var(--border-w) solid var(--border)' }}>
-          <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--text-secondary)' }}>
-            On the clock since <span style={{ fontFamily: MONO }}>{fmtDay(row.open.clock_in)} {fmtClock(row.open.clock_in)}</span>.
-            Forgot to clock out? Close it at:
-          </p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <input type="datetime-local" value={closeAt} onChange={e => setCloseAt(e.target.value)}
-              style={{ ...control, width: 'auto', fontFamily: MONO }} />
-            <button
-              disabled={!closeAt || new Date(closeAt) <= new Date(row.open.clock_in) || close.isPending}
-              onClick={() => close.mutate({ id: row.open.id, clockOut: new Date(closeAt).toISOString() }, { onSuccess: () => setCloseAt('') })}
-              style={{ ...ghostBtn, opacity: !closeAt ? 0.5 : 1 }}
-            >
-              Close shift
-            </button>
-            {close.isError && <span style={{ fontSize: 12.5, color: 'var(--danger)' }}>{close.error?.message}</span>}
-          </div>
-        </div>
-      )}
-
-      <p style={{ ...fieldLabel, marginTop: 18 }}>Time log · {fmtPeriod(period)}</p>
-      <EntryList entries={row.entries} period={period} now={now} />
+      <p style={{ ...fieldLabel, marginTop: 18 }}>Shifts · {fmtPeriod(period)}</p>
+      <ShiftList pay={pay} period={period} now={now} />
       {pay?.shift_start && (
         <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
           Scheduled {fmtTime(pay.shift_start)}–{fmtTime(pay.shift_end)}, {fmtHours(scheduledHours(pay))} a week.

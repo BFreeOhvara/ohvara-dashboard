@@ -24,10 +24,10 @@ export function LiveClock({ timezone, large = false }) {
     // Prompt 669 — Restorix's clock chip (rounded-lg accent fill, mono).
     <span style={{
       display: 'inline-block',
-      fontSize: large ? 44 : 15, fontWeight: large ? 600 : 500, fontFamily: 'var(--font-mono)', color: '#fff',
+      fontSize: large ? 30 : 15, fontWeight: large ? 600 : 500, fontFamily: 'var(--font-mono)', color: '#fff',
       fontVariantNumeric: 'tabular-nums', lineHeight: large ? 1 : undefined, letterSpacing: large ? '-0.02em' : undefined,
-      background: 'var(--accent)', borderRadius: large ? 14 : 8,
-      padding: large ? '12px 22px' : '5px 12px',
+      background: 'var(--accent)', borderRadius: large ? 12 : 8,
+      padding: large ? '8px 16px' : '5px 12px',
     }}>
       {time}
     </span>
