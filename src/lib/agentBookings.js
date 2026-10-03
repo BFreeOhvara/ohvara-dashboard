@@ -43,13 +43,13 @@ export function isMissed(p, now = Date.now()) {
   return stageOf(p) === 'booked' && !!p.scheduled_call_at && new Date(p.scheduled_call_at).getTime() < now
 }
 
-// Prompt 672 — where a client sits right now, with "not picked up" split out
+// Prompt 672 — where a client sits right now, with "not started" split out
 // of booked so every client lands in exactly one bucket (My Clients' pipeline
 // bar and status filter).
 export const BUCKETS = ['waiting', 'missed', 'inProgress', 'cancelled']
 export const BUCKET = {
   waiting:    { label: 'Booked',        fill: 'var(--purple)',  tone: 'purple' },
-  missed:     { label: 'Not picked up', fill: 'var(--warning)', tone: 'warning' },
+  missed:     { label: 'Not started',   fill: 'var(--warning)', tone: 'warning' },
   inProgress: { label: 'In progress',   fill: 'var(--info)',    tone: 'info' },
   cancelled:  { label: 'Cancelled',     fill: 'var(--success)', tone: 'success' },
 }

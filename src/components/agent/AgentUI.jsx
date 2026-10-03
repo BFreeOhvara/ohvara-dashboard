@@ -27,7 +27,7 @@ export function Pill({ tone = 'neutral', icon: Icon, children }) {
 
 export function StagePill({ p, now }) {
   const stage = stageOf(p)
-  if (isMissed(p, now)) return <Pill tone="warning" icon={AlertTriangle}>Not picked up</Pill>
+  if (isMissed(p, now)) return <Pill tone="warning" icon={AlertTriangle}>Not started</Pill>
   const label = stage === 'inProgress'
     ? (SUBSTATUS_LABEL[p.cancellation_substatus] || STAGE.inProgress.label)
     : STAGE[stage].label

@@ -9,7 +9,7 @@ import { StatTile, StatGrid, SectionHead, ListCard, GroupRow, ClientRow, EmptyNo
 import { stageOf, isMissed, sameLocalDay, startOfWeek, useNow } from '../../lib/agentBookings'
 
 // Agent Overview (Prompt 665) — the landing page. "Your day at a glance":
-// what's booked today, anything Fulfillment hasn't picked up yet, what's
+// what's booked today, any booked call whose time passed with no rep action, what's
 // coming, and the week's numbers — with Book a call one tap away.
 //
 // Prompt 669 — laid out like Restorix Portal's closer Overview: greeting +
@@ -88,8 +88,8 @@ export default function Overview() {
           sub={`${g.inProgress} being worked · ${g.waiting} waiting`} onClick={() => navigate('/agent/clients?stage=all')} />
         <StatTile label="Cancelled this week" value={isLoading ? '—' : g.cancelledThisWeek} sub="old policy confirmed cancelled"
           onClick={() => navigate('/agent/clients?stage=cancelled')} />
-        <StatTile label="Not picked up" value={isLoading ? '—' : g.missedAll.length} tone={g.missedAll.length ? 'warning' : 'neutral'}
-          sub="booked time passed, still waiting" onClick={() => navigate('/agent/clients?stage=missed')} />
+        <StatTile label="Not started" value={isLoading ? '—' : g.missedAll.length} tone={g.missedAll.length ? 'warning' : 'neutral'}
+          sub="booked time passed, rep hasn't started" onClick={() => navigate('/agent/clients?stage=missed')} />
       </StatGrid>
 
       {g.missed.length > 0 && (
@@ -100,7 +100,7 @@ export default function Overview() {
           }}>
             <AlertTriangle size={18} style={{ flexShrink: 0 }} />
             <p style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 14, fontWeight: 500 }}>
-              {g.missed.length} booked time{g.missed.length === 1 ? '' : 's'} passed and Fulfillment hasn't picked {g.missed.length === 1 ? 'it' : 'them'} up.
+              {g.missed.length} booked time{g.missed.length === 1 ? '' : 's'} passed and the assigned rep hasn't started {g.missed.length === 1 ? 'the call' : 'the calls'} yet.
               Open one to move it or give Fulfillment a heads-up.
             </p>
           </div>

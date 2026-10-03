@@ -29,7 +29,7 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // filter, one list card with an eyebrow header (Restorix's tables), and the
 // client detail opening in place under its row instead of as a separate card.
 //
-// Prompt 672 — "Not picked up" is its own bucket. Status and range live in the
+// Prompt 672 — "Not started" is its own bucket. Status and range live in the
 // URL (?stage=missed&range=week) so Overview's tiles link straight to the
 // matching slice. Range is by booking date and scopes the whole page; search
 // only narrows the list.
