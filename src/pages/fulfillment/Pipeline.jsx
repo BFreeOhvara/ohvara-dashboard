@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Search, Phone, X, Check, ArrowRight, MessageSquare } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { useFulfillmentQueue, useClaimCancellation } from '../../hooks/usePolicies'
-import { fieldLabel, primaryBtn, ghostBtn, MONO, DISPLAY } from '../../lib/exportStyles'
+import { useFulfillmentQueue } from '../../hooks/usePolicies'
+import { fieldLabel, ghostBtn, MONO, DISPLAY } from '../../lib/exportStyles'
 import { Pipeline } from '../../components/agent/Pipeline'
 import { AnchoredSelectField } from '../../components/ui/ExportForm'
 import { ListCard, EmptyNote } from '../../components/agent/AgentUI'
@@ -21,11 +21,12 @@ import { needsAttention } from '../../lib/fulfillmentFlags'
 // fulfillment_assigned policy) instead of one agent's book.
 //
 // Read-only on purpose: work happens on the desk. A row opens a summary with
-// the one action that fits — claim it, open it on the desk, or message the
-// agent. Intake stays claim-gated (RLS), so nothing here shows it.
+// the actions that fit — open it on the desk (your own, or any as admin) or
+// message the agent. Intake is gated to the assigned rep (RLS), so nothing
+// here shows it. Prompt 684: no claiming — every booking is auto-assigned.
 
 const STAGES = ['all', ...BUCKETS, 'attention']
-const UNCLAIMED = '__unclaimed'
+const UNASSIGNED = '__unassigned'
 
 // Filter options from the rows themselves: one per distinct agent / rep.
 function nameOptions(rows, key, nameKey) {
@@ -56,7 +57,7 @@ export default function FulfillmentPipeline() {
 
   // Agent + rep scope the pills and the list alike; stage and search narrow the list.
   const scoped = useMemo(() => rows.filter(p => (!agentId || p.agent_id === agentId)
-    && (!repId || (repId === UNCLAIMED ? !p.assigned_fulfillment_id : p.assigned_fulfillment_id === repId))), [rows, agentId, repId])
+    && (!repId || (repId === UNASSIGNED ? !p.assigned_fulfillment_id : p.assigned_fulfillment_id === repId))), [rows, agentId, repId])
   const attentionCount = useMemo(() => scoped.filter(p => needsAttention(p, now)).length, [scoped, now])
 
   const list = useMemo(() => {
@@ -108,7 +109,7 @@ export default function FulfillmentPipeline() {
             options={[{ value: '', label: 'All agents' }, ...agents]} style={{ width: 200 }} />
         )}
         <AnchoredSelectField value={repId} onChange={setRepId}
-          options={[{ value: '', label: 'All reps' }, { value: UNCLAIMED, label: 'Unclaimed' }, ...reps]} style={{ width: 180 }} />
+          options={[{ value: '', label: 'All reps' }, { value: UNASSIGNED, label: 'Unassigned' }, ...reps]} style={{ width: 180 }} />
         <span style={{ fontFamily: MONO, fontSize: 12.5, color: 'var(--text-muted)' }}>
           {isLoading ? 'Loading…' : `${list.length} of ${scoped.length}`}
         </span>
@@ -137,7 +138,6 @@ export default function FulfillmentPipeline() {
 
 function Summary({ p, now, profile, onClose }) {
   const navigate = useNavigate()
-  const claim = useClaimCancellation()
   const isAdmin = profile?.role === 'admin'
   const stage = stageOf(p)
   const mine = p.assigned_fulfillment_id === profile?.id
@@ -145,7 +145,8 @@ function Summary({ p, now, profile, onClose }) {
 
   const steps = [
     { label: `Booked by ${p.agent?.full_name || 'the agent'}`, at: p.created_at, done: true },
-    { label: p.assigned?.full_name ? `Claimed by ${p.assigned.full_name}` : 'Claimed by a rep', at: p.fulfillment_claimed_at, done: stage !== 'booked' },
+    { label: p.assigned?.full_name ? `Assigned to ${p.assigned.full_name}` : 'Assigned to a rep', at: p.fulfillment_claimed_at, done: !!p.assigned_fulfillment_id },
+    { label: 'Rep started on it', at: p.fulfillment_started_at, done: stage !== 'booked' },
     { label: 'Old policy cancelled', at: p.fulfillment_completed_at, done: stage === 'cancelled' },
   ]
 
@@ -163,15 +164,6 @@ function Summary({ p, now, profile, onClose }) {
             </span>
           )}
         </div>
-        {stage === 'booked' && !isAdmin && (
-          <button
-            onClick={() => claim.mutate({ id: p.id, profileId: profile.id }, { onSuccess: desk })}
-            disabled={claim.isPending}
-            style={{ ...primaryBtn, height: 36, opacity: claim.isPending ? 0.6 : 1 }}
-          >
-            Claim & start <ArrowRight size={14} />
-          </button>
-        )}
         {(mine || isAdmin) && (
           <button onClick={desk} style={ghostBtn}>Open on desk <ArrowRight size={14} /></button>
         )}
@@ -180,13 +172,13 @@ function Summary({ p, now, profile, onClose }) {
         </button>
         <button onClick={onClose} title="Close" className="icon-btn" style={{ width: 32, height: 32 }}><X size={15} /></button>
       </div>
-      {claim.isError && <p style={{ margin: '-8px 0 14px', fontSize: 13, color: 'var(--danger)' }}>{claim.error?.message}</p>}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: 16, marginBottom: 20 }}>
         <Info label="Fulfillment call" value={fmtBooking(p.scheduled_call_at)} mono />
         <Info label="New policy" value={[p.carrier_name, p.product_name, p.state].filter(Boolean).join(' · ') || '—'} />
+        <Info label="Rep" value={p.assigned?.full_name || 'Unassigned'} />
         <Info label="Status" value={stage === 'inProgress' ? (SUBSTATUS_LABEL[p.cancellation_substatus] || 'In progress')
-          : stage === 'cancelled' ? 'Cancelled' : (p.scheduled_call_at && new Date(p.scheduled_call_at) < now ? 'Not picked up' : 'Waiting to claim')} />
+          : stage === 'cancelled' ? 'Cancelled' : (p.scheduled_call_at && new Date(p.scheduled_call_at) < now ? 'Not picked up' : 'Booked, not started')} />
         {stage === 'cancelled' && <Info label="Carrier confirmation #" value={p.cancellation_confirmation || 'Not recorded'} mono />}
       </div>
 

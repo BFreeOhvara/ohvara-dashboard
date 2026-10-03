@@ -104,7 +104,7 @@ const FULFILLMENT_SELECT = `
   id, agent_id, client_first_name, client_last_name, client_phone,
   carrier_name, product_name, monthly_premium, annual_premium, state, notes,
   scheduled_call_at, fulfillment_stage, assigned_fulfillment_id, created_at, updated_at,
-  fulfillment_claimed_at, fulfillment_completed_at,
+  fulfillment_claimed_at, fulfillment_started_at, fulfillment_completed_at,
   cancellation_substatus, cancellation_confirmation, cancellation_notes,
   agent:profiles!policies_agent_id_fkey ( id, full_name, caller_id_verified_at, caller_id_enabled ),
   assigned:profiles!policies_assigned_fulfillment_id_fkey ( id, full_name )
@@ -125,26 +125,47 @@ export function useFulfillmentQueue() {
   })
 }
 
-// Prompt 663 — claim is guarded on the row still being unclaimed, so two reps
-// hitting Claim on the same item at once can't silently overwrite each other:
-// the loser's update matches zero rows and gets a clear error instead.
-// Claim/complete timestamps are stamped server-side (migration 106 trigger).
-export function useClaimCancellation() {
+// Prompt 684 — nobody claims any more: the database assigns every booking to
+// a rep (migration 116). "Starting" is the rep's first real action on an
+// assigned item (calling the client, setting a carrier status, saving notes)
+// and just moves it Pending → In Progress. Guarded on Pending + mine, so a
+// repeat call is a harmless no-op. Times are stamped server-side.
+export function useStartCancellation() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, profileId }) => {
-      const { data, error } = await supabase
+    mutationFn: async ({ id, profileId, substatus = 'calling' }) => {
+      const { error } = await supabase
         .from('policies')
-        .update({ assigned_fulfillment_id: profileId, fulfillment_stage: 'In Progress', cancellation_substatus: 'calling' })
+        .update({ fulfillment_stage: 'In Progress', cancellation_substatus: substatus })
         .eq('id', id)
-        .is('assigned_fulfillment_id', null)
-        .select('id')
+        .eq('assigned_fulfillment_id', profileId)
+        .eq('fulfillment_stage', 'Pending')
       if (error) throw error
-      if (!data?.length) throw new Error('Someone else just claimed this one.')
-      return data[0]
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),
   })
+}
+
+// Hand an item to a different rep (replaces "Release to queue"). The server
+// picks who, with the same rules as booking, and refuses if nobody else is free.
+export function usePassOnCancellation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      const { data, error } = await supabase.rpc('fulfillment_pass_on', { p_policy: id })
+      if (error) throw error
+      return data
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),
+  })
+}
+
+// Anything booked while no rep was active sits unassigned; the desk sweeps it
+// up on load. Returns how many it placed (0 almost always).
+export async function assignUnassigned() {
+  const { data, error } = await supabase.rpc('fulfillment_assign_unassigned')
+  if (error) throw error
+  return data || 0
 }
 
 export function useCreatePolicy() {

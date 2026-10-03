@@ -1,32 +1,36 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft, ArrowRight, CheckCircle2, Clock, Phone, User, Eye, EyeOff,
   ShieldAlert, Inbox, Briefcase, AlertTriangle, CircleCheckBig, Send,
-  FileSignature, Undo2, ChevronDown, ChevronUp, PhoneCall, MessageCircleMore, Loader2,
+  FileSignature, ChevronDown, ChevronUp, PhoneCall, MessageCircleMore, Loader2,
+  CalendarClock, Shuffle,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { useFulfillmentQueue, useUpdatePolicy, useClaimCancellation } from '../../hooks/usePolicies'
+import {
+  useFulfillmentQueue, useUpdatePolicy, useStartCancellation, usePassOnCancellation, assignUnassigned,
+} from '../../hooks/usePolicies'
 import { usePolicyFulfillmentDetails } from '../../hooks/useFulfillmentDetails'
 import { card, cardTitle, primaryBtn, ghostBtn, fieldLabel, control, MONO } from '../../lib/exportStyles'
 import { Segmented } from '../../components/ui/Segmented'
 import { SavedTick } from '../../components/ui/SavedTick'
 import { money, fullName, formatDate, maskLast4 } from '../../lib/policyFormat'
 import { invokeCallerId, FALLBACK_CODES } from '../../lib/callerId'
-import { flagsFor } from '../../lib/fulfillmentFlags'
+import { flagsFor, overlapsFor } from '../../lib/fulfillmentFlags'
 
-// Cancellations (Prompt 663 rebuild of the Prompt 418 Fulfillment Queue).
+// Fulfillment desk (Prompt 684 rebuild of the Prompt 663 claim desk).
 //
-// Built for a small team whose whole day is one loop: claim a cancellation,
-// work it with the old carrier, mark it cancelled, take the next one. So the
-// page is a desk, not a list: a status strip up top, "On your desk" (what
-// you've claimed) beside "Up next" (what's waiting), and a focused work view
-// for one cancellation at a time with the steps laid out in order.
+// Nobody claims anything any more: the database assigns every booking to a
+// rep the moment the agent books it (migration 116 — least-loaded rep who
+// isn't already on a call in that half hour). So the desk is just the work:
+// the one client you should be on right now, with calling them front and
+// centre, then the carrier steps, then "Mark cancelled" → the next one.
+// Pipeline (Prompt 681) is where you go to look across everything.
 //
-// Data is unchanged in shape — policies rows with fulfillment_assigned=true,
-// intake in policy_fulfillment_details (claim-gated by RLS). Migration 106
-// added claimed/completed timestamps (server-stamped), an in-progress
-// sub-status, and a place for the carrier's confirmation # + working notes.
+// Assigned isn't started. An item stays Pending (the agent still sees
+// "Booked") until the rep first acts on it — calls the client, sets a carrier
+// status, saves notes — which moves it to In Progress.
 
 const SUBSTATUS = [
   { value: 'calling',         label: 'Calling carrier' },
@@ -63,6 +67,10 @@ function fmtCallback(iso) {
   })
 }
 
+function fmtTime(iso) {
+  return new Date(iso).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })
+}
+
 function isToday(iso, now) {
   if (!iso) return false
   return new Date(iso).toDateString() === new Date(now).toDateString()
@@ -75,6 +83,33 @@ function useNow(intervalMs = 60e3) {
     return () => clearInterval(t)
   }, [intervalMs])
   return now
+}
+
+const started = p => p.fulfillment_stage === 'In Progress'
+const DUE_SOON_MS = 15 * 60e3
+
+// What to work next, in order:
+//   0. mid-call with the carrier (started, "Calling carrier")
+//   1. calls that are due — booked time passed or within 15 min, soonest first
+//   2. started items waiting on the carrier/client, longest-waiting first
+//   3. later calls, soonest first
+//   4. no call time at all, oldest booking first
+function priority(p, now) {
+  const at = p.scheduled_call_at ? new Date(p.scheduled_call_at).getTime() : null
+  if (started(p)) {
+    if (!p.cancellation_substatus || p.cancellation_substatus === 'calling') return [0, 0]
+    return [2, new Date(p.fulfillment_started_at || p.fulfillment_claimed_at || p.updated_at).getTime()]
+  }
+  if (at != null && at <= now + DUE_SOON_MS) return [1, at]
+  if (at != null) return [3, at]
+  return [4, new Date(p.created_at).getTime()]
+}
+
+function byPriority(now) {
+  return (a, b) => {
+    const pa = priority(a, now), pb = priority(b, now)
+    return pa[0] - pb[0] || pa[1] - pb[1]
+  }
 }
 
 // ── small pieces ────────────────────────────────────────────────────────────
@@ -92,12 +127,20 @@ function Pill({ tone = 'neutral', icon: Icon, children }) {
   )
 }
 
-function FlagPills({ p, now }) {
+function StatusPill({ p }) {
+  if (p.fulfillment_stage === 'Complete') return <Pill tone="success" icon={CheckCircle2}>Cancelled</Pill>
+  if (started(p)) return <Pill tone="info">{SUBSTATUS_LABEL[p.cancellation_substatus] || 'In progress'}</Pill>
+  return <Pill>Not started</Pill>
+}
+
+function FlagPills({ p, now, rows }) {
   const { overdue, stale } = flagsFor(p, now)
+  const overlaps = rows ? overlapsFor(p, rows).length : 0
   return (
     <>
-      {overdue && <Pill tone="danger" icon={AlertTriangle}>Callback overdue</Pill>}
+      {overdue && <Pill tone="danger" icon={AlertTriangle}>Call time passed</Pill>}
       {!overdue && stale && <Pill tone="warning" icon={Clock}>Stale</Pill>}
+      {overlaps > 0 && <Pill tone="warning" icon={CalendarClock}>Overlaps another call</Pill>}
     </>
   )
 }
@@ -166,86 +209,39 @@ function NotifyAgentButton() {
 
 // ── queue rows ──────────────────────────────────────────────────────────────
 
-function RowShell({ children, onClick, highlight }) {
+function QueueRow({ p, now, rows, onOpen, showRep }) {
   return (
     <div
-      onClick={onClick}
+      onClick={() => onOpen(p.id)}
       style={{
-        padding: '12px 14px', borderRadius: 7, cursor: onClick ? 'pointer' : 'default',
-        background: 'var(--bg-elevated)',
-        border: `var(--border-w) solid ${highlight ? 'var(--accent-border)' : 'var(--border)'}`,
+        padding: '11px 14px', borderRadius: 7, cursor: 'pointer',
+        background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)',
         display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
       }}
     >
-      {children}
-    </div>
-  )
-}
-
-function RowMain({ p, now, children }) {
-  return (
-    <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 3 }}>
-        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{fullName(p)}</p>
-        <FlagPills p={p} now={now} />
-        {children}
-      </div>
-      <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
-        {[p.carrier_name, p.product_name, p.state].filter(Boolean).join(' · ') || 'No carrier/product on file'}
-        {' · '}{p.agent?.full_name || 'unknown agent'}
-      </p>
-      <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-        <Clock size={11} /> {fmtCallback(p.scheduled_call_at) || 'No callback time'}
-      </p>
-    </div>
-  )
-}
-
-function WaitingRow({ p, now, onClaim, busy }) {
-  return (
-    <RowShell>
-      <RowMain p={p} now={now}>
-        <span style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>in queue {ago(p.created_at, now)}</span>
-      </RowMain>
-      <button
-        onClick={() => onClaim(p)}
-        disabled={busy}
-        style={{ ...primaryBtn, height: 32, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: busy ? 0.6 : 1 }}
-      >
-        Claim & start <ArrowRight size={13} />
-      </button>
-    </RowShell>
-  )
-}
-
-function DeskRow({ p, now, onOpen }) {
-  return (
-    <RowShell onClick={() => onOpen(p.id)} highlight>
-      <RowMain p={p} now={now}>
-        <Pill tone="info">{SUBSTATUS_LABEL[p.cancellation_substatus] || 'In progress'}</Pill>
-      </RowMain>
-      <span style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>claimed {ago(p.fulfillment_claimed_at, now)}</span>
-      <button style={{ ...ghostBtn, height: 32 }}>
-        Resume <ArrowRight size={12} />
-      </button>
-    </RowShell>
-  )
-}
-
-function TeamRow({ p, now, onOpen }) {
-  return (
-    <RowShell onClick={onOpen ? () => onOpen(p.id) : undefined}>
-      <RowMain p={p} now={now}>
-        <Pill>{SUBSTATUS_LABEL[p.cancellation_substatus] || 'In progress'}</Pill>
-      </RowMain>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-muted)' }}>
-        <User size={11} /> {p.assigned?.full_name || 'someone'} · {ago(p.fulfillment_claimed_at, now)}
+      <span style={{ width: 92, flexShrink: 0, fontFamily: MONO, fontSize: 12, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+        {p.scheduled_call_at
+          ? (isToday(p.scheduled_call_at, now) ? fmtTime(p.scheduled_call_at)
+            : new Date(p.scheduled_call_at).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }))
+          : 'No time'}
       </span>
-    </RowShell>
+      <div style={{ flex: '1 1 180px', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{fullName(p)}</p>
+          <FlagPills p={p} now={now} rows={rows} />
+        </div>
+        <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+          {p.agent?.full_name || 'unknown agent'}
+          {showRep && <> · <User size={10} style={{ verticalAlign: '-1px' }} /> {p.assigned?.full_name || 'no rep yet'}</>}
+        </p>
+      </div>
+      <StatusPill p={p} />
+      <ArrowRight size={13} style={{ color: 'var(--text-muted)' }} />
+    </div>
   )
 }
 
-// ── intake (claim-gated) ────────────────────────────────────────────────────
+// ── intake ──────────────────────────────────────────────────────────────────
 
 // Prompt 419 — driver's license/routing/account numbers default masked
 // (last 4 visible) with an explicit per-field reveal.
@@ -333,7 +329,7 @@ function telHref(phone) {
 }
 
 // The agent has verified their number and left it switched on → the client
-// sees the agent's number. Off or unverified → today's plain tel: link.
+// sees the agent's number. Off or unverified → a plain tel: link.
 function agentCallerIdOn(p) {
   return !!(p.agent?.caller_id_verified_at && p.agent?.caller_id_enabled)
 }
@@ -342,45 +338,53 @@ function agentCallerIdOn(p) {
 // to the client showing the agent's number. If Twilio can't place it (no
 // number bought yet, agent switched it off since the page loaded), it says
 // why and offers the direct dial instead — the rep is never stuck.
-function ClientCallAction({ p, canBridge }) {
+// `onCall` fires once the call is actually under way (either path), which is
+// what starts a not-yet-started item.
+function ClientCallAction({ p, canBridge, onCall }) {
   const [state, setState] = useState({ phase: 'idle' })
   const agent = firstName(p.agent?.full_name) || 'the agent'
 
   if (!p.client_phone) {
-    return <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>No client phone on file</span>
+    return <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>No client phone on file — message the agent for one.</span>
   }
 
+  const big = { ...primaryBtn, height: 44, padding: '0 20px', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 9, textDecoration: 'none' }
   const directLink = (label, style) => (
-    <a href={telHref(p.client_phone)} style={style}>
-      <Phone size={14} /> {label}
+    <a href={telHref(p.client_phone)} onClick={onCall} style={style}>
+      <Phone size={15} /> {label}
     </a>
   )
-  const primaryLink = { ...primaryBtn, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none', fontFamily: MONO }
 
-  if (!canBridge) return directLink(p.client_phone, primaryLink)
+  if (!canBridge) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
+        {directLink('Call client', big)}
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+          <span style={{ fontFamily: MONO }}>{p.client_phone}</span> · dials from your phone, shows your own number
+        </span>
+      </div>
+    )
+  }
 
   async function call() {
     setState({ phase: 'calling' })
     try {
       await invokeCallerId('start-agent-caller-id-call', { policy_id: p.id })
       setState({ phase: 'ringing' })
+      onCall?.()
     } catch (e) {
       setState({ phase: FALLBACK_CODES.has(e.code) ? 'fallback' : 'error', message: e.message })
     }
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start', maxWidth: 300 }}>
-      <button
-        onClick={call}
-        disabled={state.phase === 'calling'}
-        style={{ ...primaryBtn, display: 'inline-flex', alignItems: 'center', gap: 8, opacity: state.phase === 'calling' ? 0.6 : 1 }}
-      >
-        {state.phase === 'calling' ? <Loader2 size={14} className="animate-spin" /> : <PhoneCall size={14} />}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start', maxWidth: 340 }}>
+      <button onClick={call} disabled={state.phase === 'calling'} style={{ ...big, opacity: state.phase === 'calling' ? 0.6 : 1 }}>
+        {state.phase === 'calling' ? <Loader2 size={15} className="animate-spin" /> : <PhoneCall size={15} />}
         Call client
       </button>
       <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-        Shows {agent}'s number · <span style={{ fontFamily: MONO }}>{p.client_phone}</span>
+        <span style={{ fontFamily: MONO }}>{p.client_phone}</span> · rings your phone first, shows {agent}'s number
       </span>
       {state.phase === 'ringing' && (
         <span style={{ fontSize: 11.5, color: 'var(--success)' }}>
@@ -398,9 +402,8 @@ function ClientCallAction({ p, canBridge }) {
   )
 }
 
-// Same "read this" hint pattern as Book a call. Lives in the work view itself,
-// not just the spec: the client sees the agent's number, so the rep has to be
-// clear they're calling for the agent, never as them.
+// Same "read this" hint pattern as Book a call. The client sees the agent's
+// number, so the rep has to be clear they're calling for the agent, never as them.
 function OnBehalfHint({ p, profile }) {
   const agent = p.agent?.full_name || 'the agent'
   const me = firstName(profile?.full_name) || 'your name'
@@ -421,7 +424,7 @@ function OnBehalfHint({ p, profile }) {
   )
 }
 
-// ── focused work view ───────────────────────────────────────────────────────
+// ── the record you're working ───────────────────────────────────────────────
 
 function Step({ n, title, done, children, last }) {
   return (
@@ -446,35 +449,55 @@ function Step({ n, title, done, children, last }) {
   )
 }
 
-function WorkView({ p, now, profile, isAdmin, onBack, onClaimNext, nextAvailable, claimBusy }) {
+function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNext, nextUp, position }) {
   const update = useUpdatePolicy()
+  const start = useStartCancellation()
+  const passOn = usePassOnCancellation()
   const navigate = useNavigate()
-  const claimedByMe = p.assigned_fulfillment_id === profile?.id
-  const canEdit = claimedByMe
-  const canViewIntake = claimedByMe || isAdmin
+  const mine = p.assigned_fulfillment_id === profile?.id
+  const canEdit = mine
+  const canViewIntake = mine || isAdmin
   const done = p.fulfillment_stage === 'Complete'
+  const isStarted = started(p)
   const { data: intake, isLoading: intakeLoading } = usePolicyFulfillmentDetails(p.id, canViewIntake)
 
   const [confirmation, setConfirmation] = useState(p.cancellation_confirmation || '')
   const [notes, setNotes] = useState(p.cancellation_notes || '')
   const [saved, setSaved] = useState(false)
   const [showIntake, setShowIntake] = useState(true)
-  const [confirmingRelease, setConfirmingRelease] = useState(false)
+  const [confirmingPass, setConfirmingPass] = useState(false)
 
   const dirty = confirmation !== (p.cancellation_confirmation || '') || notes !== (p.cancellation_notes || '')
 
+  // Once the rep acts on the record, keep it on screen (pinned in the URL):
+  // otherwise setting "Waiting on carrier" would drop its priority and swap
+  // a different client in under them.
+  function hold() {
+    if (!pinned) onPin(p.id)
+  }
+
+  // First real action on a not-started item starts it.
+  function startIfNeeded(substatus) {
+    hold()
+    if (canEdit && !done && !isStarted) start.mutate({ id: p.id, profileId: profile.id, substatus })
+  }
+
   function saveRecord() {
-    update.mutate(
-      { id: p.id, cancellation_confirmation: confirmation.trim() || null, cancellation_notes: notes.trim() || null },
-      { onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 2000) } },
-    )
+    hold()
+    const fields = { id: p.id, cancellation_confirmation: confirmation.trim() || null, cancellation_notes: notes.trim() || null }
+    if (!isStarted) Object.assign(fields, { fulfillment_stage: 'In Progress', cancellation_substatus: 'calling' })
+    update.mutate(fields, { onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 2000) } })
   }
 
   function setSubstatus(value) {
+    hold()
+    if (!isStarted) return startIfNeeded(value)
     update.mutate({ id: p.id, cancellation_substatus: value })
   }
 
   function markCancelled() {
+    // Pinned so the rep sees it land instead of the desk jumping straight on.
+    hold()
     update.mutate({
       id: p.id,
       fulfillment_stage: 'Complete',
@@ -484,48 +507,58 @@ function WorkView({ p, now, profile, isAdmin, onBack, onClaimNext, nextAvailable
     })
   }
 
-  function release() {
-    update.mutate({ id: p.id, assigned_fulfillment_id: null, fulfillment_stage: 'Pending' }, { onSuccess: onBack })
+  function passToAnother() {
+    passOn.mutate(p.id, { onSuccess: onBack })
   }
 
-  const callback = fmtCallback(p.scheduled_call_at)
   const callerIdOn = agentCallerIdOn(p)
-  const canBridge = callerIdOn && (claimedByMe || isAdmin)
+  const canBridge = callerIdOn && (mine || isAdmin)
+  const callAt = p.scheduled_call_at
+  const err = update.error || start.error || passOn.error
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <button onClick={onBack} style={{ ...ghostBtn, width: 'fit-content' }}>
-        <ArrowLeft size={12} /> Back to desk
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        {pinned && (
+          <button onClick={onBack} style={{ ...ghostBtn, width: 'fit-content' }}>
+            <ArrowLeft size={12} /> {isAdmin && !mine ? 'Back to the desk' : 'Back to what’s next'}
+          </button>
+        )}
+        <span style={{ ...fieldLabel, margin: 0 }}>
+          {done ? 'Just finished' : mine ? (position ? `Now working · ${position}` : 'Now working') : `On ${p.assigned?.full_name || 'nobody'}’s desk`}
+        </span>
+      </div>
 
-      {/* Header — who, how to reach them, what the deal was */}
-      <div style={{ ...card, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 18 }}>
-        <div style={{ flex: '1 1 240px', minWidth: 0 }}>
+      {/* Header — who, when, and the call */}
+      <div style={{ ...card, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 20 }}>
+        <div style={{ flex: '1 1 260px', minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>{fullName(p)}</p>
-            {done
-              ? <Pill tone="success" icon={CheckCircle2}>Cancelled</Pill>
-              : <Pill tone="info">{SUBSTATUS_LABEL[p.cancellation_substatus] || 'In progress'}</Pill>}
-            <FlagPills p={p} now={now} />
+            <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>{fullName(p)}</p>
+            <StatusPill p={p} />
+            <FlagPills p={p} now={now} rows={rows} />
           </div>
+          <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Clock size={13} />
+            {callAt ? `Call booked ${fmtCallback(callAt)}` : 'No call time booked'}
+          </p>
           <p style={{ margin: '4px 0 0', fontSize: 11.5, color: 'var(--text-muted)' }}>
             New policy: {[p.carrier_name, p.product_name, p.state].filter(Boolean).join(' · ') || '—'}
             {' · '}<span style={{ fontFamily: MONO }}>{money(p.monthly_premium)}/mo</span>
           </p>
           <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-muted)' }}>
-            Submitted by {p.agent?.full_name || 'unknown agent'} · {ago(p.created_at, now)}
-            {!claimedByMe && p.assigned && <> · claimed by {p.assigned.full_name}</>}
+            Booked by {p.agent?.full_name || 'unknown agent'} · {ago(p.created_at, now)}
           </p>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
-          <ClientCallAction p={p} canBridge={canBridge} />
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-secondary)' }}>
-            <Clock size={11} /> {callback ? `Callback ${callback}` : 'No callback time set'}
-          </span>
-          <button onClick={() => navigate(`/messages?thread=${p.id}`)} style={ghostBtn}>
-            <MessageCircleMore size={13} /> {isAdmin ? 'Open conversation' : 'Message agent'}
-          </button>
-        </div>
+        {!done && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
+            {(mine || isAdmin)
+              ? <ClientCallAction p={p} canBridge={canBridge} onCall={() => startIfNeeded('calling')} />
+              : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Only {p.assigned?.full_name || 'the assigned rep'} calls this client.</span>}
+            <button onClick={() => navigate(`/messages?thread=${p.id}`)} style={ghostBtn}>
+              <MessageCircleMore size={13} /> {isAdmin ? 'Open conversation' : 'Message agent'}
+            </button>
+          </div>
+        )}
       </div>
 
       {canBridge && p.client_phone && !done && <OnBehalfHint p={p} profile={profile} />}
@@ -564,11 +597,11 @@ function WorkView({ p, now, profile, isAdmin, onBack, onClaimNext, nextAvailable
                   size="sm"
                   style={{ flexWrap: 'wrap', maxWidth: '100%' }}
                   options={SUBSTATUS}
-                  value={p.cancellation_substatus || 'calling'}
+                  value={isStarted ? (p.cancellation_substatus || 'calling') : null}
                   onChange={v => canEdit && setSubstatus(v)}
                 />
                 <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-                  Keep this current — it's what the rest of the team sees on your row.
+                  {isStarted ? 'Keep this current — the agent sees it on their side.' : 'Pick one once you’re on it. Calling the client starts this too.'}
                 </p>
               </>
             )}
@@ -617,13 +650,12 @@ function WorkView({ p, now, profile, isAdmin, onBack, onClaimNext, nextAvailable
                 </p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <NotifyAgentButton />
-                  {claimedByMe && nextAvailable && (
+                  {mine && (
                     <button
-                      onClick={onClaimNext}
-                      disabled={claimBusy}
-                      style={{ ...primaryBtn, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: claimBusy ? 0.6 : 1 }}
+                      onClick={onNext}
+                      style={{ ...primaryBtn, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                     >
-                      Claim next <ArrowRight size={13} />
+                      {nextUp ? <>Next: {fullName(nextUp)}</> : 'Back to the desk'} <ArrowRight size={13} />
                     </button>
                   )}
                 </div>
@@ -643,27 +675,38 @@ function WorkView({ p, now, profile, isAdmin, onBack, onClaimNext, nextAvailable
                   >
                     <CircleCheckBig size={14} /> Mark cancelled
                   </button>
-                  {confirmingRelease ? (
+                  {confirmingPass ? (
                     <>
-                      <span style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>Put it back in the queue?</span>
-                      <button onClick={release} style={{ ...ghostBtn, color: 'var(--danger)' }}>Release</button>
-                      <button onClick={() => setConfirmingRelease(false)} style={ghostBtn}>Keep</button>
+                      <span style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>Hand this to another rep?</span>
+                      <button onClick={passToAnother} disabled={passOn.isPending} style={{ ...ghostBtn, color: 'var(--danger)' }}>
+                        {passOn.isPending ? 'Passing…' : 'Pass it on'}
+                      </button>
+                      <button onClick={() => setConfirmingPass(false)} style={ghostBtn}>Keep it</button>
                     </>
                   ) : (
-                    <button onClick={() => setConfirmingRelease(true)} style={ghostBtn}>
-                      <Undo2 size={12} /> Release to queue
+                    <button onClick={() => setConfirmingPass(true)} style={ghostBtn}>
+                      <Shuffle size={12} /> Pass to another rep
                     </button>
                   )}
                 </div>
               </div>
+            ) : isAdmin ? (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
+                  {p.assigned?.full_name || 'The assigned rep'} finishes this one.
+                </p>
+                <button onClick={passToAnother} disabled={passOn.isPending} style={ghostBtn}>
+                  <Shuffle size={12} /> {passOn.isPending ? 'Reassigning…' : 'Reassign'}
+                </button>
+              </div>
             ) : (
               <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
-                Only {p.assigned?.full_name || 'the rep who claimed this'} can finish it.
+                Only {p.assigned?.full_name || 'the assigned rep'} can finish it.
               </p>
             )}
-            {update.isError && (
+            {err && (
               <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--danger)' }}>
-                Couldn't save — {update.error?.message || 'try again'}.
+                Couldn't save — {err.message || 'try again'}.
               </p>
             )}
           </Step>
@@ -680,7 +723,7 @@ function WorkView({ p, now, profile, isAdmin, onBack, onClaimNext, nextAvailable
           {showIntake && (
             !canViewIntake ? (
               <p style={{ margin: 0, fontSize: 11.5, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                Only the rep who claimed this can see the intake.
+                Only the rep it's assigned to can see the intake.
               </p>
             ) : intakeLoading ? (
               <p style={{ margin: 0, fontSize: 11.5, color: 'var(--text-muted)' }}>Loading intake…</p>
@@ -720,7 +763,15 @@ function HistoryList({ rows, now, profile, onOpen }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {list.map(p => (
-            <RowShell key={p.id} onClick={() => onOpen(p.id)}>
+            <div
+              key={p.id}
+              onClick={() => onOpen(p.id)}
+              style={{
+                padding: '12px 14px', borderRadius: 7, cursor: 'pointer',
+                background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)',
+                display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+              }}
+            >
               <div style={{ flex: '1 1 200px', minWidth: 0 }}>
                 <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{fullName(p)}</p>
                 <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
@@ -732,7 +783,7 @@ function HistoryList({ rows, now, profile, onOpen }) {
               </span>
               <AuthorizationStatus compact />
               <span onClick={e => e.stopPropagation()}><NotifyAgentButton /></span>
-            </RowShell>
+            </div>
           ))}
         </div>
       )}
@@ -745,146 +796,130 @@ function HistoryList({ rows, now, profile, onOpen }) {
 export default function FulfillmentQueue() {
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
+  const qc = useQueryClient()
   const { data: rows = [], isLoading } = useFulfillmentQueue()
-  const claim = useClaimCancellation()
   const now = useNow()
   const [view, setView] = useState('desk')
-  // Prompt 681 — the open item lives in the URL (?open=<id>) so Overview and
-  // Pipeline can link straight into a work view.
+  // The open item lives in the URL (?open=<id>) so Overview, Pipeline and
+  // notifications can link straight to it. With nothing pinned, the desk
+  // shows whatever's next in your queue.
   const [params, setParams] = useSearchParams()
-  const workingId = params.get('open')
-  const setWorkingId = id => setParams(id ? { open: id } : {}, { replace: !id })
+  const pinnedId = params.get('open')
+  const setPinned = id => setParams(id ? { open: id } : {}, { replace: !id })
   const myId = profile?.id
+
+  // Anything booked while no rep was active has no one on it; place it now.
+  useEffect(() => {
+    if (!myId) return
+    assignUnassigned()
+      .then(n => { if (n > 0) qc.invalidateQueries({ queryKey: ['policies'] }) })
+      .catch(() => {})
+  }, [myId, qc])
 
   const g = useMemo(() => {
     const open = rows.filter(p => p.fulfillment_stage !== 'Complete')
     const done = rows
       .filter(p => p.fulfillment_stage === 'Complete')
       .sort((a, b) => new Date(b.fulfillment_completed_at || b.updated_at) - new Date(a.fulfillment_completed_at || a.updated_at))
-    // Waiting: overdue callbacks first, then soonest callback, then oldest.
-    const waiting = open.filter(p => !p.assigned_fulfillment_id).sort((a, b) => {
-      const ta = a.scheduled_call_at ? new Date(a.scheduled_call_at).getTime() : Infinity
-      const tb = b.scheduled_call_at ? new Date(b.scheduled_call_at).getTime() : Infinity
-      return ta - tb || new Date(a.created_at) - new Date(b.created_at)
-    })
-    const mine = open.filter(p => p.assigned_fulfillment_id === myId)
-    const team = open.filter(p => p.assigned_fulfillment_id && p.assigned_fulfillment_id !== myId)
-    const attention = open.filter(p => { const f = flagsFor(p, now); return f.overdue || f.stale })
+    const mine = open.filter(p => p.assigned_fulfillment_id === myId).sort(byPriority(now))
+    const team = open.slice().sort(byPriority(now))
+    const unassigned = open.filter(p => !p.assigned_fulfillment_id)
+    const scope = isAdmin ? team : mine
+    const attention = scope.filter(p => { const f = flagsFor(p, now); return f.overdue || f.stale })
+    const callsToday = scope.filter(p => !started(p) && isToday(p.scheduled_call_at, now))
+    const nextCall = callsToday.filter(p => new Date(p.scheduled_call_at) >= now - DUE_SOON_MS)[0]
     const doneToday = done.filter(p => isToday(p.fulfillment_completed_at, now))
     const myDoneToday = doneToday.filter(p => p.assigned_fulfillment_id === myId)
-    return { waiting, mine, team, done, attention, doneToday, myDoneToday }
-  }, [rows, myId, now])
+    return { open, done, mine, team, unassigned, attention, callsToday, nextCall, doneToday, myDoneToday }
+  }, [rows, myId, isAdmin, now])
 
-  const working = workingId ? rows.find(p => p.id === workingId) : null
-
-  function claimAndOpen(p) {
-    claim.mutate({ id: p.id, profileId: profile.id }, { onSuccess: () => setWorkingId(p.id) })
-  }
-
-  function claimNext() {
-    const next = g.waiting[0]
-    if (next) claimAndOpen(next)
-  }
-
-  function open(id) {
-    setWorkingId(id)
-  }
+  const pinned = pinnedId ? rows.find(p => p.id === pinnedId) : null
+  // A rep always has the top of their queue on screen; admin only when they open one.
+  const active = pinned || (!isAdmin ? g.mine[0] : null)
+  const rest = (isAdmin ? g.team : g.mine).filter(p => p.id !== active?.id)
+  const nextUp = g.mine.find(p => p.id !== active?.id)
+  const position = active && !pinned && g.mine.length > 1 ? `1 of ${g.mine.length}` : null
 
   if (isLoading) {
-    return <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-muted)' }}>Loading cancellations…</p>
+    return <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-muted)' }}>Loading your desk…</p>
   }
 
-  if (working) {
-    return (
-      <div style={{ maxWidth: 1100 }}>
-        {/* keyed so "Claim next" opens the new item with fresh field state */}
-        <WorkView
-          key={working.id}
-          p={working}
-          now={now}
-          profile={profile}
-          isAdmin={isAdmin}
-          onBack={() => setWorkingId(null)}
-          onClaimNext={claimNext}
-          nextAvailable={g.waiting.length > 0}
-          claimBusy={claim.isPending}
-        />
-        {claim.isError && (
-          <p style={{ margin: '10px 0 0', fontSize: 11.5, color: 'var(--danger)' }}>{claim.error?.message}</p>
-        )}
-      </div>
-    )
-  }
+  const tiles = (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+      <StatTile
+        icon={Briefcase} label={isAdmin ? 'Open across the team' : 'On your desk'}
+        value={isAdmin ? g.team.length : g.mine.length}
+        tone={(isAdmin ? g.team.length : g.mine.length) ? 'info' : 'neutral'}
+        sub={isAdmin
+          ? (g.unassigned.length ? `${g.unassigned.length} with no rep yet` : 'every one has a rep')
+          : `${g.mine.filter(started).length} started · ${g.mine.filter(p => !started(p)).length} not yet`}
+      />
+      <StatTile
+        icon={CalendarClock} label="Calls left today" value={g.callsToday.length}
+        tone={g.callsToday.length ? 'accent' : 'neutral'}
+        sub={g.nextCall ? `next at ${fmtTime(g.nextCall.scheduled_call_at)}` : 'none still to make'}
+      />
+      <StatTile
+        icon={AlertTriangle} label="Needs attention" value={g.attention.length}
+        tone={g.attention.length ? 'danger' : 'neutral'} sub="call time passed, or stuck"
+      />
+      <StatTile
+        icon={CircleCheckBig} label="Cancelled today" value={isAdmin ? g.doneToday.length : g.myDoneToday.length}
+        tone="success" sub={isAdmin ? 'whole team' : `${g.doneToday.length} across the team`}
+      />
+    </div>
+  )
 
   return (
     <div style={{ maxWidth: 1100, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Status strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
-        <StatTile icon={Inbox} label="Waiting to claim" value={g.waiting.length} tone={g.waiting.length ? 'accent' : 'neutral'}
-          sub={g.waiting[0] ? `oldest ${ago(g.waiting.reduce((a, b) => (new Date(a.created_at) < new Date(b.created_at) ? a : b)).created_at, now)}` : 'queue is clear'} />
-        <StatTile icon={Briefcase} label="On your desk" value={g.mine.length} tone={g.mine.length ? 'info' : 'neutral'}
-          sub={`${g.team.length} with the rest of the team`} />
-        <StatTile icon={AlertTriangle} label="Needs attention" value={g.attention.length} tone={g.attention.length ? 'danger' : 'neutral'}
-          sub="overdue callbacks or stale" />
-        <StatTile icon={CircleCheckBig} label="Cancelled today" value={isAdmin ? g.doneToday.length : g.myDoneToday.length} tone="success"
-          sub={isAdmin ? 'whole team' : `${g.doneToday.length} across the team`} />
-      </div>
+      {tiles}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <Segmented value={view} onChange={setView} options={[{ value: 'desk', label: 'Desk' }, { value: 'history', label: `Cancelled (${g.done.length})` }]} />
-        {view === 'desk' && g.waiting.length > 0 && (
-          <button
-            onClick={claimNext}
-            disabled={claim.isPending}
-            style={{ ...primaryBtn, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: claim.isPending ? 0.6 : 1 }}
-          >
-            Claim next <ArrowRight size={13} />
-          </button>
-        )}
-      </div>
-
-      {claim.isError && (
-        <p style={{ margin: 0, fontSize: 11.5, color: 'var(--danger)' }}>{claim.error?.message}</p>
-      )}
+      <Segmented
+        value={view} onChange={setView}
+        options={[{ value: 'desk', label: 'Desk' }, { value: 'history', label: `Cancelled (${g.done.length})` }]}
+        style={{ width: 'fit-content' }}
+      />
 
       {view === 'history' ? (
-        <HistoryList rows={g.done} now={now} profile={profile} onOpen={open} />
+        <HistoryList rows={g.done} now={now} profile={profile} onOpen={id => { setPinned(id); setView('desk') }} />
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: 16, alignItems: 'start' }}>
+          {active ? (
+            // keyed so moving to the next client resets the field state
+            <WorkView
+              key={active.id}
+              p={active}
+              rows={rows}
+              now={now}
+              profile={profile}
+              isAdmin={isAdmin}
+              pinned={!!pinned}
+              position={position}
+              nextUp={nextUp}
+              onBack={() => setPinned(null)}
+              onPin={setPinned}
+              onNext={() => setPinned(null)}
+            />
+          ) : !isAdmin && (
             <div style={card}>
-              <p style={cardTitle}>On your desk</p>
-              {g.mine.length === 0 ? (
-                <EmptyNote>
-                  {g.waiting.length ? 'Nothing claimed — take the next one from Up next.' : 'Nothing on your desk and nothing waiting.'}
-                </EmptyNote>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {g.mine.map(p => <DeskRow key={p.id} p={p} now={now} onOpen={open} />)}
-                </div>
-              )}
+              <EmptyNote>
+                Nothing on your desk. New bookings land here on their own, no need to claim them.
+              </EmptyNote>
             </div>
+          )}
 
+          {rest.length > 0 && (
             <div style={card}>
-              <p style={cardTitle}>Up next</p>
-              {g.waiting.length === 0 ? (
-                <EmptyNote>Queue is clear — every submission has someone on it.</EmptyNote>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {g.waiting.map(p => (
-                    <WaitingRow key={p.id} p={p} now={now} onClaim={claimAndOpen} busy={claim.isPending} />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {g.team.length > 0 && (
-            <div style={card}>
-              <p style={cardTitle}>With the team</p>
+              <p style={cardTitle}>{isAdmin ? 'Everyone’s desks' : 'Up next on your desk'}</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {g.team.map(p => <TeamRow key={p.id} p={p} now={now} onOpen={isAdmin ? open : undefined} />)}
+                {rest.map(p => <QueueRow key={p.id} p={p} now={now} rows={rows} onOpen={setPinned} showRep={isAdmin} />)}
               </div>
+            </div>
+          )}
+
+          {isAdmin && rest.length === 0 && !active && (
+            <div style={card}>
+              <EmptyNote><Inbox size={14} style={{ verticalAlign: '-2px' }} /> Nothing open across the team.</EmptyNote>
             </div>
           )}
         </>

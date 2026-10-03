@@ -40,7 +40,11 @@ export default function FulfillmentOverview() {
     const since = (list, t) => list.filter(p => new Date(p.fulfillment_completed_at).getTime() >= t)
     const doneWeek = since(done, weekStart)
     const doneMonth = since(done, monthStart)
-    const waiting = open.filter(p => !p.assigned_fulfillment_id)
+    // Prompt 684 — nothing waits to be claimed now; every booking already has
+    // a rep. What's left to watch is calls the reps haven't started yet.
+    const toCall = open.filter(p => p.fulfillment_stage !== 'In Progress')
+      .sort((a, b) => (a.scheduled_call_at || '9').localeCompare(b.scheduled_call_at || '9'))
+    const unassigned = open.filter(p => !p.assigned_fulfillment_id)
     const attention = open.filter(p => needsAttention(p, now))
       .sort((a, b) => (a.scheduled_call_at || '9').localeCompare(b.scheduled_call_at || '9'))
     const todays = open.filter(p => sameLocalDay(p.scheduled_call_at, today))
@@ -51,7 +55,7 @@ export default function FulfillmentOverview() {
     // Booked → cancelled, this month: how long a client waits end to end.
     const turnaround = median(doneMonth.map(p => hoursBetween(p.created_at, p.fulfillment_completed_at)))
 
-    return { waiting, attention, attentionOlder, todays, doneWeek, doneMonth, turnaround, open }
+    return { toCall, unassigned, attention, attentionOlder, todays, doneWeek, doneMonth, turnaround, open }
   }, [rows, now])
 
   const firstName = (profile?.full_name || '').split(' ')[0]
@@ -62,7 +66,7 @@ export default function FulfillmentOverview() {
   })
   const open = id => navigate(`/fulfillment/desk?open=${id}`)
   const dash = v => (isLoading ? '—' : v)
-  const oldestWaiting = g.waiting.reduce((a, b) => (!a || new Date(b.created_at) < new Date(a.created_at) ? b : a), null)
+  const nextCall = g.toCall.find(p => p.scheduled_call_at && new Date(p.scheduled_call_at) >= now)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -88,8 +92,11 @@ export default function FulfillmentOverview() {
       <StatGrid>
         <StatTile label="Cancelled this week" value={dash(g.doneWeek.length)} sub={`${g.doneMonth.length} this month · whole team`}
           onClick={() => navigate('/fulfillment/pipeline?stage=cancelled')} />
-        <StatTile label="Waiting to claim" value={dash(g.waiting.length)}
-          sub={oldestWaiting ? `oldest booked ${fmtDuration(hoursBetween(oldestWaiting.created_at, now))} ago` : 'queue is clear'}
+        <StatTile label="Not started yet" value={dash(g.toCall.length)}
+          sub={g.unassigned.length ? `${g.unassigned.length} with no rep yet`
+            : nextCall ? `next call ${new Date(nextCall.scheduled_call_at).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })}`
+              : 'nothing booked ahead'}
+          tone={g.unassigned.length ? 'warning' : 'neutral'}
           onClick={() => navigate('/fulfillment/desk')} />
         <StatTile label="Needs attention" value={dash(g.attention.length)} tone={g.attention.length ? 'warning' : 'neutral'}
           sub="overdue callbacks or stale" onClick={() => navigate('/fulfillment/pipeline?stage=attention')} />
@@ -105,7 +112,7 @@ export default function FulfillmentOverview() {
             <AlertTriangle size={18} style={{ flexShrink: 0 }} />
             <p style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 14, fontWeight: 500 }}>
               {g.attention.length} cancellation{g.attention.length === 1 ? ' is' : 's are'} overdue or sitting too long:
-              a callback time that's passed, waiting over a day, or claimed over two days ago.
+              a call time that's passed without being started, or started over two days ago and not finished.
               {g.attentionOlder.length < g.attention.length && ' Today’s are flagged in the list below.'}
             </p>
             <button onClick={() => navigate('/fulfillment/pipeline?stage=attention')} style={{ ...ghostBtn, height: 32 }}>

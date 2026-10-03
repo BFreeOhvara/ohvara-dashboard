@@ -25,7 +25,7 @@ export function FulfillRow({ p, now, onClick, active, first }) {
     : 'No time'
   const { stale } = flagsFor(p, now)
   const done = p.fulfillment_stage === 'Complete'
-  const rep = p.assigned?.full_name || (done ? '—' : 'Unclaimed')
+  const rep = p.assigned?.full_name || (done ? '—' : 'Unassigned')
   return (
     <div
       onClick={onClick}
@@ -51,7 +51,7 @@ export function FulfillRow({ p, now, onClick, active, first }) {
         {rep}
       </span>
       <span className="order-1 md:order-none" style={{ justifySelf: 'end', display: 'inline-flex', gap: 6 }}>
-        {stale && !done && p.assigned_fulfillment_id && <Pill tone="warning" icon={Clock}>Stale</Pill>}
+        {stale && p.fulfillment_stage === 'In Progress' && <Pill tone="warning" icon={Clock}>Stale</Pill>}
         <StagePill p={p} now={now} />
       </span>
       <ChevronRight size={14} className="hidden md:block"

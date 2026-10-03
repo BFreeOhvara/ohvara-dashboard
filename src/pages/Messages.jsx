@@ -101,7 +101,7 @@ export default function Messages() {
 }
 
 function counterpart(t, me) {
-  if (me?.role === 'agent') return t.fulfillment_name ? `Fulfillment · ${t.fulfillment_name}` : 'Fulfillment · unclaimed'
+  if (me?.role === 'agent') return t.fulfillment_name ? `Fulfillment · ${t.fulfillment_name}` : 'Fulfillment · no rep yet'
   return `Agent · ${t.agent_name || 'Unknown'}`
 }
 
@@ -169,7 +169,7 @@ function Conversation({ policyId, me, onBack }) {
   }
 
   const withWho = !pol ? '' : me?.role === 'agent'
-    ? (pol.assigned?.full_name ? `With Fulfillment · ${pol.assigned.full_name}` : 'With Fulfillment · not claimed yet')
+    ? (pol.assigned?.full_name ? `With Fulfillment · ${pol.assigned.full_name}` : 'With Fulfillment · no rep yet')
     : `Booked by ${pol.agent?.full_name || 'unknown agent'}`
 
   return (

@@ -10,7 +10,7 @@ import { supabase } from '../lib/supabase'
 const SELECT = `
   id, agent_id, client_first_name, client_last_name, client_phone,
   scheduled_call_at, fulfillment_stage, assigned_fulfillment_id,
-  fulfillment_claimed_at, fulfillment_completed_at,
+  fulfillment_claimed_at, fulfillment_started_at, fulfillment_completed_at,
   cancellation_substatus, cancellation_confirmation,
   created_at, updated_at,
   agent:profiles!policies_agent_id_fkey ( id, full_name ),
@@ -98,9 +98,11 @@ export function useBookCall() {
   })
 }
 
-// Move a booking that nobody on Fulfillment has picked up yet. Guarded on the
-// row still being unclaimed so an agent can't shift a call out from under a
-// rep who's already working it.
+// Move a booking the rep hasn't started yet. Guarded on stage Pending (every
+// booking has a rep from the start since Prompt 684, so "unassigned" no
+// longer works as the guard) so an agent can't shift a call out from under a
+// rep who's already working it. The database re-checks which rep is free at
+// the new time (migration 116).
 export function useRescheduleBooking() {
   const qc = useQueryClient()
   return useMutation({
@@ -109,10 +111,10 @@ export function useRescheduleBooking() {
         .from('policies')
         .update({ scheduled_call_at: scheduledAt })
         .eq('id', id)
-        .is('assigned_fulfillment_id', null)
+        .eq('fulfillment_stage', 'Pending')
         .select('id')
       if (error) throw error
-      if (!data?.length) throw new Error('Fulfillment already picked this one up — ask them to move it.')
+      if (!data?.length) throw new Error('Fulfillment has already started this one — message them to move it.')
       return data[0]
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),

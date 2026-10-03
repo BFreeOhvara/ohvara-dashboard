@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { Bell, CheckCheck, Calendar, Clock, MessageSquare, Video, ClipboardCheck } from 'lucide-react'
+import { Bell, CheckCheck, Calendar, Clock, MessageSquare, Video, ClipboardCheck, Inbox } from 'lucide-react'
 import { useRepNotifications, useRepUnreadCount, useRepMarkNotificationRead, useRepMarkAllRead } from '../../hooks/useNotifications'
 import { useAppointmentBookedNotifier, useAppointmentReminder5MinNotifier, useCloserCallGradedNotifier } from '../../hooks/useCloserNotificationTriggers'
 
@@ -12,6 +12,7 @@ const TYPE_STYLES = {
   policy_message:            { Icon: MessageSquare, color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
   live_room_invite:          { Icon: Video,         color: 'var(--accent)',  bg: 'var(--accent-dim)'  },
   fulfillment_complete:      { Icon: ClipboardCheck, color: 'var(--success)', bg: 'var(--success-dim)' },
+  fulfillment_assigned:      { Icon: Inbox,          color: 'var(--info)',    bg: 'var(--info-dim)'    },
   default:                   { Icon: Bell,           color: 'var(--info)',    bg: 'var(--info-dim)'    },
 }
 
@@ -168,7 +169,7 @@ export function CloserNotificationBell({ profileId }) {
                       display: 'flex', gap: 10, padding: '10px 14px',
                       borderBottom: i < notifications.length - 1 ? '0.5px solid var(--border)' : 'none',
                       background: n.read ? 'transparent' : 'rgba(108,99,255,0.04)',
-                      cursor: n.read && n.type !== 'policy_message' ? 'default' : 'pointer',
+                      cursor: n.read && !n.data?.link ? 'default' : 'pointer',
                       transition: 'background 100ms',
                       animationDelay: `${i * 0.03}s`,
                     }}
@@ -176,8 +177,9 @@ export function CloserNotificationBell({ profileId }) {
                     onMouseLeave={e => { e.currentTarget.style.background = n.read ? 'transparent' : 'rgba(108,99,255,0.04)' }}
                     onClick={() => {
                       if (!n.read) markOne.mutate(n.id)
-                      // Prompt 679 — a message notification opens its thread.
-                      if (n.type === 'policy_message' && n.data?.link) { setOpen(false); navigate(n.data.link) }
+                      // Prompt 679 — a message notification opens its thread;
+                      // Prompt 684 — an assignment opens the item on the desk.
+                      if (n.data?.link) { setOpen(false); navigate(n.data.link) }
                     }}
                   >
                     {/* Icon */}

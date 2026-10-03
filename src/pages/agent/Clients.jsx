@@ -178,7 +178,7 @@ function ClientDetail({ p, now, canMove, onClose }) {
 
   const steps = [
     { label: 'Booked', at: p.created_at, done: true },
-    { label: p.assigned?.full_name ? `Picked up by ${p.assigned.full_name}` : 'Picked up by Fulfillment', at: p.fulfillment_claimed_at, done: stage !== 'booked' },
+    { label: p.assigned?.full_name ? `Picked up by ${p.assigned.full_name}` : 'Picked up by Fulfillment', at: p.fulfillment_started_at || p.fulfillment_claimed_at, done: stage !== 'booked' },
     { label: 'Old policy cancelled', at: p.fulfillment_completed_at, done: stage === 'cancelled' },
   ]
 

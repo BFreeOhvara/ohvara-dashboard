@@ -9,6 +9,11 @@ import { useEffect, useState } from 'react'
 // of: booked (waiting for Fulfillment to pick it up), in progress (a
 // Fulfillment rep has it), or cancelled (done). Only fulfillment_assigned rows
 // are bookings; anything else is pre-pivot data.
+//
+// Prompt 684 — every booking is auto-assigned to a rep the moment it's made,
+// so "has a rep" no longer means "in progress". A row is in progress once
+// the rep has actually started it (fulfillment_stage 'In Progress'); until
+// then it's still Booked, rep or not.
 
 export const STAGE = {
   // Prompt 669 — Booked was 'accent', which read as the same colour as
@@ -27,11 +32,11 @@ export const SUBSTATUS_LABEL = {
 
 export function stageOf(p) {
   if (p.fulfillment_stage === 'Complete') return 'cancelled'
-  if (p.assigned_fulfillment_id) return 'inProgress'
+  if (p.fulfillment_stage === 'In Progress') return 'inProgress'
   return 'booked'
 }
 
-// Booked time has passed and nobody on Fulfillment has picked it up yet.
+// Booked time has passed and the rep hasn't started it yet.
 export function isMissed(p, now = Date.now()) {
   return stageOf(p) === 'booked' && !!p.scheduled_call_at && new Date(p.scheduled_call_at).getTime() < now
 }
