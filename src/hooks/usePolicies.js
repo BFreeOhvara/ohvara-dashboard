@@ -106,6 +106,7 @@ const FULFILLMENT_SELECT = `
   scheduled_call_at, fulfillment_stage, assigned_fulfillment_id, created_at, updated_at,
   fulfillment_claimed_at, fulfillment_started_at, fulfillment_completed_at,
   cancellation_substatus, cancellation_confirmation, cancellation_notes,
+  call_live_since, last_call_outcome, call_attempts, last_call_at,
   agent:profiles!policies_agent_id_fkey ( id, full_name, caller_id_verified_at, caller_id_enabled ),
   assigned:profiles!policies_assigned_fulfillment_id_fkey ( id, full_name )
 `
@@ -113,6 +114,8 @@ const FULFILLMENT_SELECT = `
 export function useFulfillmentQueue() {
   return useQuery({
     queryKey: ['policies', 'fulfillment-queue'],
+    // a live call (or one just ended on another screen) shows without a refresh
+    refetchInterval: q => (q.state.data?.some(p => p.call_live_since) ? 10e3 : 45e3),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('policies')
@@ -125,21 +128,40 @@ export function useFulfillmentQueue() {
   })
 }
 
-// Prompt 684 — nobody claims any more: the database assigns every booking to
-// a rep (migration 116). "Starting" is the rep's first real action on an
-// assigned item (calling the client, setting a carrier status, saving notes)
-// and just moves it Pending → In Progress. Guarded on Pending + mine, so a
-// repeat call is a harmless no-op. Times are stamped server-side.
-export function useStartCancellation() {
+// Prompt 689 — a call is either live right now or it isn't. "Call client"
+// starts one (stage Pending → In Progress, call_live_since stamped server-side),
+// and the rep ends it with the real outcome: Cancelled (the existing "Mark
+// cancelled" update, which also clears the live flag), No answer, or
+// Rescheduling (optionally "waiting on carrier / client"). RPCs so the rep
+// check and the times live in the database (migration 117).
+export function useStartCall() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, profileId, substatus = 'calling' }) => {
-      const { error } = await supabase
-        .from('policies')
-        .update({ fulfillment_stage: 'In Progress', cancellation_substatus: substatus })
-        .eq('id', id)
-        .eq('assigned_fulfillment_id', profileId)
-        .eq('fulfillment_stage', 'Pending')
+    mutationFn: async (id) => {
+      const { error } = await supabase.rpc('fulfillment_start_call', { p_policy: id })
+      if (error) throw error
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),
+  })
+}
+
+export function useEndCall() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, outcome, reason = null }) => {
+      const { error } = await supabase.rpc('fulfillment_end_call', { p_policy: id, p_outcome: outcome, p_reason: reason })
+      if (error) throw error
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),
+  })
+}
+
+// The optional reason on a call that already ended as Rescheduling.
+export function useSetRescheduleReason() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, reason }) => {
+      const { error } = await supabase.rpc('fulfillment_set_reschedule_reason', { p_policy: id, p_reason: reason })
       if (error) throw error
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),

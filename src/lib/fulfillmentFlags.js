@@ -2,13 +2,19 @@
 // the Fulfillment Overview and Pipeline agree (Prompt 663, shared in 681).
 //
 // Prompt 684 — items are auto-assigned at booking, often for a call days
-// out, so "how long since it was assigned" stopped meaning anything. Not
-// started: stale a day past its call time (or a day after booking if it has
-// no time). Started: stale two days after the rep started it.
+// out, so "how long since it was assigned" stopped meaning anything.
+// Prompt 689 — statuses are Booked / In progress (live) / No answer /
+// Rescheduling / Cancelled:
+//   * Booked (never called): overdue once its call time passes; stale a day past it.
+//   * No answer / Rescheduling: waiting on another attempt; stale two days after
+//     the last call ended.
+//   * Live: a call open for 45+ minutes is probably one nobody ended — flagged so
+//     the rep records how it went (otherwise the agent keeps seeing it as live).
 
 const HOUR = 3600e3
-export const STALE_WAITING_H = 24   // not started, this long past its call → flagged
-export const STALE_CLAIMED_H = 48   // started but not finished this long → flagged
+export const STALE_WAITING_H = 24   // never called, this long past its call → flagged
+export const STALE_RETRY_H = 48     // called but not resolved, this long since → flagged
+export const LIVE_STALE_MIN = 45    // call still marked live this long → flagged
 export const SLOT_MS = 30 * 60e3    // Book a call's slot length; the overlap window
 
 function hoursSince(iso, now) {
@@ -17,17 +23,19 @@ function hoursSince(iso, now) {
 
 export function flagsFor(p, now) {
   const done = p.fulfillment_stage === 'Complete'
-  const started = p.fulfillment_stage === 'In Progress'
-  const overdue = !done && !started && !!p.scheduled_call_at && new Date(p.scheduled_call_at) < now
-  const staleWaiting = !done && !started && hoursSince(p.scheduled_call_at || p.created_at, now) > STALE_WAITING_H
-  const staleStarted = started
-    && hoursSince(p.fulfillment_started_at || p.fulfillment_claimed_at || p.updated_at, now) > STALE_CLAIMED_H
-  return { overdue, stale: staleWaiting || staleStarted }
+  const live = !done && !!p.call_live_since
+  const retry = !done && !live && !!p.last_call_outcome
+  const booked = !done && !live && !retry
+  const overdue = booked && !!p.scheduled_call_at && new Date(p.scheduled_call_at) < now
+  const staleBooked = booked && hoursSince(p.scheduled_call_at || p.created_at, now) > STALE_WAITING_H
+  const staleRetry = retry && hoursSince(p.last_call_at || p.fulfillment_started_at || p.updated_at, now) > STALE_RETRY_H
+  const liveStale = live && (now - new Date(p.call_live_since)) / 60e3 > LIVE_STALE_MIN
+  return { overdue, stale: staleBooked || staleRetry, liveStale }
 }
 
 export function needsAttention(p, now) {
   const f = flagsFor(p, now)
-  return !!(f.overdue || f.stale)
+  return !!(f.overdue || f.stale || f.liveStale)
 }
 
 // Open items on the same rep's desk whose calls are within one slot of this

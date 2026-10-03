@@ -11,6 +11,7 @@ import { FulfillHead, FulfillRow } from '../../components/fulfillment/FulfillUI'
 import { fullName } from '../../lib/policyFormat'
 import { fmtBooking } from '../../lib/scheduling'
 import { stageOf, bucketOf, BUCKETS, SUBSTATUS_LABEL, digits, useNow } from '../../lib/agentBookings'
+import { LiveDot } from '../../components/ui/LiveDot'
 import { needsAttention } from '../../lib/fulfillmentFlags'
 
 // Fulfillment Pipeline (Prompt 681) — every submission in flight across the
@@ -27,6 +28,10 @@ import { needsAttention } from '../../lib/fulfillmentFlags'
 
 const STAGES = ['all', ...BUCKETS, 'attention']
 const UNASSIGNED = '__unassigned'
+const STAGE_TEXT = {
+  booked: 'Booked, no call yet', inProgress: 'On a call right now', noAnswer: 'No answer, needs another call',
+  rescheduling: 'Rescheduling, needs another call', cancelled: 'Cancelled',
+}
 
 // Filter options from the rows themselves: one per distinct agent / rep.
 function nameOptions(rows, key, nameKey) {
@@ -64,7 +69,7 @@ export default function FulfillmentPipeline() {
     const q = search.trim().toLowerCase()
     const qd = digits(q)
     const filtered = scoped.filter(p => {
-      if (filter === 'attention' ? !needsAttention(p, now) : (filter !== 'all' && bucketOf(p, now) !== filter)) return false
+      if (filter === 'attention' ? !needsAttention(p, now) : (filter !== 'all' && bucketOf(p) !== filter)) return false
       if (q) {
         const hay = [p.client_first_name, p.client_last_name, p.agent?.full_name, p.assigned?.full_name, p.carrier_name].filter(Boolean).join(' ').toLowerCase()
         if (!hay.includes(q) && !(qd.length >= 3 && digits(p.client_phone).includes(qd))) return false
@@ -87,7 +92,7 @@ export default function FulfillmentPipeline() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Pipeline
-        rows={scoped} now={now} bucket={filter} onBucket={v => setParam('stage', v, 'all')}
+        rows={scoped} bucket={filter} onBucket={v => setParam('stage', v, 'all')}
         extras={[{ key: 'attention', label: 'Needs attention', count: attentionCount, warn: true }]}
       />
 
@@ -128,7 +133,7 @@ export default function FulfillmentPipeline() {
         {list.map((p, i) => (
           <div key={p.id}>
             <FulfillRow p={p} now={now} first={i === 0} active={openId === p.id} onClick={() => toggle(p.id)} />
-            {openId === p.id && <Summary p={p} now={now} profile={profile} onClose={() => toggle(p.id)} />}
+            {openId === p.id && <Summary p={p} profile={profile} onClose={() => toggle(p.id)} />}
           </div>
         ))}
       </ListCard>
@@ -136,7 +141,7 @@ export default function FulfillmentPipeline() {
   )
 }
 
-function Summary({ p, now, profile, onClose }) {
+function Summary({ p, profile, onClose }) {
   const navigate = useNavigate()
   const isAdmin = profile?.role === 'admin'
   const stage = stageOf(p)
@@ -146,7 +151,7 @@ function Summary({ p, now, profile, onClose }) {
   const steps = [
     { label: `Booked by ${p.agent?.full_name || 'the agent'}`, at: p.created_at, done: true },
     { label: p.assigned?.full_name ? `Assigned to ${p.assigned.full_name}` : 'Assigned to a rep', at: p.fulfillment_claimed_at, done: !!p.assigned_fulfillment_id },
-    { label: 'Rep started on it', at: p.fulfillment_started_at, done: stage !== 'booked' },
+    { label: (p.call_attempts || 0) > 1 ? `Called ${p.call_attempts} times` : 'Rep called the client', at: p.last_call_at || p.fulfillment_started_at, done: (p.call_attempts || 0) > 0 },
     { label: 'Old policy cancelled', at: p.fulfillment_completed_at, done: stage === 'cancelled' },
   ]
 
@@ -177,8 +182,11 @@ function Summary({ p, now, profile, onClose }) {
         <Info label="Fulfillment call" value={fmtBooking(p.scheduled_call_at)} mono />
         <Info label="New policy" value={[p.carrier_name, p.product_name, p.state].filter(Boolean).join(' · ') || '—'} />
         <Info label="Rep" value={p.assigned?.full_name || 'Unassigned'} />
-        <Info label="Status" value={stage === 'inProgress' ? (SUBSTATUS_LABEL[p.cancellation_substatus] || 'In progress')
-          : stage === 'cancelled' ? 'Cancelled' : (p.scheduled_call_at && new Date(p.scheduled_call_at) < now ? 'Not picked up' : 'Booked, not started')} />
+        <Info label="Status" value={stage === 'inProgress'
+          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><LiveDot /> On a call right now</span>
+          : stage === 'rescheduling' && SUBSTATUS_LABEL[p.cancellation_substatus]
+            ? `Rescheduling · ${SUBSTATUS_LABEL[p.cancellation_substatus].toLowerCase()}`
+            : STAGE_TEXT[stage]} />
         {stage === 'cancelled' && <Info label="Carrier confirmation #" value={p.cancellation_confirmation || 'Not recorded'} mono />}
       </div>
 

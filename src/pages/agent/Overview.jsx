@@ -1,15 +1,17 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarPlus, AlertTriangle, ArrowRight } from 'lucide-react'
+import { CalendarPlus, ArrowRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
 import { primaryBtn, ghostBtn, MONO, DISPLAY } from '../../lib/exportStyles'
 import { LiveClock } from '../../components/ui/LiveClock'
 import { StatTile, StatGrid, SectionHead, ListCard, GroupRow, ClientRow, EmptyNote } from '../../components/agent/AgentUI'
-import { stageOf, isMissed, sameLocalDay, startOfWeek, useNow } from '../../lib/agentBookings'
+import { stageOf, sameLocalDay, startOfWeek, useNow } from '../../lib/agentBookings'
+import { LiveDot } from '../../components/ui/LiveDot'
+import { fullName } from '../../lib/policyFormat'
 
 // Agent Overview (Prompt 665) — the landing page. "Your day at a glance":
-// what's booked today, any booked call whose time passed with no rep action, what's
+// what's booked today, any call happening live right now, what's
 // coming, and the week's numbers — with Book a call one tap away.
 //
 // Prompt 669 — laid out like Restorix Portal's closer Overview: greeting +
@@ -35,19 +37,19 @@ export default function Overview() {
     const todays = rows
       .filter(p => sameLocalDay(p.scheduled_call_at, today))
       .sort((a, b) => a.scheduled_call_at.localeCompare(b.scheduled_call_at))
-    // Today's misses already show (flagged) in the Today group; the attention
-    // list only needs the older ones. The tile counts all of them.
-    const missedAll = open.filter(p => isMissed(p, now))
-    const missed = missedAll.filter(p => !sameLocalDay(p.scheduled_call_at, today))
     const upcoming = open
       .filter(p => p.scheduled_call_at && new Date(p.scheduled_call_at) > today && !sameLocalDay(p.scheduled_call_at, today))
       .sort((a, b) => a.scheduled_call_at.localeCompare(b.scheduled_call_at))
     const bookedThisWeek = rows.filter(p => new Date(p.created_at).getTime() >= weekStart).length
     const cancelledThisWeek = rows.filter(p => stageOf(p) === 'cancelled' && p.fulfillment_completed_at
       && new Date(p.fulfillment_completed_at).getTime() >= weekStart).length
-    const inProgress = rows.filter(p => stageOf(p) === 'inProgress').length
-    const waiting = rows.filter(p => stageOf(p) === 'booked').length
-    return { todays, missed, missedAll, upcoming, bookedThisWeek, cancelledThisWeek, inProgress, waiting }
+    // Prompt 689 — five statuses; "live" is a call happening right now.
+    const count = st => rows.filter(p => stageOf(p) === st).length
+    const live = rows.filter(p => stageOf(p) === 'inProgress')
+    return {
+      todays, upcoming, bookedThisWeek, cancelledThisWeek, live,
+      inProgress: live.length, waiting: count('booked'), noAnswer: count('noAnswer'), rescheduling: count('rescheduling'),
+    }
   }, [rows, now])
 
   const firstName = (profile?.full_name || '').split(' ')[0]
@@ -84,29 +86,23 @@ export default function Overview() {
       <StatGrid>
         <StatTile label="Booked this week" value={isLoading ? '—' : g.bookedThisWeek} sub="since Monday"
           onClick={() => navigate('/agent/clients?range=week&stage=all')} />
-        <StatTile label="With Fulfillment" value={isLoading ? '—' : g.waiting + g.inProgress}
-          sub={`${g.inProgress} being worked · ${g.waiting} waiting`} onClick={() => navigate('/agent/clients?stage=all')} />
+        <StatTile label="With Fulfillment" value={isLoading ? '—' : g.waiting + g.inProgress + g.noAnswer + g.rescheduling}
+          sub={`${g.inProgress} on a call · ${g.waiting} booked · ${g.rescheduling} rescheduling`} onClick={() => navigate('/agent/clients?stage=all')} />
         <StatTile label="Cancelled this week" value={isLoading ? '—' : g.cancelledThisWeek} sub="old policy confirmed cancelled"
           onClick={() => navigate('/agent/clients?stage=cancelled')} />
-        <StatTile label="Not started" value={isLoading ? '—' : g.missedAll.length} tone={g.missedAll.length ? 'warning' : 'neutral'}
-          sub="booked time passed, rep hasn't started" onClick={() => navigate('/agent/clients?stage=missed')} />
+        <StatTile label="No answer" value={isLoading ? '—' : g.noAnswer} tone={g.noAnswer ? 'warning' : 'neutral'}
+          sub="Fulfillment will try again" onClick={() => navigate('/agent/clients?stage=noAnswer')} />
       </StatGrid>
 
-      {g.missed.length > 0 && (
-        <div>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 16,
-            background: 'var(--warning-dim)', border: 'var(--border-w) solid var(--warning-bd)', color: 'var(--warning)',
-          }}>
-            <AlertTriangle size={18} style={{ flexShrink: 0 }} />
-            <p style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 14, fontWeight: 500 }}>
-              {g.missed.length} booked time{g.missed.length === 1 ? '' : 's'} passed and the assigned rep hasn't started {g.missed.length === 1 ? 'the call' : 'the calls'} yet.
-              Open one to move it or give Fulfillment a heads-up.
-            </p>
-          </div>
-          <ListCard head style={{ marginTop: 10 }}>
-            {g.missed.map((p, i) => <ClientRow key={p.id} p={p} now={now} first={i === 0} onClick={() => open(p.id)} />)}
-          </ListCard>
+      {g.live.length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 16,
+          background: 'var(--danger-dim)', border: 'var(--border-w) solid var(--danger-bd)', color: 'var(--danger)',
+        }}>
+          <LiveDot size={10} />
+          <p style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 14, fontWeight: 500 }}>
+            Fulfillment is on a call with {g.live.map(fullName).join(', ')} right now.
+          </p>
         </div>
       )}
 

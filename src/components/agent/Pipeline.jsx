@@ -1,4 +1,5 @@
 import { MONO } from '../../lib/exportStyles'
+import { LiveDot } from '../ui/LiveDot'
 import { BUCKETS, BUCKET, TONE, bucketOf } from '../../lib/agentBookings'
 
 // Status filter on My Pipeline. Prompt 672 put a funnel card (Booked → Picked
@@ -10,11 +11,13 @@ import { BUCKETS, BUCKET, TONE, bucketOf } from '../../lib/agentBookings'
 // Prompt 686 — each status chip carries its own colour (tint at rest, stronger
 // when selected); `showAll={false}` drops the All chip (agent My Pipeline —
 // clicking the selected chip again clears the filter).
+// Prompt 689 — five statuses (Booked / In progress / No answer / Rescheduling /
+// Cancelled); In progress swaps its dot for the live pulse while a call is on.
 // Prompt 687 — in that mode the chips sit inside one shared rounded bar (one
 // segmented control, like Restorix's), keeping each status's own colour.
-export function Pipeline({ rows, now, bucket, onBucket, extras = [], showAll = true }) {
-  const counts = { waiting: 0, missed: 0, inProgress: 0, cancelled: 0 }
-  for (const p of rows) counts[bucketOf(p, now)]++
+export function Pipeline({ rows, bucket, onBucket, extras = [], showAll = true }) {
+  const counts = Object.fromEntries(BUCKETS.map(b => [b, 0]))
+  for (const p of rows) counts[bucketOf(p)]++
 
   const grouped = !showAll
   return (
@@ -26,9 +29,8 @@ export function Pipeline({ rows, now, bucket, onBucket, extras = [], showAll = t
       {BUCKETS.map(b => (
         <Chip
           key={b} on={bucket === b} onClick={() => onBucket(bucket === b ? 'all' : b)}
-          label={BUCKET[b].label} count={counts[b]} dot={BUCKET[b].fill}
+          label={BUCKET[b].label} count={counts[b]} dot={BUCKET[b].fill} live={b === 'inProgress' && counts[b] > 0}
           tone={grouped ? TONE[BUCKET[b].tone] : undefined} grouped={grouped}
-          warn={b === 'missed' && counts.missed > 0}
         />
       ))}
       {extras.map(x => (
@@ -41,7 +43,7 @@ export function Pipeline({ rows, now, bucket, onBucket, extras = [], showAll = t
   )
 }
 
-function Chip({ on, onClick, label, count, dot, warn, tone, grouped }) {
+function Chip({ on, onClick, label, count, dot, warn, tone, grouped, live }) {
   const border = tone ? (on ? tone.color : grouped ? 'transparent' : tone.bd) : on ? 'var(--accent)' : warn ? 'var(--warning-bd)' : 'var(--border)'
   const bg = tone ? (on ? tone.dim : grouped ? 'transparent' : 'var(--bg-surface)') : on ? 'var(--accent-dim)' : warn ? 'var(--warning-dim)' : 'var(--bg-surface)'
   const color = tone ? tone.color : on ? 'var(--accent)' : warn ? 'var(--warning)' : 'var(--text-secondary)'
@@ -56,7 +58,7 @@ function Chip({ on, onClick, label, count, dot, warn, tone, grouped }) {
         border: `var(--border-w) solid ${border}`, background: bg, color,
       }}
     >
-      {dot && <span style={{ width: 8, height: 8, borderRadius: '50%', background: dot, flexShrink: 0 }} />}
+      {live ? <LiveDot title="A call is live right now" /> : dot && <span style={{ width: 8, height: 8, borderRadius: '50%', background: dot, flexShrink: 0 }} />}
       {label}
       <span style={{ fontFamily: MONO, fontVariantNumeric: 'tabular-nums' }}>{count}</span>
     </button>

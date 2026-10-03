@@ -1,8 +1,9 @@
 import { Children } from 'react'
-import { AlertTriangle, ChevronRight, MessageCircleMore } from 'lucide-react'
+import { ChevronRight, MessageCircleMore } from 'lucide-react'
 import { card, eyebrow, control, MONO } from '../../lib/exportStyles'
 import { SLOTS, slotToISO, localDateISO } from '../../lib/scheduling'
-import { STAGE, SUBSTATUS_LABEL, TONE, stageOf, isMissed } from '../../lib/agentBookings'
+import { STAGE, TONE, stageOf } from '../../lib/agentBookings'
+import { LiveDot } from '../ui/LiveDot'
 import { fullName } from '../../lib/policyFormat'
 
 // Shared pieces for the agent portal pages (Prompt 665).
@@ -25,13 +26,13 @@ export function Pill({ tone = 'neutral', icon: Icon, children }) {
   )
 }
 
-export function StagePill({ p, now }) {
+export function StagePill({ p }) {
   const stage = stageOf(p)
-  if (isMissed(p, now)) return <Pill tone="warning" icon={AlertTriangle}>Not started</Pill>
-  const label = stage === 'inProgress'
-    ? (SUBSTATUS_LABEL[p.cancellation_substatus] || STAGE.inProgress.label)
-    : STAGE[stage].label
-  return <Pill tone={STAGE[stage].tone}>{label}</Pill>
+  return (
+    <Pill tone={STAGE[stage].tone} icon={stage === 'inProgress' ? LiveDot : undefined}>
+      {STAGE[stage].label}
+    </Pill>
+  )
 }
 
 // Restorix's Tile — eyebrow label over one big number. A warning/danger tone

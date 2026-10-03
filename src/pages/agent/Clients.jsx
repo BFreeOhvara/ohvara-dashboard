@@ -11,6 +11,7 @@ import { ClientRow, EmptyNote, SlotPicker, ListCard } from '../../components/age
 import { fullName } from '../../lib/policyFormat'
 import { slotToISO, localDateISO, fmtBooking, isFarOut } from '../../lib/scheduling'
 import { stageOf, bucketOf, BUCKETS, RANGES, SUBSTATUS_LABEL, digits, useNow, startOfWeek, startOfMonth } from '../../lib/agentBookings'
+import { LiveDot } from '../../components/ui/LiveDot'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 
 // My Pipeline (Prompt 665, was My Clients until 680) — replaces My Policies.
@@ -19,7 +20,8 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // dashboard doesn't track (Brayden, 2026-10-01). Every row an agent creates
 // is a client whose EXISTING policy is being cancelled, so this is a log of
 // clients you've booked and where each cancellation stands: Booked → In
-// progress (a Fulfillment rep has it) → Cancelled. No AP, no policy #, no
+// progress (a call is live right now) → Cancelled / No answer / Rescheduling
+// (Prompt 689). No AP, no policy #, no
 // effectuation/underwriting/lapse banners — none of that applies any more.
 //
 // Admin lands here too (nav "Clients") and sees every agent's bookings, with
@@ -29,8 +31,8 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // filter, one list card with an eyebrow header (Restorix's tables), and the
 // client detail opening in place under its row instead of as a separate card.
 //
-// Prompt 672 — "Not started" is its own bucket. Status and range live in the
-// URL (?stage=missed&range=week) so Overview's tiles link straight to the
+// Prompt 672 — status and range live in the
+// URL (?stage=noAnswer&range=week) so Overview's tiles link straight to the
 // matching slice. Range is by booking date and scopes the whole page; search
 // only narrows the list.
 //
@@ -86,7 +88,7 @@ export default function Clients() {
     const qd = digits(q)
     const filtered = scoped.filter(p => {
       // Search spans every status; the pills only filter when nothing is typed.
-      if (!q && filter !== 'all' && bucketOf(p, now) !== filter) return false
+      if (!q && filter !== 'all' && bucketOf(p) !== filter) return false
       if (q) {
         const hay = [p.client_first_name, p.client_last_name, p.current_carrier, p.agent?.full_name].filter(Boolean).join(' ').toLowerCase()
         if (!hay.includes(q) && !(qd.length >= 3 && digits(p.client_phone).includes(qd))) return false
@@ -98,7 +100,7 @@ export default function Clients() {
     return filtered.sort((a, b) => rank(a) - rank(b) || (rank(a)
       ? (b.fulfillment_completed_at || b.updated_at || '').localeCompare(a.fulfillment_completed_at || a.updated_at || '')
       : (a.scheduled_call_at || '9').localeCompare(b.scheduled_call_at || '9')))
-  }, [scoped, filter, search, now])
+  }, [scoped, filter, search])
 
   const toggle = id => {
     const next = new URLSearchParams(params)
@@ -113,7 +115,7 @@ export default function Clients() {
     // Prompt 686 — fixed-height column (viewport minus header + main padding) so
     // the page never scrolls; only the list card scrolls inside it.
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: 'calc(100dvh - 160px)', minHeight: 360 }}>
-      <Pipeline rows={scoped} now={now} bucket={filter} onBucket={v => setParam('stage', v, 'booked')} showAll={false} />
+      <Pipeline rows={scoped} bucket={filter} onBucket={v => setParam('stage', v, 'booked')} showAll={false} />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flexShrink: 0 }}>
         {isAdmin && agents.length > 1 && (
@@ -215,11 +217,20 @@ function ClientDetail({ p, now, canMove, onClose }) {
   const stage = stageOf(p)
   const [moving, setMoving] = useState(false)
 
+  const attempted = (p.call_attempts || 0) > 0
+  const caller = p.assigned?.full_name || 'Fulfillment'
   const steps = [
     { label: 'Booked', at: p.created_at, done: true },
-    { label: p.assigned?.full_name ? `Picked up by ${p.assigned.full_name}` : 'Picked up by Fulfillment', at: p.fulfillment_started_at || p.fulfillment_claimed_at, done: stage !== 'booked' },
+    { label: attempted ? `Called by ${caller}` : 'Waiting for Fulfillment to call', at: p.fulfillment_started_at || p.fulfillment_claimed_at, done: attempted },
     { label: 'Old policy cancelled', at: p.fulfillment_completed_at, done: stage === 'cancelled' },
   ]
+  const statusText = {
+    booked: 'Waiting for Fulfillment',
+    inProgress: 'On a call right now',
+    noAnswer: 'No answer — Fulfillment will try again',
+    rescheduling: `Spoke with the client, needs another call${SUBSTATUS_LABEL[p.cancellation_substatus] ? ` · ${SUBSTATUS_LABEL[p.cancellation_substatus].toLowerCase()}` : ''}`,
+    cancelled: 'Cancelled',
+  }[stage]
 
   return (
     <div style={{
@@ -246,7 +257,10 @@ function ClientDetail({ p, now, canMove, onClose }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: 16, marginBottom: 20 }}>
         <Info label="Fulfillment call" value={fmtBooking(p.scheduled_call_at)} mono />
         <Info label="Leaving" value={p.current_carrier || 'Not noted'} />
-        <Info label="Status" value={stage === 'inProgress' ? (SUBSTATUS_LABEL[p.cancellation_substatus] || 'In progress') : stage === 'cancelled' ? 'Cancelled' : 'Waiting for Fulfillment'} />
+        <Info label="Status" value={stage === 'inProgress'
+          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><LiveDot /> {statusText}</span>
+          : statusText} />
+        {attempted && stage !== 'cancelled' && <Info label="Calls so far" value={String(p.call_attempts)} mono />}
         {stage === 'cancelled' && <Info label="Carrier confirmation #" value={p.cancellation_confirmation || 'Not recorded'} mono />}
       </div>
 
@@ -279,9 +293,9 @@ function ClientDetail({ p, now, canMove, onClose }) {
             </button>
           )
       )}
-      {stage === 'inProgress' && (
+      {stage !== 'booked' && stage !== 'cancelled' && (
         <p style={{ margin: '18px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
-          Fulfillment has this one — if the time needs to change, message them.
+          Fulfillment is on this one — if the time needs to change, message them.
         </p>
       )}
     </div>

@@ -194,6 +194,12 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 @keyframes ringPulse{ 0% { transform:scale(1); opacity:.6 } 100% { transform:scale(1.9); opacity:0 } }
 @keyframes blink    { 0%,60%,100% { opacity:.35 } 30% { opacity:1 } }
 
+/* Prompt 689 — a call is happening right now: red dot with a ring that
+   pulses outward. Static (no ring) for reduced-motion. */
+.live-dot { position: relative; display: inline-block; flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+.live-dot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--danger); animation: ringPulse 1.4s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) { .live-dot::after { animation: none; opacity: 0; } }
+
 /* Training Center — quiz/roleplay redesign animations */
 @keyframes quizReveal {
   from { opacity: 0; transform: scale(0.96) translateY(8px); }

@@ -23,7 +23,7 @@ export function FulfillRow({ p, now, onClick, active, first }) {
   const when = p.scheduled_call_at
     ? new Date(p.scheduled_call_at).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
     : 'No time'
-  const { stale } = flagsFor(p, now)
+  const { stale, liveStale } = flagsFor(p, now)
   const done = p.fulfillment_stage === 'Complete'
   const rep = p.assigned?.full_name || (done ? '—' : 'Unassigned')
   return (
@@ -51,7 +51,8 @@ export function FulfillRow({ p, now, onClick, active, first }) {
         {rep}
       </span>
       <span className="order-1 md:order-none" style={{ justifySelf: 'end', display: 'inline-flex', gap: 6 }}>
-        {stale && p.fulfillment_stage === 'In Progress' && <Pill tone="warning" icon={Clock}>Stale</Pill>}
+        {liveStale && <Pill tone="danger" icon={Clock}>Still live?</Pill>}
+        {stale && p.last_call_outcome && <Pill tone="warning" icon={Clock}>Stale</Pill>}
         <StagePill p={p} now={now} />
       </span>
       <ChevronRight size={14} className="hidden md:block"

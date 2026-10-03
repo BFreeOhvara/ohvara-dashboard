@@ -12,15 +12,21 @@ const SELECT = `
   scheduled_call_at, fulfillment_stage, assigned_fulfillment_id,
   fulfillment_claimed_at, fulfillment_started_at, fulfillment_completed_at,
   cancellation_substatus, cancellation_confirmation,
+  call_live_since, last_call_outcome, call_attempts, last_call_at,
   created_at, updated_at,
   agent:profiles!policies_agent_id_fkey ( id, full_name ),
   assigned:profiles!policies_assigned_fulfillment_id_fkey ( id, full_name ),
   details:policy_fulfillment_details ( current_carrier )
 `
 
+// Prompt 689 — a live call should show up without a refresh, so the list
+// re-polls every 10s while any call is live and every 45s otherwise.
+export const livePollMs = rows => (rows?.some(p => p.call_live_since) ? 10e3 : 45e3)
+
 export function useAgentBookings(agentId = null) {
   return useQuery({
     queryKey: ['policies', 'agent-bookings', agentId ?? 'visible'],
+    refetchInterval: q => livePollMs(q.state.data),
     queryFn: async () => {
       let q = supabase
         .from('policies')
@@ -98,10 +104,10 @@ export function useBookCall() {
   })
 }
 
-// Move a booking the rep hasn't started yet. Guarded on stage Pending (every
-// booking has a rep from the start since Prompt 684, so "unassigned" no
-// longer works as the guard) so an agent can't shift a call out from under a
-// rep who's already working it. The database re-checks which rep is free at
+// Move a booking Fulfillment hasn't called yet. Guarded on stage Pending and
+// zero attempts (every booking has a rep from the start since Prompt 684, so
+// "unassigned" no longer works as the guard) so an agent can't shift a call
+// out from under a rep who's already working it. The database re-checks which rep is free at
 // the new time (migration 116).
 export function useRescheduleBooking() {
   const qc = useQueryClient()
@@ -112,9 +118,10 @@ export function useRescheduleBooking() {
         .update({ scheduled_call_at: scheduledAt })
         .eq('id', id)
         .eq('fulfillment_stage', 'Pending')
+        .eq('call_attempts', 0)
         .select('id')
       if (error) throw error
-      if (!data?.length) throw new Error('Fulfillment has already started this one — message them to move it.')
+      if (!data?.length) throw new Error('Fulfillment has already called this one — message them to move it.')
       return data[0]
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),

@@ -8,7 +8,7 @@ import { LiveClock } from '../../components/ui/LiveClock'
 import { StatTile, StatGrid, SectionHead, ListCard, EmptyNote } from '../../components/agent/AgentUI'
 import { FulfillHead, FulfillRow } from '../../components/fulfillment/FulfillUI'
 import { needsAttention } from '../../lib/fulfillmentFlags'
-import { sameLocalDay, startOfWeek, startOfMonth, median, hoursBetween, fmtDuration, useNow } from '../../lib/agentBookings'
+import { sameLocalDay, startOfWeek, startOfMonth, median, hoursBetween, fmtDuration, useNow, stageOf, isLive, needsAnotherCall } from '../../lib/agentBookings'
 
 // Fulfillment Overview (Prompt 681) — the Fulfillment role's landing page.
 // A step back from the desk: how the whole team is doing this week and month,
@@ -35,9 +35,12 @@ export default function FulfillmentOverview() {
     const doneWeek = since(done, weekStart)
     const doneMonth = since(done, monthStart)
     // Prompt 684 — nothing waits to be claimed now; every booking already has
-    // a rep. What's left to watch is calls the reps haven't started yet.
-    const toCall = open.filter(p => p.fulfillment_stage !== 'In Progress')
+    // a rep. What's left to watch is Booked (no call placed yet); No answer and
+    // Rescheduling (Prompt 689) are counted separately as calls owed again.
+    const toCall = open.filter(p => stageOf(p) === 'booked')
       .sort((a, b) => (a.scheduled_call_at || '9').localeCompare(b.scheduled_call_at || '9'))
+    const callAgain = open.filter(needsAnotherCall).length
+    const live = open.filter(isLive).length
     const unassigned = open.filter(p => !p.assigned_fulfillment_id)
     const attention = open.filter(p => needsAttention(p, now))
       .sort((a, b) => (a.scheduled_call_at || '9').localeCompare(b.scheduled_call_at || '9'))
@@ -49,7 +52,7 @@ export default function FulfillmentOverview() {
     // Booked → cancelled, this month: how long a client waits end to end.
     const turnaround = median(doneMonth.map(p => hoursBetween(p.created_at, p.fulfillment_completed_at)))
 
-    return { toCall, unassigned, attention, attentionOlder, todays, doneWeek, doneMonth, turnaround, open }
+    return { toCall, callAgain, live, unassigned, attention, attentionOlder, todays, doneWeek, doneMonth, turnaround, open }
   }, [rows, now])
 
   const firstName = (profile?.full_name || '').split(' ')[0]
@@ -84,8 +87,9 @@ export default function FulfillmentOverview() {
       <StatGrid>
         <StatTile label="Cancelled this week" value={dash(g.doneWeek.length)} sub={`${g.doneMonth.length} this month · whole team`}
           onClick={() => navigate('/fulfillment/pipeline?stage=cancelled')} />
-        <StatTile label="Not started yet" value={dash(g.toCall.length)}
+        <StatTile label="Booked, to call" value={dash(g.toCall.length)}
           sub={g.unassigned.length ? `${g.unassigned.length} with no rep yet`
+            : g.live || g.callAgain ? `${g.live} on a call now · ${g.callAgain} owed another call`
             : nextCall ? `next call ${new Date(nextCall.scheduled_call_at).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })}`
               : 'nothing booked ahead'}
           tone={g.unassigned.length ? 'warning' : 'neutral'}
@@ -104,7 +108,7 @@ export default function FulfillmentOverview() {
             <AlertTriangle size={18} style={{ flexShrink: 0 }} />
             <p style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 14, fontWeight: 500 }}>
               {g.attention.length} cancellation{g.attention.length === 1 ? ' is' : 's are'} overdue or sitting too long:
-              a call time that's passed without being started, or started over two days ago and not finished.
+              a call time that's passed with no call placed, a call that's been open too long, or an unresolved call more than two days old.
               {g.attentionOlder.length < g.attention.length && ' Today’s are flagged in the list below.'}
             </p>
             <button onClick={() => navigate('/fulfillment/pipeline?stage=attention')} style={{ ...ghostBtn, height: 32 }}>

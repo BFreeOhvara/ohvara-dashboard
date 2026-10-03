@@ -5,11 +5,11 @@ import {
   ArrowLeft, ArrowRight, CheckCircle2, Clock, Phone, User, Eye, EyeOff,
   ShieldAlert, Inbox, Briefcase, AlertTriangle, CircleCheckBig, Send,
   FileSignature, ChevronDown, ChevronUp, PhoneCall, MessageCircleMore, Loader2,
-  CalendarClock, Shuffle,
+  CalendarClock, Shuffle, PhoneMissed,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import {
-  useFulfillmentQueue, useUpdatePolicy, useStartCancellation, usePassOnCancellation, assignUnassigned,
+  useFulfillmentQueue, useUpdatePolicy, useStartCall, useEndCall, useSetRescheduleReason, usePassOnCancellation, assignUnassigned,
 } from '../../hooks/usePolicies'
 import { usePolicyFulfillmentDetails } from '../../hooks/useFulfillmentDetails'
 import { card, cardTitle, primaryBtn, ghostBtn, fieldLabel, control, MONO } from '../../lib/exportStyles'
@@ -18,6 +18,8 @@ import { SavedTick } from '../../components/ui/SavedTick'
 import { money, fullName, formatDate, maskLast4 } from '../../lib/policyFormat'
 import { invokeCallerId, FALLBACK_CODES } from '../../lib/callerId'
 import { flagsFor, overlapsFor } from '../../lib/fulfillmentFlags'
+import { STAGE, stageOf, isLive } from '../../lib/agentBookings'
+import { LiveDot } from '../../components/ui/LiveDot'
 
 // Fulfillment desk (Prompt 684 rebuild of the Prompt 663 claim desk).
 //
@@ -28,12 +30,14 @@ import { flagsFor, overlapsFor } from '../../lib/fulfillmentFlags'
 // centre, then the carrier steps, then "Mark cancelled" → the next one.
 // Pipeline (Prompt 681) is where you go to look across everything.
 //
-// Assigned isn't started. An item stays Pending (the agent still sees
-// "Booked") until the rep first acts on it — calls the client, sets a carrier
-// status, saves notes — which moves it to In Progress.
+// Prompt 689 — status is Booked → In progress (a call is live RIGHT NOW) →
+// Cancelled / No answer / Rescheduling. "Call client" starts the live call
+// (there's no end-of-call signal from the phone, so the rep declares it), and
+// when it ends the rep marks the outcome. No answer and Rescheduling both loop
+// back toward another call rather than being dead ends.
 
+// Optional reason on a Rescheduling outcome.
 const SUBSTATUS = [
-  { value: 'calling',         label: 'Calling carrier' },
   { value: 'waiting_carrier', label: 'Waiting on carrier' },
   { value: 'waiting_client',  label: 'Waiting on client' },
 ]
@@ -42,6 +46,8 @@ const SUBSTATUS_LABEL = Object.fromEntries(SUBSTATUS.map(s => [s.value, s.label]
 const TONE = {
   neutral: { color: 'var(--text-secondary)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
   accent:  { color: 'var(--accent)',  dim: 'var(--accent-dim)',  bd: 'var(--accent-border)' },
+  purple:  { color: 'var(--purple)', dim: 'var(--purple-dim)', bd: 'var(--purple-bd)' },
+  pink:    { color: 'var(--pink)',   dim: 'var(--pink-dim)',   bd: 'var(--pink-bd)' },
   info:    { color: 'var(--info)',    dim: 'var(--info-dim)',    bd: 'var(--info-bd)' },
   warning: { color: 'var(--warning)', dim: 'var(--warning-dim)', bd: 'var(--warning-bd)' },
   danger:  { color: 'var(--danger)',  dim: 'var(--danger-dim)',  bd: 'var(--danger-bd)' },
@@ -85,20 +91,20 @@ function useNow(intervalMs = 60e3) {
   return now
 }
 
-const started = p => p.fulfillment_stage === 'In Progress'
 const DUE_SOON_MS = 15 * 60e3
 
 // What to work next, in order:
-//   0. mid-call with the carrier (started, "Calling carrier")
+//   0. a call that's live right now
 //   1. calls that are due — booked time passed or within 15 min, soonest first
-//   2. started items waiting on the carrier/client, longest-waiting first
+//   2. No answer / Rescheduling — owed another call, longest-waiting first
 //   3. later calls, soonest first
 //   4. no call time at all, oldest booking first
 function priority(p, now) {
   const at = p.scheduled_call_at ? new Date(p.scheduled_call_at).getTime() : null
-  if (started(p)) {
-    if (!p.cancellation_substatus || p.cancellation_substatus === 'calling') return [0, 0]
-    return [2, new Date(p.fulfillment_started_at || p.fulfillment_claimed_at || p.updated_at).getTime()]
+  const stage = stageOf(p)
+  if (stage === 'inProgress') return [0, 0]
+  if (stage === 'noAnswer' || stage === 'rescheduling') {
+    return [2, new Date(p.last_call_at || p.fulfillment_started_at || p.updated_at).getTime()]
   }
   if (at != null && at <= now + DUE_SOON_MS) return [1, at]
   if (at != null) return [3, at]
@@ -129,16 +135,19 @@ function Pill({ tone = 'neutral', icon: Icon, children }) {
 
 function StatusPill({ p }) {
   if (p.fulfillment_stage === 'Complete') return <Pill tone="success" icon={CheckCircle2}>Cancelled</Pill>
-  if (started(p)) return <Pill tone="info">{SUBSTATUS_LABEL[p.cancellation_substatus] || 'In progress'}</Pill>
-  return <Pill>Not started</Pill>
+  const stage = stageOf(p)
+  if (stage === 'inProgress') return <Pill tone={STAGE.inProgress.tone} icon={LiveDot}>{STAGE.inProgress.label}</Pill>
+  const reason = stage === 'rescheduling' && SUBSTATUS_LABEL[p.cancellation_substatus]
+  return <Pill tone={STAGE[stage].tone}>{STAGE[stage].label}{reason ? ` · ${reason.toLowerCase()}` : ''}</Pill>
 }
 
 function FlagPills({ p, now, rows }) {
-  const { overdue, stale } = flagsFor(p, now)
+  const { overdue, stale, liveStale } = flagsFor(p, now)
   const overlaps = rows ? overlapsFor(p, rows).length : 0
   return (
     <>
       {overdue && <Pill tone="danger" icon={AlertTriangle}>Call time passed</Pill>}
+      {liveStale && <Pill tone="danger" icon={Clock}>Call still open? Mark how it went</Pill>}
       {!overdue && stale && <Pill tone="warning" icon={Clock}>Stale</Pill>}
       {overlaps > 0 && <Pill tone="warning" icon={CalendarClock}>Overlaps another call</Pill>}
     </>
@@ -339,7 +348,7 @@ function agentCallerIdOn(p) {
 // number bought yet, agent switched it off since the page loaded), it says
 // why and offers the direct dial instead — the rep is never stuck.
 // `onCall` fires once the call is actually under way (either path), which is
-// what starts a not-yet-started item.
+// what flips the item to a live call (In progress).
 function ClientCallAction({ p, canBridge, onCall }) {
   const [state, setState] = useState({ phase: 'idle' })
   const agent = firstName(p.agent?.full_name) || 'the agent'
@@ -424,6 +433,42 @@ function OnBehalfHint({ p, profile }) {
   )
 }
 
+// Shown while a call is live. The three outcomes are the only ways out of
+// "In progress": nothing sits there as an idle bucket.
+function LiveCallPanel({ p, now, busy, canCancel, onCancelled, onNoAnswer, onRescheduling }) {
+  const mins = Math.max(0, Math.floor((now - new Date(p.call_live_since)) / 60e3))
+  const btn = { ...ghostBtn, height: 38, padding: '0 14px', display: 'inline-flex', alignItems: 'center', gap: 7, opacity: busy ? 0.6 : 1 }
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', padding: '14px 18px', borderRadius: 10,
+      background: 'var(--danger-dim)', border: '1px solid var(--danger-bd)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 200px', minWidth: 0 }}>
+        <LiveDot size={11} />
+        <div>
+          <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--danger)' }}>Live call</p>
+          <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
+            Started {fmtTime(p.call_live_since)}{mins >= 1 ? ` · ${mins}m` : ''}. How did it go?
+          </p>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {canCancel && (
+          <button onClick={onCancelled} disabled={busy} style={{ ...primaryBtn, height: 38, display: 'inline-flex', alignItems: 'center', gap: 7, opacity: busy ? 0.6 : 1 }}>
+            <CircleCheckBig size={14} /> Cancelled
+          </button>
+        )}
+        <button onClick={onNoAnswer} disabled={busy} style={btn}>
+          <PhoneMissed size={14} /> No answer
+        </button>
+        <button onClick={onRescheduling} disabled={busy} style={btn}>
+          <CalendarClock size={14} /> Rescheduling
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── the record you're working ───────────────────────────────────────────────
 
 function Step({ n, title, done, children, last }) {
@@ -451,14 +496,18 @@ function Step({ n, title, done, children, last }) {
 
 function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNext, nextUp, position }) {
   const update = useUpdatePolicy()
-  const start = useStartCancellation()
+  const startCall = useStartCall()
+  const endCall = useEndCall()
+  const setReason = useSetRescheduleReason()
   const passOn = usePassOnCancellation()
   const navigate = useNavigate()
   const mine = p.assigned_fulfillment_id === profile?.id
   const canEdit = mine
   const canViewIntake = mine || isAdmin
   const done = p.fulfillment_stage === 'Complete'
-  const isStarted = started(p)
+  const live = isLive(p)
+  const stage = stageOf(p)
+  const canCall = (mine || isAdmin) && !done
   const { data: intake, isLoading: intakeLoading } = usePolicyFulfillmentDetails(p.id, canViewIntake)
 
   const [confirmation, setConfirmation] = useState(p.cancellation_confirmation || '')
@@ -476,23 +525,29 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
     if (!pinned) onPin(p.id)
   }
 
-  // First real action on a not-started item starts it.
-  function startIfNeeded(substatus) {
+  // "Call client" (either path) puts the item on a live call.
+  function onCall() {
     hold()
-    if (canEdit && !done && !isStarted) start.mutate({ id: p.id, profileId: profile.id, substatus })
+    if (canCall && !live) startCall.mutate(p.id)
   }
 
   function saveRecord() {
     hold()
-    const fields = { id: p.id, cancellation_confirmation: confirmation.trim() || null, cancellation_notes: notes.trim() || null }
-    if (!isStarted) Object.assign(fields, { fulfillment_stage: 'In Progress', cancellation_substatus: 'calling' })
-    update.mutate(fields, { onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 2000) } })
+    update.mutate(
+      { id: p.id, cancellation_confirmation: confirmation.trim() || null, cancellation_notes: notes.trim() || null },
+      { onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 2000) } },
+    )
   }
 
-  function setSubstatus(value) {
+  // The call ended without a cancellation: No answer, or Rescheduling.
+  function finishCall(outcome) {
     hold()
-    if (!isStarted) return startIfNeeded(value)
-    update.mutate({ id: p.id, cancellation_substatus: value })
+    endCall.mutate({ id: p.id, outcome })
+  }
+
+  function pickReason(value) {
+    hold()
+    setReason.mutate({ id: p.id, reason: p.cancellation_substatus === value ? null : value })
   }
 
   function markCancelled() {
@@ -514,7 +569,7 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
   const callerIdOn = agentCallerIdOn(p)
   const canBridge = callerIdOn && (mine || isAdmin)
   const callAt = p.scheduled_call_at
-  const err = update.error || start.error || passOn.error
+  const err = update.error || startCall.error || endCall.error || setReason.error || passOn.error
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -552,7 +607,11 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
         {!done && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
             {(mine || isAdmin)
-              ? <ClientCallAction p={p} canBridge={canBridge} onCall={() => startIfNeeded('calling')} />
+              ? (live
+                ? <span style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: 260, lineHeight: 1.5 }}>
+                    Call in progress. When you hang up, mark how it went just below.
+                  </span>
+                : <ClientCallAction p={p} canBridge={canBridge} onCall={onCall} />)
               : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Only {p.assigned?.full_name || 'the assigned rep'} calls this client.</span>}
             <button onClick={() => navigate(`/messages?thread=${p.id}`)} style={ghostBtn}>
               <MessageCircleMore size={13} /> {isAdmin ? 'Open conversation' : 'Message agent'}
@@ -560,6 +619,16 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
           </div>
         )}
       </div>
+
+      {live && canCall && (
+        <LiveCallPanel
+          p={p} now={now} busy={endCall.isPending || update.isPending}
+          canCancel={canEdit}
+          onCancelled={markCancelled}
+          onNoAnswer={() => finishCall('no_answer')}
+          onRescheduling={() => finishCall('rescheduling')}
+        />
+      )}
 
       {canBridge && p.client_phone && !done && <OnBehalfHint p={p} profile={profile} />}
 
@@ -588,21 +657,37 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
             <AuthorizationStatus />
           </Step>
 
-          <Step n={2} title="Call the carrier" done={done}>
+          <Step n={2} title="Call the client" done={done}>
             {done ? (
               <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>Carrier call finished.</p>
+            ) : live ? (
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
+                On a call right now. Mark how it went in the red box above when you hang up.
+              </p>
+            ) : stage === 'booked' ? (
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
+                No call yet. Tap Call client up top to start. You'll mark how it went when you hang up.
+              </p>
             ) : (
               <>
-                <Segmented
-                  size="sm"
-                  style={{ flexWrap: 'wrap', maxWidth: '100%' }}
-                  options={SUBSTATUS}
-                  value={isStarted ? (p.cancellation_substatus || 'calling') : null}
-                  onChange={v => canEdit && setSubstatus(v)}
-                />
-                <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-                  {isStarted ? 'Keep this current — the agent sees it on their side.' : 'Pick one once you’re on it. Calling the client starts this too.'}
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
+                  {stage === 'noAnswer' ? 'Last call: no answer.' : 'Last call: reached them, couldn\u2019t cancel this time.'}
+                  {' '}{p.call_attempts || 1} call{(p.call_attempts || 1) === 1 ? '' : 's'} so far · {ago(p.last_call_at, now)}. Call again when you\u2019re ready.
                 </p>
+                {stage === 'rescheduling' && canCall && (
+                  <>
+                    <Segmented
+                      size="sm"
+                      style={{ flexWrap: 'wrap', maxWidth: '100%', marginTop: 10 }}
+                      options={SUBSTATUS}
+                      value={p.cancellation_substatus || null}
+                      onChange={pickReason}
+                    />
+                    <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+                      Optional: why it needs another call. Tap again to clear.
+                    </p>
+                  </>
+                )}
               </>
             )}
           </Step>
@@ -826,7 +911,7 @@ export default function FulfillmentQueue() {
     const unassigned = open.filter(p => !p.assigned_fulfillment_id)
     const scope = isAdmin ? team : mine
     const attention = scope.filter(p => { const f = flagsFor(p, now); return f.overdue || f.stale })
-    const callsToday = scope.filter(p => !started(p) && isToday(p.scheduled_call_at, now))
+    const callsToday = scope.filter(p => !isLive(p) && isToday(p.scheduled_call_at, now))
     const nextCall = callsToday.filter(p => new Date(p.scheduled_call_at) >= now - DUE_SOON_MS)[0]
     const doneToday = done.filter(p => isToday(p.fulfillment_completed_at, now))
     const myDoneToday = doneToday.filter(p => p.assigned_fulfillment_id === myId)
@@ -852,7 +937,7 @@ export default function FulfillmentQueue() {
         tone={(isAdmin ? g.team.length : g.mine.length) ? 'info' : 'neutral'}
         sub={isAdmin
           ? (g.unassigned.length ? `${g.unassigned.length} with no rep yet` : 'every one has a rep')
-          : `${g.mine.filter(started).length} started · ${g.mine.filter(p => !started(p)).length} not yet`}
+          : `${g.mine.filter(isLive).length} on a call · ${g.mine.filter(p => ['noAnswer', 'rescheduling'].includes(stageOf(p))).length} owed another call · ${g.mine.filter(p => stageOf(p) === 'booked').length} booked`}
       />
       <StatTile
         icon={CalendarClock} label="Calls left today" value={g.callsToday.length}
