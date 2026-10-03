@@ -19,7 +19,9 @@ export const STAGE = {
   // Prompt 669 — Booked was 'accent', which read as the same colour as
   // In progress (both blue) in dark mode and as Cancelled (teal vs green) in
   // light. A neutral chip for "waiting" keeps the three stages distinct.
-  booked:     { label: 'Booked',      tone: 'muted' },
+  // Prompt 686 — Booked is purple now so every status has its own colour
+  // (purple / amber / blue / green), matching Restorix's My Pipeline.
+  booked:     { label: 'Booked',      tone: 'purple' },
   inProgress: { label: 'In progress', tone: 'info' },
   cancelled:  { label: 'Cancelled',   tone: 'success' },
 }
@@ -46,10 +48,10 @@ export function isMissed(p, now = Date.now()) {
 // bar and status filter).
 export const BUCKETS = ['waiting', 'missed', 'inProgress', 'cancelled']
 export const BUCKET = {
-  waiting:    { label: 'Booked',        fill: 'var(--border-strong)' },
-  missed:     { label: 'Not picked up', fill: 'var(--warning)' },
-  inProgress: { label: 'In progress',   fill: 'var(--info)' },
-  cancelled:  { label: 'Cancelled',     fill: 'var(--success)' },
+  waiting:    { label: 'Booked',        fill: 'var(--purple)',  tone: 'purple' },
+  missed:     { label: 'Not picked up', fill: 'var(--warning)', tone: 'warning' },
+  inProgress: { label: 'In progress',   fill: 'var(--info)',    tone: 'info' },
+  cancelled:  { label: 'Cancelled',     fill: 'var(--success)', tone: 'success' },
 }
 
 // Pipeline range, by booking date.
@@ -109,6 +111,7 @@ export function fmtDuration(hours) {
 export const TONE = {
   neutral: { color: 'var(--text-secondary)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
   muted:   { color: 'var(--text-secondary)', dim: 'var(--bg-muted)',    bd: 'var(--border-strong)' },
+  purple:  { color: 'var(--purple)',  dim: 'var(--purple-dim)',  bd: 'var(--purple-bd)' },
   accent:  { color: 'var(--accent)',  dim: 'var(--accent-dim)',  bd: 'var(--accent-border)' },
   info:    { color: 'var(--info)',    dim: 'var(--info-dim)',    bd: 'var(--info-bd)' },
   warning: { color: 'var(--warning)', dim: 'var(--warning-dim)', bd: 'var(--warning-bd)' },

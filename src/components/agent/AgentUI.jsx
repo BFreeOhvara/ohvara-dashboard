@@ -97,7 +97,7 @@ export function ListCard({ head, timeOnly, empty, children, style }) {
       {head && hasRows && (
         <div
           className={`hidden md:grid ${timeOnly ? 'md:grid-cols-[96px_minmax(0,1.4fr)_minmax(0,1fr)_160px_14px]' : 'md:grid-cols-[176px_minmax(0,1.4fr)_minmax(0,1fr)_160px_14px]'} items-center gap-x-4`}
-          style={{ ...eyebrow, padding: '11px 20px', background: 'var(--bg-elevated)' }}
+          style={{ ...eyebrow, padding: '11px 20px', background: 'var(--bg-elevated)', position: 'sticky', top: 0, zIndex: 1 }}
         >
           <span>{timeOnly ? 'Time' : 'Call'}</span><span>Client</span><span>Leaving</span><span style={{ justifySelf: 'end' }}>Status</span><span />
         </div>
@@ -134,7 +134,7 @@ const COL = {
 }
 const COL_COMPACT = { when: 'order-2 col-span-2', name: 'order-1', leaving: 'hidden', leavingInline: '', status: 'order-1', chevron: 'hidden' }
 
-export function ClientRow({ p, now, onClick, showAgent, timeOnly, active, first, compact }) {
+export function ClientRow({ p, now, onClick, showAgent, timeOnly, active, first, compact, tall }) {
   const c = compact ? COL_COMPACT : COL
   const cols = compact ? ''
     : timeOnly ? 'md:grid-cols-[96px_minmax(0,1.4fr)_minmax(0,1fr)_160px_14px]'
@@ -150,7 +150,7 @@ export function ClientRow({ p, now, onClick, showAgent, timeOnly, active, first,
       onClick={onClick}
       className={`${ROW_GRID} ${cols} table-row-hover`}
       style={{
-        padding: '14px 20px', cursor: onClick ? 'pointer' : 'default',
+        padding: tall ? '22px 20px' : '14px 20px', cursor: onClick ? 'pointer' : 'default',
         borderTop: first ? 'none' : 'var(--border-w) solid var(--border)',
         background: active ? 'var(--bg-elevated)' : undefined,
       }}

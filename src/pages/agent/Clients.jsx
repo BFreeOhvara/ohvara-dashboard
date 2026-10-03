@@ -100,22 +100,24 @@ export default function Clients() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <Pipeline rows={scoped} now={now} bucket={filter} onBucket={v => setParam('stage', v, 'all')} />
+    // Prompt 686 — fixed-height column (viewport minus header + main padding) so
+    // the page never scrolls; only the list card scrolls inside it.
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: 'calc(100dvh - 160px)', minHeight: 360 }}>
+      <Pipeline rows={scoped} now={now} bucket={filter} onBucket={v => setParam('stage', v, 'all')} showAll={false} />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10, height: 40, padding: '0 14px',
-          background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
-          borderRadius: 10, flex: '1 1 240px', maxWidth: 380,
-        }}>
-          <Search size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-          <input
-            value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search name, phone, carrier…"
-            style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}
-          />
-        </div>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, height: 44, padding: '0 14px', flexShrink: 0,
+        background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 10,
+      }}>
+        <Search size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+        <input
+          value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search name, phone, carrier…"
+          style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}
+        />
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flexShrink: 0 }}>
         {isAdmin && agents.length > 1 && (
           <AnchoredSelectField
             value={agentId} onChange={setAgentId}
@@ -124,7 +126,7 @@ export default function Clients() {
           />
         )}
         <span style={{ fontFamily: MONO, fontSize: 12.5, color: 'var(--text-muted)' }}>
-          {isLoading ? 'Loading…' : `${list.length} of ${scoped.length} client${scoped.length === 1 ? '' : 's'}`}
+          {isLoading ? 'Loading…' : `${list.length} lead${list.length === 1 ? '' : 's'}`}
         </span>
         {range !== 'all' && (
           <button onClick={() => setParam('range', 'all', 'all')} style={{ ...ghostBtn, height: 30 }}>
@@ -141,6 +143,7 @@ export default function Clients() {
 
       <ListCard
         head
+        style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}
         empty={(
           <EmptyNote>
             {isLoading ? 'Loading clients…'
@@ -152,7 +155,7 @@ export default function Clients() {
       >
         {list.map((p, i) => (
           <div key={p.id}>
-            <ClientRow p={p} now={now} showAgent={isAdmin} first={i === 0} active={openId === p.id} onClick={() => toggle(p.id)} />
+            <ClientRow p={p} now={now} showAgent={isAdmin} tall first={i === 0} active={openId === p.id} onClick={() => toggle(p.id)} />
             {openId === p.id && (
               <ClientDetail p={p} now={now} canMove={isAdmin || p.agent_id === profile?.id} onClose={() => toggle(p.id)} />
             )}
