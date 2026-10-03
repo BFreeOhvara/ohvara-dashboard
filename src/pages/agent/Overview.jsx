@@ -83,9 +83,9 @@ export default function Overview() {
 
       <StatGrid>
         <StatTile label="Booked this week" value={isLoading ? '—' : g.bookedThisWeek} sub="since Monday"
-          onClick={() => navigate('/agent/clients?range=week')} />
+          onClick={() => navigate('/agent/clients?range=week&stage=all')} />
         <StatTile label="With Fulfillment" value={isLoading ? '—' : g.waiting + g.inProgress}
-          sub={`${g.inProgress} being worked · ${g.waiting} waiting`} onClick={() => navigate('/agent/clients')} />
+          sub={`${g.inProgress} being worked · ${g.waiting} waiting`} onClick={() => navigate('/agent/clients?stage=all')} />
         <StatTile label="Cancelled this week" value={isLoading ? '—' : g.cancelledThisWeek} sub="old policy confirmed cancelled"
           onClick={() => navigate('/agent/clients?stage=cancelled')} />
         <StatTile label="Not picked up" value={isLoading ? '—' : g.missedAll.length} tone={g.missedAll.length ? 'warning' : 'neutral'}

@@ -10,18 +10,24 @@ import { BUCKETS, BUCKET, TONE, bucketOf } from '../../lib/agentBookings'
 // Prompt 686 — each status chip carries its own colour (tint at rest, stronger
 // when selected); `showAll={false}` drops the All chip (agent My Pipeline —
 // clicking the selected chip again clears the filter).
+// Prompt 687 — in that mode the chips sit inside one shared rounded bar (one
+// segmented control, like Restorix's), keeping each status's own colour.
 export function Pipeline({ rows, now, bucket, onBucket, extras = [], showAll = true }) {
   const counts = { waiting: 0, missed: 0, inProgress: 0, cancelled: 0 }
   for (const p of rows) counts[bucketOf(p, now)]++
 
+  const grouped = !showAll
   return (
-    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+    <div style={grouped ? {
+      display: 'flex', gap: 4, flexWrap: 'wrap', width: 'fit-content', maxWidth: '100%', padding: 4,
+      background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 999,
+    } : { display: 'flex', gap: 6, flexWrap: 'wrap' }}>
       {showAll && <Chip on={bucket === 'all'} onClick={() => onBucket('all')} label="All" count={rows.length} />}
       {BUCKETS.map(b => (
         <Chip
           key={b} on={bucket === b} onClick={() => onBucket(bucket === b ? 'all' : b)}
           label={BUCKET[b].label} count={counts[b]} dot={BUCKET[b].fill}
-          tone={showAll ? undefined : TONE[BUCKET[b].tone]}
+          tone={grouped ? TONE[BUCKET[b].tone] : undefined} grouped={grouped}
           warn={b === 'missed' && counts.missed > 0}
         />
       ))}
@@ -35,9 +41,9 @@ export function Pipeline({ rows, now, bucket, onBucket, extras = [], showAll = t
   )
 }
 
-function Chip({ on, onClick, label, count, dot, warn, tone }) {
-  const border = tone ? (on ? tone.color : tone.bd) : on ? 'var(--accent)' : warn ? 'var(--warning-bd)' : 'var(--border)'
-  const bg = tone ? (on ? tone.dim : 'var(--bg-surface)') : on ? 'var(--accent-dim)' : warn ? 'var(--warning-dim)' : 'var(--bg-surface)'
+function Chip({ on, onClick, label, count, dot, warn, tone, grouped }) {
+  const border = tone ? (on ? tone.color : grouped ? 'transparent' : tone.bd) : on ? 'var(--accent)' : warn ? 'var(--warning-bd)' : 'var(--border)'
+  const bg = tone ? (on ? tone.dim : grouped ? 'transparent' : 'var(--bg-surface)') : on ? 'var(--accent-dim)' : warn ? 'var(--warning-dim)' : 'var(--bg-surface)'
   const color = tone ? tone.color : on ? 'var(--accent)' : warn ? 'var(--warning)' : 'var(--text-secondary)'
   return (
     <button

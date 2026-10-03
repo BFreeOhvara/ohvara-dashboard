@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { Search, Phone, CalendarPlus, Check, X, MessageSquare } from 'lucide-react'
+import { Search, Phone, Check, X, MessageSquare } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useAgentBookings, useLegacyPolicyCount, useRescheduleBooking } from '../../hooks/useAgentBookings'
 import { fieldLabel, primaryBtn, ghostBtn, MONO, DISPLAY } from '../../lib/exportStyles'
@@ -37,6 +38,12 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // pills with counts, then search, then the list. The funnel card and its range
 // toggle are gone; a range arriving from an Overview tile shows as a removable
 // chip next to the count instead.
+//
+// Prompt 687 — lead detail opens in a popup instead of expanding under its row;
+// the page lands on Booked (the pills are one grouped bar); search looks across
+// every status (the pills only filter when the search box is empty); the lead
+// count sits above the search bar on the right; the Book a call shortcut is gone
+// (it has its own nav item).
 
 const STAGES = ['all', ...BUCKETS]
 const RANGE_VALUES = RANGES.map(r => r.value)
@@ -44,7 +51,6 @@ const RANGE_VALUES = RANGES.map(r => r.value)
 export default function Clients() {
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
-  const navigate = useNavigate()
   const now = useNow()
   const [params, setParams] = useSearchParams()
   const openId = params.get('open')
@@ -53,7 +59,7 @@ export default function Clients() {
   const { data: legacyCount = 0 } = useLegacyPolicyCount(isAdmin ? null : profile?.id)
   const rows = useMemo(() => (isAdmin ? excludeTestAccounts(raw, profile?.id) : raw), [raw, isAdmin, profile?.id])
 
-  const filter = STAGES.includes(params.get('stage')) ? params.get('stage') : 'all'
+  const filter = STAGES.includes(params.get('stage')) ? params.get('stage') : 'booked'
   const range = RANGE_VALUES.includes(params.get('range')) ? params.get('range') : 'all'
   const setParam = (key, value, fallback) => {
     const next = new URLSearchParams(params)
@@ -79,7 +85,8 @@ export default function Clients() {
     const q = search.trim().toLowerCase()
     const qd = digits(q)
     const filtered = scoped.filter(p => {
-      if (filter !== 'all' && bucketOf(p, now) !== filter) return false
+      // Search spans every status; the pills only filter when nothing is typed.
+      if (!q && filter !== 'all' && bucketOf(p, now) !== filter) return false
       if (q) {
         const hay = [p.client_first_name, p.client_last_name, p.current_carrier, p.agent?.full_name].filter(Boolean).join(' ').toLowerCase()
         if (!hay.includes(q) && !(qd.length >= 3 && digits(p.client_phone).includes(qd))) return false
@@ -98,12 +105,34 @@ export default function Clients() {
     if (openId === id) next.delete('open'); else next.set('open', id)
     setParams(next, { replace: true })
   }
+  // Looked up from every row, not the filtered list, so a link from Overview
+  // opens its lead whichever pill is selected.
+  const openRow = openId ? rows.find(p => p.id === openId) : null
 
   return (
     // Prompt 686 — fixed-height column (viewport minus header + main padding) so
     // the page never scrolls; only the list card scrolls inside it.
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: 'calc(100dvh - 160px)', minHeight: 360 }}>
-      <Pipeline rows={scoped} now={now} bucket={filter} onBucket={v => setParam('stage', v, 'all')} showAll={false} />
+      <Pipeline rows={scoped} now={now} bucket={filter} onBucket={v => setParam('stage', v, 'booked')} showAll={false} />
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flexShrink: 0 }}>
+        {isAdmin && agents.length > 1 && (
+          <AnchoredSelectField
+            value={agentId} onChange={setAgentId}
+            options={[{ value: '', label: 'All agents' }, ...agents]}
+            style={{ width: 220 }}
+          />
+        )}
+        {range !== 'all' && (
+          <button onClick={() => setParam('range', 'all', 'all')} style={{ ...ghostBtn, height: 30 }}>
+            {range === 'week' ? 'Booked this week' : 'Booked this month'} <X size={13} />
+          </button>
+        )}
+        <div style={{ flex: 1 }} />
+        <span style={{ fontFamily: MONO, fontSize: 12.5, color: 'var(--text-muted)' }}>
+          {isLoading ? 'Loading…' : `${list.length} lead${list.length === 1 ? '' : 's'}`}
+        </span>
+      </div>
 
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10, height: 44, padding: '0 14px', flexShrink: 0,
@@ -115,30 +144,6 @@ export default function Clients() {
           placeholder="Search name, phone, carrier…"
           style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}
         />
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flexShrink: 0 }}>
-        {isAdmin && agents.length > 1 && (
-          <AnchoredSelectField
-            value={agentId} onChange={setAgentId}
-            options={[{ value: '', label: 'All agents' }, ...agents]}
-            style={{ width: 220 }}
-          />
-        )}
-        <span style={{ fontFamily: MONO, fontSize: 12.5, color: 'var(--text-muted)' }}>
-          {isLoading ? 'Loading…' : `${list.length} lead${list.length === 1 ? '' : 's'}`}
-        </span>
-        {range !== 'all' && (
-          <button onClick={() => setParam('range', 'all', 'all')} style={{ ...ghostBtn, height: 30 }}>
-            {range === 'week' ? 'Booked this week' : 'Booked this month'} <X size={13} />
-          </button>
-        )}
-        <div style={{ flex: 1 }} />
-        {!isAdmin && (
-          <button onClick={() => navigate('/agent/book')} style={primaryBtn}>
-            <CalendarPlus size={16} /> Book a call
-          </button>
-        )}
       </div>
 
       <ListCard
@@ -154,14 +159,15 @@ export default function Clients() {
         )}
       >
         {list.map((p, i) => (
-          <div key={p.id}>
-            <ClientRow p={p} now={now} showAgent={isAdmin} tall first={i === 0} active={openId === p.id} onClick={() => toggle(p.id)} />
-            {openId === p.id && (
-              <ClientDetail p={p} now={now} canMove={isAdmin || p.agent_id === profile?.id} onClose={() => toggle(p.id)} />
-            )}
-          </div>
+          <ClientRow key={p.id} p={p} now={now} showAgent={isAdmin} tall first={i === 0} active={openId === p.id} onClick={() => toggle(p.id)} />
         ))}
       </ListCard>
+
+      {openRow && (
+        <ClientModal onClose={() => toggle(openRow.id)}>
+          <ClientDetail p={openRow} now={now} canMove={isAdmin || openRow.agent_id === profile?.id} onClose={() => toggle(openRow.id)} />
+        </ClientModal>
+      )}
 
       {legacyCount > 0 && (
         <GapNote>
@@ -170,6 +176,36 @@ export default function Clients() {
         </GapNote>
       )}
     </div>
+  )
+}
+
+// Centered popup, same overlay/surface as PolicyModal.
+function ClientModal({ onClose, children }) {
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = e => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey) }
+  }, [onClose])
+
+  return createPortal(
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        className="scrollbar-thin"
+        style={{
+          width: '100%', maxWidth: 640, maxHeight: '86vh', overflowY: 'auto',
+          background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)', borderRadius: 14,
+        }}
+      >
+        {children}
+      </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -187,8 +223,7 @@ function ClientDetail({ p, now, canMove, onClose }) {
 
   return (
     <div style={{
-      padding: '20px 24px 22px', background: 'var(--bg-elevated)',
-      borderTop: 'var(--border-w) solid var(--border)', boxShadow: 'inset 3px 0 0 var(--accent)',
+      padding: '22px 24px 24px',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
         <div style={{ flex: 1, minWidth: 200 }}>
