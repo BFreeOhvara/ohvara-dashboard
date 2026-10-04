@@ -64,7 +64,7 @@ const GRACE_HOURS = 48 // keep in step with src/lib/billing.js
 const MAX_SKEW_SECONDS = 5 * 60
 
 // Where Stripe may send the agent back to. Anything else falls back to prod.
-const DEFAULT_RETURN = 'https://portal.ohvara.com/settings#billing'
+const DEFAULT_RETURN = 'https://portal.ohvara.com/agent/billing'
 const ALLOWED_ORIGINS = ['https://portal.ohvara.com', 'https://ohvara-dashboard.vercel.app']
 
 function safeReturnUrl(raw: unknown): string {
