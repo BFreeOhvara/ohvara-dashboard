@@ -56,7 +56,7 @@ function Pill({ children, style }) {
   )
 }
 
-// Prompt 673 — agents' $350/week retainer. Only agents are billed; everyone
+// Prompt 673 — agents' weekly retainer (tier shown since Prompt 692). Only agents are billed; everyone
 // else gets a dash. The line under the pill is the date that matters for
 // that status: next renewal, end of grace, or end of the paid week.
 function BillingCell({ u }) {
@@ -68,9 +68,11 @@ function BillingCell({ u }) {
     past_due: u.billing_grace_until && `grace to ${formatBillingDate(u.billing_grace_until)}`,
     canceled: u.billing_current_period_end && `ends ${formatBillingDate(u.billing_current_period_end)}`,
   }[status]
+  const tier = u.billing_tier && u.billing_tier !== 'exempt' && status !== 'exempt' && status !== 'none'
+    ? u.billing_tier.charAt(0).toUpperCase() + u.billing_tier.slice(1) : null
   return (
     <div>
-      <Pill style={TONE_STYLE[meta.tone]}>{meta.label}</Pill>
+      <Pill style={TONE_STYLE[meta.tone]}>{meta.label}{tier ? ` · ${tier}` : ''}</Pill>
       {when && <p style={{ margin: '3px 0 0', fontSize: 10.5, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>{when}</p>}
     </div>
   )

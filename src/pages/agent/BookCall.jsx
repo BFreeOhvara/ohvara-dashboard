@@ -10,6 +10,8 @@ import { SlotPicker, ScriptHint } from '../../components/agent/AgentUI'
 import { formatPhoneInput, titleCase } from '../../lib/policyFormat'
 import { SLOTS, slotToISO, localDateISO, isFarOut, fmtBooking } from '../../lib/scheduling'
 import { stageOf, digits, useNow } from '../../lib/agentBookings'
+import { useBillingTiers, useWeeklyUsage } from '../../hooks/useBillingTiers'
+import { capState, nextTier, formatReset, formatWeekly } from '../../lib/billing'
 
 // Book a call (Prompt 665) — replaces the old 25-field New Submission form.
 //
@@ -44,6 +46,12 @@ export default function BookCall() {
   const { data: carriers = [] } = useCarriers()
   const { data: mine = [] } = useAgentBookings(profile?.id)
   const book = useBookCall()
+  // Prompt 692 — weekly submission cap. The database refuses a booking past
+  // it (when billing is enforced); this shows the count and the way up first.
+  const { data: tiers = [] } = useBillingTiers()
+  const { data: usage } = useWeeklyUsage(profile?.id)
+  const cap = capState(usage)
+  const upgrade = cap ? nextTier(tiers, usage.tier) : null
 
   const [form, setForm] = useState(BLANK)
   const [date, setDate] = useState(defaultDate)
@@ -120,7 +128,9 @@ export default function BookCall() {
         setDone({ name: `${firstName} ${lastName}`, at: scheduledAt })
         setForm(BLANK); setSlot(''); setDate(defaultDate()); setConfirm(null); setErrors(new Set())
       },
-      onError: err => setError(err.message || 'Could not book this call'),
+      onError: err => setError(err.hint === 'weekly_cap'
+        ? `${err.message} Upgrade your plan or wait until ${formatReset(usage?.week_end)}.`
+        : err.message || 'Could not book this call'),
     })
   }
 
@@ -153,10 +163,40 @@ export default function BookCall() {
   }
 
   const busy = book.isPending
+  const capped = !!cap?.blocking
 
   return (
     <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
       <div style={{ ...card, flex: '1 1 520px', minWidth: 0, maxWidth: 820, padding: '24px 28px' }}>
+        {cap && cap.cap != null && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: capped ? 0 : 4 }}>
+            <span style={{
+              fontFamily: MONO, fontSize: 12.5, padding: '3px 10px', borderRadius: 999,
+              color: cap.atCap ? 'var(--warning)' : 'var(--text-secondary)',
+              background: cap.atCap ? 'var(--warning-dim)' : 'var(--bg-elevated)',
+              border: `1px solid ${cap.atCap ? 'var(--warning-bd)' : 'var(--border)'}`,
+            }}>
+              {cap.used} of {cap.cap} submissions this week
+            </span>
+            <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
+              {cap.tierName} plan · resets {formatReset(usage.week_end)}
+            </span>
+          </div>
+        )}
+        {capped && (
+          <Notice tone="warning">
+            You've used all {cap.cap} submissions on the {cap.tierName} plan this week.{' '}
+            {upgrade
+              ? <>Upgrade to {upgrade.name} ({formatWeekly(upgrade.weekly_cents)}/week, {upgrade.weekly_cap ?? 'unlimited'} a week) to keep booking, or wait until {formatReset(usage.week_end)}.</>
+              : <>The cap resets {formatReset(usage.week_end)}.</>}
+            {upgrade && (
+              <button onClick={() => navigate('/agent/billing')}
+                style={{ ...ghostBtn, height: 30, marginLeft: 8, color: 'var(--warning)', borderColor: 'var(--warning-bd)' }}>
+                Upgrade
+              </button>
+            )}
+          </Notice>
+        )}
         <Step n={1} title="Who's the client" />
         <div style={grid3}>
           <TextField label="First name" placeholder="First name" autoComplete="off"
@@ -232,8 +272,8 @@ export default function BookCall() {
               {[titleCase(form.first), titleCase(form.last)].filter(Boolean).join(' ') || 'Client'} · {scheduledAt ? fmtBooking(scheduledAt) : 'pick a time'}
             </p>
           </div>
-          <button onClick={submit} disabled={busy} style={{ ...primaryBtn, height: 44, padding: '0 26px', opacity: busy ? 0.6 : 1 }}>
-            {busy ? 'Booking…' : 'Book the call'}
+          <button onClick={submit} disabled={busy || capped} style={{ ...primaryBtn, height: 44, padding: '0 26px', opacity: busy || capped ? 0.6 : 1 }}>
+            {busy ? 'Booking…' : capped ? 'Weekly cap reached' : 'Book the call'}
           </button>
         </div>
       </div>

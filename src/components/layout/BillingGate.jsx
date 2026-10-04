@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { Lock, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useAppSettings } from '../../hooks/useAppSettings'
+import { useBillingTiers } from '../../hooks/useBillingTiers'
 import { billingAccess, formatBillingDate, formatWeekly } from '../../lib/billing'
 import { card, primaryBtn, sectionTitle, MONO } from '../../lib/exportStyles'
 
@@ -17,9 +18,10 @@ export function BillingGate({ children }) {
   const { profile } = useAuth()
   const { data: settings } = useAppSettings()
   const { pathname } = useLocation()
+  const { data: tiers = [] } = useBillingTiers()
 
   const { locked, grace } = billingAccess(profile, !!settings?.agent_billing_enforced)
-  const price = formatWeekly(settings?.agent_billing_weekly_cents)
+  const price = formatWeekly(tiers[0]?.weekly_cents)
 
   if (locked && !['/settings', '/agent/billing'].includes(pathname)) {
     return (
@@ -33,7 +35,7 @@ export function BillingGate({ children }) {
         </div>
         <p style={{ ...sectionTitle, marginBottom: 8 }}>Your portal access is paused</p>
         <p style={{ margin: '0 0 22px', fontSize: 14, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
-          Access runs on a <span style={{ fontFamily: MONO }}>{price}</span>/week subscription, and this week isn't paid.
+          Access runs on a weekly subscription (from <span style={{ fontFamily: MONO }}>{price}</span>/week), and this week isn't paid.
           Pay in Billing to pick up where you left off. Clients you've already booked are still being worked.
         </p>
         <Link to="/agent/billing" style={{ ...primaryBtn, textDecoration: 'none' }}>Go to Billing</Link>

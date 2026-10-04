@@ -1,7 +1,9 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js'
 
-// Prompt 673 — the agent retainer ($350/week flat, agent pays Ohvara). Stripe
-// Billing: one weekly recurring Price, Stripe-hosted Checkout to subscribe and
+// Prompt 673 — the agent retainer (weekly, agent pays Ohvara). Prompt 692 made
+// it tiered: each row of agent_billing_tiers (migration 119) is a weekly price
+// plus a weekly submission cap, and gets its own recurring Price here. Stripe
+// Billing: one weekly recurring Price per tier, Stripe-hosted Checkout to subscribe and
 // the Customer Portal to manage, so no card data touches this app. Migration
 // 113 holds the state on profiles; this function is the only thing that
 // writes it (service role), apart from an admin by hand.
@@ -18,9 +20,11 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js'
 //                Signed in, it also re-syncs from Stripe, so a missed or
 //                late webhook heals the next time the agent opens Billing.
 //                Signed out, it returns the booleans only (ops check).
-//     checkout — agent only; returns { url } for a Stripe Checkout page.
+//     checkout — agent only; { tier } picks the plan (default: the first
+//                active tier). Returns { url } for a Stripe Checkout page.
 //     portal   — agent only; returns { url } for the Customer Portal
-//                (update card, cancel, renew, invoices).
+//                (update card, switch plan, cancel, renew, invoices).
+//                { flow: 'change_plan' } deep-links to the plan switcher.
 //
 //   POST /agent-billing/webhook    (Stripe)
 //     Verified against STRIPE_WEBHOOK_SECRET. Every event is used only for
@@ -55,7 +59,6 @@ const WEBHOOK_SECRET = Deno.env.get('STRIPE_WEBHOOK_SECRET')
 // version, which is why events are only mined for ids (both shapes handled).
 const STRIPE_VERSION = '2024-06-20'
 
-const PRICE_LOOKUP_KEY = 'ohvara_agent_weekly'
 const TAG = { ohvara: 'agent_billing' }
 const GRACE_HOURS = 48 // keep in step with src/lib/billing.js
 const MAX_SKEW_SECONDS = 5 * 60
@@ -113,57 +116,115 @@ async function stripe(path: string, init: { method?: string; params?: Record<str
   return data
 }
 
-// The weekly Price, created on first use. If the display price in app_settings
-// changes, a new Price takes over the lookup key; existing subscriptions stay
-// on whatever they signed up at until moved by hand.
-async function ensurePrice(admin: SupabaseClient): Promise<string> {
-  const { data: s } = await admin.from('app_settings').select('agent_billing_weekly_cents').limit(1).maybeSingle()
-  const cents = s?.agent_billing_weekly_cents ?? 35000
+// ── Tiers + Prices ───────────────────────────────────────────────────────────
 
-  const found = await stripe('prices', { method: 'GET', params: { lookup_keys: [PRICE_LOOKUP_KEY], active: true, limit: 1 } })
-  const current = found.data?.[0]
-  if (current && current.unit_amount === cents && current.recurring?.interval === 'week') return current.id
+type Tier = {
+  key: string; name: string; weekly_cents: number; weekly_cap: number | null
+  stripe_lookup_key: string | null; stripe_price_id: string | null; sort_order: number
+}
 
-  const product = current?.product || (await stripe('products', {
+async function loadTiers(admin: SupabaseClient): Promise<Tier[]> {
+  const { data, error } = await admin.from('agent_billing_tiers').select('*').eq('is_active', true).order('sort_order')
+  if (error) throw new Error(`Couldn't load billing tiers: ${error.message}`)
+  return (data || []) as Tier[]
+}
+
+// One shared Product, found through any existing tier Price or created once.
+async function ensureProduct(tiers: Tier[]): Promise<string> {
+  for (const t of tiers) {
+    if (!t.stripe_lookup_key) continue
+    const found = await stripe('prices', { method: 'GET', params: { lookup_keys: [t.stripe_lookup_key], active: true, limit: 1 } })
+    if (found.data?.[0]?.product) return found.data[0].product
+  }
+  return (await stripe('products', {
     params: { name: 'Ohvara agent portal access', description: 'Weekly retainer: portal access and that week\'s batch of cancellations.', metadata: TAG },
   })).id
+}
 
-  const price = await stripe('prices', {
-    params: {
-      product, currency: 'usd', unit_amount: cents, recurring: { interval: 'week' },
-      lookup_key: PRICE_LOOKUP_KEY, transfer_lookup_key: true, metadata: TAG,
-    },
-  })
-  return price.id
+// A tier's weekly Price, created on first use and found again by lookup key.
+// If the tier's price changes, a new Price takes over the lookup key; existing
+// subscriptions stay on whatever they signed up at until moved by hand.
+async function ensureTierPrice(admin: SupabaseClient, tier: Tier, tiers: Tier[]): Promise<string> {
+  const lookup = tier.stripe_lookup_key || `ohvara_agent_${tier.key}_weekly`
+  const found = await stripe('prices', { method: 'GET', params: { lookup_keys: [lookup], active: true, limit: 1 } })
+  const current = found.data?.[0]
+  let id: string
+  if (current && current.unit_amount === tier.weekly_cents && current.recurring?.interval === 'week') {
+    id = current.id
+    // Prices created before tiers existed carry no tier tag.
+    if (current.metadata?.tier !== tier.key) await stripe(`prices/${id}`, { params: { metadata: { ...TAG, tier: tier.key } } })
+  } else {
+    const product = current?.product || await ensureProduct(tiers)
+    id = (await stripe('prices', {
+      params: {
+        product, currency: 'usd', unit_amount: tier.weekly_cents, recurring: { interval: 'week' },
+        nickname: tier.name, lookup_key: lookup, transfer_lookup_key: true, metadata: { ...TAG, tier: tier.key },
+      },
+    })).id
+  }
+  if (tier.stripe_price_id !== id || tier.stripe_lookup_key !== lookup) {
+    await admin.from('agent_billing_tiers')
+      .update({ stripe_price_id: id, stripe_lookup_key: lookup, updated_at: new Date().toISOString() }).eq('key', tier.key)
+    tier.stripe_price_id = id
+    tier.stripe_lookup_key = lookup
+  }
+  return id
 }
 
 // Our own Customer Portal configuration (found by metadata), so the account's
-// default portal settings can't change what agents are allowed to do.
-async function ensurePortalConfig(): Promise<string> {
+// default portal settings can't change what agents are allowed to do. Updated
+// on every use so a new or repriced tier shows up in the plan switcher.
+//
+// Plan switching: upgrades bill the difference immediately (the cap goes up as
+// soon as the webhook lands); downgrades wait for the end of the paid week so
+// nobody loses capacity they've paid for.
+async function ensurePortalConfig(admin: SupabaseClient): Promise<string> {
+  const tiers = await loadTiers(admin)
+  const prices: string[] = []
+  for (const t of tiers) prices.push(await ensureTierPrice(admin, t, tiers))
+  const product = await ensureProduct(tiers)
+
+  const features = {
+    invoice_history: { enabled: true },
+    payment_method_update: { enabled: true },
+    // Cancelling keeps the paid week; the portal offers "Renew" until it ends.
+    subscription_cancel: { enabled: true, mode: 'at_period_end', proration_behavior: 'none' },
+    customer_update: { enabled: false },
+    subscription_update: {
+      enabled: prices.length > 1,
+      default_allowed_updates: ['price'],
+      products: [{ product, prices }],
+      proration_behavior: 'always_invoice',
+      schedule_at_period_end: { conditions: [{ type: 'decreasing_item_amount' }] },
+    },
+  }
+
   const list = await stripe('billing_portal/configurations', { method: 'GET', params: { active: true, limit: 100 } })
   const mine = (list.data || []).find((c: any) => c.metadata?.ohvara === TAG.ohvara)
-  if (mine) return mine.id
+  if (mine) {
+    await stripe(`billing_portal/configurations/${mine.id}`, { params: { features } })
+    return mine.id
+  }
   const created = await stripe('billing_portal/configurations', {
-    params: {
-      business_profile: { headline: 'Ohvara agent portal access' },
-      features: {
-        invoice_history: { enabled: true },
-        payment_method_update: { enabled: true },
-        // Cancelling keeps the paid week; the portal offers "Renew" until it ends.
-        subscription_cancel: { enabled: true, mode: 'at_period_end', proration_behavior: 'none' },
-        customer_update: { enabled: false },
-        subscription_update: { enabled: false },
-      },
-      metadata: TAG,
-    },
+    params: { business_profile: { headline: 'Ohvara agent portal access' }, features, metadata: TAG },
   })
   return created.id
+}
+
+// Which tier a Stripe Price belongs to: its own tag first, then by id or
+// lookup key. null = unrecognised (keep whatever the profile already has).
+function tierOfPrice(price: any, tiers: Tier[]): string | null {
+  if (!price) return null
+  const tagged = price.metadata?.tier
+  if (tagged && tiers.some(t => t.key === tagged)) return tagged
+  const hit = tiers.find(t => t.stripe_price_id === price.id || (price.lookup_key && t.stripe_lookup_key === price.lookup_key))
+  return hit?.key ?? null
 }
 
 // ── Subscription -> profile ──────────────────────────────────────────────────
 
 const LIVE = ['active', 'trialing', 'past_due']
-const PROFILE_COLS = 'id, role, email, full_name, billing_status, stripe_customer_id, stripe_subscription_id, billing_grace_until'
+const PROFILE_COLS = 'id, role, email, full_name, billing_status, billing_tier, stripe_customer_id, stripe_subscription_id, billing_grace_until'
 
 async function profileFor(admin: SupabaseClient, sub: any) {
   const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id
@@ -194,6 +255,7 @@ async function syncSubscription(admin: SupabaseClient, sub: any, profile?: any) 
   }
 
   const now = new Date()
+  const tier = tierOfPrice(sub.items?.data?.[0]?.price, await loadTiers(admin))
   const periodEnd = sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end
   const patch: Record<string, unknown> = {
     stripe_customer_id: typeof sub.customer === 'string' ? sub.customer : sub.customer?.id,
@@ -201,6 +263,7 @@ async function syncSubscription(admin: SupabaseClient, sub: any, profile?: any) 
     billing_current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
     billing_updated_at: now.toISOString(),
   }
+  if (tier) patch.billing_tier = tier
 
   switch (sub.status) {
     case 'active':
@@ -379,15 +442,18 @@ Deno.serve(async (req) => {
         if (error) throw new Error(`Couldn't save the Stripe customer: ${error.message}`)
       }
 
-      const price = await ensurePrice(admin)
+      const tiers = await loadTiers(admin)
+      const tier = tiers.find(t => t.key === body.tier) || (body.tier ? null : tiers[0])
+      if (!tier) return json({ error: `Unknown plan: ${body.tier}` }, 400)
+      const price = await ensureTierPrice(admin, tier, tiers)
       const session = await stripe('checkout/sessions', {
         params: {
           mode: 'subscription',
           customer: customerId,
           client_reference_id: me.id,
           line_items: [{ price, quantity: 1 }],
-          subscription_data: { metadata: { ...TAG, profile_id: me.id } },
-          metadata: { ...TAG, profile_id: me.id },
+          subscription_data: { metadata: { ...TAG, profile_id: me.id, tier: tier.key } },
+          metadata: { ...TAG, profile_id: me.id, tier: tier.key },
           success_url: returnUrl,
           cancel_url: returnUrl,
         },
@@ -397,10 +463,17 @@ Deno.serve(async (req) => {
 
     if (action === 'portal') {
       if (!me.stripe_customer_id) return json({ error: 'No subscription yet. Subscribe first.' }, 409)
-      const configuration = await ensurePortalConfig()
-      const session = await stripe('billing_portal/sessions', {
-        params: { customer: me.stripe_customer_id, configuration, return_url: returnUrl },
-      })
+      const configuration = await ensurePortalConfig(admin)
+      const params: Record<string, unknown> = { customer: me.stripe_customer_id, configuration, return_url: returnUrl }
+      // Straight to the plan switcher for an agent with a live subscription.
+      if (body.flow === 'change_plan' && me.stripe_subscription_id && ['active', 'past_due'].includes(me.billing_status)) {
+        params.flow_data = {
+          type: 'subscription_update',
+          subscription_update: { subscription: me.stripe_subscription_id },
+          after_completion: { type: 'redirect', redirect: { return_url: returnUrl } },
+        }
+      }
+      const session = await stripe('billing_portal/sessions', { params })
       return json({ url: session.url })
     }
 
