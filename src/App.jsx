@@ -18,6 +18,7 @@ import AgentOverview from './pages/agent/Overview'
 import AgentBookCall from './pages/agent/BookCall'
 import AgentClients from './pages/agent/Clients'
 import AgentTeam from './pages/agent/Team'
+import AgentActivity from './pages/agent/Activity'
 import FulfillmentQueue from './pages/fulfillment/FulfillmentQueue'
 import FulfillmentOverview from './pages/fulfillment/Overview'
 import FulfillmentPipeline from './pages/fulfillment/Pipeline'
@@ -101,6 +102,13 @@ export default function App() {
             <Route path="/agent/clients" element={
               <ProtectedRoute allowedRoles={['agent', 'admin']}>
                 <DashboardLayout><AgentClients /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            {/* Prompt 690 — Activity: chronological log (policy_events +
+                Fulfillment messages). */}
+            <Route path="/agent/activity" element={
+              <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <DashboardLayout><AgentActivity /></DashboardLayout>
               </ProtectedRoute>
             } />
             {/* Prompt 671 — Team: team-wide leaderboard + activity feed

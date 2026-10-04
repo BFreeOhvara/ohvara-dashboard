@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import {
   Users, LogOut, Home, Settings, Award,
-  ChevronLeft, ClipboardList, CalendarPlus, Trophy, MessageSquare, ListFilter, Wallet,
+  ChevronLeft, ClipboardList, CalendarPlus, Trophy, MessageSquare, ListFilter, Wallet, History,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useUnreadMessageCount, useMessagesRealtime } from '../../hooks/usePolicyMessages'
@@ -99,6 +99,8 @@ const NAV = {
     { group: 'Work', items: [
       { to: '/agent/book', label: 'Book a call', icon: CalendarPlus },
       { to: '/agent/clients', label: 'My Pipeline', icon: Users },
+      // Prompt 690 — chronological log of what happened, next to My Pipeline.
+      { to: '/agent/activity', label: 'Activity', icon: History },
       { to: '/agent/team', label: 'Team', icon: Trophy },
     ] },
     // Prompt 680 — Messages gets its own single-item group, as in Restorix.
@@ -115,6 +117,7 @@ const NAV = {
     { group: 'Agents', items: [
       { to: '/agent/book', label: 'Book a call', icon: CalendarPlus },
       { to: '/agent/clients', label: 'Pipeline', icon: Users },
+      { to: '/agent/activity', label: 'Activity', icon: History },
       { to: '/agent/team', label: 'Team', icon: Trophy },
       { to: '/messages', label: 'Messages', icon: MessageSquare },
     ] },
