@@ -75,7 +75,7 @@ export function daysUntil(iso, now = Date.now()) {
 // it like invokeCallerId does.
 export async function invokeBilling(action) {
   const { data, error } = await supabase.functions.invoke('agent-billing', {
-    body: { action, return_url: `${window.location.origin}/settings#billing` },
+    body: { action, return_url: `${window.location.origin}/agent/billing` },
   })
   if (!error) return data
   let payload = null

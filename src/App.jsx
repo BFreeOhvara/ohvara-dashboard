@@ -19,6 +19,7 @@ import AgentBookCall from './pages/agent/BookCall'
 import AgentClients from './pages/agent/Clients'
 import AgentTeam from './pages/agent/Team'
 import AgentActivity from './pages/agent/Activity'
+import AgentBilling from './pages/agent/Billing'
 import FulfillmentQueue from './pages/fulfillment/FulfillmentQueue'
 import FulfillmentOverview from './pages/fulfillment/Overview'
 import FulfillmentPipeline from './pages/fulfillment/Pipeline'
@@ -109,6 +110,12 @@ export default function App() {
             <Route path="/agent/activity" element={
               <ProtectedRoute allowedRoles={['agent', 'admin']}>
                 <DashboardLayout><AgentActivity /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            {/* Prompt 691 — Billing, promoted out of Settings. */}
+            <Route path="/agent/billing" element={
+              <ProtectedRoute allowedRoles={['agent']}>
+                <DashboardLayout><AgentBilling /></DashboardLayout>
               </ProtectedRoute>
             } />
             {/* Prompt 671 — Team: team-wide leaderboard + activity feed

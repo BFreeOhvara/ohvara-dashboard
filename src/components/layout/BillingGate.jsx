@@ -10,8 +10,9 @@ import { card, primaryBtn, sectionTitle, MONO } from '../../lib/exportStyles'
 //
 // Locked = a full lock screen in place of the page, not a read-only overlay:
 // a half-working portal invites "why can't I book?" confusion, and the agent's
-// existing clients are still being worked by Fulfillment regardless. Settings
-// stays reachable so Billing is always one click away. The sidebar stays too.
+// existing clients are still being worked by Fulfillment regardless. Billing
+// (and Settings) stay reachable so paying is always one click away. The
+// sidebar stays too. Prompt 691 — Billing is its own page, /agent/billing.
 export function BillingGate({ children }) {
   const { profile } = useAuth()
   const { data: settings } = useAppSettings()
@@ -20,7 +21,7 @@ export function BillingGate({ children }) {
   const { locked, grace } = billingAccess(profile, !!settings?.agent_billing_enforced)
   const price = formatWeekly(settings?.agent_billing_weekly_cents)
 
-  if (locked && pathname !== '/settings') {
+  if (locked && !['/settings', '/agent/billing'].includes(pathname)) {
     return (
       <div style={{ ...card, maxWidth: 520, margin: '48px auto 0', textAlign: 'center', padding: '36px 28px' }}>
         <div style={{
@@ -35,7 +36,7 @@ export function BillingGate({ children }) {
           Access runs on a <span style={{ fontFamily: MONO }}>{price}</span>/week subscription, and this week isn't paid.
           Pay in Billing to pick up where you left off. Clients you've already booked are still being worked.
         </p>
-        <Link to="/settings#billing" style={{ ...primaryBtn, textDecoration: 'none' }}>Go to Billing</Link>
+        <Link to="/agent/billing" style={{ ...primaryBtn, textDecoration: 'none' }}>Go to Billing</Link>
       </div>
     )
   }
@@ -53,7 +54,7 @@ export function BillingGate({ children }) {
             This week's payment didn't go through. Update your card by{' '}
             <b>{formatBillingDate(profile.billing_grace_until)}</b> to keep your access.
           </span>
-          <Link to="/settings#billing" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--warning)' }}>Fix payment</Link>
+          <Link to="/agent/billing" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--warning)' }}>Fix payment</Link>
         </div>
       )}
       {children}
