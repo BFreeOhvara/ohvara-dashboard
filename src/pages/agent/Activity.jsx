@@ -16,7 +16,7 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // Prompts 689/695) and every time a booked call was moved. Messages are not shown
 // here (Prompt 694) — the Messages page is the one place for those.
 //
-// One day at a time (Prompt 694): a date control above the list steps ← / → a
+// One day at a time (Prompt 694): a date control beside the page title steps ← / → a
 // calendar day, and its label opens a month picker (Prompt 698); the list
 // scrolls inside a box that ends on a whole row. Events come from
 // policy_events (migration 118, written by a trigger on policies, so nothing
@@ -137,13 +137,14 @@ export default function Activity() {
       <SectionHead
         title={isAdmin ? "Everyone's activity" : 'Your activity'}
         sub="Newest first · updates every 30 seconds"
-      />
-
-      <DateNav
-        day={day} today={today} title={title} back={back}
-        onPrev={() => setBack(n => n + 1)}
-        onNext={() => setBack(n => Math.max(0, n - 1))}
-        onPick={d => setBack(Math.max(0, Math.round((today - startOfDay(d)) / 86400000)))}
+        action={
+          <DateNav
+            day={day} today={today} title={title} back={back}
+            onPrev={() => setBack(n => n + 1)}
+            onNext={() => setBack(n => Math.max(0, n - 1))}
+            onPick={d => setBack(Math.max(0, Math.round((today - startOfDay(d)) / 86400000)))}
+          />
+        }
       />
 
       <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
@@ -175,7 +176,7 @@ export default function Activity() {
   )
 }
 
-// Date control above the list: ← [calendar · October 4 · Today] →. The label
+// Date control, top right beside the page title (Prompt 699): ← [calendar · October 4 · Today] →. The label
 // opens a month picker so a far-back day is one click, not many arrows.
 function DateNav({ day, today, title, back, onPrev, onNext, onPick }) {
   const [open, setOpen] = useState(false)
@@ -197,7 +198,7 @@ function DateNav({ day, today, title, back, onPrev, onNext, onPick }) {
   }
 
   return (
-    <div ref={wrap} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 8, margin: '14px 0 12px' }}>
+    <div ref={wrap} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
       <DayArrow dir="prev" onClick={onPrev} />
       <button
         onClick={toggle}
@@ -243,7 +244,7 @@ function MonthPicker({ view, setView, selected, today, onPick }) {
       role="dialog"
       aria-label="Choose a date"
       style={{
-        position: 'absolute', top: '100%', left: 0, marginTop: 6, zIndex: 50, width: 252, padding: 12,
+        position: 'absolute', top: '100%', right: 0, marginTop: 6, zIndex: 50, width: 252, padding: 12,
         background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 12,
         boxShadow: '0 16px 40px rgba(0,0,0,0.35)', userSelect: 'none',
       }}
