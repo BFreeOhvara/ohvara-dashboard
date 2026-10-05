@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Search, Phone, Check, X, MessageSquare } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { useAgentBookings, useRescheduleBooking, useRebookCall } from '../../hooks/useAgentBookings'
-import { fieldLabel, primaryBtn, ghostBtn, MONO, DISPLAY } from '../../lib/exportStyles'
+import { useAgentBookings, useRescheduleBooking, useRebookCall, useConfirmRecoveryNumber } from '../../hooks/useAgentBookings'
+import { fieldLabel, primaryBtn, ghostBtn, control, MONO, DISPLAY } from '../../lib/exportStyles'
 import { Pipeline } from '../../components/agent/Pipeline'
 import { AnchoredSelectField } from '../../components/ui/ExportForm'
 import { ClientRow, EmptyNote, SlotPicker, ListCard } from '../../components/agent/AgentUI'
@@ -112,6 +112,12 @@ export default function Clients() {
     if (openId === id) next.delete('open'); else next.set('open', id)
     setParams(next, { replace: true })
   }
+  const openOnly = id => {
+    const next = new URLSearchParams(params)
+    next.set('open', id)
+    next.delete('rebook')
+    setParams(next, { replace: true })
+  }
   const startRebook = id => {
     const next = new URLSearchParams(params)
     next.set('open', id)
@@ -174,6 +180,7 @@ export default function Clients() {
           <ClientRow
             key={p.id} p={p} now={now} showAgent={isAdmin} tall first={i === 0} active={openId === p.id} onClick={() => toggle(p.id)}
             onRebook={stageOf(p) === 'noAnswer' && (isAdmin || p.agent_id === profile?.id) ? () => startRebook(p.id) : undefined}
+            onConfirmNumber={p.recovery_step === 'number_check' && (isAdmin || p.agent_id === profile?.id) ? () => openOnly(p.id) : undefined}
           />
         ))}
       </ListCard>
@@ -233,7 +240,12 @@ function ClientDetail({ p, now, canMove, startRebook, onClose }) {
   const statusText = {
     booked: 'Waiting for Fulfillment',
     inProgress: 'On a call right now',
-    noAnswer: `No answer${SUBSTATUS_LABEL[p.cancellation_substatus] ? ` · ${SUBSTATUS_LABEL[p.cancellation_substatus].toLowerCase()}` : ''} — re-book a time, or Fulfillment will try again`,
+    noAnswer: `No answer${SUBSTATUS_LABEL[p.cancellation_substatus] ? ` · ${SUBSTATUS_LABEL[p.cancellation_substatus].toLowerCase()}` : ''} — ${{
+      retry_locked: `retry call locked for ${fmtBooking(p.recovery_retry_at)}; we've texted them a link to pick another time`,
+      number_check: 'two tries, no answer. Confirm their number to continue',
+      followup: "we're texting them a link to pick a time; you'll be told if they don't reply",
+      call_directly: "they haven't replied to our texts. Call them and re-book",
+    }[p.recovery_step] || 're-book a time, or Fulfillment will try again'}`,
     cancelled: 'Cancelled',
   }[stage]
 
@@ -298,6 +310,7 @@ function ClientDetail({ p, now, canMove, startRebook, onClose }) {
             </button>
           )
       )}
+      {p.recovery_step === 'number_check' && canMove && !moving && <ConfirmNumber p={p} />}
       {stage === 'noAnswer' && canMove && (
         moving
           ? <Reschedule p={p} now={now} rebook onDone={() => setMoving(false)} />
@@ -312,6 +325,43 @@ function ClientDetail({ p, now, canMove, startRebook, onClose }) {
           Fulfillment is on this one — if the time needs to change, message them.
         </p>
       )}
+    </div>
+  )
+}
+
+// Prompt 696 — the checkpoint after two unanswered calls: nothing else is sent
+// until the agent says this is the right number (optionally fixing it first).
+function ConfirmNumber({ p }) {
+  const confirm = useConfirmRecoveryNumber()
+  const [editing, setEditing] = useState(false)
+  const [phone, setPhone] = useState(p.client_phone || '')
+  const valid = [10, 11].includes(digits(phone).length)
+  const first = p.client_first_name || 'them'
+  return (
+    <div style={{ marginTop: 20, paddingTop: 18, borderTop: 'var(--border-w) solid var(--border)' }}>
+      <p style={fieldLabel}>Confirm the number</p>
+      <p style={{ margin: '6px 0 12px', fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+        Fulfillment couldn't reach {first} after two tries. Is <span style={{ fontFamily: MONO, color: 'var(--text-primary)' }}>{p.client_phone || 'no number'}</span> still
+        right? Confirm and we'll text them tomorrow morning and evening. If neither gets a reply, you'll be asked to call them yourself.
+      </p>
+      {editing && (
+        <input
+          value={phone} onChange={e => setPhone(e.target.value)} inputMode="tel" autoFocus
+          aria-label="Client phone number" placeholder="(555) 555-5555"
+          style={{ ...control, background: 'var(--bg-base)', padding: '0 12px', maxWidth: 260, marginBottom: 12, fontFamily: MONO }}
+        />
+      )}
+      {confirm.isError && <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--danger)' }}>{confirm.error?.message}</p>}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <button
+          disabled={confirm.isPending || (editing && !valid)}
+          onClick={() => confirm.mutate({ id: p.id, phone: editing && digits(phone) !== digits(p.client_phone) ? phone : null })}
+          style={{ ...primaryBtn, opacity: confirm.isPending || (editing && !valid) ? 0.5 : 1 }}
+        >
+          {confirm.isPending ? 'Saving…' : editing ? 'Save and confirm' : 'Yes, this is the right number'}
+        </button>
+        {!editing && <button onClick={() => setEditing(true)} style={{ ...ghostBtn, height: 40 }}>Change number</button>}
+      </div>
     </div>
   )
 }

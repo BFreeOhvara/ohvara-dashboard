@@ -13,6 +13,7 @@ const SELECT = `
   fulfillment_claimed_at, fulfillment_started_at, fulfillment_completed_at,
   cancellation_substatus, cancellation_confirmation,
   call_live_since, last_call_outcome, call_attempts, last_call_at,
+  recovery_step, recovery_retry_at, recovery_am_sent_at, recovery_pm_sent_at,
   created_at, updated_at,
   agent:profiles!policies_agent_id_fkey ( id, full_name ),
   assigned:profiles!policies_assigned_fulfillment_id_fkey ( id, full_name ),
@@ -113,6 +114,19 @@ export function useRebookCall() {
   return useMutation({
     mutationFn: async ({ id, scheduledAt }) => {
       const { error } = await supabase.rpc('agent_rebook_call', { p_policy: id, p_at: scheduledAt })
+      if (error) throw error
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),
+  })
+}
+
+// Prompt 696 — the agent confirms (and optionally corrects) the client's number
+// after two unanswered calls; the next calendar day the follow-up texts start.
+export function useConfirmRecoveryNumber() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, phone }) => {
+      const { error } = await supabase.rpc('agent_confirm_recovery_number', { p_policy: id, p_phone: phone || null })
       if (error) throw error
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),

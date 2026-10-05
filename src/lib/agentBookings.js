@@ -44,6 +44,29 @@ export function stageOf(p) {
   return 'booked'
 }
 
+// Prompt 696 — where a No answer lead sits in the text-and-retry flow
+// (migration 122), as a short phrase for the badge. Null when no flow is
+// running (opt-in off, or it hasn't started).
+export function recoveryLabel(p, now = Date.now()) {
+  if (stageOf(p) !== 'noAnswer' || !p.recovery_step) return null
+  switch (p.recovery_step) {
+    case 'retry_locked': {
+      if (!p.recovery_retry_at) return 'retry locked'
+      const at = new Date(p.recovery_retry_at)
+      if (sameLocalDay(at, new Date(now))) return 'retry today'
+      if (sameLocalDay(at, new Date(now + 24 * 3600e3))) return 'retry tomorrow'
+      return `retry ${at.toLocaleDateString('en-US', { weekday: 'short' })}`
+    }
+    case 'number_check': return 'needs number check'
+    case 'followup':
+      return p.recovery_pm_sent_at ? 'follow-up (PM sent)'
+        : p.recovery_am_sent_at ? 'follow-up (AM sent)'
+          : 'follow-up scheduled'
+    case 'call_directly': return 'agent to call directly'
+    default: return null
+  }
+}
+
 // A call has been placed at least once and nothing's live or resolved: it's
 // waiting on the next attempt.
 export const needsAnotherCall = p => {

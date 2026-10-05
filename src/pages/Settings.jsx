@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import {
-  Globe, Palette, Shield, Plug, Check, Loader2, Moon, Sun, Trash2, Video, PhoneCall, User, Wallet,
+  Globe, Palette, Shield, Plug, Check, Loader2, Moon, Sun, Trash2, Video, PhoneCall, User, Wallet, MessageSquareText,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -17,6 +17,7 @@ import { invokeCallerId, formatUsPhone } from '../lib/callerId'
 import { GapNote, AnchoredSelectField, TextField } from '../components/ui/ExportForm'
 import { SavedTick } from '../components/ui/SavedTick'
 import { ProfilePanel } from './Profile'
+import { TextFollowUpPanel } from '../components/settings/TextFollowUpPanel'
 import { FulfillmentPayAdminPanel } from '../components/fulfillment/GettingPaid'
 
 // Settings — literal port of the export's Settings screen (vault:
@@ -67,6 +68,8 @@ const TABS = [
   { key: 'security',     label: 'Security',                  icon: Shield },
   { key: 'integrations', label: 'Integrations',              icon: Plug },
   { key: 'callerid',     label: 'Caller ID',                 icon: PhoneCall, roles: ['agent', 'admin'] },
+  // Prompt 696 — consent for the missed-call text flow (+ admin go-live switch).
+  { key: 'textfollowup', label: 'Text follow-up',            icon: MessageSquareText, roles: ['agent', 'admin'] },
   // Prompt 681 — admin sets each Fulfillment rep's rate and shift here. The rep's own
   // Getting Paid view lives at /fulfillment/getting-paid (Prompt 683).
   { key: 'pay',          label: 'Fulfillment Pay',           icon: Wallet, roles: ['admin'] },
@@ -136,6 +139,7 @@ export default function Settings() {
         {tab === 'security'     && <SecurityPanel />}
         {tab === 'integrations' && <IntegrationsPanel profile={profile} />}
         {tab === 'callerid'     && <CallerIdPanel profile={profile} />}
+        {tab === 'textfollowup' && <TextFollowUpPanel profile={profile} />}
         {tab === 'pay' && <FulfillmentPayAdminPanel />}
       </div>
     </div>

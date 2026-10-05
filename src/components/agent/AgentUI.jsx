@@ -2,7 +2,7 @@ import { Children } from 'react'
 import { ChevronRight, MessageCircleMore } from 'lucide-react'
 import { card, eyebrow, control, MONO } from '../../lib/exportStyles'
 import { SLOTS, slotToISO, localDateISO } from '../../lib/scheduling'
-import { STAGE, TONE, stageOf } from '../../lib/agentBookings'
+import { STAGE, TONE, stageOf, recoveryLabel } from '../../lib/agentBookings'
 import { LiveDot } from '../ui/LiveDot'
 import { fullName } from '../../lib/policyFormat'
 
@@ -26,12 +26,21 @@ export function Pill({ tone = 'neutral', icon: Icon, children }) {
   )
 }
 
-export function StagePill({ p }) {
+export function StagePill({ p, now }) {
   const stage = stageOf(p)
-  return (
+  const pill = (
     <Pill tone={STAGE[stage].tone} icon={stage === 'inProgress' ? LiveDot : undefined}>
       {STAGE[stage].label}
     </Pill>
+  )
+  // Prompt 696 — a No answer lead in the text-and-retry flow says where it is.
+  const sub = recoveryLabel(p, now)
+  if (!sub) return pill
+  return (
+    <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+      {pill}
+      <span style={{ fontSize: 11.5, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{sub}</span>
+    </span>
   )
 }
 
@@ -135,7 +144,7 @@ const COL = {
 }
 const COL_COMPACT = { when: 'order-2 col-span-2', name: 'order-1', leaving: 'hidden', leavingInline: '', status: 'order-1', chevron: 'hidden' }
 
-export function ClientRow({ p, now, onClick, onRebook, showAgent, timeOnly, active, first, compact, tall }) {
+export function ClientRow({ p, now, onClick, onRebook, onConfirmNumber, showAgent, timeOnly, active, first, compact, tall }) {
   const c = compact ? COL_COMPACT : COL
   const cols = compact ? ''
     : timeOnly ? 'md:grid-cols-[96px_minmax(0,1.4fr)_minmax(0,1fr)_160px_14px]'
@@ -175,6 +184,17 @@ export function ClientRow({ p, now, onClick, onRebook, showAgent, timeOnly, acti
         {leaving}
       </span>
       <span className={c.status} style={{ justifySelf: 'end', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        {onConfirmNumber && (
+          <button
+            onClick={e => { e.stopPropagation(); onConfirmNumber() }}
+            style={{
+              height: 24, padding: '0 10px', borderRadius: 999, fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap',
+              background: 'var(--accent-dim)', color: 'var(--accent)', border: 'var(--border-w) solid var(--accent-border)',
+            }}
+          >
+            Confirm number
+          </button>
+        )}
         {onRebook && (
           <button
             onClick={e => { e.stopPropagation(); onRebook() }}

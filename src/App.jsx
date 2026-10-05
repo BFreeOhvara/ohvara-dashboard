@@ -11,6 +11,7 @@ import './lib/installPrompt'
 import Login from './pages/Login'
 import Join from './pages/Join'
 import ResetPassword from './pages/ResetPassword'
+import RescheduleLink from './pages/RescheduleLink'
 import Settings from './pages/Settings'
 import Messages from './pages/Messages'
 
@@ -62,6 +63,8 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/join/:token" element={<Join />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            {/* Prompt 696 — client-facing reschedule link from the missed-call text; no login */}
+            <Route path="/r/:token" element={<RescheduleLink />} />
             <Route path="/" element={<RoleRedirect />} />
 
             {/* Settings — shared across every role (Prompt 226) */}

@@ -18,7 +18,7 @@ import { SavedTick } from '../../components/ui/SavedTick'
 import { money, fullName, formatDate, maskLast4 } from '../../lib/policyFormat'
 import { invokeCallerId, FALLBACK_CODES } from '../../lib/callerId'
 import { flagsFor, overlapsFor } from '../../lib/fulfillmentFlags'
-import { STAGE, stageOf, isLive } from '../../lib/agentBookings'
+import { STAGE, stageOf, isLive, recoveryLabel } from '../../lib/agentBookings'
 import { LiveDot } from '../../components/ui/LiveDot'
 
 // Fulfillment desk (Prompt 684 rebuild of the Prompt 663 claim desk).
@@ -139,7 +139,8 @@ function StatusPill({ p }) {
   const stage = stageOf(p)
   if (stage === 'inProgress') return <Pill tone={STAGE.inProgress.tone} icon={LiveDot}>{STAGE.inProgress.label}</Pill>
   const reason = stage === 'noAnswer' && SUBSTATUS_LABEL[p.cancellation_substatus]
-  return <Pill tone={STAGE[stage].tone}>{STAGE[stage].label}{reason ? ` · ${reason.toLowerCase()}` : ''}</Pill>
+  const flow = recoveryLabel(p)
+  return <Pill tone={STAGE[stage].tone}>{STAGE[stage].label}{reason ? ` · ${reason.toLowerCase()}` : ''}{flow ? ` · ${flow}` : ''}</Pill>
 }
 
 function FlagPills({ p, now, rows }) {
