@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarCheck, PhoneCall, PhoneMissed, CalendarClock, CircleCheck, CalendarArrowUp, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarCheck, PhoneCall, PhoneMissed, CircleCheck, CalendarArrowUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePolicyEvents } from '../../hooks/useAgentActivity'
 import { card, MONO } from '../../lib/exportStyles'
@@ -13,8 +13,8 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 
 // Activity (Prompt 690) — what actually happened, newest first. My Pipeline
 // shows where each client stands NOW; this is the history behind it: every
-// status change (Booked → In progress → Cancelled / No answer / Rescheduling,
-// Prompt 689) and every time a booked call was moved. Messages are not shown
+// status change (Booked → In progress → Cancelled / No answer,
+// Prompts 689/695) and every time a booked call was moved. Messages are not shown
 // here (Prompt 694) — the Messages page is the one place for those.
 //
 // One day at a time (Prompt 694): a fixed-size header steps ← / → a calendar
@@ -31,7 +31,6 @@ const KIND = {
   booked:       { icon: CalendarCheck,   stage: 'booked' },
   in_progress:  { icon: PhoneCall,       stage: 'inProgress' },
   no_answer:    { icon: PhoneMissed,     stage: 'noAnswer' },
-  rescheduling: { icon: CalendarClock,   stage: 'rescheduling' },
   cancelled:    { icon: CircleCheck,     stage: 'cancelled' },
   moved:        { icon: CalendarArrowUp, color: 'var(--text-secondary)' },
 }
@@ -54,8 +53,7 @@ function describe(e) {
         ? 'Back to Booked'
         : `Booked a call with Fulfillment${d.scheduled_call_at ? ` for ${fmtBooking(d.scheduled_call_at)}` : ''}`
     case 'in_progress':  return `${who(e)} started a call${attempt}`
-    case 'no_answer':    return `Call ended: no answer${attempt}`
-    case 'rescheduling': return `Call ended: needs another call${d.reason ? ` · ${SUBSTATUS_LABEL[d.reason] || d.reason}` : ''}`
+    case 'no_answer':    return `Call ended: no answer${attempt}${d.reason ? ` · ${SUBSTATUS_LABEL[d.reason] || d.reason}` : ''}`
     case 'cancelled':    return `Old policy confirmed cancelled${d.confirmation ? ` · conf. ${d.confirmation}` : ''}`
     case 'moved':        return `Call moved to ${fmtBooking(d.to)}`
     default:             return e.kind

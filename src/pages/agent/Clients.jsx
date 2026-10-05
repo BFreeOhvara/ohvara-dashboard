@@ -3,10 +3,10 @@ import { createPortal } from 'react-dom'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Search, Phone, Check, X, MessageSquare } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { useAgentBookings, useLegacyPolicyCount, useRescheduleBooking } from '../../hooks/useAgentBookings'
+import { useAgentBookings, useRescheduleBooking, useRebookCall } from '../../hooks/useAgentBookings'
 import { fieldLabel, primaryBtn, ghostBtn, MONO, DISPLAY } from '../../lib/exportStyles'
 import { Pipeline } from '../../components/agent/Pipeline'
-import { AnchoredSelectField, GapNote } from '../../components/ui/ExportForm'
+import { AnchoredSelectField } from '../../components/ui/ExportForm'
 import { ClientRow, EmptyNote, SlotPicker, ListCard } from '../../components/agent/AgentUI'
 import { fullName } from '../../lib/policyFormat'
 import { slotToISO, localDateISO, fmtBooking, isFarOut } from '../../lib/scheduling'
@@ -20,7 +20,7 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // dashboard doesn't track (Brayden, 2026-10-01). Every row an agent creates
 // is a client whose EXISTING policy is being cancelled, so this is a log of
 // clients you've booked and where each cancellation stands: Booked → In
-// progress (a call is live right now) → Cancelled / No answer / Rescheduling
+// progress (a call is live right now) → Cancelled / No answer
 // (Prompt 689). No AP, no policy #, no
 // effectuation/underwriting/lapse banners — none of that applies any more.
 //
@@ -41,6 +41,10 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // toggle are gone; a range arriving from an Overview tile shows as a removable
 // chip next to the count instead.
 //
+// Prompt 695 — Rescheduling is gone (merged into No answer); the header is one
+// row (status pills left, lead count right); a No answer lead has a Re-book
+// action that sets a new time and sends it back to Booked.
+//
 // Prompt 687 — lead detail opens in a popup instead of expanding under its row;
 // the page lands on Booked (the pills are one grouped bar); search looks across
 // every status (the pills only filter when the search box is empty); the lead
@@ -56,9 +60,9 @@ export default function Clients() {
   const now = useNow()
   const [params, setParams] = useSearchParams()
   const openId = params.get('open')
+  const rebook = params.get('rebook') === '1'
 
   const { data: raw = [], isLoading } = useAgentBookings(isAdmin ? null : profile?.id)
-  const { data: legacyCount = 0 } = useLegacyPolicyCount(isAdmin ? null : profile?.id)
   const rows = useMemo(() => (isAdmin ? excludeTestAccounts(raw, profile?.id) : raw), [raw, isAdmin, profile?.id])
 
   const filter = STAGES.includes(params.get('stage')) ? params.get('stage') : 'booked'
@@ -104,7 +108,14 @@ export default function Clients() {
 
   const toggle = id => {
     const next = new URLSearchParams(params)
+    next.delete('rebook')
     if (openId === id) next.delete('open'); else next.set('open', id)
+    setParams(next, { replace: true })
+  }
+  const startRebook = id => {
+    const next = new URLSearchParams(params)
+    next.set('open', id)
+    next.set('rebook', '1')
     setParams(next, { replace: true })
   }
   // Looked up from every row, not the filtered list, so a link from Overview
@@ -115,9 +126,8 @@ export default function Clients() {
     // Prompt 686 — fixed-height column (viewport minus header + main padding) so
     // the page never scrolls; only the list card scrolls inside it.
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: 'calc(100dvh - 160px)', minHeight: 360 }}>
-      <Pipeline rows={scoped} bucket={filter} onBucket={v => setParam('stage', v, 'booked')} showAll={false} />
-
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flexShrink: 0 }}>
+        <Pipeline rows={scoped} bucket={filter} onBucket={v => setParam('stage', v, 'booked')} showAll={false} />
         {isAdmin && agents.length > 1 && (
           <AnchoredSelectField
             value={agentId} onChange={setAgentId}
@@ -161,21 +171,17 @@ export default function Clients() {
         )}
       >
         {list.map((p, i) => (
-          <ClientRow key={p.id} p={p} now={now} showAgent={isAdmin} tall first={i === 0} active={openId === p.id} onClick={() => toggle(p.id)} />
+          <ClientRow
+            key={p.id} p={p} now={now} showAgent={isAdmin} tall first={i === 0} active={openId === p.id} onClick={() => toggle(p.id)}
+            onRebook={stageOf(p) === 'noAnswer' && (isAdmin || p.agent_id === profile?.id) ? () => startRebook(p.id) : undefined}
+          />
         ))}
       </ListCard>
 
       {openRow && (
         <ClientModal onClose={() => toggle(openRow.id)}>
-          <ClientDetail p={openRow} now={now} canMove={isAdmin || openRow.agent_id === profile?.id} onClose={() => toggle(openRow.id)} />
+          <ClientDetail key={`${openRow.id}:${rebook}`} p={openRow} now={now} canMove={isAdmin || openRow.agent_id === profile?.id} startRebook={rebook} onClose={() => toggle(openRow.id)} />
         </ClientModal>
-      )}
-
-      {legacyCount > 0 && (
-        <GapNote>
-          {legacyCount} older record{legacyCount === 1 ? '' : 's'} from the pre-pivot submission flow {legacyCount === 1 ? "isn't" : "aren't"} shown
-          here — {legacyCount === 1 ? "it was" : "they were"} never booked with Fulfillment.
-        </GapNote>
       )}
     </div>
   )
@@ -211,11 +217,11 @@ function ClientModal({ onClose, children }) {
   )
 }
 
-function ClientDetail({ p, now, canMove, onClose }) {
+function ClientDetail({ p, now, canMove, startRebook, onClose }) {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const stage = stageOf(p)
-  const [moving, setMoving] = useState(false)
+  const [moving, setMoving] = useState(!!startRebook && stage === 'noAnswer' && canMove)
 
   const attempted = (p.call_attempts || 0) > 0
   const caller = p.assigned?.full_name || 'Fulfillment'
@@ -227,8 +233,7 @@ function ClientDetail({ p, now, canMove, onClose }) {
   const statusText = {
     booked: 'Waiting for Fulfillment',
     inProgress: 'On a call right now',
-    noAnswer: 'No answer — Fulfillment will try again',
-    rescheduling: `Spoke with the client, needs another call${SUBSTATUS_LABEL[p.cancellation_substatus] ? ` · ${SUBSTATUS_LABEL[p.cancellation_substatus].toLowerCase()}` : ''}`,
+    noAnswer: `No answer${SUBSTATUS_LABEL[p.cancellation_substatus] ? ` · ${SUBSTATUS_LABEL[p.cancellation_substatus].toLowerCase()}` : ''} — re-book a time, or Fulfillment will try again`,
     cancelled: 'Cancelled',
   }[stage]
 
@@ -293,7 +298,16 @@ function ClientDetail({ p, now, canMove, onClose }) {
             </button>
           )
       )}
-      {stage !== 'booked' && stage !== 'cancelled' && (
+      {stage === 'noAnswer' && canMove && (
+        moving
+          ? <Reschedule p={p} now={now} rebook onDone={() => setMoving(false)} />
+          : (
+            <button onClick={() => setMoving(true)} style={{ ...primaryBtn, marginTop: 20 }}>
+              Re-book a call
+            </button>
+          )
+      )}
+      {stage !== 'booked' && stage !== 'cancelled' && !(stage === 'noAnswer' && canMove) && (
         <p style={{ margin: '18px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
           Fulfillment is on this one — if the time needs to change, message them.
         </p>
@@ -302,8 +316,12 @@ function ClientDetail({ p, now, canMove, onClose }) {
   )
 }
 
-function Reschedule({ p, now, onDone }) {
-  const move = useRescheduleBooking()
+// Moves a Booked call (Prompt 665) or, with `rebook`, puts a No answer lead
+// back on Booked at a new time (Prompt 695) — same slot picker either way.
+function Reschedule({ p, now, onDone, rebook }) {
+  const reschedule = useRescheduleBooking()
+  const rebookCall = useRebookCall()
+  const move = rebook ? rebookCall : reschedule
   const current = p.scheduled_call_at ? new Date(p.scheduled_call_at) : null
   const [date, setDate] = useState(() => (current && current.getTime() > Date.now() ? localDateISO(0, current) : localDateISO(0)))
   const [slot, setSlot] = useState('')
@@ -313,7 +331,7 @@ function Reschedule({ p, now, onDone }) {
 
   return (
     <div style={{ marginTop: 20, paddingTop: 18, borderTop: 'var(--border-w) solid var(--border)' }}>
-      <p style={fieldLabel}>New time</p>
+      <p style={fieldLabel}>{rebook ? 'Re-book for' : 'New time'}</p>
       <SlotPicker date={date} slot={slot} onDate={d => { setDate(d); setSlot(''); setFarOk(false) }}
         onSlot={s => { setSlot(s); setFarOk(false) }} now={now} />
       {needsFarOk && (
@@ -329,7 +347,7 @@ function Reschedule({ p, now, onDone }) {
           onClick={() => move.mutate({ id: p.id, scheduledAt: iso }, { onSuccess: onDone })}
           style={{ ...primaryBtn, opacity: !iso || needsFarOk || move.isPending ? 0.5 : 1 }}
         >
-          {move.isPending ? 'Saving…' : iso ? `Move to ${fmtBooking(iso)}` : 'Pick a time'}
+          {move.isPending ? 'Saving…' : iso ? `${rebook ? 'Re-book for' : 'Move to'} ${fmtBooking(iso)}` : 'Pick a time'}
         </button>
         <button onClick={onDone} style={{ ...ghostBtn, height: 40 }}>Cancel</button>
       </div>

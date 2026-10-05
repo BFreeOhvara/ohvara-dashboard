@@ -4,9 +4,9 @@
 // Prompt 684 — items are auto-assigned at booking, often for a call days
 // out, so "how long since it was assigned" stopped meaning anything.
 // Prompt 689 — statuses are Booked / In progress (live) / No answer /
-// Rescheduling / Cancelled:
+// Cancelled (Rescheduling merged into No answer, 695):
 //   * Booked (never called): overdue once its call time passes; stale a day past it.
-//   * No answer / Rescheduling: waiting on another attempt; stale two days after
+//   * No answer: waiting on another attempt; stale two days after
 //     the last call ended.
 //   * Live: a call open for 45+ minutes is probably one nobody ended — flagged so
 //     the rep records how it went (otherwise the agent keeps seeing it as live).

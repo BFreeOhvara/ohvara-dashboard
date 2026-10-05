@@ -30,7 +30,7 @@ const STAGES = ['all', ...BUCKETS, 'attention']
 const UNASSIGNED = '__unassigned'
 const STAGE_TEXT = {
   booked: 'Booked, no call yet', inProgress: 'On a call right now', noAnswer: 'No answer, needs another call',
-  rescheduling: 'Rescheduling, needs another call', cancelled: 'Cancelled',
+  cancelled: 'Cancelled',
 }
 
 // Filter options from the rows themselves: one per distinct agent / rep.
@@ -184,8 +184,8 @@ function Summary({ p, profile, onClose }) {
         <Info label="Rep" value={p.assigned?.full_name || 'Unassigned'} />
         <Info label="Status" value={stage === 'inProgress'
           ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><LiveDot /> On a call right now</span>
-          : stage === 'rescheduling' && SUBSTATUS_LABEL[p.cancellation_substatus]
-            ? `Rescheduling · ${SUBSTATUS_LABEL[p.cancellation_substatus].toLowerCase()}`
+          : stage === 'noAnswer' && SUBSTATUS_LABEL[p.cancellation_substatus]
+            ? `No answer · ${SUBSTATUS_LABEL[p.cancellation_substatus].toLowerCase()}`
             : STAGE_TEXT[stage]} />
         {stage === 'cancelled' && <Info label="Carrier confirmation #" value={p.cancellation_confirmation || 'Not recorded'} mono />}
       </div>

@@ -31,12 +31,13 @@ import { LiveDot } from '../../components/ui/LiveDot'
 // Pipeline (Prompt 681) is where you go to look across everything.
 //
 // Prompt 689 — status is Booked → In progress (a call is live RIGHT NOW) →
-// Cancelled / No answer / Rescheduling. "Call client" starts the live call
+// Cancelled / No answer. "Call client" starts the live call
 // (there's no end-of-call signal from the phone, so the rep declares it), and
-// when it ends the rep marks the outcome. No answer and Rescheduling both loop
-// back toward another call rather than being dead ends.
+// when it ends the rep marks the outcome. No answer loops back toward another
+// call rather than being a dead end (Prompt 695: Rescheduling merged into it,
+// "reached them but couldn't cancel" is a No answer with an optional reason).
 
-// Optional reason on a Rescheduling outcome.
+// Optional reason on a No answer.
 const SUBSTATUS = [
   { value: 'waiting_carrier', label: 'Waiting on carrier' },
   { value: 'waiting_client',  label: 'Waiting on client' },
@@ -96,14 +97,14 @@ const DUE_SOON_MS = 15 * 60e3
 // What to work next, in order:
 //   0. a call that's live right now
 //   1. calls that are due — booked time passed or within 15 min, soonest first
-//   2. No answer / Rescheduling — owed another call, longest-waiting first
+//   2. No answer — owed another call, longest-waiting first
 //   3. later calls, soonest first
 //   4. no call time at all, oldest booking first
 function priority(p, now) {
   const at = p.scheduled_call_at ? new Date(p.scheduled_call_at).getTime() : null
   const stage = stageOf(p)
   if (stage === 'inProgress') return [0, 0]
-  if (stage === 'noAnswer' || stage === 'rescheduling') {
+  if (stage === 'noAnswer') {
     return [2, new Date(p.last_call_at || p.fulfillment_started_at || p.updated_at).getTime()]
   }
   if (at != null && at <= now + DUE_SOON_MS) return [1, at]
@@ -137,7 +138,7 @@ function StatusPill({ p }) {
   if (p.fulfillment_stage === 'Complete') return <Pill tone="success" icon={CheckCircle2}>Cancelled</Pill>
   const stage = stageOf(p)
   if (stage === 'inProgress') return <Pill tone={STAGE.inProgress.tone} icon={LiveDot}>{STAGE.inProgress.label}</Pill>
-  const reason = stage === 'rescheduling' && SUBSTATUS_LABEL[p.cancellation_substatus]
+  const reason = stage === 'noAnswer' && SUBSTATUS_LABEL[p.cancellation_substatus]
   return <Pill tone={STAGE[stage].tone}>{STAGE[stage].label}{reason ? ` · ${reason.toLowerCase()}` : ''}</Pill>
 }
 
@@ -433,9 +434,9 @@ function OnBehalfHint({ p, profile }) {
   )
 }
 
-// Shown while a call is live. The three outcomes are the only ways out of
+// Shown while a call is live. The two outcomes are the only ways out of
 // "In progress": nothing sits there as an idle bucket.
-function LiveCallPanel({ p, now, busy, canCancel, onCancelled, onNoAnswer, onRescheduling }) {
+function LiveCallPanel({ p, now, busy, canCancel, onCancelled, onNoAnswer }) {
   const mins = Math.max(0, Math.floor((now - new Date(p.call_live_since)) / 60e3))
   const btn = { ...ghostBtn, height: 38, padding: '0 14px', display: 'inline-flex', alignItems: 'center', gap: 7, opacity: busy ? 0.6 : 1 }
   return (
@@ -460,9 +461,6 @@ function LiveCallPanel({ p, now, busy, canCancel, onCancelled, onNoAnswer, onRes
         )}
         <button onClick={onNoAnswer} disabled={busy} style={btn}>
           <PhoneMissed size={14} /> No answer
-        </button>
-        <button onClick={onRescheduling} disabled={busy} style={btn}>
-          <CalendarClock size={14} /> Rescheduling
         </button>
       </div>
     </div>
@@ -539,7 +537,7 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
     )
   }
 
-  // The call ended without a cancellation: No answer, or Rescheduling.
+  // The call ended without a cancellation: No answer.
   function finishCall(outcome) {
     hold()
     endCall.mutate({ id: p.id, outcome })
@@ -626,7 +624,6 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
           canCancel={canEdit}
           onCancelled={markCancelled}
           onNoAnswer={() => finishCall('no_answer')}
-          onRescheduling={() => finishCall('rescheduling')}
         />
       )}
 
@@ -671,10 +668,10 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
             ) : (
               <>
                 <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
-                  {stage === 'noAnswer' ? 'Last call: no answer.' : 'Last call: reached them, couldn\u2019t cancel this time.'}
+                  Last call: no answer.
                   {' '}{p.call_attempts || 1} call{(p.call_attempts || 1) === 1 ? '' : 's'} so far · {ago(p.last_call_at, now)}. Call again when you\u2019re ready.
                 </p>
-                {stage === 'rescheduling' && canCall && (
+                {stage === 'noAnswer' && canCall && (
                   <>
                     <Segmented
                       size="sm"
@@ -684,7 +681,7 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
                       onChange={pickReason}
                     />
                     <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-                      Optional: why it needs another call. Tap again to clear.
+                      Optional: if you reached them, why it needs another call. Tap again to clear.
                     </p>
                   </>
                 )}
@@ -937,7 +934,7 @@ export default function FulfillmentQueue() {
         tone={(isAdmin ? g.team.length : g.mine.length) ? 'info' : 'neutral'}
         sub={isAdmin
           ? (g.unassigned.length ? `${g.unassigned.length} with no rep yet` : 'every one has a rep')
-          : `${g.mine.filter(isLive).length} on a call · ${g.mine.filter(p => ['noAnswer', 'rescheduling'].includes(stageOf(p))).length} owed another call · ${g.mine.filter(p => stageOf(p) === 'booked').length} booked`}
+          : `${g.mine.filter(isLive).length} on a call · ${g.mine.filter(p => stageOf(p) === 'noAnswer').length} owed another call · ${g.mine.filter(p => stageOf(p) === 'booked').length} booked`}
       />
       <StatTile
         icon={CalendarClock} label="Calls left today" value={g.callsToday.length}

@@ -131,8 +131,8 @@ export function useFulfillmentQueue() {
 // Prompt 689 — a call is either live right now or it isn't. "Call client"
 // starts one (stage Pending → In Progress, call_live_since stamped server-side),
 // and the rep ends it with the real outcome: Cancelled (the existing "Mark
-// cancelled" update, which also clears the live flag), No answer, or
-// Rescheduling (optionally "waiting on carrier / client"). RPCs so the rep
+// cancelled" update, which also clears the live flag) or No answer
+// (optionally "waiting on carrier / client"; Prompt 695 merged Rescheduling in). RPCs so the rep
 // check and the times live in the database (migration 117).
 export function useStartCall() {
   const qc = useQueryClient()
@@ -156,7 +156,7 @@ export function useEndCall() {
   })
 }
 
-// The optional reason on a call that already ended as Rescheduling.
+// The optional reason on a call that already ended as No answer.
 export function useSetRescheduleReason() {
   const qc = useQueryClient()
   return useMutation({

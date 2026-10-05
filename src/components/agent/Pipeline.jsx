@@ -11,8 +11,8 @@ import { BUCKETS, BUCKET, TONE, bucketOf } from '../../lib/agentBookings'
 // Prompt 686 — each status chip carries its own colour (tint at rest, stronger
 // when selected); `showAll={false}` drops the All chip (agent My Pipeline —
 // clicking the selected chip again clears the filter).
-// Prompt 689 — five statuses (Booked / In progress / No answer / Rescheduling /
-// Cancelled); In progress swaps its dot for the live pulse while a call is on.
+// Prompt 689 — statuses (Booked / In progress / No answer / Cancelled; 695
+// folded Rescheduling into No answer); In progress swaps its dot for the live pulse while a call is on.
 // Prompt 687 — in that mode the chips sit inside one shared rounded bar (one
 // segmented control, like Restorix's), keeping each status's own colour.
 export function Pipeline({ rows, bucket, onBucket, extras = [], showAll = true }) {

@@ -135,7 +135,7 @@ const COL = {
 }
 const COL_COMPACT = { when: 'order-2 col-span-2', name: 'order-1', leaving: 'hidden', leavingInline: '', status: 'order-1', chevron: 'hidden' }
 
-export function ClientRow({ p, now, onClick, showAgent, timeOnly, active, first, compact, tall }) {
+export function ClientRow({ p, now, onClick, onRebook, showAgent, timeOnly, active, first, compact, tall }) {
   const c = compact ? COL_COMPACT : COL
   const cols = compact ? ''
     : timeOnly ? 'md:grid-cols-[96px_minmax(0,1.4fr)_minmax(0,1fr)_160px_14px]'
@@ -174,7 +174,20 @@ export function ClientRow({ p, now, onClick, showAgent, timeOnly, active, first,
       <span className={c.leaving} style={{ fontSize: 14, color: p.current_carrier ? 'var(--text-secondary)' : 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {leaving}
       </span>
-      <span className={c.status} style={{ justifySelf: 'end' }}><StagePill p={p} now={now} /></span>
+      <span className={c.status} style={{ justifySelf: 'end', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        {onRebook && (
+          <button
+            onClick={e => { e.stopPropagation(); onRebook() }}
+            style={{
+              height: 24, padding: '0 10px', borderRadius: 999, fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap',
+              background: 'transparent', color: 'var(--text-secondary)', border: 'var(--border-w) solid var(--border-strong)',
+            }}
+          >
+            Re-book
+          </button>
+        )}
+        <StagePill p={p} now={now} />
+      </span>
       <ChevronRight
         size={14}
         className={c.chevron}

@@ -13,22 +13,23 @@ import { useEffect, useState } from 'react'
 //   Booked        no call has been placed yet
 //   In progress   a call is happening RIGHT NOW (call_live_since is set)
 //   Cancelled     the old policy is confirmed cancelled
-//   No answer     the last call didn't connect — needs another attempt
-//   Rescheduling  spoke to them, couldn't cancel this time — needs another call
-// No answer and Rescheduling stay their own status until the next call starts
-// (then In progress again), so the fact an attempt was made is never lost.
+//   No answer     the last call didn't resolve — it never connected, or it
+//                 connected without the carrier confirming — needs another try
+// Prompt 695 — "Rescheduling" is gone: both failure outcomes are No answer, and
+// the agent gets the lead back to Booked by re-booking it (agent_rebook_call).
+// No answer stays its own status until the next call starts (then In progress
+// again), so the fact an attempt was made is never lost.
 
 export const STAGE = {
-  // Prompt 686 — every status has its own colour (purple / blue / green /
-  // amber / pink), matching Restorix's My Pipeline.
-  booked:       { label: 'Booked',       tone: 'purple',  fill: 'var(--purple)' },
-  inProgress:   { label: 'In progress',  tone: 'info',    fill: 'var(--info)' },
-  noAnswer:     { label: 'No answer',    tone: 'warning', fill: 'var(--warning)' },
-  rescheduling: { label: 'Rescheduling', tone: 'pink',    fill: 'var(--pink)' },
+  // Prompt 686 — every status has its own colour. Prompt 695 recoloured:
+  // No answer gray, Booked blue, In progress yellow, Cancelled green.
+  booked:       { label: 'Booked',       tone: 'info',    fill: 'var(--info)' },
+  inProgress:   { label: 'In progress',  tone: 'warning', fill: 'var(--warning)' },
+  noAnswer:     { label: 'No answer',    tone: 'muted',   fill: 'var(--text-muted)' },
   cancelled:    { label: 'Cancelled',    tone: 'success', fill: 'var(--success)' },
 }
 
-// Why a call ended as Rescheduling (optional, rep-set).
+// Optional reason on a No answer the rep reached the client on (rep-set).
 export const SUBSTATUS_LABEL = {
   waiting_carrier: 'Waiting on carrier',
   waiting_client: 'Waiting on client',
@@ -40,20 +41,18 @@ export function stageOf(p) {
   if (p.fulfillment_stage === 'Complete') return 'cancelled'
   if (isLive(p)) return 'inProgress'
   if (p.last_call_outcome === 'no_answer') return 'noAnswer'
-  if (p.last_call_outcome === 'rescheduling') return 'rescheduling'
   return 'booked'
 }
 
 // A call has been placed at least once and nothing's live or resolved: it's
 // waiting on the next attempt.
 export const needsAnotherCall = p => {
-  const s = stageOf(p)
-  return s === 'noAnswer' || s === 'rescheduling'
+  return stageOf(p) === 'noAnswer'
 }
 
 // Pipeline buckets are the statuses, keyed the same as STAGE (and as the
 // ?stage= URL param).
-export const BUCKETS = ['booked', 'inProgress', 'noAnswer', 'rescheduling', 'cancelled']
+export const BUCKETS = ['booked', 'inProgress', 'noAnswer', 'cancelled']
 export const BUCKET = STAGE
 
 // Pipeline range, by booking date.

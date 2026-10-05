@@ -104,6 +104,21 @@ export function useBookCall() {
   })
 }
 
+// Prompt 695 — put a No answer lead back on Booked at a new time. An RPC (migration
+// 121) because the agent can't write the outcome columns directly: it sets the
+// time, clears the last outcome and returns the lead to Pending, so the rep is
+// re-picked for the new slot exactly like a first booking.
+export function useRebookCall() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, scheduledAt }) => {
+      const { error } = await supabase.rpc('agent_rebook_call', { p_policy: id, p_at: scheduledAt })
+      if (error) throw error
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),
+  })
+}
+
 // Move a booking Fulfillment hasn't called yet. Guarded on stage Pending and
 // zero attempts (every booking has a rep from the start since Prompt 684, so
 // "unassigned" no longer works as the guard) so an agent can't shift a call

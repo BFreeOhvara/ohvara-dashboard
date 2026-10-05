@@ -48,7 +48,7 @@ export default function Overview() {
     const live = rows.filter(p => stageOf(p) === 'inProgress')
     return {
       todays, upcoming, bookedThisWeek, cancelledThisWeek, live,
-      inProgress: live.length, waiting: count('booked'), noAnswer: count('noAnswer'), rescheduling: count('rescheduling'),
+      inProgress: live.length, waiting: count('booked'), noAnswer: count('noAnswer'),
     }
   }, [rows, now])
 
@@ -86,8 +86,8 @@ export default function Overview() {
       <StatGrid>
         <StatTile label="Booked this week" value={isLoading ? '—' : g.bookedThisWeek} sub="since Monday"
           onClick={() => navigate('/agent/clients?range=week&stage=all')} />
-        <StatTile label="With Fulfillment" value={isLoading ? '—' : g.waiting + g.inProgress + g.noAnswer + g.rescheduling}
-          sub={`${g.inProgress} on a call · ${g.waiting} booked · ${g.rescheduling} rescheduling`} onClick={() => navigate('/agent/clients?stage=all')} />
+        <StatTile label="With Fulfillment" value={isLoading ? '—' : g.waiting + g.inProgress + g.noAnswer}
+          sub={`${g.inProgress} on a call · ${g.waiting} booked · ${g.noAnswer} no answer`} onClick={() => navigate('/agent/clients?stage=all')} />
         <StatTile label="Cancelled this week" value={isLoading ? '—' : g.cancelledThisWeek} sub="old policy confirmed cancelled"
           onClick={() => navigate('/agent/clients?stage=cancelled')} />
         <StatTile label="No answer" value={isLoading ? '—' : g.noAnswer} tone={g.noAnswer ? 'warning' : 'neutral'}

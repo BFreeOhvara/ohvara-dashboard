@@ -35,8 +35,8 @@ export default function FulfillmentOverview() {
     const doneWeek = since(done, weekStart)
     const doneMonth = since(done, monthStart)
     // Prompt 684 — nothing waits to be claimed now; every booking already has
-    // a rep. What's left to watch is Booked (no call placed yet); No answer and
-    // Rescheduling (Prompt 689) are counted separately as calls owed again.
+    // a rep. What's left to watch is Booked (no call placed yet); No answer (Prompt 689;
+    // 695 folded Rescheduling into it) is counted separately as calls owed again.
     const toCall = open.filter(p => stageOf(p) === 'booked')
       .sort((a, b) => (a.scheduled_call_at || '9').localeCompare(b.scheduled_call_at || '9'))
     const callAgain = open.filter(needsAnotherCall).length
