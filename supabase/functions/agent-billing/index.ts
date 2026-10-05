@@ -120,7 +120,7 @@ async function stripe(path: string, init: { method?: string; params?: Record<str
 
 type Tier = {
   key: string; name: string; weekly_cents: number; weekly_cap: number | null
-  stripe_lookup_key: string | null; stripe_price_id: string | null; sort_order: number
+  stripe_lookup_key: string | null; stripe_price_id: string | null; stripe_product_id: string | null; sort_order: number
 }
 
 async function loadTiers(admin: SupabaseClient): Promise<Tier[]> {
@@ -129,15 +129,29 @@ async function loadTiers(admin: SupabaseClient): Promise<Tier[]> {
   return (data || []) as Tier[]
 }
 
-// One shared Product, found through any existing tier Price or created once.
-async function ensureProduct(tiers: Tier[]): Promise<string> {
-  for (const t of tiers) {
-    if (!t.stripe_lookup_key) continue
-    const found = await stripe('prices', { method: 'GET', params: { lookup_keys: [t.stripe_lookup_key], active: true, limit: 1 } })
-    if (found.data?.[0]?.product) return found.data[0].product
+// Each tier gets its OWN Stripe Product: the Customer Portal's plan switcher
+// refuses two Prices with the same billing interval under one Product. The
+// first tier keeps the original Product (Prompt 673's subscribers are on it);
+// every later tier gets a dedicated one, remembered in stripe_product_id.
+async function productFor(admin: SupabaseClient, tier: Tier, tiers: Tier[], current: any): Promise<string> {
+  if (tier.stripe_product_id) return tier.stripe_product_id
+  const first = tiers[0]
+  if (tier.key === first.key) {
+    if (current?.product) return current.product
+  } else if (current?.product) {
+    // A dedicated product left by an earlier run, as opposed to the first tier's.
+    const f = first.stripe_product_id ? null : first.stripe_lookup_key
+      ? (await stripe('prices', { method: 'GET', params: { lookup_keys: [first.stripe_lookup_key], active: true, limit: 1 } })).data?.[0]
+      : null
+    const firstProduct = first.stripe_product_id || f?.product
+    if (current.product !== firstProduct) return current.product
   }
   return (await stripe('products', {
-    params: { name: 'Ohvara agent portal access', description: 'Weekly retainer: portal access and that week\'s batch of cancellations.', metadata: TAG },
+    params: {
+      name: tier.key === first.key ? 'Ohvara agent portal access' : `Ohvara agent portal access: ${tier.name}`,
+      description: 'Weekly retainer: portal access and that week\'s batch of cancellations.',
+      metadata: { ...TAG, tier: tier.key },
+    },
   })).id
 }
 
@@ -148,25 +162,30 @@ async function ensureTierPrice(admin: SupabaseClient, tier: Tier, tiers: Tier[])
   const lookup = tier.stripe_lookup_key || `ohvara_agent_${tier.key}_weekly`
   const found = await stripe('prices', { method: 'GET', params: { lookup_keys: [lookup], active: true, limit: 1 } })
   const current = found.data?.[0]
+  const product = await productFor(admin, tier, tiers, current)
   let id: string
-  if (current && current.unit_amount === tier.weekly_cents && current.recurring?.interval === 'week') {
+  if (current && current.product === product && current.unit_amount === tier.weekly_cents && current.recurring?.interval === 'week') {
     id = current.id
     // Prices created before tiers existed carry no tier tag.
     if (current.metadata?.tier !== tier.key) await stripe(`prices/${id}`, { params: { metadata: { ...TAG, tier: tier.key } } })
   } else {
-    const product = current?.product || await ensureProduct(tiers)
     id = (await stripe('prices', {
       params: {
         product, currency: 'usd', unit_amount: tier.weekly_cents, recurring: { interval: 'week' },
         nickname: tier.name, lookup_key: lookup, transfer_lookup_key: true, metadata: { ...TAG, tier: tier.key },
       },
     })).id
+    // Moved to a different product: retire the old Price (existing subscribers keep it).
+    if (current && current.product !== product) await stripe(`prices/${current.id}`, { params: { active: false } })
   }
-  if (tier.stripe_price_id !== id || tier.stripe_lookup_key !== lookup) {
-    await admin.from('agent_billing_tiers')
-      .update({ stripe_price_id: id, stripe_lookup_key: lookup, updated_at: new Date().toISOString() }).eq('key', tier.key)
+  if (tier.stripe_price_id !== id || tier.stripe_lookup_key !== lookup || tier.stripe_product_id !== product) {
+    const { error } = await admin.from('agent_billing_tiers')
+      .update({ stripe_price_id: id, stripe_lookup_key: lookup, stripe_product_id: product, updated_at: new Date().toISOString() })
+      .eq('key', tier.key)
+    if (error) throw new Error(`Couldn't save the Stripe price: ${error.message}`)
     tier.stripe_price_id = id
     tier.stripe_lookup_key = lookup
+    tier.stripe_product_id = product
   }
   return id
 }
@@ -180,9 +199,11 @@ async function ensureTierPrice(admin: SupabaseClient, tier: Tier, tiers: Tier[])
 // nobody loses capacity they've paid for.
 async function ensurePortalConfig(admin: SupabaseClient): Promise<string> {
   const tiers = await loadTiers(admin)
-  const prices: string[] = []
-  for (const t of tiers) prices.push(await ensureTierPrice(admin, t, tiers))
-  const product = await ensureProduct(tiers)
+  const products: { product: string; prices: string[] }[] = []
+  for (const t of tiers) {
+    const price = await ensureTierPrice(admin, t, tiers)
+    products.push({ product: t.stripe_product_id as string, prices: [price] })
+  }
 
   const features = {
     invoice_history: { enabled: true },
@@ -191,9 +212,9 @@ async function ensurePortalConfig(admin: SupabaseClient): Promise<string> {
     subscription_cancel: { enabled: true, mode: 'at_period_end', proration_behavior: 'none' },
     customer_update: { enabled: false },
     subscription_update: {
-      enabled: prices.length > 1,
+      enabled: products.length > 1,
       default_allowed_updates: ['price'],
-      products: [{ product, prices }],
+      products,
       proration_behavior: 'always_invoice',
       schedule_at_period_end: { conditions: [{ type: 'decreasing_item_amount' }] },
     },
