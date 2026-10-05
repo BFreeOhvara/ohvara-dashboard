@@ -1,41 +1,30 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarCheck, PhoneCall, PhoneMissed, CalendarClock, CircleCheck, CalendarArrowUp, MessageSquare } from 'lucide-react'
+import { CalendarCheck, PhoneCall, PhoneMissed, CalendarClock, CircleCheck, CalendarArrowUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { usePolicyEvents, useReceivedMessages } from '../../hooks/useAgentActivity'
+import { usePolicyEvents } from '../../hooks/useAgentActivity'
 import { card, MONO } from '../../lib/exportStyles'
-import { SectionHead, EmptyNote, Pill, GroupRow } from '../../components/agent/AgentUI'
-import { Segmented } from '../../components/ui/Segmented'
+import { SectionHead, EmptyNote, Pill } from '../../components/agent/AgentUI'
 import { GapNote } from '../../components/ui/ExportForm'
 import { fullName } from '../../lib/policyFormat'
 import { fmtBooking } from '../../lib/scheduling'
-import { STAGE, SUBSTATUS_LABEL, sameLocalDay, useNow } from '../../lib/agentBookings'
+import { STAGE, SUBSTATUS_LABEL, useNow } from '../../lib/agentBookings'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 
 // Activity (Prompt 690) — what actually happened, newest first. My Pipeline
 // shows where each client stands NOW; this is the history behind it: every
 // status change (Booked → In progress → Cancelled / No answer / Rescheduling,
-// Prompt 689), every time a booked call was moved, and Fulfillment's messages.
+// Prompt 689) and every time a booked call was moved. Messages are not shown
+// here (Prompt 694) — the Messages page is the one place for those.
 //
-// Status events come from policy_events (migration 118, written by a trigger
-// on policies, so nothing in the app has to remember to log). Messages are
-// read straight from policy_messages and shown as a one-line preview that
-// opens the thread — Messages stays the place to read and reply.
+// One day at a time (Prompt 694): a fixed-size header steps ← / → a calendar
+// day; the list scrolls inside a fixed-height box. Events come from
+// policy_events (migration 118, written by a trigger on policies, so nothing
+// in the app has to remember to log).
 //
 // Admin lands here too and sees every agent's activity (test account held out,
 // same as My Pipeline), with the agent named on each row.
 
-const RANGES = [
-  { value: '7', label: '7 days' },
-  { value: '30', label: '30 days' },
-  { value: '90', label: '90 days' },
-]
-const FILTERS = [
-  { value: 'all', label: 'Everything' },
-  { value: 'status', label: 'Status changes' },
-  { value: 'messages', label: 'Messages' },
-]
-const PAGE = 50
 
 // policy_events.kind → how the row reads. Status kinds reuse STAGE's colours.
 const KIND = {
@@ -45,7 +34,6 @@ const KIND = {
   rescheduling: { icon: CalendarClock,   stage: 'rescheduling' },
   cancelled:    { icon: CircleCheck,     stage: 'cancelled' },
   moved:        { icon: CalendarArrowUp, color: 'var(--text-secondary)' },
-  message:      { icon: MessageSquare,   color: 'var(--accent)' },
 }
 
 const firstName = s => String(s || '').trim().split(/\s+/)[0] || ''
@@ -74,12 +62,25 @@ function describe(e) {
   }
 }
 
-function dayLabel(iso, now) {
-  if (sameLocalDay(iso, new Date(now))) return 'Today'
-  const y = new Date(now)
-  y.setDate(y.getDate() - 1)
-  if (sameLocalDay(iso, y)) return 'Yesterday'
-  return new Date(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+function startOfDay(d) {
+  const x = new Date(d)
+  x.setHours(0, 0, 0, 0)
+  return x
+}
+
+function addDays(d, n) {
+  const x = new Date(d)
+  x.setDate(x.getDate() + n)
+  return x
+}
+
+// "October 4" plus a "Today" / "Yesterday" tag where it applies.
+function dayTitle(day, now) {
+  const today = startOfDay(now)
+  const name = day.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+  if (day.getTime() === today.getTime()) return { name, tag: 'Today' }
+  if (day.getTime() === addDays(today, -1).getTime()) return { name, tag: 'Yesterday' }
+  return { name, tag: day.getFullYear() === today.getFullYear() ? day.toLocaleDateString('en-US', { weekday: 'long' }) : String(day.getFullYear()) }
 }
 
 export default function Activity() {
@@ -88,105 +89,92 @@ export default function Activity() {
   const now = useNow()
   const navigate = useNavigate()
 
-  const [range, setRange] = useState('30')
-  const [filter, setFilter] = useState('all')
-  const [limit, setLimit] = useState(PAGE)
+  // Days back from today (0 = today), so "Today" stays pinned across midnight.
+  const [back, setBack] = useState(0)
+  const today = startOfDay(now)
+  const day = addDays(today, -back)
 
-  // Floored to midnight so the query key only changes once a day.
-  const since = useMemo(() => {
-    const d = new Date(now)
-    d.setDate(d.getDate() - (Number(range) - 1))
-    d.setHours(0, 0, 0, 0)
-    return d
-  }, [now, range])
-
-  const events = usePolicyEvents(since, isAdmin ? null : profile?.id)
-  const messages = useReceivedMessages(since, profile?.id, isAdmin)
+  const events = usePolicyEvents(day, isAdmin ? null : profile?.id)
 
   const feed = useMemo(() => {
-    const ev = (events.data || []).map(e => ({
-      key: `e-${e.id}`, type: 'event', kind: e.kind, at: e.at, policyId: e.policy_id, agentId: e.agent_id,
+    const all = (events.data || []).map(e => ({
+      key: `e-${e.id}`, kind: e.kind, at: e.at, policyId: e.policy_id, agentId: e.agent_id,
       client: fullName(e.policy), agent: e.agent?.full_name, text: describe(e),
     }))
-    const msg = (messages.data || []).map(m => ({
-      key: `m-${m.id}`, type: 'message', kind: 'message', at: m.created_at, policyId: m.policy_id,
-      agentId: m.policy?.agent_id, client: fullName(m.policy), agent: m.policy?.agent?.full_name,
-      sender: m.sender_name, body: m.body,
-    }))
-    const all = [...(filter === 'messages' ? [] : ev), ...(filter === 'status' ? [] : msg)]
-      .sort((a, b) => new Date(b.at) - new Date(a.at))
     return isAdmin ? excludeTestAccounts(all, profile?.id, 'agentId') : all
-  }, [events.data, messages.data, filter, isAdmin, profile?.id])
+  }, [events.data, isAdmin, profile?.id])
 
-  const loading = events.isLoading || messages.isLoading
-  const error = events.error || messages.error
-  const shown = feed.slice(0, limit)
-
-  const open = item => navigate(item.type === 'message'
-    ? `/messages?thread=${item.policyId}`
-    : `/agent/clients?stage=all&open=${item.policyId}`)
+  const open = item => navigate(`/agent/clients?stage=all&open=${item.policyId}`)
+  const title = dayTitle(day, now)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Segmented options={FILTERS} value={filter} onChange={v => { setFilter(v); setLimit(PAGE) }} size="sm" />
-        <Segmented options={RANGES} value={range} onChange={v => { setRange(v); setLimit(PAGE) }} size="sm" style={{ marginLeft: 'auto' }} />
-      </div>
-
       <div>
         <SectionHead
           title={isAdmin ? "Everyone's activity" : 'Your activity'}
-          sub={`Last ${range} days · newest first · updates every 30 seconds`}
+          sub="Newest first · updates every 30 seconds"
         />
         <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
-          {loading ? (
-            <EmptyNote>Loading…</EmptyNote>
-          ) : error ? (
-            <p style={{ margin: 0, padding: '32px 20px', textAlign: 'center', fontSize: 14, color: 'var(--danger)' }}>
-              Couldn't load activity: {error.message}
-            </p>
-          ) : shown.length === 0 ? (
-            <EmptyNote>
-              {filter === 'messages'
-                ? `No messages from Fulfillment in the last ${range} days.`
-                : `Nothing in the last ${range} days. Bookings, calls and cancellations show up here as they happen.`}
-            </EmptyNote>
-          ) : (
-            <>
-              {shown.map((item, i) => {
-                const label = dayLabel(item.at, now)
-                const newDay = i === 0 || dayLabel(shown[i - 1].at, now) !== label
-                return (
-                  <div key={item.key}>
-                    {newDay && <GroupRow label={label} first={i === 0} />}
-                    <FeedRow item={item} showAgent={isAdmin} onClick={() => open(item)} />
-                  </div>
-                )
-              })}
-              {feed.length > shown.length && (
-                <button
-                  onClick={() => setLimit(n => n + PAGE)}
-                  style={{
-                    width: '100%', padding: '12px 20px', border: 'none', borderTop: 'var(--border-w) solid var(--border)',
-                    background: 'var(--bg-elevated)', fontSize: 13, fontWeight: 600, color: 'var(--accent)',
-                  }}
-                >
-                  Show more ({feed.length - shown.length})
-                </button>
-              )}
-            </>
-          )}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 12px',
+            background: 'var(--bg-elevated)', borderBottom: 'var(--border-w) solid var(--border)',
+          }}>
+            <DayArrow dir="prev" onClick={() => setBack(n => n + 1)} />
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', textAlign: 'center' }}>
+              {title.name} <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>· {title.tag}</span>
+            </span>
+            <DayArrow dir="next" disabled={back === 0} onClick={() => setBack(n => Math.max(0, n - 1))} />
+          </div>
+
+          {/* Fixed height: the box never grows or shrinks, the list scrolls inside it. */}
+          <div style={{ height: 'min(520px, 60vh)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+            {events.isLoading ? (
+              <EmptyNote>Loading…</EmptyNote>
+            ) : events.error ? (
+              <p style={{ margin: 0, padding: '32px 20px', textAlign: 'center', fontSize: 14, color: 'var(--danger)' }}>
+                Couldn't load activity: {events.error.message}
+              </p>
+            ) : feed.length === 0 ? (
+              <EmptyNote>
+                {back === 0
+                  ? 'Nothing yet today. Bookings, calls and cancellations show up here as they happen.'
+                  : 'Nothing happened on this day.'}
+              </EmptyNote>
+            ) : (
+              feed.map((item, i) => (
+                <FeedRow key={item.key} item={item} first={i === 0} showAgent={isAdmin} onClick={() => open(item)} />
+              ))
+            )}
+          </div>
         </div>
       </div>
 
       <GapNote>
-        Activity is logged from Oct 4, 2026. Bookings from before then show their booking, their latest call outcome and their cancellation, but not every call attempt in between. Tap a row to open the client, or a message to open its thread.
+        Activity is logged from Oct 4, 2026. Bookings from before then show their booking, their latest call outcome and their cancellation, but not every call attempt in between. Tap a row to open the client.
       </GapNote>
     </div>
   )
 }
 
-function FeedRow({ item, showAgent, onClick }) {
+function DayArrow({ dir, disabled, onClick }) {
+  const Icon = dir === 'prev' ? ChevronLeft : ChevronRight
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={dir === 'prev' ? 'Previous day' : 'Next day'}
+      style={{
+        width: 32, height: 32, borderRadius: 8, display: 'grid', placeItems: 'center', flexShrink: 0,
+        background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
+        color: 'var(--text-secondary)', opacity: disabled ? 0.4 : 1, cursor: disabled ? 'not-allowed' : 'pointer',
+      }}
+    >
+      <Icon size={16} aria-hidden />
+    </button>
+  )
+}
+
+function FeedRow({ item, first, showAgent, onClick }) {
   const k = KIND[item.kind] || KIND.moved
   const stage = k.stage && STAGE[k.stage]
   const Icon = k.icon
@@ -196,7 +184,7 @@ function FeedRow({ item, showAgent, onClick }) {
       onClick={onClick}
       className="menu-row"
       style={{
-        gap: 12, padding: '12px 20px', borderTop: 'var(--border-w) solid var(--border)', borderRadius: 0,
+        gap: 12, padding: '12px 20px', borderTop: first ? 'none' : 'var(--border-w) solid var(--border)', borderRadius: 0,
       }}
     >
       <span style={{
@@ -216,9 +204,7 @@ function FeedRow({ item, showAgent, onClick }) {
           )}
         </span>
         <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {item.type === 'message'
-            ? <><span style={{ color: 'var(--text-primary)' }}>{item.sender}</span> messaged: “{item.body}”</>
-            : item.text}
+          {item.text}
         </span>
       </span>
       <span style={{ fontFamily: MONO, fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', minWidth: 62, textAlign: 'right' }}>
