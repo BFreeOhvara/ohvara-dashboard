@@ -1,11 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarCheck, PhoneCall, PhoneMissed, CircleCheck, CalendarArrowUp, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarCheck, PhoneCall, PhoneMissed, CircleCheck, CalendarArrowUp, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePolicyEvents } from '../../hooks/useAgentActivity'
 import { card, MONO } from '../../lib/exportStyles'
 import { SectionHead, EmptyNote, Pill } from '../../components/agent/AgentUI'
-import { GapNote } from '../../components/ui/ExportForm'
 import { fullName } from '../../lib/policyFormat'
 import { fmtBooking } from '../../lib/scheduling'
 import { STAGE, SUBSTATUS_LABEL, useNow } from '../../lib/agentBookings'
@@ -17,8 +16,9 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // Prompts 689/695) and every time a booked call was moved. Messages are not shown
 // here (Prompt 694) — the Messages page is the one place for those.
 //
-// One day at a time (Prompt 694): a fixed-size header steps ← / → a calendar
-// day; the list scrolls inside a fixed-height box. Events come from
+// One day at a time (Prompt 694): a date control above the list steps ← / → a
+// calendar day, and its label opens a month picker (Prompt 698); the list
+// scrolls inside a box that ends on a whole row. Events come from
 // policy_events (migration 118, written by a trigger on policies, so nothing
 // in the app has to remember to log).
 //
@@ -105,62 +105,197 @@ export default function Activity() {
   const open = item => navigate(`/agent/clients?stage=all&open=${item.policyId}`)
   const title = dayTitle(day, now)
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div>
-        <SectionHead
-          title={isAdmin ? "Everyone's activity" : 'Your activity'}
-          sub="Newest first · updates every 30 seconds"
-        />
-        <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 12px',
-            background: 'var(--bg-elevated)', borderBottom: 'var(--border-w) solid var(--border)',
-          }}>
-            <DayArrow dir="prev" onClick={() => setBack(n => n + 1)} />
-            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', textAlign: 'center' }}>
-              {title.name} <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>· {title.tag}</span>
-            </span>
-            <DayArrow dir="next" disabled={back === 0} onClick={() => setBack(n => Math.max(0, n - 1))} />
-          </div>
+  // Size the box to the space below it, then pull the bottom edge up to the end
+  // of the last row that fully fits so a fresh load never shows a sliced row
+  // (Prompt 698). The box still scrolls to the rest.
+  const boxRef = useRef(null)
+  const [boxH, setBoxH] = useState(null)
+  const fit = useCallback(() => {
+    const el = boxRef.current
+    if (!el) return
+    const avail = Math.floor(window.innerHeight - el.getBoundingClientRect().top - 68)
+    const rows = Array.from(el.children).filter(c => c.dataset.row)
+    if (!rows.length) { setBoxH(Math.max(160, avail)); return }
+    const last = rows[rows.length - 1]
+    if (last.offsetTop + last.offsetHeight <= avail) { setBoxH(Math.max(160, avail)); return }
+    let h = rows[0].offsetTop + rows[0].offsetHeight
+    for (const r of rows) {
+      const bottom = r.offsetTop + r.offsetHeight
+      if (bottom <= avail) h = bottom
+      else break
+    }
+    setBoxH(h)
+  }, [])
+  useLayoutEffect(() => { fit() }, [fit, feed, events.isLoading, events.error])
+  useEffect(() => {
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [fit])
 
-          {/* Fixed height: the box never grows or shrinks, the list scrolls inside it. */}
-          <div style={{ height: 'min(520px, 60vh)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-            {events.isLoading ? (
-              <EmptyNote>Loading…</EmptyNote>
-            ) : events.error ? (
-              <p style={{ margin: 0, padding: '32px 20px', textAlign: 'center', fontSize: 14, color: 'var(--danger)' }}>
-                Couldn't load activity: {events.error.message}
-              </p>
-            ) : feed.length === 0 ? (
-              <EmptyNote>
-                {back === 0
-                  ? 'Nothing yet today. Bookings, calls and cancellations show up here as they happen.'
-                  : 'Nothing happened on this day.'}
-              </EmptyNote>
-            ) : (
-              feed.map((item, i) => (
-                <FeedRow key={item.key} item={item} first={i === 0} showAgent={isAdmin} onClick={() => open(item)} />
-              ))
-            )}
-          </div>
+  return (
+    <div>
+      <SectionHead
+        title={isAdmin ? "Everyone's activity" : 'Your activity'}
+        sub="Newest first · updates every 30 seconds"
+      />
+
+      <DateNav
+        day={day} today={today} title={title} back={back}
+        onPrev={() => setBack(n => n + 1)}
+        onNext={() => setBack(n => Math.max(0, n - 1))}
+        onPick={d => setBack(Math.max(0, Math.round((today - startOfDay(d)) / 86400000)))}
+      />
+
+      <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
+        {/* The box scrolls inside; its height is set by fit() above. */}
+        <div
+          ref={boxRef}
+          style={{ position: 'relative', height: boxH ?? 'min(520px, 60vh)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
+        >
+          {events.isLoading ? (
+            <EmptyNote>Loading…</EmptyNote>
+          ) : events.error ? (
+            <p style={{ margin: 0, padding: '32px 20px', textAlign: 'center', fontSize: 14, color: 'var(--danger)' }}>
+              Couldn't load activity: {events.error.message}
+            </p>
+          ) : feed.length === 0 ? (
+            <EmptyNote>
+              {back === 0
+                ? 'Nothing yet today. Bookings, calls and cancellations show up here as they happen.'
+                : 'Nothing happened on this day.'}
+            </EmptyNote>
+          ) : (
+            feed.map((item, i) => (
+              <FeedRow key={item.key} item={item} first={i === 0} showAgent={isAdmin} onClick={() => open(item)} />
+            ))
+          )}
         </div>
       </div>
-
-      <GapNote>
-        Activity is logged from Oct 4, 2026. Bookings from before then show their booking, their latest call outcome and their cancellation, but not every call attempt in between. Tap a row to open the client.
-      </GapNote>
     </div>
   )
 }
 
-function DayArrow({ dir, disabled, onClick }) {
+// Date control above the list: ← [calendar · October 4 · Today] →. The label
+// opens a month picker so a far-back day is one click, not many arrows.
+function DateNav({ day, today, title, back, onPrev, onNext, onPick }) {
+  const [open, setOpen] = useState(false)
+  const [view, setView] = useState(() => new Date(day.getFullYear(), day.getMonth(), 1))
+  const wrap = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const away = e => { if (wrap.current && !wrap.current.contains(e.target)) setOpen(false) }
+    const esc = e => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', away)
+    document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc) }
+  }, [open])
+
+  const toggle = () => {
+    if (!open) setView(new Date(day.getFullYear(), day.getMonth(), 1))
+    setOpen(o => !o)
+  }
+
+  return (
+    <div ref={wrap} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 8, margin: '14px 0 12px' }}>
+      <DayArrow dir="prev" onClick={onPrev} />
+      <button
+        onClick={toggle}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label="Pick a date"
+        style={{
+          height: 32, padding: '0 12px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 8,
+          background: open ? 'var(--bg-elevated)' : 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
+          fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap',
+        }}
+      >
+        <CalendarDays size={15} aria-hidden style={{ color: 'var(--text-secondary)' }} />
+        <span>
+          {title.name} <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>· {title.tag}</span>
+        </span>
+      </button>
+      <DayArrow dir="next" disabled={back === 0} onClick={onNext} />
+
+      {open && (
+        <MonthPicker
+          view={view} setView={setView} selected={day} today={today}
+          onPick={d => { onPick(d); setOpen(false) }}
+        />
+      )}
+    </div>
+  )
+}
+
+const DOW = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+
+function MonthPicker({ view, setView, selected, today, onPick }) {
+  const first = new Date(view.getFullYear(), view.getMonth(), 1)
+  const daysIn = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate()
+  const cells = []
+  for (let i = 0; i < first.getDay(); i++) cells.push(null)
+  for (let n = 1; n <= daysIn; n++) cells.push(new Date(view.getFullYear(), view.getMonth(), n))
+  const atCurrentMonth = view.getFullYear() === today.getFullYear() && view.getMonth() === today.getMonth()
+  const step = n => setView(new Date(view.getFullYear(), view.getMonth() + n, 1))
+
+  return (
+    <div
+      role="dialog"
+      aria-label="Choose a date"
+      style={{
+        position: 'absolute', top: '100%', left: 0, marginTop: 6, zIndex: 50, width: 252, padding: 12,
+        background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 12,
+        boxShadow: '0 16px 40px rgba(0,0,0,0.35)', userSelect: 'none',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <DayArrow dir="prev" label="Previous month" onClick={() => step(-1)} />
+        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+          {view.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+        </span>
+        <DayArrow dir="next" label="Next month" disabled={atCurrentMonth} onClick={() => step(1)} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
+        {DOW.map(d => (
+          <div key={d} style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', padding: '2px 0' }}>{d}</div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+        {cells.map((d, i) => {
+          if (!d) return <div key={i} />
+          const isSel = d.getTime() === selected.getTime()
+          const isToday = d.getTime() === today.getTime()
+          const future = d > today
+          return (
+            <button
+              key={i}
+              disabled={future}
+              onClick={() => onPick(d)}
+              style={{
+                height: 30, borderRadius: 6, fontSize: 13, fontVariantNumeric: 'tabular-nums',
+                background: isSel ? 'var(--accent)' : 'transparent',
+                color: isSel ? '#fff' : future ? 'var(--text-muted)' : isToday ? 'var(--accent)' : 'var(--text-primary)',
+                fontWeight: isSel || isToday ? 600 : 400,
+                opacity: future ? 0.4 : 1, cursor: future ? 'not-allowed' : 'pointer',
+                border: 'none',
+              }}
+            >
+              {d.getDate()}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function DayArrow({ dir, disabled, onClick, label }) {
   const Icon = dir === 'prev' ? ChevronLeft : ChevronRight
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      aria-label={dir === 'prev' ? 'Previous day' : 'Next day'}
+      aria-label={label || (dir === 'prev' ? 'Previous day' : 'Next day')}
       style={{
         width: 32, height: 32, borderRadius: 8, display: 'grid', placeItems: 'center', flexShrink: 0,
         background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
@@ -181,6 +316,7 @@ function FeedRow({ item, first, showAgent, onClick }) {
     <button
       onClick={onClick}
       className="menu-row"
+      data-row="1"
       style={{
         gap: 12, padding: '12px 20px', borderTop: first ? 'none' : 'var(--border-w) solid var(--border)', borderRadius: 0,
       }}
