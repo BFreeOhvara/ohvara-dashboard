@@ -109,8 +109,8 @@ const NAV = {
     // Prompt 693 — Billing is about the agent's own account standing, so it
     // sits with Settings; Team removed.
     { group: 'Account', items: [
-      { to: '/settings', label: 'Settings', icon: Settings },
       { to: '/agent/billing', label: 'Billing', icon: CreditCard },
+      { to: '/settings', label: 'Settings', icon: Settings },
     ] },
   ],
   admin: [
