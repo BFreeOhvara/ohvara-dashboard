@@ -17,7 +17,6 @@ import Messages from './pages/Messages'
 import AgentOverview from './pages/agent/Overview'
 import AgentBookCall from './pages/agent/BookCall'
 import AgentClients from './pages/agent/Clients'
-import AgentTeam from './pages/agent/Team'
 import AgentActivity from './pages/agent/Activity'
 import AgentBilling from './pages/agent/Billing'
 import FulfillmentQueue from './pages/fulfillment/FulfillmentQueue'
@@ -118,13 +117,8 @@ export default function App() {
                 <DashboardLayout><AgentBilling /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* Prompt 671 — Team: team-wide leaderboard + activity feed
-                (team_activity() RPC, no teammate client PII). */}
-            <Route path="/agent/team" element={
-              <ProtectedRoute allowedRoles={['agent', 'admin']}>
-                <DashboardLayout><AgentTeam /></DashboardLayout>
-              </ProtectedRoute>
-            } />
+            {/* Prompt 693 — Team removed; old links land on Overview. */}
+            <Route path="/agent/team" element={<Navigate to="/" replace />} />
             {/* Prompt 678 — Training and Performance removed; old links land on Overview. */}
             <Route path="/agent/training" element={<Navigate to="/" replace />} />
             <Route path="/agent/performance" element={<Navigate to="/" replace />} />
