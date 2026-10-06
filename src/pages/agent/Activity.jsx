@@ -167,7 +167,7 @@ export default function Activity() {
             </EmptyNote>
           ) : (
             feed.map((item, i) => (
-              <FeedRow key={item.key} item={item} first={i === 0} showAgent={isAdmin} onClick={() => open(item)} />
+              <FeedRow key={item.key} item={item} first={i === 0} last={i === feed.length - 1} showAgent={isAdmin} onClick={() => open(item)} />
             ))
           )}
         </div>
@@ -308,7 +308,7 @@ function DayArrow({ dir, disabled, onClick, label }) {
   )
 }
 
-function FeedRow({ item, first, showAgent, onClick }) {
+function FeedRow({ item, first, last, showAgent, onClick }) {
   const k = KIND[item.kind] || KIND.moved
   const stage = k.stage && STAGE[k.stage]
   const Icon = k.icon
@@ -319,7 +319,8 @@ function FeedRow({ item, first, showAgent, onClick }) {
       className="menu-row"
       data-row="1"
       style={{
-        gap: 12, padding: '12px 20px', borderTop: first ? 'none' : 'var(--border-w) solid var(--border)', borderRadius: 0,
+        gap: 12, padding: '12px 20px', borderTop: first ? 'none' : 'var(--border-w) solid var(--border)',
+        borderBottom: last ? 'var(--border-w) solid var(--border)' : 'none', borderRadius: 0,
       }}
     >
       <span style={{
