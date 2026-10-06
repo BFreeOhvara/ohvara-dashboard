@@ -1,8 +1,6 @@
 import { useState, useRef, lazy, Suspense } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useUpdateOwnProfile, useUploadAvatar, useRemoveAvatar } from '../hooks/useSettings'
-import { useMonthlyGoal, useSetMonthlyGoal } from '../hooks/useMonthlyGoals'
-import { todayISO } from '../lib/policyFormat'
 import { Loader2, Camera } from 'lucide-react'
 import {
   MONO, card, cardTitle, control, primaryBtn,
@@ -26,8 +24,7 @@ const AvatarCropModal = lazy(() =>
 // Settings), and /profile redirects to /settings#profile. The standalone page
 // wrapper with its close (X) button is gone.
 //
-// What's real: name, email, phone, username, and (closers only) the monthly
-// AP goal. NPN, licensed states, and a profile photo are in the approved
+// What's real: name, email, phone, username. NPN, licensed states, and a profile photo are in the approved
 // design but `profiles` has no column for any of the three yet — shown as an
 // honest gap note rather than a placeholder that looks like real license data.
 
@@ -114,10 +111,6 @@ export function ProfilePanel({ profile }) {
       </div>
 
       {profile.role === 'admin' && <WritesBusinessField profile={profile} />}
-
-      {(profile.role === 'agent' || (profile.role === 'admin' && profile.also_writes_business)) && (
-        <MonthlyGoalField profile={profile} />
-      )}
 
       {profile.role === 'admin' && profile.also_writes_business && (
         <DefaultViewScopeField profile={profile} />
@@ -253,61 +246,10 @@ function AvatarUpload({ profile }) {
   )
 }
 
-// Overview's monthly goal progress box (Prompt 329, month-scoped in Prompt
-// 404 / migration 095) needs a per-agent target for the CURRENT month to
-// compare submitted AP against — no row means unset, no carryover from last
-// month. Shown to closers always, and to admin/upline accounts only once
-// they've flagged themselves as also writing business (see
-// WritesBusinessField above) — otherwise there's nothing for it to drive.
-function MonthlyGoalField({ profile }) {
-  const month = todayISO().slice(0, 7)
-  const { data: goalRow } = useMonthlyGoal(profile.id, month)
-  const setGoal = useSetMonthlyGoal()
-  const [value, setValue] = useState('')
-  const [touched, setTouched] = useState(false)
-  const [saved, setSaved] = useState(false)
-
-  const current = touched ? value : String(goalRow?.goal ?? '')
-  const dirty = touched && Number(current) !== Number(goalRow?.goal ?? NaN)
-
-  async function save() {
-    const goal = Math.max(0, Number(current) || 0)
-    await setGoal.mutateAsync({ profileId: profile.id, month, goal })
-    setTouched(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
-  return (
-    <div style={{ paddingTop: 16, marginTop: 4, borderTop: 'var(--border-w) solid var(--border)' }}>
-      <p style={softLabel}>
-        This month's AP goal — drives the progress bar on your Overview · resets unset every new month
-      </p>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <input
-          type="number" min="0" step="100"
-          placeholder="Not set"
-          value={current}
-          onChange={e => { setTouched(true); setValue(e.target.value) }}
-          style={{ ...inputBase, width: 160, fontFamily: MONO }}
-        />
-        <button
-          onClick={save}
-          disabled={!dirty || setGoal.isPending}
-          style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 12, opacity: !dirty || setGoal.isPending ? 0.5 : 1 }}
-        >
-          {setGoal.isPending ? <Loader2 size={13} className="animate-spin" /> : 'Save'}
-        </button>
-        <SavedTick show={saved && !dirty} />
-      </div>
-    </div>
-  )
-}
-
 // "Default view" (Prompt 405, moved here from Settings → Regional; renamed
 // + broadened in Prompt 413) — only meaningful once a You/Everyone(/Team)
 // toggle actually exists somewhere for this account, which is exactly the
-// same gate as MonthlyGoalField above: admin/upline role AND "I'm also
+// gate used here: admin/upline role AND "I'm also
 // actively writing business" on. Same `overview_default_scope` column and
 // write path as Prompt 405 — the name was Overview-specific back when
 // Overview was the only page with this toggle; Prompt 413 wired the same
