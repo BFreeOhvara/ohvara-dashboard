@@ -11,6 +11,7 @@ import {
 import { eyebrow, primaryBtn, MONO, DISPLAY } from '../lib/exportStyles'
 import { fullName } from '../lib/policyFormat'
 import { EmptyNote } from '../components/agent/AgentUI'
+import { Avatar } from '../components/ui/Avatar'
 
 // Messages (Prompt 679) — agents and the Fulfillment team talking about a
 // booked client, in either direction.
@@ -65,6 +66,9 @@ function buildItems(policyThreads, standing, me) {
     items.push({
       key: t.policy_id, param: 'thread',
       title: fullName(t), sub: counterpart(t, me),
+      ...(me?.role === 'agent'
+        ? { avatarName: t.fulfillment_name || 'Fulfillment', avatarUrl: t.fulfillment_avatar_url, avatarColor: t.fulfillment_avatar_color }
+        : { avatarName: t.agent_name, avatarUrl: t.agent_avatar_url, avatarColor: t.agent_avatar_color }),
       last_body: t.last_body, last_sender_id: t.last_sender_id, last_at: t.last_at, unread_count: t.unread_count,
     })
   }
@@ -78,6 +82,10 @@ function buildItems(policyThreads, standing, me) {
     items.push({
       key: dmId(t.agent_id, t.peer_key), param: 'dm',
       title, sub,
+      // Admin has no profile row, so the Admin line falls back to an "A" circle.
+      ...(me?.role === 'agent'
+        ? { avatarName: title, avatarUrl: t.peer_avatar_url, avatarColor: t.peer_avatar_color }
+        : { avatarName: t.agent_name, avatarUrl: t.agent_avatar_url, avatarColor: t.agent_avatar_color }),
       last_body: t.last_body, last_sender_id: t.last_sender_id, last_at: t.last_at, unread_count: t.unread_count,
     })
   }
@@ -155,12 +163,14 @@ function ThreadRow({ t, me, active, onClick }) {
     <button
       onClick={onClick}
       style={{
-        display: 'block', width: '100%', textAlign: 'left', padding: '14px 18px',
+        display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '14px 18px',
         border: 'none', borderBottom: 'var(--border-w) solid var(--border)',
         background: active ? 'var(--bg-elevated)' : 'transparent', cursor: 'pointer',
         boxShadow: active ? 'inset 3px 0 0 var(--accent)' : 'none',
       }}
     >
+      <Avatar name={t.avatarName} avatarUrl={t.avatarUrl} avatarColor={t.avatarColor} size={36} />
+      <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: unread ? 700 : 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {t.title}
@@ -179,6 +189,7 @@ function ThreadRow({ t, me, active, onClick }) {
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           }}>{t.unread_count}</span>
         )}
+      </div>
       </div>
     </button>
   )
