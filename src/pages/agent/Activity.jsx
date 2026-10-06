@@ -160,11 +160,14 @@ export default function Activity() {
               Couldn't load activity: {events.error.message}
             </p>
           ) : feed.length === 0 ? (
-            <EmptyNote>
-              {back === 0
-                ? 'Nothing yet today. Bookings, calls and cancellations show up here as they happen.'
-                : 'Nothing happened on this day.'}
-            </EmptyNote>
+            // Empty text sits dead center of the box, not top-anchored (Prompt 700).
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <EmptyNote>
+                {back === 0
+                  ? 'Nothing yet today. Bookings, calls and cancellations show up here as they happen.'
+                  : 'Nothing happened on this day.'}
+              </EmptyNote>
+            </div>
           ) : (
             feed.map((item, i) => (
               <FeedRow key={item.key} item={item} first={i === 0} last={i === feed.length - 1} showAgent={isAdmin} onClick={() => open(item)} />
