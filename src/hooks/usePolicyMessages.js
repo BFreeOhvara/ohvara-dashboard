@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { useStandingThreads, DM_THREADS_KEY } from './useDirectMessages'
 
 // Agent <-> Fulfillment messages (Prompt 679, migration 114). One thread per
 // booked client (policy). What each role may read or write is decided by RLS
@@ -28,7 +29,9 @@ export function useMessageThreads(enabled = true) {
 // Sidebar badge. Same query key as the threads list, so it costs nothing extra.
 export function useUnreadMessageCount(enabled = true) {
   const { data: threads = [] } = useMessageThreads(enabled)
+  const { data: standing = [] } = useStandingThreads(enabled)
   return threads.reduce((n, t) => n + (t.unread_count || 0), 0)
+    + standing.reduce((n, t) => n + (t.unread_count || 0), 0)
 }
 
 // The thread header for a client — needed when a thread is opened from a
@@ -118,6 +121,11 @@ export function useMessagesRealtime(profileId) {
         qc.invalidateQueries({ queryKey: THREADS_KEY })
         const pid = payload.new?.policy_id
         if (pid) qc.invalidateQueries({ queryKey: ['policy-messages', pid] })
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages' }, payload => {
+        qc.invalidateQueries({ queryKey: DM_THREADS_KEY })
+        const { agent_id: a, peer_key: k } = payload.new || {}
+        if (a && k) qc.invalidateQueries({ queryKey: ['dm-messages', a, k] })
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }

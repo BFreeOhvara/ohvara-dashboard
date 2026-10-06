@@ -42,7 +42,7 @@ const TITLES = {
   '/fulfillment/desk': ['Fulfillment', 'Call the client, cancel the old policy, then the next one'],
   '/fulfillment/pipeline': ['Pipeline', 'Every submission across every agent, and where it stands'],
   '/fulfillment/getting-paid': ['Getting Paid', 'Clock in and out, hours logged, and your estimated pay'],
-  '/messages': ['Messages', 'Agents and Fulfillment, one conversation per client'],
+  '/messages': ['Messages', 'Fulfillment, Admin and your clients, all in one place'],
   '/settings': ['Settings', 'Profile, regional & appearance'],
 }
 
@@ -95,6 +95,9 @@ function HeaderDivider() {
 export function DashboardLayout({ children }) {
   const { pathname } = useLocation()
   const isFullWidth = pathname.includes('/quoter')
+  // Prompt 701: Messages fills the content area edge to edge (as Restorix's
+  // does) instead of sitting in the padded, max-width page container.
+  const isFullBleed = pathname === '/messages'
 
   const [navOpen, setNavOpen] = useState(false)
   useEffect(() => { setNavOpen(false) }, [pathname])
@@ -160,8 +163,8 @@ export function DashboardLayout({ children }) {
           </header>
 
           <main
-            className={`scrollbar-thin ${isFullWidth ? 'h-screen overflow-hidden flex flex-col' : 'px-4 md:px-6'}`}
-            style={isFullWidth ? { position: 'relative', zIndex: 1 } : { flex: 1, paddingTop: 32, paddingBottom: 64, maxWidth: 1280, width: '100%', margin: '0 auto', position: 'relative', zIndex: 1 }}
+            className={`scrollbar-thin ${isFullWidth ? 'h-screen overflow-hidden flex flex-col' : isFullBleed ? '' : 'px-4 md:px-6'}`}
+            style={isFullWidth ? { position: 'relative', zIndex: 1 } : isFullBleed ? { flex: 1, width: '100%', position: 'relative', zIndex: 1 } : { flex: 1, paddingTop: 32, paddingBottom: 64, maxWidth: 1280, width: '100%', margin: '0 auto', position: 'relative', zIndex: 1 }}
           >
             <div
               key={pathname}

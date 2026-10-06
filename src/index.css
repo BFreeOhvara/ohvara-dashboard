@@ -354,6 +354,11 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
     .app-main { margin-left: var(--sb-w, 240px); }
   }
 
+  /* Messages (Prompt 701): fills everything under the header (64px at md+,
+     the 56px mobile top bar below) — no card, no page padding. */
+  .messages-fill { height: calc(100dvh - 56px); min-height: 360px; }
+  @media (min-width: 768px) { .messages-fill { height: calc(100vh - 64px); } }
+
   /* ── Page & element entrances ── */
   .page-enter {
     animation: fadeSlideUp 0.35s ease both;
