@@ -192,7 +192,7 @@ export default function Clients() {
       >
         {list.map((p, i) => (
           <ClientRow
-            key={p.id} p={p} now={now} showAgent={isAdmin} tall first={i === 0} active={openId === p.id} onClick={() => toggle(p.id)}
+            key={p.id} p={p} now={now} showAgent={isAdmin} tall first={i === 0} last={i === list.length - 1} active={openId === p.id} onClick={() => toggle(p.id)}
             onRebook={canRebook(p) && (isAdmin || p.agent_id === profile?.id) ? () => startRebook(p.id) : undefined}
             rebookLabel={agentStageOf(p) === 'needsAttention' ? 'Call & rebook' : 'Re-book'}
             onConfirmNumber={agentStageOf(p) === 'confirmNumber' && (isAdmin || p.agent_id === profile?.id) ? () => openOnly(p.id) : undefined}

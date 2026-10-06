@@ -125,7 +125,8 @@ export default function Messages() {
         <div style={{ padding: '16px 18px', borderBottom: 'var(--border-w) solid var(--border)' }}>
           <p style={eyebrow}>Conversations</p>
         </div>
-        <div className="scrollbar-thin" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+        {/* Flex column only while showing a placeholder, so it centers in the pane (Prompt 707). */}
+        <div className="scrollbar-thin" style={{ flex: 1, minHeight: 0, overflowY: 'auto', ...(isLoading || items.length === 0 ? { display: 'flex', flexDirection: 'column' } : null) }}>
           {isLoading ? (
             <EmptyNote>Loading…</EmptyNote>
           ) : items.length === 0 ? (

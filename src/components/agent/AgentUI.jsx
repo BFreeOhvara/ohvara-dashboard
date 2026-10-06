@@ -94,7 +94,10 @@ export function SectionHead({ title, sub, action }) {
 
 export function EmptyNote({ children }) {
   return (
-    <p style={{ margin: 0, padding: '32px 20px', textAlign: 'center', fontSize: 14, color: 'var(--text-secondary)' }}>
+    // flex: 1 + centering so that inside a fixed-height flex-column box (My Pipeline, Activity, Messages) the
+    // text sits at the exact center on both axes, not top-anchored (Prompt 707). In an auto-height box the
+    // padding alone keeps it where it was.
+    <p style={{ margin: 0, padding: '32px 20px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 14, color: 'var(--text-secondary)' }}>
       {children}
     </p>
   )
@@ -106,7 +109,8 @@ export function EmptyNote({ children }) {
 export function ListCard({ head, timeOnly, empty, children, style }) {
   const hasRows = Children.toArray(children).length > 0
   return (
-    <div style={{ ...card, padding: 0, overflow: 'hidden', ...style }}>
+    // Empty state: a flex column so EmptyNote can fill and center itself in a fixed-height card (Prompt 707).
+    <div style={{ ...card, padding: 0, overflow: 'hidden', ...(hasRows ? null : { display: 'flex', flexDirection: 'column' }), ...style }}>
       {head && hasRows && (
         <div
           className={`hidden md:grid ${timeOnly ? 'md:grid-cols-[96px_minmax(0,1.4fr)_minmax(0,1fr)_160px_14px]' : 'md:grid-cols-[176px_minmax(0,1.4fr)_minmax(0,1fr)_160px_14px]'} items-center gap-x-4`}
@@ -147,7 +151,7 @@ const COL = {
 }
 const COL_COMPACT = { when: 'order-2 col-span-2', name: 'order-1', leaving: 'hidden', leavingInline: '', status: 'order-1', chevron: 'hidden' }
 
-export function ClientRow({ p, now, onClick, onRebook, rebookLabel = 'Re-book', onConfirmNumber, showAgent, timeOnly, active, first, compact, tall }) {
+export function ClientRow({ p, now, onClick, onRebook, rebookLabel = 'Re-book', onConfirmNumber, showAgent, timeOnly, active, first, last, compact, tall }) {
   const c = compact ? COL_COMPACT : COL
   const cols = compact ? ''
     : timeOnly ? 'md:grid-cols-[96px_minmax(0,1.4fr)_minmax(0,1fr)_160px_14px]'
@@ -165,6 +169,8 @@ export function ClientRow({ p, now, onClick, onRebook, rebookLabel = 'Re-book', 
       style={{
         padding: tall ? '22px 20px' : '14px 20px', cursor: onClick ? 'pointer' : 'default',
         borderTop: first ? 'none' : 'var(--border-w) solid var(--border)',
+        // Trailing divider under the last row, same as Activity's list (Prompt 707).
+        borderBottom: last ? 'var(--border-w) solid var(--border)' : undefined,
         background: active ? 'var(--bg-elevated)' : undefined,
       }}
     >

@@ -156,18 +156,17 @@ export default function Activity() {
           {events.isLoading ? (
             <EmptyNote>Loading…</EmptyNote>
           ) : events.error ? (
-            <p style={{ margin: 0, padding: '32px 20px', textAlign: 'center', fontSize: 14, color: 'var(--danger)' }}>
+            <p style={{ margin: 0, padding: '32px 20px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 14, color: 'var(--danger)' }}>
               Couldn't load activity: {events.error.message}
             </p>
           ) : feed.length === 0 ? (
-            // Empty text sits dead center of the box, not top-anchored (Prompt 700).
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <EmptyNote>
-                {back === 0
-                  ? 'Nothing yet today. Bookings, calls and cancellations show up here as they happen.'
-                  : 'Nothing happened on this day.'}
-              </EmptyNote>
-            </div>
+            // Loading / empty / error text all sit dead center of the box, not top-anchored
+            // (Prompts 700, 707); EmptyNote fills this flex-column box and centers itself.
+            <EmptyNote>
+              {back === 0
+                ? 'Nothing yet today. Bookings, calls and cancellations show up here as they happen.'
+                : 'Nothing happened on this day.'}
+            </EmptyNote>
           ) : (
             feed.map((item, i) => (
               <FeedRow key={item.key} item={item} first={i === 0} last={i === feed.length - 1} showAgent={isAdmin} onClick={() => open(item)} />
