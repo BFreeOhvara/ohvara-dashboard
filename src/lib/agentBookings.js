@@ -27,6 +27,9 @@ export const STAGE = {
   inProgress:   { label: 'In progress',  tone: 'warning', fill: 'var(--warning)' },
   noAnswer:     { label: 'No answer',    tone: 'muted',   fill: 'var(--text-muted)' },
   cancelled:    { label: 'Cancelled',    tone: 'success', fill: 'var(--success)' },
+  // Prompt 702 — agent-only statuses (see agentStageOf).
+  confirmNumber:  { label: 'Confirm number',  tone: 'purple',  fill: 'var(--purple)' },
+  needsAttention: { label: 'Needs attention', tone: 'warning', fill: 'var(--warning)' },
 }
 
 // Optional reason on a No answer the rep reached the client on (rep-set).
@@ -73,10 +76,28 @@ export const needsAnotherCall = p => {
   return stageOf(p) === 'noAnswer'
 }
 
+// Prompt 702 — the agent's My Pipeline view of the same leads. "In progress" is
+// not a status here: a live call is a pulse on a Booked row (isLive), and the
+// No answer lead splits by where Prompt 696's recovery has got to — still
+// automated (No answer), one-tap number check (Confirm number), or handed to
+// the agent to phone (Needs attention). Fulfillment's views keep stageOf.
+// The call-end resolution is column-driven (call_live_since / last_call_outcome
+// / recovery_step), never keyed off a status value, so none of this touches it.
+export function agentStageOf(p) {
+  const s = stageOf(p)
+  if (s === 'inProgress') return 'booked'
+  if (s === 'noAnswer') {
+    if (p.recovery_step === 'number_check') return 'confirmNumber'
+    if (p.recovery_step === 'call_directly') return 'needsAttention'
+  }
+  return s
+}
+
 // Pipeline buckets are the statuses, keyed the same as STAGE (and as the
 // ?stage= URL param).
 export const BUCKETS = ['booked', 'inProgress', 'noAnswer', 'cancelled']
 export const BUCKET = STAGE
+export const AGENT_BUCKETS = ['booked', 'noAnswer', 'confirmNumber', 'needsAttention', 'cancelled']
 
 // Pipeline range, by booking date.
 export const RANGES = [

@@ -2,7 +2,7 @@ import { Children } from 'react'
 import { ChevronRight, MessageCircleMore } from 'lucide-react'
 import { card, eyebrow, control, MONO } from '../../lib/exportStyles'
 import { SLOTS, slotToISO, localDateISO } from '../../lib/scheduling'
-import { STAGE, TONE, stageOf, recoveryLabel } from '../../lib/agentBookings'
+import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel } from '../../lib/agentBookings'
 import { LiveDot } from '../ui/LiveDot'
 import { fullName } from '../../lib/policyFormat'
 
@@ -26,10 +26,13 @@ export function Pill({ tone = 'neutral', icon: Icon, children }) {
   )
 }
 
-export function StagePill({ p, now }) {
-  const stage = stageOf(p)
+// `agent` is the agent portal's status set (Prompt 702): no In progress — a live
+// call keeps the row Booked and just pulses.
+export function StagePill({ p, now, agent }) {
+  const stage = agent ? agentStageOf(p) : stageOf(p)
+  const live = stage === 'inProgress' || (agent && stage === 'booked' && isLive(p))
   const pill = (
-    <Pill tone={STAGE[stage].tone} icon={stage === 'inProgress' ? LiveDot : undefined}>
+    <Pill tone={STAGE[stage].tone} icon={live ? LiveDot : undefined}>
       {STAGE[stage].label}
     </Pill>
   )
@@ -144,7 +147,7 @@ const COL = {
 }
 const COL_COMPACT = { when: 'order-2 col-span-2', name: 'order-1', leaving: 'hidden', leavingInline: '', status: 'order-1', chevron: 'hidden' }
 
-export function ClientRow({ p, now, onClick, onRebook, onConfirmNumber, showAgent, timeOnly, active, first, compact, tall }) {
+export function ClientRow({ p, now, onClick, onRebook, rebookLabel = 'Re-book', onConfirmNumber, showAgent, timeOnly, active, first, compact, tall }) {
   const c = compact ? COL_COMPACT : COL
   const cols = compact ? ''
     : timeOnly ? 'md:grid-cols-[96px_minmax(0,1.4fr)_minmax(0,1fr)_160px_14px]'
@@ -203,10 +206,10 @@ export function ClientRow({ p, now, onClick, onRebook, onConfirmNumber, showAgen
               background: 'transparent', color: 'var(--text-secondary)', border: 'var(--border-w) solid var(--border-strong)',
             }}
           >
-            Re-book
+            {rebookLabel}
           </button>
         )}
-        <StagePill p={p} now={now} />
+        <StagePill p={p} now={now} agent />
       </span>
       <ChevronRight
         size={14}

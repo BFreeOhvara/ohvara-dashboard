@@ -15,9 +15,11 @@ import { BUCKETS, BUCKET, TONE, bucketOf } from '../../lib/agentBookings'
 // folded Rescheduling into No answer); In progress swaps its dot for the live pulse while a call is on.
 // Prompt 687 — in that mode the chips sit inside one shared rounded bar (one
 // segmented control, like Restorix's), keeping each status's own colour.
-export function Pipeline({ rows, bucket, onBucket, extras = [], showAll = true }) {
-  const counts = Object.fromEntries(BUCKETS.map(b => [b, 0]))
-  for (const p of rows) counts[bucketOf(p)]++
+// Prompt 702 — `buckets` / `bucketFn` let the agent view run its own status set
+// (Confirm number, Needs attention, no In progress); default is the original four.
+export function Pipeline({ rows, bucket, onBucket, extras = [], showAll = true, buckets = BUCKETS, bucketFn = bucketOf }) {
+  const counts = Object.fromEntries(buckets.map(b => [b, 0]))
+  for (const p of rows) counts[bucketFn(p)]++
 
   const grouped = !showAll
   return (
@@ -26,7 +28,7 @@ export function Pipeline({ rows, bucket, onBucket, extras = [], showAll = true }
       background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 999,
     } : { display: 'flex', gap: 6, flexWrap: 'wrap' }}>
       {showAll && <Chip on={bucket === 'all'} onClick={() => onBucket('all')} label="All" count={rows.length} />}
-      {BUCKETS.map(b => (
+      {buckets.map(b => (
         <Chip
           key={b} on={bucket === b} onClick={() => onBucket(bucket === b ? 'all' : b)}
           label={BUCKET[b].label} count={counts[b]} dot={BUCKET[b].fill} live={b === 'inProgress' && counts[b] > 0}

@@ -10,7 +10,7 @@ import { AnchoredSelectField } from '../../components/ui/ExportForm'
 import { ClientRow, EmptyNote, SlotPicker, ListCard } from '../../components/agent/AgentUI'
 import { fullName } from '../../lib/policyFormat'
 import { slotToISO, localDateISO, fmtBooking, isFarOut } from '../../lib/scheduling'
-import { stageOf, bucketOf, BUCKETS, RANGES, SUBSTATUS_LABEL, digits, useNow, startOfWeek, startOfMonth } from '../../lib/agentBookings'
+import { isLive, agentStageOf, AGENT_BUCKETS, RANGES, SUBSTATUS_LABEL, digits, useNow, startOfWeek, startOfMonth } from '../../lib/agentBookings'
 import { LiveDot } from '../../components/ui/LiveDot'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 
@@ -45,13 +45,27 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // row (status pills left, lead count right); a No answer lead has a Re-book
 // action that sets a new time and sends it back to Booked.
 //
+// Prompt 702 — five statuses (no In progress — a live call pulses on its Booked
+// row); the manual Re-book is gone while Prompt 696's automation owns a No
+// answer lead; Confirm number is a one-tap row, Needs attention is "Call &
+// rebook".
+//
 // Prompt 687 — lead detail opens in a popup instead of expanding under its row;
 // the page lands on Booked (the pills are one grouped bar); search looks across
 // every status (the pills only filter when the search box is empty); the lead
 // count sits above the search bar on the right; the Book a call shortcut is gone
 // (it has its own nav item).
 
-const STAGES = ['all', ...BUCKETS]
+// Re-book is the agent's move only when nobody else owns the lead: Needs
+// attention (call, then rebook), or a No answer that isn't in Prompt 696's
+// automated flow (texting off / flow not started) — otherwise it would be a
+// dead end. Inside the flow the system owns it.
+const canRebook = p => {
+  const s = agentStageOf(p)
+  return s === 'needsAttention' || (s === 'noAnswer' && !p.recovery_step)
+}
+
+const STAGES = ['all', ...AGENT_BUCKETS]
 const RANGE_VALUES = RANGES.map(r => r.value)
 
 export default function Clients() {
@@ -92,7 +106,7 @@ export default function Clients() {
     const qd = digits(q)
     const filtered = scoped.filter(p => {
       // Search spans every status; the pills only filter when nothing is typed.
-      if (!q && filter !== 'all' && bucketOf(p) !== filter) return false
+      if (!q && filter !== 'all' && agentStageOf(p) !== filter) return false
       if (q) {
         const hay = [p.client_first_name, p.client_last_name, p.current_carrier, p.agent?.full_name].filter(Boolean).join(' ').toLowerCase()
         if (!hay.includes(q) && !(qd.length >= 3 && digits(p.client_phone).includes(qd))) return false
@@ -100,7 +114,7 @@ export default function Clients() {
       return true
     })
     // Open work first, soonest call first; finished cancellations after, newest first.
-    const rank = p => (stageOf(p) === 'cancelled' ? 1 : 0)
+    const rank = p => (agentStageOf(p) === 'cancelled' ? 1 : 0)
     return filtered.sort((a, b) => rank(a) - rank(b) || (rank(a)
       ? (b.fulfillment_completed_at || b.updated_at || '').localeCompare(a.fulfillment_completed_at || a.updated_at || '')
       : (a.scheduled_call_at || '9').localeCompare(b.scheduled_call_at || '9')))
@@ -133,7 +147,7 @@ export default function Clients() {
     // the page never scrolls; only the list card scrolls inside it.
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: 'calc(100dvh - 160px)', minHeight: 360 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flexShrink: 0 }}>
-        <Pipeline rows={scoped} bucket={filter} onBucket={v => setParam('stage', v, 'booked')} showAll={false} />
+        <Pipeline rows={scoped} buckets={AGENT_BUCKETS} bucketFn={agentStageOf} bucket={filter} onBucket={v => setParam('stage', v, 'booked')} showAll={false} />
         {isAdmin && agents.length > 1 && (
           <AnchoredSelectField
             value={agentId} onChange={setAgentId}
@@ -179,8 +193,9 @@ export default function Clients() {
         {list.map((p, i) => (
           <ClientRow
             key={p.id} p={p} now={now} showAgent={isAdmin} tall first={i === 0} active={openId === p.id} onClick={() => toggle(p.id)}
-            onRebook={stageOf(p) === 'noAnswer' && (isAdmin || p.agent_id === profile?.id) ? () => startRebook(p.id) : undefined}
-            onConfirmNumber={p.recovery_step === 'number_check' && (isAdmin || p.agent_id === profile?.id) ? () => openOnly(p.id) : undefined}
+            onRebook={canRebook(p) && (isAdmin || p.agent_id === profile?.id) ? () => startRebook(p.id) : undefined}
+            rebookLabel={agentStageOf(p) === 'needsAttention' ? 'Call & rebook' : 'Re-book'}
+            onConfirmNumber={agentStageOf(p) === 'confirmNumber' && (isAdmin || p.agent_id === profile?.id) ? () => openOnly(p.id) : undefined}
           />
         ))}
       </ListCard>
@@ -227,8 +242,9 @@ function ClientModal({ onClose, children }) {
 function ClientDetail({ p, now, canMove, startRebook, onClose }) {
   const { profile } = useAuth()
   const navigate = useNavigate()
-  const stage = stageOf(p)
-  const [moving, setMoving] = useState(!!startRebook && stage === 'noAnswer' && canMove)
+  const stage = agentStageOf(p)
+  const live = isLive(p)
+  const [moving, setMoving] = useState(!!startRebook && canRebook(p) && canMove)
 
   const attempted = (p.call_attempts || 0) > 0
   const caller = p.assigned?.full_name || 'Fulfillment'
@@ -238,14 +254,13 @@ function ClientDetail({ p, now, canMove, startRebook, onClose }) {
     { label: 'Old policy cancelled', at: p.fulfillment_completed_at, done: stage === 'cancelled' },
   ]
   const statusText = {
-    booked: 'Waiting for Fulfillment',
-    inProgress: 'On a call right now',
+    booked: live ? 'On a call right now' : 'Waiting for Fulfillment',
     noAnswer: `No answer${SUBSTATUS_LABEL[p.cancellation_substatus] ? ` · ${SUBSTATUS_LABEL[p.cancellation_substatus].toLowerCase()}` : ''} — ${{
       retry_locked: `retry call locked for ${fmtBooking(p.recovery_retry_at)}; we've texted them a link to pick another time`,
-      number_check: 'two tries, no answer. Confirm their number to continue',
       followup: "we're texting them a link to pick a time; you'll be told if they don't reply",
-      call_directly: "they haven't replied to our texts. Call them and re-book",
     }[p.recovery_step] || 're-book a time, or Fulfillment will try again'}`,
+    confirmNumber: 'two tries, no answer. Confirm their number to continue',
+    needsAttention: "they haven't replied to our texts. Call them and re-book",
     cancelled: 'Cancelled',
   }[stage]
 
@@ -274,7 +289,7 @@ function ClientDetail({ p, now, canMove, startRebook, onClose }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: 16, marginBottom: 20 }}>
         <Info label="Fulfillment call" value={fmtBooking(p.scheduled_call_at)} mono />
         <Info label="Leaving" value={p.current_carrier || 'Not noted'} />
-        <Info label="Status" value={stage === 'inProgress'
+        <Info label="Status" value={live && stage === 'booked'
           ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><LiveDot /> {statusText}</span>
           : statusText} />
         {attempted && stage !== 'cancelled' && <Info label="Calls so far" value={String(p.call_attempts)} mono />}
@@ -301,7 +316,7 @@ function ClientDetail({ p, now, canMove, startRebook, onClose }) {
         ))}
       </ol>
 
-      {stage === 'booked' && canMove && (
+      {stage === 'booked' && !live && canMove && (
         moving
           ? <Reschedule p={p} now={now} onDone={() => setMoving(false)} />
           : (
@@ -310,19 +325,19 @@ function ClientDetail({ p, now, canMove, startRebook, onClose }) {
             </button>
           )
       )}
-      {p.recovery_step === 'number_check' && canMove && !moving && <ConfirmNumber p={p} />}
-      {stage === 'noAnswer' && canMove && (
+      {stage === 'confirmNumber' && canMove && <ConfirmNumber p={p} />}
+      {canRebook(p) && canMove && (
         moving
           ? <Reschedule p={p} now={now} rebook onDone={() => setMoving(false)} />
           : (
             <button onClick={() => setMoving(true)} style={{ ...primaryBtn, marginTop: 20 }}>
-              Re-book a call
+              {stage === 'needsAttention' ? 'Call & rebook' : 'Re-book a call'}
             </button>
           )
       )}
-      {stage !== 'booked' && stage !== 'cancelled' && !(stage === 'noAnswer' && canMove) && (
+      {(stage !== 'booked' || live) && stage !== 'cancelled' && stage !== 'confirmNumber' && !(canRebook(p) && canMove) && (
         <p style={{ margin: '18px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
-          Fulfillment is on this one — if the time needs to change, message them.
+          {stage === 'noAnswer' ? "We're working this one — nothing for you to do yet." : 'Fulfillment is on this one — if the time needs to change, message them.'}
         </p>
       )}
     </div>
