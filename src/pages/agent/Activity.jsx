@@ -209,7 +209,8 @@ function DateNav({ day, today, title, back, onPrev, onNext, onPick }) {
         aria-expanded={open}
         aria-label="Pick a date"
         style={{
-          height: 32, padding: '0 12px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 8,
+          // Fixed width (fits "September 29 · Wednesday") so the arrows never shift as the label changes.
+          width: 240, height: 32, padding: '0 12px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           background: open ? 'var(--bg-elevated)' : 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
           fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap',
         }}
