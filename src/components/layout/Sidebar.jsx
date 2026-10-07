@@ -34,6 +34,11 @@ import ohvaraLogo from '../../assets/ohvara-logo.png'
 // lives in the Account group), its divider is white, and the agent's flat
 // six-item Work list is split into Restorix-style groups.
 //
+// Prompt 708 — header block: the divider beneath it is gone, the collapse
+// button is a rounded box outlined in the (former divider's) --sidebar-border
+// white instead of a grey circle, and the two-line "Ohvara / <Role> Portal"
+// title is one "Ohvara Portal" line for every role.
+//
 // Kept: collapsible to 64px on desktop, off-canvas drawer on phones.
 
 function AccountCard({ profile, expanded, onSignOut, onExpand }) {
@@ -148,8 +153,6 @@ const NAV = {
   ],
 }
 
-const PORTAL_LABELS = { agent: 'Agent Portal', admin: 'Admin', fulfillment: 'Fulfillment' }
-
 const COLLAPSE_KEY = 'ohvara-sidebar-collapsed'
 // Keep in sync with DashboardLayout's --sb-w and index.css's fallbacks.
 export const SIDEBAR_W = 240
@@ -194,24 +197,20 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
       >
         <div style={{
           height: 64, flexShrink: 0, padding: expanded ? '0 14px 0 18px' : 0,
-          borderBottom: 'var(--border-w) solid var(--sidebar-border)',
           display: 'flex', alignItems: 'center', gap: 10,
           justifyContent: expanded ? 'flex-start' : 'center',
         }}>
           <img src={ohvaraLogo} alt="Ohvara" style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover', flexShrink: 0, display: expanded ? 'block' : 'none' }} />
           {expanded && (
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text-primary)', lineHeight: 1.1 }}>Ohvara</p>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.1 }}>
-                {PORTAL_LABELS[profile?.role] || ''}
-              </p>
+              <p style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text-primary)', lineHeight: 1.1, whiteSpace: 'nowrap' }}>Ohvara Portal</p>
             </div>
           )}
           <button
             onClick={onToggleCollapse}
             title={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
             className="icon-btn hidden md:inline-flex"
-            style={{ width: 28, height: 28, flexShrink: 0 }}
+            style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 8, borderColor: 'var(--sidebar-border)' }}
           >
             <ChevronLeft size={16} style={{ transform: expanded ? 'none' : 'rotate(180deg)' }} />
           </button>
