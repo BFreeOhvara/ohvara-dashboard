@@ -555,3 +555,186 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
     box-shadow: none;
   }
 }
+
+/* ── Prompt 714 — Agent Overview v2 (the "ov" language) ─────────
+   Pilot for the portal-wide upgrade. Only /agent uses these. On this
+   language the no-shadow / no-gradient / mono-numerals rules above do not
+   apply: cards carry a soft gradient, an inset highlight and a long shadow,
+   and large numerals are Space Grotesk. See DESIGN.md v16. Plain CSS (not
+   @layer) so these always load and win over the Tailwind layers. */
+:root {
+  --ov-hi: #FFFFFF;
+  --ov-mid: #C9D4E8;
+  --ov-soft: #B4C3DE;
+  --ov-mute: #8697B5;
+  --ov-faint: #5E7195;
+  --ov-line: rgba(255,255,255,0.07);
+  --ov-data-a: #7FA6F2;
+  --ov-data-a-tint: rgba(75,121,206,0.18);
+  --ov-data-a-bar: linear-gradient(180deg, #7FA6F2, #4B79CE);
+  --ov-data-a-key: #4B79CE;
+  --ov-data-b: #34E0C4;
+  --ov-data-b-tint: rgba(0,191,166,0.16);
+  --ov-data-b-bar: linear-gradient(180deg, #34E0C4, #00A892);
+  --ov-data-b-key: #00BFA6;
+  --ov-up: #4ADE80;
+  --ov-up-tint: rgba(34,197,94,0.14);
+  --ov-stub: rgba(255,255,255,0.10);
+  --ov-grid: rgba(255,255,255,0.06);
+  --ov-warn: #FBBF24;
+  --ov-warn-tint: rgba(245,158,11,0.16);
+  --ov-badge-bg: #F59E0B;
+  --ov-badge-fg: #1A1203;
+  --ov-hero-soft: #B4C3DE;
+  --ov-hero-dot: #34E0C4;
+  --ov-hero-btn-text: #0D1730;
+  --ov-hero-btn-glow: rgba(127,166,242,0.9);
+}
+[data-theme="light"] {
+  --ov-hi: #07332E;
+  --ov-mid: #0B4A43;
+  --ov-soft: #2C6159;
+  --ov-mute: #4F7F78;
+  --ov-faint: #7FA59F;
+  --ov-line: rgba(2,79,70,0.12);
+  --ov-data-a: #0A1F44;
+  --ov-data-a-tint: rgba(10,31,68,0.09);
+  --ov-data-a-bar: linear-gradient(180deg, #2B4A82, #0A1F44);
+  --ov-data-a-key: #0A1F44;
+  --ov-data-b: #00897A;
+  --ov-data-b-tint: rgba(0,191,166,0.16);
+  --ov-data-b-bar: linear-gradient(180deg, #19D3B8, #00A892);
+  --ov-data-b-key: #00BFA6;
+  --ov-up: #0A6B33;
+  --ov-up-tint: #DCF3E4;
+  --ov-stub: rgba(2,79,70,0.14);
+  --ov-grid: rgba(2,79,70,0.09);
+  --ov-warn: #9A4A0B;
+  --ov-warn-tint: #FBE7D2;
+  --ov-badge-bg: #B45309;
+  --ov-badge-fg: #FFFFFF;
+  --ov-hero-soft: #D6F3EE;
+  --ov-hero-dot: #FFFFFF;
+  --ov-hero-btn-text: #024F46;
+  --ov-hero-btn-glow: rgba(2,50,45,0.7);
+}
+
+.ov-card {
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 48px -28px rgba(0,0,0,0.7);
+}
+[data-theme="light"] .ov-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(2,79,70,0.12);
+  box-shadow: 0 1px 2px rgba(7,51,46,0.05), 0 24px 48px -30px rgba(7,51,46,0.30);
+}
+.ov-hero {
+  border-radius: 24px;
+  background:
+    radial-gradient(ellipse 60% 120% at 100% 0%, rgba(75,121,206,0.55) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 90% at 62% 110%, rgba(0,191,166,0.22) 0%, transparent 70%),
+    linear-gradient(135deg, #16294C 0%, #0D1730 60%, #0A1024 100%);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 30px 60px -30px rgba(0,0,0,0.8);
+}
+[data-theme="light"] .ov-hero {
+  background:
+    radial-gradient(ellipse 60% 120% at 100% 0%, rgba(52,224,196,0.55) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 90% at 60% 110%, rgba(10,31,68,0.45) 0%, transparent 70%),
+    linear-gradient(135deg, #00917D 0%, #026B5E 55%, #024F46 100%);
+  border: 1px solid rgba(255,255,255,0.25);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 30px 60px -30px rgba(2,79,70,0.6);
+}
+.ov-attn {
+  border-radius: 20px;
+  background:
+    radial-gradient(ellipse 90% 45% at 50% 0%, rgba(245,158,11,0.16) 0%, transparent 70%),
+    linear-gradient(180deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid rgba(245,158,11,0.28);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 48px -28px rgba(0,0,0,0.7);
+}
+[data-theme="light"] .ov-attn {
+  background: radial-gradient(ellipse 90% 45% at 50% 0%, rgba(245,158,11,0.16) 0%, transparent 70%), #FFFFFF;
+  border: 1px solid rgba(154,74,11,0.30);
+  box-shadow: 0 1px 2px rgba(7,51,46,0.05), 0 24px 48px -30px rgba(122,54,8,0.35);
+}
+.ov-ghost {
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  transition: border-color 120ms ease;
+}
+.ov-ghost:hover { border-color: rgba(255,255,255,0.24); }
+[data-theme="light"] .ov-ghost {
+  border: 1px solid rgba(2,79,70,0.20);
+  background: #F3F8F7;
+  color: #07332E;
+}
+[data-theme="light"] .ov-ghost:hover { border-color: rgba(2,79,70,0.32); }
+
+/* Hero content is white in both themes (the hero itself is navy / teal). */
+.ov-hero { color: #FFFFFF; }
+.ov-hero-chip {
+  display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px;
+  border-radius: 999px; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.12);
+  color: #FFFFFF; font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.ov-hero-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  border: none; border-radius: 999px; background: #FFFFFF; color: var(--ov-hero-btn-text);
+  font-weight: 700; cursor: pointer;
+  box-shadow: 0 10px 30px -10px var(--ov-hero-btn-glow);
+}
+
+/* Trend cards are buttons: border one step brighter on hover, no lift. */
+.ov-link { transition: border-color 120ms ease; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.ov-link:hover { border-color: rgba(255,255,255,0.14); }
+[data-theme="light"] .ov-link:hover { border-color: rgba(2,79,70,0.22); }
+.ov-link:focus-visible, .ov-ghost:focus-visible, .ov-hero-btn:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
+/* Page grid: trend cards / attention / chart in one column; at 1280px the
+   attention panel moves to a full-height 380px right column. */
+.ov-grid {
+  display: grid; gap: 20px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "trend" "attn" "chart";
+}
+@media (min-width: 1280px) {
+  .ov-grid {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    grid-template-rows: auto 1fr;
+    grid-template-areas: "trend attn" "chart attn";
+  }
+}
+.ov-attn-row + .ov-attn-row { border-top: 1px solid var(--ov-line); }
+.ov-chart-bars {
+  background-image: linear-gradient(var(--ov-grid) 1px, transparent 1px);
+  background-position: 0 11px;
+}
+@media (max-width: 639.98px) {
+  .ov-grid { gap: 14px; }
+  .ov-card, .ov-attn { border-radius: 18px; }
+  .ov-hero { border-radius: 22px; }
+}
+
+/* Backdrop on /agent only (DashboardLayout adds the class): a dot grid
+   under two glows, in place of the two-glow default. */
+.app-backdrop.app-backdrop--v2 {
+  background-color: #07080D;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 85% -10%, rgba(75,121,206,0.30) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 0% 0%, rgba(0,191,166,0.10) 0%, transparent 70%),
+    radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px);
+  background-size: auto, auto, 24px 24px;
+}
+[data-theme="light"] .app-backdrop.app-backdrop--v2 {
+  background-color: #EEF2F3;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 85% -10%, rgba(0,191,166,0.22) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 0% 0%, rgba(10,31,68,0.07) 0%, transparent 70%),
+    radial-gradient(rgba(2,79,70,0.13) 1px, transparent 1px);
+}

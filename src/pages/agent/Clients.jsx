@@ -10,7 +10,7 @@ import { AnchoredSelectField } from '../../components/ui/ExportForm'
 import { ClientRow, EmptyNote, SlotPicker, ListCard } from '../../components/agent/AgentUI'
 import { fullName } from '../../lib/policyFormat'
 import { slotToISO, localDateISO, fmtBooking, isFarOut } from '../../lib/scheduling'
-import { isLive, agentStageOf, AGENT_BUCKETS, RANGES, SUBSTATUS_LABEL, digits, useNow, startOfWeek, startOfMonth } from '../../lib/agentBookings'
+import { isLive, agentStageOf, canRebook, AGENT_BUCKETS, RANGES, SUBSTATUS_LABEL, digits, useNow, startOfWeek, startOfMonth } from '../../lib/agentBookings'
 import { LiveDot } from '../../components/ui/LiveDot'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 
@@ -55,15 +55,6 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // every status (the pills only filter when the search box is empty); the lead
 // count sits above the search bar on the right; the Book a call shortcut is gone
 // (it has its own nav item).
-
-// Re-book is the agent's move only when nobody else owns the lead: Needs
-// attention (call, then rebook), or a No answer that isn't in Prompt 696's
-// automated flow (texting off / flow not started) — otherwise it would be a
-// dead end. Inside the flow the system owns it.
-const canRebook = p => {
-  const s = agentStageOf(p)
-  return s === 'needsAttention' || (s === 'noAnswer' && !p.recovery_step)
-}
 
 const STAGES = ['all', ...AGENT_BUCKETS]
 const RANGE_VALUES = RANGES.map(r => r.value)

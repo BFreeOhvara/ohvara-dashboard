@@ -1,28 +1,32 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarPlus, ArrowRight } from 'lucide-react'
+import { CalendarPlus, Check } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
-import { primaryBtn, ghostBtn, MONO, DISPLAY } from '../../lib/exportStyles'
-import { LiveClock } from '../../components/ui/LiveClock'
-import { StatTile, StatGrid, SectionHead, ListCard, GroupRow, ClientRow, EmptyNote } from '../../components/agent/AgentUI'
-import { stageOf, sameLocalDay, startOfWeek, useNow } from '../../lib/agentBookings'
+import { HeroPanel, TrendCard, AttentionPanel, ActivityChart } from '../../components/agent/AgentUI'
+import { stageOf, agentStageOf, sameLocalDay, startOfWeek, useNow } from '../../lib/agentBookings'
 import { LiveDot } from '../../components/ui/LiveDot'
 import { fullName } from '../../lib/policyFormat'
 
-// Agent Overview (Prompt 665) — the landing page. "Your day at a glance":
-// what's booked today, any call happening live right now, what's
-// coming, and the week's numbers — with Book a call one tap away.
+// Agent Overview (Prompt 665) — the landing page. "Your day at a glance".
 //
-// Prompt 669 — laid out like Restorix Portal's closer Overview: greeting +
-// date/clock row, four eyebrow stat tiles, a tinted needs-attention banner,
-// then one "Your calls" table with Today / Coming up group rows instead of
-// two half-width cards.
+// Prompt 714 — v2, the pilot for the portal-wide visual upgrade: a hero
+// (greeting, big clock, Book a call), two trend cards against last week, a
+// 14-day chart, and a "Needs your attention" list with a next step per No
+// answer client. The With Fulfillment tile and the "Your calls" list are gone.
+// Everything comes from the useAgentBookings rows already loaded.
 //
-// Prompt 672 — each tile opens My Clients on the matching slice of its
+// Prompt 672 — the trend cards open My Clients on the matching slice of its
 // Pipeline (?range= / ?stage=).
 
-const UPCOMING_LIMIT = 6
+const addDays = (d, n) => {
+  const x = new Date(d)
+  x.setDate(x.getDate() + n)
+  return x
+}
+
+// Needs attention first, then Confirm number, then the rest.
+const ATTN_RANK = { needsAttention: 0, confirmNumber: 1 }
 
 export default function Overview() {
   const { profile } = useAuth()
@@ -32,67 +36,71 @@ export default function Overview() {
 
   const g = useMemo(() => {
     const today = new Date(now)
-    const weekStart = startOfWeek(today).getTime()
-    const open = rows.filter(p => stageOf(p) !== 'cancelled')
-    const todays = rows
-      .filter(p => sameLocalDay(p.scheduled_call_at, today))
-      .sort((a, b) => a.scheduled_call_at.localeCompare(b.scheduled_call_at))
-    const upcoming = open
-      .filter(p => p.scheduled_call_at && new Date(p.scheduled_call_at) > today && !sameLocalDay(p.scheduled_call_at, today))
-      .sort((a, b) => a.scheduled_call_at.localeCompare(b.scheduled_call_at))
-    const bookedThisWeek = rows.filter(p => new Date(p.created_at).getTime() >= weekStart).length
-    const cancelledThisWeek = rows.filter(p => stageOf(p) === 'cancelled' && p.fulfillment_completed_at
-      && new Date(p.fulfillment_completed_at).getTime() >= weekStart).length
-    // Prompt 689 — five statuses; "live" is a call happening right now.
-    const count = st => rows.filter(p => stageOf(p) === st).length
-    const live = rows.filter(p => stageOf(p) === 'inProgress')
+    const weekStart = startOfWeek(today)
+    const lastWeekStart = addDays(weekStart, -7)
+    const ms = iso => new Date(iso).getTime()
+
+    // Booked = when the call was booked; Cancelled = when the old policy was
+    // confirmed cancelled.
+    const bookedAt = rows.map(p => p.created_at).filter(Boolean)
+    const cancelledAt = rows
+      .filter(p => stageOf(p) === 'cancelled' && p.fulfillment_completed_at)
+      .map(p => p.fulfillment_completed_at)
+    const since = (list, from) => list.filter(iso => ms(iso) >= from.getTime()).length
+    const between = (list, from, to) => list.filter(iso => ms(iso) >= from.getTime() && ms(iso) < to.getTime()).length
+    const onDay = (list, day) => list.filter(iso => sameLocalDay(iso, day)).length
+
+    const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+    const midnight = new Date(today)
+    midnight.setHours(0, 0, 0, 0)
+    const days = Array.from({ length: 14 }, (_, i) => {
+      const date = addDays(midnight, i - 13)
+      return { date, booked: onDay(bookedAt, date), cancelled: onDay(cancelledAt, date) }
+    })
+
+    const bookedThisWeek = since(bookedAt, weekStart)
+    const cancelledThisWeek = since(cancelledAt, weekStart)
+    const lastCall = p => (p.last_call_at ? ms(p.last_call_at) : 0)
+    const attention = rows
+      .filter(p => stageOf(p) === 'noAnswer')
+      .sort((a, b) => (ATTN_RANK[agentStageOf(a)] ?? 2) - (ATTN_RANK[agentStageOf(b)] ?? 2) || lastCall(a) - lastCall(b))
+
     return {
-      todays, upcoming, bookedThisWeek, cancelledThisWeek, live,
-      inProgress: live.length, waiting: count('booked'), noAnswer: count('noAnswer'),
+      todays: rows.filter(p => sameLocalDay(p.scheduled_call_at, today)).length,
+      live: rows.filter(p => stageOf(p) === 'inProgress'),
+      todayIdx: (today.getDay() + 6) % 7,
+      booked: {
+        value: bookedThisWeek,
+        diff: bookedThisWeek - between(bookedAt, lastWeekStart, weekStart),
+        week: weekDays.map(d => onDay(bookedAt, d)),
+      },
+      cancelled: {
+        value: cancelledThisWeek,
+        diff: cancelledThisWeek - between(cancelledAt, lastWeekStart, weekStart),
+        week: weekDays.map(d => onDay(cancelledAt, d)),
+      },
+      days,
+      attention,
     }
   }, [rows, now])
 
   const firstName = (profile?.full_name || '').split(' ')[0]
   const hour = new Date(now).getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
-  const dateLabel = new Date(now).toLocaleDateString('en-US', {
-    timeZone: profile?.timezone || undefined, weekday: 'long', month: 'short', day: 'numeric',
+  const greeting = `${hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'}${firstName ? `, ${firstName}` : ''}`
+  const dateLabel = month => new Date(now).toLocaleDateString('en-US', {
+    timeZone: profile?.timezone || undefined, weekday: 'long', month, day: 'numeric',
   })
-  const open = id => navigate(`/agent/clients?open=${id}`)
-  const upcoming = g.upcoming.slice(0, UPCOMING_LIMIT)
+  const sub = isLoading ? 'Loading your calls…'
+    : g.todays ? `${g.todays} call${g.todays === 1 ? '' : 's'} on the books today.`
+      : 'Nothing on the books today yet.'
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 220 }}>
-          <p style={{ margin: 0, fontFamily: DISPLAY, fontSize: 26, fontWeight: 500, letterSpacing: '-0.015em', color: 'var(--text-primary)' }}>
-            {greeting}{firstName ? `, ${firstName}` : ''}
-          </p>
-          <p style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>
-            {isLoading ? 'Loading your calls…'
-              : g.todays.length ? `${g.todays.length} call${g.todays.length === 1 ? '' : 's'} on the books today.`
-                : 'Nothing on the books today yet.'}
-          </p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <span className="hidden sm:inline" style={{ fontFamily: MONO, fontSize: 13, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{dateLabel}</span>
-          <span className="hidden sm:inline"><LiveClock timezone={profile?.timezone} /></span>
-          <button onClick={() => navigate('/agent/book')} style={primaryBtn}>
-            <CalendarPlus size={16} /> Book a call
-          </button>
-        </div>
-      </div>
-
-      <StatGrid>
-        <StatTile label="Booked this week" value={isLoading ? '—' : g.bookedThisWeek} sub="since Monday"
-          onClick={() => navigate('/agent/clients?range=week&stage=all')} />
-        <StatTile label="With Fulfillment" value={isLoading ? '—' : g.waiting + g.inProgress + g.noAnswer}
-          sub={`${g.inProgress} on a call · ${g.waiting} booked · ${g.noAnswer} no answer`} onClick={() => navigate('/agent/clients?stage=all')} />
-        <StatTile label="Cancelled this week" value={isLoading ? '—' : g.cancelledThisWeek} sub="old policy confirmed cancelled"
-          onClick={() => navigate('/agent/clients?stage=cancelled')} />
-        <StatTile label="No answer" value={isLoading ? '—' : g.noAnswer} tone={g.noAnswer ? 'warning' : 'neutral'}
-          sub="Fulfillment will try again" onClick={() => navigate('/agent/clients?stage=noAnswer')} />
-      </StatGrid>
+    <div className="flex flex-col gap-[14px] sm:gap-5">
+      <HeroPanel
+        greeting={greeting} sub={sub} timezone={profile?.timezone}
+        dateLong={dateLabel('long')} dateShort={dateLabel('short')}
+        onBook={() => navigate('/agent/book')}
+      />
 
       {g.live.length > 0 && (
         <div style={{
@@ -106,25 +114,28 @@ export default function Overview() {
         </div>
       )}
 
-      <div>
-        <SectionHead
-          title="Your calls"
-          sub="When Fulfillment is calling your clients"
-          action={(
-            <button onClick={() => navigate('/agent/clients')} style={ghostBtn}>
-              All my clients <ArrowRight size={14} />
-            </button>
-          )}
-        />
-        <ListCard
-          head={g.todays.length > 0 || upcoming.length > 0}
-          empty={<EmptyNote>{isLoading ? 'Loading…' : 'No calls today or coming up. Book one when your next client says yes.'}</EmptyNote>}
-        >
-          {g.todays.length > 0 && <GroupRow label="Today" first />}
-          {g.todays.map(p => <ClientRow key={p.id} p={p} now={now} onClick={() => open(p.id)} />)}
-          {upcoming.length > 0 && <GroupRow label={g.todays.length ? 'Coming up' : 'Coming up · nothing today'} first={g.todays.length === 0} />}
-          {upcoming.map(p => <ClientRow key={p.id} p={p} now={now} onClick={() => open(p.id)} />)}
-        </ListCard>
+      <div className="ov-grid">
+        <div className="grid grid-cols-2 gap-[14px] sm:gap-5" style={{ gridArea: 'trend', minWidth: 0 }}>
+          <TrendCard
+            label="Booked this week" icon={CalendarPlus} tone="a"
+            value={isLoading ? '—' : g.booked.value} diff={isLoading ? null : g.booked.diff}
+            week={g.booked.week} todayIdx={g.todayIdx}
+            onClick={() => navigate('/agent/clients?range=week&stage=all')}
+          />
+          <TrendCard
+            label="Cancelled this week" icon={Check} tone="b"
+            value={isLoading ? '—' : g.cancelled.value} diff={isLoading ? null : g.cancelled.diff}
+            week={g.cancelled.week} todayIdx={g.todayIdx}
+            onClick={() => navigate('/agent/clients?stage=cancelled')}
+          />
+        </div>
+
+        <AttentionPanel items={g.attention} loading={isLoading} now={now} onGo={navigate} />
+
+        <div style={{ gridArea: 'chart', display: 'flex', minWidth: 0 }}>
+          <ActivityChart days={g.days} loading={isLoading} className="hidden sm:flex" />
+          <ActivityChart days={g.days.slice(7)} loading={isLoading} compact className="flex sm:hidden" />
+        </div>
       </div>
     </div>
   )

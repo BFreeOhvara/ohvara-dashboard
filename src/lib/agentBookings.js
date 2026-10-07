@@ -93,6 +93,16 @@ export function agentStageOf(p) {
   return s
 }
 
+// Re-book is the agent's move only when nobody else owns the lead: Needs
+// attention (call, then rebook), or a No answer that isn't in Prompt 696's
+// automated flow (texting off / flow not started) — otherwise it would be a
+// dead end. Inside the flow the system owns it. (Moved here from Clients.jsx
+// by Prompt 714 so the Overview's attention rows use the same rule.)
+export const canRebook = p => {
+  const s = agentStageOf(p)
+  return s === 'needsAttention' || (s === 'noAnswer' && !p.recovery_step)
+}
+
 // Pipeline buckets are the statuses, keyed the same as STAGE (and as the
 // ?stage= URL param).
 export const BUCKETS = ['booked', 'inProgress', 'noAnswer', 'cancelled']
