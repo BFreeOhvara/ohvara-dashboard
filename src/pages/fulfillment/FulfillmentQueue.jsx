@@ -510,13 +510,12 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
   const canCall = (mine || isAdmin) && !done
   const { data: intake, isLoading: intakeLoading } = usePolicyFulfillmentDetails(p.id, canViewIntake)
 
-  const [confirmation, setConfirmation] = useState(p.cancellation_confirmation || '')
   const [notes, setNotes] = useState(p.cancellation_notes || '')
   const [saved, setSaved] = useState(false)
   const [showIntake, setShowIntake] = useState(true)
   const [confirmingPass, setConfirmingPass] = useState(false)
 
-  const dirty = confirmation !== (p.cancellation_confirmation || '') || notes !== (p.cancellation_notes || '')
+  const dirty = notes !== (p.cancellation_notes || '')
 
   // Once the rep acts on the record, keep it on screen (pinned in the URL):
   // otherwise setting "Waiting on carrier" would drop its priority and swap
@@ -534,7 +533,7 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
   function saveRecord() {
     hold()
     update.mutate(
-      { id: p.id, cancellation_confirmation: confirmation.trim() || null, cancellation_notes: notes.trim() || null },
+      { id: p.id, cancellation_notes: notes.trim() || null },
       { onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 2000) } },
     )
   }
@@ -557,7 +556,6 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
       id: p.id,
       fulfillment_stage: 'Complete',
       status: 'In Effect',
-      cancellation_confirmation: confirmation.trim() || null,
       cancellation_notes: notes.trim() || null,
     })
   }
@@ -691,18 +689,8 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
             )}
           </Step>
 
-          <Step n={3} title="Record the result" done={done && !!p.cancellation_confirmation}>
+          <Step n={3} title="Record the result" done={done && !!p.cancellation_notes}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div>
-                <p style={fieldLabel}>Carrier confirmation / reference #</p>
-                <input
-                  value={confirmation}
-                  onChange={e => setConfirmation(e.target.value)}
-                  disabled={!canEdit || done}
-                  placeholder="e.g. CXL-48213"
-                  style={{ ...control, fontFamily: MONO }}
-                />
-              </div>
               <div>
                 <p style={fieldLabel}>Notes</p>
                 <textarea
@@ -746,11 +734,6 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
               </div>
             ) : canEdit ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {!confirmation.trim() && (
-                  <p style={{ margin: 0, fontSize: 11, color: 'var(--warning)' }}>
-                    No confirmation # yet — you can still finish, but record one if the carrier gave it.
-                  </p>
-                )}
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                   <button
                     onClick={markCancelled}
@@ -862,9 +845,6 @@ function HistoryList({ rows, now, profile, onOpen }) {
                   {p.assigned?.full_name || '—'} · {ago(p.fulfillment_completed_at || p.updated_at, now)}
                 </p>
               </div>
-              <span style={{ fontSize: 11.5, fontFamily: MONO, color: p.cancellation_confirmation ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
-                {p.cancellation_confirmation ? `# ${p.cancellation_confirmation}` : 'no conf #'}
-              </span>
               <AuthorizationStatus compact />
               <span onClick={e => e.stopPropagation()}><NotifyAgentButton /></span>
             </div>

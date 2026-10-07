@@ -187,7 +187,6 @@ function Summary({ p, profile, onClose }) {
           : stage === 'noAnswer' && SUBSTATUS_LABEL[p.cancellation_substatus]
             ? `No answer · ${SUBSTATUS_LABEL[p.cancellation_substatus].toLowerCase()}`
             : STAGE_TEXT[stage]} />
-        {stage === 'cancelled' && <Info label="Carrier confirmation #" value={p.cancellation_confirmation || 'Not recorded'} mono />}
       </div>
 
       <p style={fieldLabel}>Progress</p>

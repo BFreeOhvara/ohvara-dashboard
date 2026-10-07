@@ -54,7 +54,7 @@ function describe(e) {
         : `Booked a call with Fulfillment${d.scheduled_call_at ? ` for ${fmtBooking(d.scheduled_call_at)}` : ''}`
     case 'in_progress':  return `${who(e)} started a call${attempt}`
     case 'no_answer':    return `Call ended: no answer${attempt}${d.reason ? ` · ${SUBSTATUS_LABEL[d.reason] || d.reason}` : ''}`
-    case 'cancelled':    return `Old policy confirmed cancelled${d.confirmation ? ` · conf. ${d.confirmation}` : ''}`
+    case 'cancelled':    return 'Old policy confirmed cancelled'
     case 'moved':        return `Call moved to ${fmtBooking(d.to)}`
     default:             return e.kind
   }

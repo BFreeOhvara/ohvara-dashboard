@@ -246,11 +246,11 @@ function ClientDetail({ p, now, canMove, startRebook, onClose }) {
   const live = isLive(p)
   const [moving, setMoving] = useState(!!startRebook && canRebook(p) && canMove)
 
-  const attempted = (p.call_attempts || 0) > 0
+  const attempted = (p.call_attempts || 0) > 0 || stage === 'cancelled'
   const caller = p.assigned?.full_name || 'Fulfillment'
   const steps = [
     { label: 'Booked', at: p.created_at, done: true },
-    { label: attempted ? `Called by ${caller}` : 'Waiting for Fulfillment to call', at: p.fulfillment_started_at || p.fulfillment_claimed_at, done: attempted },
+    { label: attempted ? `Called by ${caller}` : 'Waiting for Fulfillment to call', at: p.last_call_at || p.fulfillment_started_at || p.fulfillment_claimed_at, done: attempted },
     { label: 'Old policy cancelled', at: p.fulfillment_completed_at, done: stage === 'cancelled' },
   ]
   const statusText = {
@@ -288,12 +288,11 @@ function ClientDetail({ p, now, canMove, startRebook, onClose }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: 16, marginBottom: 20 }}>
         <Info label="Fulfillment call" value={fmtBooking(p.scheduled_call_at)} mono />
-        <Info label="Leaving" value={p.current_carrier || 'Not noted'} />
+        <Info label="Carrier" value={p.current_carrier || 'Not noted'} />
         <Info label="Status" value={live && stage === 'booked'
           ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><LiveDot /> {statusText}</span>
           : statusText} />
-        {attempted && stage !== 'cancelled' && <Info label="Calls so far" value={String(p.call_attempts)} mono />}
-        {stage === 'cancelled' && <Info label="Carrier confirmation #" value={p.cancellation_confirmation || 'Not recorded'} mono />}
+        {(p.call_attempts || 0) > 0 && stage !== 'cancelled' && <Info label="Calls so far" value={String(p.call_attempts)} mono />}
       </div>
 
       <p style={fieldLabel}>Progress</p>

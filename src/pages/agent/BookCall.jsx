@@ -17,7 +17,7 @@ import { capState, nextTier, formatReset, formatWeekly } from '../../lib/billing
 //
 // The agent's whole job is the phone call: if the client's a yes, book them a
 // time with Fulfillment. So the only ask before booking is who (name + phone)
-// and, if the agent already knows it, which carrier they're leaving. DOB,
+// and, if the agent already knows it, which carrier it is. DOB,
 // address, bank and beneficiaries are gone from this flow entirely —
 // Fulfillment gathers what it needs on its own call (Brayden: "if we just
 // have the client, then we don't need pretty much any information").
@@ -208,7 +208,7 @@ export default function BookCall() {
         </div>
         <div style={{ maxWidth: 360, marginBottom: 4 }}>
           <TextField
-            label="Carrier they're leaving (if you know it)" placeholder="e.g. Mutual of Omaha" list="leaving-carriers"
+            label="Carrier (if you know it)" placeholder="e.g. Mutual of Omaha" list="leaving-carriers"
             value={form.carrier} onChange={e => set('carrier', e.target.value)}
           />
           <datalist id="leaving-carriers">

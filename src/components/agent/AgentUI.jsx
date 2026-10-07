@@ -116,7 +116,7 @@ export function ListCard({ head, timeOnly, empty, children, style }) {
           className={`hidden md:grid ${timeOnly ? 'md:grid-cols-[96px_minmax(0,1.4fr)_minmax(0,1fr)_160px_14px]' : 'md:grid-cols-[176px_minmax(0,1.4fr)_minmax(0,1fr)_160px_14px]'} items-center gap-x-4`}
           style={{ ...eyebrow, padding: '11px 20px', background: 'var(--bg-elevated)', position: 'sticky', top: 0, zIndex: 1 }}
         >
-          <span>{timeOnly ? 'Time' : 'Call'}</span><span>Client</span><span>Leaving</span><span style={{ justifySelf: 'end' }}>Status</span><span />
+          <span>{timeOnly ? 'Time' : 'Call'}</span><span>Client</span><span>Carrier</span><span style={{ justifySelf: 'end' }}>Status</span><span />
         </div>
       )}
       {hasRows ? children : empty}
