@@ -3,13 +3,15 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import {
   Users, LogOut, Home, Settings, Award,
-  ChevronLeft, ClipboardList, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard,
+  ChevronLeft, Smartphone, ClipboardList, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useUnreadMessageCount, useMessagesRealtime } from '../../hooks/usePolicyMessages'
 import { Avatar } from '../ui/Avatar'
 import { eyebrow } from '../../lib/exportStyles'
 import ohvaraLogo from '../../assets/ohvara-logo.png'
+import { BugReportButton, SidebarIconButton } from '../shared/BugReportButton'
+import { MobileAppModal } from './MobileAppModal'
 
 // Sidebar — Prompt 669 restyle to Restorix Portal's Layout.jsx: a 240px rail,
 // the logo + wordmark in a 64px header that lines up with the page header's
@@ -38,6 +40,13 @@ import ohvaraLogo from '../../assets/ohvara-logo.png'
 // button is a rounded box outlined in the (former divider's) --sidebar-border
 // white instead of a grey circle, and the two-line "Ohvara / <Role> Portal"
 // title is one "Ohvara Portal" line for every role.
+//
+// Prompt 711 — the bug-report button moved in from its floating bottom-right
+// corner and sits with a phone (Add to Home Screen → MobileAppModal, the old
+// "Mobile App" box Prompt 669 had dropped) in an icon row directly above the
+// account card, as in Restorix Portal. The row lives in the same footer
+// block as the card, so it rides up with it when the card's Sign-out panel
+// expands instead of staying pinned to the viewport edge.
 //
 // Kept: collapsible to 64px on desktop, off-canvas drawer on phones.
 
@@ -161,6 +170,7 @@ export const SIDEBAR_W_COLLAPSED = 64
 export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
+  const [showMobileApp, setShowMobileApp] = useState(false)
   const groups = NAV[profile?.role] || []
 
   // Prompt 679 — unread Messages badge + the one live subscription that keeps
@@ -257,6 +267,13 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
         </nav>
 
         <div style={{ flexShrink: 0 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', padding: expanded ? '0 20px 0' : '0 0 4px',
+            flexDirection: expanded ? 'row' : 'column', justifyContent: expanded ? 'space-between' : 'center', gap: 8,
+          }}>
+            <BugReportButton anchorLeft={(expanded ? SIDEBAR_W : SIDEBAR_W_COLLAPSED) + 12} />
+            <SidebarIconButton icon={Smartphone} label="Add to Home Screen" onClick={() => setShowMobileApp(true)} />
+          </div>
           <AccountCard
             profile={profile}
             expanded={expanded}
@@ -265,6 +282,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
           />
         </div>
       </aside>
+      {showMobileApp && <MobileAppModal onClose={() => setShowMobileApp(false)} />}
     </>
   )
 }

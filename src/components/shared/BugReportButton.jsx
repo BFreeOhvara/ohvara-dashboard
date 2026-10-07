@@ -3,39 +3,47 @@ import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
 import { Bug, X, CheckCircle2, Paperclip } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import { eyebrow } from '../../lib/exportStyles'
 import {
   useCreateBugReport, useBugReports, useUnresolvedBugReportCount,
   useResolveBugReport, useBugScreenshotUrl,
 } from '../../hooks/useBugReports'
 
-// Floating "Report a bug" button (Prompt 381) — Eterna-style: a small
-// circular icon button fixed bottom-right on every authenticated page.
+// "Report a bug" sidebar button (Prompt 381 → Prompt 711). Originally a
+// floating bottom-right circle (Eterna-style); Prompt 711 moved it into the
+// sidebar's icon row above the account card, the way Restorix Portal's
+// Layout.jsx does, and turned the submit popup into a centered modal.
 // Behavior branches on role, not just copy: non-admins get a submit form
 // (description + optional screenshot -> one bug_reports row, no email/tab,
 // just the DB row per Brayden's ask); admins get the company-wide inbox
 // instead, with an unresolved-count badge on the button itself so he
-// notices without opening it.
-// Prompt 394: 390 doubled this from 44 to 88, too big — Brayden wants
-// halfway between the original and the doubled size, so 66 (~1.5x original),
-// not a straight revert to 44.
-// Prompt 395: 66 still a little too big — step down further, but not all
-// the way back to 44.
-const BTN_SIZE = 56
+// notices without opening it. `anchorLeft` is where the admin inbox panel
+// sits (just right of the rail) since the button is no longer a fixed
+// bottom-right corner it can pop up from.
+const BTN_SIZE = 44
 
-const buttonBase = {
-  position: 'fixed', bottom: 24, right: 24, zIndex: 9998,
+const sidebarIconButtonStyle = {
+  position: 'relative', flexShrink: 0,
   width: BTN_SIZE, height: BTN_SIZE, borderRadius: '50%',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
+  background: 'transparent', border: 'var(--border-w) solid var(--sidebar-border)',
   color: 'var(--text-secondary)', cursor: 'pointer',
-  boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
 }
 
-export function BugReportButton() {
+// Shared with the phone button beside it in Sidebar.jsx.
+export function SidebarIconButton({ icon: Icon, label, onClick }) {
+  return (
+    <button onClick={onClick} title={label} style={sidebarIconButtonStyle}>
+      <Icon size={20} />
+    </button>
+  )
+}
+
+export function BugReportButton({ anchorLeft = 252 }) {
   const { profile } = useAuth()
   if (!profile) return null
   return profile.role === 'admin'
-    ? <AdminInbox />
+    ? <AdminInbox anchorLeft={anchorLeft} />
     : <ReportForm profile={profile} />
 }
 
@@ -48,91 +56,112 @@ function ReportForm({ profile }) {
   const [sent, setSent] = useState(false)
   const create = useCreateBugReport()
 
+  function close() {
+    setOpen(false); setSent(false); setDescription(''); setFile(null)
+  }
+
   function submit() {
     if (!description.trim()) return
     create.mutate(
       { reporterId: profile.id, description: description.trim(), screenshotFile: file, pageUrl: pathname },
-      {
-        onSuccess: () => {
-          setDescription(''); setFile(null); setOpen(false); setSent(true)
-          setTimeout(() => setSent(false), 4000)
-        },
-      }
+      { onSuccess: () => setSent(true) }
     )
   }
 
+  const disabled = !description.trim() || create.isPending
+
   return (
     <>
-      <button onClick={() => setOpen(true)} style={buttonBase} title="Report a bug">
-        <Bug size={23} />
+      <button onClick={() => setOpen(true)} style={sidebarIconButtonStyle} title="Report a bug">
+        <Bug size={20} />
       </button>
-
-      {sent && (
-        <div style={{
-          position: 'fixed', bottom: 24 + BTN_SIZE + 12, right: 24, zIndex: 9998,
-          display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px',
-          background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8,
-          fontSize: 12.5, color: 'var(--text-primary)', boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
-        }}>
-          <CheckCircle2 size={14} style={{ color: 'var(--success)' }} /> Bug report sent — thanks!
-        </div>
-      )}
 
       {open && createPortal(
         <div
-          onClick={() => setOpen(false)}
-          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', padding: 24 }}
+          onClick={close}
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
         >
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              width: 340, background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
-              borderRadius: 10, padding: 18, boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
+              width: '100%', maxWidth: 440, background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
+              borderRadius: 12, padding: 20, boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>Report a bug</span>
-              <button onClick={() => setOpen(false)} style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 600, color: 'var(--text-primary)' }}>Report a Bug</span>
+              <button onClick={close} style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
                 <X size={16} />
               </button>
             </div>
 
-            <textarea
-              autoFocus
-              rows={4}
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="What went wrong?"
-              style={{
-                width: '100%', resize: 'vertical', background: 'var(--bg-elevated)',
-                border: 'var(--border-w) solid var(--border)', borderRadius: 6,
-                padding: '8px 10px', fontSize: 12.5, color: 'var(--text-primary)', marginBottom: 10,
-              }}
-            />
+            {sent ? (
+              <>
+                <p style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0, fontSize: 13.5, color: 'var(--text-secondary)' }}>
+                  <CheckCircle2 size={15} style={{ color: 'var(--success)', flexShrink: 0 }} />
+                  Thanks — this has been sent to the admin team.
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+                  <button onClick={close} style={{ height: 34, padding: '0 16px', border: 'none', borderRadius: 6, background: 'var(--accent)', color: '#fff', fontSize: 12.5, fontWeight: 700 }}>
+                    Done
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <label style={{ ...eyebrow, display: 'block', marginBottom: 6, color: 'var(--text-muted)' }}>What happened?</label>
+                <textarea
+                  autoFocus
+                  rows={5}
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  placeholder="Describe what you were doing and what went wrong..."
+                  style={{
+                    width: '100%', resize: 'none', background: 'var(--bg-elevated)',
+                    border: 'var(--border-w) solid var(--border)', borderRadius: 8,
+                    padding: '10px 12px', fontSize: 13, color: 'var(--text-primary)', marginBottom: 10,
+                  }}
+                />
 
-            <label style={{
-              display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5,
-              color: 'var(--text-muted)', cursor: 'pointer', marginBottom: 14,
-            }}>
-              <Paperclip size={12} />
-              {file ? file.name : 'Attach a screenshot (optional)'}
-              <input
-                type="file" accept="image/*" style={{ display: 'none' }}
-                onChange={e => setFile(e.target.files?.[0] || null)}
-              />
-            </label>
+                <label style={{
+                  display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5,
+                  color: 'var(--text-muted)', cursor: 'pointer', marginBottom: 16,
+                }}>
+                  <Paperclip size={12} />
+                  {file ? file.name : 'Attach a screenshot (optional)'}
+                  <input
+                    type="file" accept="image/*" style={{ display: 'none' }}
+                    onChange={e => setFile(e.target.files?.[0] || null)}
+                  />
+                </label>
 
-            <button
-              onClick={submit}
-              disabled={!description.trim() || create.isPending}
-              style={{
-                width: '100%', height: 34, border: 'none', borderRadius: 6,
-                background: 'var(--accent)', color: '#fff', fontSize: 12.5, fontWeight: 700,
-                opacity: !description.trim() || create.isPending ? 0.6 : 1,
-              }}
-            >
-              {create.isPending ? 'Sending…' : 'Submit'}
-            </button>
+                {create.isError && (
+                  <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--danger)' }}>
+                    Could not submit: {create.error?.message || 'something went wrong. Try again.'}
+                  </p>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <button
+                    onClick={close}
+                    style={{ height: 34, padding: '0 16px', border: 'var(--border-w) solid var(--border)', borderRadius: 6, background: 'transparent', color: 'var(--text-secondary)', fontSize: 12.5, fontWeight: 700 }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={submit}
+                    disabled={disabled}
+                    style={{
+                      height: 34, padding: '0 16px', border: 'none', borderRadius: 6,
+                      background: 'var(--accent)', color: '#fff', fontSize: 12.5, fontWeight: 700,
+                      opacity: disabled ? 0.6 : 1,
+                    }}
+                  >
+                    {create.isPending ? 'Sending…' : 'Submit'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>,
         document.body
@@ -142,7 +171,7 @@ function ReportForm({ profile }) {
 }
 
 // ── Admin: inbox ─────────────────────────────────────────────────────────────
-function AdminInbox() {
+function AdminInbox({ anchorLeft }) {
   const [open, setOpen] = useState(false)
   const panelRef = useRef(null)
   const btnRef = useRef(null)
@@ -164,8 +193,8 @@ function AdminInbox() {
 
   return (
     <>
-      <button ref={btnRef} onClick={() => setOpen(v => !v)} style={{ ...buttonBase, position: 'fixed' }} title="Bug reports">
-        <Bug size={23} />
+      <button ref={btnRef} onClick={() => setOpen(v => !v)} style={sidebarIconButtonStyle} title="Bug reports">
+        <Bug size={20} />
         {unresolvedCount > 0 && (
           <span style={{
             position: 'absolute', top: -4, right: -4,
@@ -183,8 +212,8 @@ function AdminInbox() {
         <div
           ref={panelRef}
           style={{
-            position: 'fixed', bottom: 24 + BTN_SIZE + 12, right: 24, zIndex: 9998,
-            width: 380, maxHeight: 480, display: 'flex', flexDirection: 'column',
+            position: 'fixed', bottom: 24, left: anchorLeft, zIndex: 9998,
+            width: 380, maxWidth: `calc(100vw - ${anchorLeft + 12}px)`, maxHeight: 480, display: 'flex', flexDirection: 'column',
             background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 10,
             overflow: 'hidden', boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
           }}

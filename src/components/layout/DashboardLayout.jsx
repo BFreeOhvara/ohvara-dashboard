@@ -4,7 +4,6 @@ import { Menu } from 'lucide-react'
 import { Sidebar, COLLAPSE_KEY, SIDEBAR_W, SIDEBAR_W_COLLAPSED } from './Sidebar'
 import { ActiveCallProvider } from '../../contexts/ActiveCallContext'
 import { NotificationToast } from '../rep/NotificationToast'
-import { BugReportButton } from '../shared/BugReportButton'
 import { NotificationBell } from '../admin/NotificationBell'
 import { CloserNotificationBell } from '../closer/CloserNotificationBell'
 import { useAuth } from '../../hooks/useAuth'
@@ -176,7 +175,6 @@ export function DashboardLayout({ children }) {
           </main>
         </div>
         <ToastMount />
-        <BugReportButton />
       </div>
     </ActiveCallProvider>
   )
