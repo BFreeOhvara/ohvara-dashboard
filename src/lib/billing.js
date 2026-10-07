@@ -94,7 +94,7 @@ export function nextTier(tiers, currentKey) {
   return i >= 0 ? tiers[i + 1] || null : null
 }
 
-export const capLabel = cap => (cap == null ? 'No weekly cap' : `${cap} submissions a week`)
+export const capLabel = cap => (cap == null ? 'No weekly cap' : `max of ${cap} submissions a week`)
 
 // "Monday" the cap comes back, from usage.week_end.
 export function formatReset(iso) {
