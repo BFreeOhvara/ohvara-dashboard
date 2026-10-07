@@ -76,6 +76,9 @@
   --purple:       #A855F7;
   --purple-dim:   rgba(168,85,247,0.10);
   --purple-bd:    rgba(168,85,247,0.25);
+  --teal:         #14B8A6;
+  --teal-dim:     rgba(20,184,166,0.10);
+  --teal-bd:      rgba(20,184,166,0.25);
   --pink:         #EC4899;
   --pink-dim:     rgba(236,72,153,0.10);
   --pink-bd:      rgba(236,72,153,0.25);
@@ -130,6 +133,7 @@
   --danger:#8A1F1F;  --danger-dim:#FBDCDC;  --danger-bd:rgba(138,31,31,0.35);
   --info:#16408A;    --info-dim:#DCE8FB;    --info-bd:rgba(22,64,138,0.35);
   --purple:#5B21B6;  --purple-dim:#EDE4FB;  --purple-bd:rgba(91,33,182,0.35);
+  --teal:#0F766E;    --teal-dim:#D5F0EC;    --teal-bd:rgba(15,118,110,0.35);
   --pink:#9D174D;    --pink-dim:#FCE4EE;    --pink-bd:rgba(157,23,77,0.35);
   /* Prompt 681 — same two glows as dark, tuned to read at the same weight on
      the light canvas (they were 0.16 / 0.10 and effectively invisible, so

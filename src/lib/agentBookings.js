@@ -28,7 +28,7 @@ export const STAGE = {
   noAnswer:     { label: 'No answer',    tone: 'muted',   fill: 'var(--text-muted)' },
   cancelled:    { label: 'Cancelled',    tone: 'success', fill: 'var(--success)' },
   // Prompt 702 — agent-only statuses (see agentStageOf).
-  confirmNumber:  { label: 'Confirm number',  tone: 'purple',  fill: 'var(--purple)' },
+  confirmNumber:  { label: 'Confirm number',  tone: 'teal',    fill: 'var(--teal)' },
   needsAttention: { label: 'Needs attention', tone: 'warning', fill: 'var(--warning)' },
 }
 
@@ -153,7 +153,8 @@ export const TONE = {
   neutral: { color: 'var(--text-secondary)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
   muted:   { color: 'var(--text-secondary)', dim: 'var(--bg-muted)',    bd: 'var(--border-strong)' },
   purple:  { color: 'var(--purple)',  dim: 'var(--purple-dim)',  bd: 'var(--purple-bd)' },
-  pink:    { color: 'var(--pink)',    dim: 'var(--pink-dim)',    bd: 'var(--pink-bd)' },
+  teal:    { color: 'var(--teal)',    dim: 'var(--teal-dim)',    bd: 'var(--teal-bd)' },
+  pink:   { color: 'var(--pink)',    dim: 'var(--pink-dim)',    bd: 'var(--pink-bd)' },
   accent:  { color: 'var(--accent)',  dim: 'var(--accent-dim)',  bd: 'var(--accent-border)' },
   info:    { color: 'var(--info)',    dim: 'var(--info-dim)',    bd: 'var(--info-bd)' },
   warning: { color: 'var(--warning)', dim: 'var(--warning-dim)', bd: 'var(--warning-bd)' },
