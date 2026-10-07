@@ -245,7 +245,7 @@ function tierOfPrice(price: any, tiers: Tier[]): string | null {
 // ── Subscription -> profile ──────────────────────────────────────────────────
 
 const LIVE = ['active', 'trialing', 'past_due']
-const PROFILE_COLS = 'id, role, email, full_name, billing_status, billing_tier, stripe_customer_id, stripe_subscription_id, billing_grace_until'
+const PROFILE_COLS = 'id, role, email, full_name, billing_exempt, billing_status, billing_tier, stripe_customer_id, stripe_subscription_id, billing_grace_until'
 
 async function profileFor(admin: SupabaseClient, sub: any) {
   const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id
@@ -269,7 +269,7 @@ async function syncSubscription(admin: SupabaseClient, sub: any, profile?: any) 
   const p = profile || await profileFor(admin, sub)
   if (!p) return { ignored: 'no matching profile' }
   // Comped agents and non-agents are managed by hand.
-  if (p.billing_status === 'exempt') return { ignored: 'exempt' }
+  if (p.billing_exempt || p.billing_status === 'exempt') return { ignored: 'exempt' }
   // An old subscription's late events must not clobber the current one.
   if (p.stripe_subscription_id && p.stripe_subscription_id !== sub.id && !LIVE.includes(sub.status)) {
     return { ignored: 'not the current subscription' }
@@ -421,7 +421,7 @@ Deno.serve(async (req) => {
     if (action === 'status') {
       let billing_status = me.billing_status
       // Heal from Stripe: covers a webhook that hasn't landed (or isn't set up yet).
-      if (configured && me.role === 'agent' && me.stripe_customer_id && me.billing_status !== 'exempt') {
+      if (configured && me.role === 'agent' && me.stripe_customer_id && !me.billing_exempt && me.billing_status !== 'exempt') {
         const sub = await latestSubscription(me.stripe_customer_id).catch(() => null)
         if (sub) billing_status = (await syncSubscription(admin, sub, me)).billing_status ?? billing_status
       }
@@ -429,7 +429,7 @@ Deno.serve(async (req) => {
     }
 
     if (me.role !== 'agent') return json({ error: 'Only agents are billed' }, 403)
-    if (me.billing_status === 'exempt') return json({ error: 'Your account isn\'t billed.' }, 409)
+    if (me.billing_exempt || me.billing_status === 'exempt') return json({ error: 'Your account isn\'t billed.' }, 409)
     if (!configured) {
       return json({ error: 'Billing isn\'t set up yet: the Stripe account hasn\'t been connected.', code: 'not_configured' }, 503)
     }

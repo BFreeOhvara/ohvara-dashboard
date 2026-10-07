@@ -61,7 +61,7 @@ function Pill({ children, style }) {
 // that status: next renewal, end of grace, or end of the paid week.
 function BillingCell({ u }) {
   if (u.role !== 'agent') return <span style={{ color: 'var(--text-muted)', fontFamily: MONO, fontSize: 12 }}>—</span>
-  const status = u.billing_status || 'none'
+  const status = u.billing_exempt ? 'exempt' : (u.billing_status || 'none')
   const meta = BILLING_STATUS[status] || BILLING_STATUS.none
   const when = {
     active:   u.billing_current_period_end && `renews ${formatBillingDate(u.billing_current_period_end)}`,

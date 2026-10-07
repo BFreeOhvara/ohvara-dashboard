@@ -31,7 +31,7 @@ export function BillingPanel({ profile }) {
   const currentTier = tiers.find(t => t.key === profile.billing_tier) || tiers[0]
   const price = formatWeekly(currentTier?.weekly_cents)
   const cap = capState(usage)
-  const status = profile.billing_status || 'none'
+  const status = profile.billing_exempt ? 'exempt' : (profile.billing_status || 'none')
   const meta = BILLING_STATUS[status] || BILLING_STATUS.none
   const periodEnd = formatBillingDate(profile.billing_current_period_end)
   const graceEnd = formatBillingDate(profile.billing_grace_until)

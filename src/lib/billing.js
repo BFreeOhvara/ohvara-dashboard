@@ -39,7 +39,8 @@ const future = (iso, now) => !!iso && new Date(iso).getTime() > now
 //   { locked, grace } — grace = past_due but still inside the buffer.
 // Only agents are ever billed; everyone else always has access.
 export function billingAccess(profile, enforced, now = Date.now()) {
-  if (!profile || profile.role !== 'agent' || !enforced) return { locked: false, grace: false }
+  // Gate applies only to role=agent with billing_exempt=false (P673).
+  if (!profile || profile.role !== 'agent' || profile.billing_exempt || !enforced) return { locked: false, grace: false }
   switch (profile.billing_status) {
     case 'active':
     case 'exempt':
