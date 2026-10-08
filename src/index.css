@@ -621,14 +621,18 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 
 .ov-card {
   border-radius: 20px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.02) 100%);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 48px -28px rgba(0,0,0,0.7);
+  background:
+    radial-gradient(120% 70% at 0% 0%, rgba(255,255,255,0.045) 0%, transparent 60%),
+    linear-gradient(180deg, #161922 0%, #10121A 100%);
+  border: 1px solid rgba(255,255,255,0.09);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 24px 48px -28px rgba(0,0,0,0.8);
 }
 [data-theme="light"] .ov-card {
-  background: #FFFFFF;
-  border: 1px solid rgba(2,79,70,0.12);
-  box-shadow: 0 1px 2px rgba(7,51,46,0.05), 0 24px 48px -30px rgba(7,51,46,0.30);
+  background:
+    radial-gradient(120% 70% at 0% 0%, #FFFFFF 0%, rgba(255,255,255,0) 60%),
+    linear-gradient(180deg, #FFFFFF 0%, #F2F7F6 100%);
+  border: 1px solid rgba(2,79,70,0.13);
+  box-shadow: inset 0 1px 0 #FFFFFF, inset 0 -1px 0 rgba(2,79,70,0.05), 0 1px 2px rgba(7,51,46,0.06), 0 24px 48px -28px rgba(7,51,46,0.34);
 }
 .ov-hero {
   border-radius: 24px;
@@ -651,14 +655,16 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
   border-radius: 20px;
   background:
     radial-gradient(ellipse 90% 45% at 50% 0%, rgba(245,158,11,0.16) 0%, transparent 70%),
-    linear-gradient(180deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.02) 100%);
+    linear-gradient(180deg, #171820 0%, #10121A 100%);
   border: 1px solid rgba(245,158,11,0.28);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 48px -28px rgba(0,0,0,0.7);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 24px 48px -28px rgba(0,0,0,0.8);
 }
 [data-theme="light"] .ov-attn {
-  background: radial-gradient(ellipse 90% 45% at 50% 0%, rgba(245,158,11,0.16) 0%, transparent 70%), #FFFFFF;
+  background:
+    radial-gradient(ellipse 90% 45% at 50% 0%, rgba(245,158,11,0.16) 0%, transparent 70%),
+    linear-gradient(180deg, #FFFFFF 0%, #FBF6F1 100%);
   border: 1px solid rgba(154,74,11,0.30);
-  box-shadow: 0 1px 2px rgba(7,51,46,0.05), 0 24px 48px -30px rgba(122,54,8,0.35);
+  box-shadow: inset 0 1px 0 #FFFFFF, 0 1px 2px rgba(7,51,46,0.06), 0 24px 48px -28px rgba(122,54,8,0.36);
 }
 .ov-ghost {
   border: 1px solid rgba(255,255,255,0.14);
@@ -722,21 +728,21 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 }
 
 /* Backdrop on /agent and /agent/book (DashboardLayout adds the class): a dot grid
-   under two glows, in place of the two-glow default. */
+   under one top-right glow, in place of the two-glow default. Cards are opaque
+   so the dots only show between them. */
 .app-backdrop.app-backdrop--v2 {
   background-color: #07080D;
   background-image:
     radial-gradient(ellipse 70% 50% at 85% -10%, rgba(75,121,206,0.30) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 40% at 0% 0%, rgba(0,191,166,0.10) 0%, transparent 70%),
     radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px);
-  background-size: auto, auto, 24px 24px;
+  background-size: auto, 24px 24px;
 }
 [data-theme="light"] .app-backdrop.app-backdrop--v2 {
   background-color: #EEF2F3;
   background-image:
     radial-gradient(ellipse 70% 50% at 85% -10%, rgba(0,191,166,0.22) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 40% at 0% 0%, rgba(10,31,68,0.07) 0%, transparent 70%),
     radial-gradient(rgba(2,79,70,0.13) 1px, transparent 1px);
+  background-size: auto, 24px 24px;
 }
 
 /* ── Prompt 715 — Book a call on the "ov" language ──────────────
