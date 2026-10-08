@@ -93,6 +93,15 @@ export function agentStageOf(p) {
   return s
 }
 
+// Prompt 717 — My Pipeline's four tabs. Needs you holds the two statuses only
+// the agent can move on (Confirm number, Needs attention); the rest are
+// agentStageOf as is.
+export const PIPELINE_TABS = ['booked', 'noAnswer', 'needs', 'cancelled']
+export function tabOf(p) {
+  const s = agentStageOf(p)
+  return s === 'confirmNumber' || s === 'needsAttention' ? 'needs' : s
+}
+
 // Re-book is the agent's move only when nobody else owns the lead: Needs
 // attention (call, then rebook), or a No answer that isn't in Prompt 696's
 // automated flow (texting off / flow not started) — otherwise it would be a

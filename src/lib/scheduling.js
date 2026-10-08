@@ -40,6 +40,13 @@ export function fmtSlotTime(iso) {
   return new Date(iso).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
+// Prompt 717 — "Fri, Oct 2 · 6:07 PM", My Pipeline's call time.
+export function callWhen(iso) {
+  if (!iso) return 'No time booked'
+  const d = new Date(iso)
+  return `${d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+}
+
 export function fmtBooking(iso) {
   if (!iso) return 'No time booked'
   return new Date(iso).toLocaleString('en-US', {

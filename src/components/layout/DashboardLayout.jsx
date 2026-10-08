@@ -143,7 +143,7 @@ export function DashboardLayout({ children }) {
           className="app-main flex-1 flex flex-col min-w-0 pt-[56px] md:pt-0"
           style={{ '--sb-w': `${collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W}px`, position: 'relative' }}
         >
-          <div className={`app-backdrop${pathname === '/agent' || pathname === '/agent/book' ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
+          <div className={`app-backdrop${pathname === '/agent' || pathname === '/agent/book' || pathname === '/agent/clients' ?' app-backdrop--v2' : ''}`} aria-hidden="true" />
           <header
             className="hidden md:flex"
             style={{

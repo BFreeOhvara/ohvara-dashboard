@@ -823,3 +823,133 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 @media (prefers-reduced-motion: reduce) {
   .ov-input, .ov-choice { transition: none; }
 }
+
+/* ── Prompt 717 — My Pipeline on the "ov" language ─────────────
+   Status colours, the find-any-client field, pipeline tabs, status rows and
+   the client drawer for /agent/clients. See DESIGN.md v16 "P717". */
+:root {
+  --ov-st-booked: #60A5FA;
+  --ov-st-booked-tint: rgba(59,130,246,0.16);
+  --ov-st-booked-edge: rgba(96,165,250,0.55);
+  --ov-st-noanswer: #A3B2CC;
+  --ov-st-noanswer-tint: rgba(148,163,184,0.14);
+  --ov-st-noanswer-edge: rgba(163,178,204,0.45);
+  --ov-st-needs: #FBBF24;
+  --ov-st-needs-tint: rgba(245,158,11,0.15);
+  --ov-st-needs-edge: rgba(251,191,36,0.5);
+  --ov-st-cancelled: #4ADE80;
+  --ov-st-cancelled-tint: rgba(34,197,94,0.14);
+  --ov-st-cancelled-edge: rgba(74,222,128,0.5);
+  --ov-hover: rgba(255,255,255,0.03);
+  --ov-table-head: rgba(255,255,255,0.025);
+  --ov-scrim: rgba(3,5,10,0.72);
+  --ov-live: #F87171;
+}
+[data-theme="light"] {
+  --ov-st-booked: #1D4ED8;
+  --ov-st-booked-tint: #DCE8FB;
+  --ov-st-booked-edge: rgba(29,78,216,0.45);
+  --ov-st-noanswer: #4F6B66;
+  --ov-st-noanswer-tint: #E6EEEC;
+  --ov-st-noanswer-edge: rgba(79,107,102,0.40);
+  --ov-st-needs: #9A4A0B;
+  --ov-st-needs-tint: #FBE7D2;
+  --ov-st-needs-edge: rgba(154,74,11,0.45);
+  --ov-st-cancelled: #0A6B33;
+  --ov-st-cancelled-tint: #DCF3E4;
+  --ov-st-cancelled-edge: rgba(10,107,51,0.45);
+  --ov-hover: #F6FAF9;
+  --ov-table-head: #F3F8F7;
+  --ov-scrim: rgba(7,40,36,0.45);
+  --ov-live: #B91C1C;
+}
+
+.ov-tile {
+  background: linear-gradient(180deg, #181B25 0%, #12141C 100%);
+  border: 1px solid rgba(255,255,255,0.09);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 10px 24px -16px rgba(0,0,0,0.9);
+}
+[data-theme="light"] .ov-tile {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F7FAF9 100%);
+  border: 1px solid rgba(2,79,70,0.12);
+  box-shadow: inset 0 1px 0 #FFFFFF, 0 1px 2px rgba(7,51,46,0.06), 0 10px 22px -16px rgba(7,51,46,0.35);
+}
+
+/* The search field inside the hero: white text and icon in both themes. */
+.ov-hero-search {
+  display: flex; align-items: center; gap: 12px; box-sizing: border-box; color: #FFFFFF;
+  background: rgba(0,0,0,0.30); border: 1px solid rgba(255,255,255,0.16);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); transition: border-color 120ms ease;
+}
+[data-theme="light"] .ov-hero-search {
+  background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.35);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.20);
+}
+.ov-hero-search:focus-within { border-color: rgba(255,255,255,0.45); }
+.ov-hero-search input {
+  flex: 1; min-width: 0; height: 100%; padding: 0; border: none; outline: none; background: transparent;
+  font-family: inherit; color: #FFFFFF;
+}
+.ov-hero-search input::placeholder { color: rgba(255,255,255,0.62); opacity: 1; }
+.ov-hero-search input::-webkit-search-cancel-button { display: none; }
+
+/* Clickable rows (status list, search results). */
+.ov-row { cursor: pointer; transition: background 120ms ease; }
+.ov-row:hover, .ov-row.is-active { background: var(--ov-hover); }
+.ov-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ov-row + .ov-row { border-top: 1px solid var(--ov-line); }
+
+/* Pipeline tabs + the range switch. */
+.ov-tab { font: inherit; text-align: left; cursor: pointer; transition: border-color 120ms ease; }
+.ov-tab:focus-visible, .ov-range button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ov-range { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.10); }
+[data-theme="light"] .ov-range { background: #F6FAF9; border: 1px solid rgba(2,79,70,0.18); }
+.ov-range button { border: none; border-radius: 999px; background: transparent; color: var(--ov-mute); font: inherit; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.ov-range button.is-on { background: var(--ov-hi); color: #0B0D14; font-weight: 700; }
+[data-theme="light"] .ov-range button.is-on { background: #07332E; color: #FFFFFF; }
+.ov-chips { scrollbar-width: none; }
+.ov-chips::-webkit-scrollbar { display: none; }
+
+/* Solid pill (drawer phone number, Re-book): white on dark, deep teal on light. */
+.ov-solid { background: #FFFFFF; color: var(--ov-hero-btn-text); border: none; font-weight: 700; cursor: pointer; }
+[data-theme="light"] .ov-solid { background: #07332E; color: #FFFFFF; }
+.ov-solid:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Per-status list columns (1024px and up; below that rows become cards). */
+.ov-cols-booked    { grid-template-columns: minmax(0,1.5fr) minmax(0,1fr) 220px 200px 18px; }
+.ov-cols-noAnswer  { grid-template-columns: minmax(0,1.4fr) minmax(0,0.9fr) 150px minmax(0,1.1fr) 120px; }
+.ov-cols-needs     { grid-template-columns: minmax(0,1.3fr) minmax(0,0.8fr) minmax(0,1.5fr) 170px; }
+.ov-cols-cancelled { grid-template-columns: minmax(0,1.5fr) minmax(0,1fr) 190px 190px 18px; }
+@media (max-width: 1279.98px) {
+  .ov-cols-booked    { grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) 190px 170px 18px; }
+  .ov-cols-noAnswer  { grid-template-columns: minmax(0,1.4fr) minmax(0,0.9fr) 120px minmax(0,1.1fr) 110px; }
+  .ov-cols-cancelled { grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) 160px 130px 18px; }
+}
+
+/* Client drawer: right-side panel; a full-screen sheet below 640px. */
+.ov-scrim { position: fixed; inset: 0; z-index: 200; background: var(--ov-scrim); }
+.ov-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 201; width: 460px; max-width: 100%;
+  box-sizing: border-box; display: flex; flex-direction: column;
+  background: linear-gradient(180deg, #151822 0%, #0E1017 100%);
+  border-left: 1px solid rgba(255,255,255,0.10); box-shadow: -40px 0 80px -30px rgba(0,0,0,0.8);
+  animation: ovDrawerIn 200ms ease-out;
+}
+[data-theme="light"] .ov-drawer {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F4F8F7 100%);
+  border-left: 1px solid rgba(2,79,70,0.14); box-shadow: -40px 0 80px -30px rgba(7,40,36,0.45);
+}
+@keyframes ovDrawerIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes ovSheetIn  { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@media (max-width: 639.98px) {
+  .ov-drawer { width: 100%; border-left: none; animation-name: ovSheetIn; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ov-drawer { animation: none; }
+  .ov-row, .ov-tab, .ov-hero-search { transition: none; }
+}
+/* Search results float over the page: heavier shadow in dark; light keeps .ov-card's. */
+.ov-card.ov-pop { box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 40px 80px -24px rgba(0,0,0,0.75); }
+[data-theme="light"] .ov-card.ov-pop { box-shadow: inset 0 1px 0 #FFFFFF, inset 0 -1px 0 rgba(2,79,70,0.05), 0 1px 2px rgba(7,51,46,0.06), 0 24px 48px -28px rgba(7,51,46,0.34); }
+.ov-tab[role="tab"][aria-selected="false"]:hover { border-color: rgba(255,255,255,0.14); }
+[data-theme="light"] .ov-tab[role="tab"][aria-selected="false"]:hover { border-color: rgba(2,79,70,0.22); }
