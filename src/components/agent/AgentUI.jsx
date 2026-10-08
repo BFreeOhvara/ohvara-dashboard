@@ -1,5 +1,5 @@
 import { Children } from 'react'
-import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check } from 'lucide-react'
+import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText } from 'lucide-react'
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
 import { SLOTS, slotToISO, localDateISO } from '../../lib/scheduling'
 import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, canRebook, sameLocalDay } from '../../lib/agentBookings'
@@ -709,6 +709,344 @@ export function AttentionPanel({ items, loading, now, onGo }) {
           <ArrowRight size={15} strokeWidth={2} />
         </button>
       </div>
+    </div>
+  )
+}
+
+// ── Prompt 715 — Book a call on the v16 language ──────────────────────────
+// Same booking behaviour as before; these are only the new pieces of markup.
+// Colours from the --ov-* tokens and the .ov-input / .ov-choice / .ov-step /
+// .ov-note classes in index.css.
+
+export function StepHead({ n, title, sub }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <span className="ov-step" style={{
+        width: 36, height: 36, flexShrink: 0, borderRadius: 11, fontFamily: DISPLAY, fontSize: 16, fontWeight: 600,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {n}
+      </span>
+      <div style={{ minWidth: 0 }}>
+        <h2 className="text-[18px] sm:text-[19px]" style={OV_TITLE}>{title}</h2>
+        <p style={{ margin: '1px 0 0', fontSize: 13.5, color: 'var(--ov-mute)' }}>{sub}</p>
+      </div>
+    </div>
+  )
+}
+
+// Label over an .ov-input box. Extra props go to the <input>.
+export function OvField({ label, optional, icon: Icon, error, className = '', ...input }) {
+  return (
+    <label className={className} style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+      <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>
+        {label}
+        {optional && <span style={{ fontWeight: 500, color: 'var(--ov-mute)' }}> optional</span>}
+      </span>
+      <span className={`ov-input${error ? ' is-error' : ''}`}>
+        {Icon && <Icon size={17} strokeWidth={1.9} style={{ flexShrink: 0 }} />}
+        <input aria-invalid={error || undefined} {...input} />
+      </span>
+    </label>
+  )
+}
+
+// One day card. `long` / `short` are the two date lines; the card shows the
+// short one when it is narrow (container query in index.css).
+export function DayChoice({ label, long, short, on, disabled, icon: Icon, onClick, ariaLabel, className = 'flex' }) {
+  return (
+    <button
+      type="button" onClick={onClick} disabled={disabled} aria-pressed={on} aria-label={ariaLabel}
+      className={`ov-choice ov-day h-[60px] sm:h-16 px-3 sm:px-4${on ? ' is-on' : ''} ${className}`}
+      style={{
+        flex: 1, minWidth: 0, borderRadius: 14, textAlign: 'left',
+        alignItems: 'center', gap: 12, ...(disabled ? { opacity: 0.5 } : null),
+      }}
+    >
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: on ? 'var(--ov-pick)' : 'var(--ov-mute)' }}>{label}</span>
+        <span className="text-[14.5px] sm:text-[15.5px]" style={{
+          display: 'block', marginTop: 1, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          color: disabled ? 'var(--ov-mute)' : 'var(--ov-hi)',
+        }}>
+          {short ? <><span className="ov-day-long">{long}</span><span className="ov-day-short">{short}</span></> : long}
+        </span>
+      </span>
+      {on ? (
+        <span style={{
+          width: 20, height: 20, flexShrink: 0, borderRadius: '50%', background: 'var(--ov-pick)', color: '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Check size={12} strokeWidth={3} />
+        </span>
+      ) : Icon ? (
+        <Icon size={18} strokeWidth={1.9} style={{ flexShrink: 0, color: 'var(--ov-mute)' }} />
+      ) : (
+        <span style={{ width: 18, height: 18, flexShrink: 0, boxSizing: 'border-box', borderRadius: '50%', border: '1.5px solid var(--ov-faint)' }} />
+      )}
+    </button>
+  )
+}
+
+// The fixed SLOTS, split at noon into Morning and Afternoon. Past slots are
+// disabled; slots where this agent already has a booking say so (a hint from
+// their own calendar, not a capacity check, same as SlotPicker).
+export function SlotGrid({ date, slot, onSlot, takenCounts = {}, error, now }) {
+  const groups = [
+    { label: 'Morning', icon: Sun, slots: SLOTS.filter(s => s.endsWith('AM')) },
+    { label: 'Afternoon', icon: Clock, slots: SLOTS.filter(s => s.endsWith('PM')) },
+  ]
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: 16, borderRadius: 14,
+      ...(error ? { outline: '1px solid var(--danger)', outlineOffset: 6 } : null),
+    }}>
+      {groups.map(({ label, icon: Icon, slots }) => (
+        <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: 'var(--ov-mute)' }}>
+            <Icon size={15} strokeWidth={2} />{label}
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-6" style={{ gap: 10 }}>
+            {slots.map(s => {
+              const iso = slotToISO(date, s)
+              const past = new Date(iso).getTime() <= now
+              const on = slot === s
+              const taken = takenCounts[iso] || 0
+              const [time, ampm] = s.split(' ')
+              return (
+                <button
+                  key={s} type="button" disabled={past} onClick={() => onSlot(s)} aria-pressed={on}
+                  title={past ? 'Already past' : taken ? `You already have ${taken} booked at this time` : undefined}
+                  aria-label={past ? `${s}, already past` : taken ? `${s}, you have ${taken} booked` : s}
+                  className={`ov-choice h-[52px] sm:h-[54px]${on ? ' ov-slot-on' : ''}`}
+                  style={{
+                    borderRadius: 12, padding: 0, fontFamily: DISPLAY, fontSize: 16, fontWeight: 600, lineHeight: 1.1,
+                    color: on ? '#fff' : 'var(--ov-hi)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+                  }}
+                >
+                  <span style={{ whiteSpace: 'nowrap' }}>
+                    {time}
+                    <span style={{ marginLeft: 5, fontSize: 12, fontWeight: 500, ...(on ? { opacity: 0.85 } : { color: 'var(--ov-mute)' }) }}>{ampm}</span>
+                  </span>
+                  {taken > 0 && !past && (
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: on ? '#fff' : 'var(--ov-warn)' }}>
+                      {taken} booked
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// { day: 'Today' | 'Tomorrow' | 'Mon, Oct 12', time: '10:30', period: 'AM',
+//   full: 'Thursday, October 8' } for a booking time.
+function bookingWhen(iso, now = Date.now()) {
+  const d = new Date(iso)
+  const tomorrow = new Date(now)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const day = sameLocalDay(iso, new Date(now)) ? 'Today'
+    : sameLocalDay(iso, tomorrow) ? 'Tomorrow'
+      : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  const [time, period] = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).split(/\s+/)
+  return { day, time, period, full: d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) }
+}
+
+function ClientAvatar({ name }) {
+  return (
+    <span style={{
+      width: 48, height: 48, flexShrink: 0, boxSizing: 'border-box', borderRadius: '50%',
+      background: 'rgba(255,255,255,0.14)', border: name ? '1px solid rgba(255,255,255,0.18)' : '1px dashed rgba(255,255,255,0.4)',
+      color: '#fff', fontFamily: DISPLAY, fontSize: 17, fontWeight: 600,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      {name ? initialsOf(name) : <User size={20} strokeWidth={1.9} />}
+    </span>
+  )
+}
+
+function BookError({ children }) {
+  return (
+    <p role="alert" style={{
+      margin: 0, padding: '10px 14px', borderRadius: 12, fontSize: 13.5, lineHeight: 1.45, color: '#fff',
+      background: 'rgba(239,68,68,0.18)', border: '1px solid rgba(239,68,68,0.35)',
+    }}>
+      {children}
+    </p>
+  )
+}
+
+function BookButton({ onClick, busy, capped }) {
+  const off = busy || capped
+  return (
+    <button type="button" onClick={onClick} disabled={off} className="ov-hero-btn"
+      style={{ width: '100%', height: 52, fontSize: 16, flexShrink: 0, ...(off ? { opacity: 0.6, cursor: 'not-allowed' } : null) }}>
+      <CalendarPlus size={18} strokeWidth={2.1} />
+      {busy ? 'Booking…' : capped ? 'Weekly cap reached' : 'Book the call'}
+    </button>
+  )
+}
+
+// Live summary of what the agent has entered, with the Book button. `bar`
+// is the phone version, fixed to the bottom of the screen.
+export function BookingSummary({ name, phone, carrier, scheduledAt, now, onBook, busy, capped, error, bar }) {
+  const when = scheduledAt ? bookingWhen(scheduledAt, now) : null
+  if (bar) {
+    return (
+      <div className="ov-hero flex flex-col sm:hidden" style={{
+        position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 70, borderRadius: '22px 22px 0 0',
+        padding: '16px 16px calc(20px + env(safe-area-inset-bottom))', gap: 14,
+      }}>
+        {error && <BookError>{error}</BookError>}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: DISPLAY, fontSize: 17, fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {name || 'New client'}
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--ov-hero-soft)' }}>
+              {when ? `${when.day}, ${when.time} ${when.period}` : 'Pick a time'}
+            </div>
+          </div>
+          {name && when && <Check size={20} strokeWidth={2.4} style={{ color: 'var(--ov-hero-dot)', flexShrink: 0 }} />}
+        </div>
+        <BookButton onClick={onBook} busy={busy} capped={capped} />
+      </div>
+    )
+  }
+  const meta = [phone, carrier].filter(Boolean).join(' · ')
+  const big = { marginTop: 6, fontFamily: DISPLAY, fontSize: 34, fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.035em' }
+  return (
+    <div className="ov-hero" style={{ display: 'flex', flexDirection: 'column', gap: 22, padding: '26px 26px 24px' }}>
+      <span className="ov-hero-chip" style={{ alignSelf: 'flex-start' }}>
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ov-hero-dot)' }} />Booking summary
+      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <ClientAvatar name={name} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.15, color: '#fff', overflowWrap: 'anywhere' }}>
+            {name || 'New client'}
+          </div>
+          <div style={{ marginTop: 3, fontSize: 14, color: 'var(--ov-hero-soft)' }}>{meta || 'Add their name and number'}</div>
+        </div>
+      </div>
+      <div style={{ height: 1, background: 'rgba(255,255,255,0.14)' }} />
+      <div>
+        <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-hero-soft)' }}>Fulfillment calls</div>
+        {when ? (
+          <>
+            <div style={{ ...big, color: '#fff' }}>
+              {when.day}, {when.time}
+              <span style={{ marginLeft: 7, fontSize: 17, fontWeight: 500, letterSpacing: 0, color: 'var(--ov-hero-soft)' }}>{when.period}</span>
+            </div>
+            <div style={{ marginTop: 6, fontSize: 14, color: 'var(--ov-hero-soft)' }}>{when.full}</div>
+          </>
+        ) : (
+          <div style={{ ...big, color: 'var(--ov-hero-soft)' }}>Pick a time</div>
+        )}
+      </div>
+      <BookButton onClick={onBook} busy={busy} capped={capped} />
+      {error && <BookError>{error}</BookError>}
+    </div>
+  )
+}
+
+// "3 of 7 bookings this week" with one segment per allowed booking; at the
+// cap everything turns amber. `pill` is the phone version.
+export function WeeklyUsage({ cap, resets, pill }) {
+  const warn = cap.atCap
+  if (pill) {
+    return (
+      <span className="ov-choice" style={{
+        height: 30, padding: '0 11px', borderRadius: 999, boxSizing: 'border-box', display: 'inline-flex', alignItems: 'center',
+        fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', color: warn ? 'var(--ov-warn)' : 'var(--ov-mid)',
+        ...(warn ? { borderColor: 'var(--ov-warn)' } : null),
+      }}>
+        {cap.used} of {cap.cap} this week
+      </span>
+    )
+  }
+  return (
+    <div className="ov-card" style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '20px 22px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+        <span style={{ ...OV_NUM, fontSize: 30, letterSpacing: '-0.03em', ...(warn ? { color: 'var(--ov-warn)' } : null) }}>
+          {cap.used}<span style={{ fontSize: 17, fontWeight: 500, color: 'var(--ov-mute)' }}> of {cap.cap}</span>
+        </span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ov-mid)' }}>bookings this week</span>
+      </div>
+      <div aria-hidden="true" style={{ display: 'flex', gap: 5 }}>
+        {Array.from({ length: cap.cap }, (_, i) => (
+          <span key={i} style={{
+            flex: 1, height: 8, borderRadius: 4,
+            background: warn ? 'var(--ov-warn)' : i < cap.used ? 'var(--ov-seg-on)' : 'var(--ov-stub)',
+          }} />
+        ))}
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--ov-mute)' }}>{cap.tierName} plan · resets {resets}</div>
+    </div>
+  )
+}
+
+// "today at 2:30 PM" / "tomorrow at 10:30 AM" / "Monday at 10:30 AM".
+function scriptWhen(iso, now) {
+  const { day, time, period } = bookingWhen(iso, now)
+  const d = day === 'Today' || day === 'Tomorrow' ? day.toLowerCase()
+    : new Date(iso).toLocaleDateString('en-US', { weekday: 'long' })
+  return `${d} at ${time} ${period}`
+}
+
+// The success screen after a booking, with the line to read to the client.
+export function BookedCard({ name, at, now, onAnother, onPipeline }) {
+  const { time, period, full } = bookingWhen(at, now)
+  return (
+    <div className="pt-6 sm:pt-[72px]" style={{ maxWidth: 620, margin: '0 auto' }}>
+      <section className="ov-hero px-5 pt-10 pb-8 sm:px-11 sm:pt-12 sm:pb-10"
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+        <span style={{
+          width: 76, height: 76, borderRadius: '50%', background: 'rgba(52,224,196,0.16)', border: '1px solid rgba(52,224,196,0.45)',
+          boxShadow: '0 0 0 10px rgba(52,224,196,0.07), 0 0 60px rgba(52,224,196,0.35)', color: '#34E0C4',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Check size={34} strokeWidth={2.4} />
+        </span>
+        <span className="ov-hero-chip" style={{ marginTop: 26 }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#34E0C4' }} />Booked with Fulfillment
+        </span>
+        <h1 className="text-[32px] sm:text-[40px]" style={{ margin: '18px 0 0', fontFamily: DISPLAY, fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.035em', color: '#fff' }}>
+          {name}
+        </h1>
+        <p style={{ margin: '10px 0 0', fontFamily: DISPLAY, fontSize: 20, fontWeight: 500, color: 'var(--ov-hero-soft)' }}>
+          {full} at {time} {period}
+        </p>
+        <div style={{
+          marginTop: 30, width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'flex-start', gap: 14, textAlign: 'left',
+          padding: '18px 20px', borderRadius: 16, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
+        }}>
+          <MessageSquareText size={19} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 2, color: 'var(--ov-hero-dot)' }} />
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-hero-soft)' }}>Say this before you hang up</div>
+            <p style={{ margin: '6px 0 0', fontSize: 16, lineHeight: 1.55, color: '#fff' }}>
+              &ldquo;You&rsquo;re all set for {scriptWhen(at, now)}. Our Underwriting Team will give you a call right at that time to get everything squared away.&rdquo;
+            </p>
+          </div>
+        </div>
+        <div style={{ marginTop: 28, display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button type="button" onClick={onAnother} className="ov-hero-btn" style={{ height: 50, padding: '0 26px', fontSize: 15 }}>
+            <CalendarPlus size={18} strokeWidth={2.1} /> Book another
+          </button>
+          <button type="button" onClick={onPipeline} style={{
+            height: 50, boxSizing: 'border-box', padding: '0 24px', borderRadius: 999, fontSize: 15, fontWeight: 600, color: '#fff',
+            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.18)',
+            display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+          }}>
+            See it in My Pipeline <ArrowRight size={15} strokeWidth={2} />
+          </button>
+        </div>
+      </section>
     </div>
   )
 }

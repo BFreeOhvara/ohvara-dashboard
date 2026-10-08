@@ -1,12 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react'
+import { TriangleAlert, Phone, Calendar, Info } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCarriers } from '../../hooks/useCarriers'
 import { useAgentBookings, useBookCall } from '../../hooks/useAgentBookings'
-import { card, cardTitle, primaryBtn, ghostBtn, fieldLabel, eyebrow, grid3, MONO, DISPLAY } from '../../lib/exportStyles'
-import { TextField, GapNote } from '../../components/ui/ExportForm'
-import { SlotPicker, ScriptHint } from '../../components/agent/AgentUI'
+import { StepHead, OvField, DayChoice, SlotGrid, BookingSummary, WeeklyUsage, BookedCard } from '../../components/agent/AgentUI'
 import { formatPhoneInput, titleCase } from '../../lib/policyFormat'
 import { SLOTS, slotToISO, localDateISO, isFarOut, fmtBooking } from '../../lib/scheduling'
 import { stageOf, digits, useNow } from '../../lib/agentBookings'
@@ -26,10 +24,12 @@ import { capState, nextTier, formatReset, formatWeekly } from '../../lib/billing
 // fulfillment_assigned=true, stage 'Pending', scheduled_call_at set — exactly
 // what the Fulfillment desk already reads.
 //
-// Prompt 669 — restyled to Restorix Portal's design system: numbered steps,
-// the Today/Tomorrow switch as a segmented control, a tinted footer bar for
-// the booking summary. (Prompt 680: the day's-calls side panel and the
-// read-to-the-client hint were removed.)
+// Prompt 715 — rebuilt on the v16 "ov" language (DESIGN.md v16): two step
+// cards on the left, a live booking summary + weekly meter in a sticky right
+// column at 1280px, and a bar fixed to the bottom on phones. Behaviour is
+// unchanged. (Prompt 680 removed the day's-calls side panel and the
+// read-to-the-client hint on the form; the script line lives only on the
+// success screen.)
 
 const BLANK = { first: '', last: '', phone: '', carrier: '' }
 
@@ -38,6 +38,14 @@ function defaultDate() {
   const today = localDateISO(0)
   return new Date(slotToISO(today, SLOTS[SLOTS.length - 1])).getTime() > Date.now() ? today : localDateISO(1)
 }
+
+const slotPast = (date, slot) => new Date(slotToISO(date, slot)).getTime() <= Date.now()
+
+// "Wednesday, Oct 7" / "Wed, Oct 7" for a YYYY-MM-DD date.
+const dayLabel = (date, weekday) =>
+  new Date(`${date}T00:00`).toLocaleDateString('en-US', { weekday, month: 'short', day: 'numeric' })
+
+const pillBtn = { height: 36, padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }
 
 export default function BookCall() {
   const { profile } = useAuth()
@@ -52,6 +60,7 @@ export default function BookCall() {
   const { data: usage } = useWeeklyUsage(profile?.id)
   const cap = capState(usage)
   const upgrade = cap ? nextTier(tiers, usage.tier) : null
+  const dateInput = useRef(null)
 
   const [form, setForm] = useState(BLANK)
   const [date, setDate] = useState(defaultDate)
@@ -71,7 +80,7 @@ export default function BookCall() {
   const pickDate = d => {
     setDate(d)
     // a slot that's already past on the new day can't stay selected
-    if (slot && new Date(slotToISO(d, slot)).getTime() <= Date.now()) setSlot('')
+    if (slot && slotPast(d, slot)) setSlot('')
     setConfirm(null)
   }
   const pickSlot = s => {
@@ -124,8 +133,8 @@ export default function BookCall() {
       currentCarrier: form.carrier.trim(),
       scheduledAt,
     }, {
-      onSuccess: () => {
-        setDone({ name: `${firstName} ${lastName}`, at: scheduledAt })
+      onSuccess: policy => {
+        setDone({ id: policy?.id, name: `${firstName} ${lastName}`, at: scheduledAt })
         setForm(BLANK); setSlot(''); setDate(defaultDate()); setConfirm(null); setErrors(new Set())
       },
       onError: err => setError(err.hint === 'weekly_cap'
@@ -136,176 +145,174 @@ export default function BookCall() {
 
   if (done) {
     return (
-      <div style={{ maxWidth: 640, margin: '0 auto' }}>
-        <div style={{ ...card, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '44px 28px', textAlign: 'center' }}>
-          <span style={{
-            width: 56, height: 56, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            background: 'var(--success-dim)', color: 'var(--success)',
-          }}>
-            <CheckCircle2 size={26} />
-          </span>
-          <p style={{ ...eyebrow, marginTop: 4, color: 'var(--success)' }}>Booked with Fulfillment</p>
-          <p style={{ margin: 0, fontFamily: DISPLAY, fontSize: 24, fontWeight: 500, letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>{done.name}</p>
-          <p style={{ margin: '0 0 6px', fontSize: 15, color: 'var(--text-secondary)', fontFamily: MONO }}>{fmtBooking(done.at)}</p>
-          <ScriptHint>
-            Before you hang up: "You're all set for {fmtBooking(done.at)}. Our Underwriting Team will give you a call
-            right at that time to get everything squared away."
-          </ScriptHint>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginTop: 6 }}>
-            <button onClick={() => setDone(null)} style={primaryBtn}>Book another</button>
-            <button onClick={() => navigate('/agent/clients')} style={{ ...ghostBtn, height: 40 }}>
-              See my clients <ArrowRight size={14} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <BookedCard
+        name={done.name} at={done.at} now={now}
+        onAnother={() => setDone(null)}
+        onPipeline={() => navigate(done.id ? `/agent/clients?open=${done.id}` : '/agent/clients')}
+      />
     )
   }
 
   const busy = book.isPending
   const capped = !!cap?.blocking
+  const showCap = cap && cap.cap != null
+
+  const today = localDateISO(0)
+  const tomorrow = localDateISO(1)
+  const isOther = date !== today && date !== tomorrow
+  const todayGone = new Date(slotToISO(today, SLOTS[SLOTS.length - 1])).getTime() <= now
+  const openPicker = () => {
+    const el = dateInput.current
+    if (!el) return
+    try { el.showPicker() } catch { el.focus(); el.click() }
+  }
+  const farOut = isFarOut(scheduledAt)
+
+  const name = [titleCase(form.first.trim()), titleCase(form.last.trim())].filter(Boolean).join(' ')
+  const summary = {
+    name, phone: form.phone.trim(), carrier: form.carrier.trim(), scheduledAt, now,
+    onBook: submit, busy, capped, error,
+  }
 
   return (
-    <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-      <div style={{ ...card, flex: '1 1 520px', minWidth: 0, maxWidth: 820, padding: '24px 28px' }}>
-        {cap && cap.cap != null && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: capped ? 0 : 4 }}>
-            <span style={{
-              fontFamily: MONO, fontSize: 12.5, padding: '3px 10px', borderRadius: 999,
-              color: cap.atCap ? 'var(--warning)' : 'var(--text-secondary)',
-              background: cap.atCap ? 'var(--warning-dim)' : 'var(--bg-elevated)',
-              border: `1px solid ${cap.atCap ? 'var(--warning-bd)' : 'var(--border)'}`,
-            }}>
-              {cap.used} of {cap.cap} submissions this week
-            </span>
-            <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
-              {cap.tierName} plan · resets {formatReset(usage.week_end)}
-            </span>
-          </div>
-        )}
-        {capped && (
-          <Notice tone="warning">
-            You've used all {cap.cap} submissions on the {cap.tierName} plan this week.{' '}
-            {upgrade
-              ? <>Upgrade to {upgrade.name} ({formatWeekly(upgrade.weekly_cents)}/week, {upgrade.weekly_cap ?? 'unlimited'} a week) to keep booking, or wait until {formatReset(usage.week_end)}.</>
-              : <>The cap resets {formatReset(usage.week_end)}.</>}
-            {upgrade && (
-              <button onClick={() => navigate('/agent/billing')}
-                style={{ ...ghostBtn, height: 30, marginLeft: 8, color: 'var(--warning)', borderColor: 'var(--warning-bd)' }}>
-                Upgrade
-              </button>
-            )}
-          </Notice>
-        )}
-        <Step n={1} title="Who's the client" />
-        <div style={grid3}>
-          <TextField label="First name" placeholder="First name" autoComplete="off"
-            value={form.first} onChange={e => set('first', e.target.value)} error={errors.has('first')} />
-          <TextField label="Last name" placeholder="Last name" autoComplete="off"
-            value={form.last} onChange={e => set('last', e.target.value)} error={errors.has('last')} />
-          <TextField label="Phone" mono placeholder="(602) 555-0184" inputMode="tel" autoComplete="off"
-            value={form.phone} onChange={e => set('phone', formatPhoneInput(e.target.value))} error={errors.has('phone')} />
+    <div className="pb-[110px] sm:pb-0">
+      {showCap && (
+        <div className="flex sm:hidden" style={{ justifyContent: 'flex-end', marginBottom: 14 }}>
+          <WeeklyUsage cap={cap} pill />
         </div>
-        <div style={{ maxWidth: 360, marginBottom: 4 }}>
-          <TextField
-            label="Carrier (if you know it)" placeholder="e.g. Mutual of Omaha" list="leaving-carriers"
-            value={form.carrier} onChange={e => set('carrier', e.target.value)}
-          />
-          <datalist id="leaving-carriers">
-            {carriers.map(c => <option key={c.id} value={c.name} />)}
-          </datalist>
+      )}
+
+      <div className="ov-book">
+        <div className="flex flex-col gap-[14px] sm:gap-5" style={{ minWidth: 0 }}>
+          {capped && (
+            <div className="ov-attn" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '18px 22px' }}>
+              <TriangleAlert size={18} strokeWidth={2} style={{ color: 'var(--ov-warn)', flexShrink: 0, marginTop: 2 }} />
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <p style={{ margin: 0, flex: '1 1 260px', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-mid)' }}>
+                  You've used all {cap.cap} submissions on the {cap.tierName} plan this week.{' '}
+                  {upgrade
+                    ? <>Upgrade to {upgrade.name} ({formatWeekly(upgrade.weekly_cents)}/week, {upgrade.weekly_cap ?? 'unlimited'} a week) to keep booking, or wait until {formatReset(usage.week_end)}.</>
+                    : <>The cap resets {formatReset(usage.week_end)}.</>}
+                </p>
+                {upgrade && (
+                  <button type="button" className="ov-ghost" onClick={() => navigate('/agent/billing')} style={pillBtn}>Upgrade</button>
+                )}
+              </div>
+            </div>
+          )}
+
+          <section className="ov-card flex flex-col gap-[18px] sm:gap-5 px-[18px] pt-5 pb-[22px] sm:px-7 sm:pt-[26px] sm:pb-7">
+            <StepHead n={1} title="Who's the client" sub="Name and the number Fulfillment should call" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-[18px] sm:gap-4">
+              <OvField label="First name" placeholder="First name" autoComplete="off"
+                value={form.first} onChange={e => set('first', e.target.value)} error={errors.has('first')} />
+              <OvField label="Last name" placeholder="Last name" autoComplete="off"
+                value={form.last} onChange={e => set('last', e.target.value)} error={errors.has('last')} />
+              <OvField label="Phone" icon={Phone} placeholder="(602) 555-0184" inputMode="tel" autoComplete="off"
+                className="col-span-2 sm:col-span-1"
+                value={form.phone} onChange={e => set('phone', formatPhoneInput(e.target.value))} error={errors.has('phone')} />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 sm:gap-4">
+              <OvField label="Carrier they're leaving" optional placeholder="e.g. Mutual of Omaha" list="leaving-carriers"
+                value={form.carrier} onChange={e => set('carrier', e.target.value)} />
+              <datalist id="leaving-carriers">
+                {carriers.map(c => <option key={c.id} value={c.name} />)}
+              </datalist>
+            </div>
+
+            {duplicate && (
+              <Notice warn={confirm === 'duplicate'}>
+                You already have {duplicate.client_first_name} {duplicate.client_last_name} booked with this number
+                ({fmtBooking(duplicate.scheduled_call_at)}).
+                {confirm === 'duplicate' && (
+                  <span style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                    <button type="button" className="ov-ghost" style={pillBtn}
+                      onClick={() => { setConfirm('duplicateOk'); if (!isFarOut(scheduledAt)) doBook(); else setConfirm('farOut') }}>
+                      Book anyway
+                    </button>
+                    <button type="button" className="ov-ghost" style={pillBtn} onClick={() => navigate('/agent/clients')}>View it</button>
+                  </span>
+                )}
+              </Notice>
+            )}
+          </section>
+
+          <section className="ov-card flex flex-col gap-4 sm:gap-[18px] px-[18px] pt-5 pb-[22px] sm:px-7 sm:pt-[26px] sm:pb-7">
+            <StepHead n={2} title="When should Fulfillment call" sub="Pick a day, then a time" />
+            <div className="flex gap-[10px] sm:gap-3">
+              <DayChoice
+                label="Today" on={date === today} disabled={todayGone} onClick={() => pickDate(today)}
+                long={todayGone ? 'No times left' : dayLabel(today, 'long')}
+                short={todayGone ? null : dayLabel(today, 'short')}
+              />
+              <DayChoice
+                label="Tomorrow" on={date === tomorrow} onClick={() => pickDate(tomorrow)}
+                long={dayLabel(tomorrow, 'long')} short={dayLabel(tomorrow, 'short')}
+              />
+              <DayChoice
+                className="hidden sm:flex" label="Another day" on={isOther} icon={Calendar} onClick={openPicker}
+                long={isOther ? dayLabel(date, 'short') : 'Pick a date'}
+              />
+            </div>
+            <button
+              type="button" onClick={openPicker} aria-pressed={isOther}
+              className={`ov-choice flex sm:hidden${isOther ? ' is-on' : ''}`}
+              style={{
+                height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 9,
+                fontSize: 14.5, fontWeight: 600, color: isOther ? 'var(--ov-hi)' : 'var(--ov-mid)',
+              }}
+            >
+              <Calendar size={17} strokeWidth={1.9} style={{ color: isOther ? 'var(--ov-pick)' : undefined }} />
+              {isOther ? dayLabel(date, 'short') : 'Another day'}
+            </button>
+            <input
+              ref={dateInput} type="date" value={date} min={today} tabIndex={-1} aria-label="Pick another day"
+              onChange={e => e.target.value && pickDate(e.target.value)}
+              style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', border: 0, padding: 0 }}
+            />
+
+            <SlotGrid date={date} slot={slot} onSlot={pickSlot} takenCounts={takenCounts} error={errors.has('slot')} now={now} />
+
+            <div className="ov-note" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 14 }}>
+              <Info size={17} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 1, color: farOut ? 'var(--ov-warn)' : 'var(--ov-mute)' }} />
+              <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: 'var(--ov-mute)' }}>
+                <span style={{ fontWeight: 600, color: farOut ? 'var(--ov-warn)' : 'var(--ov-mid)' }}>Today or tomorrow is the norm.</span>{' '}
+                Further out needs Fulfillment's OK. These times don't check Fulfillment's calendar yet; "booked" only counts your own calls.
+              </p>
+            </div>
+
+            {confirm === 'farOut' && (
+              <Notice warn>
+                That's more than a day out — confirm Fulfillment is actually booked through then?
+                <span style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                  <button type="button" className="ov-ghost" style={pillBtn} onClick={() => { setConfirm('farOutOk'); doBook() }}>
+                    Yes, book it
+                  </button>
+                  <button type="button" className="ov-ghost" style={pillBtn} onClick={() => setConfirm(null)}>Change time</button>
+                </span>
+              </Notice>
+            )}
+          </section>
         </div>
 
-        {duplicate && (
-          <Notice tone={confirm === 'duplicate' ? 'warning' : 'muted'}>
-            You already have {duplicate.client_first_name} {duplicate.client_last_name} booked with this number
-            ({fmtBooking(duplicate.scheduled_call_at)}).
-            {confirm === 'duplicate' && (
-              <span style={{ display: 'inline-flex', gap: 8, marginLeft: 8, flexWrap: 'wrap' }}>
-                <button onClick={() => { setConfirm('duplicateOk'); if (!isFarOut(scheduledAt)) doBook(); else setConfirm('farOut') }}
-                  style={{ ...ghostBtn, height: 30, color: 'var(--warning)', borderColor: 'var(--warning-bd)' }}>
-                  Book anyway
-                </button>
-                <button onClick={() => navigate('/agent/clients')} style={{ ...ghostBtn, height: 30 }}>View it</button>
-              </span>
-            )}
-          </Notice>
-        )}
-
-        <Step n={2} title="When should Fulfillment call" />
-        <SlotPicker date={date} slot={slot} onDate={pickDate} onSlot={pickSlot}
-          takenCounts={takenCounts} error={errors.has('slot')} now={now} />
-        <p style={{
-          margin: '12px 0 0', fontSize: 12.5, lineHeight: 1.5,
-          color: isFarOut(scheduledAt) ? 'var(--warning)' : 'var(--text-muted)',
-        }}>
-          Today or tomorrow is the norm — further out needs Fulfillment's OK.
-        </p>
-        <GapNote>
-          Slots don't know Fulfillment's real availability yet — there's no shared calendar behind this. "Booked"
-          only counts your own calls.
-        </GapNote>
-
-        {confirm === 'farOut' && (
-          <Notice tone="warning">
-            That's more than a day out — confirm Fulfillment is actually booked through then?
-            <span style={{ display: 'inline-flex', gap: 8, marginLeft: 8, flexWrap: 'wrap' }}>
-              <button onClick={() => { setConfirm('farOutOk'); doBook() }}
-                style={{ ...ghostBtn, height: 30, color: 'var(--warning)', borderColor: 'var(--warning-bd)' }}>
-                Yes, book it
-              </button>
-              <button onClick={() => setConfirm(null)} style={{ ...ghostBtn, height: 30 }}>Change time</button>
-            </span>
-          </Notice>
-        )}
-
-        {error && <p style={{ margin: '14px 0 0', fontSize: 13, color: 'var(--danger)' }}>{error}</p>}
-
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', margin: '24px -28px -24px', padding: '16px 28px',
-          borderTop: 'var(--border-w) solid var(--border)', background: 'var(--bg-elevated)',
-          borderRadius: '0 0 16px 16px',
-        }}>
-          <div style={{ flex: 1, minWidth: 180 }}>
-            <p style={{ ...fieldLabel, margin: 0 }}>Booking</p>
-            <p style={{ margin: '4px 0 0', fontSize: 14, color: scheduledAt ? 'var(--text-primary)' : 'var(--text-muted)', fontFamily: MONO }}>
-              {[titleCase(form.first), titleCase(form.last)].filter(Boolean).join(' ') || 'Client'} · {scheduledAt ? fmtBooking(scheduledAt) : 'pick a time'}
-            </p>
-          </div>
-          <button onClick={submit} disabled={busy || capped} style={{ ...primaryBtn, height: 44, padding: '0 26px', opacity: busy || capped ? 0.6 : 1 }}>
-            {busy ? 'Booking…' : capped ? 'Weekly cap reached' : 'Book the call'}
-          </button>
+        <div className="ov-book-side hidden sm:flex" style={{ flexDirection: 'column', gap: 20, minWidth: 0 }}>
+          <BookingSummary {...summary} />
+          {showCap && <WeeklyUsage cap={cap} resets={formatReset(usage.week_end)} />}
         </div>
       </div>
 
+      <BookingSummary {...summary} bar />
     </div>
   )
 }
 
-function Step({ n, title }) {
+// Duplicate-client and far-out notices: a quiet note, or amber when it needs
+// the agent to decide.
+function Notice({ warn, children }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '26px 0 14px' }}>
-      <span style={{
-        width: 24, height: 24, borderRadius: '50%', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        background: 'var(--accent-dim)', color: 'var(--accent-deep)', fontFamily: MONO, fontSize: 12, fontWeight: 500,
-      }}>{n}</span>
-      <p style={{ ...cardTitle, margin: 0, fontSize: 15 }}>{title}</p>
-    </div>
-  )
-}
-
-function Notice({ tone, children }) {
-  const warn = tone === 'warning'
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 16,
-      padding: '12px 16px', borderRadius: 12, fontSize: 13.5, lineHeight: 1.5,
-      color: warn ? 'var(--text-primary)' : 'var(--text-secondary)',
-      background: warn ? 'var(--warning-dim)' : 'var(--bg-elevated)',
-      border: `1px solid ${warn ? 'var(--warning-bd)' : 'var(--border)'}`,
-    }}>
-      <AlertTriangle size={16} style={{ color: 'var(--warning)', flexShrink: 0 }} />
-      <span style={{ flex: 1, minWidth: 200 }}>{children}</span>
+    <div className={`ov-note${warn ? ' is-warn' : ''}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 14 }}>
+      <TriangleAlert size={17} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 1, color: 'var(--ov-warn)' }} />
+      <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, lineHeight: 1.55, color: warn ? 'var(--ov-hi)' : 'var(--ov-mid)' }}>{children}</div>
     </div>
   )
 }

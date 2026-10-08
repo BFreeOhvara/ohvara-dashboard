@@ -721,7 +721,7 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
   .ov-hero { border-radius: 22px; }
 }
 
-/* Backdrop on /agent only (DashboardLayout adds the class): a dot grid
+/* Backdrop on /agent and /agent/book (DashboardLayout adds the class): a dot grid
    under two glows, in place of the two-glow default. */
 .app-backdrop.app-backdrop--v2 {
   background-color: #07080D;
@@ -737,4 +737,83 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
     radial-gradient(ellipse 70% 50% at 85% -10%, rgba(0,191,166,0.22) 0%, transparent 70%),
     radial-gradient(ellipse 50% 40% at 0% 0%, rgba(10,31,68,0.07) 0%, transparent 70%),
     radial-gradient(rgba(2,79,70,0.13) 1px, transparent 1px);
+}
+
+/* ── Prompt 715 — Book a call on the "ov" language ──────────────
+   Inputs, day/slot choices, step badges, the info note and the weekly
+   meter for /agent/book. See DESIGN.md v16 "P715 — Book a call". */
+:root {
+  --ov-placeholder: #5E7195;
+  --ov-pick: #7FA6F2;
+  --ov-seg-on: linear-gradient(180deg, #7FA6F2, #4B79CE);
+}
+[data-theme="light"] {
+  --ov-placeholder: #8DAFA9;
+  --ov-pick: #00806F;
+  --ov-seg-on: linear-gradient(180deg, #19D3B8, #00A892);
+}
+
+.ov-input {
+  display: flex; align-items: center; gap: 10px; height: 48px; box-sizing: border-box; padding: 0 14px;
+  border-radius: 12px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.10);
+  color: var(--ov-mute); transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.ov-input input {
+  flex: 1; min-width: 0; height: 100%; padding: 0; border: none; outline: none; background: transparent;
+  font-family: inherit; font-size: 15px; color: var(--ov-hi);
+}
+.ov-input input::placeholder { color: var(--ov-placeholder); opacity: 1; }
+.ov-input:focus-within { border-color: #7FA6F2; box-shadow: 0 0 0 4px rgba(75,121,206,0.22); }
+[data-theme="light"] .ov-input { background: #F6FAF9; border: 1px solid rgba(2,79,70,0.18); }
+[data-theme="light"] .ov-input:focus-within { background: #FFFFFF; border-color: #00917D; box-shadow: 0 0 0 4px rgba(0,191,166,0.20); }
+.ov-input.is-error, [data-theme="light"] .ov-input.is-error { border-color: var(--danger); }
+
+.ov-choice {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+  font: inherit; color: var(--ov-hi); transition: border-color 120ms ease, background 120ms ease;
+}
+.ov-choice:not(:disabled):not(.is-on):not(.ov-slot-on):hover { border-color: rgba(255,255,255,0.18); }
+.ov-choice.is-on { background: rgba(75,121,206,0.16); border: 1px solid #7FA6F2; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08); }
+[data-theme="light"] .ov-choice { background: #F6FAF9; border: 1px solid rgba(2,79,70,0.14); }
+[data-theme="light"] .ov-choice:not(:disabled):not(.is-on):not(.ov-slot-on):hover { border-color: rgba(2,79,70,0.28); }
+[data-theme="light"] .ov-choice.is-on { background: #E3F5F1; border: 1px solid #00917D; box-shadow: none; }
+.ov-choice:disabled { opacity: 0.35; cursor: not-allowed; }
+.ov-choice:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.ov-slot-on, .ov-choice.ov-slot-on {
+  background: linear-gradient(180deg, #6C97E8 0%, #4B79CE 100%); border: 1px solid #8FB2F5; color: #FFFFFF;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 12px 24px -10px rgba(75,121,206,0.9);
+}
+[data-theme="light"] .ov-slot-on, [data-theme="light"] .ov-choice.ov-slot-on {
+  background: linear-gradient(180deg, #00A892 0%, #027A6B 100%); border: 1px solid #00917D; color: #FFFFFF;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 12px 24px -10px rgba(2,107,94,0.8);
+}
+
+.ov-step { background: rgba(75,121,206,0.18); color: #A9C0EE; }
+[data-theme="light"] .ov-step { background: #DDF2EE; color: #026B5E; }
+.ov-note { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); }
+[data-theme="light"] .ov-note { background: #F6FAF9; border: 1px solid rgba(2,79,70,0.10); }
+.ov-note.is-warn { background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.28); }
+[data-theme="light"] .ov-note.is-warn { background: #FBE7D2; border-color: rgba(154,74,11,0.30); }
+
+/* Day cards: the long date ("Wednesday, Oct 7") only when the card has room. */
+.ov-day { container-type: inline-size; }
+.ov-day-short { display: none; }
+@container (max-width: 176px) {
+  .ov-day-long { display: none; }
+  .ov-day-short { display: inline; }
+}
+
+/* Page grid: steps left, summary + meter in a sticky 380px column at 1280px. */
+.ov-book { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1280px) {
+  .ov-book { grid-template-columns: minmax(0, 1fr) 380px; }
+  .ov-book-side { position: sticky; top: 96px; }
+}
+@media (max-width: 639.98px) {
+  .ov-book { gap: 14px; }
+  .ov-input { height: 50px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ov-input, .ov-choice { transition: none; }
 }
