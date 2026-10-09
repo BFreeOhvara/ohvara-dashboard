@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowLeft, Crown, CreditCard, CalendarX, Receipt, Loader2, TriangleAlert, Info, ExternalLink, X, CircleCheck, RotateCcw } from 'lucide-react'
+import { ArrowLeft, Crown, CreditCard, CalendarX, Receipt, Loader2, TriangleAlert, Info, Mail, X, CircleCheck, RotateCcw } from 'lucide-react'
+import { useAuth } from '../../hooks/useAuth'
 import { DISPLAY } from '../../lib/exportStyles'
 import { formatWeekly, formatBillingDate, invokeBilling } from '../../lib/billing'
 import { SettingsCard, SettingsChip } from './AgentUI'
@@ -10,7 +11,9 @@ import { SettingsCard, SettingsChip } from './AgentUI'
 // booking / Change a booking: a back arrow returns to the plan page. Plan
 // (switch up now / down at the end of the paid week), payment method (Update
 // card in Stripe's own field), cancel / renew and the last 12 invoices, all
-// without leaving the portal. Every number comes from agent-billing's
+// without leaving the portal. Payment method shows whatever is really on file
+// (card, wallet, Link, bank); paid invoices are emailed by Stripe, so the list
+// has no receipt link and nothing here opens a Stripe page (P736). Every number comes from agent-billing's
 // `overview`, which reads Stripe for the signed-in agent only.
 // ?subscribe=<tier> is the third view: Stripe Embedded Checkout in the page.
 
@@ -22,6 +25,9 @@ const LIVE = ['active', 'trialing', 'past_due']
 const H1 = { margin: 0, fontFamily: DISPLAY, fontSize: 30, fontWeight: 600, letterSpacing: '-0.025em', lineHeight: 1.1, color: 'var(--ov-hi)' }
 const BRANDS = { visa: 'Visa', mastercard: 'Mastercard', amex: 'American Express', discover: 'Discover', diners: 'Diners Club', jcb: 'JCB', unionpay: 'UnionPay' }
 const brandName = b => BRANDS[b] || (b ? b[0].toUpperCase() + b.slice(1) : 'Card')
+// One line for the method on file; `label` comes from agent-billing (P736), the
+// brand + last 4 fallback covers a page that is ahead of the function.
+const methodLabel = c => c?.label || (c?.last4 ? `${brandName(c.brand)} ending ${c.last4}` : 'Your new card')
 const capText = cap => (cap == null ? 'no weekly limit' : `${cap} bookings a week`)
 const money = cents => formatWeekly(cents)
 
@@ -158,6 +164,7 @@ export function ManageBilling({ tiers, onBack, onNoPlan, refreshProfile }) {
   const [busy, setBusy] = useState(null)
   const [dialogError, setDialogError] = useState('')
   const updateBtn = useRef(null)
+  const { profile } = useAuth()
 
   const load = useCallback(() => invokeBilling('overview')
     .then(d => {
@@ -285,10 +292,12 @@ export function ManageBilling({ tiers, onBack, onNoPlan, refreshProfile }) {
           <div style={{ flex: '1 1 220px', minWidth: 0 }}>
             {data.card ? (
               <>
-                <div style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--ov-hi)' }}>{brandName(data.card.brand)} ending {data.card.last4}</div>
-                <div style={{ marginTop: 2, fontSize: 13.5, color: 'var(--ov-mute)' }}>
-                  Expires {String(data.card.exp_month).padStart(2, '0')}/{String(data.card.exp_year).slice(-2)}
-                </div>
+                <div style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--ov-hi)' }}>{methodLabel(data.card)}</div>
+                {data.card.exp_month && data.card.exp_year && (
+                  <div style={{ marginTop: 2, fontSize: 13.5, color: 'var(--ov-mute)' }}>
+                    Expires {String(data.card.exp_month).padStart(2, '0')}/{String(data.card.exp_year).slice(-2)}
+                  </div>
+                )}
               </>
             ) : (
               <div style={{ fontSize: 14.5, color: 'var(--ov-mute)' }}>No card on file.</div>
@@ -297,7 +306,7 @@ export function ManageBilling({ tiers, onBack, onNoPlan, refreshProfile }) {
           {!cardOpen && (
             <button ref={updateBtn} type="button" className={`${pastDue ? 'ov-solid' : 'ov-ghost'} ov-mb-btn`} disabled={!pk}
               onClick={() => { setCardOpen(true); setNotice(null) }}>
-              <CreditCard size={16} strokeWidth={2.1} aria-hidden="true" /> Update card
+              <CreditCard size={16} strokeWidth={2.1} aria-hidden="true" /> {data.card ? 'Update card' : 'Add card'}
             </button>
           )}
         </div>
@@ -309,7 +318,7 @@ export function ManageBilling({ tiers, onBack, onNoPlan, refreshProfile }) {
                 onCancel={() => setCardOpen(false)}
                 onSaved={d => {
                   setCardOpen(false)
-                  const name = d.card ? `${brandName(d.card.brand)} ending ${d.card.last4}` : 'Your new card'
+                  const name = d.card ? methodLabel(d.card) : 'Your new card'
                   if (d.retry && !d.retry.ok) changed({ tone: 'warn', text: `${name} is saved, but the payment didn't go through: ${d.retry.message}` })
                   else changed({ tone: 'ok', text: d.retry?.ok ? `${name} is now your card, and your payment went through.` : `${name} is now your card.` })
                 }}
@@ -342,7 +351,7 @@ export function ManageBilling({ tiers, onBack, onNoPlan, refreshProfile }) {
 
       {/* 4. Invoices */}
       <SettingsCard icon={Receipt} title="Invoices" label="Invoices" sub={data.invoices.length ? 'Your last 12 charges, newest first.' : null} gap={14}>
-        {data.invoices.length ? <Invoices rows={data.invoices} /> : <p style={{ margin: 0, fontSize: 14, color: 'var(--ov-mute)' }}>No invoices yet.</p>}
+        {data.invoices.length ? <Invoices rows={data.invoices} email={profile?.email} /> : <p style={{ margin: 0, fontSize: 14, color: 'var(--ov-mute)' }}>No invoices yet.</p>}
       </SettingsCard>
 
       {dialog === 'cancel' && (
@@ -369,11 +378,12 @@ export function ManageBilling({ tiers, onBack, onNoPlan, refreshProfile }) {
 
 const STATUS_CHIP = { paid: ['on', 'Paid'], open: ['off', 'Open'], failed: ['warn', 'Failed'], void: ['off', 'Void'] }
 
-function Invoices({ rows }) {
-  const receipt = r => (r.receipt_url || r.pdf_url) && (
-    <a className="ov-mb-link" href={r.receipt_url || r.pdf_url} target="_blank" rel="noopener noreferrer">
-      Receipt <ExternalLink size={13} strokeWidth={2} aria-hidden="true" />
-    </a>
+function Invoices({ rows, email }) {
+  // Stripe emails the receipt when a payment goes through; no link to a Stripe page.
+  const receipt = r => r.status === 'paid' && (
+    <span className="ov-mb-emailed" title={email ? `Sent to ${email}` : undefined}>
+      <Mail size={14} strokeWidth={2} aria-hidden="true" /> Receipt emailed
+    </span>
   )
   return (
     <>

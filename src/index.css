@@ -1464,9 +1464,7 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 .ov-mb-secure { margin-right: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ov-mute); }
 .ov-mb-checkout { padding: 20px; min-height: 520px; }
 .ov-mb-embed { border-radius: 14px; overflow: hidden; }
-.ov-mb-link { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; font-size: 13.5px; font-weight: 600; color: var(--ov-pick); text-decoration: none; }
-.ov-mb-link:hover { text-decoration: underline; }
-.ov-mb-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.ov-mb-emailed { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ov-mute); white-space: nowrap; }
 .ov-mb-table { width: 100%; border-collapse: collapse; font-size: 14px; color: var(--ov-soft); }
 .ov-mb-table th { padding: 0 12px 10px; text-align: left; font-size: 12.5px; font-weight: 600; color: var(--ov-mute); border-bottom: 1px solid var(--ov-line); }
 .ov-mb-table td { padding: 12px; border-bottom: 1px solid var(--ov-line); vertical-align: middle; }

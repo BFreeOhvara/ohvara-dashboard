@@ -481,27 +481,114 @@ async function handleWebhook(req: Request, admin: SupabaseClient) {
 
 const iso = (sec: number | null | undefined) => (sec ? new Date(sec * 1000).toISOString() : null)
 
-function cardOf(pm: any) {
-  const c = pm?.card
-  return c ? { brand: c.brand, last4: c.last4, exp_month: c.exp_month, exp_year: c.exp_year } : null
+const CARD_BRANDS: Record<string, string> = {
+  visa: 'Visa', mastercard: 'Mastercard', amex: 'American Express', discover: 'Discover',
+  diners: 'Diners Club', jcb: 'JCB', unionpay: 'UnionPay', cartes_bancaires: 'Cartes Bancaires', eftpos_au: 'EFTPOS',
+}
+const WALLETS: Record<string, string> = {
+  apple_pay: 'Apple Pay', google_pay: 'Google Pay', samsung_pay: 'Samsung Pay', link: 'Link',
+  amex_express_checkout: 'Amex Express Checkout', masterpass: 'Masterpass', visa_checkout: 'Visa Checkout',
+}
+const cap = (t: string) => (t ? t[0].toUpperCase() + t.slice(1) : t)
+
+// Whatever the agent pays with, as one line for the Payment method card. `card`
+// keeps the P734 fields (brand, last4, exp_*) so an older page still works;
+// `label` is the line to show and `kind` is card | link | bank | other.
+function methodOf(pm: any) {
+  if (!pm) return null
+  const none = { brand: null, last4: null, exp_month: null, exp_year: null }
+  if (pm.card) {
+    const c = pm.card
+    const brand = CARD_BRANDS[c.brand] || (c.brand && c.brand !== 'unknown' ? cap(c.brand.replace(/_/g, ' ')) : 'Card')
+    const wallet = c.wallet?.type ? (WALLETS[c.wallet.type] || cap(String(c.wallet.type).replace(/_/g, ' '))) : null
+    const ending = c.last4 ? `${brand} ending ${c.last4}` : brand
+    return {
+      brand: c.brand, last4: c.last4, exp_month: c.exp_month, exp_year: c.exp_year,
+      kind: 'card', wallet: c.wallet?.type || null, label: wallet ? `${ending} · ${wallet}` : ending,
+    }
+  }
+  if (pm.type === 'link') {
+    const email = pm.link?.email
+    return { ...none, kind: 'link', label: email ? `Link · ${email}` : 'Link' }
+  }
+  if (pm.type === 'us_bank_account' || pm.us_bank_account) {
+    const last4 = pm.us_bank_account?.last4
+    return { ...none, last4: last4 || null, kind: 'bank', label: last4 ? `Bank account ending ${last4}` : 'Bank account' }
+  }
+  return { ...none, kind: 'other', label: cap(String(pm.type || 'payment method').replace(/_/g, ' ')) }
 }
 
-// The card the next charge goes to: the subscription's own default (Checkout
-// sets that one), else the customer's invoice default.
-async function defaultCard(customerId: string, sub: any) {
-  let pmId = idOf(sub?.default_payment_method)
-  if (!pmId) {
-    const customer = await stripe(`customers/${customerId}`)
-    if (customer.deleted) return null
-    pmId = idOf(customer.invoice_settings?.default_payment_method) || idOf(customer.default_source)
-  }
-  if (!pmId) return null
+// A payment method only counts if it's attached to the caller's own customer.
+async function ownMethod(id: string, customerId: string) {
   try {
-    return cardOf(await stripe(`payment_methods/${pmId}`))
+    const pm = await stripe(`payment_methods/${id}`)
+    return idOf(pm.customer) === customerId ? pm : null
   } catch (e) {
     if (isMissing(e)) return null
     throw e
   }
+}
+
+// What the next charge goes to, found in order, stopping at the first hit:
+//   sub      the subscription's own default
+//   customer the customer's invoice default / default source
+//   invoice  what the latest paid invoice was charged with
+//   attached the customer's first attached payment method
+// Embedded Checkout doesn't always leave a default in the first two places,
+// and a Link / wallet payment has no `card`, so the last two catch those. A
+// card found there (not in the first two) is saved as the customer's default so
+// the next lookup and the next charge agree. Logs which step hit, never card data.
+async function defaultMethod(customerId: string, sub: any) {
+  const found = (via: string, pm: any) => {
+    console.log(`agent-billing overview card via=${via} type=${pm?.type ?? 'none'}`)
+    return pm
+  }
+  const subPm = idOf(sub?.default_payment_method)
+  if (subPm) {
+    const pm = await ownMethod(subPm, customerId)
+    if (pm) return methodOf(found('sub', pm))
+  }
+
+  const customer = await stripe(`customers/${customerId}`)
+  if (customer.deleted) return null
+  const custPm = idOf(customer.invoice_settings?.default_payment_method) || idOf(customer.default_source)
+  if (custPm) {
+    const pm = await ownMethod(custPm, customerId)
+    if (pm) return methodOf(found('customer', pm))
+  }
+
+  let pm: any = null
+  let via = 'none'
+  const paid = await stripe('invoices', {
+    method: 'GET',
+    params: { customer: customerId, status: 'paid', limit: 3, expand: ['data.payment_intent.payment_method'] },
+  })
+  for (const inv of paid.data || []) {
+    const raw = inv.payment_intent?.payment_method
+    if (!raw) continue
+    const cand = typeof raw === 'string' ? await ownMethod(raw, customerId) : (idOf(raw.customer) === customerId ? raw : null)
+    if (cand) { pm = cand; via = 'invoice'; break }
+  }
+  if (!pm) {
+    try {
+      const list = await stripe(`customers/${customerId}/payment_methods`, { method: 'GET', params: { limit: 3 } })
+      const cand = (list.data || []).find((m: any) => idOf(m.customer) === customerId)
+      if (cand) { pm = cand; via = 'attached' }
+    } catch (e) {
+      if (!(e instanceof StripeError)) throw e
+      console.error('agent-billing overview attached lookup failed:', e.code || e.type)
+    }
+  }
+  found(via, pm)
+  if (!pm) return null
+
+  try {
+    await stripe(`customers/${customerId}`, { params: { invoice_settings: { default_payment_method: pm.id } } })
+  } catch (e) {
+    if (!(e instanceof StripeError)) throw e
+    console.error('agent-billing overview default heal failed:', e.code || e.type)
+  }
+  return methodOf(pm)
 }
 
 // Paid / Open / Failed for the invoice list. "Failed" = a charge was tried
@@ -555,7 +642,7 @@ async function overview(admin: SupabaseClient, me: any) {
   if (sub) billing_status = (await syncSubscription(admin, sub, me)).billing_status ?? billing_status
 
   const [card, invoices, scheduled] = await Promise.all([
-    defaultCard(me.stripe_customer_id, sub),
+    defaultMethod(me.stripe_customer_id, sub),
     stripe('invoices', { method: 'GET', params: { customer: me.stripe_customer_id, limit: 12 } }),
     sub && LIVE.includes(sub.status) ? scheduledChange(sub, tiers) : null,
   ])
@@ -632,7 +719,7 @@ async function setDefaultCard(admin: SupabaseClient, me: any, body: any) {
     }
   }
   const billing_status = sub ? (await syncSubscription(admin, sub, me)).billing_status ?? me.billing_status : me.billing_status
-  return { card: cardOf(pm), retry, billing_status }
+  return { card: methodOf(pm), retry, billing_status }
 }
 
 // Shared checks for a plan switch: a live, not-cancelling subscription and a
