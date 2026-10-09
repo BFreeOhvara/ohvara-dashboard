@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { CalendarCheck, PhoneCall, PhoneMissed, CircleCheck, CalendarArrowUp, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CalendarDays, Inbox, Sun, Clock, Moon, TriangleAlert } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { usePolicyEvents } from '../../hooks/useAgentActivity'
-import { card, MONO } from '../../lib/exportStyles'
-import { SectionHead, EmptyNote, Pill } from '../../components/agent/AgentUI'
+import { usePolicyEvents, usePolicyStory } from '../../hooks/useAgentActivity'
+import { useAgentBookings } from '../../hooks/useAgentBookings'
+import { DayHero, ActivityBox, ActivityFeed, FeedNote, ClientStory } from '../../components/agent/AgentUI'
+import { EVENT_KIND, EVENT_KINDS, EVENT_ICON, kindTone, eventIconKey } from '../../lib/activityKinds'
 import { fullName } from '../../lib/policyFormat'
-import { fmtBooking } from '../../lib/scheduling'
-import { STAGE, SUBSTATUS_LABEL, useNow } from '../../lib/agentBookings'
+import { callWhen, callAt } from '../../lib/scheduling'
+import { SUBSTATUS_LABEL, tabOf, useNow } from '../../lib/agentBookings'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 
 // Activity (Prompt 690) — what actually happened, newest first. My Pipeline
@@ -15,48 +17,69 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // status change (Booked → In progress → Cancelled / No answer,
 // Prompts 689/695) and every time a booked call was moved. Messages are not shown
 // here (Prompt 694) — the Messages page is the one place for those.
+// Events come from policy_events (migration 118, written by a trigger on
+// policies, so nothing in the app has to remember to log).
 //
-// One day at a time (Prompt 694): a date control beside the page title steps ← / → a
-// calendar day, and its label opens a month picker (Prompt 698); the list
-// scrolls inside a box that ends on a whole row. Events come from
-// policy_events (migration 118, written by a trigger on policies, so nothing
-// in the app has to remember to log).
+// Prompt 718 — rethought on the v16 language. One day at a time: a coloured
+// day hero whose edge arrows (and ← / →, and a swipe on phones) slide between
+// days, the day's activity as a bar with filter tabs, then the feed as a
+// timeline beside the selected client's story. Clicking an event only selects
+// it; the story's "Open in My Pipeline" is the page's one way to My Pipeline.
+// The page scrolls normally (the P698 fit-the-box sizing is gone).
 //
 // Admin lands here too and sees every agent's activity (test account held out,
 // same as My Pipeline), with the agent named on each row.
 
-
-// policy_events.kind → how the row reads. Status kinds reuse STAGE's colours.
-const KIND = {
-  booked:       { icon: CalendarCheck,   stage: 'booked' },
-  in_progress:  { icon: PhoneCall,       stage: 'inProgress' },
-  no_answer:    { icon: PhoneMissed,     stage: 'noAnswer' },
-  cancelled:    { icon: CircleCheck,     stage: 'cancelled' },
-  moved:        { icon: CalendarArrowUp, color: 'var(--text-secondary)' },
-}
-
 const firstName = s => String(s || '').trim().split(/\s+/)[0] || ''
+const isTyping = el => el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 
-// "Sam (Fulfillment)" when we know who did it, else just the team.
+// "Sam from Fulfillment" when we know who did it, else just the team.
 function who(e) {
-  if (e.actor_role === 'fulfillment' && e.actor_name) return `${firstName(e.actor_name)} (Fulfillment)`
+  if (e.actor_role === 'fulfillment' && e.actor_name) return `${firstName(e.actor_name)} from Fulfillment`
   if (e.actor_role === 'admin') return 'Admin'
   return 'Fulfillment'
 }
 
+const reasonOf = d => (d.reason ? ` · ${(SUBSTATUS_LABEL[d.reason] || d.reason).toLowerCase()}` : '')
+
+// The feed's sentence for one event.
 function describe(e) {
   const d = e.detail || {}
-  const attempt = d.attempt > 1 ? ` (attempt ${d.attempt})` : ''
+  const attempt = d.attempt > 1 ? ` (try ${d.attempt})` : ''
   switch (e.kind) {
     case 'booked':
-      return e.from_status
-        ? 'Back to Booked'
-        : `Booked a call with Fulfillment${d.scheduled_call_at ? ` for ${fmtBooking(d.scheduled_call_at)}` : ''}`
+      if (e.from_status) return d.scheduled_call_at ? `Back to Booked, call set for ${callAt(d.scheduled_call_at)}` : 'Back to Booked'
+      return `Booked a call with Fulfillment${d.scheduled_call_at ? ` for ${callAt(d.scheduled_call_at)}` : ''}`
     case 'in_progress':  return `${who(e)} started a call${attempt}`
-    case 'no_answer':    return `Call ended: no answer${attempt}${d.reason ? ` · ${SUBSTATUS_LABEL[d.reason] || d.reason}` : ''}`
+    case 'no_answer':    return `Call ended with no answer${attempt}${reasonOf(d)}`
     case 'cancelled':    return 'Old policy confirmed cancelled'
-    case 'moved':        return `Call moved to ${fmtBooking(d.to)}`
+    case 'moved':        return `Call moved to ${callAt(d.to)}`
     default:             return e.kind
+  }
+}
+
+const ORDINAL = ['', 'first', 'second', 'third', 'fourth', 'fifth']
+
+// The client story's Journey step for one event (label + sub line).
+function storyStep(e, isAdmin) {
+  const d = e.detail || {}
+  const when = callWhen(e.at)
+  const forTime = d.scheduled_call_at ? ` · for ${callAt(d.scheduled_call_at)}` : ''
+  switch (e.kind) {
+    case 'booked':
+      if (e.from_status) return { label: 'Re-booked', sub: when + forTime }
+      return { label: isAdmin ? `${firstName(e.agent?.full_name) || 'The agent'} booked the call` : 'You booked the call', sub: when + forTime }
+    case 'in_progress':
+      return { label: `${who(e)} called${d.attempt > 1 ? ' again' : ''}`, sub: when }
+    case 'no_answer': {
+      const n = d.attempt || 1
+      const head = n > 1 ? `No answer on the ${ORDINAL[n] ? `${ORDINAL[n]} try` : `try ${n}`}` : 'No answer'
+      return { label: head + reasonOf(d), sub: when }
+    }
+    case 'moved':     return { label: 'Call moved', sub: `${when}${d.to ? ` · to ${callAt(d.to)}` : ''}` }
+    case 'cancelled': return { label: 'Old policy cancelled', sub: when }
+    default:          return { label: e.kind, sub: when }
   }
 }
 
@@ -72,7 +95,7 @@ function addDays(d, n) {
   return x
 }
 
-// "October 4" plus a "Today" / "Yesterday" tag where it applies.
+// "Today" / "Yesterday" / the weekday (this year) / the year.
 function dayTitle(day, now) {
   const today = startOfDay(now)
   const name = day.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
@@ -81,159 +104,268 @@ function dayTitle(day, now) {
   return { name, tag: day.getFullYear() === today.getFullYear() ? day.toLocaleDateString('en-US', { weekday: 'long' }) : String(day.getFullYear()) }
 }
 
+// "Today's activity" / "Yesterday's" / "Monday's" (this week) / "Oct 2's".
+function boxTitle(back, day) {
+  if (back === 0) return "Today's activity"
+  if (back === 1) return "Yesterday's activity"
+  if (back < 7) return `${day.toLocaleDateString('en-US', { weekday: 'long' })}'s activity`
+  return `${day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}'s activity`
+}
+
+const PARTS = [
+  { key: 'evening',   label: 'Evening',   icon: Moon,  test: h => h >= 17 },
+  { key: 'afternoon', label: 'Afternoon', icon: Clock, test: h => h >= 12 && h < 17 },
+  { key: 'morning',   label: 'Morning',   icon: Sun,   test: h => h < 12 },
+]
+
+function useMedia(query) {
+  return useSyncExternalStore(
+    cb => {
+      const m = window.matchMedia(query)
+      m.addEventListener('change', cb)
+      return () => m.removeEventListener('change', cb)
+    },
+    () => window.matchMedia(query).matches,
+  )
+}
+
+const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+// The old day's half of the slide: a static copy of each day-dependent block
+// ([data-day-slide]) goes out towards the side you came from while React
+// mounts the new day, which comes in from the other side (.ov-slide-from-*).
+// The copy sits in the block's .ov-slide-frame, which clips while it runs.
+function slideOut(root, dir) {
+  if (!root) return
+  const reduce = reducedMotion()
+  const dx = dir === 'prev' ? 32 : -32
+  root.querySelectorAll('[data-day-slide]').forEach(node => {
+    const frame = node.parentElement
+    if (!frame || !node.offsetWidth || typeof node.animate !== 'function') return
+    const ghost = node.cloneNode(true)
+    ghost.removeAttribute('data-day-slide')
+    ghost.removeAttribute('class')
+    ghost.setAttribute('aria-hidden', 'true')
+    ghost.inert = true
+    ghost.dataset.slideGhost = ''
+    Object.assign(ghost.style, { position: 'absolute', left: '0', top: '0', width: `${node.offsetWidth}px`, pointerEvents: 'none' })
+    frame.classList.add('is-sliding')
+    frame.appendChild(ghost)
+    const duration = reduce ? 120 : 240
+    const anim = ghost.animate(
+      reduce ? [{ opacity: 1 }, { opacity: 0 }] : [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `translateX(${dx}px)` }],
+      { duration, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'forwards' },
+    )
+    const done = () => {
+      if (!ghost.isConnected) return
+      ghost.remove()
+      if (!frame.querySelector('[data-slide-ghost]')) frame.classList.remove('is-sliding')
+    }
+    anim.onfinish = done
+    anim.oncancel = done
+    // A hidden tab can pause the animation; never leave the copy behind.
+    setTimeout(done, duration + 200)
+  })
+}
+
 export default function Activity() {
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
   const now = useNow()
   const navigate = useNavigate()
+  const isPhone = useMedia('(max-width: 639.98px)')
+  const isWide = useMedia('(min-width: 1280px)')
 
   // Days back from today (0 = today), so "Today" stays pinned across midnight.
   const [back, setBack] = useState(0)
+  const [dir, setDir] = useState(null)
+  const [filter, setFilter] = useState('all')
+  const [picked, setPicked] = useState(null)
+  const [pickOpen, setPickOpen] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const rootRef = useRef(null)
+  const storyRef = useRef(null)
+  const touch = useRef(null)
+
   const today = startOfDay(now)
   const day = addDays(today, -back)
-
-  const events = usePolicyEvents(day, isAdmin ? null : profile?.id)
-
-  const feed = useMemo(() => {
-    const all = (events.data || []).map(e => ({
-      key: `e-${e.id}`, kind: e.kind, at: e.at, policyId: e.policy_id, agentId: e.agent_id,
-      client: fullName(e.policy), agent: e.agent?.full_name, text: describe(e),
-    }))
-    return isAdmin ? excludeTestAccounts(all, profile?.id, 'agentId') : all
-  }, [events.data, isAdmin, profile?.id])
-
-  const open = item => navigate(`/agent/clients?stage=all&open=${item.policyId}`)
   const title = dayTitle(day, now)
 
-  // Size the box to the space below it, then pull the bottom edge up to the end
-  // of the last row that fully fits so a fresh load never shows a sliced row
-  // (Prompt 698). The box still scrolls to the rest.
-  const boxRef = useRef(null)
-  const [boxH, setBoxH] = useState(null)
-  const fit = useCallback(() => {
-    const el = boxRef.current
-    if (!el) return
-    const avail = Math.floor(window.innerHeight - el.getBoundingClientRect().top - 68)
-    const rows = Array.from(el.children).filter(c => c.dataset.row)
-    if (!rows.length) { setBoxH(Math.max(160, avail)); return }
-    const last = rows[rows.length - 1]
-    if (last.offsetTop + last.offsetHeight <= avail) { setBoxH(Math.max(160, avail)); return }
-    let h = rows[0].offsetTop + rows[0].offsetHeight
-    for (const r of rows) {
-      const bottom = r.offsetTop + r.offsetHeight
-      if (bottom <= avail) h = bottom
-      else break
-    }
-    setBoxH(h)
-  }, [])
-  useLayoutEffect(() => { fit() }, [fit, feed, events.isLoading, events.error])
+  const events = usePolicyEvents(day, isAdmin ? null : profile?.id)
+  const bookings = useAgentBookings(isAdmin ? null : profile?.id)
+
+  const all = (events.data || []).map(e => ({
+    key: `e-${e.id}`, id: e.id, kind: e.kind, rebook: !!e.from_status, at: e.at, policyId: e.policy_id, agentId: e.agent_id,
+    client: fullName(e.policy), agent: e.agent?.full_name, text: describe(e),
+  }))
+  const feed = isAdmin ? excludeTestAccounts(all, profile?.id, 'agentId') : all
+  const visible = filter === 'all' ? feed : feed.filter(i => i.kind === filter)
+  const selected = visible.find(i => i.key === picked) || visible[0] || null
+
+  const counts = Object.fromEntries(EVENT_KINDS.map(k => [k, 0]))
+  feed.forEach(i => { if (i.kind in counts) counts[i.kind] += 1 })
+  const clients = new Set(feed.map(i => i.policyId)).size
+  const groups = PARTS
+    .map(part => ({ ...part, items: visible.filter(i => part.test(new Date(i.at).getHours())) }))
+    .filter(g => g.items.length)
+
+  // ── Moving between days ──
+  const goTo = target => {
+    const next = Math.max(0, target)
+    if (next === back) return
+    const d = next > back ? 'prev' : 'next'
+    slideOut(rootRef.current, d)
+    setDir(d)
+    setBack(next)
+    setFilter('all')
+    setPicked(null)
+    setSheetOpen(false)
+  }
+  const onArrowKey = useEffectEvent(e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+    if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey || isTyping(e.target)) return
+    if (pickOpen || sheetOpen || e.target.closest?.('[role="tablist"], [role="dialog"]')) return
+    e.preventDefault()
+    goTo(back + (e.key === 'ArrowLeft' ? 1 : -1))
+  })
   useEffect(() => {
-    window.addEventListener('resize', fit)
-    return () => window.removeEventListener('resize', fit)
-  }, [fit])
+    const onKey = e => onArrowKey(e)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // Phones: a horizontal swipe of 60px+ on the feed changes the day
+  // (swipe left = the next day, like turning a page).
+  const swipe = {
+    onTouchStart: e => { const t = e.touches[0]; touch.current = { x: t.clientX, y: t.clientY } },
+    onTouchEnd: e => {
+      const start = touch.current
+      touch.current = null
+      if (!start) return
+      const t = e.changedTouches[0]
+      const dx = t.clientX - start.x
+      const dy = t.clientY - start.y
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+      if (dx < 0 && back > 0) goTo(back - 1)
+      else if (dx > 0) goTo(back + 1)
+    },
+  }
+
+  const select = item => {
+    setPicked(item.key)
+    if (isPhone) setSheetOpen(true)
+    else if (!isWide) storyRef.current?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' })
+  }
+
+  // ── The selected client's story ──
+  const story = usePolicyStory(selected?.policyId)
+  const row = selected ? (bookings.data || []).find(p => p.id === selected.policyId) || null : null
+  const history = story.data || []
+  const latest = history[history.length - 1]
+  const cancelledNow = row ? tabOf(row) === 'cancelled' : latest?.kind === 'cancelled'
+  const steps = history.map((e, i) => ({
+    ...storyStep(e, isAdmin),
+    tone: kindTone(e.kind),
+    done: cancelledNow || i < history.length - 1,
+  }))
+  if (history.length && !cancelledNow) steps.push({ label: 'Old policy cancelled', done: false })
+  const openPipeline = () => {
+    if (!selected) return
+    navigate(row ? `/agent/clients?stage=${tabOf(row)}&open=${selected.policyId}` : `/agent/clients?open=${selected.policyId}`)
+  }
+  const storyProps = {
+    p: row,
+    name: selected ? (row ? fullName(row) : selected.client) : null,
+    agentName: isAdmin ? selected?.agent : null,
+    steps,
+    highlight: history.findIndex(e => e.id === selected?.id),
+    currentIcon: latest ? EVENT_ICON[eventIconKey({ kind: latest.kind, rebook: !!latest.from_status })] : undefined,
+    loading: story.isLoading,
+    now,
+    onOpenPipeline: openPipeline,
+  }
+
+  // ── Feed notes ──
+  let note = null
+  if (events.isLoading) note = <FeedNote>Loading…</FeedNote>
+  else if (events.error) note = <FeedNote icon={TriangleAlert} tone={{ fg: 'var(--danger)', tint: 'var(--danger-dim)' }} error>Couldn&rsquo;t load activity: {events.error.message}</FeedNote>
+  else if (!feed.length) {
+    note = back === 0
+      ? <FeedNote icon={Inbox} tone={kindTone('booked')}>Nothing yet today. Bookings, calls and cancellations show up here as they happen.</FeedNote>
+      : <FeedNote icon={CalendarDays} tone={kindTone('no_answer')}>Nothing happened on this day.</FeedNote>
+  } else if (!visible.length) {
+    note = <FeedNote icon={EVENT_KIND[filter].icon} tone={kindTone(filter)}>No {EVENT_KIND[filter].pill.toLowerCase()} events this day.</FeedNote>
+  }
+
+  const slideClass = dir === 'prev' ? 'ov-slide-from-left' : dir === 'next' ? 'ov-slide-from-right' : undefined
+  const dayKey = String(back)
+  const loadingDay = events.isLoading
 
   return (
-    <div>
-      <SectionHead
-        title={isAdmin ? "Everyone's activity" : 'Your activity'}
-        sub="Newest first · updates every 30 seconds"
-        action={
-          <DateNav
-            day={day} today={today} title={title} back={back}
-            onPrev={() => setBack(n => n + 1)}
-            onNext={() => setBack(n => Math.max(0, n - 1))}
-            onPick={d => setBack(Math.max(0, Math.round((today - startOfDay(d)) / 86400000)))}
+    <div ref={rootRef} style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 1320, width: '100%', margin: '0 auto' }}>
+      <DayHero
+        dayKey={dayKey} slideClass={slideClass}
+        tag={title.tag}
+        dateLong={day.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+        dateShort={day.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+        summary={loadingDay ? 'Loading…' : feed.length ? `${plural(feed.length, 'thing')} happened with ${plural(clients, 'client')}` : 'Nothing happened this day.'}
+        summaryShort={loadingDay ? 'Loading…' : feed.length ? `${plural(feed.length, 'thing')} · ${plural(clients, 'client')}` : 'Nothing happened'}
+        canNext={back > 0}
+        onPrev={() => goTo(back + 1)}
+        onNext={() => goTo(back - 1)}
+        pickOpen={pickOpen}
+        onTogglePick={() => setPickOpen(o => !o)}
+        picker={
+          <MonthPicker
+            selected={day} today={today}
+            onClose={() => setPickOpen(false)}
+            onPick={d => { setPickOpen(false); goTo(Math.round((today - startOfDay(d)) / 864e5)) }}
           />
         }
       />
 
-      <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
-        {/* The box scrolls inside; its height is set by fit() above. */}
-        <div
-          ref={boxRef}
-          style={{ position: 'relative', height: boxH ?? 'min(520px, 60vh)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
-        >
-          {events.isLoading ? (
-            <EmptyNote>Loading…</EmptyNote>
-          ) : events.error ? (
-            <p style={{ margin: 0, padding: '32px 20px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 14, color: 'var(--danger)' }}>
-              Couldn't load activity: {events.error.message}
-            </p>
-          ) : feed.length === 0 ? (
-            // Loading / empty / error text all sit dead center of the box, not top-anchored
-            // (Prompts 700, 707); EmptyNote fills this flex-column box and centers itself.
-            <EmptyNote>
-              {back === 0
-                ? 'Nothing yet today. Bookings, calls and cancellations show up here as they happen.'
-                : 'Nothing happened on this day.'}
-            </EmptyNote>
-          ) : (
-            feed.map((item, i) => (
-              <FeedRow key={item.key} item={item} first={i === 0} last={i === feed.length - 1} showAgent={isAdmin} onClick={() => open(item)} />
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
+      <ActivityBox
+        dayKey={dayKey} slideClass={slideClass}
+        title={boxTitle(back, day)} counts={counts} filter={filter}
+        onFilter={k => { setFilter(k); setPicked(null) }}
+      />
 
-// Date control, top right beside the page title (Prompt 699): ← [calendar · October 4 · Today] →. The label
-// opens a month picker so a far-back day is one click, not many arrows.
-function DateNav({ day, today, title, back, onPrev, onNext, onPick }) {
-  const [open, setOpen] = useState(false)
-  const [view, setView] = useState(() => new Date(day.getFullYear(), day.getMonth(), 1))
-  const wrap = useRef(null)
-
-  useEffect(() => {
-    if (!open) return
-    const away = e => { if (wrap.current && !wrap.current.contains(e.target)) setOpen(false) }
-    const esc = e => { if (e.key === 'Escape') setOpen(false) }
-    document.addEventListener('mousedown', away)
-    document.addEventListener('keydown', esc)
-    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc) }
-  }, [open])
-
-  const toggle = () => {
-    if (!open) setView(new Date(day.getFullYear(), day.getMonth(), 1))
-    setOpen(o => !o)
-  }
-
-  return (
-    <div ref={wrap} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-      <DayArrow dir="prev" onClick={onPrev} />
-      <button
-        onClick={toggle}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-label="Pick a date"
-        style={{
-          // Fixed width (fits "September 29 · Wednesday") so the arrows never shift as the label changes.
-          width: 240, height: 32, padding: '0 12px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          background: open ? 'var(--bg-elevated)' : 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
-          fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap',
-        }}
-      >
-        <CalendarDays size={15} aria-hidden style={{ color: 'var(--text-secondary)' }} />
-        <span>
-          {title.name} <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>· {title.tag}</span>
-        </span>
-      </button>
-      <DayArrow dir="next" disabled={back === 0} onClick={onNext} />
-
-      {open && (
-        <MonthPicker
-          view={view} setView={setView} selected={day} today={today}
-          onPick={d => { onPick(d); setOpen(false) }}
+      <div className="ov-activity">
+        <ActivityFeed
+          dayKey={dayKey} slideClass={slideClass}
+          groups={groups} note={note} selectedKey={selected?.key} onSelect={select} showAgent={isAdmin}
+          {...swipe}
         />
+        {!isPhone && <ClientStory {...storyProps} className="ov-story-side" panelRef={storyRef} />}
+      </div>
+
+      {isPhone && sheetOpen && selected && (
+        <StorySheet label={storyProps.name} onClose={() => setSheetOpen(false)}>
+          <ClientStory {...storyProps} sheet />
+        </StorySheet>
       )}
     </div>
   )
 }
 
+// Month picker under the hero's "Pick a date": a far-back day is one click,
+// not many arrows. Future days are disabled.
 const DOW = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
-function MonthPicker({ view, setView, selected, today, onPick }) {
+function MonthPicker({ selected, today, onPick, onClose }) {
+  const [view, setView] = useState(() => new Date(selected.getFullYear(), selected.getMonth(), 1))
+  const box = useRef(null)
+  useEffect(() => {
+    const away = e => {
+      if (box.current?.contains(e.target) || e.target.closest?.('[data-pick-toggle]')) return
+      onClose()
+    }
+    const esc = e => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('mousedown', away)
+    document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc) }
+  }, [onClose])
+
   const first = new Date(view.getFullYear(), view.getMonth(), 1)
   const daysIn = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate()
   const cells = []
@@ -241,27 +373,28 @@ function MonthPicker({ view, setView, selected, today, onPick }) {
   for (let n = 1; n <= daysIn; n++) cells.push(new Date(view.getFullYear(), view.getMonth(), n))
   const atCurrentMonth = view.getFullYear() === today.getFullYear() && view.getMonth() === today.getMonth()
   const step = n => setView(new Date(view.getFullYear(), view.getMonth() + n, 1))
+  const monthBtn = { width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }
 
   return (
-    <div
-      role="dialog"
-      aria-label="Choose a date"
-      style={{
-        position: 'absolute', top: '100%', right: 0, marginTop: 6, zIndex: 50, width: 252, padding: 12,
-        background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 12,
-        boxShadow: '0 16px 40px rgba(0,0,0,0.35)', userSelect: 'none',
-      }}
-    >
+    <div ref={box} role="dialog" aria-label="Choose a date" className="ov-card ov-pop" style={{
+      position: 'absolute', top: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)', zIndex: 50,
+      width: 300, maxWidth: 'calc(100vw - 32px)', boxSizing: 'border-box', padding: 14, userSelect: 'none', textAlign: 'left',
+    }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <DayArrow dir="prev" label="Previous month" onClick={() => step(-1)} />
-        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+        <button type="button" className="ov-ghost" aria-label="Previous month" onClick={() => step(-1)} style={monthBtn}>
+          <ChevronLeft size={16} strokeWidth={2} />
+        </button>
+        <span style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>
           {view.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
         </span>
-        <DayArrow dir="next" label="Next month" disabled={atCurrentMonth} onClick={() => step(1)} />
+        <button type="button" className="ov-ghost" aria-label="Next month" disabled={atCurrentMonth} onClick={() => step(1)}
+          style={{ ...monthBtn, opacity: atCurrentMonth ? 0.35 : 1, cursor: atCurrentMonth ? 'not-allowed' : 'pointer' }}>
+          <ChevronRight size={16} strokeWidth={2} />
+        </button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
         {DOW.map(d => (
-          <div key={d} style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', padding: '2px 0' }}>{d}</div>
+          <div key={d} style={{ textAlign: 'center', fontSize: 11.5, fontWeight: 600, color: 'var(--ov-mute)', padding: '2px 0' }}>{d}</div>
         ))}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
@@ -272,16 +405,14 @@ function MonthPicker({ view, setView, selected, today, onPick }) {
           const future = d > today
           return (
             <button
-              key={i}
-              disabled={future}
-              onClick={() => onPick(d)}
+              key={i} type="button" disabled={future} onClick={() => onPick(d)}
+              aria-current={isToday ? 'date' : undefined} aria-pressed={isSel}
+              className={isSel ? 'ov-solid' : undefined}
               style={{
-                height: 30, borderRadius: 6, fontSize: 13, fontVariantNumeric: 'tabular-nums',
-                background: isSel ? 'var(--accent)' : 'transparent',
-                color: isSel ? '#fff' : future ? 'var(--text-muted)' : isToday ? 'var(--accent)' : 'var(--text-primary)',
-                fontWeight: isSel || isToday ? 600 : 400,
-                opacity: future ? 0.4 : 1, cursor: future ? 'not-allowed' : 'pointer',
-                border: 'none',
+                height: 38, borderRadius: 10, fontSize: 13.5, fontVariantNumeric: 'tabular-nums', border: 'none',
+                ...(isSel ? null : { background: 'transparent', color: isToday ? 'var(--ov-pick)' : 'var(--ov-hi)' }),
+                fontWeight: isSel || isToday ? 700 : 500,
+                opacity: future ? 0.35 : 1, cursor: future ? 'not-allowed' : 'pointer',
               }}
             >
               {d.getDate()}
@@ -293,62 +424,40 @@ function MonthPicker({ view, setView, selected, today, onPick }) {
   )
 }
 
-function DayArrow({ dir, disabled, onClick, label }) {
-  const Icon = dir === 'prev' ? ChevronLeft : ChevronRight
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label || (dir === 'prev' ? 'Previous day' : 'Next day')}
-      style={{
-        width: 32, height: 32, borderRadius: 8, display: 'grid', placeItems: 'center', flexShrink: 0,
-        background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
-        color: 'var(--text-secondary)', opacity: disabled ? 0.4 : 1, cursor: disabled ? 'not-allowed' : 'pointer',
-      }}
-    >
-      <Icon size={16} aria-hidden />
-    </button>
-  )
-}
+// Phones: the client story as a bottom sheet over the scrim. Closes by
+// dragging the handle down, tapping the scrim or Esc.
+function StorySheet({ label, onClose, children }) {
+  const [drag, setDrag] = useState(0)
+  const start = useRef(null)
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = e => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey) }
+  }, [onClose])
 
-function FeedRow({ item, first, last, showAgent, onClick }) {
-  const k = KIND[item.kind] || KIND.moved
-  const stage = k.stage && STAGE[k.stage]
-  const Icon = k.icon
-  const color = stage ? stage.fill : k.color
-  return (
-    <button
-      onClick={onClick}
-      className="menu-row"
-      data-row="1"
-      style={{
-        gap: 12, padding: '12px 20px', borderTop: first ? 'none' : 'var(--border-w) solid var(--border)',
-        borderBottom: last ? 'var(--border-w) solid var(--border)' : 'none', borderRadius: 0,
-      }}
-    >
-      <span style={{
-        width: 30, height: 30, borderRadius: 999, flexShrink: 0, display: 'grid', placeItems: 'center',
-        background: 'var(--bg-elevated)', color,
-      }}>
-        <Icon size={15} aria-hidden />
-      </span>
-      <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {item.client}
-          </span>
-          {stage && <Pill tone={stage.tone}>{stage.label}</Pill>}
-          {showAgent && item.agent && (
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· {item.agent}</span>
-          )}
-        </span>
-        <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {item.text}
-        </span>
-      </span>
-      <span style={{ fontFamily: MONO, fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', minWidth: 62, textAlign: 'right' }}>
-        {new Date(item.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-      </span>
-    </button>
+  const onDown = e => { start.current = e.clientY; e.currentTarget.setPointerCapture?.(e.pointerId) }
+  const onMove = e => { if (start.current != null) setDrag(Math.max(0, e.clientY - start.current)) }
+  const onUp = () => {
+    if (start.current == null) return
+    start.current = null
+    if (drag > 90) onClose()
+    else setDrag(0)
+  }
+
+  return createPortal(
+    <>
+      <div className="ov-scrim" onClick={onClose} aria-hidden="true" />
+      <div className="ov-sheet" role="dialog" aria-modal="true" aria-label={label}
+        style={drag ? { transform: `translateY(${drag}px)` } : { transition: 'transform 160ms ease' }}>
+        <div onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+          style={{ flexShrink: 0, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'none', cursor: 'grab' }}>
+          <span style={{ width: 40, height: 5, borderRadius: 999, background: 'var(--ov-faint)' }} />
+        </div>
+        {children}
+      </div>
+    </>,
+    document.body,
   )
 }

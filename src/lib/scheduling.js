@@ -47,6 +47,13 @@ export function callWhen(iso) {
   return `${d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
 }
 
+// Prompt 718 — "Fri, Oct 9 at 11:00 AM", Activity's sentences.
+export function callAt(iso) {
+  if (!iso) return 'no time booked'
+  const d = new Date(iso)
+  return `${d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+}
+
 export function fmtBooking(iso) {
   if (!iso) return 'No time booked'
   return new Date(iso).toLocaleString('en-US', {

@@ -1,12 +1,13 @@
 import { Children, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX } from 'lucide-react'
+import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays } from 'lucide-react'
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
-import { SLOTS, slotToISO, localDateISO, callWhen } from '../../lib/scheduling'
+import { SLOTS, slotToISO, localDateISO, callWhen, callAt } from '../../lib/scheduling'
 import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, digits } from '../../lib/agentBookings'
 import { DayClock } from '../ui/DayClock'
 import { LiveDot } from '../ui/LiveDot'
 import { fullName } from '../../lib/policyFormat'
+import { EVENT_KINDS, EVENT_KIND, EVENT_ICON, kindMeta, kindTone, eventIconKey } from '../../lib/activityKinds'
 
 // Shared pieces for the agent portal pages (Prompt 665).
 // Prompt 669 — restyled to Restorix Portal's design system: eyebrow-labelled
@@ -1749,36 +1750,385 @@ export function StatusNote({ tab, live, children }) {
 
 // Vertical timeline. Each step: { label, at, done }. The first step not done
 // is the current one (the status icon on its tint); later ones are dashed.
-export function Journey({ steps, tab }) {
+// Prompt 718 (Activity's client story) adds, all optional: a step's `sub`
+// replaces its callWhen(at) line, its `tone` ({ fg, tint, edge }) recolours
+// it when current or highlighted, `currentIcon` swaps the status icon, and
+// `highlight` boxes one step with a "Selected" tag. Without them it renders
+// exactly as My Pipeline's drawer.
+export function Journey({ steps, tab, highlight = -1, currentIcon }) {
   const current = steps.findIndex(s => !s.done)
-  const Icon = PIPELINE_TAB[tab].icon
+  const Icon = currentIcon || PIPELINE_TAB[tab].icon
   return (
     <div>
       <div style={{ marginBottom: 14, fontSize: 13, fontWeight: 600, color: 'var(--ov-mute)' }}>Journey</div>
       {steps.map((s, i) => {
         const state = s.done ? 'done' : i === current ? 'current' : 'future'
         const last = i === steps.length - 1
+        const tone = s.tone || { fg: stVar(tab), tint: stVar(tab, 'tint'), edge: stVar(tab, 'edge') }
+        const hi = i === highlight
+        const lift = hi ? { position: 'relative' } : null
+        const sub = s.sub || (s.at && callWhen(s.at))
         return (
-          <div key={i} style={{ display: 'flex', gap: 14 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div key={i} style={{ display: 'flex', gap: 14, ...lift }}>
+            {hi && (
+              <span aria-hidden="true" style={{
+                position: 'absolute', left: -12, right: -12, top: -8, bottom: last ? -8 : 6, borderRadius: 12,
+                background: tone.tint, boxShadow: `inset 0 0 0 1px ${tone.edge}`,
+              }} />
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', ...lift }}>
               <span style={{
                 width: 32, height: 32, flexShrink: 0, boxSizing: 'border-box', borderRadius: '50%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 ...(state === 'done' ? { background: stVar('cancelled', 'tint'), color: stVar('cancelled') }
-                  : state === 'current' ? { background: stVar(tab, 'tint'), color: stVar(tab) }
+                  : state === 'current' ? { background: tone.tint, color: tone.fg }
                     : { border: '2px dashed var(--ov-faint)' }),
+                ...(hi ? { boxShadow: `0 0 0 3px ${tone.edge}` } : null),
               }}>
                 {state === 'done' ? <Check size={15} strokeWidth={2.2} /> : state === 'current' ? <Icon size={15} strokeWidth={2.2} /> : null}
               </span>
               {!last && <span style={{ flex: 1, width: 2, minHeight: 26, margin: '4px 0', background: 'var(--ov-line)' }} />}
             </div>
-            <div style={{ paddingTop: 5, paddingBottom: last ? 0 : 14, minWidth: 0 }}>
-              <div style={{ fontSize: 14.5, fontWeight: 600, color: state === 'future' ? 'var(--ov-mute)' : 'var(--ov-hi)' }}>{s.label}</div>
-              {s.at && state !== 'future' && <div style={{ marginTop: 2, fontSize: 13, color: 'var(--ov-mute)' }}>{callWhen(s.at)}</div>}
+            <div style={{ paddingTop: 5, paddingBottom: last ? 0 : 14, minWidth: 0, ...lift }}>
+              <div style={{ fontSize: 14.5, fontWeight: 600, color: state === 'future' ? 'var(--ov-mute)' : 'var(--ov-hi)' }}>
+                {s.label}
+                {hi && (
+                  <span style={{
+                    marginLeft: 8, height: 20, padding: '0 8px', borderRadius: 999, verticalAlign: 'middle',
+                    display: 'inline-flex', alignItems: 'center', background: tone.fg, color: 'var(--ov-on-kind)', fontSize: 11, fontWeight: 700,
+                  }}>Selected</span>
+                )}
+              </div>
+              {sub && state !== 'future' && <div style={{ marginTop: 2, fontSize: 13, color: 'var(--ov-mute)' }}>{sub}</div>}
             </div>
           </div>
         )
       })}
     </div>
+  )
+}
+
+// ── Prompt 718 — Activity on the v16 language ────────────────────────────
+// A coloured day hero with edge arrows, the activity box (bar + filter tabs),
+// the feed as a timeline grouped by part of day, and the client story, which
+// reuses Journey. Event kinds (colours, icons) are in lib/activityKinds.
+// Each day-dependent block sits in an .ov-slide-frame whose keyed child
+// carries data-day-slide; Activity.jsx animates the day change through them.
+
+const NEUTRAL_TONE = { fg: 'var(--ov-hi)', tint: 'var(--ov-neutral-tint)', edge: 'var(--ov-neutral-edge)' }
+const toneOf = k => (k === 'all' ? NEUTRAL_TONE : kindTone(k))
+
+function DayArrow({ dir, disabled, onClick }) {
+  const Icon = dir === 'prev' ? ChevronLeft : ChevronRight
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} aria-label={dir === 'prev' ? 'Previous day' : 'Next day'}
+      className="ov-day-arrow w-11 h-11 sm:w-14 sm:h-14">
+      <Icon size={22} strokeWidth={2.2} />
+    </button>
+  )
+}
+
+// The coloured top section: ‹ | tag, date, summary, Pick a date | ›.
+// `picker` (the month picker popover) is anchored under Pick a date, which
+// carries data-pick-toggle so the popover's outside-click ignores it.
+export function DayHero({ dayKey, slideClass, tag, dateLong, dateShort, summary, summaryShort, canNext, onPrev, onNext, pickOpen, onTogglePick, picker }) {
+  return (
+    <section className="ov-hero flex items-center gap-[10px] sm:gap-6 px-3 py-[18px] sm:px-7 sm:py-[30px]" style={{ position: 'relative', zIndex: 3 }}>
+      <DayArrow dir="prev" onClick={onPrev} />
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+        <div className="ov-slide-frame" style={{ width: '100%' }}>
+          <div key={dayKey} data-day-slide="" className={slideClass}>
+            <div className="hidden sm:flex" style={{ flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+              <span className="ov-hero-chip">
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ov-hero-dot)' }} />{tag}
+              </span>
+              <h1 style={{ margin: 0, fontFamily: DISPLAY, fontSize: 40, fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.035em', color: '#fff' }}>{dateLong}</h1>
+              <div style={{ fontSize: 15.5, color: 'var(--ov-hero-soft)' }}>{summary}</div>
+            </div>
+            <div className="sm:hidden">
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ov-hero-soft)' }}>{tag}</div>
+              <h1 style={{ margin: 0, fontFamily: DISPLAY, fontSize: 22, fontWeight: 600, lineHeight: 1.25, letterSpacing: '-0.02em', color: '#fff' }}>{dateShort}</h1>
+              <div style={{ fontSize: 12.5, color: 'var(--ov-hero-soft)' }}>{summaryShort}</div>
+            </div>
+          </div>
+        </div>
+        <div className="mt-1 sm:mt-[14px]" style={{ position: 'relative' }}>
+          <button type="button" data-pick-toggle="" onClick={onTogglePick} aria-haspopup="dialog" aria-expanded={pickOpen}
+            className="ov-hero-link hidden sm:inline-flex"
+            style={{ height: 34, padding: '0 14px', borderRadius: 999, alignItems: 'center', gap: 7, fontSize: 13.5 }}>
+            <CalendarDays size={15} strokeWidth={2} /> Pick a date
+          </button>
+          <button type="button" data-pick-toggle="" onClick={onTogglePick} aria-haspopup="dialog" aria-expanded={pickOpen} aria-label="Pick a date"
+            className="ov-hero-link flex sm:hidden"
+            style={{ width: 44, height: 36, borderRadius: 999, alignItems: 'center', justifyContent: 'center' }}>
+            <CalendarDays size={18} strokeWidth={2} />
+          </button>
+          {pickOpen && picker}
+        </div>
+      </div>
+      <DayArrow dir="next" disabled={!canNext} onClick={onNext} />
+    </section>
+  )
+}
+
+function KindBar({ counts, filter, height }) {
+  const total = EVENT_KINDS.reduce((s, k) => s + counts[k], 0)
+  return (
+    <div aria-hidden="true" style={{ display: 'flex', gap: height > 8 ? 4 : 3 }}>
+      {total === 0 && <span style={{ flex: 1, height, borderRadius: 6, background: 'var(--ov-stub)' }} />}
+      {EVENT_KINDS.filter(k => counts[k] > 0).map(k => (
+        <span key={k} style={{
+          flex: `${counts[k]} 1 0`, height, borderRadius: 6, background: kindTone(k).fg,
+          opacity: filter === 'all' || filter === k ? 1 : 0.35,
+        }} />
+      ))}
+    </div>
+  )
+}
+
+// "Today's activity": total, a bar sized by kind and the filter tabs (All +
+// the five kinds). Below 640px: header, bar and a scrolling row of chips.
+export function ActivityBox({ dayKey, slideClass, title, counts, filter, onFilter }) {
+  const tabs = ['all', ...EVENT_KINDS]
+  const total = EVENT_KINDS.reduce((s, k) => s + counts[k], 0)
+  const count = k => (k === 'all' ? total : counts[k])
+  const tabRefs = useRef({})
+  const chipRefs = useRef({})
+  const onKeyDown = (e, refs) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
+    e.preventDefault()
+    const i = tabs.indexOf(filter)
+    const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]
+    onFilter(next)
+    refs.current[next]?.focus()
+  }
+  const tabProps = k => ({
+    type: 'button', role: 'tab', 'aria-selected': k === filter, tabIndex: k === filter ? 0 : -1,
+    onClick: () => { if (k !== filter) onFilter(k) },
+  })
+  const dot = (k, size) => k !== 'all' && (
+    <span style={{ width: size, height: size, flexShrink: 0, borderRadius: '50%', background: kindTone(k).fg, ...(size > 7 ? { boxShadow: `0 0 0 4px ${kindTone(k).tint}` } : null) }} />
+  )
+  const label = k => (k === 'all' ? 'All' : EVENT_KIND[k].label)
+
+  return (
+    <>
+      <div className="ov-card hidden sm:block" style={{ padding: '22px 22px 20px' }}>
+        <div className="ov-slide-frame">
+          <div key={dayKey} data-day-slide="" className={slideClass} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '0 4px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mute)' }}>{title}</span>
+              <span style={{ marginLeft: 'auto', ...OV_NUM, fontSize: 30, letterSpacing: '-0.03em' }}>{total}</span>
+              <span style={{ fontSize: 14.5, color: 'var(--ov-soft)' }}>
+                event{total === 1 ? '' : 's'}
+                {counts.cancelled > 0 && <> · <span style={{ fontWeight: 600, color: 'var(--ov-st-cancelled)' }}>{counts.cancelled} cancelled</span></>}
+              </span>
+            </div>
+            <div style={{ padding: '0 4px' }}><KindBar counts={counts} filter={filter} height={10} /></div>
+            <div role="tablist" aria-label="Filter the feed" className="grid grid-cols-3 xl:grid-cols-6" style={{ gap: 8 }} onKeyDown={e => onKeyDown(e, tabRefs)}>
+              {tabs.map(k => {
+                const on = k === filter
+                const t = toneOf(k)
+                return (
+                  <button key={k} ref={el => { tabRefs.current[k] = el }} {...tabProps(k)} className="ov-tab" style={{
+                    minWidth: 0, display: 'flex', alignItems: 'center', gap: 9, height: 52, padding: '0 14px', borderRadius: 14,
+                    ...(on ? {
+                      background: `linear-gradient(180deg, ${t.tint} 0%, transparent 100%)`,
+                      border: `1px solid ${t.edge}`, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+                    } : { background: 'transparent', border: '1px solid var(--ov-line)' }),
+                  }}>
+                    {dot(k, 9)}
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: on ? t.fg : 'var(--ov-mid)', ...ellipsis }}>{label(k)}</span>
+                    <span style={{ ...OV_NUM, fontSize: 20, color: count(k) ? 'var(--ov-hi)' : 'var(--ov-faint)' }}>{count(k)}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="ov-card sm:hidden" style={{ padding: 16 }}>
+        <div className="ov-slide-frame">
+          <div key={dayKey} data-day-slide="" className={slideClass} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-mute)' }}>{title}</span>
+              <span style={{ ...OV_NUM, fontSize: 22 }}>{total}</span>
+            </div>
+            <KindBar counts={counts} filter={filter} height={8} />
+            <div role="tablist" aria-label="Filter the feed" className="ov-chips flex" style={{ gap: 6, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }} onKeyDown={e => onKeyDown(e, chipRefs)}>
+              {tabs.map(k => {
+                const on = k === filter
+                const t = toneOf(k)
+                return (
+                  <button key={k} ref={el => { chipRefs.current[k] = el }} {...tabProps(k)} className="ov-tab" style={{
+                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, height: 44, padding: '0 14px', borderRadius: 999,
+                    fontSize: 13, fontWeight: 600, color: on ? t.fg : 'var(--ov-mid)',
+                    ...(on ? { background: t.tint, border: `1px solid ${t.edge}` } : { background: 'transparent', border: '1px solid var(--ov-line)' }),
+                  }}>
+                    {dot(k, 7)}{label(k)} {count(k)}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// One feed event. Selecting is all a click does; it never navigates.
+function EventRow({ item, on, linked, showAgent, onSelect }) {
+  const t = kindTone(item.kind)
+  const Icon = EVENT_ICON[eventIconKey(item)]
+  const time = new Date(item.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  const [clock, ampm] = time.split(/\s+/)
+  return (
+    <button type="button" aria-pressed={on} onClick={() => onSelect(item)}
+      className={`ov-event${on ? ' is-on' : ''} w-full flex items-start gap-3 sm:gap-4 px-2 py-3 sm:px-4 sm:py-[14px]`}
+      style={{ position: 'relative', '--ev-tint': t.tint, ...(on ? { boxShadow: `inset 0 0 0 1px ${t.edge}` } : null) }}>
+      {linked && <span aria-hidden="true" className="hidden sm:block" style={{ position: 'absolute', left: 105, top: 50, bottom: -14, width: 2, background: 'var(--ov-line)' }} />}
+      <span className="hidden sm:block" style={{ width: 58, flexShrink: 0, paddingTop: 6, textAlign: 'right', whiteSpace: 'nowrap' }}>
+        <span style={{ fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, color: 'var(--ov-hi)' }}>{clock}</span>
+        <span style={{ marginLeft: 3, fontSize: 11, fontWeight: 600, color: 'var(--ov-mute)' }}>{ampm}</span>
+      </span>
+      <span className="w-8 h-8 sm:w-[34px] sm:h-[34px]" style={{
+        position: 'relative', zIndex: 1, flexShrink: 0, borderRadius: '50%', background: t.tint, color: t.fg,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: `0 0 0 4px var(--ov-page)${on ? `, 0 0 0 6px ${t.edge}` : ''}`,
+      }}>
+        <Icon size={16} strokeWidth={2.2} />
+      </span>
+      <span style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <span style={{ minWidth: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', ...ellipsis }}>
+            {item.client}
+            {showAgent && item.agent && <span style={{ fontWeight: 500, color: 'var(--ov-mute)' }}> · {item.agent}</span>}
+          </span>
+          <span className="hidden sm:inline-flex" style={{
+            flexShrink: 0, alignItems: 'center', gap: 6, height: 24, padding: '0 10px', borderRadius: 999,
+            background: t.tint, color: t.fg, fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: t.fg }} />{kindMeta(item.kind).pill}
+          </span>
+          <span className="sm:hidden" style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>{time}</span>
+        </span>
+        <span style={{ display: 'block', marginTop: 3, fontSize: 13.5, lineHeight: 1.45, color: 'var(--ov-soft)' }}>{item.text}</span>
+      </span>
+    </button>
+  )
+}
+
+// Centred empty/loading/error note for the feed, with an optional icon chip.
+export function FeedNote({ icon, tone, error, children }) {
+  return (
+    <div style={{ padding: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center' }}>
+      {icon && <IconChip icon={icon} color={tone.fg} tint={tone.tint} size={36} radius={11} iconSize={18} />}
+      <p style={{ margin: 0, maxWidth: 360, fontSize: 14, lineHeight: 1.5, color: error ? 'var(--danger)' : 'var(--ov-mute)' }}>{children}</p>
+    </div>
+  )
+}
+
+// The day's events as a timeline, grouped by part of day (newest first).
+// `groups`: [{ key, label, icon, items }]; `note` replaces them when set.
+// Touch handlers (the phone swipe) go on the card.
+export function ActivityFeed({ dayKey, slideClass, groups, note, selectedKey, onSelect, showAgent, ...touch }) {
+  return (
+    <section className="ov-card px-3 py-[6px] sm:py-4" style={{ minWidth: 0 }} aria-label="Events" {...touch}>
+      <div className="ov-slide-frame">
+        <div key={dayKey} data-day-slide="" className={slideClass}>
+          {note || groups.map((g, gi) => {
+            const GroupIcon = g.icon
+            return (
+              <div key={g.key} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <div className="px-1 sm:px-4" style={{
+                  display: 'flex', alignItems: 'center', gap: 8, paddingTop: gi ? 14 : 6, paddingBottom: 6,
+                  fontSize: 13, fontWeight: 600, color: 'var(--ov-mute)',
+                }}>
+                  <GroupIcon size={15} strokeWidth={2} />{g.label}
+                </div>
+                {g.items.map((item, i) => (
+                  <EventRow key={item.key} item={item} on={item.key === selectedKey} linked={i < g.items.length - 1} showAgent={showAgent} onSelect={onSelect} />
+                ))}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// One sentence for where the client stands now, beside the status pill.
+function storyStatus(p, now) {
+  const tab = tabOf(p)
+  if (tab === 'booked') {
+    if (isLive(p)) return 'On a call now'
+    return p.scheduled_call_at ? `Fulfillment calls ${callAt(p.scheduled_call_at)}` : 'Waiting for Fulfillment'
+  }
+  if (tab === 'noAnswer') return nextStep(p, now)
+  if (tab === 'needs') return NEEDS_WHY[agentStageOf(p)]
+  return `Old policy cancelled ${monthDay(p.fulfillment_completed_at || p.updated_at)}`
+}
+
+// The selected client's whole story: who they are and where they stand, the
+// checked Journey built from every event, and the page's one link to My
+// Pipeline. `p` is their current row (null if it isn't loaded, e.g. an admin
+// looking at a test row: then just the name, no status line). `sheet` lays it
+// out for the phone bottom sheet instead of a card.
+export function ClientStory({ p, name, agentName, steps, highlight, currentIcon, loading, now, onOpenPipeline, sheet, className = '', panelRef }) {
+  const side = sheet ? 20 : 22
+  if (!name) {
+    return (
+      <aside ref={panelRef} className={`ov-card ${className}`} style={{ padding: '56px 28px', textAlign: 'center', fontSize: 14, color: 'var(--ov-mute)' }}>
+        Pick an event to see that client&rsquo;s whole story.
+      </aside>
+    )
+  }
+  const tab = p ? tabOf(p) : null
+  const meta = [p?.current_carrier, p?.client_phone, agentName].filter(Boolean).join(' · ')
+  return (
+    <aside ref={panelRef} aria-label="Client story" className={`${sheet ? '' : 'ov-card '}${className}`}
+      style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0, ...(sheet ? { flex: 1 } : null) }}>
+      <div style={{
+        flexShrink: 0, padding: `${sheet ? 4 : 22}px ${side}px 18px`, borderBottom: '1px solid var(--ov-line)',
+        ...(tab ? { background: `radial-gradient(ellipse 90% 90% at 100% 0%, ${stVar(tab, 'tint')} 0%, transparent 70%)` } : null),
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-mute)' }}>Client story</div>
+        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 13, minWidth: 0 }}>
+          {tab
+            ? <StatusAvatar name={name} tab={tab} size={50} fontSize={16} />
+            : (
+              <span style={{ width: 50, height: 50, flexShrink: 0, borderRadius: '50%', background: 'var(--ov-stub)', color: 'var(--ov-mid)', fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {initialsOf(name)}
+              </span>
+            )}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: DISPLAY, fontSize: 21, fontWeight: 600, lineHeight: 1.2, letterSpacing: '-0.02em', color: 'var(--ov-hi)', overflowWrap: 'anywhere' }}>{name}</div>
+            {meta && <div style={{ marginTop: 3, fontSize: 13, color: 'var(--ov-mute)', overflowWrap: 'anywhere' }}>{meta}</div>}
+          </div>
+        </div>
+        {p && (
+          <div className="ov-well" style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', borderRadius: 12 }}>
+            <StatusPill tab={tab} />
+            <span style={{ flex: 1, minWidth: 0, fontSize: 13, lineHeight: 1.45, color: 'var(--ov-soft)' }}>{storyStatus(p, now)}</span>
+          </div>
+        )}
+      </div>
+      <div className="scrollbar-thin" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: `18px ${side}px 20px` }}>
+        {loading || !steps.length
+          ? <p style={{ margin: 0, padding: '24px 0', textAlign: 'center', fontSize: 14, color: 'var(--ov-mute)' }}>Loading…</p>
+          : <Journey steps={steps} tab={tab || 'noAnswer'} highlight={highlight} currentIcon={currentIcon} />}
+      </div>
+      <div style={{ flexShrink: 0, padding: `14px ${side}px`, paddingBottom: sheet ? 'calc(20px + env(safe-area-inset-bottom))' : 20, borderTop: '1px solid var(--ov-line)' }}>
+        <button type="button" onClick={onOpenPipeline} className="ov-ghost" style={{
+          width: '100%', height: sheet ? 50 : 46, borderRadius: 999, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        }}>
+          Open in My Pipeline <ArrowRight size={16} strokeWidth={2} />
+        </button>
+      </div>
+    </aside>
   )
 }
