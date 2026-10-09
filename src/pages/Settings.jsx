@@ -20,7 +20,7 @@ import { MONO, DISPLAY } from '../lib/exportStyles'
 import { Switch } from '../components/ui/Switch'
 import { Avatar } from '../components/ui/Avatar'
 import {
-  SettingsNav, SettingsCard, SettingsChip, CodeBoxes, StrengthBar, OvField,
+  SettingsNav, SettingsCard, SettingsChip, CodeBoxes, StrengthBar, OvField, OvSelect,
 } from '../components/agent/AgentUI'
 import { ProfilePanel } from './Profile'
 import { TextFollowUpPanel } from '../components/settings/TextFollowUpPanel'
@@ -255,6 +255,69 @@ function EmailCard({ profile }) {
   )
 }
 
+// Prompt 735 — attributes that tell Chrome's saved-passwords picker and the
+// common password managers (LastPass, 1Password, Bitwarden-style) to leave a
+// field alone.
+const NO_FILL = { 'data-lpignore': 'true', 'data-1p-ignore': 'true', 'data-form-type': 'other' }
+
+const RESEND_WAIT = 60
+
+// Prompt 735 — "Forgot password?" from Settings. The same Supabase reset email
+// and landing page the Login screen uses (/reset-password); it goes to the
+// signed-in account's own sign-in email, no current password needed. A
+// username account (@ohvara.internal) has no inbox, so it's told to ask an
+// admin instead and nothing is sent.
+function ForgotPassword({ email }) {
+  const [sent, setSent] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [wait, setWait] = useState(0)
+  const noInbox = !email || email.endsWith(LEGACY_DOMAIN)
+
+  useEffect(() => {
+    if (wait <= 0) return
+    const t = setTimeout(() => setWait(w => w - 1), 1000)
+    return () => clearTimeout(t)
+  }, [wait])
+
+  async function send() {
+    setError(''); setBusy(true)
+    const { error: e } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: `${window.location.origin}/reset-password` })
+    setBusy(false)
+    if (e) return setError("Couldn't send that. Try again.")
+    setSent(true); setWait(RESEND_WAIT)
+  }
+
+  const bubble = { display: 'flex', flexDirection: 'column', gap: 10, padding: '14px 16px', borderRadius: 14, background: 'var(--ov-stub)' }
+  const strong = { fontWeight: 600, color: 'var(--ov-hi)', overflowWrap: 'anywhere' }
+  return (
+    <div role="region" aria-label="Reset your password" style={bubble}>
+      {noInbox ? (
+        <p style={{ margin: 0, fontSize: 14, color: 'var(--ov-soft)' }}>This account has no email on file. Ask your admin to reset your password.</p>
+      ) : sent ? (
+        <>
+          <p role="status" style={{ margin: 0, fontSize: 14, color: 'var(--ov-soft)' }}>
+            Check <span style={strong}>{email}</span>. The link signs you in to set a new password.
+          </p>
+          <div>
+            <button type="button" className="ov-ghost ov-set-btn" onClick={send} disabled={busy || wait > 0}>
+              <Spin on={busy}>{wait > 0 ? `Resend link in ${wait}s` : 'Resend link'}</Spin>
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p style={{ margin: 0, fontSize: 14, color: 'var(--ov-soft)' }}>We'll email a reset link to <span style={strong}>{email}</span>.</p>
+          <div>
+            <button type="button" className="ov-buy ov-set-btn" onClick={send} disabled={busy}><Spin on={busy}>Send link</Spin></button>
+          </div>
+        </>
+      )}
+      {error && <p role="alert" style={errText}>{error}</p>}
+    </div>
+  )
+}
+
 // Password, in two steps: the current one alone, then New + Confirm side by
 // side once it checks out. The check runs on a throwaway client
 // (lib/verifyPassword) so the live session, possibly aal2, is never replaced.
@@ -266,6 +329,8 @@ function PasswordCard() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
+  const [forgot, setForgot] = useState(false)
+  const [locked, setLocked] = useState(true) // read-only until first touch, so nothing can fill it on load
 
   async function check() {
     setError(''); setDone(false)
@@ -274,7 +339,7 @@ function PasswordCard() {
     const ok = await verifyPassword(session.user.email, current).catch(() => false)
     setBusy(false)
     if (!ok) return setError("That's not your current password.")
-    setCurrent(''); setStep('new')
+    setCurrent(''); setStep('new'); setForgot(false)
   }
 
   async function update() {
@@ -285,26 +350,40 @@ function PasswordCard() {
     const { error: e } = await supabase.auth.updateUser({ password: pw.next })
     setBusy(false)
     if (e) return setError(e.message || 'Could not update the password, try again')
-    setPw({ next: '', confirm: '' }); setStep('current'); setDone(true)
+    setPw({ next: '', confirm: '' }); setStep('current'); setDone(true); setLocked(true)
   }
 
-  function back() { setStep('current'); setPw({ next: '', confirm: '' }); setError('') }
+  function back() { setStep('current'); setPw({ next: '', confirm: '' }); setError(''); setLocked(true) }
 
   return (
     <SettingsCard icon={KeyRound} title="Password" sub="First confirm your current password, then choose a new one.">
       {step === 'current' ? (
         <>
-          <div className="ov-set-2">
-            <OvField label="Current password" type="password" autoComplete="current-password" value={current}
-              onChange={e => setCurrent(e.target.value)} error={!!error}
-              onKeyDown={e => { if (e.key === 'Enter') check() }} />
-            <div>
-              <button type="button" className="ov-buy ov-set-btn" onClick={check} disabled={busy}>
-                <Spin on={busy}><ArrowRight size={15} strokeWidth={2.2} /> Continue</Spin>
-              </button>
+          {/* A real form of its own, so the browser can't pair this password box
+              with the header search (the first text box on the page) as a login
+              form, and never fills or offers a saved password here (Prompt 735). */}
+          <form autoComplete="off" noValidate onSubmit={e => { e.preventDefault(); check() }}>
+            <div className="ov-set-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
+                  <label htmlFor="ov-confirm-current" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>Current password</label>
+                  <button type="button" className="ov-set-link" aria-expanded={forgot} onClick={() => setForgot(f => !f)}>Forgot password?</button>
+                </div>
+                <span className={`ov-input${error ? ' is-error' : ''}`}>
+                  <input id="ov-confirm-current" name="ov-confirm-current" type="password" autoComplete="off" {...NO_FILL}
+                    readOnly={locked} onFocus={() => setLocked(false)} onPointerDown={() => setLocked(false)}
+                    value={current} onChange={e => setCurrent(e.target.value)} aria-invalid={!!error || undefined} />
+                </span>
+              </div>
+              <div>
+                <button type="submit" className="ov-buy ov-set-btn" disabled={busy}>
+                  <Spin on={busy}><ArrowRight size={15} strokeWidth={2.2} /> Continue</Spin>
+                </button>
+              </div>
             </div>
-          </div>
+          </form>
           {error && <p style={errText}>{error}</p>}
+          {forgot && <ForgotPassword email={session.user.email} />}
           {done ? <Done>Password updated. Use it next time you sign in.</Done> : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--ov-faint)' }}>
               <span style={{ width: 22, height: 22, flexShrink: 0, borderRadius: '50%', border: '2px dashed var(--ov-faint)', boxSizing: 'border-box' }} />
@@ -321,21 +400,23 @@ function PasswordCard() {
             <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: 'var(--ov-hi)' }}>Current password confirmed</span>
             <button type="button" className="ov-set-link" onClick={back}>Change</button>
           </div>
-          <div className="ov-set-2">
-            <OvField label="New password" type="password" autoComplete="new-password" placeholder="8+ characters" autoFocus
-              value={pw.next} onChange={e => setPw(p => ({ ...p, next: e.target.value }))} />
-            <OvField label="Confirm new password" type="password" autoComplete="new-password" placeholder="Type it again"
-              value={pw.confirm} onChange={e => setPw(p => ({ ...p, confirm: e.target.value }))}
-              error={!!pw.confirm && pw.confirm !== pw.next.slice(0, pw.confirm.length)}
-              onKeyDown={e => { if (e.key === 'Enter') update() }} />
-          </div>
-          <StrengthBar password={pw.next} />
-          {error && <p style={errText}>{error}</p>}
-          <div>
-            <button type="button" className="ov-buy ov-set-btn" onClick={update} disabled={busy || !pw.next || !pw.confirm}>
-              <Spin on={busy}>Update password</Spin>
-            </button>
-          </div>
+          <form autoComplete="off" noValidate onSubmit={e => { e.preventDefault(); update() }}
+            style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <div className="ov-set-2">
+              <OvField label="New password" name="ov-new-password" type="password" autoComplete="new-password" placeholder="8+ characters" autoFocus
+                {...NO_FILL} value={pw.next} onChange={e => setPw(p => ({ ...p, next: e.target.value }))} />
+              <OvField label="Confirm new password" name="ov-confirm-new-password" type="password" autoComplete="new-password" placeholder="Type it again"
+                {...NO_FILL} value={pw.confirm} onChange={e => setPw(p => ({ ...p, confirm: e.target.value }))}
+                error={!!pw.confirm && pw.confirm !== pw.next.slice(0, pw.confirm.length)} />
+            </div>
+            <StrengthBar password={pw.next} />
+            {error && <p style={errText}>{error}</p>}
+            <div>
+              <button type="submit" className="ov-buy ov-set-btn" disabled={busy || !pw.next || !pw.confirm}>
+                <Spin on={busy}>Update password</Spin>
+              </button>
+            </div>
+          </form>
         </>
       )}
     </SettingsCard>
@@ -621,6 +702,10 @@ function ThemeCard() {
   )
 }
 
+const ZONE_OPTIONS = SELECTABLE_TIMEZONES.map(tz => ({ value: tz.value, label: `${tz.label} time` }))
+// The current time in a zone, shown muted on its row ("6:05 PM").
+const zoneClock = o => new Intl.DateTimeFormat('en-US', { timeZone: o.value, hour: 'numeric', minute: '2-digit' }).format(new Date())
+
 function TimeZoneCard({ profile }) {
   const update = useUpdateOwnProfile()
   const { refreshProfile } = useAuth()
@@ -649,16 +734,11 @@ function TimeZoneCard({ profile }) {
   return (
     <SettingsCard icon={Globe} title="Time zone" sub="Call times, reminders and Activity show in this zone.">
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 14, alignItems: 'end' }}>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
-          <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>Your time zone</span>
-          <span className="ov-input">
-            <Globe size={17} strokeWidth={1.9} style={{ flexShrink: 0 }} />
-            <select value={timezone} onChange={e => setTimezone(e.target.value)}
-              style={{ flex: 1, minWidth: 0, height: '100%', border: 'none', outline: 'none', background: 'transparent', font: 'inherit', fontSize: 15, color: 'var(--ov-hi)', cursor: 'pointer' }}>
-              {SELECTABLE_TIMEZONES.map(tz => <option key={tz.value} value={tz.value} style={{ color: '#111' }}>{tz.label} time</option>)}
-            </select>
-          </span>
-        </label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+          <span id="tz-label" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>Your time zone</span>
+          <OvSelect value={timezone} onChange={setTimezone} options={ZONE_OPTIONS} icon={Globe} metaOf={zoneClock}
+            aria-labelledby="tz-label" />
+        </div>
         <button type="button" className="ov-buy ov-set-btn" onClick={save} disabled={!dirty || update.isPending}>
           <Spin on={update.isPending && dirty}>{saved && !dirty ? <><Check size={15} strokeWidth={2.4} /> Saved</> : 'Save'}</Spin>
         </button>

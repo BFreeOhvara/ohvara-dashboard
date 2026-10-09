@@ -855,6 +855,35 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 }
 .ov-select.is-empty select { color: var(--ov-placeholder); }
 .ov-select select option { color: #0B0D12; background: #FFFFFF; }
+/* Prompt 735 — OvSelect, the portal's own dropdown: a button dressed as an
+   .ov-input, and its listbox portaled to <body> (position:fixed, placed by JS). */
+.ov-input.ov-sel { width: 100%; cursor: pointer; text-align: left; font-family: inherit; font-size: 15px; color: var(--ov-hi); }
+.ov-sel-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-sel.is-empty .ov-sel-value { color: var(--ov-placeholder); }
+.ov-sel-chev { flex-shrink: 0; color: var(--ov-mute); transition: transform 150ms ease; }
+.ov-card.ov-sel-list {
+  position: fixed; z-index: 160; box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain;
+  padding: 6px; border-radius: 14px; display: flex; flex-direction: column; gap: 2px;
+  animation: ovSelIn 120ms ease-out;
+}
+.ov-card.ov-sel-list.is-up { animation-name: ovSelInUp; }
+.ov-card.ov-sel-list.is-closing { animation: ovSelOut 110ms ease-in forwards; pointer-events: none; }
+@keyframes ovSelIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes ovSelInUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes ovSelOut { from { opacity: 1; } to { opacity: 0; } }
+.ov-sel-opt {
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0; min-height: 40px; padding: 8px 12px; box-sizing: border-box;
+  border-radius: 10px; font-size: 14.5px; font-weight: 500; color: var(--ov-hi); cursor: pointer;
+}
+.ov-sel-opt.is-active { background: var(--ov-st-booked-tint); }
+.ov-sel-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-sel-meta { flex-shrink: 0; font-size: 13px; font-weight: 500; color: var(--ov-mute); font-variant-numeric: tabular-nums; }
+.ov-sel-check { flex-shrink: 0; color: var(--ov-st-booked); }
+@media (max-width: 767.98px) { .ov-sel-opt { min-height: 44px; } }
+@media (prefers-reduced-motion: reduce) {
+  .ov-card.ov-sel-list, .ov-card.ov-sel-list.is-up, .ov-card.ov-sel-list.is-closing { animation: none; }
+  .ov-sel-chev { transition: none; }
+}
 /* Prompt 728 — the carrier type-ahead: inline ghost completion behind the
    text, and the suggestion list under the box (44px rows, full width on a
    phone, at least 320px beside City / State). */

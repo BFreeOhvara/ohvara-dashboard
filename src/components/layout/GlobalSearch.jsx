@@ -109,7 +109,10 @@ export function GlobalSearch() {
   const optId = i => `${uid}-opt-${i}`
 
   const combo = {
-    type: 'search', value: query, autoComplete: 'off', spellCheck: false,
+    // Prompt 735 — name "q" and the ignore flags keep the browser from treating
+    // this box as a login form's username field (it offered saved logins).
+    type: 'search', name: 'q', value: query, autoComplete: 'off', spellCheck: false,
+    'data-lpignore': 'true', 'data-1p-ignore': 'true', 'data-form-type': 'other',
     placeholder: 'Search clients, pages…', 'aria-label': 'Search clients and pages',
     role: 'combobox', 'aria-expanded': open, 'aria-controls': listId, 'aria-autocomplete': 'list',
     'aria-activedescendant': open && items[active] ? optId(active) : undefined,

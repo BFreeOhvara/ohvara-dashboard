@@ -1,4 +1,4 @@
-import { Children, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Children, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send, MapPin, Moon, ChevronDown, PencilLine } from 'lucide-react'
@@ -769,20 +769,180 @@ function NoteUnder({ className = '', note, children }) {
   return <div className={className} style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>{children}{note}</div>
 }
 
+// Prompt 735 — the portal's own dropdown, for every native <select> an agent
+// would meet. WAI-ARIA select-only combobox: focus stays on the trigger button
+// and the list (a listbox, portaled to <body> so a card or modal never clips
+// it) is driven with aria-activedescendant. Opens below the trigger at its
+// width, or above when there isn't room; the chosen row is scrolled into view
+// and ticked. ↑ ↓ Home End move, Enter / Space choose, Esc closes, Tab closes,
+// letters jump to the matching option. `options` = [{ value, label }];
+// `metaOf(option)` is an optional muted, right-aligned string per row.
+const SEL_MAX = 280
+export function OvSelect({ value, onChange, options, placeholder = 'Choose', icon: Icon, error, changed, metaOf, 'aria-labelledby': labelledBy, 'aria-label': ariaLabel, id }) {
+  const uid = useId()
+  const trigger = useRef(null)
+  const list = useRef(null)
+  const typed = useRef({ text: '', at: 0 })
+  const [open, setOpen] = useState(false)
+  const [closing, setClosing] = useState(false)
+  const [active, setActive] = useState(0)
+  const [place, setPlace] = useState(null)
+  const selectedIdx = options.findIndex(o => o.value === value)
+  const selected = options[selectedIdx]
+  const shown = open || closing
+  const listId = `${uid}-list`
+  const optId = i => `${uid}-opt-${i}`
+
+  const openList = () => { typed.current.text = ''; setActive(Math.max(0, selectedIdx)); setClosing(false); setOpen(true) }
+  const closeList = () => {
+    typed.current.text = ''
+    if (!open) return
+    setOpen(false)
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    setClosing(true)
+  }
+  useEffect(() => {
+    if (!closing) return
+    const t = setTimeout(() => setClosing(false), 110)
+    return () => clearTimeout(t)
+  }, [closing])
+
+  // Below the trigger at its width; above when below is too short and above is
+  // roomier. Kept inside the screen sideways.
+  useLayoutEffect(() => {
+    if (!shown) return
+    const measure = () => {
+      const r = trigger.current.getBoundingClientRect()
+      const want = Math.min(SEL_MAX, options.length * 40 + 12)
+      const below = window.innerHeight - r.bottom - 12
+      const above = r.top - 12
+      const up = below < want && above > below
+      const room = Math.max(120, Math.min(SEL_MAX, up ? above : below))
+      const width = Math.min(r.width, window.innerWidth - 16)
+      const left = Math.min(Math.max(8, r.left), window.innerWidth - width - 8)
+      setPlace({ left, width, maxHeight: room, up, ...(up ? { bottom: window.innerHeight - r.top + 6 } : { top: r.bottom + 6 }) })
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    window.addEventListener('scroll', measure, true)
+    return () => { window.removeEventListener('resize', measure); window.removeEventListener('scroll', measure, true) }
+  }, [shown, options.length])
+
+  // Keep the active row visible inside the list (not the page).
+  useLayoutEffect(() => {
+    if (!open || !place || !list.current) return
+    const box = list.current
+    const el = box.children[active]
+    if (!el) return
+    if (el.offsetTop < box.scrollTop) box.scrollTop = el.offsetTop - 6
+    else if (el.offsetTop + el.offsetHeight > box.scrollTop + box.clientHeight) box.scrollTop = el.offsetTop + el.offsetHeight - box.clientHeight + 6
+  }, [open, place, active])
+
+  useEffect(() => {
+    if (!open) return
+    const down = e => { if (!trigger.current?.contains(e.target) && !list.current?.contains(e.target)) closeList() }
+    document.addEventListener('pointerdown', down)
+    return () => document.removeEventListener('pointerdown', down)
+  })
+
+  const choose = i => { const o = options[i]; if (o) onChange(o.value); closeList(); trigger.current?.focus() }
+
+  // Letters jump to the next option starting with what was typed; one letter
+  // pressed again steps through the matches.
+  const typeAhead = ch => {
+    const t = typed.current
+    const now = Date.now()
+    t.text = now - t.at > 700 ? ch : t.text + ch
+    t.at = now
+    const q = t.text.toLowerCase()
+    const repeat = [...q].every(c => c === q[0])
+    const needle = repeat ? q[0] : q
+    const from = repeat ? active + 1 : active
+    for (let n = 0; n < options.length; n++) {
+      const i = (from + n) % options.length
+      if (options[i].label.toLowerCase().startsWith(needle)) return i
+    }
+    return -1
+  }
+
+  const onKeyDown = e => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return
+    const last = options.length - 1
+    // A space in the middle of typing ("new m") belongs to the search, not to Choose.
+    const typing = e.key === ' ' && typed.current.text && Date.now() - typed.current.at < 700
+    if (typing) {
+      const i = typeAhead(' ')
+      e.preventDefault()
+      if (i >= 0) { setActive(i); if (!open) { setClosing(false); setOpen(true) } }
+      return
+    }
+    if (!open) {
+      if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) { e.preventDefault(); openList() }
+      else if (e.key.length === 1) {
+        const i = typeAhead(e.key)
+        if (i >= 0) { e.preventDefault(); setActive(i); setClosing(false); setOpen(true) }
+      }
+      return
+    }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActive(a => Math.min(last, a + 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(a => Math.max(0, a - 1)) }
+    else if (e.key === 'Home') { e.preventDefault(); setActive(0) }
+    else if (e.key === 'End') { e.preventDefault(); setActive(last) }
+    else if (e.key === 'PageDown') { e.preventDefault(); setActive(a => Math.min(last, a + 6)) }
+    else if (e.key === 'PageUp') { e.preventDefault(); setActive(a => Math.max(0, a - 6)) }
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(active) }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeList() }
+    else if (e.key === 'Tab') closeList()
+    else if (e.key.length === 1) {
+      const i = typeAhead(e.key)
+      if (i >= 0) { e.preventDefault(); setActive(i) }
+    }
+  }
+
+  return (
+    <>
+      <button ref={trigger} id={id} type="button" role="combobox" aria-haspopup="listbox" aria-expanded={open}
+        aria-controls={shown ? listId : undefined} aria-activedescendant={open ? optId(active) : undefined}
+        aria-labelledby={labelledBy} aria-label={labelledBy ? undefined : ariaLabel} aria-invalid={error || undefined}
+        className={`ov-input ov-sel${error ? ' is-error' : ''}${changed ? ' is-changed' : ''}${selected ? '' : ' is-empty'}`}
+        onClick={() => (open ? closeList() : openList())} onKeyDown={onKeyDown}>
+        {Icon && <Icon size={17} strokeWidth={1.9} style={{ flexShrink: 0 }} />}
+        <span className="ov-sel-value">{selected ? selected.label : placeholder}</span>
+        <ChevronDown size={17} strokeWidth={2} className="ov-sel-chev" style={{ transform: open ? 'rotate(180deg)' : 'none' }} />
+      </button>
+      {shown && place && createPortal(
+        <div ref={list} id={listId} role="listbox" aria-labelledby={labelledBy} aria-label={labelledBy ? undefined : ariaLabel}
+          className={`ov-card ov-pop ov-sel-list${closing ? ' is-closing' : ''}${place.up ? ' is-up' : ''}`}
+          style={{ left: place.left, width: place.width, maxHeight: place.maxHeight, top: place.top, bottom: place.bottom }}>
+          {options.map((o, i) => (
+            <div key={o.value} id={optId(i)} role="option" aria-selected={o.value === value}
+              className={`ov-sel-opt${i === active ? ' is-active' : ''}`}
+              onMouseDown={e => e.preventDefault()} onMouseEnter={() => setActive(i)} onClick={() => choose(i)}>
+              <span className="ov-sel-label">{o.label}</span>
+              {metaOf && <span className="ov-sel-meta">{metaOf(o)}</span>}
+              <Check size={16} strokeWidth={2.4} className="ov-sel-check" aria-hidden="true" style={{ visibility: o.value === value ? 'visible' : 'hidden' }} />
+            </div>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </>
+  )
+}
+
+const STATE_OPTIONS = US_STATES.map(s => ({ value: s.code, label: s.name }))
+
 // Prompt 724 — the state, shown by name and stored as its 2-letter code.
-// (Moved here from BookCall by Prompt 730, which shares it.)
+// (Moved here from BookCall by Prompt 730, which shares it. Prompt 735: the
+// portal's own OvSelect instead of the browser's list.)
 export function StateField({ value, onChange, error, changed, note }) {
+  const uid = useId()
   const field = (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
-      <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>State</span>
-      <span className={`ov-input ov-select${error ? ' is-error' : ''}${changed ? ' is-changed' : ''}${value ? '' : ' is-empty'}`}>
-        <select value={value} onChange={e => onChange(e.target.value)} aria-invalid={error || undefined}>
-          <option value="">Choose a state</option>
-          {US_STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
-        </select>
-        <ChevronDown size={17} strokeWidth={2} style={{ flexShrink: 0, pointerEvents: 'none' }} />
-      </span>
-    </label>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+      <span id={`${uid}-label`} style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>State</span>
+      <OvSelect value={value} onChange={onChange} options={STATE_OPTIONS} placeholder="Choose a state"
+        error={error} changed={changed} aria-labelledby={`${uid}-label`} />
+    </div>
   )
   return note ? <NoteUnder note={note}>{field}</NoteUnder> : field
 }
