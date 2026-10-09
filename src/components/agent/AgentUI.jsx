@@ -1522,8 +1522,8 @@ const tabSub = (t, { counts, confirm, call }) => (
   t !== 'needs' ? PIPELINE_TAB[t].meaning : counts.needs ? `${confirm} to confirm · ${call} to call` : 'All caught up'
 )
 
-// The "Your pipeline" box (Prompt 726): total, range switch, proportional bar,
-// a 2×2 of status tiles and the next Fulfillment call. `rows` are already
+// The "Your pipeline" box (Prompt 726, rows in 729): total, range switch, proportional bar,
+// four plain status rows and the next Fulfillment call. `rows` are already
 // range/agent scoped; `next` is the soonest booked call still ahead (ignores
 // the range).
 export function PipelineSummary({ rows, tab, range, ranges, onRange, agentFilter, next, onOpenNext, onBook }) {
@@ -1541,11 +1541,13 @@ export function PipelineSummary({ rows, tab, range, ranges, onRange, agentFilter
       {agentFilter && <div style={{ marginTop: 12 }}>{agentFilter}</div>}
       <div style={{ marginTop: 12 }}><RangeSwitch ranges={ranges} value={range} onChange={onRange} full /></div>
       <div style={{ marginTop: 14 }}><PipelineBar counts={counts} tab={tab} height={6} /></div>
-      <div className="pl-legend">
+      <div className="pl-rows">
         {PIPELINE_TABS.map(t => (
-          <div key={t} className="pl-lg">
-            <div className="l"><i style={{ background: stVar(t) }} />{PIPELINE_TAB[t].label}</div>
-            <div className="v">{counts[t]}<small>{pct(counts[t])}%</small></div>
+          <div key={t} className="pl-row2">
+            <i style={{ background: stVar(t) }} />
+            <span className="l">{PIPELINE_TAB[t].label}</span>
+            <span className="c">{counts[t]}</span>
+            <span className="p">{pct(counts[t])}%</span>
           </div>
         ))}
       </div>
@@ -1557,13 +1559,13 @@ export function PipelineSummary({ rows, tab, range, ranges, onRange, agentFilter
               <b>{new Date(next.scheduled_call_at).toLocaleDateString('en-US', { day: 'numeric', timeZone: tz })}</b>
             </span>
             <span className="k">Next Fulfillment call<b>{fullName(next)} · {fmtSlotTime(next.scheduled_call_at, next.client_timezone)}</b></span>
-            <button type="button" className="go" onClick={() => onOpenNext(next)}>Open</button>
+            <button type="button" className="ov-ghost" onClick={() => onOpenNext(next)}>Open</button>
           </>
         ) : (
           <>
             <span className="pl-ntile"><CalendarDays size={18} strokeWidth={1.9} style={{ color: 'var(--ov-faint)' }} /></span>
             <span className="k">Next Fulfillment call<b>No calls booked</b></span>
-            {onBook && <button type="button" className="go" onClick={onBook}>Book a call</button>}
+            {onBook && <button type="button" className="ov-primary" onClick={onBook}><CalendarPlus size={16} strokeWidth={2} aria-hidden="true" />Book a call</button>}
           </>
         )}
       </div>
@@ -1613,12 +1615,12 @@ export function PipelineList({ rows, tab, onTab, list, ...status }) {
               onClick={() => select(t)} className={`ov-tab pl-tab${on ? ' is-sel' : ''}${counts[t] ? '' : ' is-zero'}`}
               style={{ '--c': stVar(t), '--tint': stVar(t, 'tint'), '--edge': stVar(t, 'edge') }}
             >
-              <span className="d" />
+              <span className="ic" aria-hidden="true">{(() => { const I = PIPELINE_TAB[t].icon; return <I size={18} strokeWidth={2} /> })()}</span>
               <span style={{ minWidth: 0 }}>
                 <b className="nm">{PIPELINE_TAB[t].label}</b>
                 <small>{tabSub(t, split)}</small>
               </span>
-              <span className="n" style={OV_NUM}>{counts[t]}</span>
+              <span className="n" style={{ ...OV_NUM, color: on ? 'var(--ov-hi)' : 'var(--c)' }}>{counts[t]}</span>
             </button>
           )
         })}
@@ -1632,14 +1634,10 @@ export function PipelineList({ rows, tab, onTab, list, ...status }) {
             return (
               <button
                 key={t} ref={el => { chipRefs.current[t] = el }} type="button" role="tab" aria-selected={on} tabIndex={on ? 0 : -1}
-                onClick={() => select(t)} className={`ov-tab${on ? '' : ' ov-tile'}`}
-                style={{
-                  flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 8, height: 44, padding: '0 14px', borderRadius: 999,
-                  fontSize: 13.5, fontWeight: 600, color: on ? stVar(t) : 'var(--ov-mid)',
-                  ...(on ? { background: stVar(t, 'tint'), border: `1px solid ${stVar(t, 'edge')}` } : null),
-                }}
+                onClick={() => select(t)} className={`ov-tab pl-chip${on ? ' is-sel' : ''}`}
+                style={{ '--c': stVar(t) }}
               >
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: stVar(t) }} />
+                {(() => { const I = PIPELINE_TAB[t].icon; return <I size={16} strokeWidth={2} aria-hidden="true" /> })()}
                 {PIPELINE_TAB[t].label}
                 <span style={{ fontFamily: DISPLAY, fontWeight: 600 }}>{counts[t]}</span>
               </button>
@@ -2000,17 +1998,32 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
 // ── Client drawer ──────────────────────────────────────────────────────────
 
 // Right-side panel (a full-screen sheet below 640px) over a scrim. Esc, the
-// scrim or the close button call onClose; body scroll is locked while open.
+// scrim or the close button slide it out and then call onClose; body scroll is locked while open.
 // `children` is the scrolling body, `footer` the pinned action area.
 export function ClientDrawer({ p, tab, onClose, onMessage, messageLabel, footer, children }) {
   const closeBtn = useRef(null)
+  const onCloseRef = useRef(onClose)
+  useEffect(() => { onCloseRef.current = onClose })
+  const [closing, setClosing] = useState(false)
+  const closingRef = useRef(false)
+  const timer = useRef(null)
+  // The X, the scrim and Esc slide the drawer out, then tell the parent
+  // (Prompt 729). Repeat calls while sliding do nothing; reduced motion closes at once.
+  const finish = useRef(() => { clearTimeout(timer.current); onCloseRef.current() })
+  const requestClose = useRef(() => {
+    if (closingRef.current) return
+    closingRef.current = true
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { finish.current(); return }
+    setClosing(true)
+    timer.current = setTimeout(finish.current, 260)
+  })
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    const onKey = e => { if (e.key === 'Escape') onClose() }
+    const onKey = e => { if (e.key === 'Escape') requestClose.current() }
     window.addEventListener('keydown', onKey)
-    return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey) }
-  }, [onClose])
+    return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey); clearTimeout(timer.current) }
+  }, [])
   useEffect(() => { closeBtn.current?.focus() }, [])
 
   const name = fullName(p)
@@ -2020,15 +2033,18 @@ export function ClientDrawer({ p, tab, onClose, onMessage, messageLabel, footer,
   }
   return createPortal(
     <>
-      <div className="ov-scrim" onClick={onClose} aria-hidden="true" />
-      <aside className="ov-drawer" role="dialog" aria-modal="true" aria-label={name}>
+      <div className={`ov-scrim${closing ? ' is-closing' : ''}`} onClick={() => requestClose.current()} aria-hidden="true" />
+      <aside
+        className={`ov-drawer${closing ? ' is-closing' : ''}`} role="dialog" aria-modal="true" aria-label={name}
+        onAnimationEnd={e => { if (closing && e.target === e.currentTarget) finish.current() }}
+      >
         <div className="px-5 sm:px-[26px]" style={{
           paddingTop: 26, paddingBottom: 22, borderBottom: '1px solid var(--ov-line)',
           background: `radial-gradient(ellipse 90% 80% at 100% 0%, ${stVar(tab, 'tint')} 0%, transparent 70%)`,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-mute)' }}>Client</span>
-            <button ref={closeBtn} type="button" onClick={onClose} aria-label="Close" className="ov-ghost"
+            <button ref={closeBtn} type="button" onClick={() => requestClose.current()} aria-label="Close" className="ov-ghost"
               style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <X size={16} strokeWidth={2} />
             </button>
