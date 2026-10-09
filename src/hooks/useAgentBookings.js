@@ -24,8 +24,11 @@ const SELECT = `
 // re-polls every 10s while any call is live and every 45s otherwise.
 export const livePollMs = rows => (rows?.some(p => p.call_live_since) ? 10e3 : 45e3)
 
-export function useAgentBookings(agentId = null) {
+// `opts` passes straight to useQuery (Prompt 722: the sidebar badge and the
+// header search only switch it on where they need it).
+export function useAgentBookings(agentId = null, opts = {}) {
   return useQuery({
+    ...opts,
     queryKey: ['policies', 'agent-bookings', agentId ?? 'visible'],
     refetchInterval: q => livePollMs(q.state.data),
     queryFn: async () => {

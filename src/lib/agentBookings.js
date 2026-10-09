@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { fullName } from './policyFormat'
 
 // Agent portal (Prompt 665) — one place that decides where a booked client
 // stands, so Overview, My Clients and Performance can't disagree.
@@ -132,6 +133,21 @@ export function isBooking(p) {
 }
 
 export const digits = s => String(s || '').replace(/\D/g, '')
+
+// Client search (Prompt 717, shared with the header search by Prompt 722):
+// name, carrier and agent name contain the query, or 3+ typed digits appear in
+// the phone number. Sorted by name, numeric-aware.
+export function matchClients(rows, query) {
+  const q = String(query || '').trim().toLowerCase()
+  if (!q) return []
+  const qd = digits(q)
+  return (rows || [])
+    .filter(p => {
+      const hay = [p.client_first_name, p.client_last_name, p.current_carrier, p.agent?.full_name].filter(Boolean).join(' ').toLowerCase()
+      return hay.includes(q) || (qd.length >= 3 && digits(p.client_phone).includes(qd))
+    })
+    .sort((a, b) => fullName(a).localeCompare(fullName(b), undefined, { numeric: true }))
+}
 
 // Monday 00:00 local of the week containing `d`.
 export function startOfWeek(d = new Date()) {

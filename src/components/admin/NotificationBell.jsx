@@ -96,29 +96,14 @@ export function NotificationBell({ profileId }) {
       {/* Bell button */}
       <button
         onClick={handleOpen}
-        style={{
-          position: 'relative',
-          width: 34, height: 34,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: open ? 'var(--bg-elevated)' : 'transparent',
-          border: '0.5px solid ' + (open ? 'var(--border-hover)' : 'transparent'),
-          borderRadius: 8, cursor: 'pointer',
-          color: 'var(--text-secondary)',
-          transition: 'all 0.15s',
-        }}
-        onMouseEnter={e => { if (!open) e.currentTarget.style.background = 'var(--bg-elevated)' }}
-        onMouseLeave={e => { if (!open) e.currentTarget.style.background = 'transparent' }}
+        className={`ov-hbtn${open ? ' is-open' : ''}`}
+        aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} new` : 'Notifications'}
+        aria-expanded={open}
       >
-        <Bell size={16} />
-        {unreadCount > 0 && (
-          <span style={{
-            position: 'absolute', top: 5, right: 5,
-            width: 8, height: 8, borderRadius: '50%',
-            background: 'var(--danger)',
-            boxShadow: '0 0 6px var(--danger)',
-            animation: 'navPulse 2s ease-in-out infinite',
-          }} />
-        )}
+        {/* Prompt 722 — 42px header button with a count pill; the dropdown
+            and its logic are unchanged. */}
+        <Bell size={18} strokeWidth={1.9} />
+        {unreadCount > 0 && <span className="ov-hcount">{unreadCount > 99 ? '99+' : unreadCount}</span>}
       </button>
 
       {/* Dropdown — portaled to document.body, positioned via the bell's

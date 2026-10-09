@@ -1,288 +1,210 @@
-import { useState, useEffect, useRef } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
-import {
-  Users, LogOut, Home, Settings, Award,
-  ChevronLeft, Smartphone, ClipboardList, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard,
-} from 'lucide-react'
+import { PanelLeft, X, ChevronsUpDown } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useUnreadMessageCount, useMessagesRealtime } from '../../hooks/usePolicyMessages'
+import { useAgentBookings } from '../../hooks/useAgentBookings'
+import { useWeeklyUsage } from '../../hooks/useBillingTiers'
+import { tabOf } from '../../lib/agentBookings'
+import { capState, formatReset } from '../../lib/billing'
+import { roleLabel } from '../../lib/roleLabels'
+import { NAV } from '../../lib/nav'
 import { Avatar } from '../ui/Avatar'
-import { eyebrow } from '../../lib/exportStyles'
-import ohvaraLogo from '../../assets/ohvara-logo.png'
-import { BugReportButton, SidebarIconButton } from '../shared/BugReportButton'
+import { OhvaraMark } from '../ui/OhvaraMark'
+import { BugReportModal, BugReportInbox } from '../shared/BugReportButton'
 import { MobileAppModal } from './MobileAppModal'
+import { AccountMenu } from './AccountMenu'
 
-// Sidebar — Prompt 669 restyle to Restorix Portal's Layout.jsx: a 240px rail,
-// the logo + wordmark in a 64px header that lines up with the page header's
-// bottom border, eyebrow group labels, rounded nav rows with an accent active
-// state, and the account card pinned to the bottom.
+// Sidebar — Prompt 722 rebuilt the chrome on the v16 language (DESIGN.md v16
+// "P722 — App chrome"). Kept from before: the titled groups, each role's items
+// and routes (now in lib/nav.js), the navy / teal rail (--bg-sidebar), the
+// desktop collapse (persisted) and the phone drawer.
 //
-// Prompt 674 — the rail is back on Ohvara's own navy (teal in light) via
-// --bg-sidebar. The account card is now exactly Restorix's AccountPopover:
-// clicking it slides a panel up out of the card (the card grows upward from
-// the bottom edge) with a Settings shortcut and Sign out. The agent duty
-// toggle is gone (agents have no shifts; nothing server-side ever read it),
-// Profile moved into Settings, and the divider line that sat above the card
-// — which rode up as the card expanded — is removed.
-//
-// Prompt 675 — the panel is just Settings + Sign out (the "Profile &
-// settings" label read as two items; Settings already opens on the Profile
-// tab), the card's outline is white instead of grey, and the chevron on the
-// card's right edge is gone.
-//
-// Prompt 676 — the card has no outline at all (just the --bg-elevated fill,
-// the same as an active nav row), the panel is Sign out only (Settings
-// lives in the Account group), its divider is white, and the agent's flat
-// six-item Work list is split into Restorix-style groups.
-//
-// Prompt 708 — header block: the divider beneath it is gone, the collapse
-// button is a rounded box outlined in the (former divider's) --sidebar-border
-// white instead of a grey circle, and the two-line "Ohvara / <Role> Portal"
-// title is one "Ohvara Portal" line for every role.
-//
-// Prompt 711 — the bug-report button moved in from its floating bottom-right
-// corner and sits with a phone (Add to Home Screen → MobileAppModal, the old
-// "Mobile App" box Prompt 669 had dropped) in an icon row directly above the
-// account card, as in Restorix Portal. The row lives in the same footer
-// block as the card, so it rides up with it when the card's Sign-out panel
-// expands instead of staying pinned to the viewport edge.
-//
-// Kept: collapsible to 64px on desktop, off-canvas drawer on phones.
-
-function AccountCard({ profile, expanded, onSignOut, onExpand }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
-
-  useEffect(() => {
-    function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
-
-  // Collapsed rail: the avatar alone, which opens the rail back up.
-  if (!expanded) {
-    return (
-      <div style={{ padding: 12, display: 'flex', justifyContent: 'center' }}>
-        <button onClick={onExpand} title={profile?.full_name || 'Account'}
-          style={{ border: 'none', background: 'transparent', padding: 0, borderRadius: '50%' }}>
-          <Avatar profile={profile} size={32} />
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div ref={ref} style={{ padding: 12 }}>
-      <div style={{ overflow: 'hidden', borderRadius: 10, background: 'var(--bg-elevated)' }}>
-        <button onClick={() => setOpen(v => !v)} aria-expanded={open} className="menu-row" style={{ padding: '9px 10px' }}>
-          <Avatar profile={profile} size={30} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {profile?.full_name}
-            </p>
-            <p style={{ ...eyebrow, marginTop: 2, color: 'var(--text-muted)', fontSize: 10 }}>{profile?.role}</p>
-          </div>
-        </button>
-
-        <div style={{ display: 'grid', gridTemplateRows: open ? '1fr' : '0fr', transition: 'grid-template-rows 200ms ease-out' }}>
-          <div style={{ overflow: 'hidden' }}>
-            <div style={{ borderTop: 'var(--border-w) solid var(--sidebar-card-divider)' }}>
-              <button onClick={() => { setOpen(false); onSignOut() }} className="menu-row" style={{ color: 'var(--danger)' }}>
-                <LogOut size={15} /> Sign out
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const NAV = {
-  // Prompt 665 — agent portal rebuilt around booking Fulfillment calls.
-  // Prompt 676 — grouped the way Restorix Portal's Layout.jsx is instead of
-  // one flat list. Prompt 678 — Training and Performance removed, Team folded
-  // into Work, so no group is empty or single-item (bar Today / Account).
-  agent: [
-    { group: 'Today', items: [
-      { to: '/agent', label: 'Overview', icon: Home },
-    ] },
-    { group: 'Work', items: [
-      { to: '/agent/book', label: 'Book a call', icon: CalendarPlus },
-      { to: '/agent/clients', label: 'My Pipeline', icon: Users },
-      // Prompt 690 — chronological log of what happened, next to My Pipeline.
-      { to: '/agent/activity', label: 'Activity', icon: History },
-    ] },
-    // Prompt 680 — Messages gets its own single-item group, as in Restorix.
-    { group: 'Communications', items: [
-      { to: '/messages', label: 'Messages', icon: MessageSquare },
-    ] },
-    // Prompt 693 — Billing is about the agent's own account standing, so it
-    // sits with Settings; Team removed.
-    { group: 'Account', items: [
-      { to: '/agent/billing', label: 'Billing', icon: CreditCard },
-      { to: '/settings', label: 'Settings', icon: Settings },
-    ] },
-  ],
-  admin: [
-    // Prompt 665 — admin follows the agent portal's pages (company-wide
-    // Clients), minus the agent's personal Overview.
-    { group: 'Agents', items: [
-      { to: '/agent/book', label: 'Book a call', icon: CalendarPlus },
-      { to: '/agent/clients', label: 'Pipeline', icon: Users },
-      { to: '/agent/activity', label: 'Activity', icon: History },
-      { to: '/messages', label: 'Messages', icon: MessageSquare },
-    ] },
-    { group: 'Account', items: [
-      { to: '/admin/users', label: 'Users & Access', icon: Award },
-      { to: '/fulfillment/desk', label: 'Fulfillment', icon: ClipboardList },
-      { to: '/settings', label: 'Settings', icon: Settings },
-    ] },
-  ],
-  // Prompt 681 — same shape as the agent side: Overview landing page, the
-  // desk + a team-wide Pipeline under Work, Messages in its own group.
-  fulfillment: [
-    { group: 'Today', items: [
-      { to: '/fulfillment', label: 'Overview', icon: Home },
-    ] },
-    { group: 'Work', items: [
-      { to: '/fulfillment/desk', label: 'Fulfillment', icon: ClipboardList },
-      { to: '/fulfillment/pipeline', label: 'Pipeline', icon: ListFilter },
-      { to: '/fulfillment/getting-paid', label: 'Getting Paid', icon: Wallet },
-    ] },
-    { group: 'Communications', items: [
-      { to: '/messages', label: 'Messages', icon: MessageSquare },
-    ] },
-    { group: 'Account', items: [
-      { to: '/settings', label: 'Settings', icon: Settings },
-    ] },
-  ],
-}
+// - Header: the bird without its box (OhvaraMark) and "Ohvara Portal" in one
+//   outlined style, baseline-aligned so the text sits on the bird's bottom line.
+// - Rows 40px / radius 12; the active row has a fill, a soft shadow and a 3px
+//   glowing bar on the rail's left edge.
+// - Badges: Messages unread; agents also get My Pipeline's "needs you" count
+//   (amber), from the same useAgentBookings rows My Pipeline reads.
+// - Agents with a weekly cap get a "This week" bookings card.
+// - The account card opens the animated AccountMenu (theme, phone app, report
+//   a problem / bug reports, sign out) — the round bug and phone buttons and
+//   the slide-up Sign out panel are gone.
+// - Collapsed (72px): icon rows with tooltips, dots for badges, a hairline
+//   between groups, and the avatar opens the same menu to the right.
 
 const COLLAPSE_KEY = 'ohvara-sidebar-collapsed'
 // Keep in sync with DashboardLayout's --sb-w and index.css's fallbacks.
-export const SIDEBAR_W = 240
-export const SIDEBAR_W_COLLAPSED = 64
+export const SIDEBAR_W = 256
+export const SIDEBAR_W_COLLAPSED = 72
+const DRAWER_W = 300
+
+const badgeText = n => (n > 99 ? '99+' : n)
 
 export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
-  const [showMobileApp, setShowMobileApp] = useState(false)
-  const groups = NAV[profile?.role] || []
+  const role = profile?.role
+  const isAgent = role === 'agent'
+  const isAdmin = role === 'admin'
+  const groups = NAV[role] || []
 
   // Prompt 679 — unread Messages badge + the one live subscription that keeps
   // it (and an open thread) current.
   useMessagesRealtime(profile?.id)
   const unreadMessages = useUnreadMessageCount(!!profile?.id)
 
+  // Agents only: "needs you" on My Pipeline and this week's bookings card.
+  // Same queries (and keys) My Pipeline and Book a call already use.
+  const { data: bookings = [] } = useAgentBookings(isAgent ? profile.id : null, { enabled: isAgent })
+  const needsYou = useMemo(() => (isAgent ? bookings.filter(p => tabOf(p) === 'needs').length : 0), [bookings, isAgent])
+  const { data: usage } = useWeeklyUsage(isAgent ? profile.id : null)
+  const cap = isAgent ? capState(usage) : null
+
   // The phone drawer is always full width — collapsing is a desktop thing.
   const expanded = !collapsed || open
+  const width = open ? DRAWER_W : expanded ? SIDEBAR_W : SIDEBAR_W_COLLAPSED
+
+  const [menu, setMenu] = useState(null) // { rect, placement } while open
+  const [modal, setModal] = useState(null) // 'app' | 'report' | 'inbox'
+  const cardRef = useRef(null)
+  const closeMenu = useCallback(() => setMenu(m => (m ? { ...m, open: false } : m)), [])
+  const toggleMenu = placement => {
+    if (menu?.open) return closeMenu()
+    setMenu({ open: true, rect: cardRef.current.getBoundingClientRect(), placement })
+  }
 
   async function handleSignOut() {
     await signOut()
     navigate('/login')
   }
 
+  const badgeFor = to => {
+    if (to === '/messages' && unreadMessages > 0) return { n: unreadMessages, tone: 'msg', label: `${unreadMessages} unread` }
+    if (isAgent && to === '/agent/clients' && needsYou > 0) return { n: needsYou, tone: 'amber', label: `${needsYou} need you` }
+    return null
+  }
+
+  const plan = isAgent ? usage?.tier_name : null
+  const subline = [roleLabel(role), plan].filter(Boolean).join(' · ')
+
   return (
     <>
-      {open && (
-        <div
-          className="md:hidden"
-          onClick={onClose}
-          style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.5)' }}
-        />
-      )}
+      {open && <div className="md:hidden ov-sb-scrim" onClick={onClose} aria-hidden="true" />}
       <aside
-        className={clsx('sidebar-glass', 'md:translate-x-0', open ? 'translate-x-0' : '-translate-x-full')}
-        style={{
-          position: 'fixed', top: 0, left: 0, bottom: 0,
-          width: expanded ? SIDEBAR_W : SIDEBAR_W_COLLAPSED,
-          display: 'flex', flexDirection: 'column',
-          overflow: 'hidden', zIndex: 100,
-          transition: 'transform 200ms ease, width 150ms',
-        }}
+        className={clsx('sidebar-glass ov-sb', !expanded && 'is-collapsed', 'md:translate-x-0', open ? 'translate-x-0' : '-translate-x-full')}
+        style={{ width }}
       >
-        <div style={{
-          height: 64, flexShrink: 0, padding: expanded ? '0 14px 0 18px' : 0,
-          display: 'flex', alignItems: 'center', gap: 10,
-          justifyContent: expanded ? 'flex-start' : 'center',
-        }}>
-          <img src={ohvaraLogo} alt="Ohvara" style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover', flexShrink: 0, display: expanded ? 'block' : 'none' }} />
-          {expanded && (
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text-primary)', lineHeight: 1.1, whiteSpace: 'nowrap' }}>Ohvara Portal</p>
-            </div>
+        <div className="ov-sb-head">
+          {expanded ? (
+            <>
+              <span className="ov-sb-brand">
+                <OhvaraMark height={40} back="var(--ov-mark-back)" front="var(--ov-mark-front)" />
+                <span className="ov-wordmark">Ohvara</span>
+                <span className="ov-wordmark" style={{ marginLeft: -3 }}>Portal</span>
+              </span>
+              {open ? (
+                <button type="button" className="ov-sb-collapse ov-phone-only" onClick={onClose} aria-label="Close menu">
+                  <X size={18} strokeWidth={1.9} />
+                </button>
+              ) : (
+                <button type="button" className="ov-sb-collapse ov-desk-only" onClick={onToggleCollapse} aria-label="Collapse sidebar" title="Collapse sidebar">
+                  <PanelLeft size={17} strokeWidth={1.9} />
+                </button>
+              )}
+            </>
+          ) : (
+            <button type="button" className="ov-sb-expand" onClick={onToggleCollapse} aria-label="Expand sidebar" title="Expand sidebar">
+              <OhvaraMark height={36} back="var(--ov-mark-back)" front="var(--ov-mark-front)" />
+            </button>
           )}
-          <button
-            onClick={onToggleCollapse}
-            title={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
-            className="icon-btn hidden md:inline-flex"
-            style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 8, borderColor: 'var(--sidebar-border)' }}
-          >
-            <ChevronLeft size={16} style={{ transform: expanded ? 'none' : 'rotate(180deg)' }} />
-          </button>
         </div>
 
-        <nav style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 12px 8px', display: 'flex', flexDirection: 'column', gap: 18 }} className="scrollbar-thin">
-          {groups.map(g => (
-            <div key={g.group}>
-              {expanded && (
-                <p style={{ ...eyebrow, color: 'var(--text-muted)', padding: '0 12px 6px' }}>{g.group}</p>
-              )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {g.items.map(({ to, label, icon: Icon }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    end={to === '/agent' || to === '/fulfillment'}
-                    onClick={onClose}
-                    title={expanded ? undefined : label}
-                    style={{ position: 'relative' }}
-                    className={({ isActive }) => clsx('nav-item', isActive && 'is-active', !expanded && 'is-collapsed')}
-                  >
-                    <Icon size={17} style={{ flexShrink: 0 }} />
-                    {expanded && <span style={{ flex: 1, whiteSpace: 'nowrap' }}>{label}</span>}
-                    {to === '/messages' && unreadMessages > 0 && (
-                      <span
-                        title={`${unreadMessages} unread`}
-                        style={expanded ? {
-                          minWidth: 18, height: 18, padding: '0 5px', borderRadius: 999,
-                          background: 'var(--text-primary)', color: 'var(--bg-sidebar)', fontFamily: 'var(--font-mono)',
-                          fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        } : {
-                          position: 'absolute', top: 6, right: 12, width: 8, height: 8, borderRadius: '50%', background: 'var(--text-primary)',
-                        }}
-                      >
-                        {expanded ? (unreadMessages > 99 ? '99+' : unreadMessages) : null}
-                      </span>
-                    )}
-                  </NavLink>
-                ))}
+        <nav className="ov-sb-nav scrollbar-thin" aria-label="Main">
+          {groups.map((g, gi) => (
+            <div key={g.group} role="group" aria-label={g.group}>
+              {expanded
+                ? <p className="ov-sb-group">{g.group}</p>
+                : gi > 0 && <div className="ov-sb-rule" aria-hidden="true" />}
+              <div className="ov-sb-items">
+                {g.items.map(({ to, label, icon: Icon }) => {
+                  const badge = badgeFor(to)
+                  return (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end={to === '/agent' || to === '/fulfillment'}
+                      onClick={onClose}
+                      title={expanded ? undefined : label}
+                      aria-label={expanded ? undefined : label}
+                      className={({ isActive }) => clsx('ov-sb-row', isActive && 'is-active', !expanded && 'is-icon')}
+                    >
+                      <Icon size={18} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                      {expanded && <span className="ov-sb-label">{label}</span>}
+                      {badge && (expanded
+                        ? <span className={`ov-sb-badge is-${badge.tone}`} aria-label={badge.label}>{badgeText(badge.n)}</span>
+                        : <span className={`ov-sb-dot is-${badge.tone}`} aria-label={badge.label} />)}
+                    </NavLink>
+                  )
+                })}
               </div>
             </div>
           ))}
         </nav>
 
-        <div style={{ flexShrink: 0 }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', padding: expanded ? '0 20px 0' : '0 0 4px',
-            flexDirection: expanded ? 'row' : 'column', justifyContent: expanded ? 'space-between' : 'center', gap: 8,
-          }}>
-            <BugReportButton anchorLeft={(expanded ? SIDEBAR_W : SIDEBAR_W_COLLAPSED) + 12} />
-            <SidebarIconButton icon={Smartphone} label="Add to Home Screen" onClick={() => setShowMobileApp(true)} />
-          </div>
-          <AccountCard
-            profile={profile}
-            expanded={expanded}
-            onSignOut={handleSignOut}
-            onExpand={onToggleCollapse}
-          />
+        <div className="ov-sb-foot">
+          {expanded && cap?.cap != null && (
+            <div className="ov-sb-usage">
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                <span className="ov-sb-usage-title">This week</span>
+                <span className="ov-sb-usage-reset">Resets {formatReset(usage.week_end).slice(0, 3)}</span>
+              </div>
+              <div className="ov-sb-usage-line">
+                <span className="ov-sb-usage-num">{cap.used}</span>
+                {cap.atCap
+                  ? <span> of {cap.cap} · <span className="ov-sb-usage-full">Limit reached</span></span>
+                  : <span> of {cap.cap} bookings</span>}
+              </div>
+              <div className="ov-sb-track" role="progressbar" aria-label="Bookings this week" aria-valuemin={0} aria-valuemax={cap.cap} aria-valuenow={cap.used}>
+                <div className={clsx('ov-sb-fill', cap.atCap && 'is-full')} style={{ width: `${Math.min(100, cap.cap ? (cap.used / cap.cap) * 100 : 100)}%` }} />
+              </div>
+            </div>
+          )}
+
+          {expanded ? (
+            <button
+              ref={cardRef} type="button" className={clsx('ov-sb-account', menu?.open && 'is-open')}
+              aria-haspopup="menu" aria-expanded={!!menu?.open} onClick={() => toggleMenu('above')}
+            >
+              <Avatar profile={profile} size={36} />
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span className="ov-sb-account-name">{profile?.full_name}</span>
+                <span className="ov-sb-account-sub">{subline}</span>
+              </span>
+              <ChevronsUpDown size={16} strokeWidth={2} className="ov-sb-account-chev" aria-hidden="true" />
+            </button>
+          ) : (
+            <button
+              ref={cardRef} type="button" className="ov-sb-avatar" title={profile?.full_name || 'Account'}
+              aria-label="Account menu" aria-haspopup="menu" aria-expanded={!!menu?.open} onClick={() => toggleMenu('right')}
+            >
+              <Avatar profile={profile} size={44} />
+            </button>
+          )}
         </div>
       </aside>
-      {showMobileApp && <MobileAppModal onClose={() => setShowMobileApp(false)} />}
+
+      <AccountMenu
+        open={!!menu?.open} anchor={menu?.rect} placement={menu?.placement} onClose={closeMenu} triggerRef={cardRef}
+        isAdmin={isAdmin}
+        onPhoneApp={() => setModal('app')}
+        onReport={() => setModal(isAdmin ? 'inbox' : 'report')}
+        onSignOut={handleSignOut}
+      />
+      {modal === 'app' && <MobileAppModal onClose={() => setModal(null)} />}
+      {modal === 'report' && <BugReportModal onClose={() => setModal(null)} />}
+      {modal === 'inbox' && <BugReportInbox anchorLeft={(open ? 0 : width) + 12} onClose={() => setModal(null)} />}
     </>
   )
 }

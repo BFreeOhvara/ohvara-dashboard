@@ -1,18 +1,27 @@
-import { useState, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
-import { Menu } from 'lucide-react'
+import { useState, useEffect, Fragment } from 'react'
+import { useLocation, Link } from 'react-router-dom'
+import { Menu, ChevronRight, Home } from 'lucide-react'
 import { Sidebar, COLLAPSE_KEY, SIDEBAR_W, SIDEBAR_W_COLLAPSED } from './Sidebar'
+import { GlobalSearch } from './GlobalSearch'
 import { ActiveCallProvider } from '../../contexts/ActiveCallContext'
 import { NotificationToast } from '../rep/NotificationToast'
 import { NotificationBell } from '../admin/NotificationBell'
 import { CloserNotificationBell } from '../closer/CloserNotificationBell'
 import { useAuth } from '../../hooks/useAuth'
-import { Avatar } from '../ui/Avatar'
+import { useAgentBookings } from '../../hooks/useAgentBookings'
+import { useWeeklyUsage } from '../../hooks/useBillingTiers'
+import { usePolicyEvents } from '../../hooks/useAgentActivity'
+import { useStandingThreads, dmId } from '../../hooks/useDirectMessages'
+import { tabOf, sameLocalDay } from '../../lib/agentBookings'
+import { capState, formatReset, formatBillingDate } from '../../lib/billing'
+import { navEntry, PAGE_TONE } from '../../lib/nav'
 import { BillingGate } from './BillingGate'
 
-// Shell — Prompt 669 restyle to Restorix Portal's Layout.jsx: a 64px sticky
-// header on the card surface (display-font title + subtitle on one line,
-// bell, divider, account chip) and a 32/24 padded main capped at 1280px.
+// Shell — Prompt 669 restyle to Restorix Portal's Layout.jsx, a 32/24 padded
+// main capped at 1280px. Prompt 722 rethought the header: a 72px sticky bar
+// (translucent surface + blur) with a per-page title and live line on the
+// left, then the header search and the bell; the account chip is gone (the
+// sidebar's account card is the one place for the account).
 // Prompt 675 dropped Restorix's dot-network background for Ohvara's own
 // static two-glow backdrop (.app-backdrop in index.css).
 //
@@ -68,27 +77,156 @@ function HeaderBell() {
   return null
 }
 
-// Display-only chip (avatar initials + name) next to the header bell —
-// matches the bell+avatar+name pattern on Brayden's Eterna reference
-// dashboard. Not a menu; the sidebar-footer account row still owns
-// settings/sign-out.
-function AccountChip() {
-  const { profile } = useAuth()
+// ── Page header (Prompt 722) ─────────────────────────────────────────────────
+// Every page gets its own: an icon tile in the page's colour, "Group / Page",
+// and a live line about that page (agent pages), built from data the page
+// already loads through the same react-query hooks and keys — no new fetches.
+// Other roles' pages get the TITLES subtitle as plain text. See
+// media/p722-sidebar-header/mockup-headers.html in the vault.
+
+const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+const firstName = s => (s || '').trim().split(/\s+/)[0] || ''
+
+// One item of the live line: a tinted pill, a link when `to`.
+function Pill({ tone, to, children }) {
+  const cls = `ov-hpill ov-tone-${tone}`
+  const inner = <><span className="ov-hpill-dot" aria-hidden="true" />{children}</>
+  return to
+    ? <Link to={to} className={cls}>{inner}<ChevronRight size={11} strokeWidth={2.6} aria-hidden="true" /></Link>
+    : <span className={cls}>{inner}</span>
+}
+const Plain = ({ children }) => <span className="ov-hplain">{children}</span>
+
+// Separates the items with 3px dots; drops empty ones.
+function LiveLine({ items }) {
+  const shown = items.filter(Boolean)
+  if (!shown.length) return null
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-      <Avatar profile={profile} size={28} />
-      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-        {profile?.full_name || ''}
-      </span>
+    <div className="ov-hline">
+      {shown.map((item, i) => (
+        <Fragment key={i}>
+          {i > 0 && <span className="ov-hsep" aria-hidden="true" />}
+          {item}
+        </Fragment>
+      ))}
     </div>
   )
 }
 
-// Short vertical rule between the bell and the account chip — decorative
-// only, doesn't touch the header's top/bottom edges (matches Brayden's
-// Eterna Insurance reference: bell | divider | avatar + name).
-function HeaderDivider() {
-  return <span aria-hidden="true" style={{ width: 1, height: 24, background: 'var(--border)', flexShrink: 0 }} />
+function OverviewLine({ profile }) {
+  const { data: rows = [] } = useAgentBookings(profile.id)
+  const now = new Date()
+  const today = rows.filter(p => sameLocalDay(p.scheduled_call_at, now)).length
+  const needs = rows.filter(p => tabOf(p) === 'needs').length
+  return <LiveLine items={[
+    <Plain>{now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</Plain>,
+    today > 0 && <Pill tone="blue">{plural(today, 'call')} today</Pill>,
+    needs > 0 && <Pill tone="amber" to="/agent/clients?stage=needs">{needs} need you</Pill>,
+  ]} />
+}
+
+function BookLine({ profile }) {
+  const { data: usage, isLoading } = useWeeklyUsage(profile.id)
+  if (isLoading) return null
+  const cap = capState(usage)
+  if (cap?.cap == null) return <LiveLine items={[<Plain>No weekly limit</Plain>]} />
+  return <LiveLine items={[
+    <Pill tone="teal">{cap.used} of {cap.cap} bookings used this week</Pill>,
+    <Plain>Resets {formatReset(usage.week_end)}</Plain>,
+  ]} />
+}
+
+function PipelineLine({ profile }) {
+  const { data: rows = [], isLoading } = useAgentBookings(profile.id)
+  if (isLoading) return null
+  const needs = rows.filter(p => tabOf(p) === 'needs').length
+  const booked = rows.filter(p => tabOf(p) === 'booked').length
+  return <LiveLine items={[
+    <Plain>{plural(rows.length, 'client')}</Plain>,
+    needs > 0 && <Pill tone="amber" to="/agent/clients?stage=needs">{needs} need you</Pill>,
+    booked > 0 && <Pill tone="blue">{booked} booked</Pill>,
+  ]} />
+}
+
+function ActivityLine({ profile }) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const { data: events, isLoading } = usePolicyEvents(today, profile.id)
+  if (isLoading) return null
+  if (!events?.length) return <LiveLine items={[<Plain>Nothing yet today</Plain>]} />
+  const latest = new Date(events[0].at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  return <LiveLine items={[
+    <Pill tone="violet">{plural(events.length, 'update')} today</Pill>,
+    <Plain>Latest {latest}</Plain>,
+  ]} />
+}
+
+function MessagesLine() {
+  const { data: threads, isLoading } = useStandingThreads()
+  if (isLoading) return null
+  const unread = (threads || []).filter(t => t.unread_count > 0)
+    .sort((a, b) => new Date(b.last_at || 0) - new Date(a.last_at || 0))
+  if (!unread.length) return <LiveLine items={[<Plain>All caught up</Plain>]} />
+  const n = unread.reduce((sum, t) => sum + t.unread_count, 0)
+  const who = t => (t.peer_id ? firstName(t.peer_name) || 'Fulfillment' : 'Admin')
+  const to = `/messages?dm=${dmId(unread[0].agent_id, unread[0].peer_key)}`
+  return <LiveLine items={[
+    <Pill tone="blue" to={to}>{n} unread from {unread.length === 1 ? who(unread[0]) : `${unread.length} people`}</Pill>,
+  ]} />
+}
+
+function BillingLine({ profile }) {
+  const { data: usage, isLoading } = useWeeklyUsage(profile.id)
+  if (isLoading) return null
+  const next = !profile.billing_exempt && profile.billing_status === 'active'
+    ? formatBillingDate(profile.billing_current_period_end) : null
+  return <LiveLine items={[
+    <Pill tone="amber">{usage?.tier_name || 'No plan'}</Pill>,
+    next && <Plain>Next charge {next}</Plain>,
+  ]} />
+}
+
+function SettingsLine({ session }) {
+  const user = session?.user
+  if (!user) return null
+  const twoStep = (user.factors || []).some(f => f.factor_type === 'totp' && f.status === 'verified')
+  return <LiveLine items={[
+    <Plain>{user.email}</Plain>,
+    <Pill tone="slate" to="/settings#security">Two-step {twoStep ? 'on' : 'off'}</Pill>,
+  ]} />
+}
+
+const AGENT_LINES = {
+  '/agent': OverviewLine,
+  '/agent/book': BookLine,
+  '/agent/clients': PipelineLine,
+  '/agent/activity': ActivityLine,
+  '/messages': MessagesLine,
+  '/agent/billing': BillingLine,
+  '/settings': SettingsLine,
+}
+
+function PageTitle({ pathname }) {
+  const { profile, session } = useAuth()
+  const entry = navEntry(profile?.role, pathname)
+  const [title, sub] = TITLES[pathname] || ['', '']
+  const name = entry?.label || title
+  const Icon = entry?.icon || Home
+  const tone = PAGE_TONE[pathname] || 'blue'
+  const Line = profile?.role === 'agent' ? AGENT_LINES[pathname] : null
+  if (!name) return null
+  return (
+    <div className={`ov-htitle ov-tone-${tone}`}>
+      <span className="ov-htile" aria-hidden="true"><Icon size={20} strokeWidth={2} /></span>
+      <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div className="ov-hcrumb">
+          {entry?.group && <><span className="ov-hgroup">{entry.group}</span><span className="ov-hgroup" aria-hidden="true">/</span></>}
+          <h1 className="ov-hname">{name}</h1>
+        </div>
+        {Line ? <Line profile={profile} session={session} /> : sub && <div className="ov-hline"><Plain>{sub}</Plain></div>}
+      </div>
+    </div>
+  )
 }
 
 export function DashboardLayout({ children }) {
@@ -104,7 +242,8 @@ export function DashboardLayout({ children }) {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1')
   useEffect(() => { localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0') }, [collapsed])
 
-  const [title, sub] = TITLES[pathname] || ['', '']
+  const { profile } = useAuth()
+  const [title] = TITLES[pathname] || ['']
 
   return (
     <ActiveCallProvider>
@@ -116,49 +255,28 @@ export function DashboardLayout({ children }) {
           onToggleCollapse={() => setCollapsed(c => !c)}
         />
 
-        {/* Mobile top bar — the sidebar is off-canvas below `md`, so this is
-            the only way to open it there. */}
-        <div
-          className="md:hidden fixed top-0 inset-x-0 flex items-center gap-3"
-          style={{ height: 56, padding: '0 16px', background: 'var(--bg-surface)', borderBottom: 'var(--border-w) solid var(--border)', zIndex: 80 }}
-        >
-          <button
-            onClick={() => setNavOpen(true)}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 36, height: 36, borderRadius: 999,
-              background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            <Menu size={18} />
-          </button>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 500, color: 'var(--text-primary)' }}>{title || 'Ohvara'}</span>
-        </div>
-
         {/* Sidebar is fixed, so the content column offsets by its width — but
             only at md+, where the sidebar isn't an off-canvas drawer. Width
             travels as a CSS var so the media query can own the margin. */}
         <div
-          className="app-main flex-1 flex flex-col min-w-0 pt-[56px] md:pt-0"
+          className="app-main flex-1 flex flex-col min-w-0 pt-[60px] md:pt-0"
           style={{ '--sb-w': `${collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W}px`, position: 'relative' }}
         >
           <div className={`app-backdrop${['/agent', '/agent/book', '/agent/clients', '/agent/activity', '/agent/billing', '/settings'].includes(pathname) ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
-          <header
-            className="hidden md:flex"
-            style={{
-              position: 'sticky', top: 0, zIndex: 90,
-              alignItems: 'center', gap: 14, height: 64, padding: '0 24px',
-              background: 'var(--bg-surface)', borderBottom: 'var(--border-w) solid var(--border)',
-            }}
-          >
-            <div style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{title}</span>
-              <span style={{ marginLeft: 10, fontSize: 14, color: 'var(--text-secondary)' }}>{sub}</span>
+          {/* Prompt 722 — one header for every size: a 60px fixed top bar on
+              phones (menu, title, search, bell), the 72px sticky page header
+              from md up. One instance, so the search hotkeys and the bell
+              exist once. */}
+          <header className="ov-header fixed left-0 right-0 top-0 md:sticky">
+            <button type="button" className="ov-hbtn ov-phone-only" onClick={() => setNavOpen(true)} aria-label="Open menu">
+              <Menu size={18} strokeWidth={1.9} />
+            </button>
+            <span className="ov-hphone-title md:hidden">{navEntry(profile?.role, pathname)?.label || title || 'Ohvara'}</span>
+            <div className="hidden md:flex" style={{ flex: 1, minWidth: 0 }}>
+              <PageTitle pathname={pathname} />
             </div>
+            {(profile?.role === 'agent' || profile?.role === 'admin') && <GlobalSearch />}
             <HeaderBell />
-            <HeaderDivider />
-            <AccountChip />
           </header>
 
           <main

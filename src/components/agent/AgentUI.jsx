@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send } from 'lucide-react'
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
 import { SLOTS, slotToISO, localDateISO, callWhen, callAt } from '../../lib/scheduling'
-import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, digits } from '../../lib/agentBookings'
+import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, digits, matchClients } from '../../lib/agentBookings'
 import { DayClock } from '../ui/DayClock'
 import { LiveDot } from '../ui/LiveDot'
 import { Avatar } from '../ui/Avatar'
@@ -1153,16 +1153,7 @@ export function ClientSearch({ rows, onOpen, hotkey = true }) {
   }, [hotkey])
 
   const q = query.trim().toLowerCase()
-  const matches = useMemo(() => {
-    if (!q) return []
-    const qd = digits(q)
-    return rows
-      .filter(p => {
-        const hay = [p.client_first_name, p.client_last_name, p.current_carrier, p.agent?.full_name].filter(Boolean).join(' ').toLowerCase()
-        return hay.includes(q) || (qd.length >= 3 && digits(p.client_phone).includes(qd))
-      })
-      .sort((a, b) => fullName(a).localeCompare(fullName(b), undefined, { numeric: true }))
-  }, [rows, q])
+  const matches = useMemo(() => matchClients(rows, q), [rows, q])
   const shown = matches.slice(0, SEARCH_ROWS)
   const open = !!q && focused
   const active = Math.min(hi, Math.max(0, shown.length - 1))

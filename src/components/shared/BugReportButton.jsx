@@ -5,60 +5,45 @@ import { Bug, X, CheckCircle2, Paperclip } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { eyebrow } from '../../lib/exportStyles'
 import {
-  useCreateBugReport, useBugReports, useUnresolvedBugReportCount,
+  useCreateBugReport, useBugReports,
   useResolveBugReport, useBugScreenshotUrl,
 } from '../../hooks/useBugReports'
 
-// "Report a bug" sidebar button (Prompt 381 → Prompt 711). Originally a
-// floating bottom-right circle (Eterna-style); Prompt 711 moved it into the
-// sidebar's icon row above the account card, the way Restorix Portal's
-// Layout.jsx does, and turned the submit popup into a centered modal.
-// Behavior branches on role, not just copy: non-admins get a submit form
-// (description + optional screenshot -> one bug_reports row, no email/tab,
-// just the DB row per Brayden's ask); admins get the company-wide inbox
-// instead, with an unresolved-count badge on the button itself so he
-// notices without opening it. `anchorLeft` is where the admin inbox panel
-// sits (just right of the rail) since the button is no longer a fixed
-// bottom-right corner it can pop up from.
-const BTN_SIZE = 44
+// Bug reports (Prompt 381 → 711 → 722). Prompt 722 removed the sidebar's round
+// bug button: both halves now open from the account menu (AccountMenu.jsx) as
+// controlled pieces. Non-admins get the submit form as a centred modal
+// (description + optional screenshot -> one bug_reports row); admins get the
+// company-wide inbox panel instead. What gets saved, and the useBugReports
+// hooks, are unchanged.
 
-const sidebarIconButtonStyle = {
-  position: 'relative', flexShrink: 0,
-  width: BTN_SIZE, height: BTN_SIZE, borderRadius: '50%',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'transparent', border: 'var(--border-w) solid var(--sidebar-border)',
-  color: 'var(--text-secondary)', cursor: 'pointer',
-}
-
-// Shared with the phone button beside it in Sidebar.jsx.
-export function SidebarIconButton({ icon: Icon, label, onClick }) {
-  return (
-    <button onClick={onClick} title={label} style={sidebarIconButtonStyle}>
-      <Icon size={20} />
-    </button>
-  )
-}
-
-export function BugReportButton({ anchorLeft = 252 }) {
+// Mount while open; `onClose` unmounts it.
+export function BugReportModal({ onClose }) {
   const { profile } = useAuth()
   if (!profile) return null
-  return profile.role === 'admin'
-    ? <AdminInbox anchorLeft={anchorLeft} />
-    : <ReportForm profile={profile} />
+  return <ReportForm profile={profile} onClose={onClose} />
+}
+
+// Admin inbox panel, pinned to the bottom of the viewport `anchorLeft` px from
+// the left (just right of the sidebar). Mount while open.
+export function BugReportInbox({ onClose, anchorLeft = 268 }) {
+  return <AdminInbox anchorLeft={anchorLeft} onClose={onClose} />
 }
 
 // ── Non-admin: submit form ───────────────────────────────────────────────────
-function ReportForm({ profile }) {
+function ReportForm({ profile, onClose }) {
   const { pathname } = useLocation()
-  const [open, setOpen] = useState(false)
   const [description, setDescription] = useState('')
   const [file, setFile] = useState(null)
   const [sent, setSent] = useState(false)
   const create = useCreateBugReport()
 
-  function close() {
-    setOpen(false); setSent(false); setDescription(''); setFile(null)
-  }
+  const close = onClose
+
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   function submit() {
     if (!description.trim()) return
@@ -70,13 +55,7 @@ function ReportForm({ profile }) {
 
   const disabled = !description.trim() || create.isPending
 
-  return (
-    <>
-      <button onClick={() => setOpen(true)} style={sidebarIconButtonStyle} title="Report a bug">
-        <Bug size={20} />
-      </button>
-
-      {open && createPortal(
+  return createPortal(
         <div
           onClick={close}
           style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
@@ -89,7 +68,7 @@ function ReportForm({ profile }) {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 600, color: 'var(--text-primary)' }}>Report a Bug</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 600, color: 'var(--text-primary)' }}>Report a problem</span>
               <button onClick={close} style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
                 <X size={16} />
               </button>
@@ -165,50 +144,29 @@ function ReportForm({ profile }) {
           </div>
         </div>,
         document.body
-      )}
-    </>
   )
 }
 
 // ── Admin: inbox ─────────────────────────────────────────────────────────────
-function AdminInbox({ anchorLeft }) {
-  const [open, setOpen] = useState(false)
+function AdminInbox({ anchorLeft, onClose }) {
   const panelRef = useRef(null)
-  const btnRef = useRef(null)
   const { data: reports = [] } = useBugReports()
-  const { data: unresolvedCount = 0 } = useUnresolvedBugReportCount()
   const resolve = useResolveBugReport()
 
   useEffect(() => {
-    if (!open) return
     function onDown(e) {
-      if (
-        btnRef.current && !btnRef.current.contains(e.target) &&
-        panelRef.current && !panelRef.current.contains(e.target)
-      ) setOpen(false)
+      if (panelRef.current && !panelRef.current.contains(e.target)) onClose()
     }
+    const onKey = e => { if (e.key === 'Escape') onClose() }
     document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [onClose])
 
-  return (
-    <>
-      <button ref={btnRef} onClick={() => setOpen(v => !v)} style={sidebarIconButtonStyle} title="Bug reports">
-        <Bug size={20} />
-        {unresolvedCount > 0 && (
-          <span style={{
-            position: 'absolute', top: -4, right: -4,
-            minWidth: 17, height: 17, padding: '0 4px', borderRadius: 9,
-            background: 'var(--danger)', color: '#fff', fontSize: 10, fontWeight: 700,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: "'JetBrains Mono',monospace", boxShadow: '0 0 6px var(--danger)',
-          }}>
-            {unresolvedCount}
-          </span>
-        )}
-      </button>
-
-      {open && createPortal(
+  return createPortal(
         <div
           ref={panelRef}
           style={{
@@ -223,7 +181,7 @@ function AdminInbox({ anchorLeft }) {
             padding: '10px 14px', borderBottom: '0.5px solid var(--border)', background: 'var(--bg-elevated)',
           }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Bug reports</span>
-            <button onClick={() => setOpen(false)} style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
+            <button onClick={onClose} aria-label="Close" style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
               <X size={15} />
             </button>
           </div>
@@ -242,8 +200,6 @@ function AdminInbox({ anchorLeft }) {
           </div>
         </div>,
         document.body
-      )}
-    </>
   )
 }
 

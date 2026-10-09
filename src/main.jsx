@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client'
 // every number, money and data value.
 import '@fontsource/space-grotesk/500.css'
 import '@fontsource/space-grotesk/600.css'
+import '@fontsource/space-grotesk/700.css'
 import '@fontsource/manrope/400.css'
 import '@fontsource/manrope/500.css'
 import '@fontsource/manrope/600.css'
