@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { Phone, Calendar, CalendarDays } from 'lucide-react'
+import { Phone, Calendar, CalendarDays, MapPin } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { dmId } from '../../hooks/useDirectMessages'
 import { useAgentBookings, useRescheduleBooking, useRebookCall, useConfirmRecoveryNumber } from '../../hooks/useAgentBookings'
@@ -8,8 +8,9 @@ import { AnchoredSelectField } from '../../components/ui/ExportForm'
 import {
   ClientSearch, PipelineTabs, StatusList, ClientDrawer, InfoTile, StatusNote, Journey, DayChoice, SlotGrid,
 } from '../../components/agent/AgentUI'
-import { SLOTS, slotToISO, localDateISO, isFarOut, fmtBooking, callWhen } from '../../lib/scheduling'
-import { isLive, agentStageOf, tabOf, canRebook, PIPELINE_TABS, RANGES, SUBSTATUS_LABEL, digits, useNow, startOfWeek, startOfMonth } from '../../lib/agentBookings'
+import { fmtBooking, callWhen, clientSlotISO, slotState, openBookingIsos, dayIn, addDaysStr, dateLabel, dayGone } from '../../lib/scheduling'
+import { viewerTimezone } from '../../lib/timezones'
+import { isLive, agentStageOf, stageOf, tabOf, canRebook, PIPELINE_TABS, RANGES, SUBSTATUS_LABEL, digits, useNow, startOfWeek, startOfMonth, placeOf } from '../../lib/agentBookings'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 
 // My Pipeline (Prompt 665, was My Clients until 680) — replaces My Policies.
@@ -35,6 +36,11 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // list per tab with columns built for that status, and client details in a
 // right-side drawer. The page always opens on Booked; ?stage= wins. The page
 // scrolls normally now (the P686/P707 fixed-height column is gone).
+//
+// Prompt 724 — rows show the client's "City, ST" and call times in the
+// client's own zone (policies.client_timezone; older rows fall back to the
+// viewer's). Move / Re-book follow Book a call's rules: client-local slots,
+// 30 minutes' notice, no second booking at a time the agent already has.
 
 const RANGE_VALUES = RANGES.map(r => r.value)
 // Old ?stage= values still arrive from the Overview (attention rows, the
@@ -127,7 +133,10 @@ export default function Clients() {
       />
 
       {openRow && (
-        <ClientDetail key={`${openRow.id}:${rebook}`} p={openRow} now={now} canMove={canMove(openRow)} startRebook={rebook} isAdmin={isAdmin} onClose={close} />
+        <ClientDetail
+          key={`${openRow.id}:${rebook}`} p={openRow} now={now} canMove={canMove(openRow)} startRebook={rebook} isAdmin={isAdmin} onClose={close}
+          agentRows={raw.filter(r => r.agent_id === openRow.agent_id)}
+        />
       )}
     </div>
   )
@@ -135,14 +144,16 @@ export default function Clients() {
 
 const cap = s => s[0].toUpperCase() + s.slice(1)
 
-function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose }) {
+function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRows }) {
   const navigate = useNavigate()
   const stage = agentStageOf(p)
   const tab = tabOf(p)
   const live = isLive(p)
   const rebookable = canRebook(p) && canMove
   const [moving, setMoving] = useState(!!startRebook && rebookable)
-  const move = useMove(p, now, rebookable, () => setMoving(false))
+  const move = useMove(p, now, rebookable, () => setMoving(false), agentRows)
+  const tz = p.client_timezone || null
+  const place = placeOf(p)
 
   const attempted = (p.call_attempts || 0) > 0 || stage === 'cancelled'
   const caller = p.assigned?.full_name || 'Fulfillment'
@@ -151,6 +162,8 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose }) {
     {
       label: attempted ? `Called by ${caller}` : 'Waiting for Fulfillment to call',
       at: attempted ? p.last_call_at || p.fulfillment_started_at || p.fulfillment_claimed_at : p.scheduled_call_at,
+      // the waiting step's time is the call itself: the client's time
+      sub: !attempted && p.scheduled_call_at ? callWhen(p.scheduled_call_at, tz) : undefined,
       done: attempted,
     },
     { label: 'Old policy cancelled', at: p.fulfillment_completed_at, done: stage === 'cancelled' },
@@ -158,7 +171,7 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose }) {
   const statusText = {
     booked: live ? 'On a call right now' : 'Waiting for Fulfillment',
     noAnswer: `No answer${SUBSTATUS_LABEL[p.cancellation_substatus] ? ` · ${SUBSTATUS_LABEL[p.cancellation_substatus].toLowerCase()}` : ''} — ${{
-      retry_locked: `retry call locked for ${fmtBooking(p.recovery_retry_at)}; we've texted them a link to pick another time`,
+      retry_locked: `retry call locked for ${fmtBooking(p.recovery_retry_at, tz)}; we've texted them a link to pick another time`,
       followup: "we're texting them a link to pick a time; you'll be told if they don't reply",
     }[p.recovery_step] || 're-book a time, or Fulfillment will try again'}`,
     confirmNumber: 'Two tries, no answer. Confirm their number to continue',
@@ -199,8 +212,15 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose }) {
       messageLabel={isAdmin ? 'Message agent' : 'Message Fulfillment'}
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
-        <InfoTile label="Fulfillment call" value={callWhen(p.scheduled_call_at)} />
+        <InfoTile label="Fulfillment call" value={callWhen(p.scheduled_call_at, tz)} />
         <InfoTile label="Carrier they're leaving" value={p.current_carrier || 'Not noted'} />
+        {place && (
+          <div style={{ gridColumn: '1 / -1' }}>
+            <InfoTile label="Where they live" value={
+              <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><MapPin size={16} strokeWidth={2} style={{ flexShrink: 0 }} />{place}</span>
+            } />
+          </div>
+        )}
         {(p.call_attempts || 0) > 0 && stage !== 'cancelled' && (
           <InfoTile label="Calls so far" value={`${p.call_attempts} ${p.call_attempts === 1 ? 'try' : 'tries'}`} />
         )}
@@ -260,37 +280,39 @@ function ConfirmNumber({ p }) {
   )
 }
 
-const dayLabel = (iso, style) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', style === 'long'
-  ? { weekday: 'long', month: 'short', day: 'numeric' }
-  : { weekday: 'short', month: 'short', day: 'numeric' })
-
 // Moves a Booked call (Prompt 665) or, with `rebook`, puts a No answer lead
 // back on Booked at a new time (Prompt 695). Same mutations as before; the
 // picker is P715's DayChoice + SlotGrid. Returns the picker (drawer body)
 // and the confirm/cancel buttons (drawer footer).
-function useMove(p, now, rebook, onDone) {
+//
+// Prompt 724 — days and slots are the client's (p.client_timezone, else the
+// viewer's zone for older rows); "Too soon" and "Booked" slots are disabled,
+// the booking being moved keeping its own slot. The far-out checkbox is gone.
+function useMove(p, now, rebook, onDone, agentRows) {
   const reschedule = useRescheduleBooking()
   const rebookCall = useRebookCall()
   const move = rebook ? rebookCall : reschedule
-  const current = p.scheduled_call_at ? new Date(p.scheduled_call_at) : null
-  const [date, setDate] = useState(() => (current && current.getTime() > Date.now() ? localDateISO(0, current) : localDateISO(0)))
+  const tz = p.client_timezone || viewerTimezone()
+  const today = dayIn(now, tz)
+  const tomorrow = addDaysStr(today, 1)
+  const current = p.scheduled_call_at ? new Date(p.scheduled_call_at).getTime() : null
+  const [picked, setPicked] = useState(() => (current && current > Date.now() ? dayIn(current, tz) : null))
   const [slot, setSlot] = useState('')
-  const [farOk, setFarOk] = useState(false)
   const dateInput = useRef(null)
-  const iso = slot ? slotToISO(date, slot) : null
-  const needsFarOk = isFarOut(iso) && !farOk
+  const date = picked && picked >= today ? picked : dayGone(today, tz, now) ? tomorrow : today
+  const openIsoSet = useMemo(() => openBookingIsos(agentRows, { now, exceptId: p.id, stageOf }), [agentRows, now, p.id])
+  const iso = slot ? clientSlotISO(date, slot, tz) : null
+  const ok = !!iso && slotState(iso, { now, openIsoSet }) === 'open'
 
-  const today = localDateISO(0)
-  const tomorrow = localDateISO(1)
   const isOther = date !== today && date !== tomorrow
-  const todayGone = new Date(slotToISO(today, SLOTS[SLOTS.length - 1])).getTime() <= now
-  const pickDate = d => { setDate(d); setSlot(''); setFarOk(false) }
+  const todayGone = dayGone(today, tz, now)
+  const pickDate = d => { setPicked(d); setSlot('') }
   const openPicker = () => {
     const el = dateInput.current
     if (!el) return
     try { el.showPicker() } catch { el.focus(); el.click() }
   }
-  const cancel = () => { setSlot(''); setFarOk(false); move.reset(); onDone() }
+  const cancel = () => { setSlot(''); move.reset(); onDone() }
 
   const picker = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -298,9 +320,9 @@ function useMove(p, now, rebook, onDone) {
       <div style={{ display: 'flex', gap: 10 }}>
         <DayChoice
           label="Today" on={date === today} disabled={todayGone} onClick={() => pickDate(today)}
-          long={todayGone ? 'No times left' : dayLabel(today, 'long')} short={todayGone ? null : dayLabel(today, 'short')}
+          long={todayGone ? 'No times left' : dateLabel(today, 'long')} short={todayGone ? null : dateLabel(today, 'short')}
         />
-        <DayChoice label="Tomorrow" on={date === tomorrow} onClick={() => pickDate(tomorrow)} long={dayLabel(tomorrow, 'long')} short={dayLabel(tomorrow, 'short')} />
+        <DayChoice label="Tomorrow" on={date === tomorrow} onClick={() => pickDate(tomorrow)} long={dateLabel(tomorrow, 'long')} short={dateLabel(tomorrow, 'short')} />
       </div>
       <button
         type="button" onClick={openPicker} aria-pressed={isOther} className={`ov-choice${isOther ? ' is-on' : ''}`}
@@ -310,24 +332,18 @@ function useMove(p, now, rebook, onDone) {
         }}
       >
         <Calendar size={17} strokeWidth={1.9} style={{ color: isOther ? 'var(--ov-pick)' : undefined }} />
-        {isOther ? dayLabel(date, 'short') : 'Another day'}
+        {isOther ? dateLabel(date, 'short') : 'Another day'}
       </button>
       <input
         ref={dateInput} type="date" value={date} min={today} tabIndex={-1} aria-label="Pick another day"
         onChange={e => e.target.value && pickDate(e.target.value)}
         style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', border: 0, padding: 0 }}
       />
-      <SlotGrid date={date} slot={slot} onSlot={s => { setSlot(s); setFarOk(false) }} now={now} gridClass="grid grid-cols-3" />
-      {isFarOut(iso) && (
-        <label className="ov-note is-warn" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 14, fontSize: 13.5, color: 'var(--ov-warn)', cursor: 'pointer' }}>
-          <input type="checkbox" checked={farOk} onChange={e => setFarOk(e.target.checked)} />
-          More than a day out — Fulfillment is booked through then
-        </label>
-      )}
+      <SlotGrid date={date} slot={ok ? slot : ''} onSlot={setSlot} now={now} gridClass="grid grid-cols-3" tz={tz} openIsoSet={openIsoSet} />
     </div>
   )
 
-  const off = !iso || needsFarOk || move.isPending
+  const off = !ok || move.isPending
   const actions = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {move.isError && <p style={{ margin: 0, fontSize: 13, color: 'var(--danger)' }}>{move.error?.message}</p>}
@@ -337,7 +353,7 @@ function useMove(p, now, rebook, onDone) {
           onClick={() => move.mutate({ id: p.id, scheduledAt: iso }, { onSuccess: onDone })}
           style={{ flex: 1, minWidth: 0, height: 50, borderRadius: 999, fontSize: 15, padding: '0 16px', opacity: off ? 0.5 : 1, cursor: off ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
         >
-          {move.isPending ? 'Saving…' : iso ? `${rebook ? 'Re-book for' : 'Move to'} ${callWhen(iso)}` : 'Pick a time'}
+          {move.isPending ? 'Saving…' : ok ? `${rebook ? 'Re-book for' : 'Move to'} ${callWhen(iso, tz)}` : 'Pick a time'}
         </button>
         <button type="button" className="ov-ghost" onClick={cancel} style={{ height: 50, padding: '0 20px', borderRadius: 999, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
           Cancel

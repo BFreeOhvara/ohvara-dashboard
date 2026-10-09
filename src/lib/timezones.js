@@ -161,3 +161,70 @@ export function nextLocalMidnightUtcMs(timeZone, nowMs) {
   const d = String(tomorrow.getUTCDate()).padStart(2, '0')
   return new Date(zonedTimeToUtcIso(`${y}-${m}-${d}T00:00`, tz)).getTime()
 }
+
+// ── Prompt 724 — the client's own time zone, from their city + state ──────
+// Book a call asks for the client's city and state; call times are the
+// client's local time. The agent never sees or picks a zone.
+
+// 50 states + DC: the select shows the name and stores the code.
+export const US_STATES = [
+  ['AL', 'Alabama'], ['AK', 'Alaska'], ['AZ', 'Arizona'], ['AR', 'Arkansas'], ['CA', 'California'],
+  ['CO', 'Colorado'], ['CT', 'Connecticut'], ['DE', 'Delaware'], ['DC', 'District of Columbia'], ['FL', 'Florida'],
+  ['GA', 'Georgia'], ['HI', 'Hawaii'], ['ID', 'Idaho'], ['IL', 'Illinois'], ['IN', 'Indiana'],
+  ['IA', 'Iowa'], ['KS', 'Kansas'], ['KY', 'Kentucky'], ['LA', 'Louisiana'], ['ME', 'Maine'],
+  ['MD', 'Maryland'], ['MA', 'Massachusetts'], ['MI', 'Michigan'], ['MN', 'Minnesota'], ['MS', 'Mississippi'],
+  ['MO', 'Missouri'], ['MT', 'Montana'], ['NE', 'Nebraska'], ['NV', 'Nevada'], ['NH', 'New Hampshire'],
+  ['NJ', 'New Jersey'], ['NM', 'New Mexico'], ['NY', 'New York'], ['NC', 'North Carolina'], ['ND', 'North Dakota'],
+  ['OH', 'Ohio'], ['OK', 'Oklahoma'], ['OR', 'Oregon'], ['PA', 'Pennsylvania'], ['RI', 'Rhode Island'],
+  ['SC', 'South Carolina'], ['SD', 'South Dakota'], ['TN', 'Tennessee'], ['TX', 'Texas'], ['UT', 'Utah'],
+  ['VT', 'Vermont'], ['VA', 'Virginia'], ['WA', 'Washington'], ['WV', 'West Virginia'], ['WI', 'Wisconsin'],
+  ['WY', 'Wyoming'],
+].map(([code, name]) => ({ code, name }))
+
+const STATE_NAME = Object.fromEntries(US_STATES.map(s => [s.code, s.name]))
+
+// States that span two zones: only these need the city looked up.
+export const SPLIT_STATES = new Set(['AK', 'AZ', 'FL', 'ID', 'IN', 'KS', 'KY', 'MI', 'ND', 'NE', 'NV', 'OR', 'SD', 'TN', 'TX'])
+
+export const needsCityLookup = stateCode => SPLIT_STATES.has(String(stateCode || '').toUpperCase())
+
+// The viewer's own zone, for rows booked before P724 (no client_timezone).
+export const viewerTimezone = () => {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || DEFAULT_TIMEZONE } catch { return DEFAULT_TIMEZONE }
+}
+
+const resolved = new Map()
+
+// IANA zone for a client's city + state. Never throws, never blocks: a split
+// state looks the city up on Open-Meteo's free geocoder (3 s timeout); any
+// failure falls back to the state's usual zone, then DEFAULT_TIMEZONE.
+// Cached per city|state for the session. `fetchImpl` is for tests.
+export async function resolveClientTimezone(city, stateCode, { signal, fetchImpl } = {}) {
+  const code = String(stateCode || '').trim().toUpperCase()
+  const fallback = inferTimezoneFromState(code)
+  if (!code || !needsCityLookup(code)) return fallback
+  const name = String(city || '').trim()
+  if (!name) return fallback
+  const key = `${name.toLowerCase()}|${code}`
+  if (resolved.has(key)) return resolved.get(key)
+
+  const timeout = new AbortController()
+  const timer = setTimeout(() => timeout.abort(), 3000)
+  const onAbort = () => timeout.abort()
+  signal?.addEventListener('abort', onAbort)
+  try {
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=10&language=en&format=json&countryCode=US`
+    const res = await (fetchImpl || fetch)(url, { signal: timeout.signal })
+    if (!res.ok) return fallback
+    const body = await res.json()
+    const hit = (body?.results || []).find(r => r.country_code === 'US' && r.admin1 === STATE_NAME[code] && r.timezone)
+    const tz = hit?.timezone || fallback
+    resolved.set(key, tz)
+    return tz
+  } catch {
+    return fallback
+  } finally {
+    clearTimeout(timer)
+    signal?.removeEventListener('abort', onAbort)
+  }
+}

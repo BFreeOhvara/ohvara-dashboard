@@ -43,18 +43,23 @@ function who(e) {
 
 const reasonOf = d => (d.reason ? ` · ${(SUBSTATUS_LABEL[d.reason] || d.reason).toLowerCase()}` : '')
 
+// Prompt 724 — call times inside an event are the client's time (the joined
+// policy's client_timezone); when the event happened stays in the viewer's.
+const tzOf = e => e.policy?.client_timezone || undefined
+
 // The feed's sentence for one event.
 function describe(e) {
   const d = e.detail || {}
+  const tz = tzOf(e)
   const attempt = d.attempt > 1 ? ` (try ${d.attempt})` : ''
   switch (e.kind) {
     case 'booked':
-      if (e.from_status) return d.scheduled_call_at ? `Back to Booked, call set for ${callAt(d.scheduled_call_at)}` : 'Back to Booked'
-      return `Booked a call with Fulfillment${d.scheduled_call_at ? ` for ${callAt(d.scheduled_call_at)}` : ''}`
+      if (e.from_status) return d.scheduled_call_at ? `Back to Booked, call set for ${callAt(d.scheduled_call_at, tz)}` : 'Back to Booked'
+      return `Booked a call with Fulfillment${d.scheduled_call_at ? ` for ${callAt(d.scheduled_call_at, tz)}` : ''}`
     case 'in_progress':  return `${who(e)} started a call${attempt}`
     case 'no_answer':    return `Call ended with no answer${attempt}${reasonOf(d)}`
     case 'cancelled':    return 'Old policy confirmed cancelled'
-    case 'moved':        return `Call moved to ${callAt(d.to)}`
+    case 'moved':        return `Call moved to ${callAt(d.to, tz)}`
     default:             return e.kind
   }
 }
@@ -64,8 +69,9 @@ const ORDINAL = ['', 'first', 'second', 'third', 'fourth', 'fifth']
 // The client story's Journey step for one event (label + sub line).
 function storyStep(e, isAdmin) {
   const d = e.detail || {}
+  const tz = tzOf(e)
   const when = callWhen(e.at)
-  const forTime = d.scheduled_call_at ? ` · for ${callAt(d.scheduled_call_at)}` : ''
+  const forTime = d.scheduled_call_at ? ` · for ${callAt(d.scheduled_call_at, tz)}` : ''
   switch (e.kind) {
     case 'booked':
       if (e.from_status) return { label: 'Re-booked', sub: when + forTime }
@@ -77,7 +83,7 @@ function storyStep(e, isAdmin) {
       const head = n > 1 ? `No answer on the ${ORDINAL[n] ? `${ORDINAL[n]} try` : `try ${n}`}` : 'No answer'
       return { label: head + reasonOf(d), sub: when }
     }
-    case 'moved':     return { label: 'Call moved', sub: `${when}${d.to ? ` · to ${callAt(d.to)}` : ''}` }
+    case 'moved':     return { label: 'Call moved', sub: `${when}${d.to ? ` · to ${callAt(d.to, tz)}` : ''}` }
     case 'cancelled': return { label: 'Old policy cancelled', sub: when }
     default:          return { label: e.kind, sub: when }
   }

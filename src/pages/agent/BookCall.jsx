@@ -1,12 +1,13 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TriangleAlert, Phone, Calendar, Info } from 'lucide-react'
+import { TriangleAlert, Phone, Calendar, Info, ChevronDown } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCarriers } from '../../hooks/useCarriers'
 import { useAgentBookings, useBookCall } from '../../hooks/useAgentBookings'
 import { StepHead, OvField, DayChoice, SlotGrid, BookingSummary, WeeklyUsage, BookedCard } from '../../components/agent/AgentUI'
 import { formatPhoneInput, titleCase } from '../../lib/policyFormat'
-import { SLOTS, slotToISO, localDateISO, isFarOut, fmtBooking } from '../../lib/scheduling'
+import { fmtBooking, clientSlotISO, slotState, openBookingIsos, dayIn, addDaysStr, dateLabel, dayGone } from '../../lib/scheduling'
+import { US_STATES, needsCityLookup, inferTimezoneFromState, resolveClientTimezone } from '../../lib/timezones'
 import { stageOf, digits, useNow } from '../../lib/agentBookings'
 import { useBillingTiers, useWeeklyUsage } from '../../hooks/useBillingTiers'
 import { capState, nextTier, formatReset, formatWeekly } from '../../lib/billing'
@@ -30,22 +31,47 @@ import { capState, nextTier, formatReset, formatWeekly } from '../../lib/billing
 // unchanged. (Prompt 680 removed the day's-calls side panel and the
 // read-to-the-client hint on the form; the script line lives only on the
 // success screen.)
+//
+// Prompt 724 — step 1 also asks for the client's city and state, and every
+// time on the page is the client's local time: the zone is worked out
+// silently from city + state (resolveClientTimezone) and never shown. Slots
+// within 30 minutes, and times the agent already has booked, are disabled
+// (slotState). Both rules are UI-only. The far-out confirm is gone: a few
+// days out is fine when it helps the client.
 
-const BLANK = { first: '', last: '', phone: '', carrier: '' }
+const BLANK = { first: '', last: '', phone: '', city: '', state: '', carrier: '' }
 
-// Today, unless today's last slot has already passed — then tomorrow.
-function defaultDate() {
-  const today = localDateISO(0)
-  return new Date(slotToISO(today, SLOTS[SLOTS.length - 1])).getTime() > Date.now() ? today : localDateISO(1)
+// The client's today, unless no slot is left today, then tomorrow.
+function defaultDate(tz, now) {
+  const today = dayIn(now, tz)
+  return dayGone(today, tz, now) ? addDaysStr(today, 1) : today
 }
 
-const slotPast = (date, slot) => new Date(slotToISO(date, slot)).getTime() <= Date.now()
-
-// "Wednesday, Oct 7" / "Wed, Oct 7" for a YYYY-MM-DD date.
-const dayLabel = (date, weekday) =>
-  new Date(`${date}T00:00`).toLocaleDateString('en-US', { weekday, month: 'short', day: 'numeric' })
-
 const pillBtn = { height: 36, padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }
+
+// The client's IANA zone from city + state. A single-zone state is instant; a
+// split one is looked up ~400 ms after the last keystroke (a newer request
+// aborts the older). `resolving` is true while that lookup is out.
+function useClientTimezone(city, state) {
+  const c = city.trim()
+  const ready = !!c && !!state
+  const split = ready && needsCityLookup(state)
+  const key = `${c.toLowerCase()}|${state}`
+  const [found, setFound] = useState({ key: '', tz: null })
+  useEffect(() => {
+    if (!split) return
+    const ctl = new AbortController()
+    const t = setTimeout(() => {
+      resolveClientTimezone(c, state, { signal: ctl.signal }).then(tz => {
+        if (!ctl.signal.aborted) setFound({ key, tz })
+      })
+    }, 400)
+    return () => { clearTimeout(t); ctl.abort() }
+  }, [split, c, state, key])
+  if (!ready) return { tz: null, resolving: false }
+  if (!split) return { tz: inferTimezoneFromState(state), resolving: false }
+  return found.key === key ? { tz: found.tz, resolving: false } : { tz: null, resolving: true }
+}
 
 export default function BookCall() {
   const { profile } = useAuth()
@@ -63,43 +89,43 @@ export default function BookCall() {
   const dateInput = useRef(null)
 
   const [form, setForm] = useState(BLANK)
-  const [date, setDate] = useState(defaultDate)
+  const [pickedDate, setPickedDate] = useState(null) // the client's calendar day; null = the default
   const [slot, setSlot] = useState('')
   const [errors, setErrors] = useState(new Set())
   const [error, setError] = useState('')
-  const [confirm, setConfirm] = useState(null) // 'farOut' | 'duplicate'
+  const [confirm, setConfirm] = useState(null) // 'duplicate' | 'duplicateOk'
   const [done, setDone] = useState(null)
 
-  const scheduledAt = slot ? slotToISO(date, slot) : null
+  const { tz, resolving } = useClientTimezone(form.city, form.state)
+  const ready = !!tz
+  // Until the zone is known the (dimmed) day cards show the agent's own days.
+  const today = dayIn(now, tz || undefined)
+  // A picked day now in the client's past falls back to the default.
+  const date = !tz ? null : pickedDate && pickedDate >= today ? pickedDate : defaultDate(tz, now)
+
+  // This agent's open bookings: the times they've already taken, and the
+  // duplicate-client check.
+  const open = useMemo(() => mine.filter(p => stageOf(p) !== 'cancelled'), [mine])
+  const openIsoSet = useMemo(() => openBookingIsos(mine, { now, stageOf }), [mine, now])
+
+  // The picked slot is a wall-clock time ("2:00 PM"), so a new zone keeps it
+  // at 2:00 PM for the client. If that, or the clock moving on, makes it too
+  // soon or taken, it no longer counts as picked.
+  const slotIso = slot && date ? clientSlotISO(date, slot, tz) : null
+  const slotOpen = !!slotIso && slotState(slotIso, { now, openIsoSet }) === 'open'
+  const scheduledAt = slotOpen ? slotIso : null
 
   const set = (k, v) => {
     setForm(f => ({ ...f, [k]: v }))
     setErrors(e => { if (!e.has(k)) return e; const n = new Set(e); n.delete(k); return n })
     setConfirm(null)
   }
-  const pickDate = d => {
-    setDate(d)
-    // a slot that's already past on the new day can't stay selected
-    if (slot && slotPast(d, slot)) setSlot('')
-    setConfirm(null)
-  }
+  const pickDate = d => { setPickedDate(d); setConfirm(null) }
   const pickSlot = s => {
     setSlot(s)
     setErrors(e => { if (!e.has('slot')) return e; const n = new Set(e); n.delete('slot'); return n })
     setConfirm(null)
   }
-
-  // This agent's open bookings — for the "already booked at this time" hint,
-  // and the duplicate-client check.
-  const open = useMemo(() => mine.filter(p => stageOf(p) !== 'cancelled'), [mine])
-  const takenCounts = useMemo(() => {
-    const m = {}
-    for (const p of open) if (p.scheduled_call_at) {
-      const k = new Date(p.scheduled_call_at).toISOString()
-      m[k] = (m[k] || 0) + 1
-    }
-    return m
-  }, [open])
 
   const phoneDigits = digits(form.phone)
   const duplicate = phoneDigits.length === 10 ? open.find(p => digits(p.client_phone) === phoneDigits) : null
@@ -110,7 +136,9 @@ export default function BookCall() {
     if (!form.first.trim()) missing.add('first')
     if (!form.last.trim()) missing.add('last')
     if (phoneDigits.length !== 10) missing.add('phone')
-    if (!slot) missing.add('slot')
+    if (!form.city.trim()) missing.add('city')
+    if (!form.state) missing.add('state')
+    if (!slotOpen) missing.add('slot')
     if (missing.size) {
       setErrors(missing)
       setError(missing.has('phone') && form.phone
@@ -118,24 +146,25 @@ export default function BookCall() {
         : 'Fill in the highlighted fields and pick a time.')
       return
     }
-    if (duplicate && confirm !== 'duplicate' && confirm !== 'duplicateOk') { setConfirm('duplicate'); return }
-    if (isFarOut(scheduledAt) && confirm !== 'farOutOk') { setConfirm('farOut'); return }
+    if (duplicate && confirm !== 'duplicateOk') { setConfirm('duplicate'); return }
     doBook()
   }
 
   function doBook() {
     const firstName = titleCase(form.first)
     const lastName = titleCase(form.last)
+    const city = titleCase(form.city.trim())
     book.mutate({
       agentId: profile.id,
       firstName, lastName,
       phone: form.phone.trim(),
+      city, state: form.state, timezone: tz,
       currentCarrier: form.carrier.trim(),
       scheduledAt,
     }, {
       onSuccess: policy => {
-        setDone({ id: policy?.id, name: `${firstName} ${lastName}`, at: scheduledAt })
-        setForm(BLANK); setSlot(''); setDate(defaultDate()); setConfirm(null); setErrors(new Set())
+        setDone({ id: policy?.id, name: `${firstName} ${lastName}`, at: scheduledAt, tz, location: `${city}, ${form.state}` })
+        setForm(BLANK); setSlot(''); setPickedDate(null); setConfirm(null); setErrors(new Set())
       },
       onError: err => setError(err.hint === 'weekly_cap'
         ? `${err.message} Upgrade your plan or wait until ${formatReset(usage?.week_end)}.`
@@ -146,7 +175,7 @@ export default function BookCall() {
   if (done) {
     return (
       <BookedCard
-        name={done.name} at={done.at} now={now}
+        name={done.name} at={done.at} now={now} tz={done.tz} location={done.location}
         onAnother={() => setDone(null)}
         onPipeline={() => navigate(done.id ? `/agent/clients?open=${done.id}` : '/agent/clients')}
       />
@@ -157,22 +186,26 @@ export default function BookCall() {
   const capped = !!cap?.blocking
   const showCap = cap && cap.cap != null
 
-  const today = localDateISO(0)
-  const tomorrow = localDateISO(1)
-  const isOther = date !== today && date !== tomorrow
-  const todayGone = new Date(slotToISO(today, SLOTS[SLOTS.length - 1])).getTime() <= now
+  const tomorrow = addDaysStr(today, 1)
+  const isOther = !!date && date !== today && date !== tomorrow
+  const todayGone = ready && dayGone(today, tz, now)
   const openPicker = () => {
     const el = dateInput.current
     if (!el) return
     try { el.showPicker() } catch { el.focus(); el.click() }
   }
-  const farOut = isFarOut(scheduledAt)
 
   const name = [titleCase(form.first.trim()), titleCase(form.last.trim())].filter(Boolean).join(' ')
+  const location = form.city.trim() && form.state ? `${titleCase(form.city.trim())}, ${form.state}` : ''
   const summary = {
-    name, phone: form.phone.trim(), carrier: form.carrier.trim(), scheduledAt, now,
+    name, phone: form.phone.trim(), carrier: form.carrier.trim(), location, tz,
+    scheduledAt, now,
     onBook: submit, busy, capped, error,
   }
+  // Until city and state are in (and a split state's lookup is back), the
+  // pickers are dimmed: there's no client time to show yet.
+  const dim = !ready
+  const fields = 'grid grid-cols-1 sm:grid-cols-3 gap-y-[18px] sm:gap-4'
 
   return (
     <div className="pb-[110px] sm:pb-0">
@@ -202,17 +235,19 @@ export default function BookCall() {
           )}
 
           <section className="ov-card flex flex-col gap-[18px] sm:gap-5 px-[18px] pt-5 pb-[22px] sm:px-7 sm:pt-[26px] sm:pb-7">
-            <StepHead n={1} title="Who's the client" sub="Name and the number Fulfillment should call" />
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-[18px] sm:gap-4">
+            <StepHead n={1} title="Who's the client" sub="Name, number and where they live" />
+            <div className={fields}>
               <OvField label="First name" placeholder="First name" autoComplete="off"
                 value={form.first} onChange={e => set('first', e.target.value)} error={errors.has('first')} />
               <OvField label="Last name" placeholder="Last name" autoComplete="off"
                 value={form.last} onChange={e => set('last', e.target.value)} error={errors.has('last')} />
               <OvField label="Phone" icon={Phone} placeholder="(602) 555-0184" inputMode="tel" autoComplete="off"
-                className="col-span-2 sm:col-span-1"
                 value={form.phone} onChange={e => set('phone', formatPhoneInput(e.target.value))} error={errors.has('phone')} />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 sm:gap-4">
+            <div className={fields}>
+              <OvField label="City" placeholder="Pensacola" autoComplete="off"
+                value={form.city} onChange={e => set('city', e.target.value)} error={errors.has('city')} />
+              <StateField value={form.state} onChange={v => set('state', v)} error={errors.has('state')} />
               <OvField label="Carrier they're leaving" optional placeholder="e.g. Mutual of Omaha" list="leaving-carriers"
                 value={form.carrier} onChange={e => set('carrier', e.target.value)} />
               <datalist id="leaving-carriers">
@@ -223,11 +258,10 @@ export default function BookCall() {
             {duplicate && (
               <Notice warn={confirm === 'duplicate'}>
                 You already have {duplicate.client_first_name} {duplicate.client_last_name} booked with this number
-                ({fmtBooking(duplicate.scheduled_call_at)}).
+                ({fmtBooking(duplicate.scheduled_call_at, duplicate.client_timezone)}).
                 {confirm === 'duplicate' && (
                   <span style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                    <button type="button" className="ov-ghost" style={pillBtn}
-                      onClick={() => { setConfirm('duplicateOk'); if (!isFarOut(scheduledAt)) doBook(); else setConfirm('farOut') }}>
+                    <button type="button" className="ov-ghost" style={pillBtn} onClick={() => { setConfirm('duplicateOk'); doBook() }}>
                       Book anyway
                     </button>
                     <button type="button" className="ov-ghost" style={pillBtn} onClick={() => navigate('/agent/clients')}>View it</button>
@@ -238,60 +272,66 @@ export default function BookCall() {
           </section>
 
           <section className="ov-card flex flex-col gap-4 sm:gap-[18px] px-[18px] pt-5 pb-[22px] sm:px-7 sm:pt-[26px] sm:pb-7">
-            <StepHead n={2} title="When should Fulfillment call" sub="Pick a day, then a time" />
-            <div className="flex gap-[10px] sm:gap-3">
-              <DayChoice
-                label="Today" on={date === today} disabled={todayGone} onClick={() => pickDate(today)}
-                long={todayGone ? 'No times left' : dayLabel(today, 'long')}
-                short={todayGone ? null : dayLabel(today, 'short')}
+            <StepHead n={2} title="When should Fulfillment call" sub="Pick a day, then a time. Times are the client's local time." />
+            {dim && (
+              <div className="ov-note" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 14 }}>
+                <Info size={17} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 1, color: 'var(--ov-mute)' }} />
+                <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: 'var(--ov-mid)' }}>
+                  Add the client's city and state first, then pick a day and time.
+                </p>
+              </div>
+            )}
+            <div
+              aria-disabled={dim || undefined} aria-busy={resolving || undefined}
+              className="flex flex-col gap-4 sm:gap-[18px]"
+              style={dim ? { opacity: 0.5, pointerEvents: 'none' } : undefined}
+            >
+              <div className="flex gap-[10px] sm:gap-3">
+                <DayChoice
+                  label="Today" on={!!date && date === today} disabled={dim || todayGone} onClick={() => pickDate(today)}
+                  long={todayGone ? 'No times left' : dateLabel(today, 'long')}
+                  short={todayGone ? null : dateLabel(today, 'short')}
+                />
+                <DayChoice
+                  label="Tomorrow" on={!!date && date === tomorrow} disabled={dim} onClick={() => pickDate(tomorrow)}
+                  long={dateLabel(tomorrow, 'long')} short={dateLabel(tomorrow, 'short')}
+                />
+                <DayChoice
+                  className="hidden sm:flex" label="Another day" on={isOther} disabled={dim} icon={Calendar} onClick={openPicker}
+                  long={isOther ? dateLabel(date, 'short') : 'Pick a date'}
+                />
+              </div>
+              <button
+                type="button" onClick={openPicker} aria-pressed={isOther} disabled={dim}
+                className={`ov-choice flex sm:hidden${isOther ? ' is-on' : ''}`}
+                style={{
+                  height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 9,
+                  fontSize: 14.5, fontWeight: 600, color: isOther ? 'var(--ov-hi)' : 'var(--ov-mid)',
+                }}
+              >
+                <Calendar size={17} strokeWidth={1.9} style={{ color: isOther ? 'var(--ov-pick)' : undefined }} />
+                {isOther ? dateLabel(date, 'short') : 'Another day'}
+              </button>
+              <input
+                ref={dateInput} type="date" value={date || ''} min={today} tabIndex={-1} aria-label="Pick another day"
+                onChange={e => e.target.value && pickDate(e.target.value)}
+                style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', border: 0, padding: 0 }}
               />
-              <DayChoice
-                label="Tomorrow" on={date === tomorrow} onClick={() => pickDate(tomorrow)}
-                long={dayLabel(tomorrow, 'long')} short={dayLabel(tomorrow, 'short')}
-              />
-              <DayChoice
-                className="hidden sm:flex" label="Another day" on={isOther} icon={Calendar} onClick={openPicker}
-                long={isOther ? dayLabel(date, 'short') : 'Pick a date'}
+
+              {/* Before a zone is known the grid is a dimmed placeholder (the agent's own day). */}
+              <SlotGrid
+                date={date || today} slot={slotOpen ? slot : ''} onSlot={pickSlot} error={errors.has('slot')} now={now}
+                tz={tz} openIsoSet={ready ? openIsoSet : NO_BOOKINGS}
               />
             </div>
-            <button
-              type="button" onClick={openPicker} aria-pressed={isOther}
-              className={`ov-choice flex sm:hidden${isOther ? ' is-on' : ''}`}
-              style={{
-                height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 9,
-                fontSize: 14.5, fontWeight: 600, color: isOther ? 'var(--ov-hi)' : 'var(--ov-mid)',
-              }}
-            >
-              <Calendar size={17} strokeWidth={1.9} style={{ color: isOther ? 'var(--ov-pick)' : undefined }} />
-              {isOther ? dayLabel(date, 'short') : 'Another day'}
-            </button>
-            <input
-              ref={dateInput} type="date" value={date} min={today} tabIndex={-1} aria-label="Pick another day"
-              onChange={e => e.target.value && pickDate(e.target.value)}
-              style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', border: 0, padding: 0 }}
-            />
-
-            <SlotGrid date={date} slot={slot} onSlot={pickSlot} takenCounts={takenCounts} error={errors.has('slot')} now={now} />
 
             <div className="ov-note" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 14 }}>
-              <Info size={17} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 1, color: farOut ? 'var(--ov-warn)' : 'var(--ov-mute)' }} />
+              <Info size={17} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 1, color: 'var(--ov-mute)' }} />
               <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: 'var(--ov-mute)' }}>
-                <span style={{ fontWeight: 600, color: farOut ? 'var(--ov-warn)' : 'var(--ov-mid)' }}>Today or tomorrow is the norm.</span>{' '}
-                Further out needs Fulfillment's OK. These times don't check Fulfillment's calendar yet; "booked" only counts your own calls.
+                <span style={{ fontWeight: 600, color: 'var(--ov-mid)' }}>Today or tomorrow works best for most clients.</span>{' '}
+                A few days out is fine when it helps them. Calls need 30 minutes' notice, and a time you've already booked is taken.
               </p>
             </div>
-
-            {confirm === 'farOut' && (
-              <Notice warn>
-                That's more than a day out — confirm Fulfillment is actually booked through then?
-                <span style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                  <button type="button" className="ov-ghost" style={pillBtn} onClick={() => { setConfirm('farOutOk'); doBook() }}>
-                    Yes, book it
-                  </button>
-                  <button type="button" className="ov-ghost" style={pillBtn} onClick={() => setConfirm(null)}>Change time</button>
-                </span>
-              </Notice>
-            )}
           </section>
         </div>
 
@@ -306,8 +346,26 @@ export default function BookCall() {
   )
 }
 
-// Duplicate-client and far-out notices: a quiet note, or amber when it needs
-// the agent to decide.
+const NO_BOOKINGS = new Set()
+
+// Prompt 724 — the state, shown by name and stored as its 2-letter code.
+function StateField({ value, onChange, error }) {
+  return (
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+      <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>State</span>
+      <span className={`ov-input ov-select${error ? ' is-error' : ''}${value ? '' : ' is-empty'}`}>
+        <select value={value} onChange={e => onChange(e.target.value)} aria-invalid={error || undefined}>
+          <option value="">Choose a state</option>
+          {US_STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
+        </select>
+        <ChevronDown size={17} strokeWidth={2} style={{ flexShrink: 0, pointerEvents: 'none' }} />
+      </span>
+    </label>
+  )
+}
+
+// Duplicate-client notice: a quiet note, or amber when it needs the agent to
+// decide.
 function Notice({ warn, children }) {
   return (
     <div className={`ov-note${warn ? ' is-warn' : ''}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 14 }}>

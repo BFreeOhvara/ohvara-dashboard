@@ -206,3 +206,6 @@ export function useNow(intervalMs = 60e3) {
   return now
 }
 
+
+// Prompt 724 — "Pensacola, FL", or '' for rows booked before city/state.
+export const placeOf = p => [p?.client_city, p?.state].filter(Boolean).join(', ')

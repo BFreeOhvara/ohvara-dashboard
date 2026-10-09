@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { Search, ArrowRight, CornerDownLeft, X } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
-import { matchClients, tabOf, agentStageOf, isLive } from '../../lib/agentBookings'
+import { matchClients, tabOf, agentStageOf, isLive, placeOf } from '../../lib/agentBookings'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 import { callWhen } from '../../lib/scheduling'
 import { fullName } from '../../lib/policyFormat'
@@ -26,15 +26,16 @@ const wide = () => window.matchMedia('(min-width: 1024px)').matches
 const monthDay = iso => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 const initials = name => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?'
 
-// "Call Fri, Oct 9 · 2:30 PM · State Farm", "Tried Oct 7 · Allstate", …
+// "Call Fri, Oct 9 · 2:30 PM · State Farm · Pensacola, FL", "Tried Oct 7 · Allstate", …
+// Prompt 724 — the call time is the client's (client_timezone).
 function metaLine(p) {
   const stage = agentStageOf(p)
-  const what = stage === 'booked' ? (isLive(p) ? 'On a call now' : `Call ${callWhen(p.scheduled_call_at)}`)
+  const what = stage === 'booked' ? (isLive(p) ? 'On a call now' : `Call ${callWhen(p.scheduled_call_at, p.client_timezone)}`)
     : stage === 'cancelled' ? `Old policy cancelled ${monthDay(p.fulfillment_completed_at || p.updated_at)}`
     : stage === 'confirmNumber' ? 'Confirm the number'
     : stage === 'needsAttention' ? 'Call and rebook'
     : p.last_call_at ? `Tried ${monthDay(p.last_call_at)}` : 'No answer'
-  return [what, p.current_carrier].filter(Boolean).join(' · ')
+  return [what, p.current_carrier, placeOf(p)].filter(Boolean).join(' · ')
 }
 
 function Highlight({ text, q }) {

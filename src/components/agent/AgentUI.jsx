@@ -1,10 +1,10 @@
 import { Children, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send } from 'lucide-react'
+import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send, MapPin } from 'lucide-react'
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
-import { SLOTS, slotToISO, localDateISO, callWhen, callAt, fmtSlotTime } from '../../lib/scheduling'
-import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, digits, matchClients } from '../../lib/agentBookings'
+import { SLOTS, slotToISO, localDateISO, callWhen, callAt, fmtSlotTime, clientSlotISO, slotState, dayIn, addDaysStr } from '../../lib/scheduling'
+import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, digits, matchClients, placeOf } from '../../lib/agentBookings'
 import { DayClock } from '../ui/DayClock'
 import { LiveDot } from '../ui/LiveDot'
 import { Avatar } from '../ui/Avatar'
@@ -162,9 +162,13 @@ export function ClientRow({ p, now, onClick, onRebook, rebookLabel = 'Re-book', 
     : timeOnly ? 'md:grid-cols-[96px_minmax(0,1.4fr)_minmax(0,1fr)_160px_14px]'
       : 'md:grid-cols-[176px_minmax(0,1.4fr)_minmax(0,1fr)_160px_14px]'
   const when = p.scheduled_call_at
-    ? new Date(p.scheduled_call_at).toLocaleString('en-US', timeOnly
-      ? { hour: 'numeric', minute: '2-digit' }
-      : { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    ? new Date(p.scheduled_call_at).toLocaleString('en-US', {
+      ...(timeOnly
+        ? { hour: 'numeric', minute: '2-digit' }
+        : { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }),
+      // Prompt 724 — the client's local time when we know their zone.
+      ...(p.client_timezone ? { timeZone: p.client_timezone } : null),
+    })
     : 'No time'
   const leaving = p.current_carrier || 'Not noted'
   return (
@@ -796,7 +800,13 @@ export function DayChoice({ label, long, short, on, disabled, icon: Icon, onClic
 // The fixed SLOTS, split at noon into Morning and Afternoon. Past slots are
 // disabled; slots where this agent already has a booking say so (a hint from
 // their own calendar, not a capacity check, same as SlotPicker).
-export function SlotGrid({ date, slot, onSlot, takenCounts = {}, error, now, gridClass = 'grid grid-cols-3 sm:grid-cols-6' }) {
+//
+// Prompt 724 — pass `openIsoSet` (the agent's other open bookings) to switch
+// on the booking rules: slots are the client's wall-clock time in `tz`, a slot
+// within 30 minutes is "Too soon" and one already booked is "Booked", both
+// disabled (slotState). Without it the grid renders exactly as before.
+export function SlotGrid({ date, slot, onSlot, takenCounts = {}, error, now, gridClass = 'grid grid-cols-3 sm:grid-cols-6', tz, openIsoSet }) {
+  const rules = openIsoSet !== undefined
   const groups = [
     { label: 'Morning', icon: Sun, slots: SLOTS.filter(s => s.endsWith('AM')) },
     { label: 'Afternoon', icon: Clock, slots: SLOTS.filter(s => s.endsWith('PM')) },
@@ -813,6 +823,7 @@ export function SlotGrid({ date, slot, onSlot, takenCounts = {}, error, now, gri
           </div>
           <div className={gridClass} style={{ gap: 10 }}>
             {slots.map(s => {
+              if (rules) return <RuleSlot key={s} s={s} date={date} tz={tz} now={now} openIsoSet={openIsoSet} on={slot === s} onSlot={onSlot} />
               const iso = slotToISO(date, s)
               const past = new Date(iso).getTime() <= now
               const on = slot === s
@@ -849,9 +860,56 @@ export function SlotGrid({ date, slot, onSlot, takenCounts = {}, error, now, gri
   )
 }
 
+// Prompt 724 — one slot under the booking rules. Past slots are dimmed with
+// no caption; "Too soon" and "Booked" dim only the time so the caption reads.
+const SLOT_CAPTION = { soon: 'Too soon', booked: 'Booked' }
+const SLOT_LABEL = { past: 'already past', soon: 'too soon, calls need 30 minutes’ notice', booked: 'you already have a call booked at this time' }
+
+function RuleSlot({ s, date, tz, now, openIsoSet, on, onSlot }) {
+  const state = slotState(clientSlotISO(date, s, tz), { now, openIsoSet })
+  const off = state !== 'open'
+  const caption = SLOT_CAPTION[state]
+  const [time, ampm] = s.split(' ')
+  return (
+    <button
+      type="button" disabled={off} onClick={() => onSlot(s)} aria-pressed={on}
+      title={state === 'past' ? 'Already past' : undefined}
+      aria-label={off ? `${s}, ${SLOT_LABEL[state]}` : s}
+      className={`ov-choice h-[52px] sm:h-[54px]${on ? ' ov-slot-on' : ''}${caption ? ' ov-slot-held' : ''}`}
+      style={{
+        borderRadius: 12, padding: 0, fontFamily: DISPLAY, fontSize: 16, fontWeight: 600, lineHeight: 1.1,
+        color: on ? '#fff' : 'var(--ov-hi)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+      }}
+    >
+      <span style={{ whiteSpace: 'nowrap', ...(caption ? { opacity: state === 'booked' ? 0.45 : 0.55 } : null) }}>
+        {time}
+        <span style={{ marginLeft: 5, fontSize: 12, fontWeight: 500, ...(on ? { opacity: 0.85 } : { color: 'var(--ov-mute)' }) }}>{ampm}</span>
+      </span>
+      {caption && (
+        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: state === 'booked' ? 'var(--ov-warn)' : 'var(--ov-mute)' }}>
+          {caption}
+        </span>
+      )}
+    </button>
+  )
+}
+
 // { day: 'Today' | 'Tomorrow' | 'Mon, Oct 12', time: '10:30', period: 'AM',
-//   full: 'Thursday, October 8' } for a booking time.
-function bookingWhen(iso, now = Date.now()) {
+//   full: 'Thursday, October 8' } for a booking time. Prompt 724 — with `tz`
+// it's the client's time, Today/Tomorrow by the client's calendar.
+function bookingWhen(iso, now = Date.now(), tz) {
+  if (tz) {
+    const d = new Date(iso)
+    const date = dayIn(d.getTime(), tz)
+    const today = dayIn(now, tz)
+    const z = { timeZone: tz }
+    const day = date === today ? 'Today'
+      : date === addDaysStr(today, 1) ? 'Tomorrow'
+        : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', ...z })
+    const [time, period] = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', ...z }).split(/\s+/)
+    return { day, time, period, full: d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', ...z }) }
+  }
   const d = new Date(iso)
   const tomorrow = new Date(now)
   tomorrow.setDate(tomorrow.getDate() + 1)
@@ -897,10 +955,22 @@ function BookButton({ onClick, busy, capped }) {
   )
 }
 
+// Prompt 724 — pin + "Pensacola, FL".
+function PlaceLine({ location, size = 14, style }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, ...style }}>
+      <MapPin size={size} strokeWidth={2} style={{ flexShrink: 0 }} />
+      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{location}</span>
+    </div>
+  )
+}
+
 // Live summary of what the agent has entered, with the Book button. `bar`
 // is the phone version, fixed to the bottom of the screen.
-export function BookingSummary({ name, phone, carrier, scheduledAt, now, onBook, busy, capped, error, bar }) {
-  const when = scheduledAt ? bookingWhen(scheduledAt, now) : null
+// Prompt 724 — optional `location` ("Pensacola, FL") under the phone line and
+// `tz`, the client's zone the call time is shown in.
+export function BookingSummary({ name, phone, carrier, scheduledAt, now, onBook, busy, capped, error, bar, location, tz }) {
+  const when = scheduledAt ? bookingWhen(scheduledAt, now, tz) : null
   if (bar) {
     return (
       <div className="ov-hero flex flex-col sm:hidden" style={{
@@ -913,8 +983,9 @@ export function BookingSummary({ name, phone, carrier, scheduledAt, now, onBook,
             <div style={{ fontFamily: DISPLAY, fontSize: 17, fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {name || 'New client'}
             </div>
-            <div style={{ fontSize: 13, color: 'var(--ov-hero-soft)' }}>
+            <div style={{ fontSize: 13, color: 'var(--ov-hero-soft)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {when ? `${when.day}, ${when.time} ${when.period}` : 'Pick a time'}
+              {location && ` · ${location}`}
             </div>
           </div>
           {name && when && <Check size={20} strokeWidth={2.4} style={{ color: 'var(--ov-hero-dot)', flexShrink: 0 }} />}
@@ -937,6 +1008,7 @@ export function BookingSummary({ name, phone, carrier, scheduledAt, now, onBook,
             {name || 'New client'}
           </div>
           <div style={{ marginTop: 3, fontSize: 14, color: 'var(--ov-hero-soft)' }}>{meta || 'Add their name and number'}</div>
+          {location && <PlaceLine location={location} style={{ marginTop: 3, fontSize: 14, color: 'var(--ov-hero-soft)' }} />}
         </div>
       </div>
       <div style={{ height: 1, background: 'rgba(255,255,255,0.14)' }} />
@@ -997,16 +1069,17 @@ export function WeeklyUsage({ cap, resets, pill }) {
 }
 
 // "today at 2:30 PM" / "tomorrow at 10:30 AM" / "Monday at 10:30 AM".
-function scriptWhen(iso, now) {
-  const { day, time, period } = bookingWhen(iso, now)
+function scriptWhen(iso, now, tz) {
+  const { day, time, period } = bookingWhen(iso, now, tz)
   const d = day === 'Today' || day === 'Tomorrow' ? day.toLowerCase()
-    : new Date(iso).toLocaleDateString('en-US', { weekday: 'long' })
+    : new Date(iso).toLocaleDateString('en-US', { weekday: 'long', ...(tz ? { timeZone: tz } : null) })
   return `${d} at ${time} ${period}`
 }
 
 // The success screen after a booking, with the line to read to the client.
-export function BookedCard({ name, at, now, onAnother, onPipeline }) {
-  const { time, period, full } = bookingWhen(at, now)
+// Prompt 724 — optional `tz` (the client's zone) and `location`.
+export function BookedCard({ name, at, now, onAnother, onPipeline, tz, location }) {
+  const { time, period, full } = bookingWhen(at, now, tz)
   return (
     <div className="pt-6 sm:pt-[72px]" style={{ maxWidth: 620, margin: '0 auto' }}>
       <section className="ov-hero px-5 pt-10 pb-8 sm:px-11 sm:pt-12 sm:pb-10"
@@ -1027,6 +1100,9 @@ export function BookedCard({ name, at, now, onAnother, onPipeline }) {
         <p style={{ margin: '10px 0 0', fontFamily: DISPLAY, fontSize: 20, fontWeight: 500, color: 'var(--ov-hero-soft)' }}>
           {full} at {time} {period}
         </p>
+        {location && (
+          <PlaceLine location={location} style={{ marginTop: 8, justifyContent: 'center', fontSize: 15, color: 'var(--ov-hero-soft)' }} />
+        )}
         <div style={{
           marginTop: 30, width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'flex-start', gap: 14, textAlign: 'left',
           padding: '18px 20px', borderRadius: 16, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
@@ -1035,7 +1111,7 @@ export function BookedCard({ name, at, now, onAnother, onPipeline }) {
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-hero-soft)' }}>Say this before you hang up</div>
             <p style={{ margin: '6px 0 0', fontSize: 16, lineHeight: 1.55, color: '#fff' }}>
-              &ldquo;You&rsquo;re all set for {scriptWhen(at, now)}. Our Underwriting Team will give you a call right at that time to get everything squared away.&rdquo;
+              &ldquo;You&rsquo;re all set for {scriptWhen(at, now, tz)}. Our Underwriting Team will give you a call right at that time to get everything squared away.&rdquo;
             </p>
           </div>
         </div>
@@ -1095,7 +1171,7 @@ function nextStep(p, now) {
 // The "what's happening" phrase in search results.
 function searchPhrase(p) {
   const stage = agentStageOf(p)
-  if (stage === 'booked') return isLive(p) ? 'On a call now' : `Call ${callWhen(p.scheduled_call_at)}`
+  if (stage === 'booked') return isLive(p) ? 'On a call now' : `Call ${callWhen(p.scheduled_call_at, p.client_timezone)}`
   if (stage === 'cancelled') return `Cancelled ${monthDay(p.fulfillment_completed_at || p.updated_at)}`
   if (stage === 'confirmNumber') return 'Needs you: confirm number'
   if (stage === 'needsAttention') return 'Needs you: call & rebook'
@@ -1408,8 +1484,28 @@ function CarrierCell({ p }) {
   )
 }
 
-function DateTile({ iso }) {
+// Prompt 724 — "Pensacola, FL · (602) 555-0184" under a client's name; rows
+// booked before city/state just show the number.
+function ClientSub({ p }) {
+  const place = placeOf(p)
+  const line = { display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', ...ellipsis }
+  if (!place) return <span style={line}>{p.client_phone || 'No number'}</span>
+  return (
+    <span style={{ ...line, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', whiteSpace: 'normal', overflow: 'visible', rowGap: 0 }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0, maxWidth: '100%' }}>
+        <MapPin size={12} strokeWidth={2} style={{ flexShrink: 0, color: 'var(--ov-faint)' }} />
+        <span style={ellipsis}>{place}</span>
+      </span>
+      <span style={{ display: 'inline-flex', gap: 6, whiteSpace: 'nowrap' }}>
+        <span aria-hidden="true" style={{ color: 'var(--ov-faint)' }}>{'·'}</span>{p.client_phone || 'No number'}
+      </span>
+    </span>
+  )
+}
+
+function DateTile({ iso, tz }) {
   if (!iso) return <span style={{ fontSize: 13, color: 'var(--ov-mute)' }}>No time booked</span>
+  if (tz) return <ZonedDateTile iso={iso} tz={tz} />
   const d = new Date(iso)
   return (
     <span style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
@@ -1423,6 +1519,27 @@ function DateTile({ iso }) {
       <span style={{ minWidth: 0 }}>
         <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap' }}>{clockTime(iso)}</span>
         <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>{weekdayDate(iso)}</span>
+      </span>
+    </span>
+  )
+}
+
+// DateTile in the client's zone (Prompt 724).
+function ZonedDateTile({ iso, tz }) {
+  const d = new Date(iso)
+  const z = { timeZone: tz }
+  return (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+      <span className="ov-tile" style={{
+        width: 44, height: 48, flexShrink: 0, boxSizing: 'border-box', borderRadius: 12, lineHeight: 1,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: stVar('booked') }}>{d.toLocaleDateString('en-US', { month: 'short', ...z }).toUpperCase()}</span>
+        <span style={{ marginTop: 4, fontFamily: DISPLAY, fontSize: 18, fontWeight: 600, color: 'var(--ov-hi)' }}>{d.toLocaleDateString('en-US', { day: 'numeric', ...z })}</span>
+      </span>
+      <span style={{ minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap' }}>{d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', ...z })}</span>
+        <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>{d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', ...z })}</span>
       </span>
     </span>
   )
@@ -1520,7 +1637,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
         <StatusAvatar name={name} tab={tab} />
         <span style={{ minWidth: 0 }}>
           <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', ...ellipsis }}>{name}</span>
-          <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', ...ellipsis }}>{p.client_phone || 'No number'}</span>
+          <ClientSub p={p} />
           {showAgent && <span style={{ display: 'block', fontSize: 12.5, color: 'var(--ov-mute)', ...ellipsis }}>{p.agent?.full_name || '—'}</span>}
         </span>
       </span>
@@ -1531,7 +1648,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
     switch (tab) {
       case 'booked':
         return [
-          <DateTile key="d" iso={p.scheduled_call_at} />,
+          <DateTile key="d" iso={p.scheduled_call_at} tz={p.client_timezone} />,
           <span key="s" style={{ justifySelf: 'end' }}>{isLive(p) ? <LiveLabel /> : <span style={{ fontSize: 13, color: 'var(--ov-mute)' }}>Waiting for Fulfillment</span>}</span>,
           <span key="c">{chevron}</span>,
         ]
@@ -1566,7 +1683,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
 
   // The status-specific line on a phone card.
   const cardLine = p => {
-    if (tab === 'booked') return isLive(p) ? <LiveLabel /> : `Call ${callWhen(p.scheduled_call_at)}`
+    if (tab === 'booked') return isLive(p) ? <LiveLabel /> : `Call ${callWhen(p.scheduled_call_at, p.client_timezone)}`
     if (tab === 'noAnswer') return [triesText(p.call_attempts || 0), lastOn(p, now), nextStep(p, now)].filter(Boolean).join(' · ')
     if (tab === 'needs') return NEEDS_WHY[agentStageOf(p)]
     return `Cancelled ${monthDay(p.fulfillment_completed_at || p.updated_at)} · booked ${monthDay(p.created_at)}`
@@ -1625,6 +1742,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
                     <Building2 size={13} strokeWidth={1.8} style={{ flexShrink: 0, color: 'var(--ov-faint)' }} />
                     <span style={ellipsis}>{p.current_carrier || 'Not noted'}{showAgent ? ` · ${p.agent?.full_name || '—'}` : ''}</span>
                   </div>
+                  {placeOf(p) && <PlaceLine location={placeOf(p)} size={13} style={{ marginTop: 1, gap: 5, fontSize: 12.5, color: 'var(--ov-mute)' }} />}
                 </div>
                 {!action?.onClick && <ChevronRight size={16} strokeWidth={2} style={{ flexShrink: 0, color: 'var(--ov-faint)' }} />}
               </div>
@@ -2058,7 +2176,7 @@ function storyStatus(p, now) {
   const tab = tabOf(p)
   if (tab === 'booked') {
     if (isLive(p)) return 'On a call now'
-    return p.scheduled_call_at ? `Fulfillment calls ${callAt(p.scheduled_call_at)}` : 'Waiting for Fulfillment'
+    return p.scheduled_call_at ? `Fulfillment calls ${callAt(p.scheduled_call_at, p.client_timezone)}` : 'Waiting for Fulfillment'
   }
   if (tab === 'noAnswer') return nextStep(p, now)
   if (tab === 'needs') return NEEDS_WHY[agentStageOf(p)]
@@ -2648,8 +2766,13 @@ const startOfDay = d => {
   x.setHours(0, 0, 0, 0)
   return x
 }
-// Whole calendar days from `now` to `iso`, in the agent's own zone.
-const dayGap = (iso, now) => Math.round((startOfDay(iso) - startOfDay(now)) / 864e5)
+// Whole calendar days from `now` to `iso`, in the agent's own zone, or in
+// `tz` (the client's, Prompt 724) when given.
+const dayGap = (iso, now, tz) => {
+  if (!tz) return Math.round((startOfDay(iso) - startOfDay(now)) / 864e5)
+  const ms = s => Date.UTC(...s.split('-').map((n, i) => (i === 1 ? n - 1 : +n)))
+  return Math.round((ms(dayIn(new Date(iso).getTime(), tz)) - ms(dayIn(now, tz))) / 864e5)
+}
 
 // "in 25 min" / "in 4 h 39 min" / "in 2 h" / "Tomorrow" / "In 3 days".
 function untilLabel(iso, now) {
@@ -2666,16 +2789,19 @@ function untilLabel(iso, now) {
 }
 
 // "Today, 2:30 PM" / "Tomorrow, 2:30 PM" / "Mon, 10:00 AM" / "Oct 19, 10:00 AM".
-function comingWhen(iso, now) {
-  const gap = dayGap(iso, now)
+function comingWhen(iso, now, tz) {
+  const gap = dayGap(iso, now, tz)
   const d = new Date(iso)
+  const z = tz ? { timeZone: tz } : null
   const day = gap <= 0 ? 'Today' : gap === 1 ? 'Tomorrow'
-    : gap < 7 ? d.toLocaleDateString('en-US', { weekday: 'short' }) : shortDate(d)
-  return `${day}, ${fmtSlotTime(iso)}`
+    : gap < 7 ? d.toLocaleDateString('en-US', { weekday: 'short', ...z })
+      : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...z })
+  return `${day}, ${fmtSlotTime(iso, tz)}`
 }
 
-function CallDateTile({ iso, booked }) {
+function CallDateTile({ iso, booked, tz }) {
   const d = new Date(iso)
+  const z = tz ? { timeZone: tz } : null
   return (
     <span style={{
       width: 46, height: 46, flexShrink: 0, boxSizing: 'border-box', borderRadius: 13,
@@ -2685,9 +2811,9 @@ function CallDateTile({ iso, booked }) {
     }}>
       {/* A calendar tile: the one place an all-caps label is allowed. */}
       <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.02em', opacity: 0.9, textTransform: 'uppercase' }}>
-        {d.toLocaleDateString('en-US', { weekday: 'short' })}
+        {d.toLocaleDateString('en-US', { weekday: 'short', ...z })}
       </span>
-      <span style={{ marginTop: 3, fontFamily: DISPLAY, fontSize: 18, fontWeight: 700 }}>{d.getDate()}</span>
+      <span style={{ marginTop: 3, fontFamily: DISPLAY, fontSize: 18, fontWeight: 700 }}>{z ? d.toLocaleDateString('en-US', { day: 'numeric', ...z }) : d.getDate()}</span>
     </span>
   )
 }
@@ -2835,7 +2961,7 @@ export function ComingUpCard({ upcoming, now, onGo }) {
               display: 'flex', alignItems: 'center', gap: 14, padding: 14, borderRadius: 16,
               background: 'var(--ov-st-booked-tint)', border: '1px solid var(--ov-st-booked-edge)',
             }}>
-            <CallDateTile iso={next.scheduled_call_at} booked />
+            <CallDateTile iso={next.scheduled_call_at} tz={next.client_timezone} booked />
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fullName(next)}</span>
               <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mid)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -2844,7 +2970,7 @@ export function ComingUpCard({ upcoming, now, onGo }) {
             </span>
             <span style={{ textAlign: 'right', lineHeight: 1.25, flexShrink: 0 }}>
               <span style={{ display: 'block', fontFamily: DISPLAY, fontSize: 17, fontWeight: 700, color: 'var(--ov-st-booked)', whiteSpace: 'nowrap' }}>
-                {fmtSlotTime(next.scheduled_call_at)}
+                {fmtSlotTime(next.scheduled_call_at, next.client_timezone)}
               </span>
               <span style={{ display: 'block', fontSize: 12, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>{untilLabel(next.scheduled_call_at, now)}</span>
             </span>
@@ -2856,11 +2982,11 @@ export function ComingUpCard({ upcoming, now, onGo }) {
                 <Link key={p.id} to={`/agent/clients?stage=booked&open=${p.id}`}
                   className={`ov-up-link ov-up-row ${i >= 2 ? 'hidden sm:flex' : 'flex'}`}
                   style={{ alignItems: 'center', gap: 14, padding: '11px 4px' }}>
-                  <CallDateTile iso={p.scheduled_call_at} />
+                  <CallDateTile iso={p.scheduled_call_at} tz={p.client_timezone} />
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fullName(p)}</span>
                     <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {comingWhen(p.scheduled_call_at, now)} · {p.current_carrier || 'Carrier not noted'}
+                      {comingWhen(p.scheduled_call_at, now, p.client_timezone)} · {p.current_carrier || 'Carrier not noted'}
                     </span>
                   </span>
                   <ArrowRight size={15} strokeWidth={2} style={{ color: 'var(--ov-faint)', flexShrink: 0 }} />

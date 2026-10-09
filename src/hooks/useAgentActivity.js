@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase'
 
 const EVENT_SELECT = `
   id, policy_id, agent_id, kind, from_status, actor_name, actor_role, detail, at,
-  policy:policies ( client_first_name, client_last_name ),
+  policy:policies ( client_first_name, client_last_name, state, client_city, client_timezone ),
   agent:profiles!policy_events_agent_id_fkey ( full_name )
 `
 
