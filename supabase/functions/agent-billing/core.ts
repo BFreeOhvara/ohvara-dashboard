@@ -494,28 +494,54 @@ const cap = (t: string) => (t ? t[0].toUpperCase() + t.slice(1) : t)
 // Whatever the agent pays with, as one line for the Payment method card. `card`
 // keeps the P734 fields (brand, last4, exp_*) so an older page still works;
 // `label` is the line to show and `kind` is card | link | bank | other.
-function methodOf(pm: any) {
+// A Stripe Link payment method has no card of its own, only the Link email, so
+// `linkCard` (brand + last4 found on the charge, P737) names the card behind
+// it. The Link email is never put in the result: the page shows "Link · Visa
+// ending 4242", or just "Link" when Stripe doesn't say which card it was.
+type LinkCard = { brand: string; last4: string }
+
+function methodOf(pm: any, linkCard: LinkCard | null = null) {
   if (!pm) return null
   const none = { brand: null, last4: null, exp_month: null, exp_year: null }
-  if (pm.card) {
+  const cardLine = (brand: string | null | undefined, last4: string | null | undefined) => {
+    const name = CARD_BRANDS[brand as string] || (brand && brand !== 'unknown' ? cap(brand.replace(/_/g, ' ')) : 'Card')
+    return last4 ? `${name} ending ${last4}` : name
+  }
+  if (pm.type === 'link' && !linkCard && pm.card?.brand && pm.card?.last4) linkCard = { brand: pm.card.brand, last4: pm.card.last4 }
+  if (pm.card && pm.type !== 'link') {
     const c = pm.card
-    const brand = CARD_BRANDS[c.brand] || (c.brand && c.brand !== 'unknown' ? cap(c.brand.replace(/_/g, ' ')) : 'Card')
-    const wallet = c.wallet?.type ? (WALLETS[c.wallet.type] || cap(String(c.wallet.type).replace(/_/g, ' '))) : null
-    const ending = c.last4 ? `${brand} ending ${c.last4}` : brand
+    const walletType = c.wallet?.type || null
+    const wallet = walletType ? (WALLETS[walletType] || cap(String(walletType).replace(/_/g, ' '))) : null
+    const ending = cardLine(c.brand, c.last4)
     return {
       brand: c.brand, last4: c.last4, exp_month: c.exp_month, exp_year: c.exp_year,
-      kind: 'card', wallet: c.wallet?.type || null, label: wallet ? `${ending} · ${wallet}` : ending,
+      kind: walletType === 'link' ? 'link' : 'card', wallet: walletType,
+      label: !wallet ? ending : walletType === 'link' ? `Link · ${ending}` : `${ending} · ${wallet}`,
     }
   }
   if (pm.type === 'link') {
-    const email = pm.link?.email
-    return { ...none, kind: 'link', label: email ? `Link · ${email}` : 'Link' }
+    return {
+      ...none, brand: linkCard?.brand ?? null, last4: linkCard?.last4 ?? null, kind: 'link',
+      label: linkCard ? `Link · ${cardLine(linkCard.brand, linkCard.last4)}` : 'Link',
+    }
   }
   if (pm.type === 'us_bank_account' || pm.us_bank_account) {
     const last4 = pm.us_bank_account?.last4
     return { ...none, last4: last4 || null, kind: 'bank', label: last4 ? `Bank account ending ${last4}` : 'Bank account' }
   }
   return { ...none, kind: 'other', label: cap(String(pm.type || 'payment method').replace(/_/g, ' ')) }
+}
+
+const isLinkMethod = (pm: any) => pm?.type === 'link' || pm?.card?.wallet?.type === 'link'
+
+// The card a charge was made with: payment_method_details.card, or a card block
+// inside payment_method_details.link, whichever Stripe returns for Link.
+function cardOnCharge(charge: any): LinkCard | null {
+  const d = charge?.payment_method_details
+  for (const c of [d?.card, d?.link?.card]) {
+    if (c?.brand && c?.last4) return { brand: c.brand, last4: c.last4 }
+  }
+  return null
 }
 
 // A payment method only counts if it's attached to the caller's own customer.
@@ -538,15 +564,62 @@ async function ownMethod(id: string, customerId: string) {
 // and a Link / wallet payment has no `card`, so the last two catch those. A
 // card found there (not in the first two) is saved as the customer's default so
 // the next lookup and the next charge agree. Logs which step hit, never card data.
+//
+// P737: for a Link method, also look for the card behind it: on the method
+// itself (source=pm), else on the charge of the latest paid invoice
+// (source=charge; only a charge made with this method or another Link payment),
+// else none. The log line says which, so a reload shows whether Stripe exposes it.
 async function defaultMethod(customerId: string, sub: any) {
-  const found = (via: string, pm: any) => {
-    console.log(`agent-billing overview card via=${via} type=${pm?.type ?? 'none'}`)
-    return pm
+  let paidInvoices: any[] | null = null
+  const getPaid = async () => {
+    if (!paidInvoices) {
+      const r = await stripe('invoices', {
+        method: 'GET',
+        params: {
+          customer: customerId, status: 'paid', limit: 3,
+          expand: ['data.payment_intent.payment_method', 'data.payment_intent.latest_charge'],
+        },
+      })
+      paidInvoices = r.data || []
+    }
+    return paidInvoices as any[]
   }
+
+  const linkCardOf = async (pm: any): Promise<{ card: LinkCard | null; source: string }> => {
+    if (pm.card?.brand && pm.card?.last4) return { card: { brand: pm.card.brand, last4: pm.card.last4 }, source: 'pm' }
+    try {
+      for (const inv of await getPaid()) {
+        const charge = inv.payment_intent?.latest_charge
+        if (!charge || typeof charge === 'string') continue
+        const d = charge.payment_method_details
+        const ours = idOf(charge.payment_method) === pm.id || d?.type === 'link' || d?.card?.wallet?.type === 'link'
+        if (!ours) continue
+        const card = cardOnCharge(charge)
+        if (card) return { card, source: 'charge' }
+      }
+    } catch (e) {
+      if (!(e instanceof StripeError)) throw e
+      console.error('agent-billing overview link card lookup failed:', e.code || e.type)
+    }
+    return { card: null, source: 'none' }
+  }
+
+  const found = async (via: string, pm: any) => {
+    let linkCard: LinkCard | null = null
+    let extra = ''
+    if (pm && isLinkMethod(pm)) {
+      const r = await linkCardOf(pm)
+      linkCard = r.card
+      extra = ` link_card=${r.card ? 'yes' : 'no'} source=${r.source}`
+    }
+    console.log(`agent-billing overview card via=${via} type=${pm?.type ?? 'none'}${extra}`)
+    return methodOf(pm, linkCard)
+  }
+
   const subPm = idOf(sub?.default_payment_method)
   if (subPm) {
     const pm = await ownMethod(subPm, customerId)
-    if (pm) return methodOf(found('sub', pm))
+    if (pm) return found('sub', pm)
   }
 
   const customer = await stripe(`customers/${customerId}`)
@@ -554,16 +627,12 @@ async function defaultMethod(customerId: string, sub: any) {
   const custPm = idOf(customer.invoice_settings?.default_payment_method) || idOf(customer.default_source)
   if (custPm) {
     const pm = await ownMethod(custPm, customerId)
-    if (pm) return methodOf(found('customer', pm))
+    if (pm) return found('customer', pm)
   }
 
   let pm: any = null
   let via = 'none'
-  const paid = await stripe('invoices', {
-    method: 'GET',
-    params: { customer: customerId, status: 'paid', limit: 3, expand: ['data.payment_intent.payment_method'] },
-  })
-  for (const inv of paid.data || []) {
+  for (const inv of await getPaid()) {
     const raw = inv.payment_intent?.payment_method
     if (!raw) continue
     const cand = typeof raw === 'string' ? await ownMethod(raw, customerId) : (idOf(raw.customer) === customerId ? raw : null)
@@ -579,7 +648,7 @@ async function defaultMethod(customerId: string, sub: any) {
       console.error('agent-billing overview attached lookup failed:', e.code || e.type)
     }
   }
-  found(via, pm)
+  const method = await found(via, pm)
   if (!pm) return null
 
   try {
@@ -588,7 +657,7 @@ async function defaultMethod(customerId: string, sub: any) {
     if (!(e instanceof StripeError)) throw e
     console.error('agent-billing overview default heal failed:', e.code || e.type)
   }
-  return methodOf(pm)
+  return method
 }
 
 // Paid / Open / Failed for the invoice list. "Failed" = a charge was tried

@@ -291,14 +291,7 @@ export function ManageBilling({ tiers, onBack, onNoPlan, refreshProfile }) {
         <div className="ov-mb-row">
           <div style={{ flex: '1 1 220px', minWidth: 0 }}>
             {data.card ? (
-              <>
-                <div style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--ov-hi)' }}>{methodLabel(data.card)}</div>
-                {data.card.exp_month && data.card.exp_year && (
-                  <div style={{ marginTop: 2, fontSize: 13.5, color: 'var(--ov-mute)' }}>
-                    Expires {String(data.card.exp_month).padStart(2, '0')}/{String(data.card.exp_year).slice(-2)}
-                  </div>
-                )}
-              </>
+              <div style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--ov-hi)' }}>{methodLabel(data.card)}</div>
             ) : (
               <div style={{ fontSize: 14.5, color: 'var(--ov-mute)' }}>No card on file.</div>
             )}
