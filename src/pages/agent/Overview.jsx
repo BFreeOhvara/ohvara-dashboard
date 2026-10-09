@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { CalendarPlus, Check } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
-import { HeroPanel, TrendCard, AttentionPanel, ActivityChart } from '../../components/agent/AgentUI'
+import { HeroPanel, TrendCard, AttentionCard, ComingUpCard, LastWeekChart } from '../../components/agent/AgentUI'
 import { stageOf, agentStageOf, sameLocalDay, startOfWeek, useNow } from '../../lib/agentBookings'
 import { LiveDot } from '../../components/ui/LiveDot'
 import { fullName } from '../../lib/policyFormat'
@@ -12,9 +12,14 @@ import { fullName } from '../../lib/policyFormat'
 //
 // Prompt 714 — v2, the pilot for the portal-wide visual upgrade: a hero
 // (greeting, big clock, Book a call), two trend cards against last week, a
-// 14-day chart, and a "Needs your attention" list with a next step per No
-// answer client. The With Fulfillment tile and the "Your calls" list are gone.
+// chart, and a "Needs your attention" list with a next step per No answer
+// client. The With Fulfillment tile and the "Your calls" list are gone.
 // Everything comes from the useAgentBookings rows already loaded.
+//
+// Prompt 723 — the side box has two states: amber "Needs your attention" when
+// a client didn't pick up, otherwise "You're all caught up" with the next
+// booked calls. The chart is last Monday to Sunday (was 14 days), and the
+// box's button is the blue .ov-primary.
 //
 // Prompt 672 — the trend cards open My Clients on the matching slice of its
 // Pipeline (?range= / ?stage=).
@@ -51,10 +56,9 @@ export default function Overview() {
     const onDay = (list, day) => list.filter(iso => sameLocalDay(iso, day)).length
 
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-    const midnight = new Date(today)
-    midnight.setHours(0, 0, 0, 0)
-    const days = Array.from({ length: 14 }, (_, i) => {
-      const date = addDays(midnight, i - 13)
+    // Last Monday to Sunday (weeks run Monday to Sunday everywhere).
+    const lastWeek = Array.from({ length: 7 }, (_, i) => {
+      const date = addDays(lastWeekStart, i)
       return { date, booked: onDay(bookedAt, date), cancelled: onDay(cancelledAt, date) }
     })
 
@@ -64,6 +68,11 @@ export default function Overview() {
     const attention = rows
       .filter(p => stageOf(p) === 'noAnswer')
       .sort((a, b) => (ATTN_RANK[agentStageOf(a)] ?? 2) - (ATTN_RANK[agentStageOf(b)] ?? 2) || lastCall(a) - lastCall(b))
+    // Booked calls still ahead, soonest first (live, cancelled and no-answer
+    // rows are not "booked").
+    const upcoming = rows
+      .filter(p => stageOf(p) === 'booked' && p.scheduled_call_at && ms(p.scheduled_call_at) > now)
+      .sort((a, b) => ms(a.scheduled_call_at) - ms(b.scheduled_call_at))
 
     return {
       todays: rows.filter(p => sameLocalDay(p.scheduled_call_at, today)).length,
@@ -79,8 +88,9 @@ export default function Overview() {
         diff: cancelledThisWeek - between(cancelledAt, lastWeekStart, weekStart),
         week: weekDays.map(d => onDay(cancelledAt, d)),
       },
-      days,
+      lastWeek,
       attention,
+      upcoming,
     }
   }, [rows, now])
 
@@ -130,11 +140,12 @@ export default function Overview() {
           />
         </div>
 
-        <AttentionPanel items={g.attention} loading={isLoading} now={now} onGo={navigate} />
+        {isLoading || g.attention.length > 0
+          ? <AttentionCard items={g.attention} loading={isLoading} now={now} onGo={navigate} />
+          : <ComingUpCard upcoming={g.upcoming} now={now} onGo={navigate} />}
 
         <div style={{ gridArea: 'chart', display: 'flex', minWidth: 0 }}>
-          <ActivityChart days={g.days} loading={isLoading} className="hidden sm:flex" />
-          <ActivityChart days={g.days.slice(7)} loading={isLoading} compact className="flex sm:hidden" />
+          <LastWeekChart days={g.lastWeek} loading={isLoading} />
         </div>
       </div>
     </div>

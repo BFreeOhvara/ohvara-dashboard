@@ -1,8 +1,9 @@
 import { Children, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Link } from 'react-router-dom'
 import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send } from 'lucide-react'
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
-import { SLOTS, slotToISO, localDateISO, callWhen, callAt } from '../../lib/scheduling'
+import { SLOTS, slotToISO, localDateISO, callWhen, callAt, fmtSlotTime } from '../../lib/scheduling'
 import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, digits, matchClients } from '../../lib/agentBookings'
 import { DayClock } from '../ui/DayClock'
 import { LiveDot } from '../ui/LiveDot'
@@ -2632,6 +2633,327 @@ export function Composer({ value, onChange, onSubmit, placeholder, busy, error, 
       <div className={counter ? 'flex' : 'hidden md:flex'} style={{ gap: 12, padding: '8px 8px 0', fontSize: 12, color: 'var(--ov-faint)' }}>
         <span className="hidden md:inline">Enter to send · Shift + Enter for a new line</span>
         {counter && <span style={{ marginLeft: 'auto', fontVariantNumeric: 'tabular-nums' }}>{value.length}/{max}</span>}
+      </div>
+    </div>
+  )
+}
+
+// ── Prompt 723 — Overview final touches ───────────────────────────────────
+// The attention box has two states (AttentionCard = someone needs the agent,
+// ComingUpCard = nobody does), and the chart becomes last Monday to Sunday.
+// AttentionPanel and ActivityChart above are left in place, unused.
+
+const startOfDay = d => {
+  const x = new Date(d)
+  x.setHours(0, 0, 0, 0)
+  return x
+}
+// Whole calendar days from `now` to `iso`, in the agent's own zone.
+const dayGap = (iso, now) => Math.round((startOfDay(iso) - startOfDay(now)) / 864e5)
+
+// "in 25 min" / "in 4 h 39 min" / "in 2 h" / "Tomorrow" / "In 3 days".
+function untilLabel(iso, now) {
+  const mins = Math.max(1, Math.round((new Date(iso).getTime() - now) / 6e4))
+  const gap = dayGap(iso, now)
+  if (mins < 60) return `in ${mins} min`
+  if (gap <= 0) {
+    const h = Math.floor(mins / 60)
+    const m = mins % 60
+    return m ? `in ${h} h ${m} min` : `in ${h} h`
+  }
+  if (gap === 1) return 'Tomorrow'
+  return `In ${gap} days`
+}
+
+// "Today, 2:30 PM" / "Tomorrow, 2:30 PM" / "Mon, 10:00 AM" / "Oct 19, 10:00 AM".
+function comingWhen(iso, now) {
+  const gap = dayGap(iso, now)
+  const d = new Date(iso)
+  const day = gap <= 0 ? 'Today' : gap === 1 ? 'Tomorrow'
+    : gap < 7 ? d.toLocaleDateString('en-US', { weekday: 'short' }) : shortDate(d)
+  return `${day}, ${fmtSlotTime(iso)}`
+}
+
+function CallDateTile({ iso, booked }) {
+  const d = new Date(iso)
+  return (
+    <span style={{
+      width: 46, height: 46, flexShrink: 0, boxSizing: 'border-box', borderRadius: 13,
+      background: booked ? 'var(--ov-st-booked-tint)' : 'var(--ov-stub)',
+      color: booked ? 'var(--ov-st-booked)' : 'var(--ov-mid)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+    }}>
+      {/* A calendar tile: the one place an all-caps label is allowed. */}
+      <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.02em', opacity: 0.9, textTransform: 'uppercase' }}>
+        {d.toLocaleDateString('en-US', { weekday: 'short' })}
+      </span>
+      <span style={{ marginTop: 3, fontFamily: DISPLAY, fontSize: 18, fontWeight: 700 }}>{d.getDate()}</span>
+    </span>
+  )
+}
+
+// The amber state: same content as AttentionPanel, with the main button
+// painted like the greeting bar.
+export function AttentionCard({ items, loading, now, onGo }) {
+  const pad = 'p-[18px] sm:px-6 sm:pt-6 sm:pb-5'
+  const area = { gridArea: 'attn', minWidth: 0 }
+  const title = <h2 style={{ ...OV_TITLE, flex: 1, minWidth: 0 }} className="text-[18px] sm:text-[19px]">Needs your attention</h2>
+
+  if (loading) {
+    return (
+      <div className={`ov-card flex flex-col ${pad}`} style={area}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {title}
+          <span style={{ fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, color: 'var(--ov-mute)' }}>—</span>
+        </div>
+      </div>
+    )
+  }
+
+  const count = items.length
+  const shown = items.slice(0, ATTN_ROWS)
+  const more = n => (count > n ? `See all ${count} in My Pipeline` : 'Open in My Pipeline')
+
+  return (
+    <div className={`ov-attn flex flex-col ${pad}`} style={area}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <IconChip icon={TriangleAlert} color="var(--ov-warn)" tint="var(--ov-warn-tint)" />
+        {title}
+        <span style={{
+          minWidth: 30, height: 30, boxSizing: 'border-box', padding: '0 10px', borderRadius: 999,
+          background: 'var(--ov-badge-bg)', color: 'var(--ov-badge-fg)', fontFamily: DISPLAY, fontSize: 15, fontWeight: 700,
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontVariantNumeric: 'tabular-nums',
+        }}>
+          {count}
+        </span>
+      </div>
+      <p style={{ margin: '14px 0 6px', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-soft)' }}>
+        {count === 1 ? 'This client didn’t' : 'These clients didn’t'} pick up. Re-book a time, or Fulfillment will try again.
+      </p>
+
+      {shown.map((p, i) => {
+        const name = fullName(p)
+        const stage = agentStageOf(p)
+        const step = recoveryLabel(p, now) || triesLine(p, now)
+        const meta = [p.current_carrier || 'Carrier not noted', step].filter(Boolean).join(' · ')
+        const btn = { padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, cursor: 'pointer' }
+        let action
+        if (canRebook(p)) {
+          action = (
+            <button type="button" className="ov-ghost h-10 sm:h-[34px]" style={btn}
+              onClick={() => onGo(`/agent/clients?stage=${stage}&open=${p.id}&rebook=1`)}>
+              {stage === 'needsAttention' ? 'Call & rebook' : 'Re-book'}
+            </button>
+          )
+        } else if (stage === 'confirmNumber') {
+          action = (
+            <button type="button" className="ov-ghost h-10 sm:h-[34px]" style={btn}
+              onClick={() => onGo(`/agent/clients?stage=confirmNumber&open=${p.id}`)}>
+              Confirm number
+            </button>
+          )
+        } else {
+          action = <span style={{ fontSize: 12.5, color: 'var(--ov-mute)', whiteSpace: 'nowrap', flexShrink: 0 }}>We&rsquo;re on it</span>
+        }
+        return (
+          <div key={p.id} className={`ov-attn-row ${i >= 3 ? 'hidden sm:flex' : 'flex'}`} style={{ alignItems: 'center', gap: 12, padding: '14px 0' }}>
+            <span style={{
+              width: 38, height: 38, flexShrink: 0, borderRadius: '50%', background: 'var(--ov-warn-tint)', color: 'var(--ov-warn)',
+              fontSize: 12.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {initialsOf(name)}
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
+              <div style={{ marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)' }}>{meta}</div>
+            </div>
+            {action}
+          </div>
+        )
+      })}
+
+      <div style={{ marginTop: 'auto', paddingTop: 14 }}>
+        <button type="button" className="ov-primary" onClick={() => onGo('/agent/clients?stage=noAnswer')}>
+          <span className="sm:hidden">{more(3)}</span>
+          <span className="hidden sm:inline">{more(ATTN_ROWS)}</span>
+          <ArrowRight size={15} strokeWidth={2.2} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// The calm state: nobody needs the agent, so show what is coming up.
+// `upcoming`: booked rows with a future call, soonest first.
+export function ComingUpCard({ upcoming, now, onGo }) {
+  const pad = 'p-[18px] sm:px-6 sm:pt-6 sm:pb-5'
+  const area = { gridArea: 'attn', minWidth: 0 }
+  const title = <h2 style={{ ...OV_TITLE, flex: 1, minWidth: 0 }} className="text-[18px] sm:text-[19px]">You&rsquo;re all caught up</h2>
+  const n = upcoming.length
+  const [next, ...rest] = upcoming
+  const list = rest.slice(0, 3)
+
+  return (
+    <div className={`ov-card flex flex-col ${pad}`} style={area}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <IconChip icon={Check} color="var(--ov-up)" tint="var(--ov-up-tint)" iconSize={18} />
+        {title}
+      </div>
+      <p style={{ margin: '12px 0 0', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-soft)' }}>
+        {n ? 'Nobody is waiting on you. Here’s what’s coming up.' : 'Nobody is waiting on you.'}
+      </p>
+
+      {n === 0 ? (
+        <>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '28px 10px' }}>
+            <span style={{
+              width: 68, height: 68, borderRadius: 22, background: 'var(--ov-st-booked-tint)', color: 'var(--ov-st-booked)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <CalendarDays size={30} strokeWidth={1.8} />
+            </span>
+            <div style={{ marginTop: 18, fontFamily: DISPLAY, fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ov-hi)' }}>
+              Nothing on the books yet
+            </div>
+            <div style={{ marginTop: 6, maxWidth: 250, fontSize: 14, lineHeight: 1.5, color: 'var(--ov-mute)' }}>
+              Book a call when your next client says yes.
+            </div>
+          </div>
+          <button type="button" className="ov-primary" onClick={() => onGo('/agent/book')}>
+            <CalendarPlus size={17} strokeWidth={2.1} /> Book a call
+          </button>
+        </>
+      ) : (
+        <>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '22px 0 10px' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-mute)' }}>Up next</span>
+            <span style={{ fontSize: 12.5, color: 'var(--ov-faint)' }}>{n} {n === 1 ? 'call' : 'calls'} booked</span>
+          </div>
+
+          <Link to={`/agent/clients?stage=booked&open=${next.id}`} className="ov-up-link"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 14, padding: 14, borderRadius: 16,
+              background: 'var(--ov-st-booked-tint)', border: '1px solid var(--ov-st-booked-edge)',
+            }}>
+            <CallDateTile iso={next.scheduled_call_at} booked />
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fullName(next)}</span>
+              <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mid)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {next.current_carrier || 'Carrier not noted'}
+              </span>
+            </span>
+            <span style={{ textAlign: 'right', lineHeight: 1.25, flexShrink: 0 }}>
+              <span style={{ display: 'block', fontFamily: DISPLAY, fontSize: 17, fontWeight: 700, color: 'var(--ov-st-booked)', whiteSpace: 'nowrap' }}>
+                {fmtSlotTime(next.scheduled_call_at)}
+              </span>
+              <span style={{ display: 'block', fontSize: 12, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>{untilLabel(next.scheduled_call_at, now)}</span>
+            </span>
+          </Link>
+
+          {list.length > 0 && (
+            <div style={{ marginTop: 6 }}>
+              {list.map((p, i) => (
+                <Link key={p.id} to={`/agent/clients?stage=booked&open=${p.id}`}
+                  className={`ov-up-link ov-up-row ${i >= 2 ? 'hidden sm:flex' : 'flex'}`}
+                  style={{ alignItems: 'center', gap: 14, padding: '11px 4px' }}>
+                  <CallDateTile iso={p.scheduled_call_at} />
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fullName(p)}</span>
+                    <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {comingWhen(p.scheduled_call_at, now)} · {p.current_carrier || 'Carrier not noted'}
+                    </span>
+                  </span>
+                  <ArrowRight size={15} strokeWidth={2} style={{ color: 'var(--ov-faint)', flexShrink: 0 }} />
+                </Link>
+              ))}
+            </div>
+          )}
+
+          <div style={{ height: 14 }} />
+          <button type="button" className="ov-primary" style={{ marginTop: 'auto' }} onClick={() => onGo('/agent/clients?stage=booked')}>
+            Open My Pipeline <ArrowRight size={15} strokeWidth={2.2} />
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
+// Last Monday to Sunday: `days` is 7 entries [{ date, booked, cancelled }].
+// One responsive render (the .ov-lw* rules in index.css switch to the phone
+// layout under 640px). Rows with numbers on the left, no numbers on the bars.
+export function LastWeekChart({ days, loading, className = '' }) {
+  const booked = days.reduce((s, d) => s + d.booked, 0)
+  const cancelled = days.reduce((s, d) => s + d.cancelled, 0)
+  const m = Math.max(0, ...days.map(d => Math.max(d.booked, d.cancelled)))
+  const step = m <= 4 ? 1 : Math.ceil(m / 4)
+  const top = step * 4
+  const rows = [0, 1, 2, 3, 4]
+  const empty = !loading && booked === 0 && cancelled === 0
+  const range = days.length ? `${shortDate(days[0].date)} to ${shortDate(days[days.length - 1].date)}` : ''
+  const barH = v => (v ? `${(v / top) * 100}%` : 3)
+  const dayName = d => d.toLocaleDateString('en-US', { weekday: 'short' })
+
+  const total = (v, word) => (
+    <div>
+      <div className="ov-lw-num" style={OV_NUM}>{loading ? '—' : v}</div>
+      <div style={{ marginTop: 6, fontSize: 13, color: 'var(--ov-mute)' }}>{word}</div>
+    </div>
+  )
+
+  return (
+    <div className={`ov-card ov-lw ${className}`}>
+      <div className="ov-lw-head">
+        <div className="ov-lw-titles">
+          <h2 style={OV_TITLE} className="text-[18px] sm:text-[19px]">Last week</h2>
+          <p className="ov-lw-sub-wide" style={{ margin: '3px 0 0', fontSize: 13.5, color: 'var(--ov-mute)' }}>{range} · calls you booked and old policies confirmed cancelled</p>
+          <p className="ov-lw-sub-narrow" style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--ov-mute)' }}>{range}</p>
+        </div>
+        <Legend />
+      </div>
+
+      <div className="ov-lw-body">
+        <div className="ov-lw-totals">{total(booked, 'booked')}{total(cancelled, 'cancelled')}</div>
+
+        {empty ? (
+          <div style={{ flex: 1, minWidth: 0, minHeight: 176, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 14, color: 'var(--ov-mute)' }}>
+            No calls last week. Book one when your next client says yes.
+          </div>
+        ) : (
+          <div className="ov-lw-chart">
+            <div className="ov-lw-axis" aria-hidden="true">
+              {rows.map(i => (
+                <span key={i} className="ov-lw-tick" style={{ bottom: `calc(${i * 25}% - 7px)` }}>{i * step}</span>
+              ))}
+            </div>
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div
+                className="ov-lw-plot" role="img"
+                aria-label={`Last week: ${booked} booked, ${cancelled} cancelled`}
+              >
+                {rows.map(i => (
+                  <div key={i} className="ov-lw-line" style={{ bottom: `${i * 25}%`, background: i === 0 ? 'var(--ov-line)' : 'var(--ov-grid)' }} />
+                ))}
+                <div className="ov-lw-cols">
+                  {days.map((d, i) => (
+                    <div key={i} className="ov-lw-col" title={`${dayName(d.date)}, ${shortDate(d.date)}: ${d.booked} booked, ${d.cancelled} cancelled`}>
+                      <span className="ov-lw-bar" style={{ height: barH(d.booked), background: 'var(--ov-data-a-bar)' }} />
+                      <span className="ov-lw-bar" style={{ height: barH(d.cancelled), background: 'var(--ov-data-b-bar)' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="ov-lw-xs">
+                {days.map((d, i) => (
+                  <div key={i} style={{ flex: 1, minWidth: 0, textAlign: 'center', lineHeight: 1.25 }}>
+                    <div style={{ fontFamily: MONO, fontSize: 11.5, fontWeight: 600, color: 'var(--ov-mid)' }}>{dayName(d.date)}</div>
+                    <div className="ov-lw-date" style={{ fontFamily: MONO, fontSize: 10.5, color: 'var(--ov-faint)' }}>{shortDate(d.date)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
