@@ -131,6 +131,30 @@ export function useRebookCall() {
   })
 }
 
+// Prompt 730 — Change a booking: fix a client's details and/or move the call,
+// in place (migration 134). One update on the same row, so it never uses a
+// weekly booking. `scheduledAt` null keeps the time; a No answer lead needs
+// one (it's a re-book). The function returns the updated row.
+export function useChangeBooking() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, firstName, lastName, phone, city, state, timezone, carrierId, scheduledAt }) => {
+      const { data, error } = await supabase.rpc('agent_change_booking', {
+        p_policy: id, p_first: firstName, p_last: lastName, p_phone: phone || null,
+        p_city: city || null, p_state: state || null, p_timezone: timezone || null,
+        p_carrier: carrierId, p_at: scheduledAt || null,
+      })
+      if (error) throw error
+      return data
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['policies'] })
+      qc.invalidateQueries({ queryKey: ['policy-events'] })
+      qc.invalidateQueries({ queryKey: ['policy-story'] })
+    },
+  })
+}
+
 // Prompt 696 — the agent confirms (and optionally corrects) the client's number
 // after two unanswered calls; the next calendar day the follow-up texts start.
 export function useConfirmRecoveryNumber() {
@@ -139,30 +163,6 @@ export function useConfirmRecoveryNumber() {
     mutationFn: async ({ id, phone }) => {
       const { error } = await supabase.rpc('agent_confirm_recovery_number', { p_policy: id, p_phone: phone || null })
       if (error) throw error
-    },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),
-  })
-}
-
-// Move a booking Fulfillment hasn't called yet. Guarded on stage Pending and
-// zero attempts (every booking has a rep from the start since Prompt 684, so
-// "unassigned" no longer works as the guard) so an agent can't shift a call
-// out from under a rep who's already working it. The database re-checks which rep is free at
-// the new time (migration 116).
-export function useRescheduleBooking() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ id, scheduledAt }) => {
-      const { data, error } = await supabase
-        .from('policies')
-        .update({ scheduled_call_at: scheduledAt })
-        .eq('id', id)
-        .eq('fulfillment_stage', 'Pending')
-        .eq('call_attempts', 0)
-        .select('id')
-      if (error) throw error
-      if (!data?.length) throw new Error('Fulfillment has already called this one — message them to move it.')
-      return data[0]
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),
   })

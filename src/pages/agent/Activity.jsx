@@ -47,6 +47,19 @@ const reasonOf = d => (d.reason ? ` · ${(SUBSTATUS_LABEL[d.reason] || d.reason)
 // policy's client_timezone); when the event happened stays in the viewer's.
 const tzOf = e => e.policy?.client_timezone || undefined
 
+// Prompt 730 — an 'edited' event's sentence: "Carrier changed: Aetna → Mutual
+// of Omaha" for one field, "Details changed: carrier, phone" for several.
+const FIELD_LABEL = { name: 'Name', phone: 'Phone', city: 'City', state: 'State', carrier: 'Carrier' }
+function editedText(d) {
+  const changes = Array.isArray(d.changes) ? d.changes : []
+  if (changes.length === 1) {
+    const c = changes[0]
+    return `${FIELD_LABEL[c.field] || c.field} changed: ${c.from || 'blank'} → ${c.to || 'blank'}`
+  }
+  if (!changes.length) return 'Details changed'
+  return `Details changed: ${changes.map(c => (FIELD_LABEL[c.field] || c.field).toLowerCase()).join(', ')}`
+}
+
 // The feed's sentence for one event.
 function describe(e) {
   const d = e.detail || {}
@@ -60,6 +73,7 @@ function describe(e) {
     case 'no_answer':    return `Call ended with no answer${attempt}${reasonOf(d)}`
     case 'cancelled':    return 'Old policy confirmed cancelled'
     case 'moved':        return `Call moved to ${callAt(d.to, tz)}`
+    case 'edited':       return editedText(d)
     default:             return e.kind
   }
 }
@@ -84,6 +98,7 @@ function storyStep(e, isAdmin) {
       return { label: head + reasonOf(d), sub: when }
     }
     case 'moved':     return { label: 'Call moved', sub: `${when}${d.to ? ` · to ${callAt(d.to, tz)}` : ''}` }
+    case 'edited':    return { label: editedText(d), sub: when }
     case 'cancelled': return { label: 'Old policy cancelled', sub: when }
     default:          return { label: e.kind, sub: when }
   }

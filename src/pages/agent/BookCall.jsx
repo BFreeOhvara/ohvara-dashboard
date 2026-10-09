@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { TriangleAlert, Phone, Calendar, Info, ChevronDown } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { TriangleAlert, Phone, Calendar, Info } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCarriers, useCarrierHours, useAddCarrier } from '../../hooks/useCarriers'
 import { useAgentBookings, useBookCall } from '../../hooks/useAgentBookings'
-import { StepHead, OvField, DayChoice, SlotGrid, BookingSummary, WeeklyUsage, BookedCard, CarrierInput, SlotSkeleton } from '../../components/agent/AgentUI'
+import { StepHead, OvField, StateField, DayChoice, SlotGrid, BookingSummary, WeeklyUsage, BookedCard, CarrierInput, SlotSkeleton, BookSwitch } from '../../components/agent/AgentUI'
+import { useClientTimezone } from '../../hooks/useClientTimezone'
+import ChangeBooking from './ChangeBooking'
 import { formatPhoneInput, titleCase } from '../../lib/policyFormat'
 import { fmtBooking, clientSlotISO, slotState, openBookingIsos, dayIn, addDaysStr, dateLabel, dayGone, carrierDaySlots, firstOpenDay } from '../../lib/scheduling'
 import { hoursSummary } from '../../lib/carriers'
-import { US_STATES, needsCityLookup, inferTimezoneFromState, resolveClientTimezone } from '../../lib/timezones'
 import { stageOf, digits, useNow } from '../../lib/agentBookings'
 import { useBillingTiers, useWeeklyUsage } from '../../hooks/useBillingTiers'
 import { capState, nextTier, formatReset, formatWeekly } from '../../lib/billing'
@@ -51,31 +52,30 @@ const BLANK = { first: '', last: '', phone: '', city: '', state: '', carrier: ''
 
 const pillBtn = { height: 36, padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }
 
-// The client's IANA zone from city + state. A single-zone state is instant; a
-// split one is looked up ~400 ms after the last keystroke (a newer request
-// aborts the older). `resolving` is true while that lookup is out.
-function useClientTimezone(city, state) {
-  const c = city.trim()
-  const ready = !!c && !!state
-  const split = ready && needsCityLookup(state)
-  const key = `${c.toLowerCase()}|${state}`
-  const [found, setFound] = useState({ key: '', tz: null })
-  useEffect(() => {
-    if (!split) return
-    const ctl = new AbortController()
-    const t = setTimeout(() => {
-      resolveClientTimezone(c, state, { signal: ctl.signal }).then(tz => {
-        if (!ctl.signal.aborted) setFound({ key, tz })
-      })
-    }, 400)
-    return () => { clearTimeout(t); ctl.abort() }
-  }, [split, c, state, key])
-  if (!ready) return { tz: null, resolving: false }
-  if (!split) return { tz: inferTimezoneFromState(state), resolving: false }
-  return found.key === key ? { tz: found.tz, resolving: false } : { tz: null, resolving: true }
+// Prompt 730 — Book a call has two modes: New booking (below, unchanged) and
+// Change a booking (ChangeBooking.jsx), picked by the switch at the top. One
+// route: ?change=<policy id> opens Change a booking with that client picked;
+// ?change with no id opens it on step 1.
+export default function BookCall() {
+  const [params, setParams] = useSearchParams()
+  const changing = params.has('change')
+  const changeId = params.get('change') || null
+  // The picked client lives in the URL too, so "Change client" and picking
+  // one are just ?change= edits.
+  const setChange = id => {
+    const next = new URLSearchParams(params)
+    if (id == null) next.delete('change')
+    else next.set('change', id)
+    setParams(next, { replace: true })
+  }
+  const setMode = mode => setChange(mode === 'change' ? '' : null)
+  const switcher = <BookSwitch value={changing ? 'change' : 'new'} onChange={setMode} />
+  return changing
+    ? <ChangeBooking key={changeId || 'pick'} policyId={changeId} onPick={setChange} switcher={switcher} onNew={() => setMode('new')} />
+    : <NewBooking switcher={switcher} />
 }
 
-export default function BookCall() {
+function NewBooking({ switcher }) {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const now = useNow(30e3)
@@ -238,6 +238,7 @@ export default function BookCall() {
 
   return (
     <div className="pb-[110px] sm:pb-0">
+      {switcher}
       {showCap && (
         <div className="flex sm:hidden" style={{ justifyContent: 'flex-end', marginBottom: 14 }}>
           <WeeklyUsage cap={cap} pill />
@@ -386,22 +387,6 @@ export default function BookCall() {
 }
 
 const NO_BOOKINGS = new Set()
-
-// Prompt 724 — the state, shown by name and stored as its 2-letter code.
-function StateField({ value, onChange, error }) {
-  return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
-      <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>State</span>
-      <span className={`ov-input ov-select${error ? ' is-error' : ''}${value ? '' : ' is-empty'}`}>
-        <select value={value} onChange={e => onChange(e.target.value)} aria-invalid={error || undefined}>
-          <option value="">Choose a state</option>
-          {US_STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
-        </select>
-        <ChevronDown size={17} strokeWidth={2} style={{ flexShrink: 0, pointerEvents: 'none' }} />
-      </span>
-    </label>
-  )
-}
 
 // Duplicate-client notice: a quiet note, or amber when it needs the agent to
 // decide.

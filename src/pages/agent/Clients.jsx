@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { Phone, Calendar, CalendarDays, MapPin } from 'lucide-react'
+import { Phone, Calendar, CalendarDays, MapPin, PencilLine } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { dmId } from '../../hooks/useDirectMessages'
-import { useAgentBookings, useRescheduleBooking, useRebookCall, useConfirmRecoveryNumber } from '../../hooks/useAgentBookings'
+import { useAgentBookings, useRebookCall, useConfirmRecoveryNumber } from '../../hooks/useAgentBookings'
 import { useCarriers, useCarrierHours, useAddCarrier, useSetBookingCarrier } from '../../hooks/useCarriers'
 import { AnchoredSelectField } from '../../components/ui/ExportForm'
 import {
@@ -49,6 +49,11 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // call) and one list box on the right with the status tabs on top. The page
 // never scrolls on a tall desktop screen; the list scrolls inside its box, so
 // switching status moves nothing. Needs attention shows two groups.
+//
+// Prompt 730 — a Booked client's "Move to a different time" is now "Change
+// this booking": it opens Book a call's Change a booking with them picked
+// (/agent/book?change=<id>), where details and time are fixed in place. The
+// in-drawer picker stays only for re-booking a No answer / Needs attention lead.
 
 const RANGE_VALUES = RANGES.map(r => r.value)
 // Old ?stage= values still arrive from the Overview (attention rows, the
@@ -174,7 +179,7 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRow
   const live = isLive(p)
   const rebookable = canRebook(p) && canMove
   const [moving, setMoving] = useState(!!startRebook && rebookable)
-  const move = useMove(p, now, rebookable, () => setMoving(false), agentRows)
+  const move = useMove(p, now, () => setMoving(false), agentRows)
   const tz = p.client_timezone || null
   const place = placeOf(p)
 
@@ -208,8 +213,8 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRow
     footer = move.actions
   } else if (stage === 'booked' && !live && canMove) {
     footer = (
-      <button type="button" className="ov-ghost" onClick={() => setMoving(true)} style={{ ...big, fontWeight: 600 }}>
-        <CalendarDays size={16} strokeWidth={2} /> Move to a different time
+      <button type="button" className="ov-ghost" onClick={() => navigate(`/agent/book?change=${p.id}`)} style={{ ...big, fontWeight: 600 }}>
+        <PencilLine size={16} strokeWidth={2} /> Change this booking
       </button>
     )
   } else if (rebookable) {
@@ -303,10 +308,10 @@ function ConfirmNumber({ p }) {
   )
 }
 
-// Moves a Booked call (Prompt 665) or, with `rebook`, puts a No answer lead
-// back on Booked at a new time (Prompt 695). Same mutations as before; the
-// picker is P715's DayChoice + SlotGrid. Returns the picker (drawer body)
-// and the confirm/cancel buttons (drawer footer).
+// Puts a No answer lead back on Booked at a new time (Prompt 695). The picker
+// is P715's DayChoice + SlotGrid. Returns the picker (drawer body) and the
+// confirm/cancel buttons (drawer footer). Prompt 730: moving a Booked call
+// left the drawer for Change a booking, so this only re-books now.
 //
 // Prompt 724 — days and slots are the client's (p.client_timezone, else the
 // viewer's zone for older rows); "Booked" slots and slots inside the notice window are disabled,
@@ -316,10 +321,8 @@ function ConfirmNumber({ p }) {
 // as Book a call (carrierDaySlots). A booking saved before P728 with no
 // carrier asks for it first (CarrierInput); it's saved on the booking when
 // the move is confirmed (agent_set_booking_carrier).
-function useMove(p, now, rebook, onDone, agentRows) {
-  const reschedule = useRescheduleBooking()
-  const rebookCall = useRebookCall()
-  const move = rebook ? rebookCall : reschedule
+function useMove(p, now, onDone, agentRows) {
+  const move = useRebookCall()
   const setBookingCarrier = useSetBookingCarrier()
   const addCarrier = useAddCarrier()
   const { data: carriers = [] } = useCarriers()
@@ -375,7 +378,7 @@ function useMove(p, now, rebook, onDone, agentRows) {
           Add the carrier they're leaving first. The times follow its hours.
         </p>
       )}
-      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-mute)' }}>{rebook ? 'Re-book for' : 'New time'}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-mute)' }}>Re-book for</div>
       {checking && (
         <p role="status" style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: 'var(--ov-mid)' }}>Checking {(saved || chosen).name}'s hours…</p>
       )}
@@ -437,7 +440,7 @@ function useMove(p, now, rebook, onDone, agentRows) {
           type="button" disabled={off} className="ov-solid" onClick={confirmMove}
           style={{ flex: 1, minWidth: 0, height: 50, borderRadius: 999, fontSize: 15, padding: '0 16px', opacity: off ? 0.5 : 1, cursor: off ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
         >
-          {busy ? 'Saving…' : ok ? `${rebook ? 'Re-book for' : 'Move to'} ${callWhen(iso, tz)}` : 'Pick a time'}
+          {busy ? 'Saving…' : ok ? `Re-book for ${callWhen(iso, tz)}` : 'Pick a time'}
         </button>
         <button type="button" className="ov-ghost" onClick={cancel} style={{ height: 50, padding: '0 20px', borderRadius: 999, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
           Cancel

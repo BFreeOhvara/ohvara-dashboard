@@ -176,3 +176,14 @@ export function firstOpenDay(fromDate, tz, carrier, now = Date.now(), span = 14)
   }
   return fromDate
 }
+
+// Prompt 730 — does an existing call time still work: the carrier takes calls
+// then and it falls inside the client's 8 AM–8 PM in `tz`? 'carrier' |
+// 'clock' when it doesn't, null when it does.
+export function callMisfit(iso, tz, carrier) {
+  if (!iso || !tz || !carrier?.hours) return null
+  const ms = new Date(iso).getTime()
+  if (!carrierTakesCallAt(ms, carrier)) return 'carrier'
+  const { min } = wallClock(ms, tz)
+  return min < CLIENT_FIRST_MIN || min > CLIENT_LAST_MIN ? 'clock' : null
+}

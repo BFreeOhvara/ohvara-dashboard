@@ -1,15 +1,17 @@
-import { CalendarCheck, PhoneCall, PhoneMissed, CircleCheck, CalendarArrowUp, Undo2 } from 'lucide-react'
+import { CalendarCheck, PhoneCall, PhoneMissed, CircleCheck, CalendarArrowUp, Undo2, Pencil } from 'lucide-react'
 
 // Prompt 718 — policy_events.kind on the Activity page: filter label, pill
 // text, colour tokens and icon. Kinds reuse the status colours (a booking is
-// the same blue here as on My Pipeline); Moved has its own violet.
-export const EVENT_KINDS = ['booked', 'in_progress', 'no_answer', 'cancelled', 'moved']
+// the same blue here as on My Pipeline); Moved has its own violet. Prompt 730:
+// Edited (Change a booking fixed a detail) shares Moved's violet.
+export const EVENT_KINDS = ['booked', 'in_progress', 'no_answer', 'cancelled', 'moved', 'edited']
 export const EVENT_KIND = {
   booked:      { label: 'Booked',    pill: 'Booked',      base: '--ov-st-booked',    icon: CalendarCheck },
   in_progress: { label: 'Calls',     pill: 'In progress', base: '--ov-st-needs',     icon: PhoneCall },
   no_answer:   { label: 'No answer', pill: 'No answer',   base: '--ov-st-noanswer',  icon: PhoneMissed },
   cancelled:   { label: 'Cancelled', pill: 'Cancelled',   base: '--ov-st-cancelled', icon: CircleCheck },
   moved:       { label: 'Moved',     pill: 'Moved',       base: '--ov-kind-moved',   icon: CalendarArrowUp },
+  edited:      { label: 'Edited',    pill: 'Edited',      base: '--ov-kind-moved',   icon: Pencil },
 }
 export const kindMeta = kind => EVENT_KIND[kind] || EVENT_KIND.moved
 

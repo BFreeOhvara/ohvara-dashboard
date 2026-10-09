@@ -927,6 +927,19 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
   .ov-input, .ov-choice { transition: none; }
 }
 
+/* Prompt 730 — Change a booking: the mode switch, a field the agent changed
+   (tinted border + "Changed · was …" line), and the booking's current time
+   drawn dashed in the slot grid. */
+.ov-book-switch { margin-bottom: 12px; }
+.ov-input.is-changed:not(.is-error) { border-color: rgba(127,166,242,0.6); }
+[data-theme="light"] .ov-input.is-changed:not(.is-error) { border-color: rgba(0,145,125,0.55); }
+.ov-changed { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: 12.5px; font-weight: 500; color: var(--ov-mute); }
+.ov-choice.ov-slot-current:not(.ov-slot-on) { border-style: dashed; border-color: #7FA6F2; }
+[data-theme="light"] .ov-choice.ov-slot-current:not(.ov-slot-on) { border-color: #00917D; }
+.ov-pickrow { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; cursor: pointer; }
+.ov-pickrow.is-active { background: var(--ov-stub); }
+.ov-pickrow.is-off { cursor: not-allowed; opacity: 0.55; }
+
 /* ── Prompt 717 — My Pipeline on the "ov" language ─────────────
    Status colours, the find-any-client field, pipeline tabs, status rows and
    the client drawer for /agent/clients. See DESIGN.md v16 "P717". */

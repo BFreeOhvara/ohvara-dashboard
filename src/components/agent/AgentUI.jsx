@@ -1,11 +1,12 @@
 import { Children, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send, MapPin, Moon } from 'lucide-react'
+import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send, MapPin, Moon, ChevronDown, PencilLine } from 'lucide-react'
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
 import { SLOTS, slotTo24h, slotToISO, localDateISO, callWhen, callAt, fmtSlotTime, clientSlotISO, slotState, dayIn, addDaysStr } from '../../lib/scheduling'
 import { rankCarriers, exactCarrier } from '../../lib/carriers'
 import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, digits, matchClients, placeOf } from '../../lib/agentBookings'
+import { US_STATES } from '../../lib/timezones'
 import { DayClock } from '../ui/DayClock'
 import { LiveDot } from '../ui/LiveDot'
 import { Avatar } from '../ui/Avatar'
@@ -745,18 +746,70 @@ export function StepHead({ n, title, sub }) {
 }
 
 // Label over an .ov-input box. Extra props go to the <input>.
-export function OvField({ label, optional, icon: Icon, error, className = '', ...input }) {
-  return (
-    <label className={className} style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+// Prompt 730 — `changed` tints the box and `note` sits under it, outside the
+// <label> so it isn't read as part of the field's name (Change a booking's
+// "Changed · was …").
+export function OvField({ label, optional, icon: Icon, error, changed, note, className = '', ...input }) {
+  const field = (
+    <label className={note ? '' : className} style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
       <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>
         {label}
         {optional && <span style={{ fontWeight: 500, color: 'var(--ov-mute)' }}> optional</span>}
       </span>
-      <span className={`ov-input${error ? ' is-error' : ''}`}>
+      <span className={`ov-input${error ? ' is-error' : ''}${changed ? ' is-changed' : ''}`}>
         {Icon && <Icon size={17} strokeWidth={1.9} style={{ flexShrink: 0 }} />}
         <input aria-invalid={error || undefined} {...input} />
       </span>
     </label>
+  )
+  return note ? <NoteUnder className={className} note={note}>{field}</NoteUnder> : field
+}
+
+function NoteUnder({ className = '', note, children }) {
+  return <div className={className} style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>{children}{note}</div>
+}
+
+// Prompt 724 — the state, shown by name and stored as its 2-letter code.
+// (Moved here from BookCall by Prompt 730, which shares it.)
+export function StateField({ value, onChange, error, changed, note }) {
+  const field = (
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+      <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>State</span>
+      <span className={`ov-input ov-select${error ? ' is-error' : ''}${changed ? ' is-changed' : ''}${value ? '' : ' is-empty'}`}>
+        <select value={value} onChange={e => onChange(e.target.value)} aria-invalid={error || undefined}>
+          <option value="">Choose a state</option>
+          {US_STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
+        </select>
+        <ChevronDown size={17} strokeWidth={2} style={{ flexShrink: 0, pointerEvents: 'none' }} />
+      </span>
+    </label>
+  )
+  return note ? <NoteUnder note={note}>{field}</NoteUnder> : field
+}
+
+// Prompt 730 — "Changed · was Aetna" under a field Change a booking edited.
+export function ChangedMark({ was }) {
+  return (
+    <span className="ov-changed">
+      <PencilLine size={13} strokeWidth={2} style={{ flexShrink: 0 }} />
+      <span style={{ flexShrink: 0 }}>Changed ·</span>
+      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{was ? `was ${was}` : 'was blank'}</span>
+    </span>
+  )
+}
+
+// Prompt 730 — Book a call's "New booking | Change a booking" switch.
+export function BookSwitch({ value, onChange }) {
+  const opts = [{ value: 'new', label: 'New booking' }, { value: 'change', label: 'Change a booking' }]
+  return (
+    <div className="ov-range ov-book-switch" role="group" aria-label="Book a call">
+      {opts.map(o => (
+        <button key={o.value} type="button" aria-pressed={value === o.value} onClick={() => value !== o.value && onChange(o.value)}
+          className={value === o.value ? 'is-on' : ''} style={{ height: 40, padding: '0 18px', fontSize: 14.5 }}>
+          {o.label}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -766,7 +819,7 @@ export function OvField({ label, optional, icon: Icon, error, className = '', ..
 // ghost text after the cursor. Tab / → / Enter take it, ↑ / ↓ move, Esc
 // closes. A name that matches nothing can still be kept ("Use "<text>"").
 // `picked` is the chosen carrier row; typing again clears it (onText).
-export function CarrierInput({ carriers, text, picked, onText, onPick, onUseText, adding, error, label = "Carrier they're leaving", autoFocus }) {
+export function CarrierInput({ carriers, text, picked, onText, onPick, onUseText, adding, error, changed, note, label = "Carrier they're leaving", autoFocus }) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
   const inputRef = useRef(null)
@@ -814,7 +867,7 @@ export function CarrierInput({ carriers, text, picked, onText, onPick, onUseText
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0, position: 'relative' }}>
       <label htmlFor="carrier-input" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>{label}</label>
-      <span className={`ov-input${error ? ' is-error' : ''}`}>
+      <span className={`ov-input${error ? ' is-error' : ''}${changed ? ' is-changed' : ''}`}>
         <Building2 size={17} strokeWidth={1.9} style={{ flexShrink: 0 }} />
         <span className="ov-complete-wrap">
           <input
@@ -861,6 +914,7 @@ export function CarrierInput({ carriers, text, picked, onText, onPick, onUseText
           ))}
         </div>
       )}
+      {note}
     </div>
   )
 }
@@ -915,7 +969,10 @@ export function DayChoice({ label, long, short, on, disabled, icon: Icon, onClic
 // Prompt 728 — `slots` is the day's bookable times (the carrier's hours,
 // carrierDaySlots), grouped Morning / Afternoon / Evening (5 PM on); a group
 // with none is left out, and a day with none shows `emptyText`.
-export function SlotGrid({ date, slot, onSlot, takenCounts = {}, error, now, gridClass = 'grid grid-cols-3 sm:grid-cols-6', tz, openIsoSet, slots: daySlots = SLOTS, emptyText }) {
+//
+// Prompt 730 — `currentIso` (Change a booking) draws the booking's own time
+// dashed with a "Current" caption; it stays pickable.
+export function SlotGrid({ date, slot, onSlot, takenCounts = {}, error, now, gridClass = 'grid grid-cols-3 sm:grid-cols-6', tz, openIsoSet, slots: daySlots = SLOTS, emptyText, currentIso }) {
   const rules = openIsoSet !== undefined
   const hourOf = s => Number(slotTo24h(s).slice(0, 2))
   const groups = [
@@ -945,7 +1002,7 @@ export function SlotGrid({ date, slot, onSlot, takenCounts = {}, error, now, gri
           </div>
           <div className={gridClass} style={{ gap: 10 }}>
             {slots.map(s => {
-              if (rules) return <RuleSlot key={s} s={s} date={date} tz={tz} now={now} openIsoSet={openIsoSet} on={slot === s} onSlot={onSlot} />
+              if (rules) return <RuleSlot key={s} s={s} date={date} tz={tz} now={now} openIsoSet={openIsoSet} on={slot === s} onSlot={onSlot} currentIso={currentIso} />
               const iso = slotToISO(date, s)
               const past = new Date(iso).getTime() <= now
               const on = slot === s
@@ -997,29 +1054,31 @@ export function SlotSkeleton({ gridClass = 'grid grid-cols-3 sm:grid-cols-6' }) 
 const SLOT_CAPTION = { booked: 'Booked' }
 const SLOT_LABEL = { past: 'already past', soon: 'unavailable', booked: 'you already have a call booked at this time' }
 
-function RuleSlot({ s, date, tz, now, openIsoSet, on, onSlot }) {
-  const state = slotState(clientSlotISO(date, s, tz), { now, openIsoSet })
+function RuleSlot({ s, date, tz, now, openIsoSet, on, onSlot, currentIso }) {
+  const iso = clientSlotISO(date, s, tz)
+  const state = slotState(iso, { now, openIsoSet })
   const off = state !== 'open'
-  const caption = SLOT_CAPTION[state]
+  const current = !!currentIso && new Date(currentIso).getTime() === new Date(iso).getTime()
+  const caption = SLOT_CAPTION[state] || (current && !on ? 'Current' : null)
   const [time, ampm] = s.split(' ')
   return (
     <button
       type="button" disabled={off} onClick={() => onSlot(s)} aria-pressed={on}
       title={state === 'past' ? 'Already past' : state === 'soon' ? 'Unavailable' : undefined}
-      aria-label={off ? `${s}, ${SLOT_LABEL[state]}` : s}
-      className={`ov-choice h-[52px] sm:h-[54px]${on ? ' ov-slot-on' : ''}${caption ? ' ov-slot-held' : ''}`}
+      aria-label={off ? `${s}, ${SLOT_LABEL[state]}` : current ? `${s}, their current time` : s}
+      className={`ov-choice h-[52px] sm:h-[54px]${on ? ' ov-slot-on' : ''}${off && caption ? ' ov-slot-held' : ''}${current ? ' ov-slot-current' : ''}`}
       style={{
         borderRadius: 12, padding: 0, fontFamily: DISPLAY, fontSize: 16, fontWeight: 600, lineHeight: 1.1,
         color: on ? '#fff' : 'var(--ov-hi)',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
       }}
     >
-      <span style={{ whiteSpace: 'nowrap', ...(caption ? { opacity: 0.45 } : null) }}>
+      <span style={{ whiteSpace: 'nowrap', ...(off && caption ? { opacity: 0.45 } : null) }}>
         {time}
         <span style={{ marginLeft: 5, fontSize: 12, fontWeight: 500, ...(on ? { opacity: 0.85 } : { color: 'var(--ov-mute)' }) }}>{ampm}</span>
       </span>
       {caption && (
-        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: 'var(--ov-warn)' }}>
+        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: off ? 'var(--ov-warn)' : 'var(--ov-pick)' }}>
           {caption}
         </span>
       )}
@@ -1052,7 +1111,7 @@ function bookingWhen(iso, now = Date.now(), tz) {
   return { day, time, period, full: d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) }
 }
 
-function ClientAvatar({ name }) {
+export function ClientAvatar({ name }) {
   return (
     <span style={{
       width: 48, height: 48, flexShrink: 0, boxSizing: 'border-box', borderRadius: '50%',
@@ -1065,7 +1124,7 @@ function ClientAvatar({ name }) {
   )
 }
 
-function BookError({ children }) {
+export function BookError({ children }) {
   return (
     <p role="alert" style={{
       margin: 0, padding: '10px 14px', borderRadius: 12, fontSize: 13.5, lineHeight: 1.45, color: '#fff',
@@ -1166,7 +1225,8 @@ export function BookingSummary({ name, phone, carrier, scheduledAt, now, onBook,
 
 // "3 of 7 bookings this week" with one segment per allowed booking; at the
 // cap everything turns amber. `pill` is the phone version.
-export function WeeklyUsage({ cap, resets, pill }) {
+// Prompt 730 — `note` replaces the plan line (Change a booking's "never uses one").
+export function WeeklyUsage({ cap, resets, pill, note }) {
   const warn = cap.atCap
   if (pill) {
     return (
@@ -1195,7 +1255,7 @@ export function WeeklyUsage({ cap, resets, pill }) {
           }} />
         ))}
       </div>
-      <div style={{ fontSize: 13, color: 'var(--ov-mute)' }}>{cap.tierName} plan · resets {resets}</div>
+      {note || <div style={{ fontSize: 13, color: 'var(--ov-mute)' }}>{cap.tierName} plan · resets {resets}</div>}
     </div>
   )
 }
@@ -1323,7 +1383,7 @@ export function StatusPill({ tab }) {
   )
 }
 
-function StatusAvatar({ name, tab, size = 38, fontSize = 11.5 }) {
+export function StatusAvatar({ name, tab, size = 38, fontSize = 11.5 }) {
   return (
     <span style={{
       width: size, height: size, flexShrink: 0, borderRadius: '50%', background: stVar(tab, 'tint'), color: stVar(tab),
