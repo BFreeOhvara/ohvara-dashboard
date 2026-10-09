@@ -11,7 +11,7 @@ import { DayClock } from '../ui/DayClock'
 import { LiveDot } from '../ui/LiveDot'
 import { Avatar } from '../ui/Avatar'
 import { fullName } from '../../lib/policyFormat'
-import { EVENT_KINDS, EVENT_KIND, EVENT_ICON, kindMeta, kindTone, eventIconKey } from '../../lib/activityKinds'
+import { ACTIVITY_ROWS, rowMeta, rowTone, EVENT_ICON, kindTone, eventIconKey } from '../../lib/activityKinds'
 
 // Shared pieces for the agent portal pages (Prompt 665).
 // Prompt 669 — restyled to Restorix Portal's design system: eyebrow-labelled
@@ -2058,7 +2058,10 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
 // Right-side panel (a full-screen sheet below 640px) over a scrim. Esc, the
 // scrim or the close button slide it out and then call onClose; body scroll is locked while open.
 // `children` is the scrolling body, `footer` the pinned action area.
-export function ClientDrawer({ p, tab, onClose, onMessage, messageLabel, footer, children }) {
+// Prompt 733: Activity reuses it read-only: `name` and `meta` (one muted line) replace the
+// name from `p` and the call / message buttons, and `p` / `tab` may be null (a client
+// whose row isn't loaded).
+export function ClientDrawer({ p, tab, name: nameProp, meta, onClose, onMessage, messageLabel, footer, children }) {
   const closeBtn = useRef(null)
   const onCloseRef = useRef(onClose)
   useEffect(() => { onCloseRef.current = onClose })
@@ -2084,7 +2087,7 @@ export function ClientDrawer({ p, tab, onClose, onMessage, messageLabel, footer,
   }, [])
   useEffect(() => { closeBtn.current?.focus() }, [])
 
-  const name = fullName(p)
+  const name = nameProp ?? fullName(p)
   const btn = {
     height: 46, boxSizing: 'border-box', borderRadius: 999, fontSize: 14.5, minWidth: 0, textDecoration: 'none',
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, whiteSpace: 'nowrap', overflow: 'hidden', padding: '0 12px',
@@ -2098,7 +2101,7 @@ export function ClientDrawer({ p, tab, onClose, onMessage, messageLabel, footer,
       >
         <div className="px-5 sm:px-[26px]" style={{
           paddingTop: 26, paddingBottom: 22, borderBottom: '1px solid var(--ov-line)',
-          background: `radial-gradient(ellipse 90% 80% at 100% 0%, ${stVar(tab, 'tint')} 0%, transparent 70%)`,
+          ...(tab ? { background: `radial-gradient(ellipse 90% 80% at 100% 0%, ${stVar(tab, 'tint')} 0%, transparent 70%)` } : null),
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-mute)' }}>Client</span>
@@ -2108,26 +2111,35 @@ export function ClientDrawer({ p, tab, onClose, onMessage, messageLabel, footer,
             </button>
           </div>
           <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
-            <StatusAvatar name={name} tab={tab} size={56} fontSize={15} />
+            {tab
+              ? <StatusAvatar name={name} tab={tab} size={56} fontSize={15} />
+              : (
+                <span style={{ width: 56, height: 56, flexShrink: 0, borderRadius: '50%', background: 'var(--ov-stub)', color: 'var(--ov-mid)', fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {initialsOf(name)}
+                </span>
+              )}
             <div style={{ minWidth: 0 }}>
               <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.15, color: 'var(--ov-hi)', overflowWrap: 'anywhere' }}>{name}</div>
-              <div style={{ marginTop: 8 }}><StatusPill tab={tab} /></div>
+              {tab && <div style={{ marginTop: 8 }}><StatusPill tab={tab} /></div>}
+              {meta && <div style={{ marginTop: 6, fontSize: 13.5, color: 'var(--ov-mute)', overflowWrap: 'anywhere' }}>{meta}</div>}
             </div>
           </div>
-          <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
-            {p.client_phone ? (
-              <a href={`tel:${digits(p.client_phone)}`} className="ov-solid" style={btn}>
-                <Phone size={16} strokeWidth={2.2} style={{ flexShrink: 0 }} />{p.client_phone}
-              </a>
-            ) : (
-              <span className="ov-ghost" style={{ ...btn, fontWeight: 600, opacity: 0.6 }}>No number</span>
-            )}
-            <button type="button" onClick={onMessage} className="ov-ghost" style={{ ...btn, fontWeight: 600, cursor: 'pointer' }}>
-              <MessageSquare size={16} strokeWidth={2} style={{ flexShrink: 0 }} />
-              <span className="sm:hidden">Message</span>
-              <span className="hidden sm:inline" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{messageLabel}</span>
-            </button>
-          </div>
+          {meta === undefined && (
+            <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+              {p.client_phone ? (
+                <a href={`tel:${digits(p.client_phone)}`} className="ov-solid" style={btn}>
+                  <Phone size={16} strokeWidth={2.2} style={{ flexShrink: 0 }} />{p.client_phone}
+                </a>
+              ) : (
+                <span className="ov-ghost" style={{ ...btn, fontWeight: 600, opacity: 0.6 }}>No number</span>
+              )}
+              <button type="button" onClick={onMessage} className="ov-ghost" style={{ ...btn, fontWeight: 600, cursor: 'pointer' }}>
+                <MessageSquare size={16} strokeWidth={2} style={{ flexShrink: 0 }} />
+                <span className="sm:hidden">Message</span>
+                <span className="hidden sm:inline" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{messageLabel}</span>
+              </button>
+            </div>
+          )}
         </div>
         <div className="scrollbar-thin px-5 sm:px-[26px]" style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingTop: 22, paddingBottom: 22, display: 'flex', flexDirection: 'column', gap: 22 }}>
           {children}
@@ -2229,14 +2241,12 @@ export function Journey({ steps, tab, highlight = -1, currentIcon }) {
 }
 
 // ── Prompt 718 — Activity on the v16 language ────────────────────────────
-// A coloured day hero with edge arrows, the activity box (bar + filter tabs),
-// the feed as a timeline grouped by part of day, and the client story, which
+// A coloured day hero with edge arrows, the activity box (Prompt 733: display
+// only, a bar and plain status rows), the full-width feed as a timeline grouped
+// by part of day, and a read-only client drawer (ClientDrawer's shell) that
 // reuses Journey. Event kinds (colours, icons) are in lib/activityKinds.
 // Each day-dependent block sits in an .ov-slide-frame whose keyed child
 // carries data-day-slide; Activity.jsx animates the day change through them.
-
-const NEUTRAL_TONE = { fg: 'var(--ov-hi)', tint: 'var(--ov-neutral-tint)', edge: 'var(--ov-neutral-edge)' }
-const toneOf = k => (k === 'all' ? NEUTRAL_TONE : kindTone(k))
 
 function DayArrow({ dir, disabled, onClick }) {
   const Icon = dir === 'prev' ? ChevronLeft : ChevronRight
@@ -2291,121 +2301,65 @@ export function DayHero({ dayKey, slideClass, tag, dateLong, dateShort, summary,
   )
 }
 
-function KindBar({ counts, filter, height }) {
-  const total = EVENT_KINDS.reduce((s, k) => s + counts[k], 0)
+function KindBar({ counts, height }) {
+  const total = ACTIVITY_ROWS.reduce((s, k) => s + counts[k], 0)
   return (
     <div aria-hidden="true" style={{ display: 'flex', gap: height > 8 ? 4 : 3 }}>
       {total === 0 && <span style={{ flex: 1, height, borderRadius: 6, background: 'var(--ov-stub)' }} />}
-      {EVENT_KINDS.filter(k => counts[k] > 0).map(k => (
-        <span key={k} style={{
-          flex: `${counts[k]} 1 0`, height, borderRadius: 6, background: kindTone(k).fg,
-          opacity: filter === 'all' || filter === k ? 1 : 0.35,
-        }} />
+      {ACTIVITY_ROWS.filter(k => counts[k] > 0).map(k => (
+        <span key={k} style={{ flex: `${counts[k]} 1 0`, height, borderRadius: 6, background: rowTone(k).fg }} />
       ))}
     </div>
   )
 }
 
-// "Today's activity": total, a bar sized by kind and the filter tabs (All +
-// the five kinds). Below 640px: header, bar and a scrolling row of chips.
-export function ActivityBox({ dayKey, slideClass, title, counts, filter, onFilter }) {
-  const tabs = ['all', ...EVENT_KINDS]
-  const total = EVENT_KINDS.reduce((s, k) => s + counts[k], 0)
-  const count = k => (k === 'all' ? total : counts[k])
-  const tabRefs = useRef({})
-  const chipRefs = useRef({})
-  const onKeyDown = (e, refs) => {
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
-    e.preventDefault()
-    const i = tabs.indexOf(filter)
-    const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]
-    onFilter(next)
-    refs.current[next]?.focus()
-  }
-  const tabProps = k => ({
-    type: 'button', role: 'tab', 'aria-selected': k === filter, tabIndex: k === filter ? 0 : -1,
-    onClick: () => { if (k !== filter) onFilter(k) },
-  })
-  const dot = (k, size) => k !== 'all' && (
-    <span style={{ width: size, height: size, flexShrink: 0, borderRadius: '50%', background: kindTone(k).fg, ...(size > 7 ? { boxShadow: `0 0 0 4px ${kindTone(k).tint}` } : null) }} />
-  )
-  const label = k => (k === 'all' ? 'All' : EVENT_KIND[k].label)
-
+// "Today's activity" (Prompt 733: display only, like "Your pipeline"): the total,
+// a bar sized by status and one plain row per status with its count and share of
+// the day. Nothing in it is a button. `counts` is keyed by ACTIVITY_ROWS; the
+// Needs attention row shows only when it has something in it.
+export function ActivityBox({ dayKey, slideClass, title, counts }) {
+  const total = ACTIVITY_ROWS.reduce((s, k) => s + counts[k], 0)
+  const pct = n => (total ? Math.round((n / total) * 100) : 0)
   return (
-    <>
-      <div className="ov-card hidden sm:block" style={{ padding: '22px 22px 20px' }}>
-        <div className="ov-slide-frame">
-          <div key={dayKey} data-day-slide="" className={slideClass} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '0 4px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mute)' }}>{title}</span>
-              <span style={{ marginLeft: 'auto', ...OV_NUM, fontSize: 30, letterSpacing: '-0.03em' }}>{total}</span>
-              <span style={{ fontSize: 14.5, color: 'var(--ov-soft)' }}>
-                event{total === 1 ? '' : 's'}
-                {counts.cancelled > 0 && <> · <span style={{ fontWeight: 600, color: 'var(--ov-st-cancelled)' }}>{counts.cancelled} cancelled</span></>}
-              </span>
-            </div>
-            <div style={{ padding: '0 4px' }}><KindBar counts={counts} filter={filter} height={10} /></div>
-            <div role="tablist" aria-label="Filter the feed" className="grid grid-cols-3 xl:grid-cols-6" style={{ gap: 8 }} onKeyDown={e => onKeyDown(e, tabRefs)}>
-              {tabs.map(k => {
-                const on = k === filter
-                const t = toneOf(k)
-                return (
-                  <button key={k} ref={el => { tabRefs.current[k] = el }} {...tabProps(k)} className="ov-tab" style={{
-                    minWidth: 0, display: 'flex', alignItems: 'center', gap: 9, height: 52, padding: '0 14px', borderRadius: 14,
-                    ...(on ? {
-                      background: `linear-gradient(180deg, ${t.tint} 0%, transparent 100%)`,
-                      border: `1px solid ${t.edge}`, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
-                    } : { background: 'transparent', border: '1px solid var(--ov-line)' }),
-                  }}>
-                    {dot(k, 9)}
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: on ? t.fg : 'var(--ov-mid)', ...ellipsis }}>{label(k)}</span>
-                    <span style={{ ...OV_NUM, fontSize: 20, color: count(k) ? 'var(--ov-hi)' : 'var(--ov-faint)' }}>{count(k)}</span>
-                  </button>
-                )
-              })}
-            </div>
+    <div className="ov-card p-4 sm:px-[22px] sm:pt-[22px] sm:pb-5">
+      <div className="ov-slide-frame">
+        <div key={dayKey} data-day-slide="" className={slideClass} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="sm:px-1" style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mute)' }}>{title}</span>
+            <span style={{ marginLeft: 'auto', ...OV_NUM, fontSize: 30, letterSpacing: '-0.03em' }}>{total}</span>
+            <span style={{ fontSize: 14.5, color: 'var(--ov-soft)' }}>
+              event{total === 1 ? '' : 's'}
+              {counts.cancelled > 0 && <span className="hidden sm:inline"> · <span style={{ fontWeight: 600, color: 'var(--ov-st-cancelled)' }}>{counts.cancelled} cancelled</span></span>}
+            </span>
+          </div>
+          <div className="sm:px-1"><KindBar counts={counts} height={10} /></div>
+          <div className="ov-actrows sm:px-1">
+            {ACTIVITY_ROWS.filter(k => k !== 'needs' || counts.needs > 0).map(k => (
+              <div key={k} className={`pl-row2${counts[k] ? '' : ' is-zero'}`}>
+                <i style={{ background: rowTone(k).fg }} />
+                <span className="l">{rowMeta(k).label}</span>
+                <span className="c">{counts[k]}</span>
+                <span className="p">{pct(counts[k])}%</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
-
-      <div className="ov-card sm:hidden" style={{ padding: 16 }}>
-        <div className="ov-slide-frame">
-          <div key={dayKey} data-day-slide="" className={slideClass} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-mute)' }}>{title}</span>
-              <span style={{ ...OV_NUM, fontSize: 22 }}>{total}</span>
-            </div>
-            <KindBar counts={counts} filter={filter} height={8} />
-            <div role="tablist" aria-label="Filter the feed" className="ov-chips flex" style={{ gap: 6, overflowX: 'auto', margin: '0 -16px', padding: '0 16px' }} onKeyDown={e => onKeyDown(e, chipRefs)}>
-              {tabs.map(k => {
-                const on = k === filter
-                const t = toneOf(k)
-                return (
-                  <button key={k} ref={el => { chipRefs.current[k] = el }} {...tabProps(k)} className="ov-tab" style={{
-                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, height: 44, padding: '0 14px', borderRadius: 999,
-                    fontSize: 13, fontWeight: 600, color: on ? t.fg : 'var(--ov-mid)',
-                    ...(on ? { background: t.tint, border: `1px solid ${t.edge}` } : { background: 'transparent', border: '1px solid var(--ov-line)' }),
-                  }}>
-                    {dot(k, 7)}{label(k)} {count(k)}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
+    </div>
   )
 }
 
-// One feed event. Selecting is all a click does; it never navigates.
-function EventRow({ item, on, linked, showAgent, onSelect }) {
+// One feed event: a button that opens that client's drawer. The pill is the status the
+// event counts under (item.row), so a Moved or Edited event shows where the client is now;
+// the node on the line keeps the event's own icon and colour.
+function EventRow({ item, on, linked, showAgent, onOpen }) {
   const t = kindTone(item.kind)
+  const pt = rowTone(item.row)
   const Icon = EVENT_ICON[eventIconKey(item)]
   const time = new Date(item.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   const [clock, ampm] = time.split(/\s+/)
   return (
-    <button type="button" aria-pressed={on} onClick={() => onSelect(item)}
+    <button type="button" aria-haspopup="dialog" onClick={() => onOpen(item)}
       className={`ov-event${on ? ' is-on' : ''} w-full flex items-start gap-3 sm:gap-4 px-2 py-3 sm:px-4 sm:py-[14px]`}
       style={{ position: 'relative', '--ev-tint': t.tint, ...(on ? { boxShadow: `inset 0 0 0 1px ${t.edge}` } : null) }}>
       {linked && <span aria-hidden="true" className="hidden sm:block" style={{ position: 'absolute', left: 105, top: 50, bottom: -14, width: 2, background: 'var(--ov-line)' }} />}
@@ -2428,14 +2382,15 @@ function EventRow({ item, on, linked, showAgent, onSelect }) {
           </span>
           <span className="hidden sm:inline-flex" style={{
             flexShrink: 0, alignItems: 'center', gap: 6, height: 24, padding: '0 10px', borderRadius: 999,
-            background: t.tint, color: t.fg, fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
+            background: pt.tint, color: pt.fg, fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
           }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: t.fg }} />{kindMeta(item.kind).pill}
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: pt.fg }} />{rowMeta(item.row).pill}
           </span>
           <span className="sm:hidden" style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>{time}</span>
         </span>
         <span style={{ display: 'block', marginTop: 3, fontSize: 13.5, lineHeight: 1.45, color: 'var(--ov-soft)' }}>{item.text}</span>
       </span>
+      <ChevronRight size={18} strokeWidth={2} aria-hidden="true" style={{ alignSelf: 'center', flexShrink: 0, color: 'var(--ov-faint)' }} />
     </button>
   )
 }
@@ -2453,7 +2408,7 @@ export function FeedNote({ icon, tone, error, children }) {
 // The day's events as a timeline, grouped by part of day (newest first).
 // `groups`: [{ key, label, icon, items }]; `note` replaces them when set.
 // Touch handlers (the phone swipe) go on the card.
-export function ActivityFeed({ dayKey, slideClass, groups, note, selectedKey, onSelect, showAgent, ...touch }) {
+export function ActivityFeed({ dayKey, slideClass, groups, note, activeKey, onOpen, showAgent, ...touch }) {
   return (
     <section className="ov-card px-3 py-[6px] sm:py-4" style={{ minWidth: 0 }} aria-label="Events" {...touch}>
       <div className="ov-slide-frame">
@@ -2469,7 +2424,7 @@ export function ActivityFeed({ dayKey, slideClass, groups, note, selectedKey, on
                   <GroupIcon size={15} strokeWidth={2} />{g.label}
                 </div>
                 {g.items.map((item, i) => (
-                  <EventRow key={item.key} item={item} on={item.key === selectedKey} linked={i < g.items.length - 1} showAgent={showAgent} onSelect={onSelect} />
+                  <EventRow key={item.key} item={item} on={item.key === activeKey} linked={i < g.items.length - 1} showAgent={showAgent} onOpen={onOpen} />
                 ))}
               </div>
             )
@@ -2492,64 +2447,35 @@ function storyStatus(p, now) {
   return `Old policy cancelled ${monthDay(p.fulfillment_completed_at || p.updated_at)}`
 }
 
-// The selected client's whole story: who they are and where they stand, the
-// checked Journey built from every event, and the page's one link to My
-// Pipeline. `p` is their current row (null if it isn't loaded, e.g. an admin
-// looking at a test row: then just the name, no status line). `sheet` lays it
-// out for the phone bottom sheet instead of a card.
-export function ClientStory({ p, name, agentName, steps, highlight, currentIcon, loading, now, onOpenPipeline, sheet, className = '', panelRef }) {
-  const side = sheet ? 20 : 22
-  if (!name) {
-    return (
-      <aside ref={panelRef} className={`ov-card ${className}`} style={{ padding: '56px 28px', textAlign: 'center', fontSize: 14, color: 'var(--ov-mute)' }}>
-        Pick an event to see that client&rsquo;s whole story.
-      </aside>
-    )
-  }
+// The clicked event's client (Prompt 733: a read-only drawer on ClientDrawer's shell, replacing
+// the old Client story box): who they are and where they stand, the checked Journey built from
+// every event, and one button to My Pipeline. `p` is their current row (null if it isn't
+// loaded, e.g. an admin looking at a test row: then just the name, no status line).
+export function ActivityDrawer({ p, name, agentName, steps, highlight, currentIcon, loading, now, onOpenPipeline, onClose }) {
   const tab = p ? tabOf(p) : null
   const meta = [p?.current_carrier, p?.client_phone, agentName].filter(Boolean).join(' · ')
   return (
-    <aside ref={panelRef} aria-label="Client story" className={`${sheet ? '' : 'ov-card '}${className}`}
-      style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0, ...(sheet ? { flex: 1 } : null) }}>
-      <div style={{
-        flexShrink: 0, padding: `${sheet ? 4 : 22}px ${side}px 18px`, borderBottom: '1px solid var(--ov-line)',
-        ...(tab ? { background: `radial-gradient(ellipse 90% 90% at 100% 0%, ${stVar(tab, 'tint')} 0%, transparent 70%)` } : null),
-      }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-mute)' }}>Client story</div>
-        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 13, minWidth: 0 }}>
-          {tab
-            ? <StatusAvatar name={name} tab={tab} size={50} fontSize={16} />
-            : (
-              <span style={{ width: 50, height: 50, flexShrink: 0, borderRadius: '50%', background: 'var(--ov-stub)', color: 'var(--ov-mid)', fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {initialsOf(name)}
-              </span>
-            )}
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: DISPLAY, fontSize: 21, fontWeight: 600, lineHeight: 1.2, letterSpacing: '-0.02em', color: 'var(--ov-hi)', overflowWrap: 'anywhere' }}>{name}</div>
-            {meta && <div style={{ marginTop: 3, fontSize: 13, color: 'var(--ov-mute)', overflowWrap: 'anywhere' }}>{meta}</div>}
-          </div>
-        </div>
-        {p && (
-          <div className="ov-well" style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', borderRadius: 12 }}>
-            <StatusPill tab={tab} />
-            <span style={{ flex: 1, minWidth: 0, fontSize: 13, lineHeight: 1.45, color: 'var(--ov-soft)' }}>{storyStatus(p, now)}</span>
-          </div>
-        )}
-      </div>
-      <div className="scrollbar-thin" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: `18px ${side}px 20px` }}>
-        {loading || !steps.length
-          ? <p style={{ margin: 0, padding: '24px 0', textAlign: 'center', fontSize: 14, color: 'var(--ov-mute)' }}>Loading…</p>
-          : <Journey steps={steps} tab={tab || 'noAnswer'} highlight={highlight} currentIcon={currentIcon} />}
-      </div>
-      <div style={{ flexShrink: 0, padding: `14px ${side}px`, paddingBottom: sheet ? 'calc(20px + env(safe-area-inset-bottom))' : 20, borderTop: '1px solid var(--ov-line)' }}>
-        <button type="button" onClick={onOpenPipeline} className="ov-ghost" style={{
-          width: '100%', height: sheet ? 50 : 46, borderRadius: 999, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+    <ClientDrawer
+      p={p} tab={tab} name={name} meta={meta} onClose={onClose}
+      footer={(
+        <button type="button" onClick={onOpenPipeline} className="ov-solid" style={{
+          width: '100%', height: 50, borderRadius: 999, fontSize: 15, cursor: 'pointer',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}>
-          Open in My Pipeline <ArrowRight size={16} strokeWidth={2} />
+          Go to My Pipeline <ArrowRight size={16} strokeWidth={2.2} />
         </button>
-      </div>
-    </aside>
+      )}
+    >
+      {p && (
+        <div className="ov-well" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', borderRadius: 12 }}>
+          <StatusPill tab={tab} />
+          <span style={{ flex: 1, minWidth: 0, fontSize: 13, lineHeight: 1.45, color: 'var(--ov-soft)' }}>{storyStatus(p, now)}</span>
+        </div>
+      )}
+      {steps.length
+        ? <Journey steps={steps} tab={tab || 'noAnswer'} highlight={highlight} currentIcon={currentIcon} />
+        : <p style={{ margin: 0, padding: '24px 0', textAlign: 'center', fontSize: 14, color: 'var(--ov-mute)' }}>{loading ? 'Loading…' : 'No history for this client yet.'}</p>}
+    </ClientDrawer>
   )
 }
 

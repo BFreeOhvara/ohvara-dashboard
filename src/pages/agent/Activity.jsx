@@ -1,12 +1,11 @@
-import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from 'react'
-import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, CalendarDays, Inbox, Sun, Clock, Moon, TriangleAlert } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePolicyEvents, usePolicyStory } from '../../hooks/useAgentActivity'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
-import { DayHero, ActivityBox, ActivityFeed, FeedNote, ClientStory } from '../../components/agent/AgentUI'
-import { EVENT_KIND, EVENT_KINDS, EVENT_ICON, kindTone, eventIconKey } from '../../lib/activityKinds'
+import { DayHero, ActivityBox, ActivityFeed, FeedNote, ActivityDrawer } from '../../components/agent/AgentUI'
+import { ACTIVITY_ROWS, activityRow, EVENT_ICON, kindTone, eventIconKey } from '../../lib/activityKinds'
 import { fullName } from '../../lib/policyFormat'
 import { callWhen, callAt } from '../../lib/scheduling'
 import { SUBSTATUS_LABEL, tabOf, useNow } from '../../lib/agentBookings'
@@ -22,10 +21,14 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 //
 // Prompt 718 — rethought on the v16 language. One day at a time: a coloured
 // day hero whose edge arrows (and ← / →, and a swipe on phones) slide between
-// days, the day's activity as a bar with filter tabs, then the feed as a
-// timeline beside the selected client's story. Clicking an event only selects
-// it; the story's "Open in My Pipeline" is the page's one way to My Pipeline.
+// days, the day's activity as a bar, then the feed as a timeline.
 // The page scrolls normally (the P698 fit-the-box sizing is gone).
+//
+// Prompt 733 — the activity box only displays (no filter tabs; Moved and Edited
+// events count under the status the client is in now), the feed spans the page,
+// and clicking an event slides in a read-only drawer (My Pipeline's shell) with
+// the client's story and "Go to My Pipeline", the page's one way there. The open
+// client is in the URL (?client=<policy id>&event=<event id>).
 //
 // Admin lands here too and sees every agent's activity (test account held out,
 // same as My Pipeline), with the agent named on each row.
@@ -139,17 +142,6 @@ const PARTS = [
   { key: 'morning',   label: 'Morning',   icon: Sun,   test: h => h < 12 },
 ]
 
-function useMedia(query) {
-  return useSyncExternalStore(
-    cb => {
-      const m = window.matchMedia(query)
-      m.addEventListener('change', cb)
-      return () => m.removeEventListener('change', cb)
-    },
-    () => window.matchMedia(query).matches,
-  )
-}
-
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 // The old day's half of the slide: a static copy of each day-dependent block
@@ -194,18 +186,16 @@ export default function Activity() {
   const isAdmin = profile?.role === 'admin'
   const now = useNow()
   const navigate = useNavigate()
-  const isPhone = useMedia('(max-width: 639.98px)')
-  const isWide = useMedia('(min-width: 1280px)')
+  const [params, setParams] = useSearchParams()
+  const clientId = params.get('client')
+  const eventId = params.get('event')
+  const drawerOpen = !!clientId
 
   // Days back from today (0 = today), so "Today" stays pinned across midnight.
   const [back, setBack] = useState(0)
   const [dir, setDir] = useState(null)
-  const [filter, setFilter] = useState('all')
-  const [picked, setPicked] = useState(null)
   const [pickOpen, setPickOpen] = useState(false)
-  const [sheetOpen, setSheetOpen] = useState(false)
   const rootRef = useRef(null)
-  const storyRef = useRef(null)
   const touch = useRef(null)
 
   const today = startOfDay(now)
@@ -215,20 +205,31 @@ export default function Activity() {
   const events = usePolicyEvents(day, isAdmin ? null : profile?.id)
   const bookings = useAgentBookings(isAdmin ? null : profile?.id)
 
+  // `row` is the status an event counts and reads under: its own for Booked / Calls /
+  // No answer / Cancelled, the client's current one for Moved and Edited.
+  const bookingOf = new Map((bookings.data || []).map(p => [p.id, p]))
   const all = (events.data || []).map(e => ({
     key: `e-${e.id}`, id: e.id, kind: e.kind, rebook: !!e.from_status, at: e.at, policyId: e.policy_id, agentId: e.agent_id,
     client: fullName(e.policy), agent: e.agent?.full_name, text: describe(e),
+    row: activityRow(e.kind, bookingOf.has(e.policy_id) ? tabOf(bookingOf.get(e.policy_id)) : null),
   }))
   const feed = isAdmin ? excludeTestAccounts(all, profile?.id, 'agentId') : all
-  const visible = filter === 'all' ? feed : feed.filter(i => i.kind === filter)
-  const selected = visible.find(i => i.key === picked) || visible[0] || null
 
-  const counts = Object.fromEntries(EVENT_KINDS.map(k => [k, 0]))
-  feed.forEach(i => { if (i.kind in counts) counts[i.kind] += 1 })
+  const counts = Object.fromEntries(ACTIVITY_ROWS.map(k => [k, 0]))
+  feed.forEach(i => { counts[i.row] += 1 })
   const clients = new Set(feed.map(i => i.policyId)).size
   const groups = PARTS
-    .map(part => ({ ...part, items: visible.filter(i => part.test(new Date(i.at).getHours())) }))
+    .map(part => ({ ...part, items: feed.filter(i => part.test(new Date(i.at).getHours())) }))
     .filter(g => g.items.length)
+
+  // ── The open client's drawer (in the URL, so refresh works) ──
+  const withParams = fn => {
+    const next = new URLSearchParams(params)
+    fn(next)
+    setParams(next, { replace: true })
+  }
+  const openClient = item => withParams(next => { next.set('client', item.policyId); next.set('event', item.id) })
+  const closeClient = () => withParams(next => { next.delete('client'); next.delete('event') })
 
   // ── Moving between days ──
   const goTo = target => {
@@ -238,14 +239,12 @@ export default function Activity() {
     slideOut(rootRef.current, d)
     setDir(d)
     setBack(next)
-    setFilter('all')
-    setPicked(null)
-    setSheetOpen(false)
+    if (drawerOpen) closeClient()
   }
   const onArrowKey = useEffectEvent(e => {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
     if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey || isTyping(e.target)) return
-    if (pickOpen || sheetOpen || e.target.closest?.('[role="tablist"], [role="dialog"]')) return
+    if (pickOpen || drawerOpen || e.target.closest?.('[role="dialog"]')) return
     e.preventDefault()
     goTo(back + (e.key === 'ArrowLeft' ? 1 : -1))
   })
@@ -262,7 +261,7 @@ export default function Activity() {
     onTouchEnd: e => {
       const start = touch.current
       touch.current = null
-      if (!start) return
+      if (!start || drawerOpen) return
       const t = e.changedTouches[0]
       const dx = t.clientX - start.x
       const dy = t.clientY - start.y
@@ -272,15 +271,9 @@ export default function Activity() {
     },
   }
 
-  const select = item => {
-    setPicked(item.key)
-    if (isPhone) setSheetOpen(true)
-    else if (!isWide) storyRef.current?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' })
-  }
-
-  // ── The selected client's story ──
-  const story = usePolicyStory(selected?.policyId)
-  const row = selected ? (bookings.data || []).find(p => p.id === selected.policyId) || null : null
+  // ── The open client's story ──
+  const story = usePolicyStory(clientId)
+  const row = clientId ? bookingOf.get(clientId) || null : null
   const history = story.data || []
   const latest = history[history.length - 1]
   const cancelledNow = row ? tabOf(row) === 'cancelled' : latest?.kind === 'cancelled'
@@ -290,21 +283,8 @@ export default function Activity() {
     done: cancelledNow || i < history.length - 1,
   }))
   if (history.length && !cancelledNow) steps.push({ label: 'Old policy cancelled', done: false })
-  const openPipeline = () => {
-    if (!selected) return
-    navigate(row ? `/agent/clients?stage=${tabOf(row)}&open=${selected.policyId}` : `/agent/clients?open=${selected.policyId}`)
-  }
-  const storyProps = {
-    p: row,
-    name: selected ? (row ? fullName(row) : selected.client) : null,
-    agentName: isAdmin ? selected?.agent : null,
-    steps,
-    highlight: history.findIndex(e => e.id === selected?.id),
-    currentIcon: latest ? EVENT_ICON[eventIconKey({ kind: latest.kind, rebook: !!latest.from_status })] : undefined,
-    loading: story.isLoading,
-    now,
-    onOpenPipeline: openPipeline,
-  }
+  const openPipeline = () => navigate(row ? `/agent/clients?stage=${tabOf(row)}&open=${clientId}` : `/agent/clients?open=${clientId}`)
+  const shown = clientId ? feed.find(i => i.policyId === clientId) : null
 
   // ── Feed notes ──
   let note = null
@@ -314,8 +294,6 @@ export default function Activity() {
     note = back === 0
       ? <FeedNote icon={Inbox} tone={kindTone('booked')}>Nothing yet today. Bookings, calls and cancellations show up here as they happen.</FeedNote>
       : <FeedNote icon={CalendarDays} tone={kindTone('no_answer')}>Nothing happened on this day.</FeedNote>
-  } else if (!visible.length) {
-    note = <FeedNote icon={EVENT_KIND[filter].icon} tone={kindTone(filter)}>No {EVENT_KIND[filter].pill.toLowerCase()} events this day.</FeedNote>
   }
 
   const slideClass = dir === 'prev' ? 'ov-slide-from-left' : dir === 'next' ? 'ov-slide-from-right' : undefined
@@ -329,8 +307,8 @@ export default function Activity() {
         tag={title.tag}
         dateLong={day.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         dateShort={day.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-        summary={loadingDay ? 'Loading…' : feed.length ? `${plural(feed.length, 'thing')} happened with ${plural(clients, 'client')}` : 'Nothing happened this day.'}
-        summaryShort={loadingDay ? 'Loading…' : feed.length ? `${plural(feed.length, 'thing')} · ${plural(clients, 'client')}` : 'Nothing happened'}
+        summary={loadingDay ? 'Loading…' : feed.length ? `${plural(feed.length, 'event')} happened with ${plural(clients, 'client')}` : 'Nothing happened this day.'}
+        summaryShort={loadingDay ? 'Loading…' : feed.length ? `${plural(feed.length, 'event')} · ${plural(clients, 'client')}` : 'Nothing happened'}
         canNext={back > 0}
         onPrev={() => goTo(back + 1)}
         onNext={() => goTo(back - 1)}
@@ -347,23 +325,29 @@ export default function Activity() {
 
       <ActivityBox
         dayKey={dayKey} slideClass={slideClass}
-        title={boxTitle(back, day)} counts={counts} filter={filter}
-        onFilter={k => { setFilter(k); setPicked(null) }}
+        title={boxTitle(back, day)} counts={counts}
       />
 
-      <div className="ov-activity">
-        <ActivityFeed
-          dayKey={dayKey} slideClass={slideClass}
-          groups={groups} note={note} selectedKey={selected?.key} onSelect={select} showAgent={isAdmin}
-          {...swipe}
-        />
-        {!isPhone && <ClientStory {...storyProps} className="ov-story-side" panelRef={storyRef} />}
-      </div>
+      <ActivityFeed
+        dayKey={dayKey} slideClass={slideClass}
+        groups={groups} note={note} activeKey={drawerOpen && eventId ? `e-${eventId}` : null} onOpen={openClient} showAgent={isAdmin}
+        {...swipe}
+      />
 
-      {isPhone && sheetOpen && selected && (
-        <StorySheet label={storyProps.name} onClose={() => setSheetOpen(false)}>
-          <ClientStory {...storyProps} sheet />
-        </StorySheet>
+      {drawerOpen && (
+        <ActivityDrawer
+          key={`${clientId}:${eventId}`}
+          p={row}
+          name={row ? fullName(row) : shown?.client || fullName(history[0]?.policy) || 'Client'}
+          agentName={isAdmin ? shown?.agent || history[0]?.agent?.full_name : null}
+          steps={steps}
+          highlight={history.findIndex(e => String(e.id) === eventId)}
+          currentIcon={latest ? EVENT_ICON[eventIconKey({ kind: latest.kind, rebook: !!latest.from_status })] : undefined}
+          loading={story.isLoading}
+          now={now}
+          onOpenPipeline={openPipeline}
+          onClose={closeClient}
+        />
       )}
     </div>
   )
@@ -442,43 +426,5 @@ function MonthPicker({ selected, today, onPick, onClose }) {
         })}
       </div>
     </div>
-  )
-}
-
-// Phones: the client story as a bottom sheet over the scrim. Closes by
-// dragging the handle down, tapping the scrim or Esc.
-function StorySheet({ label, onClose, children }) {
-  const [drag, setDrag] = useState(0)
-  const start = useRef(null)
-  useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    const onKey = e => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey) }
-  }, [onClose])
-
-  const onDown = e => { start.current = e.clientY; e.currentTarget.setPointerCapture?.(e.pointerId) }
-  const onMove = e => { if (start.current != null) setDrag(Math.max(0, e.clientY - start.current)) }
-  const onUp = () => {
-    if (start.current == null) return
-    start.current = null
-    if (drag > 90) onClose()
-    else setDrag(0)
-  }
-
-  return createPortal(
-    <>
-      <div className="ov-scrim" onClick={onClose} aria-hidden="true" />
-      <div className="ov-sheet" role="dialog" aria-modal="true" aria-label={label}
-        style={drag ? { transform: `translateY(${drag}px)` } : { transition: 'transform 160ms ease' }}>
-        <div onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
-          style={{ flexShrink: 0, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'none', cursor: 'grab' }}>
-          <span style={{ width: 40, height: 5, borderRadius: 999, background: 'var(--ov-faint)' }} />
-        </div>
-        {children}
-      </div>
-    </>,
-    document.body,
   )
 }

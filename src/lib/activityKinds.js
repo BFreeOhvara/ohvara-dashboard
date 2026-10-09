@@ -15,6 +15,29 @@ export const EVENT_KIND = {
 }
 export const kindMeta = kind => EVENT_KIND[kind] || EVENT_KIND.moved
 
+// Prompt 733 — the Activity box and the feed's status pill count each event once, by
+// the status it shows. Moved and Edited events have no row or pill of their own: they
+// count (and read) as the status the client is in now (My Pipeline's tabOf). No current
+// status falls back to Booked, since a call being moved or fixed means it was booked.
+export const ACTIVITY_ROWS = ['booked', 'in_progress', 'no_answer', 'cancelled', 'needs']
+const ROW_META = {
+  booked:      EVENT_KIND.booked,
+  in_progress: EVENT_KIND.in_progress,
+  no_answer:   EVENT_KIND.no_answer,
+  cancelled:   EVENT_KIND.cancelled,
+  needs:       { label: 'Needs attention', pill: 'Needs attention', base: '--ov-st-needs' },
+}
+const TAB_ROW = { booked: 'booked', noAnswer: 'no_answer', needs: 'needs', cancelled: 'cancelled' }
+export function activityRow(kind, tab) {
+  if (kind === 'moved' || kind === 'edited') return TAB_ROW[tab] || 'booked'
+  return kind in ROW_META ? kind : 'booked'
+}
+export const rowMeta = row => ROW_META[row] || ROW_META.booked
+export function rowTone(row) {
+  const b = rowMeta(row).base
+  return { fg: `var(${b})`, tint: `var(${b}-tint)`, edge: `var(${b}-edge)` }
+}
+
 export function kindTone(kind) {
   const b = kindMeta(kind).base
   return { fg: `var(${b})`, tint: `var(${b}-tint)`, edge: `var(${b}-edge)` }

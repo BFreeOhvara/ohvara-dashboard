@@ -157,7 +157,7 @@ function ActivityLine({ profile }) {
   if (!events?.length) return <LiveLine items={[<Plain>Nothing yet today</Plain>]} />
   const latest = new Date(events[0].at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   return <LiveLine items={[
-    <Pill tone="violet">{plural(events.length, 'update')} today</Pill>,
+    <Pill tone="violet">{plural(events.length, 'event')} today</Pill>,
     <Plain>Latest {latest}</Plain>,
   ]} />
 }

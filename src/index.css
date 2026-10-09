@@ -1318,30 +1318,16 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 @keyframes ovSlideFromRight { from { opacity: 0; transform: translateX(32px); } to { opacity: 1; transform: none; } }
 @keyframes ovFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-/* Activity grid: feed + sticky story at 1280px, one column below. */
-.ov-activity { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; }
-.ov-story-side { scroll-margin-top: 96px; }
-@media (min-width: 1280px) {
-  .ov-activity { grid-template-columns: minmax(0, 1fr) 420px; }
-  .ov-story-side { position: sticky; top: 96px; max-height: calc(100vh - 120px); }
-}
-
-/* Phone client story: a bottom sheet. */
-.ov-sheet {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 201; max-height: 85vh;
-  box-sizing: border-box; display: flex; flex-direction: column; border-radius: 24px 24px 0 0;
-  background: linear-gradient(180deg, #151822 0%, #0E1017 100%);
-  border-top: 1px solid rgba(255,255,255,0.10); box-shadow: 0 -30px 60px -20px rgba(0,0,0,0.8);
-  animation: ovSheetIn 220ms ease-out;
-}
-[data-theme="light"] .ov-sheet {
-  background: linear-gradient(180deg, #FFFFFF 0%, #F4F8F7 100%);
-  border-top: 1px solid rgba(2,79,70,0.14); box-shadow: 0 -30px 60px -20px rgba(7,40,36,0.45);
+/* Activity box (Prompt 733): plain status rows (the My Pipeline .pl-row2 look), two columns from 640px. */
+.ov-actrows { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 48px; }
+.ov-actrows .pl-row2.is-zero .l, .ov-actrows .pl-row2.is-zero .c { color: var(--ov-faint); }
+@media (min-width: 640px) {
+  .ov-actrows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ov-actrows .pl-row2:nth-child(2) { border-top: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ov-slide-from-left, .ov-slide-from-right { animation: ovFadeIn 120ms ease-out; }
-  .ov-sheet { animation: none; }
   .ov-event, .ov-day-arrow { transition: none; }
 }
 
