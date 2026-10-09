@@ -938,7 +938,6 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 [data-theme="light"] .ov-choice.ov-slot-current:not(.ov-slot-on) { border-color: #00917D; }
 .ov-pickrow { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; cursor: pointer; }
 .ov-pickrow.is-active { background: var(--ov-stub); }
-.ov-pickrow.is-off { cursor: not-allowed; opacity: 0.55; }
 
 /* ── Prompt 717 — My Pipeline on the "ov" language ─────────────
    Status colours, the find-any-client field, pipeline tabs, status rows and

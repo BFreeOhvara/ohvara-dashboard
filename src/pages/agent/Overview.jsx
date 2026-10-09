@@ -4,7 +4,7 @@ import { CalendarPlus, Check } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
 import { HeroPanel, TrendCard, AttentionCard, ComingUpCard, LastWeekChart } from '../../components/agent/AgentUI'
-import { stageOf, agentStageOf, sameLocalDay, startOfWeek, useNow } from '../../lib/agentBookings'
+import { stageOf, agentStageOf, tabOf, sameLocalDay, startOfWeek, useNow } from '../../lib/agentBookings'
 import { LiveDot } from '../../components/ui/LiveDot'
 import { fullName } from '../../lib/policyFormat'
 
@@ -20,6 +20,10 @@ import { fullName } from '../../lib/policyFormat'
 // a client didn't pick up, otherwise "You're all caught up" with the next
 // booked calls. The chart is last Monday to Sunday (was 14 days), and the
 // box's button is the blue .ov-primary.
+//
+// Prompt 732 — "Needs your attention" is the Needs attention tab and nothing
+// else: a No answer client is Fulfillment's to work, so it never shows here.
+// The rows only open My Pipeline on that client; nothing starts from here.
 //
 // Prompt 672 — the trend cards open My Clients on the matching slice of its
 // Pipeline (?range= / ?stage=).
@@ -66,7 +70,7 @@ export default function Overview() {
     const cancelledThisWeek = since(cancelledAt, weekStart)
     const lastCall = p => (p.last_call_at ? ms(p.last_call_at) : 0)
     const attention = rows
-      .filter(p => stageOf(p) === 'noAnswer')
+      .filter(p => tabOf(p) === 'needs')
       .sort((a, b) => (ATTN_RANK[agentStageOf(a)] ?? 2) - (ATTN_RANK[agentStageOf(b)] ?? 2) || lastCall(a) - lastCall(b))
     // Booked calls still ahead, soonest first (live, cancelled and no-answer
     // rows are not "booked").
@@ -141,7 +145,7 @@ export default function Overview() {
         </div>
 
         {isLoading || g.attention.length > 0
-          ? <AttentionCard items={g.attention} loading={isLoading} now={now} onGo={navigate} />
+          ? <AttentionCard items={g.attention} loading={isLoading} onGo={navigate} />
           : <ComingUpCard upcoming={g.upcoming} now={now} onGo={navigate} />}
 
         <div style={{ gridArea: 'chart', display: 'flex', minWidth: 0 }}>

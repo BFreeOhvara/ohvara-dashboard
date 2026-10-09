@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { Phone, Calendar, CalendarDays, MapPin, PencilLine } from 'lucide-react'
+import { Phone, Calendar, MapPin, PencilLine } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { dmId } from '../../hooks/useDirectMessages'
 import { useAgentBookings, useRebookCall, useConfirmRecoveryNumber } from '../../hooks/useAgentBookings'
@@ -53,7 +53,10 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // Prompt 730 — a Booked client's "Move to a different time" is now "Change
 // this booking": it opens Book a call's Change a booking with them picked
 // (/agent/book?change=<id>), where details and time are fixed in place. The
-// in-drawer picker stays only for re-booking a No answer / Needs attention lead.
+// in-drawer picker stays only for re-booking a Needs attention lead.
+//
+// Prompt 732 — a No answer client is Fulfillment's: its rows end in a chevron
+// and its drawer offers Change this booking, never a re-book.
 
 const RANGE_VALUES = RANGES.map(r => r.value)
 // Old ?stage= values still arrive from the Overview (attention rows, the
@@ -177,7 +180,9 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRow
   const stage = agentStageOf(p)
   const tab = tabOf(p)
   const live = isLive(p)
-  const rebookable = canRebook(p) && canMove
+  // Prompt 732: only Needs attention clients re-book from the drawer; a No answer
+  // client is Fulfillment's, and the agent can only change the booking.
+  const rebookable = stage === 'needsAttention' && canRebook(p) && canMove
   const [moving, setMoving] = useState(!!startRebook && rebookable)
   const move = useMove(p, now, () => setMoving(false), agentRows)
   const tz = p.client_timezone || null
@@ -201,7 +206,7 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRow
     noAnswer: `No answer${SUBSTATUS_LABEL[p.cancellation_substatus] ? ` · ${SUBSTATUS_LABEL[p.cancellation_substatus].toLowerCase()}` : ''} — ${{
       retry_locked: `retry call locked for ${fmtBooking(p.recovery_retry_at, tz)}; we've texted them a link to pick another time`,
       followup: "we're texting them a link to pick a time; you'll be told if they don't reply",
-    }[p.recovery_step] || 're-book a time, or Fulfillment will try again'}`,
+    }[p.recovery_step] || 'Fulfillment will try again'}`,
     confirmNumber: 'Two tries, no answer. Confirm their number to continue',
     needsAttention: "They haven't replied to our texts. Call them and re-book",
     cancelled: p.fulfillment_completed_at ? `Cancelled ${new Date(p.fulfillment_completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'Cancelled',
@@ -211,7 +216,7 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRow
   let footer = null
   if (moving) {
     footer = move.actions
-  } else if (stage === 'booked' && !live && canMove) {
+  } else if ((stage === 'booked' || stage === 'noAnswer') && !live && canMove) {
     footer = (
       <button type="button" className="ov-ghost" onClick={() => navigate(`/agent/book?change=${p.id}`)} style={{ ...big, fontWeight: 600 }}>
         <PencilLine size={16} strokeWidth={2} /> Change this booking
@@ -220,7 +225,7 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRow
   } else if (rebookable) {
     footer = (
       <button type="button" className="ov-solid" onClick={() => setMoving(true)} style={big}>
-        {stage === 'needsAttention' ? <><Phone size={16} strokeWidth={2.2} /> Call &amp; rebook</> : <><CalendarDays size={16} strokeWidth={2} /> Re-book a call</>}
+        <Phone size={16} strokeWidth={2.2} /> Call &amp; rebook
       </button>
     )
   } else if (stage === 'confirmNumber' && canMove) {

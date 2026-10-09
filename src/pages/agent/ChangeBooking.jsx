@@ -25,9 +25,9 @@ import { DISPLAY } from '../../lib/exportStyles'
 // new one. Saving applies at once (agent_change_booking, migration 134): one
 // update to the same booking, so it never uses one of the week's bookings.
 //
-// Who can be changed: Booked (not on a call), No answer and Needs attention.
-// Cancelled, live and Confirm-number clients show in the search but can't be
-// picked. A Booked call Fulfillment has already worked can have its details
+// Who can be changed: Booked (not on a call), No answer and Needs attention →
+// Call and rebook. Cancelled, live and Confirm-number clients are left out of
+// the search entirely (Prompt 732). A Booked call Fulfillment has already worked can have its details
 // fixed but not its time (the database refuses it, same rule as the old move).
 // A No answer / Needs attention lead has to get a new time: saving re-books it.
 //
@@ -67,6 +67,16 @@ function blockOf(p) {
   if (isLive(p)) return 'On a call right now'
   if (agentStageOf(p) === 'confirmNumber') return 'Confirm their number first'
   return null
+}
+
+// Prompt 732 — the type-ahead lists only clients whose booking can be changed:
+// Booked, No answer, or Needs attention → Call and rebook, by the same tabOf()
+// My Pipeline's tabs use. Cancelled, on-a-call-now and Confirm the number are
+// left out of the list entirely (blockOf still explains a deep link to one).
+function isChangeable(p) {
+  if (isLive(p)) return false
+  const t = tabOf(p)
+  return t === 'booked' || t === 'noAnswer' || (t === 'needs' && agentStageOf(p) === 'needsAttention')
 }
 
 // First name, last name or full name starts with the query; or, for a query
@@ -453,11 +463,11 @@ function Note({ icon: Icon, tone, children }) {
 function ClientPicker({ rows, now, onPick, onNew, note }) {
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
-  const matches = useMemo(() => matchBookings(rows, query), [rows, query])
+  const matches = useMemo(() => matchBookings(rows.filter(isChangeable), query), [rows, query])
   const at = Math.min(active, Math.max(matches.length - 1, 0))
   const listId = 'change-client-list'
 
-  const choose = r => { if (r && !blockOf(r)) onPick(r) }
+  const choose = r => { if (r) onPick(r) }
   const onKeyDown = e => {
     if (e.key === 'ArrowDown' && matches.length) { e.preventDefault(); setActive(Math.min(at + 1, matches.length - 1)) }
     else if (e.key === 'ArrowUp' && matches.length) { e.preventDefault(); setActive(Math.max(at - 1, 0)) }
@@ -491,11 +501,10 @@ function ClientPicker({ rows, now, onPick, onNew, note }) {
         <div className="ov-note" style={{ borderRadius: 14, padding: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <div id={listId} role="listbox" aria-label="Clients" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {matches.map((r, i) => {
-              const off = blockOf(r)
               return (
                 <div
-                  key={r.id} id={`${listId}-${i}`} role="option" aria-selected={i === at} aria-disabled={!!off || undefined}
-                  className={`ov-pickrow${i === at ? ' is-active' : ''}${off ? ' is-off' : ''}`}
+                  key={r.id} id={`${listId}-${i}`} role="option" aria-selected={i === at}
+                  className={`ov-pickrow${i === at ? ' is-active' : ''}`}
                   onMouseDown={e => { e.preventDefault(); choose(r) }} onMouseEnter={() => setActive(i)}
                 >
                   <StatusAvatar name={fullName(r)} tab={tabOf(r)} />
@@ -508,7 +517,7 @@ function ClientPicker({ rows, now, onPick, onNew, note }) {
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0, maxWidth: '45%' }}>
                     <StatusPill tab={tabOf(r)} />
                     <span style={{ fontSize: 12.5, color: 'var(--ov-mute)', ...ellipsis, maxWidth: '100%' }}>
-                      {off || (r.scheduled_call_at && new Date(r.scheduled_call_at).getTime() > now ? callWhen(r.scheduled_call_at, r.client_timezone) : 'Needs a new time')}
+                      {r.scheduled_call_at && new Date(r.scheduled_call_at).getTime() > now ? callWhen(r.scheduled_call_at, r.client_timezone) : 'Needs a new time'}
                     </span>
                   </div>
                 </div>

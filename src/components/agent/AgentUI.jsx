@@ -1355,7 +1355,7 @@ function lastOn(p, now) {
 // recoveryLabel as a sentence: "retry tomorrow" → "Retry call tomorrow".
 function nextStep(p, now) {
   const label = recoveryLabel(p, now)
-  if (!label) return 'Re-book a time, or Fulfillment tries again'
+  if (!label) return 'Fulfillment will try again'
   const s = label.replace(/^retry/, 'retry call')
   return s[0].toUpperCase() + s.slice(1)
 }
@@ -1618,7 +1618,7 @@ export function PipelineSummary({ rows, tab, range, ranges, onRange, agentFilter
               <small style={{ color: stVar('booked') }}>{new Date(next.scheduled_call_at).toLocaleDateString('en-US', { month: 'short', timeZone: tz }).toUpperCase()}</small>
               <b>{new Date(next.scheduled_call_at).toLocaleDateString('en-US', { day: 'numeric', timeZone: tz })}</b>
             </span>
-            <span className="k">Next Fulfillment call<b>{fullName(next)} · {fmtSlotTime(next.scheduled_call_at, next.client_timezone)}</b></span>
+            <span className="k">Next Fulfillment call<b>{fullName(next)}</b></span>
             <button type="button" className="ov-ghost" onClick={() => onOpenNext(next)}>Open</button>
           </>
         ) : (
@@ -1824,8 +1824,6 @@ function rowAction(p, { canMove, onRebook, onConfirm }) {
   const mine = canMove(p)
   if (stage === 'confirmNumber' && mine) return { label: 'Confirm number', onClick: () => onConfirm(p.id), needs: true, solid: true }
   if (stage === 'needsAttention' && mine && canRebook(p)) return { label: 'Rebook', onClick: () => onRebook(p.id), needs: true }
-  if (stage === 'noAnswer' && mine && canRebook(p)) return { label: 'Re-book', icon: CalendarPlus, onClick: () => onRebook(p.id) }
-  if (stage === 'noAnswer') return { note: 'We’re on it' }
   return null
 }
 
@@ -1956,7 +1954,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
             <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--ov-hi)' }}>{triesText(p.call_attempts || 0)}</span>
             {lastOn(p, now) && <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>{lastOn(p, now)}</span>}
           </span>,
-          <ActionButton key="a" action={rowAction(p, ctx)} />,
+          <span key="c" style={{ display: 'flex', justifyContent: 'flex-end' }}>{chevron}</span>,
         ]
       case 'needs':
         return [
@@ -3129,9 +3127,10 @@ function CallDateTile({ iso, booked, tz }) {
   )
 }
 
-// The amber state: same content as AttentionPanel, with the main button
-// painted like the greeting bar.
-export function AttentionCard({ items, loading, now, onGo }) {
+// The amber state (Prompt 732): the Needs attention tab and nothing else.
+// Each row (and its Open button) goes to My Pipeline's Needs attention tab with
+// that client's drawer open; no confirm or re-book starts from here.
+export function AttentionCard({ items, loading, onGo }) {
   const pad = 'p-[18px] sm:px-6 sm:pt-6 sm:pb-5'
   const area = { gridArea: 'attn', minWidth: 0 }
   const title = <h2 style={{ ...OV_TITLE, flex: 1, minWidth: 0 }} className="text-[18px] sm:text-[19px]">Needs your attention</h2>
@@ -3150,6 +3149,10 @@ export function AttentionCard({ items, loading, now, onGo }) {
   const count = items.length
   const shown = items.slice(0, ATTN_ROWS)
   const more = n => (count > n ? `See all ${count} in My Pipeline` : 'Open in My Pipeline')
+  const toConfirm = items.filter(p => agentStageOf(p) === 'confirmNumber').length
+  const toCall = count - toConfirm
+  const intro = [toConfirm && `${toConfirm} to confirm`, toCall && `${toCall} to call`].filter(Boolean).join(' · ')
+  const go = p => onGo(`/agent/clients?open=${p.id}&stage=needs`)
 
   return (
     <div className={`ov-attn flex flex-col ${pad}`} style={area}>
@@ -3165,35 +3168,17 @@ export function AttentionCard({ items, loading, now, onGo }) {
         </span>
       </div>
       <p style={{ margin: '14px 0 6px', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-soft)' }}>
-        {count === 1 ? 'This client didn’t' : 'These clients didn’t'} pick up. Re-book a time, or Fulfillment will try again.
+        {intro}. Open one to see what to do.
       </p>
 
       {shown.map((p, i) => {
         const name = fullName(p)
-        const stage = agentStageOf(p)
-        const step = recoveryLabel(p, now) || triesLine(p, now)
-        const meta = [p.current_carrier || 'Carrier not noted', step].filter(Boolean).join(' · ')
-        const btn = { padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, cursor: 'pointer' }
-        let action
-        if (canRebook(p)) {
-          action = (
-            <button type="button" className="ov-ghost h-10 sm:h-[34px]" style={btn}
-              onClick={() => onGo(`/agent/clients?stage=${stage}&open=${p.id}&rebook=1`)}>
-              {stage === 'needsAttention' ? 'Call & rebook' : 'Re-book'}
-            </button>
-          )
-        } else if (stage === 'confirmNumber') {
-          action = (
-            <button type="button" className="ov-ghost h-10 sm:h-[34px]" style={btn}
-              onClick={() => onGo(`/agent/clients?stage=confirmNumber&open=${p.id}`)}>
-              Confirm number
-            </button>
-          )
-        } else {
-          action = <span style={{ fontSize: 12.5, color: 'var(--ov-mute)', whiteSpace: 'nowrap', flexShrink: 0 }}>We&rsquo;re on it</span>
-        }
+        const meta = [p.current_carrier || 'Carrier not noted', NEEDS_WHY[agentStageOf(p)]].filter(Boolean).join(' · ')
         return (
-          <div key={p.id} className={`ov-attn-row ${i >= 3 ? 'hidden sm:flex' : 'flex'}`} style={{ alignItems: 'center', gap: 12, padding: '14px 0' }}>
+          <div key={p.id} role="button" tabIndex={0} aria-label={`Open ${name}`}
+            onClick={() => go(p)}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(p) } }}
+            className={`ov-attn-row ${i >= 3 ? 'hidden sm:flex' : 'flex'}`} style={{ alignItems: 'center', gap: 12, padding: '14px 0', cursor: 'pointer' }}>
             <span style={{
               width: 38, height: 38, flexShrink: 0, borderRadius: '50%', background: 'var(--ov-warn-tint)', color: 'var(--ov-warn)',
               fontSize: 12.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -3202,15 +3187,18 @@ export function AttentionCard({ items, loading, now, onGo }) {
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
-              <div style={{ marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)' }}>{meta}</div>
+              <div style={{ marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>{meta}</div>
             </div>
-            {action}
+            <button type="button" className="ov-ghost h-10 sm:h-[34px]" tabIndex={-1} aria-hidden="true"
+              style={{ padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              Open <ArrowRight size={14} strokeWidth={2.2} />
+            </button>
           </div>
         )
       })}
 
       <div style={{ marginTop: 'auto', paddingTop: 14 }}>
-        <button type="button" className="ov-primary" onClick={() => onGo('/agent/clients?stage=noAnswer')}>
+        <button type="button" className="ov-primary" onClick={() => onGo('/agent/clients?stage=needs')}>
           <span className="sm:hidden">{more(3)}</span>
           <span className="hidden sm:inline">{more(ATTN_ROWS)}</span>
           <ArrowRight size={15} strokeWidth={2.2} />
