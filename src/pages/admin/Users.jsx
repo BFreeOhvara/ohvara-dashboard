@@ -7,6 +7,7 @@ import {
 import { useAuth } from '../../hooks/useAuth'
 import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { roleLabel } from '../../lib/roleLabels'
+import { formatPhoneInput } from '../../lib/policyFormat'
 import { MONO, card, grid3, primaryBtn, ghostBtn } from '../../lib/exportStyles'
 import { TextField, AnchoredSelectField, GapNote } from '../../components/ui/ExportForm'
 import { Avatar } from '../../components/ui/Avatar'
@@ -372,12 +373,26 @@ export default function Users() {
         >
           <UsersIcon size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           <span style={{ flex: 1, minWidth: 200, fontSize: 12, color: 'var(--text-secondary)' }}>
-            Pending invite — <span style={{ color: 'var(--text-primary)' }}>{roleLabel(inv.role)}</span>, expires{' '}
+            {inv.channel ? (
+              // Prompt 731: an agent sent this from the account menu. Shown so
+              // Brayden can see who brought someone in; no Copy (it went to them).
+              <>
+                Sent by <span style={{ color: 'var(--text-primary)' }}>{inv.creator?.full_name || 'an agent'}</span> to{' '}
+                <span style={{ color: 'var(--text-primary)' }}>
+                  {inv.channel === 'email' ? inv.invited_email : formatPhoneInput(String(inv.invited_phone || '').replace(/\D/g, '').slice(-10))}
+                </span>
+              </>
+            ) : (
+              <>Pending invite — <span style={{ color: 'var(--text-primary)' }}>{roleLabel(inv.role)}</span></>
+            )}
+            , expires{' '}
             {new Date(inv.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </span>
-          <button onClick={() => copyLink(inv)} style={{ ...ghostBtn, height: 26, background: 'transparent' }}>
-            {copied === inv.id ? <><Check size={11} /> Copied</> : <><Copy size={11} /> Copy link</>}
-          </button>
+          {!inv.channel && (
+            <button onClick={() => copyLink(inv)} style={{ ...ghostBtn, height: 26, background: 'transparent' }}>
+              {copied === inv.id ? <><Check size={11} /> Copied</> : <><Copy size={11} /> Copy link</>}
+            </button>
+          )}
           <button onClick={() => revokeInvite.mutate(inv.id)} style={{ ...ghostBtn, height: 26, background: 'transparent' }}>
             Revoke
           </button>

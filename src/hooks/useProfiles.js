@@ -100,45 +100,31 @@ export function useCreateProfile() {
 // ── Invite-token self-registration (Prompt 282) ──────────────────────────────
 // Admin generates a single-use /join/<token> link scoped to a role; the
 // invited person registers themselves via the claim-invite edge function.
-// All three hooks hit rep_invites directly. NOTE: this comment used to say
-// "RLS restricts them to admins" — true for migration 067's original
-// policies, but migration 072 (insurance pivot) loosened rep_invites_insert
-// to `created_by = auth.uid() and (is_admin() or role = 'closer')`, i.e. any
-// authenticated agent can insert their own 'closer' invite today. The North
-// Star note that invite generation should be admin-only (2026-07-26) is only
-// enforced client-side so far (InvitePanel moved to the admin-only Hierarchy
-// view) — tightening this INSERT policy back to admin-only needs a migration,
-// which the auto-mode classifier blocked pending Brayden's explicit go-ahead.
+// The three admin hooks hit rep_invites directly; RLS is admin-only for
+// select / insert / delete since migration 135 (Prompt 731). Agents invite
+// through the send-agent-invite edge function instead (useSendAgentInvite),
+// which texts or emails the link so the agent never sees a token. (The old
+// agent-facing useSentInvites feed was removed with that policy change; nothing
+// rendered it any more.)
 
-// My Calls Activity feed (Prompt 365) — invites THIS agent personally sent
-// (and whether each was accepted), not the global pending list
-// `usePendingInvites` already covers for Hierarchy's own UI.
-export function useSentInvites(agentId) {
-  return useQuery({
-    queryKey: ['rep_invites', 'sent-by', agentId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('rep_invites')
-        .select('id, role, created_at, used_at, used_by')
-        .eq('created_by', agentId)
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      return data || []
-    },
-    enabled: !!agentId,
-  })
-}
-
+// Pending invites for the admin Users page. Agent-sent ones carry `channel` and
+// the destination, plus who sent them, so the bar can say "Sent by … to …".
 export function usePendingInvites() {
   return useQuery({
     queryKey: ['rep_invites', 'pending'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const pending = cols => supabase
         .from('rep_invites')
-        .select('id, token, role, created_at, expires_at')
+        .select(cols)
         .is('used_at', null)
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
+      let { data, error } = await pending('id, token, role, created_at, expires_at, channel, invited_email, invited_phone, creator:profiles!rep_invites_created_by_fkey(full_name)')
+      // Until migration 135 is applied the new columns don't exist; fall back
+      // to the old list so the Users page keeps working.
+      if (error && /channel|invited_|column/i.test(error.message || '')) {
+        ({ data, error } = await pending('id, token, role, created_at, expires_at'))
+      }
       if (error) throw error
       return data || []
     },
@@ -172,6 +158,41 @@ export function useCreateInvite() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['rep_invites'] })
+    },
+  })
+}
+
+// ── Agent invites (Prompt 731) ───────────────────────────────────────────────
+// Which channels can actually send right now: email once Resend is set up,
+// text once the Twilio number is A2P-approved and recovery_config.sms_live is on.
+export function useInviteStatus(enabled = true) {
+  return useQuery({
+    queryKey: ['agent-invite-status'],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('send-agent-invite', { body: { action: 'status' } })
+      if (error) throw error
+      return { email: !!data?.email, sms: !!data?.sms }
+    },
+    enabled,
+    staleTime: 60_000,
+    retry: false,
+  })
+}
+
+// Sends the invite; the response is only { ok: true }, never the link.
+export function useSendAgentInvite() {
+  return useMutation({
+    mutationFn: async ({ channel, to }) => {
+      const { data, error } = await supabase.functions.invoke('send-agent-invite', {
+        body: { action: 'send', channel, to },
+      })
+      if (error) {
+        let msg = "Couldn't send that. Try again."
+        try { msg = (await error.context?.json())?.error || msg } catch { /* keep generic */ }
+        throw new Error(msg)
+      }
+      if (!data?.ok) throw new Error(data?.error || "Couldn't send that. Try again.")
+      return true
     },
   })
 }

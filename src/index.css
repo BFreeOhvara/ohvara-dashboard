@@ -1520,6 +1520,47 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
   .ov-qr { align-self: center; }
 }
 
+/* ── Prompt 731 — Invite an agent pop-up (account menu, agents only) ──
+   Centred at every width (16px gutter on phones, not a bottom sheet). The
+   Text message | Email switch is an .ov-range stretched full width; a channel
+   that can't send yet stays visible but muted. See DESIGN.md v16 "P731". */
+.ov-invite-wrap { position: fixed; inset: 0; z-index: 201; display: flex; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
+.ov-card.ov-invite {
+  position: relative; width: 460px; max-width: 100%; box-sizing: border-box; margin: 0;
+  display: flex; flex-direction: column; gap: 18px; padding: 24px; border-radius: 20px;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.6); animation: ovFadeIn 160ms ease-out;
+}
+[data-theme="light"] .ov-card.ov-invite { box-shadow: 0 40px 80px -24px rgba(7,40,36,0.45); }
+.ov-invite-title { margin: 0; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: var(--ov-hi); }
+.ov-invite-sub { margin: 4px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--ov-mute); }
+.ov-invite-x { flex-shrink: 0; display: flex; padding: 2px; border: none; border-radius: 8px; background: transparent; color: var(--ov-mute); cursor: pointer; }
+.ov-invite-x:hover { color: var(--ov-hi); }
+.ov-invite-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ov-range.ov-invite-seg { display: flex; width: 100%; box-sizing: border-box; }
+.ov-invite-seg button { flex: 1; min-width: 0; height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--ov-mid); }
+.ov-invite-seg button.is-muted:not(.is-on) { opacity: 0.5; }
+.ov-invite-seg button.is-on.is-muted { opacity: 0.7; }
+.ov-invite-label { font-size: 13.5px; font-weight: 600; color: var(--ov-mid); }
+.ov-input.ov-invite-field { height: 50px; }
+.ov-note.ov-invite-note { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 12px; color: var(--ov-mute); }
+.ov-invite-note p { margin: 0; font-size: 13px; line-height: 1.5; }
+.ov-invite-error { margin: 0; font-size: 13px; line-height: 1.5; color: var(--danger); }
+.ov-invite-ok { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px; background: var(--ov-up-tint); border: 1px solid rgba(74,222,128,0.28); }
+[data-theme="light"] .ov-invite-ok { border-color: rgba(10,107,51,0.25); }
+.ov-invite-ok-title { font-size: 14.5px; font-weight: 700; color: var(--ov-hi); overflow-wrap: anywhere; }
+.ov-invite-ok-sub { margin-top: 2px; font-size: 13px; color: var(--ov-mid); }
+.ov-invite-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.ov-invite-btn { height: 44px; padding: 0 22px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.ov-solid.ov-invite-btn { font-weight: 700; padding: 0 24px; }
+.ov-invite-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ov-ghost.ov-invite-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 639.98px) { .ov-card.ov-invite { padding: 20px; } }
+@media (max-width: 379.98px) {
+  .ov-invite-actions { flex-direction: column-reverse; }
+  .ov-invite-btn { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .ov-card.ov-invite { animation: none; } }
+
 /* Sign-in card (Login and the two-step check). */
 .ov-auth { width: 420px; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px; padding: 32px; }
 .ov-card.ov-auth { border-radius: 24px; }

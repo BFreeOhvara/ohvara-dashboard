@@ -14,6 +14,7 @@ import { Avatar } from '../ui/Avatar'
 import { OhvaraMark } from '../ui/OhvaraMark'
 import { BugReportModal, BugReportInbox } from '../shared/BugReportButton'
 import { MobileAppModal } from './MobileAppModal'
+import { InviteAgentModal } from '../shared/InviteAgentModal'
 import { AccountMenu } from './AccountMenu'
 
 // Sidebar — Prompt 722 rebuilt the chrome on the v16 language (DESIGN.md v16
@@ -28,9 +29,9 @@ import { AccountMenu } from './AccountMenu'
 // - Badges: Messages unread; agents also get My Pipeline's "needs attention" count
 //   (amber), from the same useAgentBookings rows My Pipeline reads.
 // - Agents with a weekly cap get a "This week" bookings card.
-// - The account card opens the animated AccountMenu (theme, phone app, report
-//   a problem / bug reports, sign out) — the round bug and phone buttons and
-//   the slide-up Sign out panel are gone.
+// - The account card opens the animated AccountMenu (theme, phone app, invite
+//   an agent [agents only, P731], report a problem / bug reports, sign out) —
+//   the round bug and phone buttons and the slide-up Sign out panel are gone.
 // - Collapsed (72px): icon rows with tooltips, dots for badges, a hairline
 //   between groups, and the avatar opens the same menu to the right.
 
@@ -199,10 +200,12 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
         open={!!menu?.open} anchor={menu?.rect} placement={menu?.placement} onClose={closeMenu} triggerRef={cardRef}
         isAdmin={isAdmin}
         onPhoneApp={() => setModal('app')}
+        onInvite={isAgent ? () => setModal('invite') : undefined}
         onReport={() => setModal(isAdmin ? 'inbox' : 'report')}
         onSignOut={handleSignOut}
       />
       {modal === 'app' && <MobileAppModal onClose={() => setModal(null)} />}
+      {modal === 'invite' && <InviteAgentModal onClose={() => setModal(null)} />}
       {modal === 'report' && <BugReportModal onClose={() => setModal(null)} />}
       {modal === 'inbox' && <BugReportInbox anchorLeft={(open ? 0 : width) + 12} onClose={() => setModal(null)} />}
     </>

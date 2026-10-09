@@ -33,7 +33,10 @@ export default function Join() {
         body: { action: 'check', token },
       })
       if (cancelled) return
-      setInvite(!fnError && data?.valid ? { role: data.role } : null)
+      const ok = !fnError && data?.valid
+      setInvite(ok ? { role: data.role, email: data.email || null } : null)
+      // Prompt 731: an email invite an agent sent only works for that address.
+      if (ok && data.email) setForm(f => ({ ...f, email: data.email }))
       setChecking(false)
     }
     check()
@@ -131,6 +134,9 @@ export default function Join() {
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                 placeholder="you@example.com"
                 autoComplete="username"
+                readOnly={!!invite.email}
+                aria-readonly={!!invite.email || undefined}
+                style={invite.email ? { opacity: 0.75, cursor: 'default' } : undefined}
               />
               <div className="relative">
                 <Input

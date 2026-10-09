@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Moon, Sun, Smartphone, Bug, LogOut } from 'lucide-react'
+import { Moon, Sun, Smartphone, UserPlus, Bug, LogOut } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { useUnresolvedBugReportCount } from '../../hooks/useBugReports'
 
@@ -15,10 +15,14 @@ import { useUnresolvedBugReportCount } from '../../hooks/useBugReports'
 //
 // `anchor` is the trigger's DOMRect, read by the caller when it opened the
 // menu (the sidebar doesn't move while it's open; a resize closes it).
+//
+// Prompt 731: agents (only) get "Invite an agent" between the phone app and
+// Report a problem; `onInvite` opens InviteAgentModal. The later rows' stagger
+// shifts by one step automatically (delay() counts rows).
 
 const STAGGER = 35
 
-export function AccountMenu({ open, anchor, placement = 'above', onClose, triggerRef, isAdmin, onPhoneApp, onReport, onSignOut }) {
+export function AccountMenu({ open, anchor, placement = 'above', onClose, triggerRef, isAdmin, onPhoneApp, onInvite, onReport, onSignOut }) {
   const [theme, setTheme] = useTheme()
   const panel = useRef(null)
   const [shown, setShown] = useState(open)
@@ -105,6 +109,11 @@ export function AccountMenu({ open, anchor, placement = 'above', onClose, trigge
       <button type="button" role="menuitem" className="ov-mi ov-mi-row" style={delay()} onClick={pick(onPhoneApp)}>
         <Smartphone size={16} strokeWidth={1.9} className="ov-mi-icon" />Get the phone app
       </button>
+      {onInvite && (
+        <button type="button" role="menuitem" className="ov-mi ov-mi-row" style={delay()} onClick={pick(onInvite)}>
+          <UserPlus size={16} strokeWidth={1.9} className="ov-mi-icon" />Invite an agent
+        </button>
+      )}
       <button type="button" role="menuitem" className="ov-mi ov-mi-row" style={delay()} onClick={pick(onReport)}>
         <Bug size={16} strokeWidth={1.9} className="ov-mi-icon" />
         <span style={{ flex: 1 }}>{isAdmin ? 'Bug reports' : 'Report a problem'}</span>

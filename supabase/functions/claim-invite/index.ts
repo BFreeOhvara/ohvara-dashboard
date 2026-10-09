@@ -6,13 +6,14 @@
 // (sb_publishable_*) is not a JWT, so JWT verification can't gate this. The
 // invite token itself is the secret: a 12-char URL-safe CSPRNG ID (Prompt 294
 // shortened it from the original 32-byte hex — still ~72 bits, effectively
-// unguessable), single-use, 7-day expiry. Creation is no longer admin-only
-// as of migration 072 (Prompt 326): any closer can mint a 'closer' invite so
-// team owners self-service their own downline; minting any other role still
-// requires admin.
+// unguessable), single-use, 7-day expiry. Creation (migration 135, Prompt
+// 731): admins from the Users page, and agents only through the
+// send-agent-invite edge function, which texts/emails the link so the agent
+// never sees it (channel / invited_email / invited_phone set on those rows).
 //
 // Two actions:
-//   { action: 'check', token }  → { valid, role } — the signup page's load gate
+//   { action: 'check', token }  → { valid, role, email } — the signup page's load gate
+//     (email = the address an agent-sent email invite is locked to, else null)
 //   { action: 'claim', token, full_name, email, password[, username] }
 //     → validates the token again, creates the auth user with the REAL email
 //       (not the legacy @ohvara.internal synthetic), marks the invite used.
@@ -39,7 +40,7 @@ function json(body: unknown, status = 200) {
 async function fetchValidInvite(adminClient: ReturnType<typeof createClient>, token: string) {
   const { data, error } = await adminClient
     .from('rep_invites')
-    .select('id, role, expires_at, used_at, created_by')
+    .select('id, role, expires_at, used_at, created_by, channel, invited_email')
     .eq('token', token)
     .maybeSingle()
   if (error || !data) return null
@@ -75,7 +76,11 @@ Deno.serve(async (req) => {
   if (action === 'check') {
     // Deliberately minimal — reveals only whether the link works and what
     // role it grants, nothing about who created it or when it expires.
-    return invite ? json({ valid: true, role: invite.role }) : json({ valid: false })
+    // Prompt 731: plus the address an agent-sent email invite is locked to, so
+    // the Join page can prefill it. Still nothing about who sent it.
+    return invite
+      ? json({ valid: true, role: invite.role, email: invite.invited_email ?? null })
+      : json({ valid: false })
   }
 
   if (action === 'claim') {
@@ -93,6 +98,10 @@ Deno.serve(async (req) => {
     }
     if (password.length < 8) {
       return json({ error: 'Password must be at least 8 characters' }, 400)
+    }
+    // Prompt 731: an invite an agent sent by email only works for that address.
+    if (invite.invited_email && email.trim().toLowerCase() !== invite.invited_email.toLowerCase()) {
+      return json({ error: 'This invite was sent to a different email address.' }, 400)
     }
 
     if (username) {
@@ -135,11 +144,17 @@ Deno.serve(async (req) => {
     // Non-fatal — a missing upline shows up as an unparented node on the
     // Hierarchy page, which is fixable there; failing the whole signup over
     // it would be worse.
-    const { error: uplineError } = await adminClient
-      .from('profiles')
-      .update({ upline_id: invite.created_by })
-      .eq('id', data.user.id)
-    if (uplineError) console.error('profiles upline_id update failed:', uplineError.message)
+    // Prompt 731: admin-made links only. An invite an agent sent from the
+    // account menu (channel set) carries no tie at all — no team, no upline —
+    // so the inviter can never see the new agent's bookings (can_view_agent /
+    // upline_of never reach them).
+    if (!invite.channel) {
+      const { error: uplineError } = await adminClient
+        .from('profiles')
+        .update({ upline_id: invite.created_by })
+        .eq('id', data.user.id)
+      if (uplineError) console.error('profiles upline_id update failed:', uplineError.message)
+    }
 
     // Single-use: mark consumed. If this somehow fails the token would stay
     // claimable, so treat it as fatal enough to log loudly — but the account
