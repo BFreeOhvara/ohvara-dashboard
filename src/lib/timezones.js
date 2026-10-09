@@ -67,12 +67,19 @@ export const SELECTABLE_TIMEZONES = [
 ]
 
 // The UTC offset (minutes) of `timeZone` at the instant `date` represents.
+// One formatter per zone: building an Intl.DateTimeFormat is the slow part,
+// and Book a call converts hundreds of slots per render (Prompt 728).
+const offsetFormats = new Map()
 function getTimezoneOffsetMinutes(timeZone, date) {
-  const dtf = new Intl.DateTimeFormat('en-US', {
-    timeZone, hourCycle: 'h23',
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-  })
+  let dtf = offsetFormats.get(timeZone)
+  if (!dtf) {
+    dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone, hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    })
+    offsetFormats.set(timeZone, dtf)
+  }
   const parts = dtf.formatToParts(date).reduce((acc, p) => { acc[p.type] = p.value; return acc }, {})
   const asUTC = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second)
   return (asUTC - date.getTime()) / 60000

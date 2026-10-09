@@ -25,6 +25,7 @@ import FulfillmentOverview from './pages/fulfillment/Overview'
 import FulfillmentPipeline from './pages/fulfillment/Pipeline'
 import FulfillmentGettingPaid from './pages/fulfillment/GettingPaid'
 import Users from './pages/admin/Users'
+import Carriers from './pages/admin/Carriers'
 
 const qc = new QueryClient({
   // refetchOnWindowFocus off: tabbing back must be silent — fresh data
@@ -133,6 +134,13 @@ export default function App() {
                 <DashboardLayout><Users /></DashboardLayout>
               </ProtectedRoute>
             } />
+            {/* Prompt 728 — carrier hours behind Book a call's bookable times. */}
+            <Route path="/admin/carriers" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardLayout><Carriers /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+
             {/* Prompt 681 — Fulfillment gets an Overview landing page and a
                 team-wide Pipeline; the claim desk moved to /fulfillment/desk. */}
             <Route path="/fulfillment" element={

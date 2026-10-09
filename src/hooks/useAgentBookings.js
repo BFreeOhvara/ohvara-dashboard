@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabase'
 // top of that; null = everything RLS allows.
 const SELECT = `
   id, agent_id, client_first_name, client_last_name, client_phone,
-  state, client_city, client_timezone,
+  state, client_city, client_timezone, carrier_id, carrier_name,
   scheduled_call_at, fulfillment_stage, assigned_fulfillment_id,
   fulfillment_claimed_at, fulfillment_started_at, fulfillment_completed_at,
   cancellation_substatus, cancellation_confirmation,
@@ -77,7 +77,7 @@ export function useLegacyPolicyCount(agentId) {
 export function useBookCall() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ agentId, firstName, lastName, phone, city, state, timezone, currentCarrier, scheduledAt }) => {
+    mutationFn: async ({ agentId, firstName, lastName, phone, city, state, timezone, carrierId, currentCarrier, scheduledAt }) => {
       const { data: policy, error } = await supabase
         .from('policies')
         .insert({
@@ -90,6 +90,9 @@ export function useBookCall() {
           client_city: city || null,
           state: state || null,
           client_timezone: timezone || null,
+          // Prompt 728 — the carrier they're leaving, whose hours set the time.
+          carrier_id: carrierId || null,
+          carrier_name: currentCarrier || null,
           pending_underwriting: false,
           fulfillment_assigned: true,
           fulfillment_stage: 'Pending',

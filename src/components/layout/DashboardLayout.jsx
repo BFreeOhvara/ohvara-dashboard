@@ -46,6 +46,7 @@ const TITLES = {
   '/agent/commissions': ['Commissions', 'Compensation grid & balance — switch the view'],
   '/admin': ['Overview', 'Your day at a glance'],
   '/admin/users': ['Users & Access', 'Accounts, roles and invites'],
+  '/admin/carriers': ['Carrier hours', 'When each carrier takes calls, which sets the bookable times'],
   '/fulfillment': ['Overview', 'How the whole team is doing'],
   '/fulfillment/desk': ['Fulfillment', 'Call the client, cancel the old policy, then the next one'],
   '/fulfillment/pipeline': ['Pipeline', 'Every submission across every agent, and where it stands'],

@@ -855,6 +855,25 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 }
 .ov-select.is-empty select { color: var(--ov-placeholder); }
 .ov-select select option { color: #0B0D12; background: #FFFFFF; }
+/* Prompt 728 — the carrier type-ahead: inline ghost completion behind the
+   text, and the suggestion list under the box (44px rows, full width on a
+   phone, at least 320px beside City / State). */
+.ov-complete-wrap { position: relative; flex: 1; min-width: 0; height: 100%; display: flex; }
+.ov-complete-wrap input { position: relative; z-index: 1; }
+.ov-complete {
+  position: absolute; inset: 0; display: flex; align-items: center; overflow: hidden; white-space: pre;
+  font-size: 15px; color: var(--ov-faint); pointer-events: none;
+}
+.ov-card.ov-suggest {
+  position: absolute; top: calc(100% + 6px); right: 0; width: max(100%, 320px); max-width: calc(100vw - 32px);
+  z-index: 30; padding: 6px; border-radius: 14px; display: flex; flex-direction: column; gap: 2px;
+}
+.ov-suggest-row {
+  display: flex; align-items: baseline; gap: 10px; min-height: 44px; padding: 10px 12px; box-sizing: border-box;
+  border-radius: 10px; font-size: 14.5px; cursor: pointer;
+}
+.ov-suggest-row.is-active { background: var(--ov-stub); }
+@media (max-width: 639px) { .ov-card.ov-suggest { left: 0; width: auto; max-width: none; } }
 
 .ov-choice {
   background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);

@@ -1,9 +1,10 @@
 import { Children, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send, MapPin } from 'lucide-react'
+import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send, MapPin, Moon } from 'lucide-react'
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
-import { SLOTS, slotToISO, localDateISO, callWhen, callAt, fmtSlotTime, clientSlotISO, slotState, dayIn, addDaysStr } from '../../lib/scheduling'
+import { SLOTS, slotTo24h, slotToISO, localDateISO, callWhen, callAt, fmtSlotTime, clientSlotISO, slotState, dayIn, addDaysStr } from '../../lib/scheduling'
+import { rankCarriers, exactCarrier } from '../../lib/carriers'
 import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, digits, matchClients, placeOf } from '../../lib/agentBookings'
 import { DayClock } from '../ui/DayClock'
 import { LiveDot } from '../ui/LiveDot'
@@ -759,6 +760,111 @@ export function OvField({ label, optional, icon: Icon, error, className = '', ..
   )
 }
 
+// Prompt 728 — "Carrier they're leaving": a plain text box with type-ahead.
+// Nothing shows on an empty focus; from the first letter, up to 6 carriers
+// (rankCarriers) appear under the box and the top one completes inline as
+// ghost text after the cursor. Tab / → / Enter take it, ↑ / ↓ move, Esc
+// closes. A name that matches nothing can still be kept ("Use "<text>"").
+// `picked` is the chosen carrier row; typing again clears it (onText).
+export function CarrierInput({ carriers, text, picked, onText, onPick, onUseText, adding, error, label = "Carrier they're leaving", autoFocus }) {
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(0)
+  const inputRef = useRef(null)
+  const listId = 'carrier-suggest'
+  const hits = useMemo(() => (picked ? [] : rankCarriers(carriers, text)), [carriers, text, picked])
+  const trimmed = text.trim()
+  const useRow = !picked && trimmed.length >= 2 && hits.length === 0
+  const rows = useRow ? [{ use: trimmed }] : hits
+  const shown = open && !picked && !!trimmed && rows.length > 0
+  const at = Math.min(active, Math.max(rows.length - 1, 0))
+
+  // Ghost completion: the top match's name, when it starts with what's typed.
+  const top = hits[0]?.carrier
+  const ghost = shown && top && top.name.toLowerCase().startsWith(text.toLowerCase()) && top.name.length > text.length
+    ? top.name.slice(text.length) : ''
+
+  const choose = row => {
+    setOpen(false); setActive(0)
+    if (row.use) onUseText(row.use)
+    else onPick(row.carrier)
+  }
+  const onKeyDown = e => {
+    if (e.key === 'ArrowDown' && rows.length) { e.preventDefault(); setOpen(true); setActive(i => Math.min(i + 1, rows.length - 1)) }
+    else if (e.key === 'ArrowUp' && rows.length) { e.preventDefault(); setActive(i => Math.max(i - 1, 0)) }
+    else if (e.key === 'Escape') { if (shown) { e.preventDefault(); setOpen(false) } }
+    else if (e.key === 'Enter') {
+      if (picked || !trimmed) return
+      e.preventDefault()
+      choose(shown ? rows[at] : useRow ? rows[0] : hits[0] || { use: trimmed })
+    } else if ((e.key === 'Tab' && !e.shiftKey) || e.key === 'ArrowRight') {
+      const el = e.currentTarget
+      const atEnd = el.selectionStart === el.value.length && el.selectionEnd === el.value.length
+      if (ghost && (e.key === 'Tab' || atEnd)) { e.preventDefault(); choose(hits[0]) }
+    }
+  }
+  const onBlur = () => {
+    setOpen(false)
+    // Typed a carrier's exact name (or alias) without picking it: that's the pick.
+    if (!picked && trimmed) {
+      const exact = exactCarrier(carriers, trimmed)
+      if (exact) onPick(exact)
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0, position: 'relative' }}>
+      <label htmlFor="carrier-input" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>{label}</label>
+      <span className={`ov-input${error ? ' is-error' : ''}`}>
+        <Building2 size={17} strokeWidth={1.9} style={{ flexShrink: 0 }} />
+        <span className="ov-complete-wrap">
+          <input
+            ref={inputRef} id="carrier-input" value={text} autoComplete="off" spellCheck={false} placeholder="Start typing, e.g. Mutual of Omaha"
+            role="combobox" aria-expanded={shown} aria-controls={listId} aria-autocomplete="both" aria-invalid={error || undefined}
+            aria-activedescendant={shown ? `${listId}-${at}` : undefined} autoFocus={autoFocus}
+            onChange={e => { onText(e.target.value); setOpen(true); setActive(0) }}
+            onFocus={() => setOpen(true)} onBlur={onBlur} onKeyDown={onKeyDown}
+          />
+          {ghost && (
+            <span className="ov-complete" aria-hidden="true">
+              <span style={{ visibility: 'hidden' }}>{text}</span>{ghost}
+            </span>
+          )}
+        </span>
+        {adding && <span style={{ fontSize: 12.5, color: 'var(--ov-mute)', flexShrink: 0 }}>Adding…</span>}
+        {picked && !adding && <Check size={17} strokeWidth={2.2} style={{ flexShrink: 0, color: 'var(--ov-pick)' }} aria-label="Carrier picked" />}
+      </span>
+      {shown && (
+        <div id={listId} role="listbox" className="ov-card ov-suggest" aria-label="Carriers">
+          {rows.map((row, i) => (
+            <div
+              key={row.use ? 'use' : row.carrier.id} id={`${listId}-${i}`} role="option" aria-selected={i === at}
+              className={`ov-suggest-row${i === at ? ' is-active' : ''}`}
+              onMouseDown={e => { e.preventDefault(); choose(row) }} onMouseEnter={() => setActive(i)}
+            >
+              {row.use ? (
+                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--ov-mid)' }}>
+                  Use “<span style={{ color: 'var(--ov-hi)', fontWeight: 600 }}>{row.use}</span>”
+                </span>
+              ) : (
+                <>
+                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, color: 'var(--ov-hi)' }}>
+                    {row.carrier.name}
+                  </span>
+                  {row.alias && (
+                    <span style={{ minWidth: 0, flexShrink: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12.5, color: 'var(--ov-mute)' }}>
+                      also {row.alias}
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // One day card. `long` / `short` are the two date lines; the card shows the
 // short one when it is narrow (container query in index.css).
 export function DayChoice({ label, long, short, on, disabled, icon: Icon, onClick, ariaLabel, className = 'flex' }) {
@@ -805,12 +911,28 @@ export function DayChoice({ label, long, short, on, disabled, icon: Icon, onClic
 // on the booking rules: slots are the client's wall-clock time in `tz`, a slot
 // within 30 minutes is plain disabled gray like a past one (no caption) and
 // one already booked is "Booked", both disabled (slotState). Without it the grid renders exactly as before.
-export function SlotGrid({ date, slot, onSlot, takenCounts = {}, error, now, gridClass = 'grid grid-cols-3 sm:grid-cols-6', tz, openIsoSet }) {
+//
+// Prompt 728 — `slots` is the day's bookable times (the carrier's hours,
+// carrierDaySlots), grouped Morning / Afternoon / Evening (5 PM on); a group
+// with none is left out, and a day with none shows `emptyText`.
+export function SlotGrid({ date, slot, onSlot, takenCounts = {}, error, now, gridClass = 'grid grid-cols-3 sm:grid-cols-6', tz, openIsoSet, slots: daySlots = SLOTS, emptyText }) {
   const rules = openIsoSet !== undefined
+  const hourOf = s => Number(slotTo24h(s).slice(0, 2))
   const groups = [
-    { label: 'Morning', icon: Sun, slots: SLOTS.filter(s => s.endsWith('AM')) },
-    { label: 'Afternoon', icon: Clock, slots: SLOTS.filter(s => s.endsWith('PM')) },
-  ]
+    { label: 'Morning', icon: Sun, slots: daySlots.filter(s => hourOf(s) < 12) },
+    { label: 'Afternoon', icon: Clock, slots: daySlots.filter(s => hourOf(s) >= 12 && hourOf(s) < 17) },
+    { label: 'Evening', icon: Moon, slots: daySlots.filter(s => hourOf(s) >= 17) },
+  ].filter(g => g.slots.length)
+  if (!groups.length && emptyText) {
+    return (
+      <div className="ov-note" style={{
+        padding: '18px 16px', borderRadius: 14, fontSize: 13.5, lineHeight: 1.55, color: 'var(--ov-mute)', textAlign: 'center',
+        ...(error ? { outline: '1px solid var(--danger)', outlineOffset: 6 } : null),
+      }}>
+        {emptyText}
+      </div>
+    )
+  }
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', gap: 16, borderRadius: 14,
@@ -856,6 +978,15 @@ export function SlotGrid({ date, slot, onSlot, takenCounts = {}, error, now, gri
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+// Prompt 728 — stand-in slots while a carrier's hours are being looked up.
+export function SlotSkeleton({ gridClass = 'grid grid-cols-3 sm:grid-cols-6' }) {
+  return (
+    <div className={gridClass} style={{ gap: 10 }} aria-hidden="true">
+      {Array.from({ length: 12 }, (_, i) => <span key={i} className="ov-skel h-[52px] sm:h-[54px]" style={{ borderRadius: 12 }} />)}
     </div>
   )
 }

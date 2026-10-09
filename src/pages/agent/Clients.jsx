@@ -4,11 +4,13 @@ import { Phone, Calendar, CalendarDays, MapPin } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { dmId } from '../../hooks/useDirectMessages'
 import { useAgentBookings, useRescheduleBooking, useRebookCall, useConfirmRecoveryNumber } from '../../hooks/useAgentBookings'
+import { useCarriers, useCarrierHours, useAddCarrier, useSetBookingCarrier } from '../../hooks/useCarriers'
 import { AnchoredSelectField } from '../../components/ui/ExportForm'
 import {
-  ClientSearch, PipelineSummary, PipelineList, ClientDrawer, InfoTile, StatusNote, Journey, DayChoice, SlotGrid,
+  ClientSearch, PipelineSummary, PipelineList, ClientDrawer, InfoTile, StatusNote, Journey, DayChoice, SlotGrid, CarrierInput, SlotSkeleton,
 } from '../../components/agent/AgentUI'
-import { fmtBooking, callWhen, clientSlotISO, slotState, openBookingIsos, dayIn, addDaysStr, dateLabel, dayGone } from '../../lib/scheduling'
+import { fmtBooking, callWhen, clientSlotISO, slotState, openBookingIsos, dayIn, addDaysStr, dateLabel, dayGone, carrierDaySlots, firstOpenDay } from '../../lib/scheduling'
+import { bookingCarrier, hoursSummary } from '../../lib/carriers'
 import { viewerTimezone } from '../../lib/timezones'
 import { isLive, agentStageOf, stageOf, tabOf, canRebook, PIPELINE_TABS, RANGES, SUBSTATUS_LABEL, digits, useNow, startOfWeek, startOfMonth, placeOf } from '../../lib/agentBookings'
 import { excludeTestAccounts } from '../../lib/testAccounts'
@@ -309,10 +311,25 @@ function ConfirmNumber({ p }) {
 // Prompt 724 — days and slots are the client's (p.client_timezone, else the
 // viewer's zone for older rows); "Booked" slots and slots inside the notice window are disabled,
 // the booking being moved keeping its own slot. The far-out checkbox is gone.
+//
+// Prompt 728 — the new time follows the booking's carrier's hours, same rules
+// as Book a call (carrierDaySlots). A booking saved before P728 with no
+// carrier asks for it first (CarrierInput); it's saved on the booking when
+// the move is confirmed (agent_set_booking_carrier).
 function useMove(p, now, rebook, onDone, agentRows) {
   const reschedule = useRescheduleBooking()
   const rebookCall = useRebookCall()
   const move = rebook ? rebookCall : reschedule
+  const setBookingCarrier = useSetBookingCarrier()
+  const addCarrier = useAddCarrier()
+  const { data: carriers = [] } = useCarriers()
+  const saved = bookingCarrier(carriers, p)
+  const [carrierText, setCarrierText] = useState(() => p.carrier_name || p.current_carrier || '')
+  const [chosenId, setChosenId] = useState(null)
+  const chosen = chosenId ? carriers.find(c => c.id === chosenId) || null : null
+  const { carrier, checking } = useCarrierHours(saved || chosen)
+  const ready = !!carrier
+
   const tz = p.client_timezone || viewerTimezone()
   const today = dayIn(now, tz)
   const tomorrow = addDaysStr(today, 1)
@@ -320,61 +337,107 @@ function useMove(p, now, rebook, onDone, agentRows) {
   const [picked, setPicked] = useState(() => (current && current > Date.now() ? dayIn(current, tz) : null))
   const [slot, setSlot] = useState('')
   const dateInput = useRef(null)
-  const date = picked && picked >= today ? picked : dayGone(today, tz, now) ? tomorrow : today
+  const slotsOn = d => (carrier && d ? carrierDaySlots(d, tz, carrier) : [])
+  const date = picked && picked >= today ? picked : ready ? firstOpenDay(today, tz, carrier, now) : today
+  const daySlots = slotsOn(date)
   const openIsoSet = useMemo(() => openBookingIsos(agentRows, { now, exceptId: p.id, stageOf }), [agentRows, now, p.id])
-  const iso = slot ? clientSlotISO(date, slot, tz) : null
+  const iso = slot && daySlots.includes(slot) ? clientSlotISO(date, slot, tz) : null
   const ok = !!iso && slotState(iso, { now, openIsoSet }) === 'open'
 
   const isOther = date !== today && date !== tomorrow
-  const todayGone = dayGone(today, tz, now)
+  const todayGone = !ready || dayGone(today, tz, now, slotsOn(today))
+  const tomorrowGone = !ready || dayGone(tomorrow, tz, now, slotsOn(tomorrow))
   const pickDate = d => { setPicked(d); setSlot('') }
   const openPicker = () => {
     const el = dateInput.current
     if (!el) return
     try { el.showPicker() } catch { el.focus(); el.click() }
   }
-  const cancel = () => { setSlot(''); move.reset(); onDone() }
+  const cancel = () => { setSlot(''); move.reset(); setBookingCarrier.reset(); onDone() }
+  const pickCarrier = c => { setCarrierText(c.name); setChosenId(c.id); setSlot('') }
+  const typeCarrier = v => { setCarrierText(v); setChosenId(null); setSlot('') }
+  const keepTypedCarrier = name => addCarrier.mutate(name, { onSuccess: row => row?.id && pickCarrier(row) })
+
+  const hoursLine = !carrier ? null : carrier.hours_status === 'fallback'
+    ? `We couldn't find ${carrier.name}'s hours, so we're using 9–5 Eastern. Fulfillment will confirm.`
+    : `${carrier.name} takes calls ${hoursSummary(carrier.hours, carrier.hours_tz)} · times are the client's local time.`
 
   const picker = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-mute)' }}>{rebook ? 'Re-book for' : 'New time'}</div>
-      <div style={{ display: 'flex', gap: 10 }}>
-        <DayChoice
-          label="Today" on={date === today} disabled={todayGone} onClick={() => pickDate(today)}
-          long={todayGone ? 'No times left' : dateLabel(today, 'long')} short={todayGone ? null : dateLabel(today, 'short')}
+      {!saved && (
+        <CarrierInput
+          carriers={carriers} text={carrierText} picked={chosen} onText={typeCarrier} onPick={pickCarrier}
+          onUseText={keepTypedCarrier} adding={addCarrier.isPending}
         />
-        <DayChoice label="Tomorrow" on={date === tomorrow} onClick={() => pickDate(tomorrow)} long={dateLabel(tomorrow, 'long')} short={dateLabel(tomorrow, 'short')} />
-      </div>
-      <button
-        type="button" onClick={openPicker} aria-pressed={isOther} className={`ov-choice${isOther ? ' is-on' : ''}`}
-        style={{
-          height: 48, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-          fontSize: 14.5, fontWeight: 600, color: isOther ? 'var(--ov-hi)' : 'var(--ov-mid)', cursor: 'pointer',
-        }}
+      )}
+      {!saved && !chosen && (
+        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: 'var(--ov-mute)' }}>
+          Add the carrier they're leaving first. The times follow its hours.
+        </p>
+      )}
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-mute)' }}>{rebook ? 'Re-book for' : 'New time'}</div>
+      {checking && (
+        <p role="status" style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: 'var(--ov-mid)' }}>Checking {(saved || chosen).name}'s hours…</p>
+      )}
+      {hoursLine && <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: 'var(--ov-mute)' }}>{hoursLine}</p>}
+      <div
+        aria-disabled={!ready || undefined}
+        style={{ display: 'flex', flexDirection: 'column', gap: 14, ...(!ready ? { opacity: 0.5, pointerEvents: 'none' } : null) }}
       >
-        <Calendar size={17} strokeWidth={1.9} style={{ color: isOther ? 'var(--ov-pick)' : undefined }} />
-        {isOther ? dateLabel(date, 'short') : 'Another day'}
-      </button>
-      <input
-        ref={dateInput} type="date" value={date} min={today} tabIndex={-1} aria-label="Pick another day"
-        onChange={e => e.target.value && pickDate(e.target.value)}
-        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', border: 0, padding: 0 }}
-      />
-      <SlotGrid date={date} slot={ok ? slot : ''} onSlot={setSlot} now={now} gridClass="grid grid-cols-3" tz={tz} openIsoSet={openIsoSet} />
+        <div style={{ display: 'flex', gap: 10 }}>
+          <DayChoice
+            label="Today" on={ready && date === today} disabled={todayGone} onClick={() => pickDate(today)}
+            long={dateLabel(today, 'long')} short={dateLabel(today, 'short')}
+          />
+          <DayChoice
+            label="Tomorrow" on={ready && date === tomorrow} disabled={tomorrowGone} onClick={() => pickDate(tomorrow)}
+            long={dateLabel(tomorrow, 'long')} short={dateLabel(tomorrow, 'short')}
+          />
+        </div>
+        <button
+          type="button" onClick={openPicker} aria-pressed={isOther} disabled={!ready} className={`ov-choice${isOther ? ' is-on' : ''}`}
+          style={{
+            height: 48, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+            fontSize: 14.5, fontWeight: 600, color: isOther ? 'var(--ov-hi)' : 'var(--ov-mid)', cursor: 'pointer',
+          }}
+        >
+          <Calendar size={17} strokeWidth={1.9} style={{ color: isOther ? 'var(--ov-pick)' : undefined }} />
+          {isOther ? dateLabel(date, 'short') : 'Another day'}
+        </button>
+        <input
+          ref={dateInput} type="date" value={date} min={today} tabIndex={-1} aria-label="Pick another day"
+          onChange={e => e.target.value && pickDate(e.target.value)}
+          style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', border: 0, padding: 0 }}
+        />
+        {checking ? <SlotSkeleton gridClass="grid grid-cols-3" /> : (
+          <SlotGrid
+            date={date} slot={ok ? slot : ''} onSlot={setSlot} now={now} gridClass="grid grid-cols-3" tz={tz} openIsoSet={openIsoSet}
+            {...(ready ? { slots: daySlots, emptyText: `${carrier.name} doesn't take calls that day. Pick another day.` } : null)}
+          />
+        )}
+      </div>
     </div>
   )
 
-  const off = !ok || move.isPending
+  const busy = move.isPending || setBookingCarrier.isPending
+  const off = !ok || busy
+  const confirmMove = async () => {
+    // An older booking gets the carrier it's leaving first.
+    if (!saved && chosen) {
+      try { await setBookingCarrier.mutateAsync({ policyId: p.id, carrierId: chosen.id }) } catch { return }
+    }
+    move.mutate({ id: p.id, scheduledAt: iso }, { onSuccess: onDone })
+  }
+  const err = setBookingCarrier.error || move.error
   const actions = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {move.isError && <p style={{ margin: 0, fontSize: 13, color: 'var(--danger)' }}>{move.error?.message}</p>}
+      {err && <p style={{ margin: 0, fontSize: 13, color: 'var(--danger)' }}>{err.message}</p>}
       <div style={{ display: 'flex', gap: 10 }}>
         <button
-          type="button" disabled={off} className="ov-solid"
-          onClick={() => move.mutate({ id: p.id, scheduledAt: iso }, { onSuccess: onDone })}
+          type="button" disabled={off} className="ov-solid" onClick={confirmMove}
           style={{ flex: 1, minWidth: 0, height: 50, borderRadius: 999, fontSize: 15, padding: '0 16px', opacity: off ? 0.5 : 1, cursor: off ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
         >
-          {move.isPending ? 'Saving…' : ok ? `${rebook ? 'Re-book for' : 'Move to'} ${callWhen(iso, tz)}` : 'Pick a time'}
+          {busy ? 'Saving…' : ok ? `${rebook ? 'Re-book for' : 'Move to'} ${callWhen(iso, tz)}` : 'Pick a time'}
         </button>
         <button type="button" className="ov-ghost" onClick={cancel} style={{ height: 50, padding: '0 20px', borderRadius: 999, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
           Cancel

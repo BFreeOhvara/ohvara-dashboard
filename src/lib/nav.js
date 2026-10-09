@@ -1,5 +1,5 @@
 import {
-  Users, Home, Settings, Award, ClipboardList, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard,
+  Users, Home, Settings, Award, ClipboardList, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard, Building2,
 } from 'lucide-react'
 
 // Each role's sidebar, grouped. Moved out of Sidebar.jsx by Prompt 722 so the
@@ -42,6 +42,8 @@ export const NAV = {
     ] },
     { group: 'Account', items: [
       { to: '/admin/users', label: 'Users & Access', icon: Award },
+      // Prompt 728 — each carrier's service hours (they set the bookable times).
+      { to: '/admin/carriers', label: 'Carrier hours', icon: Building2 },
       { to: '/fulfillment/desk', label: 'Fulfillment', icon: ClipboardList },
       { to: '/settings', label: 'Settings', icon: Settings },
     ] },

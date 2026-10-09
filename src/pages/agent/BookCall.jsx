@@ -2,11 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TriangleAlert, Phone, Calendar, Info, ChevronDown } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { useCarriers } from '../../hooks/useCarriers'
+import { useCarriers, useCarrierHours, useAddCarrier } from '../../hooks/useCarriers'
 import { useAgentBookings, useBookCall } from '../../hooks/useAgentBookings'
-import { StepHead, OvField, DayChoice, SlotGrid, BookingSummary, WeeklyUsage, BookedCard } from '../../components/agent/AgentUI'
+import { StepHead, OvField, DayChoice, SlotGrid, BookingSummary, WeeklyUsage, BookedCard, CarrierInput, SlotSkeleton } from '../../components/agent/AgentUI'
 import { formatPhoneInput, titleCase } from '../../lib/policyFormat'
-import { fmtBooking, clientSlotISO, slotState, openBookingIsos, dayIn, addDaysStr, dateLabel, dayGone } from '../../lib/scheduling'
+import { fmtBooking, clientSlotISO, slotState, openBookingIsos, dayIn, addDaysStr, dateLabel, dayGone, carrierDaySlots, firstOpenDay } from '../../lib/scheduling'
+import { hoursSummary } from '../../lib/carriers'
 import { US_STATES, needsCityLookup, inferTimezoneFromState, resolveClientTimezone } from '../../lib/timezones'
 import { stageOf, digits, useNow } from '../../lib/agentBookings'
 import { useBillingTiers, useWeeklyUsage } from '../../hooks/useBillingTiers'
@@ -38,14 +39,15 @@ import { capState, nextTier, formatReset, formatWeekly } from '../../lib/billing
 // within 30 minutes, and times the agent already has booked, are disabled
 // (slotState). Both rules are UI-only. The far-out confirm is gone: a few
 // days out is fine when it helps the client.
+//
+// Prompt 728 — the carrier they're leaving is required (a type-ahead over
+// every US life carrier, CarrierInput) and its open hours set the bookable
+// times: the Fulfillment call is a 3-way call with that carrier, so a slot is
+// open only while the carrier takes calls, starting an hour before it closes
+// at the latest (carrierDaySlots). Times still show in the client's zone.
+// The pickers stay dimmed until city + state and the carrier's hours are in.
 
 const BLANK = { first: '', last: '', phone: '', city: '', state: '', carrier: '' }
-
-// The client's today, unless no slot is left today, then tomorrow.
-function defaultDate(tz, now) {
-  const today = dayIn(now, tz)
-  return dayGone(today, tz, now) ? addDaysStr(today, 1) : today
-}
 
 const pillBtn = { height: 36, padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }
 
@@ -89,19 +91,29 @@ export default function BookCall() {
   const dateInput = useRef(null)
 
   const [form, setForm] = useState(BLANK)
+  const [carrierId, setCarrierId] = useState(null) // the picked carriers row
   const [pickedDate, setPickedDate] = useState(null) // the client's calendar day; null = the default
   const [slot, setSlot] = useState('')
   const [errors, setErrors] = useState(new Set())
   const [error, setError] = useState('')
   const [confirm, setConfirm] = useState(null) // 'duplicate' | 'duplicateOk'
   const [done, setDone] = useState(null)
+  const addCarrier = useAddCarrier()
 
   const { tz, resolving } = useClientTimezone(form.city, form.state)
-  const ready = !!tz
+  const picked = carrierId ? carriers.find(c => c.id === carrierId) || null : null
+  // The carrier with its hours: cached at once, else looked up (checking).
+  const { carrier: withHours, checking } = useCarrierHours(picked)
+  const carrier = picked ? withHours : null
+  const ready = !!tz && !!carrier
   // Until the zone is known the (dimmed) day cards show the agent's own days.
   const today = dayIn(now, tz || undefined)
-  // A picked day now in the client's past falls back to the default.
-  const date = !tz ? null : pickedDate && pickedDate >= today ? pickedDate : defaultDate(tz, now)
+  const tomorrow = addDaysStr(today, 1)
+  // A picked day now in the client's past falls back to the first day the
+  // carrier still has a time open.
+  const date = !ready ? null : pickedDate && pickedDate >= today ? pickedDate : firstOpenDay(today, tz, carrier, now)
+  const slotsOn = d => (ready && d ? carrierDaySlots(d, tz, carrier) : [])
+  const daySlots = slotsOn(date)
 
   // This agent's open bookings: the times they've already taken, and the
   // duplicate-client check.
@@ -111,7 +123,7 @@ export default function BookCall() {
   // The picked slot is a wall-clock time ("2:00 PM"), so a new zone keeps it
   // at 2:00 PM for the client. If that, or the clock moving on, makes it too
   // soon or taken, it no longer counts as picked.
-  const slotIso = slot && date ? clientSlotISO(date, slot, tz) : null
+  const slotIso = slot && date && daySlots.includes(slot) ? clientSlotISO(date, slot, tz) : null
   const slotOpen = !!slotIso && slotState(slotIso, { now, openIsoSet }) === 'open'
   const scheduledAt = slotOpen ? slotIso : null
 
@@ -120,6 +132,13 @@ export default function BookCall() {
     setErrors(e => { if (!e.has(k)) return e; const n = new Set(e); n.delete(k); return n })
     setConfirm(null)
   }
+  // Typing in the carrier box un-picks the carrier; picking one fills the box.
+  const typeCarrier = v => { set('carrier', v); setCarrierId(null) }
+  const pickCarrier = c => { set('carrier', c.name); setCarrierId(c.id) }
+  const keepTypedCarrier = name => addCarrier.mutate(name, {
+    onSuccess: row => row?.id && pickCarrier(row),
+    onError: err => setError(err.message || 'Could not add that carrier'),
+  })
   const pickDate = d => { setPickedDate(d); setConfirm(null) }
   const pickSlot = s => {
     setSlot(s)
@@ -138,12 +157,15 @@ export default function BookCall() {
     if (phoneDigits.length !== 10) missing.add('phone')
     if (!form.city.trim()) missing.add('city')
     if (!form.state) missing.add('state')
+    if (!picked) missing.add('carrier')
     if (!slotOpen) missing.add('slot')
     if (missing.size) {
       setErrors(missing)
       setError(missing.has('phone') && form.phone
         ? 'Client phone needs all 10 digits.'
-        : 'Fill in the highlighted fields and pick a time.')
+        : missing.has('carrier') && form.carrier.trim()
+          ? 'Pick the carrier from the list, or choose "Use" to keep what you typed.'
+          : 'Fill in the highlighted fields and pick a time.')
       return
     }
     if (duplicate && confirm !== 'duplicateOk') { setConfirm('duplicate'); return }
@@ -159,12 +181,13 @@ export default function BookCall() {
       firstName, lastName,
       phone: form.phone.trim(),
       city, state: form.state, timezone: tz,
-      currentCarrier: form.carrier.trim(),
+      carrierId: picked.id,
+      currentCarrier: picked.name,
       scheduledAt,
     }, {
       onSuccess: policy => {
         setDone({ id: policy?.id, name: `${firstName} ${lastName}`, at: scheduledAt, tz, location: `${city}, ${form.state}` })
-        setForm(BLANK); setSlot(''); setPickedDate(null); setConfirm(null); setErrors(new Set())
+        setForm(BLANK); setCarrierId(null); setSlot(''); setPickedDate(null); setConfirm(null); setErrors(new Set())
       },
       onError: err => setError(err.hint === 'weekly_cap'
         ? `${err.message} Upgrade your plan or wait until ${formatReset(usage?.week_end)}.`
@@ -186,9 +209,10 @@ export default function BookCall() {
   const capped = !!cap?.blocking
   const showCap = cap && cap.cap != null
 
-  const tomorrow = addDaysStr(today, 1)
   const isOther = !!date && date !== today && date !== tomorrow
-  const todayGone = ready && dayGone(today, tz, now)
+  // A day with no time left (or the carrier closed) is a plain disabled card.
+  const todayGone = ready && dayGone(today, tz, now, slotsOn(today))
+  const tomorrowGone = ready && dayGone(tomorrow, tz, now, slotsOn(tomorrow))
   const openPicker = () => {
     const el = dateInput.current
     if (!el) return
@@ -198,13 +222,18 @@ export default function BookCall() {
   const name = [titleCase(form.first.trim()), titleCase(form.last.trim())].filter(Boolean).join(' ')
   const location = form.city.trim() && form.state ? `${titleCase(form.city.trim())}, ${form.state}` : ''
   const summary = {
-    name, phone: form.phone.trim(), carrier: form.carrier.trim(), location, tz,
+    name, phone: form.phone.trim(), carrier: picked?.name || '', location, tz,
     scheduledAt, now,
     onBook: submit, busy, capped, error,
   }
-  // Until city and state are in (and a split state's lookup is back), the
-  // pickers are dimmed: there's no client time to show yet.
+  // Until city and state are in (and a split state's lookup is back) and the
+  // carrier's hours are known, the pickers are dimmed: there's no time to show.
   const dim = !ready
+  const city = form.city.trim() ? titleCase(form.city.trim()) : ''
+  const hoursLine = !ready ? null : carrier.hours_status === 'fallback'
+    ? `We couldn't find ${carrier.name}'s hours, so we're using 9–5 Eastern. Fulfillment will confirm.`
+    : `${carrier.name} takes calls ${hoursSummary(carrier.hours, carrier.hours_tz)} · times shown are ${city}'s local time.`
+  const closedText = ready ? `${carrier.name} doesn't take calls that day. Pick another day.` : null
   const fields = 'grid grid-cols-1 sm:grid-cols-3 gap-y-[18px] sm:gap-4'
 
   return (
@@ -248,11 +277,10 @@ export default function BookCall() {
               <OvField label="City" placeholder="Pensacola" autoComplete="off"
                 value={form.city} onChange={e => set('city', e.target.value)} error={errors.has('city')} />
               <StateField value={form.state} onChange={v => set('state', v)} error={errors.has('state')} />
-              <OvField label="Carrier they're leaving" optional placeholder="e.g. Mutual of Omaha" list="leaving-carriers"
-                value={form.carrier} onChange={e => set('carrier', e.target.value)} />
-              <datalist id="leaving-carriers">
-                {carriers.map(c => <option key={c.id} value={c.name} />)}
-              </datalist>
+              <CarrierInput
+                carriers={carriers} text={form.carrier} picked={picked} error={errors.has('carrier')}
+                onText={typeCarrier} onPick={pickCarrier} onUseText={keepTypedCarrier} adding={addCarrier.isPending}
+              />
             </div>
 
             {duplicate && (
@@ -273,27 +301,34 @@ export default function BookCall() {
 
           <section className="ov-card flex flex-col gap-4 sm:gap-[18px] px-[18px] pt-5 pb-[22px] sm:px-7 sm:pt-[26px] sm:pb-7">
             <StepHead n={2} title="When should Fulfillment call" sub="Pick a day, then a time. Times are the client's local time." />
-            {dim && (
+            {dim && !checking && (
               <div className="ov-note" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 14 }}>
                 <Info size={17} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 1, color: 'var(--ov-mute)' }} />
                 <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: 'var(--ov-mid)' }}>
-                  Add the client's city and state first, then pick a day and time.
+                  Add the client's city, state and carrier first, then pick a day and time.
                 </p>
               </div>
             )}
+            {checking && (
+              <p role="status" style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: 'var(--ov-mid)' }}>
+                Checking {picked.name}'s hours…
+              </p>
+            )}
+            {hoursLine && (
+              <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: 'var(--ov-mute)' }}>{hoursLine}</p>
+            )}
             <div
-              aria-disabled={dim || undefined} aria-busy={resolving || undefined}
+              aria-disabled={dim || undefined} aria-busy={resolving || checking || undefined}
               className="flex flex-col gap-4 sm:gap-[18px]"
               style={dim ? { opacity: 0.5, pointerEvents: 'none' } : undefined}
             >
               <div className="flex gap-[10px] sm:gap-3">
                 <DayChoice
                   label="Today" on={!!date && date === today} disabled={dim || todayGone} onClick={() => pickDate(today)}
-                  long={todayGone ? 'No times left' : dateLabel(today, 'long')}
-                  short={todayGone ? null : dateLabel(today, 'short')}
+                  long={dateLabel(today, 'long')} short={dateLabel(today, 'short')}
                 />
                 <DayChoice
-                  label="Tomorrow" on={!!date && date === tomorrow} disabled={dim} onClick={() => pickDate(tomorrow)}
+                  label="Tomorrow" on={!!date && date === tomorrow} disabled={dim || tomorrowGone} onClick={() => pickDate(tomorrow)}
                   long={dateLabel(tomorrow, 'long')} short={dateLabel(tomorrow, 'short')}
                 />
                 <DayChoice
@@ -318,18 +353,22 @@ export default function BookCall() {
                 style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', border: 0, padding: 0 }}
               />
 
-              {/* Before a zone is known the grid is a dimmed placeholder (the agent's own day). */}
-              <SlotGrid
-                date={date || today} slot={slotOpen ? slot : ''} onSlot={pickSlot} error={errors.has('slot')} now={now}
-                tz={tz} openIsoSet={ready ? openIsoSet : NO_BOOKINGS}
-              />
+              {/* Before the zone and the carrier's hours are known the grid is a
+                  dimmed placeholder (the agent's own day); skeletons while checking. */}
+              {checking ? <SlotSkeleton /> : (
+                <SlotGrid
+                  date={date || today} slot={slotOpen ? slot : ''} onSlot={pickSlot} error={errors.has('slot')} now={now}
+                  tz={tz} openIsoSet={ready ? openIsoSet : NO_BOOKINGS}
+                  {...(ready ? { slots: daySlots, emptyText: closedText } : null)}
+                />
+              )}
             </div>
 
             <div className="ov-note" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 14 }}>
               <Info size={17} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 1, color: 'var(--ov-mute)' }} />
               <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: 'var(--ov-mute)' }}>
                 <span style={{ fontWeight: 600, color: 'var(--ov-mid)' }}>Today or tomorrow works best for most clients.</span>{' '}
-                A few days out is fine when it helps them. Calls need 30 minutes' notice, and a time you've already booked is taken.
+                Times follow the carrier's hours, since Fulfillment calls with them on the line. Calls need 30 minutes' notice, and a time you've already booked is taken.
               </p>
             </div>
           </section>

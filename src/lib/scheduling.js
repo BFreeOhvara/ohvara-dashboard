@@ -1,4 +1,5 @@
 import { zonedTimeToUtcIso, zonedDateStr } from './timezones'
+import { minLabel, toMin } from './carriers'
 
 // Shared date+slot booking helpers. The agent's Book a call flow (Prompt 665)
 // books against a fixed set of slots rather than a freeform time, since
@@ -117,7 +118,61 @@ export function openBookingIsos(rows, { now = Date.now(), exceptId, stageOf } = 
   return set
 }
 
-// No slot left on `dateStr` that can still be booked (past or inside the notice window).
-export function dayGone(dateStr, tz, now = Date.now()) {
-  return slotState(clientSlotISO(dateStr, SLOTS[SLOTS.length - 1], tz), { now }) !== 'open'
+// No slot left on `dateStr` that can still be booked (past or inside the
+// notice window). P728: `slots` is that day's slots (carrierDaySlots); a day
+// with none (the carrier is closed) is gone too.
+export function dayGone(dateStr, tz, now = Date.now(), slots = SLOTS) {
+  return !slots.some(s => slotState(clientSlotISO(dateStr, s, tz), { now }) === 'open')
+}
+
+// ── Prompt 728 — the carrier's open hours set the bookable times ──────────
+// The Fulfillment call is a 3-way call with the carrier the client is
+// leaving, so a slot is bookable only while that carrier is open, starting at
+// least an hour before it closes (hold time). Slots are still the client's
+// wall clock (P724), every 30 minutes, and never before 8:00 AM or after
+// 8:00 PM on the client's clock (courtesy guard).
+export const CLOSE_BUFFER_MIN = 60
+export const CLIENT_FIRST_MIN = 8 * 60
+export const CLIENT_LAST_MIN = 20 * 60
+
+const wallFmts = new Map()
+// The carrier-zone weekday ('mon'…) and minutes past midnight at `ms`.
+function wallClock(ms, tz) {
+  let f = wallFmts.get(tz)
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+    wallFmts.set(tz, f)
+  }
+  const p = Object.fromEntries(f.formatToParts(new Date(ms)).map(x => [x.type, x.value]))
+  return { day: p.weekday.slice(0, 3).toLowerCase(), min: (+p.hour % 24) * 60 + +p.minute }
+}
+
+// Can a call start at `ms` with this carrier on the line?
+export function carrierTakesCallAt(ms, carrier) {
+  if (!carrier?.hours || !carrier.hours_tz) return false
+  const { day, min } = wallClock(ms, carrier.hours_tz)
+  const h = carrier.hours[day]
+  return !!h && min >= toMin(h.open) && min <= toMin(h.close) - CLOSE_BUFFER_MIN
+}
+
+// The slot labels ("8:30 AM") on the client's day `dateStr` in `tz` that the
+// carrier takes calls at. Empty when the carrier is closed that day.
+export function carrierDaySlots(dateStr, tz, carrier) {
+  if (!dateStr || !tz || !carrier?.hours) return []
+  const out = []
+  for (let m = CLIENT_FIRST_MIN; m <= CLIENT_LAST_MIN; m += 30) {
+    const label = minLabel(m)
+    if (carrierTakesCallAt(new Date(clientSlotISO(dateStr, label, tz)).getTime(), carrier)) out.push(label)
+  }
+  return out
+}
+
+// The first of the next `span` client days (from `fromDate`) with a slot
+// still bookable, else `fromDate`.
+export function firstOpenDay(fromDate, tz, carrier, now = Date.now(), span = 14) {
+  for (let i = 0; i < span; i++) {
+    const d = addDaysStr(fromDate, i)
+    if (!dayGone(d, tz, now, carrierDaySlots(d, tz, carrier))) return d
+  }
+  return fromDate
 }
