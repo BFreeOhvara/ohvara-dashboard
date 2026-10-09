@@ -1,15 +1,13 @@
 import { useState, useRef, lazy, Suspense } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useUpdateOwnProfile, useUploadAvatar, useRemoveAvatar } from '../hooks/useSettings'
-import { Loader2, Camera } from 'lucide-react'
-import {
-  MONO, card, cardTitle, control, primaryBtn,
-} from '../lib/exportStyles'
-import { GapNote } from '../components/ui/ExportForm'
-import { SavedTick } from '../components/ui/SavedTick'
+import { Loader2, Camera, Mail, Phone, Check } from 'lucide-react'
+import { DISPLAY } from '../lib/exportStyles'
+import { roleLabel } from '../lib/roleLabels'
 import { Switch } from '../components/ui/Switch'
 import { Segmented } from '../components/ui/Segmented'
 import { Avatar } from '../components/ui/Avatar'
+import { OvField } from '../components/agent/AgentUI'
 // Prompt 422 — lazy, not a top-level import: react-easy-crop pushed the
 // main bundle bigger. It's only
 // ever needed inside this one rarely-opened modal, so it belongs in its own
@@ -18,29 +16,22 @@ const AvatarCropModal = lazy(() =>
   import('../components/ui/AvatarCropModal').then(m => ({ default: m.AvatarCropModal }))
 )
 
-// Profile — split out of Settings (Prompt 338) as its own page behind the
-// sidebar account popover. Prompt 674 folded it back: ProfilePanel is now the
-// Settings page's first tab (Restorix Portal keeps profile editing in
-// Settings), and /profile redirects to /settings#profile. The standalone page
-// wrapper with its close (X) button is gone.
+// Profile — the first section of Settings (Prompt 674 folded it back in;
+// /profile redirects to /settings#profile).
 //
-// What's real: name, email, phone, username. NPN, licensed states, and a profile photo are in the approved
-// design but `profiles` has no column for any of the three yet — shown as an
-// honest gap note rather than a placeholder that looks like real license data.
+// Prompt 720 — rebuilt on the v16 language. What's editable: photo, full
+// name and phone. Username and email are gone from here: usernames no longer
+// exist in the portal, and the sign-in email changes only in Sign-in &
+// security (through Supabase auth) so profiles.email can't drift from it.
+// The NPN / licensed-states gap note is gone too (no "not available" notes
+// on Settings).
 
-const inputBase = { ...control, background: 'var(--bg-base)', padding: '0 12px' }
-const softLabel = { margin: '0 0 5px', fontSize: 11, color: 'var(--text-muted)' }
-
-const ROLE_LABEL = { admin: 'Admin', agent: 'Agent', rep: 'Setter', client: 'Client' }
-
-export function ProfilePanel({ profile }) {
+export function ProfilePanel({ profile, onEmail }) {
   const update = useUpdateOwnProfile()
-  const { refreshProfile } = useAuth()
+  const { refreshProfile, session } = useAuth()
   const [form, setForm] = useState({
     full_name: profile.full_name || '',
-    email: profile.email || '',
     phone: profile.phone || '',
-    username: profile.username || '',
   })
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -51,7 +42,7 @@ export function ProfilePanel({ profile }) {
     setError('')
     if (!form.full_name.trim()) return setError('Name can’t be empty')
     try {
-      await update.mutateAsync({ profileId: profile.id, updates: form })
+      await update.mutateAsync({ profileId: profile.id, updates: { full_name: form.full_name.trim(), phone: form.phone.trim() || null } })
       await refreshProfile()
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
@@ -65,49 +56,32 @@ export function ProfilePanel({ profile }) {
     : null
 
   return (
-    <div style={{ ...card, padding: '20px 22px' }}>
-      <p style={cardTitle}>Profile</p>
+    <section className="ov-card ov-set-card" aria-label="Profile" style={{ gap: 22 }}>
+      <AvatarUpload profile={profile} joined={joined} />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-        <AvatarUpload profile={profile} />
-        <div>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{profile.full_name}</p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-            {ROLE_LABEL[profile.role] || profile.role}{joined ? ` · joined ${joined}` : ''}
-          </p>
-        </div>
+      <div className="ov-set-2">
+        <OvField label="Full name" autoComplete="name" value={form.full_name}
+          onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} error={!!error && !form.full_name.trim()} />
+        <OvField label="Phone" icon={Phone} inputMode="tel" autoComplete="tel" placeholder="(602) 555-0143" value={form.phone}
+          onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 16 }}>
-        <label>
-          <p style={softLabel}>Full name</p>
-          <input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} style={inputBase} />
-        </label>
-        <label>
-          <p style={softLabel}>Email</p>
-          <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={inputBase} />
-        </label>
-        <label>
-          <p style={softLabel}>Phone</p>
-          <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="(602) 555-0143" style={{ ...inputBase, fontFamily: MONO }} />
-        </label>
-        <label>
-          <p style={softLabel}>Username</p>
-          <input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} style={{ ...inputBase, fontFamily: MONO }} />
-        </label>
+      <div className="ov-box" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '14px 16px', borderRadius: 14 }}>
+        <Mail size={17} strokeWidth={1.9} style={{ flexShrink: 0, color: 'var(--ov-mute)' }} />
+        <span style={{ flex: '1 1 200px', minWidth: 0, fontSize: 14, color: 'var(--ov-soft)', overflowWrap: 'anywhere' }}>
+          Your sign-in email is <span style={{ fontWeight: 600, color: 'var(--ov-hi)' }}>{session?.user?.email}</span>
+        </span>
+        <button type="button" className="ov-set-link is-blue" onClick={onEmail}>Change in Sign-in &amp; security</button>
       </div>
 
-      {error && <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--danger)' }}>{error}</p>}
+      {error && <p style={{ margin: 0, fontSize: 13.5, color: 'var(--danger)' }}>{error}</p>}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button
-          onClick={save}
-          disabled={!dirty || update.isPending}
-          style={{ ...primaryBtn, height: 32, padding: '0 16px', fontSize: 12, opacity: !dirty || update.isPending ? 0.5 : 1 }}
-        >
-          {update.isPending ? <Loader2 size={13} className="animate-spin" /> : 'Save changes'}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <button type="button" className="ov-buy ov-set-btn" onClick={save} disabled={!dirty || update.isPending}>
+          {update.isPending ? <Loader2 size={15} className="animate-spin" />
+            : saved && !dirty ? <><Check size={15} strokeWidth={2.4} /> Saved</> : 'Save changes'}
         </button>
-        <SavedTick show={saved && !dirty} />
+        <span style={{ fontSize: 13, color: 'var(--ov-mute)' }}>Changes show on your bookings and in Messages</span>
       </div>
 
       {profile.role === 'admin' && <WritesBusinessField profile={profile} />}
@@ -115,26 +89,17 @@ export function ProfilePanel({ profile }) {
       {profile.role === 'admin' && profile.also_writes_business && (
         <DefaultViewScopeField profile={profile} />
       )}
-
-      <GapNote>
-        The approved design also shows NPN (producer number) and licensed states. `profiles` has no column
-        for either yet — they need a migration, so nothing is shown rather than a placeholder that looks
-        like real license data.
-      </GapNote>
-    </div>
+    </section>
   )
 }
 
-// Profile photo upload (Prompt 407) — click the avatar circle to pick a new
-// image; uploads to the `avatars` bucket and updates profiles.avatar_url
-// immediately. Falls back to the shared two-initial colored Avatar
-// (avatar_color, migration 096) when no photo is set, same as every other
-// avatar in the app now renders.
-// Prompt 422 — a picked file now opens a crop/zoom modal instead of
-// uploading as-is (whatever was picked used to land off-center or
-// stretched into the circle); a "Remove photo" action also drops the
-// upload back to the initials fallback, deleting the stored file too.
-function AvatarUpload({ profile }) {
+// Profile photo upload (Prompt 407) — uploads to the `avatars` bucket and
+// updates profiles.avatar_url immediately. Falls back to the shared
+// two-initial colored Avatar (avatar_color, migration 096) when no photo is
+// set. Prompt 422 — a picked file opens a crop/zoom modal first; "Remove"
+// drops back to initials and deletes the stored file too. P720: the avatar
+// circle and "Upload photo" both open the picker.
+function AvatarUpload({ profile, joined }) {
   const upload = useUploadAvatar()
   const remove = useRemoveAvatar()
   const { refreshProfile } = useAuth()
@@ -180,58 +145,43 @@ function AvatarUpload({ profile }) {
   }
 
   return (
-    <div style={{ position: 'relative', flexShrink: 0 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap', paddingBottom: 22, borderBottom: '1px solid var(--ov-line)' }}>
       <button
+        type="button"
         onClick={() => inputRef.current?.click()}
         disabled={busy}
-        title="Change profile photo"
-        style={{
-          position: 'relative', width: 52, height: 52, border: 'none', padding: 0,
-          borderRadius: '50%', cursor: busy ? 'default' : 'pointer', background: 'transparent',
-        }}
+        aria-label="Change profile photo"
+        style={{ position: 'relative', width: 84, height: 84, flexShrink: 0, border: 'none', padding: 0, borderRadius: '50%', cursor: busy ? 'default' : 'pointer', background: 'transparent' }}
       >
-        <Avatar profile={profile} size={52} style={{ fontSize: 17, border: '1px solid var(--accent-border)' }} />
-        <div style={{
-          position: 'absolute', inset: 0, borderRadius: '50%',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.45)', opacity: busy ? 1 : 0,
-          transition: 'opacity 120ms',
-        }}
-          onMouseEnter={e => { if (!busy) e.currentTarget.style.opacity = 1 }}
-          onMouseLeave={e => { if (!busy) e.currentTarget.style.opacity = 0 }}
-        >
-          {busy ? <Loader2 size={16} color="#fff" className="animate-spin" /> : <Camera size={16} color="#fff" />}
-        </div>
-        {/* Persistent camera badge (Prompt 409) — visible at rest, not just on
-            hover, so the circle reads as clickable/uploadable at a glance. */}
-        {!busy && (
-          <div style={{
-            position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderRadius: '50%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'var(--accent)', border: '2px solid var(--bg-elevated)',
-          }}>
-            <Camera size={11} color="#fff" />
-          </div>
+        <Avatar profile={profile} size={84} style={{ fontFamily: DISPLAY, fontSize: 28, fontWeight: 600 }} />
+        {busy && (
+          <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.45)' }}>
+            <Loader2 size={18} color="#fff" className="animate-spin" />
+          </span>
         )}
+        <span className="ov-solid" style={{
+          position: 'absolute', right: -2, bottom: -2, width: 32, height: 32, borderRadius: '50%', boxSizing: 'border-box',
+          border: '3px solid var(--ov-page)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Camera size={14} strokeWidth={2.2} />
+        </span>
       </button>
-      <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />
-      {profile.avatar_url && (
-        <button
-          onClick={onRemove}
-          disabled={busy}
-          style={{
-            display: 'block', marginTop: 6, border: 'none', background: 'transparent',
-            color: 'var(--text-muted)', fontSize: 10.5, padding: 0, cursor: busy ? 'default' : 'pointer',
-          }}
-        >
-          Remove photo
+      <div style={{ flex: '1 1 180px', minWidth: 0 }}>
+        <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 600, color: 'var(--ov-hi)', overflowWrap: 'anywhere' }}>{profile.full_name}</div>
+        <div style={{ marginTop: 3, fontSize: 14, color: 'var(--ov-mute)' }}>
+          {roleLabel(profile.role)}{joined ? ` · joined ${joined}` : ''}
+        </div>
+        {error && <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--danger)' }}>{error}</p>}
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button type="button" className="ov-ghost ov-set-btn" onClick={() => inputRef.current?.click()} disabled={busy}>
+          <Camera size={15} strokeWidth={2} /> Upload photo
         </button>
-      )}
-      {error && (
-        <p style={{ marginTop: 4, fontSize: 10.5, color: 'var(--danger)', whiteSpace: 'nowrap' }}>
-          {error}
-        </p>
-      )}
+        {profile.avatar_url && (
+          <button type="button" className="ov-set-link" style={{ padding: '0 12px', height: 44 }} onClick={onRemove} disabled={busy}>Remove</button>
+        )}
+      </div>
+      <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />
       {pendingImage && (
         <Suspense fallback={null}>
           <AvatarCropModal
@@ -246,16 +196,12 @@ function AvatarUpload({ profile }) {
   )
 }
 
-// "Default view" (Prompt 405, moved here from Settings → Regional; renamed
-// + broadened in Prompt 413) — only meaningful once a You/Everyone(/Team)
-// toggle actually exists somewhere for this account, which is exactly the
-// gate used here: admin/upline role AND "I'm also
-// actively writing business" on. Same `overview_default_scope` column and
-// write path as Prompt 405 — the name was Overview-specific back when
-// Overview was the only page with this toggle; Prompt 413 wired the same
-// setting into My Policies' and Performance's initial scope too, so the
-// label and copy now describe it as the one shared preference it actually
-// is, not an Overview-only setting.
+const rowStyle = { display: 'flex', alignItems: 'center', gap: 14, paddingTop: 18, borderTop: '1px solid var(--ov-line)' }
+
+// "Default view" (Prompt 405/413) — only meaningful once a You/Everyone(/Team)
+// toggle exists for this account: admin AND "I'm also actively writing
+// business" on. Same `overview_default_scope` column and write path; it
+// drives Overview, My Policies' and Performance's initial scope.
 function DefaultViewScopeField({ profile }) {
   const update = useUpdateOwnProfile()
   const { refreshProfile } = useAuth()
@@ -266,13 +212,10 @@ function DefaultViewScopeField({ profile }) {
   }
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 14, padding: '16px 0', marginTop: 4,
-      borderTop: 'var(--border-w) solid var(--border)',
-    }}>
+    <div style={rowStyle}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>Default view</p>
-        <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+        <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>Default view</p>
+        <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--ov-mute)' }}>
           Which side you land on for Overview, My Policies, and Performance — only applies when their You/Everyone toggle is showing.
         </p>
       </div>
@@ -289,9 +232,7 @@ function DefaultViewScopeField({ profile }) {
 // "I'm also actively writing business" (Prompt 404) — off by default for
 // the upline/admin role, since a pure agency manager has nothing behind a
 // personal "You" view. Gates the You/Everyone toggle on Overview and the
-// You/Team toggle on Performance (Prompt 396), and reveals the personal
-// monthly-goal field above once turned on. Doesn't touch regular closers —
-// they always write business.
+// You/Team toggle on Performance (Prompt 396).
 function WritesBusinessField({ profile }) {
   const update = useUpdateOwnProfile()
   const { refreshProfile } = useAuth()
@@ -305,15 +246,12 @@ function WritesBusinessField({ profile }) {
   }
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 14, padding: '16px 0', marginTop: 4,
-      borderTop: 'var(--border-w) solid var(--border)',
-    }}>
+    <div style={rowStyle}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+        <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>
           I'm also actively writing business
         </p>
-        <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+        <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--ov-mute)' }}>
           On shows a personal You view (and goal) alongside your team numbers, on Overview and Performance.
         </p>
       </div>

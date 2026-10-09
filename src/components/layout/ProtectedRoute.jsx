@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 
 export function ProtectedRoute({ children, allowedRoles }) {
-  const { session, profile, loading } = useAuth()
+  const { session, profile, loading, mfaRequired } = useAuth()
 
   if (loading) {
     return (
@@ -13,6 +13,8 @@ export function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (!session) return <Navigate to="/login" replace />
+  // Prompt 720 — password done, two-step code not yet: Login shows the code step.
+  if (mfaRequired) return <Navigate to="/login" replace />
 
   if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
     // Redirect to their own dashboard

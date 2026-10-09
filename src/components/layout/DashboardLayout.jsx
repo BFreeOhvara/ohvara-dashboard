@@ -42,7 +42,7 @@ const TITLES = {
   '/fulfillment/pipeline': ['Pipeline', 'Every submission across every agent, and where it stands'],
   '/fulfillment/getting-paid': ['Getting Paid', 'Clock in and out, hours logged, and your estimated pay'],
   '/messages': ['Messages', 'Fulfillment, Admin and your clients, all in one place'],
-  '/settings': ['Settings', 'Profile, regional & appearance'],
+  '/settings': ['Settings', 'Your account, security and preferences'],
 }
 
 function ToastMount() {
@@ -143,7 +143,7 @@ export function DashboardLayout({ children }) {
           className="app-main flex-1 flex flex-col min-w-0 pt-[56px] md:pt-0"
           style={{ '--sb-w': `${collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W}px`, position: 'relative' }}
         >
-          <div className={`app-backdrop${['/agent', '/agent/book', '/agent/clients', '/agent/activity', '/agent/billing'].includes(pathname) ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
+          <div className={`app-backdrop${['/agent', '/agent/book', '/agent/clients', '/agent/activity', '/agent/billing', '/settings'].includes(pathname) ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
           <header
             className="hidden md:flex"
             style={{

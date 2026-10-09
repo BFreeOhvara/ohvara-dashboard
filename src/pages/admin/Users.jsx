@@ -102,7 +102,7 @@ export default function Users() {
   const [inviteRole, setInviteRole] = useState('agent')
   const [inviteOpen, setInviteOpen] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
-  const [form, setForm] = useState({ username: '', password: '', full_name: '', role: 'agent', timezone: DEFAULT_TIMEZONE })
+  const [form, setForm] = useState({ email: '', password: '', full_name: '', role: 'agent', timezone: DEFAULT_TIMEZONE })
   const [formError, setFormError] = useState('')
   const [createdCreds, setCreatedCreds] = useState(null)
   const [copied, setCopied] = useState(null)
@@ -140,11 +140,12 @@ export default function Users() {
 
   async function handleCreate() {
     setFormError('')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return setFormError('Enter a valid email address')
     try {
       await createProfile.mutateAsync(form)
-      setCreatedCreds({ username: form.username, password: form.password, full_name: form.full_name })
+      setCreatedCreds({ email: form.email.trim().toLowerCase(), password: form.password, full_name: form.full_name })
       setFormOpen(false)
-      setForm({ username: '', password: '', full_name: '', role: 'agent', timezone: DEFAULT_TIMEZONE })
+      setForm({ email: '', password: '', full_name: '', role: 'agent', timezone: DEFAULT_TIMEZONE })
     } catch (err) {
       setFormError(err.message || 'Failed to create user')
     }
@@ -211,7 +212,7 @@ export default function Users() {
           </div>
           <div style={grid3}>
             <TextField label="Full name" placeholder="Nate Rivera" value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} />
-            <TextField label="Username" mono placeholder="nrivera" value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') }))} />
+            <TextField label="Email" type="email" placeholder="nate@example.com" autoComplete="off" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
             <TextField label="Password" type="password" placeholder="Min 8 characters" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
             <AnchoredSelectField
               label="Role" value={form.role} onChange={val => setForm(f => ({ ...f, role: val }))}
@@ -249,12 +250,12 @@ export default function Users() {
               {createdCreds.full_name} — account ready
             </p>
             <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
-              {createdCreds.username} · {createdCreds.password}
+              {createdCreds.email} · {createdCreds.password}
             </p>
           </div>
           <button
             onClick={() => {
-              navigator.clipboard.writeText(`Username: ${createdCreds.username}\nPassword: ${createdCreds.password}`)
+              navigator.clipboard.writeText(`Email: ${createdCreds.email}\nPassword: ${createdCreds.password}`)
               setCopied('creds'); setTimeout(() => setCopied(null), 2000)
             }}
             style={{ ...ghostBtn, height: 28 }}
@@ -293,7 +294,7 @@ export default function Users() {
                         <div style={{ minWidth: 0 }}>
                           <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>{u.full_name}</p>
                           <p style={{ margin: '1px 0 0', fontSize: 10.5, color: 'var(--text-muted)', fontFamily: MONO }}>
-                            {u.username ? `@${u.username}` : u.email || 'no username'}
+                            {u.email || 'no email'}
                           </p>
                           {viewingCreds === u.id && <CredentialsReveal profileId={u.id} />}
                         </div>
@@ -429,7 +430,7 @@ function CredentialsReveal({ profileId }) {
 
   return (
     <p style={{ margin: '4px 0 0', fontSize: 10, color: 'var(--text-muted)', fontFamily: MONO, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-      {show ? `${data.username} · ${data.password}` : '•••••••• · ••••••••'}
+      {show ? `${data.email ?? data.username} · ${data.password}` : '•••••••• · ••••••••'}
       <button onClick={() => setShow(v => !v)} style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', display: 'inline-flex', padding: 0 }}>
         {show ? <EyeOff size={11} /> : <Eye size={11} />}
       </button>

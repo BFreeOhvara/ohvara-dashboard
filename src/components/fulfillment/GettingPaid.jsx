@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ChevronRight, Loader2 } from 'lucide-react'
-import { card, cardTitle, eyebrow, fieldLabel, control, primaryBtn, MONO } from '../../lib/exportStyles'
+import { card, cardTitle, eyebrow, fieldLabel, control, primaryBtn, MONO, DISPLAY } from '../../lib/exportStyles'
 import { GapNote } from '../ui/ExportForm'
 import { Segmented } from '../ui/Segmented'
 import { SavedTick } from '../ui/SavedTick'
@@ -136,14 +136,15 @@ export function FulfillmentPayAdminPanel() {
   const totalHrs = rows.reduce((s, r) => s + r.hours, 0)
 
   return (
-    <div style={card}>
+    // Prompt 720 — sits in Settings → Team tools as a v16 card; table unchanged.
+    <section className="ov-card ov-set-card" aria-label="Fulfillment pay" style={{ gap: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 6 }}>
-        <p style={{ ...cardTitle, margin: 0, flex: 1 }}>
-          Fulfillment pay <span style={{ fontFamily: MONO, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6 }}>{fmtPeriod(period)}</span>
-        </p>
+        <h2 style={{ margin: 0, flex: 1, fontFamily: DISPLAY, fontSize: 18, fontWeight: 600, color: 'var(--ov-hi)' }}>
+          Fulfillment pay <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 400, color: 'var(--ov-mute)', marginLeft: 6 }}>{fmtPeriod(period)}</span>
+        </h2>
         <Segmented size="sm" value={which} onChange={setWhich} options={PERIODS} />
       </div>
-      <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--text-secondary)' }}>
+      <p style={{ margin: '0 0 16px', fontSize: 13.5, color: 'var(--ov-mute)' }}>
         What to pay each rep by hand for the period, from their scheduled shift. Click a rep to set their rate and shift.
       </p>
 
@@ -190,7 +191,7 @@ export function FulfillmentPayAdminPanel() {
               </div>
             </div>
           )}
-    </div>
+    </section>
   )
 }
 

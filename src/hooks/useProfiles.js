@@ -64,7 +64,7 @@ export function useRepCredentials(profileId, enabled) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('rep_credentials')
-        .select('username, password')
+        .select('username, email, password')
         .eq('profile_id', profileId)
         .maybeSingle()
       if (error) throw error
@@ -78,11 +78,17 @@ export function useRepCredentials(profileId, enabled) {
 export function useCreateProfile() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ username, password, full_name, role, timezone }) => {
+    mutationFn: async ({ email, password, full_name, role, timezone }) => {
       const { data, error } = await supabase.functions.invoke('admin-create-user', {
-        body: { username, password, full_name, role, timezone },
+        body: { email, password, full_name, role, timezone },
       })
-      if (error) throw error
+      // Non-2xx comes back with the body unread; surface the function's own
+      // message ("An account with this email already exists.").
+      if (error) {
+        let msg = error.message
+        try { msg = (await error.context?.json())?.error || msg } catch { /* keep generic */ }
+        throw new Error(msg)
+      }
       return data
     },
     onSuccess: () => {

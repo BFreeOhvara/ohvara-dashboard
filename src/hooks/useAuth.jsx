@@ -7,6 +7,10 @@ export function AuthProvider({ children }) {
   const [session,        setSession]        = useState(undefined)
   const [profile,        setProfile]        = useState(null)
   const [profileLoading, setProfileLoading] = useState(false)
+  // Prompt 720 — two-step verification. `aal` is the session's assurance
+  // level ({ current, next }); undefined until the first read for a session,
+  // so `loading` holds and no page flashes before the code step.
+  const [aal,            setAal]            = useState(undefined)
   // Tracks which user the loaded profile belongs to, so token refreshes
   // and focus-replayed SIGNED_IN events never re-trigger the loading
   // spinner (which unmounts the whole dashboard — open modals included).
@@ -15,6 +19,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
+      readAal(session)
       if (session) fetchProfile(session.user.id, false)
     })
 
@@ -24,7 +29,18 @@ export function AuthProvider({ children }) {
         profileUserId.current = null
         setProfile(null)
         setProfileLoading(false)
+        setAal(null)
         return
+      }
+      // Re-read the assurance level on a new sign-in, a verified code and
+      // every refresh (enrolling or removing a factor refreshes the session).
+      // Deferred: supabase-js warns against awaiting auth calls inside this
+      // callback, since it holds the auth lock while it runs.
+      // A different user starts unread (holds `loading`); a replayed SIGNED_IN
+      // for the same user must not, or the dashboard would unmount on focus.
+      if (profileUserId.current !== session.user.id) setAal(undefined)
+      if (['SIGNED_IN', 'MFA_CHALLENGE_VERIFIED', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event) || profileUserId.current !== session.user.id) {
+        setTimeout(() => readAal(session), 0)
       }
       // Supabase fires TOKEN_REFRESHED (and replays SIGNED_IN) when the
       // tab regains visibility. Same user + profile already loaded →
@@ -51,6 +67,20 @@ export function AuthProvider({ children }) {
       document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [])
+
+  async function readAal(session) {
+    if (!session) { setAal(null); return }
+    try {
+      const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+      if (error) throw error
+      setAal({ current: data.currentLevel, next: data.nextLevel })
+    } catch (err) {
+      // Fail open to "no code needed": the portal still loads, and anything
+      // a verified factor protects server-side would reject the request anyway.
+      console.error('[useAuth] assurance level read failed:', err)
+      setAal({ current: null, next: null })
+    }
+  }
 
   async function fetchProfile(userId, recordLogin = false) {
     // Only show the blocking loader on a genuine user change — silent
@@ -94,16 +124,14 @@ export function AuthProvider({ children }) {
     }
   }
 
-  async function signIn(username, password) {
-    // An @ in the input means "use as-is" (email login, unchanged). For a
-    // bare username, legacy accounts map to the synthetic @ohvara.internal
-    // address — but invite-flow accounts (Prompt 284) have a chosen username
-    // AND a different real email on file, which can't be derived, only
-    // looked up. resolve_login_email (migration 069) is a narrow RPC that
-    // returns just that profile's email for a username match; only fall back
-    // to the synthetic pattern if no such profile exists, so legacy logins
-    // (apex11 etc.) are untouched.
-    const input = username.trim()
+  async function signIn(identifier, password) {
+    // Sign-in is by email (Prompt 720). An @ in the input means "use as-is".
+    // Usernames survive only for the three legacy accounts that already have
+    // one (testagent11, brayden11, testfulfill11); no screen mentions them.
+    // For a bare username, resolve_login_email (migration 069) returns that
+    // profile's email on file, and only if there's no match does it fall
+    // back to the old synthetic <username>@ohvara.internal pattern.
+    const input = identifier.trim()
     let email = input
     if (!input.includes('@')) {
       const { data: resolvedEmail } = await supabase.rpc('resolve_login_email', { p_username: input })
@@ -139,10 +167,19 @@ export function AuthProvider({ children }) {
     await fetchProfile(session.user.id, false)
   }
 
-  const loading = session === undefined || profileLoading
+  // Supabase's own session refresh after enrolling / removing a factor, so
+  // the next assurance-level read sees the new state.
+  async function refreshSession() {
+    const { data } = await supabase.auth.refreshSession()
+    await readAal(data?.session ?? session)
+  }
+
+  // A verified factor exists but this session hasn't passed the code step.
+  const mfaRequired = !!session && aal?.next === 'aal2' && aal?.current !== 'aal2'
+  const loading = session === undefined || profileLoading || (!!session && aal === undefined)
 
   return (
-    <AuthContext.Provider value={{ session, profile, signIn, signOut, loading, refreshProfile }}>
+    <AuthContext.Provider value={{ session, profile, signIn, signOut, loading, refreshProfile, refreshSession, mfaRequired }}>
       {children}
     </AuthContext.Provider>
   )

@@ -13,12 +13,14 @@
 //
 // Two actions:
 //   { action: 'check', token }  → { valid, role } — the signup page's load gate
-//   { action: 'claim', token, full_name, username, email, password }
+//   { action: 'claim', token, full_name, email, password[, username] }
 //     → validates the token again, creates the auth user with the REAL email
-//       (not the legacy @ohvara.internal synthetic) plus a self-chosen
-//       username (Prompt 284 — phone was dropped from this form), marks the
-//       invite used. NEVER writes rep_credentials — that table is
-//       legacy/client-flow only (Brayden's decision, 2026-07-15).
+//       (not the legacy @ohvara.internal synthetic), marks the invite used.
+//       Prompt 720: the Join form no longer asks for a username, so it's
+//       optional here — when absent nothing about usernames is checked or
+//       stored (profiles.username stays null). NEVER writes rep_credentials
+//       — that table is legacy/client-flow only (Brayden's decision,
+//       2026-07-15).
 
 import { createClient } from 'npm:@supabase/supabase-js'
 
@@ -81,13 +83,10 @@ Deno.serve(async (req) => {
       return json({ error: 'This invite link is invalid, expired, or already used.' }, 400)
     }
 
-    const { full_name, username, email, password } = body
-    if (!full_name?.trim() || !username?.trim() || !email?.trim() || !password) {
+    const { full_name, email, password } = body
+    const username = body.username?.trim() || null
+    if (!full_name?.trim() || !email?.trim() || !password) {
       return json({ error: 'Missing required fields' }, 400)
-    }
-    // Same rule admin-create-user already enforces for legacy usernames (Prompt 284).
-    if (!/^[a-z0-9_-]+$/.test(username.trim())) {
-      return json({ error: 'Username may only contain lowercase letters, numbers, underscores, and hyphens' }, 400)
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       return json({ error: 'Enter a valid email address' }, 400)
@@ -96,19 +95,22 @@ Deno.serve(async (req) => {
       return json({ error: 'Password must be at least 8 characters' }, 400)
     }
 
-    // Explicit pre-check: profiles.username is unique, but the auth email
-    // here is the rep's real address, not a username-derived synthetic one
-    // (unlike legacy accounts) — so a duplicate username wouldn't collide at
-    // the auth layer, only later at the DB constraint inside handle_new_user,
-    // which would surface as an opaque "Database error saving new user"
-    // instead of a clear message.
-    const { data: existingUsername } = await adminClient
-      .from('profiles')
-      .select('id')
-      .eq('username', username.trim())
-      .maybeSingle()
-    if (existingUsername) {
-      return json({ error: 'That username is already taken.' }, 400)
+    if (username) {
+      // Same rule admin-create-user used to enforce for legacy usernames (Prompt 284).
+      if (!/^[a-z0-9_-]+$/.test(username)) {
+        return json({ error: 'Username may only contain lowercase letters, numbers, underscores, and hyphens' }, 400)
+      }
+      // Explicit pre-check: profiles.username is unique, and a duplicate would
+      // otherwise only surface inside handle_new_user as an opaque "Database
+      // error saving new user".
+      const { data: existingUsername } = await adminClient
+        .from('profiles')
+        .select('id')
+        .eq('username', username)
+        .maybeSingle()
+      if (existingUsername) {
+        return json({ error: 'That username is already taken.' }, 400)
+      }
     }
 
     // email_confirm: true — no email provider is configured yet (Resend setup
@@ -118,7 +120,7 @@ Deno.serve(async (req) => {
       email: email.trim().toLowerCase(),
       password,
       email_confirm: true,
-      user_metadata: { full_name: full_name.trim(), role: invite.role, username: username.trim() },
+      user_metadata: { full_name: full_name.trim(), role: invite.role, ...(username ? { username } : {}) },
     })
     if (error) {
       const msg = /already.*registered|already.*exists/i.test(error.message)

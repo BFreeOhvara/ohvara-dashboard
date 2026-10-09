@@ -1105,3 +1105,127 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
   .ov-bill-meter { padding: 20px 18px; }
   .ov-bill .ov-plan-first { order: -1; }
 }
+
+/* ── Prompt 720 — Settings on the "ov" language ────────────────
+   Side menu + section cards for /settings, the code boxes, the two-step
+   window (centred modal; bottom sheet on phones) and the sign-in card.
+   See DESIGN.md v16 "P720 — Settings". */
+.ov-set { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 1180px; margin: 0 auto; }
+.ov-set-side { display: flex; flex-direction: column; gap: 14px; }
+.ov-set-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+@media (min-width: 1024px) {
+  .ov-set { flex-direction: row; align-items: flex-start; gap: 20px; }
+  .ov-set-side { width: 300px; flex-shrink: 0; position: sticky; top: 88px; }
+}
+
+.ov-set-nav { display: flex; flex-direction: column; gap: 4px; padding: 8px; }
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .ov-set-nav:not(.is-phone) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.ov-set-item {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: none; border-radius: 14px;
+  background: transparent; font: inherit; color: inherit; text-align: left; cursor: pointer;
+  transition: background 120ms ease;
+}
+.ov-set-item:not(.is-on):hover { background: var(--ov-hover); }
+.ov-set-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ov-set-item.is-on {
+  background: linear-gradient(180deg, var(--ov-st-booked-tint) 0%, transparent 140%);
+  box-shadow: inset 0 0 0 1px var(--ov-st-booked-edge);
+}
+.ov-set-ico {
+  width: 36px; height: 36px; flex-shrink: 0; box-sizing: border-box; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.10); color: var(--ov-mid);
+}
+[data-theme="light"] .ov-set-ico { background: #F6FAF9; border: 1px solid rgba(2,79,70,0.18); }
+.ov-set-item.is-on .ov-set-ico, .ov-set-nav.is-phone .ov-set-ico {
+  background: var(--ov-st-booked-tint); border-color: transparent; color: var(--ov-st-booked);
+}
+.ov-set-nav.is-phone { padding: 4px 6px; gap: 0; }
+.ov-set-nav.is-phone .ov-set-item { padding: 14px; border-radius: 0; }
+.ov-set-nav.is-phone .ov-set-item + .ov-set-item { border-top: 1px solid var(--ov-line); }
+.ov-set-nav.is-phone .ov-set-ico { width: 38px; height: 38px; }
+
+.ov-set-card { display: flex; flex-direction: column; padding: 24px 26px; }
+.ov-set-head { display: flex; align-items: flex-start; gap: 14px; }
+.ov-set-tile {
+  width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  background: var(--ov-st-booked-tint); color: var(--ov-st-booked);
+}
+.ov-set-right { flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+@media (max-width: 639.98px) {
+  .ov-set-card { padding: 20px 18px; }
+  .ov-set-head { flex-wrap: wrap; }
+  .ov-set-right:has(button) { width: 100%; }
+  .ov-set-right:has(button) > button { flex: 1; }
+}
+
+.ov-set-chip {
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px; box-sizing: border-box;
+  border-radius: 999px; font-size: 12.5px; font-weight: 700; white-space: nowrap;
+}
+.ov-set-chip > i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.ov-set-chip.is-on { background: var(--ov-st-cancelled-tint); color: var(--ov-st-cancelled); }
+.ov-set-chip.is-off { background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.10); color: var(--ov-mute); }
+.ov-set-chip.is-off > i { background: var(--ov-faint); }
+[data-theme="light"] .ov-set-chip.is-off { background: #F6FAF9; border: 1px solid rgba(2,79,70,0.18); }
+.ov-set-chip.is-warn { background: var(--ov-st-needs-tint); color: var(--ov-st-needs); }
+
+/* 44px pills: with .ov-buy (filled, P719) or .ov-ghost (outline). */
+.ov-set-btn {
+  height: 44px; padding: 0 20px; box-sizing: border-box; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; cursor: pointer;
+}
+.ov-set-btn.ov-ghost { font-weight: 600; padding: 0 18px; }
+.ov-set-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ov-set-btn:focus-visible, .ov-set-link:focus-visible, .ov-set-off:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ov-set-off {
+  height: 40px; padding: 0 16px; border-radius: 999px; background: transparent; border: 1px solid var(--ov-line);
+  color: var(--ov-st-noanswer); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.ov-set-off:hover { border-color: var(--ov-st-noanswer-edge); }
+.ov-set-link { border: none; background: transparent; padding: 0; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ov-mute); cursor: pointer; text-decoration: none; }
+.ov-set-link:hover { color: var(--ov-hi); }
+.ov-set-link.is-blue { color: var(--ov-st-booked); }
+
+/* Two equal columns that stack on phones (password fields, profile fields). */
+.ov-set-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: end; }
+@media (max-width: 639.98px) { .ov-set-2 { grid-template-columns: minmax(0, 1fr); } }
+
+.ov-code {
+  flex: 1; min-width: 0; width: 100%; box-sizing: border-box; border-radius: 12px; text-align: center; padding: 0;
+  background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.10); outline: none;
+  font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 24px; font-weight: 600; color: var(--ov-hi);
+  transition: border-color 120ms ease, box-shadow 120ms ease; caret-color: var(--ov-st-booked);
+}
+.ov-code:focus { border-color: var(--ov-st-booked); box-shadow: 0 0 0 4px var(--ov-st-booked-tint); }
+[data-theme="light"] .ov-code { background: #F6FAF9; border: 1px solid rgba(2,79,70,0.18); }
+[data-theme="light"] .ov-code:focus { background: #FFFFFF; border-color: var(--ov-st-booked); box-shadow: 0 0 0 4px var(--ov-st-booked-tint); }
+.ov-code.is-error, [data-theme="light"] .ov-code.is-error { border-color: var(--danger); }
+.ov-code:disabled { opacity: 0.6; }
+
+/* Two-step setup window: centred on desktop, a bottom sheet on phones. */
+.ov-modal-wrap { position: fixed; inset: 0; z-index: 201; display: flex; align-items: flex-start; justify-content: center; padding: 96px 16px 16px; overflow-y: auto; }
+.ov-modal { position: relative; width: 520px; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; padding: 28px; animation: ovFadeIn 160ms ease-out; }
+.ov-card.ov-modal { border-radius: 24px; box-shadow: 0 40px 80px -24px rgba(0,0,0,0.8); }
+[data-theme="light"] .ov-card.ov-modal { box-shadow: 0 40px 80px -24px rgba(7,40,36,0.45); }
+.ov-qr { padding: 12px; border-radius: 16px; background: #FFFFFF; flex-shrink: 0; line-height: 0; }
+.ov-qr img { width: 170px; height: 170px; display: block; }
+@media (max-width: 639.98px) {
+  .ov-modal-wrap { align-items: flex-end; padding: 0; }
+  .ov-card.ov-modal { width: 100%; border-radius: 24px 24px 0 0; padding: 24px 18px calc(24px + env(safe-area-inset-bottom)); animation: ovSheetIn 220ms ease-out; }
+  .ov-qr-row { flex-direction: column; align-items: stretch !important; }
+  .ov-qr { align-self: center; }
+}
+
+/* Sign-in card (Login and the two-step check). */
+.ov-auth { width: 420px; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px; padding: 32px; }
+.ov-card.ov-auth { border-radius: 24px; }
+.ov-auth .ov-input { height: 50px; }
+@media (max-width: 639.98px) { .ov-auth { padding: 26px 20px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ov-modal, .ov-card.ov-modal { animation: none; }
+  .ov-set-item, .ov-code { transition: none; }
+}

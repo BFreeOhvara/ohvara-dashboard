@@ -52,44 +52,55 @@ Deno.serve(async (req) => {
   const { error: authError } = await requireAdmin(req, adminClient)
   if (authError) return authError
 
-  const { username, password, full_name, role, timezone } = await req.json()
+  // Prompt 720 — accounts are email-based now; no username is made or stored.
+  // The three legacy username accounts predate this and are untouched.
+  let body: Record<string, string>
+  try {
+    body = await req.json()
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid request body' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
+  const { password, full_name, role, timezone } = body
+  const email = (body.email || '').trim().toLowerCase()
 
-  if (!username || !password || !full_name || !role) {
+  if (!email || !password || !full_name || !role) {
     return new Response(JSON.stringify({ error: 'Missing required fields' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 
-  // Usernames must be lowercase alphanumeric + underscores/hyphens only
-  if (!/^[a-z0-9_-]+$/.test(username)) {
-    return new Response(JSON.stringify({ error: 'Username may only contain lowercase letters, numbers, underscores, and hyphens' }), {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return new Response(JSON.stringify({ error: 'Enter a valid email address' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 
-  // Internal email — never exposed to the user
-  const internalEmail = `${username}@ohvara.internal`
-
   const { data, error } = await adminClient.auth.admin.createUser({
-    email: internalEmail,
+    email,
     password,
     email_confirm: true,
-    user_metadata: { full_name, role, username },
+    user_metadata: { full_name, role },
   })
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    const msg = /already.*registered|already.*exists/i.test(error.message)
+      ? 'An account with this email already exists.'
+      : error.message
+    return new Response(JSON.stringify({ error: msg }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 
-  // Store the plaintext credentials for admin lookup (rep_credentials, migration 041).
-  // Service-role client bypasses RLS. Non-fatal: the account itself is already
-  // created above, so a credentials-table failure shouldn't fail the whole request.
+  // Store the plaintext credentials for admin lookup (rep_credentials, migration 041;
+  // email instead of username since migration 129). Service-role client bypasses RLS.
+  // Non-fatal: the account itself is already created above, so a credentials-table
+  // failure shouldn't fail the whole request.
   const { error: credError } = await adminClient
     .from('rep_credentials')
     .upsert(
-      { profile_id: data.user.id, username, password },
+      { profile_id: data.user.id, email, password },
       { onConflict: 'profile_id' }
     )
   if (credError) {

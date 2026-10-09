@@ -7,14 +7,11 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import ohvaraLogo from '../assets/ohvara-logo.png'
 
-// Usernames must be lowercase alphanumeric + underscores/hyphens only — same
-// rule admin-create-user already enforces for legacy accounts (Prompt 284).
-const USERNAME_RE = /^[a-z0-9_-]+$/
-
 // Public invite-claim page (Prompt 282) — /join/<token>. The invited person
-// registers themselves: real name, a self-chosen username, real email, and
-// their own password. Phone was dropped from this form in Prompt 284 — it's
-// still optional and settable later from Settings. Role comes from the
+// registers themselves: real name, real email, and their own password.
+// Prompt 720 dropped the username field: sign-in is by email. Phone was
+// dropped in Prompt 284 — it's still optional and settable later from
+// Settings. Role comes from the
 // invite; admin never sees the password. Mirrors Login's layout so the first
 // thing a new hire sees matches the app they'll live in.
 export default function Join() {
@@ -24,7 +21,7 @@ export default function Join() {
 
   const [checking, setChecking] = useState(true)
   const [invite, setInvite]     = useState(null) // { role } when valid
-  const [form, setForm] = useState({ full_name: '', username: '', email: '', password: '', confirm: '' })
+  const [form, setForm] = useState({ full_name: '', email: '', password: '', confirm: '' })
   const [error, setError]           = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -46,7 +43,6 @@ export default function Join() {
   async function handleSubmit() {
     setError('')
     if (!form.full_name.trim()) return setError('Enter your full name')
-    if (!USERNAME_RE.test(form.username.trim())) return setError('Username may only contain lowercase letters, numbers, underscores, and hyphens')
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return setError('Enter a valid email address')
     if (form.password.length < 8) return setError('Password must be at least 8 characters')
     if (form.password !== form.confirm) return setError('Passwords do not match')
@@ -58,7 +54,6 @@ export default function Join() {
           action: 'claim',
           token,
           full_name: form.full_name,
-          username: form.username.trim(),
           email: form.email,
           password: form.password,
         },
@@ -130,20 +125,12 @@ export default function Join() {
                 autoComplete="name"
               />
               <Input
-                label="Username"
-                type="text"
-                value={form.username}
-                onChange={e => setForm(f => ({ ...f, username: e.target.value.toLowerCase() }))}
-                placeholder="jsmith"
-                autoComplete="username"
-              />
-              <Input
                 label="Email"
                 type="email"
                 value={form.email}
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                 placeholder="you@example.com"
-                autoComplete="email"
+                autoComplete="username"
               />
               <div className="relative">
                 <Input

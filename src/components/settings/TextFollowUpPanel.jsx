@@ -1,16 +1,23 @@
 import { useEffect, useState } from 'react'
-import { MessageSquareText } from 'lucide-react'
+import { MessageSquareText, Clock } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useUpdateOwnProfile } from '../../hooks/useSettings'
 import { useRecoveryConfig, useUpdateRecoveryConfig } from '../../hooks/useRecoveryConfig'
 import { Switch } from '../ui/Switch'
-import { card, cardTitle, control, primaryBtn, ghostBtn } from '../../lib/exportStyles'
+import { SettingsCard, SettingsChip } from '../agent/AgentUI'
 
 // Prompt 696 — Settings → Text follow-up. The agent's one-time consent for
 // the missed-call text flow (migration 122), plus, for an admin, the switch
 // that turns texting on once an SMS-capable Twilio number is registered for
 // A2P 10DLC and the morning / evening send times.
+// Prompt 720 — restyled into the Settings section cards (Client contact);
+// consent flow, admin switch and RPCs unchanged.
+
+const timeInput = {
+  display: 'block', width: 150, height: 44, marginTop: 8, boxSizing: 'border-box', padding: '0 12px', borderRadius: 12,
+  font: 'inherit', fontSize: 15, color: 'var(--ov-hi)', outline: 'none',
+}
 
 const hhmm = t => (t || '').slice(0, 5)
 
@@ -37,20 +44,20 @@ export function TextFollowUpPanel({ profile }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ ...card }}>
-        <p style={cardTitle}>Text follow-up</p>
-        <p style={{ margin: '0 0 16px', fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
-          When a call to one of your clients ends with no answer, we can text them: first a note that a retry is
-          already locked for the same time tomorrow, with a link to pick another time. If they still don't pick up,
-          you confirm their number and we text them once more the next morning and evening, then hand it back to you
-          to call.
+    <>
+      <SettingsCard icon={MessageSquareText} title="Text follow-up"
+        sub="If a call ends with no answer, we text your client a link to pick another time."
+        right={<SettingsChip tone={optedIn ? 'on' : 'off'}>{optedIn ? 'On' : 'Off'}</SettingsChip>}>
+        <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ov-soft)', lineHeight: 1.55 }}>
+          First a note that a retry is already locked for the same time tomorrow, with a link to pick another time.
+          If they still don't pick up, you confirm their number and we text them once more the next morning and
+          evening, then hand it back to you to call.
         </p>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderTop: 'var(--border-w) solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingTop: 16, borderTop: '1px solid var(--ov-line)' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Text clients after a missed call</p>
-            <p style={{ margin: '2px 0 0', fontSize: 12.5, color: 'var(--text-muted)' }}>
+            <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>Text clients after a missed call</p>
+            <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--ov-mute)' }}>
               {optedIn ? 'On. You agreed to this once; turn it off any time.' : 'Off. Missed calls just show as No answer.'}
             </p>
           </div>
@@ -58,35 +65,35 @@ export function TextFollowUpPanel({ profile }) {
         </div>
 
         {confirming && !optedIn && (
-          <div style={{ padding: 16, borderRadius: 10, border: 'var(--border-w) solid var(--border)', background: 'var(--bg-base)' }}>
-            <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+          <div className="ov-box" style={{ padding: 16, borderRadius: 14 }}>
+            <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, color: 'var(--ov-hi)', lineHeight: 1.5 }}>
               <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} style={{ marginTop: 4 }} />
               I confirm my clients have agreed to receive text messages about their calls, and I'm turning this on for
               all my bookings.
             </label>
-            <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
               <button
+                type="button"
+                className="ov-buy ov-set-btn"
                 disabled={!agreed || update.isPending}
                 onClick={() => setOptIn(true)}
-                style={{ ...primaryBtn, opacity: !agreed || update.isPending ? 0.5 : 1 }}
               >
                 Turn on
               </button>
-              <button onClick={() => { setConfirming(false); setAgreed(false) }} style={{ ...ghostBtn, height: 40 }}>Cancel</button>
+              <button type="button" className="ov-ghost ov-set-btn" onClick={() => { setConfirming(false); setAgreed(false) }}>Cancel</button>
             </div>
           </div>
         )}
 
         {config && !live && (
-          <p style={{ margin: '14px 0 0', fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-            Texting isn't switched on for Ohvara yet. It starts once our SMS number is approved with carriers.
-            Your choice is saved and takes effect then.
+          <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ov-mute)', lineHeight: 1.5 }}>
+            Texting starts for everyone once our SMS number is approved with carriers. Your choice is saved until then.
           </p>
         )}
-      </div>
+      </SettingsCard>
 
       {profile.role === 'admin' && <AdminControls config={config} />}
-    </div>
+    </>
   )
 }
 
@@ -116,42 +123,43 @@ function AdminControls({ config }) {
               : `Couldn't confirm ${sender.from} can send texts.`
 
   return (
-    <div style={{ ...card }}>
-      <p style={cardTitle}>Admin: texting</p>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '4px 0 14px' }}>
+    <SettingsCard icon={Clock} title="Admin: texting" sub="The company-wide switch and send times for text follow-up."
+      right={<SettingsChip tone={config.sms_live ? 'on' : 'off'}>{config.sms_live ? 'Live' : 'Off'}</SettingsChip>}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Texting live</p>
-          <p style={{ margin: '2px 0 0', fontSize: 12.5, color: 'var(--text-muted)' }}>
+          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>Texting live</p>
+          <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--ov-mute)' }}>
             Off: no lead enters the flow. Turn on only after the number is registered for A2P 10DLC.
           </p>
         </div>
         <Switch checked={!!config.sms_live} disabled={save.isPending} onChange={v => save.mutate({ sms_live: v })} />
       </div>
 
-      <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--text-secondary)', display: 'flex', gap: 8, alignItems: 'flex-start', lineHeight: 1.5 }}>
+      <p className="ov-box" style={{ margin: 0, padding: '12px 14px', borderRadius: 14, fontSize: 13.5, color: 'var(--ov-soft)', display: 'flex', gap: 8, alignItems: 'flex-start', lineHeight: 1.5 }}>
         <MessageSquareText size={15} style={{ flexShrink: 0, marginTop: 2 }} /> {senderText}
       </p>
 
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+        <label style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>
           Morning text
-          <input type="time" value={reminder} onChange={e => setDraft(d => ({ ...d, reminder: e.target.value }))} style={{ ...control, width: 140, marginTop: 6, display: 'block' }} />
+          <input type="time" className="ov-box" value={reminder} onChange={e => setDraft(d => ({ ...d, reminder: e.target.value }))} style={timeInput} />
         </label>
-        <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+        <label style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>
           Evening text
-          <input type="time" value={evening} onChange={e => setDraft(d => ({ ...d, evening: e.target.value }))} style={{ ...control, width: 140, marginTop: 6, display: 'block' }} />
+          <input type="time" className="ov-box" value={evening} onChange={e => setDraft(d => ({ ...d, evening: e.target.value }))} style={timeInput} />
         </label>
         <button
+          type="button"
+          className="ov-buy ov-set-btn"
           disabled={!dirty || !reminder || !evening || save.isPending}
           onClick={() => save.mutate({ reminder_time: reminder, evening_time: evening }, { onSuccess: () => setDraft({}) })}
-          style={{ ...primaryBtn, opacity: !dirty || save.isPending ? 0.5 : 1 }}
         >
           Save times
         </button>
       </div>
-      <p style={{ margin: '10px 0 0', fontSize: 12.5, color: 'var(--text-muted)' }}>
+      <p style={{ margin: 0, fontSize: 13, color: 'var(--ov-mute)' }}>
         Sent in each agent's own timezone. Applies to the morning reminder on the retry day and to both follow-up texts.
       </p>
-    </div>
+    </SettingsCard>
   )
 }

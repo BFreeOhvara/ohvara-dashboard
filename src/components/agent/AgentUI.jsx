@@ -2292,3 +2292,136 @@ export function BillingFacts() {
     </section>
   )
 }
+
+// ── Prompt 720 — Settings on the v16 language ──────────────────────────────
+// The section menu (side column on desktop, drill-in rows on a phone), the
+// card every section is made of, the 6-digit code boxes shared by two-step
+// setup / turn-off / sign-in, and the password strength bar. Classes are the
+// .ov-set-* block in index.css.
+
+// items: [{ key, label, sub, icon }]. `phone` draws rows with a chevron.
+export function SettingsNav({ items, active, onPick, phone }) {
+  return (
+    <nav aria-label="Settings sections" className={`ov-card ov-set-nav${phone ? ' is-phone' : ''}`}>
+      {items.map(({ key, label, sub, icon: Icon }) => {
+        const on = !phone && key === active
+        return (
+          <button key={key} type="button" onClick={() => onPick(key)} aria-current={on ? 'page' : undefined}
+            className={`ov-set-item${on ? ' is-on' : ''}`}>
+            <span className="ov-set-ico"><Icon size={17} strokeWidth={2} /></span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: phone ? 15 : 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>{label}</span>
+              <span style={{ display: 'block', marginTop: 1, fontSize: phone ? 13 : 12.5, color: 'var(--ov-mute)' }}>{sub}</span>
+            </span>
+            {phone && <ChevronRight size={18} strokeWidth={2} style={{ flexShrink: 0, color: 'var(--ov-faint)' }} />}
+          </button>
+        )
+      })}
+    </nav>
+  )
+}
+
+// A status chip: tone 'on' (green), 'off' (neutral) or 'warn'.
+export function SettingsChip({ tone = 'off', children }) {
+  return <span className={`ov-set-chip is-${tone}`}><i />{children}</span>
+}
+
+// One Settings card: a 40px icon tile, title, one-line description and an
+// optional right-hand chip or button, then the body.
+export function SettingsCard({ icon: Icon, title, sub, right, children, gap = 18, label }) {
+  return (
+    <section className="ov-card ov-set-card" aria-label={label || title} style={{ gap }}>
+      <div className="ov-set-head">
+        <span className="ov-set-tile"><Icon size={19} strokeWidth={2} /></span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2 style={{ ...OV_TITLE, fontSize: 18 }}>{title}</h2>
+          {sub && <p style={{ margin: '3px 0 0', fontSize: 13.5, lineHeight: 1.45, color: 'var(--ov-mute)' }}>{sub}</p>}
+        </div>
+        {right && <div className="ov-set-right">{right}</div>}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+// Six one-digit boxes. Typing advances, Backspace steps back, a paste (or an
+// authenticator's autofill into any box) fills all six. `value` is a string
+// of up to 6 digits.
+export function CodeBoxes({ value, onChange, onComplete, autoFocus, disabled, invalid, height = 56, label = '6-digit code' }) {
+  const refs = useRef([])
+  const digitsOf = s => (s || '').replace(/\D/g, '').slice(0, 6)
+  const cur = digitsOf(value)
+  useEffect(() => { if (autoFocus) refs.current[Math.min(cur.length, 5)]?.focus() }, [autoFocus]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function set(next) {
+    const d = digitsOf(next)
+    onChange(d)
+    refs.current[Math.min(d.length, 5)]?.focus()
+    if (d.length === 6) onComplete?.(d)
+  }
+  function onInput(i, e) {
+    let typed = e.target.value.replace(/\D/g, '')
+    if (!typed) return
+    // Typed next to a digit already in the box: keep only the new one.
+    if (cur[i] && typed.length === 2) typed = typed[0] === cur[i] ? typed[1] : typed[0]
+    // Several digits at once = a paste or autofill: take them from this box on.
+    if (typed.length > 1) return set(cur.slice(0, i) + typed)
+    set(cur.slice(0, i) + typed + cur.slice(i + 1))
+  }
+  function onKey(i, e) {
+    if (e.key === 'Backspace') {
+      e.preventDefault()
+      const at = i < cur.length ? i : cur.length - 1
+      if (at < 0) return
+      onChange(cur.slice(0, at) + cur.slice(at + 1))
+      refs.current[Math.max(at, 0)]?.focus()
+    } else if (e.key === 'ArrowLeft') refs.current[Math.max(i - 1, 0)]?.focus()
+    else if (e.key === 'ArrowRight') refs.current[Math.min(i + 1, 5)]?.focus()
+  }
+  return (
+    <div role="group" aria-label={label} style={{ display: 'flex', gap: 8 }}>
+      {Array.from({ length: 6 }, (_, i) => (
+        <input
+          key={i}
+          ref={el => { refs.current[i] = el }}
+          className={`ov-code${invalid ? ' is-error' : ''}`}
+          style={{ height }}
+          value={cur[i] || ''}
+          onChange={e => onInput(i, e)}
+          onKeyDown={e => onKey(i, e)}
+          onPaste={e => { e.preventDefault(); set(cur.slice(0, i) + e.clipboardData.getData('text')) }}
+          onFocus={e => e.target.select()}
+          inputMode="numeric"
+          autoComplete={i === 0 ? 'one-time-code' : 'off'}
+          maxLength={6}
+          disabled={disabled}
+          aria-label={`Digit ${i + 1}`}
+        />
+      ))}
+    </div>
+  )
+}
+
+// 0-4: one point each for 8+ characters, 12+, mixed case, a digit or symbol.
+function passwordScore(pw = '') {
+  if (!pw) return 0
+  return [pw.length >= 8, pw.length >= 12, /[a-z]/.test(pw) && /[A-Z]/.test(pw), /[\d\W_]/.test(pw)].filter(Boolean).length
+}
+const STRENGTH = [null, ['Weak', 'var(--danger)'], ['Okay', 'var(--ov-st-needs)'], ['Good', 'var(--ov-st-booked)'], ['Strong', 'var(--ov-st-cancelled)']]
+
+export function StrengthBar({ password }) {
+  const score = passwordScore(password)
+  const [label, color] = STRENGTH[Math.max(score, 1)]
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }} aria-live="polite">
+      <div style={{ flex: 1, display: 'flex', gap: 4 }} aria-hidden="true">
+        {[1, 2, 3, 4].map(n => (
+          <span key={n} style={{ flex: 1, height: 6, borderRadius: 3, background: score >= n ? color : 'var(--ov-stub)', transition: 'background 160ms ease' }} />
+        ))}
+      </div>
+      <span style={{ width: 52, textAlign: 'right', fontSize: 13, fontWeight: 600, color: password ? color : 'var(--ov-faint)' }}>
+        {password ? label : ''}
+      </span>
+    </div>
+  )
+}
