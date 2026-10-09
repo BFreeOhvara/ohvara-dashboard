@@ -121,7 +121,7 @@ function OverviewLine({ profile }) {
   return <LiveLine items={[
     <Plain>{now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</Plain>,
     today > 0 && <Pill tone="blue">{plural(today, 'call')} today</Pill>,
-    needs > 0 && <Pill tone="amber" to="/agent/clients?stage=needs">{needs} need you</Pill>,
+    needs > 0 && <Pill tone="amber" to="/agent/clients?stage=needs">{needs} {needs === 1 ? 'needs' : 'need'} attention</Pill>,
   ]} />
 }
 
@@ -143,7 +143,7 @@ function PipelineLine({ profile }) {
   const booked = rows.filter(p => tabOf(p) === 'booked').length
   return <LiveLine items={[
     <Plain>{plural(rows.length, 'client')}</Plain>,
-    needs > 0 && <Pill tone="amber" to="/agent/clients?stage=needs">{needs} need you</Pill>,
+    needs > 0 && <Pill tone="amber" to="/agent/clients?stage=needs">{needs} {needs === 1 ? 'needs' : 'need'} attention</Pill>,
     booked > 0 && <Pill tone="blue">{booked} booked</Pill>,
   ]} />
 }
@@ -235,6 +235,9 @@ export function DashboardLayout({ children }) {
   // Prompt 701: Messages fills the content area edge to edge (as Restorix's
   // does) instead of sitting in the padded, max-width page container.
   const isFullBleed = pathname === '/messages'
+  // Prompt 726: My Pipeline fills the height under the header on a tall
+  // desktop screen (the .ov-fit rules in index.css) so only its list scrolls.
+  const isFit = pathname === '/agent/clients'
 
   const [navOpen, setNavOpen] = useState(false)
   useEffect(() => { setNavOpen(false) }, [pathname])
@@ -247,7 +250,7 @@ export function DashboardLayout({ children }) {
 
   return (
     <ActiveCallProvider>
-      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)' }}>
+      <div className={isFit ? 'ov-fit' : undefined} style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)' }}>
         <Sidebar
           open={navOpen}
           onClose={() => setNavOpen(false)}
@@ -280,8 +283,8 @@ export function DashboardLayout({ children }) {
           </header>
 
           <main
-            className={`scrollbar-thin ${isFullWidth ? 'h-screen overflow-hidden flex flex-col' : isFullBleed ? '' : 'px-4 md:px-6'}`}
-            style={isFullWidth ? { position: 'relative', zIndex: 1 } : isFullBleed ? { flex: 1, width: '100%', position: 'relative', zIndex: 1 } : { flex: 1, paddingTop: 32, paddingBottom: 64, maxWidth: 1280, width: '100%', margin: '0 auto', position: 'relative', zIndex: 1 }}
+            className={`scrollbar-thin ${isFullWidth ? 'h-screen overflow-hidden flex flex-col' : isFullBleed ? '' : 'px-4 md:px-6'}${isFit ? ' ov-fit-main' : ''}`}
+            style={isFullWidth ? { position: 'relative', zIndex: 1 } : isFullBleed ? { flex: 1, width: '100%', position: 'relative', zIndex: 1 } : { flex: 1, paddingTop: 32, paddingBottom: 64, maxWidth: isFit ? 1680 : 1280, width: '100%', margin: '0 auto', position: 'relative', zIndex: 1 }}
           >
             <div
               key={pathname}

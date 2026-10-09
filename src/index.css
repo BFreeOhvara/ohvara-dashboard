@@ -237,7 +237,9 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 
 @layer base {
   * { box-sizing: border-box; }
-  html { color-scheme: dark; }
+  /* Prompt 726: html is the page scroller; always reserve its gutter so a page
+     that scrolls and one that does not sit at the same width (no sideways jump). */
+  html { color-scheme: dark; scrollbar-gutter: stable; }
 
   /* Prompt 669 — 14px / 400 Manrope body, matching Restorix Portal. Weight
      is carried by headings and labels, not by every line of body text. */
@@ -997,16 +999,161 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 [data-theme="light"] .ov-solid { background: #07332E; color: #FFFFFF; }
 .ov-solid:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* Per-status list columns (1024px and up; below that rows become cards). */
-.ov-cols-booked    { grid-template-columns: minmax(0,1.5fr) minmax(0,1fr) 220px 200px 18px; }
-.ov-cols-noAnswer  { grid-template-columns: minmax(0,1.4fr) minmax(0,0.9fr) 150px minmax(0,1.1fr) 120px; }
-.ov-cols-needs     { grid-template-columns: minmax(0,1.3fr) minmax(0,0.8fr) minmax(0,1.5fr) 170px; }
-.ov-cols-cancelled { grid-template-columns: minmax(0,1.5fr) minmax(0,1fr) 190px 190px 18px; }
-@media (max-width: 1279.98px) {
-  .ov-cols-booked    { grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) 190px 170px 18px; }
-  .ov-cols-noAnswer  { grid-template-columns: minmax(0,1.4fr) minmax(0,0.9fr) 120px minmax(0,1.1fr) 110px; }
-  .ov-cols-cancelled { grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) 160px 130px 18px; }
+/* ── Prompt 726 — My Pipeline layout ───────────────────────────
+   Two equal boxes on the left (Find any client / Your pipeline) and one list
+   box on the right with the status tabs on top. From 1280px on a screen at
+   least 800px tall the page is exactly the height under the header (.ov-fit,
+   set by DashboardLayout) and only the list body scrolls, so switching status
+   never moves anything. Shorter or narrower, the page scrolls normally and the
+   list box keeps a minimum height. See DESIGN.md v16 "P726". */
+:root {
+  --ov-table-head-solid: #12141C;
+  --ov-needs-band: rgba(251,191,36,0.035);
+  --ov-legend-bg: rgba(255,255,255,0.035);
+  --ov-legend-line: rgba(255,255,255,0.06);
 }
+[data-theme="light"] {
+  --ov-table-head-solid: #F3F8F7;
+  --ov-needs-band: rgba(154,74,11,0.05);
+  --ov-legend-bg: #F6FAF9;
+  --ov-legend-line: rgba(2,79,70,0.10);
+}
+
+.pl-page { display: flex; flex-direction: column; gap: 16px; }
+.pl-rail { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@media (min-width: 1024px) {
+  .pl-page { gap: 20px; }
+  .pl-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1280px) {
+  .pl-page { display: grid; grid-template-columns: 400px minmax(0, 1fr); align-items: start; }
+  .pl-rail { grid-template-columns: minmax(0, 1fr); grid-auto-rows: 1fr; }
+}
+/* Fit mode: the page is the height under the header; the rail's two boxes are
+   exactly equal; the list body scrolls inside its box. */
+@media (min-width: 1280px) and (min-height: 800px) {
+  .ov-fit { height: 100dvh; min-height: 0 !important; overflow: hidden; }
+  .ov-fit .app-main { min-height: 0; }
+  .ov-fit .ov-fit-main { min-height: 0; display: flex; flex-direction: column; padding-top: 24px !important; padding-bottom: 24px !important; }
+  .ov-fit .ov-fit-main > div { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+  .pl-page { flex: 1 1 0; min-height: 0; align-items: stretch; grid-template-rows: minmax(0, 1fr); }
+  .pl-rail { min-height: 0; grid-template-rows: repeat(2, minmax(0, 1fr)); grid-auto-rows: auto; }
+  .pl-list { min-height: 0; }
+  .pl-body { overflow-y: auto; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: rgba(134,151,181,0.35) transparent; }
+}
+
+/* Find any client */
+.ov-hero.pl-find {
+  position: relative; z-index: 3; display: flex; flex-direction: column; min-height: 0;
+  padding: 18px; border-radius: 20px;
+}
+.pl-find-h { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; line-height: 1.15; letter-spacing: -0.03em; color: #fff; }
+.pl-find-sub { margin: 3px 0 0; font-size: 13px; color: var(--ov-hero-soft); }
+.pl-results { right: 0; }
+@media (min-width: 640px) {
+  .ov-hero.pl-find { padding: 22px; }
+  .pl-results { right: auto; width: max(100%, 560px); max-width: calc(100vw - 48px); }
+}
+.pl-recent { margin-top: 18px; display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; overflow: hidden; }
+.pl-recent-hd { flex-shrink: 0; display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12.5px; font-weight: 600; color: var(--ov-hero-soft); }
+.pl-recent-hd span { font-weight: 500; opacity: 0.75; }
+.pl-recent-empty { padding: 10px 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 14px; color: var(--ov-hero-soft); }
+.pl-recent-empty .ov-hero-link { padding: 0; font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px; }
+.pl-rc {
+  flex-shrink: 0; display: flex; align-items: center; gap: 11px; width: calc(100% + 20px); margin: 0 -10px; padding: 8px 10px;
+  border: none; border-radius: 12px; background: transparent; font: inherit; text-align: left; cursor: pointer; color: #fff;
+}
+.pl-rc:hover { background: rgba(255,255,255,0.08); }
+.pl-rc:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+.pl-rc .nm { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-rc .nm small { display: block; font-size: 12px; font-weight: 500; color: var(--ov-hero-soft); overflow: hidden; text-overflow: ellipsis; }
+
+/* Your pipeline */
+.pl-pipe { padding: 18px 20px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.pl-lbl { font-size: 13px; font-weight: 600; color: var(--ov-mute); }
+.pl-total { margin-top: 2px; display: flex; align-items: baseline; gap: 8px; font-size: 14px; color: var(--ov-soft); }
+.pl-total b { font-family: 'Space Grotesk', sans-serif; font-size: 30px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; color: var(--ov-hi); }
+.pl-total em { font-style: normal; font-weight: 600; color: var(--ov-st-cancelled); }
+.pl-legend { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pl-lg { padding: 8px 12px; border-radius: 12px; background: var(--ov-legend-bg); border: 1px solid var(--ov-legend-line); }
+.pl-lg .l { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ov-mute); }
+.pl-lg .l i { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.pl-lg .v { margin-top: 2px; display: flex; align-items: baseline; gap: 6px; font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 700; line-height: 1.25; color: var(--ov-hi); }
+.pl-lg .v small { font-family: 'Manrope', sans-serif; font-size: 12.5px; font-weight: 600; color: var(--ov-faint); }
+.pl-next { margin-top: 14px; padding-top: 12px; display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--ov-line); flex-shrink: 0; }
+@media (min-width: 1280px) { .pl-next { margin-top: auto; } }
+.pl-ntile {
+  width: 40px; height: 44px; flex-shrink: 0; border-radius: 12px; background: var(--ov-stub);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
+}
+.pl-ntile small { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; }
+.pl-ntile b { margin-top: 4px; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600; color: var(--ov-hi); }
+.pl-next .k { flex: 1; min-width: 0; font-size: 12.5px; color: var(--ov-mute); }
+.pl-next .k b { display: block; font-size: 14px; font-weight: 600; color: var(--ov-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-next .go { flex-shrink: 0; border: none; background: transparent; padding: 0; font: inherit; font-size: 13px; font-weight: 600; color: var(--ov-st-booked); cursor: pointer; }
+.pl-next .go:hover { text-decoration: underline; text-underline-offset: 3px; }
+.pl-next .go:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+/* The list box */
+.pl-list { display: flex; flex-direction: column; min-width: 0; }
+@media (min-width: 640px) { .pl-list { min-height: 560px; overflow: hidden; } }
+@media (max-width: 639.98px) {
+  .ov-card.pl-list { background: none; border: none; box-shadow: none; border-radius: 0; }
+}
+.pl-tabs { flex-shrink: 0; gap: 10px; padding: 16px 16px 14px; border-bottom: 1px solid var(--ov-line); }
+.pl-tab {
+  position: relative; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  min-width: 0; width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--ov-line); background: transparent; color: var(--ov-hi);
+}
+.pl-tab .d { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.pl-tab .nm { display: block; font-size: 14px; font-weight: 600; line-height: 1.3; color: var(--ov-mid); }
+.pl-tab small { display: block; margin-top: 1px; font-size: 12.5px; line-height: 1.3; color: var(--ov-mute); }
+.pl-tab .n { font-size: 22px; letter-spacing: -0.02em; }
+.pl-tab.is-zero .n { color: var(--ov-faint); }
+.pl-tab.is-sel { background: linear-gradient(90deg, var(--tint) 0%, transparent 100%); border-color: var(--edge); }
+.pl-tab.is-sel .nm { color: var(--c); }
+.pl-tab.is-sel.is-zero .n { color: var(--ov-hi); }
+
+.pl-body { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+/* Columns: Client | Carrier | date or text | status | action. Compact until
+   1600px; the roomy set below is the mockup's. */
+.pl-cols, .pl-row {
+  display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 132px minmax(0, 1fr) 124px;
+  gap: 12px; align-items: center; padding: 0 20px;
+}
+@media (min-width: 1600px) {
+  .pl-cols, .pl-row { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 210px minmax(0, 1fr) 150px; gap: 16px; padding: 0 24px; }
+}
+.pl-cols {
+  position: sticky; top: 0; z-index: 1; height: 44px; line-height: 1.2; background: var(--ov-table-head-solid); border-bottom: 1px solid var(--ov-line);
+  font-size: 12.5px; font-weight: 600; color: var(--ov-mute);
+}
+.pl-row { min-height: 76px; border-bottom: 1px solid var(--ov-line); cursor: pointer; transition: background 120ms ease; }
+.pl-row:hover, .pl-row.is-active { background: var(--ov-hover); }
+.pl-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pl-grp {
+  padding: 16px 24px 10px; display: flex; align-items: flex-start; gap: 12px;
+  border-bottom: 1px solid var(--ov-line); background: var(--ov-needs-band);
+}
+.pl-grp .ic {
+  width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px; background: var(--ov-st-needs-tint); color: var(--ov-st-needs);
+  display: flex; align-items: center; justify-content: center;
+}
+.pl-grp b { display: block; font-size: 14.5px; color: var(--ov-hi); }
+.pl-grp b span { margin-left: 6px; font-family: 'Space Grotesk', sans-serif; color: var(--ov-st-needs); }
+.pl-grp p { margin: 2px 0 4px; font-size: 12.5px; color: var(--ov-mute); }
+@media (max-width: 1023.98px) { .pl-grp { padding: 14px 16px 10px; } }
+@media (max-width: 639.98px) {
+  .pl-grp { margin: 12px 0 10px; border: 1px solid var(--ov-st-needs-edge); border-radius: 14px; }
+}
+.pl-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+@media (min-width: 640px) { .pl-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 16px; } }
+.pl-empty {
+  flex: 1 1 auto; min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  text-align: center; padding: 24px;
+}
+@media (min-width: 640px) { .pl-empty.ov-card { background: none; border: none; box-shadow: none; border-radius: 0; } }
+@media (prefers-reduced-motion: reduce) { .pl-row { transition: none; } }
 
 /* Client drawer: right-side panel; a full-screen sheet below 640px. */
 .ov-scrim { position: fixed; inset: 0; z-index: 200; background: var(--ov-scrim); }

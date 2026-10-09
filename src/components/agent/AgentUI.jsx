@@ -641,7 +641,7 @@ export function AttentionPanel({ items, loading, now, onGo }) {
           <p style={{ margin: 0, fontFamily: DISPLAY, fontSize: 26, fontWeight: 600, lineHeight: 1.15, letterSpacing: '-0.02em', color: 'var(--ov-hi)' }}>
             You&rsquo;re all caught up
           </p>
-          <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--ov-mute)' }}>Nothing needs you right now.</p>
+          <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--ov-mute)' }}>Nothing needs your attention right now.</p>
         </div>
       </div>
     )
@@ -1140,7 +1140,7 @@ export function BookedCard({ name, at, now, onAnother, onPipeline, tz, location 
 const PIPELINE_TAB = {
   booked:    { label: 'Booked',    meaning: 'Waiting for Fulfillment',    key: 'booked',    icon: Phone },
   noAnswer:  { label: 'No answer', meaning: 'Fulfillment will try again', key: 'noanswer',  icon: PhoneMissed },
-  needs:     { label: 'Needs you', meaning: 'Only you can move these on', key: 'needs',     icon: TriangleAlert },
+  needs:     { label: 'Needs attention', meaning: 'Only you can move these on', key: 'needs',     icon: TriangleAlert },
   cancelled: { label: 'Cancelled', meaning: 'Old policy cancelled',       key: 'cancelled', icon: Check },
 }
 const stVar = (tab, part = '') => `var(--ov-st-${PIPELINE_TAB[tab].key}${part ? `-${part}` : ''})`
@@ -1173,8 +1173,8 @@ function searchPhrase(p) {
   const stage = agentStageOf(p)
   if (stage === 'booked') return isLive(p) ? 'On a call now' : `Call ${callWhen(p.scheduled_call_at, p.client_timezone)}`
   if (stage === 'cancelled') return `Cancelled ${monthDay(p.fulfillment_completed_at || p.updated_at)}`
-  if (stage === 'confirmNumber') return 'Needs you: confirm number'
-  if (stage === 'needsAttention') return 'Needs you: call & rebook'
+  if (stage === 'confirmNumber') return 'Needs attention: confirm number'
+  if (stage === 'needsAttention') return 'Needs attention: call & rebook'
   const n = p.call_attempts || 0
   return n ? `No answer · ${triesText(n)}` : 'No answer'
 }
@@ -1202,17 +1202,16 @@ function StatusAvatar({ name, tab, size = 38, fontSize = 11.5 }) {
   )
 }
 
-function StatusDot({ tab, size = 9 }) {
-  return <span style={{ width: size, height: size, flexShrink: 0, borderRadius: '50%', background: stVar(tab), boxShadow: `0 0 0 4px ${stVar(tab, 'tint')}` }} />
-}
-
 const isTyping = el => el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))
 const SEARCH_ROWS = 8
 const ellipsis = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
 
 // "Find any client": searches every row it's given (the range/agent scope),
 // whatever the selected tab. "/" focuses it while `hotkey` is on.
-export function ClientSearch({ rows, onOpen, hotkey = true }) {
+//
+// Prompt 726 — a compact box: the search, then "Recently booked" (the three
+// newest bookings, whatever their status; `recentRows` ignores the range).
+export function ClientSearch({ rows, recentRows = rows, onOpen, hotkey = true, onBook }) {
   const input = useRef(null)
   const [query, setQuery] = useState('')
   const [focused, setFocused] = useState(false)
@@ -1231,6 +1230,10 @@ export function ClientSearch({ rows, onOpen, hotkey = true }) {
 
   const q = query.trim().toLowerCase()
   const matches = useMemo(() => matchClients(rows, q), [rows, q])
+  const recent = useMemo(
+    () => [...recentRows].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')).slice(0, 3),
+    [recentRows],
+  )
   const shown = matches.slice(0, SEARCH_ROWS)
   const open = !!q && focused
   const active = Math.min(hi, Math.max(0, shown.length - 1))
@@ -1245,38 +1248,34 @@ export function ClientSearch({ rows, onOpen, hotkey = true }) {
   }
 
   return (
-    <section className="ov-hero flex flex-col gap-3 sm:gap-4 px-[18px] py-5 sm:px-8 sm:py-[30px]" style={{ position: 'relative', zIndex: 3 }}>
+    <section className="ov-hero pl-find">
       <div>
-        <h1 className="text-[24px] sm:text-[30px]" style={{ margin: 0, fontFamily: DISPLAY, fontWeight: 600, lineHeight: 1.15, letterSpacing: '-0.03em', color: '#fff' }}>
-          Find any client
-        </h1>
-        <p className="hidden sm:block" style={{ margin: '6px 0 0', fontSize: 15, color: 'var(--ov-hero-soft)' }}>
-          Searches everyone you&rsquo;ve booked, whatever their status.
-        </p>
+        <h1 className="pl-find-h">Find any client</h1>
+        <p className="pl-find-sub hidden sm:block">Searches everyone you&rsquo;ve booked, whatever their status.</p>
       </div>
-      <div style={{ position: 'relative' }}>
-        <label className="ov-hero-search h-[52px] sm:h-[58px] rounded-[14px] sm:rounded-2xl gap-[10px] sm:gap-3 px-[15px] sm:px-[18px]">
-          <Search size={21} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+      <div style={{ position: 'relative', marginTop: 16, flexShrink: 0 }}>
+        <label className="ov-hero-search h-[50px] rounded-xl gap-[10px] pl-[14px] pr-2">
+          <Search size={19} strokeWidth={2.2} style={{ flexShrink: 0 }} />
           <input
             ref={input} type="search" value={query} autoComplete="off" spellCheck={false}
-            className="text-[15.5px] sm:text-[17px]"
-            placeholder="Name, phone number or carrier" aria-label="Find any client"
+            className="text-[15px]"
+            placeholder="Name, phone, city or carrier" aria-label="Find any client"
             role="combobox" aria-expanded={open} aria-controls="ov-search-results" aria-autocomplete="list"
             aria-activedescendant={open && shown[active] ? `ov-search-${shown[active].id}` : undefined}
             onChange={e => { setQuery(e.target.value); setHi(0) }}
             onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} onKeyDown={onKeyDown}
           />
           <span className="hidden sm:inline-flex" aria-hidden="true" style={{
-            height: 26, padding: '0 9px', borderRadius: 7, border: '1px solid rgba(255,255,255,0.25)', flexShrink: 0,
-            alignItems: 'center', fontFamily: MONO, fontSize: 12, color: 'rgba(255,255,255,0.75)',
+            height: 24, minWidth: 24, padding: '0 7px', borderRadius: 7, border: '1px solid rgba(255,255,255,0.25)', flexShrink: 0,
+            alignItems: 'center', justifyContent: 'center', fontFamily: MONO, fontSize: 12, color: 'rgba(255,255,255,0.75)',
           }}>
             /
           </span>
         </label>
 
         {open && (
-          <div id="ov-search-results" role="listbox" aria-label="Matching clients" className="ov-card ov-pop"
-            style={{ position: 'absolute', left: 0, right: 0, top: 'calc(100% + 10px)', zIndex: 4, overflow: 'hidden', borderRadius: 18 }}>
+          <div id="ov-search-results" role="listbox" aria-label="Matching clients" className="ov-card ov-pop pl-results"
+            style={{ position: 'absolute', left: 0, top: 'calc(100% + 10px)', zIndex: 4, overflow: 'hidden', borderRadius: 18 }}>
             {shown.length ? (
               <>
                 <div style={{
@@ -1318,20 +1317,43 @@ export function ClientSearch({ rows, onOpen, hotkey = true }) {
           </div>
         )}
       </div>
-      <p className="sm:hidden" style={{ margin: 0, fontSize: 13, color: 'var(--ov-hero-soft)' }}>
+      <p className="sm:hidden" style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--ov-hero-soft)' }}>
         Searches every status · {rows.length} client{rows.length === 1 ? '' : 's'}
       </p>
+
+      <div className="pl-recent">
+        <div className="pl-recent-hd">Recently booked{recent.length > 0 && <span>Click to open</span>}</div>
+        {recent.length ? recent.map(p => {
+          const tab = tabOf(p)
+          const name = fullName(p)
+          return (
+            <button key={p.id} type="button" className="pl-rc" onClick={() => onOpen(p)} aria-label={`Open ${name}`}>
+              <StatusAvatar name={name} tab={tab} size={32} fontSize={11.5} />
+              <span className="nm">
+                {name}
+                <small>{[placeOf(p), p.current_carrier].filter(Boolean).join(' · ') || 'Carrier not noted'}</small>
+              </span>
+              <StatusPill tab={tab} />
+            </button>
+          )
+        }) : (
+          <div className="pl-recent-empty">
+            Nobody booked yet
+            {onBook && <button type="button" className="ov-hero-link" onClick={onBook}>Book a call</button>}
+          </div>
+        )}
+      </div>
     </section>
   )
 }
 
-function RangeSwitch({ ranges, value, onChange, small }) {
+function RangeSwitch({ ranges, value, onChange, small, full }) {
   return (
-    <div className="ov-range" role="group" aria-label="Booked in">
+    <div className="ov-range" role="group" aria-label="Booked in" style={full ? { display: 'grid', gridTemplateColumns: `repeat(${ranges.length}, 1fr)` } : undefined}>
       {ranges.map(r => (
         <button key={r.value} type="button" aria-pressed={value === r.value} onClick={() => onChange(r.value)}
           className={value === r.value ? 'is-on' : ''}
-          style={{ height: small ? 30 : 32, padding: small ? '0 11px' : '0 14px', fontSize: small ? 12.5 : 13 }}>
+          style={{ height: small || full ? 30 : 32, padding: small || full ? '0 11px' : '0 14px', fontSize: small ? 12.5 : 13 }}>
           {r.label}
         </button>
       ))}
@@ -1341,7 +1363,7 @@ function RangeSwitch({ ranges, value, onChange, small }) {
 
 function PipelineBar({ counts, tab, height }) {
   const total = PIPELINE_TABS.reduce((s, t) => s + counts[t], 0)
-  const radius = height > 8 ? 6 : 5
+  const radius = height > 8 ? 6 : height > 6 ? 5 : 3
   return (
     <div aria-hidden="true" style={{ display: 'flex', gap: height > 8 ? 4 : 3 }}>
       {total === 0 && <span style={{ flex: 1, height, borderRadius: radius, background: 'var(--ov-stub)' }} />}
@@ -1352,15 +1374,80 @@ function PipelineBar({ counts, tab, height }) {
   )
 }
 
-// The "Your pipeline" box: total, range switch, proportional bar and the four
-// status tabs. `rows` are already range/agent scoped. Below 640px it's the
-// bar, a scrolling row of chips and the range switch, with no box.
-export function PipelineTabs({ rows, tab, onTab, range, ranges, onRange, agentFilter }) {
-  const counts = useMemo(() => {
-    const c = { booked: 0, noAnswer: 0, needs: 0, cancelled: 0 }
-    rows.forEach(p => { c[tabOf(p)] += 1 })
-    return c
-  }, [rows])
+// Counts per tab, plus the Needs attention split (Prompt 726): numbers to
+// confirm vs clients the agent has to call.
+function tabCounts(rows) {
+  const counts = { booked: 0, noAnswer: 0, needs: 0, cancelled: 0 }
+  let confirm = 0
+  rows.forEach(p => {
+    counts[tabOf(p)] += 1
+    if (agentStageOf(p) === 'confirmNumber') confirm += 1
+  })
+  return { counts, confirm, call: counts.needs - confirm }
+}
+
+const tabSub = (t, { counts, confirm, call }) => (
+  t !== 'needs' ? PIPELINE_TAB[t].meaning : counts.needs ? `${confirm} to confirm · ${call} to call` : 'All caught up'
+)
+
+// The "Your pipeline" box (Prompt 726): total, range switch, proportional bar,
+// a 2×2 of status tiles and the next Fulfillment call. `rows` are already
+// range/agent scoped; `next` is the soonest booked call still ahead (ignores
+// the range).
+export function PipelineSummary({ rows, tab, range, ranges, onRange, agentFilter, next, onOpenNext, onBook }) {
+  const split = useMemo(() => tabCounts(rows), [rows])
+  const { counts } = split
+  const total = rows.length
+  const pct = n => (total ? Math.round((n / total) * 100) : 0)
+  const tz = next?.client_timezone || undefined
+  return (
+    <section className="ov-card pl-pipe">
+      <div className="pl-lbl">Your pipeline</div>
+      <div className="pl-total">
+        <b>{total}</b>client{total === 1 ? '' : 's'} · <em>{counts.cancelled} cancelled</em>
+      </div>
+      {agentFilter && <div style={{ marginTop: 12 }}>{agentFilter}</div>}
+      <div style={{ marginTop: 12 }}><RangeSwitch ranges={ranges} value={range} onChange={onRange} full /></div>
+      <div style={{ marginTop: 14 }}><PipelineBar counts={counts} tab={tab} height={6} /></div>
+      <div className="pl-legend">
+        {PIPELINE_TABS.map(t => (
+          <div key={t} className="pl-lg">
+            <div className="l"><i style={{ background: stVar(t) }} />{PIPELINE_TAB[t].label}</div>
+            <div className="v">{counts[t]}<small>{pct(counts[t])}%</small></div>
+          </div>
+        ))}
+      </div>
+      <div className="pl-next">
+        {next ? (
+          <>
+            <span className="pl-ntile">
+              <small style={{ color: stVar('booked') }}>{new Date(next.scheduled_call_at).toLocaleDateString('en-US', { month: 'short', timeZone: tz }).toUpperCase()}</small>
+              <b>{new Date(next.scheduled_call_at).toLocaleDateString('en-US', { day: 'numeric', timeZone: tz })}</b>
+            </span>
+            <span className="k">Next Fulfillment call<b>{fullName(next)} · {fmtSlotTime(next.scheduled_call_at, next.client_timezone)}</b></span>
+            <button type="button" className="go" onClick={() => onOpenNext(next)}>Open</button>
+          </>
+        ) : (
+          <>
+            <span className="pl-ntile"><CalendarDays size={18} strokeWidth={1.9} style={{ color: 'var(--ov-faint)' }} /></span>
+            <span className="k">Next Fulfillment call<b>No calls booked</b></span>
+            {onBook && <button type="button" className="go" onClick={onBook}>Book a call</button>}
+          </>
+        )}
+      </div>
+    </section>
+  )
+}
+
+// The list box (Prompt 726): the four status tabs in a row on top, then one
+// list for the selected tab in a body that scrolls inside the box (from
+// 1280px on a tall enough screen), so nothing on the page moves when the tab
+// or the row count changes. Below 640px it's a scrolling row of chips and
+// loose cards, with no box. `rows` are already range/agent scoped; `list` is
+// the selected tab's sorted rows.
+export function PipelineList({ rows, tab, onTab, list, ...status }) {
+  const split = useMemo(() => tabCounts(rows), [rows])
+  const { counts } = split
   const tabRefs = useRef({})
   const chipRefs = useRef({})
   // Phones: keep the selected chip inside the scrolling row.
@@ -1384,55 +1471,29 @@ export function PipelineTabs({ rows, tab, onTab, range, ranges, onRange, agentFi
   const select = t => { if (t !== tab) onTab(t) }
 
   return (
-    <>
-      <div className="ov-card hidden sm:flex" style={{ flexDirection: 'column', gap: 16, padding: '22px 22px 20px' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', padding: '0 4px' }}>
-          <div>
-            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mute)' }}>Your pipeline</div>
-            <div style={{ marginTop: 4, display: 'flex', alignItems: 'baseline', gap: 10 }}>
-              <span style={{ ...OV_NUM, fontSize: 36, letterSpacing: '-0.035em' }}>{rows.length}</span>
-              <span style={{ fontSize: 15, color: 'var(--ov-soft)' }}>
-                client{rows.length === 1 ? '' : 's'} · <span style={{ fontWeight: 600, color: stVar('cancelled') }}>{counts.cancelled} cancelled</span>
+    <section className="ov-card pl-list">
+      <div role="tablist" aria-label="Pipeline status" className="pl-tabs hidden sm:grid grid-cols-2 lg:grid-cols-4" onKeyDown={e => onKeyDown(e, tabRefs)}>
+        {PIPELINE_TABS.map(t => {
+          const on = t === tab
+          return (
+            <button
+              key={t} ref={el => { tabRefs.current[t] = el }} type="button" role="tab" aria-selected={on} tabIndex={on ? 0 : -1}
+              onClick={() => select(t)} className={`ov-tab pl-tab${on ? ' is-sel' : ''}${counts[t] ? '' : ' is-zero'}`}
+              style={{ '--c': stVar(t), '--tint': stVar(t, 'tint'), '--edge': stVar(t, 'edge') }}
+            >
+              <span className="d" />
+              <span style={{ minWidth: 0 }}>
+                <b className="nm">{PIPELINE_TAB[t].label}</b>
+                <small>{tabSub(t, split)}</small>
               </span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            {agentFilter}
-            <RangeSwitch ranges={ranges} value={range} onChange={onRange} />
-          </div>
-        </div>
-        <div style={{ padding: '0 4px' }}><PipelineBar counts={counts} tab={tab} height={10} /></div>
-        <div role="tablist" aria-label="Pipeline status" className="grid grid-cols-2 lg:grid-cols-4" style={{ gap: 10 }} onKeyDown={e => onKeyDown(e, tabRefs)}>
-          {PIPELINE_TABS.map(t => {
-            const on = t === tab
-            const meta = PIPELINE_TAB[t]
-            return (
-              <button
-                key={t} ref={el => { tabRefs.current[t] = el }} type="button" role="tab" aria-selected={on} tabIndex={on ? 0 : -1}
-                onClick={() => select(t)} className="ov-tab"
-                style={{
-                  minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6, padding: '14px 16px', borderRadius: 16,
-                  ...(on ? {
-                    background: `linear-gradient(180deg, ${stVar(t, 'tint')} 0%, transparent 100%)`,
-                    border: `1px solid ${stVar(t, 'edge')}`,
-                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.08), 0 14px 30px -20px ${stVar(t, 'edge')}`,
-                  } : { background: 'transparent', border: '1px solid var(--ov-line)' }),
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-                  <StatusDot tab={t} />
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, color: on ? stVar(t) : 'var(--ov-mid)', ...ellipsis }}>{meta.label}</span>
-                  <span style={{ ...OV_NUM, fontSize: 22, letterSpacing: '-0.02em', color: counts[t] || on ? 'var(--ov-hi)' : 'var(--ov-faint)' }}>{counts[t]}</span>
-                </span>
-                <span style={{ paddingLeft: 17, fontSize: 12.5, color: 'var(--ov-mute)' }}>{meta.meaning}</span>
-              </button>
-            )
-          })}
-        </div>
+              <span className="n" style={OV_NUM}>{counts[t]}</span>
+            </button>
+          )
+        })}
       </div>
 
-      <div className="flex flex-col sm:hidden" style={{ gap: 14 }}>
-        <PipelineBar counts={counts} tab={tab} height={8} />
+      <div className="sm:hidden">
+       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div role="tablist" aria-label="Pipeline status" className="ov-chips flex -mx-4 px-4" style={{ gap: 8, overflowX: 'auto' }} onKeyDown={e => onKeyDown(e, chipRefs)}>
           {PIPELINE_TABS.map(t => {
             const on = t === tab
@@ -1453,33 +1514,46 @@ export function PipelineTabs({ rows, tab, onTab, range, ranges, onRange, agentFi
             )
           })}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', padding: '0 2px' }}>
-          <span style={{ fontSize: 13, color: 'var(--ov-mute)' }}>{PIPELINE_TAB[tab].meaning}</span>
-          <RangeSwitch ranges={ranges} value={range} onChange={onRange} small />
-        </div>
-        {agentFilter}
+        <span style={{ padding: '0 2px 4px', fontSize: 13, color: 'var(--ov-mute)' }}>{tabSub(tab, split)}</span>
+       </div>
       </div>
-    </>
+
+      <div className="pl-body">
+        <StatusList key={tab} tab={tab} rows={list} {...status} />
+      </div>
+    </section>
   )
 }
 
 const COLUMNS = {
   booked:    ['Client', 'Carrier they’re leaving', 'Fulfillment call', 'Status', ''],
-  noAnswer:  ['Client', 'Carrier they’re leaving', 'Calls so far', 'What happens next', ''],
-  needs:     ['Client', 'Carrier they’re leaving', 'Why it needs you', ''],
-  cancelled: ['Client', 'Carrier they’re leaving', 'Result', 'Booked', ''],
+  noAnswer:  ['Client', 'Carrier they’re leaving', 'Next try', 'Status', ''],
+  needs:     ['Client', 'Carrier they’re leaving', 'What happened', '', ''],
+  cancelled: ['Client', 'Carrier cancelled', 'Cancelled', 'Status', ''],
 }
 const PAGE = 10
 const NEEDS_WHY = {
   confirmNumber: 'Two tries, no answer. Is their number right?',
   needsAttention: 'No reply to our texts. Call them and re-book.',
 }
+// Needs attention shows two groups (Prompt 726); a group with no rows is skipped.
+const NEEDS_GROUPS = [
+  {
+    key: 'confirm', icon: Phone, title: 'Confirm the number',
+    line: 'Fulfillment couldn’t get through. Check the number with the client and it goes back to No answer for more tries.',
+    has: p => agentStageOf(p) === 'confirmNumber',
+  },
+  {
+    key: 'call', icon: CalendarDays, title: 'Call and rebook',
+    line: 'Texts and a retry call didn’t reach them. Call them on your own time and book a new call.',
+    has: p => agentStageOf(p) !== 'confirmNumber',
+  },
+]
 
 function CarrierCell({ p }) {
   return (
-    <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, fontSize: 14, color: p.current_carrier ? 'var(--ov-soft)' : 'var(--ov-mute)' }}>
-      <Building2 size={15} strokeWidth={1.8} style={{ flexShrink: 0, color: 'var(--ov-faint)' }} />
-      <span style={ellipsis}>{p.current_carrier || 'Not noted'}</span>
+    <span style={{ minWidth: 0, fontSize: 14, color: p.current_carrier ? 'var(--ov-soft)' : 'var(--ov-mute)', ...ellipsis }}>
+      {p.current_carrier || 'Not noted'}
     </span>
   )
 }
@@ -1553,13 +1627,13 @@ function LiveLabel() {
   )
 }
 
-// A row's action: { label, icon, onClick, needs }, a muted { note }, or null.
-// Permission is the page's canMove (admin, or the agent's own client).
+// A row's action: { label, icon, onClick, needs, solid }, a muted { note }, or
+// null. Permission is the page's canMove (admin, or the agent's own client).
 function rowAction(p, { canMove, onRebook, onConfirm }) {
   const stage = agentStageOf(p)
   const mine = canMove(p)
-  if (stage === 'confirmNumber' && mine) return { label: 'Confirm number', icon: Check, onClick: () => onConfirm(p.id), needs: true }
-  if (stage === 'needsAttention' && mine && canRebook(p)) return { label: 'Call & rebook', icon: Phone, onClick: () => onRebook(p.id), needs: true }
+  if (stage === 'confirmNumber' && mine) return { label: 'Confirm number', onClick: () => onConfirm(p.id), needs: true, solid: true }
+  if (stage === 'needsAttention' && mine && canRebook(p)) return { label: 'Rebook', onClick: () => onRebook(p.id), needs: true }
   if (stage === 'noAnswer' && mine && canRebook(p)) return { label: 'Re-book', icon: CalendarPlus, onClick: () => onRebook(p.id) }
   if (stage === 'noAnswer') return { note: 'We’re on it' }
   return null
@@ -1569,42 +1643,68 @@ function ActionButton({ action, full }) {
   if (!action) return <span />
   if (action.note) return <span style={{ justifySelf: 'end', fontSize: 12.5, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>{action.note}</span>
   const Icon = action.icon
-  const look = action.needs
-    ? { height: full ? 44 : 40, padding: '0 18px', fontSize: 13.5, fontWeight: 700, border: `1px solid ${stVar('needs', 'edge')}`, background: stVar('needs', 'tint'), color: stVar('needs') }
-    : { height: full ? 44 : 36, padding: '0 16px', fontSize: 13, fontWeight: 600 }
+  const look = action.solid
+    ? { height: full ? 44 : 36, padding: '0 14px', fontSize: 13, fontWeight: 700, border: 'none', background: 'var(--ov-badge-bg)', color: 'var(--ov-badge-fg)' }
+    : action.needs
+      ? { height: full ? 44 : 36, padding: '0 14px', fontSize: 13, fontWeight: 700, border: `1px solid ${stVar('needs', 'edge')}`, background: stVar('needs', 'tint'), color: stVar('needs') }
+      : { height: full ? 44 : 36, padding: '0 16px', fontSize: 13, fontWeight: 600 }
   return (
     <button type="button" onClick={e => { e.stopPropagation(); action.onClick() }} onKeyDown={e => e.stopPropagation()}
       className={action.needs ? 'ov-tab' : 'ov-ghost'}
       style={{
-        justifySelf: 'end', borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+        justifySelf: 'end', borderRadius: full ? 999 : 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
         whiteSpace: 'nowrap', cursor: 'pointer', ...(full ? { width: '100%' } : null), ...look,
       }}>
-      <Icon size={14} strokeWidth={action.needs ? 2.2 : 2} />{action.label}
+      {Icon && <Icon size={14} strokeWidth={2} />}{action.label}
     </button>
   )
 }
 
-function EmptyState({ icon: Icon, tab, children, action }) {
+// Centred in the list box, which keeps its size. On a phone (no box) it's a
+// card of its own.
+function EmptyState({ icon: Icon, tab, title, children, action }) {
   return (
-    <div className="ov-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: 40, textAlign: 'center' }}>
-      {Icon && <IconChip icon={Icon} color={stVar(tab)} tint={stVar(tab, 'tint')} />}
-      <p style={{ margin: 0, fontSize: 14, color: 'var(--ov-mute)' }}>{children}</p>
+    <div className="pl-empty ov-card">
+      {Icon && <IconChip icon={Icon} color={stVar(tab)} tint={stVar(tab, 'tint')} size={44} radius={13} iconSize={20} />}
+      {title && <b style={{ fontSize: 15, color: 'var(--ov-hi)' }}>{title}</b>}
+      <p style={{ margin: 0, fontSize: title ? 13 : 14, color: 'var(--ov-mute)', maxWidth: 340 }}>{children}</p>
       {action}
     </div>
   )
 }
 
-// One list for the selected tab: a table from 1024px up, stacked cards below.
+// A group header band on Needs attention: amber icon tile, title + count, one
+// grey line.
+function NeedsGroupHead({ icon: Icon, title, count, line }) {
+  return (
+    <div className="pl-grp">
+      <span className="ic"><Icon size={16} strokeWidth={2} /></span>
+      <span style={{ minWidth: 0 }}>
+        <b>{title}<span>{count}</span></b>
+        <p>{line}</p>
+      </span>
+    </div>
+  )
+}
+
+// The selected tab's list: a table from 1024px up, stacked cards below.
 // `rows` arrive filtered and sorted. `emptyRange` ('week' | 'month') when
 // nobody at all was booked in the range. Key it by tab so paging resets.
+// Prompt 726 — the box, tabs and scrolling live in PipelineList; this is the
+// body (sticky column row + rows, or cards).
 export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebook, onConfirm, canMove, loading, emptyRange, onBook }) {
   const [limit, setLimit] = useState(PAGE)
-  const meta = PIPELINE_TAB[tab]
 
   if (loading) return <EmptyState tab={tab}>Loading clients…</EmptyState>
   if (!rows.length) {
     if (emptyRange) return <EmptyState icon={CalendarX} tab={tab}>Nobody booked {emptyRange === 'week' ? 'this week' : 'this month'} yet.</EmptyState>
-    if (tab === 'needs') return <EmptyState icon={Check} tab="cancelled">Nothing needs you right now.</EmptyState>
+    if (tab === 'needs') {
+      return (
+        <EmptyState icon={Check} tab="cancelled" title="Nothing needs your attention">
+          When a number needs confirming or a client needs a call from you, they’ll show up here.
+        </EmptyState>
+      )
+    }
     if (tab === 'noAnswer') return <EmptyState icon={PhoneMissed} tab={tab}>No missed calls.</EmptyState>
     if (tab === 'cancelled') return <EmptyState icon={Inbox} tab={tab}>No cancellations yet.</EmptyState>
     return (
@@ -1623,12 +1723,17 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
   const visible = paged ? rows.slice(0, limit) : rows
   const more = paged ? Math.min(PAGE, rows.length - visible.length) : 0
   const ctx = { canMove, onRebook, onConfirm }
+  // Needs attention in its two groups; every other tab is one unlabelled group.
+  const groups = tab === 'needs'
+    ? NEEDS_GROUPS.map(g => ({ ...g, rows: rows.filter(g.has) })).filter(g => g.rows.length)
+    : [{ key: 'all', rows: visible }]
   const rowProps = p => ({
     role: 'button', tabIndex: 0, 'aria-label': `Open ${fullName(p)}`,
     onClick: () => onOpen(p.id),
     onKeyDown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(p.id) } },
   })
-  const chevron = <span style={{ display: 'flex' }}><ChevronRight size={16} strokeWidth={2} style={{ color: 'var(--ov-faint)' }} /></span>
+  const chevron = <span style={{ justifySelf: 'end', display: 'flex' }}><ChevronRight size={16} strokeWidth={2} style={{ color: 'var(--ov-faint)' }} /></span>
+  const plain = { fontSize: 13.5, color: 'var(--ov-mute)' }
 
   const client = p => {
     const name = fullName(p)
@@ -1649,39 +1754,40 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
       case 'booked':
         return [
           <DateTile key="d" iso={p.scheduled_call_at} tz={p.client_timezone} />,
-          <span key="s" style={{ justifySelf: 'end' }}>{isLive(p) ? <LiveLabel /> : <span style={{ fontSize: 13, color: 'var(--ov-mute)' }}>Waiting for Fulfillment</span>}</span>,
-          <span key="c">{chevron}</span>,
+          <span key="s" style={plain}>{isLive(p) ? <LiveLabel /> : 'Waiting for Fulfillment'}</span>,
+          <span key="c" style={{ display: 'flex', justifyContent: 'flex-end' }}>{chevron}</span>,
         ]
       case 'noAnswer':
         return [
+          <span key="n" style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, fontSize: 13, lineHeight: 1.4, color: 'var(--ov-soft)' }}>
+            <RefreshCw size={15} strokeWidth={2} style={{ flexShrink: 0, color: 'var(--ov-faint)' }} />{nextStep(p, now)}
+          </span>,
           <span key="t" style={{ minWidth: 0 }}>
             <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--ov-hi)' }}>{triesText(p.call_attempts || 0)}</span>
             {lastOn(p, now) && <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>{lastOn(p, now)}</span>}
-          </span>,
-          <span key="n" style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, fontSize: 13, color: 'var(--ov-soft)' }}>
-            <RefreshCw size={15} strokeWidth={2} style={{ flexShrink: 0, color: 'var(--ov-faint)' }} />{nextStep(p, now)}
           </span>,
           <ActionButton key="a" action={rowAction(p, ctx)} />,
         ]
       case 'needs':
         return [
-          <span key="w" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13.5, lineHeight: 1.45, color: 'var(--ov-soft)' }}>
-            <TriangleAlert size={16} strokeWidth={2} style={{ flexShrink: 0, color: stVar('needs') }} />{NEEDS_WHY[agentStageOf(p)]}
-          </span>,
+          <span key="w" style={{ gridColumn: '3 / 5', fontSize: 13.5, lineHeight: 1.45, color: 'var(--ov-soft)' }}>{NEEDS_WHY[agentStageOf(p)]}</span>,
           <ActionButton key="a" action={rowAction(p, ctx)} />,
         ]
       default:
         return [
-          <span key="r" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13.5, fontWeight: 600, color: stVar('cancelled'), whiteSpace: 'nowrap' }}>
-            <Check size={15} strokeWidth={2.4} />Cancelled {monthDay(p.fulfillment_completed_at || p.updated_at)}
+          <span key="r" style={{ minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap' }}>{monthDay(p.fulfillment_completed_at || p.updated_at)}</span>
+            <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>Booked {monthDay(p.created_at)}</span>
           </span>,
-          <span key="b" style={{ fontSize: 13, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>Booked {monthDay(p.created_at)}</span>,
-          <span key="c">{chevron}</span>,
+          <span key="b" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13.5, fontWeight: 600, color: stVar('cancelled'), whiteSpace: 'nowrap' }}>
+            <Check size={15} strokeWidth={2.4} />Old policy cancelled
+          </span>,
+          <span key="c" style={{ display: 'flex', justifyContent: 'flex-end' }}>{chevron}</span>,
         ]
     }
   }
 
-  // The status-specific line on a phone card.
+  // The status-specific line on a card.
   const cardLine = p => {
     if (tab === 'booked') return isLive(p) ? <LiveLabel /> : `Call ${callWhen(p.scheduled_call_at, p.client_timezone)}`
     if (tab === 'noAnswer') return [triesText(p.call_attempts || 0), lastOn(p, now), nextStep(p, now)].filter(Boolean).join(' · ')
@@ -1689,73 +1795,70 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
     return `Cancelled ${monthDay(p.fulfillment_completed_at || p.updated_at)} · booked ${monthDay(p.created_at)}`
   }
 
+  const card = p => {
+    const name = fullName(p)
+    const action = rowAction(p, ctx)
+    return (
+      <div key={p.id} {...rowProps(p)} className="ov-tile ov-link"
+        style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 14, borderRadius: 14, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <StatusAvatar name={name} tab={tab} size={34} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ov-hi)', ...ellipsis }}>{name}</div>
+            <div style={{ marginTop: 1, display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, fontSize: 12.5, color: 'var(--ov-mute)' }}>
+              <Building2 size={13} strokeWidth={1.8} style={{ flexShrink: 0, color: 'var(--ov-faint)' }} />
+              <span style={ellipsis}>{p.current_carrier || 'Not noted'}{showAgent ? ` · ${p.agent?.full_name || '—'}` : ''}</span>
+            </div>
+            {placeOf(p) && <PlaceLine location={placeOf(p)} size={13} style={{ marginTop: 1, gap: 5, fontSize: 12.5, color: 'var(--ov-mute)' }} />}
+          </div>
+          {!action?.onClick && <ChevronRight size={16} strokeWidth={2} style={{ flexShrink: 0, color: 'var(--ov-faint)' }} />}
+        </div>
+        <div style={{ fontSize: 13, lineHeight: 1.45, color: 'var(--ov-soft)' }}>{cardLine(p)}</div>
+        {action?.onClick && <ActionButton action={action} full />}
+      </div>
+    )
+  }
+
   return (
     <>
-      <section className="ov-card hidden lg:flex" style={{ flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 12, padding: '18px 24px',
-          background: `radial-gradient(ellipse 50% 160% at 0% 0%, ${stVar(tab, 'tint')} 0%, transparent 70%)`,
-        }}>
-          <StatusDot tab={tab} size={10} />
-          <h2 style={{ ...OV_TITLE, fontSize: 19 }}>{meta.label}</h2>
-          <span style={{ fontSize: 14, color: 'var(--ov-mute)' }}>{meta.meaning}</span>
-          <span style={{ marginLeft: 'auto', fontSize: 14, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>
-            <span style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 600, color: 'var(--ov-hi)' }}>{rows.length}</span> client{rows.length === 1 ? '' : 's'}
-          </span>
-        </div>
-        <div className={`grid ov-cols-${tab}`} style={{
-          gap: 20, padding: '11px 24px', background: 'var(--ov-table-head)', borderTop: '1px solid var(--ov-line)', borderBottom: '1px solid var(--ov-line)',
-          fontSize: 12.5, fontWeight: 600, color: 'var(--ov-mute)',
-        }}>
+      <div className="hidden lg:block" style={{ flexShrink: 0 }}>
+        <div className="pl-cols">
           {COLUMNS[tab].map((c, i) => <span key={i}>{c}</span>)}
         </div>
-        <div>
-          {visible.map(p => (
-            <div key={p.id} {...rowProps(p)} className={`ov-row grid ov-cols-${tab}${activeId === p.id ? ' is-active' : ''}`}
-              style={{ alignItems: 'center', gap: 20, padding: '16px 24px' }}>
-              {client(p)}
-              <CarrierCell p={p} />
-              {cells(p)}
-            </div>
-          ))}
-        </div>
+        {groups.map(g => (
+          <div key={g.key}>
+            {g.icon && <NeedsGroupHead icon={g.icon} title={g.title} count={g.rows.length} line={g.line} />}
+            {g.rows.map(p => (
+              <div key={p.id} {...rowProps(p)} className={`pl-row${activeId === p.id ? ' is-active' : ''}`}>
+                {client(p)}
+                <CarrierCell p={p} />
+                {cells(p)}
+              </div>
+            ))}
+          </div>
+        ))}
         {more > 0 && (
           <button type="button" onClick={() => setLimit(limit + PAGE)} className="ov-row"
             style={{ width: '100%', height: 48, border: 'none', borderTop: '1px solid var(--ov-line)', background: 'transparent', fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mute)' }}>
             Show {more} more
           </button>
         )}
-      </section>
+      </div>
 
-      <div className="grid lg:hidden grid-cols-1 sm:grid-cols-2" style={{ gap: 10 }}>
-        {visible.map(p => {
-          const name = fullName(p)
-          const action = rowAction(p, ctx)
-          return (
-            <div key={p.id} {...rowProps(p)} className="ov-tile ov-link"
-              style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 14, borderRadius: 14, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                <StatusAvatar name={name} tab={tab} size={34} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ov-hi)', ...ellipsis }}>{name}</div>
-                  <div style={{ marginTop: 1, display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, fontSize: 12.5, color: 'var(--ov-mute)' }}>
-                    <Building2 size={13} strokeWidth={1.8} style={{ flexShrink: 0, color: 'var(--ov-faint)' }} />
-                    <span style={ellipsis}>{p.current_carrier || 'Not noted'}{showAgent ? ` · ${p.agent?.full_name || '—'}` : ''}</span>
-                  </div>
-                  {placeOf(p) && <PlaceLine location={placeOf(p)} size={13} style={{ marginTop: 1, gap: 5, fontSize: 12.5, color: 'var(--ov-mute)' }} />}
-                </div>
-                {!action?.onClick && <ChevronRight size={16} strokeWidth={2} style={{ flexShrink: 0, color: 'var(--ov-faint)' }} />}
-              </div>
-              <div style={{ fontSize: 13, lineHeight: 1.45, color: 'var(--ov-soft)' }}>{cardLine(p)}</div>
-              {action?.onClick && <ActionButton action={action} full />}
-            </div>
-          )
-        })}
+      <div className="lg:hidden" style={{ flexShrink: 0 }}>
+        {groups.map(g => (
+          <div key={g.key}>
+            {g.icon && <NeedsGroupHead icon={g.icon} title={g.title} count={g.rows.length} line={g.line} />}
+            <div className="pl-cards">{g.rows.map(card)}</div>
+          </div>
+        ))}
         {more > 0 && (
-          <button type="button" onClick={() => setLimit(limit + PAGE)} className="ov-ghost sm:col-span-2"
-            style={{ height: 48, borderRadius: 999, fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}>
-            Show {more} more
-          </button>
+          <div className="pl-cards">
+            <button type="button" onClick={() => setLimit(limit + PAGE)} className="ov-ghost sm:col-span-2"
+              style={{ height: 48, borderRadius: 999, fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}>
+              Show {more} more
+            </button>
+          </div>
         )}
       </div>
     </>

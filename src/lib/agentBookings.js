@@ -94,7 +94,7 @@ export function agentStageOf(p) {
   return s
 }
 
-// Prompt 717 — My Pipeline's four tabs. Needs you holds the two statuses only
+// Prompt 717 — My Pipeline's four tabs. Needs attention holds the two statuses only
 // the agent can move on (Confirm number, Needs attention); the rest are
 // agentStageOf as is.
 export const PIPELINE_TABS = ['booked', 'noAnswer', 'needs', 'cancelled']
@@ -135,7 +135,7 @@ export function isBooking(p) {
 export const digits = s => String(s || '').replace(/\D/g, '')
 
 // Client search (Prompt 717, shared with the header search by Prompt 722):
-// name, carrier and agent name contain the query, or 3+ typed digits appear in
+// name, carrier, city (Prompt 726) and agent name contain the query, or 3+ typed digits appear in
 // the phone number. Sorted by name, numeric-aware.
 export function matchClients(rows, query) {
   const q = String(query || '').trim().toLowerCase()
@@ -143,7 +143,7 @@ export function matchClients(rows, query) {
   const qd = digits(q)
   return (rows || [])
     .filter(p => {
-      const hay = [p.client_first_name, p.client_last_name, p.current_carrier, p.agent?.full_name].filter(Boolean).join(' ').toLowerCase()
+      const hay = [p.client_first_name, p.client_last_name, p.current_carrier, p.client_city, p.agent?.full_name].filter(Boolean).join(' ').toLowerCase()
       return hay.includes(q) || (qd.length >= 3 && digits(p.client_phone).includes(qd))
     })
     .sort((a, b) => fullName(a).localeCompare(fullName(b), undefined, { numeric: true }))

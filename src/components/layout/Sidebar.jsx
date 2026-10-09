@@ -25,7 +25,7 @@ import { AccountMenu } from './AccountMenu'
 //   outlined style, baseline-aligned so the text sits on the bird's bottom line.
 // - Rows 40px / radius 12; the active row has a fill, a soft shadow and a 3px
 //   glowing bar on the rail's left edge.
-// - Badges: Messages unread; agents also get My Pipeline's "needs you" count
+// - Badges: Messages unread; agents also get My Pipeline's "needs attention" count
 //   (amber), from the same useAgentBookings rows My Pipeline reads.
 // - Agents with a weekly cap get a "This week" bookings card.
 // - The account card opens the animated AccountMenu (theme, phone app, report
@@ -55,7 +55,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
   useMessagesRealtime(profile?.id)
   const unreadMessages = useUnreadMessageCount(!!profile?.id)
 
-  // Agents only: "needs you" on My Pipeline and this week's bookings card.
+  // Agents only: "needs attention" on My Pipeline and this week's bookings card.
   // Same queries (and keys) My Pipeline and Book a call already use.
   const { data: bookings = [] } = useAgentBookings(isAgent ? profile.id : null, { enabled: isAgent })
   const needsYou = useMemo(() => (isAgent ? bookings.filter(p => tabOf(p) === 'needs').length : 0), [bookings, isAgent])
@@ -82,7 +82,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
 
   const badgeFor = to => {
     if (to === '/messages' && unreadMessages > 0) return { n: unreadMessages, tone: 'msg', label: `${unreadMessages} unread` }
-    if (isAgent && to === '/agent/clients' && needsYou > 0) return { n: needsYou, tone: 'amber', label: `${needsYou} need you` }
+    if (isAgent && to === '/agent/clients' && needsYou > 0) return { n: needsYou, tone: 'amber', label: `${needsYou} ${needsYou === 1 ? 'needs' : 'need'} attention` }
     return null
   }
 

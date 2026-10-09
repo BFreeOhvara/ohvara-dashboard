@@ -6,7 +6,7 @@ import { dmId } from '../../hooks/useDirectMessages'
 import { useAgentBookings, useRescheduleBooking, useRebookCall, useConfirmRecoveryNumber } from '../../hooks/useAgentBookings'
 import { AnchoredSelectField } from '../../components/ui/ExportForm'
 import {
-  ClientSearch, PipelineTabs, StatusList, ClientDrawer, InfoTile, StatusNote, Journey, DayChoice, SlotGrid,
+  ClientSearch, PipelineSummary, PipelineList, ClientDrawer, InfoTile, StatusNote, Journey, DayChoice, SlotGrid,
 } from '../../components/agent/AgentUI'
 import { fmtBooking, callWhen, clientSlotISO, slotState, openBookingIsos, dayIn, addDaysStr, dateLabel, dayGone } from '../../lib/scheduling'
 import { viewerTimezone } from '../../lib/timezones'
@@ -32,7 +32,7 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 //
 // Prompt 717 — rebuilt on the v16 language as a rethink: a "Find any client"
 // search that always looks across every status, the "Your pipeline" box with
-// four status tabs (Booked, No answer, Needs you, Cancelled — tabOf), one
+// four status tabs (Booked, No answer, Needs attention, Cancelled — tabOf), one
 // list per tab with columns built for that status, and client details in a
 // right-side drawer. The page always opens on Booked; ?stage= wins. The page
 // scrolls normally now (the P686/P707 fixed-height column is gone).
@@ -41,6 +41,12 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 // client's own zone (policies.client_timezone; older rows fall back to the
 // viewer's). Move / Re-book follow Book a call's rules: client-local slots,
 // 30 minutes' notice, no second booking at a time the agent already has.
+//
+// Prompt 726 — new layout: two equal boxes on the left (Find any client with
+// Recently booked; Your pipeline with status tiles and the next Fulfillment
+// call) and one list box on the right with the status tabs on top. The page
+// never scrolls on a tall desktop screen; the list scrolls inside its box, so
+// switching status moves nothing. Needs attention shows two groups.
 
 const RANGE_VALUES = RANGES.map(r => r.value)
 // Old ?stage= values still arrive from the Overview (attention rows, the
@@ -85,13 +91,18 @@ export default function Clients() {
     .map(([id, name]) => ({ value: id, label: name }))
     .sort((a, b) => a.label.localeCompare(b.label)), [rows])
 
+  // Agent scope alone (Recently booked and the next call ignore the range).
+  const byAgent = useMemo(() => rows.filter(p => !agentId || p.agent_id === agentId), [rows, agentId])
   // Range + agent scope the search, the pipeline and the list alike.
   const scoped = useMemo(() => {
     const from = range === 'week' ? startOfWeek(new Date(now)).getTime()
       : range === 'month' ? startOfMonth(new Date(now)).getTime() : null
-    return rows.filter(p => (!agentId || p.agent_id === agentId)
-      && (from == null || new Date(p.created_at).getTime() >= from))
-  }, [rows, agentId, range, now])
+    return from == null ? byAgent : byAgent.filter(p => new Date(p.created_at).getTime() >= from)
+  }, [byAgent, range, now])
+  // The soonest booked call still ahead (same rule as the Overview's coming-up box).
+  const nextCall = useMemo(() => byAgent
+    .filter(p => stageOf(p) === 'booked' && p.scheduled_call_at && new Date(p.scheduled_call_at).getTime() > now)
+    .reduce((best, p) => (!best || p.scheduled_call_at < best.scheduled_call_at ? p : best), null), [byAgent, now])
 
   const list = useMemo(() => scoped.filter(p => tabOf(p) === tab).sort(SORT[tab]), [scoped, tab])
 
@@ -112,25 +123,35 @@ export default function Clients() {
   const openRow = openId ? rows.find(p => p.id === openId) : null
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <ClientSearch rows={scoped} onOpen={openFromSearch} hotkey={!openRow} />
-      <PipelineTabs
-        rows={scoped} tab={tab} onTab={t => setParam('stage', t, 'booked')}
-        range={range} ranges={RANGES} onRange={v => setParam('range', v, 'all')}
-        agentFilter={isAdmin && agents.length > 1 ? (
-          <AnchoredSelectField
-            value={agentId} onChange={setAgentId}
-            options={[{ value: '', label: 'All agents' }, ...agents]}
-            style={{ width: 200 }}
+    <>
+      <div className="pl-page">
+        <div className="pl-rail">
+          <ClientSearch
+            rows={scoped} recentRows={byAgent} onOpen={openFromSearch} hotkey={!openRow}
+            onBook={isAdmin ? undefined : () => navigate('/agent/book')}
           />
-        ) : null}
-      />
-      <StatusList
-        key={tab} tab={tab} rows={list} now={now} showAgent={isAdmin} activeId={openId}
-        onOpen={openOnly} onRebook={startRebook} onConfirm={openOnly} canMove={canMove}
-        loading={isLoading} emptyRange={scoped.length === 0 && range !== 'all' ? range : null}
-        onBook={isAdmin ? undefined : () => navigate('/agent/book')}
-      />
+          <PipelineSummary
+            rows={scoped} tab={tab}
+            range={range} ranges={RANGES} onRange={v => setParam('range', v, 'all')}
+            agentFilter={isAdmin && agents.length > 1 ? (
+              <AnchoredSelectField
+                value={agentId} onChange={setAgentId}
+                options={[{ value: '', label: 'All agents' }, ...agents]}
+                style={{ width: '100%' }}
+              />
+            ) : null}
+            next={nextCall} onOpenNext={openFromSearch}
+            onBook={isAdmin ? undefined : () => navigate('/agent/book')}
+          />
+        </div>
+        <PipelineList
+          rows={scoped} tab={tab} onTab={t => setParam('stage', t, 'booked')} list={list}
+          now={now} showAgent={isAdmin} activeId={openId}
+          onOpen={openOnly} onRebook={startRebook} onConfirm={openOnly} canMove={canMove}
+          loading={isLoading} emptyRange={scoped.length === 0 && range !== 'all' ? range : null}
+          onBook={isAdmin ? undefined : () => navigate('/agent/book')}
+        />
+      </div>
 
       {openRow && (
         <ClientDetail
@@ -138,7 +159,7 @@ export default function Clients() {
           agentRows={raw.filter(r => r.agent_id === openRow.agent_id)}
         />
       )}
-    </div>
+    </>
   )
 }
 
