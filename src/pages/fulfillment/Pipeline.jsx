@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Search, Phone, X, Check, ArrowRight, MessageSquare } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import { dmId } from '../../hooks/useDirectMessages'
 import { useFulfillmentQueue } from '../../hooks/usePolicies'
 import { fieldLabel, ghostBtn, MONO, DISPLAY } from '../../lib/exportStyles'
 import { Pipeline } from '../../components/agent/Pipeline'
@@ -172,8 +173,8 @@ function Summary({ p, profile, onClose }) {
         {(mine || isAdmin) && (
           <button onClick={desk} style={ghostBtn}>Open on desk <ArrowRight size={14} /></button>
         )}
-        <button onClick={() => navigate(`/messages?thread=${p.id}`)} style={ghostBtn}>
-          <MessageSquare size={14} /> {isAdmin ? 'Open conversation' : 'Message agent'}
+        <button onClick={() => navigate(`/messages?dm=${dmId(p.agent_id, isAdmin ? 'admin' : profile?.id)}`)} style={ghostBtn}>
+          <MessageSquare size={14} /> Message agent
         </button>
         <button onClick={onClose} title="Close" className="icon-btn" style={{ width: 32, height: 32 }}><X size={15} /></button>
       </div>

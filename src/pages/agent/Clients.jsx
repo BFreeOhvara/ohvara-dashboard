@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Phone, Calendar, CalendarDays } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import { dmId } from '../../hooks/useDirectMessages'
 import { useAgentBookings, useRescheduleBooking, useRebookCall, useConfirmRecoveryNumber } from '../../hooks/useAgentBookings'
 import { AnchoredSelectField } from '../../components/ui/ExportForm'
 import {
@@ -194,8 +195,8 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose }) {
   return (
     <ClientDrawer
       p={p} tab={tab} onClose={onClose} footer={footer}
-      onMessage={() => navigate(`/messages?thread=${p.id}`)}
-      messageLabel={isAdmin ? 'Open conversation' : 'Message Fulfillment'}
+      onMessage={() => navigate(`/messages?dm=${dmId(p.agent_id, isAdmin ? 'admin' : p.assigned_fulfillment_id || 'admin')}`)}
+      messageLabel={isAdmin ? 'Message agent' : 'Message Fulfillment'}
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
         <InfoTile label="Fulfillment call" value={callWhen(p.scheduled_call_at)} />

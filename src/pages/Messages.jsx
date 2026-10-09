@@ -1,95 +1,83 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ArrowLeft, MessageSquare, Send } from 'lucide-react'
+import { ArrowLeft, MessageSquare, Search } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
-import {
-  useMessageThreads, useThreadMessages, useThreadPolicy, useSendMessage, useMarkThreadRead,
-} from '../hooks/usePolicyMessages'
+import { useThreadPolicy } from '../hooks/usePolicyMessages'
 import {
   useStandingThreads, useDmMessages, useSendDm, useMarkDmRead, dmId, parseDmId,
 } from '../hooks/useDirectMessages'
-import { eyebrow, primaryBtn, MONO, DISPLAY } from '../lib/exportStyles'
-import { fullName } from '../lib/policyFormat'
-import { EmptyNote } from '../components/agent/AgentUI'
-import { Avatar } from '../components/ui/Avatar'
+import { DISPLAY } from '../lib/exportStyles'
+import {
+  InboxHero, InboxRow, InboxRowSkeleton, LineAvatar, DayDivider, ChatBubbleGroup, Composer,
+} from '../components/agent/AgentUI'
 
-// Messages (Prompt 679) — agents and the Fulfillment team talking about a
-// booked client, in either direction.
+// Messages (Prompt 679, rethought in 721) — the standing team lines only:
+// an agent <-> each Fulfillment rep and an agent <-> Admin (Prompt 701,
+// migration 123). A rep sees one line per agent, admin the Admin line per
+// agent. Access is RLS (can_dm_thread), so nothing here filters by role.
+// Lines open via ?dm=<agent id>.<rep id | 'admin'>.
 //
-// Shape: one thread per client (policy), not a free-form inbox. That matches
-// how the rest of the portal is organised (per-submission, not per-person),
-// and it means "who is this about" never needs asking. An agent sees only
-// their own clients' threads; a Fulfillment rep sees the whole booked pool;
-// admin sees everything — all enforced by RLS in migration 114, so nothing
-// here filters by role. Threads start from a client row (Clients ->
-// "Message Fulfillment", Fulfillment work view -> "Message agent") and open
-// here via ?thread=<policy id>.
-//
-// Prompt 701: alongside the per-client threads, every account has standing
-// threads with no client attached (migration 123) — an agent gets one with
-// each Fulfillment rep plus Admin, a rep gets one per agent, admin gets the
-// Admin line per agent. They're listed even when empty and open via
-// ?dm=<agent id>.<rep id | 'admin'>. The layout is full-bleed (no card) to
-// match Restorix; DashboardLayout drops its page padding for /messages.
+// Prompt 721 removed the per-client threads from the UI for every role
+// (policy_messages had 0 rows; the table, its RLS and my_message_threads stay
+// dormant). An old ?thread=<policy id> link redirects to that client's
+// standing line. Full screen on the v16 language: a tinted inbox column
+// (inbox hero, search, rows) and the conversation on the plain page colour.
+// See DESIGN.md v16 "P721 — Messages".
 
 const MAX_LEN = 2000
+const GROUP_GAP_MS = 5 * 60e3
 
-function fmtTime(iso) {
-  const d = new Date(iso)
-  const now = new Date()
-  const sameDay = d.toDateString() === now.toDateString()
-  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-  if (sameDay) return time
-  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1)
-  if (d.toDateString() === yesterday.toDateString()) return `Yesterday ${time}`
-  return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${time}`
+const ROLE_LABEL = { fulfillment: 'Fulfillment', admin: 'Admin', agent: 'Agent' }
+
+const STARTERS = {
+  admin: ['I have a billing question', 'Something isn’t working', 'Question about a client'],
+  fulfillment: ['Question about a client’s call', 'Heads-up before a call', 'Wrong number on file'],
 }
 
-function fmtShort(iso) {
-  const d = new Date(iso)
-  const diffMin = Math.floor((Date.now() - d.getTime()) / 60000)
-  if (diffMin < 1) return 'now'
-  if (diffMin < 60) return `${diffMin}m`
-  if (diffMin < 60 * 24) return `${Math.floor(diffMin / 60)}h`
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+const firstName = s => (s || '').trim().split(/\s+/)[0] || ''
+
+function dayDiff(iso) {
+  const d = new Date(iso); d.setHours(0, 0, 0, 0)
+  const t = new Date(); t.setHours(0, 0, 0, 0)
+  return Math.round((t - d) / 864e5)
+}
+const clock = iso => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+const monthDay = iso => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+// Inbox row time: 9:02 AM today, Yesterday, else Oct 5.
+function rowTime(iso) {
+  const diff = dayDiff(iso)
+  return diff === 0 ? clock(iso) : diff === 1 ? 'Yesterday' : monthDay(iso)
 }
 
-function counterpart(t, me) {
-  if (me?.role === 'agent') return t.fulfillment_name ? `Fulfillment · ${t.fulfillment_name}` : 'Fulfillment · no rep yet'
-  return `Agent · ${t.agent_name || 'Unknown'}`
+function dayLabel(iso) {
+  const diff = dayDiff(iso)
+  if (diff === 0) return 'Today'
+  if (diff === 1) return 'Yesterday'
+  return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-// Both kinds of thread, normalised to one row shape for the list.
-function buildItems(policyThreads, standing, me) {
-  const items = []
-  for (const t of policyThreads) {
-    items.push({
-      key: t.policy_id, param: 'thread',
-      title: fullName(t), sub: counterpart(t, me),
-      ...(me?.role === 'agent'
-        ? { avatarName: t.fulfillment_name || 'Fulfillment', avatarUrl: t.fulfillment_avatar_url, avatarColor: t.fulfillment_avatar_color }
-        : { avatarName: t.agent_name, avatarUrl: t.agent_avatar_url, avatarColor: t.agent_avatar_color }),
-      last_body: t.last_body, last_sender_id: t.last_sender_id, last_at: t.last_at, unread_count: t.unread_count,
-    })
-  }
-  for (const t of standing) {
-    const title = me?.role === 'agent'
-      ? (t.peer_id ? t.peer_name || 'Fulfillment' : 'Admin')
+// One row shape per standing thread, newest first, then by name.
+function buildItems(standing, me) {
+  const agentView = me?.role === 'agent'
+  return standing.map(t => {
+    const kind = agentView ? (t.peer_id ? 'fulfillment' : 'admin') : 'agent'
+    const title = kind === 'admin' ? 'Admin'
+      : agentView ? t.peer_name || 'Fulfillment'
       : t.agent_name || 'Unknown'
-    const sub = me?.role === 'agent'
-      ? (t.peer_id ? 'Fulfillment' : 'Admin team')
-      : me?.role === 'admin' ? 'Agent · Admin line' : 'Agent'
-    items.push({
-      key: dmId(t.agent_id, t.peer_key), param: 'dm',
-      title, sub,
-      // Admin has no profile row, so the Admin line falls back to an "A" circle.
-      ...(me?.role === 'agent'
-        ? { avatarName: title, avatarUrl: t.peer_avatar_url, avatarColor: t.peer_avatar_color }
-        : { avatarName: t.agent_name, avatarUrl: t.agent_avatar_url, avatarColor: t.agent_avatar_color }),
-      last_body: t.last_body, last_sender_id: t.last_sender_id, last_at: t.last_at, unread_count: t.unread_count,
-    })
-  }
-  return items.sort((a, b) => {
+    const line = kind === 'admin' ? { kind, name: 'Admin' }
+      : agentView ? { kind, name: title, avatarUrl: t.peer_avatar_url, avatarColor: t.peer_avatar_color }
+      : { kind, name: title, avatarUrl: t.agent_avatar_url, avatarColor: t.agent_avatar_color }
+    return {
+      key: dmId(t.agent_id, t.peer_key), agentId: t.agent_id, peerKey: t.peer_key,
+      line, title, short: kind === 'admin' ? 'Admin' : firstName(title) || title,
+      roleLine: kind === 'fulfillment' ? 'Fulfillment' : kind === 'admin' ? 'Ohvara team' : 'Agent',
+      sub: kind === 'fulfillment' ? 'Fulfillment · calls your clients'
+        : kind === 'admin' ? 'The Ohvara team. Billing, your account, anything else.'
+        : me?.role === 'admin' ? 'Agent · Admin line' : 'Agent',
+      last_body: t.last_body, last_sender_id: t.last_sender_id, last_at: t.last_at, unread_count: t.unread_count || 0,
+    }
+  }).sort((a, b) => {
     if (a.last_at && b.last_at) return new Date(b.last_at) - new Date(a.last_at)
     if (a.last_at) return -1
     if (b.last_at) return 1
@@ -97,164 +85,194 @@ function buildItems(policyThreads, standing, me) {
   })
 }
 
+// The inbox hero's bottom line.
+function heroNote(items, me) {
+  const unread = items.filter(i => i.unread_count > 0)
+  if (unread.length === 1) {
+    const [u] = unread
+    return `From ${u.short}, ${dayDiff(u.last_at) === 0 ? clock(u.last_at) : rowTime(u.last_at).toLowerCase()}`
+  }
+  if (unread.length === 2) return `From ${unread[0].short} and ${unread[1].short}`
+  if (unread.length > 2) return `From ${unread.length} people`
+  const latest = items.find(i => i.last_at)
+  if (!latest) return 'No messages yet'
+  const who = latest.last_sender_id === me?.id ? 'you' : latest.short
+  const diff = dayDiff(latest.last_at)
+  return `Last message from ${who} ${diff === 0 ? `at ${clock(latest.last_at)}` : diff === 1 ? 'yesterday' : `on ${monthDay(latest.last_at)}`}`
+}
+
+function useIsDesktop() {
+  const query = '(min-width: 768px)'
+  const [match, setMatch] = useState(() => window.matchMedia(query).matches)
+  useEffect(() => {
+    const mq = window.matchMedia(query)
+    const on = () => setMatch(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return match
+}
+
 export default function Messages() {
   const { profile } = useAuth()
   const [params, setParams] = useSearchParams()
   const policyId = params.get('thread')
-  const dm = parseDmId(params.get('dm'))
-  const activeKey = policyId || (dm ? dmId(dm.agentId, dm.peerKey) : null)
+  const dmParam = params.get('dm')
+  const dm = parseDmId(dmParam)
+  const activeKey = dm ? dmId(dm.agentId, dm.peerKey) : null
+  const desktop = useIsDesktop()
 
-  const { data: threads = [], isLoading: loadingPolicy } = useMessageThreads()
-  const { data: standing = [], isLoading: loadingStanding } = useStandingThreads()
-  const isLoading = loadingPolicy || loadingStanding
-  const items = useMemo(() => buildItems(threads, standing, profile), [threads, standing, profile])
+  const { data: standing = [], isLoading } = useStandingThreads()
+  const items = useMemo(() => buildItems(standing, profile), [standing, profile])
+  const unread = items.reduce((n, i) => n + i.unread_count, 0)
 
-  const open = (param, id) => {
-    const next = new URLSearchParams(params)
+  const [query, setQuery] = useState('')
+  const q = query.trim().toLowerCase()
+  const shown = q ? items.filter(i => [i.title, i.roleLine, i.last_body].some(s => s?.toLowerCase().includes(q))) : items
+
+  const open = id => setParams(prev => {
+    const next = new URLSearchParams(prev)
     next.delete('thread'); next.delete('dm')
-    if (id) next.set(param, id)
-    setParams(next, { replace: true })
-  }
+    if (id) next.set('dm', id)
+    return next
+  }, { replace: true })
+
+  // Old per-client links (?thread=<policy id>) land on that client's standing
+  // line: agent -> their rep (or Admin if none), rep -> the agent, admin ->
+  // the agent's Admin line. Unreadable policy -> the param is just dropped.
+  const { data: oldPolicy, isLoading: oldLoading } = useThreadPolicy(policyId)
+  useEffect(() => {
+    if (!policyId || oldLoading || !profile?.id) return
+    let to = null
+    if (oldPolicy) {
+      const peer = profile.role === 'agent' ? oldPolicy.assigned_fulfillment_id || 'admin'
+        : profile.role === 'fulfillment' ? profile.id
+        : 'admin'
+      to = dmId(oldPolicy.agent_id, peer)
+    }
+    setParams(prev => {
+      const next = new URLSearchParams(prev)
+      next.delete('thread'); next.delete('dm')
+      if (to) next.set('dm', to)
+      return next
+    }, { replace: true })
+  }, [policyId, oldLoading, oldPolicy, profile?.id, profile?.role, setParams])
+
+  // Desktop never shows a blank right side: open the most recent line.
+  const newest = items[0]?.key
+  useEffect(() => {
+    if (!desktop || policyId || dmParam || !newest) return
+    setParams(prev => {
+      const next = new URLSearchParams(prev)
+      next.set('dm', newest)
+      return next
+    }, { replace: true })
+  }, [desktop, policyId, dmParam, newest, setParams])
+
+  const chatOpen = !!(activeKey || policyId)
 
   return (
-    <div className="messages-fill flex md:grid md:grid-cols-[340px_minmax(0,1fr)]">
-      <div
-        className={activeKey ? 'hidden md:flex' : 'flex'}
-        style={{ flex: 1, minWidth: 0, flexDirection: 'column', minHeight: 0, borderRight: 'var(--border-w) solid var(--border)' }}
-      >
-        <div style={{ padding: '16px 18px', borderBottom: 'var(--border-w) solid var(--border)' }}>
-          <p style={eyebrow}>Conversations</p>
-        </div>
-        {/* Flex column only while showing a placeholder, so it centers in the pane (Prompt 707). */}
-        <div className="scrollbar-thin" style={{ flex: 1, minHeight: 0, overflowY: 'auto', ...(isLoading || items.length === 0 ? { display: 'flex', flexDirection: 'column' } : null) }}>
+    <div className="messages-fill ov-msg">
+      <div className={`ov-msg-inbox ${chatOpen ? 'hidden md:flex' : 'flex'}`}>
+        <InboxHero
+          unread={unread} loading={isLoading}
+          lines={items.map(i => ({ key: i.key, ...i.line }))}
+          note={heroNote(items, profile)}
+        />
+        <label className="ov-input ov-msg-search">
+          <Search size={16} strokeWidth={2} style={{ flexShrink: 0 }} />
+          <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search conversations" aria-label="Search conversations" />
+        </label>
+        <div className="ov-msg-list scrollbar-thin">
           {isLoading ? (
-            <EmptyNote>Loading…</EmptyNote>
+            [0, 1, 2].map(i => <InboxRowSkeleton key={i} />)
           ) : items.length === 0 ? (
-            <EmptyNote>No conversations yet.</EmptyNote>
-          ) : items.map(t => (
-            <ThreadRow key={`${t.param}:${t.key}`} t={t} me={profile} active={t.key === activeKey} onClick={() => open(t.param, t.key)} />
+            <ListNote>No conversations yet.</ListNote>
+          ) : shown.length === 0 ? (
+            <ListNote>No conversations match</ListNote>
+          ) : shown.map(t => (
+            <InboxRow
+              key={t.key} line={t.line} title={t.title} roleLine={t.roleLine}
+              time={t.last_at ? rowTime(t.last_at) : ''}
+              preview={t.last_body ? `${t.last_sender_id === profile?.id ? 'You: ' : ''}${t.last_body}` : 'No messages yet'}
+              unread={t.unread_count} active={t.key === activeKey} onClick={() => open(t.key)}
+            />
           ))}
         </div>
       </div>
 
-      <div className={activeKey ? 'flex' : 'hidden md:flex'} style={{ flex: 1, flexDirection: 'column', minHeight: 0, minWidth: 0 }}>
-        {policyId ? (
-          <PolicyConversation key={policyId} policyId={policyId} me={profile} onBack={() => open('thread', null)} />
-        ) : dm ? (
-          <DmConversation
+      <div className={`ov-msg-pane ${chatOpen ? 'flex' : 'hidden md:flex'}`}>
+        {dm ? (
+          <Conversation
             key={activeKey} agentId={dm.agentId} peerKey={dm.peerKey}
             item={items.find(i => i.key === activeKey)} listReady={!isLoading}
-            me={profile} onBack={() => open('dm', null)}
+            me={profile} onBack={() => open(null)}
           />
-        ) : (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--text-muted)' }}>
-            <MessageSquare size={26} />
-            <p style={{ margin: 0, fontSize: 14 }}>Pick a conversation</p>
-          </div>
-        )}
+        ) : !isLoading && !policyId && items.length === 0 ? (
+          <PaneNote icon={MessageSquare}>No conversations yet.</PaneNote>
+        ) : null}
       </div>
     </div>
   )
 }
 
-function ThreadRow({ t, me, active, onClick }) {
-  const unread = t.unread_count > 0
-  const mine = t.last_sender_id === me?.id
+function ListNote({ children }) {
+  return <p style={{ margin: 0, padding: '28px 14px', textAlign: 'center', fontSize: 13.5, color: 'var(--ov-mute)' }}>{children}</p>
+}
+
+function PaneNote({ icon: Icon, children, action }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '14px 18px',
-        border: 'none', borderBottom: 'var(--border-w) solid var(--border)',
-        background: active ? 'var(--bg-elevated)' : 'transparent', cursor: 'pointer',
-        boxShadow: active ? 'inset 3px 0 0 var(--accent)' : 'none',
-      }}
-    >
-      <Avatar name={t.avatarName} avatarUrl={t.avatarUrl} avatarColor={t.avatarColor} size={36} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: unread ? 700 : 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {t.title}
-        </span>
-        {t.last_at && <span style={{ fontFamily: MONO, fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>{fmtShort(t.last_at)}</span>}
-      </div>
-      <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>{t.sub}</p>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-        <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: unread ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {t.last_body ? `${mine ? 'You: ' : ''}${t.last_body}` : 'No messages yet'}
-        </span>
-        {unread && (
-          <span style={{
-            minWidth: 18, height: 18, padding: '0 5px', borderRadius: 999, flexShrink: 0,
-            background: 'var(--accent)', color: '#fff', fontFamily: MONO, fontSize: 11, fontWeight: 600,
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          }}>{t.unread_count}</span>
-        )}
-      </div>
-      </div>
-    </button>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24, textAlign: 'center', color: 'var(--ov-mute)' }}>
+      {Icon && <Icon size={26} />}
+      <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--ov-hi)' }}>{children}</p>
+      {action}
+    </div>
   )
 }
 
-function PolicyConversation({ policyId, me, onBack }) {
-  const { data: pol, isLoading: polLoading } = useThreadPolicy(policyId)
-  const { data: messages = [], isLoading } = useThreadMessages(policyId)
-  const send = useSendMessage(policyId, me?.id)
-  const markRead = useMarkThreadRead(me?.id)
-
-  const lastId = messages[messages.length - 1]?.id
-
-  // Opening the thread, or a new message arriving while it's open, marks it
-  // read. Admin is an observer (their unread count is always 0), so skip them.
-  const { mutate: mark } = markRead
-  useEffect(() => {
-    if (me?.id && lastId && me.role !== 'admin') mark(policyId)
-  }, [policyId, lastId, me?.id, me?.role, mark])
-
-  const blocked = !polLoading && (!pol || !pol.fulfillment_assigned)
-
-  const withWho = !pol ? '' : me?.role === 'agent'
-    ? (pol.assigned?.full_name ? `With Fulfillment · ${pol.assigned.full_name}` : 'With Fulfillment · no rep yet')
-    : `Booked by ${pol.agent?.full_name || 'unknown agent'}`
-
-  return (
-    <ChatPane
-      title={pol ? fullName(pol) : 'Conversation'} subtitle={withWho}
-      messages={messages} isLoading={isLoading} blocked={blocked}
-      me={me} onBack={onBack} send={send}
-    />
-  )
+// Messages split into day dividers and sender groups (same sender, each
+// message within 5 minutes of the one before, same day).
+function groupMessages(messages) {
+  const out = []
+  let day = null
+  let cur = null
+  for (const m of messages) {
+    const d = new Date(m.created_at).toDateString()
+    if (d !== day) {
+      out.push({ type: 'day', key: `day:${d}`, label: dayLabel(m.created_at) })
+      day = d
+      cur = null
+    }
+    const prev = cur?.msgs[cur.msgs.length - 1]
+    if (cur && cur.senderId === m.sender_id && new Date(m.created_at) - new Date(prev.created_at) <= GROUP_GAP_MS) {
+      cur.msgs.push(m)
+    } else {
+      cur = { type: 'group', key: m.id, senderId: m.sender_id, msgs: [m] }
+      out.push(cur)
+    }
+  }
+  return out
 }
 
-// A standing thread (Prompt 701). `item` is undefined when the URL points at a
-// pair the caller isn't part of (stale link, deactivated account) — shown as
+// One standing line. `item` is undefined when the URL points at a pair the
+// caller isn't part of (stale link, deactivated account) — shown as
 // unavailable once the list has loaded rather than letting them type into it.
-function DmConversation({ agentId, peerKey, item, listReady, me, onBack }) {
+function Conversation({ agentId, peerKey, item, listReady, me, onBack }) {
   const { data: messages = [], isLoading } = useDmMessages(agentId, peerKey)
   const send = useSendDm(agentId, peerKey, me?.id)
   const { mutate: mark } = useMarkDmRead(me?.id)
+  const [draft, setDraft] = useState('')
+  const inputRef = useRef(null)
+  const endRef = useRef(null)
 
   const lastId = messages[messages.length - 1]?.id
   useEffect(() => {
     if (me?.id && lastId) mark({ agentId, peerKey })
   }, [agentId, peerKey, lastId, me?.id, mark])
 
-  return (
-    <ChatPane
-      title={item?.title || 'Conversation'} subtitle={item?.sub || ''}
-      messages={messages} isLoading={isLoading} blocked={listReady && !item}
-      me={me} onBack={onBack} send={send}
-    />
-  )
-}
-
-function ChatPane({ title, subtitle, messages, isLoading, blocked, me, onBack, send }) {
-  const [draft, setDraft] = useState('')
-  const endRef = useRef(null)
-  const lastId = messages[messages.length - 1]?.id
-
   useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }) }, [lastId])
 
+  const groups = useMemo(() => groupMessages(messages), [messages])
   const trimmed = draft.trim()
 
   function submit() {
@@ -262,78 +280,113 @@ function ChatPane({ title, subtitle, messages, isLoading, blocked, me, onBack, s
     send.mutate(trimmed, { onSuccess: () => setDraft('') })
   }
 
+  function pickStarter(text) {
+    setDraft(text)
+    requestAnimationFrame(() => {
+      const el = inputRef.current
+      if (!el) return
+      el.focus()
+      el.setSelectionRange(text.length, text.length)
+    })
+  }
+
+  if (listReady && !item) {
+    return (
+      <PaneNote action={<button type="button" className="ov-ghost" onClick={onBack} style={{ height: 40, padding: '0 18px', borderRadius: 999, font: 'inherit', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Back to inbox</button>}>
+        This conversation isn’t available.
+      </PaneNote>
+    )
+  }
+
+  const starters = me?.role === 'agent' && item ? STARTERS[item.line.kind] : null
+  const emptyCopy = !item ? '' : item.line.kind === 'admin'
+    ? 'Ask about billing, your account, or anything that isn’t working. Replies land right here.'
+    : item.line.kind === 'fulfillment'
+      ? 'Ask about a client’s call, or let them know something before they dial.'
+      : `Send ${item.short} a note. They’ll see it in their Messages.`
+  const empty = !isLoading && messages.length === 0
+
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderBottom: 'var(--border-w) solid var(--border)' }}>
-        <button onClick={onBack} className="icon-btn md:hidden" title="Back" style={{ width: 32, height: 32 }}><ArrowLeft size={16} /></button>
-        <div style={{ minWidth: 0 }}>
-          <p style={{ margin: 0, fontFamily: DISPLAY, fontSize: 17, fontWeight: 500, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-            {title}
-          </p>
-          <p style={{ margin: '2px 0 0', fontSize: 12.5, color: 'var(--text-muted)' }}>{subtitle}</p>
-        </div>
+      <div className="ov-msg-head">
+        <span className="md:hidden">
+          <button type="button" onClick={onBack} className="ov-msg-back" aria-label="Back to inbox"><ArrowLeft size={18} /></button>
+        </span>
+        {item ? (
+          <>
+            <LineAvatar line={item.line} size={44} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="text-[18px] md:text-[20px]" style={{ fontFamily: DISPLAY, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</div>
+              <div style={{ marginTop: 2, fontSize: 13, color: 'var(--ov-mute)' }}>{item.sub}</div>
+            </div>
+          </>
+        ) : (
+          <>
+            <span className="ov-skel" style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0 }} />
+            <span className="ov-skel" style={{ width: 160, height: 16 }} />
+          </>
+        )}
       </div>
 
-      <div className="scrollbar-thin" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {blocked ? (
-          <EmptyNote>This conversation isn’t available.</EmptyNote>
-        ) : isLoading ? (
-          <EmptyNote>Loading…</EmptyNote>
-        ) : messages.length === 0 ? (
-          <EmptyNote>No messages yet — say hello below.</EmptyNote>
-        ) : messages.map(m => {
-          const mine = m.sender_id === me?.id
-          return (
-            <div key={m.id} style={{ alignSelf: mine ? 'flex-end' : 'flex-start', maxWidth: 'min(520px, 85%)' }}>
-              {!mine && (
-                <p style={{ margin: '0 0 3px 2px', fontSize: 12, color: 'var(--text-muted)' }}>
-                  {m.sender_name}{m.sender_role === 'fulfillment' ? ' · Fulfillment' : m.sender_role === 'admin' ? ' · Admin' : ''}
-                </p>
-              )}
-              <div style={{
-                padding: '9px 13px', borderRadius: 14, fontSize: 14, lineHeight: 1.45,
-                whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
-                background: mine ? 'var(--accent)' : 'var(--bg-elevated)',
-                color: mine ? '#fff' : 'var(--text-primary)',
-                border: mine ? 'none' : 'var(--border-w) solid var(--border)',
-              }}>
-                {m.body}
+      <div className="ov-msg-thread scrollbar-thin" style={empty ? { display: 'flex' } : undefined}>
+        {isLoading ? (
+          <div className="ov-msg-col" aria-hidden="true">
+            <span className="ov-skel" style={{ width: '45%', height: 40, borderRadius: 18 }} />
+            <span className="ov-skel" style={{ width: '35%', height: 40, borderRadius: 18, alignSelf: 'flex-end' }} />
+            <span className="ov-skel" style={{ width: '50%', height: 40, borderRadius: 18 }} />
+          </div>
+        ) : empty ? (
+          item && (
+            <div style={{ margin: 'auto', maxWidth: 460, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14 }}>
+              <LineAvatar line={item.line} size={72} />
+              <div>
+                <div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 600, color: 'var(--ov-hi)' }}>Start a conversation with {item.short}</div>
+                <p style={{ margin: '6px 0 0', fontSize: 14.5, lineHeight: 1.5, color: 'var(--ov-mute)' }}>{emptyCopy}</p>
               </div>
-              <p style={{ margin: '3px 2px 0', fontFamily: MONO, fontSize: 10.5, color: 'var(--text-muted)', textAlign: mine ? 'right' : 'left' }}>
-                {fmtTime(m.created_at)}
-              </p>
+              {starters && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 4 }}>
+                  {starters.map(s => <button key={s} type="button" className="ov-starter" onClick={() => pickStarter(s)}>{s}</button>)}
+                </div>
+              )}
             </div>
           )
-        })}
-        <div ref={endRef} />
+        ) : (
+          <div className="ov-msg-col">
+            {groups.map(g => {
+              if (g.type === 'day') return <DayDivider key={g.key} label={g.label} />
+              const mine = g.senderId === me?.id
+              const head = g.msgs[0]
+              const tail = g.msgs[g.msgs.length - 1]
+              return (
+                <ChatBubbleGroup
+                  key={g.key} mine={mine} messages={g.msgs}
+                  time={mine ? clock(tail.created_at) : null}
+                  caption={mine ? null : (
+                    <>
+                      <span style={{ fontWeight: 700, color: 'var(--ov-mid)' }}>{firstName(head.sender_name) || 'Someone'}</span>
+                      {ROLE_LABEL[head.sender_role] ? ` · ${ROLE_LABEL[head.sender_role]}` : ''} · {clock(head.created_at)}
+                    </>
+                  )}
+                  avatar={mine ? null : (
+                    <LineAvatar line={head.sender_role === 'admin' ? { kind: 'admin', name: 'Admin' } : item?.line || { kind: 'agent', name: head.sender_name }} size={32} badge={false} />
+                  )}
+                />
+              )
+            })}
+            <div ref={endRef} />
+          </div>
+        )}
       </div>
 
-      {!blocked && (
-        <div style={{ padding: '12px 18px 16px', borderTop: 'var(--border-w) solid var(--border)' }}>
-          {send.isError && <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--danger)' }}>{send.error?.message || 'Couldn’t send that.'}</p>}
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
-            <textarea
-              value={draft}
-              onChange={e => setDraft(e.target.value.slice(0, MAX_LEN))}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }}
-              placeholder="Write a message…"
-              rows={2}
-              style={{
-                flex: 1, minWidth: 0, resize: 'none', padding: '9px 12px', fontSize: 14, lineHeight: 1.4,
-                background: 'var(--bg-base)', border: 'var(--border-w) solid var(--border)',
-                borderRadius: 10, color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit',
-              }}
-            />
-            <button
-              onClick={submit}
-              disabled={!trimmed || send.isPending}
-              style={{ ...primaryBtn, opacity: !trimmed || send.isPending ? 0.5 : 1 }}
-            >
-              <Send size={15} /> {send.isPending ? 'Sending…' : 'Send'}
-            </button>
-          </div>
+      <div className="ov-msg-foot">
+        <div style={{ maxWidth: 860, margin: '0 auto' }}>
+          <Composer
+            value={draft} onChange={setDraft} onSubmit={submit} max={MAX_LEN} inputRef={inputRef}
+            placeholder={`Message ${item?.short || ''}…`} busy={send.isPending}
+            error={send.isError ? send.error?.message || 'Couldn’t send that.' : null}
+          />
         </div>
-      )}
+      </div>
     </>
   )
 }

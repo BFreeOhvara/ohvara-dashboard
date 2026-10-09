@@ -1229,3 +1229,109 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
   .ov-modal, .ov-card.ov-modal { animation: none; }
   .ov-set-item, .ov-code { transition: none; }
 }
+
+/* ── Prompt 721 — Messages on the "ov" language ────────────────
+   Full screen, team lines only: a 360px tinted inbox column (inbox hero,
+   search, rows) and the conversation on the plain page colour (no backdrop
+   dots or glow; .ov-msg paints over the default backdrop). The inbox and
+   pane leave `display` to Tailwind (hidden / md:flex), since plain CSS here
+   would beat the utility layer. See DESIGN.md v16 "P721 — Messages". */
+:root {
+  --ov-surface-tint: rgba(255,255,255,0.025);
+  --ov-badge-ring: #10121A;
+  --ov-mine: linear-gradient(180deg, #3B82F6 0%, #2563EB 100%);
+  --ov-send-bg: #60A5FA;
+  --ov-send-fg: #0B0D14;
+  --ov-starter-bg: rgba(255,255,255,0.05);
+}
+[data-theme="light"] {
+  --ov-surface-tint: #F3F8F7;
+  --ov-badge-ring: #FFFFFF;
+  --ov-mine: linear-gradient(180deg, #1D4ED8 0%, #1E40AF 100%);
+  --ov-send-bg: #07332E;
+  --ov-send-fg: #FFFFFF;
+  --ov-starter-bg: #F3F8F7;
+}
+
+.ov-msg { display: flex; background: var(--ov-page); color: var(--ov-mute); }
+.ov-msg-inbox {
+  flex: 1; min-width: 0; min-height: 0; flex-direction: column; gap: 14px;
+  box-sizing: border-box; padding: 20px 12px 0;
+}
+.ov-msg-pane { flex: 1; min-width: 0; min-height: 0; flex-direction: column; }
+@media (min-width: 768px) {
+  .ov-msg-inbox { flex: 0 0 360px; width: 360px; background: var(--ov-surface-tint); border-right: 1px solid var(--ov-line); }
+}
+.ov-msg-hero { margin: 0 6px; padding: 18px 18px 16px; flex-shrink: 0; }
+.ov-hero.ov-msg-hero { border-radius: 20px; }
+.ov-msg-search { margin: 0 6px; flex-shrink: 0; }
+.ov-input.ov-msg-search { height: 44px; }
+.ov-msg-search input { font-size: 14px; }
+.ov-msg-search input::-webkit-search-cancel-button { display: none; }
+.ov-msg-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding-bottom: 12px; }
+
+.ov-msg-row {
+  display: flex; gap: 12px; width: 100%; box-sizing: border-box; padding: 12px 14px; border: none; border-radius: 14px;
+  background: transparent; font: inherit; color: inherit; text-align: left; cursor: pointer; transition: background 120ms ease;
+}
+.ov-msg-row:hover { background: var(--ov-hover); }
+.ov-msg-row.is-active { background: linear-gradient(90deg, var(--ov-st-booked-tint) 0%, transparent 100%); box-shadow: inset 3px 0 0 var(--ov-st-booked); }
+.ov-msg-row:focus-visible { outline: 2px solid var(--ov-st-booked); outline-offset: -2px; }
+.ov-msg-pill {
+  min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box; border-radius: 999px; flex-shrink: 0;
+  background: var(--ov-st-booked); color: var(--ov-on-kind); font-size: 11.5px; font-weight: 800;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.ov-skel { border-radius: 8px; background: var(--ov-stub); animation: pulseDot 1.4s ease-in-out infinite; }
+
+.ov-msg-head { display: flex; align-items: center; gap: 12px; padding: 16px 32px; border-bottom: 1px solid var(--ov-line); flex-shrink: 0; }
+.ov-msg-back {
+  width: 40px; height: 40px; margin-left: -6px; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--ov-line);
+  background: transparent; color: var(--ov-mid); display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.ov-msg-back:focus-visible { outline: 2px solid var(--ov-st-booked); outline-offset: 2px; }
+.ov-msg-thread { flex: 1; min-height: 0; overflow-y: auto; padding: 28px 32px; }
+.ov-msg-col { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.ov-msg-foot { padding: 14px 32px 22px; flex-shrink: 0; }
+@media (max-width: 767.98px) {
+  .ov-msg-head { padding: 12px 16px; }
+  .ov-msg-thread { padding: 18px 16px; }
+  .ov-msg-foot { padding: 14px 16px 16px; }
+}
+
+.ov-bubble {
+  max-width: 520px; box-sizing: border-box; padding: 10px 14px; border-radius: 18px;
+  font-size: 14.5px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.ov-bubble.is-theirs { background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.10); color: var(--ov-hi); }
+[data-theme="light"] .ov-bubble.is-theirs { background: #F6FAF9; border: 1px solid rgba(2,79,70,0.18); }
+.ov-bubble.is-mine { background: var(--ov-mine); color: #FFFFFF; box-shadow: 0 8px 20px -12px rgba(37,99,235,0.8); }
+
+.ov-composer {
+  display: flex; align-items: flex-end; gap: 10px; padding: 10px 10px 10px 18px; border-radius: 22px;
+  background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.10);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+[data-theme="light"] .ov-composer { background: #F6FAF9; border: 1px solid rgba(2,79,70,0.18); }
+.ov-composer:focus-within, [data-theme="light"] .ov-composer:focus-within { border-color: var(--ov-st-booked-edge); box-shadow: 0 0 0 4px var(--ov-st-booked-tint); }
+.ov-composer textarea {
+  flex: 1; min-width: 0; box-sizing: border-box; min-height: 40px; padding: 9px 0; margin: 0; resize: none;
+  border: none; outline: none; background: transparent; font-family: inherit; font-size: 15px; line-height: 22px; color: var(--ov-hi);
+}
+.ov-composer textarea::placeholder { color: var(--ov-placeholder); opacity: 1; }
+.ov-send {
+  width: 42px; height: 42px; flex-shrink: 0; border-radius: 50%; border: none; cursor: pointer;
+  background: var(--ov-send-bg); color: var(--ov-send-fg); display: flex; align-items: center; justify-content: center;
+}
+.ov-send:disabled { opacity: 0.45; cursor: not-allowed; }
+.ov-send:focus-visible { outline: 2px solid var(--ov-st-booked); outline-offset: 2px; }
+.ov-starter {
+  height: 38px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--ov-line); background: var(--ov-starter-bg);
+  color: var(--ov-hi); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: border-color 120ms ease;
+}
+.ov-starter:hover { border-color: var(--ov-st-booked-edge); }
+.ov-starter:focus-visible { outline: 2px solid var(--ov-st-booked); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .ov-msg-row, .ov-composer, .ov-starter { transition: none; }
+  .ov-skel { animation: none; }
+}

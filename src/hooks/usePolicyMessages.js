@@ -26,12 +26,12 @@ export function useMessageThreads(enabled = true) {
   })
 }
 
-// Sidebar badge. Same query key as the threads list, so it costs nothing extra.
+// Sidebar badge. Standing lines only (Prompt 721: per-client threads left the
+// UI, so counting them could show unread nobody can open). Same query key as
+// the Messages inbox, so it costs nothing extra.
 export function useUnreadMessageCount(enabled = true) {
-  const { data: threads = [] } = useMessageThreads(enabled)
   const { data: standing = [] } = useStandingThreads(enabled)
-  return threads.reduce((n, t) => n + (t.unread_count || 0), 0)
-    + standing.reduce((n, t) => n + (t.unread_count || 0), 0)
+  return standing.reduce((n, t) => n + (t.unread_count || 0), 0)
 }
 
 // The thread header for a client — needed when a thread is opened from a

@@ -1,11 +1,12 @@
-import { Children, useEffect, useMemo, useRef, useState } from 'react'
+import { Children, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck } from 'lucide-react'
+import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send } from 'lucide-react'
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
 import { SLOTS, slotToISO, localDateISO, callWhen, callAt } from '../../lib/scheduling'
 import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, digits } from '../../lib/agentBookings'
 import { DayClock } from '../ui/DayClock'
 import { LiveDot } from '../ui/LiveDot'
+import { Avatar } from '../ui/Avatar'
 import { fullName } from '../../lib/policyFormat'
 import { EVENT_KINDS, EVENT_KIND, EVENT_ICON, kindMeta, kindTone, eventIconKey } from '../../lib/activityKinds'
 
@@ -2422,6 +2423,225 @@ export function StrengthBar({ password }) {
       <span style={{ width: 52, textAlign: 'right', fontSize: 13, fontWeight: 600, color: password ? color : 'var(--ov-faint)' }}>
         {password ? label : ''}
       </span>
+    </div>
+  )
+}
+
+// ── Prompt 721 — Messages ──────────────────────────────────────────
+// Pieces for /messages (team lines only). A `line` is
+// { kind: 'admin' | 'fulfillment' | 'agent', name, avatarUrl, avatarColor }.
+// .ov-msg-* / .ov-bubble / .ov-composer in index.css.
+
+const ROLE_BADGE = {
+  admin: { icon: ShieldCheck, bg: '#1D4ED8', label: 'Admin' },
+  fulfillment: { icon: Headset, bg: '#0F766E', label: 'Fulfillment' },
+}
+const ELLIPSIS = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+
+// The role mark at an avatar's bottom right: Admin = shield, Fulfillment =
+// headset, agents none. The 2px ring matches the surface behind it.
+export function RoleBadge({ kind, size = 17 }) {
+  const b = ROLE_BADGE[kind]
+  if (!b) return null
+  const Icon = b.icon
+  return (
+    <span title={b.label} style={{
+      position: 'absolute', right: -5, bottom: -3, width: size, height: size, boxSizing: 'content-box',
+      borderRadius: '50%', background: b.bg, color: '#fff', border: '2px solid var(--ov-badge-ring)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <Icon size={Math.round(size * 0.58)} strokeWidth={2.4} />
+    </span>
+  )
+}
+
+// A line's avatar: the person's photo or colour, or a blue "A" for Admin
+// (Admin has no profile row), with its role badge.
+export function LineAvatar({ line, size = 42, badge = true, style }) {
+  return (
+    <span style={{ position: 'relative', display: 'block', flexShrink: 0, width: size, height: size, ...style }}>
+      {line.kind === 'admin' ? (
+        <span style={{
+          width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg, #3B82F6, #1D4ED8)',
+          color: '#fff', fontSize: Math.round(size / 3), fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>A</span>
+      ) : (
+        <Avatar name={line.name} avatarUrl={line.avatarUrl} avatarColor={line.avatarColor} size={size} />
+      )}
+      {badge && <RoleBadge kind={line.kind} size={Math.round(size * 0.4)} />}
+    </span>
+  )
+}
+
+// The coloured card at the top of the inbox: unread count (or "All caught
+// up"), up to three of the user's lines, then one status line. The avatars
+// share the "Inbox" row and hang 14px into the big line, as in the mockup;
+// with three or more beside "All caught up" there's no room, so they don't.
+export function InboxHero({ unread, lines, note, loading }) {
+  const shown = lines.slice(0, 3)
+  const more = lines.length - shown.length
+  const ring = { borderRadius: '50%', boxShadow: '0 0 0 2px rgba(255,255,255,0.85)' }
+  const overlap = loading || unread > 0 || lines.length <= 2
+  return (
+    <section className="ov-hero ov-msg-hero" aria-label="Inbox">
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: 'var(--ov-hero-soft)' }}>Inbox</div>
+        {shown.length > 0 && (
+          <div style={{ display: 'flex', flexShrink: 0, marginBottom: overlap ? -14 : 0 }} aria-hidden="true">
+            {shown.map((l, i) => (
+              <LineAvatar key={l.key} line={l} size={36} badge={false} style={{ ...ring, marginLeft: i ? -10 : 0 }} />
+            ))}
+            {more > 0 && (
+              <span style={{
+                ...ring, width: 36, height: 36, marginLeft: -10, background: 'rgba(255,255,255,0.18)', color: '#fff',
+                fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>+{more}</span>
+            )}
+          </div>
+        )}
+      </div>
+      {loading ? (
+        <div className="ov-skel" style={{ marginTop: 10, width: 150, height: 28, background: 'rgba(255,255,255,0.14)' }} />
+      ) : unread > 0 ? (
+        <div style={{ marginTop: 2, display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <span style={{ fontFamily: DISPLAY, fontSize: 40, fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.03em' }}>{unread}</span>
+          <span style={{ fontSize: 16, fontWeight: 600 }}>unread</span>
+        </div>
+      ) : (
+        <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
+          <span style={{ width: 30, height: 30, flexShrink: 0, borderRadius: '50%', background: 'rgba(255,255,255,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Check size={16} strokeWidth={3} />
+          </span>
+          <span style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em' }}>All caught up</span>
+        </div>
+      )}
+      <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ov-hero-soft)' }}>
+        <span style={{ width: 7, height: 7, flexShrink: 0, borderRadius: '50%', background: 'var(--ov-hero-dot)' }} />
+        <span style={{ minWidth: 0, ...ELLIPSIS }}>{loading ? 'Loading…' : note}</span>
+      </div>
+    </section>
+  )
+}
+
+// One line in the inbox list.
+export function InboxRow({ line, title, roleLine, time, preview, unread, active, onClick }) {
+  const isUnread = unread > 0
+  return (
+    <button type="button" onClick={onClick} className={`ov-msg-row${active ? ' is-active' : ''}`} aria-current={active ? 'true' : undefined}>
+      <LineAvatar line={line} size={42} />
+      <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: isUnread ? 700 : 600, color: 'var(--ov-hi)', ...ELLIPSIS }}>{title}</span>
+          {time && (
+            <span style={{ flexShrink: 0, fontSize: 12, fontWeight: isUnread ? 700 : 500, color: isUnread ? 'var(--ov-st-booked)' : 'var(--ov-faint)' }}>{time}</span>
+          )}
+        </span>
+        <span style={{ fontSize: 12.5, color: 'var(--ov-mute)' }}>{roleLine}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: isUnread ? 600 : 400, color: isUnread ? 'var(--ov-hi)' : 'var(--ov-soft)', ...ELLIPSIS }}>{preview}</span>
+          {isUnread && <span className="ov-msg-pill" aria-label={`${unread} unread`}>{unread}</span>}
+        </span>
+      </span>
+    </button>
+  )
+}
+
+export function InboxRowSkeleton() {
+  return (
+    <div aria-hidden="true" style={{ display: 'flex', gap: 12, padding: '12px 14px' }}>
+      <span className="ov-skel" style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0 }} />
+      <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7, paddingTop: 3 }}>
+        <span className="ov-skel" style={{ width: '55%', height: 12 }} />
+        <span className="ov-skel" style={{ width: '30%', height: 10 }} />
+        <span className="ov-skel" style={{ width: '80%', height: 10 }} />
+      </span>
+    </div>
+  )
+}
+
+// "Today" / "Yesterday" / "Mon, Oct 5" between hairlines.
+export function DayDivider({ label }) {
+  return (
+    <div role="separator" aria-label={label} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, fontWeight: 700, color: 'var(--ov-faint)' }}>
+      <span style={{ flex: 1, height: 1, background: 'var(--ov-line)' }} />
+      {label}
+      <span style={{ flex: 1, height: 1, background: 'var(--ov-line)' }} />
+    </div>
+  )
+}
+
+// Inside a group the corners facing the sender's side drop to 6px between
+// bubbles, so the run reads as one block.
+function bubbleRadius(mine, i, n) {
+  if (n === 1) return 18
+  const top = i === 0 ? 18 : 6
+  const bottom = i === n - 1 ? 18 : 6
+  return mine ? `18px ${top}px ${bottom}px 18px` : `${top}px 18px 18px ${bottom}px`
+}
+
+// One run of messages from one sender. Theirs: caption above, avatar beside
+// the last bubble. Mine: the time under the last bubble.
+export function ChatBubbleGroup({ mine, caption, avatar, messages, time }) {
+  const bubbles = messages.map((m, i) => (
+    <div key={m.id} className={`ov-bubble ${mine ? 'is-mine' : 'is-theirs'}`} style={{ borderRadius: bubbleRadius(mine, i, messages.length) }}>
+      {m.body}
+    </div>
+  ))
+  if (mine) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-end', paddingLeft: 42 }}>
+        {bubbles}
+        {time && <div style={{ fontSize: 12, color: 'var(--ov-faint)', padding: '2px 4px 0' }}>{time}</div>}
+      </div>
+    )
+  }
+  return (
+    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+      {avatar}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-start', minWidth: 0, paddingRight: 42 }}>
+        {caption && <div style={{ fontSize: 12.5, color: 'var(--ov-mute)', padding: '0 4px 2px' }}>{caption}</div>}
+        {bubbles}
+      </div>
+    </div>
+  )
+}
+
+const COMPOSER_MAX_H = 6 * 22 + 18 // six lines + padding, then it scrolls
+
+// The message box: auto-grows 1 → 6 lines, Enter sends, Shift+Enter breaks a
+// line. The `n/max` counter shows from max - 200 characters.
+export function Composer({ value, onChange, onSubmit, placeholder, busy, error, max, inputRef }) {
+  const own = useRef(null)
+  const ref = inputRef || own
+  const trimmed = value.trim()
+  const counter = value.length >= max - 200
+
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, COMPOSER_MAX_H)}px`
+    el.style.overflowY = el.scrollHeight > COMPOSER_MAX_H ? 'auto' : 'hidden'
+  }, [value, ref])
+
+  return (
+    <div>
+      {error && <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--danger)' }}>{error}</p>}
+      <div className="ov-composer">
+        <textarea
+          ref={ref} rows={1} value={value} placeholder={placeholder} aria-label={placeholder}
+          className="scrollbar-thin"
+          onChange={e => onChange(e.target.value.slice(0, max))}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSubmit() } }}
+        />
+        <button type="button" className="ov-send" onClick={onSubmit} disabled={!trimmed || busy} aria-label={busy ? 'Sending…' : 'Send'} title="Send">
+          <Send size={17} strokeWidth={2.2} />
+        </button>
+      </div>
+      <div className={counter ? 'flex' : 'hidden md:flex'} style={{ gap: 12, padding: '8px 8px 0', fontSize: 12, color: 'var(--ov-faint)' }}>
+        <span className="hidden md:inline">Enter to send · Shift + Enter for a new line</span>
+        {counter && <span style={{ marginLeft: 'auto', fontVariantNumeric: 'tabular-nums' }}>{value.length}/{max}</span>}
+      </div>
     </div>
   )
 }

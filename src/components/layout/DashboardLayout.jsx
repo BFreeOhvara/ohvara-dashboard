@@ -41,7 +41,7 @@ const TITLES = {
   '/fulfillment/desk': ['Fulfillment', 'Call the client, cancel the old policy, then the next one'],
   '/fulfillment/pipeline': ['Pipeline', 'Every submission across every agent, and where it stands'],
   '/fulfillment/getting-paid': ['Getting Paid', 'Clock in and out, hours logged, and your estimated pay'],
-  '/messages': ['Messages', 'Fulfillment, Admin and your clients, all in one place'],
+  '/messages': ['Messages', 'Fulfillment and Admin, in one place'],
   '/settings': ['Settings', 'Your account, security and preferences'],
 }
 

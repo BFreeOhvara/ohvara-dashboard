@@ -8,6 +8,7 @@ import {
   CalendarClock, Shuffle, PhoneMissed,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import { dmId } from '../../hooks/useDirectMessages'
 import {
   useFulfillmentQueue, useUpdatePolicy, useStartCall, useEndCall, useSetRescheduleReason, usePassOnCancellation, assignUnassigned,
 } from '../../hooks/usePolicies'
@@ -611,8 +612,8 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
                   </span>
                 : <ClientCallAction p={p} canBridge={canBridge} onCall={onCall} />)
               : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Only {p.assigned?.full_name || 'the assigned rep'} calls this client.</span>}
-            <button onClick={() => navigate(`/messages?thread=${p.id}`)} style={ghostBtn}>
-              <MessageCircleMore size={13} /> {isAdmin ? 'Open conversation' : 'Message agent'}
+            <button onClick={() => navigate(`/messages?dm=${dmId(p.agent_id, isAdmin ? 'admin' : profile?.id)}`)} style={ghostBtn}>
+              <MessageCircleMore size={13} /> Message agent
             </button>
           </div>
         )}
