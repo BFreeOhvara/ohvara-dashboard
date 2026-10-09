@@ -803,8 +803,8 @@ export function DayChoice({ label, long, short, on, disabled, icon: Icon, onClic
 //
 // Prompt 724 — pass `openIsoSet` (the agent's other open bookings) to switch
 // on the booking rules: slots are the client's wall-clock time in `tz`, a slot
-// within 30 minutes is "Too soon" and one already booked is "Booked", both
-// disabled (slotState). Without it the grid renders exactly as before.
+// within 30 minutes is plain disabled gray like a past one (no caption) and
+// one already booked is "Booked", both disabled (slotState). Without it the grid renders exactly as before.
 export function SlotGrid({ date, slot, onSlot, takenCounts = {}, error, now, gridClass = 'grid grid-cols-3 sm:grid-cols-6', tz, openIsoSet }) {
   const rules = openIsoSet !== undefined
   const groups = [
@@ -861,9 +861,10 @@ export function SlotGrid({ date, slot, onSlot, takenCounts = {}, error, now, gri
 }
 
 // Prompt 724 — one slot under the booking rules. Past slots are dimmed with
-// no caption; "Too soon" and "Booked" dim only the time so the caption reads.
-const SLOT_CAPTION = { soon: 'Too soon', booked: 'Booked' }
-const SLOT_LABEL = { past: 'already past', soon: 'too soon, calls need 30 minutes’ notice', booked: 'you already have a call booked at this time' }
+// no caption, and so are slots inside the notice window (Prompt 727: the reason
+// lives in aria-label/title only); "Booked" dims only the time so its caption reads.
+const SLOT_CAPTION = { booked: 'Booked' }
+const SLOT_LABEL = { past: 'already past', soon: 'unavailable', booked: 'you already have a call booked at this time' }
 
 function RuleSlot({ s, date, tz, now, openIsoSet, on, onSlot }) {
   const state = slotState(clientSlotISO(date, s, tz), { now, openIsoSet })
@@ -873,7 +874,7 @@ function RuleSlot({ s, date, tz, now, openIsoSet, on, onSlot }) {
   return (
     <button
       type="button" disabled={off} onClick={() => onSlot(s)} aria-pressed={on}
-      title={state === 'past' ? 'Already past' : undefined}
+      title={state === 'past' ? 'Already past' : state === 'soon' ? 'Unavailable' : undefined}
       aria-label={off ? `${s}, ${SLOT_LABEL[state]}` : s}
       className={`ov-choice h-[52px] sm:h-[54px]${on ? ' ov-slot-on' : ''}${caption ? ' ov-slot-held' : ''}`}
       style={{
@@ -882,12 +883,12 @@ function RuleSlot({ s, date, tz, now, openIsoSet, on, onSlot }) {
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
       }}
     >
-      <span style={{ whiteSpace: 'nowrap', ...(caption ? { opacity: state === 'booked' ? 0.45 : 0.55 } : null) }}>
+      <span style={{ whiteSpace: 'nowrap', ...(caption ? { opacity: 0.45 } : null) }}>
         {time}
         <span style={{ marginLeft: 5, fontSize: 12, fontWeight: 500, ...(on ? { opacity: 0.85 } : { color: 'var(--ov-mute)' }) }}>{ampm}</span>
       </span>
       {caption && (
-        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: state === 'booked' ? 'var(--ov-warn)' : 'var(--ov-mute)' }}>
+        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: 'var(--ov-warn)' }}>
           {caption}
         </span>
       )}

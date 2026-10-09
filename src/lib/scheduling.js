@@ -117,7 +117,7 @@ export function openBookingIsos(rows, { now = Date.now(), exceptId, stageOf } = 
   return set
 }
 
-// No slot left on `dateStr` that can still be booked (past or too soon).
+// No slot left on `dateStr` that can still be booked (past or inside the notice window).
 export function dayGone(dateStr, tz, now = Date.now()) {
   return slotState(clientSlotISO(dateStr, SLOTS[SLOTS.length - 1], tz), { now }) !== 'open'
 }

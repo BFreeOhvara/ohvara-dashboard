@@ -307,7 +307,7 @@ function ConfirmNumber({ p }) {
 // and the confirm/cancel buttons (drawer footer).
 //
 // Prompt 724 — days and slots are the client's (p.client_timezone, else the
-// viewer's zone for older rows); "Too soon" and "Booked" slots are disabled,
+// viewer's zone for older rows); "Booked" slots and slots inside the notice window are disabled,
 // the booking being moved keeping its own slot. The far-out checkbox is gone.
 function useMove(p, now, rebook, onDone, agentRows) {
   const reschedule = useRescheduleBooking()

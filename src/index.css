@@ -866,7 +866,7 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 [data-theme="light"] .ov-choice:not(:disabled):not(.is-on):not(.ov-slot-on):hover { border-color: rgba(2,79,70,0.28); }
 [data-theme="light"] .ov-choice.is-on { background: #E3F5F1; border: 1px solid #00917D; box-shadow: none; }
 .ov-choice:disabled { opacity: 0.35; cursor: not-allowed; }
-/* Prompt 724 — "Too soon" / "Booked" slots dim only their time, so the caption reads. */
+/* Prompt 724 — "Booked" slots dim only their time, so the caption reads. */
 .ov-choice.ov-slot-held:disabled { opacity: 1; }
 .ov-choice:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
