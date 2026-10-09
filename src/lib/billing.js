@@ -116,9 +116,62 @@ export function formatReset(iso) {
   return new Date(iso).toLocaleDateString('en-US', { weekday: 'long' })
 }
 
+// Prompt 734 — Stripe.js for the in-page card box and checkout. The script
+// (js.stripe.com) is only fetched the first time a Billing view needs it, and
+// once per publishable key. The key comes from agent-billing (secret
+// STRIPE_PUBLISHABLE_KEY), so rotating it needs no frontend change.
+let stripeLoad = null
+let stripeKey = null
+export function getStripe(publishableKey) {
+  if (publishableKey !== stripeKey) {
+    stripeKey = publishableKey
+    stripeLoad = import('@stripe/stripe-js/pure').then(m => m.loadStripe(publishableKey))
+  }
+  return stripeLoad
+}
+
+// Stripe's fields live in an iframe and can't read our CSS variables, so the
+// v16 tokens are repeated here as values (dark = --ov-* on :root, light =
+// [data-theme="light"]). Keep in step with index.css.
+export function stripeAppearance(theme) {
+  const light = theme === 'light'
+  return {
+    theme: light ? 'stripe' : 'night',
+    variables: {
+      colorPrimary: light ? '#00806F' : '#7FA6F2',
+      colorBackground: light ? '#FFFFFF' : '#10121A',
+      colorText: light ? '#07332E' : '#FFFFFF',
+      colorTextSecondary: light ? '#4F7F78' : '#8697B5',
+      colorTextPlaceholder: light ? '#7FA59F' : '#5E7195',
+      colorDanger: light ? '#B42318' : '#F87171',
+      fontFamily: 'Manrope, system-ui, -apple-system, Segoe UI, sans-serif',
+      fontSizeBase: '15px',
+      borderRadius: '12px',
+      spacingUnit: '4px',
+    },
+    rules: {
+      '.Input': {
+        backgroundColor: light ? '#F6FAF9' : 'rgba(0,0,0,0.28)',
+        border: light ? '1px solid rgba(2,79,70,0.18)' : '1px solid rgba(255,255,255,0.10)',
+        boxShadow: 'none',
+        padding: '13px 14px',
+      },
+      '.Input:focus': {
+        border: `1px solid ${light ? '#00806F' : '#7FA6F2'}`,
+        boxShadow: `0 0 0 3px ${light ? 'rgba(0,128,111,0.16)' : 'rgba(127,166,242,0.18)'}`,
+      },
+      '.Label': { fontWeight: '600', color: light ? '#2C6159' : '#B4C3DE' },
+      '.Tab': {
+        backgroundColor: light ? '#F6FAF9' : 'rgba(0,0,0,0.28)',
+        border: light ? '1px solid rgba(2,79,70,0.18)' : '1px solid rgba(255,255,255,0.10)',
+      },
+    },
+  }
+}
+
 // supabase.functions.invoke hides a non-2xx body behind error.context; unwrap
 // it like invokeCallerId does. `extra` rides along in the body ({ tier },
-// { flow: 'change_plan' }).
+// { payment_method }, …).
 export async function invokeBilling(action, extra = {}) {
   const { data, error } = await supabase.functions.invoke('agent-billing', {
     body: { action, return_url: `${window.location.origin}/agent/billing`, ...extra },

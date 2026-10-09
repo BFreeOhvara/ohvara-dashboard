@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import { Crown, CreditCard, Lock, Info, ArrowRight, Check, Loader2 } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Crown, CreditCard, Lock, Info, ArrowRight, Check, Loader2, CircleCheck } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { DISPLAY } from '../../lib/exportStyles'
 import { useBillingTiers, useWeeklyUsage } from '../../hooks/useBillingTiers'
@@ -8,6 +9,7 @@ import {
   isComped, shownStatus, renewsAt,
 } from '../../lib/billing'
 import { RenewalRing, BookingMeter, PlanCard, BillingFacts } from './AgentUI'
+import { ManageBilling, SubscribeView, PlanSwitchDialog } from './ManageBilling'
 
 // ── Billing (Prompt 673) ────────────────────────────────────────────────────
 // The agent's weekly retainer. Card entry, cancelling and invoices all
@@ -26,6 +28,11 @@ import { RenewalRing, BookingMeter, PlanCard, BillingFacts } from './AgentUI'
 // Prompt 725 — a comped account (billing_exempt) renders as Active on its
 // tier, renewing at the end of its booking week, with the tier's cap. Its
 // Stripe buttons answer "Your account isn't billed." and never open Stripe.
+// Prompt 734 — nothing opens Stripe's own site any more. Manage billing is a
+// second view of this page (?manage=1, ManageBilling.jsx) with a back arrow,
+// Subscribe shows Stripe's Embedded Checkout in a third (?subscribe=<tier>),
+// and plan switches confirm in a dialog here. Stripe comes back to
+// ?session_id=… after checkout; the mount sync below picks the new plan up.
 
 const DAY = 86400000
 const fmtDay = ms => formatBillingDate(new Date(ms).toISOString())
@@ -46,11 +53,18 @@ function Spin({ on, children }) {
 
 export function BillingPanel({ profile }) {
   const { refreshProfile } = useAuth()
-  const { data: tiers = [] } = useBillingTiers()
+  const { data: tiers = [], isLoading: tiersLoading } = useBillingTiers()
   const { data: usage } = useWeeklyUsage(profile.id)
   const [configured, setConfigured] = useState(null)
-  const [busy, setBusy] = useState(null) // which button is waiting on Stripe
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [switchTo, setSwitchTo] = useState(null) // tier for the plan-switch dialog
+  const [params, setParams] = useSearchParams()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const manage = params.get('manage') === '1'
+  const subscribeKey = params.get('subscribe')
+  const returning = params.get('session_id')
 
   const comped = isComped(profile)
   const status = shownStatus(profile)
@@ -67,40 +81,65 @@ export function BillingPanel({ profile }) {
   // active, days of paid access left once cancelled.
   const days = ['active', 'canceled'].includes(status) ? daysUntil(end) : null
 
-  // canceled = cancel-at-period-end, still inside the paid week: renewing goes
-  // through the Customer Portal so it un-cancels the same subscription rather
-  // than Checkout starting a second one.
+  // canceled = cancel-at-period-end, still inside the paid week: Renew (in
+  // Manage billing) un-cancels the same subscription rather than Checkout
+  // starting a second one.
 
-  // Coming back from Stripe: the webhook has usually landed by now, so pull
-  // the fresh row once. refreshProfile isn't memoized; run this on mount only.
+  // `status` re-syncs the profile from Stripe (it heals a late webhook), then
+  // the fresh row is pulled. Coming back from checkout (?session_id) that's
+  // what turns the page Active. refreshProfile isn't memoized; mount only.
   useEffect(() => {
     invokeBilling('status')
       .then(d => setConfigured(!!d.configured))
       .catch(() => setConfigured(false))
-    refreshProfile()
+      .finally(() => {
+        refreshProfile()
+        if (returning) {
+          setNotice("You're subscribed. Your bookings are unlocked.")
+          setParams({}, { replace: true })
+        }
+      })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function go(action, extra) {
-    setError('')
-    // Same answer agent-billing gives a comped account (409). Answered here so
-    // the live function, which isn't redeployed with the billing_exempt check
-    // yet, never touches Stripe for it.
-    if (comped) { setError("Your account isn't billed."); return }
-    setBusy(action === 'checkout' ? `checkout:${extra.tier}` : extra?.flow || action)
-    try {
-      const d = await invokeBilling(action, extra)
-      if (!d?.url) throw new Error('Stripe did not return a page to open')
-      window.location.assign(d.url)
-    } catch (e) {
-      setError(e.message)
-      setBusy(null)
-    }
-  }
+  // Views are URL state so refresh and Back work. Opening one pushes (and
+  // marks it, so the back arrow can pop it); a deep link's back arrow, or
+  // leaving because there's no plan any more, replaces.
+  const open = (next, replace = false) => { setError(''); setParams(next, { replace, state: { billingView: true } }) }
+  const toBilling = useCallback(() => setParams({}, { replace: true }), [setParams])
+  const back = () => (location.state?.billingView ? navigate(-1) : toBilling())
 
-  // Stripe buttons work only once billing is known to be connected. A comped
+  // Same answer agent-billing gives a comped account (409); nothing calls Stripe.
+  function guard() {
+    setError('')
+    if (comped) { setError("Your account isn't billed."); return false }
+    return true
+  }
+  const openManage = () => guard() && open({ manage: '1' })
+  const openSubscribe = key => guard() && open({ subscribe: key })
+  const askSwitch = t => guard() && setSwitchTo(t)
+
+  // A view that doesn't fit the account (Manage billing with no plan, or
+  // Subscribe while already on one) falls back to the Billing view.
+  const misfit = (manage && (comped || !subscribed)) || (!!subscribeKey && (comped || subscribed))
+  useEffect(() => { if (misfit) toBilling() }, [misfit, toBilling])
+
+  // Buttons work only once billing is known to be connected. A comped
   // account's buttons are always live (they never reach Stripe).
-  const locked = comped ? !!busy : configured !== true || !!busy
+  const locked = comped ? false : configured !== true
+
+  const page = children => (
+    <div className="ov-bill flex flex-col gap-[14px] sm:gap-4" style={{ maxWidth: 1120, width: '100%', margin: '0 auto' }}>{children}</div>
+  )
+  if (manage && !comped && subscribed) {
+    return page(<ManageBilling tiers={tiers} onBack={back} onNoPlan={toBilling} refreshProfile={refreshProfile} />)
+  }
+  if (subscribeKey && !comped && !subscribed) {
+    // Tiers still loading: the view waits rather than saying "not available".
+    const tier = tiers.find(t => t.key === subscribeKey) || null
+    if (!tier && tiersLoading) return page(null)
+    return page(<SubscribeView tier={tier} onBack={back} onManage={() => open({ manage: '1' }, true)} />)
+  }
 
   const notConnected = !comped && configured === false && (
     <div className="ov-card" style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 16px', borderRadius: 14, fontSize: 13.5, lineHeight: 1.5, color: 'var(--ov-soft)' }}>
@@ -117,6 +156,12 @@ export function BillingPanel({ profile }) {
 
   return (
     <div className="ov-bill flex flex-col gap-[14px] sm:gap-4" style={{ maxWidth: 1120, width: '100%', margin: '0 auto' }}>
+      {notice && (
+        <div role="status" className="ov-mb-notice is-ok">
+          <CircleCheck size={18} strokeWidth={2} aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }} />
+          <div style={{ flex: 1 }}>{notice}</div>
+        </div>
+      )}
       {subscribed ? (
         <>
           <PlanHero {...planHero()} />
@@ -135,13 +180,20 @@ export function BillingPanel({ profile }) {
       )}
 
       <BillingFacts />
+      {switchTo && (
+        <PlanSwitchDialog
+          tier={switchTo}
+          onClose={() => setSwitchTo(null)}
+          onDone={text => { setSwitchTo(null); setNotice(text); refreshProfile() }}
+        />
+      )}
     </div>
   )
 
   // ── plan view ──────────────────────────────────────────────────────────
 
   function planHero() {
-    const manage = { label: 'Manage billing', icon: CreditCard, onClick: () => go('portal'), disabled: locked, busy: busy === 'portal' }
+    const manage = { label: 'Manage billing', icon: CreditCard, onClick: openManage, disabled: locked }
     const base = { planName: currentTier?.name, price }
     if (status === 'past_due') {
       const fix = daysUntil(profile.billing_grace_until)
@@ -195,8 +247,8 @@ export function BillingPanel({ profile }) {
           : `Resets ${reset} at midnight. The limit is per account, not per person on the login.`}
         paused={cap.blocking ? `New bookings are paused until ${reset}.` : null}
         upgrade={cap.blocking && next ? {
-          label: busy === 'change_plan' ? 'Opening Stripe…' : `Upgrade to ${next.name}`,
-          onClick: () => go('portal', { flow: 'change_plan' }),
+          label: `Upgrade to ${next.name}`,
+          onClick: () => askSwitch(next),
           disabled: locked,
         } : null}
       />
@@ -239,10 +291,10 @@ export function BillingPanel({ profile }) {
                 <>
                   <button
                     type="button" className="ov-ghost" disabled={locked}
-                    onClick={() => go('portal', { flow: 'change_plan' })}
+                    onClick={() => askSwitch(t)}
                     style={{ height: 44, borderRadius: 999, fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   >
-                    <Spin on={busy === 'change_plan'}>{higher ? `Upgrade to ${t.name}` : `Switch to ${t.name}`}</Spin>
+                    {higher ? `Upgrade to ${t.name}` : `Switch to ${t.name}`}
                   </button>
                   <div style={{ fontSize: 12.5, color: 'var(--ov-mute)', textAlign: 'center' }}>
                     {higher
@@ -279,7 +331,6 @@ export function BillingPanel({ profile }) {
       <section aria-label="Plans" style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         {tiers.map(t => {
           const pick = t === top
-          const key = `checkout:${t.key}`
           return (
             <PlanCard
               key={t.key} tier={t} price={formatWeekly(t.weekly_cents)} big pick={pick} className={pick ? 'ov-plan-first' : ''}
@@ -296,13 +347,13 @@ export function BillingPanel({ profile }) {
                 <>
                   <button
                     type="button" className={pick ? 'ov-buy' : 'ov-ghost'} disabled={locked}
-                    onClick={() => go('checkout', { tier: t.key })}
+                    onClick={() => openSubscribe(t.key)}
                     style={{ height: 50, borderRadius: 999, fontSize: 15, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                   >
-                    <Spin on={busy === key}>Subscribe to {t.name}<ArrowRight size={17} strokeWidth={2.2} /></Spin>
+                    Subscribe to {t.name}<ArrowRight size={17} strokeWidth={2.2} />
                   </button>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12.5, color: 'var(--ov-mute)' }}>
-                    <Lock size={13} strokeWidth={2} /> Secure checkout on Stripe
+                    <Lock size={13} strokeWidth={2} /> Secure checkout by Stripe, on this page
                   </div>
                 </>
               }
@@ -343,7 +394,7 @@ function PlanHero({ planName, chip, price, line, phoneLine, action, ring }) {
           <div style={{ marginTop: 22, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             {button({ height: 48, padding: '0 22px', fontSize: 15 })}
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ov-hero-soft)' }}>
-              <Lock size={14} strokeWidth={2} /> Card, invoices and cancelling open on Stripe's secure site
+              <Lock size={14} strokeWidth={2} /> Card, plan, invoices and cancelling, all on this page
             </span>
           </div>
         </div>
@@ -372,7 +423,7 @@ function PlanHero({ planName, chip, price, line, phoneLine, action, ring }) {
 function PickHero({ lapsed, names }) {
   const steps = [
     ['Pick a plan', names.length ? `${listNames(names)}, by how many clients you book a week` : 'By how many clients you book a week'],
-    ['Pay on Stripe', 'Secure checkout, your card never touches this portal'],
+    ['Pay securely', "Stripe's checkout opens right here; your card never touches Ohvara"],
     ['Start booking', 'Your bookings unlock the moment payment goes through'],
   ]
   return (
