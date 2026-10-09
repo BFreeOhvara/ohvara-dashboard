@@ -1,11 +1,11 @@
 import { useAuth } from '../../hooks/useAuth'
 import { BillingPanel } from '../../components/agent/BillingPanel'
 
-// Billing (Prompt 691) — the agent's $350/week status, countdown and Stripe
+// Billing (Prompt 691) — the agent's weekly plan, next charge and Stripe
 // links, promoted from a Settings tab to its own Work nav item since agents
-// check it every week. Content is unchanged from Prompt 673's BillingPanel.
+// check it every week. Prompt 719 — the panel sets its own v16 width (1120px).
 export default function AgentBilling() {
   const { profile } = useAuth()
   if (!profile) return null
-  return <div style={{ maxWidth: 880 }}><BillingPanel profile={profile} /></div>
+  return <BillingPanel profile={profile} />
 }

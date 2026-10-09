@@ -1,6 +1,6 @@
 import { Children, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays } from 'lucide-react'
+import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck } from 'lucide-react'
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
 import { SLOTS, slotToISO, localDateISO, callWhen, callAt } from '../../lib/scheduling'
 import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, digits } from '../../lib/agentBookings'
@@ -2130,5 +2130,165 @@ export function ClientStory({ p, name, agentName, steps, highlight, currentIcon,
         </button>
       </div>
     </aside>
+  )
+}
+
+// ── Prompt 719 — Billing ────────────────────────────────────────────────────
+
+// Days left in the paid week (or the grace window) as a ring that empties
+// toward the date. Sits on the hero, so it's white in both themes.
+export function RenewalRing({ days, total = 7, label, todayLabel, size = 148 }) {
+  const r = size / 2 - 10
+  const c = 2 * Math.PI * r
+  const p = Math.max(0, Math.min(1, days / total))
+  const big = size >= 148
+  const today = days === 0
+  return (
+    <div role="img" aria-label={today ? `Today: ${todayLabel}` : `${days} ${label}`} style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block', transform: 'rotate(-90deg)' }} aria-hidden="true">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="10" />
+        {p > 0 && (
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#FFFFFF" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${p * c} ${c}`} />
+        )}
+      </svg>
+      <div aria-hidden="true" style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+        <span style={{ fontFamily: DISPLAY, fontSize: today ? (big ? 30 : 22) : (big ? 44 : 32), fontWeight: 600, lineHeight: 1, letterSpacing: '-0.03em', color: '#FFFFFF', fontVariantNumeric: 'tabular-nums' }}>
+          {today ? 'Today' : days}
+        </span>
+        <span style={{ marginTop: 4, maxWidth: size - 36, fontSize: big ? 12.5 : 11, fontWeight: 600, lineHeight: 1.25, color: 'var(--ov-hero-soft)' }}>
+          {today ? todayLabel : label}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// This week's bookings against the plan's cap: one segment per booking the
+// plan allows. `cap` null = no cap (number only, no meter).
+export function BookingMeter({ used, cap, range, note, paused, upgrade }) {
+  const capped = cap != null
+  const full = capped && used >= cap
+  const left = capped ? Math.max(0, cap - used) : null
+  return (
+    <section className="ov-card ov-bill-meter" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <IconChip icon={CalendarPlus} color="var(--ov-st-booked)" tint="var(--ov-st-booked-tint)" />
+        <h2 style={{ ...OV_TITLE, flex: 1, fontSize: 18 }}>This week's bookings</h2>
+        {range && <span className="hidden sm:inline" style={{ fontSize: 13, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>{range}</span>}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+        <span className="ov-bill-num" style={{ ...OV_NUM, letterSpacing: '-0.035em' }}>{used}</span>
+        <span style={{ fontSize: 18, fontWeight: 500, color: 'var(--ov-mute)' }}>{capped ? `of ${cap} used` : 'this week'}</span>
+        {capped && (
+          <span style={{
+            marginLeft: 'auto', alignSelf: 'center', height: 28, padding: '0 12px', borderRadius: 999, boxSizing: 'border-box',
+            display: 'inline-flex', alignItems: 'center', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap',
+            background: full ? 'var(--ov-st-needs-tint)' : 'var(--ov-st-cancelled-tint)',
+            color: full ? 'var(--ov-st-needs)' : 'var(--ov-st-cancelled)',
+          }}>
+            {full ? 'Limit reached' : `${left} left`}
+          </span>
+        )}
+      </div>
+      {capped && cap > 0 && (
+        <div aria-hidden="true" style={{ display: 'flex', gap: 4 }}>
+          {Array.from({ length: cap }, (_, i) => (
+            <span key={i} style={{
+              flex: '1 1 0', height: 12, borderRadius: 4,
+              background: full ? 'var(--ov-st-needs)' : i < used ? 'var(--ov-st-booked)' : 'var(--ov-stub)',
+            }} />
+          ))}
+        </div>
+      )}
+      <div style={{ fontSize: 13.5, color: 'var(--ov-mute)' }}>{note}</div>
+      {paused && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: -6 }}>
+          <span style={{ flex: '1 1 220px', fontSize: 13.5, fontWeight: 600, color: 'var(--ov-st-needs)' }}>{paused}</span>
+          {upgrade && (
+            <button type="button" className="ov-ghost" onClick={upgrade.onClick} disabled={upgrade.disabled} style={{ height: 40, padding: '0 16px', borderRadius: 999, fontSize: 13.5, fontWeight: 600 }}>
+              {upgrade.label}
+            </button>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function PlanFact({ children }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: 'var(--ov-soft)' }}>
+      <span style={{
+        width: 20, height: 20, flexShrink: 0, borderRadius: '50%', background: 'var(--ov-st-cancelled-tint)', color: 'var(--ov-st-cancelled)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Check size={11} strokeWidth={3} />
+      </span>
+      {children}
+    </div>
+  )
+}
+
+// One plan (a row of agent_billing_tiers). `big` = the no-plan page's larger
+// card; `pick` = the highlighted one; `footer` = its button and notes.
+export function PlanCard({ tier, price, big, pick, tag, sub, footer, className = '' }) {
+  const capped = tier.weekly_cap != null
+  return (
+    <div className={`ov-card${pick ? ' is-pick' : ''} ${className}`} style={{
+      flex: big ? '1 1 300px' : '1 1 280px', minWidth: 0, display: 'flex', flexDirection: 'column',
+      gap: big ? 18 : 16, padding: big ? '28px 28px 24px' : '24px 24px 20px', borderRadius: big ? 22 : 20,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <span style={{ ...OV_TITLE, fontSize: big ? 22 : 19 }}>{tier.name}</span>
+        {tag}
+      </div>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <span style={{ ...OV_NUM, fontSize: big ? 52 : 38, letterSpacing: big ? '-0.035em' : '-0.03em' }}>{price}</span>
+          <span style={{ fontSize: big ? 15 : 14, color: 'var(--ov-mute)' }}>/ week</span>
+        </div>
+        {sub && <div style={{ marginTop: 8, fontSize: 13.5, color: 'var(--ov-mute)' }}>{sub}</div>}
+      </div>
+      <div className="ov-box" style={{ display: 'flex', alignItems: 'baseline', gap: 8, padding: big ? '14px 16px' : '12px 14px', borderRadius: big ? 14 : 12 }}>
+        {capped ? (
+          <>
+            <span style={{ ...OV_NUM, fontSize: big ? 28 : 22 }}>{tier.weekly_cap}</span>
+            <span style={{ fontSize: big ? 14 : 13.5, color: 'var(--ov-mute)' }}>bookings a week</span>
+          </>
+        ) : (
+          <span style={{ ...OV_NUM, fontSize: big ? 22 : 18 }}>No weekly cap</span>
+        )}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: big ? 11 : 10 }}>
+        <PlanFact>{capped ? `Up to ${tier.weekly_cap} bookings a week` : 'No limit on bookings'}</PlanFact>
+        <PlanFact>Booking count resets every Monday</PlanFact>
+        <PlanFact>Cancel anytime, keep access through your paid week</PlanFact>
+      </div>
+      {footer && <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>{footer}</div>}
+    </div>
+  )
+}
+
+const BILLING_FACTS = [
+  { icon: CreditCard, title: 'Billed weekly', line: "Your card is charged on the same day each week, for that week's access." },
+  { icon: User, title: 'One limit per account', line: 'Bookings count for the whole login, however many people use it.' },
+  { icon: ShieldCheck, title: 'Cancel anytime', line: 'You keep access through the end of the week you paid for.' },
+]
+
+export function BillingFacts() {
+  return (
+    <section aria-label="How billing works" className="ov-card" style={{ display: 'flex', gap: 22, flexWrap: 'wrap', padding: '22px 24px' }}>
+      {BILLING_FACTS.map(({ icon: Icon, title, line }) => (
+        <div key={title} style={{ flex: '1 1 220px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+          <span className="ov-box" style={{ width: 36, height: 36, flexShrink: 0, boxSizing: 'border-box', borderRadius: 11, color: 'var(--ov-mid)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon size={17} strokeWidth={2} />
+          </span>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ov-hi)' }}>{title}</div>
+            <div style={{ marginTop: 2, fontSize: 13, lineHeight: 1.45, color: 'var(--ov-mute)' }}>{line}</div>
+          </div>
+        </div>
+      ))}
+    </section>
   )
 }

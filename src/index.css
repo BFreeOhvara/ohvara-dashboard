@@ -1044,3 +1044,64 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
   .ov-sheet { animation: none; }
   .ov-event, .ov-day-arrow { transition: none; }
 }
+
+/* ── Prompt 719 — Billing on the "ov" language ────────────────
+   Hero status chips, the plan cards' boxes and highlight, the filled
+   Subscribe button and the phone sizes for /agent/billing. See DESIGN.md
+   v16 "P719 — Billing". */
+.ov-box { background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.10); }
+[data-theme="light"] .ov-box { background: #F6FAF9; border: 1px solid rgba(2,79,70,0.18); }
+
+/* Status chips sit on the hero, so they stay translucent in both themes; on
+   the light (teal) hero the text and dot go white. */
+.ov-bill-chip {
+  display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; box-sizing: border-box;
+  border-radius: 999px; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.14);
+  color: #FFFFFF; font-size: 13px; font-weight: 700; white-space: nowrap;
+}
+.ov-bill-chip > i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.75); }
+.ov-bill-chip.is-active { background: rgba(74,222,128,0.16); border-color: rgba(74,222,128,0.4); color: #86EFAC; }
+.ov-bill-chip.is-active > i { background: #4ADE80; }
+.ov-bill-chip.is-warn { background: rgba(245,158,11,0.18); border-color: rgba(251,191,36,0.5); color: #FCD34D; }
+.ov-bill-chip.is-warn > i { background: #FBBF24; }
+.ov-bill-chip.is-danger { background: rgba(239,68,68,0.18); border-color: rgba(248,113,113,0.5); color: #FCA5A5; }
+.ov-bill-chip.is-danger > i { background: #F87171; }
+[data-theme="light"] .ov-bill-chip { color: #FFFFFF; }
+[data-theme="light"] .ov-bill-chip > i { background: #FFFFFF; }
+
+/* The current plan (subscribed) or the most-bookings plan (no plan yet). */
+.ov-card.is-pick {
+  background:
+    radial-gradient(ellipse 90% 70% at 100% 0%, var(--ov-st-booked-tint) 0%, transparent 70%),
+    radial-gradient(120% 70% at 0% 0%, rgba(255,255,255,0.045) 0%, transparent 60%),
+    linear-gradient(180deg, #161922 0%, #10121A 100%);
+  border: 1px solid var(--ov-st-booked-edge);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 20px 40px -24px var(--ov-st-booked-edge);
+}
+[data-theme="light"] .ov-card.is-pick {
+  background:
+    radial-gradient(ellipse 90% 70% at 100% 0%, var(--ov-st-booked-tint) 0%, transparent 70%),
+    radial-gradient(120% 70% at 0% 0%, #FFFFFF 0%, rgba(255,255,255,0) 60%),
+    linear-gradient(180deg, #FFFFFF 0%, #F2F7F6 100%);
+  border: 1px solid var(--ov-st-booked-edge);
+  box-shadow: inset 0 1px 0 #FFFFFF, 0 20px 40px -24px var(--ov-st-booked-edge);
+}
+
+/* Filled Subscribe on the highlighted plan. */
+.ov-buy { border: none; background: var(--ov-st-booked); color: #0B0D14; box-shadow: 0 12px 28px -12px rgba(96,165,250,0.55); }
+[data-theme="light"] .ov-buy { background: #07332E; color: #FFFFFF; box-shadow: 0 12px 28px -12px rgba(7,51,46,0.5); }
+.ov-buy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ov-bill button { cursor: pointer; }
+.ov-bill button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ov-bill-pad  { padding: 34px 36px; }
+.ov-bill-h1   { font-size: 40px; }
+.ov-bill-num  { font-size: 48px; }
+.ov-bill-meter { padding: 24px 26px; }
+@media (max-width: 639.98px) {
+  .ov-bill-pad  { padding: 22px 20px; }
+  .ov-bill-h1   { font-size: 30px; }
+  .ov-bill-num  { font-size: 40px; }
+  .ov-bill-meter { padding: 20px 18px; }
+  .ov-bill .ov-plan-first { order: -1; }
+}

@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Crown, CreditCard, Lock, Info, Eye, ArrowRight, Check, Loader2 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { card, cardTitle, primaryBtn, ghostBtn, MONO } from '../../lib/exportStyles'
-import { GapNote } from '../ui/ExportForm'
+import { DISPLAY } from '../../lib/exportStyles'
 import { useBillingTiers, useWeeklyUsage } from '../../hooks/useBillingTiers'
 import {
-  BILLING_STATUS, TONE_STYLE, formatWeekly, formatBillingDate, daysUntil, invokeBilling,
-  capState, capLabel, formatReset,
+  formatWeekly, formatBillingDate, daysUntil, invokeBilling, capState, nextTier, formatReset, GRACE_HOURS,
 } from '../../lib/billing'
+import { RenewalRing, BookingMeter, PlanCard, BillingFacts } from './AgentUI'
 
 // ── Billing (Prompt 673) ────────────────────────────────────────────────────
 // The agent's weekly retainer. Card entry, cancelling and invoices all
@@ -20,30 +19,49 @@ import {
 // that differ by weekly submission cap; switching goes through the Customer
 // Portal's plan switcher (upgrade bills the difference now, downgrade waits
 // for the end of the paid week).
+// Prompt 719 — rebuilt on the v16 language: a plan hero with a renewal ring,
+// this week's bookings meter, plan cards, and a "no plan yet" page that sells
+// the plans. Exempt accounts see a preview of the plan view that never calls
+// Stripe. Billing logic is unchanged.
+
+const DAY = 86400000
+const fmtDay = ms => formatBillingDate(new Date(ms).toISOString())
+// Ranked by cap; null (no cap) counts as the most.
+const capRank = t => (t.weekly_cap == null ? Infinity : t.weekly_cap)
+const mostBookings = tiers => tiers.reduce((best, t) => (!best || capRank(t) > capRank(best) ? t : best), null)
+const listNames = names => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}`)
+
+const H2 = { margin: 0, fontFamily: DISPLAY, fontSize: 19, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ov-hi)' }
+
+function B({ children }) {
+  return <span style={{ fontWeight: 600, color: '#FFFFFF' }}>{children}</span>
+}
+
+function Spin({ on, children }) {
+  return on ? <Loader2 size={17} className="animate-spin" /> : children
+}
+
 export function BillingPanel({ profile }) {
   const { refreshProfile } = useAuth()
   const { data: tiers = [] } = useBillingTiers()
   const { data: usage } = useWeeklyUsage(profile.id)
   const [configured, setConfigured] = useState(null)
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState(null) // which button is waiting on Stripe
   const [error, setError] = useState('')
 
-  const currentTier = tiers.find(t => t.key === profile.billing_tier) || tiers[0]
-  const price = formatWeekly(currentTier?.weekly_cents)
+  const exempt = !!profile.billing_exempt
+  const status = exempt ? 'exempt' : (profile.billing_status || 'none')
+  const subscribed = ['active', 'past_due', 'canceled'].includes(status)
+  // Exempt: preview the plan they're set to, else the one with the most bookings.
+  const currentTier = tiers.find(t => t.key === profile.billing_tier) || (exempt ? mostBookings(tiers) : tiers[0])
+  const price = currentTier ? formatWeekly(currentTier.weekly_cents) : null
   const cap = capState(usage)
-  const status = profile.billing_exempt ? 'exempt' : (profile.billing_status || 'none')
-  const meta = BILLING_STATUS[status] || BILLING_STATUS.none
   const periodEnd = formatBillingDate(profile.billing_current_period_end)
   const graceEnd = formatBillingDate(profile.billing_grace_until)
-  const subscribed = ['active', 'past_due', 'canceled'].includes(status)
 
   // Prompt 677 — time-remaining at a glance: days to the next charge while
   // active, days of paid access left once cancelled.
   const days = ['active', 'canceled'].includes(status) ? daysUntil(profile.billing_current_period_end) : null
-  const countdown = days === null ? null : {
-    value: days === 0 ? 'Today' : `${days} ${days === 1 ? 'day' : 'days'}`,
-    caption: status === 'canceled' ? 'until access ends' : `until next ${price} charge`,
-  }
 
   // canceled = cancel-at-period-end, still inside the paid week: renewing goes
   // through the Customer Portal so it un-cancels the same subscription rather
@@ -59,139 +77,356 @@ export function BillingPanel({ profile }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const detail = {
-    none:     'No subscription yet.',
-    active:   periodEnd ? `Paid through ${periodEnd}. Renews automatically.` : 'Paid up. Renews automatically.',
-    past_due: graceEnd ? `Your last payment failed. Update your card by ${graceEnd} to keep access.` : 'Your last payment failed. Update your card to keep access.',
-    lapsed:   'Your subscription has lapsed. Subscribe again to get back in.',
-    canceled: periodEnd ? `Cancelled. Access runs through ${periodEnd}.` : 'Cancelled.',
-    exempt:   "Your account isn't billed.",
-  }[status]
-
   async function go(action, extra) {
-    setError(''); setBusy(true)
+    if (exempt) return // the preview never opens Stripe
+    setError(''); setBusy(action === 'checkout' ? `checkout:${extra.tier}` : extra?.flow || action)
     try {
       const d = await invokeBilling(action, extra)
       if (!d?.url) throw new Error('Stripe did not return a page to open')
       window.location.assign(d.url)
     } catch (e) {
       setError(e.message)
-      setBusy(false)
+      setBusy(null)
     }
   }
 
+  // Stripe buttons work only once billing is known to be connected.
+  const locked = configured !== true || !!busy
+
+  const notConnected = !exempt && configured === false && (
+    <div className="ov-card" style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 16px', borderRadius: 14, fontSize: 13.5, lineHeight: 1.5, color: 'var(--ov-soft)' }}>
+      <Info size={16} style={{ flexShrink: 0, marginTop: 2, color: 'var(--ov-mid)' }} />
+      Billing isn't connected yet, so nothing is being charged and your access isn't affected. Subscribing
+      switches on here once it is.
+    </div>
+  )
+  const errorBox = error && (
+    <div role="alert" className="ov-card" style={{ padding: '12px 14px', borderRadius: 12, borderColor: 'var(--danger-bd)', fontSize: 13.5, color: 'var(--danger)' }}>
+      {error}
+    </div>
+  )
+
   return (
-    <div style={{ ...card }}>
-      <p style={cardTitle}>Billing</p>
-      <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 560 }}>
-        Portal access is billed weekly to your card and covers that week's batch of cancellations. Your plan sets
-        how many submissions you can book each week (Monday to Sunday); the cap is per account, so it doesn't
-        grow with the number of people on one login. Cancel any time: you keep access through the end of the
-        week you've paid for.
-      </p>
-
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: '14px 16px', borderRadius: 8, maxWidth: 560,
-        background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)',
-      }}>
-        <span style={{
-          display: 'inline-flex', padding: '3px 9px', borderRadius: 999, fontSize: 12, fontWeight: 600,
-          whiteSpace: 'nowrap', ...TONE_STYLE[meta.tone],
+    <div className="ov-bill flex flex-col gap-[14px] sm:gap-4" style={{ maxWidth: 1120, width: '100%', margin: '0 auto' }}>
+      {exempt && currentTier && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 14, fontSize: 13.5, lineHeight: 1.45,
+          color: 'var(--ov-hi)', border: '1px solid var(--ov-st-booked-edge)',
+          background: 'linear-gradient(var(--ov-st-booked-tint), var(--ov-st-booked-tint)), var(--ov-page)',
         }}>
-          {meta.label}
-        </span>
-        <span style={{ flex: 1, minWidth: 200, fontSize: 13.5, color: 'var(--text-secondary)' }}>{detail}</span>
-        {countdown && (
-          <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-            <p style={{ margin: 0, fontFamily: MONO, fontSize: 18, fontWeight: 600, color: 'var(--text-primary)' }}>{countdown.value}</p>
-            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>{countdown.caption}</p>
-          </div>
-        )}
-      </div>
-
-      {cap && (
-        <div style={{ maxWidth: 560, marginTop: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>Submissions this week</span>
-            <span style={{ fontFamily: MONO, fontSize: 14, color: cap.atCap ? 'var(--warning)' : 'var(--text-primary)' }}>
-              {cap.cap == null ? `${cap.used} (no cap)` : `${cap.used} of ${cap.cap} used`}
-            </span>
-          </div>
-          {cap.cap != null && (
-            <div style={{ height: 6, borderRadius: 999, marginTop: 8, background: 'var(--bg-elevated)', overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', width: `${Math.min(100, (cap.used / cap.cap) * 100)}%`, borderRadius: 999,
-                background: cap.atCap ? 'var(--warning)' : 'var(--accent)',
-              }} />
-            </div>
-          )}
-          <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
-            {cap.cap == null ? 'Nothing limits your submissions.' : `Resets ${formatReset(usage.week_end)} at midnight.`}
-          </p>
+          <Eye size={16} style={{ flexShrink: 0, color: 'var(--ov-st-booked)' }} />
+          Preview: your account is exempt, so nothing is charged. This is how Billing looks on {currentTier.name}.
         </div>
       )}
 
-      {status !== 'exempt' && configured === false && (
-        <GapNote>
-          Billing isn't connected yet, so nothing is being charged and your access isn't affected. Subscribing
-          switches on here once it is.
-        </GapNote>
-      )}
-
-      {status !== 'exempt' && configured && tiers.length > 0 && (
+      {subscribed || exempt ? (
         <>
-          <p style={{ ...cardTitle, margin: '22px 0 10px', fontSize: 14 }}>
-            {subscribed ? 'Your plan' : 'Choose a plan'}
-          </p>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', maxWidth: 560 }}>
-            {tiers.map((t, i) => {
-              const current = subscribed && t.key === profile.billing_tier
-              const higher = i > tiers.findIndex(x => x.key === profile.billing_tier)
-              return (
-                <div key={t.key} style={{
-                  flex: '1 1 240px', padding: '14px 16px', borderRadius: 10,
-                  background: 'var(--bg-elevated)',
-                  border: current ? '1px solid var(--accent)' : 'var(--border-w) solid var(--border)',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{t.name}</span>
-                    {current && <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--accent)' }}>Current plan</span>}
-                  </div>
-                  <p style={{ margin: '6px 0 2px', fontFamily: MONO, fontSize: 20, fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {formatWeekly(t.weekly_cents)}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}> /week</span>
-                  </p>
-                  <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-secondary)' }}>{capLabel(t.weekly_cap)}</p>
-                  {!subscribed && (
-                    <button onClick={() => go('checkout', { tier: t.key })} disabled={busy} style={{ ...primaryBtn, opacity: busy ? 0.6 : 1 }}>
-                      {busy ? <Loader2 size={14} className="animate-spin" /> : `Subscribe to ${t.name}`}
-                    </button>
-                  )}
-                  {subscribed && !current && ['active', 'past_due'].includes(status) && (
-                    <>
-                      <button onClick={() => go('portal', { flow: 'change_plan' })} disabled={busy} style={{ ...(higher ? primaryBtn : ghostBtn), opacity: busy ? 0.6 : 1 }}>
-                        {higher ? `Upgrade to ${t.name}` : `Switch to ${t.name}`}
-                      </button>
-                      <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
-                        {higher ? "You're charged the difference for this week now." : 'Takes effect at the end of your paid week.'}
-                      </p>
-                    </>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-            {subscribed && (
-              <button onClick={() => go('portal')} disabled={busy} style={{ ...ghostBtn, opacity: busy ? 0.6 : 1 }}>
-                {status === 'past_due' ? 'Update card' : status === 'canceled' ? 'Renew or manage' : 'Manage billing'}
-              </button>
-            )}
-            <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Opens on Stripe's secure site.</span>
-          </div>
+          <PlanHero {...planHero()} />
+          {notConnected}
+          {errorBox}
+          {bookingsCard()}
+          {tiers.length > 0 && plans()}
+        </>
+      ) : (
+        <>
+          <PickHero lapsed={status === 'lapsed'} names={tiers.map(t => t.name)} />
+          {notConnected}
+          {errorBox}
+          {tiers.length > 0 && buyCards()}
         </>
       )}
 
-      {error && <p style={{ margin: '12px 0 0', fontSize: 13, color: 'var(--danger)' }}>{error}</p>}
+      <BillingFacts />
     </div>
+  )
+
+  // ── plan view ──────────────────────────────────────────────────────────
+
+  function planHero() {
+    const manage = { label: 'Manage billing', icon: CreditCard, onClick: () => go('portal'), disabled: locked, busy: busy === 'portal' }
+    const base = { planName: currentTier?.name, price }
+    if (exempt) {
+      return {
+        ...base, chip: { label: 'Exempt' }, line: "Exempt accounts aren't charged.", phoneLine: 'Not charged',
+        action: { ...manage, disabled: true, title: 'Exempt accounts have nothing to manage' },
+      }
+    }
+    const end = profile.billing_current_period_end
+    if (status === 'past_due') {
+      const fix = daysUntil(profile.billing_grace_until)
+      return {
+        ...base,
+        chip: { label: 'Payment failed', tone: 'is-warn' },
+        line: graceEnd
+          ? <>Your last payment failed. Update your card by <B>{graceEnd}</B> to keep access.</>
+          : 'Your last payment failed. Update your card to keep access.',
+        phoneLine: graceEnd ? `Update your card by ${graceEnd}` : 'Update your card',
+        action: { ...manage, label: 'Update card' },
+        ring: fix == null ? null : { days: fix, total: Math.ceil(GRACE_HOURS / 24), label: 'days to fix', phoneLabel: 'days to fix', todayLabel: 'last day to fix' },
+      }
+    }
+    if (status === 'canceled') {
+      return {
+        ...base,
+        chip: { label: 'Cancelled' },
+        line: periodEnd ? <>Cancelled. Access runs through <B>{periodEnd}</B>.</> : 'Cancelled.',
+        phoneLine: periodEnd ? `Access runs through ${periodEnd}` : 'Cancelled',
+        action: { ...manage, label: 'Renew or manage' },
+        ring: days == null ? null : { days: Math.min(days, 7), label: 'days of access left', phoneLabel: 'days left', todayLabel: 'access ends' },
+      }
+    }
+    return {
+      ...base,
+      chip: { label: 'Active', tone: 'is-active' },
+      line: periodEnd
+        ? <>Paid through <B>{fmtDay(new Date(end).getTime() - DAY)}</B>. Next charge of {price} on <B>{periodEnd}</B>, renews automatically.</>
+        : 'Paid up. Renews automatically.',
+      phoneLine: periodEnd ? `Next charge ${periodEnd}` : 'Renews automatically',
+      action: manage,
+      ring: days == null ? null : { days: Math.min(days, 7), label: 'days to renewal', phoneLabel: 'days left', todayLabel: 'renewal day' },
+    }
+  }
+
+  function bookingsCard() {
+    const range = usage?.week_end
+      ? `${fmtDay(new Date(usage.week_end).getTime() - 7 * DAY)} – ${fmtDay(new Date(usage.week_end).getTime() - DAY)}`
+      : null
+    const reset = formatReset(usage?.week_end)
+    if (exempt) {
+      if (!currentTier) return null
+      return (
+        <BookingMeter used={usage?.used ?? 0} cap={currentTier.weekly_cap} range={range} note="Exempt accounts have no limit." />
+      )
+    }
+    if (!cap) return null
+    const next = nextTier(tiers, profile.billing_tier)
+    return (
+      <BookingMeter
+        used={cap.used}
+        cap={cap.cap}
+        range={range}
+        note={cap.cap == null
+          ? 'Nothing limits your bookings.'
+          : `Resets ${reset} at midnight. The limit is per account, not per person on the login.`}
+        paused={cap.blocking ? `New bookings are paused until ${reset}.` : null}
+        upgrade={cap.blocking && next ? {
+          label: busy === 'change_plan' ? 'Opening Stripe…' : `Upgrade to ${next.name}`,
+          onClick: () => go('portal', { flow: 'change_plan' }),
+          disabled: locked,
+        } : null}
+      />
+    )
+  }
+
+  function plans() {
+    const curIdx = tiers.findIndex(t => t.key === currentTier?.key)
+    const canSwitch = exempt || ['active', 'past_due'].includes(status)
+    const currentNote = exempt ? 'Not charged while exempt'
+      : status === 'canceled' ? (periodEnd ? `Access ends ${periodEnd}` : 'Cancelled')
+      : status === 'past_due' ? (graceEnd ? `Update your card by ${graceEnd}` : 'Payment failed')
+      : periodEnd ? `Renews ${periodEnd}` : 'Renews automatically'
+    return (
+      <section aria-labelledby="ov-bill-plans" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '0 4px' }}>
+          <h2 id="ov-bill-plans" style={H2}>Plans</h2>
+          <span className="hidden sm:inline" style={{ fontSize: 13, color: 'var(--ov-mute)', textAlign: 'right' }}>
+            {tiers.length === 2 ? 'Both cover' : 'Every plan covers'} that week's batch of cancellations
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          {tiers.map((t, i) => {
+            const current = i === curIdx
+            const higher = i > curIdx
+            let footer = null
+            if (current) {
+              footer = (
+                <>
+                  <div style={{
+                    height: 44, borderRadius: 999, border: '1px dashed var(--ov-st-booked-edge)', color: 'var(--ov-st-booked)',
+                    fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    You're on this plan
+                  </div>
+                  <div style={{ fontSize: 12.5, color: 'var(--ov-mute)', textAlign: 'center' }}>{currentNote}</div>
+                </>
+              )
+            } else if (canSwitch) {
+              footer = (
+                <>
+                  <button
+                    type="button" className="ov-ghost" disabled={exempt || locked}
+                    onClick={() => go('portal', { flow: 'change_plan' })}
+                    style={{ height: 44, borderRadius: 999, fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Spin on={busy === 'change_plan'}>{higher ? `Upgrade to ${t.name}` : `Switch to ${t.name}`}</Spin>
+                  </button>
+                  <div style={{ fontSize: 12.5, color: 'var(--ov-mute)', textAlign: 'center' }}>
+                    {higher
+                      ? "You're charged the difference for this week now."
+                      : periodEnd ? `Takes effect when your paid week ends, ${periodEnd}.` : 'Takes effect when your paid week ends.'}
+                  </div>
+                </>
+              )
+            }
+            return (
+              <PlanCard
+                key={t.key} tier={t} price={formatWeekly(t.weekly_cents)} pick={current} footer={footer}
+                tag={current && (
+                  <span style={{
+                    height: 26, padding: '0 11px', borderRadius: 999, background: 'var(--ov-st-booked)', color: 'var(--ov-on-kind)',
+                    fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
+                  }}>
+                    <Check size={12} strokeWidth={3} /> Current plan
+                  </span>
+                )}
+              />
+            )
+          })}
+        </div>
+      </section>
+    )
+  }
+
+  // ── no plan yet ────────────────────────────────────────────────────────
+
+  function buyCards() {
+    const top = tiers.length > 1 ? mostBookings(tiers) : null
+    return (
+      <section aria-label="Plans" style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+        {tiers.map(t => {
+          const pick = t === top
+          const key = `checkout:${t.key}`
+          return (
+            <PlanCard
+              key={t.key} tier={t} price={formatWeekly(t.weekly_cents)} big pick={pick} className={pick ? 'ov-plan-first' : ''}
+              sub={t.weekly_cap ? `${formatWeekly(Math.round(t.weekly_cents / t.weekly_cap))} a booking if you use all ${t.weekly_cap}` : null}
+              tag={pick && (
+                <span style={{
+                  height: 26, padding: '0 11px', borderRadius: 999, background: 'var(--ov-st-booked-tint)', color: 'var(--ov-st-booked)',
+                  fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
+                }}>
+                  <Crown size={12} strokeWidth={2.4} /> Most bookings
+                </span>
+              )}
+              footer={
+                <>
+                  <button
+                    type="button" className={pick ? 'ov-buy' : 'ov-ghost'} disabled={locked}
+                    onClick={() => go('checkout', { tier: t.key })}
+                    style={{ height: 50, borderRadius: 999, fontSize: 15, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  >
+                    <Spin on={busy === key}>Subscribe to {t.name}<ArrowRight size={17} strokeWidth={2.2} /></Spin>
+                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12.5, color: 'var(--ov-mute)' }}>
+                    <Lock size={13} strokeWidth={2} /> Secure checkout on Stripe
+                  </div>
+                </>
+              }
+            />
+          )
+        })}
+      </section>
+    )
+  }
+}
+
+// The subscribed hero: plan + status chips, the weekly price, the next-charge
+// line, the Stripe button and the ring. Phones get the compact stack.
+function PlanHero({ planName, chip, price, line, phoneLine, action, ring }) {
+  const chips = (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {planName && <span className="ov-hero-chip"><Crown size={14} strokeWidth={2.2} />{planName} plan</span>}
+      <span className={`ov-bill-chip ${chip.tone || ''}`}><i />{chip.label}</span>
+    </div>
+  )
+  const Icon = action.icon
+  const button = (style) => (
+    <button type="button" className="ov-hero-btn" onClick={action.onClick} disabled={action.disabled} title={action.title} style={style}>
+      <Spin on={action.busy}><Icon size={17} strokeWidth={2.1} /> {action.label}</Spin>
+    </button>
+  )
+  const num = { fontFamily: DISPLAY, fontWeight: 600, lineHeight: 1, color: '#FFFFFF', fontVariantNumeric: 'tabular-nums' }
+  return (
+    <section className="ov-hero" aria-label="Your plan">
+      <div className="hidden sm:flex" style={{ alignItems: 'center', gap: 36, flexWrap: 'wrap', padding: '34px 36px' }}>
+        <div style={{ flex: '1 1 380px', minWidth: 0 }}>
+          {chips}
+          <div style={{ marginTop: 18, display: 'flex', alignItems: 'baseline', gap: 10 }}>
+            <span style={{ ...num, fontSize: 56, letterSpacing: '-0.04em' }}>{price ?? ' '}</span>
+            <span style={{ fontSize: 18, fontWeight: 500, color: 'var(--ov-hero-soft)' }}>/ week</span>
+          </div>
+          <p style={{ margin: '12px 0 0', fontSize: 16, color: 'var(--ov-hero-soft)' }}>{line}</p>
+          <div style={{ marginTop: 22, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            {button({ height: 48, padding: '0 22px', fontSize: 15 })}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ov-hero-soft)' }}>
+              <Lock size={14} strokeWidth={2} /> Card, invoices and cancelling open on Stripe's secure site
+            </span>
+          </div>
+        </div>
+        {ring && <RenewalRing size={148} days={ring.days} total={ring.total} label={ring.label} todayLabel={ring.todayLabel} />}
+      </div>
+
+      <div className="flex sm:hidden" style={{ flexDirection: 'column', gap: 16, padding: '22px 20px' }}>
+        {chips}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span style={{ ...num, fontSize: 44, letterSpacing: '-0.035em' }}>{price ?? ' '}</span>
+              <span style={{ fontSize: 15, color: 'var(--ov-hero-soft)' }}>/ week</span>
+            </div>
+            <div style={{ marginTop: 8, fontSize: 14, color: 'var(--ov-hero-soft)' }}>{phoneLine}</div>
+          </div>
+          {ring && <RenewalRing size={104} days={ring.days} total={ring.total} label={ring.phoneLabel} todayLabel={ring.todayLabel} />}
+        </div>
+        {button({ width: '100%', height: 50, fontSize: 16 })}
+      </div>
+    </section>
+  )
+}
+
+// No plan yet (or it ended): what a plan covers and the three steps to start.
+function PickHero({ lapsed, names }) {
+  const steps = [
+    ['Pick a plan', names.length ? `${listNames(names)}, by how many clients you book a week` : 'By how many clients you book a week'],
+    ['Pay on Stripe', 'Secure checkout, your card never touches this portal'],
+    ['Start booking', 'Your bookings unlock the moment payment goes through'],
+  ]
+  return (
+    <section className="ov-hero ov-bill-pad" style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <div>
+        {lapsed
+          ? <span className="ov-bill-chip is-danger"><i />Plan ended</span>
+          : <span className="ov-hero-chip"><span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ov-hero-dot)' }} />No plan yet</span>}
+      </div>
+      <div>
+        <h1 className="ov-bill-h1" style={{ margin: 0, fontFamily: DISPLAY, fontWeight: 600, lineHeight: 1.08, letterSpacing: '-0.035em', color: '#FFFFFF' }}>
+          {lapsed ? 'Your plan has ended' : 'Pick a plan to start booking'}
+        </h1>
+        <p style={{ margin: '12px 0 0', maxWidth: 640, fontSize: 16.5, lineHeight: 1.5, color: 'var(--ov-hero-soft)' }}>
+          {lapsed
+            ? 'Pick a plan to get back in. Clients you already booked are still being worked.'
+            : "Your plan covers each week's batch of cancellations: you book the client, Fulfillment calls them and gets the old policy cancelled."}
+        </p>
+      </div>
+      <ol style={{ display: 'flex', gap: 12, flexWrap: 'wrap', margin: 0, padding: 0, listStyle: 'none' }}>
+        {steps.map(([title, line], i) => (
+          <li key={title} style={{
+            flex: '1 1 200px', display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', borderRadius: 16,
+            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)',
+          }}>
+            <span style={{
+              width: 30, height: 30, flexShrink: 0, borderRadius: '50%', background: '#FFFFFF', color: 'var(--ov-hero-btn-text)',
+              fontFamily: DISPLAY, fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {i + 1}
+            </span>
+            <div>
+              <div style={{ fontSize: 14.5, fontWeight: 600, color: '#FFFFFF' }}>{title}</div>
+              <div style={{ marginTop: 2, fontSize: 13, lineHeight: 1.45, color: 'var(--ov-hero-soft)' }}>{line}</div>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
   )
 }
