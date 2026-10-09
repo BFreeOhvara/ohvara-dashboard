@@ -11,6 +11,7 @@ import { useTheme } from '../hooks/useTheme'
 import { useUpdateOwnProfile } from '../hooks/useSettings'
 import { useAppSettings, useUpdateAppSettings } from '../hooks/useAppSettings'
 import { useBillingTiers } from '../hooks/useBillingTiers'
+import { shownStatus } from '../lib/billing'
 import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../lib/timezones'
 import { roleLabel } from '../lib/roleLabels'
 import { verifyPassword } from '../lib/verifyPassword'
@@ -159,14 +160,15 @@ export default function Settings() {
 
 // ── Account card ────────────────────────────────────────────────────────────
 // "<Role> · <plan>" — the plan only for a billed agent with a plan running
-// (same tiers the Billing page reads); exempt or no plan shows just the role.
+// (same tiers the Billing page reads); no plan shows just the role. A comped
+// agent counts as running on its tier (P725).
 function AccountCard({ profile }) {
   const { session } = useAuth()
   const { data: tiers = [] } = useBillingTiers()
-  const status = profile.billing_status
+  const status = shownStatus(profile)
   const running = status === 'active' || status === 'past_due'
     || (status === 'canceled' && profile.billing_current_period_end && new Date(profile.billing_current_period_end) > new Date())
-  const plan = profile.role === 'agent' && !profile.billing_exempt && running
+  const plan = profile.role === 'agent' && running
     ? tiers.find(t => t.key === profile.billing_tier)?.name : null
 
   return (

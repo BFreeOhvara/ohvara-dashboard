@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Crown, CreditCard, Lock, Info, Eye, ArrowRight, Check, Loader2 } from 'lucide-react'
+import { Crown, CreditCard, Lock, Info, ArrowRight, Check, Loader2 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { DISPLAY } from '../../lib/exportStyles'
 import { useBillingTiers, useWeeklyUsage } from '../../hooks/useBillingTiers'
 import {
   formatWeekly, formatBillingDate, daysUntil, invokeBilling, capState, nextTier, formatReset, GRACE_HOURS,
+  isComped, shownStatus, renewsAt,
 } from '../../lib/billing'
 import { RenewalRing, BookingMeter, PlanCard, BillingFacts } from './AgentUI'
 
@@ -21,8 +22,10 @@ import { RenewalRing, BookingMeter, PlanCard, BillingFacts } from './AgentUI'
 // for the end of the paid week).
 // Prompt 719 — rebuilt on the v16 language: a plan hero with a renewal ring,
 // this week's bookings meter, plan cards, and a "no plan yet" page that sells
-// the plans. Exempt accounts see a preview of the plan view that never calls
-// Stripe. Billing logic is unchanged.
+// the plans. Billing logic is unchanged.
+// Prompt 725 — a comped account (billing_exempt) renders as Active on its
+// tier, renewing at the end of its booking week, with the tier's cap. Its
+// Stripe buttons answer "Your account isn't billed." and never open Stripe.
 
 const DAY = 86400000
 const fmtDay = ms => formatBillingDate(new Date(ms).toISOString())
@@ -49,19 +52,20 @@ export function BillingPanel({ profile }) {
   const [busy, setBusy] = useState(null) // which button is waiting on Stripe
   const [error, setError] = useState('')
 
-  const exempt = !!profile.billing_exempt
-  const status = exempt ? 'exempt' : (profile.billing_status || 'none')
+  const comped = isComped(profile)
+  const status = shownStatus(profile)
   const subscribed = ['active', 'past_due', 'canceled'].includes(status)
-  // Exempt: preview the plan they're set to, else the one with the most bookings.
-  const currentTier = tiers.find(t => t.key === profile.billing_tier) || (exempt ? mostBookings(tiers) : tiers[0])
+  // Comped: the plan they're set to, else the one with the most bookings.
+  const currentTier = tiers.find(t => t.key === profile.billing_tier) || (comped ? mostBookings(tiers) : tiers[0])
   const price = currentTier ? formatWeekly(currentTier.weekly_cents) : null
   const cap = capState(usage)
-  const periodEnd = formatBillingDate(profile.billing_current_period_end)
+  const end = renewsAt(profile, usage)
+  const periodEnd = formatBillingDate(end)
   const graceEnd = formatBillingDate(profile.billing_grace_until)
 
   // Prompt 677 — time-remaining at a glance: days to the next charge while
   // active, days of paid access left once cancelled.
-  const days = ['active', 'canceled'].includes(status) ? daysUntil(profile.billing_current_period_end) : null
+  const days = ['active', 'canceled'].includes(status) ? daysUntil(end) : null
 
   // canceled = cancel-at-period-end, still inside the paid week: renewing goes
   // through the Customer Portal so it un-cancels the same subscription rather
@@ -78,8 +82,12 @@ export function BillingPanel({ profile }) {
   }, [])
 
   async function go(action, extra) {
-    if (exempt) return // the preview never opens Stripe
-    setError(''); setBusy(action === 'checkout' ? `checkout:${extra.tier}` : extra?.flow || action)
+    setError('')
+    // Same answer agent-billing gives a comped account (409). Answered here so
+    // the live function, which isn't redeployed with the billing_exempt check
+    // yet, never touches Stripe for it.
+    if (comped) { setError("Your account isn't billed."); return }
+    setBusy(action === 'checkout' ? `checkout:${extra.tier}` : extra?.flow || action)
     try {
       const d = await invokeBilling(action, extra)
       if (!d?.url) throw new Error('Stripe did not return a page to open')
@@ -90,10 +98,11 @@ export function BillingPanel({ profile }) {
     }
   }
 
-  // Stripe buttons work only once billing is known to be connected.
-  const locked = configured !== true || !!busy
+  // Stripe buttons work only once billing is known to be connected. A comped
+  // account's buttons are always live (they never reach Stripe).
+  const locked = comped ? !!busy : configured !== true || !!busy
 
-  const notConnected = !exempt && configured === false && (
+  const notConnected = !comped && configured === false && (
     <div className="ov-card" style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 16px', borderRadius: 14, fontSize: 13.5, lineHeight: 1.5, color: 'var(--ov-soft)' }}>
       <Info size={16} style={{ flexShrink: 0, marginTop: 2, color: 'var(--ov-mid)' }} />
       Billing isn't connected yet, so nothing is being charged and your access isn't affected. Subscribing
@@ -108,18 +117,7 @@ export function BillingPanel({ profile }) {
 
   return (
     <div className="ov-bill flex flex-col gap-[14px] sm:gap-4" style={{ maxWidth: 1120, width: '100%', margin: '0 auto' }}>
-      {exempt && currentTier && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 14, fontSize: 13.5, lineHeight: 1.45,
-          color: 'var(--ov-hi)', border: '1px solid var(--ov-st-booked-edge)',
-          background: 'linear-gradient(var(--ov-st-booked-tint), var(--ov-st-booked-tint)), var(--ov-page)',
-        }}>
-          <Eye size={16} style={{ flexShrink: 0, color: 'var(--ov-st-booked)' }} />
-          Preview: your account is exempt, so nothing is charged. This is how Billing looks on {currentTier.name}.
-        </div>
-      )}
-
-      {subscribed || exempt ? (
+      {subscribed ? (
         <>
           <PlanHero {...planHero()} />
           {notConnected}
@@ -145,13 +143,6 @@ export function BillingPanel({ profile }) {
   function planHero() {
     const manage = { label: 'Manage billing', icon: CreditCard, onClick: () => go('portal'), disabled: locked, busy: busy === 'portal' }
     const base = { planName: currentTier?.name, price }
-    if (exempt) {
-      return {
-        ...base, chip: { label: 'Exempt' }, line: "Exempt accounts aren't charged.", phoneLine: 'Not charged',
-        action: { ...manage, disabled: true, title: 'Exempt accounts have nothing to manage' },
-      }
-    }
-    const end = profile.billing_current_period_end
     if (status === 'past_due') {
       const fix = daysUntil(profile.billing_grace_until)
       return {
@@ -192,12 +183,6 @@ export function BillingPanel({ profile }) {
       ? `${fmtDay(new Date(usage.week_end).getTime() - 7 * DAY)} – ${fmtDay(new Date(usage.week_end).getTime() - DAY)}`
       : null
     const reset = formatReset(usage?.week_end)
-    if (exempt) {
-      if (!currentTier) return null
-      return (
-        <BookingMeter used={usage?.used ?? 0} cap={currentTier.weekly_cap} range={range} note="Exempt accounts have no limit." />
-      )
-    }
     if (!cap) return null
     const next = nextTier(tiers, profile.billing_tier)
     return (
@@ -220,9 +205,8 @@ export function BillingPanel({ profile }) {
 
   function plans() {
     const curIdx = tiers.findIndex(t => t.key === currentTier?.key)
-    const canSwitch = exempt || ['active', 'past_due'].includes(status)
-    const currentNote = exempt ? 'Not charged while exempt'
-      : status === 'canceled' ? (periodEnd ? `Access ends ${periodEnd}` : 'Cancelled')
+    const canSwitch = ['active', 'past_due'].includes(status)
+    const currentNote = status === 'canceled' ? (periodEnd ? `Access ends ${periodEnd}` : 'Cancelled')
       : status === 'past_due' ? (graceEnd ? `Update your card by ${graceEnd}` : 'Payment failed')
       : periodEnd ? `Renews ${periodEnd}` : 'Renews automatically'
     return (
@@ -254,7 +238,7 @@ export function BillingPanel({ profile }) {
               footer = (
                 <>
                   <button
-                    type="button" className="ov-ghost" disabled={exempt || locked}
+                    type="button" className="ov-ghost" disabled={locked}
                     onClick={() => go('portal', { flow: 'change_plan' })}
                     style={{ height: 44, borderRadius: 999, fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   >

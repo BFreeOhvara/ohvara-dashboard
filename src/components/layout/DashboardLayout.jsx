@@ -13,7 +13,7 @@ import { useWeeklyUsage } from '../../hooks/useBillingTiers'
 import { usePolicyEvents } from '../../hooks/useAgentActivity'
 import { useStandingThreads, dmId } from '../../hooks/useDirectMessages'
 import { tabOf, sameLocalDay } from '../../lib/agentBookings'
-import { capState, formatReset, formatBillingDate } from '../../lib/billing'
+import { capState, formatReset, formatBillingDate, shownStatus, renewsAt } from '../../lib/billing'
 import { navEntry, PAGE_TONE } from '../../lib/nav'
 import { BillingGate } from './BillingGate'
 
@@ -178,8 +178,8 @@ function MessagesLine() {
 function BillingLine({ profile }) {
   const { data: usage, isLoading } = useWeeklyUsage(profile.id)
   if (isLoading) return null
-  const next = !profile.billing_exempt && profile.billing_status === 'active'
-    ? formatBillingDate(profile.billing_current_period_end) : null
+  // A comped agent reads as active, renewing when its booking week ends (P725).
+  const next = shownStatus(profile) === 'active' ? formatBillingDate(renewsAt(profile, usage)) : null
   return <LiveLine items={[
     <Pill tone="amber">{usage?.tier_name || 'No plan'}</Pill>,
     next && <Plain>Next charge {next}</Plain>,

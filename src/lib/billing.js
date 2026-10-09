@@ -57,6 +57,19 @@ export function billingAccess(profile, enforced, now = Date.now()) {
   }
 }
 
+// Prompt 725 — a comped agent (billing_exempt) is shown to the agent exactly
+// as an active subscriber on its tier: it never pays and is never locked, but
+// it sees "Active", a next-charge date and its tier's weekly cap. With no
+// Stripe period, its renewal date is the end of its booking week (usage.week_end).
+// "Exempt" is admin-only wording.
+export const isComped = profile => !!profile?.billing_exempt
+
+export const shownStatus = profile => (isComped(profile) ? 'active' : profile?.billing_status || 'none')
+
+export function renewsAt(profile, usage) {
+  return isComped(profile) ? usage?.week_end ?? null : profile?.billing_current_period_end ?? null
+}
+
 export function formatWeekly(cents) {
   const n = (cents ?? 35000) / 100
   return `$${n.toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0 })}`
@@ -74,7 +87,7 @@ export function daysUntil(iso, now = Date.now()) {
 }
 
 // Prompt 692 — cap helpers. `usage` is a row from agent_weekly_usage.
-// cap is null for uncapped / exempt agents. atCap only counts as blocking when
+// cap is null for uncapped agents and non-agents. atCap only counts as blocking when
 // enforcement is on; before go-live the number is shown but nothing is refused.
 export function capState(usage) {
   if (!usage) return null
