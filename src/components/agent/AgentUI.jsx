@@ -1562,7 +1562,7 @@ const ellipsis = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'elli
 //
 // Prompt 726 — a compact box: the search, then "Recently booked" (the three
 // newest bookings, whatever their status; `recentRows` ignores the range).
-export function ClientSearch({ rows, recentRows = rows, onOpen, hotkey = true, onBook }) {
+export function ClientSearch({ rows, recentRows = rows, onOpen, hotkey = true }) {
   const input = useRef(null)
   const [query, setQuery] = useState('')
   const [focused, setFocused] = useState(false)
@@ -1690,7 +1690,6 @@ export function ClientSearch({ rows, recentRows = rows, onOpen, hotkey = true, o
         }) : (
           <div className="pl-recent-empty">
             Nobody booked yet
-            {onBook && <button type="button" className="ov-hero-link" onClick={onBook}>Book a call</button>}
           </div>
         )}
       </div>

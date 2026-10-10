@@ -138,7 +138,6 @@ export default function Clients() {
         <div className="pl-rail">
           <ClientSearch
             rows={scoped} recentRows={byAgent} onOpen={openFromSearch} hotkey={!openRow}
-            onBook={isAdmin ? undefined : () => navigate('/agent/book')}
           />
           <PipelineSummary
             rows={scoped} tab={tab}

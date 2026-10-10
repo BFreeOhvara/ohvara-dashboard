@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
-import { PanelLeft, X, ChevronsUpDown } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, ChevronsUpDown } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useUnreadMessageCount, useMessagesRealtime } from '../../hooks/usePolicyMessages'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
@@ -70,6 +70,13 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
   const [menu, setMenu] = useState(null) // { rect, placement } while open
   const [modal, setModal] = useState(null) // 'app' | 'report' | 'inbox'
   const cardRef = useRef(null)
+  // Prompt 740 — Enter has no :active in browsers, so mirror it for the press-in.
+  const [pressed, setPressed] = useState(false)
+  const pressKeys = {
+    onKeyDown: e => { if (e.key === 'Enter' || e.key === ' ') setPressed(true) },
+    onKeyUp: () => setPressed(false),
+    onBlur: () => setPressed(false),
+  }
   const closeMenu = useCallback(() => setMenu(m => (m ? { ...m, open: false } : m)), [])
   const toggleMenu = placement => {
     if (menu?.open) return closeMenu()
@@ -106,18 +113,18 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
                 <span className="ov-wordmark" style={{ marginLeft: -3 }}>Portal</span>
               </span>
               {open ? (
-                <button type="button" className="ov-sb-collapse ov-phone-only" onClick={onClose} aria-label="Close menu">
+                <button type="button" className="ov-sb-close ov-phone-only" onClick={onClose} aria-label="Close menu">
                   <X size={18} strokeWidth={1.9} />
                 </button>
               ) : (
-                <button type="button" className="ov-sb-collapse ov-desk-only" onClick={onToggleCollapse} aria-label="Collapse sidebar" title="Collapse sidebar">
-                  <PanelLeft size={17} strokeWidth={1.9} />
+                <button type="button" className="ov-sb-toggle is-collapse ov-desk-only" onClick={onToggleCollapse} aria-label="Collapse sidebar" title="Collapse sidebar">
+                  <ChevronLeft size={16} strokeWidth={2.2} />
                 </button>
               )}
             </>
           ) : (
-            <button type="button" className="ov-sb-expand" onClick={onToggleCollapse} aria-label="Expand sidebar" title="Expand sidebar">
-              <OhvaraMark height={36} back="var(--ov-mark-back)" front="var(--ov-mark-front)" />
+            <button type="button" className="ov-sb-toggle is-expand" onClick={onToggleCollapse} aria-label="Expand sidebar" title="Expand sidebar">
+              <ChevronRight size={18} strokeWidth={2.2} />
             </button>
           )}
         </div>
@@ -175,8 +182,8 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
 
           {expanded ? (
             <button
-              ref={cardRef} type="button" className={clsx('ov-sb-account', menu?.open && 'is-open')}
-              aria-haspopup="menu" aria-expanded={!!menu?.open} onClick={() => toggleMenu('above')}
+              ref={cardRef} type="button" className={clsx('ov-sb-account', menu?.open && 'is-open', pressed && 'is-pressed')}
+              aria-haspopup="menu" aria-expanded={!!menu?.open} onClick={() => toggleMenu('above')} {...pressKeys}
             >
               <Avatar profile={profile} size={36} />
               <span style={{ flex: 1, minWidth: 0 }}>
@@ -187,8 +194,8 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
             </button>
           ) : (
             <button
-              ref={cardRef} type="button" className="ov-sb-avatar" title={profile?.full_name || 'Account'}
-              aria-label="Account menu" aria-haspopup="menu" aria-expanded={!!menu?.open} onClick={() => toggleMenu('right')}
+              ref={cardRef} type="button" className={clsx('ov-sb-avatar', menu?.open && 'is-open', pressed && 'is-pressed')} title={profile?.full_name || 'Account'}
+              aria-label="Account menu" aria-haspopup="menu" aria-expanded={!!menu?.open} onClick={() => toggleMenu('right')} {...pressKeys}
             >
               <Avatar profile={profile} size={44} />
             </button>
