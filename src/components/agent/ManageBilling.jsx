@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowLeft, Crown, CreditCard, CalendarX, Receipt, Loader2, TriangleAlert, Info, Mail, X, CircleCheck, RotateCcw } from 'lucide-react'
+import { ArrowLeft, Crown, CreditCard, CalendarX, Receipt, Loader2, TriangleAlert, Info, Mail, X, CircleCheck, RotateCcw, Check } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { DISPLAY } from '../../lib/exportStyles'
 import { formatWeekly, formatBillingDate, invokeBilling } from '../../lib/billing'
@@ -285,13 +285,21 @@ export function ManageBilling({ tiers, onBack, onNoPlan, refreshProfile }) {
         {pastDue && (
           <div className="ov-note is-warn ov-mb-row" style={{ padding: '12px 14px', borderRadius: 12, color: 'var(--ov-warn)', fontSize: 14 }}>
             <TriangleAlert size={16} strokeWidth={2} aria-hidden="true" style={{ flexShrink: 0, alignSelf: 'flex-start', marginTop: 3 }} />
-            <span style={{ flex: '1 1 0', minWidth: 0 }}>Your last payment didn't go through. Update your card and we'll try again.</span>
+            <span style={{ flex: '1 1 0', minWidth: 0 }}>Your last payment didn't go through. Update your payment method and we'll try again.</span>
           </div>
         )}
         <div className="ov-mb-row">
           <div style={{ flex: '1 1 220px', minWidth: 0 }}>
             {data.card ? (
-              <div style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--ov-hi)' }}>{methodLabel(data.card)}</div>
+              <>
+                <div className="ov-mb-method">
+                  <span style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--ov-hi)', overflowWrap: 'anywhere' }}>{methodLabel(data.card)}</span>
+                  {!pastDue && <span className="ov-mb-onfile"><Check size={12} strokeWidth={3} aria-hidden="true" /> On file</span>}
+                </div>
+                <div style={{ marginTop: 4, fontSize: 13.5, color: 'var(--ov-mute)' }}>
+                  {pastDue ? "We'll try this again once you change it." : 'Charged here every week.'}
+                </div>
+              </>
             ) : (
               <div style={{ fontSize: 14.5, color: 'var(--ov-mute)' }}>No card on file.</div>
             )}
@@ -299,13 +307,23 @@ export function ManageBilling({ tiers, onBack, onNoPlan, refreshProfile }) {
           {!cardOpen && (
             <button ref={updateBtn} type="button" className={`${pastDue ? 'ov-solid' : 'ov-ghost'} ov-mb-btn`} disabled={!pk}
               onClick={() => { setCardOpen(true); setNotice(null) }}>
-              <CreditCard size={16} strokeWidth={2.1} aria-hidden="true" /> {data.card ? 'Update card' : 'Add card'}
+              <CreditCard size={16} strokeWidth={2.1} aria-hidden="true" /> {data.card ? 'Change payment method' : 'Add card'}
             </button>
           )}
         </div>
         {!pk && <Notice tone="info">Billing isn't fully set up yet, so cards can't be changed here right now.</Notice>}
         {cardOpen && (
           <div className="ov-mb-cardbox">
+            {data.card && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--ov-hi)' }}>
+                  {data.card.kind === 'link' ? 'Pay with a card instead' : 'Use a different card'}
+                </div>
+                <div style={{ marginTop: 3, fontSize: 13.5, color: 'var(--ov-mute)', overflowWrap: 'anywhere' }}>
+                  This replaces {data.card.kind === 'link' ? 'Link' : methodLabel(data.card)}.
+                </div>
+              </div>
+            )}
             <Suspense fallback={<div style={{ fontSize: 14, color: 'var(--ov-mute)' }}>Loading…</div>}>
               <CardForm
                 onCancel={() => setCardOpen(false)}

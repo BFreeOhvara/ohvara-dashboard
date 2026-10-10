@@ -1454,6 +1454,9 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 [data-theme="light"] .ov-mb-notice.is-warn { border-color: rgba(154,74,11,0.30); }
 [data-theme="light"] .ov-mb-notice.is-error { border-color: var(--danger-bd); }
 [data-theme="light"] .ov-mb-notice.is-info { background: #F6FAF9; border-color: rgba(2,79,70,0.10); }
+.ov-mb-method { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.ov-mb-onfile { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 700; background: rgba(74,222,128,0.16); border: 1px solid rgba(74,222,128,0.4); color: #86EFAC; }
+[data-theme="light"] .ov-mb-onfile { background: rgba(10,107,51,0.10); border-color: rgba(10,107,51,0.30); color: #0A6B33; }
 .ov-mb-skel { animation: pulseDot 1.6s ease-in-out infinite; }
 .ov-mb-cardbox { padding: 18px; border-radius: 16px; background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.08); }
 [data-theme="light"] .ov-mb-cardbox { background: #FFFFFF; border: 1px solid rgba(2,79,70,0.14); }

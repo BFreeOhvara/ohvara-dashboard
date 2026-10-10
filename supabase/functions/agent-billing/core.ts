@@ -496,8 +496,9 @@ const cap = (t: string) => (t ? t[0].toUpperCase() + t.slice(1) : t)
 // `label` is the line to show and `kind` is card | link | bank | other.
 // A Stripe Link payment method has no card of its own, only the Link email, so
 // `linkCard` (brand + last4 found on the charge, P737) names the card behind
-// it. The Link email is never put in the result: the page shows "Link · Visa
-// ending 4242", or just "Link" when Stripe doesn't say which card it was.
+// it. The Link email is the agent's own, returned only to them (never logged):
+// the page shows "Link · name@example.com", or "Link · Visa ending 4242" if a
+// card is found behind it, or just "Link" when Stripe says neither.
 type LinkCard = { brand: string; last4: string }
 
 function methodOf(pm: any, linkCard: LinkCard | null = null) {
@@ -520,9 +521,10 @@ function methodOf(pm: any, linkCard: LinkCard | null = null) {
     }
   }
   if (pm.type === 'link') {
+    const email: string | null = typeof pm.link?.email === 'string' && pm.link.email.trim() ? pm.link.email.trim() : null
     return {
-      ...none, brand: linkCard?.brand ?? null, last4: linkCard?.last4 ?? null, kind: 'link',
-      label: linkCard ? `Link · ${cardLine(linkCard.brand, linkCard.last4)}` : 'Link',
+      ...none, brand: linkCard?.brand ?? null, last4: linkCard?.last4 ?? null, kind: 'link', email,
+      label: linkCard ? `Link · ${cardLine(linkCard.brand, linkCard.last4)}` : email ? `Link · ${email}` : 'Link',
     }
   }
   if (pm.type === 'us_bank_account' || pm.us_bank_account) {
