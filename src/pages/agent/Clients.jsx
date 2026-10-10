@@ -246,7 +246,7 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRow
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
         <InfoTile label="Fulfillment call" value={callWhen(p.scheduled_call_at, tz)} />
-        <InfoTile label="Carrier they're leaving" value={p.current_carrier || 'Not noted'} />
+        <InfoTile label="Carrier" value={p.current_carrier || 'Not noted'} />
         {place && (
           <div style={{ gridColumn: '1 / -1' }}>
             <InfoTile label="Where they live" value={
@@ -380,7 +380,7 @@ function useMove(p, now, onDone, agentRows) {
       )}
       {!saved && !chosen && (
         <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: 'var(--ov-mute)' }}>
-          Add the carrier they're leaving first. The times follow its hours.
+          Add the carrier first. The times follow its hours.
         </p>
       )}
       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-mute)' }}>Re-book for</div>

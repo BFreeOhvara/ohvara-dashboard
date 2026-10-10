@@ -164,7 +164,7 @@ function NewBooking({ switcher }) {
       setError(missing.has('phone') && form.phone
         ? 'Client phone needs all 10 digits.'
         : missing.has('carrier') && form.carrier.trim()
-          ? 'Pick the carrier from the list, or choose "Use" to keep what you typed.'
+          ? 'Pick a carrier from the list, or choose "Use" to keep what you typed.'
           : 'Fill in the highlighted fields and pick a time.')
       return
     }

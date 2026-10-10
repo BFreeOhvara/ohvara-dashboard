@@ -1,6 +1,5 @@
 import { Children, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link } from 'react-router-dom'
 import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send, MapPin, Moon, ChevronDown, PencilLine } from 'lucide-react'
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
 import { SLOTS, slotTo24h, slotToISO, localDateISO, callWhen, callAt, fmtSlotTime, clientSlotISO, slotState, dayIn, addDaysStr } from '../../lib/scheduling'
@@ -979,7 +978,7 @@ export function BookSwitch({ value, onChange }) {
 // ghost text after the cursor. Tab / → / Enter take it, ↑ / ↓ move, Esc
 // closes. A name that matches nothing can still be kept ("Use "<text>"").
 // `picked` is the chosen carrier row; typing again clears it (onText).
-export function CarrierInput({ carriers, text, picked, onText, onPick, onUseText, adding, error, changed, note, label = "Carrier they're leaving", autoFocus }) {
+export function CarrierInput({ carriers, text, picked, onText, onPick, onUseText, adding, error, changed, note, label = 'Carrier', autoFocus }) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
   const inputRef = useRef(null)
@@ -1031,7 +1030,7 @@ export function CarrierInput({ carriers, text, picked, onText, onPick, onUseText
         <Building2 size={17} strokeWidth={1.9} style={{ flexShrink: 0 }} />
         <span className="ov-complete-wrap">
           <input
-            ref={inputRef} id="carrier-input" value={text} autoComplete="off" spellCheck={false} placeholder="Start typing, e.g. Mutual of Omaha"
+            ref={inputRef} id="carrier-input" value={text} autoComplete="off" spellCheck={false} placeholder="e.g. Mutual of Omaha"
             role="combobox" aria-expanded={shown} aria-controls={listId} aria-autocomplete="both" aria-invalid={error || undefined}
             aria-activedescendant={shown ? `${listId}-${at}` : undefined} autoFocus={autoFocus}
             onChange={e => { onText(e.target.value); setOpen(true); setActive(0) }}
@@ -1876,9 +1875,9 @@ export function PipelineList({ rows, tab, onTab, list, ...status }) {
 }
 
 const COLUMNS = {
-  booked:    ['Client', 'Carrier they’re leaving', 'Fulfillment call', 'Status', ''],
-  noAnswer:  ['Client', 'Carrier they’re leaving', 'Next try', 'Status', ''],
-  needs:     ['Client', 'Carrier they’re leaving', 'What happened', '', ''],
+  booked:    ['Client', 'Carrier', 'Fulfillment call', 'Status', ''],
+  noAnswer:  ['Client', 'Carrier', 'Next try', 'Status', ''],
+  needs:     ['Client', 'Carrier', 'What happened', '', ''],
   cancelled: ['Client', 'Carrier cancelled', 'Cancelled', 'Status', ''],
 }
 const PAGE = 10
@@ -3341,7 +3340,7 @@ export function ComingUpCard({ upcoming, now, onGo }) {
             <span style={{ fontSize: 12.5, color: 'var(--ov-faint)' }}>{n} {n === 1 ? 'call' : 'calls'} booked</span>
           </div>
 
-          <Link to={`/agent/clients?stage=booked&open=${next.id}`} className="ov-up-link"
+          <div
             style={{
               display: 'flex', alignItems: 'center', gap: 14, padding: 14, borderRadius: 16,
               background: 'var(--ov-st-booked-tint)', border: '1px solid var(--ov-st-booked-edge)',
@@ -3359,13 +3358,13 @@ export function ComingUpCard({ upcoming, now, onGo }) {
               </span>
               <span style={{ display: 'block', fontSize: 12, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>{untilLabel(next.scheduled_call_at, now)}</span>
             </span>
-          </Link>
+          </div>
 
           {list.length > 0 && (
             <div style={{ marginTop: 6 }}>
               {list.map((p, i) => (
-                <Link key={p.id} to={`/agent/clients?stage=booked&open=${p.id}`}
-                  className={`ov-up-link ov-up-row ${i >= 2 ? 'hidden sm:flex' : 'flex'}`}
+                <div key={p.id}
+                  className={`ov-up-row ${i >= 2 ? 'hidden sm:flex' : 'flex'}`}
                   style={{ alignItems: 'center', gap: 14, padding: '11px 4px' }}>
                   <CallDateTile iso={p.scheduled_call_at} tz={p.client_timezone} />
                   <span style={{ flex: 1, minWidth: 0 }}>
@@ -3374,8 +3373,7 @@ export function ComingUpCard({ upcoming, now, onGo }) {
                       {comingWhen(p.scheduled_call_at, now, p.client_timezone)} · {p.current_carrier || 'Carrier not noted'}
                     </span>
                   </span>
-                  <ArrowRight size={15} strokeWidth={2} style={{ color: 'var(--ov-faint)', flexShrink: 0 }} />
-                </Link>
+                </div>
               ))}
             </div>
           )}

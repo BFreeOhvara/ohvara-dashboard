@@ -270,7 +270,7 @@ function ChangeForm({ p, rows, profileId, switcher, onNew, onPick, pickNote, loa
   if (changed.first || changed.last) diffs.push({ label: 'Name', from: savedName, to: name })
   if (changed.phone) diffs.push({ label: 'Phone', from: saved.phone, to: form.phone })
   if (placeChanged) diffs.push({ label: 'Where they live', from: savedPlace, to: place })
-  if (changed.carrier) diffs.push({ label: "Carrier they're leaving", from: saved.carrier, to: picked?.name || form.carrier.trim() })
+  if (changed.carrier) diffs.push({ label: 'Carrier', from: saved.carrier, to: picked?.name || form.carrier.trim() })
   if (timeChanged) diffs.push({ label: 'Call time', from: callWhen(currentIso, tz), to: callWhen(newAt, tz) })
   const timeLine = !p || timeChanged ? null
     : mode === 'keep' && currentIso ? `Stays ${callWhen(currentIso, tz || p.client_timezone)}`

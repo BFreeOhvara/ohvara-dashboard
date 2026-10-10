@@ -708,11 +708,8 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 @media (prefers-reduced-motion: reduce) { .ov-primary { transition: none; } }
 
 /* Prompt 723 — "Coming up" rows and the Last week chart. */
-.ov-up-link { color: inherit; text-decoration: none; transition: background-color 120ms ease; }
 .ov-up-row { border-radius: 10px; }
-.ov-up-row:hover { background: var(--ov-hover); }
 .ov-up-row + .ov-up-row { border-top: 1px solid var(--ov-line); border-top-left-radius: 0; border-top-right-radius: 0; }
-.ov-up-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .ov-lw { display: flex; flex-direction: column; gap: 24px; width: 100%; min-width: 0; padding: 24px 26px 22px; }
 .ov-lw-head { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 20px; }
