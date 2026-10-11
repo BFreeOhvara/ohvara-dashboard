@@ -142,6 +142,18 @@ NO shadows on sidebar
 
 ---
 
+### Invite email (the one exception to the app's token rules)
+```
+File: supabase/functions/send-agent-invite/logic.ts → emailContent()
+Table-based, inline-style HTML (Gmail/Outlook/Apple Mail ignore flex, grid, CSS variables)
+Logo: public PNG at public/email/ohvara-logo-email.png (144x144, shown 72x72),
+      served from portal.ohvara.com/email/ — email clients need a public https URL
+Hero: navy #0A1F44 (same as the logo square, so no edge) · button teal #00BFA6 with navy text
+Hex is allowed here only — email clients cannot read the app's custom properties
+```
+
+---
+
 ## Anti-Rules — NEVER Do These
 
 1. **No `box-shadow`** anywhere — not cards, not buttons, not modals

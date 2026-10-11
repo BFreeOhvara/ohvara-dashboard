@@ -92,24 +92,57 @@ export function smsBody(inviter: string, link: string) {
   return `${inviter} invited you to Ohvara. Create your account: ${link} (works once, expires in 7 days). Reply STOP to opt out.`
 }
 
-export function emailContent(inviter: string, link: string) {
+export function emailContent(inviter: string, link: string, appUrl?: string) {
   const who = escapeHtml(inviter)
+  const href = escapeHtml(link)
+  const logoUrl = `${(appUrl || 'https://portal.ohvara.com').replace(/\/$/, '')}/email/ohvara-logo-email.png`
+  const font = "font-family:'Segoe UI',Helvetica,Arial,sans-serif;"
   return {
     subject: `${inviter} invited you to Ohvara`,
     html:
-      `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#111">` +
-      `<p>${who} invited you to sign up for Ohvara.</p>` +
-      `<p><a href="${link}" style="display:inline-block;padding:12px 22px;border-radius:999px;background:#0D1730;color:#fff;text-decoration:none;font-weight:700">Create your account</a></p>` +
-      `<p style="color:#555;font-size:13px">This link works once and expires in 7 days.</p></div>`,
-    text: `${inviter} invited you to sign up for Ohvara.\n\nCreate your account: ${link}\n\nThis link works once and expires in 7 days.`,
+      `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
+      `<meta name="viewport" content="width=device-width,initial-scale=1">` +
+      `<meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only">` +
+      `<title>${who} invited you to Ohvara</title></head>` +
+      `<body style="margin:0;padding:0;background:#EEF1F5;${font}">` +
+      `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#EEF1F5;font-size:1px;line-height:1px">${who} invited you to sign up for Ohvara.</div>` +
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#EEF1F5" style="background:#EEF1F5"><tr><td align="center" style="padding:32px 16px">` +
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#FFFFFF;border-radius:16px;overflow:hidden">` +
+      // Hero
+      `<tr><td align="center" bgcolor="#0A1F44" style="background:#0A1F44;padding:44px 36px 48px;text-align:center">` +
+      `<img src="${logoUrl}" width="72" height="72" alt="Ohvara" style="display:block;margin:0 auto;border:0;outline:none;width:72px;height:72px">` +
+      `<div style="${font}font-size:14px;font-weight:700;letter-spacing:3px;color:#FFFFFF;margin-top:10px">OHVARA</div>` +
+      `<div style="${font}font-size:32px;font-weight:700;line-height:1.2;color:#FFFFFF;margin:30px 0 10px">You're invited</div>` +
+      `<div style="${font}font-size:16px;line-height:1.5;color:#C4CFE3;margin-bottom:30px">${who} invited you to sign up for Ohvara.</div>` +
+      `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto"><tr>` +
+      `<td align="center" bgcolor="#00BFA6" style="background:#00BFA6;border-radius:999px">` +
+      `<a href="${href}" style="${font}display:inline-block;padding:15px 34px;font-size:16px;font-weight:700;color:#0A1F44;text-decoration:none;border-radius:999px">Create your account</a>` +
+      `</td></tr></table></td></tr>` +
+      // Body
+      `<tr><td align="center" style="padding:28px 36px 36px;text-align:center">` +
+      `<div style="${font}font-size:14px;line-height:1.5;color:#3B4658">This link works once and expires in 7 days.</div>` +
+      `<div style="height:1px;line-height:1px;font-size:1px;background:#E3E8EF;margin:24px 0">&nbsp;</div>` +
+      `<div style="${font}font-size:12px;line-height:1.6;color:#6B778A">Button not working? Paste this link into your browser:<br>` +
+      `<a href="${href}" style="color:#0A1F44;word-break:break-all">${href}</a></div>` +
+      `<div style="${font}font-size:12px;line-height:1.6;color:#6B778A;margin-top:20px">You got this email because ${who} invited you. If you weren't expecting it, you can ignore it.</div>` +
+      `</td></tr></table>` +
+      `<div style="${font}font-size:12px;color:#8A94A6;text-align:center;margin-top:18px">Sent by Ohvara</div>` +
+      `</td></tr></table></body></html>`,
+    text: `${inviter} invited you to sign up for Ohvara.
+
+Create your account: ${link}
+
+This link works once and expires in 7 days.
+
+You got this email because ${inviter} invited you. If you weren't expecting it, you can ignore it.`,
   }
 }
 
-async function deliver(deps: Deps, channel: Channel, to: string, inviter: string, link: string): Promise<boolean> {
+async function deliver(deps: Deps, channel: Channel, to: string, inviter: string, link: string, appUrl: string): Promise<boolean> {
   const { env } = deps
   try {
     if (channel === 'email') {
-      const c = emailContent(inviter, link)
+      const c = emailContent(inviter, link, appUrl)
       // No reply_to: the inviting agent's email is never exposed.
       const res = await deps.fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -190,8 +223,9 @@ export async function handle(deps: Deps, jwt: string, body: Record<string, unkno
     channel, invited_email: channel === 'email' ? to : null, invited_phone: channel === 'sms' ? to : null,
   })
 
-  const link = `${(deps.env.appUrl || 'https://portal.ohvara.com').replace(/\/$/, '')}/join/${token}`
-  const ok = await deliver(deps, channel, to, firstName(caller.full_name), link)
+  const appUrl = (deps.env.appUrl || 'https://portal.ohvara.com').replace(/\/$/, '')
+  const link = `${appUrl}/join/${token}`
+  const ok = await deliver(deps, channel, to, firstName(caller.full_name), link, appUrl)
   if (!ok) {
     // Never leave a live token that nobody received.
     await deps.deleteInvite(id)
