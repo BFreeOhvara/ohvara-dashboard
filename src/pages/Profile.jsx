@@ -1,7 +1,7 @@
 import { useState, useRef, lazy, Suspense } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useUpdateOwnProfile, useUploadAvatar, useRemoveAvatar } from '../hooks/useSettings'
-import { Loader2, Camera, Mail, Phone, Check } from 'lucide-react'
+import { Loader2, Camera, Phone, Check } from 'lucide-react'
 import { DISPLAY } from '../lib/exportStyles'
 import { roleLabel } from '../lib/roleLabels'
 import { Switch } from '../components/ui/Switch'
@@ -23,12 +23,14 @@ const AvatarCropModal = lazy(() =>
 // name and phone. Username and email are gone from here: usernames no longer
 // exist in the portal, and the sign-in email changes only in Sign-in &
 // security (through Supabase auth) so profiles.email can't drift from it.
+// The email is shown in one place only (Sign-in & security); Profile has no
+// email row (P741).
 // The NPN / licensed-states gap note is gone too (no "not available" notes
 // on Settings).
 
-export function ProfilePanel({ profile, onEmail }) {
+export function ProfilePanel({ profile }) {
   const update = useUpdateOwnProfile()
-  const { refreshProfile, session } = useAuth()
+  const { refreshProfile } = useAuth()
   const [form, setForm] = useState({
     full_name: profile.full_name || '',
     phone: profile.phone || '',
@@ -64,14 +66,6 @@ export function ProfilePanel({ profile, onEmail }) {
           onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} error={!!error && !form.full_name.trim()} />
         <OvField label="Phone" icon={Phone} inputMode="tel" autoComplete="tel" placeholder="(602) 555-0143" value={form.phone}
           onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
-      </div>
-
-      <div className="ov-box" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '14px 16px', borderRadius: 14 }}>
-        <Mail size={17} strokeWidth={1.9} style={{ flexShrink: 0, color: 'var(--ov-mute)' }} />
-        <span style={{ flex: '1 1 200px', minWidth: 0, fontSize: 14, color: 'var(--ov-soft)', overflowWrap: 'anywhere' }}>
-          Your sign-in email is <span style={{ fontWeight: 600, color: 'var(--ov-hi)' }}>{session?.user?.email}</span>
-        </span>
-        <button type="button" className="ov-set-link is-blue" onClick={onEmail}>Change in Sign-in &amp; security</button>
       </div>
 
       {error && <p style={{ margin: 0, fontSize: 13.5, color: 'var(--danger)' }}>{error}</p>}

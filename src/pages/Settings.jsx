@@ -148,7 +148,7 @@ export default function Settings() {
             <p style={{ margin: '4px 0 0', fontSize: 14.5, color: 'var(--ov-mute)' }}>{section.lede}</p>
           </div>
         </div>
-        {open === 'profile'     && <ProfilePanel profile={profile} onEmail={() => pick('security')} />}
+        {open === 'profile'     && <ProfilePanel profile={profile} />}
         {open === 'security'    && <SecuritySection profile={profile} />}
         {open === 'preferences' && <PreferencesSection profile={profile} />}
         {open === 'contact'     && <><CallerIdPanel profile={profile} /><TextFollowUpPanel profile={profile} /></>}
@@ -363,19 +363,19 @@ function PasswordCard() {
               with the header search (the first text box on the page) as a login
               form, and never fills or offers a saved password here (Prompt 735). */}
           <form autoComplete="off" noValidate onSubmit={e => { e.preventDefault(); check() }}>
-            <div className="ov-set-2">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
-                  <label htmlFor="ov-confirm-current" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>Current password</label>
-                  <button type="button" className="ov-set-link" aria-expanded={forgot} onClick={() => setForgot(f => !f)}>Forgot password?</button>
-                </div>
+            {/* P741 — "Forgot password?" sits under the box, right-aligned to its
+                edge; the grid keeps Continue level with the input. */}
+            <div className="ov-pw-grid">
+              <div className="ov-pw-field" style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+                <label htmlFor="ov-confirm-current" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>Current password</label>
                 <span className={`ov-input${error ? ' is-error' : ''}`}>
                   <input id="ov-confirm-current" name="ov-confirm-current" type="password" autoComplete="off" {...NO_FILL}
                     readOnly={locked} onFocus={() => setLocked(false)} onPointerDown={() => setLocked(false)}
                     value={current} onChange={e => setCurrent(e.target.value)} aria-invalid={!!error || undefined} />
                 </span>
               </div>
-              <div>
+              <button type="button" className="ov-set-link ov-pw-forgot" aria-expanded={forgot} onClick={() => setForgot(f => !f)}>Forgot password?</button>
+              <div className="ov-pw-go">
                 <button type="submit" className="ov-buy ov-set-btn" disabled={busy}>
                   <Spin on={busy}><ArrowRight size={15} strokeWidth={2.2} /> Continue</Spin>
                 </button>
@@ -651,6 +651,9 @@ function PreferencesSection({ profile }) {
     <>
       <ThemeCard />
       <TimeZoneCard profile={profile} />
+      {/* P741 — spare room so the time zone list, which opens downward, can
+          bring its box up the page and still fit. */}
+      <div aria-hidden="true" style={{ height: 300 }} />
     </>
   )
 }
@@ -737,7 +740,7 @@ function TimeZoneCard({ profile }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
           <span id="tz-label" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>Your time zone</span>
           <OvSelect value={timezone} onChange={setTimezone} options={ZONE_OPTIONS} icon={Globe} metaOf={zoneClock}
-            aria-labelledby="tz-label" />
+            aria-labelledby="tz-label" placement="down" />
         </div>
         <button type="button" className="ov-buy ov-set-btn" onClick={save} disabled={!dirty || update.isPending}>
           <Spin on={update.isPending && dirty}>{saved && !dirty ? <><Check size={15} strokeWidth={2.4} /> Saved</> : 'Save'}</Spin>

@@ -1111,10 +1111,11 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
   .ov-hero.pl-find { padding: 22px; }
   .pl-results { right: auto; width: max(100%, 560px); max-width: calc(100vw - 48px); }
 }
-.pl-recent { margin-top: 18px; display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; overflow: hidden; }
+.pl-recent { margin: 18px -10px 0; padding: 0 10px; display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; overflow: hidden; }
 .pl-recent-hd { flex-shrink: 0; display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12.5px; font-weight: 600; color: var(--ov-hero-soft); }
 .pl-recent-hd span { font-weight: 500; opacity: 0.75; }
 .pl-recent-empty { padding: 10px 0; font-size: 14px; color: var(--ov-hero-soft); }
+/* P741: .pl-recent gives the highlight its 10px of room, so overflow:hidden no longer flattens the rounded ends. */
 .pl-rc {
   flex-shrink: 0; display: flex; align-items: center; gap: 11px; width: calc(100% + 20px); margin: 0 -10px; padding: 8px 10px;
   border: none; border-radius: 12px; background: transparent; font: inherit; text-align: left; cursor: pointer; color: #fff;
@@ -1568,6 +1569,11 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 /* Two equal columns that stack on phones (password fields, profile fields). */
 .ov-set-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: end; }
 @media (max-width: 639.98px) { .ov-set-2 { grid-template-columns: minmax(0, 1fr); } }
+.ov-pw-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; row-gap: 8px; align-items: end; }
+.ov-pw-field { grid-column: 1; grid-row: 1; }
+.ov-pw-go { grid-column: 2; grid-row: 1; }
+.ov-pw-forgot { grid-column: 1; grid-row: 2; justify-self: end; }
+@media (max-width: 639.98px) { .ov-pw-grid { grid-template-columns: minmax(0, 1fr); } .ov-pw-go { grid-column: 1; grid-row: 3; margin-top: 8px; } }
 
 .ov-code {
   flex: 1; min-width: 0; width: 100%; box-sizing: border-box; border-radius: 12px; text-align: center; padding: 0;

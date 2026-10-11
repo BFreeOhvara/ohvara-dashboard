@@ -11,7 +11,7 @@ import { callWhen, callAt } from '../../lib/scheduling'
 import { SUBSTATUS_LABEL, tabOf, useNow } from '../../lib/agentBookings'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 
-// Activity (Prompt 690) — what actually happened, newest first. My Pipeline
+// Activity (Prompt 690) — what actually happened, earliest first (P741). My Pipeline
 // shows where each client stands NOW; this is the history behind it: every
 // status change (Booked → In progress → Cancelled / No answer,
 // Prompts 689/695) and every time a booked call was moved. Messages are not shown
@@ -137,9 +137,9 @@ function boxTitle(back, day) {
 }
 
 const PARTS = [
-  { key: 'evening',   label: 'Evening',   icon: Moon,  test: h => h >= 17 },
-  { key: 'afternoon', label: 'Afternoon', icon: Clock, test: h => h >= 12 && h < 17 },
   { key: 'morning',   label: 'Morning',   icon: Sun,   test: h => h < 12 },
+  { key: 'afternoon', label: 'Afternoon', icon: Clock, test: h => h >= 12 && h < 17 },
+  { key: 'evening',   label: 'Evening',   icon: Moon,  test: h => h >= 17 },
 ]
 
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -219,7 +219,7 @@ export default function Activity() {
   feed.forEach(i => { counts[i.row] += 1 })
   const clients = new Set(feed.map(i => i.policyId)).size
   const groups = PARTS
-    .map(part => ({ ...part, items: feed.filter(i => part.test(new Date(i.at).getHours())) }))
+    .map(part => ({ ...part, items: feed.filter(i => part.test(new Date(i.at).getHours())).sort((a, b) => new Date(a.at) - new Date(b.at)) }))
     .filter(g => g.items.length)
 
   // ── The open client's drawer (in the URL, so refresh works) ──

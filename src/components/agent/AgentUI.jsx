@@ -776,8 +776,10 @@ function NoteUnder({ className = '', note, children }) {
 // and ticked. ↑ ↓ Home End move, Enter / Space choose, Esc closes, Tab closes,
 // letters jump to the matching option. `options` = [{ value, label }];
 // `metaOf(option)` is an optional muted, right-aligned string per row.
+// `placement`: 'auto' (default) flips above when below is too short;
+// 'down' (P741) always opens below, scrolling the page on open so the list fits.
 const SEL_MAX = 280
-export function OvSelect({ value, onChange, options, placeholder = 'Choose', icon: Icon, error, changed, metaOf, 'aria-labelledby': labelledBy, 'aria-label': ariaLabel, id }) {
+export function OvSelect({ value, onChange, options, placeholder = 'Choose', icon: Icon, error, changed, metaOf, placement = 'auto', 'aria-labelledby': labelledBy, 'aria-label': ariaLabel, id }) {
   const uid = useId()
   const trigger = useRef(null)
   const list = useRef(null)
@@ -815,7 +817,7 @@ export function OvSelect({ value, onChange, options, placeholder = 'Choose', ico
       const want = Math.min(SEL_MAX, options.length * 40 + 12)
       const below = window.innerHeight - r.bottom - 12
       const above = r.top - 12
-      const up = below < want && above > below
+      const up = placement !== 'down' && below < want && above > below
       const room = Math.max(120, Math.min(SEL_MAX, up ? above : below))
       const width = Math.min(r.width, window.innerWidth - 16)
       const left = Math.min(Math.max(8, r.left), window.innerWidth - width - 8)
@@ -825,7 +827,18 @@ export function OvSelect({ value, onChange, options, placeholder = 'Choose', ico
     window.addEventListener('resize', measure)
     window.addEventListener('scroll', measure, true)
     return () => { window.removeEventListener('resize', measure); window.removeEventListener('scroll', measure, true) }
-  }, [shown, options.length])
+  }, [shown, options.length, placement])
+
+  // placement="down": the list is position:fixed, so when there isn't room
+  // below the box on open, bring the box up the page instead of flipping.
+  useEffect(() => {
+    if (!open || placement !== 'down' || !trigger.current) return
+    const r = trigger.current.getBoundingClientRect()
+    const want = Math.min(SEL_MAX, options.length * 40 + 12)
+    if (window.innerHeight - r.bottom - 12 >= want) return
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    trigger.current.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' })
+  }, [open, placement, options.length])
 
   // Keep the active row visible inside the list (not the page).
   useLayoutEffect(() => {
@@ -2563,7 +2576,7 @@ export function FeedNote({ icon, tone, error, children }) {
   )
 }
 
-// The day's events as a timeline, grouped by part of day (newest first).
+// The day's events as a timeline, grouped by part of day (earliest first, P741).
 // `groups`: [{ key, label, icon, items }]; `note` replaces them when set.
 // Touch handlers (the phone swipe) go on the card.
 export function ActivityFeed({ dayKey, slideClass, groups, note, activeKey, onOpen, showAgent, ...touch }) {

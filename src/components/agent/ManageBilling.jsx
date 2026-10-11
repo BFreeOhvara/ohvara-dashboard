@@ -155,7 +155,70 @@ export function PlanSwitchDialog({ tier, onClose, onDone }) {
 
 // ── the Manage billing view ────────────────────────────────────────────────
 
-export function ManageBilling({ tiers, onBack, onNoPlan, refreshProfile }) {
+// Prompt 741 — a comped account (billing_exempt) opens the real page, read-only:
+// built from the profile's tier, never calls agent-billing (it answers 409),
+// and every button that would change or charge something is disabled.
+export function ManageBilling({ comped, tier, tiers, onBack, onNoPlan, refreshProfile }) {
+  if (comped) return <CompedManage tier={tier} tiers={tiers} onBack={onBack} />
+  return <PaidManage tiers={tiers} onBack={onBack} onNoPlan={onNoPlan} refreshProfile={refreshProfile} />
+}
+
+const COMPED_TIP = "Comped accounts aren't billed"
+
+function CompedManage({ tier, tiers, onBack }) {
+  const others = tiers.filter(t => t.key !== tier?.key)
+  const curCents = tier?.weekly_cents ?? 0
+  return (
+    <>
+      <BackBar onBack={onBack} title="Manage billing" sub="Your plan, card and invoices. Everything here is handled by Stripe, without leaving Ohvara." />
+      <Notice tone="info">You're comped, so this page is read-only.</Notice>
+
+      <SettingsCard icon={Crown} title="Plan" label="Plan" right={<SettingsChip tone="on">Active</SettingsChip>} gap={16}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+          <span style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 600, color: 'var(--ov-hi)' }}>{tier?.name || 'Your plan'}</span>
+          {tier && <span className="ov-mb-money" style={{ fontSize: 17, color: 'var(--ov-soft)' }}>{money(tier.weekly_cents)} / week</span>}
+          {tier && <span style={{ fontSize: 14, color: 'var(--ov-mute)' }}>{capText(tier.weekly_cap)}</span>}
+        </div>
+        <p style={{ margin: 0, fontSize: 14.5, color: 'var(--ov-soft)' }}>Comped by Ohvara. You're not charged.</p>
+        {others.length > 0 && (
+          <div className="ov-mb-row">
+            {others.map(t => (
+              <button key={t.key} type="button" className="ov-ghost ov-mb-btn" disabled title={COMPED_TIP}>
+                {t.weekly_cents > curCents ? `Upgrade to ${t.name}` : `Switch to ${t.name}`}
+                <span className="ov-mb-money" style={{ color: 'var(--ov-mute)', fontWeight: 500 }}>{money(t.weekly_cents)}/wk</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </SettingsCard>
+
+      <SettingsCard icon={CreditCard} title="Payment method" label="Payment method" gap={16}>
+        <div className="ov-mb-row">
+          <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+            <span style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--ov-hi)' }}>None needed</span>
+            <div style={{ marginTop: 4, fontSize: 13.5, color: 'var(--ov-mute)' }}>Nothing is charged on this account.</div>
+          </div>
+          <button type="button" className="ov-ghost ov-mb-btn" disabled title={COMPED_TIP}>
+            <CreditCard size={16} strokeWidth={2.1} aria-hidden="true" /> Change payment method
+          </button>
+        </div>
+      </SettingsCard>
+
+      <SettingsCard icon={CalendarX} title="Subscription" label="Subscription" gap={14}>
+        <div className="ov-mb-row">
+          <p style={{ flex: '1 1 260px', margin: 0, fontSize: 14.5, color: 'var(--ov-soft)' }}>This account is comped, so there's nothing to cancel.</p>
+          <button type="button" className="ov-ghost ov-mb-btn is-danger" disabled title={COMPED_TIP}>Cancel subscription</button>
+        </div>
+      </SettingsCard>
+
+      <SettingsCard icon={Receipt} title="Invoices" label="Invoices" gap={14}>
+        <p style={{ margin: 0, fontSize: 14, color: 'var(--ov-mute)' }}>No charges. Comped accounts aren't billed.</p>
+      </SettingsCard>
+    </>
+  )
+}
+
+function PaidManage({ tiers, onBack, onNoPlan, refreshProfile }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState(null) // { tone, text }

@@ -33,6 +33,8 @@ import { ManageBilling, SubscribeView, PlanSwitchDialog } from './ManageBilling'
 // Subscribe shows Stripe's Embedded Checkout in a third (?subscribe=<tier>),
 // and plan switches confirm in a dialog here. Stripe comes back to
 // ?session_id=… after checkout; the mount sync below picks the new plan up.
+// Prompt 741 — a comped account opens Manage billing read-only (no Stripe call);
+// Subscribe and plan switches still answer "Your account isn't billed."
 
 const DAY = 86400000
 const fmtDay = ms => formatBillingDate(new Date(ms).toISOString())
@@ -115,13 +117,13 @@ export function BillingPanel({ profile }) {
     if (comped) { setError("Your account isn't billed."); return false }
     return true
   }
-  const openManage = () => guard() && open({ manage: '1' })
+  const openManage = () => (comped || guard()) && open({ manage: '1' })
   const openSubscribe = key => guard() && open({ subscribe: key })
   const askSwitch = t => guard() && setSwitchTo(t)
 
   // A view that doesn't fit the account (Manage billing with no plan, or
   // Subscribe while already on one) falls back to the Billing view.
-  const misfit = (manage && (comped || !subscribed)) || (!!subscribeKey && (comped || subscribed))
+  const misfit = (manage && !comped && !subscribed) || (!!subscribeKey && (comped || subscribed))
   useEffect(() => { if (misfit) toBilling() }, [misfit, toBilling])
 
   // Buttons work only once billing is known to be connected. A comped
@@ -131,8 +133,8 @@ export function BillingPanel({ profile }) {
   const page = children => (
     <div className="ov-bill flex flex-col gap-[14px] sm:gap-4" style={{ maxWidth: 1120, width: '100%', margin: '0 auto' }}>{children}</div>
   )
-  if (manage && !comped && subscribed) {
-    return page(<ManageBilling tiers={tiers} onBack={back} onNoPlan={toBilling} refreshProfile={refreshProfile} />)
+  if (manage && (comped || subscribed)) {
+    return page(<ManageBilling comped={comped} tier={currentTier} tiers={tiers} onBack={back} onNoPlan={toBilling} refreshProfile={refreshProfile} />)
   }
   if (subscribeKey && !comped && !subscribed) {
     // Tiers still loading: the view waits rather than saying "not available".
