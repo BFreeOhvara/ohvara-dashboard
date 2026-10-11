@@ -16,6 +16,7 @@ import { tabOf, sameLocalDay } from '../../lib/agentBookings'
 import { capState, formatReset, formatBillingDate, shownStatus, renewsAt } from '../../lib/billing'
 import { navEntry, PAGE_TONE } from '../../lib/nav'
 import { BillingGate } from './BillingGate'
+import { ErrorBoundary } from '../shared/ErrorBoundary'
 
 // Shell — Prompt 669 restyle to Restorix Portal's Layout.jsx, a 32/24 padded
 // main capped at 1280px. Prompt 722 rethought the header: a 72px sticky bar
@@ -292,7 +293,9 @@ export function DashboardLayout({ children }) {
               className={isFullWidth ? 'flex-1 overflow-hidden flex flex-col' : ''}
               style={isFullWidth ? undefined : { animation: 'fadeUp 160ms ease-out' }}
             >
-              <BillingGate>{children}</BillingGate>
+              {/* Prompt 746 — a crashing page shows a message here; the sidebar and
+                  header stay, and a new route clears it. */}
+              <ErrorBoundary resetKey={pathname}><BillingGate>{children}</BillingGate></ErrorBoundary>
             </div>
           </main>
         </div>

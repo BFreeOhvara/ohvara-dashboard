@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth'
 import { SecretsProvider } from './contexts/SecretsContext'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
+import { ErrorBoundary } from './components/shared/ErrorBoundary'
 // Side-effect import — attaches the beforeinstallprompt listener at app
 // boot (Prompt 286) so it's never missed while the user is still on Login.
 import './lib/installPrompt'
@@ -56,6 +57,9 @@ function RoleRedirect() {
 
 export default function App() {
   return (
+    // Prompt 746 — outermost boundary: even a crash in the layout or a
+    // provider shows a message instead of a blank page.
+    <ErrorBoundary>
     <QueryClientProvider client={qc}>
       <AuthProvider>
         <SecretsProvider>
@@ -171,5 +175,6 @@ export default function App() {
         </SecretsProvider>
       </AuthProvider>
     </QueryClientProvider>
+    </ErrorBoundary>
   )
 }

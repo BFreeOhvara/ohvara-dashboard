@@ -16,6 +16,16 @@ import './index.css'
 // Side-effect import — applies the saved theme before first paint (Prompt 669).
 import './hooks/useTheme'
 import App from './App.jsx'
+import { reloadOnceFor } from './lib/chunkReload'
+
+// Prompt 746 — Vite fires this when a dynamic import's chunk fails to load (a
+// tab opened before a deploy asks for a hash that is gone). Reload once to
+// pick up the new build; if that was already tried, let the error through to
+// the boundary.
+window.addEventListener('vite:preloadError', e => {
+  const url = e.payload?.message?.match(/https?:\/\/\S+/)?.[0]
+  if (reloadOnceFor(url)) e.preventDefault()
+})
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
