@@ -90,7 +90,7 @@ function heroNote(items, me) {
   const unread = items.filter(i => i.unread_count > 0)
   if (unread.length === 1) {
     const [u] = unread
-    return `From ${u.short}, ${dayDiff(u.last_at) === 0 ? clock(u.last_at) : rowTime(u.last_at).toLowerCase()}`
+    return `From ${u.short}, ${dayDiff(u.last_at) === 1 ? 'yesterday' : rowTime(u.last_at)}`
   }
   if (unread.length === 2) return `From ${unread[0].short} and ${unread[1].short}`
   if (unread.length > 2) return `From ${unread.length} people`
