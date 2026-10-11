@@ -190,7 +190,7 @@ function NewBooking({ switcher }) {
         setForm(BLANK); setCarrierId(null); setSlot(''); setPickedDate(null); setConfirm(null); setErrors(new Set())
       },
       onError: err => setError(err.hint === 'weekly_cap'
-        ? `${err.message} Upgrade your plan or wait until ${formatReset(usage?.week_end)}.`
+        ? `${err.message} Upgrade your plan or wait until ${formatReset(usage?.week_end, profile?.timezone)}.`
         : err.message || 'Could not book this call'),
     })
   }
@@ -254,8 +254,8 @@ function NewBooking({ switcher }) {
                 <p style={{ margin: 0, flex: '1 1 260px', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-mid)' }}>
                   You've used all {cap.cap} submissions on the {cap.tierName} plan this week.{' '}
                   {upgrade
-                    ? <>Upgrade to {upgrade.name} ({formatWeekly(upgrade.weekly_cents)}/week, {upgrade.weekly_cap ?? 'unlimited'} a week) to keep booking, or wait until {formatReset(usage.week_end)}.</>
-                    : <>The cap resets {formatReset(usage.week_end)}.</>}
+                    ? <>Upgrade to {upgrade.name} ({formatWeekly(upgrade.weekly_cents)}/week, {upgrade.weekly_cap ?? 'unlimited'} a week) to keep booking, or wait until {formatReset(usage.week_end, profile?.timezone)}.</>
+                    : <>The cap resets {formatReset(usage.week_end, profile?.timezone)}.</>}
                 </p>
                 {upgrade && (
                   <button type="button" className="ov-ghost" onClick={() => navigate('/agent/billing')} style={pillBtn}>Upgrade</button>
@@ -377,7 +377,7 @@ function NewBooking({ switcher }) {
 
         <div className="ov-book-side hidden sm:flex" style={{ flexDirection: 'column', gap: 20, minWidth: 0 }}>
           <BookingSummary {...summary} />
-          {showCap && <WeeklyUsage cap={cap} resets={formatReset(usage.week_end)} />}
+          {showCap && <WeeklyUsage cap={cap} resets={formatReset(usage.week_end, profile?.timezone)} />}
         </div>
       </div>
 

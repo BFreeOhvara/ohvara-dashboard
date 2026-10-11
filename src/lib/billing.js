@@ -75,9 +75,11 @@ export function formatWeekly(cents) {
   return `$${n.toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0 })}`
 }
 
-export function formatBillingDate(iso) {
+// P743 QA-1 — optional `tz` (profiles.timezone): the booking week is counted in
+// the agent's own zone, so its dates are read there too.
+export function formatBillingDate(iso, tz) {
   if (!iso) return null
-  return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', ...(tz ? { timeZone: tz } : null) })
 }
 
 // Whole days until an ISO timestamp (rounded up, floor 0), or null if unset.
@@ -110,10 +112,11 @@ export function nextTier(tiers, currentKey) {
 
 export const capLabel = cap => (cap == null ? 'No weekly cap' : `max of ${cap} submissions a week`)
 
-// "Monday" the cap comes back, from usage.week_end.
-export function formatReset(iso) {
+// "Monday" the cap comes back, from usage.week_end, read in the agent's own
+// zone (`tz`) like the database's week (P743 QA-1).
+export function formatReset(iso, tz) {
   if (!iso) return 'Monday'
-  return new Date(iso).toLocaleDateString('en-US', { weekday: 'long' })
+  return new Date(iso).toLocaleDateString('en-US', { weekday: 'long', ...(tz ? { timeZone: tz } : null) })
 }
 
 // Prompt 734 — Stripe.js for the in-page card box and checkout. The script

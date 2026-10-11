@@ -37,7 +37,7 @@ import { ManageBilling, SubscribeView, PlanSwitchDialog } from './ManageBilling'
 // Subscribe and plan switches still answer "Your account isn't billed."
 
 const DAY = 86400000
-const fmtDay = ms => formatBillingDate(new Date(ms).toISOString())
+const fmtDay = (ms, tz) => formatBillingDate(new Date(ms).toISOString(), tz)
 // Ranked by cap; null (no cap) counts as the most.
 const capRank = t => (t.weekly_cap == null ? Infinity : t.weekly_cap)
 const mostBookings = tiers => tiers.reduce((best, t) => (!best || capRank(t) > capRank(best) ? t : best), null)
@@ -76,7 +76,7 @@ export function BillingPanel({ profile }) {
   const price = currentTier ? formatWeekly(currentTier.weekly_cents) : null
   const cap = capState(usage)
   const end = renewsAt(profile, usage)
-  const periodEnd = formatBillingDate(end)
+  const periodEnd = formatBillingDate(end, profile.timezone)
   const graceEnd = formatBillingDate(profile.billing_grace_until)
 
   // Prompt 677 — time-remaining at a glance: days to the next charge while
@@ -224,7 +224,7 @@ export function BillingPanel({ profile }) {
       ...base,
       chip: { label: 'Active', tone: 'is-active' },
       line: periodEnd
-        ? <>Paid through <B>{fmtDay(new Date(end).getTime() - DAY)}</B>. Next charge of {price} on <B>{periodEnd}</B>, renews automatically.</>
+        ? <>Paid through <B>{fmtDay(new Date(end).getTime() - DAY, profile.timezone)}</B>. Next charge of {price} on <B>{periodEnd}</B>, renews automatically.</>
         : 'Paid up. Renews automatically.',
       phoneLine: periodEnd ? `Next charge ${periodEnd}` : 'Renews automatically',
       action: manage,
@@ -234,9 +234,9 @@ export function BillingPanel({ profile }) {
 
   function bookingsCard() {
     const range = usage?.week_end
-      ? `${fmtDay(new Date(usage.week_end).getTime() - 7 * DAY)} – ${fmtDay(new Date(usage.week_end).getTime() - DAY)}`
+      ? `${fmtDay(new Date(usage.week_end).getTime() - 7 * DAY, profile.timezone)} – ${fmtDay(new Date(usage.week_end).getTime() - DAY, profile.timezone)}`
       : null
-    const reset = formatReset(usage?.week_end)
+    const reset = formatReset(usage?.week_end, profile.timezone)
     if (!cap) return null
     const next = nextTier(tiers, profile.billing_tier)
     return (

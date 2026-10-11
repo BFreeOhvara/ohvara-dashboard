@@ -166,7 +166,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
             <div className="ov-sb-usage">
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                 <span className="ov-sb-usage-title">This week</span>
-                <span className="ov-sb-usage-reset">Resets {formatReset(usage.week_end).slice(0, 3)}</span>
+                <span className="ov-sb-usage-reset">Resets {formatReset(usage.week_end, profile?.timezone).slice(0, 3)}</span>
               </div>
               <div className="ov-sb-usage-line">
                 <span className="ov-sb-usage-num">{cap.used}</span>

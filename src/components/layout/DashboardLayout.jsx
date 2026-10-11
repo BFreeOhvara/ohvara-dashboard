@@ -133,7 +133,7 @@ function BookLine({ profile }) {
   if (cap?.cap == null) return <LiveLine items={[<Plain>No weekly limit</Plain>]} />
   return <LiveLine items={[
     <Pill tone="teal">{cap.used} of {cap.cap} bookings used this week</Pill>,
-    <Plain>Resets {formatReset(usage.week_end)}</Plain>,
+    <Plain>Resets {formatReset(usage.week_end, profile.timezone)}</Plain>,
   ]} />
 }
 
@@ -180,7 +180,7 @@ function BillingLine({ profile }) {
   const { data: usage, isLoading } = useWeeklyUsage(profile.id)
   if (isLoading) return null
   // A comped agent reads as active, renewing when its booking week ends (P725).
-  const next = shownStatus(profile) === 'active' ? formatBillingDate(renewsAt(profile, usage)) : null
+  const next = shownStatus(profile) === 'active' ? formatBillingDate(renewsAt(profile, usage), profile.timezone) : null
   return <LiveLine items={[
     <Pill tone="amber">{usage?.tier_name || 'No plan'}</Pill>,
     next && <Plain>Next charge {next}</Plain>,
