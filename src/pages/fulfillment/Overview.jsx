@@ -1,143 +1,138 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, AlertTriangle } from 'lucide-react'
+import { Phone, Check, ArrowRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useFulfillmentQueue } from '../../hooks/usePolicies'
-import { ghostBtn, MONO, DISPLAY } from '../../lib/exportStyles'
-import { LiveClock } from '../../components/ui/LiveClock'
-import { StatTile, StatGrid, SectionHead, ListCard, EmptyNote } from '../../components/agent/AgentUI'
-import { FulfillHead, FulfillRow } from '../../components/fulfillment/FulfillUI'
-import { needsAttention } from '../../lib/fulfillmentFlags'
-import { sameLocalDay, startOfWeek, startOfMonth, median, hoursBetween, fmtDuration, useNow, stageOf, isLive, needsAnotherCall } from '../../lib/agentBookings'
+import { useRepCallEvents } from '../../hooks/useRepCallEvents'
+import { HeroPanel, TrendCard, LastWeekChart } from '../../components/agent/AgentUI'
+import { YourDayCard } from '../../components/fulfillment/FulfillUI'
+import { LiveDot } from '../../components/ui/LiveDot'
+import { isLive, useNow } from '../../lib/agentBookings'
+import { fullName } from '../../lib/policyFormat'
+import { DEFAULT_TIMEZONE, zonedDateStr } from '../../lib/timezones'
+import { weekFrame, weekStats, buildDay, timeParts, timeText, inLabel } from '../../lib/fulfillmentDay'
 
-// Fulfillment Overview (Prompt 681) — the Fulfillment role's landing page.
-// A step back from the desk: how the whole team is doing this week and month,
-// what needs attention across everyone, and today's calls. The desk
-// (/fulfillment/desk) stays the place work actually gets
-// done; every row here opens the item there.
-//
-// Laid out like the agent Overview (greeting + clock row, four eyebrow tiles,
-// tinted attention banner, one list card) so both sides read as one product.
+// Fulfillment Overview (Prompt 681), rebuilt in Prompt 745: the agent
+// Overview's layout (hero, two trend cards, the right-hand box, the Last week
+// chart) scoped to the signed-in rep. No team tiles, no Needs attention: a No
+// answer just stays on the calendar. Admin gets the same page for the whole
+// team (copy swaps only). Every row opens the item on the desk
+// (/fulfillment/desk?open=<id>). All day and week maths is in the profile's
+// zone (lib/fulfillmentDay.js).
 
 export default function FulfillmentOverview() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const now = useNow(30e3)
-  const { data: rows = [], isLoading } = useFulfillmentQueue()
+  const team = profile?.role === 'admin'
+  const tz = profile?.timezone || DEFAULT_TIMEZONE
+  const { data: queue = [], isLoading: queueLoading } = useFulfillmentQueue()
+  const rows = useMemo(
+    () => (team ? queue : queue.filter(p => p.assigned_fulfillment_id === profile?.id)),
+    [queue, team, profile?.id],
+  )
+  const anyLive = rows.some(isLive)
 
-  const g = useMemo(() => {
-    const today = new Date(now)
-    const weekStart = startOfWeek(today).getTime()
-    const monthStart = startOfMonth(today).getTime()
-    const open = rows.filter(p => p.fulfillment_stage !== 'Complete')
-    const done = rows.filter(p => p.fulfillment_stage === 'Complete' && p.fulfillment_completed_at)
-    const since = (list, t) => list.filter(p => new Date(p.fulfillment_completed_at).getTime() >= t)
-    const doneWeek = since(done, weekStart)
-    const doneMonth = since(done, monthStart)
-    // Prompt 684 — nothing waits to be claimed now; every booking already has
-    // a rep. What's left to watch is Booked (no call placed yet); No answer (Prompt 689;
-    // 695 folded Rescheduling into it) is counted separately as calls owed again.
-    const toCall = open.filter(p => stageOf(p) === 'booked')
-      .sort((a, b) => (a.scheduled_call_at || '9').localeCompare(b.scheduled_call_at || '9'))
-    const callAgain = open.filter(needsAnotherCall).length
-    const live = open.filter(isLive).length
-    const unassigned = open.filter(p => !p.assigned_fulfillment_id)
-    const attention = open.filter(p => needsAttention(p, now))
-      .sort((a, b) => (a.scheduled_call_at || '9').localeCompare(b.scheduled_call_at || '9'))
-    const todays = open.filter(p => sameLocalDay(p.scheduled_call_at, today))
-      .sort((a, b) => a.scheduled_call_at.localeCompare(b.scheduled_call_at))
-    // Today's flagged items already show (with their pill) in Today's calls;
-    // the attention list only needs the older ones. The tile counts all.
-    const attentionOlder = attention.filter(p => !sameLocalDay(p.scheduled_call_at, today))
-    // Booked → cancelled, this month: how long a client waits end to end.
-    const turnaround = median(doneMonth.map(p => hoursBetween(p.created_at, p.fulfillment_completed_at)))
+  const todayStr = zonedDateStr(now, tz)
+  const frame = useMemo(() => weekFrame(todayStr, tz), [todayStr, tz])
+  const { data: events = [], isLoading: eventsLoading } = useRepCallEvents(
+    new Date(frame.sinceMs).toISOString(), team ? null : profile?.id, { live: anyLive },
+  )
+  const isLoading = queueLoading || eventsLoading || !profile
 
-    return { toCall, callAgain, live, unassigned, attention, attentionOlder, todays, doneWeek, doneMonth, turnaround, open }
-  }, [rows, now])
+  const stats = useMemo(() => weekStats(
+    frame,
+    events.map(e => e.at),
+    rows.filter(p => p.fulfillment_stage === 'Complete' && p.fulfillment_completed_at).map(p => p.fulfillment_completed_at),
+  ), [frame, events, rows])
+
+  const day = useMemo(() => {
+    const d = buildDay(rows, now, tz, { team })
+    const tile = e => (e ? { ...e, ...timeParts(e.at, tz) } : e)
+    return { ...d, next: tile(d.next), rest: d.rest.map(tile), first: d.first }
+  }, [rows, now, tz, team])
+  const live = useMemo(() => rows.filter(isLive), [rows])
 
   const firstName = (profile?.full_name || '').split(' ')[0]
-  const hour = new Date(now).getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
-  const dateLabel = new Date(now).toLocaleDateString('en-US', {
-    timeZone: profile?.timezone || undefined, weekday: 'long', month: 'short', day: 'numeric',
-  })
+  const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hourCycle: 'h23' }).format(now))
+  const greeting = `${hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'}${firstName ? `, ${firstName}` : ''}`
+  const dateLabel = month => new Date(now).toLocaleDateString('en-US', { timeZone: tz, weekday: 'long', month, day: 'numeric' })
+  const shortDay = new Date(now).toLocaleDateString('en-US', { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric' })
+
   const open = id => navigate(`/fulfillment/desk?open=${id}`)
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
+  const where = team ? ' across the team' : ''
+
+  const sub = isLoading ? 'Loading your calls…'
+    : day.left > 0 ? `${plural(day.left, 'call')} to go${team ? ' across the team' : ''} today.${day.next ? ` Next up at ${timeText(day.next.at, tz)}.` : ''}`
+      : live.length ? (team ? 'The team is on a call.' : 'You’re on a call.')
+        : team ? 'Nothing else on the team’s calendar today.' : 'Nothing else on your calendar today.'
+  const action = day.first
+    ? { label: team ? 'Open the next call' : 'Open your next call', icon: Phone, onClick: () => open(day.first.id) }
+    : { label: 'Open the desk', icon: Phone, onClick: () => navigate('/fulfillment/desk') }
+
+  const countLine = `${plural(day.total, 'call')} on ${team ? 'the' : 'your'} calendar${where} today. ${day.done.length} done, ${day.left} to go.`
+  const mins = p => Math.max(0, Math.floor((now - new Date(p.call_live_since).getTime()) / 6e4))
   const dash = v => (isLoading ? '—' : v)
-  const nextCall = g.toCall.find(p => p.scheduled_call_at && new Date(p.scheduled_call_at) >= now)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 220 }}>
-          <p style={{ margin: 0, fontFamily: DISPLAY, fontSize: 26, fontWeight: 500, letterSpacing: '-0.015em', color: 'var(--text-primary)' }}>
-            {greeting}{firstName ? `, ${firstName}` : ''}
-          </p>
-          <p style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>
-            {isLoading ? 'Loading the team’s cancellations…'
-              : g.todays.length ? `${g.todays.length} call${g.todays.length === 1 ? '' : 's'} on the books today across the team.`
-                : 'No calls on the books today.'}
-          </p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <span className="hidden sm:inline" style={{ fontFamily: MONO, fontSize: 13, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{dateLabel}</span>
-          <LiveClock timezone={profile?.timezone} large />
-        </div>
-      </div>
+    <div className="flex flex-col gap-[14px] sm:gap-5">
+      <HeroPanel
+        greeting={greeting} sub={sub} timezone={tz}
+        dateLong={dateLabel('long')} dateShort={dateLabel('short')}
+        action={action}
+      />
 
-      <StatGrid>
-        <StatTile label="Cancelled this week" value={dash(g.doneWeek.length)} sub={`${g.doneMonth.length} this month · whole team`}
-          onClick={() => navigate('/fulfillment/pipeline?stage=cancelled')} />
-        <StatTile label="Booked, to call" value={dash(g.toCall.length)}
-          sub={g.unassigned.length ? `${g.unassigned.length} with no rep yet`
-            : g.live || g.callAgain ? `${g.live} on a call now · ${g.callAgain} owed another call`
-            : nextCall ? `next call ${new Date(nextCall.scheduled_call_at).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })}`
-              : 'nothing booked ahead'}
-          tone={g.unassigned.length ? 'warning' : 'neutral'}
-          onClick={() => navigate('/fulfillment/desk')} />
-        <StatTile label="Needs attention" value={dash(g.attention.length)} tone={g.attention.length ? 'warning' : 'neutral'}
-          sub="overdue callbacks or stale" onClick={() => navigate('/fulfillment/pipeline?stage=attention')} />
-        <StatTile label="Booked to cancelled" value={dash(fmtDuration(g.turnaround))} sub="median, this month" />
-      </StatGrid>
-
-      {g.attention.length > 0 && (
-        <div>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 16,
-            background: 'var(--warning-dim)', border: 'var(--border-w) solid var(--warning-bd)', color: 'var(--warning)',
+      {live.map(p => (
+        <div key={p.id} style={{
+          display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px 12px', padding: '12px 16px', borderRadius: 16,
+          background: 'var(--danger-dim)', border: 'var(--border-w) solid var(--danger-bd)', color: 'var(--danger)',
+        }}>
+          <LiveDot size={10} />
+          <p style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 14, fontWeight: 500 }}>
+            {team ? `${p.assigned?.full_name || 'A rep'} is on a call with ${fullName(p)}` : `You’re on a call with ${fullName(p)}`} · {mins(p)} min
+          </p>
+          <button type="button" onClick={() => open(p.id)} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 0, padding: 0, cursor: 'pointer',
+            font: 'inherit', fontSize: 13.5, fontWeight: 700, color: 'inherit',
           }}>
-            <AlertTriangle size={18} style={{ flexShrink: 0 }} />
-            <p style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 14, fontWeight: 500 }}>
-              {g.attention.length} cancellation{g.attention.length === 1 ? ' is' : 's are'} overdue or sitting too long:
-              a call time that's passed with no call placed, a call that's been open too long, or an unresolved call more than two days old.
-              {g.attentionOlder.length < g.attention.length && ' Today’s are flagged in the list below.'}
-            </p>
-            <button onClick={() => navigate('/fulfillment/pipeline?stage=attention')} style={{ ...ghostBtn, height: 32 }}>
-              See all <ArrowRight size={13} />
-            </button>
-          </div>
-          {g.attentionOlder.length > 0 && (
-            <ListCard style={{ marginTop: 10 }}>
-              <FulfillHead />
-              {g.attentionOlder.slice(0, 8).map((p, i) => <FulfillRow key={p.id} p={p} now={now} first={i === 0} onClick={() => open(p.id)} />)}
-            </ListCard>
-          )}
+            {team ? 'Open the call' : 'Back to the call'} <ArrowRight size={14} strokeWidth={2.4} />
+          </button>
         </div>
-      )}
+      ))}
 
-      <div>
-        <SectionHead
-          title="Today’s calls"
-          sub="Every client booked for today, whoever has them"
-          action={(
-            <button onClick={() => navigate('/fulfillment/pipeline')} style={ghostBtn}>
-              Full pipeline <ArrowRight size={14} />
-            </button>
-          )}
+      <div className="ov-grid">
+        <div className="grid grid-cols-2 gap-[14px] sm:gap-5" style={{ gridArea: 'trend', minWidth: 0 }}>
+          <TrendCard
+            label="Calls made this week" icon={Phone} tone="a"
+            value={dash(stats.calls.value)} diff={isLoading ? null : stats.calls.diff}
+            week={stats.calls.week} todayIdx={frame.todayIdx}
+            onClick={() => navigate('/fulfillment/pipeline')}
+          />
+          <TrendCard
+            label="Cancelled this week" icon={Check} tone="b"
+            value={dash(stats.cancelled.value)} diff={isLoading ? null : stats.cancelled.diff}
+            week={stats.cancelled.week} todayIdx={frame.todayIdx}
+            onClick={() => navigate('/fulfillment/pipeline?stage=cancelled')}
+          />
+        </div>
+
+        <YourDayCard
+          title={team ? 'Today' : 'Your day'} dateLabel={shortDay} loading={isLoading} countLine={countLine}
+          next={day.next} nextIn={day.next ? inLabel(day.next.ms, now) : ''}
+          later={day.rest} more={day.more}
+          done={day.done} doneTime={iso => timeText(iso, tz)}
+          onOpen={open} onCalendar={() => navigate('/fulfillment/pipeline?view=calendar')}
+          calendarLabel={team ? 'See the calendar' : 'See your calendar'}
         />
-        <ListCard empty={<EmptyNote>{isLoading ? 'Loading…' : 'Nothing booked for today.'}</EmptyNote>}>
-          {g.todays.length > 0 && <FulfillHead />}
-          {g.todays.map((p, i) => <FulfillRow key={p.id} p={p} now={now} first={i === 0} onClick={() => open(p.id)} />)}
-        </ListCard>
+
+        <div style={{ gridArea: 'chart', display: 'flex', minWidth: 0 }}>
+          <LastWeekChart
+            days={stats.lastWeek} loading={isLoading}
+            subtitle={team ? 'calls made and old policies confirmed cancelled' : 'calls you made and old policies confirmed cancelled'}
+            firstLabel="Calls" firstWord="calls" emptyText="No calls last week."
+          />
+        </div>
       </div>
     </div>
   )

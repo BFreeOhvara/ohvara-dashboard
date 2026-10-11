@@ -348,7 +348,7 @@ const OV_TITLE = {
   margin: 0, fontFamily: DISPLAY, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ov-hi)',
 }
 
-function IconChip({ icon: Icon, color, tint, size = 36, radius = 11, iconSize = 18 }) {
+export function IconChip({ icon: Icon, color, tint, size = 36, radius = 11, iconSize = 18 }) {
   return (
     <span style={{
       width: size, height: size, borderRadius: radius, flexShrink: 0, background: tint, color,
@@ -359,7 +359,10 @@ function IconChip({ icon: Icon, color, tint, size = 36, radius = 11, iconSize = 
   )
 }
 
-export function HeroPanel({ greeting, sub, dateLong, dateShort, timezone, onBook }) {
+// `action` ({ label, icon, onClick }) swaps the button; the agent Overview
+// leaves it out and keeps Book a call (Prompt 745: Fulfillment's own button).
+export function HeroPanel({ greeting, sub, dateLong, dateShort, timezone, onBook, action }) {
+  const { label: actionLabel, icon: ActionIcon, onClick: onAction } = action || { label: 'Book a call', icon: CalendarPlus, onClick: onBook }
   const dot = <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ov-hero-dot)' }} />
   return (
     <section className="ov-hero" style={{ position: 'relative', overflow: 'hidden' }}>
@@ -379,8 +382,8 @@ export function HeroPanel({ greeting, sub, dateLong, dateShort, timezone, onBook
           </h1>
           <p style={{ margin: '8px 0 0', fontSize: 15.5, color: 'var(--ov-hero-soft)' }}>{sub}</p>
         </div>
-        <button type="button" onClick={onBook} className="ov-hero-btn" style={{ width: '100%', height: 50, fontSize: 16 }}>
-          <CalendarPlus size={18} strokeWidth={2.1} /> Book a call
+        <button type="button" onClick={onAction} className="ov-hero-btn" style={{ width: '100%', height: 50, fontSize: 16 }}>
+          <ActionIcon size={18} strokeWidth={2.1} /> {actionLabel}
         </button>
       </div>
 
@@ -399,8 +402,8 @@ export function HeroPanel({ greeting, sub, dateLong, dateShort, timezone, onBook
             style={{ fontFamily: DISPLAY, fontSize: 64, fontWeight: 600, lineHeight: 1, letterSpacing: '-0.04em' }}
             periodStyle={{ marginLeft: 10, fontSize: 22, fontWeight: 500, color: 'var(--ov-hero-soft)' }}
           />
-          <button type="button" onClick={onBook} className="ov-hero-btn" style={{ height: 48, padding: '0 24px', fontSize: 15 }}>
-            <CalendarPlus size={18} strokeWidth={2.1} /> Book a call
+          <button type="button" onClick={onAction} className="ov-hero-btn" style={{ height: 48, padding: '0 24px', fontSize: 15 }}>
+            <ActionIcon size={18} strokeWidth={2.1} /> {actionLabel}
           </button>
         </div>
       </div>
@@ -490,7 +493,7 @@ export function TrendCard({ label, icon, tone, value, diff, week, todayIdx, onCl
   )
 }
 
-function Legend({ style }) {
+function Legend({ style, first = 'Booked' }) {
   const key = (bg, text) => (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: 'var(--ov-mid)', whiteSpace: 'nowrap' }}>
       <span style={{ width: 10, height: 10, borderRadius: 3, background: bg }} />{text}
@@ -498,7 +501,7 @@ function Legend({ style }) {
   )
   return (
     <span style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', ...style }}>
-      {key('var(--ov-data-a-key)', 'Booked')}{key('var(--ov-data-b-key)', 'Cancelled')}
+      {key('var(--ov-data-a-key)', first)}{key('var(--ov-data-b-key)', 'Cancelled')}
     </span>
   )
 }
@@ -3403,7 +3406,15 @@ export function ComingUpCard({ upcoming, now, onGo }) {
 // Last Monday to Sunday: `days` is 7 entries [{ date, booked, cancelled }].
 // One responsive render (the .ov-lw* rules in index.css switch to the phone
 // layout under 640px). Rows with numbers on the left, no numbers on the bars.
-export function LastWeekChart({ days, loading, className = '' }) {
+// Prompt 745 — Fulfillment reuses it with its own words: `subtitle` (after the
+// date range), `firstLabel` (legend, "Booked"), `firstWord` (first total and
+// tooltips, "booked") and `emptyText`. The defaults are the agent's.
+export function LastWeekChart({
+  days, loading, className = '',
+  subtitle = 'calls you booked and old policies confirmed cancelled',
+  firstLabel = 'Booked', firstWord = 'booked',
+  emptyText = 'No calls last week. Book one when your next client says yes.',
+}) {
   const booked = days.reduce((s, d) => s + d.booked, 0)
   const cancelled = days.reduce((s, d) => s + d.cancelled, 0)
   const m = Math.max(0, ...days.map(d => Math.max(d.booked, d.cancelled)))
@@ -3427,18 +3438,18 @@ export function LastWeekChart({ days, loading, className = '' }) {
       <div className="ov-lw-head">
         <div className="ov-lw-titles">
           <h2 style={OV_TITLE} className="text-[18px] sm:text-[19px]">Last week</h2>
-          <p className="ov-lw-sub-wide" style={{ margin: '3px 0 0', fontSize: 13.5, color: 'var(--ov-mute)' }}>{range} · calls you booked and old policies confirmed cancelled</p>
+          <p className="ov-lw-sub-wide" style={{ margin: '3px 0 0', fontSize: 13.5, color: 'var(--ov-mute)' }}>{`${range} · ${subtitle}`}</p>
           <p className="ov-lw-sub-narrow" style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--ov-mute)' }}>{range}</p>
         </div>
-        <Legend />
+        <Legend first={firstLabel} />
       </div>
 
       <div className="ov-lw-body">
-        <div className="ov-lw-totals">{total(booked, 'booked')}{total(cancelled, 'cancelled')}</div>
+        <div className="ov-lw-totals">{total(booked, firstWord)}{total(cancelled, 'cancelled')}</div>
 
         {empty ? (
           <div style={{ flex: 1, minWidth: 0, minHeight: 176, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 14, color: 'var(--ov-mute)' }}>
-            No calls last week. Book one when your next client says yes.
+            {emptyText}
           </div>
         ) : (
           <div className="ov-lw-chart">
@@ -3450,14 +3461,14 @@ export function LastWeekChart({ days, loading, className = '' }) {
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div
                 className="ov-lw-plot" role="img"
-                aria-label={`Last week: ${booked} booked, ${cancelled} cancelled`}
+                aria-label={`Last week: ${booked} ${firstWord}, ${cancelled} cancelled`}
               >
                 {rows.map(i => (
                   <div key={i} className="ov-lw-line" style={{ bottom: `${i * 25}%`, background: i === 0 ? 'var(--ov-line)' : 'var(--ov-grid)' }} />
                 ))}
                 <div className="ov-lw-cols">
                   {days.map((d, i) => (
-                    <div key={i} className="ov-lw-col" title={`${dayName(d.date)}, ${shortDate(d.date)}: ${d.booked} booked, ${d.cancelled} cancelled`}>
+                    <div key={i} className="ov-lw-col" title={`${dayName(d.date)}, ${shortDate(d.date)}: ${d.booked} ${firstWord}, ${d.cancelled} cancelled`}>
                       <span className="ov-lw-bar" style={{ height: barH(d.booked), background: 'var(--ov-data-a-bar)' }} />
                       <span className="ov-lw-bar" style={{ height: barH(d.cancelled), background: 'var(--ov-data-b-bar)' }} />
                     </div>

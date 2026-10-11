@@ -109,7 +109,8 @@ const FULFILLMENT_SELECT = `
   call_live_since, last_call_outcome, call_attempts, last_call_at,
   recovery_step, recovery_retry_at, recovery_am_sent_at, recovery_pm_sent_at,
   agent:profiles!policies_agent_id_fkey ( id, full_name, caller_id_verified_at, caller_id_enabled ),
-  assigned:profiles!policies_assigned_fulfillment_id_fkey ( id, full_name )
+  assigned:profiles!policies_assigned_fulfillment_id_fkey ( id, full_name ),
+  details:policy_fulfillment_details ( current_carrier )
 `
 
 export function useFulfillmentQueue() {
@@ -124,7 +125,13 @@ export function useFulfillmentQueue() {
         .eq('fulfillment_assigned', true)
         .order('scheduled_call_at', { ascending: true, nullsFirst: false })
       if (error) throw error
-      return data || []
+      // Prompt 745 — the Overview shows the carrier being left. The details
+      // row is a 1:1 embed (an object or a one-item array, depending on how
+      // PostgREST resolves it) and only readable by the assigned rep or admin.
+      return (data || []).map(p => {
+        const d = Array.isArray(p.details) ? p.details[0] : p.details
+        return { ...p, current_carrier: d?.current_carrier || null }
+      })
     },
   })
 }

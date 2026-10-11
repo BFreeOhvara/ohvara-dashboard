@@ -47,7 +47,7 @@ const TITLES = {
   '/admin': ['Overview', 'Your day at a glance'],
   '/admin/users': ['Users & Access', 'Accounts, roles and invites'],
   '/admin/carriers': ['Carrier hours', 'When each carrier takes calls, which sets the bookable times'],
-  '/fulfillment': ['Overview', 'How the whole team is doing'],
+  '/fulfillment': ['Overview', 'Your day at a glance'],
   '/fulfillment/desk': ['Fulfillment', 'Call the client, cancel the old policy, then the next one'],
   '/fulfillment/pipeline': ['Pipeline', 'Every submission across every agent, and where it stands'],
   '/fulfillment/getting-paid': ['Getting Paid', 'Clock in and out, hours logged, and your estimated pay'],
@@ -266,7 +266,7 @@ export function DashboardLayout({ children }) {
           className="app-main flex-1 flex flex-col min-w-0 pt-[60px] md:pt-0"
           style={{ '--sb-w': `${collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W}px`, position: 'relative' }}
         >
-          <div className={`app-backdrop${['/agent', '/agent/book', '/agent/clients', '/agent/activity', '/agent/billing', '/settings'].includes(pathname) ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
+          <div className={`app-backdrop${['/agent', '/agent/book', '/agent/clients', '/agent/activity', '/agent/billing', '/settings', '/fulfillment'].includes(pathname) ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
           {/* Prompt 722 — one header for every size: a 60px fixed top bar on
               phones (menu, title, search, bell), the 72px sticky page header
               from md up. One instance, so the search hotkeys and the bell
