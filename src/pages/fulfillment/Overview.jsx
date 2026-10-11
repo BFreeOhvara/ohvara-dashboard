@@ -1,14 +1,12 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Phone, Check, ArrowRight } from 'lucide-react'
+import { Phone, Check } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useFulfillmentQueue } from '../../hooks/usePolicies'
 import { useRepCallEvents } from '../../hooks/useRepCallEvents'
 import { HeroPanel, TrendCard, LastWeekChart } from '../../components/agent/AgentUI'
-import { YourDayCard } from '../../components/fulfillment/FulfillUI'
-import { LiveDot } from '../../components/ui/LiveDot'
+import { YourDayCard, LiveCallStrips } from '../../components/fulfillment/FulfillUI'
 import { isLive, useNow } from '../../lib/agentBookings'
-import { fullName } from '../../lib/policyFormat'
 import { DEFAULT_TIMEZONE, zonedDateStr } from '../../lib/timezones'
 import { weekFrame, weekStats, buildDay, timeParts, timeText, inLabel } from '../../lib/fulfillmentDay'
 
@@ -72,7 +70,6 @@ export default function FulfillmentOverview() {
     : { label: 'Open the desk', icon: Phone, onClick: () => navigate('/fulfillment/desk') }
 
   const countLine = `${plural(day.total, 'call')} on ${team ? 'the' : 'your'} calendar${where} today. ${day.done.length} done, ${day.left} to go.`
-  const mins = p => Math.max(0, Math.floor((now - new Date(p.call_live_since).getTime()) / 6e4))
   const dash = v => (isLoading ? '—' : v)
 
   return (
@@ -83,23 +80,7 @@ export default function FulfillmentOverview() {
         action={action}
       />
 
-      {live.map(p => (
-        <div key={p.id} style={{
-          display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px 12px', padding: '12px 16px', borderRadius: 16,
-          background: 'var(--danger-dim)', border: 'var(--border-w) solid var(--danger-bd)', color: 'var(--danger)',
-        }}>
-          <LiveDot size={10} />
-          <p style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 14, fontWeight: 500 }}>
-            {team ? `${p.assigned?.full_name || 'A rep'} is on a call with ${fullName(p)}` : `You’re on a call with ${fullName(p)}`} · {mins(p)} min
-          </p>
-          <button type="button" onClick={() => open(p.id)} style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 0, padding: 0, cursor: 'pointer',
-            font: 'inherit', fontSize: 13.5, fontWeight: 700, color: 'inherit',
-          }}>
-            {team ? 'Open the call' : 'Back to the call'} <ArrowRight size={14} strokeWidth={2.4} />
-          </button>
-        </div>
-      ))}
+      <LiveCallStrips live={live} now={now} team={team} onOpen={open} />
 
       <div className="ov-grid">
         <div className="grid grid-cols-2 gap-[14px] sm:gap-5" style={{ gridArea: 'trend', minWidth: 0 }}>
@@ -122,7 +103,7 @@ export default function FulfillmentOverview() {
           next={day.next} nextIn={day.next ? inLabel(day.next.ms, now) : ''}
           later={day.rest} more={day.more}
           done={day.done} doneTime={iso => timeText(iso, tz)}
-          onOpen={open} onCalendar={() => navigate('/fulfillment/pipeline?view=calendar')}
+          onOpen={open} onCalendar={() => navigate(`/fulfillment/desk?day=${todayStr}`)}
           calendarLabel={team ? 'See the calendar' : 'See your calendar'}
         />
 

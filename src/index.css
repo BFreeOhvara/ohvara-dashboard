@@ -2118,3 +2118,165 @@ a.ov-hpill:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; 
   border-radius: 999px; font-size: 14.5px; font-weight: 600; text-decoration: none; cursor: pointer;
 }
 .ov-crash-actions .ov-ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Prompt 747 — Fulfillment calendar ─────────────────────────
+   /fulfillment/desk: Activity's day hero for a month, the month grid (Sunday
+   first, only that month's days), the day drawer (ClientDrawer's shell) and
+   the call view. Status colours come from CALL_TONE (lib/fulfillmentDay.js);
+   a chip or row sets --fc-c / --fc-t to its tone. See DESIGN.md v16 "P747". */
+:root {
+  --fc-tile: rgba(255,255,255,0.06);
+  --fc-sel: rgba(96,165,250,0.14);
+  --fc-now: #34E0C4;
+  --fc-lift: 0 12px 28px -18px rgba(0,0,0,0.6);
+  /* The hero is navy / teal in both themes, so its dots keep the dark palette. */
+  --fc-hero-booked: #60A5FA;
+  --fc-hero-live: #F87171;
+  --fc-hero-noanswer: #A3B2CC;
+  --fc-hero-cancelled: #4ADE80;
+}
+[data-theme="light"] {
+  --fc-tile: rgba(2,79,70,0.07);
+  --fc-sel: #DCE8FB;
+  --fc-now: #00897A;
+  --fc-lift: 0 12px 28px -18px rgba(7,51,46,0.45);
+}
+
+.fc-stats { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 22px; }
+.fc-stats span { display: inline-flex; align-items: center; gap: 8px; }
+.fc-stats b { color: #FFFFFF; font-weight: 700; }
+.fc-stats i { width: 8px; height: 8px; border-radius: 50%; display: block; }
+
+.fc-month { padding: 18px 18px 16px; }
+.fc-dow, .fc-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
+.fc-dow { margin: 0 0 10px; }
+.fc-dow span { font-size: 12.5px; font-weight: 700; color: var(--ov-mute); padding-left: 12px; }
+.fc-blank { min-height: 138px; }
+.fc-day {
+  position: relative; min-height: 138px; min-width: 0; box-sizing: border-box; padding: 10px;
+  display: flex; flex-direction: column; gap: 6px; text-align: left; cursor: pointer;
+  font: inherit; color: inherit; border-radius: 16px; border: 1px solid var(--ov-line); background: var(--fc-tile);
+  transition: background 150ms ease, border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+}
+.fc-day:hover { border-color: var(--ov-st-booked-edge); box-shadow: var(--fc-lift); transform: translateY(-1px); }
+.fc-day:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fc-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.fc-n {
+  width: 30px; height: 30px; margin: -2px 0 0 -2px; flex-shrink: 0; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 600; line-height: 1; color: var(--ov-hi);
+}
+.fc-day.is-past .fc-n { color: var(--ov-mute); }
+.fc-tl { font-size: 11.5px; font-weight: 700; color: var(--ov-st-booked); }
+.fc-tot { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--ov-mute); white-space: nowrap; }
+.fc-day.is-today { border-color: var(--ov-st-booked-edge); box-shadow: inset 0 0 0 1px var(--ov-st-booked-edge), 0 0 0 4px var(--ov-st-booked-tint); }
+.fc-day.is-today .fc-n { background: var(--ov-st-booked); color: #FFFFFF; }
+.fc-day.is-sel { background: var(--fc-sel); border-color: var(--ov-st-booked-edge); box-shadow: inset 0 0 0 1px var(--ov-st-booked-edge); }
+.fc-day.is-today.is-sel { box-shadow: inset 0 0 0 1px var(--ov-st-booked-edge), 0 0 0 4px var(--ov-st-booked-tint); }
+.fc-ev {
+  display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 7px 0 0; min-width: 0; overflow: hidden;
+  border-radius: 7px; font-size: 12px; font-weight: 600; background: var(--fc-t);
+}
+.fc-ev::before { content: ""; width: 3px; align-self: stretch; border-radius: 3px; flex: none; background: var(--fc-c); }
+.fc-ev .tm { flex: none; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: var(--fc-c); }
+.fc-ev .nm { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ov-mid); font-weight: 500; }
+.fc-day.is-past .fc-ev { opacity: 0.62; }
+.fc-more { padding-left: 9px; font-size: 11.5px; font-weight: 700; color: var(--ov-mute); }
+.fc-legend {
+  display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 14px; padding: 12px 4px 0;
+  border-top: 1px solid var(--ov-line); font-size: 12.5px; color: var(--ov-mute);
+}
+.fc-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.fc-legend i { width: 10px; height: 10px; border-radius: 3px; display: block; }
+.fc-legend .fc-zone { margin-left: auto; }
+
+/* Day drawer (inside ClientDrawer's shell). */
+.fc-today-tag {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 8px; margin-left: 8px; border-radius: 999px;
+  vertical-align: 3px; background: var(--ov-st-booked-tint); color: var(--ov-st-booked);
+  font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11.5px; font-weight: 700; letter-spacing: 0;
+}
+.fc-dsum { margin: 10px 0 0; font-size: 14px; color: var(--ov-soft); }
+.fc-prog { display: flex; gap: 3px; height: 6px; margin-top: 12px; border-radius: 4px; overflow: hidden; background: var(--ov-stub); }
+.fc-prog i { display: block; height: 100%; }
+.fc-rows { display: flex; flex-direction: column; }
+.fc-row {
+  width: 100%; display: flex; align-items: center; gap: 14px; box-sizing: border-box; padding: 12px 20px;
+  border: none; border-bottom: 1px solid var(--ov-line); background: transparent; text-align: left;
+  font: inherit; color: inherit; cursor: pointer; transition: background 120ms ease;
+}
+@media (min-width: 640px) { .fc-row { padding: 12px 26px; } .fc-nowline { padding: 0 26px !important; } }
+.fc-row:hover { background: var(--ov-hover); }
+.fc-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.fc-time {
+  width: 56px; height: 46px; flex: none; border-radius: 12px; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
+  background: var(--fc-t); color: var(--fc-c);
+}
+.fc-time b { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; }
+.fc-time s { margin-top: 3px; text-decoration: none; font-size: 10px; font-weight: 700; }
+.fc-row.is-done .fc-time { opacity: 0.7; }
+.fc-who { flex: 1; min-width: 0; }
+.fc-who .nm { display: block; font-size: 14.5px; font-weight: 600; color: var(--ov-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fc-row.is-done .fc-who .nm { color: var(--ov-mid); }
+.fc-who .ln { display: block; margin-top: 2px; font-size: 12.5px; color: var(--ov-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fc-pill {
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; flex-shrink: 0; box-sizing: border-box;
+  border-radius: 999px; font-size: 12.5px; font-weight: 700; white-space: nowrap; background: var(--fc-t); color: var(--fc-c);
+}
+.fc-pill.is-live { border: 1px solid var(--fc-e); }
+.fc-chev { flex: none; color: var(--ov-faint); }
+.fc-nowline { display: flex; align-items: center; gap: 10px; height: 24px; padding: 0 20px; font-size: 11.5px; font-weight: 700; color: var(--fc-now); }
+.fc-nowline::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--fc-now); }
+.fc-nowline::after { content: ""; flex: 1; height: 1.5px; background: var(--fc-now); opacity: 0.7; }
+.fc-empty { padding: 60px 30px; text-align: center; font-size: 14px; line-height: 1.6; color: var(--ov-mute); }
+.fc-foot-note { margin: 10px 0 0; text-align: center; font-size: 12.5px; color: var(--ov-faint); }
+
+/* Call view. */
+.fc-back { display: inline-flex; align-items: center; gap: 8px; padding: 0; border: none; background: none; font: inherit; font-size: 14.5px; font-weight: 600; color: var(--ov-mid); cursor: pointer; }
+.fc-back:hover { color: var(--ov-hi); }
+.fc-back:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
+.fc-carrier {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; padding: 16px 22px; border-radius: 16px;
+  background: var(--warning-dim); border: 1px solid var(--warning-bd);
+}
+.fc-steps-num {
+  width: 28px; height: 28px; flex: none; box-sizing: border-box; border-radius: 50%; border: 1px solid var(--ov-line);
+  display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; color: var(--ov-mid);
+}
+.fc-steps-num.is-cur { background: var(--ov-st-booked); border-color: var(--ov-st-booked); color: #FFFFFF; }
+.fc-steps-num.is-done { background: var(--ov-st-cancelled-tint); border-color: var(--ov-st-cancelled-edge); color: var(--ov-st-cancelled); }
+.fc-step + .fc-step { border-top: 1px solid var(--ov-line); }
+.fc-kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; margin: 16px 0 0; }
+.fc-kv dt { font-size: 12px; font-weight: 600; color: var(--ov-mute); }
+.fc-kv dd { margin: 3px 0 0; font-size: 14px; color: var(--ov-hi); overflow-wrap: anywhere; }
+.fc-kv dd.is-missing { color: var(--ov-faint); }
+.fc-two { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.fc-pillbtn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 38px; padding: 0 16px; box-sizing: border-box;
+  border-radius: 999px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; text-decoration: none; white-space: nowrap;
+}
+.fc-pillbtn:disabled { opacity: 0.55; cursor: not-allowed; }
+.ov-primary.fc-pillbtn { width: auto; height: 38px; font-weight: 700; }
+
+@media (max-width: 1023.98px) {
+  .fc-two { grid-template-columns: minmax(0, 1fr); }
+}
+/* Phones: usable, not polished. Tiles show the date and the count only. */
+@media (max-width: 767.98px) {
+  .fc-month { padding: 12px 10px; }
+  .fc-dow, .fc-days { gap: 4px; }
+  .fc-dow span { padding-left: 0; text-align: center; font-size: 11.5px; }
+  .fc-blank, .fc-day { min-height: 62px; }
+  .fc-day { padding: 6px 4px; gap: 2px; align-items: center; border-radius: 12px; }
+  .fc-top { flex-direction: column; gap: 2px; }
+  .fc-n { margin: 0; width: 26px; height: 26px; font-size: 14px; }
+  .fc-tot { margin: 0; font-size: 10px; }
+  .fc-tl, .fc-ev, .fc-more { display: none; }
+  .fc-legend .fc-zone { margin-left: 0; }
+  .fc-kv { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fc-day, .fc-row { transition: none; }
+  .fc-day:hover { transform: none; }
+}

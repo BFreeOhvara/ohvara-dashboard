@@ -1,4 +1,4 @@
-import { Children, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Children, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useImperativeHandle } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send, MapPin, Moon, ChevronDown, PencilLine } from 'lucide-react'
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
@@ -2235,7 +2235,10 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
 // Prompt 733: Activity reuses it read-only: `name` and `meta` (one muted line) replace the
 // name from `p` and the call / message buttons, and `p` / `tab` may be null (a client
 // whose row isn't loaded).
-export function ClientDrawer({ p, tab, name: nameProp, meta, onClose, onMessage, messageLabel, footer, children }) {
+// Prompt 747 — `header` ({ title, body }) swaps the client header for another
+// (the Fulfillment calendar's day drawer): `title` sits beside the X, `body`
+// under it. `closeRef` hands the parent the slide-out. The shell is unchanged.
+export function ClientDrawer({ p, tab, name: nameProp, meta, onClose, onMessage, messageLabel, footer, children, header, closeRef: closeOut }) {
   const closeBtn = useRef(null)
   const onCloseRef = useRef(onClose)
   useEffect(() => { onCloseRef.current = onClose })
@@ -2260,6 +2263,7 @@ export function ClientDrawer({ p, tab, name: nameProp, meta, onClose, onMessage,
     return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey); clearTimeout(timer.current) }
   }, [])
   useEffect(() => { closeBtn.current?.focus() }, [])
+  useImperativeHandle(closeOut, () => () => requestClose.current(), [])
 
   const name = nameProp ?? fullName(p)
   const btn = {
@@ -2273,7 +2277,18 @@ export function ClientDrawer({ p, tab, name: nameProp, meta, onClose, onMessage,
         className={`ov-drawer${closing ? ' is-closing' : ''}`} role="dialog" aria-modal="true" aria-label={name}
         onAnimationEnd={e => { if (closing && e.target === e.currentTarget) finish.current() }}
       >
-        <div className="px-5 sm:px-[26px]" style={{
+        {header ? (
+          <div className="px-5 sm:px-[26px]" style={{ paddingTop: 22, paddingBottom: 18, borderBottom: '1px solid var(--ov-line)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {header.title}
+              <button ref={closeBtn} type="button" onClick={() => requestClose.current()} aria-label="Close" className="ov-ghost"
+                style={{ width: 40, height: 40, flexShrink: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <X size={16} strokeWidth={2} />
+              </button>
+            </div>
+            {header.body}
+          </div>
+        ) : <div className="px-5 sm:px-[26px]" style={{
           paddingTop: 26, paddingBottom: 22, borderBottom: '1px solid var(--ov-line)',
           ...(tab ? { background: `radial-gradient(ellipse 90% 80% at 100% 0%, ${stVar(tab, 'tint')} 0%, transparent 70%)` } : null),
         }}>
@@ -2314,7 +2329,7 @@ export function ClientDrawer({ p, tab, name: nameProp, meta, onClose, onMessage,
               </button>
             </div>
           )}
-        </div>
+        </div>}
         <div className="scrollbar-thin px-5 sm:px-[26px]" style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingTop: 22, paddingBottom: 22, display: 'flex', flexDirection: 'column', gap: 22 }}>
           {children}
         </div>
@@ -2422,10 +2437,10 @@ export function Journey({ steps, tab, highlight = -1, currentIcon }) {
 // Each day-dependent block sits in an .ov-slide-frame whose keyed child
 // carries data-day-slide; Activity.jsx animates the day change through them.
 
-function DayArrow({ dir, disabled, onClick }) {
+function DayArrow({ dir, disabled, onClick, label }) {
   const Icon = dir === 'prev' ? ChevronLeft : ChevronRight
   return (
-    <button type="button" onClick={onClick} disabled={disabled} aria-label={dir === 'prev' ? 'Previous day' : 'Next day'}
+    <button type="button" onClick={onClick} disabled={disabled} aria-label={label || (dir === 'prev' ? 'Previous day' : 'Next day')}
       className="ov-day-arrow w-11 h-11 sm:w-14 sm:h-14">
       <Icon size={22} strokeWidth={2.2} />
     </button>
@@ -2435,28 +2450,32 @@ function DayArrow({ dir, disabled, onClick }) {
 // The coloured top section: ‹ | tag, date, summary, Pick a date | ›.
 // `picker` (the month picker popover) is anchored under Pick a date, which
 // carries data-pick-toggle so the popover's outside-click ignores it.
-export function DayHero({ dayKey, slideClass, tag, dateLong, dateShort, summary, summaryShort, canNext, onPrev, onNext, pickOpen, onTogglePick, picker }) {
+// Prompt 747 (the Fulfillment calendar, a month at a time): `actions` replaces
+// Pick a date, `arrowLabels` names the arrows, and no `tag` hides the chip.
+export function DayHero({ dayKey, slideClass, tag, dateLong, dateShort, summary, summaryShort, canNext, onPrev, onNext, pickOpen, onTogglePick, picker, actions, arrowLabels }) {
   return (
     <section className="ov-hero flex items-center gap-[10px] sm:gap-6 px-3 py-[18px] sm:px-7 sm:py-[30px]" style={{ position: 'relative', zIndex: 3 }}>
-      <DayArrow dir="prev" onClick={onPrev} />
+      <DayArrow dir="prev" onClick={onPrev} label={arrowLabels?.[0]} />
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
         <div className="ov-slide-frame" style={{ width: '100%' }}>
           <div key={dayKey} data-day-slide="" className={slideClass}>
             <div className="hidden sm:flex" style={{ flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-              <span className="ov-hero-chip">
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ov-hero-dot)' }} />{tag}
-              </span>
+              {tag && (
+                <span className="ov-hero-chip">
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ov-hero-dot)' }} />{tag}
+                </span>
+              )}
               <h1 style={{ margin: 0, fontFamily: DISPLAY, fontSize: 40, fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.035em', color: '#fff' }}>{dateLong}</h1>
               <div style={{ fontSize: 15.5, color: 'var(--ov-hero-soft)' }}>{summary}</div>
             </div>
             <div className="sm:hidden">
-              <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ov-hero-soft)' }}>{tag}</div>
+              {tag && <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ov-hero-soft)' }}>{tag}</div>}
               <h1 style={{ margin: 0, fontFamily: DISPLAY, fontSize: 22, fontWeight: 600, lineHeight: 1.25, letterSpacing: '-0.02em', color: '#fff' }}>{dateShort}</h1>
               <div style={{ fontSize: 12.5, color: 'var(--ov-hero-soft)' }}>{summaryShort}</div>
             </div>
           </div>
         </div>
-        <div className="mt-1 sm:mt-[14px]" style={{ position: 'relative' }}>
+        {actions || <div className="mt-1 sm:mt-[14px]" style={{ position: 'relative' }}>
           <button type="button" data-pick-toggle="" onClick={onTogglePick} aria-haspopup="dialog" aria-expanded={pickOpen}
             className="ov-hero-link hidden sm:inline-flex"
             style={{ height: 34, padding: '0 14px', borderRadius: 999, alignItems: 'center', gap: 7, fontSize: 13.5 }}>
@@ -2468,9 +2487,9 @@ export function DayHero({ dayKey, slideClass, tag, dateLong, dateShort, summary,
             <CalendarDays size={18} strokeWidth={2} />
           </button>
           {pickOpen && picker}
-        </div>
+        </div>}
       </div>
-      <DayArrow dir="next" disabled={!canNext} onClick={onNext} />
+      <DayArrow dir="next" disabled={!canNext} onClick={onNext} label={arrowLabels?.[1]} />
     </section>
   )
 }

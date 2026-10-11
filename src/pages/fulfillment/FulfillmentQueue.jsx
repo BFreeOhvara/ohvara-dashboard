@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import {
-  ArrowLeft, ArrowRight, CheckCircle2, Clock, Phone, User, Eye, EyeOff,
-  ShieldAlert, Inbox, Briefcase, AlertTriangle, CircleCheckBig, Send,
-  FileSignature, ChevronDown, ChevronUp, PhoneCall, MessageCircleMore, Loader2,
+  ArrowLeft, ArrowRight, CheckCircle2, Clock, Phone, Eye, EyeOff,
+  ShieldAlert, AlertTriangle, CircleCheckBig, Send,
+  ChevronDown, ChevronUp, PhoneCall, MessageCircleMore, Loader2,
   CalendarClock, Shuffle, PhoneMissed,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
@@ -13,23 +13,30 @@ import {
   useFulfillmentQueue, useUpdatePolicy, useStartCall, useEndCall, useSetRescheduleReason, usePassOnCancellation, assignUnassigned,
 } from '../../hooks/usePolicies'
 import { usePolicyFulfillmentDetails } from '../../hooks/useFulfillmentDetails'
-import { card, cardTitle, primaryBtn, ghostBtn, fieldLabel, control, MONO } from '../../lib/exportStyles'
+import { useCarriers } from '../../hooks/useCarriers'
+import { control, MONO, DISPLAY } from '../../lib/exportStyles'
+import { IconChip } from '../../components/agent/AgentUI'
 import { Segmented } from '../../components/ui/Segmented'
 import { SavedTick } from '../../components/ui/SavedTick'
 import { money, fullName, formatDate, maskLast4 } from '../../lib/policyFormat'
 import { invokeCallerId, FALLBACK_CODES } from '../../lib/callerId'
 import { flagsFor, overlapsFor } from '../../lib/fulfillmentFlags'
-import { STAGE, stageOf, isLive, recoveryLabel } from '../../lib/agentBookings'
+import { STAGE, TONE, stageOf, isLive, recoveryLabel, useNow } from '../../lib/agentBookings'
+import { bookingCarrier, DAYS, toMin } from '../../lib/carriers'
+import { DEFAULT_TIMEZONE, zonedDateStr, zonedTimeToUtcIso, timezoneLabel } from '../../lib/timezones'
+import { CALL_TONE, buildCalls, addMonths, dayShort, timeParts, timeText } from '../../lib/fulfillmentDay'
 import { LiveDot } from '../../components/ui/LiveDot'
+import FulfillmentCalendar from './FulfillmentCalendar'
 
-// Fulfillment desk (Prompt 684 rebuild of the Prompt 663 claim desk).
+// Fulfillment (Prompt 684 desk, rebuilt as a calendar in Prompt 747).
 //
-// Nobody claims anything any more: the database assigns every booking to a
-// rep the moment the agent books it (migration 116 — least-loaded rep who
-// isn't already on a call in that half hour). So the desk is just the work:
-// the one client you should be on right now, with calling them front and
-// centre, then the carrier steps, then "Mark cancelled" → the next one.
-// Pipeline (Prompt 681) is where you go to look across everything.
+// Nobody claims anything: the database assigns every booking to a rep the
+// moment the agent books it (migration 116). The page is the rep's month
+// calendar (FulfillmentCalendar.jsx); a day slides in its calls, and a call
+// opens the call view below (?open=<id>, which the Overview, Pipeline and
+// notifications also link to). The call view is the old desk's work for one
+// client, re-homed: calling them front and centre, the carrier to cancel with,
+// then the steps. Every action, guard and side effect is the desk's.
 //
 // Prompt 689 — status is Booked → In progress (a call is live RIGHT NOW) →
 // Cancelled / No answer. "Call client" starts the live call
@@ -45,20 +52,6 @@ const SUBSTATUS = [
 ]
 const SUBSTATUS_LABEL = Object.fromEntries(SUBSTATUS.map(s => [s.value, s.label]))
 
-const TONE = {
-  neutral: { color: 'var(--text-secondary)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
-  // No answer's tone since Prompt 695 (STAGE.noAnswer); without it the desk's pill threw.
-  muted:   { color: 'var(--text-secondary)', dim: 'var(--bg-muted)', bd: 'var(--border-strong)' },
-  accent:  { color: 'var(--accent)',  dim: 'var(--accent-dim)',  bd: 'var(--accent-border)' },
-  purple:  { color: 'var(--purple)', dim: 'var(--purple-dim)', bd: 'var(--purple-bd)' },
-  teal:    { color: 'var(--teal)',   dim: 'var(--teal-dim)',   bd: 'var(--teal-bd)' },
-  pink:    { color: 'var(--pink)',   dim: 'var(--pink-dim)',   bd: 'var(--pink-bd)' },
-  info:    { color: 'var(--info)',    dim: 'var(--info-dim)',    bd: 'var(--info-bd)' },
-  warning: { color: 'var(--warning)', dim: 'var(--warning-dim)', bd: 'var(--warning-bd)' },
-  danger:  { color: 'var(--danger)',  dim: 'var(--danger-dim)',  bd: 'var(--danger-bd)' },
-  success: { color: 'var(--success)', dim: 'var(--success-dim)', bd: 'var(--success-bd)' },
-}
-
 // ── time helpers ────────────────────────────────────────────────────────────
 
 function ago(iso, now) {
@@ -71,56 +64,20 @@ function ago(iso, now) {
   return `${Math.round(h / 24)}d ago`
 }
 
-function fmtCallback(iso) {
-  if (!iso) return null
-  return new Date(iso).toLocaleString('en-US', {
-    weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
-  })
+// "just now", "5 minutes ago", "3 hours ago", "2 days ago" for the header.
+function agoLong(iso, now) {
+  if (!iso) return ''
+  const m = Math.max(0, Math.round((now - new Date(iso)) / 60e3))
+  const say = (n, w) => `${n} ${w}${n === 1 ? '' : 's'} ago`
+  if (m < 1) return 'just now'
+  if (m < 60) return say(m, 'minute')
+  const h = Math.round(m / 60)
+  if (h < 48) return say(h, 'hour')
+  return say(Math.round(h / 24), 'day')
 }
 
 function fmtTime(iso) {
   return new Date(iso).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })
-}
-
-function isToday(iso, now) {
-  if (!iso) return false
-  return new Date(iso).toDateString() === new Date(now).toDateString()
-}
-
-function useNow(intervalMs = 60e3) {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), intervalMs)
-    return () => clearInterval(t)
-  }, [intervalMs])
-  return now
-}
-
-const DUE_SOON_MS = 15 * 60e3
-
-// What to work next, in order:
-//   0. a call that's live right now
-//   1. calls that are due — booked time passed or within 15 min, soonest first
-//   2. No answer — owed another call, longest-waiting first
-//   3. later calls, soonest first
-//   4. no call time at all, oldest booking first
-function priority(p, now) {
-  const at = p.scheduled_call_at ? new Date(p.scheduled_call_at).getTime() : null
-  const stage = stageOf(p)
-  if (stage === 'inProgress') return [0, 0]
-  if (stage === 'noAnswer') {
-    return [2, new Date(p.last_call_at || p.fulfillment_started_at || p.updated_at).getTime()]
-  }
-  if (at != null && at <= now + DUE_SOON_MS) return [1, at]
-  if (at != null) return [3, at]
-  return [4, new Date(p.created_at).getTime()]
-}
-
-function byPriority(now) {
-  return (a, b) => {
-    const pa = priority(a, now), pb = priority(b, now)
-    return pa[0] - pb[0] || pa[1] - pb[1]
-  }
 }
 
 // ── small pieces ────────────────────────────────────────────────────────────
@@ -138,13 +95,20 @@ function Pill({ tone = 'neutral', icon: Icon, children }) {
   )
 }
 
+// The header's status pill, coloured from the calendar's one status map.
+const STAGE_CALL_TONE = { booked: 'booked', inProgress: 'live', noAnswer: 'noAnswer', cancelled: 'cancelled' }
+
 function StatusPill({ p }) {
-  if (p.fulfillment_stage === 'Complete') return <Pill tone="success" icon={CheckCircle2}>Cancelled</Pill>
   const stage = stageOf(p)
-  if (stage === 'inProgress') return <Pill tone={STAGE.inProgress.tone} icon={LiveDot}>{STAGE.inProgress.label}</Pill>
+  const t = CALL_TONE[STAGE_CALL_TONE[stage]]
   const reason = stage === 'noAnswer' && SUBSTATUS_LABEL[p.cancellation_substatus]
   const flow = recoveryLabel(p)
-  return <Pill tone={STAGE[stage].tone}>{STAGE[stage].label}{reason ? ` · ${reason.toLowerCase()}` : ''}{flow ? ` · ${flow}` : ''}</Pill>
+  return (
+    <span className="fc-pill" style={{ '--fc-c': t.fg, '--fc-t': t.tint, ...(stage === 'inProgress' ? { border: `1px solid ${t.edge}` } : null) }}>
+      {stage === 'inProgress' && <LiveDot size={8} />}
+      {STAGE[stage].label}{reason ? ` · ${reason.toLowerCase()}` : ''}{flow ? ` · ${flow}` : ''}
+    </span>
+  )
 }
 
 function FlagPills({ p, now, rows }) {
@@ -160,52 +124,13 @@ function FlagPills({ p, now, rows }) {
   )
 }
 
-function StatTile({ icon: Icon, label, value, sub, tone = 'neutral' }) {
-  const t = TONE[tone]
-  return (
-    <div style={{ ...card, padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-      <span style={{
-        width: 30, height: 30, borderRadius: 7, flexShrink: 0,
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        background: t.dim, border: `1px solid ${t.bd}`, color: t.color,
-      }}>
-        <Icon size={14} />
-      </span>
-      <div style={{ minWidth: 0 }}>
-        <p style={{ ...fieldLabel, margin: 0 }}>{label}</p>
-        <p style={{ margin: '2px 0 0', fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', fontFamily: MONO, lineHeight: 1.1 }}>
-          {value}
-        </p>
-        {sub && <p style={{ margin: '2px 0 0', fontSize: 10.5, color: 'var(--text-muted)' }}>{sub}</p>}
-      </div>
-    </div>
-  )
-}
-
-function EmptyNote({ children }) {
-  return (
-    <div style={{
-      padding: '22px 16px', borderRadius: 7, textAlign: 'center',
-      border: 'var(--border-w) dashed var(--border)', color: 'var(--text-muted)', fontSize: 12.5,
-    }}>
-      {children}
-    </div>
-  )
-}
-
 // Prompt 661 placeholder, carried forward unchanged in meaning: there is no
 // e-signature provider behind this yet.
-function AuthorizationStatus({ compact }) {
-  if (compact) {
-    return <Pill icon={FileSignature}>Auth: not collected · soon</Pill>
-  }
+function AuthorizationStatus() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-      <Pill icon={FileSignature}>Not yet collected</Pill>
-      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-        E-signature collection is coming soon — nothing to do here yet.
-      </span>
-    </div>
+    <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5, color: 'var(--ov-mute)' }}>
+      Not yet collected. E-signature collection is coming soon, nothing to do here yet.
+    </p>
   )
 }
 
@@ -215,69 +140,36 @@ function NotifyAgentButton() {
     <button
       disabled
       title="Coming soon — automatic status ping back to the submitting agent"
-      style={{ ...ghostBtn, opacity: 0.5, cursor: 'not-allowed' }}
+      className="ov-ghost fc-pillbtn"
     >
-      <Send size={12} /> Notify agent · soon
+      <Send size={13} /> Notify agent · soon
     </button>
   )
 }
 
-// ── queue rows ──────────────────────────────────────────────────────────────
-
-function QueueRow({ p, now, rows, onOpen, showRep }) {
-  return (
-    <div
-      onClick={() => onOpen(p.id)}
-      style={{
-        padding: '11px 14px', borderRadius: 7, cursor: 'pointer',
-        background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)',
-        display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-      }}
-    >
-      <span style={{ width: 92, flexShrink: 0, fontFamily: MONO, fontSize: 12, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-        {p.scheduled_call_at
-          ? (isToday(p.scheduled_call_at, now) ? fmtTime(p.scheduled_call_at)
-            : new Date(p.scheduled_call_at).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }))
-          : 'No time'}
-      </span>
-      <div style={{ flex: '1 1 180px', minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{fullName(p)}</p>
-          <FlagPills p={p} now={now} rows={rows} />
-        </div>
-        <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-          {p.agent?.full_name || 'unknown agent'}
-          {showRep && <> · <User size={10} style={{ verticalAlign: '-1px' }} /> {p.assigned?.full_name || 'no rep yet'}</>}
-        </p>
-      </div>
-      <StatusPill p={p} />
-      <ArrowRight size={13} style={{ color: 'var(--text-muted)' }} />
-    </div>
-  )
-}
-
 // ── intake ──────────────────────────────────────────────────────────────────
+
+const NOT_GIVEN = 'Not given'
 
 // Prompt 419 — driver's license/routing/account numbers default masked
 // (last 4 visible) with an explicit per-field reveal.
 function MaskedField({ label, value, revealed, onToggleReveal }) {
   return (
     <div>
-      <p style={fieldLabel}>{label}</p>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ fontSize: 12.5, color: 'var(--text-primary)', fontFamily: MONO }}>
-          {value ? (revealed ? value : maskLast4(value)) : '—'}
-        </span>
+      <dt>{label}</dt>
+      <dd className={value ? undefined : 'is-missing'} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ fontFamily: value ? MONO : undefined }}>{value ? (revealed ? value : maskLast4(value)) : NOT_GIVEN}</span>
         {value && (
           <button
             onClick={onToggleReveal}
             title={revealed ? 'Hide' : 'Reveal'}
-            style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', display: 'inline-flex', padding: 2 }}
+            aria-label={revealed ? `Hide ${label}` : `Reveal ${label}`}
+            style={{ border: 'none', background: 'transparent', color: 'var(--ov-mute)', display: 'inline-flex', padding: 2, cursor: 'pointer' }}
           >
-            {revealed ? <EyeOff size={12} /> : <Eye size={12} />}
+            {revealed ? <EyeOff size={13} /> : <Eye size={13} />}
           </button>
         )}
-      </div>
+      </dd>
     </div>
   )
 }
@@ -285,10 +177,8 @@ function MaskedField({ label, value, revealed, onToggleReveal }) {
 function PlainField({ label, value, mono }) {
   return (
     <div>
-      <p style={fieldLabel}>{label}</p>
-      <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-primary)', fontFamily: mono ? MONO : undefined, wordBreak: 'break-word' }}>
-        {value || '—'}
-      </p>
+      <dt>{label}</dt>
+      <dd className={value ? undefined : 'is-missing'} style={{ fontFamily: mono && value ? MONO : undefined }}>{value || NOT_GIVEN}</dd>
     </div>
   )
 }
@@ -301,9 +191,9 @@ function IntakeGrid({ data }) {
     return next
   })
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: 14 }}>
+    <dl className="fc-kv">
       <PlainField label="Full legal name" value={data.full_legal_name} />
-      <PlainField label="Date of birth" value={formatDate(data.date_of_birth)} />
+      <PlainField label="Date of birth" value={data.date_of_birth ? formatDate(data.date_of_birth) : null} />
       <PlainField label="State of birth" value={data.state_of_birth} />
       <PlainField label="State of residence" value={data.state_of_residence} />
       <PlainField label="Email" value={data.email} />
@@ -331,7 +221,7 @@ function IntakeGrid({ data }) {
         label="Account #" value={data.account_number}
         revealed={revealed.has('account')} onToggleReveal={() => toggle('account')}
       />
-    </div>
+    </dl>
   )
 }
 
@@ -360,24 +250,25 @@ function ClientCallAction({ p, canBridge, onCall }) {
   const agent = firstName(p.agent?.full_name) || 'the agent'
 
   if (!p.client_phone) {
-    return <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>No client phone on file — message the agent for one.</span>
+    return <span style={{ fontSize: 13, color: 'var(--ov-mute)' }}>No client phone on file. Message the agent for one.</span>
   }
 
-  const big = { ...primaryBtn, height: 44, padding: '0 20px', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 9, textDecoration: 'none' }
-  const directLink = (label, style) => (
-    <a href={telHref(p.client_phone)} onClick={onCall} style={style}>
-      <Phone size={15} /> {label}
+  const big = { width: 'auto', height: 48, padding: '0 26px' }
+  const note = { fontSize: 12, color: 'var(--ov-mute)', textAlign: 'right' }
+  const directLink = (label, className, style) => (
+    <a href={telHref(p.client_phone)} onClick={onCall} className={className} style={style}>
+      <Phone size={17} strokeWidth={2.1} /> {label}
     </a>
   )
 
   if (!canBridge) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
-        {directLink('Call client', big)}
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+      <>
+        {directLink('Call client', 'ov-primary', big)}
+        <span style={note}>
           <span style={{ fontFamily: MONO }}>{p.client_phone}</span> · dials from your phone, shows your own number
         </span>
-      </div>
+      </>
     )
   }
 
@@ -393,27 +284,27 @@ function ClientCallAction({ p, canBridge, onCall }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start', maxWidth: 340 }}>
-      <button onClick={call} disabled={state.phase === 'calling'} style={{ ...big, opacity: state.phase === 'calling' ? 0.6 : 1 }}>
-        {state.phase === 'calling' ? <Loader2 size={15} className="animate-spin" /> : <PhoneCall size={15} />}
+    <>
+      <button onClick={call} disabled={state.phase === 'calling'} className="ov-primary" style={{ ...big, opacity: state.phase === 'calling' ? 0.6 : 1 }}>
+        {state.phase === 'calling' ? <Loader2 size={17} className="animate-spin" /> : <PhoneCall size={17} strokeWidth={2.1} />}
         Call client
       </button>
-      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+      <span style={note}>
         <span style={{ fontFamily: MONO }}>{p.client_phone}</span> · rings your phone first, shows {agent}'s number
       </span>
       {state.phase === 'ringing' && (
-        <span style={{ fontSize: 11.5, color: 'var(--success)' }}>
+        <span style={{ ...note, color: 'var(--success)', maxWidth: 320 }}>
           Ringing your phone now. Pick up and you'll be connected to {p.client_first_name || 'the client'}.
         </span>
       )}
       {(state.phase === 'fallback' || state.phase === 'error') && (
-        <span style={{ fontSize: 11.5, color: state.phase === 'error' ? 'var(--danger)' : 'var(--warning)', lineHeight: 1.5 }}>
+        <span style={{ ...note, maxWidth: 320, color: state.phase === 'error' ? 'var(--danger)' : 'var(--warning)', lineHeight: 1.5 }}>
           {state.message}{' '}
-          {directLink('Dial directly instead', { color: 'var(--accent)', display: 'inline-flex', alignItems: 'center', gap: 4 })}
+          {directLink('Dial directly instead', undefined, { color: 'var(--accent)', display: 'inline-flex', alignItems: 'center', gap: 4 })}
           {' '}(shows your own number).
         </span>
       )}
-    </div>
+    </>
   )
 }
 
@@ -423,14 +314,10 @@ function OnBehalfHint({ p, profile }) {
   const agent = p.agent?.full_name || 'the agent'
   const me = firstName(profile?.full_name) || 'your name'
   return (
-    <div style={{
-      display: 'flex', alignItems: 'flex-start', gap: 8,
-      padding: '9px 12px', borderRadius: 6,
-      background: 'var(--bg-panel)', border: 'var(--border-w) solid var(--border)',
-    }}>
-      <MessageCircleMore size={13} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 1 }} />
-      <p style={{ margin: 0, fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-        <b style={{ color: 'var(--text-primary)', fontStyle: 'normal' }}>
+    <div className="ov-card" style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 16px', borderRadius: 16 }}>
+      <MessageCircleMore size={15} style={{ color: 'var(--ov-st-booked)', flexShrink: 0, marginTop: 2 }} />
+      <p style={{ margin: 0, fontSize: 13, color: 'var(--ov-soft)', lineHeight: 1.55 }}>
+        <b style={{ color: 'var(--ov-hi)', fontStyle: 'normal' }}>
           The client sees {firstName(agent) || 'the agent'}'s number. You're calling on behalf of {agent}. Never say you are them.
         </b>{' '}
         <i>"Hi {p.client_first_name || 'there'}, this is {me} calling on behalf of {agent}. We spoke with you about getting your old policy cancelled."</i>
@@ -443,67 +330,79 @@ function OnBehalfHint({ p, profile }) {
 // "In progress": nothing sits there as an idle bucket.
 function LiveCallPanel({ p, now, busy, canCancel, onCancelled, onNoAnswer }) {
   const mins = Math.max(0, Math.floor((now - new Date(p.call_live_since)) / 60e3))
-  const btn = { ...ghostBtn, height: 38, padding: '0 14px', display: 'inline-flex', alignItems: 'center', gap: 7, opacity: busy ? 0.6 : 1 }
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', padding: '14px 18px', borderRadius: 10,
+      display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', padding: '14px 18px', borderRadius: 16,
       background: 'var(--danger-dim)', border: '1px solid var(--danger-bd)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 200px', minWidth: 0 }}>
         <LiveDot size={11} />
         <div>
-          <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--danger)' }}>Live call</p>
-          <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-secondary)' }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--danger)' }}>Live call</p>
+          <p style={{ margin: '2px 0 0', fontSize: 12.5, color: 'var(--ov-soft)' }}>
             Started {fmtTime(p.call_live_since)}{mins >= 1 ? ` · ${mins}m` : ''}. How did it go?
           </p>
         </div>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {canCancel && (
-          <button onClick={onCancelled} disabled={busy} style={{ ...primaryBtn, height: 38, display: 'inline-flex', alignItems: 'center', gap: 7, opacity: busy ? 0.6 : 1 }}>
-            <CircleCheckBig size={14} /> Cancelled
+          <button onClick={onCancelled} disabled={busy} className="ov-primary fc-pillbtn">
+            <CircleCheckBig size={15} /> Cancelled
           </button>
         )}
-        <button onClick={onNoAnswer} disabled={busy} style={btn}>
-          <PhoneMissed size={14} /> No answer
+        <button onClick={onNoAnswer} disabled={busy} className="ov-ghost fc-pillbtn">
+          <PhoneMissed size={15} /> No answer
         </button>
       </div>
     </div>
   )
 }
 
-// ── the record you're working ───────────────────────────────────────────────
+// ── the call view ───────────────────────────────────────────────────────────
 
-function Step({ n, title, done, children, last }) {
+function Step({ n, title, done, current, children }) {
   return (
-    <div style={{ display: 'flex', gap: 14 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-        <span style={{
-          width: 26, height: 26, borderRadius: '50%', fontSize: 11.5, fontWeight: 700, fontFamily: MONO,
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          background: done ? 'var(--success-dim)' : 'var(--accent-dim)',
-          border: `1px solid ${done ? 'var(--success-bd)' : 'var(--accent-border)'}`,
-          color: done ? 'var(--success)' : 'var(--accent)',
-        }}>
-          {done ? <CheckCircle2 size={13} /> : n}
-        </span>
-        {!last && <span style={{ flex: 1, width: 1, background: 'var(--border)', margin: '4px 0' }} />}
-      </div>
-      <div style={{ flex: 1, minWidth: 0, paddingBottom: last ? 0 : 20 }}>
-        <p style={{ margin: '4px 0 10px', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{title}</p>
+    <div className="fc-step" style={{ display: 'flex', gap: 14, padding: '14px 0' }}>
+      <span className={`fc-steps-num${done ? ' is-done' : current ? ' is-cur' : ''}`}>
+        {done ? <CheckCircle2 size={14} /> : n}
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <h3 style={{ margin: '3px 0 8px', fontSize: 15, fontWeight: 700, color: 'var(--ov-hi)' }}>{title}</h3>
         {children}
       </div>
     </div>
   )
 }
 
-function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNext, nextUp, position }) {
+const stepText = { margin: 0, fontSize: 13.5, lineHeight: 1.5, color: 'var(--ov-mute)' }
+const cardTitle = { margin: 0, fontFamily: DISPLAY, fontSize: 19, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ov-hi)' }
+
+// "Open until 7:00 PM your time" from the carrier's saved hours (Prompt 728),
+// only when they were found (not the 9-5 stand-in) and the line is open now.
+function carrierOpenText(carrier, nowMs, tz) {
+  if (!carrier?.hours || !carrier.hours_tz || !['verified', 'ai'].includes(carrier.hours_status)) return null
+  const date = zonedDateStr(nowMs, carrier.hours_tz)
+  const [y, m, d] = date.split('-').map(Number)
+  const key = DAYS[(new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7]
+  const h = carrier.hours[key]
+  if (!h) return 'Closed today'
+  const at = hhmm => new Date(zonedTimeToUtcIso(`${date}T${hhmm}`, carrier.hours_tz)).getTime()
+  const open = at(h.open)
+  const close = at(h.close)
+  if (!(toMin(h.close) > toMin(h.open))) return null
+  if (nowMs < open) return `Opens at ${timeText(open, tz)} your time`
+  if (nowMs < close) return `Open until ${timeText(close, tz)} your time`
+  return 'Closed for today'
+}
+
+function CallView({ p, rows, scope, now, tz, todayStr, profile, isAdmin, backDay, onBack, onOpenCall }) {
   const update = useUpdatePolicy()
   const startCall = useStartCall()
   const endCall = useEndCall()
   const setReason = useSetRescheduleReason()
   const passOn = usePassOnCancellation()
   const navigate = useNavigate()
+  const { data: carriers } = useCarriers()
   const mine = p.assigned_fulfillment_id === profile?.id
   const canEdit = mine
   const canViewIntake = mine || isAdmin
@@ -520,21 +419,15 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
 
   const dirty = notes !== (p.cancellation_notes || '')
 
-  // Once the rep acts on the record, keep it on screen (pinned in the URL):
-  // otherwise setting "Waiting on carrier" would drop its priority and swap
-  // a different client in under them.
-  function hold() {
-    if (!pinned) onPin(p.id)
-  }
+  // Opened from the calendar further down the page: start at the top.
+  useEffect(() => { window.scrollTo(0, 0) }, [])
 
   // "Call client" (either path) puts the item on a live call.
   function onCall() {
-    hold()
     if (canCall && !live) startCall.mutate(p.id)
   }
 
   function saveRecord() {
-    hold()
     update.mutate(
       { id: p.id, cancellation_notes: notes.trim() || null },
       { onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 2000) } },
@@ -543,18 +436,14 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
 
   // The call ended without a cancellation: No answer.
   function finishCall(outcome) {
-    hold()
     endCall.mutate({ id: p.id, outcome })
   }
 
   function pickReason(value) {
-    hold()
     setReason.mutate({ id: p.id, reason: p.cancellation_substatus === value ? null : value })
   }
 
   function markCancelled() {
-    // Pinned so the rep sees it land instead of the desk jumping straight on.
-    hold()
     update.mutate({
       id: p.id,
       fulfillment_stage: 'Complete',
@@ -567,59 +456,72 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
     passOn.mutate(p.id, { onSuccess: onBack })
   }
 
+  // The next call still to make on the calendar, after this one.
+  const nextUp = useMemo(() => {
+    const ahead = buildCalls(scope, now, tz, { from: todayStr, to: `${addMonths(todayStr.slice(0, 7), 4)}-01` })
+    return ahead.find(c => !c.done && c.ms > now && c.id !== p.id) || null
+  }, [scope, now, tz, todayStr, p.id])
+
   const callerIdOn = agentCallerIdOn(p)
   const canBridge = callerIdOn && (mine || isAdmin)
   const callAt = p.scheduled_call_at
+  const callDay = callAt ? zonedDateStr(new Date(callAt).getTime(), tz) : null
   const err = update.error || startCall.error || endCall.error || setReason.error || passOn.error
+  const leaving = intake?.current_carrier || p.current_carrier || p.carrier_name
+  const carrier = bookingCarrier(carriers, p)
+  const openText = carrierOpenText(carrier, now, tz)
+  const clientLocal = callAt && p.client_timezone && timeText(callAt, p.client_timezone) !== timeText(callAt, tz)
+    ? `${timeText(callAt, p.client_timezone)} for the client (${timezoneLabel(p.client_timezone)})` : null
+  const nextLabel = nextUp && (nextUp.date === todayStr ? timeParts(nextUp.at, tz) : null)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        {pinned && (
-          <button onClick={onBack} style={{ ...ghostBtn, width: 'fit-content' }}>
-            <ArrowLeft size={12} /> {isAdmin && !mine ? 'Back to the desk' : 'Back to what’s next'}
-          </button>
-        )}
-        <span style={{ ...fieldLabel, margin: 0 }}>
-          {done ? 'Just finished' : mine ? (position ? `Now working · ${position}` : 'Now working') : `On ${p.assigned?.full_name || 'nobody'}’s desk`}
-        </span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div>
+        <button type="button" className="fc-back" onClick={onBack}>
+          <ArrowLeft size={18} strokeWidth={2.2} /> Calendar · {dayShort(backDay)}
+        </button>
       </div>
 
       {/* Header — who, when, and the call */}
-      <div style={{ ...card, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 20 }}>
-        <div style={{ flex: '1 1 260px', minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>{fullName(p)}</p>
+      <section className="ov-card" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '18px 24px', padding: '24px 26px' }}>
+        <div style={{ flex: '1 1 300px', minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <h1 style={{ margin: 0, fontFamily: DISPLAY, fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ov-hi)', overflowWrap: 'anywhere' }}>{fullName(p)}</h1>
             <StatusPill p={p} />
             <FlagPills p={p} now={now} rows={rows} />
           </div>
-          <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <Clock size={13} />
-            {callAt ? `Call booked ${fmtCallback(callAt)}` : 'No call time booked'}
-          </p>
-          <p style={{ margin: '4px 0 0', fontSize: 11.5, color: 'var(--text-muted)' }}>
-            New policy: {[p.carrier_name, p.product_name, p.state].filter(Boolean).join(' · ') || '—'}
+          <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: '6px 18px', fontSize: 13.5, color: 'var(--ov-soft)' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Clock size={15} />
+              {callAt ? (
+                <span>
+                  <b style={{ color: 'var(--ov-hi)' }}>{timeText(callAt, tz)} {callDay === todayStr ? 'today' : `· ${dayShort(callDay)}`}</b>
+                  {clientLocal && <span style={{ color: 'var(--ov-mute)' }}> · {clientLocal}</span>}
+                </span>
+              ) : 'No call time booked'}
+            </span>
+            <span>Booked by {p.agent?.full_name || 'unknown agent'} · {agoLong(p.created_at, now)}</span>
+          </div>
+          <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--ov-mute)' }}>
+            New policy: {[p.product_name, p.state].filter(Boolean).join(' · ') || 'not given'}
             {' · '}<span style={{ fontFamily: MONO }}>{money(p.monthly_premium)}/mo</span>
-          </p>
-          <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-muted)' }}>
-            Booked by {p.agent?.full_name || 'unknown agent'} · {ago(p.created_at, now)}
           </p>
         </div>
         {!done && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end' }}>
             {(mine || isAdmin)
               ? (live
-                ? <span style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: 260, lineHeight: 1.5 }}>
+                ? <span style={{ fontSize: 13, color: 'var(--ov-soft)', maxWidth: 260, lineHeight: 1.5, textAlign: 'right' }}>
                     Call in progress. When you hang up, mark how it went just below.
                   </span>
                 : <ClientCallAction p={p} canBridge={canBridge} onCall={onCall} />)
-              : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Only {p.assigned?.full_name || 'the assigned rep'} calls this client.</span>}
-            <button onClick={() => navigate(`/messages?dm=${dmId(p.agent_id, isAdmin ? 'admin' : profile?.id)}`)} style={ghostBtn}>
-              <MessageCircleMore size={13} /> Message agent
+              : <span style={{ fontSize: 13, color: 'var(--ov-mute)' }}>Only {p.assigned?.full_name || 'the assigned rep'} calls this client.</span>}
+            <button onClick={() => navigate(`/messages?dm=${dmId(p.agent_id, isAdmin ? 'admin' : profile?.id)}`)} className="ov-ghost fc-pillbtn">
+              <MessageCircleMore size={15} /> Message agent
             </button>
           </div>
         )}
-      </div>
+      </section>
 
       {live && canCall && (
         <LiveCallPanel
@@ -634,45 +536,48 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
 
       {/* The one thing this team exists to cancel */}
       {canViewIntake && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 8,
-          background: 'var(--warning-dim)', border: '1px solid var(--warning-bd)',
-        }}>
-          <ShieldAlert size={16} style={{ color: 'var(--warning)', flexShrink: 0 }} />
-          <div>
-            <p style={{ ...fieldLabel, margin: 0, color: 'var(--warning)' }}>Cancel with</p>
-            <p style={{ margin: '2px 0 0', fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
-              {intakeLoading ? 'Loading…' : (intake?.current_carrier || 'Current carrier not recorded')}
-            </p>
+        <div className="fc-carrier">
+          <IconChip icon={ShieldAlert} color="var(--warning)" tint="var(--warning-dim)" iconSize={18} />
+          <div style={{ flex: '1 1 160px', minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--warning)' }}>Cancel with</div>
+            <div style={{ fontFamily: DISPLAY, fontSize: 19, fontWeight: 600, color: 'var(--ov-hi)' }}>
+              {intakeLoading ? 'Loading…' : (leaving || 'Current carrier not recorded')}
+            </div>
           </div>
+          {(carrier?.service_phone || openText) && (
+            <div style={{ textAlign: 'right', fontSize: 13, color: 'var(--ov-soft)' }}>
+              {carrier?.service_phone && <div style={{ fontFamily: MONO, color: 'var(--ov-hi)' }}>{carrier.service_phone}</div>}
+              {openText && <div>{openText}</div>}
+            </div>
+          )}
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 16, alignItems: 'start' }}>
+      <div className="fc-two">
         {/* Steps */}
-        <div style={card}>
-          <p style={cardTitle}>Work this cancellation</p>
+        <section className="ov-card" style={{ padding: '22px 24px 10px' }}>
+          <h2 style={{ ...cardTitle, marginBottom: 4 }}>Work this call</h2>
 
           <Step n={1} title="Client authorization">
             <AuthorizationStatus />
           </Step>
 
-          <Step n={2} title="Call the client" done={done}>
+          <Step n={2} title="Call the client" done={done} current={!done && stage !== 'noAnswer'}>
             {done ? (
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>Carrier call finished.</p>
+              <p style={stepText}>Carrier call finished.</p>
             ) : live ? (
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
+              <p style={{ ...stepText, color: 'var(--ov-soft)' }}>
                 On a call right now. Mark how it went in the red box above when you hang up.
               </p>
             ) : stage === 'booked' ? (
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
-                No call yet. Tap Call client up top to start. You'll mark how it went when you hang up.
+              <p style={stepText}>
+                No call yet. Tap Call client up top to start{leaving ? `, then bring ${leaving} onto the line` : ''}. You'll mark how it went when you hang up.
               </p>
             ) : (
               <>
-                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
+                <p style={{ ...stepText, color: 'var(--ov-soft)' }}>
                   Last call: no answer.
-                  {' '}{p.call_attempts || 1} call{(p.call_attempts || 1) === 1 ? '' : 's'} so far · {ago(p.last_call_at, now)}. Call again when you\u2019re ready.
+                  {' '}{p.call_attempts || 1} call{(p.call_attempts || 1) === 1 ? '' : 's'} so far · {ago(p.last_call_at, now)}. Call again when you’re ready.
                 </p>
                 {stage === 'noAnswer' && canCall && (
                   <>
@@ -683,7 +588,7 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
                       value={p.cancellation_substatus || null}
                       onChange={pickReason}
                     />
-                    <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+                    <p style={{ ...stepText, margin: '8px 0 0', fontSize: 12 }}>
                       Optional: if you reached them, why it needs another call. Tap again to clear.
                     </p>
                   </>
@@ -694,21 +599,19 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
 
           <Step n={3} title="Record the result" done={done && !!p.cancellation_notes}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div>
-                <p style={fieldLabel}>Notes</p>
-                <textarea
-                  value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  disabled={!canEdit || done}
-                  rows={4}
-                  placeholder="Who you spoke with, what they needed, anything the next person should know"
-                  style={{ ...control, height: 'auto', padding: '8px 10px', resize: 'vertical', lineHeight: 1.5 }}
-                />
-              </div>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                disabled={!canEdit || done}
+                rows={4}
+                aria-label="Notes"
+                placeholder="Notes: who you spoke with, what they needed, anything the next person should know"
+                style={{ ...control, height: 'auto', padding: '10px 12px', borderRadius: 12, resize: 'vertical', lineHeight: 1.5 }}
+              />
               {canEdit && !done && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <button onClick={saveRecord} disabled={!dirty || update.isPending} style={{ ...ghostBtn, opacity: !dirty ? 0.5 : 1 }}>
-                    Save
+                  <button onClick={saveRecord} disabled={!dirty || update.isPending} className="ov-ghost fc-pillbtn">
+                    Save notes
                   </button>
                   <SavedTick show={saved} />
                 </div>
@@ -716,10 +619,10 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
             </div>
           </Step>
 
-          <Step n={4} title={done ? 'Cancelled' : 'Mark it cancelled'} done={done} last>
+          <Step n={4} title={done ? 'Cancelled' : 'Mark it cancelled'} done={done}>
             {done ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
+                <p style={{ ...stepText, color: 'var(--ov-soft)' }}>
                   Done {ago(p.fulfillment_completed_at || p.updated_at, now)}
                   {p.assigned?.full_name && <> by {p.assigned.full_name}</>}.
                 </p>
@@ -727,78 +630,80 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
                   <NotifyAgentButton />
                   {mine && (
                     <button
-                      onClick={onNext}
-                      style={{ ...primaryBtn, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      onClick={() => (nextUp ? onOpenCall(nextUp.id, nextUp.date) : onBack())}
+                      className="ov-primary fc-pillbtn"
                     >
-                      {nextUp ? <>Next: {fullName(nextUp)}</> : 'Back to the desk'} <ArrowRight size={13} />
+                      {nextUp ? <>Next: {nextUp.name}</> : 'Back to the calendar'} <ArrowRight size={14} />
                     </button>
                   )}
                 </div>
               </div>
             ) : canEdit ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <button
-                    onClick={markCancelled}
-                    disabled={update.isPending}
-                    style={{ ...primaryBtn, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: update.isPending ? 0.6 : 1 }}
-                  >
-                    <CircleCheckBig size={14} /> Mark cancelled
-                  </button>
-                  {confirmingPass ? (
-                    <>
-                      <span style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>Hand this to another rep?</span>
-                      <button onClick={passToAnother} disabled={passOn.isPending} style={{ ...ghostBtn, color: 'var(--danger)' }}>
-                        {passOn.isPending ? 'Passing…' : 'Pass it on'}
-                      </button>
-                      <button onClick={() => setConfirmingPass(false)} style={ghostBtn}>Keep it</button>
-                    </>
-                  ) : (
-                    <button onClick={() => setConfirmingPass(true)} style={ghostBtn}>
-                      <Shuffle size={12} /> Pass to another rep
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <button
+                  onClick={markCancelled}
+                  disabled={update.isPending}
+                  className="ov-primary fc-pillbtn"
+                >
+                  <CircleCheckBig size={15} /> Mark cancelled
+                </button>
+                {confirmingPass ? (
+                  <>
+                    <span style={{ fontSize: 12.5, color: 'var(--ov-soft)' }}>Hand this to another rep?</span>
+                    <button onClick={passToAnother} disabled={passOn.isPending} className="ov-ghost fc-pillbtn" style={{ color: 'var(--danger)' }}>
+                      {passOn.isPending ? 'Passing…' : 'Pass it on'}
                     </button>
-                  )}
-                </div>
+                    <button onClick={() => setConfirmingPass(false)} className="ov-ghost fc-pillbtn">Keep it</button>
+                  </>
+                ) : (
+                  <button onClick={() => setConfirmingPass(true)} className="ov-ghost fc-pillbtn">
+                    <Shuffle size={13} /> Pass to another rep
+                  </button>
+                )}
               </div>
             ) : isAdmin ? (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
+                <p style={stepText}>
                   {p.assigned?.full_name || 'The assigned rep'} finishes this one.
                 </p>
-                <button onClick={passToAnother} disabled={passOn.isPending} style={ghostBtn}>
-                  <Shuffle size={12} /> {passOn.isPending ? 'Reassigning…' : 'Reassign'}
+                <button onClick={passToAnother} disabled={passOn.isPending} className="ov-ghost fc-pillbtn">
+                  <Shuffle size={13} /> {passOn.isPending ? 'Reassigning…' : 'Reassign'}
                 </button>
               </div>
             ) : (
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
+              <p style={stepText}>
                 Only {p.assigned?.full_name || 'the assigned rep'} can finish it.
               </p>
             )}
             {err && (
-              <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--danger)' }}>
+              <p style={{ margin: '8px 0 0', fontSize: 12.5, color: 'var(--danger)' }}>
                 Couldn't save — {err.message || 'try again'}.
               </p>
             )}
           </Step>
-        </div>
+        </section>
 
         {/* Intake */}
-        <div style={card}>
+        <section className="ov-card" style={{ padding: '22px 24px' }}>
           <button
+            type="button"
             onClick={() => setShowIntake(s => !s)}
-            style={{ ...cardTitle, border: 'none', background: 'transparent', padding: 0, width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: showIntake ? '0 0 16px' : 0 }}
+            aria-expanded={showIntake}
+            style={{ border: 'none', background: 'transparent', padding: 0, width: '100%', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', font: 'inherit', textAlign: 'left' }}
           >
-            Client intake {showIntake ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            <h2 style={{ ...cardTitle, flex: 1 }}>Client intake</h2>
+            <span style={{ fontSize: 12.5, color: 'var(--ov-mute)' }}>From the agent's booking</span>
+            {showIntake ? <ChevronUp size={16} color="var(--ov-mute)" /> : <ChevronDown size={16} color="var(--ov-mute)" />}
           </button>
           {showIntake && (
             !canViewIntake ? (
-              <p style={{ margin: 0, fontSize: 11.5, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+              <p style={{ ...stepText, marginTop: 14, fontStyle: 'italic' }}>
                 Only the rep it's assigned to can see the intake.
               </p>
             ) : intakeLoading ? (
-              <p style={{ margin: 0, fontSize: 11.5, color: 'var(--text-muted)' }}>Loading intake…</p>
+              <p style={{ ...stepText, marginTop: 14 }}>Loading intake…</p>
             ) : !intake ? (
-              <p style={{ margin: 0, fontSize: 11.5, color: 'var(--danger)' }}>
+              <p style={{ margin: '14px 0 0', fontSize: 13, color: 'var(--danger)' }}>
                 No intake details found — the agent's submission may not have completed cleanly.
               </p>
             ) : (
@@ -806,53 +711,29 @@ function WorkView({ p, rows, now, profile, isAdmin, pinned, onBack, onPin, onNex
             )
           )}
           {p.notes && (
-            <div style={{ marginTop: 16, paddingTop: 14, borderTop: 'var(--border-w) solid var(--border)' }}>
-              <p style={fieldLabel}>Agent's note</p>
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{p.notes}</p>
+            <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--ov-line)' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ov-mute)' }}>Agent's note</div>
+              <p style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--ov-soft)', lineHeight: 1.5 }}>{p.notes}</p>
             </div>
           )}
-        </div>
+        </section>
       </div>
-    </div>
-  )
-}
 
-// ── history ─────────────────────────────────────────────────────────────────
-
-function HistoryList({ rows, now, profile, onOpen }) {
-  const [who, setWho] = useState('mine')
-  const list = who === 'mine' ? rows.filter(p => p.assigned_fulfillment_id === profile?.id) : rows
-  return (
-    <div style={card}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-        <p style={{ ...cardTitle, margin: 0 }}>Cancelled</p>
-        <Segmented size="sm" value={who} onChange={setWho} options={[{ value: 'mine', label: 'Mine' }, { value: 'team', label: 'Whole team' }]} />
-      </div>
-      {list.length === 0 ? (
-        <EmptyNote>Nothing cancelled yet.</EmptyNote>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {list.map(p => (
-            <div
-              key={p.id}
-              onClick={() => onOpen(p.id)}
-              style={{
-                padding: '12px 14px', borderRadius: 7, cursor: 'pointer',
-                background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)',
-                display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-              }}
-            >
-              <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{fullName(p)}</p>
-                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-                  {p.assigned?.full_name || '—'} · {ago(p.fulfillment_completed_at || p.updated_at, now)}
-                </p>
-              </div>
-              <AuthorizationStatus compact />
-              <span onClick={e => e.stopPropagation()}><NotifyAgentButton /></span>
-            </div>
-          ))}
-        </div>
+      {nextUp && (
+        <section className="ov-card" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px 14px', padding: '14px 18px 14px 22px' }}>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ov-mute)' }}>Next on {isAdmin ? 'the' : 'your'} calendar</span>
+          <span className="fc-time" style={{ width: 'auto', minWidth: 52, height: 40, padding: '0 8px', '--fc-c': CALL_TONE[nextUp.tone].fg, '--fc-t': CALL_TONE[nextUp.tone].tint }}>
+            {nextLabel
+              ? <><b style={{ fontSize: 14 }}>{nextLabel.time}</b><s>{nextLabel.period}</s></>
+              : <><b style={{ fontSize: 12.5 }}>{dayShort(nextUp.date).split(',')[0]}</b><s>{timeText(nextUp.at, tz)}</s></>}
+          </span>
+          <span style={{ flex: '1 1 160px', minWidth: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {nextUp.name} <span style={{ fontWeight: 500, color: 'var(--ov-mute)' }}>· {nextUp.p.current_carrier || 'Carrier not noted'}</span>
+          </span>
+          <button type="button" className="ov-ghost fc-pillbtn" onClick={() => onOpenCall(nextUp.id, nextUp.date)}>
+            Next call <ArrowRight size={15} strokeWidth={2.3} />
+          </button>
+        </section>
       )}
     </div>
   )
@@ -864,15 +745,18 @@ export default function FulfillmentQueue() {
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
   const qc = useQueryClient()
-  const { data: rows = [], isLoading } = useFulfillmentQueue()
-  const now = useNow()
-  const [view, setView] = useState('desk')
-  // The open item lives in the URL (?open=<id>) so Overview, Pipeline and
-  // notifications can link straight to it. With nothing pinned, the desk
-  // shows whatever's next in your queue.
+  const { data: queue = [], isLoading } = useFulfillmentQueue()
+  const now = useNow(30e3)
+  const tz = profile?.timezone || DEFAULT_TIMEZONE
+  const todayStr = zonedDateStr(now, tz)
+  // The URL holds where the rep is: ?day=<YYYY-MM-DD> (that day's drawer is
+  // open) or ?open=<id>&from=<day> (a call, and the day to go back to). The
+  // Overview, Pipeline and notifications link straight to ?open=<id>.
   const [params, setParams] = useSearchParams()
-  const pinnedId = params.get('open')
-  const setPinned = id => setParams(id ? { open: id } : {}, { replace: !id })
+  const openId = params.get('open')
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(params.get('day') || '') ? params.get('day') : null
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(params.get('from') || '') ? params.get('from') : null
+  const [rep, setRep] = useState('all')
   const myId = profile?.id
 
   // Anything booked while no rep was active has no one on it; place it now.
@@ -883,114 +767,56 @@ export default function FulfillmentQueue() {
       .catch(() => {})
   }, [myId, qc])
 
-  const g = useMemo(() => {
-    const open = rows.filter(p => p.fulfillment_stage !== 'Complete')
-    const done = rows
-      .filter(p => p.fulfillment_stage === 'Complete')
-      .sort((a, b) => new Date(b.fulfillment_completed_at || b.updated_at) - new Date(a.fulfillment_completed_at || a.updated_at))
-    const mine = open.filter(p => p.assigned_fulfillment_id === myId).sort(byPriority(now))
-    const team = open.slice().sort(byPriority(now))
-    const unassigned = open.filter(p => !p.assigned_fulfillment_id)
-    const scope = isAdmin ? team : mine
-    const attention = scope.filter(p => { const f = flagsFor(p, now); return f.overdue || f.stale })
-    const callsToday = scope.filter(p => !isLive(p) && isToday(p.scheduled_call_at, now))
-    const nextCall = callsToday.filter(p => new Date(p.scheduled_call_at) >= now - DUE_SOON_MS)[0]
-    const doneToday = done.filter(p => isToday(p.fulfillment_completed_at, now))
-    const myDoneToday = doneToday.filter(p => p.assigned_fulfillment_id === myId)
-    return { open, done, mine, team, unassigned, attention, callsToday, nextCall, doneToday, myDoneToday }
-  }, [rows, myId, isAdmin, now])
+  const scope = useMemo(
+    () => (isAdmin ? (rep === 'all' ? queue : queue.filter(p => p.assigned_fulfillment_id === rep)) : queue.filter(p => p.assigned_fulfillment_id === myId)),
+    [queue, isAdmin, rep, myId],
+  )
+  const reps = useMemo(() => [
+    { value: 'all', label: 'All reps' },
+    ...[...new Map(queue.filter(p => p.assigned).map(p => [p.assigned.id, p.assigned.full_name || 'Unnamed rep'])).entries()]
+      .sort((a, b) => a[1].localeCompare(b[1]))
+      .map(([value, label]) => ({ value, label })),
+  ], [queue])
 
-  const pinned = pinnedId ? rows.find(p => p.id === pinnedId) : null
-  // A rep always has the top of their queue on screen; admin only when they open one.
-  const active = pinned || (!isAdmin ? g.mine[0] : null)
-  const rest = (isAdmin ? g.team : g.mine).filter(p => p.id !== active?.id)
-  const nextUp = g.mine.find(p => p.id !== active?.id)
-  const position = active && !pinned && g.mine.length > 1 ? `1 of ${g.mine.length}` : null
+  const openDay = d => setParams({ day: d })
+  const closeDay = () => setParams({}, { replace: true })
+  const openCall = (id, d) => setParams(d ? { open: id, from: d } : { open: id })
 
-  if (isLoading) {
-    return <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-muted)' }}>Loading your desk…</p>
+  if (openId) {
+    if (isLoading || !profile) {
+      return <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ov-mute)' }}>Loading the call…</p>
+    }
+    const p = queue.find(x => x.id === openId)
+    const backDay = (p && isLive(p)) ? todayStr
+      : from || (p?.scheduled_call_at ? zonedDateStr(new Date(p.scheduled_call_at).getTime(), tz) : todayStr)
+    const back = () => openDay(backDay)
+    if (!p) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div>
+            <button type="button" className="fc-back" onClick={back}>
+              <ArrowLeft size={18} strokeWidth={2.2} /> Calendar · {dayShort(backDay)}
+            </button>
+          </div>
+          <div className="ov-card fc-empty">This call isn't on {isAdmin ? 'the' : 'your'} calendar any more.</div>
+        </div>
+      )
+    }
+    return (
+      // keyed so moving to the next client resets the field state
+      <CallView
+        key={p.id} p={p} rows={queue} scope={isAdmin ? queue : scope}
+        now={now} tz={tz} todayStr={todayStr} profile={profile} isAdmin={isAdmin}
+        backDay={backDay} onBack={back} onOpenCall={openCall}
+      />
+    )
   }
 
-  const tiles = (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
-      <StatTile
-        icon={Briefcase} label={isAdmin ? 'Open across the team' : 'On your desk'}
-        value={isAdmin ? g.team.length : g.mine.length}
-        tone={(isAdmin ? g.team.length : g.mine.length) ? 'info' : 'neutral'}
-        sub={isAdmin
-          ? (g.unassigned.length ? `${g.unassigned.length} with no rep yet` : 'every one has a rep')
-          : `${g.mine.filter(isLive).length} on a call · ${g.mine.filter(p => stageOf(p) === 'noAnswer').length} owed another call · ${g.mine.filter(p => stageOf(p) === 'booked').length} booked`}
-      />
-      <StatTile
-        icon={CalendarClock} label="Calls left today" value={g.callsToday.length}
-        tone={g.callsToday.length ? 'accent' : 'neutral'}
-        sub={g.nextCall ? `next at ${fmtTime(g.nextCall.scheduled_call_at)}` : 'none still to make'}
-      />
-      <StatTile
-        icon={AlertTriangle} label="Needs attention" value={g.attention.length}
-        tone={g.attention.length ? 'danger' : 'neutral'} sub="call time passed, or stuck"
-      />
-      <StatTile
-        icon={CircleCheckBig} label="Cancelled today" value={isAdmin ? g.doneToday.length : g.myDoneToday.length}
-        tone="success" sub={isAdmin ? 'whole team' : `${g.doneToday.length} across the team`}
-      />
-    </div>
-  )
-
   return (
-    <div style={{ maxWidth: 1100, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {tiles}
-
-      <Segmented
-        value={view} onChange={setView}
-        options={[{ value: 'desk', label: 'Desk' }, { value: 'history', label: `Cancelled (${g.done.length})` }]}
-        style={{ width: 'fit-content' }}
-      />
-
-      {view === 'history' ? (
-        <HistoryList rows={g.done} now={now} profile={profile} onOpen={id => { setPinned(id); setView('desk') }} />
-      ) : (
-        <>
-          {active ? (
-            // keyed so moving to the next client resets the field state
-            <WorkView
-              key={active.id}
-              p={active}
-              rows={rows}
-              now={now}
-              profile={profile}
-              isAdmin={isAdmin}
-              pinned={!!pinned}
-              position={position}
-              nextUp={nextUp}
-              onBack={() => setPinned(null)}
-              onPin={setPinned}
-              onNext={() => setPinned(null)}
-            />
-          ) : !isAdmin && (
-            <div style={card}>
-              <EmptyNote>
-                Nothing on your desk. New bookings land here on their own, no need to claim them.
-              </EmptyNote>
-            </div>
-          )}
-
-          {rest.length > 0 && (
-            <div style={card}>
-              <p style={cardTitle}>{isAdmin ? 'Everyone’s desks' : 'Up next on your desk'}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {rest.map(p => <QueueRow key={p.id} p={p} now={now} rows={rows} onOpen={setPinned} showRep={isAdmin} />)}
-              </div>
-            </div>
-          )}
-
-          {isAdmin && rest.length === 0 && !active && (
-            <div style={card}>
-              <EmptyNote><Inbox size={14} style={{ verticalAlign: '-2px' }} /> Nothing open across the team.</EmptyNote>
-            </div>
-          )}
-        </>
-      )}
-    </div>
+    <FulfillmentCalendar
+      rows={scope} team={isAdmin} tz={tz} now={now} todayStr={todayStr} loading={isLoading || !profile}
+      day={day} onOpenDay={openDay} onCloseDay={closeDay} onOpenCall={openCall}
+      reps={reps} rep={rep} onRep={setRep}
+    />
   )
 }

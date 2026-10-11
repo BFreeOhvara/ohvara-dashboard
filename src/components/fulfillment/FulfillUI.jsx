@@ -1,8 +1,10 @@
-import { CalendarDays, Check, ChevronRight, Clock, Minus } from 'lucide-react'
+import { ArrowRight, CalendarDays, Check, ChevronRight, Clock, Minus } from 'lucide-react'
 import { eyebrow, MONO, DISPLAY } from '../../lib/exportStyles'
 import { Pill, StagePill, IconChip } from '../agent/AgentUI'
+import { LiveDot } from '../ui/LiveDot'
 import { fullName } from '../../lib/policyFormat'
 import { flagsFor } from '../../lib/fulfillmentFlags'
+import { CALL_TONE } from '../../lib/fulfillmentDay'
 
 // Team-wide submission rows for the Fulfillment Overview and Pipeline
 // (Prompt 681). Same table shell as the agent side's ListCard/ClientRow
@@ -70,19 +72,15 @@ export function FulfillRow({ p, now, onClick, active, first }) {
 // Same as the agent cards' title style.
 const OV_TITLE = { margin: 0, fontFamily: DISPLAY, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ov-hi)' }
 const BOOKED_TILE = 'color-mix(in srgb, var(--ov-st-booked) 22%, transparent)'
-const DONE_TONE = {
-  cancelled: { bg: 'var(--ov-st-cancelled-tint)', fg: 'var(--ov-st-cancelled)', Icon: Check },
-  noAnswer: { bg: 'var(--ov-st-noanswer-tint)', fg: 'var(--ov-st-noanswer)', Icon: Minus },
-  live: { bg: 'color-mix(in srgb, var(--ov-live) 14%, transparent)', fg: 'var(--ov-live)', Icon: Clock },
-}
+const DONE_ICON = { cancelled: Check, noAnswer: Minus, live: Clock }
 
 function TimeTile({ time, period, tone, big }) {
-  const booked = tone === 'booked'
+  const t = CALL_TONE[tone === 'booked' ? 'booked' : 'noAnswer']
   return (
     <span style={{
       width: 50, height: big ? 50 : 42, flexShrink: 0, boxSizing: 'border-box', borderRadius: big ? 13 : 12,
-      background: big ? BOOKED_TILE : booked ? 'var(--ov-st-booked-tint)' : 'var(--ov-st-noanswer-tint)',
-      color: booked ? 'var(--ov-st-booked)' : 'var(--ov-st-noanswer)',
+      background: big ? BOOKED_TILE : t.tint,
+      color: t.fg,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
     }}>
       <span style={{ fontFamily: DISPLAY, fontSize: big ? 17 : 15, fontWeight: 700 }}>{time}</span>
@@ -173,11 +171,12 @@ export function YourDayCard({
         <>
           {label('Done today')}
           {done.map(r => {
-            const t = DONE_TONE[r.tone]
+            const t = CALL_TONE[r.tone]
+            const Icon = DONE_ICON[r.tone]
             return (
               <button key={`${r.id}-${r.at}`} type="button" className="fd-row fd-done" onClick={() => onOpen(r.id)}>
-                <span style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, background: t.bg, color: t.fg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <t.Icon size={11} strokeWidth={3.2} />
+                <span style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, background: t.tint, color: t.fg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon size={11} strokeWidth={3.2} />
                 </span>
                 <span style={{ fontFamily: MONO, fontSize: 12, color: 'var(--ov-faint)', width: 62, flexShrink: 0 }}>{doneTime(r.at)}</span>
                 <span style={{ flex: 1, minWidth: 0, color: 'var(--ov-mid)', ...ellipsis }}>{r.name}</span>
@@ -194,4 +193,27 @@ export function YourDayCard({
       </button>
     </div>
   )
+}
+
+// The red "You're on a call" strip (Prompt 745), one per live call, above the
+// Overview's and the calendar's (Prompt 747) hero. Admin reads "{rep} is on a call".
+export function LiveCallStrips({ live, now, team, onOpen }) {
+  const mins = p => Math.max(0, Math.floor((now - new Date(p.call_live_since).getTime()) / 6e4))
+  return live.map(p => (
+    <div key={p.id} style={{
+      display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px 12px', padding: '12px 16px', borderRadius: 16,
+      background: 'var(--danger-dim)', border: 'var(--border-w) solid var(--danger-bd)', color: 'var(--danger)',
+    }}>
+      <LiveDot size={10} />
+      <p style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 14, fontWeight: 500 }}>
+        {team ? `${p.assigned?.full_name || 'A rep'} is on a call with ${fullName(p)}` : `You’re on a call with ${fullName(p)}`} · {mins(p)} min
+      </p>
+      <button type="button" onClick={() => onOpen(p.id)} style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 0, padding: 0, cursor: 'pointer',
+        font: 'inherit', fontSize: 13.5, fontWeight: 700, color: 'inherit',
+      }}>
+        {team ? 'Open the call' : 'Back to the call'} <ArrowRight size={14} strokeWidth={2.4} />
+      </button>
+    </div>
+  ))
 }
