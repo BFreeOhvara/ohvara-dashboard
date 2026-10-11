@@ -47,6 +47,8 @@ const SUBSTATUS_LABEL = Object.fromEntries(SUBSTATUS.map(s => [s.value, s.label]
 
 const TONE = {
   neutral: { color: 'var(--text-secondary)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
+  // No answer's tone since Prompt 695 (STAGE.noAnswer); without it the desk's pill threw.
+  muted:   { color: 'var(--text-secondary)', dim: 'var(--bg-muted)', bd: 'var(--border-strong)' },
   accent:  { color: 'var(--accent)',  dim: 'var(--accent-dim)',  bd: 'var(--accent-border)' },
   purple:  { color: 'var(--purple)', dim: 'var(--purple-dim)', bd: 'var(--purple-bd)' },
   teal:    { color: 'var(--teal)',   dim: 'var(--teal-dim)',   bd: 'var(--teal-bd)' },
