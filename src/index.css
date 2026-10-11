@@ -1572,7 +1572,7 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 .ov-pw-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; row-gap: 8px; align-items: end; }
 .ov-pw-field { grid-column: 1; grid-row: 1; }
 .ov-pw-go { grid-column: 2; grid-row: 1; }
-.ov-pw-forgot { grid-column: 1; grid-row: 2; justify-self: end; }
+.ov-pw-forgot { grid-column: 1; grid-row: 2; justify-self: start; }
 @media (max-width: 639.98px) { .ov-pw-grid { grid-template-columns: minmax(0, 1fr); } .ov-pw-go { grid-column: 1; grid-row: 3; margin-top: 8px; } }
 
 .ov-code {
@@ -1861,7 +1861,7 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 [data-theme="light"] .ov-sb-toggle { border-color: rgba(255,255,255,0.34); background: rgba(255,255,255,0.10); }
 .ov-sb-toggle:hover { background: var(--sb-hover); color: #FFFFFF; }
 .ov-sb-toggle.is-collapse { width: 32px; height: 32px; border-radius: 10px; margin-top: 22px; }
-.ov-sb-toggle.is-expand { width: 40px; height: 40px; border-radius: 12px; }
+.ov-sb-toggle.is-expand { width: 32px; height: 32px; border-radius: 10px; }
 .ov-sb-nav { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; margin: 0 -14px; padding: 0 14px 8px; }
 .ov-sb.is-collapsed .ov-sb-nav { margin: 6px -10px 0; padding: 0 10px 8px; }
 .ov-sb-group { margin: 0; padding: 18px 12px 6px; font-size: 12px; font-weight: 600; color: var(--sb-group); white-space: nowrap; }
@@ -1914,20 +1914,25 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
   background: var(--sb-hover); text-align: left; font: inherit; cursor: pointer;
   transition: background 120ms ease, transform 160ms cubic-bezier(.2,.8,.2,1);
 }
-.ov-sb-account:hover, .ov-sb-avatar:hover { background: var(--sb-hover-strong); }
-.ov-sb-account.is-open, .ov-sb-avatar.is-open { background: var(--sb-active); box-shadow: inset 0 1px 0 rgba(255,255,255,0.08); }
+.ov-sb-account:hover { background: var(--sb-hover-strong); }
+.ov-sb-account.is-open { background: var(--sb-active); box-shadow: inset 0 1px 0 rgba(255,255,255,0.08); }
 /* Prompt 740 — press-in on click: scales down fast, springs back slower; the menu still opens on click as before. */
-.ov-sb-account:active, .ov-sb-account.is-pressed, .ov-sb-avatar:active, .ov-sb-avatar.is-pressed {
-  transform: scale(0.97); background: var(--sb-pressed); transition-duration: 90ms;
-}
+.ov-sb-account:active, .ov-sb-account.is-pressed { transform: scale(0.97); background: var(--sb-pressed); transition-duration: 90ms; }
+.ov-sb-avatar:active, .ov-sb-avatar.is-pressed { transform: scale(0.97); transition-duration: 90ms; }
 .ov-sb-account-name { display: block; font-size: 14.5px; font-weight: 600; color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ov-sb-account-sub { display: block; font-size: 12.5px; color: var(--sb-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ov-sb-account-chev { flex-shrink: 0; color: var(--sb-text); }
 .ov-sb-avatar {
-  display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; margin: 0 auto; padding: 0; border: none;
-  border-radius: 16px; background: var(--sb-hover); cursor: pointer;
-  transition: background 120ms ease, transform 160ms cubic-bezier(.2,.8,.2,1);
+  display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; margin: 0 auto; padding: 0; border: none;
+  border-radius: 50%; background: transparent; cursor: pointer;
+  transition: box-shadow 120ms ease, transform 160ms cubic-bezier(.2,.8,.2,1);
 }
+/* P742 — no tile: the bare circle shows state with a ring instead. */
+.ov-sb-avatar:hover { box-shadow: 0 0 0 2px rgba(255,255,255,0.22); }
+.ov-sb-avatar.is-open { box-shadow: 0 0 0 2px rgba(255,255,255,0.40); }
+.ov-sb-avatar:focus-visible { outline-offset: 3px; }
+/* P742 — masks a text field with dots (Opera GX ignores autocomplete=off on type=password). */
+.ov-pw-mask { -webkit-text-security: disc; text-security: disc; }
 
 /* ── Account menu ── */
 .ov-card.ov-menu {

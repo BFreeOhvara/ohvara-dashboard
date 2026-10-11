@@ -260,6 +260,12 @@ function EmailCard({ profile }) {
 // field alone.
 const NO_FILL = { 'data-lpignore': 'true', 'data-1p-ignore': 'true', 'data-form-type': 'other' }
 
+// Prompt 742 — Opera GX shows its saved-login list on any type="password" box,
+// ignoring autocomplete="off". Where CSS can mask a plain text box with dots, the
+// Current password box uses that instead; otherwise (Firefox) it stays a real
+// password field so the text is never shown in the clear.
+const MASK_OK = typeof CSS !== 'undefined' && !!CSS.supports && (CSS.supports('-webkit-text-security', 'disc') || CSS.supports('text-security', 'disc'))
+
 const RESEND_WAIT = 60
 
 // Prompt 735 — "Forgot password?" from Settings. The same Supabase reset email
@@ -363,13 +369,14 @@ function PasswordCard() {
               with the header search (the first text box on the page) as a login
               form, and never fills or offers a saved password here (Prompt 735). */}
           <form autoComplete="off" noValidate onSubmit={e => { e.preventDefault(); check() }}>
-            {/* P741 — "Forgot password?" sits under the box, right-aligned to its
+            {/* P741/P742 — "Forgot password?" sits under the box, flush with its left
                 edge; the grid keeps Continue level with the input. */}
             <div className="ov-pw-grid">
               <div className="ov-pw-field" style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
                 <label htmlFor="ov-confirm-current" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>Current password</label>
                 <span className={`ov-input${error ? ' is-error' : ''}`}>
-                  <input id="ov-confirm-current" name="ov-confirm-current" type="password" autoComplete="off" {...NO_FILL}
+                  <input id="ov-confirm-current" name="ov-confirm-current" type={MASK_OK ? 'text' : 'password'} className={MASK_OK ? 'ov-pw-mask' : undefined}
+                    autoComplete="off" autoCapitalize="off" autoCorrect="off" spellCheck={false} {...NO_FILL}
                     readOnly={locked} onFocus={() => setLocked(false)} onPointerDown={() => setLocked(false)}
                     value={current} onChange={e => setCurrent(e.target.value)} aria-invalid={!!error || undefined} />
                 </span>

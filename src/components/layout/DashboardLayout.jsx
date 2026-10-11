@@ -187,12 +187,12 @@ function BillingLine({ profile }) {
   ]} />
 }
 
-function SettingsLine({ session }) {
+function SettingsLine({ session, profile }) {
   const user = session?.user
   if (!user) return null
   const twoStep = (user.factors || []).some(f => f.factor_type === 'totp' && f.status === 'verified')
   return <LiveLine items={[
-    <Plain>{user.email}</Plain>,
+    <Plain>{profile?.full_name?.trim() || user.email}</Plain>,
     <Pill tone="slate" to="/settings#security">Two-step {twoStep ? 'on' : 'off'}</Pill>,
   ]} />
 }

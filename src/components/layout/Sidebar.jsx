@@ -124,7 +124,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
             </>
           ) : (
             <button type="button" className="ov-sb-toggle is-expand" onClick={onToggleCollapse} aria-label="Expand sidebar" title="Expand sidebar">
-              <ChevronRight size={18} strokeWidth={2.2} />
+              <ChevronRight size={16} strokeWidth={2.2} />
             </button>
           )}
         </div>
@@ -197,7 +197,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
               ref={cardRef} type="button" className={clsx('ov-sb-avatar', menu?.open && 'is-open', pressed && 'is-pressed')} title={profile?.full_name || 'Account'}
               aria-label="Account menu" aria-haspopup="menu" aria-expanded={!!menu?.open} onClick={() => toggleMenu('right')} {...pressKeys}
             >
-              <Avatar profile={profile} size={44} />
+              <Avatar profile={profile} size={36} />
             </button>
           )}
         </div>
