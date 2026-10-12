@@ -77,7 +77,7 @@ export function GlobalSearch() {
   useEffect(() => {
     const onKey = e => {
       const k = (e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey) && !e.altKey
-      const slash = e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey && !isTyping(e.target) && pathname !== '/agent/clients'
+      const slash = e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey && !isTyping(e.target) && pathname !== '/agent/clients' && pathname !== '/fulfillment/pipeline'
       if (!k && !slash) return
       e.preventDefault()
       setWanted(true)

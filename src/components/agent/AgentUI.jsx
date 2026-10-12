@@ -5,7 +5,8 @@ import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
 import { SLOTS, slotTo24h, slotToISO, localDateISO, callWhen, callAt, fmtSlotTime, clientSlotISO, slotState, dayIn, addDaysStr } from '../../lib/scheduling'
 import { rankCarriers, exactCarrier } from '../../lib/carriers'
 import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, digits, matchClients, placeOf } from '../../lib/agentBookings'
-import { US_STATES } from '../../lib/timezones'
+import { US_STATES, zonedDateStr } from '../../lib/timezones'
+import { whenShort, daysBetween, dayShort, timeText } from '../../lib/fulfillmentDay'
 import { DayClock } from '../ui/DayClock'
 import { LiveDot } from '../ui/LiveDot'
 import { Avatar } from '../ui/Avatar'
@@ -1578,7 +1579,17 @@ const ellipsis = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'elli
 //
 // Prompt 726 — a compact box: the search, then "Recently booked" (the three
 // newest bookings, whatever their status; `recentRows` ignores the range).
-export function ClientSearch({ rows, recentRows = rows, onOpen, hotkey = true }) {
+//
+// Prompt 749 — the Fulfillment Pipeline reuses it with props (all default to the
+// agent's): `tabFn` (the status tab of a row), `phraseFn` (the search result's
+// phrase), `sub` (the line under the heading), `recent` (the rows to show, already
+// ordered; else the three newest bookings of `recentRows`), `recentTitle`,
+// `recentMeta`, `recentSub(p)`, `recentEmpty`, and `recentPill` (the status pill).
+export function ClientSearch({
+  rows, recentRows = rows, onOpen, hotkey = true,
+  tabFn = tabOf, phraseFn = searchPhrase, sub = 'Searches everyone you’ve booked, whatever their status.',
+  recent: recentList, recentTitle = 'Recently booked', recentMeta = 'Click to open', recentSub, recentEmpty = 'Nobody booked yet', recentPill = true,
+}) {
   const input = useRef(null)
   const [query, setQuery] = useState('')
   const [focused, setFocused] = useState(false)
@@ -1598,8 +1609,8 @@ export function ClientSearch({ rows, recentRows = rows, onOpen, hotkey = true })
   const q = query.trim().toLowerCase()
   const matches = useMemo(() => matchClients(rows, q), [rows, q])
   const recent = useMemo(
-    () => [...recentRows].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')).slice(0, 3),
-    [recentRows],
+    () => recentList || [...recentRows].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')).slice(0, 3),
+    [recentRows, recentList],
   )
   const shown = matches.slice(0, SEARCH_ROWS)
   const open = !!q && focused
@@ -1618,7 +1629,7 @@ export function ClientSearch({ rows, recentRows = rows, onOpen, hotkey = true })
     <section className="ov-hero pl-find">
       <div>
         <h1 className="pl-find-h">Find any client</h1>
-        <p className="pl-find-sub hidden sm:block">Searches everyone you&rsquo;ve booked, whatever their status.</p>
+        <p className="pl-find-sub hidden sm:block">{sub}</p>
       </div>
       <div style={{ position: 'relative', marginTop: 16, flexShrink: 0 }}>
         <label className="ov-hero-search h-[50px] rounded-xl gap-[10px] pl-[14px] pr-2">
@@ -1653,9 +1664,9 @@ export function ClientSearch({ rows, recentRows = rows, onOpen, hotkey = true })
                   <span className="hidden sm:inline">Enter to open</span>
                 </div>
                 {shown.map((p, i) => {
-                  const tab = tabOf(p)
+                  const tab = tabFn(p)
                   const name = fullName(p)
-                  const phrase = searchPhrase(p)
+                  const phrase = phraseFn(p)
                   return (
                     <div
                       key={p.id} id={`ov-search-${p.id}`} role="option" aria-selected={i === active}
@@ -1689,23 +1700,23 @@ export function ClientSearch({ rows, recentRows = rows, onOpen, hotkey = true })
       </p>
 
       <div className="pl-recent">
-        <div className="pl-recent-hd">Recently booked{recent.length > 0 && <span>Click to open</span>}</div>
+        <div className="pl-recent-hd">{recentTitle}{recent.length > 0 && <span>{recentMeta}</span>}</div>
         {recent.length ? recent.map(p => {
-          const tab = tabOf(p)
+          const tab = tabFn(p)
           const name = fullName(p)
           return (
             <button key={p.id} type="button" className="pl-rc" onClick={() => onOpen(p)} aria-label={`Open ${name}`}>
               <StatusAvatar name={name} tab={tab} size={32} fontSize={11.5} />
               <span className="nm">
                 {name}
-                <small>{[placeOf(p), p.current_carrier].filter(Boolean).join(' · ') || 'Carrier not noted'}</small>
+                <small>{recentSub ? recentSub(p) : [placeOf(p), p.current_carrier].filter(Boolean).join(' · ') || 'Carrier not noted'}</small>
               </span>
-              <StatusPill tab={tab} />
+              {recentPill && <StatusPill tab={tab} />}
             </button>
           )
         }) : (
           <div className="pl-recent-empty">
-            Nobody booked yet
+            {recentEmpty}
           </div>
         )}
       </div>
@@ -1727,13 +1738,13 @@ function RangeSwitch({ ranges, value, onChange, small, full }) {
   )
 }
 
-function PipelineBar({ counts, tab, height }) {
-  const total = PIPELINE_TABS.reduce((s, t) => s + counts[t], 0)
+function PipelineBar({ counts, tab, height, tabs = PIPELINE_TABS }) {
+  const total = tabs.reduce((s, t) => s + counts[t], 0)
   const radius = height > 8 ? 6 : height > 6 ? 5 : 3
   return (
     <div aria-hidden="true" style={{ display: 'flex', gap: height > 8 ? 4 : 3 }}>
       {total === 0 && <span style={{ flex: 1, height, borderRadius: radius, background: 'var(--ov-stub)' }} />}
-      {PIPELINE_TABS.filter(t => counts[t] > 0).map(t => (
+      {tabs.filter(t => counts[t] > 0).map(t => (
         <span key={t} style={{ flex: `${counts[t]} 1 0`, height, borderRadius: radius, background: stVar(t), opacity: t === tab ? 1 : 0.35 }} />
       ))}
     </div>
@@ -1742,30 +1753,37 @@ function PipelineBar({ counts, tab, height }) {
 
 // Counts per tab, plus the Needs attention split (Prompt 726): numbers to
 // confirm vs clients the agent has to call.
-function tabCounts(rows) {
-  const counts = { booked: 0, noAnswer: 0, needs: 0, cancelled: 0 }
+function tabCounts(rows, tabFn = tabOf, tabs = PIPELINE_TABS) {
+  const counts = Object.fromEntries(tabs.map(t => [t, 0]))
   let confirm = 0
   rows.forEach(p => {
-    counts[tabOf(p)] += 1
+    counts[tabFn(p)] += 1
     if (agentStageOf(p) === 'confirmNumber') confirm += 1
   })
   return { counts, confirm, call: counts.needs - confirm }
 }
 
-const tabSub = (t, { counts, confirm, call }) => (
-  t !== 'needs' ? PIPELINE_TAB[t].meaning : counts.needs ? `${confirm} to confirm · ${call} to call` : 'All caught up'
+const tabSub = (t, { counts, confirm, call }, meanings) => (
+  t !== 'needs' ? (meanings?.[t] || PIPELINE_TAB[t].meaning) : counts.needs ? `${confirm} to confirm · ${call} to call` : 'All caught up'
 )
 
 // The "Your pipeline" box (Prompt 726, rows in 729): total, range switch, proportional bar,
 // four plain status rows and the next Fulfillment call. `rows` are already
 // range/agent scoped; `next` is the soonest booked call still ahead (ignores
 // the range).
-export function PipelineSummary({ rows, tab, range, ranges, onRange, agentFilter, next, onOpenNext, onBook }) {
-  const split = useMemo(() => tabCounts(rows), [rows])
+//
+// Prompt 749 — the Fulfillment Pipeline passes `tabs` + `tabFn` (three tabs),
+// `nextLabel` / `nextEmpty` (the next-call line) and `tz` (the zone of the date
+// tile: the rep's, not the client's).
+export function PipelineSummary({
+  rows, tab, range, ranges, onRange, agentFilter, next, onOpenNext, onBook,
+  tabs = PIPELINE_TABS, tabFn = tabOf, nextLabel = 'Next Fulfillment call', nextEmpty = 'No calls booked', tz: zone,
+}) {
+  const split = useMemo(() => tabCounts(rows, tabFn, tabs), [rows, tabFn, tabs])
   const { counts } = split
   const total = rows.length
   const pct = n => (total ? Math.round((n / total) * 100) : 0)
-  const tz = next?.client_timezone || undefined
+  const tz = zone || next?.client_timezone || undefined
   return (
     <section className="ov-card pl-pipe">
       <div className="pl-lbl">Your pipeline</div>
@@ -1774,9 +1792,9 @@ export function PipelineSummary({ rows, tab, range, ranges, onRange, agentFilter
       </div>
       {agentFilter && <div style={{ marginTop: 12 }}>{agentFilter}</div>}
       <div style={{ marginTop: 12 }}><RangeSwitch ranges={ranges} value={range} onChange={onRange} full /></div>
-      <div style={{ marginTop: 14 }}><PipelineBar counts={counts} tab={tab} height={6} /></div>
+      <div style={{ marginTop: 14 }}><PipelineBar counts={counts} tab={tab} height={6} tabs={tabs} /></div>
       <div className="pl-rows">
-        {PIPELINE_TABS.map(t => (
+        {tabs.map(t => (
           <div key={t} className="pl-row2">
             <i style={{ background: stVar(t) }} />
             <span className="l">{PIPELINE_TAB[t].label}</span>
@@ -1792,13 +1810,13 @@ export function PipelineSummary({ rows, tab, range, ranges, onRange, agentFilter
               <small style={{ color: stVar('booked') }}>{new Date(next.scheduled_call_at).toLocaleDateString('en-US', { month: 'short', timeZone: tz }).toUpperCase()}</small>
               <b>{new Date(next.scheduled_call_at).toLocaleDateString('en-US', { day: 'numeric', timeZone: tz })}</b>
             </span>
-            <span className="k">Next Fulfillment call<b>{fullName(next)}</b></span>
+            <span className="k">{nextLabel}<b>{fullName(next)}</b></span>
             <button type="button" className="ov-ghost" onClick={() => onOpenNext(next)}>Open</button>
           </>
         ) : (
           <>
             <span className="pl-ntile"><CalendarDays size={18} strokeWidth={1.9} style={{ color: 'var(--ov-faint)' }} /></span>
-            <span className="k">Next Fulfillment call<b>No calls booked</b></span>
+            <span className="k">{nextLabel}<b>{nextEmpty}</b></span>
             {onBook && <button type="button" className="ov-primary" onClick={onBook}><CalendarPlus size={16} strokeWidth={2} aria-hidden="true" />Book a call</button>}
           </>
         )}
@@ -1813,8 +1831,11 @@ export function PipelineSummary({ rows, tab, range, ranges, onRange, agentFilter
 // or the row count changes. Below 640px it's a scrolling row of chips and
 // loose cards, with no box. `rows` are already range/agent scoped; `list` is
 // the selected tab's sorted rows.
-export function PipelineList({ rows, tab, onTab, list, ...status }) {
-  const split = useMemo(() => tabCounts(rows), [rows])
+//
+// Prompt 749 — the Fulfillment Pipeline passes `tabs` + `tabFn` (three tabs) and
+// `meanings` (the line under each tab's name); the rest goes to StatusList.
+export function PipelineList({ rows, tab, onTab, list, tabs = PIPELINE_TABS, tabFn = tabOf, meanings, ...status }) {
+  const split = useMemo(() => tabCounts(rows, tabFn, tabs), [rows, tabFn, tabs])
   const { counts } = split
   const tabRefs = useRef({})
   const chipRefs = useRef({})
@@ -1831,8 +1852,8 @@ export function PipelineList({ rows, tab, onTab, list, ...status }) {
   const onKeyDown = (e, refs) => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
     e.preventDefault()
-    const i = PIPELINE_TABS.indexOf(tab)
-    const next = PIPELINE_TABS[(i + (e.key === 'ArrowRight' ? 1 : PIPELINE_TABS.length - 1)) % PIPELINE_TABS.length]
+    const i = tabs.indexOf(tab)
+    const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]
     onTab(next)
     refs.current[next]?.focus()
   }
@@ -1840,8 +1861,8 @@ export function PipelineList({ rows, tab, onTab, list, ...status }) {
 
   return (
     <section className="ov-card pl-list">
-      <div role="tablist" aria-label="Pipeline status" className="pl-tabs hidden sm:grid grid-cols-2 lg:grid-cols-4" onKeyDown={e => onKeyDown(e, tabRefs)}>
-        {PIPELINE_TABS.map(t => {
+      <div role="tablist" aria-label="Pipeline status" className={`pl-tabs hidden sm:grid ${tabs.length === 3 ? 'grid-cols-3' : 'grid-cols-2 lg:grid-cols-4'}`} onKeyDown={e => onKeyDown(e, tabRefs)}>
+        {tabs.map(t => {
           const on = t === tab
           return (
             <button
@@ -1852,7 +1873,7 @@ export function PipelineList({ rows, tab, onTab, list, ...status }) {
               <span className="ic" aria-hidden="true">{(() => { const I = PIPELINE_TAB[t].icon; return <I size={18} strokeWidth={2} /> })()}</span>
               <span style={{ minWidth: 0 }}>
                 <b className="nm">{PIPELINE_TAB[t].label}</b>
-                <small>{tabSub(t, split)}</small>
+                <small>{tabSub(t, split, meanings)}</small>
               </span>
               <span className="n" style={{ ...OV_NUM, color: on ? 'var(--ov-hi)' : 'var(--c)' }}>{counts[t]}</span>
             </button>
@@ -1863,7 +1884,7 @@ export function PipelineList({ rows, tab, onTab, list, ...status }) {
       <div className="sm:hidden">
        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div role="tablist" aria-label="Pipeline status" className="ov-chips flex -mx-4 px-4" style={{ gap: 8, overflowX: 'auto' }} onKeyDown={e => onKeyDown(e, chipRefs)}>
-          {PIPELINE_TABS.map(t => {
+          {tabs.map(t => {
             const on = t === tab
             return (
               <button
@@ -1878,7 +1899,7 @@ export function PipelineList({ rows, tab, onTab, list, ...status }) {
             )
           })}
         </div>
-        <span style={{ padding: '0 2px 4px', fontSize: 13, color: 'var(--ov-mute)' }}>{tabSub(tab, split)}</span>
+        <span style={{ padding: '0 2px 4px', fontSize: 13, color: 'var(--ov-mute)' }}>{tabSub(tab, split, meanings)}</span>
        </div>
       </div>
 
@@ -1991,6 +2012,62 @@ function LiveLabel() {
   )
 }
 
+// ── Prompt 749 — the Fulfillment Pipeline's rows ──────────────────────────
+// Columns for a rep's list (same five-column grid as the agent's), times in the
+// rep's zone: Client · Cancel with · call / next try / cancelled · Booked by · Status.
+const FULFILL_COLUMNS = {
+  booked:    ['Client', 'Cancel with', 'Call', 'Booked by', 'Status'],
+  noAnswer:  ['Client', 'Cancel with', 'Next try', 'Booked by', 'Status'],
+  cancelled: ['Client', 'Carrier cancelled', 'Cancelled', 'Booked by', 'Status'],
+}
+
+// "Today · Sat" / "Tomorrow · Sun" / "Mon, Oct 12" in the zone.
+function dayWordLong(iso, now, tz) {
+  const date = zonedDateStr(new Date(iso).getTime(), tz)
+  const n = daysBetween(zonedDateStr(now, tz), date)
+  const wk = new Date(iso).toLocaleDateString('en-US', { weekday: 'short', timeZone: tz })
+  if (n === 0) return `Today · ${wk}`
+  if (n === 1) return `Tomorrow · ${wk}`
+  return dayShort(date)
+}
+
+function FulfillDate({ iso, now, tz }) {
+  if (!iso) return <span style={{ fontSize: 13, color: 'var(--ov-mute)' }}>Not scheduled</span>
+  const d = new Date(iso)
+  const z = { timeZone: tz }
+  return (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+      <span className="ov-tile" style={{
+        width: 44, height: 48, flexShrink: 0, boxSizing: 'border-box', borderRadius: 12, lineHeight: 1,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: stVar('booked') }}>{d.toLocaleDateString('en-US', { month: 'short', ...z }).toUpperCase()}</span>
+        <span style={{ marginTop: 4, fontFamily: DISPLAY, fontSize: 18, fontWeight: 600, color: 'var(--ov-hi)' }}>{d.toLocaleDateString('en-US', { day: 'numeric', ...z })}</span>
+      </span>
+      <span style={{ minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap' }}>{timeText(iso, tz)}</span>
+        <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>{dayWordLong(iso, now, tz)}</span>
+      </span>
+    </span>
+  )
+}
+
+// A booked call whose time has passed without one being placed.
+const timePassed = (p, now) => !isLive(p) && !!p.scheduled_call_at && new Date(p.scheduled_call_at).getTime() < now
+
+function FulfillStatus({ p, tab, now }) {
+  if (tab === 'booked' && isLive(p)) return <LiveLabel />
+  const late = tab === 'booked' && timePassed(p, now)
+  const color = late ? stVar('needs') : stVar(tab)
+  const label = tab === 'booked' ? (late ? 'Time passed' : 'Booked')
+    : tab === 'noAnswer' ? `No answer · try ${Math.max(1, p.call_attempts || 0)}` : 'Cancelled'
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color, whiteSpace: 'nowrap', minWidth: 0 }}>
+      <span style={{ width: 8, height: 8, flexShrink: 0, borderRadius: '50%', background: color }} />{label}
+    </span>
+  )
+}
+
 // A row's action: { label, icon, onClick, needs, solid }, a muted { note }, or
 // null. Permission is the page's canMove (admin, or the agent's own client).
 function rowAction(p, { canMove, onRebook, onConfirm }) {
@@ -2054,7 +2131,10 @@ function NeedsGroupHead({ icon: Icon, title, count, line }) {
 // nobody at all was booked in the range. Key it by tab so paging resets.
 // Prompt 726 — the box, tabs and scrolling live in PipelineList; this is the
 // body (sticky column row + rows, or cards).
-export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebook, onConfirm, canMove, loading, emptyRange, onBook }) {
+//
+// Prompt 749 — `fulfill` ({ tz }) switches it to the rep's list: columns above, no
+// row actions, the booking agent in its own column, times in `tz`.
+export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebook, onConfirm, canMove, loading, emptyRange, onBook, fulfill }) {
   const [limit, setLimit] = useState(PAGE)
 
   if (loading) return <EmptyState tab={tab}>Loading clients…</EmptyState>
@@ -2069,6 +2149,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
     }
     if (tab === 'noAnswer') return <EmptyState icon={PhoneMissed} tab={tab}>No missed calls.</EmptyState>
     if (tab === 'cancelled') return <EmptyState icon={Inbox} tab={tab}>No cancellations yet.</EmptyState>
+    if (fulfill) return <EmptyState icon={Phone} tab={tab}>No calls waiting right now.</EmptyState>
     return (
       <EmptyState icon={CalendarPlus} tab={tab} action={onBook && (
         <button type="button" className="ov-ghost" onClick={onBook}
@@ -2085,6 +2166,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
   const visible = paged ? rows.slice(0, limit) : rows
   const more = paged ? Math.min(PAGE, rows.length - visible.length) : 0
   const ctx = { canMove, onRebook, onConfirm }
+  const columns = fulfill ? FULFILL_COLUMNS[tab] : COLUMNS[tab]
   // Needs attention in its two groups; every other tab is one unlabelled group.
   const groups = tab === 'needs'
     ? NEEDS_GROUPS.map(g => ({ ...g, rows: rows.filter(g.has) })).filter(g => g.rows.length)
@@ -2099,19 +2181,45 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
 
   const client = p => {
     const name = fullName(p)
+    // Prompt 749 — the rep's list is the mockup's: name over "City, ST · phone", no avatar.
+    if (fulfill) {
+      return (
+        <span style={{ minWidth: 0 }}>
+          <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', ...ellipsis }}>{name}</span>
+          <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', ...ellipsis }}>
+            {[placeOf(p), p.client_phone || 'No number'].filter(Boolean).join(' · ')}
+          </span>
+        </span>
+      )
+    }
     return (
       <span style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
         <StatusAvatar name={name} tab={tab} />
         <span style={{ minWidth: 0 }}>
           <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', ...ellipsis }}>{name}</span>
           <ClientSub p={p} />
-          {showAgent && <span style={{ display: 'block', fontSize: 12.5, color: 'var(--ov-mute)', ...ellipsis }}>{p.agent?.full_name || '—'}</span>}
+          {showAgent && !fulfill && <span style={{ display: 'block', fontSize: 12.5, color: 'var(--ov-mute)', ...ellipsis }}>{p.agent?.full_name || '—'}</span>}
         </span>
       </span>
     )
   }
 
   const cells = p => {
+    if (fulfill) {
+      const when = tab === 'cancelled'
+        ? (
+          <span key="d" style={{ minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap' }}>{monthDay(p.fulfillment_completed_at || p.updated_at)}</span>
+            <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>Booked {monthDay(p.created_at)}</span>
+          </span>
+        )
+        : <FulfillDate key="d" iso={p.scheduled_call_at} now={now} tz={fulfill.tz} />
+      return [
+        when,
+        <span key="a" style={{ minWidth: 0, fontSize: 14, color: 'var(--ov-soft)', ...ellipsis }}>{p.agent?.full_name || '—'}</span>,
+        <FulfillStatus key="s" p={p} tab={tab} now={now} />,
+      ]
+    }
     switch (tab) {
       case 'booked':
         return [
@@ -2151,6 +2259,12 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
 
   // The status-specific line on a card.
   const cardLine = p => {
+    if (fulfill) {
+      const by = p.agent?.full_name ? ` · from ${p.agent.full_name}` : ''
+      if (tab === 'booked') return isLive(p) ? <LiveLabel /> : `${timePassed(p, now) ? 'Time passed · ' : ''}${p.scheduled_call_at ? whenShort(p.scheduled_call_at, now, fulfill.tz) : 'Not scheduled'}${by}`
+      if (tab === 'noAnswer') return `No answer · try ${Math.max(1, p.call_attempts || 0)}${p.scheduled_call_at ? ` · next ${whenShort(p.scheduled_call_at, now, fulfill.tz)}` : ''}${by}`
+      return `Cancelled ${monthDay(p.fulfillment_completed_at || p.updated_at)}${by}`
+    }
     if (tab === 'booked') return isLive(p) ? <LiveLabel /> : `Call ${callWhen(p.scheduled_call_at, p.client_timezone)}`
     if (tab === 'noAnswer') return [triesText(p.call_attempts || 0), lastOn(p, now), nextStep(p, now)].filter(Boolean).join(' · ')
     if (tab === 'needs') return NEEDS_WHY[agentStageOf(p)]
@@ -2159,7 +2273,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
 
   const card = p => {
     const name = fullName(p)
-    const action = rowAction(p, ctx)
+    const action = fulfill ? null : rowAction(p, ctx)
     return (
       <div key={p.id} {...rowProps(p)} className="ov-tile ov-link"
         style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 14, borderRadius: 14, minWidth: 0 }}>
@@ -2169,7 +2283,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ov-hi)', ...ellipsis }}>{name}</div>
             <div style={{ marginTop: 1, display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, fontSize: 12.5, color: 'var(--ov-mute)' }}>
               <Building2 size={13} strokeWidth={1.8} style={{ flexShrink: 0, color: 'var(--ov-faint)' }} />
-              <span style={ellipsis}>{p.current_carrier || 'Not noted'}{showAgent ? ` · ${p.agent?.full_name || '—'}` : ''}</span>
+              <span style={ellipsis}>{p.current_carrier || 'Not noted'}{showAgent && !fulfill ? ` · ${p.agent?.full_name || '—'}` : ''}</span>
             </div>
             {placeOf(p) && <PlaceLine location={placeOf(p)} size={13} style={{ marginTop: 1, gap: 5, fontSize: 12.5, color: 'var(--ov-mute)' }} />}
           </div>
@@ -2184,14 +2298,14 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
   return (
     <>
       <div className="hidden lg:block" style={{ flexShrink: 0 }}>
-        <div className="pl-cols">
-          {COLUMNS[tab].map((c, i) => <span key={i}>{c}</span>)}
+        <div className={`pl-cols${fulfill ? ' pl-f' : ''}`}>
+          {columns.map((c, i) => <span key={i}>{c}</span>)}
         </div>
         {groups.map(g => (
           <div key={g.key}>
             {g.icon && <NeedsGroupHead icon={g.icon} title={g.title} count={g.rows.length} line={g.line} />}
             {g.rows.map(p => (
-              <div key={p.id} {...rowProps(p)} className={`pl-row${activeId === p.id ? ' is-active' : ''}`}>
+              <div key={p.id} {...rowProps(p)} className={`pl-row${fulfill ? ' pl-f' : ''}${activeId === p.id ? ' is-active' : ''}`}>
                 {client(p)}
                 <CarrierCell p={p} />
                 {cells(p)}

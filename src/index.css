@@ -1236,6 +1236,12 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 @media (min-width: 1600px) {
   .pl-cols, .pl-row { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 210px minmax(0, 1fr) 150px; gap: 16px; padding: 0 24px; }
 }
+/* Prompt 749 — the Fulfillment list: the call column carries a day word and
+   "Booked by" replaces the status text. */
+.pl-cols.pl-f, .pl-row.pl-f { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 150px minmax(0, 0.8fr) 140px; }
+@media (min-width: 1600px) {
+  .pl-cols.pl-f, .pl-row.pl-f { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 168px minmax(0, 0.9fr) 140px; }
+}
 .pl-cols {
   position: sticky; top: 0; z-index: 1; height: 44px; line-height: 1.2; background: var(--ov-table-head-solid); border-bottom: 1px solid var(--ov-line);
   font-size: 12.5px; font-weight: 600; color: var(--ov-mute);

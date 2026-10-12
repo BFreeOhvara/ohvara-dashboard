@@ -103,6 +103,15 @@ export function tabOf(p) {
   return s === 'confirmNumber' || s === 'needsAttention' ? 'needs' : s
 }
 
+// Prompt 749 — the Fulfillment Pipeline's three tabs. A rep has no Needs
+// attention: every No answer stays theirs, whatever step the text flow is on,
+// and a live call sits on Booked as a pulse (like the agent side).
+export const FULFILL_TABS = ['booked', 'noAnswer', 'cancelled']
+export const fulfillTabOf = p => {
+  const s = stageOf(p)
+  return s === 'inProgress' ? 'booked' : s
+}
+
 // Re-book is the agent's move only when nobody else owns the lead: Needs
 // attention (call, then rebook), or a No answer that isn't in Prompt 696's
 // automated flow (texting off / flow not started) — otherwise it would be a

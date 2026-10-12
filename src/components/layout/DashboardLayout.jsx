@@ -50,7 +50,7 @@ const TITLES = {
   '/admin/carriers': ['Carrier hours', 'When each carrier takes calls, which sets the bookable times'],
   '/fulfillment': ['Overview', 'Your day at a glance'],
   '/fulfillment/desk': ['My calls', 'Your day, call by call'],
-  '/fulfillment/pipeline': ['Pipeline', 'Every submission across every agent, and where it stands'],
+  '/fulfillment/pipeline': ['Pipeline', 'Every client on your book and where each cancellation stands'],
   '/fulfillment/getting-paid': ['Getting Paid', 'Clock in and out, hours logged, and your estimated pay'],
   '/messages': ['Messages', 'Fulfillment and Admin, in one place'],
   '/settings': ['Settings', 'Your account, security and preferences'],
@@ -237,9 +237,9 @@ export function DashboardLayout({ children }) {
   // Prompt 701: Messages fills the content area edge to edge (as Restorix's
   // does) instead of sitting in the padded, max-width page container.
   const isFullBleed = pathname === '/messages'
-  // Prompt 726: My Pipeline fills the height under the header on a tall
+  // Prompt 726: My Pipeline (and, Prompt 749, Fulfillment's Pipeline) fills the height under the header on a tall
   // desktop screen (the .ov-fit rules in index.css) so only its list scrolls.
-  const isFit = pathname === '/agent/clients'
+  const isFit = pathname === '/agent/clients' || pathname === '/fulfillment/pipeline'
 
   const [navOpen, setNavOpen] = useState(false)
   useEffect(() => { setNavOpen(false) }, [pathname])
@@ -267,7 +267,7 @@ export function DashboardLayout({ children }) {
           className="app-main flex-1 flex flex-col min-w-0 pt-[60px] md:pt-0"
           style={{ '--sb-w': `${collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W}px`, position: 'relative' }}
         >
-          <div className={`app-backdrop${['/agent', '/agent/book', '/agent/clients', '/agent/activity', '/agent/billing', '/settings', '/fulfillment', '/fulfillment/desk'].includes(pathname) ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
+          <div className={`app-backdrop${['/agent', '/agent/book', '/agent/clients', '/agent/activity', '/agent/billing', '/settings', '/fulfillment', '/fulfillment/desk', '/fulfillment/pipeline'].includes(pathname) ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
           {/* Prompt 722 — one header for every size: a 60px fixed top bar on
               phones (menu, title, search, bell), the 72px sticky page header
               from md up. One instance, so the search hotkeys and the bell
