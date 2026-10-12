@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ChevronRight, Loader2 } from 'lucide-react'
-import { card, cardTitle, eyebrow, fieldLabel, control, primaryBtn, MONO, DISPLAY } from '../../lib/exportStyles'
-import { GapNote } from '../ui/ExportForm'
+import { eyebrow, fieldLabel, control, primaryBtn, MONO, DISPLAY } from '../../lib/exportStyles'
 import { Segmented } from '../ui/Segmented'
 import { SavedTick } from '../ui/SavedTick'
 import { Avatar } from '../ui/Avatar'
@@ -11,27 +10,26 @@ import {
   fmtShift, scheduledHours, fmtTime,
 } from '../../lib/payPeriod'
 import { useNow } from '../../lib/agentBookings'
+import { Switch } from '../ui/Switch'
+import { ConfirmDialog } from '../agent/ManageBilling'
+import { usePayouts, usePayoutAccounts, usePayoutsLive, useSetPayoutsLive, usePayWeek } from '../../hooks/useFulfillmentPayouts'
+import { accountStatus, destination, isoDay } from '../../lib/myPay'
 
-// Getting Paid page (Prompt 681, moved out of Settings in 683). Tracking only: the rep's scheduled
-// shift, the hours that shift adds up to this pay period (automatic, nothing
-// to punch in; Prompt 685), their hourly rate, and hours × rate. No payroll processor sits behind it — Brayden pays by hand
-// from these numbers. Admin gets the whole team on one table and is the only
-// one who can set a rate or shift (RLS, migration 115).
+// Fulfillment pay, the admin's team table (Prompt 681; in Settings → Team
+// tools since 720). Each rep's scheduled shift, the hours it adds up to this
+// pay period (automatic, nothing to punch in; Prompt 685), their hourly rate,
+// and hours × rate. Admin is the only one who can set a rate or shift (RLS,
+// migration 115). The rep's own view is My pay (pages/fulfillment/MyPay.jsx,
+// Prompt 753).
+// Prompt 753 — Approve & pay per rep for a finished week: a Stripe Transfer to
+// the rep's connected account, through fulfillment-pay-week (which recomputes
+// the amount on the server). Disabled until payouts_live is on; the switch
+// sits on this card.
 
 const PERIODS = [{ value: 'this', label: 'This week' }, { value: 'last', label: 'Last week' }]
 
 function usePeriod(which, now) {
   return useMemo(() => payPeriod(which === 'last' ? now - 7 * 864e5 : now), [which, now])
-}
-
-function Figure({ label, value, sub }) {
-  return (
-    <div style={{ padding: '14px 16px', borderRadius: 12, background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)' }}>
-      <p style={eyebrow}>{label}</p>
-      <p style={{ margin: '6px 0 0', fontFamily: MONO, fontSize: 20, fontWeight: 500, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{value}</p>
-      {sub && <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>{sub}</p>}
-    </div>
-  )
 }
 
 const fmtClock = d => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
@@ -69,54 +67,6 @@ function ShiftList({ pay, period, now }) {
   )
 }
 
-// ── rep ─────────────────────────────────────────────────────────────────────
-
-export function GettingPaidPanel({ profile }) {
-  const now = useNow(30e3)
-  const [which, setWhich] = useState('this')
-  const period = usePeriod(which, now)
-  const { data: payRows = [], isLoading: payLoading } = useFulfillmentPay(profile.id)
-  const pay = payRows[0]
-  const hours = workedHours(pay, period, now)
-  const sched = scheduledHours(pay)
-  const est = estimateCents(hours, pay?.hourly_rate_cents)
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={card}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-          <p style={{ ...cardTitle, margin: 0, flex: 1 }}>
-            Getting paid <span style={{ fontFamily: MONO, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6 }}>{fmtPeriod(period)}</span>
-          </p>
-          <Segmented size="sm" value={which} onChange={setWhich} options={PERIODS} />
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: 10 }}>
-          <Figure label="Hours worked" value={payLoading ? '—' : fmtHours(hours)} sub={sched != null ? `of ${fmtHours(sched)} scheduled` : 'no shift set'} />
-          <Figure label="Hourly rate" value={pay?.hourly_rate_cents != null ? fmtCents(pay.hourly_rate_cents) : '—'} sub={pay?.hourly_rate_cents != null ? 'per hour' : 'not set yet'} />
-          <Figure label="Estimated pay" value={est != null ? fmtCents(est) : '—'} sub="hours × rate" />
-        </div>
-
-        <p style={{ margin: '14px 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>
-          Scheduled shift: <span style={{ fontFamily: MONO, color: 'var(--text-primary)' }}>{fmtShift(pay) || 'not set yet'}</span>
-        </p>
-
-        <GapNote>
-          Hours come straight from your scheduled shift, so there's nothing to clock in. This is an estimate to
-          check against, not a paycheck. Pay is sent by hand for each weekly period (Monday to Sunday). If a day
-          wasn't worked as scheduled, message Brayden and he'll adjust it.
-        </GapNote>
-      </div>
-
-      <div style={card}>
-        <p style={cardTitle}>Shift log</p>
-        {payLoading ? <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Loading…</p>
-          : <ShiftList pay={pay} period={period} now={now} />}
-      </div>
-    </div>
-  )
-}
-
 // ── admin ───────────────────────────────────────────────────────────────────
 
 export function FulfillmentPayAdminPanel() {
@@ -124,16 +74,35 @@ export function FulfillmentPayAdminPanel() {
   const [which, setWhich] = useState('this')
   const period = usePeriod(which, now)
   const [openId, setOpenId] = useState(null)
+  const [confirm, setConfirm] = useState(null) // the row being paid
+  const [notice, setNotice] = useState(null) // { tone, text }
   const { data: reps = [], isLoading: repsLoading } = useFulfillmentReps()
   const { data: pays = [] } = useFulfillmentPay(null)
+  const { data: payouts = [] } = usePayouts(null)
+  const { data: accounts = [] } = usePayoutAccounts(null)
+  const { data: live = false } = usePayoutsLive()
+  const setLive = useSetPayoutsLive()
+  const payWeek = usePayWeek()
+  const startIso = isoDay(period.start)
+  const ended = now >= period.end.getTime()
 
   const rows = reps.map(r => {
     const pay = pays.find(p => p.profile_id === r.id)
     const hours = workedHours(pay, period, now)
-    return { rep: r, pay, hours, est: estimateCents(hours, pay?.hourly_rate_cents) }
+    const payout = payouts.find(p => p.rep_id === r.id && p.period_start === startIso)
+    const account = accounts.find(a => a.rep_id === r.id) || null
+    return { rep: r, pay, hours, est: estimateCents(hours, pay?.hourly_rate_cents), payout, account }
   })
   const totalEst = rows.reduce((s, r) => s + (r.est || 0), 0)
   const totalHrs = rows.reduce((s, r) => s + r.hours, 0)
+
+  function pay(r) {
+    setNotice(null)
+    payWeek.mutate({ repId: r.rep.id, periodStart: startIso }, {
+      onSuccess: d => { setConfirm(null); setNotice({ tone: 'ok', text: `Paid ${r.rep.full_name} ${fmtCents(d.amount_cents)}${d.paid_to ? ` to ${d.paid_to}` : ''}.` }) },
+      onError: e => { setConfirm(null); setNotice({ tone: 'error', text: e.message }) },
+    })
+  }
 
   return (
     // Prompt 720 — sits in Settings → Team tools as a v16 card; table unchanged.
@@ -144,24 +113,37 @@ export function FulfillmentPayAdminPanel() {
         </h2>
         <Segmented size="sm" value={which} onChange={setWhich} options={PERIODS} />
       </div>
-      <p style={{ margin: '0 0 16px', fontSize: 13.5, color: 'var(--ov-mute)' }}>
-        What to pay each rep by hand for the period, from their scheduled shift. Click a rep to set their rate and shift.
+      <p style={{ margin: '0 0 12px', fontSize: 13.5, color: 'var(--ov-mute)' }}>
+        What each rep earned for the period, from their scheduled shift. Click a rep to set their rate and shift. Approve & pay sends a finished week to the rep's bank through Stripe.
       </p>
+
+      {/* Prompt 753 — the off switch (recovery_config.payouts_live). */}
+      <div className="fp-live">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--ov-hi)' }}>Payouts {live ? 'on' : 'off'}</p>
+          <p style={{ margin: '2px 0 0', fontSize: 12.5, color: 'var(--ov-mute)' }}>
+            {live ? 'Approve & pay sends real money.' : "Turn on payouts when you're ready. Stripe payouts suit 1099 contractors; W-2 employees need a payroll service."}
+          </p>
+        </div>
+        <Switch checked={live} disabled={setLive.isPending} onChange={v => setLive.mutate(v)} />
+      </div>
+
+      {notice && <p role={notice.tone === 'error' ? 'alert' : 'status'} className={`fp-notice is-${notice.tone}`}>{notice.text}</p>}
 
       {repsLoading ? <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Loading…</p>
         : rows.length === 0 ? <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>No Fulfillment reps yet.</p>
           : (
             <div style={{ border: 'var(--border-w) solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-              <div className="hidden md:grid md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.4fr)_90px_90px_100px_14px] gap-x-4"
+              <div className="hidden md:grid md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.4fr)_80px_80px_90px_150px_14px] gap-x-4"
                 style={{ ...eyebrow, padding: '10px 16px', background: 'var(--bg-elevated)' }}>
                 <span>Rep</span><span>Shift</span><span style={{ justifySelf: 'end' }}>Rate</span>
-                <span style={{ justifySelf: 'end' }}>Hours</span><span style={{ justifySelf: 'end' }}>Owed</span><span />
+                <span style={{ justifySelf: 'end' }}>Hours</span><span style={{ justifySelf: 'end' }}>Owed</span><span style={{ justifySelf: 'end' }}>Payout</span><span />
               </div>
               {rows.map((r, i) => (
                 <div key={r.rep.id}>
                   <div
                     onClick={() => setOpenId(openId === r.rep.id ? null : r.rep.id)}
-                    className="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.4fr)_90px_90px_100px_14px] gap-x-4 gap-y-1 items-center table-row-hover"
+                    className="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.4fr)_80px_80px_90px_150px_14px] gap-x-4 gap-y-1 items-center table-row-hover"
                     style={{ padding: '12px 16px', cursor: 'pointer', borderTop: i ? 'var(--border-w) solid var(--border)' : 'none' }}
                   >
                     <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
@@ -179,6 +161,9 @@ export function FulfillmentPayAdminPanel() {
                       {r.est != null ? fmtCents(r.est) : '—'}
                       <span className="md:hidden" style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 8 }}>{fmtHours(r.hours)}</span>
                     </span>
+                    <span className="col-span-2 md:col-span-1" style={{ justifySelf: 'end' }} onClick={e => e.stopPropagation()}>
+                      <PayCell row={r} live={live} ended={ended} busy={payWeek.isPending} onPay={() => { setNotice(null); setConfirm(r) }} />
+                    </span>
                     <ChevronRight size={14} className="hidden md:block" style={{ color: 'var(--text-muted)', transform: openId === r.rep.id ? 'rotate(90deg)' : 'none', transition: 'transform 120ms' }} />
                   </div>
                   {openId === r.rep.id && <RepPayEditor row={r} period={period} now={now} />}
@@ -191,7 +176,39 @@ export function FulfillmentPayAdminPanel() {
               </div>
             </div>
           )}
+
+      {confirm && (
+        <ConfirmDialog
+          title={`Pay ${confirm.rep.full_name}?`}
+          confirmLabel="Approve & pay" busy={payWeek.isPending}
+          onConfirm={() => pay(confirm)} onClose={() => setConfirm(null)}
+        >
+          Sends <b style={{ fontFamily: MONO }}>{fmtCents(confirm.est)}</b> for {fmtPeriod(period)} ({fmtHours(confirm.hours)} × {fmtCents(confirm.pay?.hourly_rate_cents)}/hr)
+          {destination(confirm.account) ? <> to {destination(confirm.account)}</> : null}. The amount is worked out again from the schedule before it's sent. This can't be undone here.
+        </ConfirmDialog>
+      )}
     </section>
+  )
+}
+
+// The Payout column: Approve & pay, or where that week stands (P753).
+function PayCell({ row, live, ended, busy, onPay }) {
+  const st = row.payout?.status
+  if (st === 'paid') return <span className="fp-chip is-up">Paid</span>
+  if (st === 'approved') return <span className="fp-chip is-warn">Sending…</span>
+  const why = !live ? "Turn on payouts when you're ready"
+    : !ended ? 'Pay after the week ends'
+      : !(row.est > 0) ? 'Nothing to pay'
+        : accountStatus(row.account) !== 'ready' ? `${row.rep.full_name} hasn't finished payout setup`
+          : null
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+      {st === 'failed' && <span className="fp-chip is-bad" title={row.payout.failure_reason || ''}>Failed</span>}
+      {st === 'held' && <span className="fp-chip is-warn" title={row.payout.failure_reason || ''}>On hold</span>}
+      <button type="button" className="ov-solid ov-mb-btn is-small" disabled={!!why || busy} title={why || undefined} onClick={onPay}>
+        {st === 'failed' || st === 'held' ? 'Retry' : 'Approve & pay'}
+      </button>
+    </span>
   )
 }
 

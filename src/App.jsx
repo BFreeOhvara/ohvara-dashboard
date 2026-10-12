@@ -25,7 +25,7 @@ import AgentBilling from './pages/agent/Billing'
 import MyCalls from './pages/fulfillment/MyCalls'
 import FulfillmentOverview from './pages/fulfillment/Overview'
 import FulfillmentPipeline from './pages/fulfillment/Pipeline'
-import FulfillmentGettingPaid from './pages/fulfillment/GettingPaid'
+import MyPay, { GettingPaidRedirect } from './pages/fulfillment/MyPay'
 import Users from './pages/admin/Users'
 import Carriers from './pages/admin/Carriers'
 
@@ -166,12 +166,15 @@ export default function App() {
                 <DashboardLayout><FulfillmentPipeline /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* Prompt 683 — the rep's Getting Paid view, promoted out of Settings. */}
-            <Route path="/fulfillment/getting-paid" element={
+            {/* Prompt 683 — the rep's Getting Paid view, promoted out of Settings.
+                Prompt 753 — renamed "My pay" at /fulfillment/pay (Payout settings
+                is ?settings=1); the old path redirects, keeping its query. */}
+            <Route path="/fulfillment/pay" element={
               <ProtectedRoute allowedRoles={['fulfillment']}>
-                <DashboardLayout><FulfillmentGettingPaid /></DashboardLayout>
+                <DashboardLayout><MyPay /></DashboardLayout>
               </ProtectedRoute>
             } />
+            <Route path="/fulfillment/getting-paid" element={<GettingPaidRedirect />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

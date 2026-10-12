@@ -54,11 +54,21 @@ import type { SupabaseClient } from 'npm:@supabase/supabase-js'
 // events: checkout.session.completed, customer.subscription.created,
 //   customer.subscription.updated, customer.subscription.deleted,
 //   invoice.paid, invoice.payment_failed
+//   + transfer.reversed (Prompt 753, Fulfillment payouts)
+// Prompt 753 also points a Connect endpoint ("events on connected accounts")
+// at the same URL for account.updated and account.external_account.*; its
+// signing secret is STRIPE_CONNECT_WEBHOOK_SECRET.
 
 export type Env = {
   stripeKey?: string
   webhookSecret?: string
   publishableKey?: string
+  // Prompt 753 — Fulfillment payouts ride on this same webhook URL. A Connect
+  // endpoint ("events on connected accounts", for account.updated) has its own
+  // signing secret; either secret is accepted. Connect events (account.*,
+  // transfer.reversed) go to onConnectEvent instead of the billing sync.
+  connectWebhookSecret?: string
+  onConnectEvent?: (event: any) => Promise<Record<string, unknown>>
   fetch?: typeof fetch
   now?: () => number
 }
@@ -450,13 +460,29 @@ function subscriptionIdOf(event: any): string | null {
   }
 }
 
+const CONNECT_TYPES = ['account.updated', 'account.external_account.created', 'account.external_account.updated', 'account.external_account.deleted', 'transfer.reversed']
+
 async function handleWebhook(req: Request, admin: SupabaseClient) {
   if (!ENV.stripeKey || !ENV.webhookSecret) return json({ error: 'Billing webhook not configured' }, 503)
   const raw = await req.text()
-  if (!await verifySignature(req.headers.get('stripe-signature'), raw, ENV.webhookSecret)) {
-    return json({ error: 'Bad signature' }, 400)
-  }
+  const sig = req.headers.get('stripe-signature')
+  const ok = await verifySignature(sig, raw, ENV.webhookSecret)
+    || (!!ENV.connectWebhookSecret && await verifySignature(sig, raw, ENV.connectWebhookSecret))
+  if (!ok) return json({ error: 'Bad signature' }, 400)
   const event = JSON.parse(raw)
+
+  // Prompt 753 — Fulfillment payouts (Connect). Non-2xx makes Stripe retry.
+  if (CONNECT_TYPES.includes(event.type)) {
+    if (!ENV.onConnectEvent) return json({ received: true, ignored: event.type })
+    try {
+      const result = await ENV.onConnectEvent(event)
+      console.log(`agent-billing webhook ${event.type} (payouts)`, JSON.stringify(result))
+      return json({ received: true, ...result })
+    } catch (e) {
+      console.error(`agent-billing webhook ${event.type} (payouts) failed:`, (e as Error).message)
+      return json({ error: (e as Error).message }, 500)
+    }
+  }
   const subId = subscriptionIdOf(event)
   if (!subId) return json({ received: true, ignored: event.type })
 

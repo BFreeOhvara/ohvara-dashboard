@@ -31,11 +31,12 @@ const methodLabel = c => c?.label || (c?.last4 ? `${brandName(c.brand)} ending $
 const capText = cap => (cap == null ? 'no weekly limit' : `${cap} bookings a week`)
 const money = cents => formatWeekly(cents)
 
-export function BackBar({ onBack, title, sub }) {
+// backLabel: where the arrow goes (P753's Payout settings goes back to My pay).
+export function BackBar({ onBack, title, sub, backLabel = 'Billing' }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <button type="button" className="ov-mb-back" onClick={onBack}>
-        <ArrowLeft size={17} strokeWidth={2.1} aria-hidden="true" /> Billing
+        <ArrowLeft size={17} strokeWidth={2.1} aria-hidden="true" /> {backLabel}
       </button>
       <div>
         <h1 style={H1}>{title}</h1>

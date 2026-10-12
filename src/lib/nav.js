@@ -58,7 +58,8 @@ export const NAV = {
       // Prompt 748 — the role and the tab shared a name; the tab is "My calls".
       { to: '/fulfillment/desk', label: 'My calls', icon: Phone },
       { to: '/fulfillment/pipeline', label: 'Pipeline', icon: ListFilter },
-      { to: '/fulfillment/getting-paid', label: 'Getting Paid', icon: Wallet },
+      // Prompt 753 — Getting Paid → My pay.
+      { to: '/fulfillment/pay', label: 'My pay', icon: Wallet },
     ] },
     { group: 'Communications', items: [
       { to: '/messages', label: 'Messages', icon: MessageSquare },

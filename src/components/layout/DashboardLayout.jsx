@@ -51,7 +51,7 @@ const TITLES = {
   '/fulfillment': ['Overview', 'Your day at a glance'],
   '/fulfillment/desk': ['My calls', 'Your day, call by call'],
   '/fulfillment/pipeline': ['Pipeline', 'Every client on your book and where each cancellation stands'],
-  '/fulfillment/getting-paid': ['Getting Paid', 'Clock in and out, hours logged, and your estimated pay'],
+  '/fulfillment/pay': ['My pay', "Your hours, what you've earned, and where it's paid"],
   '/messages': ['Messages', 'Fulfillment and Admin, in one place'],
   '/settings': ['Settings', 'Your account, security and preferences'],
 }
