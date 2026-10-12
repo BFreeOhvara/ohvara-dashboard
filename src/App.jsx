@@ -21,7 +21,7 @@ import AgentBookCall from './pages/agent/BookCall'
 import AgentClients from './pages/agent/Clients'
 import AgentActivity from './pages/agent/Activity'
 import AgentBilling from './pages/agent/Billing'
-import FulfillmentQueue from './pages/fulfillment/FulfillmentQueue'
+import MyCalls from './pages/fulfillment/MyCalls'
 import FulfillmentOverview from './pages/fulfillment/Overview'
 import FulfillmentPipeline from './pages/fulfillment/Pipeline'
 import FulfillmentGettingPaid from './pages/fulfillment/GettingPaid'
@@ -146,7 +146,8 @@ export default function App() {
             } />
 
             {/* Prompt 681 — Fulfillment gets an Overview landing page and a
-                team-wide Pipeline; the claim desk moved to /fulfillment/desk. */}
+                team-wide Pipeline; the claim desk moved to /fulfillment/desk.
+                Prompt 748 — /fulfillment/desk is "My calls", one day at a time. */}
             <Route path="/fulfillment" element={
               <ProtectedRoute allowedRoles={['fulfillment', 'admin']}>
                 <DashboardLayout><FulfillmentOverview /></DashboardLayout>
@@ -154,7 +155,7 @@ export default function App() {
             } />
             <Route path="/fulfillment/desk" element={
               <ProtectedRoute allowedRoles={['fulfillment', 'admin']}>
-                <DashboardLayout><FulfillmentQueue /></DashboardLayout>
+                <DashboardLayout><MyCalls /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/fulfillment/pipeline" element={

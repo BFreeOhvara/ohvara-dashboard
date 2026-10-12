@@ -49,7 +49,7 @@ const TITLES = {
   '/admin/users': ['Users & Access', 'Accounts, roles and invites'],
   '/admin/carriers': ['Carrier hours', 'When each carrier takes calls, which sets the bookable times'],
   '/fulfillment': ['Overview', 'Your day at a glance'],
-  '/fulfillment/desk': ['Fulfillment', 'Your calls, day by day'],
+  '/fulfillment/desk': ['My calls', 'Your day, call by call'],
   '/fulfillment/pipeline': ['Pipeline', 'Every submission across every agent, and where it stands'],
   '/fulfillment/getting-paid': ['Getting Paid', 'Clock in and out, hours logged, and your estimated pay'],
   '/messages': ['Messages', 'Fulfillment and Admin, in one place'],

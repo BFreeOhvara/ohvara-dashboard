@@ -67,7 +67,7 @@ export default function FulfillmentOverview() {
         : team ? 'Nothing else on the team’s calendar today.' : 'Nothing else on your calendar today.'
   const action = day.first
     ? { label: team ? 'Open the next call' : 'Open your next call', icon: Phone, onClick: () => open(day.first.id) }
-    : { label: 'Open the desk', icon: Phone, onClick: () => navigate('/fulfillment/desk') }
+    : { label: 'Open My calls', icon: Phone, onClick: () => navigate('/fulfillment/desk') }
 
   const countLine = `${plural(day.total, 'call')} on ${team ? 'the' : 'your'} calendar${where} today. ${day.done.length} done, ${day.left} to go.`
   const dash = v => (isLoading ? '—' : v)
@@ -103,7 +103,7 @@ export default function FulfillmentOverview() {
           next={day.next} nextIn={day.next ? inLabel(day.next.ms, now) : ''}
           later={day.rest} more={day.more}
           done={day.done} doneTime={iso => timeText(iso, tz)}
-          onOpen={open} onCalendar={() => navigate(`/fulfillment/desk?day=${todayStr}`)}
+          onOpen={open} onCalendar={() => navigate('/fulfillment/desk')}
           calendarLabel={team ? 'See the calendar' : 'See your calendar'}
         />
 

@@ -1,5 +1,5 @@
 import {
-  Users, Home, Settings, Award, ClipboardList, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard, Building2,
+  Users, Home, Settings, Award, ClipboardList, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard, Building2, Phone,
 } from 'lucide-react'
 
 // Each role's sidebar, grouped. Moved out of Sidebar.jsx by Prompt 722 so the
@@ -55,7 +55,8 @@ export const NAV = {
       { to: '/fulfillment', label: 'Overview', icon: Home },
     ] },
     { group: 'Work', items: [
-      { to: '/fulfillment/desk', label: 'Fulfillment', icon: ClipboardList },
+      // Prompt 748 — the role and the tab shared a name; the tab is "My calls".
+      { to: '/fulfillment/desk', label: 'My calls', icon: Phone },
       { to: '/fulfillment/pipeline', label: 'Pipeline', icon: ListFilter },
       { to: '/fulfillment/getting-paid', label: 'Getting Paid', icon: Wallet },
     ] },

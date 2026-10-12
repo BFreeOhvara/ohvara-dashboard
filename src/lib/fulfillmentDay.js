@@ -94,7 +94,6 @@ export const CALL_TONE = {
   cancelled: { label: 'Cancelled', fg: 'var(--ov-st-cancelled)', tint: 'var(--ov-st-cancelled-tint)', edge: 'var(--ov-st-cancelled-edge)' },
   late:      { label: 'Time passed', fg: 'var(--ov-warn)', tint: 'var(--ov-warn-tint)', edge: 'color-mix(in srgb, var(--ov-warn) 40%, transparent)' },
 }
-export const LEGEND = ['booked', 'live', 'noAnswer', 'cancelled']
 
 // Every call on the calendar between two zone days (`from`..`to`, YYYY-MM-DD,
 // inclusive), soonest first. One rule set for the Overview's day and the
@@ -194,33 +193,7 @@ export function buildDay(rows, nowMs, tz, { team = false } = {}) {
   }
 }
 
-// ── Prompt 747 — the month calendar ──────────────────────────────────────
-
-const ymd = (y, m, d) => {
-  const t = new Date(Date.UTC(y, m - 1, d))
-  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`
-}
-
-// '2026-10' moved by `n` months.
-export function addMonths(month, n) {
-  const [y, m] = month.split('-').map(Number)
-  return ymd(y, m + n, 1).slice(0, 7)
-}
-
-// One month on the rep's calendar: its days, the blank cells before the 1st
-// (weeks run Sunday to Saturday) and the instants that start and end it.
-export function monthFrame(month, tz) {
-  const zone = zoneOf(tz)
-  const [y, m] = month.split('-').map(Number)
-  const count = new Date(Date.UTC(y, m, 0)).getUTCDate()
-  const dates = Array.from({ length: count }, (_, i) => ymd(y, m, i + 1))
-  return {
-    month, zone, dates, from: dates[0], to: dates[count - 1],
-    lead: new Date(Date.UTC(y, m - 1, 1)).getUTCDay(),
-    startMs: dayStartMs(dates[0], zone),
-    endMs: dayStartMs(`${addMonths(month, 1)}-01`, zone),
-  }
-}
+// ── Prompt 747 — date labels ─────────────────────────────────────────────
 
 // Zone-free labels for a YYYY-MM or YYYY-MM-DD.
 const utcNoon = s => {
@@ -228,7 +201,82 @@ const utcNoon = s => {
   return new Date(Date.UTC(y, m - 1, d, 12))
 }
 const fmt = (s, opts) => utcNoon(s).toLocaleDateString('en-US', { ...opts, timeZone: 'UTC' })
-export const monthTitle = month => fmt(month, { month: 'long', year: 'numeric' })            // October 2026
-export const monthShort = month => fmt(month, { month: 'short', year: 'numeric' })           // Oct 2026
 export const dayLong = date => fmt(date, { weekday: 'long', month: 'long', day: 'numeric' })  // Tuesday, October 13
 export const dayShort = date => fmt(date, { weekday: 'short', month: 'short', day: 'numeric' }) // Tue, Oct 13
+
+// ── Prompt 748 — My calls, one day at a time ─────────────────────────────
+
+// The instants that start and end one zone day.
+export function dayBounds(date, tz) {
+  const zone = zoneOf(tz)
+  return { startMs: dayStartMs(date, zone), endMs: dayStartMs(addDaysStr(date, 1), zone) }
+}
+
+// Whole days from `a` to `b` (YYYY-MM-DD, zone-free).
+export const daysBetween = (a, b) => Math.round((utcNoon(b) - utcNoon(a)) / 864e5)
+
+// "tomorrow" / "yesterday" / "in 3 days" / "2 days ago" ('' on today).
+export function relDay(date, today) {
+  const n = daysBetween(today, date)
+  if (n === 0) return ''
+  if (n === 1) return 'tomorrow'
+  if (n === -1) return 'yesterday'
+  return n > 0 ? `in ${n} days` : `${-n} days ago`
+}
+
+export const weekdayLong = date => fmt(date, { weekday: 'long' })                              // Sunday
+export const todayBadge = date => fmt(date, { weekday: 'short', day: 'numeric' }).replace(/^(\d+)\s+(\w+)$/, '$2 $1') // Sat 10
+
+// "tomorrow" / "Mon" (within a week) / "Tue, Oct 20" for the footer line.
+export function dayWord(date, today) {
+  const n = daysBetween(today, date)
+  if (n === 0) return 'today'
+  if (n === 1) return 'tomorrow'
+  if (n === -1) return 'yesterday'
+  if (n > 1 && n < 7) return fmt(date, { weekday: 'short' })
+  return dayShort(date)
+}
+
+// The hour of day (9.5 = 9:30) of an instant in the zone.
+export function hourOf(iso, tz) {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: zoneOf(tz), hour: 'numeric', minute: 'numeric', hourCycle: 'h23' }).formatToParts(new Date(iso))
+  const get = type => Number(parts.find(p => p.type === type)?.value || 0)
+  return (get('hour') % 24) + get('minute') / 60
+}
+
+// The zone day a call belongs on: a live call today, a cancellation the day it
+// was done, anything else its booked time (a No answer's next try).
+export function callDayOf(p, nowMs, tz) {
+  const zone = zoneOf(tz)
+  const at = isLive(p) ? nowMs
+    : p.fulfillment_stage === 'Complete' ? (p.fulfillment_completed_at || p.scheduled_call_at)
+      : (p.scheduled_call_at || p.last_call_at)
+  return zonedDateStr(at ? new Date(at).getTime() : nowMs, zone)
+}
+
+// "Today 3:30 PM" / "Tomorrow 9:00 AM" / "Tue 1:00 PM" / "Oct 20 1:00 PM".
+export function whenShort(iso, nowMs, tz) {
+  const zone = zoneOf(tz)
+  const date = zonedDateStr(new Date(iso).getTime(), zone)
+  const n = daysBetween(zonedDateStr(nowMs, zone), date)
+  const day = n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : n === -1 ? 'Yesterday'
+    : Math.abs(n) < 7 ? fmt(date, { weekday: 'short' }) : fmt(date, { month: 'short', day: 'numeric' })
+  return `${day} ${timeText(iso, zone)}`
+}
+
+// One day's calls counted: done (cancelled + no answer), the live one, and the
+// ones still to make (`late` = a booked time that passed without a call).
+export function dayTally(calls) {
+  const t = { total: calls.length, cancelled: 0, noAnswer: 0, live: 0, toGo: 0, late: 0 }
+  for (const c of calls) {
+    if (c.tone === 'live') t.live++
+    else if (c.done && c.tone === 'cancelled') t.cancelled++
+    else if (c.done) t.noAnswer++
+    else {
+      t.toGo++
+      if (c.late) t.late++
+    }
+  }
+  t.done = t.cancelled + t.noAnswer
+  return t
+}

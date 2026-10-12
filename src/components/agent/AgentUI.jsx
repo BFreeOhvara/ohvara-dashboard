@@ -2238,7 +2238,9 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
 // Prompt 747 — `header` ({ title, body }) swaps the client header for another
 // (the Fulfillment calendar's day drawer): `title` sits beside the X, `body`
 // under it. `closeRef` hands the parent the slide-out. The shell is unchanged.
-export function ClientDrawer({ p, tab, name: nameProp, meta, onClose, onMessage, messageLabel, footer, children, header, closeRef: closeOut }) {
+// Prompt 748 — `header.style` and `footerStyle` (the My calls drawer's status
+// tint) are optional.
+export function ClientDrawer({ p, tab, name: nameProp, meta, onClose, onMessage, messageLabel, footer, footerStyle, children, header, closeRef: closeOut }) {
   const closeBtn = useRef(null)
   const onCloseRef = useRef(onClose)
   useEffect(() => { onCloseRef.current = onClose })
@@ -2278,7 +2280,7 @@ export function ClientDrawer({ p, tab, name: nameProp, meta, onClose, onMessage,
         onAnimationEnd={e => { if (closing && e.target === e.currentTarget) finish.current() }}
       >
         {header ? (
-          <div className="px-5 sm:px-[26px]" style={{ paddingTop: 22, paddingBottom: 18, borderBottom: '1px solid var(--ov-line)' }}>
+          <div className="px-5 sm:px-[26px]" style={{ paddingTop: 22, paddingBottom: 18, borderBottom: '1px solid var(--ov-line)', ...header.style }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               {header.title}
               <button ref={closeBtn} type="button" onClick={() => requestClose.current()} aria-label="Close" className="ov-ghost"
@@ -2334,7 +2336,7 @@ export function ClientDrawer({ p, tab, name: nameProp, meta, onClose, onMessage,
           {children}
         </div>
         {footer && (
-          <div className="px-5 sm:px-[26px]" style={{ paddingTop: 18, paddingBottom: 'calc(24px + env(safe-area-inset-bottom))', borderTop: '1px solid var(--ov-line)' }}>
+          <div className="px-5 sm:px-[26px]" style={{ paddingTop: 18, paddingBottom: 'calc(24px + env(safe-area-inset-bottom))', borderTop: '1px solid var(--ov-line)', ...footerStyle }}>
             {footer}
           </div>
         )}
