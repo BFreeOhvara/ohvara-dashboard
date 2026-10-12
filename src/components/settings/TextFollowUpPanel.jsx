@@ -134,6 +134,16 @@ function AdminControls({ config }) {
         </div>
         <Switch checked={!!config.sms_live} disabled={save.isPending} onChange={v => save.mutate({ sms_live: v })} />
       </div>
+      {/* Prompt 751 — the pop-up phone's off switch (recovery_config.voice_live). */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>Calling in the portal</p>
+          <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--ov-mute)' }}>
+            Off: Call client works the old way and the portal phone opens as a preview. Turn on once Ohvara's number is approved and the Twilio app is set up.
+          </p>
+        </div>
+        <Switch checked={!!config.voice_live} disabled={save.isPending} onChange={v => save.mutate({ voice_live: v })} />
+      </div>
 
       <p className="ov-box" style={{ margin: 0, padding: '12px 14px', borderRadius: 14, fontSize: 13.5, color: 'var(--ov-soft)', display: 'flex', gap: 8, alignItems: 'flex-start', lineHeight: 1.5 }}>
         <MessageSquareText size={15} style={{ flexShrink: 0, marginTop: 2 }} /> {senderText}

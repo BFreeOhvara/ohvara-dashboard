@@ -106,6 +106,7 @@ const FULFILLMENT_SELECT = `
   scheduled_call_at, fulfillment_stage, assigned_fulfillment_id, created_at, updated_at,
   fulfillment_claimed_at, fulfillment_started_at, fulfillment_completed_at,
   cancellation_substatus, cancellation_confirmation, cancellation_notes,
+  cancellation_effective_date, drafts_stopped,
   call_live_since, last_call_outcome, call_attempts, last_call_at,
   recovery_step, recovery_retry_at, recovery_am_sent_at, recovery_pm_sent_at,
   client_city, client_timezone, carrier_id,

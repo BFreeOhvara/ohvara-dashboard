@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { SecretsProvider } from './contexts/SecretsContext'
+import { PortalPhoneProvider } from './contexts/PortalPhoneContext'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 import { ErrorBoundary } from './components/shared/ErrorBoundary'
@@ -64,6 +65,8 @@ export default function App() {
       <AuthProvider>
         <SecretsProvider>
         <BrowserRouter>
+          {/* Prompt 751 — the pop-up phone sits above the routes so a call stays up across pages. */}
+          <PortalPhoneProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/join/:token" element={<Join />} />
@@ -172,6 +175,7 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </PortalPhoneProvider>
         </BrowserRouter>
         </SecretsProvider>
       </AuthProvider>

@@ -1,21 +1,21 @@
 // ============================================================
 // twilio-token — mint a Twilio Voice Access Token for the browser
 //
-// The rep's CallModal calls this on open. It returns a short-lived
-// JWT (Access Token) that the @twilio/voice-sdk Device uses to
-// register and place WebRTC calls. Replaces the Prompt 29 bridge
-// (twilio-call) — audio runs through the rep's mic/headset, Twilio
-// dials the lead directly (1 leg, ~$0.0065/min).
+// Prompt 751: the fulfillment pop-up phone calls this when it opens.
+// It returns a short-lived JWT (Access Token) that the
+// @twilio/voice-sdk Device uses to join the call's conference over
+// WebRTC — audio runs through the rep's mic/headset.
 //
 // Deploy WITH jwt verification (this is called by an authed rep):
 //   supabase functions deploy twilio-token --project-ref jjextitmbptoaolacocs
 //
 // Required Supabase secrets:
-//   TWILIO_ACCOUNT_SID      — Twilio account SID (ACxxxx)
+//   TWILIO_ACCOUNT_SID      — Twilio account SID (ACxxxx); falls back
+//                             to CALLER_ID_TWILIO_ACCOUNT_SID
 //   TWILIO_API_KEY_SID      — Standard API Key SID (SKxxxx)
 //   TWILIO_API_KEY_SECRET   — that API Key's secret
 //   TWILIO_TWIML_APP_SID    — Voice TwiML App SID (APxxxx), Voice URL
-//                             = .../functions/v1/twilio-voice-webhook
+//                             = .../functions/v1/fulfillment-voice
 //   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY — to resolve the caller
 //
 // The token's identity = the calling rep's profile_id (auth user id),
@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
     })
   }
 
-  const accountSid   = Deno.env.get('TWILIO_ACCOUNT_SID')
+  const accountSid   = Deno.env.get('TWILIO_ACCOUNT_SID') ?? Deno.env.get('CALLER_ID_TWILIO_ACCOUNT_SID')
   const apiKeySid    = Deno.env.get('TWILIO_API_KEY_SID')
   const apiKeySecret = Deno.env.get('TWILIO_API_KEY_SECRET')
   const twimlAppSid  = Deno.env.get('TWILIO_TWIML_APP_SID')

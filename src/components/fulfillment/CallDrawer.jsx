@@ -6,6 +6,7 @@ import { useCarriers } from '../../hooks/useCarriers'
 import { useClientCall, useCallActions } from '../../hooks/useCallActions'
 import { useCorrectResult } from '../../hooks/usePolicies'
 import { ResultFixBar } from './ResultFixBar'
+import { usePortalPhone } from '../../contexts/portalPhone'
 import { ClientDrawer } from '../agent/AgentUI'
 import { Segmented } from '../ui/Segmented'
 import { SavedTick } from '../ui/SavedTick'
@@ -39,8 +40,11 @@ const SUBSTATUS_LABEL = Object.fromEntries(SUBSTATUS.map(s => [s.value, s.label]
 export function CallButton({ p, call, className, style, children, icon = true }) {
   if (!p.client_phone) return null
   const calling = call.state.phase === 'calling'
-  const Icon = call.canBridge ? PhoneCall : Phone
+  const Icon = call.canBridge || call.portal ? PhoneCall : Phone
   const inner = <>{icon && (calling ? <Loader2 size={17} className="animate-spin" /> : <Icon size={17} strokeWidth={2.1} />)}{children}</>
+  if (call.portal) {
+    return <button type="button" onClick={e => { e.stopPropagation(); call.openPhone() }} className={className} style={style}>{inner}</button>
+  }
   if (!call.canBridge) {
     return <a href={telHref(p.client_phone)} onClick={e => { e.stopPropagation(); call.onCall?.() }} className={className} style={style}>{inner}</a>
   }
@@ -113,6 +117,8 @@ function ChangeResult({ p, result }) {
 export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpenCall, fix }) {
   const navigate = useNavigate()
   const { data: carriers } = useCarriers()
+  const phone = usePortalPhone()
+  const onPhone = phone.activeId === p.id
   const act = useCallActions(p)
   const mine = p.assigned_fulfillment_id === profile?.id
   const done = p.fulfillment_stage === 'Complete'
@@ -189,6 +195,13 @@ export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpe
         {changeLink}
       </div>
     )
+  } else if (live && onPhone) {
+    footer = (
+      <div className="mc-foot-row">
+        <span>You're on this call in the portal phone. Record how it went there when it ends.</span>
+        <button type="button" className="mc-link" onClick={() => phone.open(p)}><PhoneCall size={13} /> Show phone</button>
+      </div>
+    )
   } else if (live) {
     footer = (
       <>
@@ -219,6 +232,9 @@ export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpe
         <CallStatus p={p} call={call} style={{ marginTop: 10 }} />
         <div className="mc-foot-row" style={{ marginTop: 12 }}>
           <span>{[callHint(p, canBridge)].flat().join(' ')}</span>
+          {!phone.voiceLive && p.client_phone && (
+            <button type="button" className="mc-link" onClick={() => phone.open(p)}><PhoneCall size={13} /> Preview the portal phone</button>
+          )}
           {passLink}
           {changeLink}
         </div>
@@ -299,6 +315,16 @@ export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpe
         <div className="mc-tile"><div>Booked by</div><div>{agent}{bookedOn ? ` · ${bookedOn}` : ''}</div></div>
         <div className="mc-tile"><div>Calls so far</div><div>{live ? `${Math.max(attempts, 1)}, this one` : attempts ? attempts : 'None yet'}</div></div>
       </div>
+
+      {done && (p.cancellation_confirmation || p.cancellation_effective_date) && (
+        <div className="mc-grid2">
+          <div className="mc-tile"><div>Confirmation</div><div style={{ fontFamily: MONO, overflowWrap: 'anywhere' }}>{p.cancellation_confirmation || 'Not recorded'}</div></div>
+          <div className="mc-tile">
+            <div>Takes effect</div>
+            <div>{p.cancellation_effective_date ? dayShort(p.cancellation_effective_date) : 'Not recorded'}{p.drafts_stopped ? ' · drafts stopped' : ''}</div>
+          </div>
+        </div>
+      )}
 
       {(mine || p.cancellation_notes) && (
         <div>

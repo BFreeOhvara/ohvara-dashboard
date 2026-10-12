@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useUpdatePolicy, useStartCall, useEndCall, useSetRescheduleReason, usePassOnCancellation } from './usePolicies'
 import { invokeCallerId, FALLBACK_CODES } from '../lib/callerId'
 import { isLive } from '../lib/agentBookings'
+import { usePortalPhone } from '../contexts/portalPhone'
 
 // ── calling the client (Prompt 666) ─────────────────────────────────────────
 // "Call client" rings the rep's own phone first (Twilio), then connects them to
@@ -9,8 +10,13 @@ import { isLive } from '../lib/agentBookings'
 // and offers the direct dial instead. Without the agent's caller ID it's a
 // plain tel: link. `onCall` fires once the call is under way (either path),
 // which is what puts the item on a live call.
+// Prompt 751: once calling in the portal is on (recovery_config.voice_live),
+// the button opens the pop-up phone instead (`portal`), for the rep who can
+// work the call.
 export function useClientCall(p, { canBridge, onCall }) {
   const [state, setState] = useState({ phase: 'idle' })
+  const phone = usePortalPhone()
+  const portal = phone.voiceLive && !!onCall
   async function bridge() {
     setState({ phase: 'calling' })
     try {
@@ -21,7 +27,7 @@ export function useClientCall(p, { canBridge, onCall }) {
       setState({ phase: FALLBACK_CODES.has(e.code) ? 'fallback' : 'error', message: e.message })
     }
   }
-  return { state, canBridge, bridge, onCall }
+  return { state, canBridge, bridge, onCall, portal, openPhone: () => phone.open(p) }
 }
 
 // The three ways out of a call, shared by the drawer and the page's focus card.

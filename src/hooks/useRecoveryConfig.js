@@ -2,15 +2,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 // Prompt 696 — the single row of no-answer recovery settings (migration 122):
-// whether texting is switched on, and the morning / evening send times. Any
+// whether texting is switched on, and the morning / evening send times.
+// Prompt 751 adds voice_live, the pop-up phone's switch. Any
 // signed-in user can read it; only an admin can write.
-export function useRecoveryConfig() {
+export function useRecoveryConfig({ enabled = true } = {}) {
   return useQuery({
     queryKey: ['recovery-config'],
+    enabled,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('recovery_config')
-        .select('sms_live, reminder_time, evening_time')
+        .select('sms_live, voice_live, reminder_time, evening_time')
         .limit(1)
         .maybeSingle()
       if (error) throw error
