@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Check, Loader2, MessageCircleMore, MessageSquare, Phone, PhoneCall, ShieldAlert, Shuffle } from 'lucide-react'
+import { ArrowRight, Check, Loader2, MessageCircleMore, MessageSquare, Phone, PhoneCall, ShieldAlert, Shuffle, Undo2 } from 'lucide-react'
 import { dmId } from '../../hooks/useDirectMessages'
 import { useCarriers } from '../../hooks/useCarriers'
 import { useClientCall, useCallActions } from '../../hooks/useCallActions'
+import { useCorrectResult } from '../../hooks/usePolicies'
+import { ResultFixBar } from './ResultFixBar'
 import { ClientDrawer } from '../agent/AgentUI'
 import { Segmented } from '../ui/Segmented'
 import { SavedTick } from '../ui/SavedTick'
@@ -15,7 +17,7 @@ import { bookingCarrier } from '../../lib/carriers'
 import { zonedDateStr } from '../../lib/timezones'
 import { CALL_TONE, buildCalls, dayShort, whenShort } from '../../lib/fulfillmentDay'
 import { addDaysStr } from '../../lib/scheduling'
-import { agentCallerIdOn, callHint, callTone, carrierOpenText, clientTimeText, firstName, initialsOf, telHref } from '../../lib/fulfillmentCall'
+import { RESULT_TEXT, agentCallerIdOn, callHint, callTone, carrierOpenText, changeableResult, clientTimeText, firstName, initialsOf, otherResult, telHref } from '../../lib/fulfillmentCall'
 
 // Prompt 748 — a call on My calls opens in this drawer (My Pipeline's
 // ClientDrawer shell) instead of a page of its own. It carries every action
@@ -83,7 +85,32 @@ function StatusPill({ p, now }) {
   )
 }
 
-export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpenCall }) {
+// Prompt 750 — "Change result" in the footer: Cancelled ↔ No answer, with a
+// two-choice confirm. Shown while the user may still change it
+// (changeableResult: the rep the same day, admin any time).
+function ChangeResult({ p, result }) {
+  const [asking, setAsking] = useState(false)
+  const correct = useCorrectResult()
+  const to = otherResult(result)
+  if (!asking) {
+    return <button type="button" className="mc-link" onClick={() => setAsking(true)}><Undo2 size={13} /> Change result</button>
+  }
+  return (
+    <div className="mc-change">
+      <div className="mc-change-row">
+        <button type="button" className="mc-link" style={{ color: 'var(--ov-data-a)' }} disabled={correct.isPending}
+          onClick={() => correct.mutate({ id: p.id, to }, { onSuccess: () => setAsking(false) })}>
+          {correct.isPending ? 'Changing…' : `Change to ${RESULT_TEXT[to]}`}
+        </button>
+        <button type="button" className="mc-link" onClick={() => { setAsking(false); correct.reset() }}>Keep it</button>
+      </div>
+      {to === 'no_answer' && <p>The agent will get a note that it isn't cancelled yet.</p>}
+      {correct.error && <p style={{ color: 'var(--danger)' }}>Couldn't change it: {correct.error.message || 'try again'}</p>}
+    </div>
+  )
+}
+
+export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpenCall, fix }) {
   const navigate = useNavigate()
   const { data: carriers } = useCarriers()
   const act = useCallActions(p)
@@ -96,6 +123,10 @@ export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpe
   const canWork = mine && !done
   const canBridge = agentCallerIdOn(p) && mine
   const call = useClientCall(p, { canBridge, onCall: canWork ? act.start : undefined })
+  const fixing = fix?.fix?.id === p.id
+  const result = fixing ? null : changeableResult(p, { isAdmin, mine, tz, now })
+  const changeLink = result ? <ChangeResult key={result} p={p} result={result} /> : null
+  const marked = r => ({ onSuccess: () => fix?.show(p, r) })
 
   const [notes, setNotes] = useState(p.cancellation_notes || '')
   const [saved, setSaved] = useState(false)
@@ -143,6 +174,7 @@ export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpe
         {isAdmin && !done && (
           <button type="button" onClick={pass} disabled={act.passing} className="mc-link"><Shuffle size={13} /> {act.passing ? 'Reassigning…' : 'Reassign'}</button>
         )}
+        {changeLink}
       </div>
     )
   } else if (done) {
@@ -154,6 +186,7 @@ export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpe
             Next call <ArrowRight size={15} strokeWidth={2.3} />
           </button>
         )}
+        {changeLink}
       </div>
     )
   } else if (live) {
@@ -161,10 +194,10 @@ export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpe
       <>
         <p className="mc-hung"><span />Hung up? Mark how it went.</p>
         <div className="mc-grid2">
-          <button type="button" onClick={() => act.cancelled(notes)} disabled={act.busy} className={`${btn} mc-btn-ok`} style={{ height: 48 }}>
+          <button type="button" onClick={() => act.cancelled(notes, marked('cancelled'))} disabled={act.busy} className={`${btn} mc-btn-ok`} style={{ height: 48 }}>
             <Check size={17} strokeWidth={2.6} /> Cancelled
           </button>
-          <button type="button" onClick={act.noAnswer} disabled={act.busy} className={`${btn} ov-ghost`} style={{ height: 48 }}>No answer</button>
+          <button type="button" onClick={() => act.noAnswer(marked('no_answer'))} disabled={act.busy} className={`${btn} ov-ghost`} style={{ height: 48 }}>No answer</button>
         </div>
         <div className="mc-foot-row" style={{ marginTop: 12 }}>
           <span>Reached them but it needs another call? Pick No answer.</span>
@@ -179,7 +212,7 @@ export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpe
           {p.client_phone
             ? <CallButton p={p} call={call} className={`${btn} ov-solid`} style={{ height: 48 }}>Call client</CallButton>
             : <span className={`${btn} ov-ghost`} style={{ height: 48, opacity: 0.6 }}>No number</span>}
-          <button type="button" onClick={() => act.cancelled(notes)} disabled={act.saving} className={`${btn} ov-ghost`} style={{ height: 48 }}>
+          <button type="button" onClick={() => act.cancelled(notes, marked('cancelled'))} disabled={act.saving} className={`${btn} ov-ghost`} style={{ height: 48 }}>
             <Check size={16} strokeWidth={2.4} /> Mark cancelled
           </button>
         </div>
@@ -187,6 +220,7 @@ export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpe
         <div className="mc-foot-row" style={{ marginTop: 12 }}>
           <span>{[callHint(p, canBridge)].flat().join(' ')}</span>
           {passLink}
+          {changeLink}
         </div>
       </>
     )
@@ -234,7 +268,7 @@ export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpe
           </>
         ),
       }}
-      footer={footer}
+      footer={<>{fix?.fix && <ResultFixBar ctl={fix} inline />}{footer}</>}
       footerStyle={live && mine ? { background: 'color-mix(in srgb, var(--ov-live) 5%, transparent)' } : undefined}
     >
       {canBridge && p.client_phone && !done && (

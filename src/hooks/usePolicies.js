@@ -165,6 +165,19 @@ export function useEndCall() {
   })
 }
 
+// Prompt 750 — fix a wrong result: Cancelled ↔ No answer (migration 136). The
+// server holds the rules (rep same day, admin any time, never while live).
+export function useCorrectResult() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, to }) => {
+      const { error } = await supabase.rpc('fulfillment_correct_result', { p_policy: id, p_to: to })
+      if (error) throw error
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),
+  })
+}
+
 // The optional reason on a call that already ended as No answer.
 export function useSetRescheduleReason() {
   const qc = useQueryClient()

@@ -2356,6 +2356,28 @@ a.ov-hpill:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; 
 .mc-pass { display: inline-flex; align-items: center; gap: 12px; color: var(--ov-soft); }
 .mc-callnote { margin: 0; font-size: 12.5px; line-height: 1.5; }
 
+/* Prompt 750 — the quick fix after a result, and Change result in the drawer */
+.mc-fix-wrap { position: fixed; left: 0; right: 0; bottom: 24px; z-index: 150; display: flex; justify-content: center; padding: 0 16px; pointer-events: none; }
+.mc-fix {
+  pointer-events: auto; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; max-width: 100%;
+  padding: 12px 12px 12px 18px; border-radius: 14px; font-size: 13.5px; color: var(--ov-hi);
+  animation: mcFixIn 180ms ease-out; transition: opacity 250ms ease;
+}
+.mc-fix.is-inline { margin-bottom: 12px; padding: 10px 10px 10px 14px; box-shadow: none; }
+.mc-fix.is-leaving { opacity: 0; }
+.mc-fix-text { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; }
+.mc-fix-sep { color: var(--ov-faint); }
+.mc-fix-act { font-size: 13.5px; color: var(--ov-data-a); }
+.mc-fix-act:hover { color: var(--ov-hi); }
+.mc-fix-err { flex-basis: 100%; font-size: 12.5px; color: var(--danger); }
+.mc-fix-x { margin-left: auto; width: 28px; height: 28px; border: none; border-radius: 8px; background: none; color: var(--ov-faint); font-size: 18px; line-height: 1; cursor: pointer; }
+.mc-fix-x:hover { color: var(--ov-hi); background: var(--ov-stub); }
+@keyframes mcFixIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .mc-fix { animation: none; } }
+.mc-change { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.mc-change-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.mc-change p { margin: 0; font-size: 12.5px; color: var(--ov-mute); }
+
 /* Phones: usable, not polished (the mobile redesign comes later). */
 @media (max-width: 899.98px) {
   .mc-date h1 { font-size: 28px; }

@@ -33,12 +33,12 @@ export function useCallActions(p) {
   const passOn = usePassOnCancellation()
   return {
     start: () => { if (!isLive(p) && p.fulfillment_stage !== 'Complete') startCall.mutate(p.id) },
-    noAnswer: () => endCall.mutate({ id: p.id, outcome: 'no_answer' }),
+    noAnswer: opts => endCall.mutate({ id: p.id, outcome: 'no_answer' }, opts),
     // `notes` undefined leaves the saved notes as they are.
-    cancelled: notes => update.mutate({
+    cancelled: (notes, opts) => update.mutate({
       id: p.id, fulfillment_stage: 'Complete', status: 'In Effect',
       ...(notes === undefined ? null : { cancellation_notes: notes.trim() || null }),
-    }),
+    }, opts),
     reason: value => setReason.mutate({ id: p.id, reason: p.cancellation_substatus === value ? null : value }),
     saveNotes: (notes, opts) => update.mutate({ id: p.id, cancellation_notes: notes.trim() || null }, opts),
     passOn: opts => passOn.mutate(p.id, opts),

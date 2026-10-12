@@ -64,10 +64,17 @@ function editedText(d) {
   return `Details changed: ${changes.map(c => (FIELD_LABEL[c.field] || c.field).toLowerCase()).join(', ')}`
 }
 
+// Prompt 750 — a result Fulfillment fixed (fulfillment_correct_result) reads
+// as a change, not a fresh call.
+const correctionText = e => (e.detail?.correction
+  ? `Result changed to ${e.kind === 'cancelled' ? 'Cancelled' : 'No answer'}` : null)
+
 // The feed's sentence for one event.
 function describe(e) {
   const d = e.detail || {}
   const tz = tzOf(e)
+  const fixed = correctionText(e)
+  if (fixed) return fixed
   const attempt = d.attempt > 1 ? ` (try ${d.attempt})` : ''
   switch (e.kind) {
     case 'booked':
@@ -89,6 +96,8 @@ function storyStep(e, isAdmin) {
   const d = e.detail || {}
   const tz = tzOf(e)
   const when = callWhen(e.at)
+  const fixed = correctionText(e)
+  if (fixed) return { label: fixed, sub: when }
   const forTime = d.scheduled_call_at ? ` · for ${callAt(d.scheduled_call_at, tz)}` : ''
   switch (e.kind) {
     case 'booked':

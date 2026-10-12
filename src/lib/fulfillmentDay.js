@@ -136,10 +136,26 @@ export function buildCalls(rows, nowMs, tz, { from, to, events = null } = {}) {
 
   if (events) {
     const byId = new Map(rows.map(p => [p.id, p]))
+    // Prompt 750 — a corrected result (detail.correction) replaces the outcome
+    // it fixed, keeping that call's time; it isn't a second call. An admin's
+    // fix of an earlier day's call isn't a call on the day it was made.
+    const lastOf = new Map()
     for (const e of events) {
       const p = byId.get(e.policy_id)
       const tone = e.kind === 'cancelled' ? 'cancelled' : (e.kind === 'no_answer' || e.kind === 'rescheduling') ? 'noAnswer' : null
-      if (p && tone && inRange(e.at)) out.push(call(p, e.at, tone, { done: true, attempt: e.detail?.attempt || null }))
+      if (!p || !tone || !inRange(e.at)) continue
+      const prev = lastOf.get(e.policy_id)
+      if (e.detail?.correction) {
+        if (!prev) continue
+        const i = out.indexOf(prev)
+        const next = call(p, prev.at, tone, { done: true, attempt: prev.attempt })
+        out[i] = next
+        lastOf.set(e.policy_id, next)
+        continue
+      }
+      const c = call(p, e.at, tone, { done: true, attempt: e.detail?.attempt || null })
+      out.push(c)
+      lastOf.set(e.policy_id, c)
     }
   }
 

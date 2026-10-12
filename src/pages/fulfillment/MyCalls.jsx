@@ -7,6 +7,8 @@ import { useFulfillmentQueue, assignUnassigned } from '../../hooks/usePolicies'
 import { useCallOutcomes } from '../../hooks/useRepCallEvents'
 import { ClientDrawer, OvSelect } from '../../components/agent/AgentUI'
 import { CallDrawer, CallButton, CallStatus } from '../../components/fulfillment/CallDrawer'
+import { ResultFixBar } from '../../components/fulfillment/ResultFixBar'
+import { useResultFix } from '../../hooks/useResultFix'
 import { useCallActions, useClientCall } from '../../hooks/useCallActions'
 import { agentCallerIdOn, callHint, clientTimeText } from '../../lib/fulfillmentCall'
 import { useCarriers } from '../../hooks/useCarriers'
@@ -125,7 +127,7 @@ function DayTrack({ calls, tz, now, isToday, ahead, focusKey, nextKey, liveCall 
 
 const pad = n => String(n).padStart(2, '0')
 
-function FocusCard({ c, now: pageNow, tz, profile, isAdmin, team, onOpen }) {
+function FocusCard({ c, now: pageNow, tz, profile, isAdmin, team, onOpen, onResult }) {
   const { p } = c
   const live = c.tone === 'live'
   const secNow = useNow(live ? 1e3 : 60e3)
@@ -194,11 +196,11 @@ function FocusCard({ c, now: pageNow, tz, profile, isAdmin, team, onOpen }) {
       {live ? (
         <div className="mc-focus-actions">
           {mine && (
-            <button type="button" className="mc-btn mc-btn-ok" disabled={act.busy} onClick={stop(() => act.cancelled())}>
+            <button type="button" className="mc-btn mc-btn-ok" disabled={act.busy} onClick={stop(() => act.cancelled(undefined, { onSuccess: () => onResult(p, 'cancelled') }))}>
               <Check size={17} strokeWidth={2.6} /> Cancelled
             </button>
           )}
-          {mine && <button type="button" className="mc-btn ov-ghost" disabled={act.busy} onClick={stop(act.noAnswer)}>No answer</button>}
+          {mine && <button type="button" className="mc-btn ov-ghost" disabled={act.busy} onClick={stop(() => act.noAnswer({ onSuccess: () => onResult(p, 'no_answer') }))}>No answer</button>}
           <button type="button" className="mc-btn mc-btn-quiet" onClick={stop(() => onOpen(c))}>Open details</button>
           <span className="mc-focus-note" style={{ color: 'var(--ov-live)' }}>{mine ? 'Hung up? Mark how it went.' : `${p.assigned?.full_name || 'The rep'} is on this call.`}</span>
         </div>
@@ -262,6 +264,7 @@ export default function MyCalls() {
   const myId = profile?.id
   const rootRef = useRef(null)
   const [nav, setNav] = useState(null)
+  const fix = useResultFix()
 
   // Anything booked while no rep was active has no one on it; place it now.
   useEffect(() => {
@@ -427,7 +430,7 @@ export default function MyCalls() {
         )}
         <div className="mc-tl-rest">
           <div className="mc-now"><span className="mc-now-dot"><span /></span>Now · {timeText(now, tz)}<i /></div>
-          {focus && <FocusCard c={focus} now={now} tz={tz} profile={profile} isAdmin={isAdmin} team={team} onOpen={openCall} />}
+          {focus && <FocusCard c={focus} now={now} tz={tz} profile={profile} isAdmin={isAdmin} team={team} onOpen={openCall} onResult={fix.show} />}
           {later.length > 0 && <div className="mc-label" style={{ margin: '18px 0 6px' }}>Later today · {later.length}</div>}
           {later.map((c, i) => {
             const s = subFor(c)
@@ -522,11 +525,12 @@ export default function MyCalls() {
         <CallDrawer
           key={openRow.id} p={openRow} scope={isAdmin ? queue : scope}
           now={now} tz={tz} profile={profile} isAdmin={isAdmin}
-          onClose={closeCall} onOpenCall={openOther}
+          onClose={closeCall} onOpenCall={openOther} fix={fix}
         />
       ) : !isLoading && (
         <ClientDrawer name="Call not found" meta={`This call isn't on ${isAdmin ? 'the' : 'your'} calendar any more.`} onClose={closeCall} />
       ))}
+      {!openRow && <ResultFixBar ctl={fix} />}
     </div>
   )
 }
