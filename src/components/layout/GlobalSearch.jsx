@@ -4,10 +4,12 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { Search, ArrowRight, CornerDownLeft, X } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
-import { matchClients, tabOf, agentStageOf, isLive, placeOf } from '../../lib/agentBookings'
+import { useFulfillmentQueue } from '../../hooks/usePolicies'
+import { matchClients, tabOf, agentStageOf, stageOf, isLive, placeOf, useNow } from '../../lib/agentBookings'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 import { callWhen } from '../../lib/scheduling'
 import { fullName } from '../../lib/policyFormat'
+import { CALL_TONE } from '../../lib/fulfillmentDay'
 import { NAV } from '../../lib/nav'
 import { StatusPill } from '../agent/AgentUI'
 
@@ -38,6 +40,41 @@ function metaLine(p) {
   return [what, p.current_carrier, placeOf(p)].filter(Boolean).join(' · ')
 }
 
+// Prompt 752 — a Fulfillment rep's result: pill + meta in their own words
+// ("Call Sat, Oct 10 · 3:30 PM · Globe Life", "No answer · try 2 · next Mon 9:00 AM").
+function fulfillTone(p) {
+  const st = stageOf(p)
+  return st === 'cancelled' ? 'cancelled' : st === 'inProgress' ? 'live' : st === 'noAnswer' ? 'noAnswer' : 'booked'
+}
+const FULFILL_PILL = { booked: 'Booked', live: 'On a call', noAnswer: 'No answer', cancelled: 'Cancelled' }
+function nextTry(p, nowMs) {
+  if (!p.scheduled_call_at || new Date(p.scheduled_call_at).getTime() <= nowMs) return null
+  const [day, time] = callWhen(p.scheduled_call_at, p.client_timezone).split(' · ')
+  return `next ${day.split(',')[0]} ${time}`
+}
+function fulfillMeta(p, nowMs) {
+  const tone = fulfillTone(p)
+  const carrier = p.current_carrier || p.carrier_name
+  const what = tone === 'live' ? 'On a call now'
+    : tone === 'cancelled' ? `Cancelled ${monthDay(p.fulfillment_completed_at || p.updated_at)}`
+    : tone === 'noAnswer' ? ['No answer', `try ${p.call_attempts || 1}`, nextTry(p, nowMs)].filter(Boolean).join(' · ')
+    : `Call ${callWhen(p.scheduled_call_at, p.client_timezone)}`
+  return [what, carrier].filter(Boolean).join(' · ')
+}
+
+function FulfillPill({ tone }) {
+  const t = CALL_TONE[tone]
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6, height: 24, padding: '0 10px', borderRadius: 999,
+      background: t.tint, color: t.fg, fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: t.fg }} />
+      {FULFILL_PILL[tone]}
+    </span>
+  )
+}
+
 function Highlight({ text, q }) {
   const i = q ? text.toLowerCase().indexOf(q) : -1
   if (i < 0) return text
@@ -50,6 +87,8 @@ export function GlobalSearch() {
   const { pathname } = useLocation()
   const role = profile?.role
   const isAdmin = role === 'admin'
+  const isFulfill = role === 'fulfillment'
+  const nowMs = useNow(60e3)
   const uid = useId()
   const box = useRef(null)
   const sheetInput = useRef(null)
@@ -60,8 +99,12 @@ export function GlobalSearch() {
   // Admin's company-wide rows only load once the search is first used.
   const [wanted, setWanted] = useState(false)
 
-  const { data: raw = [] } = useAgentBookings(isAdmin ? null : profile?.id, { enabled: !!profile?.id && (!isAdmin || wanted) })
-  const rows = useMemo(() => (isAdmin ? excludeTestAccounts(raw, profile?.id) : raw), [raw, isAdmin, profile?.id])
+  const { data: raw = [] } = useAgentBookings(isAdmin ? null : profile?.id, { enabled: !!profile?.id && !isFulfill && (!isAdmin || wanted) })
+  const { data: queue = [] } = useFulfillmentQueue({ enabled: !!profile?.id && isFulfill })
+  const rows = useMemo(() => {
+    if (isFulfill) return queue.filter(p => p.assigned_fulfillment_id === profile?.id)
+    return isAdmin ? excludeTestAccounts(raw, profile?.id) : raw
+  }, [raw, queue, isAdmin, isFulfill, profile?.id])
 
   const q = query.trim().toLowerCase()
   const clients = useMemo(() => matchClients(rows, q).slice(0, MAX_CLIENTS), [rows, q])
@@ -95,6 +138,7 @@ export function GlobalSearch() {
   const choose = item => {
     close()
     if (item.kind === 'page') { navigate(item.page.to); return }
+    if (isFulfill) { navigate(`/fulfillment/desk?open=${item.p.id}`); return }
     const tab = tabOf(item.p)
     navigate(`/agent/clients?open=${item.p.id}${tab === 'booked' ? '' : `&stage=${tab}`}`)
   }
@@ -113,7 +157,8 @@ export function GlobalSearch() {
     // this box as a login form's username field (it offered saved logins).
     type: 'search', name: 'q', value: query, autoComplete: 'off', spellCheck: false,
     'data-lpignore': 'true', 'data-1p-ignore': 'true', 'data-form-type': 'other',
-    placeholder: 'Search clients, pages…', 'aria-label': 'Search clients and pages',
+    placeholder: isFulfill ? 'Search clients, carriers, pages' : 'Search clients, pages…',
+    'aria-label': isFulfill ? 'Search clients, carriers and pages' : 'Search clients and pages',
     role: 'combobox', 'aria-expanded': open, 'aria-controls': listId, 'aria-autocomplete': 'list',
     'aria-activedescendant': open && items[active] ? optId(active) : undefined,
     onChange, onKeyDown,
@@ -131,9 +176,9 @@ export function GlobalSearch() {
             <span className="ov-gs-avatar" aria-hidden="true">{initials(name)}</span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span className="ov-gs-name"><Highlight text={name} q={q} /></span>
-              <span className="ov-gs-meta">{metaLine(p)}</span>
+              <span className="ov-gs-meta">{isFulfill ? fulfillMeta(p, nowMs) : metaLine(p)}</span>
             </span>
-            <StatusPill tab={tabOf(p)} />
+            {isFulfill ? <FulfillPill tone={fulfillTone(p)} /> : <StatusPill tab={tabOf(p)} />}
             <CornerDownLeft size={15} strokeWidth={2} className="ov-gs-enter" aria-hidden="true" />
           </div>
         )
@@ -156,7 +201,7 @@ export function GlobalSearch() {
       {!items.length && <p className="ov-gs-empty">No clients or pages match &ldquo;{query.trim()}&rdquo;</p>}
       <div className="ov-gs-foot hidden lg:flex" aria-hidden="true">
         <span>↑ ↓ to move</span>
-        <span>{items[active]?.kind === 'page' ? 'Enter to go' : 'Enter to open in My Pipeline'}</span>
+        <span>{items[active]?.kind === 'page' ? 'Enter to go' : isFulfill ? 'Enter to open the call' : 'Enter to open in My Pipeline'}</span>
         <span>Esc to close</span>
       </div>
     </div>

@@ -115,8 +115,9 @@ const FULFILLMENT_SELECT = `
   details:policy_fulfillment_details ( current_carrier )
 `
 
-export function useFulfillmentQueue() {
+export function useFulfillmentQueue(opts = {}) {
   return useQuery({
+    ...opts,
     queryKey: ['policies', 'fulfillment-queue'],
     // a live call (or one just ended on another screen) shows without a refresh
     refetchInterval: q => (q.state.data?.some(p => p.call_live_since) ? 10e3 : 45e3),

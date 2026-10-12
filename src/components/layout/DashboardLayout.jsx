@@ -280,7 +280,7 @@ export function DashboardLayout({ children }) {
             <div className="hidden md:flex" style={{ flex: 1, minWidth: 0 }}>
               <PageTitle pathname={pathname} />
             </div>
-            {(profile?.role === 'agent' || profile?.role === 'admin') && <GlobalSearch />}
+            {(profile?.role === 'agent' || profile?.role === 'admin' || profile?.role === 'fulfillment') && <GlobalSearch />}
             <HeaderBell />
           </header>
 
