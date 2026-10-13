@@ -13,8 +13,9 @@ import {
 
 // Messages (Prompt 679, rethought in 721) — the standing team lines only:
 // an agent <-> each Fulfillment rep and an agent <-> Admin (Prompt 701,
-// migration 123). A rep sees one line per agent, admin the Admin line per
-// agent. Access is RLS (can_dm_thread), so nothing here filters by role.
+// migration 123). A rep sees their own Admin line (Prompt 754, migration 139)
+// plus one line per agent; admin sees every agent's and rep's Admin line.
+// Access is RLS (can_dm_thread), so nothing here filters by role.
 // Lines open via ?dm=<agent id>.<rep id | 'admin'>.
 //
 // Prompt 721 removed the per-client threads from the UI for every role
@@ -29,9 +30,15 @@ const GROUP_GAP_MS = 5 * 60e3
 
 const ROLE_LABEL = { fulfillment: 'Fulfillment', admin: 'Admin', agent: 'Agent' }
 
+// Quick-start chips, by who is writing and to which line.
 const STARTERS = {
-  admin: ['I have a billing question', 'Something isn’t working', 'Question about a client'],
-  fulfillment: ['Question about a client’s call', 'Heads-up before a call', 'Wrong number on file'],
+  agent: {
+    admin: ['I have a billing question', 'Something isn’t working', 'Question about a client'],
+    fulfillment: ['Question about a client’s call', 'Heads-up before a call', 'Wrong number on file'],
+  },
+  fulfillment: {
+    admin: ['Question about my pay', 'Schedule change', 'Problem with a call'],
+  },
 }
 
 const firstName = s => (s || '').trim().split(/\s+/)[0] || ''
@@ -57,27 +64,36 @@ function dayLabel(iso) {
   return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-// One row shape per standing thread, newest first, then by name.
+// One row shape per standing thread, newest first, then by name. A rep's own
+// Admin line (Prompt 754, migration 139: agent_id = the rep, peer null) is
+// pinned at the top as "Ohvara team". On admin's side a line's owner is an
+// agent or a rep (agent_role); a rep's line is labelled Fulfillment.
 function buildItems(standing, me) {
   const agentView = me?.role === 'agent'
+  const repView = me?.role === 'fulfillment'
   return standing.map(t => {
-    const kind = agentView ? (t.peer_id ? 'fulfillment' : 'admin') : 'agent'
+    const ownLine = agentView || (repView && t.agent_id === me?.id)
+    const kind = ownLine ? (t.peer_id ? 'fulfillment' : 'admin')
+      : me?.role === 'admin' && t.agent_role === 'fulfillment' ? 'fulfillment' : 'agent'
     const title = kind === 'admin' ? 'Admin'
-      : agentView ? t.peer_name || 'Fulfillment'
+      : ownLine ? t.peer_name || 'Fulfillment'
       : t.agent_name || 'Unknown'
     const line = kind === 'admin' ? { kind, name: 'Admin' }
-      : agentView ? { kind, name: title, avatarUrl: t.peer_avatar_url, avatarColor: t.peer_avatar_color }
+      : ownLine ? { kind, name: title, avatarUrl: t.peer_avatar_url, avatarColor: t.peer_avatar_color }
       : { kind, name: title, avatarUrl: t.agent_avatar_url, avatarColor: t.agent_avatar_color }
     return {
       key: dmId(t.agent_id, t.peer_key), agentId: t.agent_id, peerKey: t.peer_key,
       line, title, short: kind === 'admin' ? 'Admin' : firstName(title) || title,
+      pinned: repView && kind === 'admin',
       roleLine: kind === 'fulfillment' ? 'Fulfillment' : kind === 'admin' ? 'Ohvara team' : 'Agent',
-      sub: kind === 'fulfillment' ? 'Fulfillment · calls your clients'
-        : kind === 'admin' ? 'The Ohvara team. Billing, your account, anything else.'
-        : me?.role === 'admin' ? 'Agent · Admin line' : 'Agent',
+      sub: kind === 'admin'
+        ? repView ? 'Admin · questions about your pay, schedule or anything else' : 'The Ohvara team. Billing, your account, anything else.'
+        : me?.role === 'admin' ? `${kind === 'fulfillment' ? 'Fulfillment' : 'Agent'} · Admin line`
+        : kind === 'fulfillment' ? 'Fulfillment · calls your clients' : 'Agent',
       last_body: t.last_body, last_sender_id: t.last_sender_id, last_at: t.last_at, unread_count: t.unread_count || 0,
     }
   }).sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
     if (a.last_at && b.last_at) return new Date(b.last_at) - new Date(a.last_at)
     if (a.last_at) return -1
     if (b.last_at) return 1
@@ -298,9 +314,11 @@ function Conversation({ agentId, peerKey, item, listReady, me, onBack }) {
     )
   }
 
-  const starters = me?.role === 'agent' && item ? STARTERS[item.line.kind] : null
+  const starters = item ? STARTERS[me?.role]?.[item.line.kind] || null : null
   const emptyCopy = !item ? '' : item.line.kind === 'admin'
-    ? 'Ask about billing, your account, or anything that isn’t working. Replies land right here.'
+    ? me?.role === 'fulfillment'
+      ? 'Ask about your pay, your schedule, or a problem with a call. Replies land right here.'
+      : 'Ask about billing, your account, or anything that isn’t working. Replies land right here.'
     : item.line.kind === 'fulfillment'
       ? 'Ask about a client’s call, or let them know something before they dial.'
       : `Send ${item.short} a note. They’ll see it in their Messages.`
