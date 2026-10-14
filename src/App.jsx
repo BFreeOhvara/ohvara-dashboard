@@ -29,6 +29,7 @@ import MyPay, { GettingPaidRedirect } from './pages/fulfillment/MyPay'
 import Users from './pages/admin/Users'
 import AdminOverview from './pages/admin/Overview'
 import AdminPipeline from './pages/admin/Pipeline'
+import AdminFulfillment from './pages/admin/Fulfillment'
 import AdminPayouts from './pages/admin/Payouts'
 
 const qc = new QueryClient({
@@ -162,7 +163,7 @@ export default function App() {
             } />
             <Route path="/admin/fulfillment" element={
               <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><MyCalls /></DashboardLayout>
+                <DashboardLayout><AdminFulfillment /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/admin/payouts" element={

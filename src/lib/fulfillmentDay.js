@@ -179,12 +179,14 @@ export function buildCalls(rows, nowMs, tz, { from, to, events = null } = {}) {
       if (e.detail?.correction) {
         if (!prev) continue
         const i = out.indexOf(prev)
-        const next = call(p, prev.at, tone, { done: true, attempt: prev.attempt })
+        const next = call(p, prev.at, tone, { done: true, attempt: prev.attempt, by: prev.by })
         out[i] = next
         lastOf.set(e.policy_id, next)
         continue
       }
-      const c = call(p, e.at, tone, { done: true, attempt: e.detail?.attempt || null })
+      // `by` (Prompt 760): who ended the call, so admin's desk puts it on
+      // that person's row even after the client moved to someone else.
+      const c = call(p, e.at, tone, { done: true, attempt: e.detail?.attempt || null, by: e.actor_id || null })
       out.push(c)
       lastOf.set(e.policy_id, c)
     }

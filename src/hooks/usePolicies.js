@@ -208,6 +208,23 @@ export function usePassOnCancellation() {
   })
 }
 
+// Prompt 760 — admin's "Give to" on the Fulfillment desk: one call to the
+// person picked (migration 142). The server refuses non-admins, live or
+// finished calls, and a person who already has a call within a slot of it.
+// `ids` run one at a time so each check sees the call given before it.
+export function useGiveCalls() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ ids, to }) => {
+      for (const id of ids) {
+        const { error } = await supabase.rpc('admin_give_call', { p_policy: id, p_to: to })
+        if (error) throw error
+      }
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),
+  })
+}
+
 // Anything booked while no rep was active sits unassigned; the desk sweeps it
 // up on load. Returns how many it placed (0 almost always).
 export async function assignUnassigned() {

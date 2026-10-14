@@ -47,7 +47,7 @@ const TITLES = {
   '/agent/commissions': ['Commissions', 'Compensation grid & balance — switch the view'],
   '/admin': ['Overview', 'The business at a glance'],
   '/admin/pipeline': ['Pipeline', "Everyone's clients and where each cancellation stands"],
-  '/admin/fulfillment': ['Fulfillment', 'The whole desk, call by call'],
+  '/admin/fulfillment': ['Fulfillment', 'The whole desk, live'],
   '/admin/payouts': ['Payouts', "Approve Fulfillment's weekly pay"],
   '/admin/users': ['Users', 'Accounts, roles and invites'],
   '/fulfillment': ['Overview', 'Your day at a glance'],

@@ -85,6 +85,7 @@ function describe(e) {
     case 'cancelled':    return 'Old policy confirmed cancelled'
     case 'moved':        return `Call moved to ${callAt(d.to, tz)}`
     case 'edited':       return editedText(d)
+    case 'reassigned':   return `Fulfillment call given to ${d.to_name || 'another rep'}`
     default:             return e.kind
   }
 }
@@ -112,6 +113,7 @@ function storyStep(e, isAdmin) {
     }
     case 'moved':     return { label: 'Call moved', sub: `${when}${d.to ? ` · to ${callAt(d.to, tz)}` : ''}` }
     case 'edited':    return { label: editedText(d), sub: when }
+    case 'reassigned': return { label: `Call given to ${d.to_name || 'another rep'}`, sub: when }
     case 'cancelled': return { label: 'Old policy cancelled', sub: when }
     default:          return { label: e.kind, sub: when }
   }

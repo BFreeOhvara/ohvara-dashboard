@@ -28,8 +28,9 @@ const ROW_META = {
   needs:       { label: 'Needs attention', pill: 'Needs attention', base: '--ov-st-needs' },
 }
 const TAB_ROW = { booked: 'booked', noAnswer: 'no_answer', needs: 'needs', cancelled: 'cancelled' }
+// Prompt 760: Reassigned (admin gave the call to another Fulfillment person) counts the same way.
 export function activityRow(kind, tab) {
-  if (kind === 'moved' || kind === 'edited') return TAB_ROW[tab] || 'booked'
+  if (kind === 'moved' || kind === 'edited' || kind === 'reassigned') return TAB_ROW[tab] || 'booked'
   return kind in ROW_META ? kind : 'booked'
 }
 export const rowMeta = row => ROW_META[row] || ROW_META.booked
