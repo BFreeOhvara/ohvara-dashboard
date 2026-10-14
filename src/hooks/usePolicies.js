@@ -150,6 +150,8 @@ export function useStartCall() {
   return useMutation({
     mutationFn: async (id) => {
       const { error } = await supabase.rpc('fulfillment_start_call', { p_policy: id })
+      // Prompt 756 — more than 5 minutes before the call (migration 140).
+      if (error?.message === 'too_early') throw Object.assign(new Error("It's not time to call yet."), { tooEarly: true, opensAt: error.details || null })
       if (error) throw error
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),

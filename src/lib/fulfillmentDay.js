@@ -280,6 +280,52 @@ export function whenShort(iso, nowMs, tz) {
   return `${day} ${timeText(iso, zone)}`
 }
 
+// ── Prompt 756 — the week tiles and the call unlock ─────────────────────
+
+// This Monday to Sunday in the zone: the two dates and the instants around them.
+export function thisWeek(nowMs, tz) {
+  const zone = zoneOf(tz)
+  const today = zonedDateStr(nowMs, zone)
+  const from = addDaysStr(today, -dowOf(today))
+  const to = addDaysStr(from, 6)
+  return { from, to, startMs: dayStartMs(from, zone), endMs: dayStartMs(addDaysStr(from, 7), zone) }
+}
+
+// The My calls week tiles, from buildCalls over this week (with that week's
+// policy_events). booked = every call on the calendar this week, done or still
+// to come; rate = cancelled / finished results (null before anything finished).
+export function weekScore(rows, nowMs, tz, events) {
+  const { from, to } = thisWeek(nowMs, tz)
+  const t = dayTally(buildCalls(rows, nowMs, tz, { from, to, events }))
+  return { booked: t.total, cancelled: t.cancelled, finished: t.done, rate: t.done ? t.cancelled / t.done : null }
+}
+
+// "Call client" opens this many minutes before the call's time (the same
+// instant buildCalls puts the call at: scheduled_call_at, a retry's slot or a
+// rescheduled time). Late is fine; a later day never is. No time = always open.
+// fulfillment_start_call (migration 140) holds the same line on the server.
+export const CALL_UNLOCK_LEAD_MIN = 5
+
+export const callTimeOf = p => p?.scheduled_call_at || null
+
+export function unlockAt(p) {
+  const at = callTimeOf(p)
+  return at ? new Date(new Date(at).getTime() - CALL_UNLOCK_LEAD_MIN * 6e4).toISOString() : null
+}
+
+export function canStartCall(p, nowMs, tz) {
+  const at = callTimeOf(p)
+  if (!at) return true
+  const ms = new Date(at).getTime()
+  if (ms <= nowMs) return true
+  const zone = zoneOf(tz)
+  if (zonedDateStr(ms, zone) > zonedDateStr(nowMs, zone)) return false
+  return nowMs >= ms - CALL_UNLOCK_LEAD_MIN * 6e4
+}
+
+// The toast for a locked button, or the server's too_early (its opens-at).
+export const tooEarlyText = (opensAt, tz) => `It's not time to call yet.${opensAt ? ` Opens at ${timeText(opensAt, tz)}.` : ''}`
+
 // One day's calls counted: done (cancelled + no answer), the live one, and the
 // ones still to make (`late` = a booked time that passed without a call).
 export function dayTally(calls) {

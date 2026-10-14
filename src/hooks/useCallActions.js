@@ -1,8 +1,19 @@
 import { useState } from 'react'
 import { useUpdatePolicy, useStartCall, useEndCall, useSetRescheduleReason, usePassOnCancellation } from './usePolicies'
 import { invokeCallerId, FALLBACK_CODES } from '../lib/callerId'
-import { isLive } from '../lib/agentBookings'
+import { isLive, useNow } from '../lib/agentBookings'
+import { canStartCall, timeText, tooEarlyText, unlockAt } from '../lib/fulfillmentDay'
 import { usePortalPhone } from '../contexts/portalPhone'
+
+// Prompt 756 — Call client is locked until 5 minutes before the call. Ticks
+// every 15 s so a button unlocks by itself. `opens` is "3:25 PM" (own zone).
+export function useCallLock(p) {
+  const now = useNow(15e3)
+  const { tz, toast } = usePortalPhone()
+  const locked = !!p && !isLive(p) && !canStartCall(p, now, tz)
+  const at = locked ? unlockAt(p) : null
+  return { locked, opens: at ? timeText(at, tz) : null, tell: () => toast(tooEarlyText(at, tz)) }
+}
 
 // ── calling the client (Prompt 666) ─────────────────────────────────────────
 // "Call client" rings the rep's own phone first (Twilio), then connects them to
@@ -37,8 +48,13 @@ export function useCallActions(p) {
   const endCall = useEndCall()
   const setReason = useSetRescheduleReason()
   const passOn = usePassOnCancellation()
+  const { tz, toast } = usePortalPhone()
   return {
-    start: () => { if (!isLive(p) && p.fulfillment_stage !== 'Complete') startCall.mutate(p.id) },
+    start: () => {
+      if (isLive(p) || p.fulfillment_stage === 'Complete') return
+      if (!canStartCall(p, Date.now(), tz)) { toast(tooEarlyText(unlockAt(p), tz)); return }
+      startCall.mutate(p.id, { onError: e => { if (e.tooEarly) toast(tooEarlyText(e.opensAt, tz)) } })
+    },
     noAnswer: opts => endCall.mutate({ id: p.id, outcome: 'no_answer' }, opts),
     // `notes` undefined leaves the saved notes as they are.
     cancelled: (notes, opts) => update.mutate({
@@ -51,6 +67,6 @@ export function useCallActions(p) {
     busy: update.isPending || endCall.isPending,
     passing: passOn.isPending,
     saving: update.isPending,
-    error: update.error || startCall.error || endCall.error || setReason.error || passOn.error,
+    error: update.error || (startCall.error?.tooEarly ? null : startCall.error) || endCall.error || setReason.error || passOn.error,
   }
 }

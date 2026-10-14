@@ -10,6 +10,9 @@ import { connectVoice, micState, askForMic } from '../lib/voiceDevice'
 import { bookingCarrier } from '../lib/carriers'
 import { fullName } from '../lib/policyFormat'
 import { everyoneGone } from '../lib/portalPhone'
+import { DEFAULT_TIMEZONE } from '../lib/timezones'
+import { canStartCall, tooEarlyText, unlockAt } from '../lib/fulfillmentDay'
+import { ErrorToast } from '../components/shared/ErrorToast'
 import { PortalPhone } from '../components/fulfillment/PortalPhone'
 import { PhoneContext } from './portalPhone'
 
@@ -26,6 +29,9 @@ export function PortalPhoneProvider({ children, voice = connectVoice }) {
   const can = profile?.role === 'fulfillment' || profile?.role === 'admin'
   const { data: cfg } = useRecoveryConfig({ enabled: can })
   const voiceLive = !!cfg?.voice_live
+  const tz = profile?.timezone || DEFAULT_TIMEZONE
+  const [note, setNote] = useState(null)    // { id, text } — the toast
+  const toast = useCallback(text => setNote({ id: Date.now(), text }), [])
   const { data: carriers } = useCarriers()
   const startCall = useStartCall()
   const qc = useQueryClient()
@@ -104,10 +110,12 @@ export function PortalPhoneProvider({ children, voice = connectVoice }) {
         onError: e => setError(e?.message || 'The call had a problem.'),
       })
     } catch (e) {
+      // P756 — the server said it's too early: no call happened, close the phone.
+      if (e.tooEarly) { setS(null); toast(tooEarlyText(e.opensAt, tz)); return }
       setError(e.message || 'Couldn\'t start the call.')
       setS(x => (x ? { ...x, mode: 'result', endedAt: Date.now() } : x))
     }
-  }, [startCall, voice, finish, qc])
+  }, [startCall, voice, finish, qc, toast, tz])
 
   // Everyone hung up: end the conference and ask how it went.
   useEffect(() => {
@@ -124,11 +132,13 @@ export function PortalPhoneProvider({ children, voice = connectVoice }) {
     setError(null)
     setAnswered(false)
     if (!voiceLive) { setS({ p: pol, mode: 'preview', collapsed: false }); return true }
+    // P756 — Call client opens 5 minutes before the call.
+    if (!canStartCall(pol, Date.now(), tz)) { toast(tooEarlyText(unlockAt(pol), tz)); return false }
     setS({ p: pol, mode: 'connecting', collapsed: false })
     if ((await micState()) !== 'granted') { setS({ p: pol, mode: 'mic', collapsed: false }); return true }
     start(pol)
     return true
-  }, [can, s, voiceLive, start])
+  }, [can, s, voiceLive, start, toast, tz])
 
   const allowMic = useCallback(async () => {
     try { await askForMic(); start(s.p) } catch { setError('Your browser blocked the microphone. Allow it from the address bar, then try again.') }
@@ -155,11 +165,12 @@ export function PortalPhoneProvider({ children, voice = connectVoice }) {
   useEffect(() => { if (!can && line.current) finish() }, [can, finish])
   useEffect(() => () => { line.current?.destroy() }, [])
 
-  const ctx = useMemo(() => ({ voiceLive, open, activeId: s && s.mode !== 'preview' ? s.p.id : null }), [voiceLive, open, s])
+  const ctx = useMemo(() => ({ voiceLive, open, activeId: s && s.mode !== 'preview' ? s.p.id : null, toast, tz }), [voiceLive, open, s, toast, tz])
 
   return (
     <PhoneContext.Provider value={ctx}>
       {children}
+      {note && <ErrorToast key={note.id} message={note.text} onDone={() => setNote(null)} />}
       {can && s && (
         <PortalPhone
           s={s} names={names} legs={legs} answered={answered} muted={muted} busy={busy} error={error}

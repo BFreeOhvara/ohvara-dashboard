@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Check, Loader2, MessageCircleMore, MessageSquare, Phone, PhoneCall, ShieldAlert, Shuffle, Undo2 } from 'lucide-react'
+import { ArrowRight, Check, Loader2, Lock, MessageCircleMore, MessageSquare, Phone, PhoneCall, ShieldAlert, Shuffle, Undo2 } from 'lucide-react'
 import { dmId } from '../../hooks/useDirectMessages'
 import { useCarriers } from '../../hooks/useCarriers'
-import { useClientCall, useCallActions } from '../../hooks/useCallActions'
+import { useClientCall, useCallActions, useCallLock } from '../../hooks/useCallActions'
 import { useCorrectResult } from '../../hooks/usePolicies'
 import { ResultFixBar } from './ResultFixBar'
 import { usePortalPhone } from '../../contexts/portalPhone'
@@ -37,8 +37,19 @@ const SUBSTATUS = [
 const SUBSTATUS_LABEL = Object.fromEntries(SUBSTATUS.map(s => [s.value, s.label]))
 
 // The button itself, whichever path it takes. `children` is its label.
+// Prompt 756: for the rep who can work the call it stays locked (grey, lock
+// icon) until 5 minutes before the call; a tap only says when it opens.
 export function CallButton({ p, call, className, style, children, icon = true }) {
+  const lock = useCallLock(call.onCall ? p : null)
   if (!p.client_phone) return null
+  if (lock.locked) {
+    return (
+      <button type="button" aria-disabled="true" title={`Unlocks at ${lock.opens}`} className={`${className} mc-locked`} style={style}
+        onClick={e => { e.stopPropagation(); lock.tell() }}>
+        {icon && <Lock size={17} strokeWidth={2.1} />}{children}
+      </button>
+    )
+  }
   const calling = call.state.phase === 'calling'
   const Icon = call.canBridge || call.portal ? PhoneCall : Phone
   const inner = <>{icon && (calling ? <Loader2 size={17} className="animate-spin" /> : <Icon size={17} strokeWidth={2.1} />)}{children}</>
@@ -129,6 +140,7 @@ export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpe
   const canWork = mine && !done
   const canBridge = agentCallerIdOn(p) && mine
   const call = useClientCall(p, { canBridge, onCall: canWork ? act.start : undefined })
+  const lock = useCallLock(canWork ? p : null)
   const fixing = fix?.fix?.id === p.id
   const result = fixing ? null : changeableResult(p, { isAdmin, mine, tz, now })
   const changeLink = result ? <ChangeResult key={result} p={p} result={result} /> : null
@@ -231,7 +243,7 @@ export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpe
         </div>
         <CallStatus p={p} call={call} style={{ marginTop: 10 }} />
         <div className="mc-foot-row" style={{ marginTop: 12 }}>
-          <span>{[callHint(p, canBridge)].flat().join(' ')}</span>
+          <span>{canWork && lock.locked ? `Call client unlocks at ${lock.opens}.` : [callHint(p, canBridge)].flat().join(' ')}</span>
           {!phone.voiceLive && p.client_phone && (
             <button type="button" className="mc-link" onClick={() => phone.open(p)}><PhoneCall size={13} /> Preview the portal phone</button>
           )}

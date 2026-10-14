@@ -9,17 +9,15 @@ import { ClientDrawer, OvSelect } from '../../components/agent/AgentUI'
 import { CallDrawer, CallButton, CallStatus } from '../../components/fulfillment/CallDrawer'
 import { ResultFixBar } from '../../components/fulfillment/ResultFixBar'
 import { useResultFix } from '../../hooks/useResultFix'
-import { useCallActions, useClientCall } from '../../hooks/useCallActions'
-import { agentCallerIdOn, callHint, clientTimeText } from '../../lib/fulfillmentCall'
-import { useCarriers } from '../../hooks/useCarriers'
-import { bookingCarrier } from '../../lib/carriers'
+import { useCallActions, useCallLock, useClientCall } from '../../hooks/useCallActions'
+import { agentCallerIdOn } from '../../lib/fulfillmentCall'
 import { isLive, useNow } from '../../lib/agentBookings'
 import { addDaysStr } from '../../lib/scheduling'
 import { slideOut } from '../../lib/daySlide'
 import { DEFAULT_TIMEZONE, zonedDateStr } from '../../lib/timezones'
 import {
   CALL_TONE, buildCalls, dayBounds, dayLong, dayShort, dayTally, dayWord, daysBetween, weekdayLong, hourOf, inLabel, relDay,
-  timeParts, timeText, todayBadge, callDayOf,
+  timeParts, timeText, todayBadge, callDayOf, thisWeek, weekScore,
 } from '../../lib/fulfillmentDay'
 
 // Prompt 748 — "My calls": the rep's day, one day at a time (replaces P747's
@@ -34,6 +32,11 @@ import {
 // shows the day of that call. Calls come from buildCalls (lib/fulfillmentDay.js),
 // past outcomes from policy_events (one fetch per day). Admin sees every rep's
 // calls, with a rep picker in the header.
+// Prompt 756: full width (the Overview's container). Below the header, the
+// timeline on the left and a 340px side column (Today's score, Booked this
+// week + Cancel rate, Tomorrow); stacked under 1100px. The Up next card is
+// time, name, "Cancel with" and the buttons; Call client unlocks 5 minutes
+// before the call (useCallLock; the server's too_early backs it).
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
@@ -126,72 +129,52 @@ function DayTrack({ calls, tz, now, isToday, ahead, focusKey, nextKey, liveCall 
 // ── the focus card ──────────────────────────────────────────────────────────
 
 const pad = n => String(n).padStart(2, '0')
+const lateLabel = mins => (mins >= 60 ? `${Math.floor(mins / 60)} hr ${mins % 60 ? `${mins % 60} min ` : ''}late` : `${mins} min late`)
 
-function FocusCard({ c, now: pageNow, tz, profile, isAdmin, team, onOpen, onResult }) {
+function FocusCard({ c, now: pageNow, tz, profile, isAdmin, onOpen, onResult }) {
   const { p } = c
   const live = c.tone === 'live'
   const secNow = useNow(live ? 1e3 : 60e3)
   const now = live ? secNow : pageNow
-  const { data: carriers } = useCarriers()
   const act = useCallActions(p)
   const mine = p.assigned_fulfillment_id === profile?.id
   const canWork = mine && p.fulfillment_stage !== 'Complete'
   const canBridge = agentCallerIdOn(p) && mine
   const call = useClientCall(p, { canBridge, onCall: canWork ? act.start : undefined })
-  const carrier = bookingCarrier(carriers, p)
+  const lock = useCallLock(canWork ? p : null)
   const late = !live && c.ms <= now
 
-  let ring
   let tag
+  let when
   if (live) {
     const secs = Math.max(0, Math.floor((now - c.ms) / 1e3))
-    ring = { big: `${Math.floor(secs / 60)}:${pad(secs % 60)}`, small: 'on the call', arc: Math.min(360, (secs / (45 * 60)) * 360) }
-    tag = `ON A CALL · ${Math.floor(secs / 60)} MIN`
+    tag = 'ON A CALL'
+    when = `${Math.floor(secs / 60)}:${pad(secs % 60)}`
   } else if (late) {
-    const mins = Math.max(0, Math.round((now - c.ms) / 6e4))
-    ring = { big: mins >= 60 ? `${Math.floor(mins / 60)}:${pad(mins % 60)}` : String(mins), small: mins >= 60 ? 'hr · min late' : 'min late', arc: 360 }
     tag = 'TIME PASSED'
+    when = lateLabel(Math.max(0, Math.round((now - c.ms) / 6e4)))
   } else {
-    const mins = Math.max(0, Math.round((c.ms - now) / 6e4))
-    ring = {
-      big: mins >= 60 ? `${Math.floor(mins / 60)}:${pad(mins % 60)}` : String(mins),
-      small: mins >= 60 ? 'hr · min' : 'min',
-      arc: Math.max(0, Math.min(360, (1 - mins / 120) * 360)),
-    }
-    tag = `UP NEXT · ${inLabel(c.ms, now).toUpperCase()}`
+    tag = 'UP NEXT'
+    when = inLabel(c.ms, now)
   }
-  const tone = live ? 'live' : late ? 'late' : c.tone === 'noAnswer' ? 'noAnswer' : 'booked'
-  const t = CALL_TONE[tone === 'noAnswer' ? 'booked' : tone]
+  const t = CALL_TONE[live ? 'live' : late ? 'late' : 'booked']
   const { time, period } = timeParts(c.at, tz)
-  const theirs = clientTimeText(p, c.at, tz)
-  const hint = callHint(p, canBridge)
   const stop = fn => e => { e.stopPropagation(); fn() }
 
   return (
     <div className={`mc-focus${live ? ' is-live' : ''}`} style={{ '--mc-c': t.fg, '--mc-t': t.tint, '--mc-e': t.edge }}
       onClick={() => onOpen(c)}>
       <span className="mc-focus-dot" />
-      <div className="mc-focus-top">
-        <span className="mc-ring" style={{ background: `conic-gradient(var(--mc-c) 0 ${ring.arc}deg, var(--ov-stub) ${ring.arc}deg 360deg)` }}>
-          <span><b>{ring.big}</b><span>{ring.small}</span></span>
-        </span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span className="mc-tag">{tag}</span>
-            {theirs && <span style={{ fontSize: 12.5, color: 'var(--ov-mute)' }}>{theirs}</span>}
-          </div>
-          <div className="mc-focus-when">
-            <span className="mc-focus-time">{time}<span>{period}</span></span>
-            <span className="mc-focus-name">{c.name}</span>
-          </div>
-          <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            <span className="mc-chip mc-chip-amber">
-              <b>Cancel with</b>{carrierOf(p)}{carrier?.service_phone && <> · <span style={{ fontFamily: 'var(--font-mono)' }}>{carrier.service_phone}</span></>}
-            </span>
-            <span className="mc-chip">From {team ? `${p.agent?.full_name || 'an agent'} · ${p.assigned?.full_name || 'Unassigned'}` : p.agent?.full_name || 'an agent'}</span>
-            {c.tone === 'noAnswer' && <span className="mc-chip">No answer before · try {c.attempt}</span>}
-          </div>
-        </div>
+      <div className="mc-focus-head">
+        <span className="mc-tag">{tag}</span>
+        <span className="mc-focus-in">{when}</span>
+      </div>
+      <div className="mc-focus-when">
+        <span className="mc-focus-time">{time}<span>{period}</span></span>
+        <span className="mc-focus-name">{c.name}</span>
+      </div>
+      <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <span className="mc-chip"><b>Cancel with</b>{carrierOf(p)}</span>
       </div>
       {live ? (
         <div className="mc-focus-actions">
@@ -202,15 +185,15 @@ function FocusCard({ c, now: pageNow, tz, profile, isAdmin, team, onOpen, onResu
           )}
           {mine && <button type="button" className="mc-btn ov-ghost" disabled={act.busy} onClick={stop(() => act.noAnswer({ onSuccess: () => onResult(p, 'no_answer') }))}>No answer</button>}
           <button type="button" className="mc-btn mc-btn-quiet" onClick={stop(() => onOpen(c))}>Open details</button>
-          <span className="mc-focus-note" style={{ color: 'var(--ov-live)' }}>{mine ? 'Hung up? Mark how it went.' : `${p.assigned?.full_name || 'The rep'} is on this call.`}</span>
+          <span className="mc-focus-note" style={{ color: 'var(--mc-hung)' }}>{mine ? 'Hung up? Mark how it went.' : `${p.assigned?.full_name || 'The rep'} is on this call.`}</span>
         </div>
       ) : (
         <div className="mc-focus-actions">
           {canWork && p.client_phone && <CallButton p={p} call={call} className="mc-btn ov-solid mc-btn-call">Call client</CallButton>}
           <button type="button" className="mc-btn ov-ghost" onClick={stop(() => onOpen(c))}>Open details</button>
           <span className="mc-focus-note">
-            {!canWork ? (isAdmin ? `${p.assigned?.full_name || 'The assigned rep'} calls this client.` : '')
-              : Array.isArray(hint) ? <>{hint[0]}<br />{hint[1]}</> : hint}
+            {canWork ? (lock.locked && p.client_phone ? `Unlocks at ${lock.opens}` : '')
+              : isAdmin ? `${p.assigned?.full_name || 'The assigned rep'} calls this client.` : ''}
           </span>
         </div>
       )}
@@ -220,15 +203,84 @@ function FocusCard({ c, now: pageNow, tz, profile, isAdmin, team, onOpen, onResu
   )
 }
 
+// ── the side column ─────────────────────────────────────────────────────────
+
+const pctText = n => `${Math.round(n * 100)}%`
+
+function SideColumn({ title, t, past, week, next, onSee }) {
+  const deg = n => (t.total ? (n / t.total) * 360 : 0)
+  const cx = deg(t.cancelled)
+  const na = deg(t.cancelled + t.noAnswer)
+  const tally = [
+    { l: 'Cancelled', n: t.cancelled, c: CALL_TONE.cancelled.fg },
+    { l: 'No answer', n: t.noAnswer, c: CALL_TONE.noAnswer.fg },
+    { l: past ? 'Not called' : 'To go', n: t.toGo + t.live, c: CALL_TONE.booked.fg },
+  ]
+  return (
+    <aside className="mc-side">
+      <section className="ov-card mc-side-card">
+        <div className="mc-side-head"><h2>{title}</h2><span>{plural(t.total, 'call')}</span></div>
+        <div className="mc-score">
+          <span className="mc-score-ring" style={{
+            background: `conic-gradient(${CALL_TONE.cancelled.fg} 0 ${cx}deg, ${CALL_TONE.noAnswer.fg} ${cx}deg ${na}deg, color-mix(in srgb, var(--ov-st-booked) 22%, transparent) ${na}deg 360deg)`,
+          }}>
+            <span><b>{t.done}/{t.total}</b><span>finished</span></span>
+          </span>
+          <div className="mc-score-list">
+            {tally.map(k => (
+              <div key={k.l}><i style={{ background: k.c }} /><span>{k.l}</span><b>{k.n}</b></div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="mc-side-tiles">
+        <div className="ov-card mc-stat">
+          <div>Booked this week</div>
+          <b>{week ? week.booked : '–'}</b>
+          <div>on your calendar</div>
+        </div>
+        <div className="ov-card mc-stat">
+          <div>Cancel rate</div>
+          <b style={week?.rate != null ? { color: CALL_TONE.cancelled.fg } : undefined}>{week?.rate != null ? pctText(week.rate) : '—'}</b>
+          <div>this week</div>
+        </div>
+      </div>
+
+      <section className="ov-card mc-side-card mc-side-next">
+        <div className="mc-side-head">
+          <h2>{next.title}</h2>
+          <button type="button" className="mc-see" onClick={onSee}>See {next.see}</button>
+        </div>
+        {next.calls.length ? (
+          <>
+            <div className="mc-next-line">{plural(next.calls.length, 'call')} · starts at {timeText(next.calls[0].at, next.tz)}</div>
+            <div className="mc-next-tl">
+              {next.calls.map(c => {
+                const { time, period } = timeParts(c.at, next.tz)
+                return (
+                  <div key={c.key} className="mc-next-row">
+                    <span className="mc-next-dot" style={{ background: c.done ? CALL_TONE[c.tone].fg : c.tone === 'noAnswer' ? CALL_TONE.noAnswer.fg : CALL_TONE.booked.fg }} />
+                    <span className="mc-next-time">{time} <span>{period}</span></span>
+                    <span className="mc-next-name">{c.name}</span>
+                    <span className="mc-next-carrier">{carrierOf(c.p)}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        ) : (
+          <div className="mc-next-line">Nothing booked yet.</div>
+        )}
+      </section>
+    </aside>
+  )
+}
+
 // ── rows ────────────────────────────────────────────────────────────────────
 
-// A retry's or past no answer's second line: "No answer at 11:45 AM · try 2".
-function retrySub(c, tz) {
-  const { p } = c
-  return p.last_call_at && new Date(p.last_call_at).getTime() < c.ms
-    ? `No answer at ${timeText(p.last_call_at, tz)} · try ${c.attempt}`
-    : `No answer · try ${c.attempt}`
-}
+// A No answer retry's second line: "Second try" / "Try 3".
+const retrySub = c => (c.attempt === 2 ? 'Second try' : `Try ${c.attempt}`)
 
 function CallRow({ c, tz, sub, subTone, tag, onOpen }) {
   const { time, period } = timeParts(c.at, tz)
@@ -239,7 +291,7 @@ function CallRow({ c, tz, sub, subTone, tag, onOpen }) {
       <span className="mc-row-time">{time}<span>{period}</span></span>
       <span className="mc-row-who">
         <span className="nm">{tag && <span className="mc-first">{tag}</span>}{c.name}</span>
-        <span className="ln" style={subTone ? { color: subTone } : undefined}>{sub}</span>
+        {sub && <span className="ln" style={subTone ? { color: subTone } : undefined}>{sub}</span>}
       </span>
       <span className="mc-row-carrier">{carrierOf(c.p)}</span>
       <ChevronRight size={15} strokeWidth={2.3} className="mc-chev" />
@@ -254,7 +306,7 @@ export default function MyCalls() {
   const isAdmin = profile?.role === 'admin'
   const qc = useQueryClient()
   const { data: queue = [], isLoading } = useFulfillmentQueue()
-  const now = useNow(30e3)
+  const now = useNow(15e3)
   const tz = profile?.timezone || DEFAULT_TIMEZONE
   const todayStr = zonedDateStr(now, tz)
   const [params, setParams] = useSearchParams()
@@ -311,14 +363,18 @@ export default function MyCalls() {
   const later = isToday ? (liveCall ? upcoming : upcoming.slice(1)) : []
   const nextKey = isToday ? (liveCall ? upcoming.find(c => !c.late)?.key : focus?.key) : null
 
-  // The next day after this one with calls on it (the footer line).
+  // The next day after this one with calls on it (the empty day's link).
   const nextDay = useMemo(() => {
     const list = buildCalls(scope, now, tz, { from: addDaysStr(day, 1), to: addDaysStr(day, 120) })
-    if (!list.length) return null
-    const d = list[0].date
-    const on = list.filter(c => c.date === d)
-    return { date: d, n: on.length, first: on[0] }
+    return list.length ? { date: list[0].date } : null
   }, [scope, now, tz, day])
+
+  // ── the side column: this Mon–Sun (with its outcomes) and the day after ──
+  const wk = thisWeek(now, tz)
+  const { data: weekEvents, isLoading: weekLoading } = useCallOutcomes(iso(wk.startMs), iso(wk.endMs), { live: anyLive })
+  const week = useMemo(() => (weekLoading || !weekEvents ? null : weekScore(scope, now, tz, weekEvents)), [scope, now, tz, weekEvents, weekLoading])
+  const after = addDaysStr(day, 1)
+  const afterCalls = useMemo(() => buildCalls(scope, now, tz, { from: after, to: after }), [scope, now, tz, after])
 
   // ── moving between days ──
   const setUrl = (next, replace = true) => setParams(next, { replace })
@@ -359,20 +415,19 @@ export default function MyCalls() {
       : isToday ? (liveCall ? `${plural(t.total, 'call')} · ${t.done} done · on the ${timeParts(liveCall.at, tz).time} now` : `${plural(t.total, 'call')} · ${t.done} done · ${t.toGo + t.live} to go`)
         : ahead ? `${plural(t.total, 'call')} booked`
           : [plural(t.total, 'call'), `${t.cancelled} cancelled`, `${t.noAnswer} no answer`, t.late && `${t.late} not called`].filter(Boolean).join(' · ')
-  const toGo = t.toGo + t.live
-  const deg = n => (t.total ? (n / t.total) * 360 : 0)
-  const ringStops = { cx: deg(t.cancelled), na: deg(t.cancelled + t.noAnswer) }
   const rel = relDay(day, todayStr)
 
+  // P756: a row's second line only when it adds something (no "From <agent>").
   const subFor = c => {
-    const who = team ? `${c.p.assigned?.full_name || 'Unassigned'} · ` : ''
+    const who = team ? c.p.assigned?.full_name || 'Unassigned' : ''
+    const line = (text, tone) => ({ sub: [who, text].filter(Boolean).join(' · '), tone })
     if (c.done) {
-      if (c.tone === 'cancelled') return { sub: `${who}Cancelled`, tone: CALL_TONE.cancelled.fg }
-      return { sub: `${who}No answer${c.attempt > 1 ? ` · try ${c.attempt}` : ''}`, tone: CALL_TONE.noAnswer.fg }
+      if (c.tone === 'cancelled') return line('Cancelled', CALL_TONE.cancelled.fg)
+      return line(`No answer${c.attempt > 1 ? ` · try ${c.attempt}` : ''}`, CALL_TONE.noAnswer.fg)
     }
-    if (c.tone === 'noAnswer') return { sub: `${who}${retrySub(c, tz)}`, tone: CALL_TONE.noAnswer.fg }
-    if (c.late) return { sub: `${who}${past ? 'Not called' : 'Time passed'} · From ${c.p.agent?.full_name || 'an agent'}`, tone: CALL_TONE.late.fg }
-    return { sub: `${who}From ${c.p.agent?.full_name || 'an agent'}` }
+    if (c.tone === 'noAnswer') return line(retrySub(c), CALL_TONE.noAnswer.fg)
+    if (c.late) return line(past ? 'Not called' : 'Time passed', CALL_TONE.late.fg)
+    return line('')
   }
   // A done no answer's result: "No answer · again at 5:30 PM" while a retry waits.
   const doneResult = c => {
@@ -390,13 +445,12 @@ export default function MyCalls() {
     const n = daysBetween(todayStr, d)
     return n === 0 ? 'today' : n > 0 && n < 7 ? weekdayLong(d) : dayShort(d)
   }
-  const nextLine = nextDay && (
-    <button type="button" className="mc-then" onClick={() => goDay(nextDay.date)}>
-      <span className="mc-then-dot" />
-      Then {dayWord(nextDay.date, todayStr)}: {plural(nextDay.n, 'call')}, first at {timeText(nextDay.first.at, tz)}
-      <b> · See {seeDay(nextDay.date)}</b>
-    </button>
-  )
+  const afterWord = dayWord(after, todayStr)
+  const afterN = daysBetween(todayStr, after)
+  const next = {
+    title: afterN >= 7 || afterN < -1 ? dayShort(after) : afterWord[0].toUpperCase() + afterWord.slice(1),
+    see: seeDay(after), calls: afterCalls, tz,
+  }
 
   let timeline
   if (busy) {
@@ -430,16 +484,15 @@ export default function MyCalls() {
         )}
         <div className="mc-tl-rest">
           <div className="mc-now"><span className="mc-now-dot"><span /></span>Now · {timeText(now, tz)}<i /></div>
-          {focus && <FocusCard c={focus} now={now} tz={tz} profile={profile} isAdmin={isAdmin} team={team} onOpen={openCall} onResult={fix.show} />}
+          {focus && <FocusCard c={focus} now={now} tz={tz} profile={profile} isAdmin={isAdmin} onOpen={openCall} onResult={fix.show} />}
           {later.length > 0 && <div className="mc-label" style={{ margin: '18px 0 6px' }}>Later today · {later.length}</div>}
           {later.map((c, i) => {
             const s = subFor(c)
             const isNext = liveCall && i === 0 && !c.late
             return <CallRow key={c.key} c={c} tz={tz} onOpen={openCall}
-              sub={isNext ? `Next · ${s.sub.replace(/^From/, 'from')}` : s.sub} subTone={isNext ? 'var(--ov-data-a)' : s.tone} />
+              sub={isNext ? ['Next', s.sub].filter(Boolean).join(' · ') : s.sub} subTone={isNext ? 'var(--ov-data-a)' : s.tone} />
           })}
           {!focus && !later.length && <p className="mc-quiet">That's everything for today.</p>}
-          {nextLine}
         </div>
       </div>
     )
@@ -451,7 +504,6 @@ export default function MyCalls() {
             const s = c.done ? { sub: `${team ? `${c.p.assigned?.full_name || 'Unassigned'} · ` : ''}${doneResult(c)}`, tone: CALL_TONE[c.tone].fg } : subFor(c)
             return <CallRow key={c.key} c={c} tz={tz} onOpen={openCall} sub={s.sub} subTone={s.tone} tag={ahead && i === 0 ? 'First' : null} />
           })}
-          {nextLine}
         </div>
       </div>
     )
@@ -499,26 +551,22 @@ export default function MyCalls() {
         </div>
       </section>
 
-      <div className="ov-slide-frame">
-        <section key={day} data-day-slide="" className={`ov-card mc-day ${slideClass}`} aria-label={`${dayLong(day)} calls`}>
-          <div className="mc-day-head">
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <h2>{isAdmin ? 'The day' : 'Your day'}</h2>
-              <div className="mc-day-line">{dayLine}</div>
+      <div className="mc-cols">
+        <div className="ov-slide-frame mc-main">
+          <section key={day} data-day-slide="" className={`ov-card mc-day ${slideClass}`} aria-label={`${dayLong(day)} calls`}>
+            <div className="mc-day-head">
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h2>{isAdmin ? 'The day' : 'Your day'}</h2>
+                <div className="mc-day-line">{dayLine}</div>
+              </div>
             </div>
-            <div className="mc-legend">
-              <span><i style={{ background: CALL_TONE.cancelled.fg }} />Cancelled <b>{t.cancelled}</b></span>
-              <span><i style={{ background: CALL_TONE.noAnswer.fg }} />No answer <b>{t.noAnswer}</b></span>
-              <span><i style={{ background: CALL_TONE.booked.fg }} />{past ? 'Not called' : 'To go'} <b>{toGo}</b></span>
-            </div>
-            <span className="mc-mini" style={{
-              background: `conic-gradient(${CALL_TONE.cancelled.fg} 0 ${ringStops.cx}deg, ${CALL_TONE.noAnswer.fg} ${ringStops.cx}deg ${ringStops.na}deg, color-mix(in srgb, var(--ov-st-booked) 22%, transparent) ${ringStops.na}deg 360deg)`,
-            }}>
-              <span>{t.done}/{t.total}</span>
-            </span>
-          </div>
-          {timeline}
-        </section>
+            {timeline}
+          </section>
+        </div>
+        <SideColumn
+          title={isToday ? "Today's score" : `${weekdayLong(day)}'s score`} t={t} past={past}
+          week={week} next={next} onSee={() => goDay(after)}
+        />
       </div>
 
       {openId && (openRow ? (
