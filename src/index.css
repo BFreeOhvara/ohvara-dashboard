@@ -2570,7 +2570,7 @@ a.ov-hpill:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; 
    Payout settings: Manage billing's look (SettingsCard, .ov-mb-*) on an
    820px column, with Stripe's embedded components in .ov-mb-cardbox.
    fp-* is the admin Approve & pay column. See DESIGN.md v16 "P753". */
-.mp-page { width: 100%; max-width: 1060px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.mp-page { width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
 .mp-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
 .mp-hero { position: relative; overflow: hidden; display: flex; gap: 32px; padding: 28px 32px; }
