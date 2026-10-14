@@ -1765,7 +1765,7 @@ function tabCounts(rows, tabFn = tabOf, tabs = PIPELINE_TABS) {
 }
 
 const tabSub = (t, { counts, confirm, call }, meanings) => (
-  t !== 'needs' ? (meanings?.[t] || PIPELINE_TAB[t].meaning) : counts.needs ? `${confirm} to confirm · ${call} to call` : 'All caught up'
+  meanings?.[t] || (t !== 'needs' ? PIPELINE_TAB[t].meaning : counts.needs ? `${confirm} to confirm · ${call} to call` : 'All caught up')
 )
 
 // The "Your pipeline" box (Prompt 726, rows in 729): total, range switch, proportional bar,
@@ -1776,9 +1776,13 @@ const tabSub = (t, { counts, confirm, call }, meanings) => (
 // Prompt 749 — the Fulfillment Pipeline passes `tabs` + `tabFn` (three tabs),
 // `nextLabel` / `nextEmpty` (the next-call line) and `tz` (the zone of the date
 // tile: the rep's, not the client's).
+//
+// Prompt 759 — the Admin Pipeline passes `title` ("Everyone's pipeline") and
+// `foot` (the View only note), which takes the next-call line's place.
 export function PipelineSummary({
   rows, tab, range, ranges, onRange, agentFilter, next, onOpenNext, onBook,
   tabs = PIPELINE_TABS, tabFn = tabOf, nextLabel = 'Next Fulfillment call', nextEmpty = 'No calls booked', tz: zone,
+  title = 'Your pipeline', foot,
 }) {
   const split = useMemo(() => tabCounts(rows, tabFn, tabs), [rows, tabFn, tabs])
   const { counts } = split
@@ -1787,7 +1791,7 @@ export function PipelineSummary({
   const tz = zone || next?.client_timezone || undefined
   return (
     <section className="ov-card pl-pipe">
-      <div className="pl-lbl">Your pipeline</div>
+      <div className="pl-lbl">{title}</div>
       <div className="pl-total">
         <b>{total}</b>client{total === 1 ? '' : 's'} · <em>{counts.cancelled} cancelled</em>
       </div>
@@ -1805,7 +1809,7 @@ export function PipelineSummary({
         ))}
       </div>
       <div className="pl-next">
-        {next ? (
+        {foot || (next ? (
           <>
             <span className="pl-ntile">
               <small style={{ color: stVar('booked') }}>{new Date(next.scheduled_call_at).toLocaleDateString('en-US', { month: 'short', timeZone: tz }).toUpperCase()}</small>
@@ -1820,7 +1824,7 @@ export function PipelineSummary({
             <span className="k">{nextLabel}<b>{nextEmpty}</b></span>
             {onBook && <button type="button" className="ov-primary" onClick={onBook}><CalendarPlus size={16} strokeWidth={2} aria-hidden="true" />Book a call</button>}
           </>
-        )}
+        ))}
       </div>
     </section>
   )
@@ -2017,6 +2021,7 @@ function LiveLabel() {
 // Columns for a rep's list (same five-column grid as the agent's), times in the
 // rep's zone: Client · Cancel with · call / next try / cancelled · Booked by · Status.
 const FULFILL_COLUMNS = {
+  needs:     ['Client', 'Cancel with', 'Call', 'Booked by', 'Status'],
   booked:    ['Client', 'Cancel with', 'Call', 'Booked by', 'Status'],
   noAnswer:  ['Client', 'Cancel with', 'Next try', 'Booked by', 'Status'],
   cancelled: ['Client', 'Carrier cancelled', 'Cancelled', 'Booked by', 'Status'],
@@ -2056,7 +2061,15 @@ function FulfillDate({ iso, now, tz }) {
 // A booked call whose time has passed without one being placed.
 const timePassed = (p, now) => !isLive(p) && !!p.scheduled_call_at && new Date(p.scheduled_call_at).getTime() < now
 
-function FulfillStatus({ p, tab, now }) {
+// Prompt 759 — the Admin Pipeline's Needs attention rows say why (`reason`).
+function FulfillStatus({ p, tab, now, reason }) {
+  if (tab === 'needs') {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: stVar('needs'), whiteSpace: 'nowrap', minWidth: 0 }}>
+        <span style={{ width: 8, height: 8, flexShrink: 0, borderRadius: '50%', background: stVar('needs'), boxShadow: `0 0 0 4px ${stVar('needs', 'tint')}` }} />{reason?.(p) || 'Needs attention'}
+      </span>
+    )
+  }
   if (tab === 'booked' && isLive(p)) return <LiveLabel />
   const late = tab === 'booked' && timePassed(p, now)
   const color = late ? stVar('needs') : stVar(tab)
@@ -2135,12 +2148,21 @@ function NeedsGroupHead({ icon: Icon, title, count, line }) {
 //
 // Prompt 749 — `fulfill` ({ tz }) switches it to the rep's list: columns above, no
 // row actions, the booking agent in its own column, times in `tz`.
+// Prompt 759 — the Admin Pipeline adds a Needs attention tab to it: `fulfill.reason(p)`
+// is the row's status text there, and `fulfill.tint(p)` an optional row background.
 export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebook, onConfirm, canMove, loading, emptyRange, onBook, fulfill }) {
   const [limit, setLimit] = useState(PAGE)
 
   if (loading) return <EmptyState tab={tab}>Loading clients…</EmptyState>
   if (!rows.length) {
     if (emptyRange) return <EmptyState icon={CalendarX} tab={tab}>Nobody booked {emptyRange === 'week' ? 'this week' : 'this month'} yet.</EmptyState>
+    if (tab === 'needs' && fulfill) {
+      return (
+        <EmptyState icon={Check} tab="cancelled" title="Nothing needs attention">
+          Calls past their time or stuck for days show up here.
+        </EmptyState>
+      )
+    }
     if (tab === 'needs') {
       return (
         <EmptyState icon={Check} tab="cancelled" title="Nothing needs your attention">
@@ -2169,7 +2191,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
   const ctx = { canMove, onRebook, onConfirm }
   const columns = fulfill ? FULFILL_COLUMNS[tab] : COLUMNS[tab]
   // Needs attention in its two groups; every other tab is one unlabelled group.
-  const groups = tab === 'needs'
+  const groups = tab === 'needs' && !fulfill
     ? NEEDS_GROUPS.map(g => ({ ...g, rows: rows.filter(g.has) })).filter(g => g.rows.length)
     : [{ key: 'all', rows: visible }]
   const rowProps = p => ({
@@ -2218,7 +2240,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
       return [
         when,
         <span key="a" style={{ minWidth: 0, fontSize: 14, color: 'var(--ov-soft)', ...ellipsis }}>{p.agent?.full_name || '—'}</span>,
-        <FulfillStatus key="s" p={p} tab={tab} now={now} />,
+        <FulfillStatus key="s" p={p} tab={tab} now={now} reason={fulfill.reason} />,
       ]
     }
     switch (tab) {
@@ -2262,6 +2284,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
   const cardLine = p => {
     if (fulfill) {
       const by = p.agent?.full_name ? ` · from ${p.agent.full_name}` : ''
+      if (tab === 'needs') return `${fulfill.reason?.(p) || 'Needs attention'} · ${p.scheduled_call_at ? whenShort(p.scheduled_call_at, now, fulfill.tz) : 'Not scheduled'}${by}`
       if (tab === 'booked') return isLive(p) ? <LiveLabel /> : `${timePassed(p, now) ? 'Time passed · ' : ''}${p.scheduled_call_at ? whenShort(p.scheduled_call_at, now, fulfill.tz) : 'Not scheduled'}${by}`
       if (tab === 'noAnswer') return `No answer · try ${Math.max(1, p.call_attempts || 0)}${p.scheduled_call_at ? ` · next ${whenShort(p.scheduled_call_at, now, fulfill.tz)}` : ''}${by}`
       return `Cancelled ${monthDay(p.fulfillment_completed_at || p.updated_at)}${by}`
@@ -2306,7 +2329,8 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
           <div key={g.key}>
             {g.icon && <NeedsGroupHead icon={g.icon} title={g.title} count={g.rows.length} line={g.line} />}
             {g.rows.map(p => (
-              <div key={p.id} {...rowProps(p)} className={`pl-row${fulfill ? ' pl-f' : ''}${activeId === p.id ? ' is-active' : ''}`}>
+              <div key={p.id} {...rowProps(p)} className={`pl-row${fulfill ? ' pl-f' : ''}${activeId === p.id ? ' is-active' : ''}`}
+                style={activeId !== p.id && fulfill?.tint?.(p) ? { background: fulfill.tint(p) } : undefined}>
                 {client(p)}
                 <CarrierCell p={p} />
                 {cells(p)}

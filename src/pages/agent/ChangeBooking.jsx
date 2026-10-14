@@ -99,9 +99,10 @@ function matchBookings(rows, query) {
 
 export default function ChangeBooking({ policyId, onPick, switcher, onNew }) {
   const { profile } = useAuth()
-  const isAdmin = profile?.role === 'admin'
   const navigate = useNavigate()
-  const { data: rows = [], isLoading } = useAgentBookings(isAdmin ? null : profile?.id)
+  // Prompt 759 — everyone changes only their own bookings (admin included:
+  // migration 141 refuses an admin changing another agent's).
+  const { data: rows = [], isLoading } = useAgentBookings(profile?.id)
   const [done, setDone] = useState(null)
 
   const p = policyId ? rows.find(r => r.id === policyId) || null : null
@@ -124,7 +125,7 @@ export default function ChangeBooking({ policyId, onPick, switcher, onNew }) {
 
   return (
     <ChangeForm
-      key={target?.id || 'none'} p={target} rows={rows} isAdmin={isAdmin} profileId={profile?.id}
+      key={target?.id || 'none'} p={target} rows={rows} profileId={profile?.id}
       switcher={switcher} onNew={onNew} onPick={onPick} pickNote={pickNote} loading={isLoading && !!policyId}
       onSaved={setDone}
     />
