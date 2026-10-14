@@ -111,6 +111,39 @@ export function usePayWeek() {
   })
 }
 
+// Prompt 761 — Admin Payouts. Each person's hours day by day for one pay
+// week (fulfillment_week_days, migration 143): the schedule's hours, the
+// admin's fix if any, and the hours that count. Keyed { [repId]: days[] }.
+export function useWeekDays(periodStart, repIds) {
+  return useQuery({
+    queryKey: [...KEY, 'days', periodStart, repIds],
+    enabled: !!periodStart && repIds.length > 0,
+    queryFn: async () => {
+      const out = {}
+      await Promise.all(repIds.map(async id => {
+        const { data, error } = await supabase.rpc('fulfillment_week_days', { p_rep: id, p_start: periodStart })
+        if (error) throw error
+        out[id] = (data || []).map(d => ({ day: d.day, scheduled: Number(d.scheduled), fixed: d.fixed == null ? null : Number(d.fixed), hours: Number(d.hours) }))
+      }))
+      return out
+    },
+  })
+}
+
+// Fix hours: { repId, periodStart, days: { 'YYYY-MM-DD': hours }, reason }.
+// The server refuses approved / paid weeks and writes the audit rows.
+export function useFixHours() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ repId, periodStart, days, reason }) => {
+      const { data, error } = await supabase.rpc('fulfillment_fix_hours', { p_rep: repId, p_start: periodStart, p_days: days, p_reason: reason })
+      if (error) throw error
+      return Array.isArray(data) ? data[0] : data
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: KEY }),
+  })
+}
+
 export function useRefreshPayouts() {
   const qc = useQueryClient()
   return () => qc.invalidateQueries({ queryKey: KEY })

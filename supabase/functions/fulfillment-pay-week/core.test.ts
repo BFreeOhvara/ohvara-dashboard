@@ -46,7 +46,8 @@ function world(over: { live?: boolean; figures?: Partial<Figures>; account?: Pay
       const k = `${repId}|${f.period_start}`
       let r = rows.get(k)
       if (!r) { r = { id: `po_${rows.size + 1}`, rep_id: repId, period_start: f.period_start, period_end: f.period_end, hours: f.hours, rate_cents: f.rate_cents, amount_cents: f.amount_cents, status: 'upcoming', stripe_transfer_id: null }; rows.set(k, r) }
-      if (!['upcoming', 'failed', 'held'].includes(r.status)) return null
+      // An approved row is claimable only when marked stale (the real store: older than 2 min).
+      if (!['upcoming', 'failed', 'held'].includes(r.status) && !(r.status === 'approved' && (r as any).stale)) return null
       Object.assign(r, { status: 'approved', approved_by: adminId, hours: f.hours, rate_cents: f.rate_cents, amount_cents: f.amount_cents })
       return { ...r }
     },
@@ -80,11 +81,79 @@ test('admin-only: a rep, an agent or a stranger cannot pay a week', async () => 
   assert.equal(transfers(w.calls).length, 0)
 })
 
-test('payouts_live off: Approve & pay refuses, nothing is sent', async () => {
+test('payouts_live off: Approve marks the week approved, Stripe is never called, no email', async () => {
   const w = world({ live: false })
-  await assert.rejects(payWeek(w.store, w.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK }), { code: 'payouts_off', message: /Turn on payouts/ })
+  const r = await payWeek(w.store, w.stripe, { ...ENV, configured: false }, ADMIN, { rep_id: REP, period_start: WEEK, amount_cents: 1 })
+  assert.deepEqual(r, { ok: true, approved_only: true, payout_id: 'po_1', amount_cents: 45000 })
   assert.equal(w.calls.length, 0)
-  assert.equal(w.rows.size, 0)
+  assert.equal(w.emails.length, 0)
+  const row = w.rows.get(`${REP}|${WEEK}`)!
+  assert.equal(row.status, 'approved')
+  assert.equal(row.approved_by, ADMIN)
+  assert.equal(row.stripe_transfer_id, null)
+  // A second click (or Approve all) is a no-op, still nothing sent.
+  const again = await payWeek(w.store, w.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK })
+  assert.equal(again.approved_only, true)
+  assert.equal(w.calls.length, 0)
+  // A rep with no payout account is approved the same way, still no Stripe, no email.
+  const h = world({ live: false, account: null })
+  assert.equal((await payWeek(h.store, h.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK })).approved_only, true)
+  assert.equal(h.calls.length + h.emails.length, 0)
+  // Off still refuses a week that isn't over and a non-admin.
+  const open = world({ live: false, figures: { ended: false } })
+  await assert.rejects(payWeek(open.store, open.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK }), { code: 'week_not_over' })
+  await assert.rejects(payWeek(open.store, open.stripe, ENV, REP, { rep_id: REP, period_start: WEEK }), { status: 403 })
+  assert.equal(open.calls.length, 0)
+})
+
+test('approved while off, paid once payouts are on: one transfer for the approved week', async () => {
+  const w = world({ live: false })
+  await payWeek(w.store, w.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK })
+  const live = world({ live: true })
+  live.rows.set(`${REP}|${WEEK}`, { ...w.rows.get(`${REP}|${WEEK}`)!, stale: true } as any)
+  const r = await payWeek(live.store, live.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK })
+  assert.equal(r.transfer_id, 'tr_1')
+  assert.equal(transfers(live.calls).length, 1)
+  assert.equal(live.rows.get(`${REP}|${WEEK}`)!.status, 'paid')
+  await assert.rejects(payWeek(live.store, live.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK }), { code: 'already_paid' })
+  assert.equal(transfers(live.calls).length, 1)
+})
+
+test('approve all: one call per waiting person; paid, held and failed each land on their own row', async () => {
+  const REP2 = '44444444-4444-4444-8444-444444444444'
+  const REP3 = '55555555-5555-4555-8555-555555555555'
+  const w = world()
+  const roleOf = w.store.role
+  const repOf = w.store.rep
+  const accounts: Record<string, PayoutAccount | null> = {
+    [REP]: readyAccount(), [REP2]: null, [REP3]: readyAccount({ rep_id: REP3, stripe_account_id: 'acct_3' }),
+  }
+  w.store.role = async id => (id === REP2 || id === REP3 ? 'fulfillment' : roleOf(id))
+  w.store.rep = async id => {
+    if (id !== REP2 && id !== REP3) return repOf(id)
+    return { id, role: 'fulfillment', full_name: id === REP2 ? 'Nina' : 'Marcus', email: `${id}@x.com`, stripe_account_id: accounts[id]?.stripe_account_id ?? null, payout_email_sent: true, payout_email_problem: true }
+  }
+  w.store.account = async id => accounts[id] ?? null
+  const base = w.stripe
+  const stripe: Stripe = async (m, path, params, opts) => {
+    if (path === 'transfers' && (params as any)?.destination === 'acct_3') {
+      w.calls.push({ method: m, path, params, key: opts?.idempotencyKey })
+      throw new StripeError({ code: 'account_closed' }, 400, 'x')
+    }
+    return base(m, path, params, opts)
+  }
+  const out = []
+  for (const id of [REP, REP2, REP3]) {
+    out.push(await payWeek(w.store, stripe, ENV, ADMIN, { rep_id: id, period_start: WEEK }).then(r => r.ok, e => e.code))
+  }
+  assert.deepEqual(out, [true, 'held', 'transfer_failed'])
+  assert.equal(w.rows.get(`${REP}|${WEEK}`)!.status, 'paid')
+  assert.equal(w.rows.get(`${REP2}|${WEEK}`)!.status, 'held')
+  assert.equal(w.rows.get(`${REP3}|${WEEK}`)!.status, 'failed')
+  assert.match(w.rows.get(`${REP3}|${WEEK}`)!.failure_reason!, /can't receive money/)
+  // Pressing Approve all again pays nobody twice.
+  await assert.rejects(payWeek(w.store, stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK }), { code: 'already_paid' })
+  assert.equal(transfers(w.calls).filter(c => c.params.destination === 'acct_rep').length, 1)
 })
 
 test('input checks: bad rep id, a non-Monday, a non-Fulfillment rep, a week not over, $0', async () => {
@@ -180,9 +249,12 @@ test('handle: no JWT is 401, a refusal is its status + code', async () => {
   const w = world({ live: false })
   const req = (auth: string | null, body: any) => new Request('http://x', { method: 'POST', headers: auth ? { Authorization: `Bearer ${auth}` } : {}, body: JSON.stringify(body) })
   assert.equal((await handle(req(null, {}), w.store, w.stripe, ENV)).status, 401)
-  const r = await handle(req('admin', { rep_id: REP, period_start: WEEK }), w.store, w.stripe, ENV)
-  assert.equal(r.status, 409)
-  assert.equal((await r.json()).code, 'payouts_off')
+  const r = await handle(req('admin', { rep_id: REP, period_start: '2026-10-06' }), w.store, w.stripe, ENV)
+  assert.equal(r.status, 400)
+  const off = await handle(req('admin', { rep_id: REP, period_start: WEEK }), w.store, w.stripe, ENV)
+  assert.equal(off.status, 200)
+  assert.equal((await off.json()).approved_only, true)
+  assert.equal(w.calls.length, 0)
   assert.equal((await handle(req('rep', { rep_id: REP, period_start: WEEK }), w.store, w.stripe, ENV)).status, 403)
 })
 

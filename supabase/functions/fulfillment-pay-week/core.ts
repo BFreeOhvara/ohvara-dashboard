@@ -5,6 +5,12 @@
 //
 //   POST { rep_id, period_start }   (period_start = that week's Monday)
 //
+// Prompt 761: while payouts_live is off, Approve still works but only marks the
+// week approved (same checks and claim, the amount locked from the server's
+// figures); Stripe is never called and no email goes out. Once payouts are
+// on, an approved week is paid by approving it again (the claim takes an
+// approved row older than two minutes).
+//
 // Order of checks: admin → payouts_live on → Stripe configured → the week is
 // over and comes to more than $0 → claim the row (upcoming / failed / held →
 // approved, so two clicks can't both pay) → the rep's payout account can take
@@ -82,8 +88,8 @@ export async function payWeek(store: Store, stripe: Stripe, env: Env, adminId: s
   const repId = String(body?.rep_id || '')
   const start = String(body?.period_start || '')
   if (!UUID.test(repId) || !isMonday(start)) throw new AppError(400, 'Pick a rep and a week (its Monday).')
-  if (!(await store.payoutsLive())) throw new AppError(409, 'Turn on payouts when you\'re ready.', 'payouts_off')
-  if (!env.configured) throw new AppError(503, 'Stripe isn\'t connected.', 'not_configured')
+  const live = await store.payoutsLive()
+  if (live && !env.configured) throw new AppError(503, 'Stripe isn\'t connected.', 'not_configured')
 
   const rep = await store.rep(repId)
   if (!rep || rep.role !== 'fulfillment') throw new AppError(404, 'That rep isn\'t on Fulfillment.')
@@ -96,8 +102,11 @@ export async function payWeek(store: Store, stripe: Stripe, env: Env, adminId: s
   if (!row) {
     const cur = await store.payout(repId, start)
     if (cur?.status === 'paid') throw new AppError(409, 'That week is already paid.', 'already_paid')
+    if (!live && cur?.status === 'approved') return { ok: true, approved_only: true, payout_id: cur.id, amount_cents: cur.amount_cents }
     throw new AppError(409, 'That week is being paid right now.', 'in_progress')
   }
+  // Payouts off: the week stays approved, no money moves.
+  if (!live) return { ok: true, approved_only: true, payout_id: row.id, amount_cents: row.amount_cents }
 
   const acct = await store.account(repId)
   if (!rep.stripe_account_id || !acct || !canPay(acct)) {
