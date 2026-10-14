@@ -1,6 +1,6 @@
 import { useState, useEffect, Fragment } from 'react'
 import { useLocation, Link } from 'react-router-dom'
-import { Menu, ChevronRight, Home, Plus } from 'lucide-react'
+import { Menu, ChevronRight, Home } from 'lucide-react'
 import { Sidebar, COLLAPSE_KEY, SIDEBAR_W, SIDEBAR_W_COLLAPSED } from './Sidebar'
 import { GlobalSearch } from './GlobalSearch'
 import { ActiveCallProvider } from '../../contexts/ActiveCallContext'
@@ -242,6 +242,8 @@ export function DashboardLayout({ children }) {
   // Prompt 726: My Pipeline (and, Prompt 749, Fulfillment's Pipeline) fills the height under the header on a tall
   // desktop screen (the .ov-fit rules in index.css) so only its list scrolls. Admin Users (P762) too.
   const isFit = pathname === '/agent/clients' || pathname === '/fulfillment/pipeline' || pathname === '/admin/pipeline' || pathname === '/admin/users'
+  // Prompt 763: the Admin Overview fits one screen from 700px tall (.ov-fitao in index.css); shorter, it scrolls.
+  const isFitAo = pathname === '/admin'
 
   const [navOpen, setNavOpen] = useState(false)
   useEffect(() => { setNavOpen(false) }, [pathname])
@@ -254,7 +256,7 @@ export function DashboardLayout({ children }) {
 
   return (
     <ActiveCallProvider>
-      <div className={isFit ? 'ov-fit' : undefined} style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)' }}>
+      <div className={isFit ? 'ov-fit' : isFitAo ? 'ov-fitao' : undefined} style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)' }}>
         <Sidebar
           open={navOpen}
           onClose={() => setNavOpen(false)}
@@ -283,19 +285,12 @@ export function DashboardLayout({ children }) {
               <PageTitle pathname={pathname} />
             </div>
             {(profile?.role === 'agent' || profile?.role === 'admin' || profile?.role === 'fulfillment') && <GlobalSearch />}
-            {/* Prompt 758 — admin's Book a call lives here, not in the sidebar. */}
-            {profile?.role === 'admin' && (
-              <Link to="/agent/book" className="ov-hbook" aria-label="Book a call">
-                <Plus size={16} strokeWidth={2.2} aria-hidden="true" />
-                <span className="ov-hbook-text">Book a call</span>
-              </Link>
-            )}
             <HeaderBell />
           </header>
 
           <main
-            className={`scrollbar-thin ${isFullWidth ? 'h-screen overflow-hidden flex flex-col' : isFullBleed ? '' : 'px-4 md:px-6'}${isFit ? ' ov-fit-main' : ''}`}
-            style={isFullWidth ? { position: 'relative', zIndex: 1 } : isFullBleed ? { flex: 1, width: '100%', position: 'relative', zIndex: 1 } : { flex: 1, paddingTop: 32, paddingBottom: 64, maxWidth: isFit && !pathname.startsWith('/admin') ? 1680 : 1280, width: '100%', margin: '0 auto', position: 'relative', zIndex: 1 }}
+            className={`scrollbar-thin ${isFullWidth ? 'h-screen overflow-hidden flex flex-col' : isFullBleed ? '' : 'px-4 md:px-6'}${isFit ? ' ov-fit-main' : isFitAo ? ' ov-fitao-main' : ''}`}
+            style={isFullWidth ? { position: 'relative', zIndex: 1 } : isFullBleed ? { flex: 1, width: '100%', position: 'relative', zIndex: 1 } : { flex: 1, paddingTop: 32, paddingBottom: 64, maxWidth: isFit && (!pathname.startsWith('/admin') || pathname === '/admin/pipeline') ? 1680 : 1280, width: '100%', margin: '0 auto', position: 'relative', zIndex: 1 }}
           >
             <div
               key={pathname}
