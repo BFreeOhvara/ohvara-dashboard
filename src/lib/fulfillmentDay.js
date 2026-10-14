@@ -51,10 +51,22 @@ export function binByDay(frame, isos) {
 
 const sum = (a, from, to) => a.slice(from, to).reduce((s, n) => s + n, 0)
 
-// The two trend cards and the chart, from per-day counts of calls started and
-// of old policies confirmed cancelled.
-export function weekStats(frame, callIsos, cancelIsos) {
-  const calls = binByDay(frame, callIsos)
+// Prompt 757 — "booked" per frame day (14 counts, index 0 = last Monday): every
+// call on the calendar that day, done or still to come (buildCalls entries, so
+// it is the same number My calls shows). The one definition of "booked".
+export function bookedByDay(frame, calls) {
+  const out = new Array(14).fill(0)
+  for (const c of calls) {
+    const i = frame.dates.indexOf(c.date)
+    if (i >= 0) out[i]++
+  }
+  return out
+}
+
+// The two trend cards and the chart, from per-day counts of calls booked
+// (bookedByDay) and of old policies confirmed cancelled.
+export function weekStats(frame, bookedCalls, cancelIsos) {
+  const calls = bookedByDay(frame, bookedCalls)
   const cancels = binByDay(frame, cancelIsos)
   const part = a => ({ value: sum(a, 7, 14), diff: sum(a, 7, 14) - sum(a, 0, 7), week: a.slice(7, 14) })
   return {

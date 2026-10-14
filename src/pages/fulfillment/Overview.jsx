@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { Phone, Check } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useFulfillmentQueue } from '../../hooks/usePolicies'
-import { useRepCallEvents } from '../../hooks/useRepCallEvents'
+import { useCallOutcomes } from '../../hooks/useRepCallEvents'
 import { HeroPanel, TrendCard, LastWeekChart } from '../../components/agent/AgentUI'
 import { YourDayCard, LiveCallStrips } from '../../components/fulfillment/FulfillUI'
 import { isLive, useNow } from '../../lib/agentBookings'
 import { DEFAULT_TIMEZONE, zonedDateStr } from '../../lib/timezones'
-import { weekFrame, weekStats, buildDay, timeParts, timeText, inLabel } from '../../lib/fulfillmentDay'
+import { weekFrame, weekStats, buildCalls, buildDay, timeParts, timeText, inLabel } from '../../lib/fulfillmentDay'
 
 // Fulfillment Overview (Prompt 681), rebuilt in Prompt 745: the agent
 // Overview's layout (hero, two trend cards, the right-hand box, the Last week
@@ -33,16 +33,17 @@ export default function FulfillmentOverview() {
 
   const todayStr = zonedDateStr(now, tz)
   const frame = useMemo(() => weekFrame(todayStr, tz), [todayStr, tz])
-  const { data: events = [], isLoading: eventsLoading } = useRepCallEvents(
-    new Date(frame.sinceMs).toISOString(), team ? null : profile?.id, { live: anyLive },
+  const { data: events = [], isLoading: eventsLoading } = useCallOutcomes(
+    new Date(frame.sinceMs).toISOString(), new Date(frame.bounds[14]).toISOString(), { live: anyLive },
   )
   const isLoading = queueLoading || eventsLoading || !profile
 
+  // Booked = every call on the calendar last Monday to this Sunday, done or to come.
   const stats = useMemo(() => weekStats(
     frame,
-    events.map(e => e.at),
+    buildCalls(rows, now, tz, { from: frame.dates[0], to: frame.dates[13], events }),
     rows.filter(p => p.fulfillment_stage === 'Complete' && p.fulfillment_completed_at).map(p => p.fulfillment_completed_at),
-  ), [frame, events, rows])
+  ), [frame, events, rows, now, tz])
 
   const day = useMemo(() => {
     const d = buildDay(rows, now, tz, { team })
@@ -85,7 +86,7 @@ export default function FulfillmentOverview() {
       <div className="ov-grid">
         <div className="grid grid-cols-2 gap-[14px] sm:gap-5" style={{ gridArea: 'trend', minWidth: 0 }}>
           <TrendCard
-            label="Calls made this week" icon={Phone} tone="a"
+            label="Calls booked this week" icon={Phone} tone="a"
             value={dash(stats.calls.value)} diff={isLoading ? null : stats.calls.diff}
             week={stats.calls.week} todayIdx={frame.todayIdx}
             onClick={() => navigate('/fulfillment/pipeline')}
@@ -110,8 +111,8 @@ export default function FulfillmentOverview() {
         <div style={{ gridArea: 'chart', display: 'flex', minWidth: 0 }}>
           <LastWeekChart
             days={stats.lastWeek} loading={isLoading}
-            subtitle={team ? 'calls made and old policies confirmed cancelled' : 'calls you made and old policies confirmed cancelled'}
-            firstLabel="Calls" firstWord="calls" emptyText="No calls last week."
+            subtitle={team ? 'calls booked on the calendar and old policies confirmed cancelled' : 'calls booked on your calendar and old policies confirmed cancelled'}
+            firstLabel="Booked" firstWord="booked" emptyText="No calls last week."
           />
         </div>
       </div>
