@@ -49,7 +49,7 @@ const TITLES = {
   '/admin/pipeline': ['Pipeline', "Everyone's clients and where each cancellation stands"],
   '/admin/fulfillment': ['Fulfillment', 'The whole desk, live'],
   '/admin/payouts': ['Payouts', "Approve Fulfillment's weekly pay"],
-  '/admin/users': ['Users', 'Accounts, roles and invites'],
+  '/admin/users': ['Users', 'Everyone with a login, what they’ve done, and their access'],
   '/fulfillment': ['Overview', 'Your day at a glance'],
   '/fulfillment/desk': ['My calls', 'Your day, call by call'],
   '/fulfillment/pipeline': ['Pipeline', 'Every client on your book and where each cancellation stands'],
@@ -240,8 +240,8 @@ export function DashboardLayout({ children }) {
   // does) instead of sitting in the padded, max-width page container.
   const isFullBleed = pathname === '/messages'
   // Prompt 726: My Pipeline (and, Prompt 749, Fulfillment's Pipeline) fills the height under the header on a tall
-  // desktop screen (the .ov-fit rules in index.css) so only its list scrolls.
-  const isFit = pathname === '/agent/clients' || pathname === '/fulfillment/pipeline' || pathname === '/admin/pipeline'
+  // desktop screen (the .ov-fit rules in index.css) so only its list scrolls. Admin Users (P762) too.
+  const isFit = pathname === '/agent/clients' || pathname === '/fulfillment/pipeline' || pathname === '/admin/pipeline' || pathname === '/admin/users'
 
   const [navOpen, setNavOpen] = useState(false)
   useEffect(() => { setNavOpen(false) }, [pathname])

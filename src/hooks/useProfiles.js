@@ -180,11 +180,15 @@ export function useInviteStatus(enabled = true) {
 }
 
 // Sends the invite; the response is only { ok: true }, never the link.
+// `role` only counts for an admin (Prompt 762: Agent or Fulfillment); an
+// agent's invite is always for an agent.
 export function useSendAgentInvite() {
+  const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ channel, to }) => {
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['rep_invites'] }),
+    mutationFn: async ({ channel, to, role }) => {
       const { data, error } = await supabase.functions.invoke('send-agent-invite', {
-        body: { action: 'send', channel, to },
+        body: { action: 'send', channel, to, ...(role ? { role } : {}) },
       })
       if (error) {
         let msg = "Couldn't send that. Try again."
@@ -222,6 +226,47 @@ export function useToggleUserActive() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['profiles'] })
+    },
+  })
+}
+
+// Prompt 762 — role and access go through admin-only RPCs (migration 144).
+// They refuse non-admins and your own account. A person with open clients
+// (or a Fulfillment person with open calls) needs `confirm`; without it the
+// server answers has_open_work and the count, so the page warns first.
+function rpcError(error) {
+  const e = new Error(error.message === 'has_open_work' ? 'They still have open clients.' : error.message)
+  e.code = error.code
+  if (error.message === 'has_open_work') e.openWork = Number(error.details) || 0
+  return e
+}
+
+export function useSetUserRole() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ userId, role, confirm = false }) => {
+      const { data, error } = await supabase.rpc('admin_set_user_role', { p_user: userId, p_role: role, p_confirm: confirm })
+      if (error) throw rpcError(error)
+      return data
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['profiles'] })
+      qc.invalidateQueries({ queryKey: ['policies'] })
+    },
+  })
+}
+
+export function useSetUserAccess() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ userId, active, confirm = false }) => {
+      const { data, error } = await supabase.rpc('admin_set_user_access', { p_user: userId, p_active: active, p_confirm: confirm })
+      if (error) throw rpcError(error)
+      return data
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['profiles'] })
+      qc.invalidateQueries({ queryKey: ['policies'] })
     },
   })
 }

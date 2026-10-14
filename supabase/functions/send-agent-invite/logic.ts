@@ -7,6 +7,7 @@
 // token, the link or the destination.
 
 export type Channel = 'email' | 'sms'
+export type InviteRole = 'agent' | 'fulfillment'
 
 export type Env = {
   resendKey?: string
@@ -30,7 +31,7 @@ export type Deps = {
   // End this agent's unused, unexpired invites to the destination (one live link per destination).
   expireLive(createdBy: string, dest: { channel: Channel; to: string }, at: string): Promise<void>
   insertInvite(row: {
-    token: string; role: 'agent'; created_by: string; expires_at: string
+    token: string; role: InviteRole; created_by: string; expires_at: string
     channel: Channel; invited_email: string | null; invited_phone: string | null
   }): Promise<string>
   deleteInvite(id: string): Promise<void>
@@ -179,10 +180,13 @@ async function deliver(deps: Deps, channel: Channel, to: string, inviter: string
 export async function handle(deps: Deps, jwt: string, body: Record<string, unknown>): Promise<Result> {
   const caller = await deps.caller(jwt)
   if (!caller) return { status: 401, body: { error: 'Unauthorized' } }
-  // Agents only, active ones; admin/fulfillment make invites on the Users page.
-  if (caller.role !== 'agent' || caller.is_active === false) {
+  // Active agents and admins. Prompt 762: admin's Users page "Add someone"
+  // sends here too and can invite Fulfillment; an agent only ever invites agents.
+  const isAdmin = caller.role === 'admin'
+  if ((caller.role !== 'agent' && !isAdmin) || caller.is_active === false) {
     return { status: 403, body: { error: 'Only agents can send invites.' } }
   }
+  const role: InviteRole = isAdmin && body.role === 'fulfillment' ? 'fulfillment' : 'agent'
 
   if (body.action === 'status') return { status: 200, body: await status(deps) }
   if (body.action !== 'send') return { status: 400, body: { error: 'Unknown action' } }
@@ -218,7 +222,7 @@ export async function handle(deps: Deps, jwt: string, body: Record<string, unkno
 
   const token = makeToken(deps.randomBytes(12))
   const id = await deps.insertInvite({
-    token, role: 'agent', created_by: caller.id,
+    token, role, created_by: caller.id,
     expires_at: new Date(now.getTime() + WEEK_MS).toISOString(),
     channel, invited_email: channel === 'email' ? to : null, invited_phone: channel === 'sms' ? to : null,
   })

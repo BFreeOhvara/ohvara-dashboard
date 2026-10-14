@@ -1,454 +1,670 @@
-import { useMemo, useState } from 'react'
-import { Search, Users as UsersIcon, Copy, Check, Trash2, AlertTriangle, KeyRound, Eye, EyeOff, X } from 'lucide-react'
-import {
-  useAllProfiles, useCreateProfile, useToggleUserActive, useDeleteUser,
-  useRepCredentials, usePendingInvites, useCreateInvite, useRevokeInvite,
-} from '../../hooks/useProfiles'
+import { useEffect, useEffectEvent, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Search, Plus, ChevronRight, X, ArrowUpDown, Copy, Check } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../../lib/timezones'
-import { roleLabel } from '../../lib/roleLabels'
-import { formatPhoneInput } from '../../lib/policyFormat'
-import { MONO, card, grid3, primaryBtn, ghostBtn } from '../../lib/exportStyles'
-import { TextField, AnchoredSelectField, GapNote } from '../../components/ui/ExportForm'
+import {
+  useAllProfiles, usePendingInvites, useCreateInvite, useRevokeInvite, useInviteStatus,
+  useSendAgentInvite, useSetUserRole, useSetUserAccess,
+} from '../../hooks/useProfiles'
+import { useAgentBookings } from '../../hooks/useAgentBookings'
+import { useCallOutcomes } from '../../hooks/useRepCallEvents'
+import { usePayouts } from '../../hooks/useFulfillmentPayouts'
+import { dmId } from '../../hooks/useDirectMessages'
+import { OvSelect } from '../../components/agent/AgentUI'
 import { Avatar } from '../../components/ui/Avatar'
-import { BILLING_STATUS, TONE_STYLE, formatBillingDate } from '../../lib/billing'
+import { attentionReason } from '../../lib/fulfillmentFlags'
+import { buildCalls, thisWeek, whenShort } from '../../lib/fulfillmentDay'
+import { isLive, stageOf, useNow } from '../../lib/agentBookings'
+import { addDaysStr } from '../../lib/scheduling'
+import { fullName, formatPhoneInput } from '../../lib/policyFormat'
+import { DEFAULT_TIMEZONE, zonedDateStr } from '../../lib/timezones'
 
-// Users & Access — literal port of the export's "Admin · Users" screen
-// (vault: media/claude-design-export-ohvara-dashboard-v3.html, lines
-// 1044-1093): search + Invite user toolbar, one bordered table (User / Role /
-// Status / 2FA / Last active / actions), and the pending-invite bar beneath
-// it.
+// Admin Users (Prompt 762) — replaces Users & Access. Left: an Agents /
+// Fulfillment switch, search with a sort, one row per person (this week's
+// numbers and a bar against the top person), pending invites as dashed rows,
+// and Add someone. Right: the selected person — a coloured panel (View
+// pipeline, Message, four numbers), this week day by day, their latest
+// clients (Fulfillment: calls), and an Access strip (role, how they sign in,
+// turn access off / back on). No Admins tab.
 //
-// Flagged deviations:
-//  · The export's per-row "Edit" button has no screen behind it — there's no
-//    admin profile-edit form in this app — so the row keeps the actions that
-//    are real: reveal login, deactivate/reactivate, delete.
-//  · 2FA renders an em-dash for every user. Supabase MFA isn't enabled on the
-//    project, so a green check would be a lie.
-//  · "Resend" on an invite needs email infrastructure that doesn't exist —
-//    invites are shared by hand, so it's Copy instead.
-//  · The export has no create-user form. Kept behind a second button: it's
-//    the only way to make the first account (Nate's), before any invite
-//    link can exist.
+// One set of numbers, the Overview's (adminWeek): buildCalls this week with
+// that week's outcomes, so every call on the calendar, done or to come, and
+// cancelled = the ones that ended Cancelled. Split by person:
+//   agent        their clients' calls (all agents add up to the Overview's
+//                "Calls booked this week")
+//   Fulfillment  the calls on their row: whoever ended it, else the assigned
+//                person (Admin Fulfillment's rule); hours = their pay week's
+// Weeks are Monday to Sunday in the admin's zone. Rank is among people with
+// access, by the main number. "On now" = on a call, or signed in within 15
+// minutes (profiles.last_login_at is the only presence there is).
+//
+// Role and access go through admin-only RPCs (migration 144); they refuse
+// non-admins and your own account, and want a confirm when the person still
+// has open clients. Invites reuse send-agent-invite (text or email, with a
+// role for admin) and the old copy-a-link flow.
 
-const th = {
-  padding: '11px 16px', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
-  textTransform: 'uppercase', color: 'var(--text-muted)', textAlign: 'left',
-  borderBottom: 'var(--border-w) solid var(--border)', whiteSpace: 'nowrap',
+const ROLES = { agents: 'agent', fulfillment: 'fulfillment' }
+const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const ONLINE_MS = 15 * 60e3
+const DOT = { cx: '#4ADE80', bk: '#60A5FA', na: '#A3B2CC', at: '#FBBF24', live: '#F87171' }
+
+const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+const firstOf = name => String(name || '').trim().split(/\s+/)[0] || 'They'
+const shortName = name => {
+  const [first, ...rest] = String(name || '').trim().split(/\s+/)
+  const last = rest.pop()
+  return first ? `${first}${last ? ` ${last[0]}.` : ''}` : 'Unknown'
 }
-const td = { padding: '12px 16px', borderBottom: 'var(--border-w) solid var(--border)' }
+const shortDate = (iso, tz) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: tz })
+const hrs = h => String(Math.round((Number(h) || 0) * 10) / 10)
+const realEmail = e => (e && !/@ohvara\.internal$/i.test(e) ? e : null)
+const phoneText = raw => formatPhoneInput(String(raw || '').replace(/\D/g, '').slice(-10))
 
-const ROLE_STYLE = {
-  admin:       { color: 'var(--accent)',  dim: 'var(--accent-dim)',  bd: 'var(--accent-border)' },
-  agent:       { color: 'var(--info)',    dim: 'var(--info-dim)',    bd: 'var(--info-bd)' },
-  rep:         { color: 'var(--text-secondary)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
-  client:      { color: 'var(--text-secondary)', dim: 'var(--bg-elevated)', bd: 'var(--border)' },
-  fulfillment: { color: 'var(--warning)', dim: 'var(--warning-dim)', bd: 'var(--warning-bd)' },
+function ago(iso, now) {
+  const d = now - new Date(iso).getTime()
+  if (d < 60e3) return 'just now'
+  if (d < 3600e3) return `${Math.floor(d / 60e3)} min ago`
+  if (d < 86400e3) return `${Math.floor(d / 3600e3)}h ago`
+  const days = Math.floor(d / 86400e3)
+  return days < 7 ? `${days}d ago` : new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+const daysAgo = (iso, now) => {
+  const n = Math.floor((now - new Date(iso).getTime()) / 86400e3)
+  return n <= 0 ? 'today' : n === 1 ? '1 day ago' : `${n} days ago`
 }
 
-function Pill({ children, style }) {
-  return (
-    <span style={{
-      display: 'inline-flex', padding: '2px 7px', borderRadius: 4,
-      fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', ...style,
-    }}>
-      {children}
-    </span>
+// A client's status as a word and a colour (the Pipeline's statuses).
+function clientStatus(p, now) {
+  if (isLive(p)) return { text: 'On a call', c: DOT.live }
+  const s = stageOf(p)
+  if (s === 'cancelled') return { text: 'Cancelled', c: DOT.cx }
+  if (attentionReason(p, now)) return { text: 'Needs attention', c: DOT.at }
+  if (s === 'noAnswer') return { text: 'No answer', c: DOT.na }
+  return { text: 'Booked', c: DOT.bk }
+}
+
+export default function AdminUsers() {
+  const { profile } = useAuth()
+  const navigate = useNavigate()
+  const now = useNow(30e3)
+  const tz = profile?.timezone || DEFAULT_TIMEZONE
+  const [params, setParams] = useSearchParams()
+  const tab = params.get('role') === 'fulfillment' ? 'fulfillment' : 'agents'
+  const role = ROLES[tab]
+  const [query, setQuery] = useState('')
+  const [sort, setSort] = useState('top')
+  const [adding, setAdding] = useState(false)
+
+  const { data: profiles = [], isLoading: peopleLoading } = useAllProfiles()
+  const { data: invites = [] } = usePendingInvites()
+  const { data: rows = [], isLoading: rowsLoading } = useAgentBookings(null)
+  const week = useMemo(() => thisWeek(now, tz), [now, tz])
+  const dates = useMemo(() => DAY_LABELS.map((_, i) => addDaysStr(week.from, i)), [week.from])
+  const todayStr = zonedDateStr(now, tz)
+  const { data: events = [], isLoading: eventsLoading } = useCallOutcomes(
+    new Date(week.startMs).toISOString(), new Date(week.endMs).toISOString(), { live: rows.some(isLive) },
   )
-}
 
-// Prompt 673 — agents' weekly retainer (tier shown since Prompt 692). Only agents are billed; everyone
-// else gets a dash. The line under the pill is the date that matters for
-// that status: next renewal, end of grace, or end of the paid week.
-function BillingCell({ u }) {
-  if (u.role !== 'agent') return <span style={{ color: 'var(--text-muted)', fontFamily: MONO, fontSize: 12 }}>—</span>
-  const status = u.billing_exempt ? 'exempt' : (u.billing_status || 'none')
-  const meta = BILLING_STATUS[status] || BILLING_STATUS.none
-  const when = {
-    active:   u.billing_current_period_end && `renews ${formatBillingDate(u.billing_current_period_end)}`,
-    past_due: u.billing_grace_until && `grace to ${formatBillingDate(u.billing_grace_until)}`,
-    canceled: u.billing_current_period_end && `ends ${formatBillingDate(u.billing_current_period_end)}`,
-  }[status]
-  const tier = u.billing_tier && u.billing_tier !== 'exempt' && status !== 'exempt' && status !== 'none'
-    ? u.billing_tier.charAt(0).toUpperCase() + u.billing_tier.slice(1) : null
+  const people = useMemo(() => profiles.filter(u => u.role === 'agent' || u.role === 'fulfillment'), [profiles])
+  const byId = useMemo(() => new Map(people.map(u => [u.id, u])), [people])
+
+  // ── this week, per person ──
+  const stats = useMemo(() => {
+    const out = new Map()
+    const blank = () => ({ a: new Array(7).fill(0), b: new Array(7).fill(0), clients: 0, live: false })
+    for (const u of people) out.set(u.id, blank())
+    for (const p of rows) {
+      const s = out.get(p.agent_id)
+      if (s && byId.get(p.agent_id)?.role === 'agent') s.clients++
+      const f = out.get(p.assigned_fulfillment_id)
+      if (f && isLive(p)) f.live = true
+    }
+    // One list of this week's calls: an agent's are their clients' calls, a
+    // Fulfillment person's are the ones on their row.
+    const calls = buildCalls(rows, now, tz, { from: week.from, to: week.to, events })
+    const add = (id, role, c) => {
+      const s = out.get(id)
+      if (!s || byId.get(id)?.role !== role) return
+      const i = dates.indexOf(c.date)
+      if (i < 0) return
+      s.a[i]++
+      if (c.done && c.tone === 'cancelled') s.b[i]++
+    }
+    for (const c of calls) {
+      add(c.p.agent_id, 'agent', c)
+      add(c.done && c.tone !== 'live' && byId.has(c.by) ? c.by : c.p.assigned_fulfillment_id, 'fulfillment', c)
+    }
+    for (const s of out.values()) {
+      s.main = s.a.reduce((t, n) => t + n, 0)
+      s.cx = s.b.reduce((t, n) => t + n, 0)
+    }
+    return out
+  }, [people, byId, rows, events, dates, tz, now, week.from, week.to])
+
+  // Rank among people with access in this role.
+  const ranked = useMemo(() => people
+    .filter(u => u.role === role && u.is_active)
+    .sort((x, y) => stats.get(y.id).main - stats.get(x.id).main || stats.get(y.id).cx - stats.get(x.id).cx || (x.full_name || '').localeCompare(y.full_name || '')), [people, role, stats])
+
+  const inRole = useMemo(() => people.filter(u => u.role === role), [people, role])
+  const roleInvites = useMemo(() => invites.filter(i => i.role === role), [invites, role])
+  const counts = {
+    agents: people.filter(u => u.role === 'agent').length + invites.filter(i => i.role === 'agent').length,
+    fulfillment: people.filter(u => u.role === 'fulfillment').length + invites.filter(i => i.role === 'fulfillment').length,
+  }
+
+  const list = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const hit = u => !q || [u.full_name, u.email, u.username, u.phone].filter(Boolean).join(' ').toLowerCase().includes(q)
+    const by = {
+      top: (x, y) => stats.get(y.id).main - stats.get(x.id).main || (x.full_name || '').localeCompare(y.full_name || ''),
+      name: (x, y) => (x.full_name || '').localeCompare(y.full_name || ''),
+      last: (x, y) => (y.last_login_at || '').localeCompare(x.last_login_at || ''),
+    }[sort]
+    return inRole.filter(hit).sort((x, y) => (y.is_active - x.is_active) || by(x, y))
+  }, [inRole, query, sort, stats])
+  const shownInvites = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return roleInvites.filter(i => !q || [i.invited_email, i.invited_phone].filter(Boolean).join(' ').toLowerCase().includes(q))
+  }, [roleInvites, query])
+  const top = Math.max(1, ...inRole.map(u => stats.get(u.id).main))
+
+  const userParam = params.get('user')
+  const selected = (userParam && byId.get(userParam)?.role === role ? byId.get(userParam) : null) || list[0] || null
+  const update = fn => {
+    const next = new URLSearchParams(params)
+    fn(next)
+    setParams(next, { replace: true })
+  }
+  const pick = id => update(next => next.set('user', id))
+  const switchTab = t => update(next => {
+    if (t === 'fulfillment') next.set('role', 'fulfillment'); else next.delete('role')
+    next.delete('user')
+  })
+  // A role change moves the person to the other tab; follow them there.
+  const follow = (id, newRole) => update(next => {
+    next.set('user', id)
+    if (newRole === 'fulfillment') next.set('role', 'fulfillment'); else next.delete('role')
+  })
+
+  const loading = peopleLoading || !profile
+  const numbersLoading = rowsLoading || eventsLoading
+  const isAgents = tab === 'agents'
+
   return (
-    <div>
-      <Pill style={TONE_STYLE[meta.tone]}>{meta.label}{tier ? ` · ${tier}` : ''}</Pill>
-      {when && <p style={{ margin: '3px 0 0', fontSize: 10.5, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>{when}</p>}
+    <div className="au-page">
+      <section className="ov-card au-list" aria-label="People">
+        <div className="au-list-top">
+          <div className="au-switch" role="tablist" aria-label="Who">
+            {[['agents', 'Agents'], ['fulfillment', 'Fulfillment']].map(([k, label]) => (
+              <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'is-on' : ''} onClick={() => switchTab(k)}>
+                {label}<b>{counts[k]}</b>
+              </button>
+            ))}
+          </div>
+          <div className="au-find">
+            <Search size={15} strokeWidth={2} aria-hidden="true" />
+            <input value={query} onChange={e => setQuery(e.target.value)} placeholder={isAgents ? 'Find an agent' : 'Find a Fulfillment person'} aria-label="Search people" />
+            <label className="au-sort">
+              <ArrowUpDown size={12} strokeWidth={2.2} aria-hidden="true" />
+              <select value={sort} onChange={e => setSort(e.target.value)} aria-label="Sort">
+                <option value="top">{isAgents ? 'Most booked' : 'Most calls'}</option>
+                <option value="name">Name</option>
+                <option value="last">Last on</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div className="au-rows">
+          {loading && <p className="au-empty">Loading…</p>}
+          {!loading && !list.length && !shownInvites.length && (
+            <p className="au-empty">{query ? 'Nobody matches that.' : isAgents ? 'No agents yet.' : 'Nobody on Fulfillment yet.'}</p>
+          )}
+          {list.map(u => {
+            const s = stats.get(u.id)
+            const on = u.is_active && (s.live || (u.last_login_at && now - new Date(u.last_login_at).getTime() < ONLINE_MS))
+            return (
+              <button key={u.id} type="button" className={`au-row${selected?.id === u.id ? ' is-sel' : ''}${u.is_active ? '' : ' is-off'}`}
+                aria-current={selected?.id === u.id ? 'true' : undefined} onClick={() => pick(u.id)}>
+                <span className="au-av">
+                  <Avatar profile={u} size={38} />
+                  <i style={{ background: on ? '#4ADE80' : 'var(--ov-mute)' }} />
+                </span>
+                <span className="au-row-t">
+                  <b>{u.full_name || 'Unnamed'}</b>
+                  <span>{!u.is_active ? 'Access off'
+                    : numbersLoading ? '…'
+                      : `${isAgents ? `${s.main} booked` : plural(s.main, 'call')} · ${s.cx} cancelled`}</span>
+                </span>
+                {u.is_active && <span className="au-bar" aria-hidden="true"><span style={{ width: `${(s.main / top) * 100}%` }} /></span>}
+              </button>
+            )
+          })}
+          {shownInvites.map(inv => <InviteRow key={inv.id} inv={inv} now={now} meName={profile?.full_name} />)}
+        </div>
+
+        <div className="au-add-wrap">
+          <button type="button" className="au-add" onClick={() => setAdding(true)}>
+            <Plus size={16} strokeWidth={2.4} aria-hidden="true" />Add someone
+          </button>
+        </div>
+      </section>
+
+      {selected ? (
+        <Person
+          key={selected.id} u={selected} s={stats.get(selected.id)} rows={rows} events={events} now={now} tz={tz}
+          dates={dates} todayStr={todayStr} week={week} numbersLoading={numbersLoading}
+          rank={ranked.findIndex(r => r.id === selected.id) + 1} of={ranked.length}
+          onPipeline={() => navigate(selected.role === 'agent' ? `/admin/pipeline?agent=${selected.id}` : `/admin/fulfillment?rep=${selected.id}`)}
+          onMessage={() => navigate(`/messages?dm=${dmId(selected.id, 'admin')}`)}
+          onRole={follow}
+        />
+      ) : (
+        <section className="ov-card au-none">
+          {loading ? 'Loading…' : isAgents ? 'No agents yet. Add someone to get started.' : 'Nobody on Fulfillment yet. Add someone to get started.'}
+        </section>
+      )}
+
+      {adding && <AddSomeone defaultRole={role} onClose={() => setAdding(false)} />}
     </div>
   )
 }
 
-function lastActive(iso) {
-  if (!iso) return 'Never'
-  const diff = Date.now() - new Date(iso).getTime()
-  if (diff < 60000) return 'Just now'
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
-  if (diff < 7 * 86400000) return `${Math.floor(diff / 86400000)}d ago`
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
+// ── a pending invite ──────────────────────────────────────────────────────
+function InviteRow({ inv, now, meName }) {
+  const send = useSendAgentInvite()
+  const revoke = useRevokeInvite()
+  const [state, setState] = useState(null)
+  const to = inv.channel === 'email' ? inv.invited_email : inv.channel === 'sms' ? phoneText(inv.invited_phone) : null
+  const name = to || 'Invite link'
 
-export default function Users() {
-  const { profile } = useAuth()
-  const { data: profiles, isLoading } = useAllProfiles()
-  const createProfile = useCreateProfile()
-  const toggleActive = useToggleUserActive()
-  const deleteUser = useDeleteUser()
-  const { data: invites = [] } = usePendingInvites()
-  const createInvite = useCreateInvite()
-  const revokeInvite = useRevokeInvite()
-
-  const [search, setSearch] = useState('')
-  const [inviteRole, setInviteRole] = useState('agent')
-  const [inviteOpen, setInviteOpen] = useState(false)
-  const [formOpen, setFormOpen] = useState(false)
-  const [form, setForm] = useState({ email: '', password: '', full_name: '', role: 'agent', timezone: DEFAULT_TIMEZONE })
-  const [formError, setFormError] = useState('')
-  const [createdCreds, setCreatedCreds] = useState(null)
-  const [copied, setCopied] = useState(null)
-  const [confirmDelete, setConfirmDelete] = useState(null)
-  const [viewingCreds, setViewingCreds] = useState(null)
-
-  const rows = useMemo(() => {
-    if (!profiles) return []
-    const q = search.trim().toLowerCase()
-    if (!q) return profiles
-    return profiles.filter(p =>
-      [p.full_name, p.username, p.email].filter(Boolean).join(' ').toLowerCase().includes(q)
-    )
-  }, [profiles, search])
-
-  const linkFor = token => `${window.location.origin}/join/${token}`
-
-  async function copyLink(inv) {
-    try {
-      await navigator.clipboard.writeText(linkFor(inv.token))
-      setCopied(inv.id)
-      setTimeout(() => setCopied(null), 2000)
-    } catch { /* clipboard can be blocked — the link is on screen anyway */ }
-  }
-
-  async function generateInvite() {
-    setFormError('')
-    try {
-      const inv = await createInvite.mutateAsync({ role: inviteRole, createdBy: profile.id })
-      copyLink(inv)
-    } catch (err) {
-      setFormError(err.message || 'Failed to create invite')
+  // Resend: a sent invite goes again to the same place (a new link) and the
+  // old one is cancelled; a link invite is copied again.
+  async function resend() {
+    setState(null)
+    if (!inv.channel) {
+      try {
+        await navigator.clipboard.writeText(`${window.location.origin}/join/${inv.token}`)
+        setState({ ok: 'Link copied' })
+      } catch { setState({ err: 'Couldn’t copy the link' }) }
+      return
     }
-  }
-
-  async function handleCreate() {
-    setFormError('')
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return setFormError('Enter a valid email address')
     try {
-      await createProfile.mutateAsync(form)
-      setCreatedCreds({ email: form.email.trim().toLowerCase(), password: form.password, full_name: form.full_name })
-      setFormOpen(false)
-      setForm({ email: '', password: '', full_name: '', role: 'agent', timezone: DEFAULT_TIMEZONE })
-    } catch (err) {
-      setFormError(err.message || 'Failed to create user')
-    }
+      await send.mutateAsync({ channel: inv.channel, to: inv.channel === 'email' ? inv.invited_email : inv.invited_phone, role: inv.role })
+      await revoke.mutateAsync(inv.id)
+    } catch (e) { setState({ err: e.message }) }
   }
 
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 7, height: 30, padding: '0 10px',
-          background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)',
-          borderRadius: 6, width: 240,
-        }}>
-          <Search size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search users…"
-            style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }}
-          />
-        </div>
-        <div style={{ flex: 1 }} />
-        <button onClick={() => { setFormOpen(v => !v); setInviteOpen(false); setCreatedCreds(null) }} style={{ ...ghostBtn, height: 30 }}>
-          New user
-        </button>
-        <button
-          onClick={() => { setInviteOpen(v => !v); setFormOpen(false) }}
-          style={{ ...primaryBtn, height: 30, padding: '0 14px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-        >
-          <UsersIcon size={12} /> Invite user
-        </button>
-      </div>
-
-      {inviteOpen && (
-        <div style={{ ...card, marginBottom: 16 }}>
-          <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Invite link</p>
-          <p style={{ margin: '0 0 14px', fontSize: 11.5, color: 'var(--text-muted)' }}>
-            Single-use, 7-day expiry. They pick their own password — you only pick the role. Whoever claims it
-            joins under you in the hierarchy.
-          </p>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
-            <AnchoredSelectField
-              label="Role" value={inviteRole} onChange={setInviteRole} style={{ width: 160 }}
-              options={[
-                { value: 'agent', label: 'Agent' },
-                { value: 'admin', label: 'Admin' },
-                { value: 'fulfillment', label: 'Fulfillment' },
-              ]}
-            />
-            <button onClick={generateInvite} disabled={createInvite.isPending} style={{ ...primaryBtn, height: 34, opacity: createInvite.isPending ? 0.6 : 1 }}>
-              {createInvite.isPending ? 'Generating…' : 'Generate & copy link'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {formOpen && (
-        <div style={{ ...card, marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
-            <p style={{ margin: 0, flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Create user directly</p>
-            <button onClick={() => setFormOpen(false)} style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', display: 'inline-flex', padding: 2 }}>
-              <X size={14} />
-            </button>
-          </div>
-          <div style={grid3}>
-            <TextField label="Full name" placeholder="Nate Rivera" value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} />
-            <TextField label="Email" type="email" placeholder="nate@example.com" autoComplete="off" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-            <TextField label="Password" type="password" placeholder="Min 8 characters" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
-            <AnchoredSelectField
-              label="Role" value={form.role} onChange={val => setForm(f => ({ ...f, role: val }))}
-              options={[
-                { value: 'agent', label: 'Agent' },
-                { value: 'admin', label: 'Admin' },
-                { value: 'fulfillment', label: 'Fulfillment' },
-              ]}
-            />
-            <AnchoredSelectField
-              label="Timezone" value={form.timezone} onChange={val => setForm(f => ({ ...f, timezone: val }))}
-              options={SELECTABLE_TIMEZONES.map(tz => ({ value: tz.value, label: tz.label }))}
-            />
-          </div>
-          <button onClick={handleCreate} disabled={createProfile.isPending} style={{ ...primaryBtn, height: 34, opacity: createProfile.isPending ? 0.6 : 1 }}>
-            {createProfile.isPending ? 'Creating…' : 'Create user'}
-          </button>
-          <GapNote>
-            An account made here has no upline, so it starts its own chain on Hierarchy. Invite links are the
-            normal path — they stamp the recruiter automatically.
-          </GapNote>
-        </div>
-      )}
-
-      {formError && <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--danger)' }}>{formError}</p>}
-
-      {createdCreds && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16,
-          padding: '14px 18px', borderRadius: 8,
-          background: 'var(--success-dim)', border: '1px solid var(--success-bd)',
-        }}>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
-              {createdCreds.full_name} — account ready
-            </p>
-            <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
-              {createdCreds.email} · {createdCreds.password}
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(`Email: ${createdCreds.email}\nPassword: ${createdCreds.password}`)
-              setCopied('creds'); setTimeout(() => setCopied(null), 2000)
-            }}
-            style={{ ...ghostBtn, height: 28 }}
-          >
-            {copied === 'creds' ? <><Check size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
-          </button>
-        </div>
-      )}
-
-      <div style={{ background: 'var(--bg-surface)', border: 'var(--border-w) solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={th}>User</th>
-                <th style={th}>Role</th>
-                <th style={th}>Status</th>
-                <th style={th}>Billing</th>
-                <th style={{ ...th, textAlign: 'center' }}>2FA</th>
-                <th style={{ ...th, textAlign: 'right' }}>Last active</th>
-                <th style={{ ...th, textAlign: 'right' }} />
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr><td colSpan={7} style={{ ...td, fontSize: 12.5, color: 'var(--text-muted)' }}>Loading users…</td></tr>
-              ) : rows.length === 0 ? (
-                <tr><td colSpan={7} style={{ ...td, fontSize: 12.5, color: 'var(--text-muted)' }}>No users match this search.</td></tr>
-              ) : rows.map(u => {
-                const rs = ROLE_STYLE[u.role] || ROLE_STYLE.rep
-                return (
-                  <tr key={u.id}>
-                    <td style={td}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Avatar profile={u} size={26} style={{ opacity: u.is_active ? 1 : 0.45 }} />
-                        <div style={{ minWidth: 0 }}>
-                          <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>{u.full_name}</p>
-                          <p style={{ margin: '1px 0 0', fontSize: 10.5, color: 'var(--text-muted)', fontFamily: MONO }}>
-                            {u.email || 'no email'}
-                          </p>
-                          {viewingCreds === u.id && <CredentialsReveal profileId={u.id} />}
-                        </div>
-                      </div>
-                    </td>
-                    <td style={td}>
-                      <Pill style={{ background: rs.dim, color: rs.color, border: `1px solid ${rs.bd}` }}>{roleLabel(u.role)}</Pill>
-                    </td>
-                    <td style={td}>
-                      <Pill style={u.is_active
-                        ? { background: 'var(--success-dim)', color: 'var(--success)', border: '1px solid var(--success-bd)' }
-                        : { background: 'var(--danger-dim)', color: 'var(--danger)', border: '1px solid var(--danger-bd)' }}>
-                        {u.is_active ? 'Active' : 'Inactive'}
-                      </Pill>
-                    </td>
-                    <td style={td}><BillingCell u={u} /></td>
-                    <td style={{ ...td, textAlign: 'center', color: 'var(--text-muted)', fontFamily: MONO, fontSize: 12 }}>—</td>
-                    <td style={{ ...td, textAlign: 'right', fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, whiteSpace: 'nowrap' }}>
-                      {lastActive(u.last_login_at)}
-                    </td>
-                    <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <button
-                        onClick={() => setViewingCreds(v => (v === u.id ? null : u.id))}
-                        title="Reveal saved login"
-                        style={{
-                          height: 26, width: 26, marginRight: 6, borderRadius: 6,
-                          border: 'var(--border-w) solid var(--border)',
-                          background: viewingCreds === u.id ? 'var(--accent-dim)' : 'transparent',
-                          color: viewingCreds === u.id ? 'var(--accent)' : 'var(--text-muted)',
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        }}
-                      >
-                        <KeyRound size={12} />
-                      </button>
-                      <button
-                        onClick={() => toggleActive.mutate({ userId: u.id, isActive: !u.is_active })}
-                        disabled={toggleActive.isPending}
-                        style={{
-                          height: 26, padding: '0 10px', marginRight: 6, borderRadius: 6, fontSize: 11,
-                          border: u.is_active ? '1px solid var(--danger-bd)' : 'var(--border-w) solid var(--border)',
-                          background: u.is_active ? 'var(--danger-dim)' : 'transparent',
-                          color: u.is_active ? 'var(--danger)' : 'var(--text-secondary)',
-                        }}
-                      >
-                        {u.is_active ? 'Deactivate' : 'Reactivate'}
-                      </button>
-                      <button
-                        onClick={() => setConfirmDelete(u)}
-                        title="Delete account"
-                        style={{ height: 26, width: 26, borderRadius: 6, border: 'var(--border-w) solid var(--border)', background: 'transparent', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <GapNote>
-        2FA reads as an em-dash for everyone — MFA isn't enabled on this Supabase project, so no account can
-        have it yet.
-      </GapNote>
-
-      {invites.length > 0 && invites.map(inv => (
-        <div
-          key={inv.id}
-          style={{
-            marginTop: 14, ...card, padding: '16px 20px',
-            display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-          }}
-        >
-          <UsersIcon size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-          <span style={{ flex: 1, minWidth: 200, fontSize: 12, color: 'var(--text-secondary)' }}>
-            {inv.channel ? (
-              // Prompt 731: an agent sent this from the account menu. Shown so
-              // Brayden can see who brought someone in; no Copy (it went to them).
-              <>
-                Sent by <span style={{ color: 'var(--text-primary)' }}>{inv.creator?.full_name || 'an agent'}</span> to{' '}
-                <span style={{ color: 'var(--text-primary)' }}>
-                  {inv.channel === 'email' ? inv.invited_email : formatPhoneInput(String(inv.invited_phone || '').replace(/\D/g, '').slice(-10))}
-                </span>
-              </>
-            ) : (
-              <>Pending invite — <span style={{ color: 'var(--text-primary)' }}>{roleLabel(inv.role)}</span></>
-            )}
-            , expires{' '}
-            {new Date(inv.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-          </span>
-          {!inv.channel && (
-            <button onClick={() => copyLink(inv)} style={{ ...ghostBtn, height: 26, background: 'transparent' }}>
-              {copied === inv.id ? <><Check size={11} /> Copied</> : <><Copy size={11} /> Copy link</>}
+    <div className="au-row is-invite">
+      <span className="au-av"><span className="au-av-inv">{name[0].toUpperCase()}</span><i style={{ background: '#7FA6F2' }} /></span>
+      <span className="au-row-t">
+        <b title={name}>{name}</b>
+        <span>
+          {state?.err ? <em className="is-err">{state.err}</em> : state?.ok ? <em>{state.ok}</em> : (
+            <>Invite sent {daysAgo(inv.created_at, now)}{inv.creator?.full_name && inv.creator.full_name !== meName ? ` by ${firstOf(inv.creator.full_name)}` : ''} · </>
+          )}
+          {!state && (
+            <button type="button" className="au-link" onClick={resend} disabled={send.isPending || revoke.isPending}>
+              {send.isPending ? 'Sending…' : inv.channel ? 'Resend' : 'Copy link'}
             </button>
           )}
-          <button onClick={() => revokeInvite.mutate(inv.id)} style={{ ...ghostBtn, height: 26, background: 'transparent' }}>
-            Revoke
-          </button>
-        </div>
-      ))}
-
-      {confirmDelete && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} onClick={() => setConfirmDelete(null)} />
-          <div style={{
-            position: 'relative', width: '100%', maxWidth: 380, padding: 24, borderRadius: 12,
-            background: 'var(--bg-elevated)', border: 'var(--border-w) solid var(--border)',
-            boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
-              <span style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--danger-dim)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <AlertTriangle size={17} style={{ color: 'var(--danger)' }} />
-              </span>
-              <div>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Delete account permanently?</p>
-                <p style={{ margin: '4px 0 0', fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                  {confirmDelete.full_name} will be removed from auth and profiles. Anyone they recruited keeps
-                  their own account but loses this upline. This can't be undone.
-                </p>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => setConfirmDelete(null)} style={{ ...ghostBtn, height: 32 }}>Cancel</button>
-              <button
-                onClick={async () => { await deleteUser.mutateAsync({ userId: confirmDelete.id }); setConfirmDelete(null) }}
-                disabled={deleteUser.isPending}
-                style={{ height: 32, padding: '0 14px', borderRadius: 6, border: '1px solid var(--danger-bd)', background: 'var(--danger-dim)', color: 'var(--danger)', fontSize: 12, fontWeight: 700 }}
-              >
-                {deleteUser.isPending ? 'Deleting…' : 'Delete account'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        </span>
+      </span>
+      <button type="button" className="au-inv-x" aria-label="Cancel invite" title="Cancel invite" onClick={() => revoke.mutate(inv.id)} disabled={revoke.isPending}>
+        <X size={14} strokeWidth={2.2} />
+      </button>
     </div>
   )
 }
 
-function CredentialsReveal({ profileId }) {
-  const { data, isLoading, error } = useRepCredentials(profileId, true)
-  const [show, setShow] = useState(false)
+// ── the selected person ─────────────────────────────────────────────────────
+function Person({ u, s, rows, events, now, tz, dates, todayStr, week, numbersLoading, rank, of, onPipeline, onMessage, onRole }) {
+  const isAgent = u.role === 'agent'
+  const payouts = usePayouts(null, !isAgent)
+  const hours = useMemo(() => {
+    if (isAgent) return null
+    const r = (payouts.data || []).find(w => w.rep_id === u.id && w.period_start === week.from)
+    return r ? Number(r.hours) || 0 : 0
+  }, [isAgent, payouts.data, u.id, week.from])
 
-  if (isLoading) return <p style={{ margin: '4px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>Loading…</p>
-  if (error || !data) return <p style={{ margin: '4px 0 0', fontSize: 10, color: 'var(--danger)' }}>No saved login for this account.</p>
+  const on = u.is_active && (s.live || (u.last_login_at && now - new Date(u.last_login_at).getTime() < ONLINE_MS))
+  const status = !u.is_active ? 'access off'
+    : s.live ? 'on a call now'
+      : on ? 'on now'
+        : u.last_login_at ? `last on ${ago(u.last_login_at, now)}` : 'hasn’t signed in yet'
+  const line = [isAgent ? 'Agent' : 'Fulfillment', `joined ${shortDate(u.created_at, tz)}`, status].join(' · ')
+
+  const n = v => (numbersLoading ? '–' : v)
+  const tiles = isAgent
+    ? [[n(s.main), 'booked this week', 'is-a'], [n(s.cx), 'cancelled this week', 'is-b'], [n(s.clients), 'clients all time', ''], [u.is_active && rank ? `#${rank}` : '–', `of ${plural(of, 'agent')}`, 'is-c']]
+    : [[n(s.main), 'calls this week', 'is-a'], [n(s.cx), 'cancelled this week', 'is-b'], [payouts.isLoading ? '–' : hrs(hours), 'hours this week', ''], [u.is_active && rank ? `#${rank}` : '–', `of ${of} on Fulfillment`, 'is-c']]
+
+  // Latest clients (agent: last 6 booked) / calls (Fulfillment: last 6 they made).
+  const latest = useMemo(() => {
+    if (isAgent) {
+      return rows.filter(p => p.agent_id === u.id)
+        .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+        .slice(0, 6)
+        .map(p => {
+          const at = stageOf(p) === 'cancelled' ? (p.fulfillment_completed_at || p.updated_at) : p.scheduled_call_at
+          const when = at ? (stageOf(p) === 'cancelled' ? whenShort(at, now, tz).replace(/ \d.*$/, '') : whenShort(at, now, tz)) : 'no call time'
+          return { id: p.id, name: fullName(p), sub: `${p.current_carrier || p.carrier_name || 'Carrier not noted'} · ${when.replace(/^(Today|Tomorrow|Yesterday)/, w => w.toLowerCase())}`, ...clientStatus(p, now) }
+        })
+    }
+    const mine = new Map()
+    for (const e of events) if (e.actor_id === u.id) mine.set(e.policy_id, e.at > (mine.get(e.policy_id) || '') ? e.at : mine.get(e.policy_id))
+    for (const p of rows) {
+      if (p.assigned_fulfillment_id !== u.id) continue
+      const at = isLive(p) ? p.call_live_since : p.fulfillment_completed_at || p.last_call_at
+      if (at && at > (mine.get(p.id) || '')) mine.set(p.id, at)
+    }
+    const byPolicy = new Map(rows.map(p => [p.id, p]))
+    return [...mine.entries()]
+      .filter(([id]) => byPolicy.has(id))
+      .sort((a, b) => b[1].localeCompare(a[1]))
+      .slice(0, 6)
+      .map(([id, at]) => {
+        const p = byPolicy.get(id)
+        return { id, name: fullName(p), sub: `Booked by ${shortName(p.agent?.full_name)} · ${whenShort(at, now, tz).replace(/^(Today|Tomorrow|Yesterday)/, w => w.toLowerCase())}`, ...clientStatus(p, now) }
+      })
+  }, [isAgent, rows, events, u.id, now, tz])
+
+  const dayMax = Math.max(1, ...s.a)
 
   return (
-    <p style={{ margin: '4px 0 0', fontSize: 10, color: 'var(--text-muted)', fontFamily: MONO, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-      {show ? `${data.email ?? data.username} · ${data.password}` : '•••••••• · ••••••••'}
-      <button onClick={() => setShow(v => !v)} style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', display: 'inline-flex', padding: 0 }}>
-        {show ? <EyeOff size={11} /> : <Eye size={11} />}
-      </button>
-    </p>
+    <div className="au-right">
+      <section className="ov-hero au-hero" aria-label={u.full_name}>
+        <div className="au-hero-head">
+          <span className="au-hero-av">
+            <Avatar profile={u} size={64} />
+            <i style={{ background: on ? '#4ADE80' : '#8697B5' }} />
+          </span>
+          <div className="au-hero-name">
+            <h2>{u.full_name || 'Unnamed'}</h2>
+            <p>{line}</p>
+          </div>
+          <div className="au-hero-btns">
+            <button type="button" className="au-solid" onClick={onPipeline}>
+              {isAgent ? 'View pipeline' : 'View on the desk'}<ChevronRight size={15} strokeWidth={2.4} aria-hidden="true" />
+            </button>
+            <button type="button" className="au-glass" onClick={onMessage}>Message</button>
+          </div>
+        </div>
+        <div className="au-tiles">
+          {tiles.map(([v, label, cls]) => (
+            <div key={label} className={`au-tile ${cls}`}><b>{v}</b><span>{label}</span></div>
+          ))}
+        </div>
+      </section>
+
+      <div className="au-mid">
+        <section className="ov-card au-days" aria-label="This week, day by day">
+          <div className="au-card-head">
+            <h3>This week, day by day</h3>
+            <span className="au-key"><span><i className="is-a" />{isAgent ? 'Booked' : 'Calls'}</span><span><i className="is-b" />Cancelled</span></span>
+          </div>
+          <div className="au-day-rows">
+            {dates.map((d, i) => {
+              const future = d > todayStr
+              const today = d === todayStr
+              return (
+                <div key={d} className={`au-day${future ? ' is-future' : ''}${today ? ' is-today' : ''}`}>
+                  <span className="au-day-l">{DAY_LABELS[i]}</span>
+                  <span className="au-day-bars">
+                    <span className="is-a" style={{ width: `${(s.a[i] / dayMax) * 100}%` }} />
+                    <span className="is-b" style={{ width: `${(s.b[i] / dayMax) * 100}%` }} />
+                  </span>
+                  <span className="au-day-v">{s.a[i]} / {s.b[i]}</span>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+
+        <section className="ov-card au-latest" aria-label={isAgent ? 'Latest clients' : 'Latest calls'}>
+          <div className="au-card-head">
+            <h3>{isAgent ? 'Latest clients' : 'Latest calls'}</h3>
+            {isAgent && s.clients > 0 && <button type="button" className="au-link" onClick={onPipeline}>All {s.clients}</button>}
+          </div>
+          <div className="au-latest-rows">
+            {numbersLoading ? <p className="au-empty">Loading…</p>
+              : !latest.length ? <p className="au-empty">{isAgent ? 'No clients booked yet.' : 'No calls made yet.'}</p>
+                : latest.map(c => (
+                  <div key={c.id} className="au-client">
+                    <span className="au-client-t"><b>{c.name}</b><span>{c.sub}</span></span>
+                    <span className="au-st" style={{ color: c.c }}><i style={{ background: c.c }} />{c.text}</span>
+                  </div>
+                ))}
+          </div>
+        </section>
+      </div>
+
+      <AccessStrip u={u} rows={rows} onRole={onRole} />
+    </div>
+  )
+}
+
+// ── role and access ─────────────────────────────────────────────────────────
+function AccessStrip({ u, rows, onRole }) {
+  const setRole = useSetUserRole()
+  const setAccess = useSetUserAccess()
+  const [ask, setAsk] = useState(null)   // { kind: 'role', to } | { kind: 'off' }
+  const [err, setErr] = useState(null)
+  const isAgent = u.role === 'agent'
+  const open = rows.filter(p => p.fulfillment_stage !== 'Complete' && (isAgent ? p.agent_id === u.id : p.assigned_fulfillment_id === u.id)).length
+  const signIn = realEmail(u.email) || (u.phone ? phoneText(u.phone) : null) || u.username || 'no login saved'
+  const busy = setRole.isPending || setAccess.isPending
+
+  async function run(fn) {
+    setErr(null)
+    try {
+      await fn()
+      setAsk(null)
+    } catch (e) {
+      // The server counted open work the page didn't see: ask again with it.
+      if (e.openWork && ask) setAsk({ ...ask, open: e.openWork })
+      else setErr(e.message || 'That didn’t work. Try again.')
+    }
+  }
+  const confirmRole = () => run(async () => {
+    await setRole.mutateAsync({ userId: u.id, role: ask.to, confirm: true })
+    onRole(u.id, ask.to)
+  })
+  const confirmOff = () => run(() => setAccess.mutateAsync({ userId: u.id, active: false, confirm: true }))
+  const turnOn = () => run(() => setAccess.mutateAsync({ userId: u.id, active: true }))
+
+  const first = firstOf(u.full_name)
+  const openN = ask?.open ?? open
+
+  return (
+    <section className="ov-card au-access" aria-label="Access">
+      <span className="au-access-h">Access</span>
+      <span className="au-access-role">
+        Role
+        <span className="au-role-sel">
+          <OvSelect
+            value={u.role} placement="up" aria-label="Role"
+            onChange={v => { if (v !== u.role) { setErr(null); setAsk({ kind: 'role', to: v }) } }}
+            options={[{ value: 'agent', label: 'Agent' }, { value: 'fulfillment', label: 'Fulfillment' }]}
+          />
+        </span>
+      </span>
+      <span className="au-access-sign">Signs in with <b>{signIn}</b></span>
+      <span className="au-access-gap" />
+      {err && <span className="au-err" role="alert">{err}</span>}
+      {u.is_active ? (
+        <button type="button" className="au-off" onClick={() => { setErr(null); setAsk({ kind: 'off' }) }} disabled={busy}>Turn off access</button>
+      ) : (
+        <button type="button" className="au-on" onClick={turnOn} disabled={busy}>{setAccess.isPending ? 'Turning on…' : 'Turn access back on'}</button>
+      )}
+
+      {ask?.kind === 'role' && (
+        <Dialog
+          title={`Make ${first} ${ask.to === 'agent' ? 'an agent' : 'Fulfillment'}?`}
+          onCancel={() => setAsk(null)} onConfirm={confirmRole} busy={setRole.isPending} confirmLabel={`Make ${ask.to === 'agent' ? 'Agent' : 'Fulfillment'}`}
+          err={err}
+        >
+          <p>{ask.to === 'agent'
+            ? `${first} will sign in to the agent portal and stop getting Fulfillment calls.`
+            : `${first} will sign in to the Fulfillment desk instead of the agent portal.`}</p>
+          {openN > 0 && (
+            <p className="au-warn">{isAgent
+              ? `${first} has ${plural(openN, 'open client')}. They stay booked under ${first}, but ${first} won't see them as an agent any more.`
+              : `${first} has ${plural(openN, 'open call')}. Calls not live go to someone else on Fulfillment.`}</p>
+          )}
+        </Dialog>
+      )}
+      {ask?.kind === 'off' && (
+        <Dialog
+          title={`Turn off ${first}’s access?`} danger
+          onCancel={() => setAsk(null)} onConfirm={confirmOff} busy={setAccess.isPending} confirmLabel="Turn off access"
+          err={err}
+        >
+          <p>{first} can’t sign in and is signed out now. {isAgent ? 'They can’t book calls.' : 'They won’t get new calls.'} Their clients and history stay. You can turn it back on any time.</p>
+          {!isAgent && openN > 0 && <p className="au-warn">{`${first} has ${plural(openN, 'open call')}. Calls not live go to someone else on Fulfillment.`}</p>}
+        </Dialog>
+      )}
+    </section>
+  )
+}
+
+function Dialog({ title, children, onCancel, onConfirm, confirmLabel, busy, danger, err }) {
+  const onKey = useEffectEvent(e => { if (e.key === 'Escape' && !busy) onCancel() })
+  useEffect(() => {
+    const h = e => onKey(e)
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [])
+  return createPortal(
+    <>
+      <div className="ov-scrim ap-scrim" onClick={busy ? undefined : onCancel} aria-hidden="true" />
+      <div className="ov-card ap-modal au-modal" role="dialog" aria-modal="true" aria-label={title}>
+        <div className="ap-modal-head">
+          <div><h2>{title}</h2></div>
+          <button type="button" className="ap-x" aria-label="Close" onClick={onCancel} disabled={busy}><X size={18} /></button>
+        </div>
+        <div className="au-modal-body">{children}</div>
+        {err && <p className="au-err" role="alert">{err}</p>}
+        <div className="ap-fix-foot">
+          <button type="button" className="ap-ghost" onClick={onCancel} disabled={busy}>Cancel</button>
+          <button type="button" className={danger ? 'au-danger' : 'ap-solid'} onClick={onConfirm} disabled={busy}>{busy ? 'Working…' : confirmLabel}</button>
+        </div>
+      </div>
+    </>,
+    document.body,
+  )
+}
+
+// ── Add someone ─────────────────────────────────────────────────────────────
+function AddSomeone({ defaultRole, onClose }) {
+  const { profile } = useAuth()
+  const status = useInviteStatus()
+  const send = useSendAgentInvite()
+  const createInvite = useCreateInvite()
+  const [role, setRole] = useState(defaultRole)
+  const [channel, setChannel] = useState('email')
+  const [to, setTo] = useState('')
+  const [err, setErr] = useState(null)
+  const [done, setDone] = useState(null)   // { sent } | { link }
+  const [copied, setCopied] = useState(false)
+  const ready = status.data?.[channel]
+  const busy = send.isPending || createInvite.isPending
+
+  const onKey = useEffectEvent(e => { if (e.key === 'Escape' && !busy) onClose() })
+  useEffect(() => {
+    const h = e => onKey(e)
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [])
+
+  async function submit(e) {
+    e.preventDefault()
+    setErr(null)
+    try {
+      await send.mutateAsync({ channel, to, role })
+      setDone({ sent: channel === 'email' ? to.trim() : phoneText(to) })
+    } catch (x) { setErr(x.message) }
+  }
+  async function makeLink() {
+    setErr(null)
+    try {
+      const inv = await createInvite.mutateAsync({ role, createdBy: profile.id })
+      const link = `${window.location.origin}/join/${inv.token}`
+      setDone({ link })
+      try { await navigator.clipboard.writeText(link); setCopied(true) } catch { /* the link is on screen */ }
+    } catch (x) { setErr(x.message || 'Couldn’t make a link.') }
+  }
+
+  const roleWord = role === 'agent' ? 'an agent' : 'Fulfillment'
+  return createPortal(
+    <>
+      <div className="ov-scrim ap-scrim" onClick={busy ? undefined : onClose} aria-hidden="true" />
+      <div className="ov-card ap-modal au-modal" role="dialog" aria-modal="true" aria-label="Add someone">
+        <div className="ap-modal-head">
+          <div>
+            <h2>Add someone</h2>
+            <p>They get a link that works once and lasts 7 days. They pick their own password.</p>
+          </div>
+          <button type="button" className="ap-x" aria-label="Close" onClick={onClose} disabled={busy}><X size={18} /></button>
+        </div>
+
+        {done ? (
+          <div className="au-modal-body">
+            {done.sent ? <p>Invite sent to <b>{done.sent}</b> as {roleWord}.</p> : (
+              <>
+                <p>{copied ? 'Link copied.' : 'Here’s the link.'} Send it to them yourself. It joins them as {roleWord}.</p>
+                <p className="au-linkbox"><code>{done.link}</code>
+                  <button type="button" className="au-link" onClick={async () => { try { await navigator.clipboard.writeText(done.link); setCopied(true) } catch { /* shown */ } }}>
+                    {copied ? <><Check size={13} /> Copied</> : <><Copy size={13} /> Copy</>}
+                  </button>
+                </p>
+              </>
+            )}
+            <div className="ap-fix-foot"><button type="button" className="ap-solid" onClick={onClose}>Done</button></div>
+          </div>
+        ) : (
+          <form className="au-modal-body" onSubmit={submit}>
+            <div className="au-field">
+              <span>Role</span>
+              <div className="au-seg" role="radiogroup" aria-label="Role">
+                {[['agent', 'Agent'], ['fulfillment', 'Fulfillment']].map(([v, l]) => (
+                  <button key={v} type="button" role="radio" aria-checked={role === v} className={role === v ? 'is-on' : ''} onClick={() => setRole(v)}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <div className="au-field">
+              <span>Send by</span>
+              <div className="au-seg" role="radiogroup" aria-label="Send by">
+                {[['email', 'Email'], ['sms', 'Text']].map(([v, l]) => (
+                  <button key={v} type="button" role="radio" aria-checked={channel === v} className={channel === v ? 'is-on' : ''} onClick={() => { setChannel(v); setTo(''); setErr(null) }}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <label className="au-field">
+              <span>{channel === 'email' ? 'Their email' : 'Their phone'}</span>
+              <input
+                className="au-input" value={to} autoComplete="off" disabled={status.isSuccess && !ready}
+                type={channel === 'email' ? 'email' : 'tel'} inputMode={channel === 'email' ? 'email' : 'tel'}
+                placeholder={channel === 'email' ? 'name@example.com' : '(555) 123-4567'}
+                onChange={e => setTo(channel === 'sms' ? formatPhoneInput(e.target.value) : e.target.value)}
+              />
+            </label>
+            {status.isSuccess && !ready && (
+              <p className="au-note">{channel === 'email' ? 'Email invites aren’t set up yet.' : 'Texting invites is coming soon.'} Copy a link instead.</p>
+            )}
+            {status.isError && <p className="au-note">Couldn’t check which ways can send. You can still copy a link.</p>}
+            {err && <p className="au-err" role="alert">{err}</p>}
+            <div className="ap-fix-foot">
+              <button type="button" className="au-link au-copy" onClick={makeLink} disabled={busy}>Copy a link instead</button>
+              <button type="submit" className="ap-solid" disabled={busy || !ready || !to.trim()}>{send.isPending ? 'Sending…' : 'Send invite'}</button>
+            </div>
+          </form>
+        )}
+      </div>
+    </>,
+    document.body,
   )
 }

@@ -6,7 +6,7 @@
 //   supabase functions deploy send-agent-invite --project-ref jjextitmbptoaolacocs
 //
 //   { action: 'status' }                    → { email, sms } — which channels can send
-//   { action: 'send', channel, to }         → { ok: true } (nothing else, ever)
+//   { action: 'send', channel, to, role? }  → { ok: true } (nothing else, ever); role: admin only (P762)
 //
 // Email: Resend (RESEND_API_KEY, INVITE_FROM_EMAIL on a Resend-verified domain).
 // Text: the same Twilio account/number as recovery-sms, and only once

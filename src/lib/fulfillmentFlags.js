@@ -38,6 +38,16 @@ export function needsAttention(p, now) {
   return !!(f.overdue || f.stale || f.liveStale)
 }
 
+// Why a client needs attention, as the admin Pipeline's label (Prompt 759;
+// shared with Users in 762), or null when it doesn't.
+export function attentionReason(p, now) {
+  const f = flagsFor(p, now)
+  if (f.liveStale) return 'Call left open'
+  if (f.stale && p.last_call_outcome === 'no_answer') return 'Stuck 48h+'
+  if (f.overdue || f.stale) return 'Past call time'
+  return null
+}
+
 // Open items on the same rep's desk whose calls are within one slot of this
 // one. Assignment avoids this whenever any rep is free; it only happens when
 // every rep already had a call then, so the desk shows it rather than hiding it.

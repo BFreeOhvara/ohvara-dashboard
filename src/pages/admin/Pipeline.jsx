@@ -8,7 +8,7 @@ import { dmId } from '../../hooks/useDirectMessages'
 import {
   ClientSearch, PipelineSummary, PipelineList, ClientDrawer, InfoTile, StatusNote, Journey, OvSelect,
 } from '../../components/agent/AgentUI'
-import { flagsFor } from '../../lib/fulfillmentFlags'
+import { attentionReason } from '../../lib/fulfillmentFlags'
 import { whenShort } from '../../lib/fulfillmentDay'
 import { callWhen } from '../../lib/scheduling'
 import { isLive, stageOf, fulfillTabOf, RANGES, useNow, startOfWeek, startOfMonth, placeOf } from '../../lib/agentBookings'
@@ -37,13 +37,7 @@ const RANGE_VALUES = RANGES.map(r => r.value)
 const STAGE_ALIAS = { all: 'needs', attention: 'needs', needsAttention: 'needs', confirmNumber: 'needs', inProgress: 'booked' }
 
 // Why a row needs attention, or null when it doesn't.
-function reasonOf(p, now) {
-  const f = flagsFor(p, now)
-  if (f.liveStale) return 'Call left open'
-  if (f.stale && stageOf(p) === 'noAnswer') return 'Stuck 48h+'
-  if (f.overdue || f.stale) return 'Past call time'
-  return null
-}
+const reasonOf = attentionReason
 
 const byCall = (a, b) => (a.scheduled_call_at || '9').localeCompare(b.scheduled_call_at || '9')
 const SORT = {

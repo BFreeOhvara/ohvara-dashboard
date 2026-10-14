@@ -246,6 +246,8 @@ export default function AdminFulfillment() {
   const todayStr = zonedDateStr(now, tz)
   const [params, setParams] = useSearchParams()
   const dayParam = DAY_RE.test(params.get('day') || '') ? params.get('day') : null
+  // Users' "View on the desk" (P762) lands here with ?rep=<id>: that row is marked and scrolled to.
+  const repParam = params.get('rep')
   const day = dayParam || todayStr
   const isToday = day === todayStr
   const past = day < todayStr
@@ -290,6 +292,10 @@ export default function AdminFulfillment() {
       return { id, rep, name, calls: list, shift: shiftOf(rep, day) }
     }).sort((a, b) => (a.id === NOBODY) - (b.id === NOBODY) || a.name.localeCompare(b.name))
   }, [calls, repById, day])
+  const focusShown = lanes.some(l => l.id === repParam)
+  useEffect(() => {
+    if (focusShown) rootRef.current?.querySelector('.af-lane.is-focus')?.scrollIntoView({ block: 'center' })
+  }, [focusShown, day])
 
   // The track runs from the desk's first hour to its last: 9 AM to 7 PM,
   // widened to the shifts of the people on it and to every call.
@@ -463,7 +469,7 @@ export default function AdminFulfillment() {
                   const st = laneStatus(l)
                   const cx = l.calls.filter(c => c.k === 'cx').length
                   return (
-                    <div key={l.id} className="af-lane">
+                    <div key={l.id} className={`af-lane${l.id === repParam ? ' is-focus' : ''}`}>
                       <div className="af-who">
                         <div className="af-who-top">
                           <span className="af-av">
