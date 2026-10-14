@@ -142,7 +142,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
                     <NavLink
                       key={to}
                       to={to}
-                      end={to === '/agent' || to === '/fulfillment'}
+                      end={to === '/agent' || to === '/fulfillment' || to === '/admin'}
                       onClick={onClose}
                       title={expanded ? undefined : label}
                       aria-label={expanded ? undefined : label}

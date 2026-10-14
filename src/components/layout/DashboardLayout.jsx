@@ -1,6 +1,6 @@
 import { useState, useEffect, Fragment } from 'react'
 import { useLocation, Link } from 'react-router-dom'
-import { Menu, ChevronRight, Home } from 'lucide-react'
+import { Menu, ChevronRight, Home, Plus } from 'lucide-react'
 import { Sidebar, COLLAPSE_KEY, SIDEBAR_W, SIDEBAR_W_COLLAPSED } from './Sidebar'
 import { GlobalSearch } from './GlobalSearch'
 import { ActiveCallProvider } from '../../contexts/ActiveCallContext'
@@ -45,9 +45,11 @@ const TITLES = {
   '/agent/stats': ['Performance', 'Production, persistency, and leaderboard — switch the view'],
   '/agent/hierarchy': ['Team', 'Your hierarchy, team chat, and DMs'],
   '/agent/commissions': ['Commissions', 'Compensation grid & balance — switch the view'],
-  '/admin': ['Overview', 'Your day at a glance'],
-  '/admin/users': ['Users & Access', 'Accounts, roles and invites'],
-  '/admin/carriers': ['Carrier hours', 'When each carrier takes calls, which sets the bookable times'],
+  '/admin': ['Overview', 'The business at a glance'],
+  '/admin/pipeline': ['Pipeline', "Everyone's clients and where each cancellation stands"],
+  '/admin/fulfillment': ['Fulfillment', 'The whole desk, call by call'],
+  '/admin/payouts': ['Payouts', "Approve Fulfillment's weekly pay"],
+  '/admin/users': ['Users', 'Accounts, roles and invites'],
   '/fulfillment': ['Overview', 'Your day at a glance'],
   '/fulfillment/desk': ['My calls', 'Your day, call by call'],
   '/fulfillment/pipeline': ['Pipeline', 'Every client on your book and where each cancellation stands'],
@@ -239,7 +241,7 @@ export function DashboardLayout({ children }) {
   const isFullBleed = pathname === '/messages'
   // Prompt 726: My Pipeline (and, Prompt 749, Fulfillment's Pipeline) fills the height under the header on a tall
   // desktop screen (the .ov-fit rules in index.css) so only its list scrolls.
-  const isFit = pathname === '/agent/clients' || pathname === '/fulfillment/pipeline'
+  const isFit = pathname === '/agent/clients' || pathname === '/fulfillment/pipeline' || pathname === '/admin/pipeline'
 
   const [navOpen, setNavOpen] = useState(false)
   useEffect(() => { setNavOpen(false) }, [pathname])
@@ -267,7 +269,7 @@ export function DashboardLayout({ children }) {
           className="app-main flex-1 flex flex-col min-w-0 pt-[60px] md:pt-0"
           style={{ '--sb-w': `${collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W}px`, position: 'relative' }}
         >
-          <div className={`app-backdrop${['/agent', '/agent/book', '/agent/clients', '/agent/activity', '/agent/billing', '/settings', '/fulfillment', '/fulfillment/desk', '/fulfillment/pipeline', '/fulfillment/pay', '/fulfillment/getting-paid'].includes(pathname) ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
+          <div className={`app-backdrop${['/agent', '/agent/book', '/agent/clients', '/agent/activity', '/agent/billing', '/settings', '/fulfillment', '/fulfillment/desk', '/fulfillment/pipeline', '/fulfillment/pay', '/fulfillment/getting-paid'].includes(pathname) || pathname.startsWith('/admin') ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
           {/* Prompt 722 — one header for every size: a 60px fixed top bar on
               phones (menu, title, search, bell), the 72px sticky page header
               from md up. One instance, so the search hotkeys and the bell
@@ -281,12 +283,19 @@ export function DashboardLayout({ children }) {
               <PageTitle pathname={pathname} />
             </div>
             {(profile?.role === 'agent' || profile?.role === 'admin' || profile?.role === 'fulfillment') && <GlobalSearch />}
+            {/* Prompt 758 — admin's Book a call lives here, not in the sidebar. */}
+            {profile?.role === 'admin' && (
+              <Link to="/agent/book" className="ov-hbook" aria-label="Book a call">
+                <Plus size={16} strokeWidth={2.2} aria-hidden="true" />
+                <span className="ov-hbook-text">Book a call</span>
+              </Link>
+            )}
             <HeaderBell />
           </header>
 
           <main
             className={`scrollbar-thin ${isFullWidth ? 'h-screen overflow-hidden flex flex-col' : isFullBleed ? '' : 'px-4 md:px-6'}${isFit ? ' ov-fit-main' : ''}`}
-            style={isFullWidth ? { position: 'relative', zIndex: 1 } : isFullBleed ? { flex: 1, width: '100%', position: 'relative', zIndex: 1 } : { flex: 1, paddingTop: 32, paddingBottom: 64, maxWidth: isFit ? 1680 : 1280, width: '100%', margin: '0 auto', position: 'relative', zIndex: 1 }}
+            style={isFullWidth ? { position: 'relative', zIndex: 1 } : isFullBleed ? { flex: 1, width: '100%', position: 'relative', zIndex: 1 } : { flex: 1, paddingTop: 32, paddingBottom: 64, maxWidth: isFit && !pathname.startsWith('/admin') ? 1680 : 1280, width: '100%', margin: '0 auto', position: 'relative', zIndex: 1 }}
           >
             <div
               key={pathname}

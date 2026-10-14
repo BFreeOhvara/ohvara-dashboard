@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { SecretsProvider } from './contexts/SecretsContext'
@@ -27,13 +27,24 @@ import FulfillmentOverview from './pages/fulfillment/Overview'
 import FulfillmentPipeline from './pages/fulfillment/Pipeline'
 import MyPay, { GettingPaidRedirect } from './pages/fulfillment/MyPay'
 import Users from './pages/admin/Users'
-import Carriers from './pages/admin/Carriers'
+import AdminOverview from './pages/admin/Overview'
+import AdminPayouts from './pages/admin/Payouts'
 
 const qc = new QueryClient({
   // refetchOnWindowFocus off: tabbing back must be silent — fresh data
   // arrives via explicit invalidations, not a focus-triggered refetch wave.
   defaultOptions: { queries: { staleTime: 30000, retry: 1, refetchOnWindowFocus: false } },
 })
+
+// Prompt 758 — an admin who lands on a page that now has an Admin home (old
+// bookmarks, links inside the agent / Fulfillment pages) goes there instead,
+// query string kept. Agents and Fulfillment see the page as before.
+function AdminTo({ to, children }) {
+  const { profile } = useAuth()
+  const { search } = useLocation()
+  if (profile?.role === 'admin') return <Navigate to={`${to}${search}`} replace />
+  return children
+}
 
 function RoleRedirect() {
   const { profile, loading } = useAuth()
@@ -51,7 +62,7 @@ function RoleRedirect() {
   }
   if (!profile) return <Navigate to="/login" replace />
   if (profile.role === 'agent') return <Navigate to="/agent" replace />
-  if (profile.role === 'admin') return <Navigate to="/admin/users" replace />
+  if (profile.role === 'admin') return <Navigate to="/admin" replace />
   if (profile.role === 'fulfillment') return <Navigate to="/fulfillment" replace />
   return <Navigate to="/login" replace />
 }
@@ -112,7 +123,7 @@ export default function App() {
             } />
             <Route path="/agent/clients" element={
               <ProtectedRoute allowedRoles={['agent', 'admin']}>
-                <DashboardLayout><AgentClients /></DashboardLayout>
+                <AdminTo to="/admin/pipeline"><DashboardLayout><AgentClients /></DashboardLayout></AdminTo>
               </ProtectedRoute>
             } />
             {/* Prompt 690 — Activity: chronological log (policy_events +
@@ -135,35 +146,53 @@ export default function App() {
             <Route path="/agent/performance" element={<Navigate to="/" replace />} />
             <Route path="/agent/submissions" element={<Navigate to="/agent/book" replace />} />
             <Route path="/agent/policies" element={<Navigate to="/agent/clients" replace />} />
-            <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
+            {/* Prompt 758 — the Admin side: Overview, Pipeline, Fulfillment,
+                Payouts, Users (P759-P762 replace the stand-in pages). Settings
+                and Messages are shared. */}
+            <Route path="/admin" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardLayout><AdminOverview /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/pipeline" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardLayout><AgentClients /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/fulfillment" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardLayout><MyCalls /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/payouts" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardLayout><AdminPayouts /></DashboardLayout>
+              </ProtectedRoute>
+            } />
             <Route path="/admin/users" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <DashboardLayout><Users /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* Prompt 728 — carrier hours behind Book a call's bookable times. */}
-            <Route path="/admin/carriers" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><Carriers /></DashboardLayout>
-              </ProtectedRoute>
-            } />
+            {/* Prompt 758 — Carrier hours moved into Settings (admin section). */}
+            <Route path="/admin/carriers" element={<Navigate to="/settings#carriers" replace />} />
 
             {/* Prompt 681 — Fulfillment gets an Overview landing page and a
                 team-wide Pipeline; the claim desk moved to /fulfillment/desk.
                 Prompt 748 — /fulfillment/desk is "My calls", one day at a time. */}
             <Route path="/fulfillment" element={
               <ProtectedRoute allowedRoles={['fulfillment', 'admin']}>
-                <DashboardLayout><FulfillmentOverview /></DashboardLayout>
+                <AdminTo to="/admin"><DashboardLayout><FulfillmentOverview /></DashboardLayout></AdminTo>
               </ProtectedRoute>
             } />
             <Route path="/fulfillment/desk" element={
               <ProtectedRoute allowedRoles={['fulfillment', 'admin']}>
-                <DashboardLayout><MyCalls /></DashboardLayout>
+                <AdminTo to="/admin/fulfillment"><DashboardLayout><MyCalls /></DashboardLayout></AdminTo>
               </ProtectedRoute>
             } />
             <Route path="/fulfillment/pipeline" element={
               <ProtectedRoute allowedRoles={['fulfillment', 'admin']}>
-                <DashboardLayout><FulfillmentPipeline /></DashboardLayout>
+                <AdminTo to="/admin/pipeline"><DashboardLayout><FulfillmentPipeline /></DashboardLayout></AdminTo>
               </ProtectedRoute>
             } />
             {/* Prompt 683 — the rep's Getting Paid view, promoted out of Settings.

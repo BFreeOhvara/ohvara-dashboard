@@ -76,6 +76,25 @@ export function weekStats(frame, bookedCalls, cancelIsos) {
   }
 }
 
+// Prompt 758 — the admin Overview's week, from one buildCalls list (last Monday
+// to this Sunday, with that range's policy_events) so the cards and the chart
+// agree with My calls: booked = every call on the calendar, cancelled = calls
+// that ended Cancelled, rate = cancelled / calls that ended (cancelled or no
+// answer; null before any ended).
+export function adminWeek(frame, calls) {
+  const part = a => ({ value: sum(a, 7, 14), diff: sum(a, 7, 14) - sum(a, 0, 7), week: a.slice(7, 14) })
+  const booked = bookedByDay(frame, calls)
+  const cancelled = bookedByDay(frame, calls.filter(c => c.done && c.tone === 'cancelled'))
+  const ended = bookedByDay(frame, calls.filter(c => c.done && c.tone !== 'live'))
+  const endedTotal = sum(ended, 7, 14)
+  return {
+    booked: part(booked),
+    cancelled: part(cancelled),
+    rate: endedTotal ? Math.round((sum(cancelled, 7, 14) / endedTotal) * 100) : null,
+    days: frame.dates.slice(7, 14).map((d, i) => ({ date: noonOf(d), booked: booked[7 + i], cancelled: cancelled[7 + i] })),
+  }
+}
+
 // "3:30" + "PM" for the time tiles; "3:30 PM" for sentences.
 export function timeParts(iso, tz) {
   const parts = new Intl.DateTimeFormat('en-US', { timeZone: zoneOf(tz), hour: 'numeric', minute: '2-digit', hour12: true }).formatToParts(new Date(iso))

@@ -1,5 +1,5 @@
 import {
-  Users, Home, Settings, Award, ClipboardList, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard, Building2, Phone,
+  Users, Home, Settings, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard, Phone,
 } from 'lucide-react'
 
 // Each role's sidebar, grouped. Moved out of Sidebar.jsx by Prompt 722 so the
@@ -31,20 +31,23 @@ export const NAV = {
       { to: '/settings', label: 'Settings', icon: Settings },
     ] },
   ],
+  // Prompt 758 — the admin sidebar, grouped like the agent and Fulfillment
+  // ones. Book a call is a header button for admin; Activity is reached from
+  // Users (route kept); Carrier hours moved into Settings.
   admin: [
-    // Prompt 665 — admin follows the agent portal's pages (company-wide
-    // Clients), minus the agent's personal Overview.
-    { group: 'Agents', items: [
-      { to: '/agent/book', label: 'Book a call', icon: CalendarPlus },
-      { to: '/agent/clients', label: 'Pipeline', icon: Users },
-      { to: '/agent/activity', label: 'Activity', icon: History },
+    { group: 'Today', items: [
+      { to: '/admin', label: 'Overview', icon: Home },
+    ] },
+    { group: 'Work', items: [
+      { to: '/admin/pipeline', label: 'Pipeline', icon: ListFilter },
+      { to: '/admin/fulfillment', label: 'Fulfillment', icon: Phone },
+      { to: '/admin/payouts', label: 'Payouts', icon: Wallet },
+    ] },
+    { group: 'Communications', items: [
       { to: '/messages', label: 'Messages', icon: MessageSquare },
     ] },
     { group: 'Account', items: [
-      { to: '/admin/users', label: 'Users & Access', icon: Award },
-      // Prompt 728 — each carrier's service hours (they set the bookable times).
-      { to: '/admin/carriers', label: 'Carrier hours', icon: Building2 },
-      { to: '/fulfillment/desk', label: 'Fulfillment', icon: ClipboardList },
+      { to: '/admin/users', label: 'Users', icon: Users },
       { to: '/settings', label: 'Settings', icon: Settings },
     ] },
   ],

@@ -362,7 +362,8 @@ export function IconChip({ icon: Icon, color, tint, size = 36, radius = 11, icon
 
 // `action` ({ label, icon, onClick }) swaps the button; the agent Overview
 // leaves it out and keeps Book a call (Prompt 745: Fulfillment's own button).
-export function HeroPanel({ greeting, sub, dateLong, dateShort, timezone, onBook, action }) {
+// `compact` (Prompt 758, the admin Overview) is the same panel a size tighter.
+export function HeroPanel({ greeting, sub, dateLong, dateShort, timezone, onBook, action, compact }) {
   const { label: actionLabel, icon: ActionIcon, onClick: onAction } = action || { label: 'Book a call', icon: CalendarPlus, onClick: onBook }
   const dot = <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ov-hero-dot)' }} />
   return (
@@ -389,21 +390,21 @@ export function HeroPanel({ greeting, sub, dateLong, dateShort, timezone, onBook
       </div>
 
       {/* Tablet and up: text left; big clock and Book a call right. */}
-      <div className="hidden sm:flex" style={{ flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 32, padding: '36px 40px' }}>
+      <div className="hidden sm:flex" style={{ flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: compact ? 28 : 32, padding: compact ? '30px 36px' : '36px 40px' }}>
         <div style={{ flex: '1 1 380px', minWidth: 0 }}>
           <span className="ov-hero-chip">{dot}{dateLong}</span>
-          <h1 style={{ margin: '18px 0 0', fontFamily: DISPLAY, fontSize: 46, fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.035em', color: 'inherit' }}>
+          <h1 style={{ margin: compact ? '16px 0 0' : '18px 0 0', fontFamily: DISPLAY, fontSize: compact ? 44 : 46, fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.035em', color: 'inherit' }}>
             {greeting}
           </h1>
-          <p style={{ margin: '12px 0 0', fontSize: 17, color: 'var(--ov-hero-soft)' }}>{sub}</p>
+          <p style={{ margin: compact ? '10px 0 0' : '12px 0 0', fontSize: compact ? 16 : 17, color: 'var(--ov-hero-soft)' }}>{sub}</p>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 18 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: compact ? 16 : 18 }}>
           <DayClock
             timezone={timezone}
-            style={{ fontFamily: DISPLAY, fontSize: 64, fontWeight: 600, lineHeight: 1, letterSpacing: '-0.04em' }}
-            periodStyle={{ marginLeft: 10, fontSize: 22, fontWeight: 500, color: 'var(--ov-hero-soft)' }}
+            style={{ fontFamily: DISPLAY, fontSize: compact ? 58 : 64, fontWeight: 600, lineHeight: 1, letterSpacing: '-0.04em' }}
+            periodStyle={{ marginLeft: 10, fontSize: compact ? 21 : 22, fontWeight: 500, color: 'var(--ov-hero-soft)' }}
           />
-          <button type="button" onClick={onAction} className="ov-hero-btn" style={{ height: 48, padding: '0 24px', fontSize: 15 }}>
+          <button type="button" onClick={onAction} className="ov-hero-btn" style={{ height: compact ? 46 : 48, padding: compact ? '0 22px' : '0 24px', fontSize: 15 }}>
             <ActionIcon size={18} strokeWidth={2.1} /> {actionLabel}
           </button>
         </div>

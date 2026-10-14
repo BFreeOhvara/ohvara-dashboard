@@ -48,7 +48,7 @@ export default function Login() {
   // Role redirect — held while the two-step code is still owed.
   useEffect(() => {
     if (loading || !profile || mfaRequired) return
-    if (profile.role === 'admin')            navigate('/admin/users',         { replace: true })
+    if (profile.role === 'admin')            navigate('/admin',               { replace: true })
     else if (profile.role === 'agent')      navigate('/agent',   { replace: true })
     else if (profile.role === 'fulfillment') navigate('/fulfillment',         { replace: true })
   }, [profile, loading, mfaRequired, navigate])

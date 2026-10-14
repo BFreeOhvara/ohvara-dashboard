@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import { createPortal } from 'react-dom'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import {
-  User, ShieldCheck, SlidersHorizontal, PhoneForwarded, Wrench, Mail, KeyRound, Smartphone, LogOut, Moon, Sun,
+  User, ShieldCheck, SlidersHorizontal, PhoneForwarded, Wrench, Building2, Mail, KeyRound, Smartphone, LogOut, Moon, Sun,
   Check, Globe, Video, PhoneCall, ArrowLeft, ArrowRight, X, Copy, Loader2, Trash2,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -25,6 +25,7 @@ import {
 import { ProfilePanel } from './Profile'
 import { TextFollowUpPanel } from '../components/settings/TextFollowUpPanel'
 import { FulfillmentPayAdminPanel } from '../components/fulfillment/GettingPaid'
+import Carriers from './admin/Carriers'
 
 // Settings — Prompt 720 rethink on the v16 language (P714–P719). Eight tabs
 // became four sections plus one admin-only, picked from a side menu beside
@@ -49,6 +50,8 @@ const SECTIONS = [
   { key: 'preferences', label: 'Preferences',        sub: 'Theme and time zone',          icon: SlidersHorizontal, lede: 'How the portal looks and keeps time for you.' },
   { key: 'contact',     label: 'Client contact',     sub: 'Caller ID and text follow-up', icon: PhoneForwarded,    lede: 'How Fulfillment reaches your clients for you.', roles: ['agent', 'admin'] },
   { key: 'team',        label: 'Team tools',         sub: 'Live Room and Fulfillment pay', icon: Wrench,           lede: 'Company-wide settings only admins can change.', roles: ['admin'] },
+  // Prompt 758 — Carrier hours left the admin sidebar and lives here.
+  { key: 'carriers',    label: 'Carrier hours',      sub: 'When each carrier takes calls', icon: Building2,        lede: 'Service hours set the bookable times in Book a call.', roles: ['admin'] },
 ]
 
 // Old tab hashes → new sections.
@@ -153,6 +156,7 @@ export default function Settings() {
         {open === 'preferences' && <PreferencesSection profile={profile} />}
         {open === 'contact'     && <><CallerIdPanel profile={profile} /><TextFollowUpPanel profile={profile} /></>}
         {open === 'team'        && <><LiveRoomCard /><FulfillmentPayAdminPanel /></>}
+        {open === 'carriers'    && <Carriers />}
       </div>
     </div>
   )
