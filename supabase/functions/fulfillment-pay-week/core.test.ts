@@ -1,435 +1,245 @@
 /**
- * Node unit tests for Fulfillment payouts (Prompt 753): fulfillment-pay-week,
- * fulfillment-connect-session and the Connect webhook handler, with a mocked
- * Stripe client and in-memory stores. No real Stripe calls, no transfers.
+ * Node unit tests for the automatic Monday pay run (Prompt 764), with a mocked
+ * Stripe client and an in-memory store that follows the database's rules
+ * (fulfillment_payable / fulfillment_claim_payout / fulfillment_finish_payout,
+ * migration 145). No real Stripe calls, no money moves.
  * Run: node --test supabase/functions/fulfillment-pay-week/core.test.ts
+ * (The Connect tests moved to fulfillment-connect-session/core.test.ts.)
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { payWeek, handle, type Store, type Payout, type Figures } from './core.ts'
-import { act as connectAct, handle as connectHandle, details, maskStreet, type Store as ConnectSessionStore } from '../fulfillment-connect-session/core.ts'
-import {
-  StripeError, summarize, statusOf, handleConnectEvent, formEncode, type Stripe, type PayoutAccount, type Email,
-} from '../_shared/fulfillmentPayouts.ts'
+import { runPayday, handle, chicago, mondayOf, type Store, type Payout, type Rep, type Run } from './core.ts'
+import { StripeError, type Stripe, type PayoutAccount, type Email } from '../_shared/fulfillmentPayouts.ts'
 
-const REP = '11111111-1111-4111-8111-111111111111'
-const AGENT = '22222222-2222-4222-8222-222222222222'
-const ADMIN = '33333333-3333-4333-8333-333333333333'
-const WEEK = '2026-10-05' // a Monday
+const A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+const B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+// Monday Oct 19 2026, 8:05 AM Central (CDT, UTC-5).
+const MON_805 = new Date('2026-10-19T13:05:00Z')
+const LAST_WEEK = '2026-10-12'
 const ENV = { configured: true, appUrl: 'https://portal.ohvara.com' }
 
-const readyAccount = (over: Partial<PayoutAccount> = {}): PayoutAccount => ({
-  rep_id: REP, stripe_account_id: 'acct_rep', details_submitted: true, payouts_enabled: true, transfers_active: true,
-  requirements_due: [], disabled_reason: null, external_kind: 'bank', bank_name: 'Chase', last4: '4821', ...over,
+const ready = (rep: string): PayoutAccount => ({
+  rep_id: rep, stripe_account_id: `acct_${rep[0]}`, details_submitted: true, payouts_enabled: true, transfers_active: true,
+  requirements_due: [], disabled_reason: null, external_kind: 'bank', bank_name: 'Chase', last4: '4821',
 })
 
-// 30h at $15/hr, the mockup's numbers.
-const FIG: Figures = { period_start: WEEK, period_end: '2026-10-11', hours: 30, rate_cents: 1500, amount_cents: 45000, ended: true }
+type C = { id: string; rep: string; status: string; amount: number; logged: string; week: string; payout: string | null; paid: boolean }
 
-function world(over: { live?: boolean; figures?: Partial<Figures>; account?: PayoutAccount | null; stripeFail?: any; repEmails?: boolean } = {}) {
-  const rows = new Map<string, Payout & { approved_by?: string; paid_to?: string; failure_reason?: string | null }>()
+function world(over: { live?: boolean; paused?: boolean; balance?: number; accounts?: Record<string, PayoutAccount | null>; failFor?: string; minCents?: number | null; reps?: Rep[] } = {}) {
+  const reps: Rep[] = over.reps ?? [
+    { id: A, full_name: 'Ana', email: 'ana@x.co', stripe_account_id: 'acct_a', payout_email_sent: true, payout_email_problem: true },
+    { id: B, full_name: 'Ben', email: 'ben@x.co', stripe_account_id: 'acct_b', payout_email_sent: true, payout_email_problem: true },
+  ]
+  const accounts: Record<string, PayoutAccount | null> = over.accounts ?? { [A]: ready(A), [B]: ready(B) }
+  const cancels: C[] = []
+  const payouts: (Payout & { run_id?: string; failure_reason?: string | null; paid_to?: string | null })[] = []
+  const runs: (Run & Record<string, any>)[] = []
+  const transfers: any[] = []
+  const admin: string[] = []
+  const repNotes: [string, string][] = []
   const emails: Email[] = []
-  const calls: { method: string; path: string; params?: any; key?: string }[] = []
-  const transfersByKey = new Map<string, any>()
-  const roles: Record<string, string> = { [REP]: 'fulfillment', [AGENT]: 'agent', [ADMIN]: 'admin' }
-  const account = over.account === undefined ? readyAccount() : over.account
+  const settings = { payouts_live: over.live ?? true, payouts_paused: over.paused ?? false }
+  const state = { balance: over.balance ?? 1_000_000 }
+  let n = 0
+  const add = (rep: string, status: string, logged = '2026-10-14T15:00:00Z', week = LAST_WEEK, amount = 1000) =>
+    cancels.push({ id: `c${++n}`, rep, status, amount, logged, week, payout: null, paid: false })
+
+  const locked = (c: C) => c.paid || payouts.some(p => p.id === c.payout && ['approved', 'paid'].includes(p.status))
+  const payable = (rep: string, period: string) => {
+    const cut = new Date(`${period}T05:00:00Z`).getTime() + 7 * 864e5
+    const list = cancels.filter(c => c.rep === rep && ['verified', 'verified_by_admin'].includes(c.status) && !c.paid && new Date(c.logged).getTime() < cut && !locked(c))
+    const sum = list.reduce((t, c) => t + c.amount, 0)
+    const wk = list.filter(c => c.week === period).length
+    const topup = over.minCents != null && wk > 0 && sum < over.minCents ? over.minCents - sum : 0
+    return { ids: list.map(c => c.id), cancels: list.length, amount_cents: sum + topup, topup }
+  }
+
   const store: Store = {
-    async userFromJwt(jwt) { return ({ admin: ADMIN, rep: REP } as any)[jwt] ?? null },
-    async role(id) { return roles[id] ?? null },
-    async payoutsLive() { return over.live ?? true },
-    async rep(id) {
-      if (!roles[id]) return null
-      return { id, role: roles[id], full_name: 'Test Fulfill', email: 'tf@example.com', stripe_account_id: account?.stripe_account_id ?? null, payout_email_sent: over.repEmails ?? true, payout_email_problem: over.repEmails ?? true }
+    async cronOk(s) { return s === 'cron-secret' },
+    async settings() { return settings },
+    async run(d) { return runs.find(r => r.pay_date === d) ?? null },
+    async startRun(d) {
+      const had = runs.find(r => r.pay_date === d)
+      if (had) { had.status = 'running'; had.attempts++; return had }
+      const r = { id: `run${runs.length + 1}`, pay_date: d, status: 'running', attempts: 1 }
+      runs.push(r)
+      return r
     },
-    async figures(_rep, start) { return { ...FIG, ...over.figures, period_start: start } },
-    async claim(repId, f, adminId) {
-      const k = `${repId}|${f.period_start}`
-      let r = rows.get(k)
-      if (!r) { r = { id: `po_${rows.size + 1}`, rep_id: repId, period_start: f.period_start, period_end: f.period_end, hours: f.hours, rate_cents: f.rate_cents, amount_cents: f.amount_cents, status: 'upcoming', stripe_transfer_id: null }; rows.set(k, r) }
-      // An approved row is claimable only when marked stale (the real store: older than 2 min).
-      if (!['upcoming', 'failed', 'held'].includes(r.status) && !(r.status === 'approved' && (r as any).stale)) return null
-      Object.assign(r, { status: 'approved', approved_by: adminId, hours: f.hours, rate_cents: f.rate_cents, amount_cents: f.amount_cents })
-      return { ...r }
+    async finishRun(id, patch) { Object.assign(runs.find(r => r.id === id)!, patch) },
+    async reps() { return reps },
+    async payable(rep, period) { return payable(rep, period) },
+    async sending(rep, period) { return payouts.find(p => p.rep_id === rep && p.period_start === period && p.status === 'approved') ?? null },
+    async account(rep) { return accounts[rep] ?? null },
+    async claim(rep, period, run, hold = false, reason) {
+      let cur = payouts.find(p => p.rep_id === rep && p.period_start === period)
+      if (cur?.status === 'paid') return null
+      if (cur?.status === 'approved') return cur
+      const f = payable(rep, period)
+      if (f.amount_cents <= 0) return null
+      if (!cur) {
+        cur = { id: `po${payouts.length + 1}`, rep_id: rep, period_start: period, period_end: '2026-10-18', amount_cents: 0, cancels: 0, topup_cents: 0, status: 'upcoming', stripe_transfer_id: null }
+        payouts.push(cur)
+      }
+      Object.assign(cur, { amount_cents: f.amount_cents, cancels: f.cancels, topup_cents: f.topup, status: hold ? 'held' : 'approved', run_id: run, failure_reason: hold ? reason : null })
+      if (!hold) for (const c of cancels) if (f.ids.includes(c.id) && !c.payout) c.payout = cur.id
+      return cur
     },
-    async payout(repId, start) { return rows.get(`${repId}|${start}`) ?? null },
-    async account() { return account },
-    async markPayout(id, patch) { for (const r of rows.values()) if (r.id === id) Object.assign(r, patch) },
+    async finish(id, ok, tr, to, reason) {
+      const p = payouts.find(x => x.id === id)!
+      if (ok) { Object.assign(p, { status: 'paid', stripe_transfer_id: tr, paid_to: to }); for (const c of cancels) if (c.payout === id) c.paid = true }
+      else { Object.assign(p, { status: 'failed', failure_reason: reason }); for (const c of cancels) if (c.payout === id) c.payout = null }
+    },
+    async notifyAdmins(m) { admin.push(m) },
+    async notifyRep(rep, m) { repNotes.push([rep, m]) },
     async sendEmail(e) { emails.push(e) },
   }
+  const seenKeys = new Map<string, any>()
   const stripe: Stripe = async (method, path, params, opts) => {
-    calls.push({ method, path, params, key: opts?.idempotencyKey })
+    if (path === 'balance') return { available: [{ currency: 'usd', amount: state.balance }] }
     if (path === 'transfers') {
-      if (over.stripeFail) throw over.stripeFail
-      // Stripe's idempotency: the same key returns the same transfer.
-      if (opts?.idempotencyKey && transfersByKey.has(opts.idempotencyKey)) return transfersByKey.get(opts.idempotencyKey)
-      const t = { id: `tr_${transfersByKey.size + 1}`, amount: params!.amount }
-      if (opts?.idempotencyKey) transfersByKey.set(opts.idempotencyKey, t)
+      const k = opts?.idempotencyKey!
+      if (seenKeys.has(k)) return seenKeys.get(k)
+      if (over.failFor && params?.destination === over.failFor) throw new StripeError({ code: 'account_invalid', message: 'nope' }, 400, 'x')
+      const t = { id: `tr_${transfers.length + 1}`, ...params }
+      transfers.push({ ...params, key: k })
+      seenKeys.set(k, t)
       return t
     }
-    return {}
+    throw new Error(`unexpected ${method} ${path}`)
   }
-  return { store, stripe, rows, emails, calls }
+  return { store, stripe, cancels, payouts, runs, transfers, admin, repNotes, emails, settings, state, add, accounts }
 }
 
-const transfers = (calls: any[]) => calls.filter(c => c.path === 'transfers')
-
-test('admin-only: a rep, an agent or a stranger cannot pay a week', async () => {
+test('time: Chicago date, the Monday, and no pay before 8 AM Monday', async () => {
+  assert.deepEqual(chicago(MON_805), { date: '2026-10-19', weekday: 'Mon', hour: 8 })
+  assert.equal(mondayOf('2026-10-21'), '2026-10-19')
   const w = world()
-  await assert.rejects(payWeek(w.store, w.stripe, ENV, REP, { rep_id: REP, period_start: WEEK }), { status: 403 })
-  await assert.rejects(payWeek(w.store, w.stripe, ENV, AGENT, { rep_id: REP, period_start: WEEK }), { status: 403 })
-  await assert.rejects(payWeek(w.store, w.stripe, ENV, 'nobody', { rep_id: REP, period_start: WEEK }), { status: 403 })
-  assert.equal(transfers(w.calls).length, 0)
+  w.add(A, 'verified')
+  const early = await runPayday(w.store, w.stripe, ENV, new Date('2026-10-19T12:30:00Z')) as any // 7:30 AM CDT
+  assert.equal(early.skipped, 'before_pay_time')
+  assert.equal(w.runs.length, 0)
 })
 
-test('payouts_live off: Approve marks the week approved, Stripe is never called, no email', async () => {
-  const w = world({ live: false })
-  const r = await payWeek(w.store, w.stripe, { ...ENV, configured: false }, ADMIN, { rep_id: REP, period_start: WEEK, amount_cents: 1 })
-  assert.deepEqual(r, { ok: true, approved_only: true, payout_id: 'po_1', amount_cents: 45000 })
-  assert.equal(w.calls.length, 0)
-  assert.equal(w.emails.length, 0)
-  const row = w.rows.get(`${REP}|${WEEK}`)!
-  assert.equal(row.status, 'approved')
-  assert.equal(row.approved_by, ADMIN)
-  assert.equal(row.stripe_transfer_id, null)
-  // A second click (or Approve all) is a no-op, still nothing sent.
-  const again = await payWeek(w.store, w.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK })
-  assert.equal(again.approved_only, true)
-  assert.equal(w.calls.length, 0)
-  // A rep with no payout account is approved the same way, still no Stripe, no email.
-  const h = world({ live: false, account: null })
-  assert.equal((await payWeek(h.store, h.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK })).approved_only, true)
-  assert.equal(h.calls.length + h.emails.length, 0)
-  // Off still refuses a week that isn't over and a non-admin.
-  const open = world({ live: false, figures: { ended: false } })
-  await assert.rejects(payWeek(open.store, open.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK }), { code: 'week_not_over' })
-  await assert.rejects(payWeek(open.store, open.stripe, ENV, REP, { rep_id: REP, period_start: WEEK }), { status: 403 })
-  assert.equal(open.calls.length, 0)
-})
-
-test('approved while off, paid once payouts are on: one transfer for the approved week', async () => {
-  const w = world({ live: false })
-  await payWeek(w.store, w.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK })
-  const live = world({ live: true })
-  live.rows.set(`${REP}|${WEEK}`, { ...w.rows.get(`${REP}|${WEEK}`)!, stale: true } as any)
-  const r = await payWeek(live.store, live.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK })
-  assert.equal(r.transfer_id, 'tr_1')
-  assert.equal(transfers(live.calls).length, 1)
-  assert.equal(live.rows.get(`${REP}|${WEEK}`)!.status, 'paid')
-  await assert.rejects(payWeek(live.store, live.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK }), { code: 'already_paid' })
-  assert.equal(transfers(live.calls).length, 1)
-})
-
-test('approve all: one call per waiting person; paid, held and failed each land on their own row', async () => {
-  const REP2 = '44444444-4444-4444-8444-444444444444'
-  const REP3 = '55555555-5555-4555-8555-555555555555'
+test('normal run: each rep gets the sum of their verified cancels; checking / needs a listen roll over', async () => {
   const w = world()
-  const roleOf = w.store.role
-  const repOf = w.store.rep
-  const accounts: Record<string, PayoutAccount | null> = {
-    [REP]: readyAccount(), [REP2]: null, [REP3]: readyAccount({ rep_id: REP3, stripe_account_id: 'acct_3' }),
-  }
-  w.store.role = async id => (id === REP2 || id === REP3 ? 'fulfillment' : roleOf(id))
-  w.store.rep = async id => {
-    if (id !== REP2 && id !== REP3) return repOf(id)
-    return { id, role: 'fulfillment', full_name: id === REP2 ? 'Nina' : 'Marcus', email: `${id}@x.com`, stripe_account_id: accounts[id]?.stripe_account_id ?? null, payout_email_sent: true, payout_email_problem: true }
-  }
-  w.store.account = async id => accounts[id] ?? null
-  const base = w.stripe
-  const stripe: Stripe = async (m, path, params, opts) => {
-    if (path === 'transfers' && (params as any)?.destination === 'acct_3') {
-      w.calls.push({ method: m, path, params, key: opts?.idempotencyKey })
-      throw new StripeError({ code: 'account_closed' }, 400, 'x')
-    }
-    return base(m, path, params, opts)
-  }
-  const out = []
-  for (const id of [REP, REP2, REP3]) {
-    out.push(await payWeek(w.store, stripe, ENV, ADMIN, { rep_id: id, period_start: WEEK }).then(r => r.ok, e => e.code))
-  }
-  assert.deepEqual(out, [true, 'held', 'transfer_failed'])
-  assert.equal(w.rows.get(`${REP}|${WEEK}`)!.status, 'paid')
-  assert.equal(w.rows.get(`${REP2}|${WEEK}`)!.status, 'held')
-  assert.equal(w.rows.get(`${REP3}|${WEEK}`)!.status, 'failed')
-  assert.match(w.rows.get(`${REP3}|${WEEK}`)!.failure_reason!, /can't receive money/)
-  // Pressing Approve all again pays nobody twice.
-  await assert.rejects(payWeek(w.store, stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK }), { code: 'already_paid' })
-  assert.equal(transfers(w.calls).filter(c => c.params.destination === 'acct_rep').length, 1)
+  w.add(A, 'verified'); w.add(A, 'verified_by_admin'); w.add(A, 'checking'); w.add(A, 'needs_listen'); w.add(A, 'not_paid'); w.add(A, 'void')
+  w.add(B, 'verified')
+  w.add(A, 'verified', '2026-10-19T13:00:00Z', '2026-10-19') // logged this week: waits for next Monday
+  const r = await runPayday(w.store, w.stripe, ENV, MON_805) as any
+  assert.equal(r.status, 'done')
+  assert.deepEqual(w.transfers.map(t => [t.destination, t.amount]).sort(), [['acct_a', 2000], ['acct_b', 1000]])
+  assert.equal(w.runs[0].paid_cents, 3000)
+  assert.equal(w.runs[0].cancels, 3)
+  assert.equal(w.cancels.filter(c => c.paid).length, 3)
+  assert.equal(w.emails.filter(e => /on its way/.test(e.subject)).length, 2)
+  // Each transfer's key is per payout row + amount.
+  assert.ok(w.transfers.every(t => /^fulfillment-payout-po\d+-\d+$/.test(t.key)))
 })
 
-test('input checks: bad rep id, a non-Monday, a non-Fulfillment rep, a week not over, $0', async () => {
-  const w = world()
-  await assert.rejects(payWeek(w.store, w.stripe, ENV, ADMIN, { rep_id: 'x', period_start: WEEK }), { status: 400 })
-  await assert.rejects(payWeek(w.store, w.stripe, ENV, ADMIN, { rep_id: REP, period_start: '2026-10-06' }), { status: 400 })
-  await assert.rejects(payWeek(w.store, w.stripe, ENV, ADMIN, { rep_id: AGENT, period_start: WEEK }), { status: 404 })
-  const open = world({ figures: { ended: false } })
-  await assert.rejects(payWeek(open.store, open.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK }), { code: 'week_not_over' })
-  const zero = world({ figures: { amount_cents: 0, hours: 0 } })
-  await assert.rejects(payWeek(zero.store, zero.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK }), { code: 'nothing_to_pay' })
-  assert.equal(transfers([...open.calls, ...zero.calls, ...w.calls]).length, 0)
-  const unconfigured = world()
-  await assert.rejects(payWeek(unconfigured.store, unconfigured.stripe, { ...ENV, configured: false }, ADMIN, { rep_id: REP, period_start: WEEK }), { code: 'not_configured' })
+test('payouts_live off: nothing moves; paused: nothing moves; both retry the next day', async () => {
+  const off = world({ live: false })
+  off.add(A, 'verified')
+  assert.equal((await runPayday(off.store, off.stripe, ENV, MON_805) as any).status, 'off')
+  assert.equal(off.transfers.length, 0)
+  assert.equal(off.payouts.length, 0)
+  const paused = world({ paused: true })
+  paused.add(A, 'verified')
+  assert.equal((await runPayday(paused.store, paused.stripe, ENV, MON_805) as any).status, 'paused')
+  assert.equal(paused.transfers.length, 0)
+  // Unpaused Tuesday: the same pay date runs and pays.
+  paused.settings.payouts_paused = false
+  const tue = await runPayday(paused.store, paused.stripe, ENV, new Date('2026-10-20T13:05:00Z')) as any
+  assert.equal(tue.status, 'done')
+  assert.equal(tue.pay_date, '2026-10-19')
+  assert.equal(paused.transfers.length, 1)
+  assert.equal(paused.runs[0].attempts, 2)
 })
 
-test('amount is recomputed on the server: a client amount in the body is ignored', async () => {
-  const w = world()
-  const r = await payWeek(w.store, w.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK, amount_cents: 999999, hours: 80 })
-  assert.equal(r.amount_cents, 45000)
-  const [t] = transfers(w.calls)
-  assert.equal(t.params.amount, 45000)
-  assert.equal(t.params.destination, 'acct_rep')
-  assert.equal(t.params.currency, 'usd')
-  assert.equal(t.params.metadata.period_start, WEEK)
-  const row = w.rows.get(`${REP}|${WEEK}`)!
-  assert.equal(row.status, 'paid')
-  assert.equal(row.stripe_transfer_id, 'tr_1')
-  assert.equal(row.paid_to, 'Chase •••• 4821')
-  assert.equal(row.approved_by, ADMIN)
-  assert.equal(w.emails.length, 1)
-  assert.match(w.emails[0].subject, /\$450\.00/)
-  assert.match(w.emails[0].text, /Chase •••• 4821/)
+test('short balance: nobody is paid, Brayden is told, it retries the next day', async () => {
+  const w = world({ balance: 1500 })
+  w.add(A, 'verified'); w.add(B, 'verified')
+  const r = await runPayday(w.store, w.stripe, ENV, MON_805) as any
+  assert.equal(r.status, 'short_balance')
+  assert.equal(w.transfers.length, 0)
+  assert.equal(w.payouts.length, 0)
+  assert.equal(w.cancels.filter(c => c.payout).length, 0)
+  assert.match(w.admin[0], /\$15\.00 available.*\$20\.00/)
+  // Topped up by Tuesday: the same pay date runs and pays both.
+  w.state.balance = 5000
+  const tue = await runPayday(w.store, w.stripe, ENV, new Date('2026-10-20T13:05:00Z')) as any
+  assert.equal(tue.status, 'done')
+  assert.equal(w.transfers.length, 2)
 })
 
-test('idempotency: one paid row per rep-week; a second click is refused; the key is per row + amount', async () => {
-  const w = world()
-  await payWeek(w.store, w.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK })
-  await assert.rejects(payWeek(w.store, w.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK }), { code: 'already_paid' })
-  const ts = transfers(w.calls)
-  assert.equal(ts.length, 1)
-  assert.equal(ts[0].key, 'fulfillment-payout-po_1-45000')
-  assert.equal(w.rows.size, 1)
-  // A row stuck in approved (the attempt in flight) is not paid twice either.
-  const x = world()
-  await x.store.claim(REP, FIG, ADMIN)
-  await assert.rejects(payWeek(x.store, x.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK }), { code: 'in_progress' })
-  assert.equal(transfers(x.calls).length, 0)
+test('no bank: held (nothing reserved), then paid in the first run after the rep connects', async () => {
+  const w = world({ accounts: { [A]: ready(A), [B]: null } })
+  w.add(A, 'verified'); w.add(B, 'verified')
+  await runPayday(w.store, w.stripe, ENV, MON_805)
+  assert.deepEqual(w.transfers.map(t => t.destination), ['acct_a'])
+  const held = w.payouts.find(p => p.rep_id === B)!
+  assert.equal(held.status, 'held')
+  assert.equal(w.cancels.find(c => c.rep === B)!.payout, null)
+  assert.match(w.emails.find(e => e.to === 'ben@x.co')!.subject, /problem/)
+  // Ben connects; next Monday's run pays last week's cancel too.
+  w.accounts[B] = ready(B)
+  await runPayday(w.store, w.stripe, ENV, new Date('2026-10-26T13:05:00Z'))
+  assert.deepEqual(w.transfers.map(t => [t.destination, t.amount]), [['acct_a', 1000], ['acct_b', 1000]])
+  assert.ok(w.cancels.every(c => c.paid))
 })
 
-test('a retry after a crash reuses the same idempotency key, so Stripe returns the same transfer', async () => {
-  const w = world()
-  await payWeek(w.store, w.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK })
-  // Simulate the row reverting (e.g. the DB write after the transfer was lost).
-  w.rows.get(`${REP}|${WEEK}`)!.status = 'failed'
-  const again = await payWeek(w.store, w.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK })
-  assert.equal(again.transfer_id, 'tr_1')
-})
-
-test('failure path: a refused transfer marks the week failed and sends the problem email', async () => {
-  const w = world({ stripeFail: new StripeError({ code: 'balance_insufficient', message: 'Insufficient funds in Stripe account acct_123' }, 400, 'x') })
-  await assert.rejects(payWeek(w.store, w.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK }), { code: 'transfer_failed', message: /balance was too low/ })
-  const row = w.rows.get(`${REP}|${WEEK}`)!
-  assert.equal(row.status, 'failed')
-  assert.match(row.failure_reason!, /balance was too low/)
-  assert.doesNotMatch(row.failure_reason!, /acct_/)
-  assert.equal(w.emails.length, 1)
-  assert.match(w.emails[0].subject, /problem/)
-  // Failed can be paid again once fixed.
+test('a failed transfer: payout failed, cancels freed, Brayden and the rep told, paid next run', async () => {
+  const w = world({ failFor: 'acct_b' })
+  w.add(A, 'verified'); w.add(B, 'verified')
+  const r = await runPayday(w.store, w.stripe, ENV, MON_805) as any
+  assert.equal(r.status, 'done')
+  assert.equal(w.runs[0].failed_reps, 1)
+  assert.equal(w.payouts.find(p => p.rep_id === B)!.status, 'failed')
+  assert.equal(w.cancels.find(c => c.rep === B)!.payout, null)
+  assert.match(w.admin[0], /1 transfer failed: Ben/)
+  assert.equal(w.repNotes[0][0], B)
+  assert.ok(w.emails.some(e => e.to === 'ben@x.co' && /problem/.test(e.subject)))
+  // Fixed by next Monday: paid then.
   const ok = world()
-  const r2 = ok.rows
-  r2.set(`${REP}|${WEEK}`, { ...row, status: 'failed' })
-  assert.equal((await payWeek(ok.store, ok.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK })).ok, true)
+  Object.assign(w.stripe, {})
+  const next = await runPayday(w.store, ok.stripe, ENV, new Date('2026-10-26T13:05:00Z')) as any
+  assert.equal(next.status, 'done')
+  assert.ok(w.cancels.every(c => c.paid))
 })
 
-test('held: a rep without a ready payout account is put on hold, no transfer', async () => {
-  for (const account of [null, readyAccount({ payouts_enabled: false, requirements_due: ['individual.verification.document'] })]) {
-    const w = world({ account })
-    await assert.rejects(payWeek(w.store, w.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK }), { code: 'held' })
-    assert.equal(w.rows.get(`${REP}|${WEEK}`)!.status, 'held')
-    assert.equal(transfers(w.calls).length, 0)
-    assert.equal(w.emails.length, 1)
-  }
+test('running twice: the second call is a no-op, nobody is paid twice', async () => {
+  const w = world()
+  w.add(A, 'verified')
+  await runPayday(w.store, w.stripe, ENV, MON_805)
+  const again = await runPayday(w.store, w.stripe, ENV, new Date('2026-10-19T14:05:00Z')) as any
+  assert.equal(again.skipped, 'already_done')
+  assert.equal(w.transfers.length, 1)
+  // Even a run that crashed after claiming resumes with the same key (Stripe returns the same transfer).
+  const c = world()
+  c.add(A, 'verified')
+  const row = await c.store.claim(A, LAST_WEEK, 'run0')
+  assert.equal(row!.status, 'approved')
+  await runPayday(c.store, c.stripe, ENV, MON_805)
+  await c.stripe('POST', 'transfers', { amount: row!.amount_cents, destination: 'acct_a' }, { idempotencyKey: `fulfillment-payout-${row!.id}-${row!.amount_cents}` })
+  assert.equal(c.transfers.length, 1)
 })
 
-test('emails respect the rep switches', async () => {
-  const w = world({ repEmails: false })
-  await payWeek(w.store, w.stripe, ENV, ADMIN, { rep_id: REP, period_start: WEEK })
-  assert.equal(w.emails.length, 0)
+test('weekly minimum: topped up when the rep has a verified cancel that week', async () => {
+  const w = world({ minCents: 5000 })
+  w.add(A, 'verified')
+  w.add(B, 'checking')
+  await runPayday(w.store, w.stripe, ENV, MON_805)
+  assert.deepEqual(w.transfers.map(t => [t.destination, t.amount]), [['acct_a', 5000]])
+  assert.equal(w.payouts[0].topup_cents, 4000)
 })
 
-test('handle: no JWT is 401, a refusal is its status + code', async () => {
-  const w = world({ live: false })
-  const req = (auth: string | null, body: any) => new Request('http://x', { method: 'POST', headers: auth ? { Authorization: `Bearer ${auth}` } : {}, body: JSON.stringify(body) })
-  assert.equal((await handle(req(null, {}), w.store, w.stripe, ENV)).status, 401)
-  const r = await handle(req('admin', { rep_id: REP, period_start: '2026-10-06' }), w.store, w.stripe, ENV)
-  assert.equal(r.status, 400)
-  const off = await handle(req('admin', { rep_id: REP, period_start: WEEK }), w.store, w.stripe, ENV)
-  assert.equal(off.status, 200)
-  assert.equal((await off.json()).approved_only, true)
-  assert.equal(w.calls.length, 0)
-  assert.equal((await handle(req('rep', { rep_id: REP, period_start: WEEK }), w.store, w.stripe, ENV)).status, 403)
-})
-
-// ── fulfillment-connect-session ─────────────────────────────────────────────
-
-const stripeAccount = (over: any = {}) => ({
-  id: 'acct_rep', details_submitted: true, payouts_enabled: true, capabilities: { transfers: 'active' },
-  requirements: { currently_due: [], past_due: [], disabled_reason: null },
-  external_accounts: { data: [{ object: 'bank_account', bank_name: 'JPMORGAN CHASE BANK', last4: '4821', default_for_currency: true }] },
-  individual: {
-    first_name: 'Test', last_name: 'Fulfill', address: { line1: '1418 Elm St', city: 'Amarillo', state: 'TX' },
-    dob: { day: 3, month: 4, year: 1994 }, verification: { status: 'verified' }, ssn_last_4_provided: true,
-  },
-  ...over,
-})
-
-function connectWorld(over: { acct?: string | null; role?: string; docsRefused?: boolean } = {}) {
-  const saved: PayoutAccount[] = []
-  const calls: { method: string; path: string; params?: any; key?: string }[] = []
-  const profiles: Record<string, any> = {
-    [REP]: { id: REP, role: over.role ?? 'fulfillment', email: 'tf@example.com', full_name: 'Test Fulfill', stripe_account_id: over.acct === undefined ? 'acct_rep' : over.acct },
-    [AGENT]: { id: AGENT, role: 'agent', email: 'a@example.com', full_name: 'Agent', stripe_account_id: 'acct_agent' },
-  }
-  const store: ConnectSessionStore = {
-    async userFromJwt(jwt) { return ({ rep: REP, agent: AGENT } as any)[jwt] ?? null },
-    async profile(id) { return profiles[id] ?? null },
-    async setStripeAccount(id, a) { profiles[id].stripe_account_id = a },
-    async saveAccount(row) { saved.push(row) },
-  }
-  const stripe: Stripe = async (method, path, params, opts) => {
-    calls.push({ method, path, params, key: opts?.idempotencyKey })
-    if (method === 'GET' && path.startsWith('accounts/')) return stripeAccount({ id: path.split('/')[1] })
-    if (method === 'POST' && path === 'accounts') return { id: 'acct_new', details_submitted: false, payouts_enabled: false, capabilities: { transfers: 'inactive' }, requirements: { currently_due: ['external_account'] } }
-    if (path === 'account_sessions') {
-      if (over.docsRefused && params?.components?.documents) throw new StripeError({ message: 'Received unknown parameter: components[documents]', param: 'components[documents]' }, 400, 'x')
-      return { client_secret: `cs_${params!.account}` }
-    }
-    return {}
-  }
-  return { store, stripe, saved, calls, profiles }
-}
-const CENV = { configured: true, publishableKey: 'pk_test_1' }
-
-test('connect session: only a signed-in Fulfillment rep, and only for their own account', async () => {
-  const w = connectWorld()
-  await assert.rejects(connectAct(w.store, w.stripe, CENV, '', { action: 'session' }), { status: 401 })
-  await assert.rejects(connectAct(w.store, w.stripe, CENV, 'agent', { action: 'session' }), { status: 403 })
-  const s = await connectAct(w.store, w.stripe, CENV, 'rep', { action: 'session', account: 'acct_agent' }) as any
-  assert.equal(s.client_secret, 'cs_acct_rep')
-  assert.equal(s.publishable_key, 'pk_test_1')
-  assert.equal(s.documents, true)
-  const sess = w.calls.find(c => c.path === 'account_sessions')!
-  assert.equal(sess.params.account, 'acct_rep')
-  assert.deepEqual(Object.keys(sess.params.components).sort(), ['account_management', 'account_onboarding', 'documents', 'notification_banner'])
-  assert.equal(sess.params.components.account_management.features.external_account_collection, true)
-  assert.ok(!w.calls.some(c => c.path.includes('acct_agent')))
-})
-
-test('connect session: creates an Express account (transfers only) the first time, idempotently', async () => {
-  const w = connectWorld({ acct: null })
-  const s = await connectAct(w.store, w.stripe, CENV, 'rep', { action: 'session' }) as any
-  const create = w.calls.find(c => c.method === 'POST' && c.path === 'accounts')!
-  assert.equal(create.params.type, 'express')
-  assert.deepEqual(create.params.capabilities, { transfers: { requested: true } })
-  assert.equal(create.params.metadata.profile_id, REP)
-  assert.equal(create.key, `fulfillment-account-${REP}`)
-  assert.equal(w.profiles[REP].stripe_account_id, 'acct_new')
-  assert.equal(s.client_secret, 'cs_acct_new')
-  assert.equal(statusOf(w.saved[0]), 'incomplete')
-})
-
-test('connect session: falls back without the documents component and says so', async () => {
-  const w = connectWorld({ docsRefused: true })
-  const s = await connectAct(w.store, w.stripe, CENV, 'rep', { action: 'session' }) as any
-  assert.equal(s.documents, false)
-  assert.equal(s.client_secret, 'cs_acct_rep')
-})
-
-test('connect overview: status, last 4 only, masked details; nothing unmasked stored', async () => {
-  const w = connectWorld()
-  const o = await connectAct(w.store, w.stripe, CENV, 'rep', { action: 'overview' }) as any
-  assert.equal(o.status, 'ready')
-  assert.equal(o.account.label, 'JPMORGAN CHASE BANK •••• 4821')
-  assert.deepEqual(o.details, { legal_name: 'Test Fulfill', address: '•••• Elm St, Amarillo, TX', dob: '••/••/1994', verified: true, tin_on_file: true })
-  const stored = JSON.stringify(w.saved)
-  assert.doesNotMatch(stored, /1418|Amarillo|1994|Test/)
-  const none = connectWorld({ acct: null })
-  assert.equal((await connectAct(none.store, none.stripe, CENV, 'rep', { action: 'overview' }) as any).status, 'none')
-  assert.equal(none.calls.length, 0)
-  const off = connectWorld()
-  await assert.rejects(connectAct(off.store, off.stripe, { configured: false, publishableKey: null }, 'rep', {}), { code: 'not_configured' })
-  assert.equal(maskStreet('12B Main St'), '•••• Main St')
-  assert.equal(details({}), null)
-})
-
-test('connect handle: Stripe text is not leaked', async () => {
-  const w = connectWorld()
-  const boom: Stripe = async () => { throw new StripeError({ message: 'No such account: acct_secret' }, 404, 'x') }
-  const r = await connectHandle(new Request('http://x', { method: 'POST', headers: { Authorization: 'Bearer rep' }, body: '{"action":"overview"}' }), w.store, boom, CENV)
-  assert.equal(r.status, 502)
-  assert.doesNotMatch(await r.text(), /acct_secret/)
-})
-
-test('status summary: action needed vs ready vs incomplete; debit card destination', () => {
-  assert.equal(statusOf(null), 'none')
-  assert.equal(statusOf(summarize(REP, stripeAccount())), 'ready')
-  assert.equal(statusOf(summarize(REP, stripeAccount({ requirements: { currently_due: ['individual.verification.document'] } }))), 'action_needed')
-  assert.equal(statusOf(summarize(REP, stripeAccount({ details_submitted: false }))), 'incomplete')
-  const card = summarize(REP, stripeAccount({ external_accounts: { data: [{ object: 'card', brand: 'Visa', last4: '1111' }] } }))
-  assert.deepEqual([card.external_kind, card.bank_name, card.last4], ['card', 'Visa debit', '1111'])
-  assert.equal(formEncode({ a: { b: [1, { c: 2 }] } }).toString(), 'a%5Bb%5D%5B0%5D=1&a%5Bb%5D%5B1%5D%5Bc%5D=2')
-})
-
-// ── Connect webhook events ──────────────────────────────────────────────────
-
-test('webhook: account.updated re-fetches and stores the summary; unknown accounts ignored', async () => {
-  const saved: PayoutAccount[] = []
-  const rows: any[] = [{ id: 'po_1', rep_id: REP, period_start: WEEK, period_end: '2026-10-11', amount_cents: 45000, status: 'paid', stripe_transfer_id: 'tr_9' }]
-  const emails: Email[] = []
-  const store = {
-    async repByAccount(a: string) { return a === 'acct_rep' ? REP : null },
-    async saveAccount(r: PayoutAccount) { saved.push(r) },
-    async payoutByTransfer(t: string) { return rows.find(r => r.stripe_transfer_id === t) ?? null },
-    async markPayout(id: string, patch: any) { Object.assign(rows.find(r => r.id === id), patch) },
-    async rep() { return { email: 'tf@example.com', payout_email_problem: true } },
-    async sendEmail(e: Email) { emails.push(e) },
-  }
-  let fetched = 0
-  const stripe: Stripe = async (_m, path) => { fetched++; return stripeAccount({ id: path.split('/')[1], payouts_enabled: false }) }
-  // The event payload says enabled, the fresh account says not: the fresh one wins.
-  const r = await handleConnectEvent(store, stripe, { type: 'account.updated', data: { object: { id: 'acct_rep', payouts_enabled: true } } }, 'https://p')
-  assert.equal(fetched, 1)
-  assert.equal(saved[0].payouts_enabled, false)
-  assert.equal(r.status, 'action_needed')
-  assert.deepEqual(await handleConnectEvent(store, stripe, { type: 'account.updated', data: { object: { id: 'acct_other' } } }, 'https://p'), { ignored: 'not a fulfillment payout account' })
-  await handleConnectEvent(store, stripe, { type: 'account.external_account.created', account: 'acct_rep', data: { object: { object: 'bank_account' } } }, 'https://p')
-  assert.equal(saved.length, 2)
-
-  const rev = await handleConnectEvent(store, stripe, { type: 'transfer.reversed', data: { object: { id: 'tr_9' } } }, 'https://p')
-  assert.equal(rev.reversed, 'po_1')
-  assert.equal(rows[0].status, 'failed')
-  assert.equal(emails.length, 1)
-  // A redelivered event doesn't email twice.
-  await handleConnectEvent(store, stripe, { type: 'transfer.reversed', data: { object: { id: 'tr_9' } } }, 'https://p')
-  assert.equal(emails.length, 1)
-})
-
-// ── agent-billing's webhook routes Connect events here, billing unchanged ───
-
-test('agent-billing webhook: either signing secret; Connect events go to the payout handler', async () => {
-  const { configure, handle: billing } = await import('../agent-billing/core.ts')
-  const { createHmac } = await import('node:crypto')
-  const seen: any[] = []
-  const fetched: string[] = []
-  configure({
-    stripeKey: 'sk_test_x', webhookSecret: 'whsec_billing', connectWebhookSecret: 'whsec_connect',
-    onConnectEvent: async e => { seen.push(e.type); return { ok: 1 } },
-    fetch: (async (url: string) => { fetched.push(url); return new Response('{}', { status: 404 }) }) as any,
-    now: () => 1_800_000_000_000,
-  })
-  const post = (secret: string, event: any) => {
-    const body = JSON.stringify(event)
-    const t = 1_800_000_000
-    const sig = createHmac('sha256', secret).update(`${t}.${body}`).digest('hex')
-    return billing(new Request('http://x/agent-billing/webhook', { method: 'POST', headers: { 'stripe-signature': `t=${t},v1=${sig}` }, body }), {} as any)
-  }
-  assert.equal((await post('whsec_connect', { type: 'account.updated', data: { object: { id: 'acct_1' } } })).status, 200)
-  assert.equal((await post('whsec_billing', { type: 'transfer.reversed', data: { object: { id: 'tr_1' } } })).status, 200)
-  assert.deepEqual(seen, ['account.updated', 'transfer.reversed'])
-  assert.equal((await post('whsec_wrong', { type: 'account.updated', data: { object: {} } })).status, 400)
-  // A billing event still takes the subscription path (re-fetches the subscription), not the payout handler.
-  await post('whsec_billing', { type: 'customer.subscription.updated', data: { object: { id: 'sub_1' } } })
-  assert.equal(seen.length, 2)
-  assert.ok(fetched.some(u => u.includes('subscriptions/sub_1')))
-  // Unrelated events are ignored as before.
-  const r = await post('whsec_billing', { type: 'charge.succeeded', data: { object: {} } })
-  assert.equal((await r.json()).ignored, 'charge.succeeded')
+test('handle: only pg_cron\'s secret runs it; a person gets "automatic"', async () => {
+  const w = world()
+  const asAdmin = await handle(new Request('http://x', { method: 'POST', headers: { Authorization: 'Bearer admin' }, body: '{"rep_id":"x"}' }), w.store, w.stripe, ENV, MON_805)
+  assert.equal(asAdmin.status, 403)
+  assert.equal((await asAdmin.json()).code, 'automatic')
+  const wrong = await handle(new Request('http://x', { method: 'POST', headers: { 'x-ohvara-cron': 'guess' } }), w.store, w.stripe, ENV, MON_805)
+  assert.equal(wrong.status, 403)
+  const ok = await handle(new Request('http://x', { method: 'POST', headers: { 'x-ohvara-cron': 'cron-secret' } }), w.store, w.stripe, ENV, MON_805)
+  assert.equal(ok.status, 200)
+  assert.equal((await ok.json()).status, 'done')
 })

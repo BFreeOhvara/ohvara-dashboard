@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabase'
 
 // Prompt 696 — the single row of no-answer recovery settings (migration 122):
 // whether texting is switched on, and the morning / evening send times.
-// Prompt 751 adds voice_live, the pop-up phone's switch. Any
+// Prompt 751 adds voice_live, the pop-up phone's switch; Prompt 764
+// recording_live + recording_notice (call recording). Any
 // signed-in user can read it; only an admin can write.
 export function useRecoveryConfig({ enabled = true } = {}) {
   return useQuery({
@@ -12,7 +13,7 @@ export function useRecoveryConfig({ enabled = true } = {}) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('recovery_config')
-        .select('sms_live, voice_live, reminder_time, evening_time')
+        .select('sms_live, voice_live, recording_live, recording_notice, reminder_time, evening_time')
         .limit(1)
         .maybeSingle()
       if (error) throw error

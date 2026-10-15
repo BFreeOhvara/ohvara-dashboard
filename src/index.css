@@ -2546,6 +2546,20 @@ a.ov-hpill:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; 
 .pp-key.pp-end > span { background: var(--pp-red); border: 0; box-shadow: 0 10px 24px -8px rgba(229,50,45,.8); }
 .pp-key.pp-end:not(:disabled):hover > span { background: var(--pp-red); filter: brightness(1.08); }
 .pp-hide { position: absolute; right: 34px; top: 40px; font-size: 13px; font-weight: 600; color: var(--pp-ink-3) !important; background: none; border: 0; }
+/* Prompt 764 — Recording pill (top bar) and the "AI checks it" note. Same
+   red / blue on both phone themes, like the mockup. */
+.pp-rec {
+  display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; box-sizing: border-box;
+  background: rgba(229,50,45,0.18); border: 1px solid rgba(248,113,113,0.45); font-size: 11.5px; font-weight: 700; color: #FCA5A5;
+}
+.pp-rec > i { width: 7px; height: 7px; border-radius: 50%; background: #EF4444; animation: pulseDot 1.6s ease-in-out infinite; }
+.pp-field em { font-style: normal; font-weight: 500; opacity: 0.7; }
+.pp-checking {
+  margin: 0; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px;
+  background: rgba(127,166,242,0.14); border: 1px solid rgba(127,166,242,0.45); font-size: 13px; line-height: 1.35; color: var(--pp-ink);
+}
+.pp-checking > span { width: 20px; height: 20px; flex: none; border-radius: 50%; border: 2px solid #7FA6F2; border-right-color: transparent; box-sizing: border-box; animation: spin 1s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .pp-rec > i, .pp-checking > span { animation: none; } }
 .pp-note { margin: 0 16px 12px; padding: 10px 12px; border-radius: 12px; background: var(--pp-well); font-size: 12.5px; line-height: 1.45; color: var(--pp-ink-2); text-align: center; }
 .pp-note[data-tone="err"] { color: var(--pp-err); }
 .pp-link { background: none; border: 0; padding: 0; font-size: inherit; font-weight: 700; color: var(--pp-ink) !important; text-decoration: underline; text-underline-offset: 2px; }
@@ -2734,10 +2748,91 @@ a.ov-hpill:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; 
 .mp-st.is-up { color: var(--ov-up); }
 .mp-st.is-bad { color: var(--danger); }
 
+/* Prompt 764 — pay per verified cancel (media/fulfillment-pay-per-cancel/
+   my-pay-per-cancel.dc.html). Verified = teal (data-b), being checked =
+   striped blue (data-a), needs a listen = amber (warn). The hero stays navy
+   in both themes, so its chips and bars keep the dark palette. */
+.mp-earn { margin-top: 4px; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.mp-earn .mp-amount { margin-top: 0; }
+.mp-earn .mp-calc { margin-top: 0; gap: 6px; }
+.mp-earn .mp-calc b { font-weight: 600; color: #FFFFFF; }
+.mp-chips { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+.mp-chip {
+  display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border-radius: 999px; box-sizing: border-box;
+  font-size: 12.5px; font-weight: 700; white-space: nowrap;
+}
+.mp-chip > i { width: 7px; height: 7px; border-radius: 2px; background: currentColor; }
+.mp-chip.is-verified { background: rgba(52,224,196,0.14); border: 1px solid rgba(52,224,196,0.35); color: #5EEAD4; }
+.mp-chip.is-checking { background: rgba(127,166,242,0.14); border: 1px solid rgba(127,166,242,0.35); color: #A9C2F5; }
+.mp-chip.is-listen { background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.35); color: #FCD34D; }
+.mp-floor { margin-top: 10px; font-size: 13px; color: #C9D4E8; }
+.mp-floor .is-past { color: #5EEAD4; font-weight: 700; }
+.mp-stack { width: 100%; display: flex; flex-direction: column; gap: 3px; }
+.mp-bar { display: block; width: 100%; border-radius: 6px; box-sizing: border-box; min-height: 6px; }
+.mp-bar.is-verified { background: linear-gradient(180deg, #34E0C4, #00A892); }
+.mp-bar.is-checking { background: repeating-linear-gradient(135deg, #7FA6F2 0 6px, #5F88DA 6px 12px); }
+.mp-bar.is-listen { background: #FBBF24; }
+.mp-bar.is-empty { border: 1px dashed rgba(255,255,255,0.18); }
+.mp-col .mp-col-n { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; color: #FFFFFF; }
+.mp-col.is-future .mp-col-n { color: #5E7195; }
+.mp-col.is-today .mp-col-n { color: #34E0C4; }
+[data-theme="light"] .mp-col .mp-col-n { color: #FFFFFF; }
+[data-theme="light"] .mp-col.is-future .mp-col-n { color: #D6F3EE; }
+
+.mp-cancels { display: flex; flex-direction: column; min-width: 0; }
+.mp-cancels-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mp-cancels-head h2 { margin: 0; flex: 1; font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; color: var(--ov-hi); }
+.mp-tabs { display: inline-flex; padding: 3px; gap: 3px; border-radius: 999px; background: var(--ov-stub); border: 1px solid var(--ov-line); flex-wrap: wrap; }
+.mp-tabs button {
+  height: 26px; padding: 0 11px; border: none; border-radius: 999px; background: transparent; display: inline-flex; align-items: center; gap: 6px;
+  font: inherit; font-size: 12.5px; font-weight: 700; color: var(--ov-mid); cursor: pointer;
+}
+.mp-tabs button .mp-mono { font-size: 11px; opacity: 0.75; }
+.mp-tabs button.is-on { background: var(--ov-hi); color: var(--bg-base, #0B0D14); }
+.mp-tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mp-cancels-sub { margin: 8px 0 0; font-size: 13px; color: var(--ov-mute); }
+.mp-thead, .mp-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 190px 72px; align-items: center; gap: 0 8px; padding: 0 4px; }
+.mp-thead { margin-top: 12px; padding-bottom: 8px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; color: var(--ov-faint); }
+.mp-thead span:last-child { text-align: right; }
+.mp-rows { list-style: none; margin: 0; padding: 0; }
+.mp-row { min-height: 54px; border-top: 1px solid var(--ov-line); }
+.mp-row.is-listen { background: var(--ov-warn-tint); background: color-mix(in srgb, var(--ov-warn-tint) 40%, transparent); }
+.mp-when { display: flex; flex-direction: column; }
+.mp-when b { font-size: 13.5px; font-weight: 600; color: var(--ov-hi); }
+.mp-when .mp-mono { font-size: 11.5px; color: var(--ov-mute); }
+.mp-who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.mp-ini { width: 30px; height: 30px; flex: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #0B0D14; background: #7FA6F2; }
+.mp-ini[data-tone="1"] { background: #34E0C4; }
+.mp-ini[data-tone="2"] { background: #F9A8D4; }
+.mp-ini[data-tone="3"] { background: #FCD34D; }
+.mp-ini[data-tone="4"] { background: #A5B4FC; }
+.mp-ini[data-tone="5"] { background: #86EFAC; }
+.mp-who-t { min-width: 0; display: flex; flex-direction: column; }
+.mp-who-t b { font-size: 14px; font-weight: 600; color: var(--ov-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-who-t span { font-size: 12px; color: var(--ov-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-status { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.mp-spill { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.mp-spill > i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.mp-spill.is-verified { background: var(--ov-data-b-tint); color: var(--ov-data-b); }
+.mp-spill.is-checking { background: var(--ov-data-a-tint); color: var(--ov-data-a); }
+.mp-spill.is-listen { background: var(--ov-warn-tint); color: var(--ov-warn); }
+.mp-spill.is-off { background: var(--ov-stub); color: var(--ov-mute); }
+.mp-note { margin-top: 3px; font-size: 11.5px; color: var(--ov-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.mp-pay { text-align: right; font-size: 14px; font-weight: 600; color: var(--ov-mid); }
+.mp-pay.is-verified { color: var(--ov-data-b); }
+.mp-pay.is-listen, .mp-pay.is-off { color: var(--ov-faint); }
+.mp-pay.is-off { text-decoration: line-through; }
+.mp-wait { margin: 10px 0 0; font-size: 12.5px; color: var(--ov-warn); }
+
 @media (max-width: 1023.98px) {
   .mp-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 767.98px) {
+  .mp-thead { display: none; }
+  .mp-row { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; padding: 10px 4px; }
+  .mp-when { grid-column: 1 / -1; flex-direction: row; gap: 8px; align-items: baseline; }
+  .mp-status { grid-column: 1 / -1; }
+  .mp-pay { grid-row: 2; grid-column: 2; }
   .mp-hero { flex-direction: column; gap: 22px; padding: 20px 18px 22px; }
   .mp-chart { width: 100%; }
   .mp-amount { font-size: 48px; }

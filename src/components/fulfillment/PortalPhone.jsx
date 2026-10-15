@@ -10,6 +10,10 @@ import { phoneView, clock } from '../../lib/portalPhone'
 // media/fulfillment-my-calls/phone.dc.html (its five stages are worked out in
 // lib/portalPhone.js). Portaled to <body> so DashboardLayout's animated page
 // wrapper can't trap its position: fixed (Gotchas).
+// Prompt 764 (media/fulfillment-pay-per-cancel/phone.dc.html): a red
+// Recording pill while a recorded call is live (recovery_config.recording_live);
+// on the Result screen the confirmation number is optional, and saving a
+// Cancelled says the AI will check the recording.
 
 const I = {
   mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
@@ -40,7 +44,7 @@ function Key({ k, icon, onPress, disabled }) {
 const PAD = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
 const REASONS = [{ value: 'waiting_carrier', label: 'Waiting on carrier' }, { value: 'waiting_client', label: 'Waiting on client' }]
 
-function Result({ p, names, s, onClose, error: callError }) {
+function Result({ p, s, onClose, error: callError, recording }) {
   const navigate = useNavigate()
   const { profile } = useAuth()
   const tz = profile?.timezone || DEFAULT_TIMEZONE
@@ -51,8 +55,10 @@ function Result({ p, names, s, onClose, error: callError }) {
   const [effective, setEffective] = useState(() => zonedDateStr(Date.now(), tz))
   const [drafts, setDrafts] = useState(false)
   const [reason, setReason] = useState(null)
+  const [checking, setChecking] = useState(false) // saved as Cancelled, recording on
   const took = s.joinedAt && s.endedAt ? clock((s.endedAt - s.joinedAt) / 1000) : null
-  const ready = pick === 'no_answer' || (conf.trim() && effective && drafts)
+  // The confirmation number is optional (P764): the recording is the proof.
+  const ready = pick === 'no_answer' || (effective && drafts)
   const saving = update.isPending || endCall.isPending
   const error = update.error || endCall.error
 
@@ -62,8 +68,8 @@ function Result({ p, names, s, onClose, error: callError }) {
       // The same write as Mark cancelled, with the proof.
       update.mutate({
         id: p.id, fulfillment_stage: 'Complete', status: 'In Effect',
-        cancellation_confirmation: conf.trim(), cancellation_effective_date: effective, drafts_stopped: true,
-      }, done)
+        cancellation_confirmation: conf.trim() || null, cancellation_effective_date: effective, drafts_stopped: true,
+      }, recording ? { onSuccess: () => { setChecking(true); setTimeout(onClose, 2600) } } : done)
     } else {
       endCall.mutate({ id: p.id, outcome: 'no_answer', reason }, done)
     }
@@ -79,8 +85,8 @@ function Result({ p, names, s, onClose, error: callError }) {
       </div>
       {pick === 'cancelled' ? (
         <>
-          <label className="pp-field"><span>Confirmation number from {names.carrier}</span>
-            <input className="pp-mono" value={conf} onChange={e => setConf(e.target.value)} placeholder="From the carrier rep" autoComplete="off" />
+          <label className="pp-field"><span>Confirmation number <em>(optional)</em></span>
+            <input className="pp-mono" value={conf} onChange={e => setConf(e.target.value)} placeholder="If the carrier gave one" autoComplete="off" />
           </label>
           <label className="pp-field"><span>Takes effect</span>
             <input type="date" value={effective} onChange={e => setEffective(e.target.value)} />
@@ -88,6 +94,9 @@ function Result({ p, names, s, onClose, error: callError }) {
           <button type="button" className="pp-check" data-on={drafts} role="checkbox" aria-checked={drafts} onClick={() => setDrafts(v => !v)}>
             <i>{drafts && <Svg d={I.check} size={12} w={3.2} />}</i>No more payments will be drafted
           </button>
+          {checking && (
+            <p className="pp-checking" role="status"><span aria-hidden="true" />Saved. AI listens to the recording to check the carrier confirmed the cancel.</p>
+          )}
         </>
       ) : (
         <div>
@@ -101,7 +110,7 @@ function Result({ p, names, s, onClose, error: callError }) {
       )}
       <div style={{ flex: 1 }} />
       {(error || callError) && <p className="pp-note" data-tone="err" style={{ margin: 0 }}>{error ? `Couldn't save: ${error.message || 'try again'}` : callError}</p>}
-      <button type="button" className="pp-save" disabled={!ready || saving} onClick={save}>{saving ? 'Saving…' : 'Save'}</button>
+      <button type="button" className="pp-save" disabled={!ready || saving || checking} onClick={save}>{saving ? 'Saving…' : checking ? 'Saved' : 'Save'}</button>
       <span className="pp-fine">
         Picked the wrong one? <button type="button" className="pp-link" onClick={() => navigate(`/fulfillment/desk?open=${p.id}`)}>Change it</button> until the end of the day.
       </span>
@@ -109,7 +118,7 @@ function Result({ p, names, s, onClose, error: callError }) {
   )
 }
 
-export function PortalPhone({ s, names, legs, answered, muted, busy, error, canRingCarrier, devices, onDevice, onPress, onAllowMic, onCollapse, onClose }) {
+export function PortalPhone({ s, names, legs, answered, muted, busy, error, canRingCarrier, devices, onDevice, onPress, onAllowMic, onCollapse, onClose, recording = false }) {
   const [now, setNow] = useState(() => Date.now())
   const [pad, setPad] = useState(false)
   const [typed, setTyped] = useState('')
@@ -151,6 +160,7 @@ export function PortalPhone({ s, names, legs, answered, muted, busy, error, canR
         <button type="button" className="pp-dev" onClick={() => devices && setMenu(m => !m)} aria-expanded={menu} aria-label="Audio devices">
           <Svg d={I.headset} size={14} w={2.2} />{devices?.label || 'Headset'}
         </button>
+        {recording && s.mode === 'call' && <span className="pp-rec" role="status"><i aria-hidden="true" />Recording</span>}
         <button type="button" className="pp-round" onClick={() => (preview ? onClose() : onCollapse(true))} aria-label={preview ? 'Close the phone' : 'Collapse the phone'}>
           <Svg d={I.down} size={13} w={2.4} />
         </button>
@@ -248,7 +258,7 @@ export function PortalPhone({ s, names, legs, answered, muted, busy, error, canR
         </>
       )}
 
-      {s.mode === 'result' && <Result p={s.p} names={names} s={s} onClose={onClose} error={error} />}
+      {s.mode === 'result' && <Result p={s.p} s={s} onClose={onClose} error={error} recording={recording} />}
     </div>,
     document.body,
   )

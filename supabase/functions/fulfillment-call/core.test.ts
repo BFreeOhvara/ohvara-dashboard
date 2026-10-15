@@ -188,10 +188,12 @@ test('end one party resumes the one on hold; ringing legs are canceled; end all 
 const VURL = 'https://x.supabase.co/functions/v1/fulfillment-voice'
 const TOKEN = 'secret-token'
 
-function voiceWorld(over: { live?: boolean; assigned?: string } = {}) {
+function voiceWorld(over: { live?: boolean; assigned?: string; recording?: boolean } = {}) {
   const saved: any[] = []
   const holds: any[] = []
   const ended: any[] = []
+  const recs: any[] = []
+  const noticed = new Set<string>()
   const store: VoiceStore = {
     async role(id) { return ({ [REP]: 'fulfillment', [OTHER]: 'fulfillment', [ADMIN]: 'admin' } as any)[id] ?? null },
     async policy(id) { return id === POL ? { id: POL, fulfillment_assigned: true, assigned_fulfillment_id: over.assigned ?? REP, fulfillment_stage: 'In Progress' } : null },
@@ -199,8 +201,11 @@ function voiceWorld(over: { live?: boolean; assigned?: string } = {}) {
     async saveLeg(p) { saved.push(p) },
     async setHold(sid, hold) { holds.push([sid, hold]) },
     async endLegs(pid, reason) { ended.push([pid, reason]) },
+    async recording() { return { live: !!over.recording, notice: 'This call may be recorded & kept.' } },
+    async startRecording(row) { recs.push(row) },
+    async claimNotice(sid) { if (noticed.has(sid)) return null; noticed.add(sid); return 'CFconf' },
   }
-  return { store, saved, holds, ended }
+  return { store, saved, holds, ended, recs }
 }
 
 async function signed(query: string, form: Record<string, string>, sig?: string) {
@@ -259,4 +264,37 @@ test('callbacks: leg status, hold/unhold, conference end, keypad TwiML', async (
   assert.match(dt, /<Play digits="1#"\/>/)
   assert.equal(legStatus('busy'), 'ended')
   assert.equal(legStatus('answered'), 'live')
+})
+
+test('recording on (P764): the conference records from the start, a row per rep leg, callback to cancel-check', async () => {
+  const w = voiceWorld({ recording: true })
+  const env = { authToken: TOKEN, publicUrl: VURL, checkUrl: 'https://x.supabase.co/functions/v1/fulfillment-cancel-check' }
+  const xml = await (await voice(await signed('', { From: `client:${REP}`, policy_id: POL, CallSid: 'CArep' }), w.store, env)).text()
+  assert.match(xml, /record="record-from-start"/)
+  assert.match(xml, /recordingStatusCallback="https:\/\/x\.supabase\.co\/functions\/v1\/fulfillment-cancel-check\?event=rec&amp;policy=44444444-4444-4444-8444-444444444444&amp;call=CArep"/)
+  assert.match(xml, /recordingStatusCallbackEvent="in-progress completed absent"/)
+  assert.deepEqual(w.recs, [{ call_sid: 'CArep', policy_id: POL, rep_id: REP }])
+  // Off: no record attribute, no row.
+  const off = voiceWorld()
+  const plain = await (await voice(await signed('', { From: `client:${REP}`, policy_id: POL, CallSid: 'CArep' }), off.store, env)).text()
+  assert.doesNotMatch(plain, /record/i)
+  assert.equal(off.recs.length, 0)
+})
+
+test('recording notice (P764): once per outside leg when it answers; never while recording is off', async () => {
+  const calls: any[] = []
+  const twilio = async (method: string, path: string, params?: any) => { calls.push([method, path, params]); return { status: 200, data: {} } }
+  const w = voiceWorld({ recording: true })
+  const env = { authToken: TOKEN, publicUrl: VURL, twilio: twilio as any }
+  const q = `?event=leg&policy=${POL}&party=client`
+  await voice(await signed(q, { CallSid: 'CAc', CallStatus: 'ringing' }), w.store, env)
+  await voice(await signed(q, { CallSid: 'CAc', CallStatus: 'in-progress' }), w.store, env)
+  await voice(await signed(q, { CallSid: 'CAc', CallStatus: 'in-progress' }), w.store, env)
+  assert.deepEqual(calls, [['POST', '/Conferences/CFconf/Participants/CAc.json', { AnnounceUrl: `${VURL}?event=notice`, AnnounceMethod: 'POST' }]])
+  const say = await (await voice(await signed('?event=notice', {}), w.store, env)).text()
+  assert.match(say, /<Say>This call may be recorded &amp; kept\.<\/Say>/)
+  const off = voiceWorld()
+  calls.length = 0
+  await voice(await signed(q, { CallSid: 'CAd', CallStatus: 'in-progress' }), off.store, env)
+  assert.equal(calls.length, 0)
 })

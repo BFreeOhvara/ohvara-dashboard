@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
-// Prompt 753 — My pay on Stripe Connect (migration 138). Pay weeks live in
-// fulfillment_payouts (hours + amount always computed by the server from the
-// schedule); fulfillment_payout_accounts is what Stripe says about the rep's
+// Prompt 753 — My pay on Stripe Connect (migration 138); Prompt 764 pays per
+// verified cancel (migration 145). Paid weeks live in fulfillment_payouts
+// (written only by the Monday pay run, fulfillment-pay-week; nobody
+// approves); fulfillment_payout_accounts is what Stripe says about the rep's
 // connected account (bank name + last 4 only). Payout settings talk to
-// Stripe through fulfillment-connect-session; Approve & pay (admin) through
-// fulfillment-pay-week. recovery_config.payouts_live is the off switch.
+// Stripe through fulfillment-connect-session. recovery_config.payouts_live is
+// the off switch, payouts_paused skips runs.
 
 const KEY = ['fulfillment-payouts']
 
@@ -35,15 +36,13 @@ async function invoke(fn, body) {
 
 export const invokeConnect = (action, extra = {}) => invoke('fulfillment-connect-session', { action, ...extra })
 
-// Refresh this week + last week from the schedule (server-side), then read.
-// `repId: null` = every rep RLS allows (admin: the team).
+// Payout rows (Prompt 764: written only by the Monday pay run, one per rep
+// per pay week). `repId: null` = every rep RLS allows (admin: the team).
 export function usePayouts(repId = null, enabled = true) {
   return useQuery({
     queryKey: [...KEY, 'weeks', repId ?? 'all'],
     enabled,
     queryFn: async () => {
-      const { error: syncError } = await supabase.rpc('fulfillment_sync_payouts', { p_rep: repId })
-      if (syncError) console.warn('fulfillment_sync_payouts:', syncError.message)
       let q = supabase.from('fulfillment_payouts').select('*').order('period_start', { ascending: false }).limit(repId ? 12 : 200)
       if (repId) q = q.eq('rep_id', repId)
       const { data, error } = await q
@@ -79,68 +78,62 @@ export function useConnectOverview(enabled = true) {
   })
 }
 
-export function usePayoutsLive() {
+// Prompt 764 — the pay settings on recovery_config (admin writes; anyone
+// signed in reads): payouts_live, payouts_paused, pay_per_cancel_cents,
+// weekly_min_cents (null = off), weekly_cancel_cap.
+const PAY_COLS = 'payouts_live, payouts_paused, pay_per_cancel_cents, weekly_min_cents, weekly_cancel_cap'
+export function usePaySettings() {
   return useQuery({
-    queryKey: [...KEY, 'live'],
+    queryKey: [...KEY, 'settings'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('recovery_config').select('payouts_live').limit(1).maybeSingle()
+      const { data, error } = await supabase.from('recovery_config').select(PAY_COLS).limit(1).maybeSingle()
       if (error) throw error
-      return !!data?.payouts_live
+      return data || { payouts_live: false, payouts_paused: false, pay_per_cancel_cents: 1000, weekly_min_cents: null, weekly_cancel_cap: 40 }
     },
   })
 }
+export const usePayoutsLive = () => {
+  const q = usePaySettings()
+  return { ...q, data: !!q.data?.payouts_live }
+}
 
-// Admin only (column grant + RLS on recovery_config).
-export function useSetPayoutsLive() {
+export function useSavePaySettings() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async on => {
+    mutationFn: async patch => {
       const { error } = await supabase.from('recovery_config')
-        .update({ payouts_live: on, updated_at: new Date().toISOString() }).eq('id', true)
+        .update({ ...patch, updated_at: new Date().toISOString() }).eq('id', true)
       if (error) throw error
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: [...KEY, 'live'] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: [...KEY, 'settings'] })
+      qc.invalidateQueries({ queryKey: ['recovery-config'] })
+    },
   })
 }
-
-export function usePayWeek() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ repId, periodStart }) => invoke('fulfillment-pay-week', { rep_id: repId, period_start: periodStart }),
-    onSettled: () => qc.invalidateQueries({ queryKey: KEY }),
-  })
+export function useSetPayoutsLive() {
+  const save = useSavePaySettings()
+  return { ...save, mutate: (on, opts) => save.mutate({ payouts_live: on }, opts) }
 }
 
-// Prompt 761 — Admin Payouts. Each person's hours day by day for one pay
-// week (fulfillment_week_days, migration 143): the schedule's hours, the
-// admin's fix if any, and the hours that count. Keyed { [repId]: days[] }.
-export function useWeekDays(periodStart, repIds) {
+// Prompt 764 — cancels (fulfillment_cancels, migration 145): one row per
+// Cancelled result, its status and pay. A rep reads their own (RLS), an
+// admin all. `since` = the earliest week_start ('YYYY-MM-DD').
+export function useCancels(repId = null, since = null, enabled = true) {
   return useQuery({
-    queryKey: [...KEY, 'days', periodStart, repIds],
-    enabled: !!periodStart && repIds.length > 0,
+    queryKey: [...KEY, 'cancels', repId ?? 'all', since],
+    enabled,
+    refetchInterval: q => (q.state.data?.some(c => c.status === 'checking') ? 30e3 : false),
     queryFn: async () => {
-      const out = {}
-      await Promise.all(repIds.map(async id => {
-        const { data, error } = await supabase.rpc('fulfillment_week_days', { p_rep: id, p_start: periodStart })
-        if (error) throw error
-        out[id] = (data || []).map(d => ({ day: d.day, scheduled: Number(d.scheduled), fixed: d.fixed == null ? null : Number(d.fixed), hours: Number(d.hours) }))
-      }))
-      return out
-    },
-  })
-}
-
-// Fix hours: { repId, periodStart, days: { 'YYYY-MM-DD': hours }, reason }.
-// The server refuses approved / paid weeks and writes the audit rows.
-export function useFixHours() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ repId, periodStart, days, reason }) => {
-      const { data, error } = await supabase.rpc('fulfillment_fix_hours', { p_rep: repId, p_start: periodStart, p_days: days, p_reason: reason })
+      let q = supabase.from('fulfillment_cancels')
+        .select('id, policy_id, rep_id, agent_id, client_name, carrier_name, agent_name, logged_at, week_start, amount_cents, status, reason, verified_at, decided_at, payout_id, paid_at')
+        .neq('status', 'void').order('logged_at', { ascending: false }).limit(500)
+      if (repId) q = q.eq('rep_id', repId)
+      if (since) q = q.gte('week_start', since)
+      const { data, error } = await q
       if (error) throw error
-      return Array.isArray(data) ? data[0] : data
+      return data || []
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: KEY }),
   })
 }
 

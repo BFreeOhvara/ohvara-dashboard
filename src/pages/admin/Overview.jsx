@@ -162,13 +162,14 @@ export default function AdminOverview() {
 
   const needs = useMemo(() => {
     const out = []
-    // Last week's pay: weeks that ended, not approved yet, with something to pay.
-    const owed = payouts.filter(p => p.period_start === frame.dates[0] && p.status === 'upcoming' && p.amount_cents > 0)
+    // Prompt 764: pay goes out by itself on Monday; only a failed transfer
+    // (retried next Monday) needs a look.
+    const owed = payouts.filter(p => p.status === 'failed' && p.amount_cents > 0)
     if (owed.length) {
       const total = owed.reduce((s, p) => s + p.amount_cents, 0)
       out.push({
         key: 'pay', tone: 'warn', action: 'Review', to: '/admin/payouts',
-        title: 'Approve last week’s pay',
+        title: 'Pay that didn’t go out',
         sub: <>{owed.length === 1 ? '1 person' : `${owed.length} people`} · <span style={{ fontFamily: MONO }}>{fmtCents(total)}</span></>,
       })
     }
@@ -197,7 +198,7 @@ export default function AdminOverview() {
       out.push({ key: 'sms', tone: 'mute', action: 'Settings', to: '/settings#contact', title: 'Texting isn’t live yet', sub: 'Switch it on in Settings' })
     }
     return out
-  }, [payouts, queue, invites, config, frame.dates, now])
+  }, [payouts, queue, invites, config, now])
 
   const firstName = (profile?.full_name || '').split(' ')[0]
   const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hourCycle: 'h23' }).format(now))

@@ -1,32 +1,37 @@
+import { useState } from 'react'
 import { CalendarDays, Landmark, Settings as Gear, TriangleAlert, CreditCard } from 'lucide-react'
-import { fmtCents, fmtHours, fmtPeriod } from '../../lib/payPeriod'
+import { fmtCents, fmtPeriod } from '../../lib/payPeriod'
 import {
-  payWeek, dayHoursLabel, shortTime, rulerRange, hourFrac, rulerTicks, payDayOf, destination, requirementText,
-  payoutRow, paidThisMonth,
+  payDayOf, destination, requirementText, payoutRow, paidThisMonth, cancelTotals, cancelsByDay, cancelView,
+  dayLabel, timeLabel, initials,
 } from '../../lib/myPay'
 
-// Prompt 753 — "My pay" (was Getting Paid): this week's pay in a hero (what
-// you've earned so far, hours × rate, the pay day and where it goes, hours by
-// day), your shifts on an 8a–8p ruler, where pay goes (Stripe Connect), and
-// the payouts list. Presentational: pages/fulfillment/MyPay.jsx feeds it.
-// Mockup: media/fulfillment-my-calls/my-pay.dc.html.
+// Prompt 764 — "My pay", pay per verified cancel. A literal port of
+// media/fulfillment-pay-per-cancel/my-pay-per-cancel.dc.html: the hero (what
+// you've earned this week = verified + being checked, the chips, the pay day,
+// the weekly minimum line, cancels by day), Your cancels (tabs + rows) and,
+// on the right, Get paid to and Payouts. A rep only ever sees a status and a
+// note, never transcripts, recordings or AI quotes. Presentational:
+// pages/fulfillment/MyPay.jsx feeds it.
 
 const PERIODS = [{ value: 'this', label: 'This week' }, { value: 'last', label: 'Last week' }]
+const TABS = [{ value: 'all', label: 'All' }, { value: 'verified', label: 'Verified' }, { value: 'checking', label: 'Checking' }, { value: 'listen', label: 'Needs a listen' }]
 const longDay = d => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-const compactHours = h => {
-  const mins = Math.round(h * 60)
-  return mins % 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins / 60}h`
-}
+const whole = cents => (cents % 100 ? fmtCents(cents) : fmtCents(cents).replace(/\.00$/, ''))
+const AV_TONES = 6
 
 function Money({ cents }) {
-  const [whole, frac] = fmtCents(cents).split('.')
-  return <>{whole}<span className="mp-cents">.{frac}</span></>
+  const [w, frac] = fmtCents(cents).split('.')
+  return <>{w}<span className="mp-cents">.{frac}</span></>
 }
 
-function Hero({ which, onWhich, period, w, account }) {
+function Hero({ which, onWhich, period, now, cancels, rate, minCents, account }) {
+  const t = cancelTotals(cancels)
+  const days = cancelsByDay(cancels, period, now)
+  const max = Math.max(5, ...days.map(d => d.n))
+  const unit = n => Math.round(n / max * 150)
   const dest = destination(account)
-  const max = Math.max(8, ...w.days.map(d => d.full))
-  const scale = h => Math.round(h / max * 130)
+  const counted = t.verified + t.checking
   return (
     <section className="ov-hero mp-hero" aria-label="This week's pay">
       <div className="mp-hero-main">
@@ -38,38 +43,45 @@ function Hero({ which, onWhich, period, w, account }) {
             ))}
           </span>
         </div>
-        {w.unset ? (
-          <>
-            <div className="mp-earn-label">Your pay</div>
-            <div className="mp-unset">Brayden hasn't set your schedule yet</div>
-            <div className="mp-calc">Once your hours and rate are in, what you've earned shows here.</div>
-          </>
-        ) : (
-          <>
-            <div className="mp-earn-label">{which === 'this' ? "You've earned so far" : 'You earned'}</div>
-            <div className="mp-amount" data-testid="mp-amount"><Money cents={w.earned} /></div>
-            <div className="mp-calc">
-              <span className="mp-mono">{fmtHours(w.worked)}</span><span className="mp-x">×</span>
-              <span className="mp-mono">{fmtCents(w.rate)}/hr</span><span className="mp-x">·</span>
-              <span>{w.left > 0 ? `${compactHours(w.left)} left on your schedule` : 'your whole schedule'}</span>
-            </div>
-          </>
+        <div className="mp-earn-label">{which === 'this' ? "You've earned this week" : 'You earned last week'}</div>
+        <div className="mp-earn">
+          <span className="mp-amount" data-testid="mp-amount"><Money cents={t.earnedCents} /></span>
+          <span className="mp-calc"><b className="mp-mono">{counted}</b> cancel{counted === 1 ? '' : 's'} <span className="mp-x">×</span> <b className="mp-mono">{whole(rate)}</b></span>
+        </div>
+        <div className="mp-chips">
+          <span className="mp-chip is-verified"><i />{whole(t.verifiedCents)} verified</span>
+          <span className="mp-chip is-checking"><i />{whole(t.checkingCents)} being checked</span>
+          <span className="mp-chip is-listen"><i />{t.listen} needs a listen</span>
+        </div>
+        {minCents != null && (
+          <div className="mp-floor">
+            Weekly minimum <b className="mp-mono">{whole(minCents)}</b> · {t.verifiedCents >= minCents
+              ? <span className="is-past">you're past it</span>
+              : t.verified > 0 ? <span>you'll get at least this</span> : <span>with one verified cancel</span>}
+          </div>
         )}
         <div className="mp-strip">
           <CalendarDays size={16} strokeWidth={2} aria-hidden="true" />
           <span>Paid <b>{longDay(payDayOf(period))}</b> to {dest || 'your bank (add it below)'}</span>
         </div>
       </div>
-      <div className="mp-chart" aria-label="Hours by day">
-        <div className="mp-chart-head"><span>Hours by day</span><span>{w.scheduled != null ? `${compactHours(w.scheduled)} scheduled` : 'No schedule yet'}</span></div>
+      <div className="mp-chart" aria-label="Cancels by day">
+        <div className="mp-chart-head"><span>Cancels by day</span><span>{whole(rate)} each</span></div>
         <div className="mp-cols">
-          {w.days.map(d => (
-            <div key={d.date.getTime()} className={`mp-col${d.isToday ? ' is-today' : ''}`} title={d.off ? `${d.short}: off` : `${d.short}: ${compactHours(d.done)} of ${compactHours(d.full)}`}>
-              <span className="mp-col-n">{dayHoursLabel(d)}</span>
-              <span className="mp-col-plan" style={{ height: d.off ? 6 : scale(d.full) }}>
-                <span className="mp-col-done" style={{ height: scale(d.done) }} />
+          {days.map(d => (
+            <div key={d.date.getTime()} className={`mp-col${d.isToday ? ' is-today' : ''}${d.future ? ' is-future' : ''}`}
+              title={d.future ? `${d.short}: later` : `${d.short}: ${d.verified} verified, ${d.checking} being checked, ${d.listen} needs a listen`}>
+              <span className="mp-col-n">{d.future ? '–' : d.n}</span>
+              <span className="mp-stack">
+                {d.future ? <span className="mp-bar is-empty" style={{ height: 120 }} /> : (
+                  <>
+                    {d.listen > 0 && <span className="mp-bar is-listen" style={{ height: unit(d.listen) }} />}
+                    {d.checking > 0 && <span className="mp-bar is-checking" style={{ height: unit(d.checking) }} />}
+                    {d.verified > 0 && <span className="mp-bar is-verified" style={{ height: unit(d.verified) }} />}
+                  </>
+                )}
               </span>
-              <span className="mp-col-l">{d.letter}</span>
+              <span className="mp-col-l">{d.isToday ? 'Today' : d.short}</span>
             </div>
           ))}
         </div>
@@ -78,33 +90,44 @@ function Hero({ which, onWhich, period, w, account }) {
   )
 }
 
-function Shifts({ w }) {
-  const range = rulerRange(w.days)
+function Cancels({ cancels, now }) {
+  const [tab, setTab] = useState('all')
+  const rows = cancels.map(c => ({ c, v: cancelView(c) }))
+  const count = k => (k === 'all' ? rows.filter(r => r.v.kind !== 'off').length : rows.filter(r => r.v.kind === k).length)
+  const shown = rows.filter(r => (tab === 'all' ? true : r.v.kind === tab))
   return (
-    <section className="ov-card mp-card mp-shifts" aria-label="Your shifts">
-      <div className="mp-card-head"><h2>Your shifts</h2><span>Hours come from your schedule. Nothing to clock.</span></div>
-      <div className="mp-ticks">
-        {rulerTicks(range).map(t => <span key={t.x} style={{ left: `${t.x}%` }}>{t.label}</span>)}
+    <section className="ov-card mp-card mp-cancels" aria-label="Your cancels">
+      <div className="mp-cancels-head">
+        <h2>Your cancels</h2>
+        <span className="mp-tabs" role="tablist" aria-label="Show">
+          {TABS.map(t => (
+            <button key={t.value} type="button" role="tab" aria-selected={tab === t.value} className={tab === t.value ? 'is-on' : ''} onClick={() => setTab(t.value)}>
+              {t.label}<span className="mp-mono">{count(t.value)}</span>
+            </button>
+          ))}
+        </span>
       </div>
-      <div>
-        {w.days.map(d => {
-          const state = d.off ? 'off' : d.isToday ? 'now' : d.past ? 'done' : 'later'
-          return (
-            <div key={d.date.getTime()} className={`mp-shift is-${state}`}>
-              <span className="mp-shift-day">{d.isToday ? 'Today' : `${d.short} ${d.date.getDate()}`}</span>
-              <span className="mp-shift-track">
-                {!d.off && (
-                  <span className="mp-shift-bar" style={{ left: `${hourFrac(d.start, range)}%`, width: `${hourFrac(d.end, range) - hourFrac(d.start, range)}%` }}>
-                    {shortTime(d.start)} – {shortTime(d.end)}
-                  </span>
-                )}
-              </span>
-              <span className="mp-shift-h">{d.off ? 'Off' : compactHours(d.full)}</span>
-            </div>
-          )
-        })}
-      </div>
-      <p className="mp-foot">Something off? Message Brayden and he'll fix the week before it's paid.</p>
+      <p className="mp-cancels-sub">Every cancel call is recorded. AI listens for the carrier confirming the cancel. Verified cancels are paid Monday.</p>
+      <div className="mp-thead" aria-hidden="true"><span>LOGGED</span><span>CLIENT · AGENT</span><span>STATUS</span><span>PAY</span></div>
+      {shown.length === 0 ? <p className="mp-empty">{cancels.length ? 'Nothing here this week.' : 'No cancels this week yet. Each one you log shows here.'}</p> : (
+        <ul className="mp-rows">
+          {shown.map(({ c, v }, i) => {
+            const at = new Date(c.logged_at)
+            return (
+              <li key={c.id} className={`mp-row is-${v.kind}`}>
+                <span className="mp-when"><b>{dayLabel(at, now)}</b><span className="mp-mono">{timeLabel(at)}</span></span>
+                <span className="mp-who">
+                  <span className="mp-ini" data-tone={i % AV_TONES}>{initials(c.client_name)}</span>
+                  <span className="mp-who-t"><b>{c.client_name || 'Client'}</b><span>{c.carrier_name || 'Carrier'} · for {c.agent_name || 'agent'}</span></span>
+                </span>
+                <span className="mp-status"><span className={`mp-spill is-${v.kind}`}><i />{v.label}</span><span className="mp-note">{v.note}</span></span>
+                <span className={`mp-pay mp-mono is-${v.kind}`}>{fmtCents(c.amount_cents)}</span>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+      <p className="mp-foot">If the call wasn’t clear, Brayden listens and decides before pay day.</p>
     </section>
   )
 }
@@ -124,7 +147,7 @@ function GetPaidTo({ status, account, loading, onConnect, onSettings }) {
           <span className="mp-pill is-up"><i />Ready</span>
         </div>
         <div className="mp-method-foot">
-          <span>Payouts by Stripe</span>
+          <span>Paid every Monday by Stripe</span>
           <button type="button" className="mp-textbtn" onClick={onSettings}><Gear size={14} strokeWidth={2} aria-hidden="true" /> Payout settings</button>
         </div>
       </section>
@@ -147,7 +170,7 @@ function GetPaidTo({ status, account, loading, onConnect, onSettings }) {
       <button type="button" className="ov-hero-btn mp-bigbtn" onClick={onConnect}>
         <Landmark size={18} strokeWidth={2} aria-hidden="true" /> {status === 'incomplete' ? 'Finish connecting your bank' : 'Connect a bank account'}
       </button>
-      <div className="mp-later">PayPal · coming later</div>
+      <p className="mp-wait">Your confirmed cancels wait here until a bank is added.</p>
     </section>
   )
 }
@@ -157,7 +180,7 @@ function Payouts({ payouts, now, account }) {
   return (
     <section className="ov-card mp-card mp-payouts" aria-label="Payouts">
       <div className="mp-payouts-head"><h2>Payouts</h2><span><span className="mp-mono">{fmtCents(month)}</span> paid this month</span></div>
-      {payouts.length === 0 ? <p className="mp-empty">Your first payout shows here after your first week.</p> : (
+      {payouts.length === 0 ? <p className="mp-empty">Your first payout shows here after your first verified cancel.</p> : (
         <ul className="mp-list">
           {payouts.slice(0, 6).map(p => {
             const r = payoutRow(p, now, account)
@@ -175,13 +198,15 @@ function Payouts({ payouts, now, account }) {
   )
 }
 
-export function MyPayView({ which, onWhich, period, now, pay, segments, payouts = [], account = null, status = 'none', accountLoading = false, onConnect, onSettings }) {
-  const w = payWeek(pay, period, now, segments)
+export function MyPayView({
+  which, onWhich, period, now, weekCancels = [], rate = 1000, minCents = null,
+  payouts = [], account = null, status = 'none', accountLoading = false, onConnect, onSettings,
+}) {
   return (
     <div className="mp-page">
-      <Hero which={which} onWhich={onWhich} period={period} w={w} account={status === 'ready' ? account : null} />
+      <Hero which={which} onWhich={onWhich} period={period} now={now} cancels={weekCancels} rate={rate} minCents={minCents} account={status === 'ready' ? account : null} />
       <div className="mp-grid">
-        <Shifts w={w} />
+        <Cancels cancels={weekCancels} now={now} />
         <div className="mp-side">
           <GetPaidTo status={status} account={account} loading={accountLoading} onConnect={onConnect} onSettings={onSettings} />
           <Payouts payouts={payouts} now={now} account={account} />

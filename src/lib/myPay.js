@@ -1,12 +1,9 @@
-import { shiftSegments, scheduledHours } from './payPeriod'
-
-// Prompt 753 — My pay: the numbers behind the hero chart, the shift ruler,
+// Prompt 753 / 764 — My pay: the numbers behind the hero, the cancels list,
 // the payouts list and the Get paid to card. Pure functions, so the page and
-// the harness agree. Hours come from the schedule (lib/payPeriod.js); money
-// already earned is hours × rate; nothing here is a source of truth for what
-// gets paid (the server recomputes that, migration 138).
+// the harness agree. Pay is per verified cancel (migration 145); each cancel
+// carries its own amount. Nothing here is a source of truth for what gets
+// paid: the Monday pay run recomputes that in the database.
 
-const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 export const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
@@ -17,69 +14,58 @@ export function isoDay(d) {
 }
 export const fromIsoDay = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d) }
 
-// One entry per day of the period, Mon..Sun: scheduled (full) and worked so
-// far (done) hours, the shift times, and whether it's today / over / off.
-// `segments` defaults to the uniform schedule; the harness passes its own.
-export function weekDays(period, now, segments) {
+// ── cancels ────────────────────────────────────────────────────────────────
+
+export const isVerified = c => c.status === 'verified' || c.status === 'verified_by_admin'
+
+// What a rep sees for each status: never transcripts, recordings or quotes.
+export function cancelView(c) {
+  if (c.status === 'verified') return { kind: 'verified', label: 'Verified', note: 'Carrier confirmed on the call' }
+  if (c.status === 'verified_by_admin') return { kind: 'verified', label: 'Verified', note: 'Brayden listened · paid' }
+  if (c.status === 'checking') return { kind: 'checking', label: 'Checking', note: 'AI is listening · a few minutes' }
+  if (c.status === 'not_paid') return { kind: 'off', label: 'Not paid', note: 'Brayden listened · not paid' }
+  return { kind: 'listen', label: 'Needs a listen', note: c.reason === 'no_recording' ? 'No recording · with Brayden' : 'Not clear on the call · with Brayden' }
+}
+
+// Totals for a set of cancels (void rows are never fetched).
+export function cancelTotals(list) {
+  const t = { count: 0, verified: 0, checking: 0, listen: 0, notPaid: 0, verifiedCents: 0, checkingCents: 0 }
+  for (const c of list) {
+    if (c.status === 'void') continue
+    t.count++
+    if (isVerified(c)) { t.verified++; t.verifiedCents += c.amount_cents }
+    else if (c.status === 'checking') { t.checking++; t.checkingCents += c.amount_cents }
+    else if (c.status === 'needs_listen') t.listen++
+    else if (c.status === 'not_paid') t.notPaid++
+  }
+  return { ...t, earnedCents: t.verifiedCents + t.checkingCents }
+}
+
+// The hero's day bars: Mon–Fri (plus a weekend day only if it has cancels),
+// each stacked verified / checking / needs a listen. Days after today are
+// dashed placeholders.
+export function cancelsByDay(list, period, now) {
   const today = new Date(now)
-  return Array.from({ length: 7 }, (_, i) => {
+  const days = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(period.start.getFullYear(), period.start.getMonth(), period.start.getDate() + i)
-    const seg = segments.find(s => sameDay(s.start, date))
+    const mine = list.filter(c => sameDay(new Date(c.logged_at), date))
+    const t = cancelTotals(mine)
     const isToday = sameDay(date, today)
-    return {
-      date, letter: DAY_LETTERS[i], short: DAY_SHORT[i], isToday,
-      off: !seg, start: seg?.start ?? null, end: seg?.end ?? null,
-      full: seg?.full ?? 0, done: seg?.hours ?? 0,
-      past: !isToday && date < today,
-    }
+    return { date, short: DAY_SHORT[i], isToday, future: !isToday && date > today, verified: t.verified, checking: t.checking, listen: t.listen, n: t.verified + t.checking + t.listen }
   })
+  return days.filter((d, i) => i < 5 || d.n > 0)
 }
 
-export function payWeek(pay, period, now, segments = shiftSegments(pay, period, now)) {
-  const days = weekDays(period, now, segments)
-  const worked = days.reduce((s, d) => s + d.done, 0)
-  const scheduled = segments.length ? days.reduce((s, d) => s + d.full, 0) : scheduledHours(pay)
-  const rate = pay?.hourly_rate_cents ?? null
-  return {
-    days,
-    worked,
-    scheduled,
-    left: scheduled != null ? Math.max(0, scheduled - worked) : null,
-    rate,
-    earned: rate != null ? Math.round(worked * rate) : null,
-    // Brayden hasn't set a rate or a shift: no money to show.
-    unset: rate == null || !pay?.shift_start,
-  }
+// "Today", "Tue 13"
+export function dayLabel(d, now) {
+  const n = new Date(now)
+  if (sameDay(d, n)) return 'Today'
+  const y = new Date(n.getFullYear(), n.getMonth(), n.getDate() - 1)
+  if (sameDay(d, y)) return 'Yesterday'
+  return `${DAY_SHORT[(d.getDay() + 6) % 7]} ${d.getDate()}`
 }
-
-// "30h", "4/8h", "—"
-export const dayHoursLabel = d => (d.off ? '—' : d.done >= d.full ? `${trimH(d.full)}h` : `${trimH(d.done)}/${trimH(d.full)}h`)
-const trimH = h => (Math.round(h * 10) / 10).toString()
-
-// "10a", "12:30p"
-export function shortTime(d) {
-  const h = d.getHours(), m = d.getMinutes()
-  const h12 = h % 12 === 0 ? 12 : h % 12
-  return `${h12}${m ? `:${String(m).padStart(2, '0')}` : ''}${h >= 12 ? 'p' : 'a'}`
-}
-
-// The shift ruler runs 8a–8p, widened to fit any shift outside it.
-export function rulerRange(days) {
-  let lo = 8, hi = 20
-  for (const d of days) {
-    if (d.off) continue
-    lo = Math.min(lo, d.start.getHours())
-    hi = Math.max(hi, d.end.getHours() + (d.end.getMinutes() ? 1 : 0))
-  }
-  if ((hi - lo) % 2) hi += 1
-  return { lo, hi }
-}
-export const hourFrac = (d, { lo, hi }) => ((d.getHours() + d.getMinutes() / 60) - lo) / (hi - lo) * 100
-export function rulerTicks({ lo, hi }) {
-  const out = []
-  for (let h = lo; h <= hi; h += 2) out.push({ x: (h - lo) / (hi - lo) * 100, label: `${h % 12 === 0 ? 12 : h % 12}${h >= 12 && h < 24 ? 'p' : 'a'}` })
-  return out
-}
+export const timeLabel = d => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+export const initials = name => (name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?'
 
 // The Monday after the week = pay day.
 export const payDayOf = period => period.end
@@ -136,11 +122,12 @@ export function payoutRow(p, now, account) {
   const tile = p.status === 'paid' && p.paid_at ? new Date(p.paid_at) : payDay
   const thisWeek = new Date(now) >= start && new Date(now) < payDay
   const dest = p.paid_to || destination(account)
-  const sub = p.status === 'paid' ? (p.paid_to ? `To ${p.paid_to}` : 'Sent')
-    : p.status === 'failed' ? (p.failure_reason || 'Didn\'t go through')
+  const n = p.cancels ? `${p.cancels} cancel${p.cancels === 1 ? '' : 's'}` : null
+  const sub = p.status === 'paid' ? [n, p.paid_to ? `to ${p.paid_to}` : 'sent'].filter(Boolean).join(' · ')
+    : p.status === 'failed' ? (p.failure_reason || "Didn't go through")
       : p.status === 'held' ? (p.failure_reason || 'On hold')
         : p.status === 'approved' ? `Sending${dest ? ` to ${dest}` : ''}`
-          : thisWeek ? 'This week · after Brayden approves' : 'Waiting on Brayden\'s approval'
+          : p.sub || (thisWeek ? 'This week · verified by Sunday' : 'Paid Monday')
   return {
     id: p.id, mon: MON[tile.getMonth()], day: tile.getDate(), week: weekRange(p.period_start, p.period_end),
     sub, amount: p.amount_cents, status: PAYOUT_STATUS[p.status] || PAYOUT_STATUS.upcoming,

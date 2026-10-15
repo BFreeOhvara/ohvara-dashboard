@@ -144,6 +144,8 @@ function AdminControls({ config }) {
         </div>
         <Switch checked={!!config.voice_live} disabled={save.isPending} onChange={v => save.mutate({ voice_live: v })} />
       </div>
+      {/* Prompt 764 — call recording (recovery_config.recording_live + the notice). */}
+      <RecordingSetting config={config} save={save} />
 
       <p className="ov-box" style={{ margin: 0, padding: '12px 14px', borderRadius: 14, fontSize: 13.5, color: 'var(--ov-soft)', display: 'flex', gap: 8, alignItems: 'flex-start', lineHeight: 1.5 }}>
         <MessageSquareText size={15} style={{ flexShrink: 0, marginTop: 2 }} /> {senderText}
@@ -171,5 +173,38 @@ function AdminControls({ config }) {
         Sent in each agent's own timezone. Applies to the morning reminder on the retry day and to both follow-up texts.
       </p>
     </SettingsCard>
+  )
+}
+
+// Prompt 764 — record Fulfillment calls (the AI checks each cancel from the
+// recording) and the notice each leg hears. Off by default; turn on only after
+// checking the consent rules for the states Ohvara calls.
+function RecordingSetting({ config, save }) {
+  const [notice, setNotice] = useState(null)
+  const value = notice ?? config.recording_notice ?? 'This call may be recorded.'
+  const ok = value.trim().length >= 3 && value.trim().length <= 300
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>Record calls</p>
+          <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--ov-mute)' }}>
+            Records every portal call so AI can check each cancel. Off: nothing is recorded, no notice plays, and cancels wait for you to listen. Check the consent rules for your states before turning it on.
+          </p>
+        </div>
+        <Switch checked={!!config.recording_live} disabled={save.isPending} onChange={v => save.mutate({ recording_live: v })} />
+      </div>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <label style={{ flex: 1, minWidth: 220, fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>
+          Recording notice (played to the client and the carrier)
+          <input className="ov-box" value={value} maxLength={300} onChange={e => setNotice(e.target.value)}
+            style={{ display: 'block', width: '100%', boxSizing: 'border-box', marginTop: 6, height: 40, padding: '0 12px', borderRadius: 12, font: 'inherit', fontWeight: 500, color: 'var(--ov-hi)' }} />
+        </label>
+        <button type="button" className="ov-buy ov-set-btn" disabled={notice == null || !ok || save.isPending}
+          onClick={() => save.mutate({ recording_notice: value.trim() }, { onSuccess: () => setNotice(null) })}>
+          Save notice
+        </button>
+      </div>
+    </>
   )
 }

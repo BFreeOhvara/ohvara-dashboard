@@ -175,6 +175,7 @@ export function PortalPhoneProvider({ children, voice = connectVoice }) {
         <PortalPhone
           s={s} names={names} legs={legs} answered={answered} muted={muted} busy={busy} error={error}
           canRingCarrier={!!carrier?.service_phone} devices={devices} onDevice={pickDevice}
+          recording={!!cfg?.recording_live}
           onPress={press} onAllowMic={allowMic} onCollapse={collapse} onClose={close}
         />
       )}

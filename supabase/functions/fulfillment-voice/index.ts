@@ -7,15 +7,19 @@
 // X-Twilio-Signature on every request):
 //   npx.cmd supabase functions deploy fulfillment-voice --no-verify-jwt --project-ref jjextitmbptoaolacocs
 //
-// Secrets: CALLER_ID_TWILIO_AUTH_TOKEN (signs Twilio's requests).
+// Secrets: CALLER_ID_TWILIO_AUTH_TOKEN (signs Twilio's requests);
+// CALLER_ID_TWILIO_ACCOUNT_SID (Prompt 764: plays the recording notice).
 // The TwiML App's Voice URL = https://jjextitmbptoaolacocs.supabase.co/functions/v1/fulfillment-voice
 import { createClient } from 'npm:@supabase/supabase-js'
 import { handle, type Store } from './core.ts'
+import { twilioClient } from '../_shared/twilio.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const admin = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
 const legs = () => admin.from('fulfillment_voice_legs')
+const SID = Deno.env.get('CALLER_ID_TWILIO_ACCOUNT_SID')
+const TOKEN = Deno.env.get('CALLER_ID_TWILIO_AUTH_TOKEN') ?? null
 
 const store: Store = {
   async role(id) {
@@ -50,6 +54,19 @@ const store: Store = {
     await legs().update({ on_hold: hold, hold_since: hold ? now : null, updated_at: now })
       .eq('call_sid', callSid).neq('status', 'ended').neq('on_hold', hold)
   },
+  async recording() {
+    const { data } = await admin.from('recovery_config').select('recording_live, recording_notice').limit(1).maybeSingle()
+    return { live: !!data?.recording_live, notice: data?.recording_notice || 'This call may be recorded.' }
+  },
+  async startRecording(row) {
+    const { error } = await admin.from('fulfillment_recordings').upsert(row, { onConflict: 'call_sid', ignoreDuplicates: true })
+    if (error) throw error
+  },
+  async claimNotice(callSid) {
+    const { data } = await legs().update({ notice_at: new Date().toISOString() })
+      .eq('call_sid', callSid).is('notice_at', null).select('conference_sid').maybeSingle()
+    return data?.conference_sid ?? null
+  },
   async endLegs(policyId, reason) {
     const now = new Date().toISOString()
     await legs().update({ status: 'ended', on_hold: false, hold_since: null, ended_at: now, end_reason: reason, updated_at: now })
@@ -58,6 +75,8 @@ const store: Store = {
 }
 
 Deno.serve(req => handle(req, store, {
-  authToken: Deno.env.get('CALLER_ID_TWILIO_AUTH_TOKEN') ?? null,
+  authToken: TOKEN,
   publicUrl: `${SUPABASE_URL}/functions/v1/fulfillment-voice`,
+  checkUrl: `${SUPABASE_URL}/functions/v1/fulfillment-cancel-check`,
+  twilio: SID && TOKEN ? twilioClient(SID, TOKEN) : null,
 }))
