@@ -60,6 +60,10 @@ export function formatPhoneInput(raw) {
   return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`
 }
 
+// A stored phone (any format, maybe +1…) shown in the same mask (Prompt 766,
+// moved from Admin Users).
+export const phoneText = raw => formatPhoneInput(String(raw || '').replace(/\D/g, '').slice(-10))
+
 // Title-cases a name on submit (Prompt 401) — not applied while typing, only
 // as a normalization pass right before save. Idempotent, so already-correct
 // input passes through unchanged.

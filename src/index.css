@@ -2003,19 +2003,26 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 .ov-mi-row:hover, .ov-mi-row:focus-visible { background: var(--ov-menu-hover); outline: none; }
 .ov-mi-row.is-danger, .ov-mi-row.is-danger .ov-mi-icon { color: var(--ov-live); }
 .ov-mi-icon { flex-shrink: 0; color: var(--ov-mute); }
-.ov-mi-theme { display: flex; align-items: center; gap: 11px; height: 44px; padding: 0 6px 0 10px; font-size: 14px; font-weight: 500; color: var(--ov-hi); }
+.ov-mi-theme {
+  display: flex; align-items: center; gap: 11px; width: 100%; height: 44px; padding: 0 6px 0 10px; box-sizing: border-box;
+  border: none; border-radius: 10px; background: transparent; text-align: left; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 500; color: var(--ov-hi); transition: background 120ms ease;
+}
+.ov-mi-theme:hover, .ov-mi-theme:focus-visible { background: var(--ov-menu-hover); outline: none; }
 .ov-mi-sep { height: 1px; margin: 4px 8px; background: var(--ov-line); }
 .ov-theme-switch {
   position: relative; display: flex; width: 68px; height: 32px; padding: 2px; box-sizing: border-box; border-radius: 999px;
   background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.10);
 }
 [data-theme="light"] .ov-theme-switch { background: #F6FAF9; border-color: rgba(2,79,70,0.18); }
-.ov-theme-switch button {
-  position: relative; flex: 1; padding: 0; border: none; border-radius: 999px; background: transparent; cursor: pointer;
-  color: var(--ov-mute); display: flex; align-items: center; justify-content: center;
+.ov-theme-switch > span:not(.ov-thumb) {
+  position: relative; flex: 1; border-radius: 999px; color: var(--ov-mute);
+  display: flex; align-items: center; justify-content: center;
 }
-.ov-theme-switch button.is-on { color: var(--ov-st-booked); }
-.ov-theme-switch button:focus-visible { outline: 2px solid var(--ov-st-booked); outline-offset: 1px; }
+.ov-theme-switch > span.is-on { color: var(--ov-st-booked); }
+.ov-theme-switch > span.is-on svg { animation: ovThemePop 420ms cubic-bezier(.2,.8,.2,1); }
+@keyframes ovThemePop { 0% { transform: rotate(-90deg) scale(.5); opacity: 0; } 60% { transform: rotate(8deg) scale(1.15); opacity: 1; } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ov-theme-switch > span.is-on svg { animation: none; } }
 .ov-thumb {
   position: absolute; top: 2px; width: 32px; height: 26px; border-radius: 999px;
   background: var(--ov-st-booked-tint); box-shadow: inset 0 0 0 1px var(--ov-st-booked-edge);
@@ -3390,6 +3397,25 @@ a.ov-hpill:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; 
 .au-off:disabled, .au-on:disabled, .au-danger:disabled { opacity: 0.55; cursor: default; }
 .au-off:focus-visible, .au-on:focus-visible, .au-danger:focus-visible { outline: 2px solid var(--ov-data-a); outline-offset: 2px; }
 
+/* P766: the shared dialog shell Admin Users uses (Add someone, role, access). P765 dropped it with the old Payouts page; restored. */
+.ap-ghost, .ap-solid { height: 42px; box-sizing: border-box; border-radius: 999px; font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.ap-ghost { padding: 0 14px; font-size: 13.5px; border: 1px solid color-mix(in srgb, var(--ov-hi) 16%, transparent); background: none; color: var(--ov-hi); }
+.ap-ghost:hover:not(:disabled) { background: color-mix(in srgb, var(--ov-hi) 6%, transparent); }
+.ap-solid { padding: 0 20px; font-size: 14px; font-weight: 700; border: none; background: #FFFFFF; color: #0D1730; }
+.ap-solid:hover:not(:disabled) { background: #E8EEF9; }
+[data-theme="light"] .ap-solid { background: #07332E; color: #FFFFFF; }
+.ap-ghost:disabled, .ap-solid:disabled { opacity: 0.5; cursor: default; }
+.ap-ghost:focus-visible, .ap-solid:focus-visible { outline: 2px solid var(--ov-data-a); outline-offset: 2px; }
+.ap-scrim { z-index: 210; }
+.ap-modal { position: fixed; z-index: 211; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 560px; max-width: calc(100vw - 32px); max-height: calc(100vh - 64px); box-sizing: border-box; overflow: auto; padding: 20px; }
+.ap-modal-head { display: flex; align-items: flex-start; gap: 12px; }
+.ap-modal-head > div { flex: 1; }
+.ap-modal-head h2 { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 600; color: var(--ov-hi); }
+.ap-modal-head p { margin: 4px 0 0; font-size: 13px; color: var(--ov-mute); }
+.ap-x { width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: none; background: color-mix(in srgb, var(--ov-hi) 6%, transparent); color: var(--ov-hi); cursor: pointer; }
+.ap-fix-foot { margin-top: 16px; display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.ap-fix-foot > span { margin-right: auto; font-size: 13px; color: var(--ov-mute); }
+.ap-fix-foot b { font-family: 'Space Grotesk', sans-serif; font-size: 16px; color: var(--ov-hi); }
 .au-modal { width: 480px; }
 .au-modal-body { margin-top: 14px; display: flex; flex-direction: column; gap: 14px; }
 .au-modal-body p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ov-mid); }

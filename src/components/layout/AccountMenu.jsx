@@ -19,11 +19,16 @@ import { useUnresolvedBugReportCount } from '../../hooks/useBugReports'
 // Prompt 731: agents (only) get "Invite an agent" between the phone app and
 // Report a problem; `onInvite` opens InviteAgentModal. The later rows' stagger
 // shifts by one step automatically (delay() counts rows).
+//
+// Prompt 766: the whole Theme row is one button (tap flips dark/light; the pill
+// is only the indicator), and admins get "Invite someone" between Theme and
+// Get the phone app, opening the Users page's Add someone dialog.
 
 const STAGGER = 35
 
 export function AccountMenu({ open, anchor, placement = 'above', onClose, triggerRef, isAdmin, onPhoneApp, onInvite, onReport, onSignOut }) {
   const [theme, setTheme] = useTheme()
+  const light = theme === 'light'
   const panel = useRef(null)
   const [shown, setShown] = useState(open)
   const [prevOpen, setPrevOpen] = useState(open)
@@ -69,7 +74,7 @@ export function AccountMenu({ open, anchor, placement = 'above', onClose, trigge
     ? { left: anchor.right + 12, bottom: window.innerHeight - anchor.bottom, width: 248, transformOrigin: '0% 100%' }
     : { left: anchor.left, bottom: window.innerHeight - anchor.top + 4, width: anchor.width, transformOrigin: '50% 100%' }
 
-  // Arrow keys move between rows (the two theme buttons count as rows).
+  // Arrow keys move between rows.
   const onKeyDown = e => {
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return
     const items = [...panel.current.querySelectorAll('[role^="menuitem"]')]
@@ -91,25 +96,28 @@ export function AccountMenu({ open, anchor, placement = 'above', onClose, trigge
       style={{ position: 'fixed', zIndex: 130, ...pos }}
       onAnimationEnd={e => { if (closing && e.target === e.currentTarget) setShown(false) }}
     >
-      <div className="ov-mi ov-mi-theme" style={delay()}>
+      <button
+        type="button" role="menuitem" className="ov-mi ov-mi-theme" style={delay()}
+        aria-label={light ? 'Switch to dark theme' : 'Switch to light theme'}
+        onClick={() => setTheme(light ? 'dark' : 'light')}
+      >
         <Moon size={16} strokeWidth={1.9} className="ov-mi-icon" aria-hidden="true" />
-        <span id="ov-theme-label" style={{ flex: 1 }}>Theme</span>
-        <span className="ov-theme-switch" role="group" aria-labelledby="ov-theme-label">
-          <span className="ov-thumb" style={{ left: theme === 'light' ? 32 : 2 }} aria-hidden="true" />
-          <button type="button" role="menuitemradio" aria-checked={theme !== 'light'} aria-label="Dark theme"
-            className={theme !== 'light' ? 'is-on' : ''} onClick={() => setTheme('dark')}>
-            <Moon size={14} strokeWidth={2.2} />
-          </button>
-          <button type="button" role="menuitemradio" aria-checked={theme === 'light'} aria-label="Light theme"
-            className={theme === 'light' ? 'is-on' : ''} onClick={() => setTheme('light')}>
-            <Sun size={14} strokeWidth={2.2} />
-          </button>
+        <span style={{ flex: 1 }}>Theme</span>
+        <span className="ov-theme-switch" aria-hidden="true">
+          <span className="ov-thumb" style={{ left: light ? 32 : 2 }} />
+          <span className={light ? '' : 'is-on'}><Moon size={14} strokeWidth={2.2} /></span>
+          <span className={light ? 'is-on' : ''}><Sun size={14} strokeWidth={2.2} /></span>
         </span>
-      </div>
+      </button>
+      {onInvite && isAdmin && (
+        <button type="button" role="menuitem" className="ov-mi ov-mi-row" style={delay()} onClick={pick(onInvite)}>
+          <UserPlus size={16} strokeWidth={1.9} className="ov-mi-icon" />Invite someone
+        </button>
+      )}
       <button type="button" role="menuitem" className="ov-mi ov-mi-row" style={delay()} onClick={pick(onPhoneApp)}>
         <Smartphone size={16} strokeWidth={1.9} className="ov-mi-icon" />Get the phone app
       </button>
-      {onInvite && (
+      {onInvite && !isAdmin && (
         <button type="button" role="menuitem" className="ov-mi ov-mi-row" style={delay()} onClick={pick(onInvite)}>
           <UserPlus size={16} strokeWidth={1.9} className="ov-mi-icon" />Invite an agent
         </button>

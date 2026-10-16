@@ -15,6 +15,7 @@ import { OhvaraMark } from '../ui/OhvaraMark'
 import { BugReportModal, BugReportInbox } from '../shared/BugReportButton'
 import { MobileAppModal } from './MobileAppModal'
 import { InviteAgentModal } from '../shared/InviteAgentModal'
+import { AddSomeone } from '../shared/AddSomeone'
 import { AccountMenu } from './AccountMenu'
 
 // Sidebar — Prompt 722 rebuilt the chrome on the v16 language (DESIGN.md v16
@@ -207,12 +208,14 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
         open={!!menu?.open} anchor={menu?.rect} placement={menu?.placement} onClose={closeMenu} triggerRef={cardRef}
         isAdmin={isAdmin}
         onPhoneApp={() => setModal('app')}
-        onInvite={isAgent ? () => setModal('invite') : undefined}
+        onInvite={isAgent || isAdmin ? () => setModal('invite') : undefined}
         onReport={() => setModal(isAdmin ? 'inbox' : 'report')}
         onSignOut={handleSignOut}
       />
       {modal === 'app' && <MobileAppModal onClose={() => setModal(null)} />}
-      {modal === 'invite' && <InviteAgentModal onClose={() => setModal(null)} />}
+      {modal === 'invite' && (isAdmin
+        ? <AddSomeone defaultRole="agent" onClose={() => setModal(null)} />
+        : <InviteAgentModal onClose={() => setModal(null)} />)}
       {modal === 'report' && <BugReportModal onClose={() => setModal(null)} />}
       {modal === 'inbox' && <BugReportInbox anchorLeft={(open ? 0 : width) + 12} onClose={() => setModal(null)} />}
     </>
