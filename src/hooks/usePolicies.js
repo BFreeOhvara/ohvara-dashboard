@@ -169,6 +169,40 @@ export function useEndCall() {
   })
 }
 
+// Prompt 769 — Mark cancelled and the call notes go through RPCs (migration
+// 149): a rep has no direct UPDATE on policies. `notes` undefined leaves the
+// saved notes as they are; `proof` is the phone's confirmation / effective
+// date / drafts stopped.
+export function useMarkCancelled() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, notes, proof }) => {
+      const { error } = await supabase.rpc('fulfillment_mark_cancelled', {
+        p_policy: id,
+        p_notes: notes ?? null,
+        p_set_notes: notes !== undefined,
+        p_proof: !!proof,
+        p_confirmation: proof?.confirmation ?? null,
+        p_effective: proof?.effectiveDate ?? null,
+        p_drafts_stopped: !!proof?.draftsStopped,
+      })
+      if (error) throw error
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),
+  })
+}
+
+export function useSaveCancelNotes() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, notes }) => {
+      const { error } = await supabase.rpc('fulfillment_save_notes', { p_policy: id, p_notes: notes })
+      if (error) throw error
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),
+  })
+}
+
 // Prompt 750 — fix a wrong result: Cancelled ↔ No answer (migration 136). The
 // server holds the rules (rep same day, admin any time, never while live).
 export function useCorrectResult() {

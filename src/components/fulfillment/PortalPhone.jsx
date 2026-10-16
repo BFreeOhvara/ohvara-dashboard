@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { useUpdatePolicy, useEndCall } from '../../hooks/usePolicies'
+import { useMarkCancelled, useEndCall } from '../../hooks/usePolicies'
 import { useAuth } from '../../hooks/useAuth'
 import { zonedDateStr, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { phoneView, clock } from '../../lib/portalPhone'
@@ -48,7 +48,7 @@ function Result({ p, s, onClose, error: callError, recording }) {
   const navigate = useNavigate()
   const { profile } = useAuth()
   const tz = profile?.timezone || DEFAULT_TIMEZONE
-  const update = useUpdatePolicy()
+  const update = useMarkCancelled()
   const endCall = useEndCall()
   const [pick, setPick] = useState('cancelled')
   const [conf, setConf] = useState('')
@@ -67,8 +67,7 @@ function Result({ p, s, onClose, error: callError, recording }) {
     if (pick === 'cancelled') {
       // The same write as Mark cancelled, with the proof.
       update.mutate({
-        id: p.id, fulfillment_stage: 'Complete', status: 'In Effect',
-        cancellation_confirmation: conf.trim() || null, cancellation_effective_date: effective, drafts_stopped: true,
+        id: p.id, proof: { confirmation: conf.trim() || null, effectiveDate: effective, draftsStopped: true },
       }, recording ? { onSuccess: () => { setChecking(true); setTimeout(onClose, 2600) } } : done)
     } else {
       endCall.mutate({ id: p.id, outcome: 'no_answer', reason }, done)

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useUpdatePolicy, useStartCall, useEndCall, useSetRescheduleReason, usePassOnCancellation } from './usePolicies'
+import { useMarkCancelled, useSaveCancelNotes, useStartCall, useEndCall, useSetRescheduleReason, usePassOnCancellation } from './usePolicies'
 import { invokeCallerId, FALLBACK_CODES } from '../lib/callerId'
 import { isLive, useNow } from '../lib/agentBookings'
 import { canStartCall, timeText, tooEarlyText, unlockAt } from '../lib/fulfillmentDay'
@@ -43,7 +43,8 @@ export function useClientCall(p, { canBridge, onCall }) {
 
 // The three ways out of a call, shared by the drawer and the page's focus card.
 export function useCallActions(p) {
-  const update = useUpdatePolicy()
+  const markCancelled = useMarkCancelled()
+  const saveNotes = useSaveCancelNotes()
   const startCall = useStartCall()
   const endCall = useEndCall()
   const setReason = useSetRescheduleReason()
@@ -57,16 +58,13 @@ export function useCallActions(p) {
     },
     noAnswer: opts => endCall.mutate({ id: p.id, outcome: 'no_answer' }, opts),
     // `notes` undefined leaves the saved notes as they are.
-    cancelled: (notes, opts) => update.mutate({
-      id: p.id, fulfillment_stage: 'Complete', status: 'In Effect',
-      ...(notes === undefined ? null : { cancellation_notes: notes.trim() || null }),
-    }, opts),
+    cancelled: (notes, opts) => markCancelled.mutate({ id: p.id, notes: notes === undefined ? undefined : notes.trim() }, opts),
     reason: value => setReason.mutate({ id: p.id, reason: p.cancellation_substatus === value ? null : value }),
-    saveNotes: (notes, opts) => update.mutate({ id: p.id, cancellation_notes: notes.trim() || null }, opts),
+    saveNotes: (notes, opts) => saveNotes.mutate({ id: p.id, notes: notes.trim() }, opts),
     passOn: opts => passOn.mutate(p.id, opts),
-    busy: update.isPending || endCall.isPending,
+    busy: markCancelled.isPending || saveNotes.isPending || endCall.isPending,
     passing: passOn.isPending,
-    saving: update.isPending,
-    error: update.error || (startCall.error?.tooEarly ? null : startCall.error) || endCall.error || setReason.error || passOn.error,
+    saving: markCancelled.isPending || saveNotes.isPending,
+    error: markCancelled.error || saveNotes.error || (startCall.error?.tooEarly ? null : startCall.error) || endCall.error || setReason.error || passOn.error,
   }
 }
