@@ -1,188 +1,89 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
-// ── Admin notifications ──────────────────────────────────────────────────────
-// Prompt 379 Bug B: these used to have no profile_id filter at all, relying
-// on the "Admins manage notifications" RLS policy's broad ALL/SELECT access
-// to return literally every user's rows — every admin's own bell showed
-// everyone's notifications, not just theirs (e.g. all 4 team-channel
-// fan-out rows on one message, instead of just their own). Explicit
-// `.eq('profile_id', profileId)` here is belt-and-suspenders on top of the
-// migration 087 RLS narrowing — this component must never regress into
-// showing another user's notifications again regardless of what RLS allows.
+// Prompt 767 — one bell for every role. Rows come only from the database
+// (migration 146, notify()); the client reads its own (RLS), marks them read
+// through notifications_mark_read and never writes them. Old-shape rows (no
+// title) and email/push-only rows (in_bell false) are not shown.
 
-export function useNotifications(profileId, limit = 20) {
+const FEED = ['notifications', 'feed']
+const BANNER = ['notifications', 'banner']
+const SETTINGS = ['notifications', 'settings']
+
+export function useNotificationFeed(profileId, limit = 100) {
   return useQuery({
-    queryKey: ['notifications', profileId, limit],
+    queryKey: [...FEED, profileId, limit],
+    enabled: !!profileId,
+    refetchInterval: 15000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('notifications')
-        .select('*')
+        .select('id, type, title, detail, link, created_at, read, needs_action')
         .eq('profile_id', profileId)
+        .eq('in_bell', true)
+        .not('title', 'is', null)
         .order('created_at', { ascending: false })
         .limit(limit)
       if (error) throw error
       return data || []
     },
-    enabled: !!profileId,
-    refetchInterval: 15000,
   })
 }
 
-export function useUnreadCount(profileId) {
+// The red money banner: { kind, title, sub, btn, link } or null.
+export function useMoneyBanner(profileId) {
   return useQuery({
-    queryKey: ['notifications-unread-count', profileId],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('notifications')
-        .select('id', { count: 'exact', head: true })
-        .eq('profile_id', profileId)
-        .eq('read', false)
-      if (error) throw error
-      return count ?? 0
-    },
+    queryKey: [...BANNER, profileId],
     enabled: !!profileId,
-    refetchInterval: 15000,
+    refetchInterval: 60000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('my_money_banner')
+      if (error) throw error
+      return data || null
+    },
   })
 }
 
-export function useMarkNotificationRead(profileId) {
+// ids = null marks everything read.
+export function useMarkRead(profileId) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (id) => {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('id', id)
-        .eq('profile_id', profileId)
+    mutationFn: async (ids = null) => {
+      const { error } = await supabase.rpc('notifications_mark_read', { p_ids: ids })
       if (error) throw error
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['notifications', profileId] })
-      qc.invalidateQueries({ queryKey: ['notifications-unread-count', profileId] })
+    onMutate: async (ids = null) => {
+      // Mark them read on screen right away; the refetch confirms it.
+      await qc.cancelQueries({ queryKey: [...FEED, profileId] })
+      qc.setQueriesData({ queryKey: [...FEED, profileId] }, rows =>
+        rows?.map(n => (ids === null || ids.includes(n.id) ? { ...n, read: true } : n)))
     },
+    onSettled: () => qc.invalidateQueries({ queryKey: [...FEED, profileId] }),
   })
 }
 
-export function useMarkAllRead(profileId) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('profile_id', profileId)
-        .eq('read', false)
-      if (error) throw error
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['notifications', profileId] })
-      qc.invalidateQueries({ queryKey: ['notifications-unread-count', profileId] })
-    },
-  })
-}
-
-// ── Live Room invite (Prompt 393) ────────────────────────────────────────────
-// Manual, admin-triggered fan-out — not a DB trigger like migration 090's 4
-// real event types, since there's no DB event to hang this on (an admin
-// clicking a button IS the event). Client-side bulk insert relies on
-// migration 087's "Admins insert notifications" RLS policy, which allows an
-// admin to insert a row for any profile_id, not just their own. Scoped to
-// closer+admin — the only two roles that can see Team → Meetings at all
-// (see App.jsx's allowedRoles on /agent/hierarchy).
-export function useNotifyLiveRoom(currentProfileId) {
-  return useMutation({
-    mutationFn: async () => {
-      const { data: recipients, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id')
-        .in('role', ['agent', 'admin'])
-        .neq('id', currentProfileId)
-      if (profilesError) throw profilesError
-      if (!recipients.length) return 0
-
-      const rows = recipients.map(p => ({
-        profile_id: p.id,
-        type: 'live_room_invite',
-        message: 'Live Room is open — join now',
-        data: { link: '/agent/hierarchy#meetings' },
-      }))
-      const { error } = await supabase.from('notifications').insert(rows)
-      if (error) throw error
-      return rows.length
-    },
-  })
-}
-
-// ── Rep notifications (scoped by profile_id) ────────────────────────────────
-
-export function useRepNotifications(profileId, limit = 20) {
+export function useNotificationSettings(profileId) {
   return useQuery({
-    queryKey: ['rep-notifications', profileId, limit],
+    queryKey: [...SETTINGS, profileId],
+    enabled: !!profileId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('profile_id', profileId)
-        .order('created_at', { ascending: false })
-        .limit(limit)
+      const { data, error } = await supabase.rpc('my_notification_settings')
       if (error) throw error
       return data || []
     },
-    enabled: !!profileId,
-    refetchInterval: 15000,
   })
 }
 
-export function useRepUnreadCount(profileId) {
-  return useQuery({
-    queryKey: ['rep-notifications-unread', profileId],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('notifications')
-        .select('id', { count: 'exact', head: true })
-        .eq('profile_id', profileId)
-        .eq('read', false)
-      if (error) throw error
-      return count ?? 0
-    },
-    enabled: !!profileId,
-    refetchInterval: 15000,
-  })
-}
-
-export function useRepMarkNotificationRead(profileId) {
+export function useSetNotificationEmail(profileId) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (id) => {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('id', id)
-        .eq('profile_id', profileId)
+    mutationFn: async ({ type, on }) => {
+      const { error } = await supabase.rpc('set_notification_email', { p_type: type, p_on: on })
       if (error) throw error
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['rep-notifications', profileId] })
-      qc.invalidateQueries({ queryKey: ['rep-notifications-unread', profileId] })
+    onMutate: ({ type, on }) => {
+      qc.setQueryData([...SETTINGS, profileId], rows => rows?.map(r => (r.type === type ? { ...r, email_on: on } : r)))
     },
-  })
-}
-
-export function useRepMarkAllRead(profileId) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('profile_id', profileId)
-        .eq('read', false)
-      if (error) throw error
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['rep-notifications', profileId] })
-      qc.invalidateQueries({ queryKey: ['rep-notifications-unread', profileId] })
-    },
+    onSettled: () => qc.invalidateQueries({ queryKey: [...SETTINGS, profileId] }),
   })
 }

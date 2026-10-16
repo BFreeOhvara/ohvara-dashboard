@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { isCron } from '../_shared/cronAuth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +15,12 @@ const supabase = createClient(
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
+  }
+
+  // Only pg_cron (Vault secret, P767) or the service key may run this job.
+  const bearer = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '')
+  if (bearer !== Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') && !(await isCron(req, supabase))) {
+    return new Response(JSON.stringify({ error: 'Not allowed' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
   try {

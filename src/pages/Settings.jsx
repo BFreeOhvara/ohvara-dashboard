@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import {
   User, ShieldCheck, SlidersHorizontal, PhoneForwarded, Wrench, Building2, Mail, KeyRound, Smartphone, LogOut, Moon, Sun,
-  Check, Globe, Video, PhoneCall, ArrowLeft, ArrowRight, X, Copy, Loader2, Trash2,
+  Check, Globe, Video, PhoneCall, ArrowLeft, ArrowRight, X, Copy, Loader2, Trash2, Bell,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -11,6 +11,7 @@ import { useTheme } from '../hooks/useTheme'
 import { useUpdateOwnProfile } from '../hooks/useSettings'
 import { useAppSettings, useUpdateAppSettings } from '../hooks/useAppSettings'
 import { useBillingTiers } from '../hooks/useBillingTiers'
+import { useNotificationSettings, useSetNotificationEmail } from '../hooks/useNotifications'
 import { shownStatus } from '../lib/billing'
 import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../lib/timezones'
 import { roleLabel } from '../lib/roleLabels'
@@ -48,6 +49,8 @@ const SECTIONS = [
   { key: 'profile',     label: 'Profile',            sub: 'Photo, name and phone',        icon: User,              lede: 'How you show up across the portal.' },
   { key: 'security',    label: 'Sign-in & security', sub: 'Email, password, two-step',    icon: ShieldCheck,       lede: 'Keep your account yours.' },
   { key: 'preferences', label: 'Preferences',        sub: 'Theme and time zone',          icon: SlidersHorizontal, lede: 'How the portal looks and keeps time for you.' },
+  // Prompt 767 — the bell panel's "Notification settings".
+  { key: 'notifications', label: 'Notifications',    sub: 'Email for each alert',         icon: Bell,              lede: 'Everything shows in the bell. Choose what also comes by email.' },
   { key: 'contact',     label: 'Client contact',     sub: 'Caller ID and text follow-up', icon: PhoneForwarded,    lede: 'How Fulfillment reaches your clients for you.', roles: ['agent', 'admin'] },
   { key: 'team',        label: 'Team tools',         sub: 'Live Room and Fulfillment pay', icon: Wrench,           lede: 'Company-wide settings only admins can change.', roles: ['admin'] },
   // Prompt 758 — Carrier hours left the admin sidebar and lives here.
@@ -154,6 +157,7 @@ export default function Settings() {
         {open === 'profile'     && <ProfilePanel profile={profile} />}
         {open === 'security'    && <SecuritySection profile={profile} />}
         {open === 'preferences' && <PreferencesSection profile={profile} />}
+        {open === 'notifications' && <NotificationsSection profile={profile} />}
         {open === 'contact'     && <><CallerIdPanel profile={profile} /><TextFollowUpPanel profile={profile} /></>}
         {open === 'team'        && <><LiveRoomCard /><FulfillmentPayAdminPanel /></>}
         {open === 'carriers'    && <Carriers />}
@@ -657,6 +661,38 @@ function DevicesCard() {
 }
 
 // ── Preferences ─────────────────────────────────────────────────────────────
+// ── Notifications (Prompt 767) ──────────────────────────────────────────────
+// One email switch per notification type this role gets (the bell always
+// shows them). Saved by set_notification_email; the server reads it when it
+// queues an email.
+function NotificationsSection({ profile }) {
+  const { data: rows = [], isLoading, error } = useNotificationSettings(profile.id)
+  const set = useSetNotificationEmail(profile.id)
+  return (
+    <>
+      <SettingsCard icon={Mail} title="Email" sub={`Sent to ${profile.email || 'your sign-in email'}. Emails that aren’t about money wait until 8 AM if they come in after 9 PM.`}>
+        {isLoading ? <p style={{ margin: 0, fontSize: 14, color: 'var(--ov-mute)' }}>Loading…</p>
+          : error ? <p role="alert" style={{ margin: 0, fontSize: 14, color: 'var(--ov-live)' }}>Couldn’t load your settings. Refresh to try again.</p>
+          : (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {rows.map((r, i) => (
+                <label key={r.type} style={{
+                  display: 'flex', alignItems: 'center', gap: 14, minHeight: 52, cursor: 'pointer',
+                  borderTop: i ? '1px solid var(--ov-line)' : 'none',
+                }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>{r.label}</span>
+                  <Switch checked={!!r.email_on} onChange={() => set.mutate({ type: r.type, on: !r.email_on })} />
+                </label>
+              ))}
+            </div>
+          )}
+        {set.error && <p role="alert" style={{ margin: 0, fontSize: 13.5, color: 'var(--ov-live)' }}>{set.error.message || 'Couldn’t save that.'}</p>}
+      </SettingsCard>
+      <SettingsCard icon={Smartphone} title="Phone alerts" sub="Off for now. They come with the Ohvara app, with quiet hours from 9 PM to 8 AM (money problems still come through)." />
+    </>
+  )
+}
+
 function PreferencesSection({ profile }) {
   return (
     <>

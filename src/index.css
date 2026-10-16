@@ -3482,3 +3482,191 @@ a.ov-hpill:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; 
   .au-access-gap { display: none; }
   .au-off, .au-on { flex: 1; }
 }
+
+/* ── Prompt 767 — notifications panel (every role) ────────────────────────
+   Mockup: media/notifications/panel.dc.html in the vault (dark). Light is the
+   same layout on the light tokens. Rows are exactly 64px. */
+:root {
+  --nt-bg: radial-gradient(120% 40% at 100% 0%, rgba(75,121,206,0.22) 0%, transparent 60%), linear-gradient(180deg, #151B2B 0%, #0E121C 100%);
+  --nt-arrow: #172036;
+  --nt-edge: rgba(255,255,255,0.13);
+  --nt-shadow: 0 40px 80px -24px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.12);
+  --nt-hi: #FFFFFF;
+  --nt-read: #D5DEEE;
+  --nt-sub: #8697B5;
+  --nt-time: #6F84A8;
+  --nt-label: #5E7195;
+  --nt-accent: #7FA6F2;
+  --nt-on-accent: #0B1220;
+  --nt-unread-bg: rgba(127,166,242,0.07);
+  --nt-hover: rgba(255,255,255,0.035);
+  --nt-line: rgba(255,255,255,0.05);
+  --nt-tabs-bg: rgba(0,0,0,0.28);
+  --nt-tabs-edge: rgba(255,255,255,0.09);
+  --nt-tab-on-bg: #FFFFFF;
+  --nt-tab-on-fg: #0B0D14;
+  --nt-tab-off: #B4C3DE;
+  --nt-n-on-bg: #FBBF24;
+  --nt-n-on-fg: #1A1203;
+  --nt-n-off-bg: rgba(251,191,36,0.2);
+  --nt-n-off-fg: #FCD34D;
+  --nt-foot-bg: rgba(0,0,0,0.18);
+  --nt-foot-line: rgba(255,255,255,0.08);
+  --nt-foot-fg: #C9D4E8;
+  --nt-dim: rgba(3,5,10,0.35);
+  --nt-ban-bg: radial-gradient(120% 120% at 100% 0%, rgba(239,68,68,0.30) 0%, transparent 60%), rgba(239,68,68,0.08);
+  --nt-ban-edge: rgba(248,113,113,0.45);
+  --nt-ban-tile: rgba(239,68,68,0.22);
+  --nt-ban-icon: #FCA5A5;
+  --nt-ban-title: #FFFFFF;
+  --nt-ban-sub: #FECACA;
+  --nt-ban-btn-bg: #FFFFFF;
+  --nt-ban-btn-fg: #1F0A0A;
+  --nt-amber: #FBBF24;  --nt-amber-tint: rgba(251,191,36,0.15);
+  --nt-red: #F87171;    --nt-red-tint: rgba(239,68,68,0.16);
+  --nt-teal: #34E0C4;   --nt-teal-tint: rgba(52,224,196,0.14);
+  --nt-blue: #7FA6F2;   --nt-blue-tint: rgba(127,166,242,0.15);
+  --nt-purple: #C4B5FD; --nt-purple-tint: rgba(167,139,250,0.16);
+  --nt-green: #4ADE80;  --nt-green-tint: rgba(34,197,94,0.14);
+}
+[data-theme="light"] {
+  --nt-bg: radial-gradient(120% 40% at 100% 0%, rgba(0,191,166,0.10) 0%, transparent 60%), linear-gradient(180deg, #FFFFFF 0%, #F7FAF9 100%);
+  --nt-arrow: #FFFFFF;
+  --nt-edge: rgba(2,79,70,0.16);
+  --nt-shadow: 0 30px 60px -24px rgba(7,51,46,0.40), inset 0 1px 0 #FFFFFF;
+  --nt-hi: #07332E;
+  --nt-read: #2C6159;
+  --nt-sub: #4F7F78;
+  --nt-time: #4F7F78;
+  --nt-label: #6B9690;
+  --nt-accent: #0A1F44;
+  --nt-on-accent: #FFFFFF;
+  --nt-unread-bg: rgba(10,31,68,0.05);
+  --nt-hover: #F3F8F7;
+  --nt-line: rgba(2,79,70,0.08);
+  --nt-tabs-bg: #EEF4F3;
+  --nt-tabs-edge: rgba(2,79,70,0.10);
+  --nt-tab-on-bg: #0A1F44;
+  --nt-tab-on-fg: #FFFFFF;
+  --nt-tab-off: #2C6159;
+  --nt-n-on-bg: #F59E0B;
+  --nt-n-on-fg: #1A1203;
+  --nt-n-off-bg: #FBE7D2;
+  --nt-n-off-fg: #9A4A0B;
+  --nt-foot-bg: #F3F8F7;
+  --nt-foot-line: rgba(2,79,70,0.10);
+  --nt-foot-fg: #0B4A43;
+  --nt-dim: rgba(7,40,36,0.18);
+  --nt-ban-bg: #FDEDED;
+  --nt-ban-edge: rgba(185,28,28,0.30);
+  --nt-ban-tile: #FBD5D5;
+  --nt-ban-icon: #B91C1C;
+  --nt-ban-title: #7F1D1D;
+  --nt-ban-sub: #991B1B;
+  --nt-ban-btn-bg: #B91C1C;
+  --nt-ban-btn-fg: #FFFFFF;
+  --nt-amber: #9A4A0B;  --nt-amber-tint: #FBE7D2;
+  --nt-red: #B91C1C;    --nt-red-tint: #FBE1E1;
+  --nt-teal: #00806F;   --nt-teal-tint: #D6F3EE;
+  --nt-blue: #1D4ED8;   --nt-blue-tint: #DCE8FB;
+  --nt-purple: #6D28D9; --nt-purple-tint: #EDE5FB;
+  --nt-green: #0A6B33;  --nt-green-tint: #DCF3E4;
+}
+
+.ov-hbtn.nt-bell.is-open { border: 2px solid var(--nt-accent); box-shadow: 0 0 0 4px var(--ov-st-booked-tint); }
+.nt-dim { position: fixed; right: 0; bottom: 0; background: var(--nt-dim); z-index: 60; }
+.nt-arrow {
+  position: fixed; width: 14px; height: 14px; transform: rotate(45deg); z-index: 62; box-sizing: border-box;
+  background: var(--nt-arrow); border-left: 1px solid var(--nt-edge); border-top: 1px solid var(--nt-edge);
+}
+.nt-wrap { position: fixed; z-index: 61; }
+.nt-panel {
+  position: relative; width: 100%; height: 100%; box-sizing: border-box; display: flex; flex-direction: column;
+  border-radius: 22px; overflow: hidden; font-family: var(--font-sans); color: var(--nt-hi);
+  background: var(--nt-bg); border: 1px solid var(--nt-edge); box-shadow: var(--nt-shadow);
+}
+.nt-panel button { font: inherit; }
+.nt-head { flex: none; padding: 18px 18px 14px; }
+.nt-titlebar { display: flex; align-items: center; gap: 10px; }
+.nt-title { font-family: var(--font-display); font-size: 19px; font-weight: 600; letter-spacing: -0.015em; }
+.nt-unread {
+  min-width: 24px; height: 22px; padding: 0 7px; box-sizing: border-box; border-radius: 999px; background: var(--nt-accent); color: var(--nt-on-accent);
+  font-family: var(--font-mono); font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+}
+.nt-markall {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 2px; border: 0; background: none; cursor: pointer;
+  font-size: 12.5px; font-weight: 600; color: var(--nt-accent);
+}
+.nt-markall:disabled { opacity: 0.45; cursor: default; }
+.nt-tabs { margin-top: 14px; display: flex; padding: 3px; gap: 3px; border-radius: 999px; background: var(--nt-tabs-bg); border: 1px solid var(--nt-tabs-edge); }
+.nt-tab {
+  flex: 1; height: 32px; border: 0; border-radius: 999px; display: flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer;
+  font-size: 13px; font-weight: 700; background: transparent; color: var(--nt-tab-off);
+}
+.nt-tab.is-on { background: var(--nt-tab-on-bg); color: var(--nt-tab-on-fg); }
+.nt-tab-n {
+  min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; font-family: var(--font-mono); font-size: 11px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; background: var(--nt-n-off-bg); color: var(--nt-n-off-fg);
+}
+.nt-tab.is-on .nt-tab-n { background: var(--nt-n-on-bg); color: var(--nt-n-on-fg); }
+.nt-tab:focus-visible, .nt-row:focus-visible, .nt-markall:focus-visible, .nt-settings:focus-visible, .nt-banner-btn:focus-visible {
+  outline: 2px solid var(--nt-accent); outline-offset: -2px;
+}
+
+.nt-banner {
+  flex: none; margin: 0 14px 10px; padding: 14px; border-radius: 16px; display: flex; gap: 12px; align-items: flex-start;
+  background: var(--nt-ban-bg); border: 1px solid var(--nt-ban-edge);
+}
+.nt-banner-tile { width: 36px; height: 36px; flex: none; border-radius: 11px; background: var(--nt-ban-tile); color: var(--nt-ban-icon); display: flex; align-items: center; justify-content: center; }
+.nt-banner-title { display: block; font-size: 14px; font-weight: 700; color: var(--nt-ban-title); }
+.nt-banner-sub { display: block; margin-top: 2px; font-size: 12.5px; line-height: 1.4; color: var(--nt-ban-sub); }
+.nt-banner-btn {
+  margin-top: 10px; display: inline-flex; align-items: center; height: 30px; padding: 0 13px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--nt-ban-btn-bg); color: var(--nt-ban-btn-fg); font-size: 12.5px; font-weight: 700;
+}
+
+.nt-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.nt-group { padding: 10px 18px 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--nt-label); }
+.nt-row {
+  position: relative; width: 100%; display: flex; align-items: center; gap: 12px; height: 64px; box-sizing: border-box; padding: 0 14px 0 18px;
+  border: 0; border-top: 1px solid var(--nt-line); background: transparent; text-align: left; cursor: pointer; color: inherit;
+}
+.nt-row.is-unread { background: var(--nt-unread-bg); }
+.nt-row:hover { background: var(--nt-hover); }
+.nt-edge { position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 0 3px 3px 0; background: var(--nt-c); }
+.nt-tile { width: 36px; height: 36px; flex: none; border-radius: 11px; background: var(--nt-t); color: var(--nt-c); display: flex; align-items: center; justify-content: center; }
+.nt-body { flex: 1; min-width: 0; }
+.nt-line { display: flex; align-items: baseline; gap: 8px; }
+.nt-row-title {
+  flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; line-height: 1.3; color: var(--nt-read);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.nt-row.is-unread .nt-row-title { font-weight: 700; color: var(--nt-hi); }
+.nt-time { flex: none; font-family: var(--font-mono); font-size: 11px; color: var(--nt-time); }
+.nt-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--nt-accent); align-self: center; }
+.nt-row-sub {
+  display: block; margin-top: 3px; font-size: 12.5px; line-height: 1.3; color: var(--nt-sub);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.nt-chev { flex: none; color: var(--nt-label); }
+.nt-tone-amber  { --nt-c: var(--nt-amber);  --nt-t: var(--nt-amber-tint); }
+.nt-tone-red    { --nt-c: var(--nt-red);    --nt-t: var(--nt-red-tint); }
+.nt-tone-teal   { --nt-c: var(--nt-teal);   --nt-t: var(--nt-teal-tint); }
+.nt-tone-blue   { --nt-c: var(--nt-blue);   --nt-t: var(--nt-blue-tint); }
+.nt-tone-purple { --nt-c: var(--nt-purple); --nt-t: var(--nt-purple-tint); }
+.nt-tone-green  { --nt-c: var(--nt-green);  --nt-t: var(--nt-green-tint); }
+
+.nt-empty { height: 100%; min-height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; padding: 24px; box-sizing: border-box; }
+.nt-empty-tile { width: 48px; height: 48px; border-radius: 15px; background: var(--nt-teal-tint); color: var(--nt-teal); display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+.nt-empty-title { font-family: var(--font-display); font-size: 16px; font-weight: 600; color: var(--nt-hi); }
+.nt-empty-sub { font-size: 13px; color: var(--nt-sub); }
+
+.nt-foot {
+  flex: none; display: flex; align-items: center; gap: 10px; padding: 12px 18px; font-size: 12.5px;
+  border-top: 1px solid var(--nt-foot-line); background: var(--nt-foot-bg);
+}
+.nt-settings { display: inline-flex; align-items: center; gap: 7px; border: 0; background: none; padding: 2px 0; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--nt-foot-fg); }
+.nt-settings:hover { color: var(--nt-hi); }
+.nt-phone { display: inline-flex; align-items: center; gap: 7px; color: var(--nt-sub); white-space: nowrap; }
+.nt-phone-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--nt-label); }
+@media (max-width: 420px) { .nt-phone { display: none; } }

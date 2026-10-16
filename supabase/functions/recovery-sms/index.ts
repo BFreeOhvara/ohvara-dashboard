@@ -13,6 +13,7 @@
 // RECOVERY_TWILIO_FROM_NUMBER, else CALLER_ID_TWILIO_FROM_NUMBER. It must be
 // SMS-capable and registered for A2P 10DLC or carriers will filter the texts.
 import { createClient } from 'npm:@supabase/supabase-js'
+import { isCron } from '../_shared/cronAuth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -112,7 +113,8 @@ Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   const bearer = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '')
-  const isWorker = bearer === SERVICE_KEY
+  // pg_cron sends the Vault secret (P767); the service key still works too.
+  const isWorker = bearer === SERVICE_KEY || await isCron(req, supabase)
 
   if (!isWorker) {
     // An admin asking about the sender; nothing else is open to users.

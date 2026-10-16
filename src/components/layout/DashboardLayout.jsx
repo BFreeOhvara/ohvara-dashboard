@@ -4,9 +4,7 @@ import { Menu, ChevronRight, Home } from 'lucide-react'
 import { Sidebar, COLLAPSE_KEY, SIDEBAR_W, SIDEBAR_W_COLLAPSED } from './Sidebar'
 import { GlobalSearch } from './GlobalSearch'
 import { ActiveCallProvider } from '../../contexts/ActiveCallContext'
-import { NotificationToast } from '../rep/NotificationToast'
-import { NotificationBell } from '../admin/NotificationBell'
-import { CloserNotificationBell } from '../closer/CloserNotificationBell'
+import { NotificationBell } from '../notifications/NotificationBell'
 import { useAuth } from '../../hooks/useAuth'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
 import { useWeeklyUsage } from '../../hooks/useBillingTiers'
@@ -58,27 +56,12 @@ const TITLES = {
   '/settings': ['Settings', 'Your account, security and preferences'],
 }
 
-function ToastMount() {
-  const { profile } = useAuth()
-  if (!profile || !['agent'].includes(profile.role)) return null
-  return <NotificationToast profileId={profile.id} />
-}
-
+// Prompt 767 — one bell for every role (the old admin bell, the shared
+// agent/fulfillment bell and the agent toasts are gone).
 function HeaderBell() {
   const { profile } = useAuth()
-  if (profile?.role === 'admin')       return <NotificationBell profileId={profile.id} />
-  // Prompt 424: fulfillment wasn't wired into any branch here at all — the
-  // bell wasn't hidden by the header, HeaderBell just fell through to null
-  // for this role. Reuses CloserNotificationBell (generic profile-id-keyed
-  // notification list; its closer-specific trigger hooks filter on
-  // closer_id/rep_id, which simply never match a fulfillment profile —
-  // harmless no-ops, not errors) since it already has the fulfillment_complete
-  // icon mapped (Prompt 418) and now team_message too now that Team is in
-  // this role's nav.
-  if (profile?.role === 'agent' || profile?.role === 'fulfillment') {
-    return <CloserNotificationBell profileId={profile.id} />
-  }
-  return null
+  if (!['admin', 'agent', 'fulfillment'].includes(profile?.role)) return null
+  return <NotificationBell profileId={profile.id} />
 }
 
 // ── Page header (Prompt 722) ─────────────────────────────────────────────────
@@ -303,7 +286,6 @@ export function DashboardLayout({ children }) {
             </div>
           </main>
         </div>
-        <ToastMount />
       </div>
     </ActiveCallProvider>
   )
