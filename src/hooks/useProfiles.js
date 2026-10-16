@@ -58,45 +58,6 @@ export function useAllProfiles() {
   })
 }
 
-export function useRepCredentials(profileId, enabled) {
-  return useQuery({
-    queryKey: ['rep_credentials', profileId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('rep_credentials')
-        .select('username, email, password')
-        .eq('profile_id', profileId)
-        .maybeSingle()
-      if (error) throw error
-      return data
-    },
-    enabled: !!profileId && !!enabled,
-    staleTime: Infinity,
-  })
-}
-
-export function useCreateProfile() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ email, password, full_name, role, timezone }) => {
-      const { data, error } = await supabase.functions.invoke('admin-create-user', {
-        body: { email, password, full_name, role, timezone },
-      })
-      // Non-2xx comes back with the body unread; surface the function's own
-      // message ("An account with this email already exists.").
-      if (error) {
-        let msg = error.message
-        try { msg = (await error.context?.json())?.error || msg } catch { /* keep generic */ }
-        throw new Error(msg)
-      }
-      return data
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['profiles'] })
-    },
-  })
-}
-
 // ── Invite-token self-registration (Prompt 282) ──────────────────────────────
 // Admin generates a single-use /join/<token> link scoped to a role; the
 // invited person registers themselves via the claim-invite edge function.
@@ -214,22 +175,6 @@ export function useRevokeInvite() {
   })
 }
 
-export function useToggleUserActive() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ userId, isActive }) => {
-      const { data, error } = await supabase.functions.invoke('admin-toggle-user', {
-        body: { user_id: userId, is_active: isActive },
-      })
-      if (error) throw error
-      return data
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['profiles'] })
-    },
-  })
-}
-
 // Prompt 762 — role and access go through admin-only RPCs (migration 144).
 // They refuse non-admins and your own account. A person with open clients
 // (or a Fulfillment person with open calls) needs `confirm`; without it the
@@ -267,22 +212,6 @@ export function useSetUserAccess() {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['profiles'] })
       qc.invalidateQueries({ queryKey: ['policies'] })
-    },
-  })
-}
-
-export function useDeleteUser() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ userId }) => {
-      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
-        body: { user_id: userId },
-      })
-      if (error) throw error
-      return data
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['profiles'] })
     },
   })
 }
