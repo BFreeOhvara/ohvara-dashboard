@@ -122,16 +122,36 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Prompt 770: take the invite first, in one conditional update, so two
+    // claims of the same link at once can't both make an account. Released
+    // again below if the account can't be made.
+    const { data: taken } = await adminClient
+      .from('rep_invites')
+      .update({ used_at: new Date().toISOString() })
+      .eq('id', invite.id)
+      .is('used_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .select('id')
+      .maybeSingle()
+    if (!taken) {
+      return json({ error: 'This invite link is invalid, expired, or already used.' }, 400)
+    }
+
     // email_confirm: true — no email provider is configured yet (Resend setup
     // pending), so accounts are auto-confirmed and can log in immediately.
-    // The handle_new_user trigger creates the profiles row from this metadata.
+    // The handle_new_user trigger creates the profiles row. The role goes in
+    // app_metadata, which only the service role can write (Prompt 770,
+    // migration 152): the trigger ignores a role in user_metadata, so a plain
+    // public sign-up can't pick one.
     const { data, error } = await adminClient.auth.admin.createUser({
       email: email.trim().toLowerCase(),
       password,
       email_confirm: true,
+      app_metadata: { role: invite.role },
       user_metadata: { full_name: full_name.trim(), role: invite.role, ...(username ? { username } : {}) },
     })
     if (error) {
+      await adminClient.from('rep_invites').update({ used_at: null }).eq('id', invite.id).is('used_by', null)
       const msg = /already.*registered|already.*exists/i.test(error.message)
         ? 'An account with this email already exists.'
         : error.message
@@ -156,12 +176,10 @@ Deno.serve(async (req) => {
       if (uplineError) console.error('profiles upline_id update failed:', uplineError.message)
     }
 
-    // Single-use: mark consumed. If this somehow fails the token would stay
-    // claimable, so treat it as fatal enough to log loudly — but the account
-    // is already created, so still return success to the new user.
+    // Single-use: already taken above; record who used it.
     const { error: usedError } = await adminClient
       .from('rep_invites')
-      .update({ used_at: new Date().toISOString(), used_by: data.user.id })
+      .update({ used_by: data.user.id })
       .eq('id', invite.id)
     if (usedError) console.error('rep_invites used_at update failed:', usedError.message)
 
