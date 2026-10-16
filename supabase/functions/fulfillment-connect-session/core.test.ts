@@ -77,6 +77,14 @@ test('connect session: only a signed-in Fulfillment rep, and only for their own 
   assert.ok(!w.calls.some(c => c.path.includes('acct_agent')))
 })
 
+test('connect session: an admin can open their own bank setup (P765), never another account', async () => {
+  const w = connectWorld({ role: 'admin' })
+  const s = await connectAct(w.store, w.stripe, CENV, 'rep', { action: 'session', account: 'acct_agent' }) as any
+  assert.equal(s.client_secret, 'cs_acct_rep')
+  assert.ok(!w.calls.some(c => c.path.includes('acct_agent')))
+  await assert.rejects(connectAct(w.store, w.stripe, CENV, 'agent', { action: 'session' }), { status: 403 })
+})
+
 test('connect session: creates an Express account (transfers only) the first time, idempotently', async () => {
   const w = connectWorld({ acct: null })
   const s = await connectAct(w.store, w.stripe, CENV, 'rep', { action: 'session' }) as any

@@ -16,7 +16,8 @@
 //        made without it and { documents: false } tells the page to hide
 //        Download 1099.
 //
-// Callers: a signed-in Fulfillment rep, for themselves only. The account id
+// Callers: a signed-in Fulfillment rep (or, Prompt 765, an admin connecting
+// their own bank from Admin Payouts), for themselves only. The account id
 // always comes from their own profile; nothing in the body names an account.
 
 import {
@@ -78,7 +79,7 @@ async function caller(store: Store, jwt: string) {
   const id = jwt ? await store.userFromJwt(jwt) : null
   if (!id) throw new AppError(401, 'Not signed in')
   const me = await store.profile(id)
-  if (!me || me.role !== 'fulfillment') throw new AppError(403, 'Payout settings are for Fulfillment reps.')
+  if (!me || (me.role !== 'fulfillment' && me.role !== 'admin')) throw new AppError(403, 'Payout settings are for Fulfillment reps.')
   return me
 }
 

@@ -48,7 +48,7 @@ const TITLES = {
   '/admin': ['Overview', 'The business at a glance'],
   '/admin/pipeline': ['Pipeline', "Everyone's clients and where each cancellation stands"],
   '/admin/fulfillment': ['Fulfillment', 'The whole desk, live'],
-  '/admin/payouts': ['Payouts', "Approve Fulfillment's weekly pay"],
+  '/admin/payouts': ['Payouts', 'Reps are paid per verified cancel, automatically every Monday'],
   '/admin/users': ['Users', 'Everyone with a login, what they’ve done, and their access'],
   '/fulfillment': ['Overview', 'Your day at a glance'],
   '/fulfillment/desk': ['My calls', 'Your day, call by call'],

@@ -151,3 +151,93 @@ export function useSavePayoutEmails() {
     },
   })
 }
+
+// Prompt 765 — Admin Payouts. Admin-only reads (RLS: is_admin) and the
+// decision RPC. Nothing here moves money; the Monday run does that.
+
+// Verified cancels not yet paid: what the next Monday run will pay.
+export function useUnpaidVerified(enabled = true) {
+  return useQuery({
+    queryKey: [...KEY, 'unpaid'],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('fulfillment_cancels')
+        .select('id, rep_id, amount_cents, week_start, logged_at')
+        .in('status', ['verified', 'verified_by_admin']).is('paid_at', null).limit(1000)
+      if (error) throw error
+      return data || []
+    },
+  })
+}
+
+// Cancels waiting on Brayden, with where the AI thinks the carrier says it and
+// the recording's length (the audio itself only comes through
+// fulfillment-recording).
+export function useNeedsListen(enabled = true) {
+  return useQuery({
+    queryKey: [...KEY, 'needs-listen'],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('fulfillment_cancels')
+        .select('id, rep_id, client_name, carrier_name, agent_name, logged_at, amount_cents, reason, listen_at_seconds, recording_id, recording:fulfillment_recordings(id, status, duration_seconds)')
+        .eq('status', 'needs_listen').order('logged_at', { ascending: true }).limit(100)
+      if (error) throw error
+      return data || []
+    },
+  })
+}
+
+// Finished pay runs that paid someone, newest first.
+export function usePayRuns(enabled = true) {
+  return useQuery({
+    queryKey: [...KEY, 'runs'],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('fulfillment_pay_runs')
+        .select('id, pay_date, period_start, status, cancels, paid_cents, paid_reps')
+        .gt('paid_cents', 0).order('pay_date', { ascending: false }).limit(8)
+      if (error) throw error
+      return data || []
+    },
+  })
+}
+
+// Pay it / Don't pay (a reason is required for Don't pay).
+export function useDecideCancel() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, pay, note }) => {
+      const { error } = await supabase.rpc('fulfillment_decide_cancel', { p_cancel: id, p_pay: pay, p_note: note?.trim() || null })
+      if (error) throw error
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: KEY }),
+  })
+}
+
+// Ohvara's Stripe balance, live, through the admin-only
+// fulfillment-stripe-balance function. Not retried: if the function isn't
+// deployed or Stripe is down the page says "Balance unavailable".
+export function useStripeBalance(enabled = true) {
+  return useQuery({
+    queryKey: [...KEY, 'balance'],
+    enabled,
+    staleTime: 60e3,
+    retry: false,
+    queryFn: async () => (await invoke('fulfillment-stripe-balance', {})).available_cents,
+  })
+}
+
+// The recording as a blob URL, fetched with the admin's session (an <audio
+// src> can't send the header). Not cached: it's never stored anywhere.
+export async function loadRecordingUrl(recordingId) {
+  const { data: s } = await supabase.auth.getSession()
+  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fulfillment-recording?id=${encodeURIComponent(recordingId)}`, {
+    headers: { Authorization: `Bearer ${s?.session?.access_token || ''}`, apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
+  })
+  if (!res.ok) {
+    let msg = 'Couldn’t load the recording'
+    try { msg = (await res.json())?.error || msg } catch { /* not JSON */ }
+    throw new Error(msg)
+  }
+  return URL.createObjectURL(await res.blob())
+}
