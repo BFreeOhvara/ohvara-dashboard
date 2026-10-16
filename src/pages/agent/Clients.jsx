@@ -10,8 +10,8 @@ import {
   ClientSearch, PipelineSummary, PipelineList, ClientDrawer, InfoTile, StatusNote, Journey, DayChoice, SlotGrid, CarrierInput, SlotSkeleton,
 } from '../../components/agent/AgentUI'
 import { fmtBooking, callWhen, clientSlotISO, slotState, openBookingIsos, dayIn, addDaysStr, dateLabel, dayGone, carrierDaySlots, firstOpenDay } from '../../lib/scheduling'
-import { bookingCarrier, hoursSummary } from '../../lib/carriers'
-import { viewerTimezone } from '../../lib/timezones'
+import { bookingCarrier, viewerHoursSummary } from '../../lib/carriers'
+import { viewerTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { isLive, agentStageOf, stageOf, tabOf, canRebook, PIPELINE_TABS, RANGES, SUBSTATUS_LABEL, digits, useNow, startOfWeek, startOfMonth, placeOf } from '../../lib/agentBookings'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 
@@ -326,6 +326,8 @@ function ConfirmNumber({ p }) {
 // carrier asks for it first (CarrierInput); it's saved on the booking when
 // the move is confirmed (agent_set_booking_carrier).
 function useMove(p, now, onDone, agentRows) {
+  const { profile } = useAuth()
+  const myTz = profile?.timezone || DEFAULT_TIMEZONE
   const move = useRebookCall()
   const setBookingCarrier = useSetBookingCarrier()
   const addCarrier = useAddCarrier()
@@ -366,8 +368,8 @@ function useMove(p, now, onDone, agentRows) {
   const keepTypedCarrier = name => addCarrier.mutate(name, { onSuccess: row => row?.id && pickCarrier(row) })
 
   const hoursLine = !carrier ? null : carrier.hours_status === 'fallback'
-    ? `We couldn't find ${carrier.name}'s hours, so we're using 9–5 Eastern. Fulfillment will confirm.`
-    : `${carrier.name} takes calls ${hoursSummary(carrier.hours, carrier.hours_tz)} · times are the client's local time.`
+    ? `We couldn't find ${carrier.name}'s hours, so we're using ${viewerHoursSummary(carrier, myTz)}. Fulfillment will confirm.`
+    : `${carrier.name} takes calls ${viewerHoursSummary(carrier, myTz)} · times are the client's local time.`
 
   const picker = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

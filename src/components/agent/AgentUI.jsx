@@ -363,6 +363,29 @@ export function IconChip({ icon: Icon, color, tint, size = 36, radius = 11, icon
 // `action` ({ label, icon, onClick }) swaps the button; the agent Overview
 // leaves it out and keeps Book a call (Prompt 745: Fulfillment's own button).
 // `compact` (Prompt 758, the admin Overview) is the same panel a size tighter.
+// Prompt 768 (QA Finding 7) — a load that failed says so, instead of looking
+// like a brand-new empty account. `what` finishes "Couldn't load …".
+export function LoadError({ what, onRetry, style }) {
+  return (
+    <div role="alert" style={{
+      display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 16,
+      background: 'var(--danger-dim)', border: 'var(--border-w) solid var(--danger-bd)', color: 'var(--danger)', ...style,
+    }}>
+      <TriangleAlert size={16} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+      <p style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 14, fontWeight: 500 }}>Couldn’t load {what}.</p>
+      {onRetry && (
+        <button type="button" onClick={onRetry} style={{
+          flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 10,
+          border: 'var(--border-w) solid var(--danger-bd)', background: 'transparent', color: 'var(--danger)',
+          fontSize: 13, fontWeight: 600, cursor: 'pointer',
+        }}>
+          <RefreshCw size={14} strokeWidth={2.2} /> Try again
+        </button>
+      )}
+    </div>
+  )
+}
+
 export function HeroPanel({ greeting, sub, dateLong, dateShort, timezone, onBook, action, compact }) {
   const { label: actionLabel, icon: ActionIcon, onClick: onAction } = action || { label: 'Book a call', icon: CalendarPlus, onClick: onBook }
   const dot = <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ov-hero-dot)' }} />

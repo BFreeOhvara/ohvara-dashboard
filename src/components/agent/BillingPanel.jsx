@@ -223,10 +223,14 @@ export function BillingPanel({ profile }) {
     return {
       ...base,
       chip: { label: 'Active', tone: 'is-active' },
-      line: periodEnd
-        ? <>Paid through <B>{fmtDay(new Date(end).getTime() - DAY, profile.timezone)}</B>. Next charge of {price} on <B>{periodEnd}</B>, renews automatically.</>
-        : 'Paid up. Renews automatically.',
-      phoneLine: periodEnd ? `Next charge ${periodEnd}` : 'Renews automatically',
+      // Prompt 768 (QA Finding 10) — a comped account is never charged, so it
+      // doesn't read as if it will be.
+      line: comped
+        ? (periodEnd ? <>Comped by Ohvara, so you're not charged. Your week renews <B>{periodEnd}</B>.</> : "Comped by Ohvara, so you're not charged.")
+        : periodEnd
+          ? <>Paid through <B>{fmtDay(new Date(end).getTime() - DAY, profile.timezone)}</B>. Next charge of {price} on <B>{periodEnd}</B>, renews automatically.</>
+          : 'Paid up. Renews automatically.',
+      phoneLine: comped ? 'Not charged' : periodEnd ? `Next charge ${periodEnd}` : 'Renews automatically',
       action: manage,
       ring: days == null ? null : { days: Math.min(days, 7), label: 'days to renewal', phoneLabel: 'days left', todayLabel: 'renewal day' },
     }

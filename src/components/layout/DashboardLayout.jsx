@@ -169,7 +169,8 @@ function BillingLine({ profile }) {
   const next = shownStatus(profile) === 'active' ? formatBillingDate(renewsAt(profile, usage), profile.timezone) : null
   return <LiveLine items={[
     <Pill tone="amber">{usage?.tier_name || 'No plan'}</Pill>,
-    next && <Plain>Next charge {next}</Plain>,
+    // Prompt 768 — a comped agent isn't charged.
+    profile.billing_exempt ? <Plain>Not charged</Plain> : next && <Plain>Next charge {next}</Plain>,
   ]} />
 }
 

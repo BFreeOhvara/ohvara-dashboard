@@ -8,7 +8,7 @@ import {
 } from '../hooks/useDirectMessages'
 import { DISPLAY } from '../lib/exportStyles'
 import {
-  InboxHero, InboxRow, InboxRowSkeleton, LineAvatar, DayDivider, ChatBubbleGroup, Composer,
+  InboxHero, InboxRow, InboxRowSkeleton, LineAvatar, DayDivider, ChatBubbleGroup, Composer, LoadError,
 } from '../components/agent/AgentUI'
 
 // Messages (Prompt 679, rethought in 721) — the standing team lines only:
@@ -138,7 +138,7 @@ export default function Messages() {
   const activeKey = dm ? dmId(dm.agentId, dm.peerKey) : null
   const desktop = useIsDesktop()
 
-  const { data: standing = [], isLoading } = useStandingThreads()
+  const { data: standing = [], isLoading, isError: threadsFailed, refetch: retryThreads } = useStandingThreads()
   const items = useMemo(() => buildItems(standing, profile), [standing, profile])
   const unread = items.reduce((n, i) => n + i.unread_count, 0)
 
@@ -202,6 +202,9 @@ export default function Messages() {
         <div className="ov-msg-list scrollbar-thin">
           {isLoading ? (
             [0, 1, 2].map(i => <InboxRowSkeleton key={i} />)
+          ) : threadsFailed ? (
+            // Prompt 768 — a failed load isn't "No conversations yet".
+            <LoadError what="your conversations" onRetry={() => retryThreads()} style={{ margin: 8 }} />
           ) : items.length === 0 ? (
             <ListNote>No conversations yet.</ListNote>
           ) : shown.length === 0 ? (
@@ -224,7 +227,7 @@ export default function Messages() {
             item={items.find(i => i.key === activeKey)} listReady={!isLoading}
             me={profile} onBack={() => open(null)}
           />
-        ) : !isLoading && !policyId && items.length === 0 ? (
+        ) : !isLoading && !threadsFailed && !policyId && items.length === 0 ? (
           <PaneNote icon={MessageSquare}>No conversations yet.</PaneNote>
         ) : null}
       </div>
@@ -274,7 +277,7 @@ function groupMessages(messages) {
 // caller isn't part of (stale link, deactivated account) — shown as
 // unavailable once the list has loaded rather than letting them type into it.
 function Conversation({ agentId, peerKey, item, listReady, me, onBack }) {
-  const { data: messages = [], isLoading } = useDmMessages(agentId, peerKey)
+  const { data: messages = [], isLoading, isError: messagesFailed, refetch: retryMessages } = useDmMessages(agentId, peerKey)
   const send = useSendDm(agentId, peerKey, me?.id)
   const { mutate: mark } = useMarkDmRead(me?.id)
   const [draft, setDraft] = useState('')
@@ -322,7 +325,7 @@ function Conversation({ agentId, peerKey, item, listReady, me, onBack }) {
     : item.line.kind === 'fulfillment'
       ? 'Ask about a client’s call, or let them know something before they dial.'
       : `Send ${item.short} a note. They’ll see it in their Messages.`
-  const empty = !isLoading && messages.length === 0
+  const empty = !isLoading && !messagesFailed && messages.length === 0
 
   return (
     <>
@@ -347,7 +350,9 @@ function Conversation({ agentId, peerKey, item, listReady, me, onBack }) {
       </div>
 
       <div className="ov-msg-thread scrollbar-thin" style={empty ? { display: 'flex' } : undefined}>
-        {isLoading ? (
+        {messagesFailed ? (
+          <LoadError what="these messages" onRetry={() => retryMessages()} style={{ margin: 'auto 0' }} />
+        ) : isLoading ? (
           <div className="ov-msg-col" aria-hidden="true">
             <span className="ov-skel" style={{ width: '45%', height: 40, borderRadius: 18 }} />
             <span className="ov-skel" style={{ width: '35%', height: 40, borderRadius: 18, alignSelf: 'flex-end' }} />

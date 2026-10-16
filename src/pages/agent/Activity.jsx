@@ -1,10 +1,10 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, CalendarDays, Inbox, Sun, Clock, Moon, TriangleAlert } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CalendarDays, Inbox, Sun, Clock, Moon } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePolicyEvents, usePolicyStory } from '../../hooks/useAgentActivity'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
-import { DayHero, ActivityBox, ActivityFeed, FeedNote, ActivityDrawer } from '../../components/agent/AgentUI'
+import { DayHero, ActivityBox, ActivityFeed, FeedNote, ActivityDrawer, LoadError } from '../../components/agent/AgentUI'
 import { ACTIVITY_ROWS, activityRow, EVENT_ICON, kindTone, eventIconKey } from '../../lib/activityKinds'
 import { fullName } from '../../lib/policyFormat'
 import { callWhen, callAt } from '../../lib/scheduling'
@@ -262,7 +262,7 @@ export default function Activity() {
   // ── Feed notes ──
   let note = null
   if (events.isLoading) note = <FeedNote>Loading…</FeedNote>
-  else if (events.error) note = <FeedNote icon={TriangleAlert} tone={{ fg: 'var(--danger)', tint: 'var(--danger-dim)' }} error>Couldn&rsquo;t load activity: {events.error.message}</FeedNote>
+  else if (events.error) note = <LoadError what="this day's activity" onRetry={() => events.refetch()} />
   else if (!feed.length) {
     note = back === 0
       ? <FeedNote icon={Inbox} tone={kindTone('booked')}>Nothing yet today. Bookings, calls and cancellations show up here as they happen.</FeedNote>
@@ -280,8 +280,8 @@ export default function Activity() {
         tag={title.tag}
         dateLong={day.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         dateShort={day.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-        summary={loadingDay ? 'Loading…' : feed.length ? `${plural(feed.length, 'event')} happened with ${plural(clients, 'client')}` : 'Nothing happened this day.'}
-        summaryShort={loadingDay ? 'Loading…' : feed.length ? `${plural(feed.length, 'event')} · ${plural(clients, 'client')}` : 'Nothing happened'}
+        summary={events.error ? 'Couldn’t load this day.' : loadingDay ? 'Loading…' : feed.length ? `${plural(feed.length, 'event')} happened with ${plural(clients, 'client')}` : 'Nothing happened this day.'}
+        summaryShort={events.error ? 'Couldn’t load' : loadingDay ? 'Loading…' : feed.length ? `${plural(feed.length, 'event')} · ${plural(clients, 'client')}` : 'Nothing happened'}
         canNext={back > 0}
         onPrev={() => goTo(back + 1)}
         onNext={() => goTo(back - 1)}

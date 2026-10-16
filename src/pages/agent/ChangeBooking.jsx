@@ -8,13 +8,14 @@ import { useClientTimezone } from '../../hooks/useClientTimezone'
 import { useWeeklyUsage } from '../../hooks/useBillingTiers'
 import {
   StepHead, OvField, StateField, CarrierInput, ChangedMark, DayChoice, SlotGrid, SlotSkeleton, WeeklyUsage,
-  ClientAvatar, BookError, StatusAvatar, StatusPill,
+  ClientAvatar, BookError, StatusAvatar, StatusPill, LoadError,
 } from '../../components/agent/AgentUI'
 import { formatPhoneInput, titleCase, fullName } from '../../lib/policyFormat'
 import {
   callWhen, callAt, clientSlotISO, slotState, openBookingIsos, dayIn, addDaysStr, dateLabel, dayGone, carrierDaySlots, firstOpenDay, callMisfit,
 } from '../../lib/scheduling'
-import { bookingCarrier, hoursSummary } from '../../lib/carriers'
+import { DEFAULT_TIMEZONE } from '../../lib/timezones'
+import { bookingCarrier, viewerHoursSummary } from '../../lib/carriers'
 import { stageOf, agentStageOf, tabOf, isLive, digits, useNow, placeOf } from '../../lib/agentBookings'
 import { capState } from '../../lib/billing'
 import { DISPLAY } from '../../lib/exportStyles'
@@ -102,7 +103,7 @@ export default function ChangeBooking({ policyId, onPick, switcher, onNew }) {
   const navigate = useNavigate()
   // Prompt 759 — everyone changes only their own bookings (admin included:
   // migration 141 refuses an admin changing another agent's).
-  const { data: rows = [], isLoading } = useAgentBookings(profile?.id)
+  const { data: rows = [], isLoading, isError, refetch } = useAgentBookings(profile?.id)
   const [done, setDone] = useState(null)
 
   const p = policyId ? rows.find(r => r.id === policyId) || null : null
@@ -121,18 +122,28 @@ export default function ChangeBooking({ policyId, onPick, switcher, onNew }) {
 
   let pickNote = null
   if (policyId && p && blocked) pickNote = `${fullName(p)}: ${blocked.toLowerCase()}.`
-  else if (policyId && !p && !isLoading) pickNote = "We couldn't find that booking. Search for the client instead."
+  else if (policyId && !p && !isLoading && !isError) pickNote = "We couldn't find that booking. Search for the client instead."
 
-  return (
+  const form = (
     <ChangeForm
       key={target?.id || 'none'} p={target} rows={rows} profileId={profile?.id}
       switcher={switcher} onNew={onNew} onPick={onPick} pickNote={pickNote} loading={isLoading && !!policyId}
       onSaved={setDone}
     />
   )
+  // Prompt 768 — a failed load isn't "no clients".
+  if (!isError) return form
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <LoadError what="your bookings" onRetry={() => refetch()} />
+      {form}
+    </div>
+  )
 }
 
 function ChangeForm({ p, rows, profileId, switcher, onNew, onPick, pickNote, loading, onSaved }) {
+  const { profile } = useAuth()
+  const myTz = profile?.timezone || DEFAULT_TIMEZONE
   const now = useNow(30e3)
   const { data: carriers = [] } = useCarriers()
   const { data: usage } = useWeeklyUsage(profileId)
@@ -287,8 +298,8 @@ function ChangeForm({ p, rows, profileId, switcher, onNew, onPick, pickNote, loa
   // ── step 2 notes ──
   const was = (k, v) => (changed[k] ? <ChangedMark was={v} /> : null)
   const hoursLine = !ready ? null : carrier.hours_status === 'fallback'
-    ? `We couldn't find ${carrier.name}'s hours, so we're using 9–5 Eastern. Fulfillment will confirm.`
-    : `${carrier.name} takes calls ${hoursSummary(carrier.hours, carrier.hours_tz)} · times shown are ${city}'s local time.`
+    ? `We couldn't find ${carrier.name}'s hours, so we're using ${viewerHoursSummary(carrier, myTz)}. Fulfillment will confirm.`
+    : `${carrier.name} takes calls ${viewerHoursSummary(carrier, myTz)} · times shown are ${city}'s local time.`
   const fields = 'grid grid-cols-1 sm:grid-cols-3 gap-y-[18px] sm:gap-4'
   const dimStyle = { opacity: 0.5, pointerEvents: 'none' }
 

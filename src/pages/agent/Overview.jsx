@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { CalendarPlus, Check } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
-import { HeroPanel, TrendCard, AttentionCard, ComingUpCard, LastWeekChart } from '../../components/agent/AgentUI'
-import { stageOf, agentStageOf, tabOf, sameLocalDay, startOfWeek, useNow } from '../../lib/agentBookings'
+import { HeroPanel, TrendCard, AttentionCard, ComingUpCard, LastWeekChart, LoadError } from '../../components/agent/AgentUI'
+import { stageOf, agentStageOf, tabOf, useNow } from '../../lib/agentBookings'
+import { addDaysStr } from '../../lib/scheduling'
+import { DEFAULT_TIMEZONE, zonedDateStr, zonedTimeToUtcIso } from '../../lib/timezones'
 import { LiveDot } from '../../components/ui/LiveDot'
 import { fullName } from '../../lib/policyFormat'
 
@@ -28,11 +30,15 @@ import { fullName } from '../../lib/policyFormat'
 // Prompt 672 — the trend cards open My Clients on the matching slice of its
 // Pipeline (?range= / ?stage=).
 
-const addDays = (d, n) => {
-  const x = new Date(d)
-  x.setDate(x.getDate() + n)
-  return x
-}
+// Prompt 768 (QA Finding 6) — days and weeks are the agent's profile zone,
+// the same zone the weekly cap and its meter use (agent_weekly_usage), so
+// "Booked this week" and the meter always reset together. Days are
+// YYYY-MM-DD strings in that zone.
+const dowOf = day => (new Date(`${day}T12:00:00Z`).getUTCDay() + 6) % 7 // Mon = 0
+const dayStartMs = (day, tz) => new Date(zonedTimeToUtcIso(`${day}T00:00`, tz)).getTime()
+// Noon UTC on that date, for the chart's labels (same date in every US zone).
+const labelDate = day => new Date(`${day}T12:00:00Z`)
+const hourIn = (ms, tz) => +new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hourCycle: 'h23' }).format(new Date(ms)) % 24
 
 // Needs attention first, then Confirm number, then the rest.
 const ATTN_RANK = { needsAttention: 0, confirmNumber: 1 }
@@ -41,13 +47,19 @@ export default function Overview() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const now = useNow()
-  const { data: rows = [], isLoading } = useAgentBookings(profile?.id)
+  const { data: rows = [], isLoading: loadingRows, isError, refetch } = useAgentBookings(profile?.id)
+  // A failed load shows dashes, not zeros (Prompt 768).
+  const isLoading = loadingRows || isError
+
+  const tz = profile?.timezone || DEFAULT_TIMEZONE
 
   const g = useMemo(() => {
-    const today = new Date(now)
-    const weekStart = startOfWeek(today)
-    const lastWeekStart = addDays(weekStart, -7)
+    const today = zonedDateStr(now, tz)
+    const weekStartDay = addDaysStr(today, -dowOf(today))
+    const weekStart = dayStartMs(weekStartDay, tz)
+    const lastWeekStart = dayStartMs(addDaysStr(weekStartDay, -7), tz)
     const ms = iso => new Date(iso).getTime()
+    const dayOf = iso => (iso ? zonedDateStr(ms(iso), tz) : null)
 
     // Booked = when the call was booked; Cancelled = when the old policy was
     // confirmed cancelled.
@@ -55,15 +67,15 @@ export default function Overview() {
     const cancelledAt = rows
       .filter(p => stageOf(p) === 'cancelled' && p.fulfillment_completed_at)
       .map(p => p.fulfillment_completed_at)
-    const since = (list, from) => list.filter(iso => ms(iso) >= from.getTime()).length
-    const between = (list, from, to) => list.filter(iso => ms(iso) >= from.getTime() && ms(iso) < to.getTime()).length
-    const onDay = (list, day) => list.filter(iso => sameLocalDay(iso, day)).length
+    const since = (list, from) => list.filter(iso => ms(iso) >= from).length
+    const between = (list, from, to) => list.filter(iso => ms(iso) >= from && ms(iso) < to).length
+    const onDay = (list, day) => list.filter(iso => dayOf(iso) === day).length
 
-    const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+    const weekDays = Array.from({ length: 7 }, (_, i) => addDaysStr(weekStartDay, i))
     // Last Monday to Sunday (weeks run Monday to Sunday everywhere).
     const lastWeek = Array.from({ length: 7 }, (_, i) => {
-      const date = addDays(lastWeekStart, i)
-      return { date, booked: onDay(bookedAt, date), cancelled: onDay(cancelledAt, date) }
+      const day = addDaysStr(weekStartDay, i - 7)
+      return { date: labelDate(day), booked: onDay(bookedAt, day), cancelled: onDay(cancelledAt, day) }
     })
 
     const bookedThisWeek = since(bookedAt, weekStart)
@@ -79,9 +91,9 @@ export default function Overview() {
       .sort((a, b) => ms(a.scheduled_call_at) - ms(b.scheduled_call_at))
 
     return {
-      todays: rows.filter(p => sameLocalDay(p.scheduled_call_at, today)).length,
+      todays: rows.filter(p => dayOf(p.scheduled_call_at) === today).length,
       live: rows.filter(p => stageOf(p) === 'inProgress'),
-      todayIdx: (today.getDay() + 6) % 7,
+      todayIdx: dowOf(today),
       booked: {
         value: bookedThisWeek,
         diff: bookedThisWeek - between(bookedAt, lastWeekStart, weekStart),
@@ -96,15 +108,16 @@ export default function Overview() {
       attention,
       upcoming,
     }
-  }, [rows, now])
+  }, [rows, now, tz])
 
   const firstName = (profile?.full_name || '').split(' ')[0]
-  const hour = new Date(now).getHours()
+  const hour = hourIn(now, tz)
   const greeting = `${hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'}${firstName ? `, ${firstName}` : ''}`
   const dateLabel = month => new Date(now).toLocaleDateString('en-US', {
-    timeZone: profile?.timezone || undefined, weekday: 'long', month, day: 'numeric',
+    timeZone: tz, weekday: 'long', month, day: 'numeric',
   })
-  const sub = isLoading ? 'Loading your calls…'
+  const sub = isError ? 'Couldn’t load your calls.'
+    : isLoading ? 'Loading your calls…'
     : g.todays ? `${g.todays} call${g.todays === 1 ? '' : 's'} on the books today.`
       : 'Nothing on the books today yet.'
 
@@ -115,6 +128,8 @@ export default function Overview() {
         dateLong={dateLabel('long')} dateShort={dateLabel('short')}
         onBook={() => navigate('/agent/book')}
       />
+
+      {isError && <LoadError what="your calls" onRetry={() => refetch()} />}
 
       {g.live.length > 0 && (
         <div style={{

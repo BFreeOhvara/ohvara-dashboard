@@ -9,7 +9,8 @@ import { useClientTimezone } from '../../hooks/useClientTimezone'
 import ChangeBooking from './ChangeBooking'
 import { formatPhoneInput, titleCase } from '../../lib/policyFormat'
 import { fmtBooking, clientSlotISO, slotState, openBookingIsos, dayIn, addDaysStr, dateLabel, dayGone, carrierDaySlots, firstOpenDay } from '../../lib/scheduling'
-import { hoursSummary } from '../../lib/carriers'
+import { DEFAULT_TIMEZONE } from '../../lib/timezones'
+import { viewerHoursSummary } from '../../lib/carriers'
 import { stageOf, digits, useNow } from '../../lib/agentBookings'
 import { useBillingTiers, useWeeklyUsage } from '../../hooks/useBillingTiers'
 import { capState, nextTier, formatReset, formatWeekly } from '../../lib/billing'
@@ -230,9 +231,10 @@ function NewBooking({ switcher }) {
   // carrier's hours are known, the pickers are dimmed: there's no time to show.
   const dim = !ready
   const city = form.city.trim() ? titleCase(form.city.trim()) : ''
+  const myTz = profile?.timezone || DEFAULT_TIMEZONE
   const hoursLine = !ready ? null : carrier.hours_status === 'fallback'
-    ? `We couldn't find ${carrier.name}'s hours, so we're using 9–5 Eastern. Fulfillment will confirm.`
-    : `${carrier.name} takes calls ${hoursSummary(carrier.hours, carrier.hours_tz)} · times shown are ${city}'s local time.`
+    ? `We couldn't find ${carrier.name}'s hours, so we're using ${viewerHoursSummary(carrier, myTz)}. Fulfillment will confirm.`
+    : `${carrier.name} takes calls ${viewerHoursSummary(carrier, myTz)} · times shown are ${city}'s local time.`
   const closedText = ready ? `${carrier.name} doesn't take calls that day. Pick another day.` : null
   const fields = 'grid grid-cols-1 sm:grid-cols-3 gap-y-[18px] sm:gap-4'
 

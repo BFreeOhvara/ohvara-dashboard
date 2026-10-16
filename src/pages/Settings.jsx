@@ -782,7 +782,10 @@ function TimeZoneCard({ profile }) {
   }
 
   return (
-    <SettingsCard icon={Globe} title="Time zone" sub="Call times, reminders and Activity show in this zone.">
+    <SettingsCard icon={Globe} title="Time zone" sub={profile.role === 'agent'
+      // Prompt 768 (QA Finding 5) — what the setting actually does for an agent.
+      ? 'Your clock and your booking week (it resets Monday at midnight here) use this zone. Call times always show in the client’s own time.'
+      : 'Call times, reminders and Activity show in this zone.'}>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 14, alignItems: 'end' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
           <span id="tz-label" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>Your time zone</span>

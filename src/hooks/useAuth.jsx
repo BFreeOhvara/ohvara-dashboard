@@ -128,17 +128,25 @@ export function AuthProvider({ children }) {
     // Sign-in is by email (Prompt 720). An @ in the input means "use as-is".
     // Usernames survive only for the three legacy accounts that already have
     // one (testagent11, brayden11, testfulfill11); no screen mentions them.
-    // For a bare username, resolve_login_email (migration 069) returns that
-    // profile's email on file, and only if there's no match does it fall
-    // back to the old synthetic <username>@ohvara.internal pattern.
+    // Prompt 768 — a bare username signs in on the server (username-sign-in):
+    // it looks the email up and checks the password there, and only a
+    // session comes back. The browser never learns the email, so a username
+    // can't be used to find one (resolve_login_email is closed to the browser).
     const input = identifier.trim()
-    let email = input
-    if (!input.includes('@')) {
-      const { data: resolvedEmail } = await supabase.rpc('resolve_login_email', { p_username: input })
-      email = resolvedEmail || `${input}@ohvara.internal`
+    let authData
+    if (input.includes('@')) {
+      const { data, error } = await supabase.auth.signInWithPassword({ email: input, password })
+      if (error) throw error
+      authData = data
+    } else {
+      const { data: tokens, error: fnErr } = await supabase.functions.invoke('username-sign-in', {
+        body: { username: input, password },
+      })
+      if (fnErr || !tokens?.access_token) throw new Error('Invalid login credentials')
+      const { data, error } = await supabase.auth.setSession(tokens)
+      if (error) throw error
+      authData = data
     }
-    const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
 
     // Check if account is deactivated before allowing the session through
     const { data: profileData } = await supabase

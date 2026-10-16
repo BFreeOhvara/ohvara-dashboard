@@ -6,6 +6,8 @@
 //   hours_tz: IANA zone (US only)
 //   hours_status: verified | ai | fallback | pending | null
 
+import { zonedDateStr, zonedTimeToUtcIso } from './timezones'
+
 export const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 const DAY_LABEL = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' }
 
@@ -118,6 +120,35 @@ export function hoursSummary(hours, tz) {
   }).join(', ')
   return `${text} ${zoneAbbr(tz)}`.trim()
 }
+
+// Prompt 768 (QA Finding 4) — agents never see a zone name. The carrier's
+// hours (in its own zone `tz`) moved onto the agent's clock (`viewerTz`, their
+// profile zone) for this week's dates: "Mon–Fri 7:00 AM–7:00 PM your time".
+// A saved fallback is just 9–5 Eastern, so it reads the same way.
+export function hoursOnViewerClock(hours, tz, viewerTz, now = Date.now()) {
+  if (!hours || !tz || !viewerTz) return hours
+  const fmt = new Intl.DateTimeFormat('en-US', { timeZone: viewerTz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  const wall = ms => {
+    const p = Object.fromEntries(fmt.formatToParts(new Date(ms)).map(x => [x.type, x.value]))
+    return `${String(+p.hour % 24).padStart(2, '0')}:${p.minute}`
+  }
+  const base = zonedDateStr(now, tz)
+  const [y, m, d] = base.split('-').map(Number)
+  const dow = (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7
+  const out = {}
+  DAYS.forEach((day, i) => {
+    const h = hours[day]
+    if (!h) { out[day] = null; return }
+    const t = new Date(Date.UTC(y, m - 1, d + i - dow))
+    const date = t.toISOString().slice(0, 10)
+    const at = hhmm => wall(new Date(zonedTimeToUtcIso(`${date}T${hhmm}`, tz)).getTime())
+    out[day] = { open: at(h.open), close: at(h.close) }
+  })
+  return out
+}
+
+export const viewerHoursSummary = (carrier, viewerTz) =>
+  `${hoursSummary(hoursOnViewerClock(carrier.hours, carrier.hours_tz, viewerTz))} your time`
 
 export const HOURS_STATUS = {
   verified: { label: 'Verified', tone: 'up' },
