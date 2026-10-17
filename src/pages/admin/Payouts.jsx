@@ -9,6 +9,8 @@ import { PayoutsView } from '../../components/admin/PayoutsView'
 import { bankText, payoutsModel } from '../../lib/adminPayouts'
 import { DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { useNow } from '../../lib/agentBookings'
+import { usePhoneLayout } from '../../hooks/usePhoneLayout'
+import { AdminPhonePay } from '../../components/admin/phone/AdminPhonePay'
 
 // Admin Payouts (Prompt 761; simple version Prompt 765, mockup
 // media/admin-redesign/admin-payouts-simple.dc.html). Pay is per verified
@@ -19,7 +21,12 @@ import { useNow } from '../../lib/agentBookings'
 // The wiring only; the numbers are in lib/adminPayouts.js and the look in
 // components/admin/PayoutsView.jsx.
 
+// Prompt 774 — under 768px, inside the admin phone shell, the phone screen.
 export default function AdminPayouts() {
+  return usePhoneLayout() ? <AdminPhonePay /> : <AdminPayoutsDesktop />
+}
+
+function AdminPayoutsDesktop() {
   const { profile } = useAuth()
   const now = useNow(60e3)
   const tz = profile?.timezone || DEFAULT_TIMEZONE

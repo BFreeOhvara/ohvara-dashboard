@@ -15,6 +15,8 @@ import { weekFrame, buildCalls, adminWeek } from '../../lib/fulfillmentDay'
 import { fmtCents } from '../../lib/payPeriod'
 import { roleLabel } from '../../lib/roleLabels'
 import { MONO } from '../../lib/exportStyles'
+import { usePhoneLayout } from '../../hooks/usePhoneLayout'
+import { AdminPhoneHome } from '../../components/admin/phone/AdminPhoneHome'
 
 // Admin Overview (Prompt 758), ported from media/admin-redesign/admin-overview.dc.html.
 // Five boxes: the hero, two week cards (calls booked, cancelled), "This week,
@@ -135,7 +137,12 @@ function NeedRow({ n, onGo }) {
   )
 }
 
+// Prompt 774 — under 768px, inside the admin phone shell, the phone screen.
 export default function AdminOverview() {
+  return usePhoneLayout() ? <AdminPhoneHome /> : <AdminOverviewDesktop />
+}
+
+function AdminOverviewDesktop() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const now = useNow(30e3)

@@ -3,23 +3,21 @@ import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Search, Plus, ChevronRight, X, ArrowUpDown } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import {
-  useAllProfiles, usePendingInvites, useRevokeInvite,
-  useSendAgentInvite, useSetUserRole, useSetUserAccess,
-} from '../../hooks/useProfiles'
-import { useAgentBookings } from '../../hooks/useAgentBookings'
-import { useCallOutcomes, useMissedStrikes } from '../../hooks/useRepCallEvents'
+import { useRevokeInvite, useSendAgentInvite, useSetUserRole, useSetUserAccess } from '../../hooks/useProfiles'
+import { useMissedStrikes } from '../../hooks/useRepCallEvents'
+import { usePeopleWeek } from '../../hooks/usePeopleWeek'
 import { usePayouts } from '../../hooks/useFulfillmentPayouts'
 import { dmId } from '../../hooks/useDirectMessages'
 import { OvSelect } from '../../components/agent/AgentUI'
 import { AddSomeone } from '../../components/shared/AddSomeone'
 import { Avatar } from '../../components/ui/Avatar'
 import { attentionReason } from '../../lib/fulfillmentFlags'
-import { buildCalls, thisWeek, whenShort } from '../../lib/fulfillmentDay'
+import { whenShort } from '../../lib/fulfillmentDay'
 import { isLive, stageOf, useNow } from '../../lib/agentBookings'
-import { addDaysStr } from '../../lib/scheduling'
 import { fullName, phoneText } from '../../lib/policyFormat'
-import { DEFAULT_TIMEZONE, zonedDateStr } from '../../lib/timezones'
+import { DEFAULT_TIMEZONE } from '../../lib/timezones'
+import { usePhoneLayout } from '../../hooks/usePhoneLayout'
+import { AdminPhonePeople } from '../../components/admin/phone/AdminPhonePeople'
 
 // Admin Users (Prompt 762) — replaces Users & Access. Left: an Agents /
 // Fulfillment switch, search with a sort, one row per person (this week's
@@ -84,7 +82,12 @@ function clientStatus(p, now) {
   return { text: 'Booked', c: DOT.bk }
 }
 
+// Prompt 774 — under 768px, inside the admin phone shell, the phone screen.
 export default function AdminUsers() {
+  return usePhoneLayout() ? <AdminPhonePeople /> : <AdminUsersDesktop />
+}
+
+function AdminUsersDesktop() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const now = useNow(30e3)
@@ -96,51 +99,7 @@ export default function AdminUsers() {
   const [sort, setSort] = useState('top')
   const [adding, setAdding] = useState(false)
 
-  const { data: profiles = [], isLoading: peopleLoading } = useAllProfiles()
-  const { data: invites = [] } = usePendingInvites()
-  const { data: rows = [], isLoading: rowsLoading } = useAgentBookings(null)
-  const week = useMemo(() => thisWeek(now, tz), [now, tz])
-  const dates = useMemo(() => DAY_LABELS.map((_, i) => addDaysStr(week.from, i)), [week.from])
-  const todayStr = zonedDateStr(now, tz)
-  const { data: events = [], isLoading: eventsLoading } = useCallOutcomes(
-    new Date(week.startMs).toISOString(), new Date(week.endMs).toISOString(), { live: rows.some(isLive) },
-  )
-
-  const people = useMemo(() => profiles.filter(u => u.role === 'agent' || u.role === 'fulfillment'), [profiles])
-  const byId = useMemo(() => new Map(people.map(u => [u.id, u])), [people])
-
-  // ── this week, per person ──
-  const stats = useMemo(() => {
-    const out = new Map()
-    const blank = () => ({ a: new Array(7).fill(0), b: new Array(7).fill(0), clients: 0, live: false })
-    for (const u of people) out.set(u.id, blank())
-    for (const p of rows) {
-      const s = out.get(p.agent_id)
-      if (s && byId.get(p.agent_id)?.role === 'agent') s.clients++
-      const f = out.get(p.assigned_fulfillment_id)
-      if (f && isLive(p)) f.live = true
-    }
-    // One list of this week's calls: an agent's are their clients' calls, a
-    // Fulfillment person's are the ones on their row.
-    const calls = buildCalls(rows, now, tz, { from: week.from, to: week.to, events })
-    const add = (id, role, c) => {
-      const s = out.get(id)
-      if (!s || byId.get(id)?.role !== role) return
-      const i = dates.indexOf(c.date)
-      if (i < 0) return
-      s.a[i]++
-      if (c.done && c.tone === 'cancelled') s.b[i]++
-    }
-    for (const c of calls) {
-      add(c.p.agent_id, 'agent', c)
-      add(c.done && c.tone !== 'live' && byId.has(c.by) ? c.by : c.p.assigned_fulfillment_id, 'fulfillment', c)
-    }
-    for (const s of out.values()) {
-      s.main = s.a.reduce((t, n) => t + n, 0)
-      s.cx = s.b.reduce((t, n) => t + n, 0)
-    }
-    return out
-  }, [people, byId, rows, events, dates, tz, now, week.from, week.to])
+  const { invites, rows, events, week, dates, todayStr, people, byId, stats, peopleLoading, rowsLoading, eventsLoading } = usePeopleWeek(now, tz)
 
   // Rank among people with access in this role.
   const ranked = useMemo(() => people

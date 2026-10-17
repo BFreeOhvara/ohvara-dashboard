@@ -166,7 +166,7 @@ function ListenCard({ c, rep, tz, loadAudio, onDecide, deciding }) {
   )
 }
 
-function BankModal({ account, hasAccount, Embed, onClose }) {
+export function BankModal({ account, hasAccount, Embed, onClose }) {
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)

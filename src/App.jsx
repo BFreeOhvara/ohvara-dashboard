@@ -33,6 +33,7 @@ import AdminOverview from './pages/admin/Overview'
 import AdminPipeline from './pages/admin/Pipeline'
 import AdminFulfillment from './pages/admin/Fulfillment'
 import AdminPayouts from './pages/admin/Payouts'
+import AdminMore from './pages/admin/More'
 
 const qc = new QueryClient({
   // refetchOnWindowFocus off: tabbing back must be silent — fresh data
@@ -182,6 +183,12 @@ export default function App() {
             <Route path="/admin/users" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <DashboardLayout><Users /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            {/* Prompt 774 — More, the admin phone layout's fifth tab (desktop → /admin). */}
+            <Route path="/admin/more" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardLayout><AdminMore /></DashboardLayout>
               </ProtectedRoute>
             } />
             {/* Prompt 758 — Carrier hours moved into Settings (admin section). */}

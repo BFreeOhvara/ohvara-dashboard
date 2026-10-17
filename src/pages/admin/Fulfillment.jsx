@@ -8,12 +8,14 @@ import { useCallOutcomes } from '../../hooks/useRepCallEvents'
 import { useAllProfiles } from '../../hooks/useProfiles'
 import { ClientDrawer } from '../../components/agent/AgentUI'
 import { Avatar } from '../../components/ui/Avatar'
-import { isLive, stageOf, useNow } from '../../lib/agentBookings'
-import { SLOT_MS } from '../../lib/fulfillmentFlags'
+import { isLive, useNow } from '../../lib/agentBookings'
+import { KIND, KEY_ORDER, NOBODY, canGive, deskDay, giveOptions, shiftOf } from '../../lib/adminDesk'
 import { addDaysStr } from '../../lib/scheduling'
 import { slideOut } from '../../lib/daySlide'
-import { DEFAULT_TIMEZONE, zonedDateStr, zonedTimeToUtcIso } from '../../lib/timezones'
-import { buildCalls, dayBounds, dayLong, dayShort, hourOf, relDay, timeParts, timeText, todayBadge } from '../../lib/fulfillmentDay'
+import { DEFAULT_TIMEZONE, zonedDateStr } from '../../lib/timezones'
+import { dayBounds, dayLong, dayShort, hourOf, relDay, timeParts, timeText, todayBadge } from '../../lib/fulfillmentDay'
+import { usePhoneLayout } from '../../hooks/usePhoneLayout'
+import { AdminPhoneDesk } from '../../components/admin/phone/AdminPhoneDesk'
 
 // Admin Fulfillment (Prompt 760), ported from media/admin-redesign/admin-fulfillment.dc.html.
 // The whole desk one day at a time: who is making calls and when, as dots (no
@@ -35,46 +37,6 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 const isTyping = el => el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))
 const iso = ms => new Date(ms).toISOString()
 const carrierOf = p => p.current_carrier || p.carrier_name || 'Not noted'
-const NOBODY = 'nobody'
-
-// Dot kinds: cancelled, no answer, live, stuck (past its time, never started), still to call.
-const KIND = {
-  cx:    { label: 'Cancelled',     seg: 'var(--ov-st-cancelled)' },
-  na:    { label: 'No answer',     seg: 'var(--ov-st-noanswer)' },
-  live:  { label: 'Live',          seg: 'var(--ov-live)' },
-  stuck: { label: 'Stuck',         seg: 'var(--ov-warn)' },
-  bk:    { label: 'Still to call', seg: 'color-mix(in srgb, var(--ov-st-booked) 35%, transparent)' },
-}
-const KEY_ORDER = ['cx', 'na', 'live', 'stuck', 'bk']
-const canGive = c => c.k === 'stuck' || c.k === 'bk'
-
-function kindOf(c) {
-  if (c.tone === 'live') return 'live'
-  if (c.done) return c.tone === 'cancelled' ? 'cx' : 'na'
-  return c.late ? 'stuck' : 'bk'
-}
-
-// The day's calls for the desk: buildCalls plus No answer retries whose time
-// passed without a call (buildCalls only lists retries still ahead), which
-// count as stuck like a passed Booked time.
-function deskCalls(rows, nowMs, tz, day, events) {
-  const list = buildCalls(rows, nowMs, tz, { from: day, to: day, events })
-  for (const p of rows) {
-    if (isLive(p) || p.fulfillment_stage === 'Complete' || !p.scheduled_call_at || stageOf(p) !== 'noAnswer') continue
-    const ms = new Date(p.scheduled_call_at).getTime()
-    if (ms > nowMs || zonedDateStr(ms, tz) !== day) continue
-    list.push({ key: `${p.id}:retry:${p.scheduled_call_at}`, id: p.id, p, at: p.scheduled_call_at, ms, date: day, tone: 'noAnswer', late: true, retry: true, attempt: (p.call_attempts || 0) + 1 })
-  }
-  return list.sort((a, b) => a.ms - b.ms)
-}
-
-// A rep's shift on `day`, as instants (null when no working hours are set).
-function shiftOf(rep, day) {
-  if (!rep?.working_hours_start || !rep?.working_hours_end) return null
-  const zone = rep.timezone || DEFAULT_TIMEZONE
-  const at = t => new Date(zonedTimeToUtcIso(`${day}T${String(t).slice(0, 5)}`, zone)).getTime()
-  return { startMs: at(rep.working_hours_start), endMs: at(rep.working_hours_end) }
-}
 
 const short = (iso, tz) => {
   const { time, period } = timeParts(iso, tz)
@@ -112,30 +74,6 @@ function Track({ calls, range, pct, nowH, live, tz, now, onOpen }) {
 }
 
 // ── Give to ─────────────────────────────────────────────────────────────────
-
-// Who can take these calls: every active Fulfillment person, with whether
-// they are free (no open call within a slot, counting the ones given before
-// in the same batch) and on shift at each call's time.
-function giveOptions(calls, reps, rows) {
-  return reps.map(r => {
-    const taken = []
-    const ids = []
-    let mine = 0
-    let offShift = 0
-    for (const c of calls) {
-      if (c.p.assigned_fulfillment_id === r.id) { mine++; continue }
-      const clash = rows.some(o => o.id !== c.id && o.assigned_fulfillment_id === r.id && o.fulfillment_stage !== 'Complete'
-        && o.scheduled_call_at && Math.abs(new Date(o.scheduled_call_at).getTime() - c.ms) < SLOT_MS)
-        || taken.some(ms => Math.abs(ms - c.ms) < SLOT_MS)
-      if (clash) continue
-      const s = shiftOf(r, zonedDateStr(c.ms, r.timezone || DEFAULT_TIMEZONE))
-      if (s && (c.ms < s.startMs || c.ms >= s.endMs)) offShift++
-      taken.push(c.ms)
-      ids.push(c.id)
-    }
-    return { rep: r, ids, mine, offShift, open: calls.length - mine }
-  }).filter(o => o.open > 0)
-}
 
 function GivePicker({ calls, reps, rows, tz, onClose }) {
   const give = useGiveCalls()
@@ -237,7 +175,12 @@ function CallPeek({ c, tz, now, onClose, onGive }) {
 
 // ── page ────────────────────────────────────────────────────────────────────
 
+// Prompt 774 — under 768px, inside the admin phone shell, the phone screen.
 export default function AdminFulfillment() {
+  return usePhoneLayout() ? <AdminPhoneDesk /> : <AdminFulfillmentDesktop />
+}
+
+function AdminFulfillmentDesktop() {
   const { profile } = useAuth()
   const { data: queue = [], isLoading } = useFulfillmentQueue()
   const { data: profiles = [] } = useAllProfiles()
@@ -268,11 +211,7 @@ export default function AdminFulfillment() {
   const busy = isLoading || !profile || (started && eventsLoading)
   const calls = useMemo(() => {
     if (busy) return []
-    return deskCalls(queue, now, tz, day, started ? events : null).map(c => {
-      const owner = c.done && c.tone !== 'live' && repById.has(c.by) ? c.by : (c.p.assigned_fulfillment_id || NOBODY)
-      const r = repById.get(owner)
-      return { ...c, k: kindOf(c), h: hourOf(c.at, tz), owner, ownerName: r?.full_name || c.p.assigned?.full_name || 'Nobody yet' }
-    })
+    return deskDay(queue, now, tz, day, started ? events : null, repById)
   }, [busy, queue, now, tz, day, started, events, repById])
 
   const count = Object.fromEntries(KEY_ORDER.map(k => [k, calls.filter(c => c.k === k).length]))

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { House, Users, Plus, MessageSquare, Menu, ChevronLeft, Phone, Wallet } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
@@ -6,6 +7,9 @@ import { PhoneLayoutContext } from '../../hooks/usePhoneLayout'
 import { usePortalPhone } from '../../contexts/portalPhone'
 import { BillingGate } from './BillingGate'
 import { ErrorBoundary } from '../shared/ErrorBoundary'
+import { AddSomeoneSheet } from '../admin/phone/AddSomeoneSheet'
+import { PhoneToast } from '../admin/phone/PhoneToast'
+import { useAdminPay } from '../admin/phone/useAdminPay'
 
 // Prompt 772 — the agent's phone shell (under 768px): no sidebar, no top bar,
 // a bottom tab bar (Home, Clients, a raised + for Book a call, Messages, More)
@@ -15,6 +19,9 @@ import { ErrorBoundary } from '../shared/ErrorBoundary'
 // Prompt 773 — Fulfillment gets the same shell: Today, Clients, a raised Call
 // button, Pay, More (media/mobile-fulfillment/). The Call button never starts
 // a call: it brings back a live one, or takes Today to the next-call card.
+// Prompt 774 — Admin too: Home, Desk, a raised + (Add someone, a sheet), Pay
+// (an amber dot when a cancel needs a listen or Monday's run won't pay), More
+// (media/mobile-admin/). People, Pipeline and Settings open from More.
 
 const AGENT_TABS = [
   { to: '/agent', label: 'Home', icon: House, on: p => p === '/agent' },
@@ -32,12 +39,22 @@ const FULFILL_TABS = [
   { to: '/fulfillment/more', label: 'More', icon: Menu, on: p => ['/fulfillment/more', '/messages', '/settings'].includes(p), badge: true },
 ]
 
+const ADMIN_TABS = [
+  { to: '/admin', label: 'Home', icon: House, on: p => p === '/admin' },
+  { to: '/admin/fulfillment', label: 'Desk', icon: Phone, on: p => p === '/admin/fulfillment' },
+  { label: 'Add someone', icon: Plus, plus: true, add: true },
+  { to: '/admin/payouts', label: 'Pay', icon: Wallet, on: p => p === '/admin/payouts', payDot: true },
+  { to: '/admin/more', label: 'More', icon: Menu, on: p => ['/admin/more', '/admin/users', '/admin/pipeline', '/messages', '/settings'].includes(p), badge: true },
+]
+const TABS = { agent: AGENT_TABS, fulfillment: FULFILL_TABS, admin: ADMIN_TABS }
+
 // Pages opened from More: a header with a back arrow to More.
 const SUB_PAGES = {
   agent: { '/agent/activity': 'Activity', '/agent/billing': 'Billing', '/settings': 'Settings' },
   fulfillment: { '/settings': 'Settings' },
+  admin: { '/admin/users': 'People', '/admin/pipeline': 'Pipeline', '/settings': 'Settings' },
 }
-const MORE = { agent: '/agent/more', fulfillment: '/fulfillment/more' }
+const MORE = { agent: '/agent/more', fulfillment: '/fulfillment/more', admin: '/admin/more' }
 
 // The raised Call button: a live call comes back full screen; otherwise
 // Today scrolls to the next-call card and highlights it (`focusNext`).
@@ -54,6 +71,27 @@ function CallTab({ tab }) {
   )
 }
 
+// The raised + on Admin: Add someone as a sheet, over whatever page is open.
+function AddTab({ tab }) {
+  const [open, setOpen] = useState(false)
+  const [toast, setToast] = useState(null)
+  const Icon = tab.icon
+  return (
+    <>
+      <button type="button" className="ph-tab" aria-label="Add someone" onClick={() => setOpen(true)}>
+        <span className="ph-plus"><Icon size={26} strokeWidth={2.6} aria-hidden="true" /></span>
+      </button>
+      {open && <AddSomeoneSheet onClose={() => setOpen(false)} onSent={msg => { setOpen(false); setToast(msg) }} />}
+      <PhoneToast text={toast} onDone={() => setToast(null)} />
+    </>
+  )
+}
+
+function PayDot() {
+  const { alert } = useAdminPay()
+  return alert ? <span className="ph-tab-dot" aria-hidden="true" /> : null
+}
+
 function TabBar({ pathname, tabs }) {
   const { profile } = useAuth()
   useMessagesRealtime(profile?.id)
@@ -62,7 +100,8 @@ function TabBar({ pathname, tabs }) {
     <nav className="ph-tabbar" aria-label="Main">
       {tabs.map(tab => {
         if (tab.call) return <CallTab key="call" tab={tab} />
-        const { to, label, icon: Icon, plus, on, badge } = tab
+        if (tab.add) return <AddTab key="add" tab={tab} />
+        const { to, label, icon: Icon, plus, on, badge, payDot } = tab
         const active = on(pathname)
         const count = badge && unread > 0 ? unread : 0
         return (
@@ -75,6 +114,7 @@ function TabBar({ pathname, tabs }) {
                 <span className="ph-tab-icon">
                   <Icon size={22} strokeWidth={active ? 2.2 : 1.9} aria-hidden="true" />
                   {count > 0 && <span className="ph-tab-badge" aria-hidden="true">{count > 99 ? '99+' : count}</span>}
+                  {payDot && <PayDot />}
                 </span>
                 <span aria-hidden="true">{label}</span>
               </>
@@ -105,7 +145,7 @@ export function PhoneShell({ children }) {
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
   const { profile } = useAuth()
-  const role = profile?.role === 'fulfillment' ? 'fulfillment' : 'agent'
+  const role = profile?.role === 'fulfillment' || profile?.role === 'admin' ? profile.role : 'agent'
   const params = new URLSearchParams(search)
   const inChat = pathname === '/messages' && (params.has('dm') || params.has('thread'))
   const tabs = pathname !== '/agent/book' && !inChat
@@ -120,7 +160,7 @@ export function PhoneShell({ children }) {
             <ErrorBoundary resetKey={pathname}><BillingGate>{children}</BillingGate></ErrorBoundary>
           </div>
         </main>
-        {tabs && <TabBar pathname={pathname} tabs={role === 'fulfillment' ? FULFILL_TABS : AGENT_TABS} />}
+        {tabs && <TabBar pathname={pathname} tabs={TABS[role]} />}
       </div>
     </PhoneLayoutContext.Provider>
   )
