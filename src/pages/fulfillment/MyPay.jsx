@@ -5,6 +5,8 @@ import {
   usePayouts, usePayoutAccounts, useConnectOverview, useRefreshPayouts, useSavePayoutEmails, useCancels, usePaySettings,
 } from '../../hooks/useFulfillmentPayouts'
 import { MyPayView } from '../../components/fulfillment/MyPay'
+import { PhoneMyPay } from '../../components/fulfillment/phone/PhoneMyPay'
+import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { PayoutSettingsView } from '../../components/fulfillment/PayoutSettings'
 import { payPeriod } from '../../lib/payPeriod'
 import { accountStatus, cancelTotals, isoDay } from '../../lib/myPay'
@@ -43,6 +45,7 @@ function payoutList(rows, cancels, now) {
 
 export default function MyPay() {
   const { profile, refreshProfile } = useAuth()
+  const phone = usePhoneLayout()
   const now = useNow(30e3)
   const [which, setWhich] = useState('this')
   const [params, setParams] = useSearchParams()
@@ -96,6 +99,21 @@ export default function MyPay() {
           saving: saveEmails.isPending, ...emailState,
         }}
         onEmail={onEmail}
+      />
+    )
+  }
+
+  if (phone) {
+    const week = payPeriod(now)
+    return (
+      <PhoneMyPay
+        period={week} now={now}
+        weekCancels={cancels.filter(c => c.week_start === isoDay(week.start))}
+        rate={paySettings?.pay_per_cancel_cents ?? 1000}
+        payouts={payoutList(payouts, cancels, now)} account={account} status={status}
+        accountLoading={accountsLoading || (started && overview.isLoading && !stored)}
+        onConnect={() => open({ settings: '1', setup: '1' })}
+        onSettings={() => open({ settings: '1' })}
       />
     )
   }

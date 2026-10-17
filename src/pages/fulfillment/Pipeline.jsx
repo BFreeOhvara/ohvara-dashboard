@@ -8,6 +8,9 @@ import { CallDrawer } from '../../components/fulfillment/CallDrawer'
 import { whenShort, timeText } from '../../lib/fulfillmentDay'
 import { isLive, stageOf, fulfillTabOf, FULFILL_TABS, RANGES, useNow, startOfWeek, startOfMonth } from '../../lib/agentBookings'
 import { DEFAULT_TIMEZONE } from '../../lib/timezones'
+import { usePhoneLayout } from '../../hooks/usePhoneLayout'
+import { PhoneFulClients } from '../../components/fulfillment/phone/PhoneFulClients'
+import { PhoneSheet } from '../../components/agent/phone/PhoneSheet'
 
 // Fulfillment Pipeline (Prompt 681, rebuilt by Prompt 749) — the agent's My
 // Pipeline (P726/P729) scoped to the rep: "Find any client" with the rep's
@@ -21,6 +24,8 @@ import { DEFAULT_TIMEZONE } from '../../lib/timezones'
 // page: ?open=<id>. ?stage= (booked / noAnswer / cancelled) and ?range= (week /
 // month) are in the URL, like the agent side; Overview links ?stage=cancelled.
 // Times are in the rep's zone.
+// Prompt 773 — on a rep's phone layout the page is PhoneFulClients (no
+// ?stage= = no filter there), and a row's call opens as a bottom sheet.
 
 const RANGE_VALUES = RANGES.map(r => r.value)
 // Old ?stage= values (the P681 pills) land on Booked.
@@ -49,6 +54,46 @@ const searchPhrase = tz => p => {
 const lower = s => s.replace(/^(Today|Tomorrow|Yesterday)/, w => w.toLowerCase())
 
 export default function FulfillmentPipeline() {
+  return usePhoneLayout() ? <PhonePipeline /> : <DeskPipeline />
+}
+
+function PhonePipeline() {
+  const { profile } = useAuth()
+  const now = useNow()
+  const tz = profile?.timezone || DEFAULT_TIMEZONE
+  const [params, setParams] = useSearchParams()
+  const openId = params.get('open')
+  const { data: queue = [], isLoading } = useFulfillmentQueue()
+  const mine = useMemo(() => queue.filter(p => p.assigned_fulfillment_id === profile?.id), [queue, profile?.id])
+  const stage = params.get('stage')
+  const filter = FULFILL_TABS.includes(stage) ? stage : null
+  const update = fn => {
+    const next = new URLSearchParams(params)
+    fn(next)
+    setParams(next, { replace: true })
+  }
+  const openRow = openId ? queue.find(p => p.id === openId) : null
+  const close = () => update(next => next.delete('open'))
+  return (
+    <>
+      <PhoneFulClients
+        rows={mine} loading={isLoading || !profile} now={now} tz={tz}
+        filter={filter} onFilter={t => update(next => { if (t) next.set('stage', t); else next.delete('stage') })}
+        onOpen={p => setParams(prev => { const next = new URLSearchParams(prev); next.set('open', p.id); return next })}
+      />
+      {openId && (openRow ? (
+        <CallDrawer key={openRow.id} p={openRow} scope={mine} now={now} tz={tz} profile={profile} isAdmin={false}
+          onClose={close} onOpenCall={id => update(next => next.set('open', id))} />
+      ) : !isLoading && (
+        <PhoneSheet label="Call not found" head={<b style={{ fontSize: 17 }}>Call not found</b>} onClose={close}>
+          <p className="ph-empty" style={{ textAlign: 'left', padding: '12px 0 8px' }}>This client isn't on your pipeline any more.</p>
+        </PhoneSheet>
+      ))}
+    </>
+  )
+}
+
+function DeskPipeline() {
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
   const now = useNow()

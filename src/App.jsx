@@ -27,6 +27,7 @@ import MyCalls from './pages/fulfillment/MyCalls'
 import FulfillmentOverview from './pages/fulfillment/Overview'
 import FulfillmentPipeline from './pages/fulfillment/Pipeline'
 import MyPay, { GettingPaidRedirect } from './pages/fulfillment/MyPay'
+import FulfillmentMore from './pages/fulfillment/More'
 import Users from './pages/admin/Users'
 import AdminOverview from './pages/admin/Overview'
 import AdminPipeline from './pages/admin/Pipeline'
@@ -213,6 +214,12 @@ export default function App() {
               </ProtectedRoute>
             } />
             <Route path="/fulfillment/getting-paid" element={<GettingPaidRedirect />} />
+            {/* Prompt 773 — More, the rep's phone layout's fifth tab (desktop → /fulfillment). */}
+            <Route path="/fulfillment/more" element={
+              <ProtectedRoute allowedRoles={['fulfillment']}>
+                <DashboardLayout><FulfillmentMore /></DashboardLayout>
+              </ProtectedRoute>
+            } />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

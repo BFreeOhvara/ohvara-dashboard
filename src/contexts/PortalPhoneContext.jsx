@@ -14,6 +14,8 @@ import { DEFAULT_TIMEZONE } from '../lib/timezones'
 import { canStartCall, tooEarlyText, unlockAt } from '../lib/fulfillmentDay'
 import { ErrorToast } from '../components/shared/ErrorToast'
 import { PortalPhone } from '../components/fulfillment/PortalPhone'
+import { PhoneCall } from '../components/fulfillment/phone/PhoneCall'
+import { useIsPhone } from '../hooks/usePhoneLayout'
 import { PhoneContext } from './portalPhone'
 
 // Prompt 751 — the pop-up phone. One call at a time, owned here (above the
@@ -23,10 +25,14 @@ import { PhoneContext } from './portalPhone'
 // preview and Call client keeps its old path.
 //
 // mode: preview | mic (asking for the microphone) | connecting | call | result
+// Prompt 773 — a rep on a phone (under 768px) gets the phone layout's call
+// screen: full screen, minimize to a red bar above the tab bar, the result as
+// a bottom sheet. Same calls and same Twilio logic (PortalPhone `phone`).
 
 export function PortalPhoneProvider({ children, voice = connectVoice }) {
   const { profile } = useAuth()
   const can = profile?.role === 'fulfillment' || profile?.role === 'admin'
+  const onPhone = useIsPhone() && profile?.role === 'fulfillment'
   const { data: cfg } = useRecoveryConfig({ enabled: can })
   const voiceLive = !!cfg?.voice_live
   const tz = profile?.timezone || DEFAULT_TIMEZONE
@@ -165,20 +171,27 @@ export function PortalPhoneProvider({ children, voice = connectVoice }) {
   useEffect(() => { if (!can && line.current) finish() }, [can, finish])
   useEffect(() => () => { line.current?.destroy() }, [])
 
-  const ctx = useMemo(() => ({ voiceLive, open, activeId: s && s.mode !== 'preview' ? s.p.id : null, toast, tz }), [voiceLive, open, s, toast, tz])
+  const show = useCallback(() => setS(x => (x ? { ...x, collapsed: false } : x)), [])
+  const ctx = useMemo(() => ({ voiceLive, open, activeId: s && s.mode !== 'preview' ? s.p.id : null, toast, tz, show }), [voiceLive, open, s, toast, tz, show])
 
   return (
     <PhoneContext.Provider value={ctx}>
       {children}
       {note && <ErrorToast key={note.id} message={note.text} onDone={() => setNote(null)} />}
-      {can && s && (
+      {can && s && (onPhone ? (
+        <PhoneCall
+          s={s} names={names} legs={legs} answered={answered} muted={muted} busy={busy} error={error}
+          canRingCarrier={!!carrier?.service_phone} recording={!!cfg?.recording_live} smsLive={!!cfg?.sms_live}
+          onPress={press} onAllowMic={allowMic} onCollapse={collapse} onClose={close}
+        />
+      ) : (
         <PortalPhone
           s={s} names={names} legs={legs} answered={answered} muted={muted} busy={busy} error={error}
           canRingCarrier={!!carrier?.service_phone} devices={devices} onDevice={pickDevice}
           recording={!!cfg?.recording_live}
           onPress={press} onAllowMic={allowMic} onCollapse={collapse} onClose={close}
         />
-      )}
+      ))}
     </PhoneContext.Provider>
   )
 }

@@ -7,6 +7,7 @@ import { createContext, useContext } from 'react'
 //   activeId   the policy on the phone right now, if any
 //   toast(msg) a one-off message top-right (P756: "It's not time to call yet")
 //   tz         the signed-in profile's zone
-export const PhoneContext = createContext({ voiceLive: false, open: () => false, activeId: null, toast: () => {}, tz: null })
+//   show()     bring a minimized call back up (P773's raised Call button)
+export const PhoneContext = createContext({ voiceLive: false, open: () => false, activeId: null, toast: () => {}, tz: null, show: () => {} })
 
 export const usePortalPhone = () => useContext(PhoneContext)

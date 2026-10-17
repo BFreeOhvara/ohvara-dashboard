@@ -8,6 +8,8 @@ import { useCallOutcomes } from '../../hooks/useRepCallEvents'
 import { ClientDrawer, OvSelect } from '../../components/agent/AgentUI'
 import { CallDrawer, CallButton, CallStatus } from '../../components/fulfillment/CallDrawer'
 import { ResultFixBar } from '../../components/fulfillment/ResultFixBar'
+import { PhoneToday } from '../../components/fulfillment/phone/PhoneToday'
+import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { useResultFix } from '../../hooks/useResultFix'
 import { useCallActions, useCallLock, useClientCall } from '../../hooks/useCallActions'
 import { agentCallerIdOn } from '../../lib/fulfillmentCall'
@@ -37,6 +39,8 @@ import {
 // week + Cancel rate, Tomorrow); stacked under 1100px. The Up next card is
 // time, name, "Cancel with" and the buttons; Call client unlocks 5 minutes
 // before the call (useCallLock; the server's too_early backs it).
+// Prompt 773 — on a rep's phone layout this route is Today (PhoneToday), so
+// ?open=<id> links (notifications, the phone's result) open the call's sheet.
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
@@ -306,6 +310,10 @@ function CallRow({ c, tz, sub, subTone, tag, onOpen }) {
 // ── page ────────────────────────────────────────────────────────────────────
 
 export default function MyCalls() {
+  return usePhoneLayout() ? <PhoneToday /> : <DeskMyCalls />
+}
+
+function DeskMyCalls() {
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
   const qc = useQueryClient()

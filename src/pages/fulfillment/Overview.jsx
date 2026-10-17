@@ -9,6 +9,8 @@ import { YourDayCard, LiveCallStrips } from '../../components/fulfillment/Fulfil
 import { isLive, useNow } from '../../lib/agentBookings'
 import { DEFAULT_TIMEZONE, zonedDateStr } from '../../lib/timezones'
 import { weekFrame, weekStats, buildCalls, buildDay, timeParts, timeText, inLabel } from '../../lib/fulfillmentDay'
+import { usePhoneLayout } from '../../hooks/usePhoneLayout'
+import { PhoneToday } from '../../components/fulfillment/phone/PhoneToday'
 
 // Fulfillment Overview (Prompt 681), rebuilt in Prompt 745: the agent
 // Overview's layout (hero, two trend cards, the right-hand box, the Last week
@@ -17,8 +19,13 @@ import { weekFrame, weekStats, buildCalls, buildDay, timeParts, timeText, inLabe
 // team (copy swaps only). Every row opens the item on the desk
 // (/fulfillment/desk?open=<id>). All day and week maths is in the profile's
 // zone (lib/fulfillmentDay.js).
+// Prompt 773 — on a rep's phone layout the Overview folds into Today.
 
 export default function FulfillmentOverview() {
+  return usePhoneLayout() ? <PhoneToday /> : <DeskOverview />
+}
+
+function DeskOverview() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const now = useNow(30e3)

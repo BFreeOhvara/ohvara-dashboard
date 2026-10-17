@@ -241,8 +241,9 @@ export function DashboardLayout({ children }) {
   const [title] = TITLES[pathname] || ['']
 
   // Prompt 772 — an agent on a phone gets the app-style shell instead.
+  // Prompt 773 — a Fulfillment rep too (admin's phone layout is P774).
   const phone = useIsPhone()
-  if (phone && profile?.role === 'agent') {
+  if (phone && (profile?.role === 'agent' || profile?.role === 'fulfillment')) {
     return <ActiveCallProvider><PhoneShell>{children}</PhoneShell></ActiveCallProvider>
   }
 

@@ -8,6 +8,8 @@ import { useCorrectResult } from '../../hooks/usePolicies'
 import { ResultFixBar } from './ResultFixBar'
 import { usePortalPhone } from '../../contexts/portalPhone'
 import { ClientDrawer } from '../agent/AgentUI'
+import { usePhoneLayout } from '../../hooks/usePhoneLayout'
+import { PhoneDrawerSheet } from './phone/PhoneDrawerSheet'
 import { Segmented } from '../ui/Segmented'
 import { SavedTick } from '../ui/SavedTick'
 import { LiveDot } from '../ui/LiveDot'
@@ -29,6 +31,8 @@ import { RESULT_TEXT, agentCallerIdOn, callHint, callTone, carrierOpenText, chan
 // gone from the call (Brayden: "we're not even going to have that
 // information"); the intake data and its RLS are untouched.
 // Admin reads other reps' calls and can only reassign them.
+// Prompt 773 — on a rep's phone layout the same content opens as a bottom
+// sheet (PhoneDrawerSheet), every field and action unchanged.
 
 const SUBSTATUS = [
   { value: 'waiting_carrier', label: 'Waiting on carrier' },
@@ -128,6 +132,7 @@ function ChangeResult({ p, result }) {
 
 export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpenCall, fix }) {
   const navigate = useNavigate()
+  const Shell = usePhoneLayout() ? PhoneDrawerSheet : ClientDrawer
   const { data: carriers } = useCarriers()
   const phone = usePortalPhone()
   const onPhone = phone.activeId === p.id
@@ -256,7 +261,7 @@ export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpe
   }
 
   return (
-    <ClientDrawer
+    <Shell
       name={name} onClose={onClose}
       header={{
         style: { background: `radial-gradient(ellipse 90% 80% at 100% 0%, ${t.tint} 0%, transparent 70%)` },
@@ -376,6 +381,6 @@ export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpe
       {act.error && (
         <p style={{ margin: 0, fontSize: 12.5, color: 'var(--danger)' }}>Couldn't save — {act.error.message || 'try again'}.</p>
       )}
-    </ClientDrawer>
+    </Shell>
   )
 }

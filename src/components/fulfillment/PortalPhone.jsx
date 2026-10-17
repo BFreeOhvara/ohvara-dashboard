@@ -5,6 +5,7 @@ import { useMarkCancelled, useEndCall } from '../../hooks/usePolicies'
 import { useAuth } from '../../hooks/useAuth'
 import { zonedDateStr, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { phoneView, clock } from '../../lib/portalPhone'
+import { I, PAD } from './phoneIcons'
 
 // Prompt 751 — the pop-up phone panel, a literal port of
 // media/fulfillment-my-calls/phone.dc.html (its five stages are worked out in
@@ -15,25 +16,12 @@ import { phoneView, clock } from '../../lib/portalPhone'
 // on the Result screen the confirmation number is optional, and saving a
 // Cancelled says the AI will check the recording.
 
-const I = {
-  mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
-  keypad: 'M6 5h.01M12 5h.01M18 5h.01M6 11h.01M12 11h.01M18 11h.01M6 17h.01M12 17h.01M18 17h.01',
-  pause: 'M9 5v14M15 5v14',
-  add: 'M12 5v14M5 12h14',
-  swap: 'M7 7h11l-3-3M17 17H6l3 3',
-  merge: 'M7 4v4a5 5 0 0 0 5 5 5 5 0 0 0 5-5V4M12 13v7',
-  end: 'M3 15c5-5 13-5 18 0l-2.5 2.5-3-1.5v-3a12 12 0 0 0-5 0v3l-3 1.5z',
-  headset: 'M4 15v-3a8 8 0 0 1 16 0v3M4 15h3v5H5a1 1 0 0 1-1-1zM20 15h-3v5h2a1 1 0 0 0 1-1z',
-  down: 'M6 9l6 6 6-6',
-  up: 'M6 15l6-6 6 6',
-  check: 'M5 12.5l4.5 4.5L19 7.5',
-}
 
-const Svg = ({ d, size = 24, w = 2, stroke = 'currentColor' }) => (
+export const Svg = ({ d, size = 24, w = 2, stroke = 'currentColor' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
 )
 
-function Key({ k, icon, onPress, disabled }) {
+export function Key({ k, icon, onPress, disabled }) {
   return (
     <button type="button" className="pp-key" data-on={!!k.on} disabled={disabled || k.off || !k.act} onClick={() => onPress(k.act)} aria-pressed={k.on ? true : undefined}>
       <span><Svg d={icon} /></span>{k.label}
@@ -41,7 +29,6 @@ function Key({ k, icon, onPress, disabled }) {
   )
 }
 
-const PAD = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
 const REASONS = [{ value: 'waiting_carrier', label: 'Waiting on carrier' }, { value: 'waiting_client', label: 'Waiting on client' }]
 
 function Result({ p, s, onClose, error: callError, recording }) {
