@@ -15,6 +15,7 @@ import { DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { Avatar } from '../../components/ui/Avatar'
 import { BugReportModal } from '../../components/shared/BugReportButton'
 import { PhoneSheet } from '../../components/agent/phone/PhoneSheet'
+import { AccountRows } from '../../components/shared/AccountRows'
 
 // Prompt 773 — More, the rep's phone layout's fifth tab (mockup
 // FulMore.dc.html): the profile ("Fulfillment · $10 a cancel", from the pay
@@ -155,6 +156,7 @@ export default function FulfillmentMore() {
         </button>
         <Row icon={Settings} tone="blue" label="Settings" onClick={() => navigate('/settings')} />
         <Row icon={TriangleAlert} tone="amber" label="Report a problem" onClick={() => setModal('report')} />
+        <AccountRows />
       </section>
 
       <button type="button" className="ph-signout" onClick={handleSignOut}>

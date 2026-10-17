@@ -35,6 +35,7 @@ export type Policy = {
   assigned_fulfillment_id: string | null
   fulfillment_stage: string | null
   carrier_id: string | null
+  is_demo?: boolean
 }
 
 export interface Store {
@@ -126,6 +127,8 @@ export async function act(store: Store, twilio: Twilio, env: Env, userId: string
   if (!p || !p.fulfillment_assigned) refuse('Cancellation not found', 404)
   if (role !== 'admin' && p!.assigned_fulfillment_id !== userId) refuse('Only the rep it\'s assigned to can call on this one.', 403)
   if (p!.fulfillment_stage === 'Complete' && action !== 'end_all' && action !== 'end') refuse('This one is already cancelled', 409, 'done')
+  // Prompt 775 — App Review sample bookings never place a real call.
+  if (p!.is_demo) refuse('This is a sample account: no real calls are placed.', 409, 'demo')
   if (!(await store.voiceLive())) refuse('Calling in the portal isn\'t on yet.', 409, 'voice_off')
   if (!env.configured) refuse('Calling isn\'t set up yet.', 503, 'not_configured')
 

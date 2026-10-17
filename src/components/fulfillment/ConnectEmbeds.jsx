@@ -3,7 +3,9 @@ import { loadConnectAndInitialize } from '@stripe/connect-js'
 import {
   ConnectComponentsProvider, ConnectAccountOnboarding, ConnectAccountManagement, ConnectNotificationBanner, ConnectDocuments,
 } from '@stripe/react-connect-js'
-import { Loader2, Lock } from 'lucide-react'
+import { Loader2, Lock, ExternalLink } from 'lucide-react'
+import { useAuth } from '../../hooks/useAuth'
+import { isNativeApp, openExternal, webUrl } from '../../lib/native'
 import { invokeConnect } from '../../hooks/useFulfillmentPayouts'
 import { useTheme } from '../../hooks/useTheme'
 
@@ -98,7 +100,30 @@ const ONLY_BANK = { fields: 'eventually_due', futureRequirements: 'include', req
 const NOT_BANK = { fields: 'eventually_due', futureRequirements: 'include', requirements: { exclude: ['external_account'] } }
 const ONLY_TAX = { fields: 'eventually_due', futureRequirements: 'include', requirements: { only: ['individual.ssn_last_4', 'individual.id_number'] } }
 
-export default function ConnectEmbed({ kind, onDone, onDocuments }) {
+// Prompt 775 — inside the phone app Stripe's forms never load in the app's
+// own webview: the same page opens on the website in the system browser
+// sheet (bank and tax details are entered there, then the sheet is closed).
+function OnTheWebsite({ kind }) {
+  const { profile } = useAuth()
+  if (kind === 'banner') return null
+  const path = profile?.role === 'admin' ? '/admin/payouts' : '/fulfillment/pay'
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <p className="ps-note" style={{ margin: 0 }}>Bank and tax details are entered on Stripe’s secure page on the Ohvara website.</p>
+      <button type="button" className="ov-solid" onClick={() => openExternal(webUrl(path))}
+        style={{ height: 46, borderRadius: 999, padding: '0 22px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <ExternalLink size={16} strokeWidth={2.2} aria-hidden="true" />Open on the website
+      </button>
+    </div>
+  )
+}
+
+export default function ConnectEmbed(props) {
+  if (isNativeApp()) return <OnTheWebsite kind={props.kind} />
+  return <StripeEmbed {...props} />
+}
+
+function StripeEmbed({ kind, onDone, onDocuments }) {
   const { instance, documents, error } = useConnect()
   const [loaded, setLoaded] = useState(false)
   useEffect(() => { if (instance) onDocuments?.(documents) }, [instance, documents, onDocuments])

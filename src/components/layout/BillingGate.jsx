@@ -5,6 +5,8 @@ import { useAppSettings } from '../../hooks/useAppSettings'
 import { useBillingTiers } from '../../hooks/useBillingTiers'
 import { billingAccess, formatBillingDate, formatWeekly } from '../../lib/billing'
 import { card, primaryBtn, sectionTitle, MONO } from '../../lib/exportStyles'
+import { isNativeApp } from '../../lib/native'
+import { NATIVE_BILLING_TEXT } from '../native/NativeBillingNote'
 
 // Prompt 673 — wraps every page's content. Inert unless
 // app_settings.agent_billing_enforced is on (it's off until Stripe is live).
@@ -36,9 +38,9 @@ export function BillingGate({ children }) {
         <p style={{ ...sectionTitle, marginBottom: 8 }}>Your portal access is paused</p>
         <p style={{ margin: '0 0 22px', fontSize: 14, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
           Access runs on a weekly subscription (from <span style={{ fontFamily: MONO }}>{price}</span>/week), and this week isn't paid.
-          Pay in Billing to pick up where you left off. Clients you've already booked are still being worked.
+          {isNativeApp() ? NATIVE_BILLING_TEXT : 'Pay in Billing to pick up where you left off.'} Clients you've already booked are still being worked.
         </p>
-        <Link to="/agent/billing" style={{ ...primaryBtn, textDecoration: 'none' }}>Go to Billing</Link>
+        {!isNativeApp() && <Link to="/agent/billing" style={{ ...primaryBtn, textDecoration: 'none' }}>Go to Billing</Link>}
       </div>
     )
   }
@@ -53,10 +55,10 @@ export function BillingGate({ children }) {
         }}>
           <AlertTriangle size={16} style={{ color: 'var(--warning)', flexShrink: 0 }} />
           <span style={{ flex: 1, minWidth: 200, fontSize: 13.5, color: 'var(--text-primary)' }}>
-            This week's payment didn't go through. Update your card by{' '}
+            This week's payment didn't go through. {isNativeApp() ? 'Update your card on the Ohvara website' : 'Update your card'} by{' '}
             <b>{formatBillingDate(profile.billing_grace_until)}</b> to keep your access.
           </span>
-          <Link to="/agent/billing" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--warning)' }}>Fix payment</Link>
+          {!isNativeApp() && <Link to="/agent/billing" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--warning)' }}>Fix payment</Link>}
         </div>
       )}
       {children}

@@ -13,7 +13,7 @@ import { NAV } from '../../lib/nav'
 import { Avatar } from '../ui/Avatar'
 import { OhvaraMark } from '../ui/OhvaraMark'
 import { BugReportModal, BugReportInbox } from '../shared/BugReportButton'
-import { MobileAppModal } from './MobileAppModal'
+import { GetAppModal } from './GetAppModal'
 import { InviteAgentModal } from '../shared/InviteAgentModal'
 import { AddSomeone } from '../shared/AddSomeone'
 import { AccountMenu } from './AccountMenu'
@@ -212,7 +212,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
         onReport={() => setModal(isAdmin ? 'inbox' : 'report')}
         onSignOut={handleSignOut}
       />
-      {modal === 'app' && <MobileAppModal onClose={() => setModal(null)} />}
+      {modal === 'app' && <GetAppModal onClose={() => setModal(null)} />}
       {modal === 'invite' && (isAdmin
         ? <AddSomeone defaultRole="agent" onClose={() => setModal(null)} />
         : <InviteAgentModal onClose={() => setModal(null)} />)}

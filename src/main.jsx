@@ -17,6 +17,12 @@ import './index.css'
 import './hooks/useTheme'
 import App from './App.jsx'
 import { reloadOnceFor } from './lib/chunkReload'
+import { isNativeApp } from './lib/native'
+import { bootNative } from './lib/nativeBoot'
+
+// Prompt 775 — the iPhone / Android app: status bar, back button, links,
+// keyboard, offline, over-the-air updates. Nothing changes on the website.
+if (isNativeApp()) bootNative()
 
 // Prompt 746 — Vite fires this when a dynamic import's chunk fails to load (a
 // tab opened before a deploy asks for a hash that is gone). Reload once to

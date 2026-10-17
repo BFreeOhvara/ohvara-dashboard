@@ -6,6 +6,9 @@ import {
   MessageSquare, UserPlus, CircleCheck, Calendar, Clock, Users, Flag, Zap, Gauge, Video, PartyPopper,
 } from 'lucide-react'
 import { useNotificationFeed, useMoneyBanner, useMarkRead } from '../../hooks/useNotifications'
+import { usePushSettings } from '../../hooks/useAccount'
+import { isNativeApp } from '../../lib/native'
+import { GetAppModal } from '../layout/GetAppModal'
 import { lookOf, groupByDay, shownFor, needsYou, timeLabel, safeLink } from '../../lib/notifications'
 
 // Prompt 767 — the notifications bell and panel, the same for every role
@@ -62,6 +65,10 @@ export function NotificationBell({ profileId, full = false }) {
   const { data: banner } = useMoneyBanner(profileId)
   const markRead = useMarkRead(profileId)
   const unread = rows.filter(n => !n.read).length
+  // Prompt 775 — the footer tells the truth about phone alerts.
+  const { data: push } = usePushSettings(profileId)
+  const phoneOn = !!push?.push_on && (isNativeApp() || (push?.devices ?? 0) > 0)
+  const [getApp, setGetApp] = useState(false)
 
   useEffect(() => {
     if (!open) return undefined
@@ -100,17 +107,20 @@ export function NotificationBell({ profileId, full = false }) {
               onOpen={n => { if (!n.read) markRead.mutate([n.id]); go(n.link) }}
               onMarkAll={() => markRead.mutate(null)}
               onBanner={() => go(banner?.link)}
-              onSettings={() => go('/settings#notifications')} />
+              onSettings={() => go('/settings#notifications')}
+              phoneOn={phoneOn}
+              onPhone={() => { if (isNativeApp() || phoneOn) go('/settings#notifications'); else { setOpen(false); setGetApp(true) } }} />
           </div>
         </>,
         document.body,
       )}
+      {getApp && <GetAppModal onClose={() => setGetApp(false)} />}
     </>
   )
 }
 
 // The panel itself, without placement (the harness renders it on its own).
-export function NotificationPanel({ rows, banner, unread, onOpen, onMarkAll, onBanner, onSettings, onClose, initialTab = 'all', now }) {
+export function NotificationPanel({ rows, banner, unread, onOpen, onMarkAll, onBanner, onSettings, onClose, initialTab = 'all', now, phoneOn = false, onPhone }) {
   const [tab, setTab] = useState(initialTab)
   const needs = rows.filter(needsYou).length
   const groups = groupByDay(shownFor(rows, tab), now)
@@ -148,7 +158,10 @@ export function NotificationPanel({ rows, banner, unread, onOpen, onMarkAll, onB
           <span style={{ flex: 1, minWidth: 0 }}>
             <span className="nt-banner-title">{banner.title}</span>
             <span className="nt-banner-sub">{banner.sub}</span>
-            <button type="button" className="nt-banner-btn" onClick={onBanner}>{banner.btn}</button>
+            {/* Prompt 775 — no payment buttons inside the phone app. */}
+            {!(isNativeApp() && String(banner.link || '').startsWith('/agent/billing')) && (
+              <button type="button" className="nt-banner-btn" onClick={onBanner}>{banner.btn}</button>
+            )}
           </span>
         </div>
       )}
@@ -192,7 +205,10 @@ export function NotificationPanel({ rows, banner, unread, onOpen, onMarkAll, onB
           <SlidersHorizontal size={15} strokeWidth={2} aria-hidden="true" />Notification settings
         </button>
         <span style={{ flex: 1 }} />
-        <span className="nt-phone"><span className="nt-phone-dot" aria-hidden="true" />Phone alerts off · Get the app</span>
+        <button type="button" className="nt-phone" onClick={onPhone}>
+          <span className={`nt-phone-dot${phoneOn ? ' is-on' : ''}`} aria-hidden="true" />
+          {phoneOn ? 'Phone alerts on' : isNativeApp() ? 'Phone alerts off' : 'Phone alerts off · Get the app'}
+        </button>
       </div>
     </div>
   )

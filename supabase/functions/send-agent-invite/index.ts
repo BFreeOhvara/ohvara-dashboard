@@ -39,8 +39,9 @@ const deps: Deps = {
   async caller(jwt) {
     const { data } = await db.auth.getUser(jwt)
     if (!data?.user) return null
-    const { data: p } = await db.from('profiles').select('role, is_active, full_name').eq('id', data.user.id).maybeSingle()
-    return { id: data.user.id, role: p?.role ?? null, is_active: p?.is_active ?? null, full_name: p?.full_name ?? null }
+    const { data: p } = await db.from('profiles').select('role, is_active, full_name, is_demo').eq('id', data.user.id).maybeSingle()
+    // Prompt 775 — an App Review sample account can't send real invites (treated as access off).
+    return { id: data.user.id, role: p?.role ?? null, is_active: p?.is_demo ? false : (p?.is_active ?? null), full_name: p?.full_name ?? null }
   },
   async smsLive() {
     const { data } = await db.from('recovery_config').select('sms_live').maybeSingle()

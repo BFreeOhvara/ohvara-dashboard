@@ -9,6 +9,9 @@ import { capState, formatWeekly, formatBillingDate, formatReset, renewsAt, shown
 import { Avatar } from '../../components/ui/Avatar'
 import { InviteAgentModal } from '../../components/shared/InviteAgentModal'
 import { BugReportModal } from '../../components/shared/BugReportButton'
+import { AccountRows } from '../../components/shared/AccountRows'
+import { isNativeApp } from '../../lib/native'
+import { NATIVE_BILLING_TEXT } from '../../components/native/NativeBillingNote'
 
 // Prompt 772 — More, the phone layout's fifth tab (mockup More.dc.html): the
 // profile, a Billing card (plan, weekly price, next charge, this week's
@@ -109,10 +112,14 @@ export default function More() {
             </div>
           </>
         )}
-        <button type="button" className="ov-ghost" onClick={() => navigate(subscribed ? '/agent/billing?manage=1' : '/agent/billing')}
-          style={{ marginTop: 14, width: '100%', height: 46, borderRadius: 999, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-          {subscribed ? 'Manage billing' : 'Choose a plan'}
-        </button>
+        {isNativeApp() ? (
+          <p style={{ margin: '14px 0 0', fontSize: 13.5, color: 'var(--ov-mute)' }}>{NATIVE_BILLING_TEXT}</p>
+        ) : (
+          <button type="button" className="ov-ghost" onClick={() => navigate(subscribed ? '/agent/billing?manage=1' : '/agent/billing')}
+            style={{ marginTop: 14, width: '100%', height: 46, borderRadius: 999, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+            {subscribed ? 'Manage billing' : 'Choose a plan'}
+          </button>
+        )}
       </section>
 
       <section className="ov-card ph-menu">
@@ -129,6 +136,7 @@ export default function More() {
         </button>
         <Row icon={Settings} tone="blue" label="Settings" onClick={() => navigate('/settings')} />
         <Row icon={TriangleAlert} tone="amber" label="Report a problem" onClick={() => setModal('report')} />
+        <AccountRows />
       </section>
 
       <button type="button" className="ph-signout" onClick={handleSignOut}>

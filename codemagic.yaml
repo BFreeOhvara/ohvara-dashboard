@@ -1,0 +1,107 @@
+# Prompt 775 — cloud builds for the Ohvara phone app (Codemagic, free tier:
+# a Mac in the cloud, so no Mac is needed here). Both workflows run on demand
+# from the Codemagic dashboard ("Start new build"); nothing builds on push.
+#
+# Set up once in Codemagic (brain/App Store Launch Checklist.md has the clicks):
+#   - Team integrations → App Store Connect → the API key, named "Ohvara ASC key"
+#   - Code signing identities → iOS: an Apple Distribution certificate + an App
+#     Store profile for com.ohvara.portal (Codemagic can make both with the key)
+#   - Code signing identities → Android keystores: the upload keystore,
+#     reference name "ohvara_upload"
+#   - Environment groups:
+#       ohvara_web   VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY (the public
+#                    publishable key), VITE_PUBLIC_APP_URL=https://portal.ohvara.com
+#       google_play  GCLOUD_SERVICE_ACCOUNT_CREDENTIALS (Play service account
+#                    JSON, secret), GOOGLE_SERVICES_JSON (Firebase Android file, secret)
+# Keys and keystores live only in Codemagic. Never in git.
+
+workflows:
+  ios-testflight:
+    name: iPhone → TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: Ohvara ASC key
+    environment:
+      groups:
+        - ohvara_web
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.ohvara.portal
+      vars:
+        BUNDLE_ID: com.ohvara.portal
+        # The app's Apple ID (App Store Connect → the app → App Information).
+        APP_STORE_APPLE_ID: "0"
+        # The app ships this same build inside it; no over-the-air zip needed.
+        OTA_SKIP: "1"
+      node: 22
+      xcode: latest
+    scripts:
+      - name: Install
+        script: npm ci
+      - name: Build the portal
+        script: npm run build
+      - name: Copy it into the iPhone project
+        script: npx cap sync ios
+      - name: Signing profiles
+        script: xcode-project use-profiles --project ios/App/App.xcodeproj
+      - name: Next build number
+        script: |
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+          NEXT=$((LATEST + 1))
+          sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9]*;/CURRENT_PROJECT_VERSION = $NEXT;/g" ios/App/App.xcodeproj/project.pbxproj
+          echo "Build $NEXT"
+      - name: Build the .ipa
+        script: xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+
+  android-internal:
+    name: Android → Play internal testing
+    instance_type: linux_x2
+    max_build_duration: 60
+    environment:
+      groups:
+        - ohvara_web
+        - google_play
+      android_signing:
+        - ohvara_upload
+      vars:
+        PACKAGE_NAME: com.ohvara.portal
+        OTA_SKIP: "1"
+      node: 22
+      java: 21
+    scripts:
+      - name: Install
+        script: npm ci
+      - name: Build the portal
+        script: npm run build
+      - name: Copy it into the Android project
+        script: npx cap sync android
+      - name: Firebase file (push)
+        script: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+            echo "Firebase file added"
+          else
+            echo "No Firebase file yet: this build has no push"
+          fi
+      - name: Build the .aab
+        script: |
+          LATEST=$(google-play get-latest-build-number --package-name "$PACKAGE_NAME" 2>/dev/null || echo 0)
+          NEXT=$((LATEST + 1))
+          echo "Build $NEXT"
+          cd android && ./gradlew bundleRelease -PversionCode=$NEXT
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+        # Required until the app has been published once.
+        submit_as_draft: true

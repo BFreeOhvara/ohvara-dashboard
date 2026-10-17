@@ -12,6 +12,10 @@ import { useUpdateOwnProfile } from '../hooks/useSettings'
 import { useAppSettings, useUpdateAppSettings } from '../hooks/useAppSettings'
 import { useBillingTiers } from '../hooks/useBillingTiers'
 import { useNotificationSettings, useSetNotificationEmail } from '../hooks/useNotifications'
+import { usePushSettings, useSetPush } from '../hooks/useAccount'
+import { isNativeApp } from '../lib/native'
+import { startPush } from '../lib/push'
+import { DeleteAccountDialog } from '../components/shared/DeleteAccount'
 import { shownStatus } from '../lib/billing'
 import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../lib/timezones'
 import { roleLabel } from '../lib/roleLabels'
@@ -50,9 +54,9 @@ const SECTIONS = [
   { key: 'security',    label: 'Sign-in & security', sub: 'Email, password, two-step',    icon: ShieldCheck,       lede: 'Keep your account yours.' },
   { key: 'preferences', label: 'Preferences',        sub: 'Theme and time zone',          icon: SlidersHorizontal, lede: 'How the portal looks and keeps time for you.' },
   // Prompt 767 — the bell panel's "Notification settings".
-  { key: 'notifications', label: 'Notifications',    sub: 'Email for each alert',         icon: Bell,              lede: 'Everything shows in the bell. Choose what also comes by email.' },
+  { key: 'notifications', label: 'Notifications',    sub: 'Email and phone alerts',       icon: Bell,              lede: 'Everything shows in the bell. Choose what also comes by email or to your phone.' },
   { key: 'contact',     label: 'Client contact',     sub: 'Caller ID and text follow-up', icon: PhoneForwarded,    lede: 'How Fulfillment reaches your clients for you.', roles: ['agent', 'admin'] },
-  { key: 'team',        label: 'Team tools',         sub: 'Live Room and Fulfillment pay', icon: Wrench,           lede: 'Company-wide settings only admins can change.', roles: ['admin'] },
+  { key: 'team',        label: 'Team tools',         sub: 'Live Room, pay, App Review', icon: Wrench,           lede: 'Company-wide settings only admins can change.', roles: ['admin'] },
   // Prompt 758 — Carrier hours left the admin sidebar and lives here.
   { key: 'carriers',    label: 'Carrier hours',      sub: 'When each carrier takes calls', icon: Building2,        lede: 'Service hours set the bookable times in Book a call.', roles: ['admin'] },
 ]
@@ -159,7 +163,7 @@ export default function Settings() {
         {open === 'preferences' && <PreferencesSection profile={profile} />}
         {open === 'notifications' && <NotificationsSection profile={profile} />}
         {open === 'contact'     && <><CallerIdPanel profile={profile} /><TextFollowUpPanel profile={profile} /></>}
-        {open === 'team'        && <><LiveRoomCard /><FulfillmentPayAdminPanel /></>}
+        {open === 'team'        && <><LiveRoomCard /><FulfillmentPayAdminPanel /><AppReviewLoginsCard /></>}
         {open === 'carriers'    && <Carriers />}
       </div>
     </div>
@@ -201,7 +205,27 @@ function SecuritySection({ profile }) {
       <PasswordCard />
       <TwoStepCard />
       <DevicesCard />
+      <DeleteAccountCard profile={profile} />
     </>
+  )
+}
+
+// Prompt 775 — Delete my account (also on every role's phone More page).
+function DeleteAccountCard({ profile }) {
+  const [open, setOpen] = useState(false)
+  const admin = profile.role === 'admin'
+  return (
+    <SettingsCard icon={Trash2} title="Delete my account"
+      sub={admin ? 'Admin accounts are removed by another admin from People.' : 'Deletes your login and personal details for good. Records the law makes us keep stay, without your name.'}>
+      {!admin && (
+        <div>
+          <button type="button" className="ov-ghost ov-set-btn" onClick={() => setOpen(true)} style={{ color: 'var(--ov-live)' }}>
+            <Trash2 size={16} strokeWidth={2} /> Delete my account
+          </button>
+        </div>
+      )}
+      {open && <DeleteAccountDialog onClose={() => setOpen(false)} />}
+    </SettingsCard>
   )
 }
 
@@ -688,8 +712,36 @@ function NotificationsSection({ profile }) {
           )}
         {set.error && <p role="alert" style={{ margin: 0, fontSize: 13.5, color: 'var(--ov-live)' }}>{set.error.message || 'Couldn’t save that.'}</p>}
       </SettingsCard>
-      <SettingsCard icon={Smartphone} title="Phone alerts" sub="Off for now. They come with the Ohvara app, with quiet hours from 9 PM to 8 AM (money problems still come through)." />
+      <PushCard profile={profile} />
     </>
+  )
+}
+
+// Prompt 775 — Phone alerts: one switch per person (default on). Pushes go to
+// every phone they're signed in to with the Ohvara app; the list is the same
+// as the bell's, quiet 9 PM–8 AM their time except money problems.
+function PushCard({ profile }) {
+  const { data, isLoading } = usePushSettings(profile.id)
+  const set = useSetPush(profile.id)
+  const on = !!data?.push_on
+  const phones = data?.devices ?? 0
+  const sub = isNativeApp()
+    ? 'Alerts on this phone, quiet from 9 PM to 8 AM your time (money problems still come through).'
+    : phones > 0
+      ? `On ${phones === 1 ? 'one phone' : `${phones} phones`} with the Ohvara app. Quiet from 9 PM to 8 AM your time, except money problems.`
+      : 'They come with the Ohvara phone app, quiet from 9 PM to 8 AM your time (money problems still come through).'
+  function flip() {
+    const next = !on
+    set.mutate(next, { onSuccess: () => { if (next && isNativeApp()) startPush({}).catch(() => {}) } })
+  }
+  return (
+    <SettingsCard icon={Smartphone} title="Phone alerts" sub={sub}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 14, minHeight: 52, cursor: 'pointer' }}>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>Send phone alerts</span>
+        <Switch checked={on} disabled={isLoading || set.isPending} onChange={flip} />
+      </label>
+      {set.error && <p role="alert" style={{ margin: 0, fontSize: 13.5, color: 'var(--ov-live)' }}>{set.error.message || 'Couldn’t save that.'}</p>}
+    </SettingsCard>
   )
 }
 
@@ -1000,6 +1052,58 @@ function CallerIdPanel({ profile }) {
 // Daily.co's room URL is what the Team → Meetings Live Room joins. No API key
 // lives here or anywhere client-side; a Daily room only needs its URL. One
 // company-wide link, so this whole section is admin-only.
+// Prompt 775 — the App Review test logins (one sample agent, one sample
+// Fulfillment rep). Make / reset shows the two passwords once, to paste into
+// App Store Connect and Google Play. Everything those accounts do stays on
+// the sample side, enforced in the database (migration 156).
+function AppReviewLoginsCard() {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [logins, setLogins] = useState(null)
+  const [copied, setCopied] = useState('')
+
+  async function reset() {
+    setBusy(true); setError('')
+    const { data, error: e } = await supabase.functions.invoke('app-review-logins', { body: { action: 'reset' } })
+    setBusy(false)
+    if (e || !data?.ok) { setError(data?.error || 'Couldn’t set up the logins. Try again.'); return }
+    setLogins({ agent: data.agent, fulfillment: data.fulfillment })
+  }
+  async function copy(key, text) {
+    try { await navigator.clipboard.writeText(text); setCopied(key); setTimeout(() => setCopied(''), 1500) } catch { /* no clipboard */ }
+  }
+  const row = (key, label, value) => (
+    <div className="ov-box" style={{ ...box, flexWrap: 'wrap' }}>
+      <span style={{ width: 92, fontSize: 13, color: 'var(--ov-mute)' }}>{label}</span>
+      <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontFamily: MONO, color: 'var(--ov-hi)', overflowWrap: 'anywhere' }}>{value}</span>
+      <button type="button" className="ov-set-link is-blue" onClick={() => copy(key, value)}>{copied === key ? 'Copied' : 'Copy'}</button>
+    </div>
+  )
+
+  return (
+    <SettingsCard icon={ShieldCheck} title="App Review logins"
+      sub="Sample agent and Fulfillment accounts for Apple and Google to test the app. They only ever see sample data: no real calls, texts, emails, charges or pay.">
+      {logins ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <p role="status" style={{ margin: 0, fontSize: 13.5, color: 'var(--ov-st-needs)' }}>Copy these now. The passwords aren’t shown again (make new ones any time).</p>
+          {row('ae', 'Agent', logins.agent.email)}
+          {row('ap', 'Password', logins.agent.password)}
+          {row('fe', 'Fulfillment', logins.fulfillment.email)}
+          {row('fp', 'Password', logins.fulfillment.password)}
+          <div><button type="button" className="ov-ghost ov-set-btn" onClick={() => setLogins(null)}>Done</button></div>
+        </div>
+      ) : (
+        <div>
+          <button type="button" className="ov-buy ov-set-btn" onClick={reset} disabled={busy}>
+            <Spin on={busy}>Make / reset the logins</Spin>
+          </button>
+        </div>
+      )}
+      {error && <p role="alert" style={errText}>{error}</p>}
+    </SettingsCard>
+  )
+}
+
 function LiveRoomCard() {
   const { data: settings } = useAppSettings()
   const updateSettings = useUpdateAppSettings()

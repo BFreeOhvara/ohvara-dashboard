@@ -30,6 +30,7 @@ export type Policy = {
   fulfillment_assigned: boolean
   assigned_fulfillment_id: string | null
   fulfillment_stage: string | null
+  is_demo?: boolean
 }
 
 export type LegPatch = {
@@ -101,6 +102,8 @@ async function joinRequest(store: Store, env: Env, form: Record<string, string>)
   if (!p || !p.fulfillment_assigned) return twiml(say('That cancellation was not found.'))
   if (role !== 'admin' && p.assigned_fulfillment_id !== who) return twiml(say('This cancellation is assigned to another rep.'))
   if (p.fulfillment_stage === 'Complete') return twiml(say('This one is already cancelled.'))
+  // Prompt 775 — App Review sample bookings never place a real call.
+  if (p.is_demo) return twiml(say('This is a sample account. No real calls are placed.'))
   if (!(await store.voiceLive())) return twiml(say('Calling in the portal is not on yet.'))
   const rec = await store.recording()
   if (rec.live && env.checkUrl && form.CallSid) {

@@ -17,6 +17,7 @@ import { PortalPhone } from '../components/fulfillment/PortalPhone'
 import { PhoneCall } from '../components/fulfillment/phone/PhoneCall'
 import { useIsPhone } from '../hooks/usePhoneLayout'
 import { PhoneContext } from './portalPhone'
+import { isNativeApp } from '../lib/native'
 
 // Prompt 751 — the pop-up phone. One call at a time, owned here (above the
 // routes, so it stays up while the rep moves between pages). "Call client"
@@ -147,7 +148,11 @@ export function PortalPhoneProvider({ children, voice = connectVoice }) {
   }, [can, s, voiceLive, start, toast, tz])
 
   const allowMic = useCallback(async () => {
-    try { await askForMic(); start(s.p) } catch { setError('Your browser blocked the microphone. Allow it from the address bar, then try again.') }
+    try { await askForMic(); start(s.p) } catch {
+      setError(isNativeApp()
+        ? 'Ohvara can’t use the microphone. Turn it on in your phone’s Settings → Ohvara, then try again.'
+        : 'Your browser blocked the microphone. Allow it from the address bar, then try again.')
+    }
   }, [s, start])
 
   const press = useCallback(async (act, extra) => {
@@ -166,6 +171,27 @@ export function PortalPhoneProvider({ children, voice = connectVoice }) {
 
   const close = useCallback(() => { setS(null); setError(null); setAnswered(false) }, [])
   const collapse = useCallback(on => setS(x => (x ? { ...x, collapsed: on } : x)), [])
+
+  // Prompt 775 — in the phone app the screen stays on during a call, and if
+  // the app went to the background (phone locked, another app opened) the rep
+  // is told on return: iPhone stops the app's microphone in the background,
+  // so the call may have dropped. Native calling (CallKit) is the later fix.
+  const inCall = s?.mode === 'call'
+  useEffect(() => {
+    if (!isNativeApp()) return undefined
+    import('@capacitor-community/keep-awake')
+      .then(({ KeepAwake }) => (inCall ? KeepAwake.keepAwake() : KeepAwake.allowSleep()))
+      .catch(() => {})
+    if (!inCall) return undefined
+    let off = null
+    let gone = false
+    let left = false
+    import('@capacitor/app').then(({ App }) => App.addListener('appStateChange', ({ isActive }) => {
+      if (!isActive) { left = true; return }
+      if (left) { left = false; toast('Ohvara was in the background. If the call dropped, ring them again.') }
+    })).then(h => { if (gone) h.remove(); else off = h }).catch(() => {})
+    return () => { gone = true; off?.remove?.() }
+  }, [inCall, toast])
 
   // Leaving the portal (sign out) drops the line.
   useEffect(() => { if (!can && line.current) finish() }, [can, finish])

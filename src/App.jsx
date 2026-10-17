@@ -6,6 +6,7 @@ import { PortalPhoneProvider } from './contexts/PortalPhoneContext'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 import { ErrorBoundary } from './components/shared/ErrorBoundary'
+import { NativeBridge } from './components/native/NativeBridge'
 // Side-effect import — attaches the beforeinstallprompt listener at app
 // boot (Prompt 286) so it's never missed while the user is still on Login.
 import './lib/installPrompt'
@@ -83,6 +84,8 @@ export default function App() {
         <BrowserRouter>
           {/* Prompt 751 — the pop-up phone sits above the routes so a call stays up across pages. */}
           <PortalPhoneProvider>
+          {/* Prompt 775 — phone app only: push, offline screen. */}
+          <NativeBridge />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/join/:token" element={<Join />} />

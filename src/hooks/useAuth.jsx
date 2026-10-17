@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, createContext, useContext } from 'react'
 import { supabase } from '../lib/supabase'
+import { stopPush } from '../lib/push'
 
 const AuthContext = createContext(null)
 
@@ -162,6 +163,8 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
+    // Prompt 775 — this phone stops getting this user's alerts.
+    await stopPush()
     await supabase.auth.signOut()
   }
 

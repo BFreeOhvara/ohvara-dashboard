@@ -32,6 +32,10 @@ function Brand() {
 export default function Login() {
   const { signIn, signOut, session, profile, loading, mfaRequired } = useAuth()
   const navigate = useNavigate()
+  // Prompt 775 — Delete my account lands here; the note shows once.
+  const [deleted] = useState(() => {
+    try { const v = sessionStorage.getItem('ohvara-deleted') === '1'; sessionStorage.removeItem('ohvara-deleted'); return v } catch { return false }
+  })
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
@@ -174,6 +178,11 @@ export default function Login() {
                 <h1 style={H1}>Sign in</h1>
                 <p style={SUB}>Use the email you joined with.</p>
               </div>
+              {deleted && (
+                <p role="status" style={{ margin: 0, padding: '10px 12px', borderRadius: 12, fontSize: 13.5, lineHeight: 1.5, color: 'var(--ov-mid)', background: 'var(--ov-line)' }}>
+                  Your account was deleted. Thanks for working with Ohvara.
+                </p>
+              )}
               <OvField label="Email" icon={Mail} type="text" inputMode="email" autoComplete="username" autoCapitalize="none" spellCheck={false}
                 value={identifier} onChange={e => setIdentifier(e.target.value)} placeholder="you@example.com" autoFocus
                 error={!!error} onKeyDown={e => { if (e.key === 'Enter') handleSubmit() }} />

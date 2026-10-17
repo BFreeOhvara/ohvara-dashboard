@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
 
   const { data: me } = await admin
     .from('profiles')
-    .select('id, role, full_name, caller_id_number, caller_id_twilio_sid, caller_id_pending_number, caller_id_pending_at, caller_id_enabled')
+    .select('id, role, full_name, caller_id_number, caller_id_twilio_sid, caller_id_pending_number, caller_id_pending_at, caller_id_enabled, is_demo')
     .eq('id', user.id)
     .single()
   if (!me || !['agent', 'admin'].includes(me.role)) return json({ error: 'Only agents can set a Caller ID' }, 403)
@@ -95,6 +95,9 @@ Deno.serve(async (req) => {
       enabled: me.caller_id_enabled,
     })
   }
+
+  // Prompt 775 — an App Review sample account never gets a verification call.
+  if (me.is_demo) return json({ error: 'Caller ID is not available on a sample account.', code: 'demo' }, 403)
 
   if (!configured) {
     return json({ error: 'Calling isn\'t set up yet — the Twilio account hasn\'t been connected.', code: 'not_configured' }, 503)

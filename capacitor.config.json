@@ -1,0 +1,45 @@
+{
+  "appId": "com.ohvara.portal",
+  "appName": "Ohvara",
+  "webDir": "dist",
+  "backgroundColor": "#080810",
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "never",
+    "scheme": "Ohvara"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "launchAutoHide": true,
+      "backgroundColor": "#080810",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "overlaysWebView": true,
+      "style": "DARK"
+    },
+    "Keyboard": {
+      "resize": "native",
+      "resizeOnFullScreen": true
+    },
+    "PushNotifications": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
+    },
+    "CapacitorUpdater": {
+      "autoUpdate": false,
+      "appReadyTimeout": 15000,
+      "resetWhenUpdate": true,
+      "autoDeleteFailed": true,
+      "autoDeletePrevious": true,
+      "statsUrl": ""
+    }
+  }
+}

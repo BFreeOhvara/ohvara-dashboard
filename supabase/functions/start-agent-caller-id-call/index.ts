@@ -54,10 +54,12 @@ Deno.serve(async (req) => {
 
   const { data: p } = await admin
     .from('policies')
-    .select('id, agent_id, client_first_name, client_phone, fulfillment_assigned, assigned_fulfillment_id')
+    .select('id, agent_id, client_first_name, client_phone, fulfillment_assigned, assigned_fulfillment_id, is_demo')
     .eq('id', body.policy_id)
     .single()
   if (!p || !p.fulfillment_assigned) return json({ error: 'Cancellation not found' }, 404)
+  // Prompt 775 — App Review sample bookings never place a real call.
+  if (p.is_demo) return json({ error: 'This is a sample account: no real calls are placed.', code: 'demo' }, 409)
   if (me.role !== 'admin' && p.assigned_fulfillment_id !== me.id) {
     return json({ error: 'Claim this cancellation before calling the client.' }, 403)
   }

@@ -29,7 +29,7 @@ const store: Store = {
   },
   async policy(id) {
     const { data } = await admin.from('policies')
-      .select('id, agent_id, client_phone, fulfillment_assigned, assigned_fulfillment_id, fulfillment_stage, carrier_id')
+      .select('id, agent_id, client_phone, fulfillment_assigned, assigned_fulfillment_id, fulfillment_stage, carrier_id, is_demo')
       .eq('id', id).maybeSingle()
     return data
   },

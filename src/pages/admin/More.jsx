@@ -15,6 +15,7 @@ import { Avatar } from '../../components/ui/Avatar'
 import { Switch } from '../../components/ui/Switch'
 import { BankModal } from '../../components/admin/PayoutsView'
 import { PhoneSheet } from '../../components/agent/phone/PhoneSheet'
+import { AccountRows } from '../../components/shared/AccountRows'
 
 // Prompt 774 — More, the admin phone's fifth tab (mockup AdmMore.dc.html):
 // the profile ("Admin · owner"), then People (Users as a phone list),
@@ -154,6 +155,7 @@ export default function AdminMore() {
           <span style={{ fontSize: 13, color: 'var(--ov-mute)' }}>{light ? 'Light' : 'Dark'}</span>
         </button>
         <Row icon={Settings} tone="blue" label="Settings" onClick={() => navigate('/settings')} />
+        <AccountRows />
       </section>
 
       <button type="button" className="ph-signout" onClick={handleSignOut}>

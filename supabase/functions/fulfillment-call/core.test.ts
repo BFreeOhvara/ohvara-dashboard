@@ -14,7 +14,7 @@ const ADMIN = '33333333-3333-4333-8333-333333333333'
 const POL = '44444444-4444-4444-8444-444444444444'
 const ENV = { from: '+15550001111', voiceUrl: 'https://x.supabase.co/functions/v1/fulfillment-voice', configured: true }
 
-function world(over: { legs?: Leg[]; live?: boolean; callerId?: boolean; stage?: string; carrierPhone?: string | null } = {}) {
+function world(over: { legs?: Leg[]; live?: boolean; callerId?: boolean; stage?: string; carrierPhone?: string | null; demo?: boolean } = {}) {
   const legs: Leg[] = over.legs ?? []
   const calls: { method: string; path: string; params?: any }[] = []
   const roles: Record<string, string> = { [REP]: 'fulfillment', [OTHER]: 'fulfillment', [ADMIN]: 'admin' }
@@ -24,7 +24,7 @@ function world(over: { legs?: Leg[]; live?: boolean; callerId?: boolean; stage?:
     async policy(id) {
       return id === POL ? {
         id: POL, agent_id: 'agent', client_phone: '(555) 222-3333', fulfillment_assigned: true,
-        assigned_fulfillment_id: REP, fulfillment_stage: over.stage ?? 'In Progress', carrier_id: 'car',
+        assigned_fulfillment_id: REP, fulfillment_stage: over.stage ?? 'In Progress', carrier_id: 'car', is_demo: !!over.demo,
       } : null
     },
     async agentCallerId() { return over.callerId ? { caller_id_number: '+15559998888', caller_id_enabled: true } : { caller_id_number: '+15559998888', caller_id_enabled: false } },
@@ -73,6 +73,14 @@ test('permission checks: role, assignment, admin, done, voice off', async () => 
   assert.equal(off.calls.length, 0)
   const admin = world()
   assert.equal((await act(admin.store, admin.twilio, ENV, ADMIN, { policy_id: POL, action: 'ring_client' })).ok, true)
+})
+
+test('P775: an App Review sample booking never reaches Twilio', async () => {
+  const demo = world({ demo: true })
+  for (const action of ['ring_client', 'ring_carrier', 'hold', 'end_all']) {
+    await assert.rejects(act(demo.store, demo.twilio, ENV, REP, { policy_id: POL, action }), { code: 'demo', status: 409 })
+  }
+  assert.equal(demo.calls.length, 0)
 })
 
 test('handle: no JWT is 401, a refusal is its status + code', async () => {

@@ -7,6 +7,7 @@ import { PhoneLayoutContext } from '../../hooks/usePhoneLayout'
 import { usePortalPhone } from '../../contexts/portalPhone'
 import { BillingGate } from './BillingGate'
 import { ErrorBoundary } from '../shared/ErrorBoundary'
+import { PullToRefresh } from '../native/PullToRefresh'
 import { AddSomeoneSheet } from '../admin/phone/AddSomeoneSheet'
 import { PhoneToast } from '../admin/phone/PhoneToast'
 import { useAdminPay } from '../admin/phone/useAdminPay'
@@ -141,6 +142,8 @@ export function PhoneSubHead({ title, onBack, right }) {
   )
 }
 
+const REFRESH = ['/agent', '/fulfillment', '/fulfillment/desk', '/admin']
+
 export function PhoneShell({ children }) {
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
@@ -157,7 +160,12 @@ export function PhoneShell({ children }) {
         {sub && <PhoneSubHead title={sub} onBack={() => navigate(MORE[role])} />}
         <main className="ph-main">
           <div key={pathname} style={{ animation: 'fadeUp 160ms ease-out' }}>
-            <ErrorBoundary resetKey={pathname}><BillingGate>{children}</BillingGate></ErrorBoundary>
+            <ErrorBoundary resetKey={pathname}>
+              {/* Prompt 775 — pull down to refresh Home / Today in the phone app. */}
+              {REFRESH.includes(pathname)
+                ? <PullToRefresh><BillingGate>{children}</BillingGate></PullToRefresh>
+                : <BillingGate>{children}</BillingGate>}
+            </ErrorBoundary>
           </div>
         </main>
         {tabs && <TabBar pathname={pathname} tabs={TABS[role]} />}

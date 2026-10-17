@@ -17,6 +17,7 @@ import { capState, nextTier, formatReset, formatWeekly } from '../../lib/billing
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { PhoneBook } from '../../components/agent/phone/PhoneBook'
 import { PhoneSubHead } from '../../components/layout/PhoneShell'
+import { isNativeApp } from '../../lib/native'
 
 // Book a call (Prompt 665) — replaces the old 25-field New Submission form.
 //
@@ -279,11 +280,11 @@ function NewBooking({ switcher }) {
       <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <p style={{ margin: 0, flex: '1 1 260px', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-mid)' }}>
           You've used all {cap.cap} submissions on the {cap.tierName} plan this week.{' '}
-          {upgrade
+          {upgrade && !isNativeApp()
             ? <>Upgrade to {upgrade.name} ({formatWeekly(upgrade.weekly_cents)}/week, {upgrade.weekly_cap ?? 'unlimited'} a week) to keep booking, or wait until {formatReset(usage.week_end, profile?.timezone)}.</>
             : <>The cap resets {formatReset(usage.week_end, profile?.timezone)}.</>}
         </p>
-        {upgrade && (
+        {upgrade && !isNativeApp() && (
           <button type="button" className="ov-ghost" onClick={() => navigate('/agent/billing')} style={{ ...pillBtn, ...(phone ? { height: 44 } : null) }}>Upgrade</button>
         )}
       </div>
