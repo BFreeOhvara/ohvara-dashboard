@@ -4,7 +4,7 @@ import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
 import { SLOTS, slotTo24h, slotToISO, localDateISO, callWhen, callAt, fmtSlotTime, clientSlotISO, slotState, dayIn, addDaysStr } from '../../lib/scheduling'
 import { rankCarriers, exactCarrier } from '../../lib/carriers'
-import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, digits, matchClients, placeOf } from '../../lib/agentBookings'
+import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, isMissedHold, MISSED_LABEL, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, digits, matchClients, placeOf } from '../../lib/agentBookings'
 import { US_STATES, zonedDateStr } from '../../lib/timezones'
 import { whenShort, daysBetween, dayShort, timeText } from '../../lib/fulfillmentDay'
 import { DayClock } from '../ui/DayClock'
@@ -2094,9 +2094,11 @@ function FulfillStatus({ p, tab, now, reason }) {
     )
   }
   if (tab === 'booked' && isLive(p)) return <LiveLabel />
+  // Prompt 771 — the retry held after a rep missed the call.
+  const missed = isMissedHold(p)
   const late = tab === 'booked' && timePassed(p, now)
-  const color = late ? stVar('needs') : stVar(tab)
-  const label = tab === 'booked' ? (late ? 'Time passed' : 'Booked')
+  const color = late || missed ? stVar('needs') : stVar(tab)
+  const label = missed ? MISSED_LABEL : tab === 'booked' ? (late ? 'Time passed' : 'Booked')
     : tab === 'noAnswer' ? `No answer · try ${Math.max(1, p.call_attempts || 0)}` : 'Cancelled'
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color, whiteSpace: 'nowrap', minWidth: 0 }}>

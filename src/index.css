@@ -2368,6 +2368,9 @@ a.ov-hpill:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; 
 .mc-row-carrier { font-size: 13px; color: var(--ov-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
 .mc-chev { flex-shrink: 0; color: var(--ov-faint); }
 .mc-first { flex-shrink: 0; height: 20px; padding: 0 8px; margin-right: 8px; border-radius: 999px; display: inline-flex; align-items: center; background: var(--ov-st-booked-tint); color: var(--ov-st-booked); font-size: 11px; font-weight: 700; }
+.mc-first.mc-pri { background: var(--ov-st-needs-tint); color: var(--ov-st-needs); }
+.mc-chip.mc-chip-pri { background: var(--ov-st-needs-tint); color: var(--ov-st-needs); }
+.mc-chip.mc-chip-pri b { color: inherit; }
 .mc-quiet { margin: 14px 0 0; font-size: 13px; color: var(--ov-mute); }
 .mc-empty { padding: 44px 20px 36px; display: flex; flex-direction: column; align-items: center; text-align: center; font-size: 14px; color: var(--ov-mute); }
 .mc-link {

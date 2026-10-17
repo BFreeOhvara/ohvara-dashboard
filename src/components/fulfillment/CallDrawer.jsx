@@ -13,7 +13,7 @@ import { SavedTick } from '../ui/SavedTick'
 import { LiveDot } from '../ui/LiveDot'
 import { control, MONO, DISPLAY } from '../../lib/exportStyles'
 import { fullName } from '../../lib/policyFormat'
-import { isLive, stageOf, recoveryLabel } from '../../lib/agentBookings'
+import { isLive, stageOf, recoveryLabel, isMissedHold, MISSED_LABEL } from '../../lib/agentBookings'
 import { bookingCarrier } from '../../lib/carriers'
 import { zonedDateStr } from '../../lib/timezones'
 import { CALL_TONE, buildCalls, dayShort, whenShort } from '../../lib/fulfillmentDay'
@@ -86,6 +86,7 @@ function StatusPill({ p, now }) {
   const tone = callTone(p, now)
   const t = CALL_TONE[tone]
   let text = { cancelled: 'Cancelled', late: 'Time passed', booked: 'Booked' }[tone]
+  if (tone === 'booked' && isMissedHold(p)) text = `Priority · ${MISSED_LABEL}`
   if (tone === 'live') text = `On a call · ${Math.max(0, Math.floor((now - new Date(p.call_live_since)) / 6e4))} min`
   if (tone === 'noAnswer') {
     const reason = SUBSTATUS_LABEL[p.cancellation_substatus]

@@ -11,7 +11,7 @@ import { ResultFixBar } from '../../components/fulfillment/ResultFixBar'
 import { useResultFix } from '../../hooks/useResultFix'
 import { useCallActions, useCallLock, useClientCall } from '../../hooks/useCallActions'
 import { agentCallerIdOn } from '../../lib/fulfillmentCall'
-import { isLive, useNow } from '../../lib/agentBookings'
+import { isLive, isMissedHold, MISSED_LABEL, useNow } from '../../lib/agentBookings'
 import { addDaysStr } from '../../lib/scheduling'
 import { slideOut } from '../../lib/daySlide'
 import { DEFAULT_TIMEZONE, zonedDateStr } from '../../lib/timezones'
@@ -174,6 +174,7 @@ function FocusCard({ c, now: pageNow, tz, profile, isAdmin, onOpen, onResult }) 
         <span className="mc-focus-name">{c.name}</span>
       </div>
       <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {isMissedHold(p) && <span className="mc-chip mc-chip-pri"><b>Priority</b>{MISSED_LABEL}</span>}
         <span className="mc-chip"><b>Cancel with</b>{carrierOf(p)}</span>
       </div>
       {live ? (
@@ -290,7 +291,10 @@ function CallRow({ c, tz, sub, subTone, tag, onOpen }) {
       <span className="mc-row-dot" style={{ background: dot }} />
       <span className="mc-row-time">{time}<span>{period}</span></span>
       <span className="mc-row-who">
-        <span className="nm">{tag && <span className="mc-first">{tag}</span>}{c.name}</span>
+        <span className="nm">
+          {isMissedHold(c.p) && !c.done && <span className="mc-first mc-pri">Priority</span>}
+          {tag && <span className="mc-first">{tag}</span>}{c.name}
+        </span>
         {sub && <span className="ln" style={subTone ? { color: subTone } : undefined}>{sub}</span>}
       </span>
       <span className="mc-row-carrier">{carrierOf(c.p)}</span>
@@ -425,6 +429,8 @@ export default function MyCalls() {
       if (c.tone === 'cancelled') return line('Cancelled', CALL_TONE.cancelled.fg)
       return line(`No answer${c.attempt > 1 ? ` · try ${c.attempt}` : ''}`, CALL_TONE.noAnswer.fg)
     }
+    // Prompt 771 — a retry held after a missed call.
+    if (isMissedHold(c.p) && !c.late) return line(MISSED_LABEL, 'var(--ov-st-needs)')
     if (c.tone === 'noAnswer') return line(retrySub(c), CALL_TONE.noAnswer.fg)
     if (c.late) return line(past ? 'Not called' : 'Time passed', CALL_TONE.late.fg)
     return line('')

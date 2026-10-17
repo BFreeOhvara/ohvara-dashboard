@@ -5,6 +5,9 @@
 // recovery_config.sms_live is on), sends each through Twilio, and reports the
 // result back (recovery_mark_sent) so the lead moves to its next step.
 //
+// Prompt 771: the same run also sends the two "sorry we missed your call"
+// texts for a call a rep missed (missed_claim_due / missed_mark_sent).
+//
 // Also answers { action: 'status' } for an admin's Settings panel: is a
 // sender configured, and is that number actually SMS-capable.
 //
@@ -57,7 +60,7 @@ function dayText(iso: string, tz: string) {
 }
 
 type Row = {
-  policy_id: string; kind: 'text1' | 'text2' | 'am' | 'pm'; first_name: string; phone: string
+  policy_id: string; kind: 'text1' | 'text2' | 'am' | 'pm' | 'apology1' | 'apology2'; first_name: string; phone: string
   retry_at: string | null; token: string; agent_name: string | null; tz: string
 }
 
@@ -72,6 +75,10 @@ function compose(r: Row): string {
       return `Hi ${r.first_name}, it's ${who}. We tried to reach you about your insurance call and missed you. We've saved a retry for ${when}. Need a different time? ${link} ${stop}`
     case 'text2':
       return `Hi ${r.first_name}, a reminder from ${who}: we're calling you ${when}. Need a different time, or sooner? ${link} ${stop}`
+    case 'apology1':
+      return `Hi ${r.first_name}, it's ${who}. Sorry we missed your call. Pick a new time so we can get your old policy cancelled: ${link} If you don't, we'll call you ${when}. ${stop}`
+    case 'apology2':
+      return `Hi ${r.first_name}, ${who} again. Sorry again for missing your call. We'll call you ${when}. Need a different time, or sooner? ${link} ${stop}`
     case 'am':
       return `Hi ${r.first_name}, it's ${who}. We still haven't been able to reach you about your insurance call. Pick a time that works and we'll call you then: ${link} ${stop}`
     default:
@@ -127,21 +134,25 @@ Deno.serve(async req => {
 
   try {
     if (!configured) return json({ configured: false, sent: 0 })
-    const { data: rows, error } = await supabase.rpc('recovery_claim_due', { p_limit: 25 })
-    if (error) throw error
-
-    let sent = 0, failed = 0
-    for (const r of (rows ?? []) as Row[]) {
-      const to = toE164(r.phone)
-      const result = to ? await sendSms(to, compose(r)) : { ok: false, error: 'Unusable phone number' }
-      const { error: markErr } = await supabase.rpc('recovery_mark_sent', {
-        p_policy: r.policy_id, p_kind: r.kind, p_ok: result.ok,
-        p_sid: result.sid ?? null, p_error: result.error ?? null, p_phone: to ?? r.phone,
-      })
-      if (markErr) console.error('[recovery-sms] mark_sent', markErr.message)
-      if (result.ok) sent++; else failed++
+    let claimed = 0, sent = 0, failed = 0
+    // P696 no-answer texts, then P771 missed-by-us apologies. Each claim
+    // function hands back nothing until recovery_config.sms_live is on.
+    for (const [claim, mark] of [['recovery_claim_due', 'recovery_mark_sent'], ['missed_claim_due', 'missed_mark_sent']]) {
+      const { data: rows, error } = await supabase.rpc(claim, { p_limit: 25 })
+      if (error) throw error
+      claimed += rows?.length ?? 0
+      for (const r of (rows ?? []) as Row[]) {
+        const to = toE164(r.phone)
+        const result = to ? await sendSms(to, compose(r)) : { ok: false, error: 'Unusable phone number' }
+        const { error: markErr } = await supabase.rpc(mark, {
+          p_policy: r.policy_id, p_kind: r.kind, p_ok: result.ok,
+          p_sid: result.sid ?? null, p_error: result.error ?? null, p_phone: to ?? r.phone,
+        })
+        if (markErr) console.error(`[recovery-sms] ${mark}`, markErr.message)
+        if (result.ok) sent++; else failed++
+      }
     }
-    return json({ configured: true, claimed: rows?.length ?? 0, sent, failed })
+    return json({ configured: true, claimed, sent, failed })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[recovery-sms]', msg)

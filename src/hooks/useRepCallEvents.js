@@ -52,3 +52,20 @@ export function useCallOutcomes(sinceIso, untilIso, { enabled = true, live = fal
     },
   })
 }
+
+// Prompt 771 — a rep's missed-call strikes in the last 30 days (rolling;
+// fulfillment_missed_calls, admin or the rep themself can read it).
+export function useMissedStrikes(repId, enabled = true) {
+  return useQuery({
+    queryKey: ['missed-strikes', repId],
+    enabled: !!repId && enabled,
+    queryFn: async () => {
+      const since = new Date(Date.now() - 30 * 864e5).toISOString()
+      const { count, error } = await supabase.from('fulfillment_missed_calls')
+        .select('id', { count: 'exact', head: true })
+        .eq('rep_id', repId).gt('created_at', since)
+      if (error) throw error
+      return count ?? 0
+    },
+  })
+}

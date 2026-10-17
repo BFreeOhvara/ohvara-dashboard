@@ -146,6 +146,8 @@ function AdminControls({ config }) {
       </div>
       {/* Prompt 764 — call recording (recovery_config.recording_live + the notice). */}
       <RecordingSetting config={config} save={save} />
+      {/* Prompt 771 — when a call counts as missed by us, and when the apology text goes. */}
+      <MissedSetting config={config} save={save} />
 
       <p className="ov-box" style={{ margin: 0, padding: '12px 14px', borderRadius: 14, fontSize: 13.5, color: 'var(--ov-soft)', display: 'flex', gap: 8, alignItems: 'flex-start', lineHeight: 1.5 }}>
         <MessageSquareText size={15} style={{ flexShrink: 0, marginTop: 2 }} /> {senderText}
@@ -173,6 +175,51 @@ function AdminControls({ config }) {
         Sent in each agent's own timezone. Applies to the morning reminder on the retry day and to both follow-up texts.
       </p>
     </SettingsCard>
+  )
+}
+
+// Prompt 771 — a booked call the rep hasn't started this many minutes after
+// its time is "missed by us": the retry is held and the rep gets a strike.
+// The first apology text goes this many minutes after the miss (texting live
+// only). Limits match the database checks (5–60, 0–120).
+function MissedSetting({ config, save }) {
+  const [draft, setDraft] = useState({})
+  const grace = draft.grace ?? String(config.missed_grace_min ?? 10)
+  const delay = draft.delay ?? String(config.missed_text_delay_min ?? 15)
+  const g = Number(grace), d = Number(delay)
+  const valid = Number.isInteger(g) && g >= 5 && g <= 60 && Number.isInteger(d) && d >= 0 && d <= 120
+  const dirty = g !== config.missed_grace_min || d !== config.missed_text_delay_min
+  const field = { ...timeInput, width: 96 }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div>
+        <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>Missed calls</p>
+        <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--ov-mute)' }}>
+          A call the rep hasn't started this long after its time is missed by us: a retry is held, the rep gets a strike and the client gets a sorry text.
+        </p>
+      </div>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <label style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>
+          Missed after (min)
+          <input type="number" inputMode="numeric" min={5} max={60} className="ov-box" value={grace}
+            onChange={e => setDraft(x => ({ ...x, grace: e.target.value }))} style={field} />
+        </label>
+        <label style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>
+          Sorry text after (min)
+          <input type="number" inputMode="numeric" min={0} max={120} className="ov-box" value={delay}
+            onChange={e => setDraft(x => ({ ...x, delay: e.target.value }))} style={field} />
+        </label>
+        <button
+          type="button"
+          className="ov-buy ov-set-btn"
+          disabled={!dirty || !valid || save.isPending}
+          onClick={() => save.mutate({ missed_grace_min: g, missed_text_delay_min: d }, { onSuccess: () => setDraft({}) })}
+        >
+          Save
+        </button>
+      </div>
+      {!valid && <p style={{ margin: 0, fontSize: 13, color: 'var(--danger)' }}>Missed after: 5 to 60. Sorry text: 0 to 120.</p>}
+    </div>
   )
 }
 

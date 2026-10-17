@@ -109,6 +109,7 @@ const FULFILLMENT_SELECT = `
   cancellation_effective_date, drafts_stopped,
   call_live_since, last_call_outcome, call_attempts, last_call_at,
   recovery_step, recovery_retry_at, recovery_am_sent_at, recovery_pm_sent_at,
+  missed_step, missed_retry_at,
   client_city, client_timezone, carrier_id,
   agent:profiles!policies_agent_id_fkey ( id, full_name, caller_id_verified_at, caller_id_enabled ),
   assigned:profiles!policies_assigned_fulfillment_id_fkey ( id, full_name ),

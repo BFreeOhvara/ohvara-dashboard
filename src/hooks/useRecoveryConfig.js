@@ -13,7 +13,7 @@ export function useRecoveryConfig({ enabled = true } = {}) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('recovery_config')
-        .select('sms_live, voice_live, recording_live, recording_notice, reminder_time, evening_time')
+        .select('sms_live, voice_live, recording_live, recording_notice, reminder_time, evening_time, missed_grace_min, missed_text_delay_min')
         .limit(1)
         .maybeSingle()
       if (error) throw error

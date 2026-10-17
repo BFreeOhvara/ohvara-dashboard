@@ -15,6 +15,7 @@ const SELECT = `
   cancellation_substatus, cancellation_confirmation,
   call_live_since, last_call_outcome, call_attempts, last_call_at,
   recovery_step, recovery_retry_at, recovery_am_sent_at, recovery_pm_sent_at,
+  missed_step, missed_retry_at,
   created_at, updated_at,
   agent:profiles!policies_agent_id_fkey ( id, full_name ),
   assigned:profiles!policies_assigned_fulfillment_id_fkey ( id, full_name ),

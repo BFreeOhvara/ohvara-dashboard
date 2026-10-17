@@ -51,7 +51,14 @@ export function stageOf(p) {
 // Prompt 696 — where a No answer lead sits in the text-and-retry flow
 // (migration 122), as a short phrase for the badge. Null when no flow is
 // running (opt-in off, or it hasn't started).
+//
+// Prompt 771 — a call the rep missed (migration 155) says so whatever its
+// status, until the held retry starts or the client picks a new time.
+export const MISSED_LABEL = 'Missed by us · rebooking'
+export const isMissedHold = p => p.missed_step === 'rebooking' && stageOf(p) !== 'cancelled' && !isLive(p)
+
 export function recoveryLabel(p, now = Date.now()) {
+  if (isMissedHold(p)) return MISSED_LABEL
   if (stageOf(p) !== 'noAnswer' || !p.recovery_step) return null
   switch (p.recovery_step) {
     case 'retry_locked': {

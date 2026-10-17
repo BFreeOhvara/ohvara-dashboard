@@ -8,7 +8,7 @@ import {
   useSendAgentInvite, useSetUserRole, useSetUserAccess,
 } from '../../hooks/useProfiles'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
-import { useCallOutcomes } from '../../hooks/useRepCallEvents'
+import { useCallOutcomes, useMissedStrikes } from '../../hooks/useRepCallEvents'
 import { usePayouts } from '../../hooks/useFulfillmentPayouts'
 import { dmId } from '../../hooks/useDirectMessages'
 import { OvSelect } from '../../components/agent/AgentUI'
@@ -335,7 +335,9 @@ function Person({ u, s, rows, events, now, tz, dates, todayStr, week, numbersLoa
     : s.live ? 'on a call now'
       : on ? 'on now'
         : u.last_login_at ? `last on ${ago(u.last_login_at, now)}` : 'hasn’t signed in yet'
-  const line = [isAgent ? 'Agent' : 'Fulfillment', `joined ${shortDate(u.created_at, tz)}`, status].join(' · ')
+  const strikes = useMissedStrikes(u.id, !isAgent)
+  const missed = !isAgent && strikes.data != null ? `Missed calls: ${strikes.data} in 30 days` : null
+  const line = [isAgent ? 'Agent' : 'Fulfillment', `joined ${shortDate(u.created_at, tz)}`, status, missed].filter(Boolean).join(' · ')
 
   const n = v => (numbersLoading ? '–' : v)
   const tiles = isAgent
