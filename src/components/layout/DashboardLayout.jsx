@@ -15,6 +15,8 @@ import { capState, formatReset, formatBillingDate, shownStatus, renewsAt } from 
 import { navEntry, PAGE_TONE } from '../../lib/nav'
 import { BillingGate } from './BillingGate'
 import { ErrorBoundary } from '../shared/ErrorBoundary'
+import { PhoneShell } from './PhoneShell'
+import { useIsPhone } from '../../hooks/usePhoneLayout'
 
 // Shell — Prompt 669 restyle to Restorix Portal's Layout.jsx, a 32/24 padded
 // main capped at 1280px. Prompt 722 rethought the header: a 72px sticky bar
@@ -237,6 +239,12 @@ export function DashboardLayout({ children }) {
 
   const { profile } = useAuth()
   const [title] = TITLES[pathname] || ['']
+
+  // Prompt 772 — an agent on a phone gets the app-style shell instead.
+  const phone = useIsPhone()
+  if (phone && profile?.role === 'agent') {
+    return <ActiveCallProvider><PhoneShell>{children}</PhoneShell></ActiveCallProvider>
+  }
 
   return (
     <ActiveCallProvider>

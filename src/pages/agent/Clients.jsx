@@ -14,6 +14,9 @@ import { bookingCarrier, viewerHoursSummary } from '../../lib/carriers'
 import { viewerTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { isLive, agentStageOf, stageOf, tabOf, canRebook, PIPELINE_TABS, RANGES, SUBSTATUS_LABEL, digits, useNow, startOfWeek, startOfMonth, placeOf } from '../../lib/agentBookings'
 import { excludeTestAccounts } from '../../lib/testAccounts'
+import { usePhoneLayout } from '../../hooks/usePhoneLayout'
+import { PhoneClients } from '../../components/agent/phone/PhoneClients'
+import { PhoneClientSheet } from '../../components/agent/phone/PhoneClientSheet'
 
 // My Pipeline (Prompt 665, was My Clients until 680) — replaces My Policies.
 //
@@ -57,6 +60,10 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 //
 // Prompt 732 — a No answer client is Fulfillment's: its rows end in a chevron
 // and its drawer offers Change this booking, never a re-book.
+//
+// Prompt 772 — on the agent's phone layout the page is PhoneClients (one
+// grouped list, a four-part status filter, no tabs) and a client opens as a
+// bottom sheet (PhoneClientSheet) with the same next steps as the drawer.
 
 const RANGE_VALUES = RANGES.map(r => r.value)
 // Old ?stage= values still arrive from the Overview (attention rows, the
@@ -78,6 +85,7 @@ export default function Clients() {
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
   const navigate = useNavigate()
+  const phone = usePhoneLayout()
   const now = useNow()
   const [params, setParams] = useSearchParams()
   const openId = params.get('open')
@@ -132,6 +140,27 @@ export default function Clients() {
   // opens its client whichever tab is selected.
   const openRow = openId ? rows.find(p => p.id === openId) : null
 
+  const detail = openRow && (
+    <ClientDetail
+      key={`${openRow.id}:${rebook}`} p={openRow} now={now} canMove={canMove(openRow)} startRebook={rebook} isAdmin={isAdmin} onClose={close}
+      agentRows={raw.filter(r => r.agent_id === openRow.agent_id)} phone={phone}
+    />
+  )
+
+  if (phone) {
+    // No ?stage= means no filter here (the desktop opens on Booked); 'all' too.
+    const filter = PIPELINE_TABS.includes(stageParam) ? stageParam : stageParam && stageParam !== 'all' ? STAGE_ALIAS[stageParam] || null : null
+    return (
+      <>
+        <PhoneClients
+          rows={scoped} loading={isLoading} filter={filter} sort={SORT} now={now}
+          onFilter={t => setParam('stage', t, null)} onOpen={p => openOnly(p.id)}
+        />
+        {detail}
+      </>
+    )
+  }
+
   return (
     <>
       <div className="pl-page">
@@ -162,19 +191,14 @@ export default function Clients() {
         />
       </div>
 
-      {openRow && (
-        <ClientDetail
-          key={`${openRow.id}:${rebook}`} p={openRow} now={now} canMove={canMove(openRow)} startRebook={rebook} isAdmin={isAdmin} onClose={close}
-          agentRows={raw.filter(r => r.agent_id === openRow.agent_id)}
-        />
-      )}
+      {detail}
     </>
   )
 }
 
 const cap = s => s[0].toUpperCase() + s.slice(1)
 
-function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRows }) {
+function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRows, phone }) {
   const navigate = useNavigate()
   const stage = agentStageOf(p)
   const tab = tabOf(p)
@@ -211,14 +235,14 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRow
     cancelled: p.fulfillment_completed_at ? `Cancelled ${new Date(p.fulfillment_completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'Cancelled',
   }[stage]
 
-  const big = { width: '100%', height: 50, borderRadius: 999, fontSize: 15, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer' }
+  const big = { width: '100%', height: phone ? 52 : 50, borderRadius: 999, fontSize: 15, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer' }
   let footer = null
   if (moving) {
     footer = move.actions
   } else if ((stage === 'booked' || stage === 'noAnswer') && !live && canMove) {
     footer = (
-      <button type="button" className="ov-ghost" onClick={() => navigate(`/agent/book?change=${p.id}`)} style={{ ...big, fontWeight: 600 }}>
-        <PencilLine size={16} strokeWidth={2} /> Change this booking
+      <button type="button" className={phone ? 'ov-solid' : 'ov-ghost'} onClick={() => navigate(`/agent/book?change=${p.id}`)} style={{ ...big, fontWeight: phone ? 700 : 600 }}>
+        <PencilLine size={16} strokeWidth={2} /> {phone ? 'Change booking' : 'Change this booking'}
       </button>
     )
   } else if (rebookable) {
@@ -229,7 +253,7 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRow
     )
   } else if (stage === 'confirmNumber' && canMove) {
     footer = <ConfirmNumber p={p} />
-  } else if ((stage !== 'booked' || live) && stage !== 'cancelled' && stage !== 'confirmNumber') {
+  } else if (!phone && (stage !== 'booked' || live) && stage !== 'cancelled' && stage !== 'confirmNumber') {
     footer = (
       <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5, color: 'var(--ov-mute)' }}>
         {stage === 'noAnswer' ? "We're working this one — nothing for you to do yet." : 'Fulfillment is on this one — if the time needs to change, message them.'}
@@ -237,10 +261,31 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRow
     )
   }
 
+  const onMessage = () => navigate(`/messages?dm=${dmId(p.agent_id, isAdmin ? 'admin' : p.assigned_fulfillment_id || 'admin')}`)
+
+  if (phone) {
+    // The phone sheet's history reads as sentences; its note is the status
+    // text whenever it says what happens next (not for a plain Booked call).
+    const history = [
+      { label: 'Booked by you', at: p.created_at, done: true },
+      attempted
+        ? { label: `Called by ${caller}`, at: steps[1].at, done: true }
+        : { label: `Waiting for ${caller} to call`, next: true },
+      { label: 'Old policy cancelled', at: p.fulfillment_completed_at, done: stage === 'cancelled' },
+    ]
+    return (
+      <PhoneClientSheet
+        p={p} now={now} steps={history} footer={footer} picker={moving ? move.picker : null}
+        note={stage === 'booked' && !live ? null : cap(statusText)}
+        onMessage={onMessage} messageLabel={isAdmin ? 'Message agent' : 'Message Fulfillment'} onClose={onClose}
+      />
+    )
+  }
+
   return (
     <ClientDrawer
       p={p} tab={tab} onClose={onClose} footer={footer}
-      onMessage={() => navigate(`/messages?dm=${dmId(p.agent_id, isAdmin ? 'admin' : p.assigned_fulfillment_id || 'admin')}`)}
+      onMessage={onMessage}
       messageLabel={isAdmin ? 'Message agent' : 'Message Fulfillment'}
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>

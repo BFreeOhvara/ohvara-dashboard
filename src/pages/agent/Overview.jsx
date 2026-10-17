@@ -9,6 +9,8 @@ import { addDaysStr } from '../../lib/scheduling'
 import { DEFAULT_TIMEZONE, zonedDateStr, zonedTimeToUtcIso } from '../../lib/timezones'
 import { LiveDot } from '../../components/ui/LiveDot'
 import { fullName } from '../../lib/policyFormat'
+import { usePhoneLayout } from '../../hooks/usePhoneLayout'
+import { PhoneHome } from '../../components/agent/phone/PhoneHome'
 
 // Agent Overview (Prompt 665) — the landing page. "Your day at a glance".
 //
@@ -46,6 +48,7 @@ const ATTN_RANK = { needsAttention: 0, confirmNumber: 1 }
 export default function Overview() {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const phone = usePhoneLayout()
   const now = useNow()
   const { data: rows = [], isLoading: loadingRows, isError, refetch } = useAgentBookings(profile?.id)
   // A failed load shows dashes, not zeros (Prompt 768).
@@ -120,6 +123,11 @@ export default function Overview() {
     : isLoading ? 'Loading your calls…'
     : g.todays ? `${g.todays} call${g.todays === 1 ? '' : 's'} on the books today.`
       : 'Nothing on the books today yet.'
+
+  // Prompt 772 — the phone layout's Home, from the same numbers.
+  if (phone) {
+    return <PhoneHome g={g} greeting={greeting} sub={sub} isLoading={isLoading} isError={isError} refetch={refetch} now={now} tz={tz} />
+  }
 
   return (
     <div className="flex flex-col gap-[14px] sm:gap-5">

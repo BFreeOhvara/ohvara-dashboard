@@ -22,6 +22,7 @@ import AgentBookCall from './pages/agent/BookCall'
 import AgentClients from './pages/agent/Clients'
 import AgentActivity from './pages/agent/Activity'
 import AgentBilling from './pages/agent/Billing'
+import AgentMore from './pages/agent/More'
 import MyCalls from './pages/fulfillment/MyCalls'
 import FulfillmentOverview from './pages/fulfillment/Overview'
 import FulfillmentPipeline from './pages/fulfillment/Pipeline'
@@ -139,6 +140,12 @@ export default function App() {
             <Route path="/agent/billing" element={
               <ProtectedRoute allowedRoles={['agent']}>
                 <DashboardLayout><AgentBilling /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            {/* Prompt 772 — More, the phone layout's fifth tab (a desktop visit goes home). */}
+            <Route path="/agent/more" element={
+              <ProtectedRoute allowedRoles={['agent']}>
+                <DashboardLayout><AgentMore /></DashboardLayout>
               </ProtectedRoute>
             } />
             {/* Prompt 693 — Team removed; old links land on Overview. */}

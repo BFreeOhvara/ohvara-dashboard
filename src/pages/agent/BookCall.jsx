@@ -14,6 +14,9 @@ import { viewerHoursSummary } from '../../lib/carriers'
 import { stageOf, digits, useNow } from '../../lib/agentBookings'
 import { useBillingTiers, useWeeklyUsage } from '../../hooks/useBillingTiers'
 import { capState, nextTier, formatReset, formatWeekly } from '../../lib/billing'
+import { usePhoneLayout } from '../../hooks/usePhoneLayout'
+import { PhoneBook } from '../../components/agent/phone/PhoneBook'
+import { PhoneSubHead } from '../../components/layout/PhoneShell'
 
 // Book a call (Prompt 665) — replaces the old 25-field New Submission form.
 //
@@ -53,6 +56,10 @@ const BLANK = { first: '', last: '', phone: '', city: '', state: '', carrier: ''
 
 const pillBtn = { height: 36, padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }
 
+// Prompt 772 — on the agent's phone layout New booking renders PhoneBook (the
+// same state and rules, a phone layout); Change a booking and the booked
+// screen keep their own layout under a back-arrow header.
+
 // Prompt 730 — Book a call has two modes: New booking (below, unchanged) and
 // Change a booking (ChangeBooking.jsx), picked by the switch at the top. One
 // route: ?change=<policy id> opens Change a booking with that client picked;
@@ -71,6 +78,18 @@ export default function BookCall() {
   }
   const setMode = mode => setChange(mode === 'change' ? '' : null)
   const switcher = <BookSwitch value={changing ? 'change' : 'new'} onChange={setMode} />
+  const phone = usePhoneLayout()
+  const navigate = useNavigate()
+  if (phone && changing) {
+    return (
+      <>
+        <div style={{ margin: '-4px -16px 8px' }}>
+          <PhoneSubHead title="Change a booking" onBack={() => navigate(-1)} />
+        </div>
+        <ChangeBooking key={changeId || 'pick'} policyId={changeId} onPick={setChange} switcher={switcher} onNew={() => setMode('new')} />
+      </>
+    )
+  }
   return changing
     ? <ChangeBooking key={changeId || 'pick'} policyId={changeId} onPick={setChange} switcher={switcher} onNew={() => setMode('new')} />
     : <NewBooking switcher={switcher} />
@@ -90,6 +109,8 @@ function NewBooking({ switcher }) {
   const cap = capState(usage)
   const upgrade = cap ? nextTier(tiers, usage.tier) : null
   const dateInput = useRef(null)
+  const phone = usePhoneLayout()
+  const [step1Open, setStep1Open] = useState(true)
 
   const [form, setForm] = useState(BLANK)
   const [carrierId, setCarrierId] = useState(null) // the picked carriers row
@@ -140,8 +161,14 @@ function NewBooking({ switcher }) {
     onSuccess: row => row?.id && pickCarrier(row),
     onError: err => setError(err.message || 'Could not add that carrier'),
   })
-  const pickDate = d => { setPickedDate(d); setConfirm(null) }
+  // On a phone, step 1 folds to a summary once it's complete and the agent
+  // moves on (picks the carrier last, taps Done, or picks a day or time).
+  const step1Done = f => f.first.trim() && f.last.trim() && digits(f.phone).length === 10 && f.city.trim() && f.state
+  const filled = !!step1Done(form) && !!picked
+  const fold = () => { if (filled) setStep1Open(false) }
+  const pickDate = d => { setPickedDate(d); setConfirm(null); fold() }
   const pickSlot = s => {
+    fold()
     setSlot(s)
     setErrors(e => { if (!e.has('slot')) return e; const n = new Set(e); n.delete('slot'); return n })
     setConfirm(null)
@@ -162,6 +189,7 @@ function NewBooking({ switcher }) {
     if (!slotOpen) missing.add('slot')
     if (missing.size) {
       setErrors(missing)
+      if (['first', 'last', 'phone', 'city', 'state', 'carrier'].some(k => missing.has(k))) setStep1Open(true)
       setError(missing.has('phone') && form.phone
         ? 'Client phone needs all 10 digits.'
         : missing.has('carrier') && form.carrier.trim()
@@ -197,12 +225,19 @@ function NewBooking({ switcher }) {
   }
 
   if (done) {
-    return (
+    const booked = (
       <BookedCard
         name={done.name} at={done.at} now={now} tz={done.tz} location={done.location}
         onAnother={() => setDone(null)}
         onPipeline={() => navigate(done.id ? `/agent/clients?open=${done.id}` : '/agent/clients')}
       />
+    )
+    if (!phone) return booked
+    return (
+      <>
+        <div style={{ margin: '-4px -16px 0' }}><PhoneSubHead title="Booked" onBack={() => navigate('/agent')} /></div>
+        {booked}
+      </>
     )
   }
 
@@ -238,6 +273,44 @@ function NewBooking({ switcher }) {
   const closedText = ready ? `${carrier.name} doesn't take calls that day. Pick another day.` : null
   const fields = 'grid grid-cols-1 sm:grid-cols-3 gap-y-[18px] sm:gap-4'
 
+  const capWarning = capped && (
+    <div className="ov-attn" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: phone ? '16px 16px' : '18px 22px' }}>
+      <TriangleAlert size={18} strokeWidth={2} style={{ color: 'var(--ov-warn)', flexShrink: 0, marginTop: 2 }} />
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <p style={{ margin: 0, flex: '1 1 260px', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-mid)' }}>
+          You've used all {cap.cap} submissions on the {cap.tierName} plan this week.{' '}
+          {upgrade
+            ? <>Upgrade to {upgrade.name} ({formatWeekly(upgrade.weekly_cents)}/week, {upgrade.weekly_cap ?? 'unlimited'} a week) to keep booking, or wait until {formatReset(usage.week_end, profile?.timezone)}.</>
+            : <>The cap resets {formatReset(usage.week_end, profile?.timezone)}.</>}
+        </p>
+        {upgrade && (
+          <button type="button" className="ov-ghost" onClick={() => navigate('/agent/billing')} style={{ ...pillBtn, ...(phone ? { height: 44 } : null) }}>Upgrade</button>
+        )}
+      </div>
+    </div>
+  )
+
+  if (phone) {
+    const onePick = c => {
+      const rest = step1Done({ ...form, carrier: c.name })
+      pickCarrier(c)
+      if (rest) setStep1Open(false)
+    }
+    return (
+      <PhoneBook
+        onBack={() => navigate(-1)} cap={cap} capWarning={capWarning}
+        form={form} set={set} errors={errors} picked={picked} carriers={carriers}
+        onCarrierText={typeCarrier} onCarrierPick={onePick} onCarrierUse={keepTypedCarrier} addingCarrier={addCarrier.isPending}
+        step1Open={step1Open || !filled} onEdit={() => setStep1Open(true)} onDone={() => setStep1Open(false)} filled={filled}
+        ready={ready} checking={checking} tz={tz} today={today} date={date} onDate={pickDate} slotsOn={slotsOn} daySlots={daySlots}
+        openIsoSet={openIsoSet} now={now} slot={slotOpen ? slot : ''} onSlot={pickSlot} hoursLine={hoursLine} closedText={closedText}
+        duplicate={duplicate} confirmDuplicate={confirm === 'duplicate'} onBookAnyway={() => { setConfirm('duplicateOk'); doBook() }}
+        onViewDuplicate={() => navigate(`/agent/clients?open=${duplicate.id}`)}
+        name={name} scheduledAt={scheduledAt} onBook={submit} busy={busy} capped={capped} error={error}
+      />
+    )
+  }
+
   return (
     <div className="pb-[110px] sm:pb-0">
       {switcher}
@@ -249,22 +322,7 @@ function NewBooking({ switcher }) {
 
       <div className="ov-book">
         <div className="flex flex-col gap-[14px] sm:gap-5" style={{ minWidth: 0 }}>
-          {capped && (
-            <div className="ov-attn" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '18px 22px' }}>
-              <TriangleAlert size={18} strokeWidth={2} style={{ color: 'var(--ov-warn)', flexShrink: 0, marginTop: 2 }} />
-              <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <p style={{ margin: 0, flex: '1 1 260px', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-mid)' }}>
-                  You've used all {cap.cap} submissions on the {cap.tierName} plan this week.{' '}
-                  {upgrade
-                    ? <>Upgrade to {upgrade.name} ({formatWeekly(upgrade.weekly_cents)}/week, {upgrade.weekly_cap ?? 'unlimited'} a week) to keep booking, or wait until {formatReset(usage.week_end, profile?.timezone)}.</>
-                    : <>The cap resets {formatReset(usage.week_end, profile?.timezone)}.</>}
-                </p>
-                {upgrade && (
-                  <button type="button" className="ov-ghost" onClick={() => navigate('/agent/billing')} style={pillBtn}>Upgrade</button>
-                )}
-              </div>
-            </div>
-          )}
+          {capWarning}
 
           <section className="ov-card flex flex-col gap-[18px] sm:gap-5 px-[18px] pt-5 pb-[22px] sm:px-7 sm:pt-[26px] sm:pb-7">
             <StepHead n={1} title="Who's the client" sub="Name, number and where they live" />

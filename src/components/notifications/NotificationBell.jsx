@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import {
-  Bell, CheckCheck, ChevronRight, SlidersHorizontal, Headphones, PhoneMissed, Phone, Wallet,
+  Bell, CheckCheck, X, ChevronRight, SlidersHorizontal, Headphones, PhoneMissed, Phone, Wallet,
   MessageSquare, UserPlus, CircleCheck, Calendar, Clock, Users, Flag, Zap, Gauge, Video, PartyPopper,
 } from 'lucide-react'
 import { useNotificationFeed, useMoneyBanner, useMarkRead } from '../../hooks/useNotifications'
@@ -50,7 +50,9 @@ function useAnchor(open, btnRef) {
   return pos
 }
 
-export function NotificationBell({ profileId }) {
+// Prompt 772 — `full`: the agent's phone layout opens the panel full screen
+// (no pointer, no dim), with a close button in its title bar.
+export function NotificationBell({ profileId, full = false }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const btnRef = useRef(null)
@@ -89,11 +91,12 @@ export function NotificationBell({ profileId }) {
       </button>
       {open && pos && createPortal(
         <>
-          <div className="nt-dim" style={{ top: pos.dimTop, left: pos.dimLeft }} aria-hidden="true" />
-          <div className="nt-arrow" style={{ top: pos.top - 6, left: pos.arrowLeft }} aria-hidden="true" />
-          <div ref={panelRef} role="dialog" aria-label="Notifications" className="nt-wrap"
-            style={{ top: pos.top, left: pos.left, width: pos.width, height: pos.maxH }}>
+          {!full && <div className="nt-dim" style={{ top: pos.dimTop, left: pos.dimLeft }} aria-hidden="true" />}
+          {!full && <div className="nt-arrow" style={{ top: pos.top - 6, left: pos.arrowLeft }} aria-hidden="true" />}
+          <div ref={panelRef} role="dialog" aria-label="Notifications" className={`nt-wrap${full ? ' is-full' : ''}`}
+            style={full ? { top: 0, left: 0, width: '100vw', height: '100dvh' } : { top: pos.top, left: pos.left, width: pos.width, height: pos.maxH }}>
             <NotificationPanel rows={rows} banner={banner} unread={unread}
+              onClose={full ? () => { setOpen(false); btnRef.current?.focus() } : undefined}
               onOpen={n => { if (!n.read) markRead.mutate([n.id]); go(n.link) }}
               onMarkAll={() => markRead.mutate(null)}
               onBanner={() => go(banner?.link)}
@@ -107,7 +110,7 @@ export function NotificationBell({ profileId }) {
 }
 
 // The panel itself, without placement (the harness renders it on its own).
-export function NotificationPanel({ rows, banner, unread, onOpen, onMarkAll, onBanner, onSettings, initialTab = 'all', now }) {
+export function NotificationPanel({ rows, banner, unread, onOpen, onMarkAll, onBanner, onSettings, onClose, initialTab = 'all', now }) {
   const [tab, setTab] = useState(initialTab)
   const needs = rows.filter(needsYou).length
   const groups = groupByDay(shownFor(rows, tab), now)
@@ -123,6 +126,11 @@ export function NotificationPanel({ rows, banner, unread, onOpen, onMarkAll, onB
           <button type="button" className="nt-markall" onClick={onMarkAll} disabled={!unread}>
             <CheckCheck size={14} strokeWidth={2.2} aria-hidden="true" />Mark all read
           </button>
+          {onClose && (
+            <button type="button" className="nt-close" onClick={onClose} aria-label="Close notifications">
+              <X size={20} strokeWidth={2.2} />
+            </button>
+          )}
         </div>
         <div className="nt-tabs" role="tablist" aria-label="Show">
           {tabs.map(([key, label, n]) => (
