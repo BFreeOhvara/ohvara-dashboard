@@ -133,7 +133,7 @@ function AdminControls({ config }) {
             Off: no lead enters the flow. Turn on only after Twilio approves the A2P campaign. Clients are texted only if the agent ticked “Client agreed to texts” on the booking.
           </p>
         </div>
-        <Switch checked={!!config.sms_live} disabled={save.isPending} onChange={v => save.mutate({ sms_live: v })} />
+        <Switch checked={!!config.sms_live} disabled={save.isPending} onChange={v => save.mutate({ sms_live: v })} label="Texting live" />
       </div>
       {/* Prompt 751 — the pop-up phone's off switch (recovery_config.voice_live). */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -143,7 +143,7 @@ function AdminControls({ config }) {
             Off: Call client works the old way and the portal phone opens as a preview. Turn on once Ohvara's number is approved and the Twilio app is set up.
           </p>
         </div>
-        <Switch checked={!!config.voice_live} disabled={save.isPending} onChange={v => save.mutate({ voice_live: v })} />
+        <Switch checked={!!config.voice_live} disabled={save.isPending} onChange={v => save.mutate({ voice_live: v })} label="Calling in the portal" />
       </div>
       {/* Prompt 764 — call recording (recovery_config.recording_live + the notice). */}
       <RecordingSetting config={config} save={save} />
@@ -240,7 +240,7 @@ function RecordingSetting({ config, save }) {
             Records every portal call so AI can check each cancel. Off: nothing is recorded, no notice plays, and cancels wait for you to listen. Check the consent rules for your states before turning it on.
           </p>
         </div>
-        <Switch checked={!!config.recording_live} disabled={save.isPending} onChange={v => save.mutate({ recording_live: v })} />
+        <Switch checked={!!config.recording_live} disabled={save.isPending} onChange={v => save.mutate({ recording_live: v })} label="Record calls" />
       </div>
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <label style={{ flex: 1, minWidth: 220, fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>

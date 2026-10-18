@@ -201,7 +201,7 @@ export function GlobalSearch() {
       {!items.length && <p className="ov-gs-empty">No clients or pages match &ldquo;{query.trim()}&rdquo;</p>}
       <div className="ov-gs-foot hidden lg:flex" aria-hidden="true">
         <span>↑ ↓ to move</span>
-        <span>{items[active]?.kind === 'page' ? 'Enter to go' : isFulfill ? 'Enter to open the call' : 'Enter to open in My Pipeline'}</span>
+        <span>{items[active]?.kind === 'page' ? 'Enter to go' : isFulfill ? 'Enter to open the call' : isAdmin ? 'Enter to open in Pipeline' : 'Enter to open in My Pipeline'}</span>
         <span>Esc to close</span>
       </div>
     </div>
