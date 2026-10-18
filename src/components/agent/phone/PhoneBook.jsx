@@ -5,6 +5,7 @@ import { formatPhoneInput } from '../../../lib/policyFormat'
 import { addDaysStr, clientSlotISO, slotState, slotTo24h, dayGone, fmtBooking } from '../../../lib/scheduling'
 import { PhoneSubHead } from '../../layout/PhoneShell'
 import { dayTime } from './phoneBits'
+import TextConsent from '../TextConsent'
 
 // Prompt 772 — Book a call on a phone (mockup Book.dc.html). All the state and
 // every rule live in BookCall.jsx's NewBooking (the same validation, carrier
@@ -30,7 +31,7 @@ export function PhoneBook({
   step1Open, onEdit, onDone, filled,
   ready, checking, tz, today, date, onDate, slotsOn, daySlots, openIsoSet, now, slot, onSlot, hoursLine, closedText,
   duplicate, confirmDuplicate, onBookAnyway, onViewDuplicate,
-  name, scheduledAt, onBook, busy, capped, error,
+  name, scheduledAt, onBook, busy, capped, error, textsOk, onTextsOk,
 }) {
   const dateInput = useRef(null)
   const openPicker = () => {
@@ -174,6 +175,8 @@ export function PhoneBook({
             )
           )}
         </section>
+
+        <TextConsent checked={textsOk} onChange={onTextsOk} disabled={busy} compact />
       </div>
 
       <div className="ph-bookbar">

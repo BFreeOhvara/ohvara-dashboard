@@ -14,7 +14,8 @@ export type Env = {
   fromEmail?: string
   twilioSid?: string
   twilioToken?: string
-  twilioFrom?: string
+  // Prompt 776 — texts go through the Messaging Service, not a bare number.
+  twilioService?: string
   appUrl?: string
 }
 
@@ -80,7 +81,7 @@ export function emailReady(env: Env) {
 
 export async function status(deps: Deps) {
   const { env } = deps
-  const twilio = !!(env.twilioSid && env.twilioToken && env.twilioFrom)
+  const twilio = !!(env.twilioSid && env.twilioToken && env.twilioService)
   return { email: emailReady(env), sms: twilio && (await deps.smsLive()) }
 }
 
@@ -163,7 +164,7 @@ async function deliver(deps: Deps, channel: Channel, to: string, inviter: string
         Authorization: `Basic ${btoa(`${env.twilioSid}:${env.twilioToken}`)}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({ To: to, From: env.twilioFrom!, Body: smsBody(inviter, link) }),
+      body: new URLSearchParams({ To: to, MessagingServiceSid: env.twilioService!, Body: smsBody(inviter, link) }),
     })
     // Only the status and Twilio's error code: its message can quote the number.
     if (!res.ok) {

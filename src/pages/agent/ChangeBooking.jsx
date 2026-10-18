@@ -4,6 +4,7 @@ import { Phone, Calendar, Info, Search, Check, CircleCheck, TriangleAlert, Penci
 import { useAuth } from '../../hooks/useAuth'
 import { useCarriers, useCarrierHours, useAddCarrier } from '../../hooks/useCarriers'
 import { useAgentBookings, useChangeBooking } from '../../hooks/useAgentBookings'
+import TextConsent from '../../components/agent/TextConsent'
 import { useClientTimezone } from '../../hooks/useClientTimezone'
 import { useWeeklyUsage } from '../../hooks/useBillingTiers'
 import {
@@ -162,6 +163,8 @@ function ChangeForm({ p, rows, profileId, switcher, onNew, onPick, pickNote, loa
   const [slot, setSlot] = useState('')
   const [errors, setErrors] = useState(new Set())
   const [error, setError] = useState('')
+  // P776 — null = as saved; true/false = the agent changed it.
+  const [textsEdit, setTextsEdit] = useState(null)
 
   const clearErr = k => setErrors(e => { if (!e.has(k)) return e; const n = new Set(e); n.delete(k); return n })
   const set = (k, v) => { setEdits(e => ({ ...e, [k]: v })); clearErr(k); setError('') }
@@ -225,7 +228,10 @@ function ChangeForm({ p, rows, profileId, switcher, onNew, onPick, pickNote, loa
   const slotOpen = !!slotIso && slotState(slotIso, { now, openIsoSet }) === 'open'
   const newAt = mode === 'new' && slotOpen ? slotIso : null
   const timeChanged = !!newAt && (rebook || new Date(newAt).getTime() !== new Date(currentIso).getTime())
-  const anyChange = rebook ? timeChanged : detailsChanged || timeChanged
+  const textsSaved = !!p?.sms_consent
+  const textsOk = textsEdit ?? textsSaved
+  const textsChanged = !!p && textsOk !== textsSaved
+  const anyChange = rebook ? timeChanged || textsChanged : detailsChanged || timeChanged || textsChanged
 
   const pickDate = d => { setPickedDate(d); setSlot('') }
   const pickSlot = s => { setSlot(s); clearErr('slot'); setError('') }
@@ -265,6 +271,8 @@ function ChangeForm({ p, rows, profileId, switcher, onNew, onPick, pickNote, loa
       phone: changed.phone ? form.phone.trim() : p.client_phone,
       city: cityOut, state: form.state, timezone: tz, carrierId: picked.id,
       scheduledAt: timeChanged ? newAt : null,
+      onlyTexts: textsChanged && !(rebook ? timeChanged : detailsChanged || timeChanged),
+      smsConsent: textsChanged ? textsOk : null,
     }, {
       onSuccess: () => onSaved({
         id: p.id, name: `${firstName} ${lastName}`.trim(), at: timeChanged ? newAt : currentIso, tz, rebook,
@@ -284,6 +292,7 @@ function ChangeForm({ p, rows, profileId, switcher, onNew, onPick, pickNote, loa
   if (placeChanged) diffs.push({ label: 'Where they live', from: savedPlace, to: place })
   if (changed.carrier) diffs.push({ label: 'Carrier', from: saved.carrier, to: picked?.name || form.carrier.trim() })
   if (timeChanged) diffs.push({ label: 'Call time', from: callWhen(currentIso, tz), to: callWhen(newAt, tz) })
+  if (textsChanged) diffs.push({ label: 'Texts', from: textsSaved ? 'Agreed' : 'Not agreed', to: textsOk ? 'Agreed' : 'Not agreed' })
   const timeLine = !p || timeChanged ? null
     : mode === 'keep' && currentIso ? `Stays ${callWhen(currentIso, tz || p.client_timezone)}`
       : 'Pick a new time'
@@ -360,6 +369,7 @@ function ChangeForm({ p, rows, profileId, switcher, onNew, onPick, pickNote, loa
                 <p role="status" style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: 'var(--ov-mid)' }}>Checking {picked.name}'s hours…</p>
               )}
               {hoursLine && <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: 'var(--ov-mute)' }}>{hoursLine}</p>}
+              <TextConsent checked={textsOk} onChange={v => { setTextsEdit(v); setError('') }} disabled={!p || busy} />
             </div>
           </section>
 

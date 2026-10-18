@@ -33,7 +33,7 @@ const deps: Deps = {
     fromEmail: Deno.env.get('INVITE_FROM_EMAIL'),
     twilioSid: Deno.env.get('RECOVERY_TWILIO_ACCOUNT_SID') ?? Deno.env.get('CALLER_ID_TWILIO_ACCOUNT_SID'),
     twilioToken: Deno.env.get('RECOVERY_TWILIO_AUTH_TOKEN') ?? Deno.env.get('CALLER_ID_TWILIO_AUTH_TOKEN'),
-    twilioFrom: Deno.env.get('RECOVERY_TWILIO_FROM_NUMBER') ?? Deno.env.get('CALLER_ID_TWILIO_FROM_NUMBER'),
+    twilioService: Deno.env.get('TWILIO_MESSAGING_SERVICE_SID'),
     appUrl: Deno.env.get('PUBLIC_APP_URL'),
   },
   async caller(jwt) {
@@ -44,8 +44,10 @@ const deps: Deps = {
     return { id: data.user.id, role: p?.role ?? null, is_active: p?.is_demo ? false : (p?.is_active ?? null), full_name: p?.full_name ?? null }
   },
   async smsLive() {
-    const { data } = await db.from('recovery_config').select('sms_live').maybeSingle()
-    return !!data?.sms_live
+    // Prompt 776 — invite texts aren't in the A2P campaign yet, so they need
+    // their own switch on top of sms_live.
+    const { data } = await db.from('recovery_config').select('sms_live, invite_sms_live').maybeSingle()
+    return !!data?.sms_live && !!data?.invite_sms_live
   },
   async countSent(createdBy, since, dest) {
     let q = db.from('rep_invites').select('id', { count: 'exact', head: true })

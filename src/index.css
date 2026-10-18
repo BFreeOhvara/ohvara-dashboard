@@ -952,6 +952,8 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 .ov-note { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); }
 [data-theme="light"] .ov-note { background: #F6FAF9; border: 1px solid rgba(2,79,70,0.10); }
 .ov-note.is-warn { background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.28); }
+/* P776 — "Client agreed to texts" box */
+.ov-consent-box { width: 20px; height: 20px; margin: 0 0 0 1px; flex-shrink: 0; accent-color: var(--ov-pick); cursor: inherit; }
 [data-theme="light"] .ov-note.is-warn { background: #FBE7D2; border-color: rgba(154,74,11,0.30); }
 
 /* Day cards: the long date ("Wednesday, Oct 7") only when the card has room. */

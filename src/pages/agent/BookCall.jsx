@@ -18,6 +18,7 @@ import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { PhoneBook } from '../../components/agent/phone/PhoneBook'
 import { PhoneSubHead } from '../../components/layout/PhoneShell'
 import { isNativeApp } from '../../lib/native'
+import TextConsent from '../../components/agent/TextConsent'
 
 // Book a call (Prompt 665) — replaces the old 25-field New Submission form.
 //
@@ -121,6 +122,7 @@ function NewBooking({ switcher }) {
   const [error, setError] = useState('')
   const [confirm, setConfirm] = useState(null) // 'duplicate' | 'duplicateOk'
   const [done, setDone] = useState(null)
+  const [textsOk, setTextsOk] = useState(false) // P776 — client agreed to texts
   const addCarrier = useAddCarrier()
 
   const { tz, resolving } = useClientTimezone(form.city, form.state)
@@ -214,10 +216,11 @@ function NewBooking({ switcher }) {
       carrierId: picked.id,
       currentCarrier: picked.name,
       scheduledAt,
+      smsConsent: textsOk,
     }, {
       onSuccess: policy => {
         setDone({ id: policy?.id, name: `${firstName} ${lastName}`, at: scheduledAt, tz, location: `${city}, ${form.state}` })
-        setForm(BLANK); setCarrierId(null); setSlot(''); setPickedDate(null); setConfirm(null); setErrors(new Set())
+        setForm(BLANK); setCarrierId(null); setSlot(''); setPickedDate(null); setConfirm(null); setErrors(new Set()); setTextsOk(false)
       },
       onError: err => setError(err.hint === 'weekly_cap'
         ? `${err.message} Upgrade your plan or wait until ${formatReset(usage?.week_end, profile?.timezone)}.`
@@ -308,6 +311,7 @@ function NewBooking({ switcher }) {
         duplicate={duplicate} confirmDuplicate={confirm === 'duplicate'} onBookAnyway={() => { setConfirm('duplicateOk'); doBook() }}
         onViewDuplicate={() => navigate(`/agent/clients?open=${duplicate.id}`)}
         name={name} scheduledAt={scheduledAt} onBook={submit} busy={busy} capped={capped} error={error}
+        textsOk={textsOk} onTextsOk={setTextsOk}
       />
     )
   }
@@ -359,6 +363,8 @@ function NewBooking({ switcher }) {
                 )}
               </Notice>
             )}
+
+            <TextConsent checked={textsOk} onChange={setTextsOk} disabled={busy} />
           </section>
 
           <section className="ov-card flex flex-col gap-4 sm:gap-[18px] px-[18px] pt-5 pb-[22px] sm:px-7 sm:pt-[26px] sm:pb-7">

@@ -114,13 +114,14 @@ function AdminControls({ config }) {
   const evening = draft.evening ?? hhmm(config.evening_time)
   const dirty = reminder !== hhmm(config.reminder_time) || evening !== hhmm(config.evening_time)
 
-  const senderText = !sender ? 'Checking the sending number…'
-    : sender.error ? "Couldn't check the sending number."
-      : !sender.configured ? `No sending number set (missing: ${(sender.missing || []).join(', ')}). Set RECOVERY_TWILIO_FROM_NUMBER, or the Caller ID number, in Supabase secrets.`
-        : sender.owned === false ? `${sender.from} is a verified caller ID, not a Twilio number we own, so it can't send texts. Buy an SMS-capable number.`
-          : sender.sms_capable === false ? `${sender.from} can't send texts. Use an SMS-capable number.`
-            : sender.sms_capable ? `${sender.from} can send texts. It still needs A2P 10DLC registration before carriers will deliver them.`
-              : `Couldn't confirm ${sender.from} can send texts.`
+  // Prompt 776 — texts go through the "Ohvara Texts" Messaging Service.
+  const senderText = !sender ? 'Checking the Messaging Service…'
+    : sender.error ? "Couldn't check the Messaging Service."
+      : !sender.configured ? `Texting isn't set up (missing: ${(sender.missing || []).join(', ')}). Add it in Supabase secrets.`
+        : sender.senders === null ? "Couldn't read the Messaging Service's numbers from Twilio."
+          : !sender.senders?.length ? 'The Messaging Service has no phone number yet. Add the Dallas number to its sender pool in Twilio.'
+            : sender.sms_capable ? `Sending from ${sender.senders.map(n => n.number).join(', ')} through the Messaging Service. Turn on only after Twilio approves the A2P campaign.`
+              : `${sender.senders.map(n => n.number).join(', ')} can't send texts. Add an SMS-capable number to the service.`
 
   return (
     <SettingsCard icon={Clock} title="Admin: texting" sub="The company-wide switch and send times for text follow-up."
@@ -129,7 +130,7 @@ function AdminControls({ config }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>Texting live</p>
           <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--ov-mute)' }}>
-            Off: no lead enters the flow. Turn on only after the number is registered for A2P 10DLC.
+            Off: no lead enters the flow. Turn on only after Twilio approves the A2P campaign. Clients are texted only if the agent ticked “Client agreed to texts” on the booking.
           </p>
         </div>
         <Switch checked={!!config.sms_live} disabled={save.isPending} onChange={v => save.mutate({ sms_live: v })} />

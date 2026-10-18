@@ -15,7 +15,7 @@ const SELECT = `
   cancellation_substatus, cancellation_confirmation,
   call_live_since, last_call_outcome, call_attempts, last_call_at,
   recovery_step, recovery_retry_at, recovery_am_sent_at, recovery_pm_sent_at,
-  missed_step, missed_retry_at,
+  missed_step, missed_retry_at, sms_consent,
   created_at, updated_at,
   agent:profiles!policies_agent_id_fkey ( id, full_name ),
   assigned:profiles!policies_assigned_fulfillment_id_fkey ( id, full_name ),
@@ -78,7 +78,7 @@ export function useLegacyPolicyCount(agentId) {
 export function useBookCall() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ agentId, firstName, lastName, phone, city, state, timezone, carrierId, currentCarrier, scheduledAt }) => {
+    mutationFn: async ({ agentId, firstName, lastName, phone, city, state, timezone, carrierId, currentCarrier, scheduledAt, smsConsent }) => {
       const { data: policy, error } = await supabase
         .from('policies')
         .insert({
@@ -98,6 +98,8 @@ export function useBookCall() {
           fulfillment_assigned: true,
           fulfillment_stage: 'Pending',
           scheduled_call_at: scheduledAt,
+          // Prompt 776 — the client agreed to texts (the server stamps who/when).
+          sms_consent: !!smsConsent,
         })
         .select('id')
         .single()
@@ -139,13 +141,22 @@ export function useRebookCall() {
 export function useChangeBooking() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, firstName, lastName, phone, city, state, timezone, carrierId, scheduledAt }) => {
-      const { data, error } = await supabase.rpc('agent_change_booking', {
-        p_policy: id, p_first: firstName, p_last: lastName, p_phone: phone || null,
-        p_city: city || null, p_state: state || null, p_timezone: timezone || null,
-        p_carrier: carrierId, p_at: scheduledAt || null,
-      })
-      if (error) throw error
+    mutationFn: async ({ id, firstName, lastName, phone, city, state, timezone, carrierId, scheduledAt, onlyTexts, smsConsent }) => {
+      let data = null
+      if (!onlyTexts) {
+        const res = await supabase.rpc('agent_change_booking', {
+          p_policy: id, p_first: firstName, p_last: lastName, p_phone: phone || null,
+          p_city: city || null, p_state: state || null, p_timezone: timezone || null,
+          p_carrier: carrierId, p_at: scheduledAt || null,
+        })
+        if (res.error) throw res.error
+        data = res.data
+      }
+      // Prompt 776 — "Client agreed to texts" ticked or unticked (null = unchanged).
+      if (smsConsent !== null && smsConsent !== undefined) {
+        const { error } = await supabase.rpc('agent_set_sms_consent', { p_policy: id, p_agreed: smsConsent })
+        if (error) throw new Error(onlyTexts ? error.message : `Saved, but the text consent didn't: ${error.message}`)
+      }
       return data
     },
     onSettled: () => {
