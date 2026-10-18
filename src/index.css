@@ -1795,6 +1795,9 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 @media (hover: none) and (pointer: coarse) {
   .ov-switch { position: relative; }
   .ov-switch::after { content: ''; position: absolute; left: 0; right: 0; top: -10px; bottom: -10px; }
+  /* P780 — same for the range chips and the Settings text links. */
+  .ov-range button, .ov-set-link { position: relative; }
+  .ov-range button::after, .ov-set-link::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
 }
 /* P778 — a 44px tap target on the phone. */
 .ph-app .ov-send { width: 44px; height: 44px; }
