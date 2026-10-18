@@ -13,3 +13,15 @@ export function useOneAtATime(mutation) {
     mutate(vars, { ...opts, onSettled: (...a) => { busy.current = false; opts.onSettled?.(...a) } })
   }, [mutate])
 }
+
+// P780 — the same guard for an async handler (a mutateAsync, or two in a row
+// like Resend's send-then-cancel): `const once = useOnce()`, then
+// `onClick={once(() => save())}`. A second call while the first runs is dropped.
+export function useOnce() {
+  const busy = useRef(false)
+  return useCallback(fn => async (...a) => {
+    if (busy.current) return
+    busy.current = true
+    try { return await fn(...a) } finally { busy.current = false }
+  }, [])
+}

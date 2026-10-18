@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useCreateInvite, useInviteStatus, useSendAgentInvite } from '../../hooks/useProfiles'
 import { formatPhoneInput, phoneText } from '../../lib/policyFormat'
 import { webUrl } from '../../lib/native'
+import { useOnce } from '../../hooks/useOneAtATime'
 
 // Add someone (Prompt 762, moved here Prompt 766): the Admin invite dialog —
 // role Agent or Fulfillment, send by email or text, or copy a one-time link.
@@ -23,6 +24,7 @@ export function AddSomeone({ defaultRole, onClose }) {
   const [copied, setCopied] = useState(false)
   const ready = status.data?.[channel]
   const busy = send.isPending || createInvite.isPending
+  const once = useOnce() // P780: a double-tap sends (or makes a link) once
 
   const onKey = useEffectEvent(e => { if (e.key === 'Escape' && !busy) onClose() })
   useEffect(() => {
@@ -31,15 +33,15 @@ export function AddSomeone({ defaultRole, onClose }) {
     return () => window.removeEventListener('keydown', h)
   }, [])
 
-  async function submit(e) {
-    e.preventDefault()
+  const send1 = once(async () => {
     setErr(null)
     try {
       await send.mutateAsync({ channel, to, role })
       setDone({ sent: channel === 'email' ? to.trim() : phoneText(to) })
     } catch (x) { setErr(x.message) }
-  }
-  async function makeLink() {
+  })
+  const submit = e => { e.preventDefault(); send1() }
+  const makeLink = once(async () => {
     setErr(null)
     try {
       const inv = await createInvite.mutateAsync({ role, createdBy: profile.id })
@@ -47,7 +49,7 @@ export function AddSomeone({ defaultRole, onClose }) {
       setDone({ link })
       try { await navigator.clipboard.writeText(link); setCopied(true) } catch { /* the link is on screen */ }
     } catch (x) { setErr(x.message || 'Couldn’t make a link.') }
-  }
+  })
 
   const roleWord = role === 'agent' ? 'an agent' : 'Fulfillment'
   return createPortal(

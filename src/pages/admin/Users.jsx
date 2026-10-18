@@ -19,6 +19,7 @@ import { DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { AdminPhonePeople } from '../../components/admin/phone/AdminPhonePeople'
 import { webUrl } from '../../lib/native'
+import { useOnce } from '../../hooks/useOneAtATime'
 
 // Admin Users (Prompt 762) — replaces Users & Access. Left: an Agents /
 // Fulfillment switch, search with a sort, one row per person (this week's
@@ -237,12 +238,13 @@ function InviteRow({ inv, now, meName }) {
   const send = useSendAgentInvite()
   const revoke = useRevokeInvite()
   const [state, setState] = useState(null)
+  const once = useOnce() // P780: a double-tap sends once
   const to = inv.channel === 'email' ? inv.invited_email : inv.channel === 'sms' ? phoneText(inv.invited_phone) : null
   const name = to || 'Invite link'
 
   // Resend: a sent invite goes again to the same place (a new link) and the
   // old one is cancelled; a link invite is copied again.
-  async function resend() {
+  const resend = once(async () => {
     setState(null)
     if (!inv.channel) {
       try {
@@ -255,7 +257,7 @@ function InviteRow({ inv, now, meName }) {
       await send.mutateAsync({ channel: inv.channel, to: inv.channel === 'email' ? inv.invited_email : inv.invited_phone, role: inv.role })
       await revoke.mutateAsync(inv.id)
     } catch (e) { setState({ err: e.message }) }
-  }
+  })
 
   return (
     <div className="au-row is-invite">
@@ -419,8 +421,9 @@ function AccessStrip({ u, rows, onRole }) {
   const open = rows.filter(p => p.fulfillment_stage !== 'Complete' && (isAgent ? p.agent_id === u.id : p.assigned_fulfillment_id === u.id)).length
   const signIn = realEmail(u.email) || (u.phone ? phoneText(u.phone) : null) || u.username || 'no login saved'
   const busy = setRole.isPending || setAccess.isPending
+  const once = useOnce() // P780: a double-tap changes once
 
-  async function run(fn) {
+  const run = once(async fn => {
     setErr(null)
     try {
       await fn()
@@ -430,7 +433,7 @@ function AccessStrip({ u, rows, onRole }) {
       if (e.openWork && ask) setAsk({ ...ask, open: e.openWork })
       else setErr(e.message || 'That didn’t work. Try again.')
     }
-  }
+  })
   const confirmRole = () => run(async () => {
     await setRole.mutateAsync({ userId: u.id, role: ask.to, confirm: true })
     onRole(u.id, ask.to)

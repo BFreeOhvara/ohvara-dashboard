@@ -4,6 +4,7 @@ import { useDecideCancel, loadRecordingUrl } from '../../../hooks/useFulfillment
 import { money, clock } from '../../../lib/adminPayouts'
 import { PhoneSheet } from '../../agent/phone/PhoneSheet'
 import { listenWhen } from './useAdminPay'
+import { useOnce } from '../../../hooks/useOneAtATime'
 
 // Prompt 774 — "Needs a listen" as a bottom sheet (mockup AdmListen.dc.html):
 // who, what and why, a player (big waveform, −15 / play / +15) streaming from
@@ -147,15 +148,16 @@ export function ListenSheet({ c, rep, tz, onClose, onDecided, loadAudio = loadRe
   const [error, setError] = useState('')
   const repName = rep?.full_name || 'The rep'
   const busy = decide.isPending
+  const once = useOnce() // P780: a double-tap decides once
 
-  async function go(pay) {
+  const go = once(async pay => {
     if (!pay && note.trim().length < 3) { setNoting(true); setHint('Say why it isn’t paid'); return }
     setHint(''); setError('')
     try {
       await decide.mutateAsync({ id: c.id, pay, note })
       onDecided?.(pay)
     } catch (e) { setError(e.message) }
-  }
+  })
 
   return (
     <PhoneSheet

@@ -13,6 +13,7 @@ import { Avatar } from '../../ui/Avatar'
 import { PhoneSheet } from '../../agent/phone/PhoneSheet'
 import { PhoneToast } from './PhoneToast'
 import { LoadError } from '../../agent/AgentUI'
+import { useOneAtATime } from '../../../hooks/useOneAtATime'
 
 // Prompt 774 — the desk on a phone (mockup AdmDesk.dc.html), the phone
 // version of Admin Fulfillment for today: a 4-part filter (Live / Past time /
@@ -70,6 +71,7 @@ function callWord(c, now) {
 // Who to give these calls to, when nobody can take them all in one tap.
 function PickWho({ calls, reps, rows, tz, onClose, onGiven }) {
   const give = useGiveCalls()
+  const giveOnce = useOneAtATime(give) // P780: a double-tap gives once
   const [err, setErr] = useState(null)
   const opts = useMemo(() => giveOptions(calls, reps, rows), [calls, reps, rows])
   const one = calls.length === 1 ? calls[0] : null
@@ -81,7 +83,7 @@ function PickWho({ calls, reps, rows, tz, onClose, onGiven }) {
   }
   const pick = o => {
     setErr(null)
-    give.mutate({ ids: o.ids, to: o.rep.id }, {
+    giveOnce({ ids: o.ids, to: o.rep.id }, {
       onSuccess: () => onGiven(`Given to ${o.rep.full_name || 'them'}`),
       onError: e => setErr(e?.message || 'That didn’t go through. Try again.'),
     })
@@ -160,6 +162,7 @@ export function AdminPhoneDesk() {
   const [picking, setPicking] = useState(null) // call keys
   const [toast, setToast] = useState(null)
   const give = useGiveCalls()
+  const giveOnce = useOneAtATime(give)
   const [giveErr, setGiveErr] = useState(null)
 
   const reps = useMemo(() => profiles.filter(r => r.role === 'fulfillment'), [profiles])
@@ -203,7 +206,7 @@ export function AdminPhoneDesk() {
   function giveAll() {
     if (!taker) { setPicking(stuck.map(c => c.key)); return }
     setGiveErr(null)
-    give.mutate({ ids: taker.ids, to: taker.rep.id }, {
+    giveOnce({ ids: taker.ids, to: taker.rep.id }, {
       onSuccess: () => setToast(`Given to ${taker.rep.full_name || 'them'}`),
       onError: e => setGiveErr(e?.message || 'That didn’t go through. Try again.'),
     })

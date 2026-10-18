@@ -4,6 +4,7 @@ import { useAuth } from '../../../hooks/useAuth'
 import { useCreateInvite, useInviteStatus, useSendAgentInvite } from '../../../hooks/useProfiles'
 import { PhoneSheet } from '../../agent/phone/PhoneSheet'
 import { webUrl } from '../../../lib/native'
+import { useOnce } from '../../../hooks/useOneAtATime'
 
 // Prompt 774 — Add someone from the raised + (mockup AdmAdd.dc.html): Agent
 // or Fulfillment, their name and email, a note on what happens next, Send
@@ -26,21 +27,22 @@ export function AddSomeoneSheet({ onClose, onSent }) {
   const [link, setLink] = useState(null)
   const ready = status.data?.email
   const busy = send.isPending || createInvite.isPending
+  const once = useOnce() // P780: a double-tap sends (or makes a link) once
   const first = name.trim().split(/\s+/)[0]
   const note = role === 'agent'
     ? (first ? `${first} gets an email to set a password, then picks a plan and pays before booking.` : 'They get an email to set a password, then pick a plan and pay before booking.')
     : (first ? `${first} gets an email to set a password, then adds a bank to get paid.` : 'They get an email to set a password, then add a bank to get paid.')
 
-  async function submit(e) {
-    e.preventDefault()
+  const send1 = once(async () => {
     setErr(null)
     if (!email.trim()) { setErr('Add their email.'); return }
     try {
       await send.mutateAsync({ channel: 'email', to: email.trim(), role })
       onSent?.(`Invite sent to ${name.trim() || email.trim()}`)
     } catch (x) { setErr(x.message) }
-  }
-  async function makeLink() {
+  })
+  const submit = e => { e.preventDefault(); send1() }
+  const makeLink = once(async () => {
     setErr(null)
     try {
       const inv = await createInvite.mutateAsync({ role, createdBy: profile.id })
@@ -49,7 +51,7 @@ export function AddSomeoneSheet({ onClose, onSent }) {
       try { await navigator.clipboard.writeText(url); copied = true } catch { /* shown below */ }
       setLink({ url, copied })
     } catch (x) { setErr(x.message || 'Couldn’t make a link.') }
-  }
+  })
 
   return (
     <PhoneSheet

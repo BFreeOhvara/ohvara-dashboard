@@ -15,6 +15,7 @@ import { slideOut } from '../../lib/daySlide'
 import { DEFAULT_TIMEZONE, zonedDateStr } from '../../lib/timezones'
 import { dayBounds, dayLong, dayShort, hourOf, relDay, timeParts, timeText, todayBadge } from '../../lib/fulfillmentDay'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
+import { useOneAtATime } from '../../hooks/useOneAtATime'
 import { AdminPhoneDesk } from '../../components/admin/phone/AdminPhoneDesk'
 
 // Admin Fulfillment (Prompt 760), ported from media/admin-redesign/admin-fulfillment.dc.html.
@@ -77,6 +78,7 @@ function Track({ calls, range, pct, nowH, live, tz, now, onOpen }) {
 
 function GivePicker({ calls, reps, rows, tz, onClose }) {
   const give = useGiveCalls()
+  const giveOnce = useOneAtATime(give) // P780: a double-tap gives once
   const [err, setErr] = useState(null)
   const opts = useMemo(() => giveOptions(calls, reps, rows), [calls, reps, rows])
   const onKey = useEffectEvent(e => { if (e.key === 'Escape' && !give.isPending) onClose() })
@@ -89,7 +91,7 @@ function GivePicker({ calls, reps, rows, tz, onClose }) {
 
   const pick = o => {
     setErr(null)
-    give.mutate({ ids: o.ids, to: o.rep.id }, {
+    giveOnce({ ids: o.ids, to: o.rep.id }, {
       onSuccess: onClose,
       onError: e => setErr(e?.message || 'That didn’t go through. Try again.'),
     })

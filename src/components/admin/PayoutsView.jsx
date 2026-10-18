@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { Landmark, Loader2, Pause, Play, RefreshCw, TriangleAlert, X } from 'lucide-react'
 import { Avatar } from '../ui/Avatar'
+import { useOnce } from '../../hooks/useOneAtATime'
 import { Switch } from '../ui/Switch'
 import { money, dayLong, monDay, clock } from '../../lib/adminPayouts'
 
@@ -142,11 +143,12 @@ function ListenCard({ c, rep, tz, loadAudio, onDecide, deciding }) {
   const [hint, setHint] = useState('')
   const [error, setError] = useState('')
   const busy = deciding === c.id
-  async function go(pay) {
+  const once = useOnce() // P780: a double-tap decides once
+  const go = once(async pay => {
     if (!pay && note.trim().length < 3) { setNoting(true); setHint('Say why it isn’t paid'); return }
     setHint(''); setError('')
     try { await onDecide({ id: c.id, pay, note }) } catch (e) { setError(e.message) }
-  }
+  })
   return (
     <div className="ap2-lcard">
       <div className="ap2-lcard-top"><b>{c.client_name || 'Client'}</b><span>{money(c.amount_cents)}</span></div>

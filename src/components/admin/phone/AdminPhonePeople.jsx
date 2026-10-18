@@ -14,6 +14,7 @@ import { PhoneSheet } from '../../agent/phone/PhoneSheet'
 import { AddSomeoneSheet } from './AddSomeoneSheet'
 import { PhoneToast } from './PhoneToast'
 import { LoadError } from '../../agent/AgentUI'
+import { useOnce } from '../../../hooks/useOneAtATime'
 import { webUrl } from '../../../lib/native'
 
 // Prompt 774 — People (Admin Users) on a phone, from More: Agents /
@@ -44,7 +45,8 @@ function InviteRow({ inv, now }) {
   const [state, setState] = useState(null)
   const to = inv.channel === 'email' ? inv.invited_email : inv.channel === 'sms' ? phoneText(inv.invited_phone) : null
   const name = to || 'Invite link'
-  async function resend() {
+  const once = useOnce() // P780: a double-tap sends once
+  const resend = once(async () => {
     setState(null)
     if (!inv.channel) {
       try { await navigator.clipboard.writeText(webUrl(`/join?t=${inv.token}`)); setState({ ok: 'Link copied' }) } catch { setState({ err: 'Couldn’t copy the link' }) }
@@ -54,7 +56,7 @@ function InviteRow({ inv, now }) {
       await send.mutateAsync({ channel: inv.channel, to: inv.channel === 'email' ? inv.invited_email : inv.invited_phone, role: inv.role })
       await revoke.mutateAsync(inv.id)
     } catch (e) { setState({ err: e.message }) }
-  }
+  })
   return (
     <div className="ph-row" style={{ cursor: 'default' }}>
       <span className="aph-noav is-invite">{name[0].toUpperCase()}</span>
