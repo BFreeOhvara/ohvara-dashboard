@@ -149,7 +149,7 @@ export default function Settings() {
           {phone && (
             <button type="button" aria-label="All settings" className="ov-ghost"
               onClick={() => navigate('/settings')}
-              style={{ width: 40, height: 40, flexShrink: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              style={{ width: 44, height: 44, flexShrink: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <ArrowLeft size={17} strokeWidth={2} />
             </button>
           )}
@@ -991,7 +991,7 @@ function CallerIdPanel({ profile }) {
                   : 'Off: Fulfillment calls from their own number'}
               </p>
             </div>
-            <Switch checked={!!profile.caller_id_enabled} onChange={toggle} disabled={update.isPending} />
+            <Switch checked={!!profile.caller_id_enabled} onChange={toggle} disabled={update.isPending} label="Show my number on Fulfillment's calls" />
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             {confirmRemove ? (

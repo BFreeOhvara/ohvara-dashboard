@@ -2649,7 +2649,7 @@ export function DayHero({ dayKey, slideClass, tag, dateLong, dateShort, summary,
           </button>
           <button type="button" data-pick-toggle="" onClick={onTogglePick} aria-haspopup="dialog" aria-expanded={pickOpen} aria-label="Pick a date"
             className="ov-hero-link flex sm:hidden"
-            style={{ width: 44, height: 36, borderRadius: 999, alignItems: 'center', justifyContent: 'center' }}>
+            style={{ width: 44, height: 44, borderRadius: 999, alignItems: 'center', justifyContent: 'center' }}>
             <CalendarDays size={18} strokeWidth={2} />
           </button>
           {pickOpen && picker}

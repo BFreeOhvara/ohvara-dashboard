@@ -284,6 +284,12 @@ html.sx-root body {
 .sx-link:hover { text-decoration: underline; }
 .sx-link--forgot { margin-top: 2px; min-height: 36px; }
 .sx-link--back { color: var(--sx-mute); min-height: 36px; }
+/* P778 — on touch screens Forgot password / Back get a 44px-tall tap area
+   without moving anything. */
+@media (hover: none) and (pointer: coarse) {
+  .sx-link--forgot, .sx-link--back { position: relative; }
+  .sx-link--forgot::after, .sx-link--back::after { content: ''; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
+}
 .sx-link--soft { color: var(--sx-blue-hi); min-height: 0; display: inline; }
 
 .sx-check { margin-top: 6px; display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; color: var(--sx-soft); cursor: pointer; position: relative; }

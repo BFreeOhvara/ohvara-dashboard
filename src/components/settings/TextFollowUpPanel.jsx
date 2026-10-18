@@ -61,7 +61,7 @@ export function TextFollowUpPanel({ profile }) {
               {optedIn ? 'On. You agreed to this once; turn it off any time.' : 'Off. Missed calls just show as No answer.'}
             </p>
           </div>
-          <Switch checked={optedIn || confirming} disabled={update.isPending} onChange={toggle} />
+          <Switch checked={optedIn || confirming} disabled={update.isPending} onChange={toggle} label="Text clients after a missed call" />
         </div>
 
         {confirming && !optedIn && (

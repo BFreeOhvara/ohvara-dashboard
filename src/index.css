@@ -1791,6 +1791,13 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
   background: var(--ov-send-bg); color: var(--ov-send-fg); display: flex; align-items: center; justify-content: center;
 }
 .ov-send:disabled { opacity: 0.45; cursor: not-allowed; }
+/* P778 — on touch screens the toggle's tap target is 44px tall, same look. */
+@media (hover: none) and (pointer: coarse) {
+  .ov-switch { position: relative; }
+  .ov-switch::after { content: ''; position: absolute; left: 0; right: 0; top: -10px; bottom: -10px; }
+}
+/* P778 — a 44px tap target on the phone. */
+.ph-app .ov-send { width: 44px; height: 44px; }
 .ov-send:focus-visible { outline: 2px solid var(--ov-st-booked); outline-offset: 2px; }
 .ov-starter {
   height: 38px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--ov-line); background: var(--ov-starter-bg);

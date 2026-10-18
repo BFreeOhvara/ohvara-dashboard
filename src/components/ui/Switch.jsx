@@ -2,12 +2,16 @@
 // (Prompt 324 found only Button-as-toggle patterns like Users.jsx's
 // Activate/Deactivate, nothing pill-shaped). Design tokens only, no
 // hardcoded colors, matching every other control in this app.
-export function Switch({ checked, onChange, disabled = false }) {
+// P778 — `label` names it for screen readers when no <label> wraps it, and
+// .ov-switch adds an invisible hit area so the tap target is 44px tall.
+export function Switch({ checked, onChange, disabled = false, label }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={label}
+      className="ov-switch"
       disabled={disabled}
       onClick={() => onChange(!checked)}
       style={{
