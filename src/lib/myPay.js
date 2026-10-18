@@ -24,7 +24,9 @@ export function cancelView(c) {
   if (c.status === 'verified_by_admin') return { kind: 'verified', label: 'Verified', note: 'Brayden listened · paid' }
   if (c.status === 'checking') return { kind: 'checking', label: 'Checking', note: 'AI is listening · a few minutes' }
   if (c.status === 'not_paid') return { kind: 'off', label: 'Not paid', note: 'Brayden listened · not paid' }
-  return { kind: 'listen', label: 'Needs a listen', note: c.reason === 'no_recording' ? 'No recording · with Brayden' : 'Not clear on the call · with Brayden' }
+  // P779 — past the weekly cap the server holds a confirmed cancel for a listen (over_cap).
+  const why = c.reason === 'no_recording' ? 'No recording' : c.reason === 'over_cap' ? 'Over the weekly cap' : 'Not clear on the call'
+  return { kind: 'listen', label: 'Needs a listen', note: `${why} · with Brayden` }
 }
 
 // Totals for a set of cancels (void rows are never fetched).
