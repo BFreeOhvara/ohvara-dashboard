@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react'
 import { Search, RefreshCw, Pencil, ExternalLink, X } from 'lucide-react'
 import { useCarriers, useLookupCarrier, useSaveCarrier } from '../../hooks/useCarriers'
 import { useAppSettings, useUpdateAppSettings } from '../../hooks/useAppSettings'
-import { Pill } from '../../components/agent/AgentUI'
+import { Pill, LoadError } from '../../components/agent/AgentUI'
 import { DAYS, hoursSummary, normalizeName, HOURS_STATUS } from '../../lib/carriers'
+import { useOneAtATime } from '../../hooks/useOneAtATime'
 import { MONO } from '../../lib/exportStyles'
 
 // Carrier hours (Prompt 728) — admin only. Every carrier agents can pick in
@@ -28,7 +29,8 @@ const fmtDate = iso => (iso ? new Date(iso).toLocaleDateString('en-US', { month:
 const host = url => { try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url } }
 
 export default function Carriers() {
-  const { data: carriers = [], isLoading } = useCarriers()
+  const { data: carriers = [], isLoading, isError, refetch } = useCarriers()
+  const failed = isError && !carriers.length // P780: say so instead of "No carriers match"
   const { data: settings } = useAppSettings()
   const updateSettings = useUpdateAppSettings()
   const [q, setQ] = useState('')
@@ -99,6 +101,8 @@ export default function Carriers() {
       <section className="ov-card" style={{ padding: 0, overflow: 'hidden' }}>
         {isLoading ? (
           <p style={{ margin: 0, padding: 20, color: 'var(--ov-mute)', fontSize: 14 }}>Loading carriers…</p>
+        ) : failed ? (
+          <LoadError what="the carriers" onRetry={() => refetch()} style={{ margin: 12 }} />
         ) : rows.length === 0 ? (
           <p style={{ margin: 0, padding: 20, color: 'var(--ov-mute)', fontSize: 14 }}>No carriers match.</p>
         ) : rows.map(c => (
@@ -111,6 +115,7 @@ export default function Carriers() {
 
 function CarrierRow({ c, editing, onEdit, onDone }) {
   const lookup = useLookupCarrier()
+  const lookupOnce = useOneAtATime(lookup) // P780: a double-tap looks up (and pays) once
   const status = HOURS_STATUS[c.hours_status]
   const result = lookup.data
   return (
@@ -135,7 +140,7 @@ function CarrierRow({ c, editing, onEdit, onDone }) {
           {lookup.isPending
             ? <Pill tone="muted">Checking</Pill>
             : status ? <Pill tone={STATUS_TONE[status.tone]}>{status.label}</Pill> : null}
-          <button type="button" className="ov-ghost" onClick={() => lookup.mutate(c.id)} disabled={lookup.isPending}
+          <button type="button" className="ov-ghost" onClick={() => lookupOnce(c.id)} disabled={lookup.isPending}
             style={{ height: 34, padding: '0 12px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <RefreshCw size={13} strokeWidth={2} />{lookup.isPending ? 'Looking up…' : 'Look up again'}
           </button>

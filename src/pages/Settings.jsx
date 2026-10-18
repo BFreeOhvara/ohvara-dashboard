@@ -8,6 +8,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
+import { useOnce } from '../hooks/useOneAtATime'
 import { useUpdateOwnProfile } from '../hooks/useSettings'
 import { useAppSettings, useUpdateAppSettings } from '../hooks/useAppSettings'
 import { useBillingTiers } from '../hooks/useBillingTiers'
@@ -1068,14 +1069,15 @@ function AppReviewLoginsCard() {
   const [error, setError] = useState('')
   const [logins, setLogins] = useState(null)
   const [copied, setCopied] = useState('')
+  const once = useOnce() // P780: a double-tap resets the logins once
 
-  async function reset() {
+  const reset = once(async () => {
     setBusy(true); setError('')
     const { data, error: e } = await supabase.functions.invoke('app-review-logins', { body: { action: 'reset' } })
     setBusy(false)
     if (e || !data?.ok) { setError(data?.error || 'Couldn’t set up the logins. Try again.'); return }
     setLogins({ agent: data.agent, fulfillment: data.fulfillment })
-  }
+  })
   async function copy(key, text) {
     try { await navigator.clipboard.writeText(text); setCopied(key); setTimeout(() => setCopied(''), 1500) } catch { /* no clipboard */ }
   }
