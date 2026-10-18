@@ -6,7 +6,7 @@ import { useAgentBookings } from '../../hooks/useAgentBookings'
 import { useAllProfiles } from '../../hooks/useProfiles'
 import { dmId } from '../../hooks/useDirectMessages'
 import {
-  ClientSearch, PipelineSummary, PipelineList, ClientDrawer, InfoTile, StatusNote, Journey, OvSelect,
+  ClientSearch, PipelineSummary, PipelineList, ClientDrawer, InfoTile, StatusNote, Journey, OvSelect, LoadError,
 } from '../../components/agent/AgentUI'
 import { attentionReason } from '../../lib/fulfillmentFlags'
 import { whenShort } from '../../lib/fulfillmentDay'
@@ -70,7 +70,9 @@ export default function AdminPipeline() {
   const [params, setParams] = useSearchParams()
   const openId = params.get('open')
 
-  const { data: raw = [], isLoading } = useAgentBookings(null)
+  const { data: raw = [], isLoading, isError, refetch } = useAgentBookings(null)
+  // P780 — a failed load says so instead of "0 clients".
+  const failed = isError && !raw.length
   const { data: profiles = [] } = useAllProfiles()
   const rows = useMemo(() => excludeTestAccounts(raw, profile?.id), [raw, profile?.id])
 
@@ -151,6 +153,7 @@ export default function AdminPipeline() {
 
   return (
     <>
+      {failed && <LoadError what="the clients" onRetry={() => refetch()} style={{ marginBottom: 16 }} />}
       <div className="pl-page">
         <div className="pl-rail pl-rail--sum">
           <ClientSearch
@@ -176,7 +179,7 @@ export default function AdminPipeline() {
           rows={scoped} tab={tab} onTab={t => setParam('stage', t, 'needs')} list={list}
           tabs={TABS} tabFn={tabFn} meanings={MEANINGS}
           now={now} activeId={openId} onOpen={open} fulfill={fulfill}
-          loading={isLoading || !profile} emptyRange={scoped.length === 0 && range !== 'all' ? range : null}
+          loading={isLoading || !profile || failed} emptyRange={scoped.length === 0 && range !== 'all' ? range : null}
         />
       </div>
 
@@ -185,7 +188,7 @@ export default function AdminPipeline() {
           key={openRow.id} p={openRow} tab={tabFn(openRow)} why={reasonOf(openRow, now)} tz={tz} onClose={close}
           onMessage={() => navigate(`/messages?dm=${dmId(openRow.agent_id, 'admin')}`)}
         />
-      ) : !isLoading && (
+      ) : !isLoading && !failed && (
         <ClientDrawer name="Client not found" meta="This client isn't on the pipeline any more." onClose={close} />
       ))}
     </>

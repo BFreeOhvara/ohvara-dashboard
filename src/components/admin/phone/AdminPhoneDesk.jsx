@@ -12,6 +12,7 @@ import { fullName } from '../../../lib/policyFormat'
 import { Avatar } from '../../ui/Avatar'
 import { PhoneSheet } from '../../agent/phone/PhoneSheet'
 import { PhoneToast } from './PhoneToast'
+import { LoadError } from '../../agent/AgentUI'
 
 // Prompt 774 — the desk on a phone (mockup AdmDesk.dc.html), the phone
 // version of Admin Fulfillment for today: a 4-part filter (Live / Past time /
@@ -147,8 +148,10 @@ function PersonDay({ l, now, tz, onClose, onGive }) {
 
 export function AdminPhoneDesk() {
   const { profile } = useAuth()
-  const { data: queue = [], isLoading } = useFulfillmentQueue()
-  const { data: profiles = [] } = useAllProfiles()
+  const queueQ = useFulfillmentQueue()
+  const { data: queue = [], isLoading } = queueQ
+  const profilesQ = useAllProfiles()
+  const { data: profiles = [] } = profilesQ
   const now = useNow(15e3)
   const tz = profile?.timezone || DEFAULT_TIMEZONE
   const day = zonedDateStr(now, tz)
@@ -164,8 +167,11 @@ export function AdminPhoneDesk() {
   const activeReps = useMemo(() => reps.filter(r => r.is_active).sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '')), [reps])
 
   const { startMs, endMs } = dayBounds(day, tz)
-  const { data: events = [], isLoading: eventsLoading } = useCallOutcomes(new Date(startMs).toISOString(), new Date(endMs).toISOString(), { live: queue.some(isLive) })
-  const busy = isLoading || eventsLoading || !profile
+  const eventsQ = useCallOutcomes(new Date(startMs).toISOString(), new Date(endMs).toISOString(), { live: queue.some(isLive) })
+  const { data: events = [], isLoading: eventsLoading } = eventsQ
+  // P780 — a failed load says so instead of an empty desk.
+  const failed = [queueQ, profilesQ, eventsQ].some(q => q.isError && !q.data)
+  const busy = isLoading || eventsLoading || !profile || failed
   const calls = useMemo(() => (busy ? [] : deskDay(queue, now, tz, day, events, repById)), [busy, queue, now, tz, day, events, repById])
 
   const lanes = useMemo(() => {
@@ -207,9 +213,10 @@ export function AdminPhoneDesk() {
     <div className="ph-stack" style={{ gap: 14 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
         <h1 className="ph-h1">The desk</h1>
-        <span style={{ fontSize: 14, color: 'var(--ov-mute)' }}>{busy ? 'Loading…' : `${plural(calls.length, 'call')} today · ${plural(onDesk, 'person').replace('persons', 'people')}`}</span>
+        <span style={{ fontSize: 14, color: 'var(--ov-mute)' }}>{failed ? '' : busy ? 'Loading…' : `${plural(calls.length, 'call')} today · ${plural(onDesk, 'person').replace('persons', 'people')}`}</span>
       </div>
 
+      {failed && <LoadError what="the desk" onRetry={() => [queueQ, profilesQ, eventsQ].forEach(q => q.isError && q.refetch())} />}
       <div className="ov-card ph-seg" role="group" aria-label="Filter calls" style={{ marginTop: 0 }}>
         {FILTERS.map(x => {
           const on = filter === x.k
@@ -255,7 +262,7 @@ export function AdminPhoneDesk() {
           <span className="ph-mute">Now {timeText(new Date(now).toISOString(), tz)}</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {busy ? <div className="ov-card ph-card"><div className="ph-empty">Loading the desk…</div></div>
+          {busy ? <div className="ov-card ph-card"><div className="ph-empty">{failed ? 'Couldn’t load the desk.' : 'Loading the desk…'}</div></div>
             : !shown.length ? <div className="ov-card ph-card"><div className="ph-empty">{f ? 'Nobody has a call like that today.' : 'No calls on the desk today.'}</div></div>
               : shown.map(l => {
                 const st = statusOf(l, now, tz)

@@ -6,7 +6,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useFulfillmentQueue, useGiveCalls } from '../../hooks/usePolicies'
 import { useCallOutcomes } from '../../hooks/useRepCallEvents'
 import { useAllProfiles } from '../../hooks/useProfiles'
-import { ClientDrawer } from '../../components/agent/AgentUI'
+import { ClientDrawer, LoadError } from '../../components/agent/AgentUI'
 import { Avatar } from '../../components/ui/Avatar'
 import { isLive, useNow } from '../../lib/agentBookings'
 import { KIND, KEY_ORDER, NOBODY, canGive, deskDay, giveOptions, shiftOf } from '../../lib/adminDesk'
@@ -182,8 +182,10 @@ export default function AdminFulfillment() {
 
 function AdminFulfillmentDesktop() {
   const { profile } = useAuth()
-  const { data: queue = [], isLoading } = useFulfillmentQueue()
-  const { data: profiles = [] } = useAllProfiles()
+  const queueQ = useFulfillmentQueue()
+  const { data: queue = [], isLoading } = queueQ
+  const profilesQ = useAllProfiles()
+  const { data: profiles = [] } = profilesQ
   const now = useNow(15e3)
   const tz = profile?.timezone || DEFAULT_TIMEZONE
   const todayStr = zonedDateStr(now, tz)
@@ -207,8 +209,11 @@ function AdminFulfillmentDesktop() {
   const { startMs, endMs } = dayBounds(day, tz)
   const started = startMs <= now
   const anyLive = queue.some(isLive)
-  const { data: events = [], isLoading: eventsLoading } = useCallOutcomes(iso(startMs), iso(endMs), { enabled: started, live: anyLive })
-  const busy = isLoading || !profile || (started && eventsLoading)
+  const eventsQ = useCallOutcomes(iso(startMs), iso(endMs), { enabled: started, live: anyLive })
+  const { data: events = [], isLoading: eventsLoading } = eventsQ
+  // P780 — a failed load says so instead of an empty desk.
+  const failed = [queueQ, profilesQ, ...(started ? [eventsQ] : [])].some(q => q.isError && !q.data)
+  const busy = isLoading || !profile || (started && eventsLoading) || failed
   const calls = useMemo(() => {
     if (busy) return []
     return deskDay(queue, now, tz, day, started ? events : null, repById)
@@ -298,6 +303,7 @@ function AdminFulfillmentDesktop() {
 
   return (
     <div ref={rootRef} className="af-page">
+      {failed && <LoadError what="the desk" onRetry={() => [queueQ, profilesQ, eventsQ].forEach(q => q.isError && q.refetch())} />}
       <section className="ov-hero af-hero">
         <div className="mc-top">
           <button type="button" className="mc-arrow" aria-label="Previous day" onClick={() => goDay(addDaysStr(day, -1))}>
@@ -402,7 +408,7 @@ function AdminFulfillmentDesktop() {
                 {nowH != null && <span className="af-hnow" style={{ left: `clamp(40px, ${pct(nowH)}%, calc(100% - 40px))` }}>Now {timeParts(iso(now), tz).time}</span>}
               </div>
             </div>
-            {busy ? <p className="af-empty">Loading the desk…</p>
+            {busy ? <p className="af-empty">{failed ? 'Couldn’t load the desk.' : 'Loading the desk…'}</p>
               : !lanes.length ? <p className="af-empty">No calls on the desk {dayWordShort}.</p>
                 : lanes.map(l => {
                   const st = laneStatus(l)

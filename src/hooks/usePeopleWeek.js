@@ -15,15 +15,24 @@ import { zonedDateStr } from '../lib/timezones'
 const DAYS = 7
 
 export function usePeopleWeek(now, tz) {
-  const { data: profiles = [], isLoading: peopleLoading } = useAllProfiles()
-  const { data: invites = [] } = usePendingInvites()
-  const { data: rows = [], isLoading: rowsLoading } = useAgentBookings(null)
+  const profilesQ = useAllProfiles()
+  const { data: profiles = [], isLoading: peopleLoading } = profilesQ
+  const invitesQ = usePendingInvites()
+  const { data: invites = [] } = invitesQ
+  const rowsQ = useAgentBookings(null)
+  const { data: rows = [], isLoading: rowsLoading } = rowsQ
   const week = useMemo(() => thisWeek(now, tz), [now, tz])
   const dates = useMemo(() => Array.from({ length: DAYS }, (_, i) => addDaysStr(week.from, i)), [week.from])
   const todayStr = zonedDateStr(now, tz)
-  const { data: events = [], isLoading: eventsLoading } = useCallOutcomes(
+  const eventsQ = useCallOutcomes(
     new Date(week.startMs).toISOString(), new Date(week.endMs).toISOString(), { live: rows.some(isLive) },
   )
+  const { data: events = [], isLoading: eventsLoading } = eventsQ
+  // P780 — failed loads, so the page says so instead of "No agents yet" / zeros.
+  const broken = q => q.isError && !q.data
+  const peopleFailed = broken(profilesQ) || broken(invitesQ)
+  const numbersFailed = broken(rowsQ) || broken(eventsQ)
+  const retry = () => [profilesQ, invitesQ, rowsQ, eventsQ].forEach(q => broken(q) && q.refetch())
 
   const people = useMemo(() => profiles.filter(u => u.role === 'agent' || u.role === 'fulfillment'), [profiles])
   const byId = useMemo(() => new Map(people.map(u => [u.id, u])), [people])
@@ -61,5 +70,5 @@ export function usePeopleWeek(now, tz) {
     return out
   }, [people, byId, rows, events, dates, tz, now, week.from, week.to])
 
-  return { profiles, invites, rows, events, week, dates, todayStr, people, byId, stats, peopleLoading, rowsLoading, eventsLoading }
+  return { profiles, invites, rows, events, week, dates, todayStr, people, byId, stats, peopleLoading, rowsLoading, eventsLoading, peopleFailed, numbersFailed, retry }
 }

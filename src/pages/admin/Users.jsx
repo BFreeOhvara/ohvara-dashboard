@@ -8,7 +8,7 @@ import { useMissedStrikes } from '../../hooks/useRepCallEvents'
 import { usePeopleWeek } from '../../hooks/usePeopleWeek'
 import { usePayouts } from '../../hooks/useFulfillmentPayouts'
 import { dmId } from '../../hooks/useDirectMessages'
-import { OvSelect } from '../../components/agent/AgentUI'
+import { OvSelect, LoadError } from '../../components/agent/AgentUI'
 import { AddSomeone } from '../../components/shared/AddSomeone'
 import { Avatar } from '../../components/ui/Avatar'
 import { attentionReason } from '../../lib/fulfillmentFlags'
@@ -100,7 +100,7 @@ function AdminUsersDesktop() {
   const [sort, setSort] = useState('top')
   const [adding, setAdding] = useState(false)
 
-  const { invites, rows, events, week, dates, todayStr, people, byId, stats, peopleLoading, rowsLoading, eventsLoading } = usePeopleWeek(now, tz)
+  const { invites, rows, events, week, dates, todayStr, people, byId, stats, peopleLoading, rowsLoading, eventsLoading, peopleFailed, numbersFailed, retry } = usePeopleWeek(now, tz)
 
   // Rank among people with access in this role.
   const ranked = useMemo(() => people
@@ -148,8 +148,8 @@ function AdminUsersDesktop() {
     if (newRole === 'fulfillment') next.set('role', 'fulfillment'); else next.delete('role')
   })
 
-  const loading = peopleLoading || !profile
-  const numbersLoading = rowsLoading || eventsLoading
+  const loading = peopleLoading || !profile || peopleFailed
+  const numbersLoading = rowsLoading || eventsLoading || numbersFailed
   const isAgents = tab === 'agents'
 
   return (
@@ -178,7 +178,7 @@ function AdminUsersDesktop() {
         </div>
 
         <div className="au-rows">
-          {loading && <p className="au-empty">Loading…</p>}
+          {peopleFailed ? <LoadError what="people" onRetry={retry} style={{ margin: '4px 12px' }} /> : loading && <p className="au-empty">Loading…</p>}
           {!loading && !list.length && !shownInvites.length && (
             <p className="au-empty">{query ? 'Nobody matches that.' : isAgents ? 'No agents yet.' : 'Nobody on Fulfillment yet.'}</p>
           )}
@@ -223,7 +223,7 @@ function AdminUsersDesktop() {
         />
       ) : (
         <section className="ov-card au-none">
-          {loading ? 'Loading…' : isAgents ? 'No agents yet. Add someone to get started.' : 'Nobody on Fulfillment yet. Add someone to get started.'}
+          {peopleFailed ? 'Couldn’t load people.' : loading ? 'Loading…' : isAgents ? 'No agents yet. Add someone to get started.' : 'Nobody on Fulfillment yet. Add someone to get started.'}
         </section>
       )}
 

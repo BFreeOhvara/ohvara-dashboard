@@ -13,6 +13,7 @@ import { Avatar } from '../../ui/Avatar'
 import { PhoneSheet } from '../../agent/phone/PhoneSheet'
 import { AddSomeoneSheet } from './AddSomeoneSheet'
 import { PhoneToast } from './PhoneToast'
+import { LoadError } from '../../agent/AgentUI'
 import { webUrl } from '../../../lib/native'
 
 // Prompt 774 — People (Admin Users) on a phone, from More: Agents /
@@ -133,8 +134,8 @@ export function AdminPhonePeople() {
   const [openId, setOpenId] = useState(null)
   const [adding, setAdding] = useState(false)
   const [toast, setToast] = useState(null)
-  const { invites, people, stats, week, peopleLoading, rowsLoading, eventsLoading } = usePeopleWeek(now, tz)
-  const numbersLoading = rowsLoading || eventsLoading
+  const { invites, people, stats, week, peopleLoading, rowsLoading, eventsLoading, peopleFailed, numbersFailed, retry } = usePeopleWeek(now, tz)
+  const numbersLoading = rowsLoading || eventsLoading || numbersFailed
   const isAgents = tab === 'agent'
 
   const inRole = useMemo(() => people.filter(u => u.role === tab), [people, tab])
@@ -158,7 +159,7 @@ export function AdminPhonePeople() {
           <button key={k} type="button" role="tab" aria-selected={tab === k} className={`ph-seg-btn${tab === k ? ' is-on' : ''}`}
             onClick={() => setParams(k === 'fulfillment' ? { role: 'fulfillment' } : {}, { replace: true })}>
             <span className="ph-seg-label" style={{ color: c }}>{l}</span>
-            <span className="ph-seg-num">{peopleLoading ? '—' : counts[k]}</span>
+            <span className="ph-seg-num">{peopleLoading || peopleFailed ? '—' : counts[k]}</span>
             <span className="ph-seg-bar" style={{ background: c }} aria-hidden="true" />
           </button>
         ))}
@@ -170,8 +171,8 @@ export function AdminPhonePeople() {
       </label>
 
       <div className="ov-card ph-card">
-        {peopleLoading && <div className="ph-empty">Loading…</div>}
-        {!peopleLoading && !list.length && !shownInvites.length && (
+        {peopleFailed ? <LoadError what="people" onRetry={retry} style={{ margin: 12 }} /> : peopleLoading && <div className="ph-empty">Loading…</div>}
+        {!peopleLoading && !peopleFailed && !list.length && !shownInvites.length && (
           <div className="ph-empty">{q ? 'Nobody matches that.' : isAgents ? 'No agents yet.' : 'Nobody on Fulfillment yet.'}</div>
         )}
         {list.map(u => {
