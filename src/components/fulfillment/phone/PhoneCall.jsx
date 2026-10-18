@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, PhoneMissed, MessageSquareText, CalendarDays, Mic, ChevronUp } from 'lucide-react'
 import { useMarkCancelled, useEndCall } from '../../../hooks/usePolicies'
+import { useOneAtATime } from '../../../hooks/useOneAtATime'
 import { usePaySettings } from '../../../hooks/useFulfillmentPayouts'
 import { useAuth } from '../../../hooks/useAuth'
 import { zonedDateStr, DEFAULT_TIMEZONE } from '../../../lib/timezones'
@@ -29,6 +30,8 @@ function Result({ p, s, names, conf: saidConf, onClose, onDismiss, error: callEr
   const tz = profile?.timezone || DEFAULT_TIMEZONE
   const update = useMarkCancelled()
   const endCall = useEndCall()
+  const cancelOnce = useOneAtATime(update)
+  const endOnce = useOneAtATime(endCall)
   const { data: pay } = usePaySettings()
   const [pick, setPick] = useState('cancelled')
   const [conf, setConf] = useState(saidConf || '')
@@ -44,11 +47,11 @@ function Result({ p, s, names, conf: saidConf, onClose, onDismiss, error: callEr
 
   function save() {
     if (pick === 'cancelled') {
-      update.mutate({
+      cancelOnce({
         id: p.id, proof: { confirmation: conf.trim() || null, effectiveDate: effective, draftsStopped: true },
       }, { onSuccess: recording ? () => { setChecking(true); setTimeout(onClose, 2600) } : onClose })
     } else {
-      endCall.mutate({ id: p.id, outcome: 'no_answer' }, { onSuccess: onClose })
+      endOnce({ id: p.id, outcome: 'no_answer' }, { onSuccess: onClose })
     }
   }
 

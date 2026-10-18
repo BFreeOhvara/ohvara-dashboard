@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ArrowLeft, MessageSquare, Search } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { useOneAtATime } from '../hooks/useOneAtATime'
 import { useThreadPolicy } from '../hooks/usePolicyMessages'
 import {
   useStandingThreads, useDmMessages, useSendDm, useMarkDmRead, dmId, parseDmId,
@@ -279,6 +280,7 @@ function groupMessages(messages) {
 function Conversation({ agentId, peerKey, item, listReady, me, onBack }) {
   const { data: messages = [], isLoading, isError: messagesFailed, refetch: retryMessages } = useDmMessages(agentId, peerKey)
   const send = useSendDm(agentId, peerKey, me?.id)
+  const sendOnce = useOneAtATime(send)
   const { mutate: mark } = useMarkDmRead(me?.id)
   const [draft, setDraft] = useState('')
   const inputRef = useRef(null)
@@ -296,7 +298,7 @@ function Conversation({ agentId, peerKey, item, listReady, me, onBack }) {
 
   function submit() {
     if (!trimmed || send.isPending) return
-    send.mutate(trimmed, { onSuccess: () => setDraft('') })
+    sendOnce(trimmed, { onSuccess: () => setDraft('') })
   }
 
   function pickStarter(text) {

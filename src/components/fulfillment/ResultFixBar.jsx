@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, Undo2 } from 'lucide-react'
 import { useCorrectResult } from '../../hooks/usePolicies'
+import { useOneAtATime } from '../../hooks/useOneAtATime'
 import { RESULT_TEXT, otherResult } from '../../lib/fulfillmentCall'
 
 // Prompt 750 — the quick-fix bar (state: hooks/useResultFix.js). It names
@@ -15,10 +16,11 @@ export function ResultFixBar({ ctl, inline = false }) {
 function Bar({ ctl, inline }) {
   const { fix, hold, close, arm } = ctl
   const correct = useCorrectResult()
+  const once = useOneAtATime(correct)
   const [changed, setChanged] = useState(null)
 
   const to = otherResult(fix.result)
-  const change = () => correct.mutate({ id: fix.id, to }, {
+  const change = () => once({ id: fix.id, to }, {
     onSuccess: () => { setChanged(to); arm(2500) },
   })
   const bar = (

@@ -5,6 +5,7 @@ import { dmId } from '../../hooks/useDirectMessages'
 import { useCarriers } from '../../hooks/useCarriers'
 import { useClientCall, useCallActions, useCallLock } from '../../hooks/useCallActions'
 import { useCorrectResult } from '../../hooks/usePolicies'
+import { useOneAtATime } from '../../hooks/useOneAtATime'
 import { ResultFixBar } from './ResultFixBar'
 import { usePortalPhone } from '../../contexts/portalPhone'
 import { ClientDrawer } from '../agent/AgentUI'
@@ -111,6 +112,7 @@ function StatusPill({ p, now }) {
 function ChangeResult({ p, result }) {
   const [asking, setAsking] = useState(false)
   const correct = useCorrectResult()
+  const change = useOneAtATime(correct)
   const to = otherResult(result)
   if (!asking) {
     return <button type="button" className="mc-link" onClick={() => setAsking(true)}><Undo2 size={13} /> Change result</button>
@@ -119,7 +121,7 @@ function ChangeResult({ p, result }) {
     <div className="mc-change">
       <div className="mc-change-row">
         <button type="button" className="mc-link" style={{ color: 'var(--ov-data-a)' }} disabled={correct.isPending}
-          onClick={() => correct.mutate({ id: p.id, to }, { onSuccess: () => setAsking(false) })}>
+          onClick={() => change({ id: p.id, to }, { onSuccess: () => setAsking(false) })}>
           {correct.isPending ? 'Changing…' : `Change to ${RESULT_TEXT[to]}`}
         </button>
         <button type="button" className="mc-link" onClick={() => { setAsking(false); correct.reset() }}>Keep it</button>

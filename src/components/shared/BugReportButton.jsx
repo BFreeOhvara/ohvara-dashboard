@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
 import { Bug, X, CheckCircle2, Paperclip } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import { useOneAtATime } from '../../hooks/useOneAtATime'
 import { eyebrow } from '../../lib/exportStyles'
 import {
   useCreateBugReport, useBugReports,
@@ -36,6 +37,7 @@ function ReportForm({ profile, onClose }) {
   const [file, setFile] = useState(null)
   const [sent, setSent] = useState(false)
   const create = useCreateBugReport()
+  const createOnce = useOneAtATime(create)
 
   const close = onClose
 
@@ -47,7 +49,7 @@ function ReportForm({ profile, onClose }) {
 
   function submit() {
     if (!description.trim()) return
-    create.mutate(
+    createOnce(
       { reporterId: profile.id, description: description.trim(), screenshotFile: file, pageUrl: pathname },
       { onSuccess: () => setSent(true) }
     )

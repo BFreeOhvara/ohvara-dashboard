@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useMarkCancelled, useEndCall } from '../../hooks/usePolicies'
+import { useOneAtATime } from '../../hooks/useOneAtATime'
 import { useAuth } from '../../hooks/useAuth'
 import { zonedDateStr, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { phoneView, clock } from '../../lib/portalPhone'
@@ -37,6 +38,8 @@ function Result({ p, s, onClose, error: callError, recording }) {
   const tz = profile?.timezone || DEFAULT_TIMEZONE
   const update = useMarkCancelled()
   const endCall = useEndCall()
+  const cancelOnce = useOneAtATime(update)
+  const endOnce = useOneAtATime(endCall)
   const [pick, setPick] = useState('cancelled')
   const [conf, setConf] = useState('')
   const [effective, setEffective] = useState(() => zonedDateStr(Date.now(), tz))
@@ -53,11 +56,11 @@ function Result({ p, s, onClose, error: callError, recording }) {
     const done = { onSuccess: onClose }
     if (pick === 'cancelled') {
       // The same write as Mark cancelled, with the proof.
-      update.mutate({
+      cancelOnce({
         id: p.id, proof: { confirmation: conf.trim() || null, effectiveDate: effective, draftsStopped: true },
       }, recording ? { onSuccess: () => { setChecking(true); setTimeout(onClose, 2600) } } : done)
     } else {
-      endCall.mutate({ id: p.id, outcome: 'no_answer', reason }, done)
+      endOnce({ id: p.id, outcome: 'no_answer', reason }, done)
     }
   }
 

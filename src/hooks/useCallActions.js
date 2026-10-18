@@ -4,6 +4,7 @@ import { invokeCallerId, FALLBACK_CODES } from '../lib/callerId'
 import { isLive, useNow } from '../lib/agentBookings'
 import { canStartCall, timeText, tooEarlyText, unlockAt } from '../lib/fulfillmentDay'
 import { usePortalPhone } from '../contexts/portalPhone'
+import { useOneAtATime } from './useOneAtATime'
 
 // Prompt 756 — Call client is locked until 5 minutes before the call. Ticks
 // every 15 s so a button unlocks by itself. `opens` is "3:25 PM" (own zone).
@@ -50,18 +51,23 @@ export function useCallActions(p) {
   const setReason = useSetRescheduleReason()
   const passOn = usePassOnCancellation()
   const { tz, toast } = usePortalPhone()
+  const cancel = useOneAtATime(markCancelled)
+  const notesOnce = useOneAtATime(saveNotes)
+  const end = useOneAtATime(endCall)
+  const reasonOnce = useOneAtATime(setReason)
+  const pass = useOneAtATime(passOn)
   return {
     start: () => {
       if (isLive(p) || p.fulfillment_stage === 'Complete') return
       if (!canStartCall(p, Date.now(), tz)) { toast(tooEarlyText(unlockAt(p), tz)); return }
       startCall.mutate(p.id, { onError: e => { if (e.tooEarly) toast(tooEarlyText(e.opensAt, tz)) } })
     },
-    noAnswer: opts => endCall.mutate({ id: p.id, outcome: 'no_answer' }, opts),
+    noAnswer: opts => end({ id: p.id, outcome: 'no_answer' }, opts),
     // `notes` undefined leaves the saved notes as they are.
-    cancelled: (notes, opts) => markCancelled.mutate({ id: p.id, notes: notes === undefined ? undefined : notes.trim() }, opts),
-    reason: value => setReason.mutate({ id: p.id, reason: p.cancellation_substatus === value ? null : value }),
-    saveNotes: (notes, opts) => saveNotes.mutate({ id: p.id, notes: notes.trim() }, opts),
-    passOn: opts => passOn.mutate(p.id, opts),
+    cancelled: (notes, opts) => cancel({ id: p.id, notes: notes === undefined ? undefined : notes.trim() }, opts),
+    reason: value => reasonOnce({ id: p.id, reason: p.cancellation_substatus === value ? null : value }),
+    saveNotes: (notes, opts) => notesOnce({ id: p.id, notes: notes.trim() }, opts),
+    passOn: opts => pass(p.id, opts),
     busy: markCancelled.isPending || saveNotes.isPending || endCall.isPending,
     passing: passOn.isPending,
     saving: markCancelled.isPending || saveNotes.isPending,
