@@ -35,6 +35,9 @@ export function deskCalls(rows, nowMs, tz, day, events) {
     if (isLive(p) || p.fulfillment_stage === 'Complete' || !p.scheduled_call_at || stageOf(p) !== 'noAnswer') continue
     const ms = new Date(p.scheduled_call_at).getTime()
     if (ms > nowMs || zonedDateStr(ms, tz) !== day) continue
+    // P780 — with no retry booked (texting off), the call keeps the time it
+    // was just tried at; that's the No answer itself, not a retry nobody made.
+    if (p.last_call_at && new Date(p.last_call_at).getTime() >= ms) continue
     list.push({ key: `${p.id}:retry:${p.scheduled_call_at}`, id: p.id, p, at: p.scheduled_call_at, ms, date: day, tone: 'noAnswer', late: true, retry: true, attempt: (p.call_attempts || 0) + 1 })
   }
   return list.sort((a, b) => a.ms - b.ms)
