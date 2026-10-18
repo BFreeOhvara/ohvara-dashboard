@@ -17,6 +17,7 @@ import { roleLabel } from '../../../lib/roleLabels'
 import { phoneText } from '../../../lib/policyFormat'
 import { NotificationBell } from '../../notifications/NotificationBell'
 import { Avatar } from '../../ui/Avatar'
+import { LoadError } from '../../agent/AgentUI'
 import { ListenSheet } from './ListenSheet'
 import { PhoneToast } from './PhoneToast'
 import { useAdminPay } from './useAdminPay'
@@ -67,26 +68,36 @@ export function AdminPhoneHome() {
   const [listenId, setListenId] = useState(null)
   const [toast, setToast] = useState(null)
 
-  const { data: queue = [], isLoading: queueLoading } = useFulfillmentQueue()
+  const queueQ = useFulfillmentQueue()
+  const { data: queue = [], isLoading: queueLoading } = queueQ
   const { data: profiles = [] } = useAllProfiles()
   const anyLive = queue.some(isLive)
   const todayStr = zonedDateStr(now, tz)
   const frame = useMemo(() => weekFrame(todayStr, tz), [todayStr, tz])
-  const { data: events = [], isLoading: eventsLoading } = useCallOutcomes(
+  const eventsQ = useCallOutcomes(
     new Date(frame.sinceMs).toISOString(), new Date(frame.bounds[14]).toISOString(), { live: anyLive },
   )
-  const { data: payouts = [], isLoading: payLoading } = usePayouts(null)
-  const { data: invites = [], isLoading: invitesLoading } = usePendingInvites()
-  const { data: config, isLoading: configLoading } = useRecoveryConfig()
+  const { data: events = [], isLoading: eventsLoading } = eventsQ
+  const payQ = usePayouts(null)
+  const { data: payouts = [], isLoading: payLoading } = payQ
+  const invitesQ = usePendingInvites()
+  const { data: invites = [], isLoading: invitesLoading } = invitesQ
+  const configQ = useRecoveryConfig()
+  const { data: config, isLoading: configLoading } = configQ
   const pay = useAdminPay()
+  // P780 — a failed load says so instead of "Nothing needs you" and zeros.
+  const broken = q => q.isError && !q.data
+  const chartFailed = broken(queueQ) || broken(eventsQ)
+  const needsFailed = chartFailed || [payQ, invitesQ, configQ].some(broken) || !!pay.error || !!pay.listenError
+  const retry = () => { [queueQ, eventsQ, payQ, invitesQ, configQ].forEach(q => broken(q) && q.refetch()); if (pay.error || pay.listenError) pay.refetch() }
 
   const repById = useMemo(() => new Map(profiles.filter(r => r.role === 'fulfillment').map(r => [r.id, r])), [profiles])
   const week = useMemo(() => adminWeek(
     frame, buildCalls(queue, now, tz, { from: frame.dates[0], to: frame.dates[13], events }),
   ), [frame, queue, events, now, tz])
   const today = useMemo(() => deskDay(queue, now, tz, todayStr, events, repById), [queue, now, tz, todayStr, events, repById])
-  const chartLoading = queueLoading || eventsLoading || !profile
-  const needsLoading = queueLoading || payLoading || invitesLoading || configLoading || pay.loading || !profile
+  const chartLoading = queueLoading || eventsLoading || !profile || chartFailed
+  const needsLoading = queueLoading || payLoading || invitesLoading || configLoading || pay.loading || !profile || needsFailed
 
   const listen = pay.model.listen
   const needs = useMemo(() => {
@@ -112,8 +123,10 @@ export function AdminPhoneHome() {
     const late = queue.filter(p => flagsFor(p, nowDate).overdue)
     if (late.length) {
       const names = [...new Set(late.map(p => p.assigned?.full_name || repById.get(p.assigned_fulfillment_id)?.full_name).filter(Boolean))]
+      // P780 — the desk shows today only; calls missed on an earlier day are on the Pipeline.
+      const older = late.some(p => zonedDateStr(new Date(p.scheduled_call_at).getTime(), tz) < todayStr)
       out.push({
-        key: 'late', tone: 'warn', icon: Clock, hot: true, go: () => navigate('/admin/fulfillment'),
+        key: 'late', tone: 'warn', icon: Clock, hot: true, go: () => navigate(older ? '/admin/pipeline' : '/admin/fulfillment'),
         title: `${plural(late.length, 'call')} past their time`,
         sub: `Not started · ${names.length ? names.join(', ') : 'Not given to anyone'}`,
       })
@@ -136,14 +149,14 @@ export function AdminPhoneHome() {
       })
     }
     return out
-  }, [listen, payouts, queue, invites, config, now, repById, navigate])
+  }, [listen, payouts, queue, invites, config, now, repById, navigate, tz, todayStr])
   const hot = needs.filter(n => n.hot).length
 
   const firstName = (profile?.full_name || '').split(' ')[0]
   const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hourCycle: 'h23' }).format(now))
   const greeting = `${hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'}${firstName ? `, ${firstName}` : ''}`
   const chip = new Date(now).toLocaleDateString('en-US', { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric' })
-  const sub = needsLoading ? 'Checking what needs you…'
+  const sub = needsFailed ? 'Couldn’t check what needs you.' : needsLoading ? 'Checking what needs you…'
     : hot ? `${hot} ${hot === 1 ? 'thing needs' : 'things need'} you today.` : 'Nothing needs you today.'
 
   const lives = today.filter(c => c.k === 'live')
@@ -182,7 +195,8 @@ export function AdminPhoneHome() {
           {!needsLoading && hot > 0 && <span className="ph-count">{hot}</span>}
         </div>
         <div className="ov-card ph-card">
-          {needsLoading ? <div className="ph-empty">Checking…</div>
+          {needsFailed ? <LoadError what="what needs you" onRetry={retry} style={{ margin: 12 }} />
+            : needsLoading ? <div className="ph-empty">Checking…</div>
             : !needs.length ? <div className="ph-empty">Nothing needs you right now.</div>
               : needs.map(n => {
                 const [color, tint] = TONE[n.tone]

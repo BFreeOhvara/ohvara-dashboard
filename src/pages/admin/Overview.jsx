@@ -4,10 +4,10 @@ import { Phone, Check } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useFulfillmentQueue } from '../../hooks/usePolicies'
 import { useCallOutcomes } from '../../hooks/useRepCallEvents'
-import { usePayouts } from '../../hooks/useFulfillmentPayouts'
+import { useNeedsListen, usePayouts } from '../../hooks/useFulfillmentPayouts'
 import { usePendingInvites } from '../../hooks/useProfiles'
 import { useRecoveryConfig } from '../../hooks/useRecoveryConfig'
-import { HeroPanel, IconChip } from '../../components/agent/AgentUI'
+import { HeroPanel, IconChip, LoadError } from '../../components/agent/AgentUI'
 import { isLive, useNow } from '../../lib/agentBookings'
 import { flagsFor } from '../../lib/fulfillmentFlags'
 import { DEFAULT_TIMEZONE, zonedDateStr } from '../../lib/timezones'
@@ -149,26 +149,50 @@ function AdminOverviewDesktop() {
   const needsRef = useRef(null)
   const tz = profile?.timezone || DEFAULT_TIMEZONE
 
-  const { data: queue = [], isLoading: queueLoading } = useFulfillmentQueue()
+  const queueQ = useFulfillmentQueue()
+  const { data: queue = [], isLoading: queueLoading } = queueQ
   const anyLive = queue.some(isLive)
   const todayStr = zonedDateStr(now, tz)
   const frame = useMemo(() => weekFrame(todayStr, tz), [todayStr, tz])
-  const { data: events = [], isLoading: eventsLoading } = useCallOutcomes(
+  const eventsQ = useCallOutcomes(
     new Date(frame.sinceMs).toISOString(), new Date(frame.bounds[14]).toISOString(), { live: anyLive },
   )
-  const { data: payouts = [], isLoading: payLoading } = usePayouts(null)
-  const { data: invites = [], isLoading: invitesLoading } = usePendingInvites()
-  const { data: config, isLoading: configLoading } = useRecoveryConfig()
+  const { data: events = [], isLoading: eventsLoading } = eventsQ
+  const payQ = usePayouts(null)
+  const { data: payouts = [], isLoading: payLoading } = payQ
+  const invitesQ = usePendingInvites()
+  const { data: invites = [], isLoading: invitesLoading } = invitesQ
+  const configQ = useRecoveryConfig()
+  const { data: config, isLoading: configLoading } = configQ
+  const listenQ = useNeedsListen()
+  const { data: listen = [], isLoading: listenLoading } = listenQ
+  // P780 — a failed load says so; the numbers stay blank instead of "0" and
+  // "Nothing needs you".
+  const broken = q => q.isError && !q.data
+  const chartFailed = broken(queueQ) || broken(eventsQ)
+  const needsFailed = chartFailed || [payQ, invitesQ, configQ, listenQ].some(broken)
+  const retry = () => [queueQ, eventsQ, payQ, invitesQ, configQ, listenQ].forEach(q => broken(q) && q.refetch())
 
   const week = useMemo(() => adminWeek(
     frame, buildCalls(queue, now, tz, { from: frame.dates[0], to: frame.dates[13], events }),
   ), [frame, queue, events, now, tz])
 
-  const chartLoading = queueLoading || eventsLoading || !profile
-  const needsLoading = queueLoading || payLoading || invitesLoading || configLoading || !profile
+  const chartLoading = queueLoading || eventsLoading || !profile || chartFailed
+  const needsLoading = queueLoading || payLoading || invitesLoading || configLoading || listenLoading || !profile || needsFailed
 
   const needs = useMemo(() => {
     const out = []
+    // P780 — a cancel waiting on a listen holds a rep's pay (the phone Home
+    // already lists it first).
+    if (listen.length) {
+      const c = listen[0]
+      out.push({
+        key: 'listen', tone: 'warn', action: 'Listen', to: '/admin/payouts',
+        title: `${plural(listen.length, 'cancel')} ${listen.length === 1 ? 'needs' : 'need'} a listen`,
+        sub: listen.length === 1 ? <>{[c.client_name || 'Client', c.carrier_name].filter(Boolean).join(' · ')} · <span style={{ fontFamily: MONO }}>{fmtCents(c.amount_cents)}</span></>
+          : `Oldest: ${[c.client_name || 'Client', c.carrier_name].filter(Boolean).join(' · ')}`,
+      })
+    }
     // Prompt 764: pay goes out by itself on Monday; only a failed transfer
     // (retried next Monday) needs a look.
     const owed = payouts.filter(p => p.status === 'failed' && p.amount_cents > 0)
@@ -181,11 +205,15 @@ function AdminOverviewDesktop() {
       })
     }
     const nowDate = new Date(now)
-    const late = queue.filter(p => flagsFor(p, nowDate).overdue).length
-    if (late) {
+    const late = queue.filter(p => flagsFor(p, nowDate).overdue)
+    if (late.length) {
+      // P780 — the desk shows one day, so a call missed on an earlier day is
+      // only on the Pipeline (Needs attention); send the admin where they all are.
+      const older = late.filter(p => zonedDateStr(new Date(p.scheduled_call_at).getTime(), tz) < zonedDateStr(now, tz)).length
       out.push({
-        key: 'late', tone: 'warn', action: 'View', to: '/admin/fulfillment',
-        title: `${plural(late, 'call')} past their time`, sub: 'Not started yet · Fulfillment',
+        key: 'late', tone: 'warn', action: 'View', to: older ? '/admin/pipeline' : '/admin/fulfillment',
+        title: `${plural(late.length, 'call')} past their time`,
+        sub: older ? `Not started yet · ${older === late.length ? 'from before today' : `${older} from before today`}` : 'Not started yet · Fulfillment',
       })
     }
     if (invites.length) {
@@ -205,13 +233,13 @@ function AdminOverviewDesktop() {
       out.push({ key: 'sms', tone: 'mute', action: 'Settings', to: '/settings#contact', title: 'Texting isn’t live yet', sub: 'Switch it on in Settings' })
     }
     return out
-  }, [payouts, queue, invites, config, now])
+  }, [listen, payouts, queue, invites, config, now, tz])
 
   const firstName = (profile?.full_name || '').split(' ')[0]
   const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hourCycle: 'h23' }).format(now))
   const greeting = `${hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'}${firstName ? `, ${firstName}` : ''}`
   const dateLabel = month => new Date(now).toLocaleDateString('en-US', { timeZone: tz, weekday: 'long', month, day: 'numeric' })
-  const sub = needsLoading ? 'Checking what needs you…'
+  const sub = needsFailed ? 'Couldn’t check what needs you.' : needsLoading ? 'Checking what needs you…'
     : needs.length ? `${needs.length} ${needs.length === 1 ? 'thing needs' : 'things need'} you today.` : 'Nothing needs you today.'
 
   const seeNeeds = () => {
@@ -226,6 +254,7 @@ function AdminOverviewDesktop() {
 
   return (
     <div className="ao-page">
+      {needsFailed && <LoadError what="everything on this page" onRetry={retry} />}
       <HeroPanel
         compact greeting={greeting} sub={sub} timezone={tz}
         dateLong={dateLabel('long')} dateShort={dateLabel('short')}
@@ -251,7 +280,9 @@ function AdminOverviewDesktop() {
             {!needsLoading && needs.length > 0 && <span className="ao-count">{needs.length}</span>}
           </div>
           <div className="ao-need-list">
-            {needsLoading
+            {needsFailed
+              ? <p className="ao-empty">Couldn’t check. Try again above.</p>
+              : needsLoading
               ? <p className="ao-empty">Checking…</p>
               : needs.length
                 ? needs.map(n => <NeedRow key={n.key} n={n} onGo={() => navigate(n.to)} />)

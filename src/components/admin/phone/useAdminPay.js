@@ -38,6 +38,7 @@ export function useAdminPay() {
     error: unpaid.error?.message || settings.error?.message || accounts.error?.message || '',
     listenError: listen.error?.message || '',
     alert: model.listen.length > 0 || (loaded && state !== 'auto'),
+    refetch: () => [settings, unpaid, listen, accounts].forEach(q => q.isError && q.refetch()),
   }
 }
 
