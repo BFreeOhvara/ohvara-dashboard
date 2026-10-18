@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { Landmark, Loader2, Pause, Play, RefreshCw, X } from 'lucide-react'
+import { Landmark, Loader2, Pause, Play, RefreshCw, TriangleAlert, X } from 'lucide-react'
 import { Avatar } from '../ui/Avatar'
 import { Switch } from '../ui/Switch'
 import { money, dayLong, monDay, clock } from '../../lib/adminPayouts'
@@ -21,13 +21,16 @@ const STATE = {
   held: ['Held', 'is-warn'],
 }
 
-function Next({ model }) {
+function Next({ model, balance }) {
   const { mode, nextRun } = model
+  // P780 — like the phone's Pay tab: a balance short of Monday's run means it won't pay.
+  const short = mode === 'auto' && balance != null && nextRun.cents > 0 && balance < nextRun.cents
   const badge = {
     auto: { cls: 'is-auto', label: 'Pays automatically', note: 'Monday 8 AM · nothing for you to do', icon: <RefreshCw size={16} strokeWidth={2.2} aria-hidden="true" /> },
     paused: { cls: 'is-off', label: 'Paused', note: 'Automatic payouts are paused. Nobody is paid until you turn them back on.', icon: <Pause size={16} strokeWidth={2.2} aria-hidden="true" /> },
     off: { cls: 'is-off', label: 'Not live yet', note: 'Payouts are off, so the Monday run moves no money.', icon: <Pause size={16} strokeWidth={2.2} aria-hidden="true" /> },
-  }[mode]
+    short: { cls: 'is-bad', label: 'Won’t pay', note: `Stripe balance is ${money(balance)}, short of ${money(nextRun.cents)}. Add ${money(nextRun.cents - balance)} by Monday 8 AM or nobody gets paid.`, icon: <TriangleAlert size={16} strokeWidth={2.2} aria-hidden="true" /> },
+  }[short ? 'short' : mode]
   return (
     <div className="ap2-next-head">
       <div className="ap2-next-main">
@@ -207,7 +210,7 @@ export function PayoutsView({
     <div className="ap2-page">
       <div className="ap2-col">
         <section className="ap2-next" aria-label="Next pay run">
-          <Next model={model} />
+          <Next model={model} balance={balance} />
           <div className="ap2-reps">
             {loading && <div className="ap2-empty">Loading…</div>}
             {!loading && error && <div className="ap2-empty is-err">Couldn’t load pay: {error}</div>}

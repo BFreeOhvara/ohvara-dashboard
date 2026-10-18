@@ -3175,6 +3175,7 @@ a.ov-hpill:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; 
 .ap2-badge { height: 44px; box-sizing: border-box; border-radius: 999px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14.5px; font-weight: 700; }
 .ap2-badge.is-auto { background: rgba(52,224,196,0.16); border: 1px solid rgba(52,224,196,0.45); color: #5EEAD4; }
 .ap2-badge.is-off { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); color: #C9D4E8; }
+.ap2-badge.is-bad { background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.45); color: #FCA5A5; }
 .ap2-badge-note { margin-top: 8px; font-size: 12.5px; line-height: 1.4; color: #9FB0CF; }
 .ap2-reps { margin-top: 22px; display: flex; flex-direction: column; }
 .ap2-rep { display: flex; align-items: center; gap: 14px; min-height: 62px; border-top: 1px solid rgba(255,255,255,0.10); }
