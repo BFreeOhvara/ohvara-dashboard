@@ -17,7 +17,7 @@ const PHONE_GROUPS = [
   { tab: 'cancelled', label: 'Cancelled', head: 'Cancelled', color: 'var(--ov-st-cancelled)' },
 ]
 
-export function PhoneClients({ rows, loading, filter, onFilter, sort, now, onOpen }) {
+export function PhoneClients({ rows, loading, error, filter, onFilter, sort, now, onOpen }) {
   const [query, setQuery] = useState('')
   const q = query.trim()
   const shown = useMemo(() => (q ? new Set(matchClients(rows, q).map(p => p.id)) : null), [rows, q])
@@ -59,7 +59,8 @@ export function PhoneClients({ rows, loading, filter, onFilter, sort, now, onOpe
 
       <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
         {loading && <div className="ov-card ph-card ph-empty">Loading your clients…</div>}
-        {!loading && groups.length === 0 && (
+        {error}
+        {!loading && !error && groups.length === 0 && (
           <div className="ov-card ph-card ph-empty">{q ? `No client matches “${q}”.` : 'No clients yet. Tap + to book your first call.'}</div>
         )}
         {!loading && groups.map(g => (

@@ -61,7 +61,7 @@ export function NotificationBell({ profileId, full = false }) {
   const btnRef = useRef(null)
   const panelRef = useRef(null)
   const pos = useAnchor(open, btnRef)
-  const { data: rows = [] } = useNotificationFeed(profileId)
+  const { data: rows = [], isError: feedFailed, refetch: refetchFeed } = useNotificationFeed(profileId)
   const { data: banner } = useMoneyBanner(profileId)
   const markRead = useMarkRead(profileId)
   const unread = rows.filter(n => !n.read).length
@@ -102,7 +102,7 @@ export function NotificationBell({ profileId, full = false }) {
           {!full && <div className="nt-arrow" style={{ top: pos.top - 6, left: pos.arrowLeft }} aria-hidden="true" />}
           <div ref={panelRef} role="dialog" aria-label="Notifications" className={`nt-wrap${full ? ' is-full' : ''}`}
             style={full ? { top: 0, left: 0, width: '100vw', height: '100dvh' } : { top: pos.top, left: pos.left, width: pos.width, height: pos.maxH }}>
-            <NotificationPanel rows={rows} banner={banner} unread={unread}
+            <NotificationPanel rows={rows} failed={feedFailed} onRetry={() => refetchFeed()} banner={banner} unread={unread}
               onClose={full ? () => { setOpen(false); btnRef.current?.focus() } : undefined}
               onOpen={n => { if (!n.read) markRead.mutate([n.id]); go(n.link) }}
               onMarkAll={() => markRead.mutate(null)}
@@ -120,7 +120,7 @@ export function NotificationBell({ profileId, full = false }) {
 }
 
 // The panel itself, without placement (the harness renders it on its own).
-export function NotificationPanel({ rows, banner, unread, onOpen, onMarkAll, onBanner, onSettings, onClose, initialTab = 'all', now, phoneOn = false, onPhone }) {
+export function NotificationPanel({ rows, failed = false, onRetry, banner, unread, onOpen, onMarkAll, onBanner, onSettings, onClose, initialTab = 'all', now, phoneOn = false, onPhone }) {
   const [tab, setTab] = useState(initialTab)
   const needs = rows.filter(needsYou).length
   const groups = groupByDay(shownFor(rows, tab), now)
@@ -167,7 +167,13 @@ export function NotificationPanel({ rows, banner, unread, onOpen, onMarkAll, onB
       )}
 
       <div className="nt-list scrollbar-thin">
-        {groups.length === 0 ? (
+        {failed && groups.length === 0 ? (
+          // P778 — a failed load isn't "all caught up".
+          <div className="nt-empty" role="alert">
+            <span className="nt-empty-title">Couldn’t load your notifications</span>
+            <button type="button" className="nt-banner-btn" onClick={onRetry}>Try again</button>
+          </div>
+        ) : groups.length === 0 ? (
           <div className="nt-empty">
             <span className="nt-empty-tile"><PartyPopper size={22} strokeWidth={2} aria-hidden="true" /></span>
             <span className="nt-empty-title">You’re all caught up</span>

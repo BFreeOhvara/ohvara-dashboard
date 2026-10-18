@@ -146,7 +146,7 @@ function ChangeForm({ p, rows, profileId, switcher, onNew, onPick, pickNote, loa
   const { profile } = useAuth()
   const myTz = profile?.timezone || DEFAULT_TIMEZONE
   const now = useNow(30e3)
-  const { data: carriers = [] } = useCarriers()
+  const { data: carriers = [], isError: carriersFailed, refetch: refetchCarriers } = useCarriers()
   const { data: usage } = useWeeklyUsage(profileId)
   const cap = capState(usage)
   const change = useChangeBooking()
@@ -328,6 +328,8 @@ function ChangeForm({ p, rows, profileId, switcher, onNew, onPick, pickNote, loa
 
       <div className="ov-book">
         <div className="flex flex-col gap-[14px] sm:gap-5" style={{ minWidth: 0 }}>
+          {/* P778 — same as Book a call: a failed carrier list says so. */}
+          {carriersFailed && <LoadError what="the carrier list" onRetry={() => refetchCarriers()} />}
           <section className="ov-card flex flex-col gap-[18px] sm:gap-5 px-[18px] pt-5 pb-[22px] sm:px-7 sm:pt-[26px] sm:pb-7">
             <StepHead n={1} title="Which client?" sub="Type a name or phone number. It searches everyone you've booked." />
             {p ? (

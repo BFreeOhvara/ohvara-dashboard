@@ -4,7 +4,7 @@ import { TriangleAlert, Phone, Calendar, Info } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCarriers, useCarrierHours, useAddCarrier } from '../../hooks/useCarriers'
 import { useAgentBookings, useBookCall } from '../../hooks/useAgentBookings'
-import { StepHead, OvField, StateField, DayChoice, SlotGrid, BookingSummary, WeeklyUsage, BookedCard, CarrierInput, SlotSkeleton, BookSwitch } from '../../components/agent/AgentUI'
+import { StepHead, OvField, StateField, DayChoice, SlotGrid, BookingSummary, WeeklyUsage, BookedCard, CarrierInput, SlotSkeleton, BookSwitch, LoadError } from '../../components/agent/AgentUI'
 import { useClientTimezone } from '../../hooks/useClientTimezone'
 import ChangeBooking from './ChangeBooking'
 import { formatPhoneInput, titleCase } from '../../lib/policyFormat'
@@ -101,7 +101,7 @@ function NewBooking({ switcher }) {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const now = useNow(30e3)
-  const { data: carriers = [] } = useCarriers()
+  const { data: carriers = [], isError: carriersFailed, refetch: refetchCarriers } = useCarriers()
   const { data: mine = [] } = useAgentBookings(profile?.id)
   const book = useBookCall()
   // Prompt 692 — weekly submission cap. The database refuses a booking past
@@ -277,6 +277,9 @@ function NewBooking({ switcher }) {
   const closedText = ready ? `${carrier.name} doesn't take calls that day. Pick another day.` : null
   const fields = 'grid grid-cols-1 sm:grid-cols-3 gap-y-[18px] sm:gap-4'
 
+  // P778 — without the carrier list every name looks unknown ("Use …"), so a
+  // failed load says so and offers a retry, above the form on both layouts.
+  const carriersError = carriersFailed && <LoadError what="the carrier list" onRetry={() => refetchCarriers()} />
   const capWarning = capped && (
     <div className="ov-attn" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: phone ? '16px 16px' : '18px 22px' }}>
       <TriangleAlert size={18} strokeWidth={2} style={{ color: 'var(--ov-warn)', flexShrink: 0, marginTop: 2 }} />
@@ -302,7 +305,7 @@ function NewBooking({ switcher }) {
     }
     return (
       <PhoneBook
-        onBack={() => navigate(-1)} cap={cap} capWarning={capWarning}
+        onBack={() => navigate(-1)} cap={cap} capWarning={<>{carriersError}{capWarning}</>}
         form={form} set={set} errors={errors} picked={picked} carriers={carriers}
         onCarrierText={typeCarrier} onCarrierPick={onePick} onCarrierUse={keepTypedCarrier} addingCarrier={addCarrier.isPending}
         step1Open={step1Open || !filled} onEdit={() => setStep1Open(true)} onDone={() => setStep1Open(false)} filled={filled}
@@ -327,6 +330,7 @@ function NewBooking({ switcher }) {
 
       <div className="ov-book">
         <div className="flex flex-col gap-[14px] sm:gap-5" style={{ minWidth: 0 }}>
+          {carriersError}
           {capWarning}
 
           <section className="ov-card flex flex-col gap-[18px] sm:gap-5 px-[18px] pt-5 pb-[22px] sm:px-7 sm:pt-[26px] sm:pb-7">

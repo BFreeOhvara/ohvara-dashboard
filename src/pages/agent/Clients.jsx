@@ -8,6 +8,7 @@ import { useCarriers, useCarrierHours, useAddCarrier, useSetBookingCarrier } fro
 import { AnchoredSelectField } from '../../components/ui/ExportForm'
 import {
   ClientSearch, PipelineSummary, PipelineList, ClientDrawer, InfoTile, StatusNote, Journey, DayChoice, SlotGrid, CarrierInput, SlotSkeleton,
+  LoadError,
 } from '../../components/agent/AgentUI'
 import { fmtBooking, callWhen, clientSlotISO, slotState, openBookingIsos, dayIn, addDaysStr, dateLabel, dayGone, carrierDaySlots, firstOpenDay } from '../../lib/scheduling'
 import { bookingCarrier, viewerHoursSummary } from '../../lib/carriers'
@@ -91,7 +92,9 @@ export default function Clients() {
   const openId = params.get('open')
   const rebook = params.get('rebook') === '1'
 
-  const { data: raw = [], isLoading } = useAgentBookings(isAdmin ? null : profile?.id)
+  const { data: raw = [], isLoading, isError, refetch } = useAgentBookings(isAdmin ? null : profile?.id)
+  // P778 — a failed load says so (not "No clients yet"), on both layouts.
+  const loadError = isError ? <LoadError what="your clients" onRetry={() => refetch()} /> : null
   const rows = useMemo(() => (isAdmin ? excludeTestAccounts(raw, profile?.id) : raw), [raw, isAdmin, profile?.id])
 
   const stageParam = params.get('stage')
@@ -153,7 +156,7 @@ export default function Clients() {
     return (
       <>
         <PhoneClients
-          rows={scoped} loading={isLoading} filter={filter} sort={SORT} now={now}
+          rows={scoped} loading={isLoading} error={loadError} filter={filter} sort={SORT} now={now}
           onFilter={t => setParam('stage', t, null)} onOpen={p => openOnly(p.id)}
         />
         {detail}
@@ -163,6 +166,7 @@ export default function Clients() {
 
   return (
     <>
+      {loadError && <div style={{ marginBottom: 16 }}>{loadError}</div>}
       <div className="pl-page">
         <div className="pl-rail">
           <ClientSearch
