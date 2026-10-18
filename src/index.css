@@ -3799,6 +3799,14 @@ button.nt-phone:hover { color: var(--ov-hi); }
 /* Messages (P721's phone inbox/chat) fills the space above the tab bar. */
 .ph-app .messages-fill { height: 100vh; height: 100dvh; }
 .ph-app.has-tabs .messages-fill { height: calc(100dvh - var(--ph-tabbar-h) - env(safe-area-inset-bottom)); }
+/* P778 — and on any touch screen, wherever the field renders: sheets portaled
+   to <body> sit outside .ph-app, and a landscape phone or iPad gets the
+   desktop layout. Mouse screens are untouched. */
+@media (hover: none) and (pointer: coarse) {
+  input, select, textarea, [contenteditable="true"] { font-size: 16px !important; }
+  /* No double-tap zoom when a button or link is tapped twice quickly. */
+  a, button, [role="button"], [role="tab"], [role="switch"], label, input, select, textarea { touch-action: manipulation; }
+}
 
 .ph-stack { display: flex; flex-direction: column; gap: 18px; }
 .ph-h1 { margin: 0; font-family: var(--font-display); font-size: 28px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; color: var(--ov-hi); }
