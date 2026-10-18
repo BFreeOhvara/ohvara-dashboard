@@ -41,6 +41,14 @@ export function InviteAgentModal({ onClose }) {
   const avail = status.data?.[channel] === true
   const soon = status.isFetched && !avail
 
+  // P778 — open on a channel that can send. Texting invites stay off until
+  // they're in the A2P campaign, so start on Email when Text can't send yet
+  // (unless the agent has already picked a tab).
+  const picked = useRef(false)
+  useEffect(() => {
+    if (!picked.current && status.data && status.data.sms !== true && status.data.email === true) setChannel('email')
+  }, [status.data])
+
   useEffect(() => {
     if (!sentTo && !soon) field.current?.focus({ preventScroll: true })
   }, [channel, sentTo, soon])
@@ -50,6 +58,7 @@ export function InviteAgentModal({ onClose }) {
   const canSend = avail && valid && !send.isPending
 
   function pick(c) {
+    picked.current = true
     if (c === channel) return
     setChannel(c); setValue(''); send.reset()
   }
