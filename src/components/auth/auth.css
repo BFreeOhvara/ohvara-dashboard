@@ -77,6 +77,8 @@ html.sx-root body {
 }
 .sx-page *, .sx-page *::before, .sx-page *::after { box-sizing: border-box; }
 .sx-page :focus-visible { outline: 2px solid var(--sx-teal-hi); outline-offset: 2px; }
+/* Inputs show focus on their field box (.sx-box:focus-within) instead. */
+.sx-page .sx-input:focus-visible, .sx-page .sx-input:focus { outline: none; }
 
 /* ---------- desktop: story on the left, card on the right ---------- */
 .sx-left {
