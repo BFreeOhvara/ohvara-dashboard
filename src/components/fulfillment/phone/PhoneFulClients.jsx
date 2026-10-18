@@ -50,7 +50,7 @@ function rowEnd(p, now, tz, nextId) {
   return [today ? timeText(p.scheduled_call_at, tz) : whenText(p.scheduled_call_at, now, tz), agent, p.id === nextId ? 'var(--ph-next-time)' : 'var(--ov-hi)']
 }
 
-export function PhoneFulClients({ rows, loading, filter, onFilter, now, tz: tzIn, onOpen }) {
+export function PhoneFulClients({ rows, loading, error, filter, onFilter, now, tz: tzIn, onOpen }) {
   const tz = tzIn || DEFAULT_TIMEZONE
   const [query, setQuery] = useState('')
   const q = query.trim()
@@ -104,7 +104,7 @@ export function PhoneFulClients({ rows, loading, filter, onFilter, now, tz: tzIn
       </div>
 
       <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {loading && <div className="ov-card ph-card ph-empty">Loading your clients…</div>}
+        {error || (loading && <div className="ov-card ph-card ph-empty">Loading your clients…</div>)}
         {!loading && groups.length === 0 && (
           <div className="ov-card ph-card ph-empty">
             {q ? `No client matches “${q}”.` : filter ? `No ${STATUS.find(s => s.tab === filter).label.toLowerCase()} clients.` : 'No clients yet. Calls show here once agents book them.'}

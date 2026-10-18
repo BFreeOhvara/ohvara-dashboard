@@ -5,7 +5,7 @@ import { Check, ChevronLeft, ChevronRight, CornerDownLeft } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useFulfillmentQueue, assignUnassigned } from '../../hooks/usePolicies'
 import { useCallOutcomes } from '../../hooks/useRepCallEvents'
-import { ClientDrawer, OvSelect } from '../../components/agent/AgentUI'
+import { ClientDrawer, OvSelect, LoadError } from '../../components/agent/AgentUI'
 import { CallDrawer, CallButton, CallStatus } from '../../components/fulfillment/CallDrawer'
 import { ResultFixBar } from '../../components/fulfillment/ResultFixBar'
 import { PhoneToday } from '../../components/fulfillment/phone/PhoneToday'
@@ -317,7 +317,8 @@ function DeskMyCalls() {
   const { profile } = useAuth()
   const isAdmin = profile?.role === 'admin'
   const qc = useQueryClient()
-  const { data: queue = [], isLoading } = useFulfillmentQueue()
+  const queueQ = useFulfillmentQueue()
+  const { data: queue = [], isLoading } = queueQ
   const now = useNow(15e3)
   const tz = profile?.timezone || DEFAULT_TIMEZONE
   const todayStr = zonedDateStr(now, tz)
@@ -360,12 +361,15 @@ function DeskMyCalls() {
   const { startMs, endMs } = dayBounds(day, tz)
   const anyLive = scope.some(isLive)
   const started = startMs <= now
-  const { data: events = [], isLoading: eventsLoading } = useCallOutcomes(iso(startMs), iso(endMs), { enabled: started, live: anyLive })
+  const eventsQ = useCallOutcomes(iso(startMs), iso(endMs), { enabled: started, live: anyLive })
+  const { data: events = [], isLoading: eventsLoading } = eventsQ
+  // P779 — a failed load isn't "nothing on your calendar".
+  const failed = (queueQ.isError && !queueQ.data) || (started && eventsQ.isError && !eventsQ.data)
   const calls = useMemo(
     () => buildCalls(scope, now, tz, { from: day, to: day, events: started ? events : null }),
     [scope, now, tz, day, started, events],
   )
-  const busy = isLoading || !profile || (started && eventsLoading)
+  const busy = isLoading || !profile || (started && eventsLoading) || failed
   const t = dayTally(calls)
 
   const done = calls.filter(c => c.done && c.tone !== 'live')
@@ -422,7 +426,7 @@ function DeskMyCalls() {
     : isToday ? { n: t.toGo, word: 'to go', line: liveCall ? `${plural(t.total, 'call')} · ${t.done} done · on a call` : `${plural(t.total, 'call')} today · ${t.done} done` }
       : ahead ? { n: t.total, word: 'booked', line: firstAt ? `first at ${timeText(firstAt.at, tz)}` : 'nothing yet' }
         : { n: t.total, word: t.total === 1 ? 'call' : 'calls', line: `${t.cancelled} cancelled · ${t.noAnswer} no answer` }
-  const dayLine = busy ? 'Loading the day…'
+  const dayLine = failed ? 'Couldn’t load the day' : busy ? 'Loading the day…'
     : !t.total ? 'No calls'
       : isToday ? (liveCall ? `${plural(t.total, 'call')} · ${t.done} done · on the ${timeParts(liveCall.at, tz).time} now` : `${plural(t.total, 'call')} · ${t.done} done · ${t.toGo + t.live} to go`)
         : ahead ? `${plural(t.total, 'call')} booked`
@@ -467,7 +471,9 @@ function DeskMyCalls() {
   }
 
   let timeline
-  if (busy) {
+  if (failed) {
+    timeline = <LoadError what={isAdmin ? 'the calls' : 'your calls'} onRetry={() => { queueQ.refetch(); eventsQ.refetch() }} style={{ margin: '4px 0' }} />
+  } else if (busy) {
     timeline = <div className="mc-empty">Loading the day…</div>
   } else if (!calls.length) {
     timeline = (
@@ -589,7 +595,7 @@ function DeskMyCalls() {
           now={now} tz={tz} profile={profile} isAdmin={isAdmin}
           onClose={closeCall} onOpenCall={openOther} fix={fix}
         />
-      ) : !isLoading && (
+      ) : !isLoading && !failed && (
         <ClientDrawer name="Call not found" meta={`This call isn't on ${isAdmin ? 'the' : 'your'} calendar any more.`} onClose={closeCall} />
       ))}
       {!openRow && <ResultFixBar ctl={fix} />}

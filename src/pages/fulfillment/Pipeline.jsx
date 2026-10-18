@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Users, UserRound } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useFulfillmentQueue } from '../../hooks/usePolicies'
-import { ClientSearch, PipelineSummary, PipelineList, ClientDrawer, OvSelect } from '../../components/agent/AgentUI'
+import { ClientSearch, PipelineSummary, PipelineList, ClientDrawer, OvSelect, LoadError } from '../../components/agent/AgentUI'
 import { CallDrawer } from '../../components/fulfillment/CallDrawer'
 import { whenShort, timeText } from '../../lib/fulfillmentDay'
 import { isLive, stageOf, fulfillTabOf, FULFILL_TABS, RANGES, useNow, startOfWeek, startOfMonth } from '../../lib/agentBookings'
@@ -63,7 +63,8 @@ function PhonePipeline() {
   const tz = profile?.timezone || DEFAULT_TIMEZONE
   const [params, setParams] = useSearchParams()
   const openId = params.get('open')
-  const { data: queue = [], isLoading } = useFulfillmentQueue()
+  const { data: queue = [], isLoading, isError, data, refetch } = useFulfillmentQueue()
+  const failed = isError && !data   // P779
   const mine = useMemo(() => queue.filter(p => p.assigned_fulfillment_id === profile?.id), [queue, profile?.id])
   const stage = params.get('stage')
   const filter = FULFILL_TABS.includes(stage) ? stage : null
@@ -77,14 +78,15 @@ function PhonePipeline() {
   return (
     <>
       <PhoneFulClients
-        rows={mine} loading={isLoading || !profile} now={now} tz={tz}
+        rows={mine} loading={isLoading || !profile || failed} now={now} tz={tz}
+        error={failed && <LoadError what="your clients" onRetry={() => refetch()} />}
         filter={filter} onFilter={t => update(next => { if (t) next.set('stage', t); else next.delete('stage') })}
         onOpen={p => setParams(prev => { const next = new URLSearchParams(prev); next.set('open', p.id); return next })}
       />
       {openId && (openRow ? (
         <CallDrawer key={openRow.id} p={openRow} scope={mine} now={now} tz={tz} profile={profile} isAdmin={false}
           onClose={close} onOpenCall={id => update(next => next.set('open', id))} />
-      ) : !isLoading && (
+      ) : !isLoading && !failed && (
         <PhoneSheet label="Call not found" head={<b style={{ fontSize: 17 }}>Call not found</b>} onClose={close}>
           <p className="ph-empty" style={{ textAlign: 'left', padding: '12px 0 8px' }}>This client isn't on your pipeline any more.</p>
         </PhoneSheet>
@@ -100,7 +102,8 @@ function DeskPipeline() {
   const tz = profile?.timezone || DEFAULT_TIMEZONE
   const [params, setParams] = useSearchParams()
   const openId = params.get('open')
-  const { data: queue = [], isLoading } = useFulfillmentQueue()
+  const { data: queue = [], isLoading, isError, data, refetch } = useFulfillmentQueue()
+  const failed = isError && !data   // P779 — not an empty board
 
   const repId = isAdmin ? params.get('rep') || '' : ''
   const agentId = params.get('agent') || ''
@@ -183,6 +186,7 @@ function DeskPipeline() {
 
   return (
     <>
+      {failed && <LoadError what={isAdmin ? 'the clients' : 'your clients'} onRetry={() => refetch()} style={{ marginBottom: 16 }} />}
       <div className="pl-page">
         <div className="pl-rail">
           <ClientSearch
@@ -205,7 +209,7 @@ function DeskPipeline() {
           rows={scoped} tab={tab} onTab={t => setParam('stage', t, 'booked')} list={list}
           tabs={FULFILL_TABS} tabFn={fulfillTabOf} meanings={isAdmin ? MEANINGS_ADMIN : MEANINGS}
           now={now} activeId={openId} onOpen={open} fulfill={{ tz }}
-          loading={isLoading || !profile} emptyRange={scoped.length === 0 && range !== 'all' ? range : null}
+          loading={isLoading || !profile || failed} emptyRange={scoped.length === 0 && range !== 'all' ? range : null}
         />
       </div>
 
@@ -215,7 +219,7 @@ function DeskPipeline() {
           now={now} tz={tz} profile={profile} isAdmin={isAdmin}
           onClose={close} onOpenCall={open}
         />
-      ) : !isLoading && (
+      ) : !isLoading && !failed && (
         <ClientDrawer name="Call not found" meta={`This client isn't on ${isAdmin ? 'the' : 'your'} pipeline any more.`} onClose={close} />
       ))}
     </>

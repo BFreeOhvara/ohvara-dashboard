@@ -4,7 +4,7 @@ import { Phone, Check } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useFulfillmentQueue } from '../../hooks/usePolicies'
 import { useCallOutcomes } from '../../hooks/useRepCallEvents'
-import { HeroPanel, TrendCard, LastWeekChart } from '../../components/agent/AgentUI'
+import { HeroPanel, TrendCard, LastWeekChart, LoadError } from '../../components/agent/AgentUI'
 import { YourDayCard, LiveCallStrips } from '../../components/fulfillment/FulfillUI'
 import { isLive, useNow } from '../../lib/agentBookings'
 import { DEFAULT_TIMEZONE, zonedDateStr } from '../../lib/timezones'
@@ -31,7 +31,8 @@ function DeskOverview() {
   const now = useNow(30e3)
   const team = profile?.role === 'admin'
   const tz = profile?.timezone || DEFAULT_TIMEZONE
-  const { data: queue = [], isLoading: queueLoading } = useFulfillmentQueue()
+  const queueQ = useFulfillmentQueue()
+  const { data: queue = [], isLoading: queueLoading } = queueQ
   const rows = useMemo(
     () => (team ? queue : queue.filter(p => p.assigned_fulfillment_id === profile?.id)),
     [queue, team, profile?.id],
@@ -40,10 +41,13 @@ function DeskOverview() {
 
   const todayStr = zonedDateStr(now, tz)
   const frame = useMemo(() => weekFrame(todayStr, tz), [todayStr, tz])
-  const { data: events = [], isLoading: eventsLoading } = useCallOutcomes(
+  const eventsQ = useCallOutcomes(
     new Date(frame.sinceMs).toISOString(), new Date(frame.bounds[14]).toISOString(), { live: anyLive },
   )
-  const isLoading = queueLoading || eventsLoading || !profile
+  const { data: events = [], isLoading: eventsLoading } = eventsQ
+  // P779 — a failed load says so; the cards stay blank instead of "no calls".
+  const failed = (queueQ.isError && !queueQ.data) || (eventsQ.isError && !eventsQ.data)
+  const isLoading = queueLoading || eventsLoading || !profile || failed
 
   // Booked = every call on the calendar last Monday to this Sunday, done or to come.
   const stats = useMemo(() => weekStats(
@@ -69,7 +73,7 @@ function DeskOverview() {
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
   const where = team ? ' across the team' : ''
 
-  const sub = isLoading ? 'Loading your calls…'
+  const sub = failed ? 'Couldn’t load your calls.' : isLoading ? 'Loading your calls…'
     : day.left > 0 ? `${plural(day.left, 'call')} to go${team ? ' across the team' : ''} today.${day.next ? ` Next up at ${timeText(day.next.at, tz)}.` : ''}`
       : live.length ? (team ? 'The team is on a call.' : 'You’re on a call.')
         : team ? 'Nothing else on the team’s calendar today.' : 'Nothing else on your calendar today.'
@@ -87,6 +91,8 @@ function DeskOverview() {
         dateLong={dateLabel('long')} dateShort={dateLabel('short')}
         action={action}
       />
+
+      {failed && <LoadError what={team ? 'the calls' : 'your calls'} onRetry={() => { queueQ.refetch(); eventsQ.refetch() }} />}
 
       <LiveCallStrips live={live} now={now} team={team} onOpen={open} />
 

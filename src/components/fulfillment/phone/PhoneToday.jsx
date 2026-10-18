@@ -12,6 +12,7 @@ import { CallButton, CallDrawer, CallStatus } from '../CallDrawer'
 import { NotificationBell } from '../../notifications/NotificationBell'
 import { Avatar } from '../../ui/Avatar'
 import { PhoneSheet } from '../../agent/phone/PhoneSheet'
+import { LoadError } from '../../agent/AgentUI'
 import { clientSub } from '../../agent/phone/phoneBits'
 import { agentCallerIdOn, carrierOpenText, firstName } from '../../../lib/fulfillmentCall'
 import { bookingCarrier } from '../../../lib/carriers'
@@ -147,7 +148,8 @@ export function PhoneToday() {
   const navigate = useNavigate()
   const location = useLocation()
   const qc = useQueryClient()
-  const { data: queue = [], isLoading } = useFulfillmentQueue()
+  const queueQ = useFulfillmentQueue()
+  const { data: queue = [], isLoading } = queueQ
   const { data: carriers } = useCarriers()
   const now = useNow(15e3)
   const tz = profile?.timezone || DEFAULT_TIMEZONE
@@ -167,9 +169,12 @@ export function PhoneToday() {
   const mine = useMemo(() => queue.filter(p => p.assigned_fulfillment_id === myId), [queue, myId])
   const { startMs, endMs } = dayBounds(today, tz)
   const anyLive = mine.some(isLive)
-  const { data: events = [], isLoading: eventsLoading } = useCallOutcomes(iso(startMs), iso(endMs), { live: anyLive })
+  const eventsQ = useCallOutcomes(iso(startMs), iso(endMs), { live: anyLive })
+  const { data: events = [], isLoading: eventsLoading } = eventsQ
+  // P779 — a failed load isn't "no calls today".
+  const failed = (queueQ.isError && !queueQ.data) || (eventsQ.isError && !eventsQ.data)
   const calls = useMemo(() => buildCalls(mine, now, tz, { from: today, to: today, events }), [mine, now, tz, today, events])
-  const busy = isLoading || !profile || eventsLoading
+  const busy = isLoading || !profile || eventsLoading || failed
   const t = dayTally(calls)
   const liveCall = calls.find(c => c.tone === 'live') || null
   const upcoming = calls.filter(c => !c.done)
@@ -203,7 +208,7 @@ export function PhoneToday() {
 
   const chip = new Date(now).toLocaleDateString('en-US', { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric' })
   const toGo = t.toGo + t.live
-  const sub = busy ? 'Loading your day…'
+  const sub = failed ? 'Couldn’t load your calls.' : busy ? 'Loading your day…'
     : t.total ? `${plural(t.total, 'call')} today. ${t.done} done, ${toGo} to go.`
       : 'Nothing on your calendar today.'
   const score = [
@@ -228,7 +233,9 @@ export function PhoneToday() {
         <p style={{ margin: '6px 0 0', fontSize: 15, color: 'var(--ov-soft)' }}>{sub}</p>
       </div>
 
-      {busy ? (
+      {failed ? (
+        <LoadError what="your calls" onRetry={() => { queueQ.refetch(); eventsQ.refetch() }} />
+      ) : busy ? (
         <div className="ov-card ph-card ph-empty">Loading your day…</div>
       ) : focus ? (
         <NextCard c={focus} now={now} tz={tz} profile={profile} carriers={carriers} onOpen={open} lit={lit} cardRef={cardRef} />
@@ -289,7 +296,7 @@ export function PhoneToday() {
       {openId && (openRow ? (
         <CallDrawer key={openRow.id} p={openRow} scope={mine} now={now} tz={tz} profile={profile} isAdmin={false}
           onClose={close} onOpenCall={id => setParams({ open: id }, { replace: true })} />
-      ) : !isLoading && (
+      ) : !isLoading && !failed && (
         <PhoneSheet label="Call not found" head={<b style={{ fontSize: 17 }}>Call not found</b>} onClose={close}>
           <p className="ph-empty" style={{ textAlign: 'left', padding: '12px 0 8px' }}>This call isn't on your calendar any more.</p>
         </PhoneSheet>

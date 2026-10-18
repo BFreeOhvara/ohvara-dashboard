@@ -8,6 +8,7 @@ import { MyPayView } from '../../components/fulfillment/MyPay'
 import { PhoneMyPay } from '../../components/fulfillment/phone/PhoneMyPay'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { PayoutSettingsView } from '../../components/fulfillment/PayoutSettings'
+import { LoadError } from '../../components/agent/AgentUI'
 import { payPeriod } from '../../lib/payPeriod'
 import { accountStatus, cancelTotals, isoDay } from '../../lib/myPay'
 import { useNow } from '../../lib/agentBookings'
@@ -55,7 +56,8 @@ export default function MyPay() {
   const period = useMemo(() => payPeriod(which === 'last' ? now - 7 * 864e5 : now), [which, now])
 
   const since = useMemo(() => isoDay(payPeriod(now - 7 * 864e5).start), [now])
-  const { data: cancels = [] } = useCancels(profile?.id, since, !!profile)
+  const cancelsQ = useCancels(profile?.id, since, !!profile)
+  const { data: cancels = [] } = cancelsQ
   const { data: paySettings } = usePaySettings()
   const { data: payouts = [] } = usePayouts(profile?.id, !!profile)
   const { data: accounts = [], isLoading: accountsLoading } = usePayoutAccounts(profile?.id, !!profile)
@@ -101,6 +103,14 @@ export default function MyPay() {
         onEmail={onEmail}
       />
     )
+  }
+
+  // P779 — without the cancels the hero would say $0.00 earned; say it didn't load.
+  if (cancelsQ.isError && !cancelsQ.data) {
+    const error = <LoadError what="your pay" onRetry={() => cancelsQ.refetch()} />
+    return phone
+      ? <div className="ph-stack" style={{ gap: 14 }}><h1 className="ph-h1">My pay</h1>{error}</div>
+      : error
   }
 
   if (phone) {
