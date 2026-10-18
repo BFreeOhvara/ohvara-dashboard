@@ -285,7 +285,7 @@ function NewBooking({ switcher }) {
       <TriangleAlert size={18} strokeWidth={2} style={{ color: 'var(--ov-warn)', flexShrink: 0, marginTop: 2 }} />
       <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <p style={{ margin: 0, flex: '1 1 260px', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-mid)' }}>
-          You've used all {cap.cap} submissions on the {cap.tierName} plan this week.{' '}
+          You've used all {cap.cap} bookings on the {cap.tierName} plan this week.{' '}
           {upgrade && !isNativeApp()
             ? <>Upgrade to {upgrade.name} ({formatWeekly(upgrade.weekly_cents)}/week, {upgrade.weekly_cap ?? 'unlimited'} a week) to keep booking, or wait until {formatReset(usage.week_end, profile?.timezone)}.</>
             : <>The cap resets {formatReset(usage.week_end, profile?.timezone)}.</>}
