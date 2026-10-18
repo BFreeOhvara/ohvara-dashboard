@@ -4,6 +4,7 @@ import { X, Copy, Check } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCreateInvite, useInviteStatus, useSendAgentInvite } from '../../hooks/useProfiles'
 import { formatPhoneInput, phoneText } from '../../lib/policyFormat'
+import { webUrl } from '../../lib/native'
 
 // Add someone (Prompt 762, moved here Prompt 766): the Admin invite dialog —
 // role Agent or Fulfillment, send by email or text, or copy a one-time link.
@@ -42,7 +43,7 @@ export function AddSomeone({ defaultRole, onClose }) {
     setErr(null)
     try {
       const inv = await createInvite.mutateAsync({ role, createdBy: profile.id })
-      const link = `${window.location.origin}/join/${inv.token}`
+      const link = webUrl(`/join?t=${inv.token}`)
       setDone({ link })
       try { await navigator.clipboard.writeText(link); setCopied(true) } catch { /* the link is on screen */ }
     } catch (x) { setErr(x.message || 'Couldn’t make a link.') }

@@ -13,6 +13,7 @@ import { Avatar } from '../../ui/Avatar'
 import { PhoneSheet } from '../../agent/phone/PhoneSheet'
 import { AddSomeoneSheet } from './AddSomeoneSheet'
 import { PhoneToast } from './PhoneToast'
+import { webUrl } from '../../../lib/native'
 
 // Prompt 774 — People (Admin Users) on a phone, from More: Agents /
 // Fulfillment, search, one row per person with this week's numbers (the
@@ -45,7 +46,7 @@ function InviteRow({ inv, now }) {
   async function resend() {
     setState(null)
     if (!inv.channel) {
-      try { await navigator.clipboard.writeText(`${window.location.origin}/join/${inv.token}`); setState({ ok: 'Link copied' }) } catch { setState({ err: 'Couldn’t copy the link' }) }
+      try { await navigator.clipboard.writeText(webUrl(`/join?t=${inv.token}`)); setState({ ok: 'Link copied' }) } catch { setState({ err: 'Couldn’t copy the link' }) }
       return
     }
     try {

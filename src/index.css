@@ -4467,3 +4467,13 @@ body:has(.pc-bar) .ph-app.has-tabs .ph-main { padding-bottom: calc(var(--ph-tabb
 /* No rubber-band bounce of the whole page and no long-press callouts on links in the app. */
 html.is-native, html.is-native body { overscroll-behavior-y: none; }
 html.is-native a, html.is-native img { -webkit-touch-callout: none; }
+
+/* Prompt 781 — "Confirm your email" banner (text-invite accounts). */
+.ov-confirm-banner {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 0 0 16px; padding: 12px 14px; border-radius: 14px;
+  background: var(--warning-dim); border: 1px solid var(--warning-bd); color: var(--ov-hi);
+  font-size: 13.5px; line-height: 1.45;
+}
+.ov-confirm-banner > svg { color: var(--warning); }
+.ph-main .ov-confirm-banner { margin: 12px 14px 0; }

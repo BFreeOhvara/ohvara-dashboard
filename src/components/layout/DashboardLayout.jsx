@@ -16,6 +16,7 @@ import { navEntry, PAGE_TONE } from '../../lib/nav'
 import { BillingGate } from './BillingGate'
 import { ErrorBoundary } from '../shared/ErrorBoundary'
 import { PhoneShell } from './PhoneShell'
+import { ConfirmEmailBanner } from './ConfirmEmailBanner'
 import { useIsPhone } from '../../hooks/usePhoneLayout'
 
 // Shell — Prompt 669 restyle to Restorix Portal's Layout.jsx, a 32/24 padded
@@ -292,6 +293,7 @@ export function DashboardLayout({ children }) {
             >
               {/* Prompt 746 — a crashing page shows a message here; the sidebar and
                   header stay, and a new route clears it. */}
+              <ConfirmEmailBanner />
               <ErrorBoundary resetKey={pathname}><BillingGate>{children}</BillingGate></ErrorBoundary>
             </div>
           </main>

@@ -1,5 +1,8 @@
 {
   "rewrites": [
+    { "source": "/j/:code", "destination": "/join.html" },
+    { "source": "/join", "destination": "/join.html" },
+    { "source": "/join/:token", "destination": "/join.html" },
     {
       "source": "/(.*)",
       "destination": "/index.html"

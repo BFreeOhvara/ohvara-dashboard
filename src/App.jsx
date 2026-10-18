@@ -13,6 +13,7 @@ import './lib/installPrompt'
 
 import Login from './pages/Login'
 import Join from './pages/Join'
+import ConfirmEmail from './pages/ConfirmEmail'
 import ResetPassword from './pages/ResetPassword'
 import RescheduleLink from './pages/RescheduleLink'
 import Settings from './pages/Settings'
@@ -88,7 +89,11 @@ export default function App() {
           <NativeBridge />
           <Routes>
             <Route path="/login" element={<Login />} />
+            {/* Prompt 781 — /join?t=<token>; texts use the short /j/<token>. */}
+            <Route path="/join" element={<Join />} />
             <Route path="/join/:token" element={<Join />} />
+            <Route path="/j/:token" element={<Join />} />
+            <Route path="/confirm-email" element={<ConfirmEmail />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             {/* Prompt 696 — client-facing reschedule link from the missed-call text; no login */}
             <Route path="/r/:token" element={<RescheduleLink />} />

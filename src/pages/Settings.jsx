@@ -13,7 +13,7 @@ import { useAppSettings, useUpdateAppSettings } from '../hooks/useAppSettings'
 import { useBillingTiers } from '../hooks/useBillingTiers'
 import { useNotificationSettings, useSetNotificationEmail } from '../hooks/useNotifications'
 import { usePushSettings, useSetPush } from '../hooks/useAccount'
-import { isNativeApp } from '../lib/native'
+import { isNativeApp, webUrl } from '../lib/native'
 import { startPush } from '../lib/push'
 import { DeleteAccountDialog } from '../components/shared/DeleteAccount'
 import { shownStatus } from '../lib/billing'
@@ -261,8 +261,10 @@ function EmailCard({ profile }) {
       <div className="ov-box" style={{ ...box, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ov-hi)', overflowWrap: 'anywhere', minWidth: 0 }}>{user.email}</span>
         {legacy
-          ? <span style={{ fontSize: 13, color: 'var(--ov-mute)' }}>Signs in with username <span style={{ fontFamily: MONO, color: 'var(--ov-soft)' }}>{profile.username}</span></span>
-          : user.email_confirmed_at && <SettingsChip tone="on">Verified</SettingsChip>}
+          ? <span style={{ fontSize: 13, color: 'var(--ov-mute)' }}>Signs in as <span style={{ fontFamily: MONO, color: 'var(--ov-soft)' }}>{profile.username}</span></span>
+          : profile.email_confirm_pending
+            ? <SettingsChip>Not confirmed yet</SettingsChip>
+            : user.email_confirmed_at && <SettingsChip tone="on">Verified</SettingsChip>}
       </div>
       {editing && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -305,7 +307,7 @@ const RESEND_WAIT = 60
 // signed-in account's own sign-in email, no current password needed. A
 // username account (@ohvara.internal) has no inbox, so it's told to ask an
 // admin instead and nothing is sent.
-function ForgotPassword({ email }) {
+function ForgotPassword({ email, pending }) {
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -320,7 +322,10 @@ function ForgotPassword({ email }) {
 
   async function send() {
     setError(''); setBusy(true)
-    const { error: e } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: `${window.location.origin}/reset-password` })
+    // Prompt 781 — through account-email, which only mails a confirmed email.
+    const { error: e } = await supabase.functions.invoke('account-email', {
+      body: { action: 'reset', email: email.trim().toLowerCase(), redirect_to: webUrl('/reset-password') },
+    })
     setBusy(false)
     if (e) return setError("Couldn't send that. Try again.")
     setSent(true); setWait(RESEND_WAIT)
@@ -332,6 +337,8 @@ function ForgotPassword({ email }) {
     <div role="region" aria-label="Reset your password" style={bubble}>
       {noInbox ? (
         <p style={{ margin: 0, fontSize: 14, color: 'var(--ov-soft)' }}>This account has no email on file. Ask your admin to reset your password.</p>
+      ) : pending ? (
+        <p style={{ margin: 0, fontSize: 14, color: 'var(--ov-soft)' }}>Confirm your email first: tap the link we sent to <span style={strong}>{email}</span>, or Send again on the banner at the top.</p>
       ) : sent ? (
         <>
           <p role="status" style={{ margin: 0, fontSize: 14, color: 'var(--ov-soft)' }}>
@@ -360,7 +367,7 @@ function ForgotPassword({ email }) {
 // side once it checks out. The check runs on a throwaway client
 // (lib/verifyPassword) so the live session, possibly aal2, is never replaced.
 function PasswordCard() {
-  const { session } = useAuth()
+  const { session, profile } = useAuth()
   const [step, setStep] = useState('current')
   const [current, setCurrent] = useState('')
   const [pw, setPw] = useState({ next: '', confirm: '' })
@@ -422,7 +429,7 @@ function PasswordCard() {
             </div>
           </form>
           {error && <p style={errText}>{error}</p>}
-          {forgot && <ForgotPassword email={session.user.email} />}
+          {forgot && <ForgotPassword email={session.user.email} pending={!!profile?.email_confirm_pending} />}
           {done ? <Done>Password updated. Use it next time you sign in.</Done> : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--ov-faint)' }}>
               <span style={{ width: 22, height: 22, flexShrink: 0, borderRadius: '50%', border: '2px dashed var(--ov-faint)', boxSizing: 'border-box' }} />

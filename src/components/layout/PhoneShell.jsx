@@ -11,6 +11,7 @@ import { PullToRefresh } from '../native/PullToRefresh'
 import { AddSomeoneSheet } from '../admin/phone/AddSomeoneSheet'
 import { PhoneToast } from '../admin/phone/PhoneToast'
 import { useAdminPay } from '../admin/phone/useAdminPay'
+import { ConfirmEmailBanner } from './ConfirmEmailBanner'
 
 // Prompt 772 — the agent's phone shell (under 768px): no sidebar, no top bar,
 // a bottom tab bar (Home, Clients, a raised + for Book a call, Messages, More)
@@ -160,6 +161,7 @@ export function PhoneShell({ children }) {
         {sub && <PhoneSubHead title={sub} onBack={() => navigate(MORE[role])} />}
         <main className="ph-main">
           <div key={pathname} style={{ animation: 'fadeUp 160ms ease-out' }}>
+            <ConfirmEmailBanner />
             <ErrorBoundary resetKey={pathname}>
               {/* Prompt 775 — pull down to refresh Home / Today in the phone app. */}
               {REFRESH.includes(pathname)

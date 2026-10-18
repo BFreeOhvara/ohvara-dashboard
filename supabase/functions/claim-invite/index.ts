@@ -12,7 +12,8 @@
 // never sees it (channel / invited_email / invited_phone set on those rows).
 //
 // Two actions:
-//   { action: 'check', token }  → { valid, role, email } — the signup page's load gate
+//   { action: 'check', token }  → { valid, role, email, by_text, pay_per_cancel_cents }
+//     or { valid: false, reason: 'expired' | 'used' | 'invalid' } — the signup page's load gate
 //     (email = the address an agent-sent email invite is locked to, else null)
 //   { action: 'claim', token, full_name, email, password[, username] }
 //     → validates the token again, creates the auth user with the REAL email
@@ -24,6 +25,7 @@
 //       2026-07-15).
 
 import { createClient } from 'npm:@supabase/supabase-js'
+import { sendConfirmEmail } from '../_shared/confirmEmail.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,16 +39,17 @@ function json(body: unknown, status = 200) {
 }
 
 // A token is claimable if it exists, is unused, and hasn't expired.
-async function fetchValidInvite(adminClient: ReturnType<typeof createClient>, token: string) {
+// Prompt 781: says which of those failed, so /join can show the right state.
+async function fetchInvite(adminClient: ReturnType<typeof createClient>, token: string) {
   const { data, error } = await adminClient
     .from('rep_invites')
     .select('id, role, expires_at, used_at, created_by, channel, invited_email')
     .eq('token', token)
     .maybeSingle()
-  if (error || !data) return null
-  if (data.used_at) return null
-  if (new Date(data.expires_at) <= new Date()) return null
-  return data
+  if (error || !data) return { invite: null, reason: 'invalid' }
+  if (data.used_at) return { invite: null, reason: 'used' }
+  if (new Date(data.expires_at) <= new Date()) return { invite: null, reason: 'expired' }
+  return { invite: data, reason: null }
 }
 
 Deno.serve(async (req) => {
@@ -71,16 +74,26 @@ Deno.serve(async (req) => {
     return json({ error: 'Missing invite token' }, 400)
   }
 
-  const invite = await fetchValidInvite(adminClient, token)
+  const { invite, reason } = await fetchInvite(adminClient, token)
 
   if (action === 'check') {
     // Deliberately minimal — reveals only whether the link works and what
     // role it grants, nothing about who created it or when it expires.
     // Prompt 731: plus the address an agent-sent email invite is locked to, so
     // the Join page can prefill it. Still nothing about who sent it.
-    return invite
-      ? json({ valid: true, role: invite.role, email: invite.invited_email ?? null })
-      : json({ valid: false })
+    // Prompt 781: whether it came by text (no email known: /join asks for one
+    // and it gets confirmed after), and Fulfillment's live pay per cancel for
+    // the perks copy. A dead link says only expired / used / invalid.
+    if (!invite) return json({ valid: false, reason })
+    let pay: number | null = null
+    if (invite.role === 'fulfillment') {
+      const { data: cfg } = await adminClient.from('recovery_config').select('pay_per_cancel_cents').limit(1).maybeSingle()
+      pay = cfg?.pay_per_cancel_cents ?? null
+    }
+    return json({
+      valid: true, role: invite.role, email: invite.invited_email ?? null,
+      by_text: invite.channel === 'sms', pay_per_cancel_cents: pay,
+    })
   }
 
   if (action === 'claim') {
@@ -174,6 +187,17 @@ Deno.serve(async (req) => {
         .update({ upline_id: invite.created_by })
         .eq('id', data.user.id)
       if (uplineError) console.error('profiles upline_id update failed:', uplineError.message)
+    }
+
+    // Prompt 781: a text invite never knew this email, so it starts
+    // unconfirmed: a confirm link goes out now, the portal shows a banner, and
+    // Forgot password won't mail it until the link is clicked (account-email).
+    // They're still signed straight in. Non-fatal: the banner can resend.
+    if (invite.channel === 'sms') {
+      const { error: pendErr } = await adminClient.from('profiles')
+        .update({ email_confirm_pending: true }).eq('id', data.user.id)
+      if (pendErr) console.error('email_confirm_pending update failed:', pendErr.message)
+      else await sendConfirmEmail(adminClient, data.user.id, email.trim().toLowerCase())
     }
 
     // Single-use: already taken above; record who used it.

@@ -1,31 +1,62 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Mail, Lock, ShieldCheck, Loader2 } from 'lucide-react'
+import { Mail, Lock, ShieldCheck, Loader2, ArrowRight, ArrowLeft, MailCheck, Check } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
-import { supabase } from '../lib/supabase'
-import { DISPLAY } from '../lib/exportStyles'
-import { OvField, CodeBoxes } from '../components/agent/AgentUI'
-import ohvaraLogo from '../assets/ohvara-logo.png'
+import { supabase, setKeepSignedIn, keepSignedIn } from '../lib/supabase'
+import { isNativeApp, webUrl } from '../lib/native'
+import { CodeBoxes } from '../components/agent/AgentUI'
+import { AuthPage, AuField, PasswordField, AuCheck, AuAlert } from '../components/auth/AuthShell'
+import { keepSubmitVisible, EMAIL_RE, SUPPORT_EMAIL } from '../components/auth/authUtils'
 
-// Sign-in — Prompt 720: email only on screen ("Email", no mention of
-// usernames). The three legacy accounts still type their username into the
-// same field; useAuth.signIn resolves it. When the account has two-step on,
-// the password step is followed by the Two-step check card (six code boxes),
-// and nothing past /login opens until the code checks out.
+// Sign-in — Prompt 781: the theme-proof navy page (mockups media/sign-in/
+// SignIn + SignInPhone in the vault). The field says Email; the three legacy
+// accounts still type their username into it and useAuth.signIn resolves it
+// on the server (username-sign-in), unlisted. Two-step accounts get the code
+// card after the password, and nothing past /login opens until it checks out.
 //
-// Forgot password (Prompt 282) only reaches accounts with a real email, and
-// nothing arrives until an SMTP sender is set up on the Supabase project.
+// Forgot password goes through account-email: same answer whoever asks, and
+// it only mails an account whose email is confirmed (a text-invite account
+// must click its confirm link first).
 
-const H1 = { margin: 0, fontFamily: DISPLAY, fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ov-hi)' }
-const SUB = { margin: '4px 0 0', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-mute)' }
-const errBox = { margin: 0, padding: '10px 12px', borderRadius: 12, fontSize: 13.5, lineHeight: 1.5, color: 'var(--danger)', background: 'var(--danger-dim)', border: '1px solid var(--danger-bd)' }
+const WRONG = 'That email and password don’t match. Check them and try again.'
 
-function Brand() {
+function Story() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-      <img src={ohvaraLogo} alt="" style={{ width: 34, height: 34, borderRadius: 10, objectFit: 'cover' }} />
-      <span style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 600, color: 'var(--ov-hi)' }}>Ohvara Portal</span>
-    </div>
+    <>
+      <span className="sx-pill"><i />For agents, Fulfillment and admins</span>
+      <h1 className="sx-h1">Every switch,<br /><span className="sx-grad">cancelled cleanly.</span></h1>
+      <p className="sx-lede">
+        You book the call. We get the old policy cancelled.<span className="sx-desk-only"> Everyone sees it happen, live.</span>
+      </p>
+      <div className="sx-preview" aria-hidden="true">
+        <div className="sx-pv-next">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="sx-pv-tag"><i />UP NEXT</span>
+            <span style={{ flex: 1 }} />
+            <span style={{ fontSize: 12.5, color: 'var(--sx-mute)' }}>in 12 min</span>
+          </div>
+          <div className="sx-pv-time">3:30 PM</div>
+          <div style={{ marginTop: 4, fontSize: 15, fontWeight: 700 }}>Linda Okafor</div>
+          <div style={{ fontSize: 12.5, color: 'var(--sx-mute)' }}>Cancel with Globe Life · Denver, CO</div>
+        </div>
+        <div className="sx-pv-done">
+          <span className="sx-pv-check"><Check size={16} strokeWidth={3} /></span>
+          <span>
+            <span style={{ display: 'block', fontSize: 14, fontWeight: 700 }}>Cancelled · verified</span>
+            <span style={{ display: 'block', fontSize: 12, color: 'var(--sx-dim)' }}>Globe Life confirmed on the call</span>
+          </span>
+        </div>
+        <div className="sx-pv-chip"><i />Booked by your agent · 2 min ago</div>
+      </div>
+    </>
+  )
+}
+
+function AppGlyph() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="6" y="2" width="12" height="20" rx="3" /><rect x="10" y="18" width="4" height="1.6" rx=".8" fill="var(--sx-hi)" />
+    </svg>
   )
 }
 
@@ -38,7 +69,9 @@ export default function Login() {
   })
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
+  const [keep, setKeep] = useState(() => keepSignedIn())
   const [error, setError]       = useState('')
+  const [wrong, setWrong]       = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [forgotMode, setForgotMode]   = useState(false)
   const [resetEmail, setResetEmail]   = useState('')
@@ -59,39 +92,46 @@ export default function Login() {
 
   useEffect(() => {
     if (!loading && session && !profile && !submitting && !mfaRequired) {
-      setError('Signed in but profile failed to load — check the browser console for details.')
+      setError('Signed in but your profile didn’t load. Refresh the page, or write to ' + SUPPORT_EMAIL + '.')
     }
   }, [loading, session, profile, submitting, mfaRequired])
 
-  async function handleSubmit() {
-    setError('')
-    if (!identifier.trim() || !password) return setError('Enter your email and password')
+  async function handleSubmit(e) {
+    e?.preventDefault()
+    setError(''); setWrong(false)
+    if (!identifier.trim() || !password) { setWrong(true); return setError('Enter your email and password.') }
     setSubmitting(true)
     try {
+      setKeepSignedIn(keep)
       await signIn(identifier.trim(), password)
     } catch (err) {
-      setError(/invalid login credentials/i.test(err.message || '') ? 'Wrong email or password' : err.message || 'Wrong email or password')
+      const m = err.message || ''
+      if (/invalid login credentials/i.test(m) || !m) { setWrong(true); setError(WRONG) }
+      else setError(m)
     } finally {
       setSubmitting(false)
     }
   }
 
-  async function handleReset() {
+  function openForgot() {
+    setForgotMode(true); setResetSent(false); setResetError('')
+    if (!resetEmail && identifier.includes('@')) setResetEmail(identifier.trim())
+  }
+
+  async function handleReset(e) {
+    e?.preventDefault()
     setResetError('')
     const email = resetEmail.trim().toLowerCase()
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setResetError('Enter the email address on your account')
-      return
-    }
+    if (!EMAIL_RE.test(email)) return setResetError('Type the email you joined with.')
     setResetSending(true)
     try {
-      const { error: rpError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+      const { error: fnError } = await supabase.functions.invoke('account-email', {
+        body: { action: 'reset', email, redirect_to: webUrl('/reset-password') },
       })
-      if (rpError) throw rpError
+      if (fnError) throw fnError
       setResetSent(true)
-    } catch (err) {
-      setResetError(err.message || 'Could not send the reset email — try again')
+    } catch {
+      setResetError('Couldn’t send the reset link. Try again.')
     } finally {
       setResetSending(false)
     }
@@ -125,79 +165,86 @@ export default function Login() {
   const codeStep = session && mfaRequired && !loading
 
   return (
-    <div className="min-h-screen flex justify-center px-4" style={{ position: 'relative', background: 'var(--bg-base)' }}>
-      <div className="app-backdrop app-backdrop--v2" style={{ left: 0 }} aria-hidden="true" />
-      <div className="page-enter" style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 420, padding: 'clamp(48px, 18vh, 190px) 0 48px' }}>
-        <div className="ov-card ov-auth">
-          <Brand />
-          {codeStep ? (
-            <>
-              <div style={{ width: 52, height: 52, borderRadius: 16, background: 'var(--ov-st-booked-tint)', color: 'var(--ov-st-booked)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <ShieldCheck size={24} strokeWidth={2} />
-              </div>
-              <div>
-                <h1 style={H1}>Two-step check</h1>
-                <p style={SUB}>Open your authenticator app and enter the 6-digit code for Ohvara.</p>
-              </div>
+    <AuthPage left={<Story />}>
+      <section className="sx-card" aria-label={codeStep ? 'Two-step check' : forgotMode ? 'Reset your password' : 'Sign in'}>
+        {codeStep ? (
+          <>
+            <span className="sx-big-ico sx-big-ico--ok"><ShieldCheck size={24} strokeWidth={2} /></span>
+            <h2>Two-step check</h2>
+            <p className="sx-card-sub">Open your authenticator app and enter the 6-digit code for Ohvara.</p>
+            <div style={{ marginTop: 20 }}>
               <CodeBoxes value={code} onChange={setCode} onComplete={verifyCode} autoFocus disabled={verifying} invalid={!!codeError} height={58} />
-              {codeError && <p role="alert" style={errBox}>{codeError}</p>}
-              <button type="button" className="ov-buy ov-set-btn" style={{ height: 50, fontSize: 15 }} onClick={() => verifyCode()} disabled={verifying || code.length !== 6}>
-                {verifying ? <Loader2 size={16} className="animate-spin" /> : 'Verify'}
-              </button>
-              <button type="button" className="ov-set-link" style={{ alignSelf: 'center' }} onClick={switchAccount}>Use a different account</button>
-            </>
-          ) : forgotMode ? (
-            <>
-              <div>
-                <h1 style={H1}>{resetSent ? 'Check your email' : 'Reset password'}</h1>
-                <p style={SUB}>
-                  {resetSent
-                    ? <>If an account exists for <span style={{ fontWeight: 600, color: 'var(--ov-soft)' }}>{resetEmail.trim()}</span>, a password reset link is on its way.</>
-                    : "Enter your account's email and we'll send a reset link."}
-                </p>
-              </div>
-              {!resetSent && (
-                <>
-                  <OvField label="Email" icon={Mail} type="email" value={resetEmail} onChange={e => setResetEmail(e.target.value)}
-                    placeholder="you@example.com" autoFocus autoComplete="email" error={!!resetError}
-                    onKeyDown={e => { if (e.key === 'Enter') handleReset() }} />
-                  {resetError && <p role="alert" style={errBox}>{resetError}</p>}
-                  <button type="button" className="ov-buy ov-set-btn" style={{ height: 50, fontSize: 15 }} onClick={handleReset} disabled={resetSending}>
-                    {resetSending ? 'Sending…' : 'Send reset link'}
-                  </button>
-                </>
-              )}
-              <button type="button" className="ov-set-link" style={{ alignSelf: 'center' }}
-                onClick={() => { setForgotMode(false); setResetSent(false); setResetError('') }}>
-                Back to sign in
-              </button>
-            </>
-          ) : (
-            <>
-              <div>
-                <h1 style={H1}>Sign in</h1>
-                <p style={SUB}>Use the email you joined with.</p>
-              </div>
-              {deleted && (
-                <p role="status" style={{ margin: 0, padding: '10px 12px', borderRadius: 12, fontSize: 13.5, lineHeight: 1.5, color: 'var(--ov-mid)', background: 'var(--ov-line)' }}>
-                  Your account was deleted. Thanks for working with Ohvara.
-                </p>
-              )}
-              <OvField label="Email" icon={Mail} type="text" inputMode="email" autoComplete="username" autoCapitalize="none" spellCheck={false}
-                value={identifier} onChange={e => setIdentifier(e.target.value)} placeholder="you@example.com" autoFocus
-                error={!!error} onKeyDown={e => { if (e.key === 'Enter') handleSubmit() }} />
-              <OvField label="Password" icon={Lock} type="password" autoComplete="current-password"
-                value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••"
-                error={!!error} onKeyDown={e => { if (e.key === 'Enter') handleSubmit() }} />
-              {error && <p role="alert" style={errBox}>{error}</p>}
-              <button type="button" className="ov-buy ov-set-btn" style={{ height: 50, fontSize: 15 }} onClick={handleSubmit} disabled={submitting || (loading && !!session)}>
-                {submitting ? 'Signing in…' : loading && session ? 'Loading…' : 'Sign in'}
-              </button>
-              <button type="button" className="ov-set-link" style={{ alignSelf: 'center' }} onClick={() => setForgotMode(true)}>Forgot password?</button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+            </div>
+            {codeError && <AuAlert>{codeError}</AuAlert>}
+            <button type="button" className="sx-btn" style={{ marginTop: 20 }} onClick={() => verifyCode()} disabled={verifying || code.length !== 6}>
+              {verifying ? <Loader2 size={18} className="animate-spin" /> : 'Verify'}
+            </button>
+            <div className="sx-center-note"><button type="button" className="sx-link" onClick={switchAccount}>Use a different account</button></div>
+          </>
+        ) : forgotMode ? (
+          <>
+            <button type="button" className="sx-link sx-link--back" onClick={() => { setForgotMode(false); setResetSent(false); setResetError('') }}>
+              <ArrowLeft size={16} strokeWidth={2.2} />Back to sign in
+            </button>
+            <h2 style={{ marginTop: 10 }}>{resetSent ? 'Check your email' : 'Reset your password'}</h2>
+            <p className="sx-card-sub">
+              {resetSent
+                ? <>We sent a link to <strong>{resetEmail.trim()}</strong>.</>
+                : 'Type the email you joined with and we’ll send you a link to set a new password.'}
+            </p>
+            {resetSent ? (
+              <>
+                <div className="sx-ok" role="status">
+                  <span className="sx-ok-ico"><MailCheck size={22} strokeWidth={2} /></span>
+                  <span>If that email has an Ohvara account, a reset link is on its way. It works for 1 hour.</span>
+                </div>
+                <button type="button" className="sx-btn sx-btn--ghost" style={{ marginTop: 16 }}
+                  onClick={() => { setForgotMode(false); setResetSent(false) }}>Back to sign in</button>
+              </>
+            ) : (
+              <form onSubmit={handleReset} onFocus={keepSubmitVisible} noValidate>
+                {resetError && <AuAlert>{resetError}</AuAlert>}
+                <AuField first label="Email" icon={Mail} type="email" inputMode="email" name="email" autoComplete="email"
+                  autoCapitalize="none" spellCheck={false} value={resetEmail} onChange={e => setResetEmail(e.target.value)}
+                  placeholder="you@email.com" autoFocus error={!!resetError} />
+                <button type="submit" className="sx-btn" style={{ marginTop: 20 }} disabled={resetSending}>
+                  {resetSending ? <><Loader2 size={18} className="animate-spin" />Sending…</> : 'Send reset link'}
+                </button>
+              </form>
+            )}
+          </>
+        ) : (
+          <form onSubmit={handleSubmit} onFocus={keepSubmitVisible} noValidate>
+            <h2>Welcome back</h2>
+            <p className="sx-card-sub">Sign in to your Ohvara account.</p>
+            {deleted && <div className="sx-note" role="status">Your account was deleted. Thanks for working with Ohvara.</div>}
+            {error && <AuAlert>{error}</AuAlert>}
+            <AuField first label="Email" icon={Mail} type="text" inputMode="email" name="email" autoComplete="username"
+              autoCapitalize="none" autoCorrect="off" spellCheck={false} value={identifier}
+              onChange={e => setIdentifier(e.target.value)} placeholder="you@email.com" autoFocus={!isNativeApp()} error={wrong} />
+            <PasswordField label="Password" icon={Lock} name="password" autoComplete="current-password"
+              value={password} onChange={e => setPassword(e.target.value)} placeholder="Your password" error={wrong} />
+            <button type="button" className="sx-link sx-link--forgot" onClick={openForgot}>Forgot password?</button>
+            {!isNativeApp() && (
+              <div><AuCheck checked={keep} onChange={setKeep}>Keep me signed in</AuCheck></div>
+            )}
+            <button type="submit" className="sx-btn" disabled={submitting || (loading && !!session)}>
+              {submitting ? <><Loader2 size={18} className="animate-spin" />Signing in…</>
+                : loading && session ? 'Loading…'
+                : <>Sign in<ArrowRight size={17} strokeWidth={2.4} /></>}
+            </button>
+            <div className="sx-invite-note">
+              New to Ohvara? Accounts are invite-only.<br />
+              Ask your agent or <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> for an invite.
+            </div>
+          </form>
+        )}
+      </section>
+      {!isNativeApp() && (
+        <a href="/app" className="sx-getapp">
+          <span className="sx-getapp-ico"><AppGlyph /></span>Get the phone app
+        </a>
+      )}
+    </AuthPage>
   )
 }

@@ -3,6 +3,7 @@ import { Mail, Send } from 'lucide-react'
 import { useAuth } from '../../../hooks/useAuth'
 import { useCreateInvite, useInviteStatus, useSendAgentInvite } from '../../../hooks/useProfiles'
 import { PhoneSheet } from '../../agent/phone/PhoneSheet'
+import { webUrl } from '../../../lib/native'
 
 // Prompt 774 — Add someone from the raised + (mockup AdmAdd.dc.html): Agent
 // or Fulfillment, their name and email, a note on what happens next, Send
@@ -43,7 +44,7 @@ export function AddSomeoneSheet({ onClose, onSent }) {
     setErr(null)
     try {
       const inv = await createInvite.mutateAsync({ role, createdBy: profile.id })
-      const url = `${window.location.origin}/join/${inv.token}`
+      const url = webUrl(`/join?t=${inv.token}`)
       let copied = false
       try { await navigator.clipboard.writeText(url); copied = true } catch { /* shown below */ }
       setLink({ url, copied })

@@ -18,6 +18,7 @@ import { fullName, phoneText } from '../../lib/policyFormat'
 import { DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { AdminPhonePeople } from '../../components/admin/phone/AdminPhonePeople'
+import { webUrl } from '../../lib/native'
 
 // Admin Users (Prompt 762) — replaces Users & Access. Left: an Agents /
 // Fulfillment switch, search with a sort, one row per person (this week's
@@ -245,7 +246,7 @@ function InviteRow({ inv, now, meName }) {
     setState(null)
     if (!inv.channel) {
       try {
-        await navigator.clipboard.writeText(`${window.location.origin}/join/${inv.token}`)
+        await navigator.clipboard.writeText(webUrl(`/join?t=${inv.token}`))
         setState({ ok: 'Link copied' })
       } catch { setState({ err: 'Couldn’t copy the link' }) }
       return
