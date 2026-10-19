@@ -31,7 +31,7 @@ workflows:
       vars:
         BUNDLE_ID: com.ohvara.portal
         # The app's Apple ID (App Store Connect → the app → App Information).
-        APP_STORE_APPLE_ID: "0"
+        APP_STORE_APPLE_ID: "6824336893"
         # The app ships this same build inside it; no over-the-air zip needed.
         OTA_SKIP: "1"
       node: 22
