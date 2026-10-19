@@ -27,11 +27,13 @@ export function dayTime(iso, nowMs, tz) {
   return `${word}, ${timeText(iso, tz || DEFAULT_TIMEZONE)}`
 }
 
-// "in 1 hr 20 min" today, "in 3 days" later on, "Oct 19" past a week.
+// "in 1 hr 20 min" today, "in 3 days" later on, "Oct 19" past a week or
+// on an earlier day (P777: was "earlier today" for any past day).
 export function untilText(iso, nowMs, tz) {
   const ms = new Date(iso).getTime()
   const { n, day } = dayTile(iso, nowMs, tz)
-  if (n <= 0) return ms > nowMs ? inLabel(ms, nowMs) : 'earlier today'
+  if (n < 0) return fmtDay(day, { month: 'short', day: 'numeric' })
+  if (n === 0) return ms > nowMs ? inLabel(ms, nowMs) : 'earlier today'
   if (n === 1) return 'tomorrow'
   if (n < 7) return `in ${n} days`
   return fmtDay(day, { month: 'short', day: 'numeric' })
