@@ -1,7 +1,7 @@
 import { isLive, stageOf } from './agentBookings'
 import { SLOT_MS } from './fulfillmentFlags'
 import { DEFAULT_TIMEZONE, zonedDateStr, zonedTimeToUtcIso } from './timezones'
-import { buildCalls, hourOf } from './fulfillmentDay'
+import { buildCalls, hourOf, CALL_UNLOCK_LEAD_MIN } from './fulfillmentDay'
 
 // The desk's rules, shared by Admin Fulfillment (Prompt 760, desktop) and the
 // admin phone's Desk and Home (Prompt 774): which calls are on a day, what
@@ -37,7 +37,8 @@ export function deskCalls(rows, nowMs, tz, day, events) {
     if (ms > nowMs || zonedDateStr(ms, tz) !== day) continue
     // P780 — with no retry booked (texting off), the call keeps the time it
     // was just tried at; that's the No answer itself, not a retry nobody made.
-    if (p.last_call_at && new Date(p.last_call_at).getTime() >= ms) continue
+    // P777: a call unlocks 5 min early, so a try in that window counts too.
+    if (p.last_call_at && new Date(p.last_call_at).getTime() >= ms - CALL_UNLOCK_LEAD_MIN * 6e4) continue
     list.push({ key: `${p.id}:retry:${p.scheduled_call_at}`, id: p.id, p, at: p.scheduled_call_at, ms, date: day, tone: 'noAnswer', late: true, retry: true, attempt: (p.call_attempts || 0) + 1 })
   }
   return list.sort((a, b) => a.ms - b.ms)
