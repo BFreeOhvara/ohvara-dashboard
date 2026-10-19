@@ -133,6 +133,7 @@ export default function MyPay() {
       which={which} onWhich={setWhich} period={period} now={now}
       weekCancels={cancels.filter(c => c.week_start === isoDay(period.start))}
       rate={paySettings?.pay_per_cancel_cents ?? 1000} minCents={paySettings?.weekly_min_cents ?? null}
+      recording={paySettings?.recording_live ?? true}
       payouts={payoutList(payouts, cancels, now)} account={account} status={status}
       accountLoading={accountsLoading || (started && overview.isLoading && !stored)}
       onConnect={() => open({ settings: '1', setup: '1' })}

@@ -81,14 +81,14 @@ export function useConnectOverview(enabled = true) {
 // Prompt 764 — the pay settings on recovery_config (admin writes; anyone
 // signed in reads): payouts_live, payouts_paused, pay_per_cancel_cents,
 // weekly_min_cents (null = off), weekly_cancel_cap.
-const PAY_COLS = 'payouts_live, payouts_paused, pay_per_cancel_cents, weekly_min_cents, weekly_cancel_cap'
+const PAY_COLS = 'payouts_live, payouts_paused, pay_per_cancel_cents, weekly_min_cents, weekly_cancel_cap, recording_live'
 export function usePaySettings() {
   return useQuery({
     queryKey: [...KEY, 'settings'],
     queryFn: async () => {
       const { data, error } = await supabase.from('recovery_config').select(PAY_COLS).limit(1).maybeSingle()
       if (error) throw error
-      return data || { payouts_live: false, payouts_paused: false, pay_per_cancel_cents: 1000, weekly_min_cents: null, weekly_cancel_cap: 40 }
+      return data || { payouts_live: false, payouts_paused: false, pay_per_cancel_cents: 1000, weekly_min_cents: null, weekly_cancel_cap: 40, recording_live: false }
     },
   })
 }

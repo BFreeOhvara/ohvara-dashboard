@@ -90,7 +90,7 @@ function Hero({ which, onWhich, period, now, cancels, rate, minCents, account })
   )
 }
 
-function Cancels({ cancels, now }) {
+function Cancels({ cancels, now, recording = true }) {
   const [tab, setTab] = useState('all')
   const rows = cancels.map(c => ({ c, v: cancelView(c) }))
   const count = k => (k === 'all' ? rows.filter(r => r.v.kind !== 'off').length : rows.filter(r => r.v.kind === k).length)
@@ -107,7 +107,10 @@ function Cancels({ cancels, now }) {
           ))}
         </span>
       </div>
-      <p className="mp-cancels-sub">Every cancel call is recorded. AI listens for the carrier confirming the cancel. Verified cancels are paid Monday.</p>
+      {/* P777: while recording is off, every cancel waits for Brayden by hand. */}
+      <p className="mp-cancels-sub">{recording
+        ? 'Every cancel call is recorded. AI listens for the carrier confirming the cancel. Verified cancels are paid Monday.'
+        : 'Brayden checks each cancel before pay day. Verified cancels are paid Monday.'}</p>
       <div className="mp-thead" aria-hidden="true"><span>LOGGED</span><span>CLIENT · AGENT</span><span>STATUS</span><span>PAY</span></div>
       {shown.length === 0 ? <p className="mp-empty">{cancels.length ? 'Nothing here this week.' : 'No cancels this week yet. Each one you log shows here.'}</p> : (
         <ul className="mp-rows">
@@ -200,13 +203,13 @@ function Payouts({ payouts, now, account }) {
 
 export function MyPayView({
   which, onWhich, period, now, weekCancels = [], rate = 1000, minCents = null,
-  payouts = [], account = null, status = 'none', accountLoading = false, onConnect, onSettings,
+  payouts = [], account = null, status = 'none', accountLoading = false, onConnect, onSettings, recording = true,
 }) {
   return (
     <div className="mp-page">
       <Hero which={which} onWhich={onWhich} period={period} now={now} cancels={weekCancels} rate={rate} minCents={minCents} account={status === 'ready' ? account : null} />
       <div className="mp-grid">
-        <Cancels cancels={weekCancels} now={now} />
+        <Cancels cancels={weekCancels} now={now} recording={recording} />
         <div className="mp-side">
           <GetPaidTo status={status} account={account} loading={accountLoading} onConnect={onConnect} onSettings={onSettings} />
           <Payouts payouts={payouts} now={now} account={account} />
