@@ -191,6 +191,7 @@ export function ListenSheet({ c, rep, tz, onClose, onDecided, loadAudio = loadRe
     >
       <div className="aph-listen">
         <div className="aph-why">{why(c)}</div>
+        <div className="aph-conf"><span>Confirmation number</span>{c.policy?.cancellation_confirmation ? <b className="ph-mono">{c.policy.cancellation_confirmation}</b> : <i>Not given</i>}</div>
         <Player c={c} loadAudio={loadAudio} />
       </div>
     </PhoneSheet>

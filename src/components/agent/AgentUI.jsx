@@ -11,6 +11,7 @@ import { DayClock } from '../ui/DayClock'
 import { LiveDot } from '../ui/LiveDot'
 import { Avatar } from '../ui/Avatar'
 import { fullName } from '../../lib/policyFormat'
+import { useAuth } from '../../hooks/useAuth'
 import { ACTIVITY_ROWS, rowMeta, rowTone, EVENT_ICON, kindTone, eventIconKey } from '../../lib/activityKinds'
 
 // Shared pieces for the agent portal pages (Prompt 665).
@@ -1019,9 +1020,15 @@ export function BookSwitch({ value, onChange }) {
 // ghost text after the cursor. Tab / → / Enter take it, ↑ / ↓ move, Esc
 // closes. A name that matches nothing can still be kept ("Use "<text>"").
 // `picked` is the chosen carrier row; typing again clears it (onText).
+// Prompt 784 (dry-run F2): a typo used to become a carrier everyone sees.
+// Only an admin can add one now, after a confirm step; anyone else is told
+// it isn't on the list (carrier_add refuses them too, migration 159).
 export function CarrierInput({ carriers, text, picked, onText, onPick, onUseText, adding, error, changed, note, label = 'Carrier', autoFocus }) {
+  const { profile } = useAuth()
+  const canAdd = profile?.role === 'admin'
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
+  const [asking, setAsking] = useState(null) // the name an admin is about to add
   const inputRef = useRef(null)
   const listId = 'carrier-suggest'
   const hits = useMemo(() => (picked ? [] : rankCarriers(carriers, text)), [carriers, text, picked])
@@ -1037,8 +1044,9 @@ export function CarrierInput({ carriers, text, picked, onText, onPick, onUseText
     ? top.name.slice(text.length) : ''
 
   const choose = row => {
+    if (row.use && !canAdd) return
     setOpen(false); setActive(0)
-    if (row.use) onUseText(row.use)
+    if (row.use) setAsking(row.use)
     else onPick(row.carrier)
   }
   const onKeyDown = e => {
@@ -1074,7 +1082,7 @@ export function CarrierInput({ carriers, text, picked, onText, onPick, onUseText
             ref={inputRef} id="carrier-input" value={text} autoComplete="off" spellCheck={false} placeholder="e.g. Mutual of Omaha"
             role="combobox" aria-expanded={shown} aria-controls={listId} aria-autocomplete="both" aria-invalid={error || undefined}
             aria-activedescendant={shown ? `${listId}-${at}` : undefined} autoFocus={autoFocus}
-            onChange={e => { onText(e.target.value); setOpen(true); setActive(0) }}
+            onChange={e => { onText(e.target.value); setOpen(true); setActive(0); setAsking(null) }}
             onFocus={() => setOpen(true)} onBlur={onBlur} onKeyDown={onKeyDown}
           />
           {ghost && (
@@ -1094,9 +1102,13 @@ export function CarrierInput({ carriers, text, picked, onText, onPick, onUseText
               className={`ov-suggest-row${i === at ? ' is-active' : ''}`}
               onMouseDown={e => { e.preventDefault(); choose(row) }} onMouseEnter={() => setActive(i)}
             >
-              {row.use ? (
+              {row.use && canAdd ? (
                 <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--ov-mid)' }}>
-                  Use “<span style={{ color: 'var(--ov-hi)', fontWeight: 600 }}>{row.use}</span>”
+                  Add “<span style={{ color: 'var(--ov-hi)', fontWeight: 600 }}>{row.use}</span>” as a new carrier
+                </span>
+              ) : row.use ? (
+                <span style={{ minWidth: 0, whiteSpace: 'normal', fontSize: 13, lineHeight: 1.4, color: 'var(--ov-mute)' }}>
+                  “<span style={{ color: 'var(--ov-hi)', fontWeight: 600, overflowWrap: 'anywhere' }}>{row.use}</span>” isn't on the list. Check the spelling, or message an admin to add it.
                 </span>
               ) : (
                 <>
@@ -1112,6 +1124,15 @@ export function CarrierInput({ carriers, text, picked, onText, onPick, onUseText
               )}
             </div>
           ))}
+        </div>
+      )}
+      {asking && !picked && (
+        <div className="ov-carrier-ask" role="group" aria-label="Add a carrier">
+          <span>Add “<b>{asking}</b>” as a new carrier? Everyone booking will see it in the list.</span>
+          <span className="ov-carrier-ask-btns">
+            <button type="button" className="ov-solid" disabled={adding} onClick={() => { onUseText(asking); setAsking(null) }}>{adding ? 'Adding…' : 'Add carrier'}</button>
+            <button type="button" className="ov-ghost" disabled={adding} onClick={() => { setAsking(null); inputRef.current?.focus() }}>Cancel</button>
+          </span>
         </div>
       )}
       {note}

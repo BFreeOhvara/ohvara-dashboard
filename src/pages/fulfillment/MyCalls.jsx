@@ -8,6 +8,7 @@ import { useCallOutcomes } from '../../hooks/useRepCallEvents'
 import { ClientDrawer, OvSelect, LoadError } from '../../components/agent/AgentUI'
 import { CallDrawer, CallButton, CallStatus } from '../../components/fulfillment/CallDrawer'
 import { ResultFixBar } from '../../components/fulfillment/ResultFixBar'
+import { CancelNumber } from '../../components/fulfillment/CancelNumber'
 import { PhoneToday } from '../../components/fulfillment/phone/PhoneToday'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { useResultFix } from '../../hooks/useResultFix'
@@ -141,6 +142,7 @@ function FocusCard({ c, now: pageNow, tz, profile, isAdmin, onOpen, onResult }) 
   const secNow = useNow(live ? 1e3 : 60e3)
   const now = live ? secNow : pageNow
   const act = useCallActions(p)
+  const [askNumber, setAskNumber] = useState(false) // P784
   const mine = p.assigned_fulfillment_id === profile?.id
   const canWork = mine && p.fulfillment_stage !== 'Complete'
   const canBridge = agentCallerIdOn(p) && mine
@@ -183,8 +185,13 @@ function FocusCard({ c, now: pageNow, tz, profile, isAdmin, onOpen, onResult }) 
       </div>
       {live ? (
         <div className="mc-focus-actions">
-          {mine && (
-            <button type="button" className="mc-btn mc-btn-ok" disabled={act.busy} onClick={stop(() => act.cancelled(undefined, { onSuccess: () => onResult(p, 'cancelled') }))}>
+          {mine && askNumber && (
+            <CancelNumber carrier={carrierOf(p)} busy={act.busy}
+              onSave={num => act.cancelled(undefined, { onSuccess: () => onResult(p, 'cancelled') }, num)} onBack={() => setAskNumber(false)} />
+          )}
+          {mine && !askNumber && (
+            <button type="button" className="mc-btn mc-btn-ok" disabled={act.busy}
+              onClick={stop(() => (act.needsNumber ? setAskNumber(true) : act.cancelled(undefined, { onSuccess: () => onResult(p, 'cancelled') })))}>
               <Check size={17} strokeWidth={2.6} /> Cancelled
             </button>
           )}

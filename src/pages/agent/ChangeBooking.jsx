@@ -257,7 +257,7 @@ function ChangeForm({ p, rows, profileId, switcher, onNew, onPick, pickNote, loa
       setError(missing.has('phone') && form.phone
         ? 'Client phone needs all 10 digits.'
         : missing.has('carrier') && form.carrier.trim()
-          ? 'Pick the carrier from the list, or choose "Use" to keep what you typed.'
+          ? 'Pick the carrier from the list.'
           : missing.has('slot') && missing.size === 1 ? 'Pick a new time.' : 'Fill in the highlighted fields.')
       return
     }

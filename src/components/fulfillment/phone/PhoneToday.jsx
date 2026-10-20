@@ -7,6 +7,7 @@ import { useFulfillmentQueue, assignUnassigned } from '../../../hooks/usePolicie
 import { useCallOutcomes } from '../../../hooks/useRepCallEvents'
 import { useCarriers } from '../../../hooks/useCarriers'
 import { useCallActions, useCallLock, useClientCall } from '../../../hooks/useCallActions'
+import { CancelNumber } from '../CancelNumber'
 import { usePortalPhone } from '../../../contexts/portalPhone'
 import { CallButton, CallDrawer, CallStatus } from '../CallDrawer'
 import { NotificationBell } from '../../notifications/NotificationBell'
@@ -58,6 +59,7 @@ function NextCard({ c, now: pageNow, tz, profile, carriers, onOpen, lit, cardRef
   const now = live ? secNow : pageNow
   const phone = usePortalPhone()
   const act = useCallActions(p)
+  const [askNumber, setAskNumber] = useState(false) // P784
   const mine = p.assigned_fulfillment_id === profile?.id
   const canWork = mine && p.fulfillment_stage !== 'Complete'
   const call = useClientCall(p, { canBridge: agentCallerIdOn(p) && mine, onCall: canWork ? act.start : undefined })
@@ -91,10 +93,12 @@ function NextCard({ c, now: pageNow, tz, profile, carriers, onOpen, lit, cardRef
         <Phone size={18} strokeWidth={2.2} aria-hidden="true" />Back to the call
       </button>
     )
+  } else if (live && mine && askNumber) {
+    action = <CancelNumber carrier={leaving} busy={act.busy} onSave={num => act.cancelled(undefined, undefined, num)} onBack={() => setAskNumber(false)} />
   } else if (live && mine) {
     action = (
       <span className="ph-nc-two">
-        <button type="button" className="ph-nc-btn is-ok" disabled={act.busy} onClick={() => act.cancelled()}>
+        <button type="button" className="ph-nc-btn is-ok" disabled={act.busy} onClick={() => (act.needsNumber ? setAskNumber(true) : act.cancelled())}>
           <Check size={18} strokeWidth={2.6} aria-hidden="true" />Cancelled
         </button>
         <button type="button" className="ph-nc-btn is-ghost" disabled={act.busy} onClick={() => act.noAnswer()}>No answer</button>

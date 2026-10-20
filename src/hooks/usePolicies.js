@@ -209,8 +209,9 @@ export function useSaveCancelNotes() {
 export function useCorrectResult() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, to }) => {
-      const { error } = await supabase.rpc('fulfillment_correct_result', { p_policy: id, p_to: to })
+    // P784: `confirmation` is needed to change to Cancelled while recording is off.
+    mutationFn: async ({ id, to, confirmation }) => {
+      const { error } = await supabase.rpc('fulfillment_correct_result', { p_policy: id, p_to: to, p_confirmation: confirmation || null })
       if (error) throw error
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),

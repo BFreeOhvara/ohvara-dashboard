@@ -39,7 +39,8 @@ function Result({ p, s, names, conf: saidConf, onClose, onDismiss, error: callEr
   const [drafts, setDrafts] = useState(false)
   const [checking, setChecking] = useState(false)
   const took = s.joinedAt && s.endedAt ? clock((s.endedAt - s.joinedAt) / 1000) : null
-  const ready = pick === 'no_answer' || (effective && drafts)
+  // With recording off the confirmation number is the only proof (P784).
+  const ready = pick === 'no_answer' || (effective && drafts && (recording || conf.trim()))
   const saving = update.isPending || endCall.isPending
   const error = update.error || endCall.error
   const amount = pay?.pay_per_cancel_cents != null ? whole(pay.pay_per_cancel_cents) : null
@@ -88,8 +89,8 @@ function Result({ p, s, names, conf: saidConf, onClose, onDismiss, error: callEr
         </div>
         {pick === 'cancelled' ? (
           <div className="pc-res-fields">
-            <label className="pc-field"><span>Confirmation number <em>(optional)</em></span>
-              <input className="pc-mono" value={conf} onChange={e => setConf(e.target.value)} placeholder="If the carrier gave one" autoComplete="off" />
+            <label className="pc-field"><span>Confirmation number {recording ? <em>(optional)</em> : <em>(needed)</em>}</span>
+              <input className="pc-mono" value={conf} onChange={e => setConf(e.target.value)} placeholder={recording ? 'If the carrier gave one' : 'The number the carrier read out'} autoComplete="off" />
             </label>
             <label className="pc-field"><span>Takes effect</span>
               <input type="date" value={effective} onChange={e => setEffective(e.target.value)} />

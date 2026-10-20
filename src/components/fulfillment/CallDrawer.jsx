@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Check, Loader2, Lock, MessageCircleMore, MessageSquare, Phone, PhoneCall, ShieldAlert, Shuffle, Undo2 } from 'lucide-react'
 import { dmId } from '../../hooks/useDirectMessages'
 import { useCarriers } from '../../hooks/useCarriers'
+import { useRecoveryConfig } from '../../hooks/useRecoveryConfig'
 import { useClientCall, useCallActions, useCallLock } from '../../hooks/useCallActions'
 import { useCorrectResult } from '../../hooks/usePolicies'
 import { useOneAtATime } from '../../hooks/useOneAtATime'
 import { ResultFixBar } from './ResultFixBar'
+import { CancelNumber } from './CancelNumber'
 import { usePortalPhone } from '../../contexts/portalPhone'
 import { ClientDrawer } from '../agent/AgentUI'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
@@ -109,13 +111,25 @@ function StatusPill({ p, now }) {
 // Prompt 750 — "Change result" in the footer: Cancelled ↔ No answer, with a
 // two-choice confirm. Shown while the user may still change it
 // (changeableResult: the rep the same day, admin any time).
-function ChangeResult({ p, result }) {
+// P784: to Cancelled while recording is off, it asks for the confirmation number.
+function ChangeResult({ p, result, carrier }) {
   const [asking, setAsking] = useState(false)
   const correct = useCorrectResult()
   const change = useOneAtATime(correct)
+  const { data: cfg } = useRecoveryConfig()
   const to = otherResult(result)
   if (!asking) {
     return <button type="button" className="mc-link" onClick={() => setAsking(true)}><Undo2 size={13} /> Change result</button>
+  }
+  if (to === 'cancelled' && !cfg?.recording_live && !p.cancellation_confirmation) {
+    return (
+      <div className="mc-change">
+        <CancelNumber carrier={carrier} busy={correct.isPending} saveText="Change to Cancelled"
+          onSave={num => change({ id: p.id, to, confirmation: num }, { onSuccess: () => setAsking(false) })}
+          onBack={() => { setAsking(false); correct.reset() }} />
+        {correct.error && <p style={{ color: 'var(--danger)' }}>Couldn't change it: {correct.error.message || 'try again'}</p>}
+      </div>
+    )
   }
   return (
     <div className="mc-change">
@@ -151,12 +165,18 @@ export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpe
   const lock = useCallLock(canWork ? p : null)
   const fixing = fix?.fix?.id === p.id
   const result = fixing ? null : changeableResult(p, { isAdmin, mine, tz, now })
-  const changeLink = result ? <ChangeResult key={result} p={p} result={result} /> : null
+  const changeLink = result ? <ChangeResult key={result} p={p} result={result} carrier={p.current_carrier || p.carrier_name} /> : null
   const marked = r => ({ onSuccess: () => fix?.show(p, r) })
 
   const [notes, setNotes] = useState(p.cancellation_notes || '')
   const [saved, setSaved] = useState(false)
   const [confirmingPass, setConfirmingPass] = useState(false)
+  const [askNumber, setAskNumber] = useState(false) // P784: Cancelled while recording is off
+  const cancel = () => (act.needsNumber ? setAskNumber(true) : act.cancelled(notes, marked('cancelled')))
+  const askBox = (
+    <CancelNumber carrier={p.current_carrier || p.carrier_name} busy={act.saving}
+      onSave={num => act.cancelled(notes, marked('cancelled'), num)} onBack={() => setAskNumber(false)} />
+  )
   const dirty = notes !== (p.cancellation_notes || '')
 
   // The next call still to make after this one, any day ahead.
@@ -226,12 +246,14 @@ export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpe
     footer = (
       <>
         <p className="mc-hung"><span />Hung up? Mark how it went.</p>
-        <div className="mc-grid2">
-          <button type="button" onClick={() => act.cancelled(notes, marked('cancelled'))} disabled={act.busy} className={`${btn} mc-btn-ok`} style={{ height: 48 }}>
-            <Check size={17} strokeWidth={2.6} /> Cancelled
-          </button>
-          <button type="button" onClick={() => act.noAnswer(marked('no_answer'))} disabled={act.busy} className={`${btn} ov-ghost`} style={{ height: 48 }}>No answer</button>
-        </div>
+        {askNumber ? askBox : (
+          <div className="mc-grid2">
+            <button type="button" onClick={cancel} disabled={act.busy} className={`${btn} mc-btn-ok`} style={{ height: 48 }}>
+              <Check size={17} strokeWidth={2.6} /> Cancelled
+            </button>
+            <button type="button" onClick={() => act.noAnswer(marked('no_answer'))} disabled={act.busy} className={`${btn} ov-ghost`} style={{ height: 48 }}>No answer</button>
+          </div>
+        )}
         <div className="mc-foot-row" style={{ marginTop: 12 }}>
           <span>Reached them but it needs another call? Pick No answer.</span>
           {passLink}
@@ -241,14 +263,16 @@ export function CallDrawer({ p, scope, now, tz, profile, isAdmin, onClose, onOpe
   } else {
     footer = (
       <>
-        <div className="mc-grid2">
-          {p.client_phone
-            ? <CallButton p={p} call={call} className={`${btn} ov-solid`} style={{ height: 48 }}>Call client</CallButton>
-            : <span className={`${btn} ov-ghost`} style={{ height: 48, opacity: 0.6 }}>No number</span>}
-          <button type="button" onClick={() => act.cancelled(notes, marked('cancelled'))} disabled={act.saving} className={`${btn} ov-ghost`} style={{ height: 48 }}>
-            <Check size={16} strokeWidth={2.4} /> Mark cancelled
-          </button>
-        </div>
+        {askNumber ? askBox : (
+          <div className="mc-grid2">
+            {p.client_phone
+              ? <CallButton p={p} call={call} className={`${btn} ov-solid`} style={{ height: 48 }}>Call client</CallButton>
+              : <span className={`${btn} ov-ghost`} style={{ height: 48, opacity: 0.6 }}>No number</span>}
+            <button type="button" onClick={cancel} disabled={act.saving} className={`${btn} ov-ghost`} style={{ height: 48 }}>
+              <Check size={16} strokeWidth={2.4} /> Mark cancelled
+            </button>
+          </div>
+        )}
         <CallStatus p={p} call={call} style={{ marginTop: 10 }} />
         <div className="mc-foot-row" style={{ marginTop: 12 }}>
           <span>{canWork && lock.locked ? `Call client unlocks at ${lock.opens}.` : [callHint(p, canBridge)].flat().join(' ')}</span>

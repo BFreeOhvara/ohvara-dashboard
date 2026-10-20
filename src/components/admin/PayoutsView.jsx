@@ -154,6 +154,7 @@ function ListenCard({ c, rep, tz, loadAudio, onDecide, deciding }) {
       <div className="ap2-lcard-top"><b>{c.client_name || 'Client'}</b><span>{money(c.amount_cents)}</span></div>
       <div className="ap2-lcard-sub">{[c.carrier_name, rep?.full_name || c.agent_name, stamp(c.logged_at, tz)].filter(Boolean).join(' · ')}</div>
       <div className="ap2-lcard-why">{c.reasonText}</div>
+      <div className="ap2-lcard-conf"><span>Confirmation number</span>{c.policy?.cancellation_confirmation ? <b>{c.policy.cancellation_confirmation}</b> : <i>Not given</i>}</div>
       <ListenPlayer c={c} loadAudio={loadAudio} />
       {noting ? (
         <input className="ap2-note" value={note} onChange={e => { setNote(e.target.value); setHint('') }} placeholder="Note (needed for Don’t pay)"

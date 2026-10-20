@@ -47,8 +47,9 @@ function Result({ p, s, onClose, error: callError, recording }) {
   const [reason, setReason] = useState(null)
   const [checking, setChecking] = useState(false) // saved as Cancelled, recording on
   const took = s.joinedAt && s.endedAt ? clock((s.endedAt - s.joinedAt) / 1000) : null
-  // The confirmation number is optional (P764): the recording is the proof.
-  const ready = pick === 'no_answer' || (effective && drafts)
+  // The confirmation number is optional while the call is recorded (P764): the
+  // recording is the proof. With recording off it's the only proof (P784).
+  const ready = pick === 'no_answer' || (effective && drafts && (recording || conf.trim()))
   const saving = update.isPending || endCall.isPending
   const error = update.error || endCall.error
 
@@ -74,8 +75,8 @@ function Result({ p, s, onClose, error: callError, recording }) {
       </div>
       {pick === 'cancelled' ? (
         <>
-          <label className="pp-field"><span>Confirmation number <em>(optional)</em></span>
-            <input className="pp-mono" value={conf} onChange={e => setConf(e.target.value)} placeholder="If the carrier gave one" autoComplete="off" />
+          <label className="pp-field"><span>Confirmation number {recording ? <em>(optional)</em> : <em>(needed)</em>}</span>
+            <input className="pp-mono" value={conf} onChange={e => setConf(e.target.value)} placeholder={recording ? 'If the carrier gave one' : 'The number the carrier read out'} autoComplete="off" />
           </label>
           <label className="pp-field"><span>Takes effect</span>
             <input type="date" value={effective} onChange={e => setEffective(e.target.value)} />

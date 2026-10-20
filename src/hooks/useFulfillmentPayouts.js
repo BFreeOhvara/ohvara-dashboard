@@ -172,14 +172,15 @@ export function useUnpaidVerified(enabled = true) {
 
 // Cancels waiting on Brayden, with where the AI thinks the carrier says it and
 // the recording's length (the audio itself only comes through
-// fulfillment-recording).
+// fulfillment-recording). P784: plus the carrier's confirmation number the rep
+// typed, the proof while recording is off.
 export function useNeedsListen(enabled = true) {
   return useQuery({
     queryKey: [...KEY, 'needs-listen'],
     enabled,
     queryFn: async () => {
       const { data, error } = await supabase.from('fulfillment_cancels')
-        .select('id, rep_id, client_name, carrier_name, agent_name, logged_at, amount_cents, reason, listen_at_seconds, recording_id, recording:fulfillment_recordings(id, status, duration_seconds)')
+        .select('id, rep_id, client_name, carrier_name, agent_name, logged_at, amount_cents, reason, listen_at_seconds, recording_id, recording:fulfillment_recordings(id, status, duration_seconds), policy:policies(cancellation_confirmation)')
         .eq('status', 'needs_listen').order('logged_at', { ascending: true }).limit(100)
       if (error) throw error
       return data || []

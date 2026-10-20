@@ -140,17 +140,17 @@ export function AdminPhoneHome() {
         sub: invites.length === 1 ? `${to || roleLabel(oldest.role)} · sent ${ago(oldest.created_at, now)}` : `Oldest sent ${ago(oldest.created_at, now)}`,
       })
     }
-    if (config && (!config.voice_live || !config.sms_live)) {
-      const both = !config.voice_live && !config.sms_live
-      out.push({
-        key: 'live', tone: 'mute', icon: TriangleAlert, go: () => navigate('/settings#contact'),
-        title: both ? 'Calling and texting aren’t live yet' : !config.voice_live ? 'Calling isn’t live yet' : 'Texting isn’t live yet',
-        sub: `Switch ${both ? 'them' : 'it'} on in Settings`,
-      })
+    // P784 (dry-run F3): one row each, like desktop Home, so both count the same.
+    if (config && !config.voice_live) {
+      out.push({ key: 'voice', tone: 'mute', icon: TriangleAlert, go: () => navigate('/settings#contact'), title: 'Calling isn’t live yet', sub: 'Switch it on in Settings' })
+    }
+    if (config && !config.sms_live) {
+      out.push({ key: 'sms', tone: 'mute', icon: TriangleAlert, go: () => navigate('/settings#contact'), title: 'Texting isn’t live yet', sub: 'Switch it on in Settings' })
     }
     return out
   }, [listen, payouts, queue, invites, config, now, repById, navigate, tz, todayStr])
-  const hot = needs.filter(n => n.hot).length
+  // P784: every row counts, the same as desktop Home (it said 1 above 2 rows).
+  const hot = needs.length
 
   const firstName = (profile?.full_name || '').split(' ')[0]
   const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hourCycle: 'h23' }).format(now))

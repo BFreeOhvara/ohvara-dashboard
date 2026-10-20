@@ -2441,6 +2441,22 @@ a.ov-hpill:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; 
 .mc-change { display: flex; flex-direction: column; gap: 8px; width: 100%; }
 .mc-change-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .mc-change p { margin: 0; font-size: 12.5px; color: var(--ov-mute); }
+/* P784 — an admin confirms a new carrier before it joins the shared list. */
+.ov-carrier-ask { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--mc-tile-bg); border: 1px solid var(--mc-tile-bd); font-size: 13.5px; line-height: 1.45; color: var(--ov-mid); }
+.ov-carrier-ask b { color: var(--ov-hi); overflow-wrap: anywhere; }
+.ov-carrier-ask-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.ov-carrier-ask-btns button { height: 40px; padding: 0 16px; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.ov-carrier-ask-btns button:disabled { opacity: 0.55; cursor: not-allowed; }
+/* P784 — the confirmation number Cancelled asks for while recording is off. */
+.mc-cnum { display: flex; flex-direction: column; gap: 10px; width: 100%; min-width: 0; padding: 14px; border-radius: 14px; background: var(--mc-tile-bg); border: 1px solid var(--mc-tile-bd); cursor: default; }
+.mc-cnum label { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mc-cnum label span { font-size: 13px; font-weight: 600; color: var(--ov-mute); overflow-wrap: anywhere; }
+.mc-cnum input { width: 100%; min-width: 0; height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-base); color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 15px; outline: none; }
+.mc-cnum input:focus { border-color: var(--accent); }
+.mc-cnum p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--ov-mute); }
+.mc-cnum-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+.mc-cnum-row .mc-btn { height: 44px; padding: 0 16px; }
+@media (pointer: coarse) { .mc-cnum input { font-size: 16px; } }
 
 /* Phones: usable, not polished (the mobile redesign comes later). */
 @media (max-width: 899.98px) {
@@ -3222,6 +3238,11 @@ a.ov-hpill:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; 
 .ap2-lcard-top span { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--ov-mute); }
 .ap2-lcard-sub { margin-top: 2px; font-size: 12px; color: var(--ov-mute); }
 .ap2-lcard-why { margin-top: 8px; font-size: 12.5px; font-weight: 600; color: var(--ov-warn); }
+.ap2-lcard-conf, .aph-conf { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: var(--ov-mute); }
+.ap2-lcard-conf { margin-top: 8px; }
+.ap2-lcard-conf b, .aph-conf b { font-family: 'JetBrains Mono', monospace; font-size: 13.5px; font-weight: 600; color: var(--ov-hi); overflow-wrap: anywhere; }
+.ap2-lcard-conf i, .aph-conf i { font-style: normal; color: var(--ov-warn); }
+.aph-conf { padding: 0 4px; font-size: 13.5px; }
 .ap2-player { margin-top: 10px; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .ap2-play { width: 32px; height: 32px; flex: none; border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--ov-hi); color: #0D1730; cursor: pointer; }
 [data-theme="light"] .ap2-play { color: #FFFFFF; }

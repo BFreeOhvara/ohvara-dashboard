@@ -5,6 +5,7 @@ import { isLive, useNow } from '../lib/agentBookings'
 import { canStartCall, timeText, tooEarlyText, unlockAt } from '../lib/fulfillmentDay'
 import { usePortalPhone } from '../contexts/portalPhone'
 import { useOneAtATime } from './useOneAtATime'
+import { useRecoveryConfig } from './useRecoveryConfig'
 
 // Prompt 756 — Call client is locked until 5 minutes before the call. Ticks
 // every 15 s so a button unlocks by itself. `opens` is "3:25 PM" (own zone).
@@ -56,7 +57,11 @@ export function useCallActions(p) {
   const end = useOneAtATime(endCall)
   const reasonOnce = useOneAtATime(setReason)
   const pass = useOneAtATime(passOn)
+  // P784: with call recording off, Cancelled needs the carrier's confirmation
+  // number (the server refuses without it). Unknown counts as off.
+  const { data: cfg } = useRecoveryConfig()
   return {
+    needsNumber: !cfg?.recording_live,
     start: () => {
       if (isLive(p) || p.fulfillment_stage === 'Complete') return
       if (!canStartCall(p, Date.now(), tz)) { toast(tooEarlyText(unlockAt(p), tz)); return }
@@ -64,7 +69,10 @@ export function useCallActions(p) {
     },
     noAnswer: opts => end({ id: p.id, outcome: 'no_answer' }, opts),
     // `notes` undefined leaves the saved notes as they are.
-    cancelled: (notes, opts) => cancel({ id: p.id, notes: notes === undefined ? undefined : notes.trim() }, opts),
+    cancelled: (notes, opts, confirmation) => cancel({
+      id: p.id, notes: notes === undefined ? undefined : notes.trim(),
+      proof: confirmation ? { confirmation } : undefined,
+    }, opts),
     reason: value => reasonOnce({ id: p.id, reason: p.cancellation_substatus === value ? null : value }),
     saveNotes: (notes, opts) => notesOnce({ id: p.id, notes: notes.trim() }, opts),
     passOn: opts => pass(p.id, opts),
