@@ -26,7 +26,12 @@ export function otaBuildVersion() {
   return `1.${d.slice(0, 8)}.${Number(d.slice(8))}${sha ? `-${sha}` : ''}`
 }
 
+// Prompt 789 — `minNative` is per platform ({ ios, android }): the store build
+// counters are separate. The manifest keeps the old single `minNative` (the
+// lowest one) for store builds whose ota.js predates per-platform minimums.
 export function otaBundle({ version, minNative }) {
+  const perPlatform = typeof minNative === 'object' && minNative ? minNative : { ios: minNative, android: minNative }
+  const lowest = Math.min(...Object.values(perPlatform).map(n => Number(n) || 1))
   let outDir = 'dist'
   return {
     name: 'ohvara-ota',
@@ -39,7 +44,7 @@ export function otaBundle({ version, minNative }) {
       const dir = path.join(outDir, 'ota')
       fs.mkdirSync(dir, { recursive: true })
       fs.writeFileSync(path.join(dir, `${version}.zip`), zip)
-      const manifest = { version, bundle: `/ota/${version}.zip`, checksum, minNative, builtAt: new Date().toISOString() }
+      const manifest = { version, bundle: `/ota/${version}.zip`, checksum, minNative: lowest, minNativeBuild: perPlatform, builtAt: new Date().toISOString() }
       fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(manifest, null, 2))
     },
   }

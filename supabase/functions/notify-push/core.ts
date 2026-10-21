@@ -73,11 +73,38 @@ export async function sendDue(store: Store, senders: Senders, limit = 50) {
   return { claimed: due.length, sent, failed }
 }
 
+// Prompt 789 — dry run ({"check": true} from the cron caller): one alert per
+// set-up platform to a made-up device token, so Apple/Google refuse the token
+// and nothing reaches anyone, but their answer shows whether our keys passed.
+const FAKE_TOKEN = { ios: '0'.repeat(64), android: 'ohvara-dry-run-not-a-device' }
+const KEYS_OK = {
+  ios: ['BadDeviceToken', 'Unregistered', 'DeviceTokenNotForTopic'],
+  android: ['INVALID_ARGUMENT', 'UNREGISTERED'],
+}
+
+export async function checkKeys(senders: Senders) {
+  const out: Record<string, { keys: 'ok' | 'refused' | 'not set up'; answer?: string }> = {}
+  for (const p of ['ios', 'android'] as const) {
+    const send = senders[p]
+    if (!send) { out[p] = { keys: 'not set up' }; continue }
+    try {
+      const r = await send(FAKE_TOKEN[p], { title: 'Ohvara check', body: '', link: '/', badge: 0, type: 'check' })
+      const answer = r.ok ? 'accepted a made-up token' : r.error || 'failed'
+      out[p] = { keys: !r.ok && KEYS_OK[p].includes(answer) ? 'ok' : 'refused', answer }
+    } catch (e) {
+      out[p] = { keys: 'refused', answer: (e as Error).message }
+    }
+  }
+  return out
+}
+
 export async function handle(req: Request, store: Store, senders: Senders) {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
   const secret = req.headers.get('x-ohvara-cron')
   if (!secret || !(await store.cronOk(secret))) return json({ error: 'Not allowed' }, 403)
+  const body = await req.json().catch(() => ({}))
+  if (body?.check === true) return json({ check: await checkKeys(senders) })
   // No keys at all yet: leave the queue alone rather than burning tries.
   if (!senders.ios && !senders.android) return json({ configured: false, sent: 0 })
   try {

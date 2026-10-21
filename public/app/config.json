@@ -1,5 +1,5 @@
 {
   "ios": null,
   "android": null,
-  "push": { "ios": null, "android": null }
+  "push": { "ios": 3, "android": 1 }
 }

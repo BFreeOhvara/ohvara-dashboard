@@ -9,10 +9,11 @@
 // (notifyAppReady never runs), the plugin rolls back to the last good one.
 //
 // Only HTML/JS/CSS change this way. A build that needs new native code bumps
-// `ohvara.otaMinNativeBuild` in package.json, and older store builds then
-// ignore it until the user updates from the store.
+// `ohvara.otaMinNativeBuild` in package.json ({ ios, android }: Apple and
+// Google count builds separately), and older store builds then ignore it
+// until the user updates from the store.
 import { App } from '@capacitor/app'
-import { WEB_ORIGIN } from './native'
+import { WEB_ORIGIN, nativePlatform } from './native'
 
 /* global __APP_BUILD__ */
 const RUNNING = typeof __APP_BUILD__ === 'string' ? __APP_BUILD__ : 'dev'
@@ -21,10 +22,11 @@ const EVERY_MS = 30 * 60 * 1000
 let lastCheck = 0
 let busy = false
 
-export function isNewer(manifest, running, nativeBuild) {
+export function isNewer(manifest, running, nativeBuild, platform) {
   if (!manifest?.version || !manifest?.bundle || !manifest?.checksum) return false
   if (manifest.version === running) return false
-  if (Number(nativeBuild) < Number(manifest.minNative || 1)) return false
+  const min = manifest.minNativeBuild?.[platform] ?? manifest.minNative ?? 1
+  if (Number(nativeBuild) < Number(min || 1)) return false
   return true
 }
 
@@ -37,7 +39,7 @@ async function check(Updater) {
     if (!res.ok) return
     const m = await res.json()
     const info = await App.getInfo()
-    if (!isNewer(m, RUNNING, info.build)) return
+    if (!isNewer(m, RUNNING, info.build, nativePlatform())) return
     const { bundles = [] } = await Updater.list()
     let bundle = bundles.find(b => b.version === m.version && b.status !== 'error')
     if (!bundle) {

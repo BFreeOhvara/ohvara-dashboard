@@ -6,7 +6,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { handle, sendDue, message, apnsSender, fcmSender, signJwt, type Store, type Due, type Senders } from './core.ts'
+import { handle, sendDue, message, apnsSender, fcmSender, signJwt, checkKeys, type Store, type Due, type Senders } from './core.ts'
 
 const SECRET = 's3cret'
 const due = (o: Partial<Due> = {}): Due => ({
@@ -155,4 +155,28 @@ test('FCM: RS256 service-account token once, v1 send with link data, UNREGISTERE
 
 test('signJwt rejects a key that is not PKCS8', async () => {
   await assert.rejects(signJwt('ES256', '-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----', {}, {}))
+})
+
+test('dry run: made-up token only, never claims the queue; token refused = keys ok', async () => {
+  const { store, finished } = memStore([due()])
+  const tokens: string[] = []
+  const check = new Request('https://x/functions/v1/notify-push', { method: 'POST', headers: { 'x-ohvara-cron': SECRET }, body: JSON.stringify({ check: true }) })
+  const res = await handle(check, store, {
+    ios: async t => { tokens.push(t); return { ok: false, dead: true, error: 'BadDeviceToken' } },
+    android: async t => { tokens.push(t); return { ok: false, error: 'INVALID_ARGUMENT' } },
+  })
+  assert.deepEqual((await res.json()).check, { ios: { keys: 'ok', answer: 'BadDeviceToken' }, android: { keys: 'ok', answer: 'INVALID_ARGUMENT' } })
+  assert.deepEqual(tokens, ['0'.repeat(64), 'ohvara-dry-run-not-a-device'])
+  assert.equal(finished.length, 0)
+  const noCron = new Request('https://x/functions/v1/notify-push', { method: 'POST', body: JSON.stringify({ check: true }) })
+  assert.equal((await handle(noCron, store, {})).status, 403)
+})
+
+test('dry run: bad keys and missing keys are named', async () => {
+  const out = await checkKeys({
+    ios: async () => ({ ok: false, error: 'InvalidProviderToken' }),
+    android: async () => { throw new Error('google token 400') },
+  })
+  assert.deepEqual(out, { ios: { keys: 'refused', answer: 'InvalidProviderToken' }, android: { keys: 'refused', answer: 'google token 400' } })
+  assert.deepEqual(await checkKeys({}), { ios: { keys: 'not set up' }, android: { keys: 'not set up' } })
 })
