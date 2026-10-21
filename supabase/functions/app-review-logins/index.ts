@@ -19,11 +19,17 @@ Deno.serve(req => handle(req, {
     return data?.id ?? null
   },
   async createUser(email, password, role, name) {
-    // Role comes from app_metadata only (P770: handle_new_user never trusts user_metadata).
+    // Role comes from pending_signups (P787: app_metadata isn't on the row yet
+    // when handle_new_user runs) — never from user_metadata (P770).
+    const { error: pendErr } = await admin.from('pending_signups').upsert({ email, role, created_at: new Date().toISOString() })
+    if (pendErr) throw new Error(pendErr.message)
     const { data, error } = await admin.auth.admin.createUser({
       email, password, email_confirm: true, app_metadata: { role }, user_metadata: { full_name: name },
     })
-    if (error || !data.user) throw new Error(error?.message || 'createUser failed')
+    if (error || !data.user) {
+      await admin.from('pending_signups').delete().eq('email', email)
+      throw new Error(error?.message || 'createUser failed')
+    }
     return data.user.id
   },
   async setPassword(id, password) {

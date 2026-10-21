@@ -150,20 +150,31 @@ Deno.serve(async (req) => {
       return json({ error: 'This invite link is invalid, expired, or already used.' }, 400)
     }
 
+    // The handle_new_user trigger creates the profiles row. Its role comes
+    // from pending_signups, which only the service role can write (Prompt
+    // 787, migration 160: app_metadata isn't on the row yet when the trigger
+    // runs). The trigger ignores a role in user_metadata (Prompt 770), so a
+    // plain public sign-up can't pick one.
+    const cleanEmail = email.trim().toLowerCase()
+    const { error: pendErr } = await adminClient.from('pending_signups')
+      .upsert({ email: cleanEmail, role: invite.role, created_at: new Date().toISOString() })
+    if (pendErr) {
+      await adminClient.from('rep_invites').update({ used_at: null }).eq('id', invite.id).is('used_by', null)
+      console.error('pending_signups upsert failed:', pendErr.message)
+      return json({ error: 'Couldn’t create your account. Try again.' }, 500)
+    }
+
     // email_confirm: true — no email provider is configured yet (Resend setup
     // pending), so accounts are auto-confirmed and can log in immediately.
-    // The handle_new_user trigger creates the profiles row. The role goes in
-    // app_metadata, which only the service role can write (Prompt 770,
-    // migration 152): the trigger ignores a role in user_metadata, so a plain
-    // public sign-up can't pick one.
     const { data, error } = await adminClient.auth.admin.createUser({
-      email: email.trim().toLowerCase(),
+      email: cleanEmail,
       password,
       email_confirm: true,
       app_metadata: { role: invite.role },
       user_metadata: { full_name: full_name.trim(), role: invite.role, ...(username ? { username } : {}) },
     })
     if (error) {
+      await adminClient.from('pending_signups').delete().eq('email', cleanEmail)
       await adminClient.from('rep_invites').update({ used_at: null }).eq('id', invite.id).is('used_by', null)
       const msg = /already.*registered|already.*exists/i.test(error.message)
         ? 'An account with this email already exists.'
