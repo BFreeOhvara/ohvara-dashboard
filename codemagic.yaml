@@ -63,7 +63,8 @@ workflows:
 
   android-internal:
     name: Android → Play internal testing
-    instance_type: linux_x2
+    # The free Personal plan only allows the Mac; it has the Android SDK too.
+    instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
       groups:
@@ -75,6 +76,7 @@ workflows:
         PACKAGE_NAME: com.ohvara.portal
         OTA_SKIP: "1"
       node: 22
+      # Capacitor 8 compiles with Java 21 (android/app/capacitor.build.gradle).
       java: 21
     scripts:
       - name: Install
@@ -83,6 +85,8 @@ workflows:
         script: npm run build
       - name: Copy it into the Android project
         script: npx cap sync android
+      - name: Android SDK path
+        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
       - name: Firebase file (push)
         script: |
           if [ -n "$GOOGLE_SERVICES_JSON" ]; then
