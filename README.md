@@ -1,4 +1,6 @@
-# React + Vite
+# Ohvara dashboard
+
+Ohvara is an inbound insurance app for reps and fulfillment.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
