@@ -97,24 +97,28 @@ export default function BookCall() {
     : <NewBooking switcher={switcher} />
 }
 
-function NewBooking({ switcher }) {
+// Prompt 797 — the VA desk reuses this for "Book on an agent's calendar":
+// agentId is whose calendar (default: the signed-in agent), prefill seeds step 1,
+// onBack leaves the phone layout, and onBooked replaces the Booked screen.
+export function NewBooking({ switcher, agentId, prefill, onBack, onBooked }) {
   const { profile } = useAuth()
+  const forId = agentId || profile?.id
   const navigate = useNavigate()
   const now = useNow(30e3)
   const { data: carriers = [], isError: carriersFailed, refetch: refetchCarriers } = useCarriers()
-  const { data: mine = [] } = useAgentBookings(profile?.id)
+  const { data: mine = [] } = useAgentBookings(forId)
   const book = useBookCall()
   // Prompt 692 — weekly submission cap. The database refuses a booking past
   // it (when billing is enforced); this shows the count and the way up first.
   const { data: tiers = [] } = useBillingTiers()
-  const { data: usage } = useWeeklyUsage(profile?.id)
+  const { data: usage } = useWeeklyUsage(forId)
   const cap = capState(usage)
   const upgrade = cap ? nextTier(tiers, usage.tier) : null
   const dateInput = useRef(null)
   const phone = usePhoneLayout()
   const [step1Open, setStep1Open] = useState(true)
 
-  const [form, setForm] = useState(BLANK)
+  const [form, setForm] = useState(prefill ? { ...BLANK, ...prefill } : BLANK)
   const [carrierId, setCarrierId] = useState(null) // the picked carriers row
   const [pickedDate, setPickedDate] = useState(null) // the client's calendar day; null = the default
   const [slot, setSlot] = useState('')
@@ -209,7 +213,7 @@ function NewBooking({ switcher }) {
     const lastName = titleCase(form.last)
     const city = titleCase(form.city.trim())
     book.mutate({
-      agentId: profile.id,
+      agentId: forId,
       firstName, lastName,
       phone: form.phone.trim(),
       city, state: form.state, timezone: tz,
@@ -219,6 +223,7 @@ function NewBooking({ switcher }) {
       smsConsent: textsOk,
     }, {
       onSuccess: policy => {
+        if (onBooked) { onBooked({ id: policy?.id, name: `${firstName} ${lastName}`, at: scheduledAt, tz, location: `${city}, ${form.state}` }); return }
         setDone({ id: policy?.id, name: `${firstName} ${lastName}`, at: scheduledAt, tz, location: `${city}, ${form.state}` })
         setForm(BLANK); setCarrierId(null); setSlot(''); setPickedDate(null); setConfirm(null); setErrors(new Set()); setTextsOk(false)
       },
@@ -286,11 +291,11 @@ function NewBooking({ switcher }) {
       <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <p style={{ margin: 0, flex: '1 1 260px', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-mid)' }}>
           You've used all {cap.cap} bookings on the {cap.tierName} plan this week.{' '}
-          {upgrade && !isNativeApp()
+          {upgrade && !isNativeApp() && !agentId
             ? <>Upgrade to {upgrade.name} ({formatWeekly(upgrade.weekly_cents)}/week, {upgrade.weekly_cap ?? 'unlimited'} a week) to keep booking, or wait until {formatReset(usage.week_end, profile?.timezone)}.</>
             : <>The cap resets {formatReset(usage.week_end, profile?.timezone)}.</>}
         </p>
-        {upgrade && !isNativeApp() && (
+        {upgrade && !isNativeApp() && !agentId && (
           <button type="button" className="ov-ghost" onClick={() => navigate('/agent/billing')} style={{ ...pillBtn, ...(phone ? { height: 44 } : null) }}>Upgrade</button>
         )}
       </div>
@@ -305,7 +310,7 @@ function NewBooking({ switcher }) {
     }
     return (
       <PhoneBook
-        onBack={() => navigate(-1)} cap={cap} capWarning={<>{carriersError}{capWarning}</>}
+        onBack={onBack || (() => navigate(-1))} cap={cap} capWarning={<>{carriersError}{capWarning}</>}
         form={form} set={set} errors={errors} picked={picked} carriers={carriers}
         onCarrierText={typeCarrier} onCarrierPick={onePick} onCarrierUse={keepTypedCarrier} addingCarrier={addCarrier.isPending}
         step1Open={step1Open || !filled} onEdit={() => setStep1Open(true)} onDone={() => setStep1Open(false)} filled={filled}

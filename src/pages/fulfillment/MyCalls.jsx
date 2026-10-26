@@ -10,6 +10,7 @@ import { CallDrawer, CallButton, CallStatus } from '../../components/fulfillment
 import { ResultFixBar } from '../../components/fulfillment/ResultFixBar'
 import { CancelNumber } from '../../components/fulfillment/CancelNumber'
 import { PhoneToday } from '../../components/fulfillment/phone/PhoneToday'
+import VaDesk from '../../components/fulfillment/VaDesk'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { useResultFix } from '../../hooks/useResultFix'
 import { useCallActions, useCallLock, useClientCall } from '../../hooks/useCallActions'
@@ -316,8 +317,36 @@ function CallRow({ c, tz, sub, subTone, tag, onOpen }) {
 
 // ── page ────────────────────────────────────────────────────────────────────
 
+// Prompt 797 — a switch at the top: My calls (the day) or Qualify a call (the
+// VA's inbound policy-help screen, ?mode=qualify).
 export default function MyCalls() {
-  return usePhoneLayout() ? <PhoneToday /> : <DeskMyCalls />
+  const phone = usePhoneLayout()
+  const [params, setParams] = useSearchParams()
+  const qualify = params.get('mode') === 'qualify'
+  const setMode = m => {
+    const next = new URLSearchParams(params)
+    if (m === 'qualify') next.set('mode', 'qualify')
+    else next.delete('mode')
+    next.delete('open')
+    setParams(next, { replace: true })
+  }
+  const opts = [{ value: 'calls', label: 'My calls' }, { value: 'qualify', label: 'Qualify a call' }]
+  return (
+    <>
+      <div className="ov-range ov-book-switch" role="group" aria-label="Desk" style={{ marginBottom: 14 }}>
+        {opts.map(o => {
+          const on = (o.value === 'qualify') === qualify
+          return (
+            <button key={o.value} type="button" aria-pressed={on} className={on ? 'is-on' : ''}
+              onClick={() => !on && setMode(o.value)} style={{ height: 40, padding: '0 18px', fontSize: 14.5 }}>
+              {o.label}
+            </button>
+          )
+        })}
+      </div>
+      {qualify ? <VaDesk /> : phone ? <PhoneToday /> : <DeskMyCalls />}
+    </>
+  )
 }
 
 function DeskMyCalls() {
