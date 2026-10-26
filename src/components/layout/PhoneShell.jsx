@@ -30,7 +30,7 @@ const AGENT_TABS = [
   { to: '/agent/clients', label: 'Clients', icon: Users, on: p => p === '/agent/clients' },
   { to: '/agent/book', label: 'Book a call', icon: Plus, plus: true, on: () => false },
   { to: '/messages', label: 'Messages', icon: MessageSquare, on: p => p === '/messages', badge: true },
-  { to: '/agent/more', label: 'More', icon: Menu, on: p => ['/agent/more', '/agent/activity', '/agent/billing', '/settings'].includes(p) },
+  { to: '/agent/more', label: 'More', icon: Menu, on: p => ['/agent/more', '/agent/activity', '/agent/leads', '/agent/billing', '/settings'].includes(p) },
 ]
 
 const FULFILL_TABS = [
@@ -52,7 +52,7 @@ const TABS = { agent: AGENT_TABS, fulfillment: FULFILL_TABS, admin: ADMIN_TABS }
 
 // Pages opened from More: a header with a back arrow to More.
 const SUB_PAGES = {
-  agent: { '/agent/activity': 'Activity', '/agent/billing': 'Billing', '/settings': 'Settings' },
+  agent: { '/agent/activity': 'Activity', '/agent/leads': 'Leads', '/agent/billing': 'Billing', '/settings': 'Settings' },
   fulfillment: { '/settings': 'Settings' },
   admin: { '/admin/users': 'People', '/admin/pipeline': 'Pipeline', '/settings': 'Settings' },
 }

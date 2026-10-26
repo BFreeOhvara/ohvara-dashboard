@@ -1,5 +1,5 @@
 import {
-  Users, Home, Settings, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard, Phone,
+  Users, Home, Settings, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard, Phone, Inbox,
 } from 'lucide-react'
 
 // Each role's sidebar, grouped. Moved out of Sidebar.jsx by Prompt 722 so the
@@ -19,6 +19,7 @@ export const NAV = {
       { to: '/agent/clients', label: 'My Pipeline', icon: Users },
       // Prompt 690 — chronological log of what happened, next to My Pipeline.
       { to: '/agent/activity', label: 'Activity', icon: History },
+      { to: '/agent/leads', label: 'Leads', icon: Inbox },
     ] },
     // Prompt 680 — Messages gets its own single-item group, as in Restorix.
     { group: 'Communications', items: [
@@ -87,6 +88,7 @@ export function navEntry(role, pathname) {
 export const PAGE_TONE = {
   '/agent/book': 'teal',
   '/agent/activity': 'violet',
+  '/agent/leads': 'teal',
   '/agent/billing': 'amber',
   '/settings': 'slate',
 }

@@ -13,6 +13,7 @@ import './lib/installPrompt'
 
 import Login from './pages/Login'
 import Join from './pages/Join'
+import MortgageProtection from './pages/MortgageProtection'
 import ConfirmEmail from './pages/ConfirmEmail'
 import ResetPassword from './pages/ResetPassword'
 import RescheduleLink from './pages/RescheduleLink'
@@ -25,6 +26,7 @@ import AgentClients from './pages/agent/Clients'
 import AgentActivity from './pages/agent/Activity'
 import AgentBilling from './pages/agent/Billing'
 import AgentMore from './pages/agent/More'
+import AgentLeads from './pages/agent/Leads'
 import MyCalls from './pages/fulfillment/MyCalls'
 import FulfillmentOverview from './pages/fulfillment/Overview'
 import FulfillmentPipeline from './pages/fulfillment/Pipeline'
@@ -93,6 +95,8 @@ export default function App() {
             <Route path="/join" element={<Join />} />
             <Route path="/join/:token" element={<Join />} />
             <Route path="/j/:token" element={<Join />} />
+            {/* Public mortgage-protection qualifier; no login. Posts to submit-mp-lead. */}
+            <Route path="/mp" element={<MortgageProtection />} />
             <Route path="/confirm-email" element={<ConfirmEmail />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             {/* Prompt 696 — client-facing reschedule link from the missed-call text; no login */}
@@ -144,6 +148,12 @@ export default function App() {
             <Route path="/agent/activity" element={
               <ProtectedRoute allowedRoles={['agent', 'admin']}>
                 <DashboardLayout><AgentActivity /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            {/* Leads — delivered mp_leads + lead settings; stays open while billing is locked. */}
+            <Route path="/agent/leads" element={
+              <ProtectedRoute allowedRoles={['agent']}>
+                <DashboardLayout><AgentLeads /></DashboardLayout>
               </ProtectedRoute>
             } />
             {/* Prompt 691 — Billing, promoted out of Settings. */}
