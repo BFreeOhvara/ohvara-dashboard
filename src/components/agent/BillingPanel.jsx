@@ -9,6 +9,7 @@ import {
   isComped, shownStatus, renewsAt,
 } from '../../lib/billing'
 import { RenewalRing, BookingMeter, PlanCard, BillingFacts } from './AgentUI'
+import { PrepaidBalanceCard } from './PrepaidBalanceCard'
 import { ManageBilling, SubscribeView, PlanSwitchDialog } from './ManageBilling'
 
 // ── Billing (Prompt 673) ────────────────────────────────────────────────────
@@ -181,6 +182,7 @@ export function BillingPanel({ profile }) {
         </>
       )}
 
+      <PrepaidBalanceCard agentId={profile.id} />
       <BillingFacts />
       {switchTo && (
         <PlanSwitchDialog
