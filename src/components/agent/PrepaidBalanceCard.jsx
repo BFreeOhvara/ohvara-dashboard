@@ -6,7 +6,7 @@ import { DISPLAY, MONO } from '../../lib/exportStyles'
 
 // Prepaid lead balance. Reads agent_lead_balance (one row per agent), the
 // per-lead price from recovery_config.mp_lead_price_cents, and the ledger.
-// Top-ups go through the create-balance-topup edge function, which maps the
+// Top-ups go through the lead-balance-topup edge function, which maps the
 // button to an amount on the server and hands back a Stripe Checkout URL.
 // Three blocks, as in Dot's mockup: balance hero, price card, history card.
 const TOPUPS = [100, 250, 500]
@@ -60,7 +60,7 @@ export function PrepaidBalanceCard({ agentId }) {
   async function topUp(dollars) {
     setError(''); setBusy(dollars)
     try {
-      const { data: res, error: err } = await supabase.functions.invoke('create-balance-topup', {
+      const { data: res, error: err } = await supabase.functions.invoke('lead-balance-topup', {
         body: { amount_dollars: dollars, return_url: `${window.location.origin}/agent/billing` },
       })
       if (err || !res?.url) throw err || new Error('No checkout link')

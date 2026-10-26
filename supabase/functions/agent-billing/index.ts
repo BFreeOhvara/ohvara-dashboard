@@ -13,6 +13,7 @@
 import { createClient } from 'npm:@supabase/supabase-js'
 import { configure, handle } from './core.ts'
 import { handleConnectEvent, stripeClient, type ConnectStore } from '../_shared/fulfillmentPayouts.ts'
+import { handleTopupEvent, type TopupStore } from '../_shared/leadTopup.ts'
 
 const KEY = Deno.env.get('STRIPE_SECRET_KEY')
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
@@ -53,12 +54,30 @@ const payouts: ConnectStore = {
   },
 }
 
+// Prepaid lead top-ups (migration 162's agent_lead_ledger; service role may
+// only insert). 23505 is the one-topup-per-stripe_ref index: already credited.
+const topups: TopupStore = {
+  async agent(id) {
+    const { data, error } = await admin.from('profiles').select('id, role').eq('id', id).maybeSingle()
+    if (error) throw error
+    return data
+  },
+  async insertTopup(row) {
+    const { data, error } = await admin.from('agent_lead_ledger')
+      .insert({ ...row, kind: 'topup' }).select('id, balance_after_cents').single()
+    if (error?.code === '23505') return null
+    if (error) throw error
+    return data
+  },
+}
+
 configure({
   stripeKey: KEY,
   webhookSecret: Deno.env.get('STRIPE_WEBHOOK_SECRET'),
   publishableKey: Deno.env.get('STRIPE_PUBLISHABLE_KEY'),
   connectWebhookSecret: Deno.env.get('STRIPE_CONNECT_WEBHOOK_SECRET'),
   onConnectEvent: KEY ? event => handleConnectEvent(payouts, stripeClient(KEY), event, APP_URL) : undefined,
+  onTopupEvent: KEY ? event => handleTopupEvent(topups, stripeClient(KEY), event) : undefined,
 })
 
 Deno.serve(req => handle(req, admin))

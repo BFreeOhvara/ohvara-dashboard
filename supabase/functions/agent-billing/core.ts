@@ -1,4 +1,5 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js'
+import { isTopupEvent } from '../_shared/leadTopup.ts'
 
 // Prompt 673 — the agent retainer (weekly, agent pays Ohvara). Prompt 692 made
 // it tiered: each row of agent_billing_tiers (migration 119) is a weekly price
@@ -55,6 +56,9 @@ import type { SupabaseClient } from 'npm:@supabase/supabase-js'
 //   customer.subscription.updated, customer.subscription.deleted,
 //   invoice.paid, invoice.payment_failed
 //   + transfer.reversed (Prompt 753, Fulfillment payouts)
+// checkout.session.completed also carries prepaid lead top-ups (mode payment,
+// metadata.kind lead_topup, from lead-balance-topup); those credit
+// agent_lead_ledger and never touch the subscription.
 // Prompt 753 also points a Connect endpoint ("events on connected accounts")
 // at the same URL for account.updated and account.external_account.*; its
 // signing secret is STRIPE_CONNECT_WEBHOOK_SECRET.
@@ -69,6 +73,9 @@ export type Env = {
   // transfer.reversed) go to onConnectEvent instead of the billing sync.
   connectWebhookSecret?: string
   onConnectEvent?: (event: any) => Promise<Record<string, unknown>>
+  // Prepaid lead balance: a one-time Checkout tagged kind=lead_topup
+  // (../_shared/leadTopup.ts) credits agent_lead_ledger instead.
+  onTopupEvent?: (event: any) => Promise<Record<string, unknown>>
   fetch?: typeof fetch
   now?: () => number
 }
@@ -483,6 +490,22 @@ async function handleWebhook(req: Request, admin: SupabaseClient) {
       return json({ error: (e as Error).message }, 500)
     }
   }
+
+  // Prepaid lead top-up. Must come before subscriptionIdOf, which ignores every
+  // payment-mode session. A retry after a 500 can't credit twice: the ledger
+  // allows one topup row per session id.
+  if (isTopupEvent(event)) {
+    if (!ENV.onTopupEvent) return json({ received: true, ignored: 'lead top-up' })
+    try {
+      const result = await ENV.onTopupEvent(event)
+      console.log(`agent-billing webhook ${event.type} (lead top-up)`, JSON.stringify(result))
+      return json({ received: true, ...result })
+    } catch (e) {
+      console.error(`agent-billing webhook ${event.type} (lead top-up) failed:`, (e as Error).message)
+      return json({ error: (e as Error).message }, 500)
+    }
+  }
+
   const subId = subscriptionIdOf(event)
   if (!subId) return json({ received: true, ignored: event.type })
 
