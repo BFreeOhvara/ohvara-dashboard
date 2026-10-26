@@ -6,6 +6,8 @@
 // limit and a 24-hour same-phone dedupe. A good lead goes into leads as
 // lead_type 'mortgage_protection', lead_source 'meta' (migration 161), is
 // handed to the assignment step, and gets delivered_at once an agent has it.
+// Until assign_lead (migration 164) exists, index.ts assigns nobody, so leads
+// stay unassigned with delivered_at null.
 //
 // Nothing here texts, emails or calls; that is a separate function. Logs carry
 // error text only, never the phone, name or IP.
