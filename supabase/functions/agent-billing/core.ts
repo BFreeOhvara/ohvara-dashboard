@@ -1,4 +1,5 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js'
+import { TOPUP_KIND, topupFromSession } from '../_shared/balanceTopup.ts'
 
 // Prompt 673 — the agent retainer (weekly, agent pays Ohvara). Prompt 692 made
 // it tiered: each row of agent_billing_tiers (migration 119) is a weekly price
@@ -42,6 +43,9 @@ import type { SupabaseClient } from 'npm:@supabase/supabase-js'
 //     Verified against STRIPE_WEBHOOK_SECRET. Every event is used only for
 //     the subscription id; the subscription itself is re-fetched from Stripe,
 //     so out-of-order delivery can't write stale state.
+//     Exception: a checkout.session.completed with metadata.kind
+//     'prepaid_topup' (create-balance-topup) credits the agent's prepaid
+//     balance once per session via credit_topup (migration 161).
 //
 // Deployed with verify_jwt off; users are authenticated here instead.
 //
@@ -460,6 +464,28 @@ function subscriptionIdOf(event: any): string | null {
   }
 }
 
+// A paid top-up session → one ledger credit. credit_topup is keyed on the
+// session id, so Stripe's retries and duplicate deliveries credit it once.
+// A session that doesn't check out (unpaid, amounts disagree) is answered 2xx
+// and logged: retrying wouldn't change it. A DB failure is 500 so Stripe retries.
+async function creditTopupEvent(admin: SupabaseClient, session: any) {
+  const r = topupFromSession(session)
+  if ('skip' in r) {
+    const log = r.skip === 'amount_mismatch' || r.skip === 'agent_mismatch' || r.skip === 'bad_amount' ? console.error : console.log
+    log(`agent-billing webhook topup ${session?.id} not credited: ${r.skip}`)
+    return json({ received: true, ignored: `topup_${r.skip}` })
+  }
+  const { agent_id, amount_cents, session_id } = r.credit
+  const { data, error } = await admin.rpc('credit_topup', { p_agent: agent_id, p_amount_cents: amount_cents, p_session: session_id })
+  if (error) {
+    console.error(`agent-billing webhook topup ${session_id} failed:`, error.message)
+    return json({ error: error.message }, 500)
+  }
+  const credited = data === true
+  console.log(`agent-billing webhook topup ${session_id}`, JSON.stringify({ agent_id, amount_cents, credited }))
+  return json({ received: true, topup: credited ? 'credited' : 'already_credited' })
+}
+
 const CONNECT_TYPES = ['account.updated', 'account.external_account.created', 'account.external_account.updated', 'account.external_account.deleted', 'transfer.reversed']
 
 async function handleWebhook(req: Request, admin: SupabaseClient) {
@@ -483,6 +509,12 @@ async function handleWebhook(req: Request, admin: SupabaseClient) {
       return json({ error: (e as Error).message }, 500)
     }
   }
+  // Prepaid balance top-ups (create-balance-topup). Must come before the
+  // subscription lookup, which ignores payment-mode sessions.
+  if (event.type === 'checkout.session.completed' && event.data?.object?.metadata?.kind === TOPUP_KIND) {
+    return creditTopupEvent(admin, event.data.object)
+  }
+
   const subId = subscriptionIdOf(event)
   if (!subId) return json({ received: true, ignored: event.type })
 
