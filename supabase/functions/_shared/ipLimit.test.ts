@@ -123,9 +123,12 @@ Deno.test('the raw IP is never stored or returned', () =>
     assert.ok(!JSON.stringify(r).includes(ip))
   }))
 
-Deno.test('clientIp reads only x-forwarded-for (first entry)', () => {
+Deno.test('clientIp reads only x-forwarded-for (right-most, gateway-added entry)', () => {
   const req = (h: Record<string, string>) => new Request('https://x.supabase.co/functions/v1/f', { headers: h })
-  assert.equal(clientIp(req({ 'x-forwarded-for': '203.0.113.7, 10.0.0.1' })), '203.0.113.7')
+  assert.equal(clientIp(req({ 'x-forwarded-for': '203.0.113.7' })), '203.0.113.7')
+  // Spoofed: the caller sends a fake value, the gateway appends the real one.
+  assert.equal(clientIp(req({ 'x-forwarded-for': '6.6.6.6, 203.0.113.7' })), '203.0.113.7')
+  assert.equal(clientIp(req({ 'x-forwarded-for': '1.1.1.1,2.2.2.2 , 203.0.113.7 ' })), '203.0.113.7')
   assert.equal(clientIp(req({ 'x-real-ip': '1.2.3.4', 'cf-connecting-ip': '1.2.3.4', 'true-client-ip': '1.2.3.4' })), null)
   assert.equal(clientIp(req({ 'x-forwarded-for': ' ' })), null)
 })

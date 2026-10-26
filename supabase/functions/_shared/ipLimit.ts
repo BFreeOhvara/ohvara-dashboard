@@ -10,12 +10,16 @@
 // Only the salted hash is ever stored. Never log or return the raw IP.
 
 // Supabase's gateway sets x-forwarded-for on every request to an edge
-// function; the first entry is the caller's address. Other client-sent
+// function. A caller can send their own x-forwarded-for, and proxies append
+// to it, so only the RIGHT-MOST entry (the one the gateway added) is
+// trusted; anything to its left is client-controlled and ignored. If the
+// gateway turns out to sit behind another appending proxy, every caller
+// would share one bucket (fails closed, never open). Other client-sent
 // headers (x-real-ip, cf-connecting-ip, true-client-ip, forwarded) are
 // ignored on purpose. Confirm on a real request before relying on it.
 export function clientIp(req: Request): string | null {
-  const first = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-  return first ? first : null
+  const last = req.headers.get('x-forwarded-for')?.split(',').pop()?.trim()
+  return last ? last : null
 }
 
 // SHA-256 of salt + ip, hex. The salt is read at call time so a rotated
