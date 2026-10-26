@@ -90,7 +90,7 @@ function SettingsCard() {
                   aria-pressed={on} aria-label={s.name}
                   style={{
                     ...chipBase, minHeight: 44, minWidth: 44, justifyContent: 'center', cursor: 'pointer',
-                    ...(on ? {} : { background: 'var(--ov-ghost-bg)', color: 'var(--ov-hi)', borderColor: 'var(--ov-ghost-edge)' }),
+                    ...(on ? {} : { background: 'transparent', color: 'var(--ov-mid)', borderColor: 'var(--ov-line)' }),
                   }}>
                   {s.code}
                 </button>
