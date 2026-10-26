@@ -5,15 +5,16 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { clientIp, handle, Limiter, MP_CONSENT_VERSION, MSG, type Deps, type LeadRow } from './core.ts'
+import { clientIp, handle, Limiter, MP_CONSENT_VERSION, MSG, toE164, type Deps, type LeadRow } from './core.ts'
 
 const NOW = new Date('2026-10-26T01:00:00Z')
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 
 function deps(over: Partial<Deps> = {}) {
   const rows: (LeadRow & { id: string })[] = []
   const log: string[] = []
   const d: Deps = {
-    async countPhone(phone, since) { return rows.filter(r => r.phone === phone && r.consent_at >= since).length },
+    async findRecent(phone, since) { return rows.filter(r => r.phone === phone && r.consent_at >= since).at(-1)?.id ?? null },
     async insertLead(row) { const id = `lead-${rows.length + 1}`; rows.push({ ...row, id }); log.push(`insert:${id}`); return id },
     async assign(id) { log.push(`assign:${id}`) },
     limiter: new Limiter(),
@@ -32,10 +33,18 @@ const good = (over: Record<string, unknown> = {}) => ({
   ...over,
 })
 
-test('a good lead is stored with server consent fields, then assigned; reply is only ok', async () => {
+// A quiet drop: same shape as a stored lead, with a random id that matches no row.
+function assertDecoy(r: { status: number; body: Record<string, unknown> }) {
+  assert.equal(r.status, 200)
+  assert.deepEqual(Object.keys(r.body), ['ok', 'lead_id'])
+  assert.equal(r.body.ok, true)
+  assert.match(String(r.body.lead_id), UUID)
+}
+
+test('a good lead is stored with server consent fields, then assigned; reply is ok + lead_id only', async () => {
   const { d, rows, log } = deps()
   const r = await handle(d, good({ consent_at: '2000-01-01T00:00:00Z', assigned_agent_id: 'x', status: 'closed' }), '1.2.3.4')
-  assert.deepEqual(r, { status: 200, body: { ok: true } })
+  assert.deepEqual(r, { status: 200, body: { ok: true, lead_id: 'lead-1' } })
   assert.deepEqual(log, ['insert:lead-1', 'assign:lead-1'])
   const row = rows[0]
   assert.equal(row.consent_at, NOW.toISOString())
@@ -51,14 +60,15 @@ test('a good lead is stored with server consent fields, then assigned; reply is 
 
 test('the honeypot looks like success and stores nothing', async () => {
   const { d, log } = deps()
-  assert.deepEqual(await handle(d, good({ website: 'http://spam' }), '1.2.3.4'), { status: 200, body: { ok: true } })
+  assertDecoy(await handle(d, good({ website: 'http://spam' }), '1.2.3.4'))
   assert.deepEqual(log, [])
 })
 
 test('bad fields are refused with a field error and nothing stored', async () => {
   const cases: [Record<string, unknown>, string][] = [
     [{ first_name: '  ' }, MSG.name],
-    [{ phone: '5125550123' }, MSG.phone],
+    [{ phone: '512555012' }, MSG.phone],
+    [{ phone: 5125550123 }, MSG.phone],
     [{ phone: '+15120550123' }, MSG.phone],
     [{ phone: '+445125550123' }, MSG.phone],
     [{ state: 'ZZ' }, MSG.state],
@@ -68,11 +78,12 @@ test('bad fields are refused with a field error and nothing stored', async () =>
     [{ homeowner: 'yes' }, MSG.answers],
     [{ smoker: undefined }, MSG.answers],
     [{ consent: 'true' }, MSG.consent],
+    [{ consent: false }, MSG.consent],
     [{ consent_text_version: 'old' }, MSG.stale],
   ]
   for (const [over, msg] of cases) {
     const { d, log } = deps()
-    assert.deepEqual(await handle(d, good(over), '1.2.3.4'), { status: 400, body: { error: msg } }, JSON.stringify(over))
+    assert.deepEqual(await handle(d, good(over), '1.2.3.4'), { status: 400, body: { ok: false, error: msg } }, JSON.stringify(over))
     assert.deepEqual(log, [])
   }
 })
@@ -86,41 +97,71 @@ test('optional fields may be left out', async () => {
   assert.equal(rows[0].email, null)
 })
 
-test('a repeat phone within 30 days is dropped quietly', async () => {
+test('loose phone formats normalise to E.164 and are stored that way', async () => {
+  for (const raw of ['(512) 555-0123', '512.555.0123', '512 555 0123', '5125550123', '1 512 555 0123', '+1 (512) 555-0123', ' +15125550123 ']) {
+    assert.equal(toE164(raw), '+15125550123', raw)
+  }
+  for (const raw of ['', '512555012', '25125550123', '+445125550123', '(012) 555-0123', '512-055-0123', '512-555-0123 x9', 'abc5125550123', 5125550123, null]) {
+    assert.equal(toE164(raw), null, String(raw))
+  }
   const { d, rows } = deps()
+  await handle(d, good({ phone: '(512) 555-0123' }), '1.2.3.4')
+  assert.equal(rows[0].phone, '+15125550123')
+})
+
+test('a repeat phone within 30 days gets the existing lead_id, no new row or assign', async () => {
+  const { d, rows, log } = deps()
   await handle(d, good(), '1.1.1.1')
   // A fresh limiter so only the database check is in play.
   d.limiter = new Limiter()
-  const r = await handle(d, good({ first_name: 'Other' }), '2.2.2.2')
-  assert.deepEqual(r, { status: 200, body: { ok: true } })
+  // The same number typed loosely dedupes too.
+  const r = await handle(d, good({ first_name: 'Other', phone: '(512) 555-0123' }), '2.2.2.2')
+  assert.deepEqual(r, { status: 200, body: { ok: true, lead_id: 'lead-1' } })
   assert.equal(rows.length, 1)
+  assert.deepEqual(log, ['insert:lead-1', 'assign:lead-1'])
 })
 
 test('the same phone after 30 days is stored again', async () => {
   const { d, rows } = deps()
   rows.push({ ...(good() as unknown as LeadRow), id: 'old', consent_at: '2026-09-20T00:00:00Z' })
-  await handle(d, good(), '1.1.1.1')
+  const r = await handle(d, good(), '1.1.1.1')
   assert.equal(rows.length, 2)
+  assert.equal(r.body.lead_id, 'lead-2')
 })
 
 test('per-IP limit: the sixth in an hour is dropped quietly', async () => {
   const { d, rows } = deps()
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 5; i++) {
     const r = await handle(d, good({ phone: `+1512555010${i}` }), '9.9.9.9')
-    assert.deepEqual(r.body, { ok: true })
+    assert.equal(r.body.lead_id, `lead-${i + 1}`)
   }
+  assertDecoy(await handle(d, good({ phone: '+15125550105' }), '9.9.9.9'))
   assert.equal(rows.length, 5)
   // Another IP is unaffected.
   await handle(d, good({ phone: '+15125550199' }), '8.8.8.8')
   assert.equal(rows.length, 6)
 })
 
+test('per-phone limit: the third post of one phone in an hour is dropped, across IPs', async () => {
+  // Dedupe off so only the limiter is in play.
+  const { d, rows } = deps({ async findRecent() { return null } })
+  await handle(d, good(), '1.1.1.1')
+  await handle(d, good(), '2.2.2.2')
+  assertDecoy(await handle(d, good(), '3.3.3.3'))
+  assert.equal(rows.length, 2)
+})
+
 test('an assign failure still keeps the lead and replies ok, logging no phone', async () => {
   const { d, rows, log } = deps({ async assign() { throw new Error('no agent') } })
   const r = await handle(d, good(), '1.2.3.4')
-  assert.deepEqual(r, { status: 200, body: { ok: true } })
+  assert.deepEqual(r, { status: 200, body: { ok: true, lead_id: 'lead-1' } })
   assert.equal(rows.length, 1)
   assert.ok(log.every(l => !l.includes('5125550123')))
+})
+
+test('a database error on insert bubbles up (index.ts turns it into a generic 500)', async () => {
+  const { d } = deps({ async insertLead() { throw new Error('db down') } })
+  await assert.rejects(handle(d, good(), '1.2.3.4'), /db down/)
 })
 
 test('clientIp reads the first forwarded address', () => {

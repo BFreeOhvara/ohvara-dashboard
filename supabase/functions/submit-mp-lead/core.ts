@@ -3,12 +3,13 @@
 //
 // The public mortgage-protection lead form posts here with no login, so every
 // gate lives in this file: field checks, a honeypot, a per-IP / per-phone rate
-// limit and a 30-day repeat-phone drop. A good lead is stored in mp_leads
+// limit and a 30-day same-phone dedupe. A good lead is stored in mp_leads
 // (migration 161) and handed to assign_mp_lead (migration 162).
 //
-// The caller only ever gets { ok: true } (or a field error). A bot, a repeat
-// phone, a rate-limited caller and a real lead all look the same, and nothing
-// about the agent it went to comes back. Nothing here texts, emails or calls.
+// The caller only ever gets { ok: true, lead_id } (or a field error). A repeat
+// phone gets the lead it already has. A bot or a rate-limited caller gets a
+// random id that matches no row, so all four look the same, and nothing about
+// the agent the lead went to comes back. Nothing here texts, emails or calls.
 // Logs carry error text only, never the phone, name or IP.
 
 // The consent wording version the form shows. The server stores this value,
@@ -57,8 +58,8 @@ export type LeadRow = {
 }
 
 export interface Deps {
-  // mp_leads rows with this phone created at or after `since`.
-  countPhone(phone: string, since: string): Promise<number>
+  // Newest mp_leads row with this phone created at or after `since`, or null.
+  findRecent(phone: string, since: string): Promise<string | null>
   insertLead(row: LeadRow): Promise<string>
   assign(leadId: string): Promise<void>
   limiter: Limiter
@@ -68,8 +69,10 @@ export interface Deps {
 
 export type Result = { status: number; body: Record<string, unknown> }
 
-const OK: Result = { status: 200, body: { ok: true } }
-const bad = (error: string): Result => ({ status: 400, body: { error } })
+const ok = (lead_id: string): Result => ({ status: 200, body: { ok: true, lead_id } })
+// A quiet drop: the same reply shape as a stored lead, with an id that matches no row.
+const decoy = (): Result => ok(crypto.randomUUID())
+const bad = (error: string): Result => ({ status: 400, body: { ok: false, error } })
 
 export const MSG = {
   name: 'Enter your first name',
@@ -103,6 +106,19 @@ export class Limiter {
   }
 }
 
+// "(512) 555-0123", "512.555.0123", "1 512 555 0123", "+15125550123" → "+15125550123".
+// Anything else (letters, wrong length, non-US, bad area code) → null.
+export function toE164(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+  const s = raw.trim()
+  if (!s || s.length > 30 || !/^\+?[\d\s().-]+$/.test(s)) return null
+  const digits = s.replace(/\D/g, '')
+  const e164 = digits.length === 10 ? `+1${digits}`
+    : digits.length === 11 && digits.startsWith('1') ? `+${digits}`
+    : null
+  return e164 && E164_US.test(e164) ? e164 : null
+}
+
 const text = (v: unknown, max: number): string | null => {
   if (typeof v !== 'string') return null
   const s = v.trim()
@@ -120,8 +136,8 @@ export function validate(body: Record<string, unknown>, now: Date): LeadRow | Re
   const last_name = optText(body.last_name, 100)
   if (last_name === undefined) return bad(MSG.name)
 
-  const phone = typeof body.phone === 'string' ? body.phone.trim() : ''
-  if (!E164_US.test(phone)) return bad(MSG.phone)
+  const phone = toE164(body.phone)
+  if (!phone) return bad(MSG.phone)
 
   const state = typeof body.state === 'string' ? body.state.trim().toUpperCase() : ''
   if (!US_STATES.has(state)) return bad(MSG.state)
@@ -158,23 +174,26 @@ export function validate(body: Record<string, unknown>, now: Date): LeadRow | Re
 export async function handle(deps: Deps, body: Record<string, unknown>, ip: string | null): Promise<Result> {
   // A filled honeypot is a bot: look like success, store nothing.
   const trap = body[HONEYPOT]
-  if (trap !== undefined && trap !== null && trap !== '') return OK
+  if (trap !== undefined && trap !== null && trap !== '') return decoy()
 
   const now = deps.now()
   const t = now.getTime()
   // No IP header: skip this one rather than put every real visitor in one
   // bucket; the phone limit and 30-day check below still apply.
-  if (ip && deps.limiter.over(`ip:${ip}`, IP_LIMIT, HOUR_MS, t)) return OK
+  if (ip && deps.limiter.over(`ip:${ip}`, IP_LIMIT, HOUR_MS, t)) return decoy()
 
   const row = validate(body, now)
   if ('status' in row) return row
 
-  if (deps.limiter.over(`phone:${row.phone}`, PHONE_LIMIT, HOUR_MS, t)) return OK
+  if (deps.limiter.over(`phone:${row.phone}`, PHONE_LIMIT, HOUR_MS, t)) return decoy()
 
-  // Same phone in the last 30 days: drop it quietly so the reply can't be used
-  // to learn who has already asked.
+  // Same phone in the last 30 days (covers the brief's 24h double tap): hand
+  // back the lead we already have. No second row, no second assignment and no
+  // second charge. Ids are random, so the reply doesn't say whether the phone
+  // had asked before.
   const since = new Date(t - DEDUPE_DAYS * DAY_MS).toISOString()
-  if ((await deps.countPhone(row.phone, since)) > 0) return OK
+  const existing = await deps.findRecent(row.phone, since)
+  if (existing) return ok(existing)
 
   const id = await deps.insertLead(row)
   try {
@@ -183,7 +202,7 @@ export async function handle(deps: Deps, body: Record<string, unknown>, ip: stri
     // The lead is saved as 'new' and can be assigned later; the person still gets ok.
     deps.log(`assign failed: ${err instanceof Error ? err.message : String(err)}`)
   }
-  return OK
+  return ok(id)
 }
 
 // First address in x-forwarded-for (the Supabase gateway puts the client first).
