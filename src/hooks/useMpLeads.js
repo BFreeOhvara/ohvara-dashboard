@@ -5,7 +5,7 @@ import { useAuth } from './useAuth'
 // Meta mortgage-protection leads delivered to this agent (migration 161). RLS
 // already limits mp_leads to assigned_agent_id = auth.uid() (admin sees all),
 // so the explicit filter is for admins who open the page: they see their own.
-const LEAD_COLS = 'id, created_at, first_name, last_name, phone, state, age_band, mortgage_balance_band, homeowner, smoker, best_time, status, assigned_at'
+const LEAD_COLS = 'id, created_at, first_name, last_name, phone, state, age_band, mortgage_balance_band, homeowner, smoker, best_time, status, assigned_at, lead_type, delivered_at'
 
 export function useMpLeads() {
   const { profile } = useAuth()

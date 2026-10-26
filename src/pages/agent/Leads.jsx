@@ -26,13 +26,18 @@ const chipBase = {
 const sub = { color: 'var(--ov-mute)', fontSize: 13.5 }
 const stateName = code => US_STATES.find(s => s.code === code)?.name || code
 
+const TZ = 'America/Chicago'
+const ymd = d => d.toLocaleDateString('en-CA', { timeZone: TZ })
+const TYPES = [['all', 'All'], ['cancellation', 'Cancellations'], ['mortgage_protection', 'Mortgage protection']]
+const TYPE_LABEL = { cancellation: 'Cancellation', mortgage_protection: 'Mortgage protection' }
+
 function when(iso) {
   const d = new Date(iso)
-  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-  const day = new Date(), yest = new Date(); yest.setDate(day.getDate() - 1)
-  if (d.toDateString() === day.toDateString()) return `Today, ${time}`
-  if (d.toDateString() === yest.toDateString()) return `Yesterday, ${time}`
-  return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${time}`
+  const time = d.toLocaleTimeString('en-US', { timeZone: TZ, hour: 'numeric', minute: '2-digit' })
+  const now = new Date()
+  if (ymd(d) === ymd(now)) return `Today, ${time}`
+  if (ymd(d) === ymd(new Date(now.getTime() - 864e5))) return `Yesterday, ${time}`
+  return `${d.toLocaleDateString('en-US', { timeZone: TZ, month: 'short', day: 'numeric' })}, ${time}`
 }
 
 function answers(l) {
@@ -43,6 +48,28 @@ function answers(l) {
     l.smoker != null && (l.smoker ? 'Smoker' : 'Non-smoker'),
     l.best_time && `Best: ${l.best_time}`,
   ].filter(Boolean)
+}
+
+function Detail({ lead }) {
+  const rows = [
+    ['Homeowner', lead.homeowner != null && (lead.homeowner ? 'Yes' : 'No')],
+    ['Mortgage balance', lead.mortgage_balance_band],
+    ['Age', lead.age_band],
+    ['Smoker', lead.smoker != null && (lead.smoker ? 'Yes' : 'No')],
+    ['Best time to call', lead.best_time],
+    ['Delivered', lead.delivered_at && when(lead.delivered_at)],
+  ].filter(([, v]) => v)
+  if (!rows.length) return null
+  return (
+    <dl style={{ margin: '0 0 12px', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '6px 12px', minWidth: 0 }}>
+      {rows.map(([k, v]) => (
+        <div key={k} style={{ display: 'contents' }}>
+          <dt style={sub}>{k}</dt>
+          <dd style={{ margin: 0, fontSize: 14, minWidth: 0, overflowWrap: 'anywhere', fontVariantNumeric: 'tabular-nums' }}>{v}</dd>
+        </div>
+      ))}
+    </dl>
+  )
 }
 
 function SettingsCard() {
@@ -117,6 +144,7 @@ function SettingsCard() {
 }
 
 function LeadCard({ lead, onStatus, busy }) {
+  const [open, setOpen] = useState(false)
   const [label, tone] = STATUS_TONE[lead.status] || STATUS_TONE.new
   const name = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || 'Unnamed lead'
   const num = digits(lead.phone)
@@ -131,11 +159,19 @@ function LeadCard({ lead, onStatus, busy }) {
         </div>
         <span style={{ ...chipBase, color: TONE_VAR[tone], background: `var(--ov-st-${tone}-tint)`, borderColor: `var(--ov-st-${tone}-edge)` }}>{label}</span>
       </div>
+      <div style={{ margin: '8px 0 0' }}>
+        <span style={chipBase}>{TYPE_LABEL[lead.lead_type] || TYPE_LABEL.mortgage_protection}</span>
+      </div>
       {chips.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '10px 0 12px' }}>
           {chips.map(c => <span key={c} style={chipBase}>{c}</span>)}
         </div>
       )}
+      <button type="button" className="ov-ghost" aria-expanded={open} onClick={() => setOpen(o => !o)}
+        style={{ ...btn, width: '100%', marginBottom: 8, fontSize: 13 }}>
+        {open ? 'Hide details' : 'Details'}
+      </button>
+      {open && <Detail lead={lead} />}
       {num ? (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <a className="ov-ghost" href={`tel:${num}`} style={{ ...btn, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>Call</a>
@@ -158,8 +194,10 @@ function LeadCard({ lead, onStatus, busy }) {
 export default function Leads() {
   const { data: leads = [], isLoading, isError } = useMpLeads()
   const update = useUpdateMpLeadStatus()
+  const [type, setType] = useState('all')
+  const shown = type === 'all' ? leads : leads.filter(l => (l.lead_type || 'mortgage_protection') === type)
   const weekAgo = Date.now() - 7 * 864e5
-  const thisWeek = leads.filter(l => new Date(l.created_at).getTime() >= weekAgo).length
+  const thisWeek = shown.filter(l => new Date(l.created_at).getTime() >= weekAgo).length
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 560, minWidth: 0 }}>
@@ -168,13 +206,24 @@ export default function Leads() {
         <h2 style={{ fontSize: 17, fontWeight: 600, margin: 0 }}>Delivered leads</h2>
         <span style={{ ...sub, fontVariantNumeric: 'tabular-nums' }}>{thisWeek} this week</span>
       </div>
+      <div role="group" aria-label="Lead type" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {TYPES.map(([key, text]) => (
+          <button key={key} type="button" aria-pressed={type === key} onClick={() => setType(key)}
+            style={{
+              ...chipBase, minHeight: 44, padding: '0 14px', cursor: 'pointer',
+              ...(type === key ? {} : { background: 'transparent', color: 'var(--ov-mid)' }),
+            }}>
+            {text}
+          </button>
+        ))}
+      </div>
       {isLoading && <p style={sub}>Loading…</p>}
       {isError && <p role="alert" style={{ ...sub, color: 'var(--ov-st-needs)' }}>Couldn’t load your leads. Try again.</p>}
-      {!isLoading && !isError && leads.length === 0 && (
-        <section className="ov-card"><div style={sub}>No leads yet. Turn on lead settings and pick your states.</div></section>
+      {!isLoading && !isError && shown.length === 0 && (
+        <section className="ov-card"><div style={sub}>{leads.length ? 'No leads of this type.' : 'No leads yet. Turn on lead settings and pick your states.'}</div></section>
       )}
       {update.isError && <p role="alert" style={{ ...sub, color: 'var(--ov-st-needs)' }}>Couldn’t update that lead. Try again.</p>}
-      {leads.map(l => (
+      {shown.map(l => (
         <LeadCard key={l.id} lead={l} busy={update.isPending} onStatus={(id, status) => update.mutate({ id, status })} />
       ))}
     </div>
