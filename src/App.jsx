@@ -25,6 +25,7 @@ import AgentClients from './pages/agent/Clients'
 import AgentActivity from './pages/agent/Activity'
 import AgentBilling from './pages/agent/Billing'
 import AgentMore from './pages/agent/More'
+import AgentLeads from './pages/agent/Leads'
 import MyCalls from './pages/fulfillment/MyCalls'
 import FulfillmentOverview from './pages/fulfillment/Overview'
 import FulfillmentPipeline from './pages/fulfillment/Pipeline'
@@ -144,6 +145,12 @@ export default function App() {
             <Route path="/agent/activity" element={
               <ProtectedRoute allowedRoles={['agent', 'admin']}>
                 <DashboardLayout><AgentActivity /></DashboardLayout>
+              </ProtectedRoute>
+            } />
+            {/* Leads — delivered mp_leads + lead settings; stays open while billing is locked. */}
+            <Route path="/agent/leads" element={
+              <ProtectedRoute allowedRoles={['agent']}>
+                <DashboardLayout><AgentLeads /></DashboardLayout>
               </ProtectedRoute>
             } />
             {/* Prompt 691 — Billing, promoted out of Settings. */}
