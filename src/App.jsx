@@ -14,6 +14,7 @@ import './lib/installPrompt'
 import Login from './pages/Login'
 import Join from './pages/Join'
 import MortgageProtection from './pages/MortgageProtection'
+import ProtectLanding from './pages/public/ProtectLanding'
 import ConfirmEmail from './pages/ConfirmEmail'
 import ResetPassword from './pages/ResetPassword'
 import RescheduleLink from './pages/RescheduleLink'
@@ -26,7 +27,8 @@ import AgentClients from './pages/agent/Clients'
 import AgentActivity from './pages/agent/Activity'
 import AgentBilling from './pages/agent/Billing'
 import AgentMore from './pages/agent/More'
-import AgentLeads from './pages/agent/Leads'
+// P808: Leads hidden until migration 161 is live and Brayden approves the page.
+// import AgentLeads from './pages/agent/Leads'
 import MyCalls from './pages/fulfillment/MyCalls'
 import FulfillmentOverview from './pages/fulfillment/Overview'
 import FulfillmentPipeline from './pages/fulfillment/Pipeline'
@@ -97,6 +99,8 @@ export default function App() {
             <Route path="/j/:token" element={<Join />} />
             {/* Public mortgage-protection qualifier; no login. Posts to submit-mp-lead. */}
             <Route path="/mp" element={<MortgageProtection />} />
+            {/* Public mortgage-protection landing + qualifier; no login. Posts to submit-mp-lead. */}
+            <Route path="/protect" element={<ProtectLanding />} />
             <Route path="/confirm-email" element={<ConfirmEmail />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             {/* Prompt 696 — client-facing reschedule link from the missed-call text; no login */}
@@ -150,12 +154,8 @@ export default function App() {
                 <DashboardLayout><AgentActivity /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* Leads — delivered mp_leads + lead settings; stays open while billing is locked. */}
-            <Route path="/agent/leads" element={
-              <ProtectedRoute allowedRoles={['agent']}>
-                <DashboardLayout><AgentLeads /></DashboardLayout>
-              </ProtectedRoute>
-            } />
+            {/* P808: Leads hidden (its tables aren't live yet); send it to Overview. */}
+            <Route path="/agent/leads" element={<Navigate to="/agent" replace />} />
             {/* Prompt 691 — Billing, promoted out of Settings. */}
             <Route path="/agent/billing" element={
               <ProtectedRoute allowedRoles={['agent']}>
