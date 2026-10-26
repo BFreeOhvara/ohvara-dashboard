@@ -54,7 +54,7 @@ const payouts: ConnectStore = {
   },
 }
 
-// Prepaid lead top-ups (migration 162's agent_lead_ledger; service role may
+// Prepaid lead top-ups (migration 169's agent_lead_ledger; service role may
 // only insert). 23505 is the one-topup-per-stripe_ref index: already credited.
 const topups: TopupStore = {
   async agent(id) {

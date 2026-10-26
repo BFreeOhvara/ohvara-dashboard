@@ -1,6 +1,7 @@
-// Delivering a new lead to an agent, with the prepaid lead charge (migration
-// 162). Kept free of Supabase/Deno imports so it runs against fakes; an intake
-// function (lead-intake) supplies the database side.
+// Delivering a new lead to an agent, with the prepaid lead charge (migrations
+// 169 and 171: charge_lead on leads). Kept free of Supabase/Deno imports so it
+// runs against fakes; an intake function (lead-intake) supplies the database
+// side. Cancellation leads are never charged (charge_lead says no_price).
 //
 //   1. assign the lead. Nobody qualifies → it stays unassigned.
 //   2. price = recovery_config.price_per_lead_cents[lead_type]. Not set → no

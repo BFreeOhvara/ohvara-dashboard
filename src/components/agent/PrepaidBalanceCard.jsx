@@ -5,7 +5,9 @@ import { supabase } from '../../lib/supabase'
 import { DISPLAY, MONO } from '../../lib/exportStyles'
 
 // Prepaid lead balance. Reads agent_lead_balance (one row per agent), the
-// per-lead price from recovery_config.mp_lead_price_cents, and the ledger.
+// per-lead price from recovery_config.price_per_lead_cents (the lead_type →
+// cents map charge_lead reads; mortgage protection is the only paid type
+// today), and the ledger.
 // Top-ups go through the lead-balance-topup edge function, which maps the
 // button to an amount on the server and hands back a Stripe Checkout URL.
 // Three blocks, as in Dot's mockup: balance hero, price card, history card.
@@ -14,6 +16,12 @@ const TOPUPS = [100, 250, 500]
 const money = cents => {
   const d = (cents || 0) / 100
   return d.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: Number.isInteger(d) ? 0 : 2 })
+}
+// Same rule as priceFromMap in supabase/functions/_shared/leadDelivery.ts:
+// anything but a positive whole number is no price (nothing is charged).
+const leadPrice = (map, type) => {
+  const v = map && typeof map === 'object' && !Array.isArray(map) ? map[type] : null
+  return Number.isInteger(v) && v > 0 ? v : null
 }
 const TZ = 'America/Chicago'
 const dayKey = d => d.toLocaleDateString('en-CA', { timeZone: TZ })
@@ -34,14 +42,14 @@ function usePrepaid(agentId) {
     queryFn: async () => {
       const [bal, cfg, ledger] = await Promise.all([
         supabase.from('agent_lead_balance').select('balance_cents').eq('agent_id', agentId).maybeSingle(),
-        supabase.from('recovery_config').select('mp_lead_price_cents').limit(1).maybeSingle(),
+        supabase.from('recovery_config').select('price_per_lead_cents').limit(1).maybeSingle(),
         supabase.from('agent_lead_ledger').select('id, kind, amount_cents, balance_after_cents, note, created_at')
           .eq('agent_id', agentId).order('created_at', { ascending: false }).limit(20),
       ])
       if (bal.error) throw bal.error
       return {
         balance: bal.data?.balance_cents ?? 0,
-        price: cfg.data?.mp_lead_price_cents ?? null,
+        price: leadPrice(cfg.data?.price_per_lead_cents, 'mortgage_protection'),
         ledger: ledger.data || [],
       }
     },

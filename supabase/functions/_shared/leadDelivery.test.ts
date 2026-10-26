@@ -1,6 +1,6 @@
 /**
  * Node unit tests for lead delivery with the prepaid lead charge. Fakes stand
- * in for assignment, recovery_config and charge_lead (migration 162).
+ * in for assignment, recovery_config and charge_lead (migrations 169 and 171).
  * Run: node --test supabase/functions/_shared/leadDelivery.test.ts
  */
 import { test } from 'node:test'

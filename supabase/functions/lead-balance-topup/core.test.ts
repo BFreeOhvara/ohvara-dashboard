@@ -2,7 +2,7 @@
  * Node unit tests for prepaid lead top-ups: the Checkout request
  * (lead-balance-topup), the webhook credit (../_shared/leadTopup.ts) and its
  * routing inside agent-billing's /webhook. Mocked Stripe, an in-memory ledger
- * that keeps migration 162's one-topup-per-stripe_ref rule. No real Stripe
+ * that keeps migration 169's one-topup-per-stripe_ref rule. No real Stripe
  * calls, no money moves.
  * Run: node --test supabase/functions/lead-balance-topup/core.test.ts
  */
