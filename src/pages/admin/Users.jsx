@@ -1,14 +1,15 @@
 import { useEffect, useEffectEvent, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Search, Plus, ChevronRight, X, ArrowUpDown } from 'lucide-react'
+import { Search, Plus, ChevronRight, X, ArrowUpDown, PhoneIncoming } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useRevokeInvite, useSendAgentInvite, useSetUserRole, useSetUserAccess } from '../../hooks/useProfiles'
 import { useMissedStrikes } from '../../hooks/useRepCallEvents'
 import { usePeopleWeek } from '../../hooks/usePeopleWeek'
 import { usePayouts } from '../../hooks/useFulfillmentPayouts'
 import { dmId } from '../../hooks/useDirectMessages'
-import { OvSelect, LoadError } from '../../components/agent/AgentUI'
+import { useOnDutyAgents, isDutyMissing } from '../../hooks/useOnDutyAgents'
+import { OvSelect, LoadError, SettingsCard, SettingsChip } from '../../components/agent/AgentUI'
 import { AddSomeone } from '../../components/shared/AddSomeone'
 import { Avatar } from '../../components/ui/Avatar'
 import { attentionReason } from '../../lib/fulfillmentFlags'
@@ -154,6 +155,8 @@ function AdminUsersDesktop() {
   const isAgents = tab === 'agents'
 
   return (
+    <>
+    <OnDutyCard />
     <div className="au-page">
       <section className="ov-card au-list" aria-label="People">
         <div className="au-list-top">
@@ -230,6 +233,41 @@ function AdminUsersDesktop() {
 
       {adding && <AddSomeone defaultRole={role} onClose={() => setAdding(false)} />}
     </div>
+    </>
+  )
+}
+
+const dutyTime = iso => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' })
+
+// Who can take a live transfer right now. Count and rows share one array.
+function OnDutyCard() {
+  const { data, error, isLoading, refetch } = useOnDutyAgents()
+  const rows = data || []
+  const note = { margin: 0, fontSize: 14, color: 'var(--ov-mute)' }
+  return (
+    <SettingsCard
+      icon={PhoneIncoming}
+      title="Live transfers · on duty now"
+      sub="Agents who can take a live transfer right now."
+      right={!error && !isLoading && <SettingsChip tone="on"><span style={{ fontFamily: 'var(--font-mono)' }}>{rows.length}</span></SettingsChip>}
+      gap={10}
+    >
+      {error ? (isDutyMissing(error)
+        ? <p style={note}>Duty status isn't set up yet.</p>
+        : <LoadError what="duty status" onRetry={refetch} />)
+        : isLoading ? <p style={note}>Loading…</p>
+        : !rows.length ? <p style={note}>No agents on duty.</p>
+        : (
+          <div>
+            {rows.map((a, i) => (
+              <div key={a.agent_id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', columnGap: 12, rowGap: 2, padding: '10px 0', borderTop: i ? '1px solid var(--ov-line)' : 'none' }}>
+                <b style={{ fontWeight: 500, minWidth: 0, overflowWrap: 'anywhere' }}>{a.full_name || 'Unnamed'}</b>
+                <span style={{ fontSize: 13.5, color: 'var(--ov-mute)' }}>On since <span style={{ fontFamily: 'var(--font-mono)' }}>{dutyTime(a.updated_at)}</span></span>
+              </div>
+            ))}
+          </div>
+        )}
+    </SettingsCard>
   )
 }
 
