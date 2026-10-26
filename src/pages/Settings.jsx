@@ -30,6 +30,7 @@ import {
 } from '../components/agent/AgentUI'
 import { ProfilePanel } from './Profile'
 import { TextFollowUpPanel } from '../components/settings/TextFollowUpPanel'
+import { DutyPanel } from '../components/settings/DutyPanel'
 import { FulfillmentPayAdminPanel } from '../components/fulfillment/GettingPaid'
 import Carriers from './admin/Carriers'
 
@@ -163,7 +164,7 @@ export default function Settings() {
         {open === 'security'    && <SecuritySection profile={profile} />}
         {open === 'preferences' && <PreferencesSection profile={profile} />}
         {open === 'notifications' && <NotificationsSection profile={profile} />}
-        {open === 'contact'     && <><CallerIdPanel profile={profile} /><TextFollowUpPanel profile={profile} /></>}
+        {open === 'contact'     && <><DutyPanel /><CallerIdPanel profile={profile} /><TextFollowUpPanel profile={profile} /></>}
         {open === 'team'        && <><LiveRoomCard /><FulfillmentPayAdminPanel /><AppReviewLoginsCard /></>}
         {open === 'carriers'    && <Carriers />}
       </div>
