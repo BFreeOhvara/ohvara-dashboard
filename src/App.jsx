@@ -13,6 +13,7 @@ import './lib/installPrompt'
 
 import Login from './pages/Login'
 import Join from './pages/Join'
+import MortgageProtection from './pages/MortgageProtection'
 import ConfirmEmail from './pages/ConfirmEmail'
 import ResetPassword from './pages/ResetPassword'
 import RescheduleLink from './pages/RescheduleLink'
@@ -93,6 +94,8 @@ export default function App() {
             <Route path="/join" element={<Join />} />
             <Route path="/join/:token" element={<Join />} />
             <Route path="/j/:token" element={<Join />} />
+            {/* Public mortgage-protection qualifier; no login. Posts to submit-mp-lead. */}
+            <Route path="/mp" element={<MortgageProtection />} />
             <Route path="/confirm-email" element={<ConfirmEmail />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             {/* Prompt 696 — client-facing reschedule link from the missed-call text; no login */}
