@@ -5,11 +5,16 @@ import { supabase } from '../../lib/supabase'
 import { DISPLAY, MONO } from '../../lib/exportStyles'
 
 // Prepaid lead balance. Reads agent_lead_balance (one row per agent), the
-// per-lead price from recovery_config.mp_lead_price_cents, and the ledger.
+// per-lead price from recovery_config.price_per_lead_cents (lead type → cents), and the ledger.
 // Top-ups go through the create-balance-topup edge function, which maps the
 // button to an amount on the server and hands back a Stripe Checkout URL.
 // Three blocks, as in Dot's mockup: balance hero, price card, history card.
 const TOPUPS = [100, 250, 500]
+const LEAD_TYPES = [
+  ['mortgage_protection', 'Mortgage protection'],
+  ['policy_help', 'Policy help'],
+  ['policy_review', 'Policy review'],
+]
 
 const money = cents => {
   const d = (cents || 0) / 100
@@ -34,14 +39,14 @@ function usePrepaid(agentId) {
     queryFn: async () => {
       const [bal, cfg, ledger] = await Promise.all([
         supabase.from('agent_lead_balance').select('balance_cents').eq('agent_id', agentId).maybeSingle(),
-        supabase.from('recovery_config').select('mp_lead_price_cents').limit(1).maybeSingle(),
+        supabase.from('recovery_config').select('price_per_lead_cents').limit(1).maybeSingle(),
         supabase.from('agent_lead_ledger').select('id, kind, amount_cents, balance_after_cents, note, created_at')
           .eq('agent_id', agentId).order('created_at', { ascending: false }).limit(20),
       ])
       if (bal.error) throw bal.error
       return {
         balance: bal.data?.balance_cents ?? 0,
-        price: cfg.data?.mp_lead_price_cents ?? null,
+        prices: cfg.data?.price_per_lead_cents || {},
         ledger: ledger.data || [],
       }
     },
@@ -104,17 +109,21 @@ export function PrepaidBalanceCard({ agentId }) {
       {ready && (
         <>
           <section className="ov-card" aria-label="Price per lead" style={CARD}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-              <div style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
-                <h2 style={H2}>Price per lead</h2>
-                <div style={{ fontSize: 13.5, color: 'var(--ov-mute)' }}>Charged when a lead is delivered</div>
-              </div>
-              {data.price != null && (
-                <div style={{ fontFamily: MONO, fontSize: 22, fontWeight: 600, color: 'var(--ov-hi)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                  {money(data.price)}
-                </div>
-              )}
-            </div>
+            <h2 style={H2}>Price per lead</h2>
+            <div style={{ fontSize: 13.5, color: 'var(--ov-mute)', marginBottom: 6 }}>Charged when a lead is delivered</div>
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+              {LEAD_TYPES.map(([key, label], i) => {
+                const cents = data.prices[key]
+                return (
+                  <li key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderTop: i === 0 ? 0 : '1px solid var(--ov-line)' }}>
+                    <span style={{ minWidth: 0, overflowWrap: 'anywhere', color: 'var(--ov-hi)' }}>{label}</span>
+                    {cents != null
+                      ? <span style={{ fontFamily: MONO, fontSize: 17, fontWeight: 600, color: 'var(--ov-hi)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{money(cents)}</span>
+                      : <span style={{ fontSize: 13.5, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>Not set</span>}
+                  </li>
+                )
+              })}
+            </ul>
           </section>
 
           <section className="ov-card" aria-label="History" style={CARD}>
