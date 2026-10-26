@@ -5,9 +5,20 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { clientIp, handle, Limiter, MP_CONSENT_VERSION, MSG, type Deps, type LeadRow } from './core.ts'
+import { clientIp, handle, MP_CONSENT_VERSION, MSG, type Deps, type LeadRow } from './core.ts'
 
 const NOW = new Date('2026-10-26T01:00:00Z')
+
+// In-memory stand-in for the database-backed limiter (tests only).
+function fakeLimiter() {
+  const hits = new Map<string, number[]>()
+  return async (key: string, limit: number, windowMs: number) => {
+    const recent = (hits.get(key) ?? []).filter(t => NOW.getTime() - t < windowMs)
+    recent.push(NOW.getTime())
+    hits.set(key, recent)
+    return recent.length > limit
+  }
+}
 
 function deps(over: Partial<Deps> = {}) {
   const rows: (LeadRow & { id: string })[] = []
@@ -16,7 +27,7 @@ function deps(over: Partial<Deps> = {}) {
     async countPhone(phone, since) { return rows.filter(r => r.phone === phone && r.consent_at >= since).length },
     async insertLead(row) { const id = `lead-${rows.length + 1}`; rows.push({ ...row, id }); log.push(`insert:${id}`); return id },
     async assign(id) { log.push(`assign:${id}`) },
-    limiter: new Limiter(),
+    checkAndRecord: fakeLimiter(),
     now: () => NOW,
     log: m => log.push(`log:${m}`),
     ...over,
@@ -90,7 +101,7 @@ test('a repeat phone within 30 days is dropped quietly', async () => {
   const { d, rows } = deps()
   await handle(d, good(), '1.1.1.1')
   // A fresh limiter so only the database check is in play.
-  d.limiter = new Limiter()
+  d.checkAndRecord = fakeLimiter()
   const r = await handle(d, good({ first_name: 'Other' }), '2.2.2.2')
   assert.deepEqual(r, { status: 200, body: { ok: true } })
   assert.equal(rows.length, 1)

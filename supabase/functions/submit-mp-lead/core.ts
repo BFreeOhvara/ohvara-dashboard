@@ -61,7 +61,9 @@ export interface Deps {
   countPhone(phone: string, since: string): Promise<number>
   insertLead(row: LeadRow): Promise<string>
   assign(leadId: string): Promise<void>
-  limiter: Limiter
+  // Records a hit for `key` (lasting, in the database); true if it is now over
+  // `limit` within `windowMs`.
+  checkAndRecord(key: string, limit: number, windowMs: number): Promise<boolean>
   now(): Date
   log(msg: string): void
 }
@@ -79,28 +81,6 @@ export const MSG = {
   answers: 'Answer every question',
   consent: 'Please agree to be contacted',
   stale: 'This page is out of date. Refresh and try again.',
-}
-
-// A sliding-window counter kept in memory. It lives as long as the function's
-// worker, so it slows a burst from one IP; the 30-day phone check in the
-// database is the lasting guard.
-export class Limiter {
-  private hits = new Map<string, number[]>()
-  private max: number
-  constructor(max = 10_000) { this.max = max }
-  // Records a hit and says whether `key` is now over `limit` within `windowMs`.
-  over(key: string, limit: number, windowMs: number, now: number): boolean {
-    const recent = (this.hits.get(key) ?? []).filter(t => now - t < windowMs)
-    recent.push(now)
-    this.hits.set(key, recent)
-    if (this.hits.size > this.max) this.prune(now, windowMs)
-    return recent.length > limit
-  }
-  private prune(now: number, windowMs: number) {
-    for (const [k, ts] of this.hits) if (!ts.some(t => now - t < windowMs)) this.hits.delete(k)
-    // Still too big (a flood of distinct keys): start over rather than grow without bound.
-    if (this.hits.size > this.max) this.hits.clear()
-  }
 }
 
 const text = (v: unknown, max: number): string | null => {
@@ -164,12 +144,12 @@ export async function handle(deps: Deps, body: Record<string, unknown>, ip: stri
   const t = now.getTime()
   // No IP header: skip this one rather than put every real visitor in one
   // bucket; the phone limit and 30-day check below still apply.
-  if (ip && deps.limiter.over(`ip:${ip}`, IP_LIMIT, HOUR_MS, t)) return OK
+  if (ip && await deps.checkAndRecord(`ip:${ip}`, IP_LIMIT, HOUR_MS)) return OK
 
   const row = validate(body, now)
   if ('status' in row) return row
 
-  if (deps.limiter.over(`phone:${row.phone}`, PHONE_LIMIT, HOUR_MS, t)) return OK
+  if (await deps.checkAndRecord(`phone:${row.phone}`, PHONE_LIMIT, HOUR_MS)) return OK
 
   // Same phone in the last 30 days: drop it quietly so the reply can't be used
   // to learn who has already asked.

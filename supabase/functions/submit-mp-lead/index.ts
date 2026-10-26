@@ -9,10 +9,12 @@
 //     → { ok: true }            stored (or quietly dropped), nothing else, ever
 //     → { error } 400           a field is missing or wrong
 //
-// Needs mp_leads (migration 161) and assign_mp_lead (migration 162). Sends no
+// Needs mp_leads (migration 161), assign_mp_lead (migration 162) and
+// check_and_record_hit (migration 163). Sends no
 // text, email or call. All the rules live in core.ts; this wires the database.
 import { createClient } from 'npm:@supabase/supabase-js'
-import { clientIp, handle, Limiter, type Deps } from './core.ts'
+import { checkAndRecord } from '../_shared/ipLimit.ts'
+import { clientIp, handle, type Deps } from './core.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,7 +41,7 @@ const deps: Deps = {
     const { error } = await db.rpc('assign_mp_lead', { p_lead_id: leadId })
     if (error) throw error
   },
-  limiter: new Limiter(),
+  checkAndRecord: (key, limit, windowMs) => checkAndRecord(db, key, limit, windowMs),
   now: () => new Date(),
   log: m => console.error('[submit-mp-lead]', m),
 }
