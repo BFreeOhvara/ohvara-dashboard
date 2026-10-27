@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Phone, MessageSquare, Inbox, PhoneCall, BadgeCheck, Ban, ChevronRight, SlidersHorizontal, X, Check, Mail } from 'lucide-react'
+import { Phone, MessageSquare, Inbox, PhoneCall, BadgeCheck, Ban, ChevronRight, SlidersHorizontal, X, Check, Mail, TriangleAlert } from 'lucide-react'
 import { useMpLeads, useUpdateMpLeadStatus, useLeadSettings, useSaveLeadSettings } from '../../hooks/useMpLeads'
 import { ClientDrawer, InfoTile, LoadError, OvSelect, IconChip } from '../../components/agent/AgentUI'
 import { Switch } from '../../components/ui/Switch'
@@ -19,7 +19,7 @@ import { initialsOf } from '../../lib/fulfillmentCall'
 const TABS = ['new', 'contacted', 'closed', 'bad']
 const TAB = {
   new: { label: 'New', sub: 'Call first', icon: Inbox, write: 'assigned' },
-  contacted: { label: 'Contacted', sub: 'Waiting on them', icon: PhoneCall, write: 'contacted' },
+  contacted: { label: 'Contacted', sub: 'Reached out', icon: PhoneCall, write: 'contacted' },
   closed: { label: 'Closed', sub: 'Policy written', icon: BadgeCheck, write: 'closed' },
   bad: { label: 'Bad lead', sub: 'Not a fit', icon: Ban, write: 'bad' },
 }
@@ -86,13 +86,13 @@ function DeliveryHero({ settings, loading, saving, today, onToggle, onEdit }) {
           <span className="ov-hero-chip">{cap == null ? 'No daily limit' : `Up to ${cap} a day`}</span>
         </div>
       )}
-      {active && cap != null && cap > 0 && (
+      {active && cap != null && cap > 0 && today != null && (
         <div className="ld-meter" aria-label={`${today} of ${cap} leads today`}>
           <div className="ld-meter-hd"><span>Today</span><span><b>{today}</b> of {cap}</span></div>
           <div className="ld-meter-track"><div className="ld-meter-fill" style={{ width: `${Math.min(100, (today / cap) * 100)}%` }} /></div>
         </div>
       )}
-      <button type="button" className="ov-hero-btn" onClick={onEdit} style={active && cap ? null : { marginTop: 'auto' }}>
+      <button type="button" className="ov-hero-btn" onClick={onEdit} style={active && cap && today != null ? null : { marginTop: 'auto' }}>
         <SlidersHorizontal size={16} strokeWidth={2} aria-hidden="true" />{settings ? 'States and daily limit' : 'Set up lead delivery'}
       </button>
     </section>
@@ -100,7 +100,7 @@ function DeliveryHero({ settings, loading, saving, today, onToggle, onEdit }) {
 }
 
 // Rail box 2: totals by status and the newest lead.
-function LeadSummary({ leads, counts, tab, now, onOpen }) {
+function LeadSummary({ leads, counts, tab, now, onOpen, failed }) {
   const total = leads.length
   const week = leads.filter(l => now - new Date(l.created_at).getTime() < 7 * 864e5).length
   const pct = n => (total ? Math.round((n / total) * 100) : 0)
@@ -108,7 +108,7 @@ function LeadSummary({ leads, counts, tab, now, onOpen }) {
   return (
     <section className="ov-card pl-pipe ld-pipe">
       <div className="pl-lbl">Your leads</div>
-      <div className="pl-total"><b>{total}</b>lead{total === 1 ? '' : 's'} · {week} this week</div>
+      <div className="pl-total">{failed ? <><b>—</b>Couldn’t load</> : <><b>{total}</b>lead{total === 1 ? '' : 's'} · {week} this week</>}</div>
       <div style={{ marginTop: 14, display: 'flex', height: 6, gap: 3, borderRadius: 999, overflow: 'hidden', background: 'var(--ov-stub)' }}>
         {TABS.filter(t => counts[t]).map(t => (
           <span key={t} style={{ flex: counts[t], background: `var(--ld-${t})`, opacity: t === tab ? 1 : 0.55 }} />
@@ -119,8 +119,8 @@ function LeadSummary({ leads, counts, tab, now, onOpen }) {
           <div key={t} className="pl-row2">
             <i style={{ background: `var(--ld-${t})` }} />
             <span className="l">{TAB[t].label}</span>
-            <span className="c">{counts[t]}</span>
-            <span className="p">{pct(counts[t])}%</span>
+            <span className="c">{failed ? '—' : counts[t]}</span>
+            <span className="p">{failed ? '' : `${pct(counts[t])}%`}</span>
           </div>
         ))}
       </div>
@@ -133,8 +133,8 @@ function LeadSummary({ leads, counts, tab, now, onOpen }) {
           </>
         ) : (
           <>
-            <span className="pl-ntile"><Check size={18} strokeWidth={2} style={{ color: 'var(--ld-closed)' }} /></span>
-            <span className="k">Newest to call<b>Nobody waiting</b></span>
+            <span className="pl-ntile">{failed ? <TriangleAlert size={18} strokeWidth={2} style={{ color: 'var(--ov-faint)' }} /> : <Check size={18} strokeWidth={2} style={{ color: 'var(--ld-closed)' }} />}</span>
+            <span className="k">Newest to call<b>{failed ? 'Not loaded' : 'Nobody waiting'}</b></span>
           </>
         )}
       </div>
@@ -142,7 +142,7 @@ function LeadSummary({ leads, counts, tab, now, onOpen }) {
   )
 }
 
-function LeadList({ tab, onTab, counts, list, now, activeId, onOpen, loading, settings }) {
+function LeadList({ tab, onTab, counts, list, now, activeId, onOpen, loading, failed, settings }) {
   const refs = useRef({})
   const onKeyDown = e => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
@@ -152,7 +152,7 @@ function LeadList({ tab, onTab, counts, list, now, activeId, onOpen, loading, se
     refs.current[next]?.focus()
   }
   const Icon = TAB[tab].icon
-  const empty = tab === 'new'
+  const empty = failed ? 'Your leads didn’t load. Use Try again above.' : tab === 'new'
     ? settings?.active ? 'No new leads right now. New ones show up here the moment they come in.' : 'Turn on lead delivery to start getting leads.'
     : tab === 'contacted' ? 'Leads you’ve reached out to show up here.'
       : tab === 'closed' ? 'Leads you’ve written a policy for show up here.' : 'Nothing marked as a bad lead.'
@@ -167,7 +167,7 @@ function LeadList({ tab, onTab, counts, list, now, activeId, onOpen, loading, se
               onClick={() => !on && onTab(t)} className={`ov-tab pl-tab${on ? ' is-sel' : ''}${counts[t] ? '' : ' is-zero'}`} style={colours(t)}>
               <span className="ic" aria-hidden="true"><I size={18} strokeWidth={2} /></span>
               <span style={{ minWidth: 0 }}><b className="nm">{TAB[t].label}</b><small>{TAB[t].sub}</small></span>
-              <span className="n" style={{ ...OV_NUM, color: on ? 'var(--ov-hi)' : 'var(--c)' }}>{counts[t]}</span>
+              <span className="n" style={{ ...OV_NUM, color: on ? 'var(--ov-hi)' : 'var(--c)' }}>{failed ? '—' : counts[t]}</span>
             </button>
           )
         })}
@@ -180,7 +180,7 @@ function LeadList({ tab, onTab, counts, list, now, activeId, onOpen, loading, se
               <button key={t} type="button" role="tab" aria-selected={t === tab} onClick={() => onTab(t)}
                 className={`ov-tab pl-chip${t === tab ? ' is-sel' : ''}`} style={colours(t)}>
                 <I size={16} strokeWidth={2} aria-hidden="true" />{TAB[t].label}
-                <span style={OV_NUM}>{counts[t]}</span>
+                <span style={OV_NUM}>{failed ? '—' : counts[t]}</span>
               </button>
             )
           })}
@@ -191,7 +191,7 @@ function LeadList({ tab, onTab, counts, list, now, activeId, onOpen, loading, se
         {loading ? <div className="pl-empty ov-card"><p style={{ margin: 0, color: 'var(--ov-mute)' }}>Loading leads…</p></div>
           : !list.length ? (
             <div className="pl-empty ov-card">
-              <IconChip icon={Icon} color={`var(--ld-${tab})`} tint={`var(--ld-${tab}-tint)`} size={44} radius={13} iconSize={20} />
+              <IconChip icon={failed ? TriangleAlert : Icon} color={`var(--ld-${tab})`} tint={`var(--ld-${tab}-tint)`} size={44} radius={13} iconSize={20} />
               <p style={{ margin: 0, fontSize: 14, color: 'var(--ov-mute)', maxWidth: 340 }}>{empty}</p>
             </div>
           ) : (
@@ -383,12 +383,12 @@ export default function Leads() {
       {isError && <div style={{ marginBottom: 16 }}><LoadError what="your leads" onRetry={() => refetch()} /></div>}
       <div className="pl-page">
         <div className="pl-rail">
-          <DeliveryHero settings={settings} loading={settingsLoading} saving={save.isPending} today={today}
+          <DeliveryHero settings={settings} loading={settingsLoading} saving={save.isPending} today={isError ? null : today}
             onToggle={on => put({ active: on })} onEdit={() => setEditing(true)} />
-          <LeadSummary leads={leads} counts={counts} tab={tab} now={now} onOpen={id => set('open', id)} />
+          <LeadSummary leads={leads} counts={counts} tab={tab} now={now} onOpen={id => set('open', id)} failed={isError} />
         </div>
         <LeadList tab={tab} onTab={t => set('stage', t === 'new' ? null : t)} counts={counts} list={list} now={now}
-          activeId={openId} onOpen={id => set('open', id)} loading={isLoading} settings={settings} />
+          activeId={openId} onOpen={id => set('open', id)} loading={isLoading} failed={isError} settings={settings} />
       </div>
       {open && (
         <LeadDrawer key={open.id} lead={open} now={now} onClose={() => set('open', null)} busy={update.isPending} error={update.isError}

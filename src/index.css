@@ -4594,3 +4594,5 @@ html.is-native a, html.is-native img { -webkit-touch-callout: none; }
 .ld-step button { width: 44px; height: 44px; border-radius: 50%; font-size: 20px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .ld-step b { min-width: 56px; text-align: center; font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 600; color: var(--ov-hi); font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { .ld-row { transition: none; } }
+/* A dropdown opened inside a drawer (Lead settings) sits above it; the list is portaled after the drawer. */
+.ov-drawer ~ .ov-card.ov-sel-list { z-index: 202; }
