@@ -4517,3 +4517,80 @@ html.is-native a, html.is-native img { -webkit-touch-callout: none; }
 }
 .ov-confirm-banner > svg { color: var(--warning); }
 .ph-main .ov-confirm-banner { margin: 12px 14px 0; }
+
+/* ── P810 — Leads (/agent/leads) ─────────────────────────────────
+   My Pipeline's layout (P726): a 400px rail (lead delivery hero + "Your
+   leads" summary) and the tabs + list box; a drawer per lead. Four lead
+   statuses: New (booked blue), Contacted (teal), Closed (green), Bad lead
+   (grey). Amber stays for attention only. */
+:root {
+  --ld-new: var(--ov-st-booked); --ld-new-tint: var(--ov-st-booked-tint); --ld-new-edge: var(--ov-st-booked-edge);
+  --ld-contacted: #2DD4BF; --ld-contacted-tint: rgba(45,212,191,0.14); --ld-contacted-edge: rgba(45,212,191,0.5);
+  --ld-closed: var(--ov-st-cancelled); --ld-closed-tint: var(--ov-st-cancelled-tint); --ld-closed-edge: var(--ov-st-cancelled-edge);
+  --ld-bad: var(--ov-st-noanswer); --ld-bad-tint: var(--ov-st-noanswer-tint); --ld-bad-edge: var(--ov-st-noanswer-edge);
+}
+[data-theme="light"] {
+  --ld-contacted: #0F766E; --ld-contacted-tint: #D5F2EE; --ld-contacted-edge: rgba(15,118,110,0.45);
+}
+.ld-hero { padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow: hidden; }
+.ld-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ld-hero-lbl { font-size: 13px; font-weight: 600; color: var(--ov-hero-soft); }
+.ld-hero-h { margin: 2px 0 0; font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; line-height: 1.15; letter-spacing: -0.03em; color: #fff; }
+.ld-hero-sub { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--ov-hero-soft); }
+.ld-hero-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.ld-meter { margin-top: auto; }
+.ld-meter-hd { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--ov-hero-soft); }
+.ld-meter-hd b { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600; color: #fff; font-variant-numeric: tabular-nums; }
+.ld-meter-track { margin-top: 8px; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.14); overflow: hidden; }
+.ld-meter-fill { height: 100%; border-radius: 999px; background: #fff; }
+.ld-hero .ov-hero-btn { height: 44px; padding: 0 18px; font-size: 14px; align-self: flex-start; }
+.ld-hero .ov-switch { box-shadow: 0 0 0 1px rgba(255,255,255,0.35); }
+
+/* Lead | Mortgage | Best time | Delivered | > */
+.ld-cols, .ld-row {
+  display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr) 150px 24px;
+  gap: 12px; align-items: center; padding: 0 20px;
+}
+@media (min-width: 1600px) { .ld-cols, .ld-row { gap: 16px; padding: 0 24px; } }
+.ld-cols {
+  position: sticky; top: 0; z-index: 1; height: 44px; background: var(--ov-table-head-solid); border-bottom: 1px solid var(--ov-line);
+  font-size: 12.5px; font-weight: 600; color: var(--ov-mute);
+}
+.ld-row { min-height: 72px; border-bottom: 1px solid var(--ov-line); cursor: pointer; transition: background 120ms ease; }
+.ld-row:hover, .ld-row.is-active { background: var(--ov-hover); }
+.ld-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ld-av {
+  width: 38px; height: 38px; flex-shrink: 0; border-radius: 50%; background: var(--tint); color: var(--c);
+  font-size: 11.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.ld-nm { display: block; font-size: 14.5px; font-weight: 600; color: var(--ov-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ld-sm { display: block; margin-top: 2px; font-size: 12.5px; color: var(--ov-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ld-cell { min-width: 0; font-size: 14px; color: var(--ov-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ld-fresh { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--ld-new); vertical-align: 1px; }
+/* Under 1024px: name + delivered + chevron, as cards below 640px. */
+@media (max-width: 1023.98px) {
+  .ld-cols { display: none; }
+  .ld-row { grid-template-columns: minmax(0, 1fr) auto 18px; }
+  .ld-row .ld-wide { display: none; }
+}
+@media (max-width: 639.98px) {
+  .ld-row { min-height: 68px; padding: 0 14px; border: 1px solid var(--ov-line); border-radius: 18px; background: var(--ov-table-head-solid); }
+  .ld-list { display: flex; flex-direction: column; gap: 8px; }
+  .ld-pipe { display: none; }
+}
+.ld-seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ld-seg button {
+  height: 46px; border-radius: 999px; font-size: 14px; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.ld-seg button[aria-pressed="true"] { color: var(--c); border-color: var(--c); background: var(--tint); box-shadow: 0 0 0 1px var(--c); }
+.ld-states { display: flex; flex-wrap: wrap; gap: 8px; }
+.ld-state {
+  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 8px 0 12px; border-radius: 999px;
+  font-size: 13.5px; font-weight: 600; color: var(--ov-hi); background: var(--ov-stub); border: 1px solid var(--ov-line); cursor: pointer;
+}
+.ld-state:hover { border-color: var(--ov-faint); }
+.ld-step { display: flex; align-items: center; gap: 12px; }
+.ld-step button { width: 44px; height: 44px; border-radius: 50%; font-size: 20px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.ld-step b { min-width: 56px; text-align: center; font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 600; color: var(--ov-hi); font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .ld-row { transition: none; } }

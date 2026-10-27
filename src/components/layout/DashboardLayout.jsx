@@ -229,7 +229,7 @@ export function DashboardLayout({ children }) {
   const isFullBleed = pathname === '/messages'
   // Prompt 726: My Pipeline (and, Prompt 749, Fulfillment's Pipeline) fills the height under the header on a tall
   // desktop screen (the .ov-fit rules in index.css) so only its list scrolls. Admin Users (P762) too.
-  const isFit = pathname === '/agent/clients' || pathname === '/fulfillment/pipeline' || pathname === '/admin/pipeline' || pathname === '/admin/users'
+  const isFit = pathname === '/agent/clients' || pathname === '/agent/leads' || pathname === '/fulfillment/pipeline' || pathname === '/admin/pipeline' || pathname === '/admin/users'
   // Prompt 763: the Admin Overview fits one screen from 700px tall (.ov-fitao in index.css); shorter, it scrolls.
   const isFitAo = pathname === '/admin'
 

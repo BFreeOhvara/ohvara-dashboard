@@ -27,8 +27,7 @@ import AgentClients from './pages/agent/Clients'
 import AgentActivity from './pages/agent/Activity'
 import AgentBilling from './pages/agent/Billing'
 import AgentMore from './pages/agent/More'
-// P808: Leads hidden until migration 161 is live and Brayden approves the page.
-// import AgentLeads from './pages/agent/Leads'
+import AgentLeads from './pages/agent/Leads'
 import MyCalls from './pages/fulfillment/MyCalls'
 import FulfillmentOverview from './pages/fulfillment/Overview'
 import FulfillmentPipeline from './pages/fulfillment/Pipeline'
@@ -154,8 +153,12 @@ export default function App() {
                 <DashboardLayout><AgentActivity /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* P808: Leads hidden (its tables aren't live yet); send it to Overview. */}
-            <Route path="/agent/leads" element={<Navigate to="/agent" replace />} />
+            {/* Leads — delivered mp_leads + lead settings; stays open while billing is locked. */}
+            <Route path="/agent/leads" element={
+              <ProtectedRoute allowedRoles={['agent']}>
+                <DashboardLayout><AgentLeads /></DashboardLayout>
+              </ProtectedRoute>
+            } />
             {/* Prompt 691 — Billing, promoted out of Settings. */}
             <Route path="/agent/billing" element={
               <ProtectedRoute allowedRoles={['agent']}>
