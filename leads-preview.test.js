@@ -10,7 +10,7 @@ const { ESLint } = require('eslint')
 
 const REF = 'jjextitmbptoaolacocs'
 const UID = '00000000-0000-4000-8000-000000000001'
-const OUT = 'C:/Users/freem/.atlas/work/shots/8c120da8/'
+const OUT = 'dist/leads-shots/' // dist is gitignored; run after the build
 const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url')
 const exp = Math.floor(Date.now() / 1000) + 36000
 const jwt = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: UID, aal: 'aal1', amr: [{ method: 'password', timestamp: 1 }], exp, role: 'authenticated' })}.sig`
