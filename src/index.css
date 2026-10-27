@@ -4517,3 +4517,38 @@ html.is-native a, html.is-native img { -webkit-touch-callout: none; }
 }
 .ov-confirm-banner > svg { color: var(--warning); }
 .ph-main .ov-confirm-banner { margin: 12px 14px 0; }
+
+/* Agent Leads (/agent/leads): two columns from 1100px, settings sticky on the
+   right; one column below; on phones the settings card comes after the leads. */
+.ld-grid { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); max-width: 1120px; margin: 0 auto; }
+.ld-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.ld-side { min-width: 0; scroll-margin-top: 24px; }
+@media (min-width: 1100px) {
+  .ld-grid { grid-template-columns: minmax(0, 1fr) 380px; }
+  .ld-side > .ov-card { position: sticky; top: 24px; }
+}
+.ld-contact { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1 1 200px; max-width: 260px; }
+.ld-seg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 3px; border-radius: 999px; border: 1px solid var(--ov-line); background: var(--bg-muted); flex: 1 1 340px; }
+.ld-seg button { min-height: 36px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--ov-mute); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0 4px; white-space: nowrap; }
+.ld-seg button:disabled { opacity: .55; cursor: default; }
+.ld-seg button[aria-pressed="true"]:disabled { opacity: 1; }
+.ld-btn { min-height: 40px; }
+.ld-chip-x { width: 32px; height: 32px; }
+.ld-hero-btn { min-height: 40px; }
+@media (max-width: 767.98px) {
+  .ld-grid { gap: 14px; }
+  .ld-main { gap: 14px; }
+  .ld-contact { max-width: none; flex-basis: 100%; }
+  .ld-seg { flex-basis: 100%; }
+  .ld-seg button { min-height: 42px; }
+  .ld-btn, .ld-hero-btn { min-height: 44px; }
+  .ld-chip-x { width: 40px; height: 40px; }
+  .ld-chip { min-height: 44px !important; }
+  .ld-save { width: 100%; }
+  .ld-foot { flex-direction: column; align-items: stretch !important; }
+  .ld-num { font-size: 40px !important; }
+  .ld-num-label { font-size: 17px !important; }
+  .ld-title { font-size: 18px !important; }
+  .ld-cap { font-size: 26px !important; }
+  .ld-side { order: 2; }
+}
