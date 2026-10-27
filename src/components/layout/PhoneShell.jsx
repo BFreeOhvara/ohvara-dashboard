@@ -34,7 +34,7 @@ const AGENT_TABS = [
 ]
 
 const FULFILL_TABS = [
-  { to: '/fulfillment', label: 'Today', icon: House, on: p => p === '/fulfillment' || p === '/fulfillment/desk' },
+  { to: '/fulfillment', label: 'Today', icon: House, on: p => p === '/fulfillment' || p.startsWith('/fulfillment/desk') },
   { to: '/fulfillment/pipeline', label: 'Clients', icon: Users, on: p => p === '/fulfillment/pipeline' },
   { label: 'Call', icon: Phone, plus: true, call: true },
   { to: '/fulfillment/pay', label: 'Pay', icon: Wallet, on: p => p === '/fulfillment/pay' },

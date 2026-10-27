@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronLeft, ChevronRight, CornerDownLeft } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
@@ -318,18 +318,14 @@ function CallRow({ c, tz, sub, subTone, tag, onOpen }) {
 // ── page ────────────────────────────────────────────────────────────────────
 
 // Prompt 797 — a switch at the top: My calls (the day) or Qualify a call (the
-// VA's inbound policy-help screen, ?mode=qualify).
-export default function MyCalls() {
+// VA's inbound policy-help screen, /fulfillment/desk/qualify; ?mode=qualify
+// still works).
+export default function MyCalls({ qualifyRoute = false }) {
   const phone = usePhoneLayout()
-  const [params, setParams] = useSearchParams()
-  const qualify = params.get('mode') === 'qualify'
-  const setMode = m => {
-    const next = new URLSearchParams(params)
-    if (m === 'qualify') next.set('mode', 'qualify')
-    else next.delete('mode')
-    next.delete('open')
-    setParams(next, { replace: true })
-  }
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const qualify = qualifyRoute || params.get('mode') === 'qualify'
+  const setMode = m => navigate(m === 'qualify' ? '/fulfillment/desk/qualify' : '/fulfillment/desk', { replace: true })
   const opts = [{ value: 'calls', label: 'My calls' }, { value: 'qualify', label: 'Qualify a call' }]
   return (
     <>

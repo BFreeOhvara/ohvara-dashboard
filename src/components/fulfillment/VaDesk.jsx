@@ -12,7 +12,7 @@ import { digits, stageOf, useNow } from '../../lib/agentBookings'
 import { capState, formatReset } from '../../lib/billing'
 import { dayIn, addDaysStr, dateLabel, dayGone, carrierDaySlots, clientSlotISO, slotState, openBookingIsos, fmtBooking } from '../../lib/scheduling'
 
-// Prompt 797 — the VA call-qualify screen on /fulfillment/desk?mode=qualify,
+// Prompt 797 — the VA call-qualify screen on /fulfillment/desk/qualify,
 // built from the approved mockup (ohvara/leads/mockups/va-desk.html). The VA
 // answers an inbound policy-help call, runs a four-item checklist (question
 // type, carrier, state, urgency) and ends it one of three ways: Live transfer

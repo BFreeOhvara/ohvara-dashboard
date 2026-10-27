@@ -228,6 +228,12 @@ export default function App() {
                 <AdminTo to="/admin/fulfillment"><DashboardLayout><MyCalls /></DashboardLayout></AdminTo>
               </ProtectedRoute>
             } />
+            {/* Prompt 797 — the VA qualify screen has its own path so it can be linked and captured. */}
+            <Route path="/fulfillment/desk/qualify" element={
+              <ProtectedRoute allowedRoles={['fulfillment', 'admin']}>
+                <AdminTo to="/admin/fulfillment"><DashboardLayout><MyCalls qualifyRoute /></DashboardLayout></AdminTo>
+              </ProtectedRoute>
+            } />
             <Route path="/fulfillment/pipeline" element={
               <ProtectedRoute allowedRoles={['fulfillment', 'admin']}>
                 <AdminTo to="/admin/pipeline"><DashboardLayout><FulfillmentPipeline /></DashboardLayout></AdminTo>
