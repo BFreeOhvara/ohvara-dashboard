@@ -4532,11 +4532,15 @@ html.is-native a, html.is-native img { -webkit-touch-callout: none; }
 .ld-seg button { min-height: 36px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--ov-mute); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0 4px; white-space: nowrap; }
 .ld-seg button:disabled { opacity: .55; cursor: default; }
 .ld-seg button[aria-pressed="true"]:disabled { opacity: 1; }
+.ld-grid .ov-card { padding: 20px; }
+.ld-grid .ov-hero { padding: 24px; }
 .ld-btn { min-height: 40px; }
 .ld-chip-x { width: 32px; height: 32px; }
 .ld-hero-btn { min-height: 40px; }
 @media (max-width: 767.98px) {
   .ld-grid { gap: 14px; }
+  .ld-grid .ov-card { padding: 16px; }
+  .ld-grid .ov-hero { padding: 20px 18px; }
   .ld-main { gap: 14px; }
   .ld-contact { max-width: none; flex-basis: 100%; }
   .ld-seg { flex-basis: 100%; }

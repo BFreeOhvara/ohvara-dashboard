@@ -83,7 +83,7 @@ function ErrorCard({ title, body, onRetry }) {
 function Hero({ settings, settingsLoading, leads, tz }) {
   if (settingsLoading) {
     return (
-      <section className="ov-hero" aria-busy="true" style={{ padding: 24 }}>
+      <section className="ov-hero" aria-busy="true">
         {skel(110, 14, { opacity: 0.6 })}{skel(180, 44, { margin: '16px 0 12px', opacity: 0.6 })}{skel('70%', 14, { opacity: 0.6 })}
       </section>
     )
@@ -98,7 +98,7 @@ function Hero({ settings, settingsLoading, leads, tz }) {
     settings.daily_cap != null && `Up to ${settings.daily_cap} a day`,
   ].filter(Boolean) : []
   return (
-    <section className="ov-hero" aria-label="This week" style={{ padding: 24 }}>
+    <section className="ov-hero" aria-label="This week">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--ov-hero-soft)', fontSize: 13.5, fontWeight: 600 }}>
           <i style={{ width: 8, height: 8, borderRadius: '50%', background: on ? 'var(--ov-hero-dot)' : 'var(--ov-hero-soft)', opacity: on ? 1 : 0.5 }} />
