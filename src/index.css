@@ -4517,3 +4517,39 @@ html.is-native a, html.is-native img { -webkit-touch-callout: none; }
 }
 .ov-confirm-banner > svg { color: var(--warning); }
 .ph-main .ov-confirm-banner { margin: 12px 14px 0; }
+
+/* Prompt 797 — VA desk (/fulfillment/desk?mode=qualify). One column on a phone;
+   at 768px call + checklist left, outcomes right (mockup va-desk.html). */
+.va-grid { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.va-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+@media (min-width: 768px) {
+  .va-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 18px; align-items: start; }
+  .va-col { gap: 18px; }
+}
+.va-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; margin: 14px 0 0; }
+.va-facts dt { font-size: 12px; color: var(--ov-hero-soft); }
+.va-facts dd { margin: 0; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.va-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.2); color: #FFFFFF; }
+.va-pill.is-live { color: var(--ov-up); border-color: var(--ov-up); background: var(--ov-page, #07080D); }
+.va-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+.va-bar { height: 6px; border-radius: 999px; background: var(--ov-stub); overflow: hidden; margin: 10px 0 4px; }
+.va-bar i { display: block; height: 100%; background: var(--ov-data-b); border-radius: 999px; transition: width 160ms ease; }
+.va-q { margin-top: 16px; }
+.va-ql { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--ov-mid); }
+.va-tick { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--ov-faint); display: inline-flex; align-items: center; justify-content: center; flex: none; color: var(--ov-page, #07080D); }
+.va-q.is-done .va-tick { background: var(--ov-up); border-color: var(--ov-up); }
+.va-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.va-chips .ov-choice { min-height: 44px; padding: 0 14px; border-radius: 14px; font-size: 14px; font-weight: 600; color: var(--ov-mid); cursor: pointer; display: inline-flex; align-items: center; }
+.va-chips .ov-choice.is-on { color: var(--ov-hi); }
+.va-agent { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 8px 12px; margin-top: 8px; border-radius: 14px; text-align: left; font: inherit; color: var(--ov-hi); cursor: pointer; }
+.va-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--ov-stub); color: var(--ov-mid); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex: none; }
+.va-days { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; padding-bottom: 2px; }
+.va-days .ov-choice { flex: none; min-width: 64px; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 14px; font-size: 12px; color: var(--ov-mid); cursor: pointer; }
+.va-days .ov-choice b { font-size: 16px; font-variant-numeric: tabular-nums; color: var(--ov-hi); }
+.va-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; font-variant-numeric: tabular-nums; }
+@media (min-width: 768px) { .va-slots { grid-template-columns: repeat(3, 1fr); } }
+.va-slots .ov-choice { min-height: 44px; border-radius: 12px; font-size: 14px; font-weight: 600; color: var(--ov-hi); cursor: pointer; }
+.va-slots .ov-choice:disabled { color: var(--ov-faint); border-style: dashed; background: transparent; opacity: 1; }
+.va-cap { margin-top: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--ov-warn); background: var(--ov-warn-tint); color: var(--ov-warn); font-size: 13px; font-weight: 600; }
+.va-go { width: 100%; margin-top: 14px; height: 48px; border-radius: 999px; font-size: 14.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+.va-go:disabled { opacity: 0.45; cursor: not-allowed; }

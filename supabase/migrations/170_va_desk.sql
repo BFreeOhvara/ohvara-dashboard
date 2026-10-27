@@ -1,8 +1,15 @@
--- 163 — VA call-qualify desk.
+-- 170 — VA call-qualify desk.
 --
 -- NOT APPLIED. Written from a worktree; applying it is a separate, checked
 -- step. Additive only. Needs 161 (leads.lead_type, lead_source,
--- qualifier_answers) first.
+-- qualifier_answers; commit 17b40ab, not in this branch) applied first.
+--
+-- The agent id goes in leads.transfer_agent_id only. leads.assigned_rep_id is
+-- the rep batch-assignment column (migration 016/019 daily batch, rep RLS), so
+-- nothing here writes it.
+--
+-- Touches RLS: two new insert policies (policies_insert_va,
+-- fulfillment_details_insert_va). Brayden approves those.
 --
 -- A Fulfillment rep (the VA) answers an inbound policy-help call, runs the
 -- qualify checklist and either saves the lead, books the client on an
@@ -73,12 +80,12 @@ begin
   insert into public.leads (
     business_name, contact_name, phone, city, state,
     lead_type, lead_source, qualifier_answers,
-    assigned_rep_id, transfer_agent_id, transfer_status, transferred_at
+    transfer_agent_id, transfer_status, transferred_at
   ) values (
     trim(p_first) || ' ' || trim(p_last), trim(p_first) || ' ' || trim(p_last),
     nullif(trim(p_phone), ''), nullif(trim(p_city), ''), nullif(trim(p_state), ''),
     'policy_help', 'google', coalesce(p_answers, '{}'::jsonb),
-    p_agent,
+    case when p_outcome = 'transfer' then p_agent end,
     case when p_outcome = 'transfer' then p_agent end,
     case when p_outcome = 'transfer' then 'requested' end,
     case when p_outcome = 'transfer' then now() end
@@ -100,7 +107,7 @@ begin
     raise exception 'Only Fulfillment can update a call' using errcode = '42501';
   end if;
   update public.leads
-     set assigned_rep_id = p_agent
+     set transfer_agent_id = p_agent
    where id = p_lead and lead_type = 'policy_help';
 end;
 $$;
