@@ -1,11 +1,11 @@
 /* VA desk (/fulfillment/leads). v16 tokens only (src/index.css); surfaces are
    .ov-card / .ov-attn / .ov-hero, buttons are .ov-ghost / .ov-primary. */
 
-.va { font-variant-numeric: normal; }
+.va { line-height: 1.45; }
 .va .tab { font-variant-numeric: tabular-nums; }
 .va h1, .va h2, .va h3, .va .disp { font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600; margin: 0; }
 .va p { margin: 0; }
-.va button { font: inherit; }
+:where(.va) button { font: inherit; }
 .va .sub { color: var(--ov-mute); font-size: 13.5px; line-height: 1.45; }
 .va .grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .va svg { flex-shrink: 0; }
@@ -178,6 +178,10 @@
   .va-clock span { font-size: 17px; }
   .va-card-h h2, .va-qsec-h h2, .va-empty h3, .va-done h3 { font-size: 18px; }
   .va .ov-ghost, .va-hero-btn { min-height: 44px; }
+  .va .ov-ghost.va-sel { min-height: 48px; }
+  .va .ov-ghost.va-agent { min-height: 56px; }
+  .va .ov-ghost.va-pick { min-height: 64px; }
+  .va .ov-ghost.va-day { min-height: 56px; }
   .va-hero-acts { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr); }
   .va-hero-call { width: 100%; }
   .va-two { grid-template-columns: minmax(0, 1fr); gap: 0; }

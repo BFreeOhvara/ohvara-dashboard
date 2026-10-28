@@ -10,7 +10,7 @@ import { phoneText } from '../../lib/policyFormat'
 import { addDaysStr, carrierDaySlots, clientSlotISO, dateLabel, dayGone, dayIn, fmtBooking, slotState } from '../../lib/scheduling'
 import {
   CHECKLIST_ITEMS, QUESTION_TYPES, URGENCIES, callbackOk, callbackPresets, checklistProgress, clockText, countdown,
-  displayName, holdGone, itemDone, leadTypeLabel, secondsLeft, timeSince, toLocalInput,
+  displayName, holdGone, itemDone, leadTypeLabel, secondsLeft, stateName, timeSince, toLocalInput,
 } from '../../lib/vaQueue'
 import './vaDesk.css'
 
@@ -83,7 +83,7 @@ function Hero({ row, expiresAt, now, onRelease, releasing, releaseErr, onRetryRe
       </div>
       <h2 className="va-hero-name">{displayName(row)}</h2>
       <div className="va-hchips">
-        {row.state && <span className="ov-hero-chip">{row.state}</span>}
+        {row.state && <span className="ov-hero-chip">{stateName(row.state)}</span>}
         <span className="ov-hero-chip">{leadTypeLabel(row.lead_type)}</span>
         <span className="ov-hero-chip">Arrived {timeSince(row.created_at, now)}</span>
         <span className="ov-hero-chip">{tries === 0 ? 'First try' : `${tries} ${tries === 1 ? 'try' : 'tries'} so far`}</span>
@@ -346,7 +346,7 @@ function BookPanel({ desk, row, checklist, roster, onDone, now }) {
 
       <div className="va-foot">
         <button type="button" className="ov-primary va-btn" disabled={!agent || !chosen || full || busy} onClick={submit}>
-          {busy ? 'Booking…' : chosen && date ? `Book ${dateLabel(date, 'short')}, ${chosen.label}` : 'Book'}
+          {busy ? 'Booking…' : chosen && date ? `Book ${weekday(date)} ${dayNum(date)}, ${chosen.label}` : 'Book'}
         </button>
         <p className="sub">{agent ? `Saves the booking on ${agent.full_name}'s calendar.` : "Saves the booking on the agent's calendar."} No text, email or call goes out from here.</p>
       </div>

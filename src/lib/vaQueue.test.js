@@ -59,7 +59,7 @@ test('hold clock and errors', () => {
 test('labels', () => {
   assert.equal(timeSince(ago(12), NOW), '12 min ago')
   assert.equal(timeSince(ago(30 * 60), NOW), 'Yesterday')
-  assert.equal(rowMeta({ state: 'TX', lead_type: 'policy_help', created_at: ago(300), bucket: 'not_reached', va_attempts: 1 }, NOW), 'TX · Policy help · 5 h ago · 1 try')
+  assert.equal(rowMeta({ state: 'TX', lead_type: 'policy_help', created_at: ago(300), bucket: 'not_reached', va_attempts: 1 }, NOW), 'Texas · Policy help · 5 h ago · 1 try')
   assert.equal(callbackOk(new Date(NOW + 3600e3), NOW), true)
   assert.equal(callbackOk(new Date(NOW - 1), NOW), false)
   assert.equal(callbackOk(new Date(NOW + 91 * 864e5), NOW), false)

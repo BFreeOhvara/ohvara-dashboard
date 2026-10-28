@@ -94,19 +94,19 @@ export default function VaQueue({ queue, heldId, claimingId, notice, onTake }) {
 
   return (
     <>
+      {held && (
+        <p className="ov-note va-qnote"><Lock size={18} strokeWidth={2} aria-hidden="true" />
+          <span>Finish or release {splitName(held.contact_name).first || 'this lead'} to take another lead.</span></p>
+      )}
+      {notice && (
+        <p className="ov-note va-qnote" role="status"><Info size={18} strokeWidth={2} aria-hidden="true" /><span>{notice}</span></p>
+      )}
+
       <div className="va-counts">
         {BUCKETS.map(b => (
           <div key={b} className="ov-card va-count"><p>{BUCKET_LABEL[b]}</p><b className="tab">{counts[b]}</b></div>
         ))}
       </div>
-
-      {notice && (
-        <p className="ov-note va-qnote" role="status"><Info size={18} strokeWidth={2} aria-hidden="true" /><span>{notice}</span></p>
-      )}
-      {held && (
-        <p className="ov-note va-qnote"><Lock size={18} strokeWidth={2} aria-hidden="true" />
-          <span>Finish or release {splitName(held.contact_name).first || 'this lead'} to take another lead.</span></p>
-      )}
 
       {rows.length === 0 ? (
         <div className="ov-card va-empty">

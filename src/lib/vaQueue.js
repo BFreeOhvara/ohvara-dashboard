@@ -2,6 +2,8 @@
 // 4-item checklist. No React, no network. The screen reads these so the
 // counts, the sort and the "outcomes unlock at 4 of 4" rule live in one place.
 //
+import { US_STATES } from './usStates.js'
+
 // Rows come from va_queue() (migration 175): lead_id, lead_type, contact_name,
 // phone, city, state, va_checklist, bucket ('new' | 'not_reached' |
 // 'callback_due'), va_attempts, va_callback_at, claimed_by_me,
@@ -137,10 +139,13 @@ export function clockText(iso, now = Date.now()) {
   return `${d.toLocaleDateString('en-US', { weekday: 'short' })} ${timeOnly(d)}`
 }
 
+// "TX" → "Texas" (a code the list doesn't know is shown as it is).
+export const stateName = code => US_STATES.find(s => s.code === String(code || '').toUpperCase())?.name || code || ''
+
 // "Texas · Policy help · 12 min ago" (+ " · 2 tries" in Not reached).
 export function rowMeta(row, now = Date.now()) {
   return [
-    row.state,
+    stateName(row.state),
     leadTypeLabel(row.lead_type),
     timeSince(row.created_at, now),
     row.bucket === 'not_reached' ? tries(row.va_attempts) : '',
