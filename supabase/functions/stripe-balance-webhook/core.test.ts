@@ -137,6 +137,27 @@ test('other events and unpaid or untagged sessions are ignored with 200', async 
   assert.equal(l.rows.length, 0)
 })
 
+test('credit_topup is called once for a paid completed session, never for a bad signature, livemode or unpaid one', async () => {
+  const calls: any[] = []
+  const store: Store = {
+    async creditTopup(a) { calls.push(a); return { result: 'credited', ledger_id: 'l1', balance_cents: a.amount_cents } },
+  }
+  const bad = await signed(paidEvent(), 'whsec_wrong')
+  const live = await signed(paidEvent({ livemode: true }))
+  const unpaid = await signed(paidEvent({ object: { payment_status: 'unpaid' } }))
+  const noPayment = await signed(paidEvent({ object: { payment_status: 'no_payment_required', amount_total: 0 } }))
+  const expired = await signed(paidEvent({ type: 'checkout.session.expired', object: { payment_status: 'unpaid' } }))
+  for (const [raw, sig] of [[bad.raw, bad.sig], [bad.raw, null], [live.raw, live.sig], [unpaid.raw, unpaid.sig],
+                            [noPayment.raw, noPayment.sig], [expired.raw, expired.sig]] as const) {
+    await quiet(() => post(store, raw, sig))
+  }
+  assert.equal(calls.length, 0)
+  const paid = await signed(paidEvent())
+  const r = await quiet(() => post(store, paid.raw, paid.sig))
+  assert.equal(r.status, 200)
+  assert.deepEqual(calls, [{ agent_id: AGENT, amount_cents: 25000, session_id: 'cs_test_1', event_id: 'evt_1' }])
+})
+
 test('a database error is 500 so Stripe retries, with a generic body', async () => {
   const store: Store = { async creditTopup() { throw new Error('credit_topup: profile x not found') } }
   const { raw, sig } = await signed(paidEvent())
