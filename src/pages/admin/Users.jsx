@@ -10,6 +10,7 @@ import { usePayouts } from '../../hooks/useFulfillmentPayouts'
 import { dmId } from '../../hooks/useDirectMessages'
 import { OvSelect, LoadError } from '../../components/agent/AgentUI'
 import { AddSomeone } from '../../components/shared/AddSomeone'
+import { OnDutyNow } from '../../components/admin/OnDutyNow'
 import { Avatar } from '../../components/ui/Avatar'
 import { attentionReason } from '../../lib/fulfillmentFlags'
 import { whenShort } from '../../lib/fulfillmentDay'
@@ -154,6 +155,8 @@ function AdminUsersDesktop() {
   const isAgents = tab === 'agents'
 
   return (
+    <>
+    <OnDutyNow />
     <div className="au-page">
       <section className="ov-card au-list" aria-label="People">
         <div className="au-list-top">
@@ -230,6 +233,7 @@ function AdminUsersDesktop() {
 
       {adding && <AddSomeone defaultRole={role} onClose={() => setAdding(false)} />}
     </div>
+    </>
   )
 }
 

@@ -16,6 +16,7 @@ import { PhoneToast } from './PhoneToast'
 import { LoadError } from '../../agent/AgentUI'
 import { useOnce } from '../../../hooks/useOneAtATime'
 import { webUrl } from '../../../lib/native'
+import { OnDutyNow } from '../OnDutyNow'
 
 // Prompt 774 — People (Admin Users) on a phone, from More: Agents /
 // Fulfillment, search, one row per person with this week's numbers (the
@@ -156,6 +157,7 @@ export function AdminPhonePeople() {
 
   return (
     <div className="ph-stack" style={{ gap: 14 }}>
+      <OnDutyNow />
       <div className="ov-card ph-seg aph-seg2" role="tablist" aria-label="Who" style={{ marginTop: 0 }}>
         {[['agent', 'Agents', 'var(--ov-data-a)'], ['fulfillment', 'Fulfillment', 'var(--ov-data-b)']].map(([k, l, c]) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} className={`ph-seg-btn${tab === k ? ' is-on' : ''}`}
