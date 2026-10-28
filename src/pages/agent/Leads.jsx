@@ -7,8 +7,9 @@ import { US_STATES } from '../../lib/usStates'
 import { digits } from '../../lib/agentBookings'
 import { DEFAULT_TIMEZONE, zonedDateStr } from '../../lib/timezones'
 
-// Leads — Meta mortgage-protection leads delivered to this agent (migration
-// 161: mp_leads, agent_lead_settings). Call and Text are tel:/sms: links that
+// Leads — Meta mortgage-protection leads delivered to this agent (leads with
+// lead_type 'mortgage_protection', migration 166; agent_lead_settings and
+// leads.agent_status, migration 161). Call and Text are tel:/sms: links that
 // open the agent's own phone; the app sends nothing. Not behind BillingGate
 // (see the pass-through in BillingGate.jsx). Layout classes .ld-* in index.css.
 

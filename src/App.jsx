@@ -153,7 +153,7 @@ export default function App() {
                 <DashboardLayout><AgentActivity /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* Leads — delivered mp_leads + lead settings; stays open while billing is locked. */}
+            {/* Leads — delivered Meta leads (leads.lead_type) + lead settings; stays open while billing is locked. */}
             <Route path="/agent/leads" element={
               <ProtectedRoute allowedRoles={['agent']}>
                 <DashboardLayout><AgentLeads /></DashboardLayout>

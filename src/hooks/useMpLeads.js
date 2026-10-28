@@ -2,25 +2,43 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 
-// Meta mortgage-protection leads delivered to this agent (migration 161). RLS
-// already limits mp_leads to assigned_agent_id = auth.uid() (admin sees all),
-// so the explicit filter is for admins who open the page: they see their own.
-const LEAD_COLS = 'id, created_at, first_name, last_name, phone, state, age_band, mortgage_balance_band, homeowner, smoker, best_time, status, assigned_at'
+// Meta mortgage-protection leads delivered to this agent: leads rows with
+// lead_type 'mortgage_protection' (migration 166). RLS already limits leads to
+// assigned_rep_id = auth.uid() (admin sees all), so the explicit filter is for
+// admins who open the page: they see their own. The agent's status is
+// leads.agent_status (161); the qualifier answers sit in qualifier_answers.
+const MP_LEAD_TYPE = 'mortgage_protection'
+const LEAD_COLS = 'id, created_at, contact_name, phone, state, qualifier_answers, agent_status, delivered_at'
 export const LEAD_LIMIT = 200
+
+// One leads row in the shape the Leads page reads.
+const toLead = ({ contact_name, qualifier_answers: qa, agent_status, delivered_at, ...l }) => ({
+  ...l,
+  first_name: contact_name,
+  last_name: null,
+  age_band: qa?.age_band ?? null,
+  mortgage_balance_band: qa?.mortgage_balance_band ?? null,
+  homeowner: qa?.homeowner ?? null,
+  smoker: qa?.smoker ?? null,
+  best_time: qa?.best_time ?? null,
+  status: agent_status ?? 'assigned',
+  assigned_at: delivered_at,
+})
 
 export function useMpLeads() {
   const { profile } = useAuth()
   return useQuery({
-    queryKey: ['mp_leads', profile?.id],
+    queryKey: ['leads', MP_LEAD_TYPE, profile?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('mp_leads')
+        .from('leads')
         .select(LEAD_COLS)
-        .eq('assigned_agent_id', profile.id)
-        .order('assigned_at', { ascending: false, nullsFirst: false })
+        .eq('lead_type', MP_LEAD_TYPE)
+        .eq('assigned_rep_id', profile.id)
+        .order('delivered_at', { ascending: false, nullsFirst: false })
         .limit(LEAD_LIMIT)
       if (error) throw error
-      return data
+      return data.map(toLead)
     },
     enabled: !!profile?.id,
     // New leads show up without a refresh.
@@ -28,19 +46,22 @@ export function useMpLeads() {
   })
 }
 
-// Agents may change status only (column grant), to assigned/contacted/closed/bad.
+// Agents change agent_status only, to assigned/contacted/closed/bad, on their
+// own leads (leads_rep_update: assigned_rep_id = auth.uid()). Never
+// leads.status: that is the cancellation pipeline and feeds the rep queues.
 // Optimistic: the lead flips in the cache at once; on error only that lead
 // goes back to its old status, so other cards' changes are untouched.
 export function useUpdateMpLeadStatus() {
   const { profile } = useAuth()
   const qc = useQueryClient()
-  const key = ['mp_leads', profile?.id]
+  const key = ['leads', MP_LEAD_TYPE, profile?.id]
   const setStatus = (id, status) =>
     qc.setQueryData(key, rows => rows?.map(l => (l.id === id ? { ...l, status } : l)))
   return useMutation({
     mutationFn: async ({ id, status }) => {
       if (!['assigned', 'contacted', 'closed', 'bad'].includes(status)) throw new Error('Bad status')
-      const { error } = await supabase.from('mp_leads').update({ status }).eq('id', id)
+      const { error } = await supabase.from('leads').update({ agent_status: status })
+        .eq('id', id).eq('lead_type', MP_LEAD_TYPE).eq('assigned_rep_id', profile.id)
       if (error) throw error
     },
     onMutate: async ({ id, status, from }) => {

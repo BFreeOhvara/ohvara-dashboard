@@ -3,8 +3,9 @@
 //
 // The public mortgage-protection lead form posts here with no login, so every
 // gate lives in this file: field checks, a honeypot, a per-IP / per-phone rate
-// limit and a 30-day repeat-phone drop. A good lead is stored in mp_leads
-// (migration 161) and handed to assign_mp_lead (migration 162).
+// limit and a 30-day repeat-phone drop. A good lead is stored in leads as
+// lead_type 'mortgage_protection', lead_source 'meta' (migration 166), and
+// handed to assign_lead (migration 162), which also charges the agent.
 //
 // The caller only ever gets { ok: true } (or a field error). A bot, a repeat
 // phone, a rate-limited caller and a real lead all look the same, and nothing
@@ -35,13 +36,13 @@ const UTM = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_ter
 // The form's hidden field. People never see or fill it; bots do.
 export const HONEYPOT = 'website'
 
-export type LeadRow = {
-  source: 'meta_mp'
-  first_name: string
-  last_name: string | null
-  phone: string
-  email: string | null
-  state: string
+// The Meta mortgage-protection value of leads.lead_type (166). Google
+// policy-help calls are 'policy_help'.
+export const MP_LEAD_TYPE = 'mortgage_protection'
+
+// The qualifier's answers, the consent record and the tracking tags, kept
+// together in leads.qualifier_answers (166).
+export type QualifierAnswers = {
   age_band: string
   mortgage_balance_band: string
   homeowner: boolean
@@ -56,8 +57,20 @@ export type LeadRow = {
   utm_term: string | null
 }
 
+// Only these leads columns are ever written; nothing else from the body gets through.
+export type LeadRow = {
+  lead_type: typeof MP_LEAD_TYPE
+  lead_source: 'meta'
+  business_name: string   // leads.business_name is NOT NULL (001); a person lead uses their name
+  contact_name: string
+  phone: string
+  email: string | null
+  state: string
+  qualifier_answers: QualifierAnswers
+}
+
 export interface Deps {
-  // mp_leads rows with this phone created at or after `since`.
+  // leads rows of MP_LEAD_TYPE with this phone created at or after `since`.
   countPhone(phone: string, since: string): Promise<number>
   insertLead(row: LeadRow): Promise<string>
   assign(leadId: string): Promise<void>
@@ -145,13 +158,19 @@ export function validate(body: Record<string, unknown>, now: Date): LeadRow | Re
   // Tracking tags are best-effort: a bad one is dropped, not an error.
   const utm = Object.fromEntries(UTM.map(k => [k, text(body[k], 200)])) as Record<typeof UTM[number], string | null>
 
+  const name = last_name ? `${first_name} ${last_name}` : first_name
   return {
-    source: 'meta_mp',
-    first_name, last_name, phone, email, state,
-    age_band, mortgage_balance_band, homeowner, smoker, best_time,
-    consent_at: now.toISOString(),
-    consent_text_version: MP_CONSENT_VERSION,
-    ...utm,
+    lead_type: MP_LEAD_TYPE,
+    lead_source: 'meta',
+    business_name: name,
+    contact_name: name,
+    phone, email, state,
+    qualifier_answers: {
+      age_band, mortgage_balance_band, homeowner, smoker, best_time,
+      consent_at: now.toISOString(),
+      consent_text_version: MP_CONSENT_VERSION,
+      ...utm,
+    },
   }
 }
 
