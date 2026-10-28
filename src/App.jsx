@@ -26,8 +26,8 @@ import AgentClients from './pages/agent/Clients'
 import AgentActivity from './pages/agent/Activity'
 import AgentBilling from './pages/agent/Billing'
 import AgentMore from './pages/agent/More'
-import AgentLeads from './pages/agent/Leads'
-import { LEADS_PAGE } from './lib/leadsPage'
+// P808: Leads hidden until its tables (166/169/171) are on master and applied.
+// import AgentLeads from './pages/agent/Leads'
 import MyCalls from './pages/fulfillment/MyCalls'
 import FulfillmentOverview from './pages/fulfillment/Overview'
 import FulfillmentPipeline from './pages/fulfillment/Pipeline'
@@ -159,13 +159,8 @@ export default function App() {
                 <DashboardLayout><AgentActivity /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* Leads — delivered Meta leads (leads.lead_type) + lead settings; stays open while billing is locked.
-                P808: hidden (its tables aren't live) unless built with VITE_LEADS_PAGE=1 locally; off, it goes to Overview. */}
-            <Route path="/agent/leads" element={LEADS_PAGE ? (
-              <ProtectedRoute allowedRoles={['agent', 'admin']}>
-                <DashboardLayout><AgentLeads /></DashboardLayout>
-              </ProtectedRoute>
-            ) : <Navigate to="/agent" replace />} />
+            {/* P808: Leads hidden (its tables aren't live yet); send it to Overview. */}
+            <Route path="/agent/leads" element={<Navigate to="/agent" replace />} />
             {/* Prompt 691 — Billing, promoted out of Settings. */}
             <Route path="/agent/billing" element={
               <ProtectedRoute allowedRoles={['agent']}>
