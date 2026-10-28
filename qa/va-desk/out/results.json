@@ -1,0 +1,616 @@
+[
+  {
+    "name": "queue-1920-light",
+    "scrollWidth": 1905,
+    "clientWidth": 1920,
+    "sideways": false,
+    "theme": "light",
+    "bannedLines": [],
+    "pageErrors": [],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster"
+    ]
+  },
+  {
+    "name": "claimed-1920-light",
+    "scrollWidth": 1905,
+    "clientWidth": 1920,
+    "sideways": false,
+    "theme": "light",
+    "bannedLines": [],
+    "pageErrors": [],
+    "checklist": "1 of 4",
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/va_claim"
+    ]
+  },
+  {
+    "name": "queue-1920-dark",
+    "scrollWidth": 1905,
+    "clientWidth": 1920,
+    "sideways": false,
+    "theme": "dark",
+    "bannedLines": [],
+    "pageErrors": [],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster"
+    ]
+  },
+  {
+    "name": "claimed-1920-dark",
+    "scrollWidth": 1905,
+    "clientWidth": 1920,
+    "sideways": false,
+    "theme": "dark",
+    "bannedLines": [],
+    "pageErrors": [],
+    "checklist": "1 of 4",
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/va_claim"
+    ]
+  },
+  {
+    "name": "queue-1440-light",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "sideways": false,
+    "theme": "light",
+    "bannedLines": [],
+    "pageErrors": [],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster"
+    ]
+  },
+  {
+    "name": "claimed-1440-light",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "sideways": false,
+    "theme": "light",
+    "bannedLines": [],
+    "pageErrors": [],
+    "checklist": "1 of 4",
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/va_claim"
+    ]
+  },
+  {
+    "name": "queue-1440-dark",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "sideways": false,
+    "theme": "dark",
+    "bannedLines": [],
+    "pageErrors": [],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster"
+    ]
+  },
+  {
+    "name": "claimed-1440-dark",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "sideways": false,
+    "theme": "dark",
+    "bannedLines": [],
+    "pageErrors": [],
+    "checklist": "1 of 4",
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/va_claim"
+    ]
+  },
+  {
+    "name": "queue-390-light",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "sideways": false,
+    "theme": "light",
+    "bannedLines": [],
+    "pageErrors": [],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/my_standing_threads"
+    ]
+  },
+  {
+    "name": "claimed-390-light",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "sideways": false,
+    "theme": "light",
+    "bannedLines": [],
+    "pageErrors": [],
+    "checklist": "1 of 4",
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/va_claim"
+    ]
+  },
+  {
+    "name": "queue-390-dark",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "sideways": false,
+    "theme": "dark",
+    "bannedLines": [],
+    "pageErrors": [],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/my_standing_threads"
+    ]
+  },
+  {
+    "name": "claimed-390-dark",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "sideways": false,
+    "theme": "dark",
+    "bannedLines": [],
+    "pageErrors": [],
+    "checklist": "1 of 4",
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/va_claim"
+    ]
+  },
+  {
+    "name": "state-3of4-locked-1440-light",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "sideways": false,
+    "theme": "light",
+    "bannedLines": [],
+    "pageErrors": [],
+    "checklist": "3 of 4",
+    "outcomesDisabled": [
+      true,
+      true,
+      true
+    ],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/va_claim"
+    ]
+  },
+  {
+    "name": "state-4of4-unlocked-1440-light",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "sideways": false,
+    "theme": "light",
+    "bannedLines": [],
+    "pageErrors": [],
+    "checklist": "4 of 4",
+    "outcomesDisabled": [
+      false,
+      false,
+      false
+    ],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/va_claim"
+    ]
+  },
+  {
+    "name": "state-book-1440-light",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "sideways": false,
+    "theme": "light",
+    "bannedLines": [],
+    "pageErrors": [],
+    "bookButton": "Book Thu 29, 8:00 AM",
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/va_claim"
+    ]
+  },
+  {
+    "name": "state-booked-1440-light",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "sideways": false,
+    "theme": "light",
+    "bannedLines": [],
+    "pageErrors": [],
+    "bookCalls": [
+      "BOOK-INSERT",
+      "BODY {\"p_lead\":\"n1\",\"p_agent\":\"a1\",\"p_outcome\":\"booked\",\"p_callback_at\":null,\"p_booking_id\":\"pol-1\",\"p_checklist\":{\"question_type\":\"Claim\",\"carrier\":\"Carrier A\",\"state\":\"TX\",\"urgency\":\"Today\"}}"
+    ],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/va_claim",
+      "POST /rest/v1/rpc/va_set_lead_outcome"
+    ]
+  },
+  {
+    "name": "state-transfer-1440-light",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "sideways": false,
+    "theme": "light",
+    "bannedLines": [],
+    "pageErrors": [],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/va_claim",
+      "POST /rest/v1/rpc/va_set_lead_outcome"
+    ]
+  },
+  {
+    "name": "state-callback-1440-light",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "sideways": false,
+    "theme": "light",
+    "bannedLines": [],
+    "pageErrors": [],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/va_claim",
+      "POST /rest/v1/rpc/va_set_lead_outcome"
+    ]
+  },
+  {
+    "name": "state-done-1440-light",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "sideways": false,
+    "theme": "light",
+    "bannedLines": [],
+    "pageErrors": [],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/va_claim",
+      "POST /rest/v1/rpc/va_set_lead_outcome"
+    ]
+  },
+  {
+    "name": "state-3of4-locked-390-dark",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "sideways": false,
+    "theme": "dark",
+    "bannedLines": [],
+    "pageErrors": [],
+    "checklist": "3 of 4",
+    "outcomesDisabled": [
+      true,
+      true,
+      true
+    ],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/va_claim"
+    ]
+  },
+  {
+    "name": "state-4of4-unlocked-390-dark",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "sideways": false,
+    "theme": "dark",
+    "bannedLines": [],
+    "pageErrors": [],
+    "checklist": "4 of 4",
+    "outcomesDisabled": [
+      false,
+      false,
+      false
+    ],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/va_claim"
+    ]
+  },
+  {
+    "name": "state-book-390-dark",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "sideways": false,
+    "theme": "dark",
+    "bannedLines": [],
+    "pageErrors": [],
+    "bookButton": "Book Thu 29, 8:00 AM",
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/va_claim"
+    ]
+  },
+  {
+    "name": "state-booked-390-dark",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "sideways": false,
+    "theme": "dark",
+    "bannedLines": [],
+    "pageErrors": [],
+    "bookCalls": [
+      "BOOK-INSERT",
+      "BODY {\"p_lead\":\"n1\",\"p_agent\":\"a1\",\"p_outcome\":\"booked\",\"p_callback_at\":null,\"p_booking_id\":\"pol-1\",\"p_checklist\":{\"question_type\":\"Claim\",\"carrier\":\"Carrier A\",\"state\":\"TX\",\"urgency\":\"Today\"}}"
+    ],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/va_claim",
+      "POST /rest/v1/rpc/va_set_lead_outcome"
+    ]
+  },
+  {
+    "name": "state-transfer-390-dark",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "sideways": false,
+    "theme": "dark",
+    "bannedLines": [],
+    "pageErrors": [],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/va_claim",
+      "POST /rest/v1/rpc/va_set_lead_outcome"
+    ]
+  },
+  {
+    "name": "state-callback-390-dark",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "sideways": false,
+    "theme": "dark",
+    "bannedLines": [],
+    "pageErrors": [],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/va_claim",
+      "POST /rest/v1/rpc/va_set_lead_outcome"
+    ]
+  },
+  {
+    "name": "state-done-390-dark",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "sideways": false,
+    "theme": "dark",
+    "bannedLines": [],
+    "pageErrors": [],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/va_claim",
+      "POST /rest/v1/rpc/va_set_lead_outcome"
+    ]
+  },
+  {
+    "name": "transfer-body",
+    "body": [
+      "BODY {\"p_lead\":\"n1\",\"p_agent\":\"a2\",\"p_outcome\":\"transferred\",\"p_callback_at\":null,\"p_booking_id\":null,\"p_checklist\":{\"question_type\":\"Claim\",\"carrier\":\"Carrier A\",\"state\":\"TX\",\"urgency\":\"Today\"}}"
+    ]
+  },
+  {
+    "name": "state-hold-ended-1440-light",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "sideways": false,
+    "theme": "light",
+    "bannedLines": [],
+    "pageErrors": [],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/va_claim"
+    ]
+  },
+  {
+    "name": "state-back-in-queue-1440-light",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "sideways": false,
+    "theme": "light",
+    "bannedLines": [],
+    "pageErrors": [],
+    "heroGone": true,
+    "jordanRowEnabled": true,
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/va_claim"
+    ]
+  },
+  {
+    "name": "state-hold-ended-390-dark",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "sideways": false,
+    "theme": "dark",
+    "bannedLines": [],
+    "pageErrors": [],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/va_claim"
+    ]
+  },
+  {
+    "name": "state-back-in-queue-390-dark",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "sideways": false,
+    "theme": "dark",
+    "bannedLines": [],
+    "pageErrors": [],
+    "heroGone": true,
+    "jordanRowEnabled": true,
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/va_claim"
+    ]
+  },
+  {
+    "name": "state-lost-race-1440-light",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "sideways": false,
+    "theme": "light",
+    "bannedLines": [],
+    "pageErrors": [],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "POST /rest/v1/rpc/my_money_banner",
+      "POST /rest/v1/rpc/my_push_settings",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/va_claim"
+    ]
+  },
+  {
+    "name": "state-queue-error-390-dark",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "sideways": false,
+    "theme": "dark",
+    "bannedLines": [],
+    "pageErrors": [],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/my_standing_threads"
+    ]
+  },
+  {
+    "name": "state-queue-empty-390-light",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "sideways": false,
+    "theme": "light",
+    "bannedLines": [],
+    "pageErrors": [],
+    "rpc": [
+      "POST /rest/v1/rpc/get_my_profile",
+      "POST /rest/v1/rpc/va_queue",
+      "POST /rest/v1/rpc/va_agent_roster",
+      "POST /rest/v1/rpc/my_standing_threads"
+    ]
+  }
+]
