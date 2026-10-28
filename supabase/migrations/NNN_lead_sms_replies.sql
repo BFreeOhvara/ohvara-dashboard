@@ -1,9 +1,10 @@
 -- NNN — Lead text replies for the VA queue (Roadmap Goal 8 groundwork).
 --
 -- NOT APPLIED. Written from a worktree; applying it is a separate, checked
--- step. Additive only: one table, two indexes, a trigger and four functions,
--- each created only if it isn't there yet (or replaced in place). Nothing is
--- dropped, renamed, truncated or deleted. NNN is a placeholder: the file takes
+-- step. Additive only: one table, two indexes on it, a trigger and four
+-- functions, each created only if it isn't there yet (or replaced in place).
+-- Nothing is dropped, renamed, truncated or deleted. Creates no index on
+-- leads and grants nothing on sms_e164. NNN is a placeholder: the file takes
 -- the number the migration ledger reserved for this task before it merges.
 --
 -- HOLD: merge only after Goal 1's 166_lead_types_delivery is merged (one lead
@@ -75,11 +76,10 @@ end $$;
 
 -- ── matching a reply to its lead ────────────────────────────────────────────
 -- Leads keep phone as typed (submit-mp-lead stores E.164; older leads may
--- not), so the match goes through sms_e164 on both sides. sms_e164 is
--- immutable, so this index serves it.
-create index if not exists leads_phone_e164_idx
-  on public.leads (public.sms_e164(phone), created_at desc) where phone is not null;
-
+-- not), so the match goes through sms_e164 on both sides. No index on leads
+-- for it: sms_e164 is revoked from authenticated (157), and an index
+-- expression runs as the user writing the row, so it would break admin and
+-- rep writes to leads. One scan per inbound text is fine.
 create or replace function public.lead_sms_match(p_phone text)
  returns uuid
  language sql
