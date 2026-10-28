@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { MessageSquare, Phone, Bell, Moon, Sun, Settings, TriangleAlert, ChevronRight, LogOut, Landmark, CreditCard, Search } from 'lucide-react'
+import { MessageSquare, Phone, PhoneIncoming, Bell, Moon, Sun, Settings, TriangleAlert, ChevronRight, LogOut, Landmark, CreditCard, Search } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useTheme } from '../../hooks/useTheme'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
@@ -144,6 +144,7 @@ export default function FulfillmentMore() {
 
       <section className="ov-card ph-menu">
         <Row icon={MessageSquare} tone="blue" label="Messages" right={unread > 0 ? `${unread} new` : null} onClick={() => navigate('/messages')} />
+        <Row icon={PhoneIncoming} tone="teal" label="Leads" onClick={() => navigate('/fulfillment/leads')} />
         <Row icon={Phone} tone="teal" label="Carrier phone numbers" onClick={() => setModal('carriers')} />
         <Row icon={Bell} tone="amber" label="Notifications" onClick={() => navigate('/settings#notifications')} />
         <button type="button" className="ph-mrow" onClick={() => setTheme(light ? 'dark' : 'light')}

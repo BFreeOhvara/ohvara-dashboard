@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2, Wallet, Lock, CircleAlert } from 'lucide-react'
+import { Loader2, Lock, CircleAlert, Plus, Phone, FileText } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { DISPLAY, MONO } from '../../lib/exportStyles'
 
@@ -23,6 +23,12 @@ const topupLabel = cents => {
   return `+$${d.toLocaleString('en-US', { minimumFractionDigits: Number.isInteger(d) ? 0 : 2, maximumFractionDigits: 2 })}`
 }
 const TYPE_LABEL = { mortgage_protection: 'Meta lead', policy_help: 'Google call' }
+const TYPE_SOURCE = { mortgage_protection: 'Form filled in from a Meta ad', policy_help: 'Call from a Google ad' }
+const TYPE_ICON = { policy_help: Phone }
+const TypeIcon = ({ type, size = 17 }) => {
+  const Icon = TYPE_ICON[type] || FileText
+  return <Icon size={size} strokeWidth={2} />
+}
 const typeLabel = t => TYPE_LABEL[t] || (t ? t.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase()) : '')
 
 const TZ = 'America/Chicago'
@@ -38,6 +44,19 @@ const when = iso => {
 }
 
 const HISTORY_ROWS = 20
+
+// Hero line from the active lead_prices (cheapest first): what the balance buys at
+// today's prices, or which lead types it can't cover yet.
+const plural = (n, label) => (n === 1 ? label : `${label}s`)
+function coverageLine(balance, prices) {
+  const counts = prices.map(p => ({ label: typeLabel(p.lead_type), n: Math.floor(balance / p.price_cents) }))
+  const covered = counts.filter(c => c.n >= 1)
+  const short = counts.filter(c => c.n < 1)
+  if (!covered.length) return null
+  const list = (arr, sep) => arr.map((c, i) => <span key={c.label}>{i > 0 && sep}<b>{c.n} {plural(c.n, c.label)}</b></span>)
+  if (!short.length) return <>About {list(covered, ' or ')} at today's prices.</>
+  return <>Enough for {list(covered, ' and ')}, not {short.map(c => `a ${c.label}`).join(' or ')}.</>
+}
 
 // Until migration 176 is applied the four tables don't exist: PostgREST answers
 // 404 / PGRST205 (not in the schema cache), Postgres 42P01. That's not a fault,
@@ -72,6 +91,7 @@ function usePrepaid(agentId) {
 }
 
 const H2 = { margin: 0, fontFamily: DISPLAY, fontSize: 18, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ov-hi)' }
+const HEAD = { fontSize: 14, fontWeight: 600, color: 'var(--ov-hero-soft)' }
 const SUB = { margin: 0, fontSize: 13.5, color: 'var(--ov-mute)' }
 const MONO_NUM = { fontFamily: MONO, fontVariantNumeric: 'tabular-nums' }
 
@@ -104,7 +124,7 @@ export function PrepaidBalanceCard({ agentId }) {
     return (
       <>
         <section className="ov-hero ov-bal" aria-label="Prepaid balance" aria-busy="true">
-          <Skel w={132} h={30} style={{ borderRadius: 999 }} />
+          <div className="ov-bal-top"><span style={HEAD}>Prepaid balance</span></div>
           <Skel w={190} h={44} style={{ margin: '16px 0 8px' }} />
           <Skel w="85%" h={14} />
           <div className="ov-bal-topups" style={{ marginTop: 28 }}>
@@ -130,10 +150,9 @@ export function PrepaidBalanceCard({ agentId }) {
   if (isError || !data) {
     return (
       <section className="ov-hero ov-bal" aria-label="Prepaid balance">
-        <div className="ov-bal-top"><span className="ov-hero-chip"><Wallet size={14} strokeWidth={2.2} />Prepaid balance</span></div>
-        <h3 style={{ margin: '16px 0 0', fontFamily: DISPLAY, fontSize: 22, fontWeight: 600, letterSpacing: '-0.01em', color: 'inherit' }}>We couldn't load your balance</h3>
-        <p className="ov-bal-line" style={{ marginTop: 6 }}>Your money is safe. Check your connection and try again.</p>
-        <div className="ov-bal-topups" style={{ marginTop: 12 }}>
+        <div className="ov-bal-top"><span style={HEAD}>Prepaid balance</span></div>
+        <p className="ov-bal-err" role="alert" style={{ marginTop: 16 }}><CircleAlert size={16} strokeWidth={2.2} /><span>Balance isn't available right now.</span></p>
+        <div className="ov-bal-topups" style={{ marginTop: 16 }}>
           <button type="button" className="ov-hero-btn" onClick={() => refetch()} style={{ flex: '0 0 auto', height: 46, padding: '0 22px', fontSize: 15, fontFamily: 'inherit' }}>
             Try again
           </button>
@@ -144,20 +163,22 @@ export function PrepaidBalanceCard({ agentId }) {
 
   const { balance, prices, options, ledger } = data
   const lowest = prices.length ? Math.min(...prices.map(p => p.price_cents)) : null
-  // A brand-new account (no ledger rows) is a fresh start, not a warning.
-  const low = lowest != null && ledger.length > 0 && balance < lowest
+  // A brand-new account (no ledger rows, $0) is a fresh start, not a warning.
   const fresh = ledger.length === 0 && balance === 0
+  const low = !fresh && lowest != null && balance < lowest
 
-  let line = "Each lead is paid from this balance when it's delivered to you."
-  if (low) line = <>That's less than one lead (<strong>{money(lowest)}</strong>). Add funds to keep getting leads.</>
-  else if (fresh) line = "Add funds to start getting leads. Each one is paid from this balance when it's delivered."
+  let line = coverageLine(balance, prices) || "Each lead is paid from this balance when it's delivered to you."
+  if (low) line = <><strong>The next lead won't be delivered.</strong> Add funds to keep leads coming.</>
+  else if (fresh) line = 'Add funds to start receiving leads.'
 
   return (
     <>
       <section className="ov-hero ov-bal" aria-label="Prepaid balance">
         <div className="ov-bal-top">
-          <span className="ov-hero-chip"><Wallet size={14} strokeWidth={2.2} />Prepaid balance</span>
-          {low && <span className="ov-bill-chip is-warn"><i />Low balance</span>}
+          <span style={HEAD}>Prepaid balance</span>
+          {low ? <span className="ov-bill-chip is-warn"><i />Low balance</span>
+            : fresh ? <span className="ov-bill-chip"><i />No funds yet</span>
+            : <span className="ov-hero-chip"><i />Receiving leads</span>}
         </div>
         <div className="ov-bal-num" style={MONO_NUM}>{money(balance)}</div>
         <p className="ov-bal-line">{line}</p>
@@ -195,12 +216,16 @@ export function PrepaidBalanceCard({ agentId }) {
         <section className="ov-card ov-bal-card" aria-labelledby="ov-bal-prices">
           <div style={{ marginBottom: 6 }}>
             <h2 id="ov-bal-prices" style={H2}>Price per lead</h2>
-            <p style={SUB}>Charged once, when a lead is delivered</p>
+            <p style={SUB}>Taken from your balance when a lead is delivered to you.</p>
           </div>
           {prices.map((p, i) => (
             <div key={p.lead_type} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderTop: i === 0 ? 0 : '1px solid var(--ov-line)' }}>
-              <div style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere', fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>{typeLabel(p.lead_type)}</div>
-              <div style={{ ...MONO_NUM, fontSize: 20, fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--ov-hi)' }}>{money(p.price_cents)}</div>
+              <span className="ov-box ov-bal-ico"><TypeIcon type={p.lead_type} /></span>
+              <div style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
+                <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>{typeLabel(p.lead_type)}</div>
+                {TYPE_SOURCE[p.lead_type] && <div style={{ ...SUB, fontSize: 13 }}>{TYPE_SOURCE[p.lead_type]}</div>}
+              </div>
+              <div style={{ ...MONO_NUM, fontSize: 18, fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--ov-hi)' }}>{money(p.price_cents)}</div>
             </div>
           ))}
         </section>
@@ -217,19 +242,22 @@ export function PrepaidBalanceCard({ agentId }) {
           <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
             {ledger.map((r, i) => {
               const credit = r.amount_cents > 0
-              const type = !credit && r.lead_type ? typeLabel(r.lead_type) : ''
+              const type = credit ? (r.kind === 'topup' ? 'Card top-up' : '') : r.lead_type ? typeLabel(r.lead_type) : ''
               return (
                 <li key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderTop: i === 0 ? 0 : '1px solid var(--ov-line)' }}>
+                  <span className={`ov-box ov-bal-ico is-sm${credit ? ' is-in' : ''}`}>
+                    {credit ? <Plus size={16} strokeWidth={2.4} /> : <TypeIcon type={r.lead_type} size={16} />}
+                  </span>
                   <div style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
                     <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>{credit ? 'Funds added' : 'Lead delivered'}</div>
-                    <div style={SUB}>{type ? `${type} · ` : ''}{when(r.created_at)}</div>
+                    <div style={SUB}>{type ? `${type} · ` : ''}<span style={{ whiteSpace: 'nowrap' }}>{when(r.created_at)}</span></div>
                   </div>
                   <div style={{ ...MONO_NUM, textAlign: 'right', flexShrink: 0 }}>
                     <div style={{ fontSize: 14.5, fontWeight: 600, whiteSpace: 'nowrap', color: credit ? 'var(--ov-up)' : 'var(--ov-hi)' }}>
                       {credit ? '+' : '−'}{money(Math.abs(r.amount_cents))}
                     </div>
                     {r.balance_after_cents != null && (
-                      <div style={{ fontSize: 12, whiteSpace: 'nowrap', color: 'var(--ov-mute)' }}>Bal. {money(r.balance_after_cents)}</div>
+                      <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, whiteSpace: 'nowrap', color: 'var(--ov-mute)' }}>Balance <span style={MONO_NUM}>{money(r.balance_after_cents)}</span></div>
                     )}
                   </div>
                 </li>

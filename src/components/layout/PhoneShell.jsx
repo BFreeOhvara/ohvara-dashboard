@@ -54,7 +54,7 @@ const TABS = { agent: AGENT_TABS, fulfillment: FULFILL_TABS, admin: ADMIN_TABS }
 // Pages opened from More: a header with a back arrow to More.
 const SUB_PAGES = {
   agent: { '/agent/activity': 'Activity', ...(LEADS_PAGE ? { '/agent/leads': 'Leads' } : {}), '/agent/billing': 'Billing', '/settings': 'Settings' },
-  fulfillment: { '/settings': 'Settings' },
+  fulfillment: { '/fulfillment/leads': 'Leads', '/settings': 'Settings' },
   admin: { '/admin/users': 'People', '/admin/pipeline': 'Pipeline', '/settings': 'Settings' },
 }
 const MORE = { agent: '/agent/more', fulfillment: '/fulfillment/more', admin: '/admin/more' }

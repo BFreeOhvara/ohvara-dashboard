@@ -29,6 +29,7 @@ import AgentMore from './pages/agent/More'
 // P808: Leads hidden until its tables (166/169/171) are on master and applied.
 // import AgentLeads from './pages/agent/Leads'
 import MyCalls from './pages/fulfillment/MyCalls'
+import VaLeads from './pages/fulfillment/VaLeads'
 import FulfillmentOverview from './pages/fulfillment/Overview'
 import FulfillmentPipeline from './pages/fulfillment/Pipeline'
 import MyPay, { GettingPaidRedirect } from './pages/fulfillment/MyPay'
@@ -228,6 +229,12 @@ export default function App() {
             <Route path="/fulfillment/desk" element={
               <ProtectedRoute allowedRoles={['fulfillment', 'admin']}>
                 <AdminTo to="/admin/fulfillment"><DashboardLayout><MyCalls /></DashboardLayout></AdminTo>
+              </ProtectedRoute>
+            } />
+            {/* VA desk: the queue, claim, 4-item checklist and outcome. No admin twin, so admin sees the same page. */}
+            <Route path="/fulfillment/leads" element={
+              <ProtectedRoute allowedRoles={['fulfillment', 'admin']}>
+                <DashboardLayout><VaLeads /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/fulfillment/pipeline" element={

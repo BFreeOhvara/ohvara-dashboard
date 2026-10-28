@@ -136,7 +136,7 @@ async function shot(scName, theme, w) {
   await mock(page, sc, gate, seen)
   await page.goto(`${base}/agent/billing`, { waitUntil: 'domcontentloaded' })
   if (scName === 'loading') await page.waitForSelector('.ov-bal-skel', { timeout: 30000 })
-  else if (scName === 'error') await page.getByText("We couldn't load your balance").waitFor({ timeout: 30000 })
+  else if (scName === 'error') await page.getByText("Balance isn't available right now.").waitFor({ timeout: 30000 })
   else await page.waitForSelector('.ov-bal-num', { timeout: 30000 })
   await page.waitForTimeout(700) // card fade-in, fonts
   const m = await measure(page)
