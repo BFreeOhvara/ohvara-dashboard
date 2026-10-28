@@ -53,3 +53,16 @@ Does not match (file as a separate frontend fix; I did not change app code in th
 11. **Back-from-Stripe notice.** Mockup: "Payment received. $250.00 was added to your prepaid balance." App: "Payment received. Your balance updates in a moment." (the app doesn't know the amount).
 
 Not a defect: in the 390 full-page shots the fixed phone tab bar appears mid-image; that is Playwright full-page stitching of a `position: fixed` element.
+
+## Fix pass: items 2-4 and 6-10 closed (rerun of the script)
+
+Changed `PrepaidBalanceCard.jsx` and the `.ov-bal` / `.ov-bill-chip` rules in `index.css`; the error shot now waits for the new copy.
+- 2: plain "Prepaid balance" label + chip: "Receiving leads", amber "Low balance", neutral "No funds yet".
+- 3: hero line from `lead_prices` ("About N Meta leads or N Google calls at today's prices"; "Enough for 1 Meta lead, not a Google call.").
+- 4: low copy "The next lead won't be delivered. Add funds to keep leads coming."
+- 6: price rows have an icon tile, source line and an 18px price; subtitle matches the mockup. History rows have an icon tile (plus / phone / form),
+  "Card top-up" under Funds added and "Balance $X".
+- 7: error is "Balance isn't available right now." in an alert box. 8: the loading hero keeps the label.
+- 9 (light chip): the amber chip text and dot are white on the teal hero via `--chip-warn-fg` / `--chip-warn-dot`.
+- Column stays 380px. Still open: items 1, 5 and 11 (not in this task). History subtext wraps to two lines at 380 when it has a date and "Card top-up".
+- At 390 (light and dark, every scenario) `scrollWidth == clientWidth == 390`; no page errors.

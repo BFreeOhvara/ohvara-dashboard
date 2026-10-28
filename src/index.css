@@ -1418,12 +1418,15 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 .ov-bill-chip > i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.75); }
 .ov-bill-chip.is-active { background: rgba(74,222,128,0.16); border-color: rgba(74,222,128,0.4); color: #86EFAC; }
 .ov-bill-chip.is-active > i { background: #4ADE80; }
-.ov-bill-chip.is-warn { background: rgba(245,158,11,0.18); border-color: rgba(251,191,36,0.5); color: #FCD34D; }
-.ov-bill-chip.is-warn > i { background: #FBBF24; }
+.ov-bill-chip { --chip-warn-fg: #FCD34D; --chip-warn-dot: #FBBF24; }
+.ov-bill-chip.is-warn { background: rgba(245,158,11,0.18); border-color: rgba(251,191,36,0.5); color: var(--chip-warn-fg); }
+.ov-bill-chip.is-warn > i { background: var(--chip-warn-dot); }
 .ov-bill-chip.is-danger { background: rgba(239,68,68,0.18); border-color: rgba(248,113,113,0.5); color: #FCA5A5; }
 .ov-bill-chip.is-danger > i { background: #F87171; }
 [data-theme="light"] .ov-bill-chip { color: #FFFFFF; }
 [data-theme="light"] .ov-bill-chip > i { background: #FFFFFF; }
+/* The amber text and dot are yellow on the light (teal) hero: too faint. White, like the other chips. */
+[data-theme="light"] .ov-bill-chip { --chip-warn-fg: #FFFFFF; --chip-warn-dot: #FFFFFF; }
 
 /* The current plan (subscribed) or the most-bookings plan (no plan yet). */
 .ov-card.is-pick {
@@ -1494,13 +1497,14 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 
 /* Prepaid balance column (PrepaidBalanceCard). */
 .ov-bal { display: flex; flex-direction: column; padding: 24px; }
-.ov-bal-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ov-bal-top { display: flex; align-items: center; justify-content: space-between; gap: 8px 10px; flex-wrap: wrap; }
+.ov-bal-top .ov-hero-chip > i { width: 7px; height: 7px; border-radius: 50%; background: var(--ov-hero-dot); }
 .ov-bal-num {
   margin: 16px 0 6px; font-family: var(--font-mono); font-size: 44px; font-weight: 600; line-height: 1.05;
   letter-spacing: -0.03em; color: inherit; overflow-wrap: anywhere;
 }
 .ov-bal-line { margin: 0; font-size: 14px; color: var(--ov-hero-soft); }
-.ov-bal-line strong { color: inherit; font-weight: 600; font-family: var(--font-mono); }
+.ov-bal-line strong, .ov-bal-line b { color: inherit; font-weight: 600; }
 .ov-bal-label { margin: 20px 0 0; font-size: 13px; font-weight: 600; color: var(--ov-hero-soft); }
 .ov-bal-topups { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
 .ov-bal-topups .ov-hero-btn {
@@ -1512,9 +1516,12 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
   margin: 12px 0 0; display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 14px;
   background: rgba(255,255,255,0.10); border: 1px solid var(--danger-bd); font-size: 13.5px; font-weight: 600; color: inherit;
 }
-.ov-bal-err > svg { flex-shrink: 0; margin-top: 1px; color: var(--danger); }
+.ov-bal-err > svg { flex-shrink: 0; margin-top: 1px; color: inherit; }
 .ov-bal-skel { display: block; border-radius: 10px; background: rgba(255,255,255,0.16); }
 .ov-bal-card { padding: 20px 22px; }
+.ov-bal-ico { width: 36px; height: 36px; flex-shrink: 0; border-radius: 11px; display: flex; align-items: center; justify-content: center; color: var(--ov-mid); }
+.ov-bal-ico.is-sm { width: 34px; height: 34px; border-radius: 10px; }
+.ov-bal-ico.is-in { background: var(--ov-up-tint); border-color: transparent; color: var(--ov-up); }
 @media (max-width: 639.98px) {
   .ov-bal { padding: 22px 20px; }
   .ov-bal-num { font-size: 40px; }
