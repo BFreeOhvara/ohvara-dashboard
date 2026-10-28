@@ -5,7 +5,8 @@
 // gate lives in this file: field checks, a honeypot, a per-IP / per-phone rate
 // limit and a 30-day repeat-phone drop. A good lead is stored in leads as
 // lead_type 'mortgage_protection', lead_source 'meta' (migration 166), and
-// handed to assign_lead (migration 162), which also charges the agent.
+// handed to assign_lead (migration 173), which picks an opted-in agent for the
+// state under their daily cap. No charge yet; that is the prepaid-balance goal.
 //
 // The caller only ever gets { ok: true } (or a field error). A bot, a repeat
 // phone, a rate-limited caller and a real lead all look the same, and nothing

@@ -10,9 +10,9 @@
 //     → { error } 400           a field is missing or wrong
 //
 // Writes leads (lead_type 'mortgage_protection', lead_source 'meta';
-// migration 166) and calls assign_lead (migration 162, which charges through
-// 169/171). None of these is on master yet. Sends no text, email or call. All
-// the rules live in core.ts; this wires the database.
+// migration 166) and calls assign_lead (migration 173, service role only; no
+// charge). Neither is applied yet. Sends no text, email or call. All the rules
+// live in core.ts; this wires the database.
 import { createClient } from 'npm:@supabase/supabase-js'
 import { clientIp, handle, Limiter, MP_LEAD_TYPE, type Deps } from './core.ts'
 
