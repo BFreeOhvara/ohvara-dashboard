@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Inbox, CircleAlert } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { useMpLeads, useUpdateMpLeadStatus, useLeadSettings, useSaveLeadSettings, LEAD_LIMIT } from '../../hooks/useMpLeads'
+import { useMpLeads, useUpdateMpLeadStatus, useLeadSettings, useSaveLeadSettings, LEAD_LIMIT, leadTime, weekCount } from '../../hooks/useMpLeads'
 import { Switch } from '../../components/ui/Switch'
 import { US_STATES } from '../../lib/usStates'
 import { digits } from '../../lib/agentBookings'
@@ -50,13 +50,6 @@ function when(iso, tz) {
   return `${new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: tz })}, ${time}`
 }
 
-// Monday (YYYY-MM-DD) of this week in the agent's time zone.
-function mondayStr(tz) {
-  const today = new Date(`${zonedDateStr(Date.now(), tz)}T12:00:00Z`)
-  today.setUTCDate(today.getUTCDate() - ((today.getUTCDay() + 6) % 7))
-  return today.toISOString().slice(0, 10)
-}
-
 function answers(l) {
   return [
     l.homeowner != null && (l.homeowner ? 'Homeowner' : 'Renter'),
@@ -90,8 +83,7 @@ function Hero({ settings, settingsLoading, leads, tz }) {
     )
   }
   const on = deliveryOn(settings)
-  const monday = mondayStr(tz)
-  const week = leads.filter(l => l.assigned_at && zonedDateStr(new Date(l.assigned_at).getTime(), tz) >= monday).length
+  const week = weekCount(leads, tz)
   const fresh = leads.filter(l => l.status === 'new' || l.status === 'assigned').length
   const chips = on ? [
     fresh > 0 && `${fresh} new to call`,
@@ -142,7 +134,7 @@ function LeadCard({ lead, tz }) {
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <div style={grow}>
           <h3 className="ld-title" style={{ ...disp, fontSize: 19, lineHeight: 1.25, letterSpacing: '-0.01em', margin: 0 }}>{name}</h3>
-          <p style={{ ...sub, marginTop: 2 }}>{[lead.state && stateName(lead.state), when(lead.assigned_at || lead.created_at, tz)].filter(Boolean).join(' · ')}</p>
+          <p style={{ ...sub, marginTop: 2 }}>{[lead.state && stateName(lead.state), when(leadTime(lead), tz)].filter(Boolean).join(' · ')}</p>
         </div>
         <span style={{ ...chip, ...TONE[tone], flexShrink: 0 }}>{label}</span>
       </div>

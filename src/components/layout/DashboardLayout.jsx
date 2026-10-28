@@ -18,6 +18,7 @@ import { ErrorBoundary } from '../shared/ErrorBoundary'
 import { PhoneShell } from './PhoneShell'
 import { ConfirmEmailBanner } from './ConfirmEmailBanner'
 import { useIsPhone } from '../../hooks/usePhoneLayout'
+import { LEADS_PAGE } from '../../lib/leadsPage'
 
 // Shell — Prompt 669 restyle to Restorix Portal's Layout.jsx, a 32/24 padded
 // main capped at 1280px. Prompt 722 rethought the header: a 72px sticky bar
@@ -41,7 +42,7 @@ const TITLES = {
   '/agent/book': ['Book a call', 'Get your client on the calendar with Fulfillment'],
   '/agent/clients': ['My Pipeline', 'Everyone booked with Fulfillment and where each cancellation stands'],
   '/agent/activity': ['Activity', 'What happened with your clients, newest first'],
-  '/agent/leads': ['Leads', 'Delivered to you. Call or text from your own phone'],
+  ...(LEADS_PAGE ? { '/agent/leads': ['Leads', 'Delivered to you. Call or text from your own phone'] } : {}),
   '/agent/billing': ['Billing', 'Your weekly subscription and next charge'],
   '/agent/carriers': ['Carrier Portals', 'Every carrier login in one directory'],
   '/agent/stats': ['Performance', 'Production, persistency, and leaderboard — switch the view'],

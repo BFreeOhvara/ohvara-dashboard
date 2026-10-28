@@ -12,6 +12,7 @@ import { BugReportModal } from '../../components/shared/BugReportButton'
 import { AccountRows } from '../../components/shared/AccountRows'
 import { isNativeApp } from '../../lib/native'
 import { NATIVE_BILLING_TEXT } from '../../components/native/NativeBillingNote'
+import { LEADS_PAGE } from '../../lib/leadsPage'
 
 // Prompt 772 — More, the phone layout's fifth tab (mockup More.dc.html): the
 // profile, a Billing card (plan, weekly price, next charge, this week's
@@ -124,7 +125,7 @@ export default function More() {
 
       <section className="ov-card ph-menu">
         <Row icon={Activity} tone="blue" label="Activity" onClick={() => navigate('/agent/activity')} />
-        <Row icon={Inbox} tone="teal" label="Leads" onClick={() => navigate('/agent/leads')} />
+        {LEADS_PAGE && <Row icon={Inbox} tone="teal" label="Leads" onClick={() => navigate('/agent/leads')} />}
         <Row icon={UserPlus} tone="teal" label="Invite an agent" onClick={() => setModal('invite')} />
         <Row icon={Bell} tone="amber" label="Notifications" onClick={() => navigate('/settings#notifications')} />
         <button type="button" className="ph-mrow" onClick={() => setTheme(light ? 'dark' : 'light')}
