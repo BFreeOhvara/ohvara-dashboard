@@ -77,6 +77,23 @@ test('an amount not in the active options is refused, Stripe untouched', async (
   }
 })
 
+test('a price sent by the client is ignored: Stripe gets the option amount', async () => {
+  const w = world()
+  const r = await w.call('agent', {
+    amount_cents: 10000, return_url: RETURN,
+    unit_amount: 1, price: 1, price_cents: 1, currency: 'eur', metadata: { amount_cents: '1', agent_id: REP },
+    line_items: [{ quantity: 100, price_data: { currency: 'usd', unit_amount: 1 } }],
+  })
+  assert.equal(r.status, 200)
+  const { params } = w.calls[0]
+  assert.equal(params.line_items.length, 1)
+  assert.equal(params.line_items[0].quantity, 1)
+  assert.equal(params.line_items[0].price_data.unit_amount, 10000)
+  assert.equal(params.line_items[0].price_data.currency, 'usd')
+  assert.equal(params.metadata.amount_cents, '10000')
+  assert.equal(params.metadata.agent_id, AGENT)
+})
+
 test('the allow-list comes from the settings rows, not a fixed list', async () => {
   const w = world({ options: [7500] })
   assert.equal((await w.call('agent', { amount_cents: 10000, return_url: RETURN })).status, 400)
