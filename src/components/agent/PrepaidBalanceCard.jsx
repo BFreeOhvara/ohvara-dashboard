@@ -119,10 +119,10 @@ export function PrepaidBalanceCard({ agentId }) {
     return (
       <section className="ov-hero ov-bal" aria-label="Prepaid balance">
         <div className="ov-bal-top"><span className="ov-hero-chip"><Wallet size={14} strokeWidth={2.2} />Prepaid balance</span></div>
-        <h3 style={{ margin: '16px 0 0', fontFamily: DISPLAY, fontSize: 22, fontWeight: 600, letterSpacing: '-0.01em' }}>We couldn't load your balance</h3>
+        <h3 style={{ margin: '16px 0 0', fontFamily: DISPLAY, fontSize: 22, fontWeight: 600, letterSpacing: '-0.01em', color: 'inherit' }}>We couldn't load your balance</h3>
         <p className="ov-bal-line" style={{ marginTop: 6 }}>Your money is safe. Check your connection and try again.</p>
         <div className="ov-bal-topups" style={{ marginTop: 12 }}>
-          <button type="button" className="ov-hero-btn" onClick={() => refetch()} style={{ flex: '0 0 auto', height: 46, padding: '0 22px', fontSize: 15 }}>
+          <button type="button" className="ov-hero-btn" onClick={() => refetch()} style={{ flex: '0 0 auto', height: 46, padding: '0 22px', fontSize: 15, fontFamily: 'inherit' }}>
             Try again
           </button>
         </div>
