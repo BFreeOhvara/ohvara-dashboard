@@ -1477,8 +1477,12 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 .ov-bill-col.is-plan { grid-area: plan; }
 .ov-bill-col.is-pre { grid-area: pre; }
 .ov-bill-facts { grid-area: facts; min-width: 0; }
+/* Prepaid column empty (ledger tables not there yet, before migration 176):
+   no column, the plan blocks keep the full width as before. */
+.ov-bill-col.is-pre:empty { display: none; }
+.ov-bill-grid:has(> .ov-bill-col.is-pre:empty) { grid-template-areas: "notice" "plan" "facts"; }
 @container (min-width: 1040px) {
-  .ov-bill-grid {
+  .ov-bill-grid:not(:has(> .ov-bill-col.is-pre:empty)) {
     column-gap: 20px; grid-template-columns: minmax(0, 1fr) 380px; align-items: start;
     grid-template-areas: "notice notice" "plan pre" "facts facts";
   }

@@ -11,6 +11,7 @@ import { DISPLAY, MONO } from '../../lib/exportStyles'
 // from prepaid_topup_options and a same-origin return_url, the server re-checks
 // the amount and hands back a Stripe Checkout URL. No card data is handled here.
 // Three blocks, as in Dot's approved mockup: balance hero, price card, history.
+// Renders nothing while the ledger tables are missing (before migration 176).
 
 const prepaidKey = agentId => ['prepaid-balance', agentId]
 
@@ -38,6 +39,12 @@ const when = iso => {
 
 const HISTORY_ROWS = 20
 
+// Until migration 176 is applied the four tables don't exist: PostgREST answers
+// 404 / PGRST205 (not in the schema cache), Postgres 42P01. That's not a fault,
+// so the whole prepaid column stays hidden; any other failure shows the error card.
+const MISSING_TABLE = new Set(['PGRST205', '42P01'])
+const tableMissing = r => !!r.error && (MISSING_TABLE.has(r.error.code) || r.status === 404)
+
 function usePrepaid(agentId) {
   return useQuery({
     queryKey: prepaidKey(agentId),
@@ -51,7 +58,9 @@ function usePrepaid(agentId) {
         supabase.from('agent_lead_ledger').select('id, kind, amount_cents, balance_after_cents, lead_type, created_at')
           .eq('agent_id', agentId).order('created_at', { ascending: false }).limit(HISTORY_ROWS),
       ])
-      for (const r of [bal, prices, options, ledger]) if (r.error) throw r.error
+      const all = [bal, prices, options, ledger]
+      if (all.some(tableMissing)) return { missing: true }
+      for (const r of all) if (r.error) throw r.error
       return {
         balance: bal.data?.balance_cents ?? 0,
         prices: prices.data || [],
@@ -114,6 +123,9 @@ export function PrepaidBalanceCard({ agentId }) {
       </>
     )
   }
+
+  // Hidden before 176; BillingPanel then drops the empty column (CSS :has).
+  if (data?.missing) return null
 
   if (isError || !data) {
     return (
