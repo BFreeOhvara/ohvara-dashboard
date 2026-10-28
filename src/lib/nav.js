@@ -1,7 +1,6 @@
 import {
-  Users, Home, Settings, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard, Phone, Inbox,
+  Users, Home, Settings, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard, Phone,
 } from 'lucide-react'
-import { LEADS_PAGE } from './leadsPage'
 
 // Each role's sidebar, grouped. Moved out of Sidebar.jsx by Prompt 722 so the
 // page header (group / page name / icon) and the header search's "Go to" read
@@ -20,8 +19,7 @@ export const NAV = {
       { to: '/agent/clients', label: 'My Pipeline', icon: Users },
       // Prompt 690 — chronological log of what happened, next to My Pipeline.
       { to: '/agent/activity', label: 'Activity', icon: History },
-      // P808: Leads shows only in a local VITE_LEADS_PAGE=1 build (lib/leadsPage.js).
-      ...(LEADS_PAGE ? [{ to: '/agent/leads', label: 'Leads', icon: Inbox }] : []),
+      // P808: Leads hidden until its migrations are live and the page is approved.
     ] },
     // Prompt 680 — Messages gets its own single-item group, as in Restorix.
     { group: 'Communications', items: [
@@ -90,7 +88,6 @@ export function navEntry(role, pathname) {
 export const PAGE_TONE = {
   '/agent/book': 'teal',
   '/agent/activity': 'violet',
-  '/agent/leads': 'teal',
   '/agent/billing': 'amber',
   '/settings': 'slate',
 }
