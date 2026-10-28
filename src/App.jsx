@@ -13,7 +13,6 @@ import './lib/installPrompt'
 
 import Login from './pages/Login'
 import Join from './pages/Join'
-import MortgageProtection from './pages/MortgageProtection'
 import ProtectLanding from './pages/public/ProtectLanding'
 import ConfirmEmail from './pages/ConfirmEmail'
 import ResetPassword from './pages/ResetPassword'
@@ -57,6 +56,12 @@ function AdminTo({ to, children }) {
   return children
 }
 
+// Old /mp ad links forward to /protect with the query string (utm tags) kept.
+function MpToProtect() {
+  const { search } = useLocation()
+  return <Navigate to={{ pathname: '/protect', search }} replace />
+}
+
 function RoleRedirect() {
   const { profile, loading } = useAuth()
   // Prompt 323 investigation — this is the installed PWA's start_url ('/'),
@@ -97,9 +102,9 @@ export default function App() {
             <Route path="/join" element={<Join />} />
             <Route path="/join/:token" element={<Join />} />
             <Route path="/j/:token" element={<Join />} />
-            {/* Public mortgage-protection qualifier; no login. Posts to submit-mp-lead. */}
-            <Route path="/mp" element={<MortgageProtection />} />
-            {/* Public mortgage-protection landing + qualifier; no login. Posts to submit-mp-lead. */}
+            {/* /protect is the one public mortgage-protection page (landing + qualifier; no
+                login; posts to submit-mp-lead). /mp forwards to it, utm tags kept. */}
+            <Route path="/mp" element={<MpToProtect />} />
             <Route path="/protect" element={<ProtectLanding />} />
             <Route path="/confirm-email" element={<ConfirmEmail />} />
             <Route path="/reset-password" element={<ResetPassword />} />
