@@ -1,0 +1,300 @@
+{
+  "passes": [
+    {
+      "route": "today",
+      "width": 1920,
+      "theme": "light",
+      "duty": "live",
+      "shots": [
+        "today-1920-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1905,
+      "innerWidth": 1920,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "today",
+      "width": 1920,
+      "theme": "dark",
+      "duty": "live",
+      "shots": [
+        "today-1920-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1905,
+      "innerWidth": 1920,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "today",
+      "width": 1440,
+      "theme": "light",
+      "duty": "live",
+      "shots": [
+        "today-1440-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1425,
+      "innerWidth": 1440,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "today",
+      "width": 1440,
+      "theme": "dark",
+      "duty": "live",
+      "shots": [
+        "today-1440-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1425,
+      "innerWidth": 1440,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "today",
+      "width": 390,
+      "theme": "light",
+      "duty": "live",
+      "shots": [
+        "today-390-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "today",
+      "width": 390,
+      "theme": "dark",
+      "duty": "live",
+      "shots": [
+        "today-390-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "inbounds",
+      "width": 1920,
+      "theme": "light",
+      "duty": "live",
+      "shots": [
+        "inbounds-booked-1920-light.png",
+        "inbounds-live-1920-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1905,
+      "innerWidth": 1920,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "inbounds",
+      "width": 1920,
+      "theme": "dark",
+      "duty": "live",
+      "shots": [
+        "inbounds-booked-1920-dark.png",
+        "inbounds-live-1920-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1905,
+      "innerWidth": 1920,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "inbounds",
+      "width": 1440,
+      "theme": "light",
+      "duty": "live",
+      "shots": [
+        "inbounds-booked-1440-light.png",
+        "inbounds-live-1440-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1425,
+      "innerWidth": 1440,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "inbounds",
+      "width": 1440,
+      "theme": "dark",
+      "duty": "live",
+      "shots": [
+        "inbounds-booked-1440-dark.png",
+        "inbounds-live-1440-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1425,
+      "innerWidth": 1440,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "inbounds",
+      "width": 390,
+      "theme": "light",
+      "duty": "live",
+      "shots": [
+        "inbounds-booked-390-light.png",
+        "inbounds-live-390-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "inbounds",
+      "width": 390,
+      "theme": "dark",
+      "duty": "live",
+      "shots": [
+        "inbounds-booked-390-dark.png",
+        "inbounds-live-390-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "detail",
+      "width": 1920,
+      "theme": "light",
+      "duty": "live",
+      "shots": [
+        "detail-1920-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1905,
+      "innerWidth": 1920,
+      "upcoming": 4,
+      "failures": []
+    },
+    {
+      "route": "detail",
+      "width": 1920,
+      "theme": "dark",
+      "duty": "live",
+      "shots": [
+        "detail-1920-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1905,
+      "innerWidth": 1920,
+      "upcoming": 4,
+      "failures": []
+    },
+    {
+      "route": "detail",
+      "width": 1440,
+      "theme": "light",
+      "duty": "live",
+      "shots": [
+        "detail-1440-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1425,
+      "innerWidth": 1440,
+      "upcoming": 4,
+      "failures": []
+    },
+    {
+      "route": "detail",
+      "width": 1440,
+      "theme": "dark",
+      "duty": "live",
+      "shots": [
+        "detail-1440-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1425,
+      "innerWidth": 1440,
+      "upcoming": 4,
+      "failures": []
+    },
+    {
+      "route": "detail",
+      "width": 390,
+      "theme": "light",
+      "duty": "live",
+      "shots": [
+        "detail-390-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "upcoming": 4,
+      "failures": []
+    },
+    {
+      "route": "detail",
+      "width": 390,
+      "theme": "dark",
+      "duty": "live",
+      "shots": [
+        "detail-390-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "upcoming": 4,
+      "failures": []
+    }
+  ],
+  "extra": [
+    {
+      "check": "agent_duty 404, Today 1440 light",
+      "failures": []
+    },
+    {
+      "check": "agent_duty 404, Today 1440 dark",
+      "failures": []
+    },
+    {
+      "check": "explainers: booked, first view=open; booked, second view=collapsed; live, first view=open; live, second view=collapsed; booked, opened by the agent=open; booked, after reload (choice remembered)=open; booked, closed again then reload=collapsed",
+      "failures": []
+    },
+    {
+      "check": "Sold click: timeline 13 -> 15 steps, outcome + became_client shown, 1 set_inbound_outcome(sold)",
+      "failures": []
+    },
+    {
+      "check": "failed save rolls back with Try again; retry saves; note saves",
+      "failures": []
+    },
+    {
+      "check": "flag off: old Overview (no v2 shell, old sidebar: Overview|Book a call|My Pipeline|Activity|Messages|Billing|Settings)",
+      "failures": []
+    },
+    {
+      "check": "flag off: /agent/inbounds goes back to /agent",
+      "failures": []
+    },
+    {
+      "check": "flag on, ?portal=v1: old Overview (no v2 shell, old sidebar: Overview|Book a call|My Pipeline|Activity|Messages|Billing|Settings)",
+      "failures": []
+    },
+    {
+      "check": "flag off and ?portal=v1 render the same Overview text",
+      "failures": []
+    }
+  ]
+}
