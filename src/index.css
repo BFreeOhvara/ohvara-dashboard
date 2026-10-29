@@ -3115,33 +3115,6 @@ a.ov-hpill:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; 
   .lc-fine { font-size: 12px; }
 }
 @media (prefers-reduced-motion: reduce) { .lc-skel { animation: none; } }
-/* Prompt 763 — Admin Overview fits one screen. From 1280px wide and 700px tall the page is the height under the
-   header (like .ov-fit does for the Pipelines, from 900), the chart takes the height the cards leave, and the Needs
-   you list scrolls inside its box with Open Payouts pinned under it. Shorter or narrower, the page scrolls as before. */
-@media (min-width: 1280px) and (min-height: 700px) {
-  .ov-fitao { height: 100dvh; min-height: 0 !important; overflow: hidden; }
-  .ov-fitao .app-main { min-height: 0; }
-  .ov-fitao .ov-fitao-main { min-height: 0; display: flex; flex-direction: column; padding-top: 24px !important; padding-bottom: 24px !important; }
-  .ov-fitao .ov-fitao-main > div { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
-  .ov-fitao .ao-page { flex: 1 1 0; min-height: 0; }
-  .ov-fitao .ao-page > .ov-hero { flex-shrink: 0; }
-  .ov-fitao .ao-grid { flex: 1 1 0; min-height: 0; grid-template-rows: minmax(0, 200px) minmax(0, 1fr); }
-  .ov-fitao .ao-stat, .ov-fitao .ao-chart, .ov-fitao .ao-needs { min-height: 0; }
-  .ov-fitao .ao-stat { gap: 12px; }
-  .ov-fitao .ao-chart-body { min-height: 0; }
-  .ov-fitao .ao-plot { min-height: 0; align-items: stretch; }
-  .ov-fitao .ao-day { height: 100%; }
-  .ov-fitao .ao-bars { flex: 1 1 0; min-height: 0; height: auto; }
-  .ov-fitao .ao-need-list { flex: 1 1 0; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(134,151,181,0.35) transparent; }
-}
-@media (min-width: 1280px) and (min-height: 700px) and (max-height: 819.98px) {
-  .ov-fitao .ao-grid { grid-template-rows: minmax(0, 156px) minmax(0, 1fr); }
-  .ov-fitao .ao-stat { padding: 14px 22px; gap: 8px; }
-  .ov-fitao .ao-num { font-size: 44px; }
-  .ov-fitao .ao-chip { margin-top: 6px; }
-  .ov-fitao .ao-strip { height: 52px; }
-  .ov-fitao .ao-needs { padding: 16px 20px; }
-}
 
 /* ── Prompt 760 — Admin Fulfillment: the whole desk, as dots ─────────────── */
 .af-page { display: flex; flex-direction: column; gap: 14px; --af-ring: #10121A; }
