@@ -18,6 +18,8 @@ import { phoneText } from '../../../lib/policyFormat'
 import { NotificationBell } from '../../notifications/NotificationBell'
 import { Avatar } from '../../ui/Avatar'
 import { LoadError } from '../../agent/AgentUI'
+import { useLeadCapacity } from '../../../hooks/useLeadCapacity'
+import { LeadCapacityCard } from '../LeadCapacityCard'
 import { ListenSheet } from './ListenSheet'
 import { PhoneToast } from './PhoneToast'
 import { useAdminPay } from './useAdminPay'
@@ -67,6 +69,7 @@ export function AdminPhoneHome() {
   const tz = profile?.timezone || DEFAULT_TIMEZONE
   const [listenId, setListenId] = useState(null)
   const [toast, setToast] = useState(null)
+  const capacityQ = useLeadCapacity()
 
   const queueQ = useFulfillmentQueue()
   const { data: queue = [], isLoading: queueLoading } = queueQ
@@ -244,6 +247,8 @@ export function AdminPhoneHome() {
         </span>
         <WeekChart days={week.days} todayIdx={frame.todayIdx} />
       </section>
+
+      <LeadCapacityCard data={capacityQ.data} loading={capacityQ.isLoading} error={capacityQ.error} onRetry={() => capacityQ.refetch()} />
 
       {listenCard && (
         <ListenSheet c={listenCard} rep={profiles.find(p => p.id === listenCard.rep_id)} tz={tz} onClose={() => setListenId(null)}

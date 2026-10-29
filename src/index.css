@@ -3051,6 +3051,70 @@ a.ov-hpill:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; 
 .ao-need.is-mute { --need: var(--ov-mute); }
 .ao-need-dot { width: 9px; height: 9px; flex-shrink: 0; border-radius: 50%; background: var(--need); }
 .ao-need-act { flex-shrink: 0; font-size: 12.5px; font-weight: 700; color: var(--need); }
+/* Lead capacity card (LeadCapacityCard.jsx): Overview under the grid, phone Home under This week. It lays itself
+   out from its own width: from 620px the copy button sits top right, from 900px the four tiles are one row, under
+   480px it is the phone size. Amber only on "Unassigned now" above 0. */
+.lc { container-type: inline-size; color: var(--ov-hi); min-width: 0; }
+.lc-in { box-sizing: border-box; padding: 22px 26px; display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); grid-template-areas: "head" "tiles" "act" "foot"; }
+.lc-in.no-foot { grid-template-areas: "head" "tiles" "act"; }
+.lc-in.is-err { grid-template-areas: "head" "tiles"; }
+@container (min-width: 620px) {
+  .lc-in { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "head act" "tiles tiles" "foot foot"; align-items: center; }
+  .lc-in.no-foot { grid-template-areas: "head act" "tiles tiles"; }
+  .lc-in.is-err { grid-template-areas: "head head" "tiles tiles"; }
+}
+.lc-head { grid-area: head; display: flex; align-items: center; gap: 12px; min-width: 0; }
+.lc-grow { flex: 1; min-width: 0; }
+.lc-ic { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; flex-shrink: 0; background: var(--ov-data-a-tint); color: var(--ov-data-a); }
+.lc-h { margin: 0; font-family: var(--font-display); font-size: 19px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; color: var(--ov-hi); }
+.lc-sub { margin: 2px 0 0; font-size: 13px; color: var(--ov-mute); }
+.lc-act { grid-area: act; display: flex; flex-direction: column; align-items: stretch; gap: 8px; min-width: 0; }
+.lc-act .ov-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 48px; padding: 0 18px;
+  box-sizing: border-box; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer;
+}
+.lc-act .ov-ghost:disabled { opacity: .5; cursor: not-allowed; }
+.lc-act .ov-ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@container (min-width: 620px) { .lc-act { align-items: flex-end; } .lc-act .ov-ghost { width: auto; height: 44px; } }
+.lc-done { margin: 0; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12.5px; color: var(--ov-mute); }
+.lc-tiles { grid-area: tiles; display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@container (min-width: 900px) { .lc-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; } }
+.lc-tile { box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 16px 18px; border-radius: 16px; }
+.lc-l, .lc-n { margin: 0; }
+.lc-l { font-size: 14px; font-weight: 600; color: var(--ov-mid); }
+.lc-n { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-family: var(--font-display); font-weight: 600; font-variant-numeric: tabular-nums; font-size: 52px; line-height: 1; letter-spacing: -0.035em; color: var(--ov-hi); }
+.lc-n small { font-family: var(--font-ui); font-size: 15px; font-weight: 500; letter-spacing: 0; color: var(--ov-mute); }
+.lc-n.is-word { font-size: 26px; letter-spacing: -0.02em; line-height: 1.1; }
+.lc-n.is-dash { color: var(--ov-faint); }
+.lc-s { margin: auto 0 0; font-size: 13px; line-height: 1.4; color: var(--ov-mute); overflow-wrap: anywhere; }
+.lc-s strong { color: var(--ov-hi); font-weight: 700; }
+.lc .lc-tile.is-attn { background: var(--ov-warn-tint); border-color: color-mix(in srgb, var(--ov-warn) 35%, transparent); }
+.lc .lc-tile.is-attn .lc-l, .lc .lc-tile.is-attn .lc-n { color: var(--ov-warn); }
+.lc-skel { display: block; border-radius: 8px; background: var(--ov-stub); animation: pulseDot 1.4s ease-in-out infinite; }
+.lc-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.lc-nw { white-space: nowrap; }
+.lc-foot { grid-area: foot; display: flex; flex-direction: column; gap: 10px; padding-top: 16px; border-top: 1px solid var(--ov-line); min-width: 0; }
+.lc-prices { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.lc-pl { font-size: 13px; font-weight: 700; color: var(--ov-mid); margin-right: 2px; }
+.lc-price { box-sizing: border-box; max-width: 100%; display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-height: 30px; padding: 5px 6px 5px 12px; border-radius: 15px; background: var(--ov-stub); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.lc-price b { font-weight: 600; }
+.lc-price.is-none { padding: 5px 12px; color: var(--ov-mute); }
+.lc-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; border: 1px dashed var(--ov-faint); font-size: 11.5px; font-weight: 600; color: var(--ov-mute); }
+.lc-fine { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--ov-mute); }
+.lc-copytext { margin: 0; padding: 14px 16px; border-radius: 14px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; color: var(--ov-mid); white-space: pre-wrap; overflow-wrap: anywhere; user-select: all; }
+@container (max-width: 480px) {
+  .lc-in { padding: 16px; gap: 14px; }
+  .lc-h { font-size: 18px; }
+  .lc-tiles { gap: 10px; }
+  .lc-tile { padding: 14px; gap: 8px; border-radius: 14px; }
+  .lc-l { font-size: 13px; }
+  .lc-n { font-size: 40px; }
+  .lc-n small { font-size: 13.5px; }
+  .lc-n.is-word { font-size: 21px; }
+  .lc-s { font-size: 12.5px; }
+  .lc-fine { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .lc-skel { animation: none; } }
 /* Prompt 763 — Admin Overview fits one screen. From 1280px wide and 700px tall the page is the height under the
    header (like .ov-fit does for the Pipelines, from 900), the chart takes the height the cards leave, and the Needs
    you list scrolls inside its box with Open Payouts pinned under it. Shorter or narrower, the page scrolls as before. */

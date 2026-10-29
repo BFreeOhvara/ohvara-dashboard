@@ -17,6 +17,8 @@ import { roleLabel } from '../../lib/roleLabels'
 import { MONO } from '../../lib/exportStyles'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { AdminPhoneHome } from '../../components/admin/phone/AdminPhoneHome'
+import { LeadCapacityCard } from '../../components/admin/LeadCapacityCard'
+import { useLeadCapacity } from '../../hooks/useLeadCapacity'
 
 // Admin Overview (Prompt 758), ported from media/admin-redesign/admin-overview.dc.html.
 // Five boxes: the hero, two week cards (calls booked, cancelled), "This week,
@@ -151,6 +153,7 @@ function AdminOverviewDesktop() {
 
   const queueQ = useFulfillmentQueue()
   const { data: queue = [], isLoading: queueLoading } = queueQ
+  const capacityQ = useLeadCapacity()
   const anyLive = queue.some(isLive)
   const todayStr = zonedDateStr(now, tz)
   const frame = useMemo(() => weekFrame(todayStr, tz), [todayStr, tz])
@@ -295,6 +298,8 @@ function AdminOverviewDesktop() {
 
         <DayChart days={week.days} todayIdx={frame.todayIdx} loading={chartLoading} />
       </div>
+
+      <LeadCapacityCard data={capacityQ.data} loading={capacityQ.isLoading} error={capacityQ.error} onRetry={() => capacityQ.refetch()} />
     </div>
   )
 }
