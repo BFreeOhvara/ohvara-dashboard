@@ -8,7 +8,8 @@
 //             conference. The agent is picked here, never by the browser.
 //             Nobody on duty: status no_answer and code no_agent, so the desk
 //             offers "Book instead". help-voice ?event=agent_leg moves the row
-//             to transferred (the agent answered) or back to no_answer.
+//             to transferred (a person answered) or back to no_answer
+//             (voicemail, fax, unknown or no answer: agentLegParams).
 //   drop      the VA hangs up their own leg once the agent has answered. The
 //             conference is never ended here: the VA joined with
 //             endConferenceOnExit false, so the caller and agent keep talking.
