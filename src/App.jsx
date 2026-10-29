@@ -29,11 +29,14 @@ import AgentClients from './pages/agent/Clients'
 import AgentActivity from './pages/agent/Activity'
 import AgentBilling from './pages/agent/Billing'
 import AgentMore from './pages/agent/More'
-// The v2 agent portal (app_settings.agent_portal_v2, off by default): Today, Inbounds, Inbound detail.
-// Lazy, so a flag-off agent never downloads it.
+// The v2 agent portal (app_settings.agent_portal_v2, off by default): Today, Inbounds, Inbound detail,
+// Calendar, Clients, Plan & billing. Lazy, so a flag-off agent never downloads it.
 const V2Today = lazy(() => import('./pages/agent/v2/Today'))
 const V2Inbounds = lazy(() => import('./pages/agent/v2/Inbounds'))
 const V2InboundDetail = lazy(() => import('./pages/agent/v2/InboundDetail'))
+const V2Calendar = lazy(() => import('./pages/agent/v2/Calendar'))
+const V2Clients = lazy(() => import('./pages/agent/v2/Clients'))
+const V2Plan = lazy(() => import('./pages/agent/v2/Plan'))
 // P808: Leads mounts only in dev behind VITE_LEADS_PAGE=1; otherwise the page is not in the bundle.
 // The DEV check sits here, in this file, so a production build drops the import() and the chunk.
 const AgentLeads = import.meta.env.DEV && LEADS_PAGE ? lazy(() => import('./pages/agent/Leads')) : null
@@ -79,6 +82,14 @@ function AgentHome() {
   if (v2.loading) return <Spinner />
   if (v2.on) return <Suspense fallback={<Spinner />}><V2Today /></Suspense>
   return <DashboardLayout><AgentOverview /></DashboardLayout>
+}
+
+// /agent/clients: the v2 Clients when the flag is on, else My Pipeline exactly as before (?portal=v1 too).
+function AgentClientsRoute() {
+  const v2 = usePortalV2()
+  if (v2.loading) return <Spinner />
+  if (v2.on) return <Suspense fallback={<Spinner />}><V2Clients /></Suspense>
+  return <DashboardLayout><AgentClients /></DashboardLayout>
 }
 
 // The v2-only routes: with the flag off they go back to /agent.
@@ -177,7 +188,7 @@ export default function App() {
                 <AgentHome />
               </ProtectedRoute>
             } />
-            {/* v2 portal: Inbounds list and one inbound (flag off: back to /agent). */}
+            {/* v2 portal: Inbounds list, one inbound, Calendar, Plan & billing (flag off: back to /agent). */}
             <Route path="/agent/inbounds" element={
               <ProtectedRoute allowedRoles={['agent']}>
                 <V2Only><V2Inbounds /></V2Only>
@@ -188,6 +199,16 @@ export default function App() {
                 <V2Only><V2InboundDetail /></V2Only>
               </ProtectedRoute>
             } />
+            <Route path="/agent/calendar" element={
+              <ProtectedRoute allowedRoles={['agent']}>
+                <V2Only><V2Calendar /></V2Only>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/plan" element={
+              <ProtectedRoute allowedRoles={['agent']}>
+                <V2Only><V2Plan /></V2Only>
+              </ProtectedRoute>
+            } />
             <Route path="/agent/book" element={
               <ProtectedRoute allowedRoles={['agent', 'admin']}>
                 <DashboardLayout><AgentBookCall /></DashboardLayout>
@@ -195,7 +216,7 @@ export default function App() {
             } />
             <Route path="/agent/clients" element={
               <ProtectedRoute allowedRoles={['agent', 'admin']}>
-                <AdminTo to="/admin/pipeline"><DashboardLayout><AgentClients /></DashboardLayout></AdminTo>
+                <AdminTo to="/admin/pipeline"><AgentClientsRoute /></AdminTo>
               </ProtectedRoute>
             } />
             {/* Prompt 690 — Activity: chronological log (policy_events +
