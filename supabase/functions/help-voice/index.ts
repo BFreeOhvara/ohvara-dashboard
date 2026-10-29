@@ -55,6 +55,10 @@ const store: Store = {
     if (error) throw error
     return data
   },
+  async setLeadTransferStatus(leadId, status) {
+    const { error } = await admin.from('leads').update({ transfer_status: status }).eq('id', leadId)
+    if (error) throw error
+  },
 }
 
 Deno.serve(req => handle(req, store, SID && TOKEN ? twilioClient(SID, TOKEN) : null, {
