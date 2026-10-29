@@ -11,9 +11,11 @@
 //            ringing VA legs are canceled; a later one is hung up.
 //   va_leg   a VA leg's call status. Once every VA leg has ended and nobody
 //            joined, the caller hears a short message and is hung up.
-//   agent_leg the agent help-transfer dialed in: answered = transferred,
-//            ended unanswered = no_answer.
-//   conf     the conference's events: its start, and its end.
+//   agent_leg the agent help-transfer dialed in: answered by a person =
+//            transferred; voicemail, fax, unknown or no answer = no_answer.
+//   conf     the conference's events: its start, a participant leaving, and
+//            its end. When the VA or the agent leaves and nobody but the
+//            caller is left, the whole conference is completed.
 //
 // help-transfer reuses helpConferenceName, helpConference, HelpCall and Store.
 
@@ -55,6 +57,9 @@ export interface Store {
   // whenStatus: update only while the row has one of these statuses. The
   // updated row, or null when nothing matched.
   updateHelpCall(callSid: string, patch: Partial<HelpCall>, whenStatus?: HelpStatus[]): Promise<HelpCall | null>
+  // leads.transfer_status (175) on the call's lead: 'connected' once a person
+  // answers the agent leg, 'dropped' when nobody does or the call ends alone.
+  setLeadTransferStatus(leadId: string, status: 'connected' | 'dropped'): Promise<void>
 }
 
 // trackingNumber: HELP_TRACKING_NUMBER (read-only config), the VA legs' From.
@@ -63,6 +68,10 @@ export type Env = { authToken: string | null; publicUrl: string; trackingNumber?
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const SID = /^CA[0-9a-zA-Z]{1,64}$/
 const FINAL = ['completed', 'busy', 'no-answer', 'failed', 'canceled']
+// A row that hasn't ended yet.
+const OPEN: HelpStatus[] = ['ringing', 'live', 'transferring', 'transferred', 'no_answer']
+// Conference participant statuses that are no longer on the call.
+const LEFT = ['complete', 'failed']
 const SORRY = 'Sorry, no one can take your call right now. Please call back soon.'
 
 const twiml = (inner = '') =>
@@ -192,27 +201,126 @@ async function vaLeg(store: Store, twilio: Twilio | null, callSid: string, form:
   return twiml()
 }
 
-// The agent leg help-transfer dialed into the conference. Answered: the call
-// is transferred and the VA may drop. Ended before that: no_answer, so the
-// desk offers to book instead. Only while the row is transferring, and only
-// for the leg on the row (one from an earlier attempt changes nothing).
-async function agentLeg(store: Store, callSid: string, form: Record<string, string>) {
+// The lead's transfer_status follows the call. A lead write that fails (175
+// not applied yet) is logged and never breaks the call itself.
+async function markLead(store: Store, row: HelpCall, status: 'connected' | 'dropped') {
+  if (!row.lead_id) return
+  try { await store.setLeadTransferStatus(row.lead_id, status) } catch (e) {
+    console.error('lead transfer_status failed:', row.lead_id, status, (e as Error).message)
+  }
+}
+
+// Who picked up the agent's phone leg (help-transfer turns machine detection
+// on there): the callback's AnsweredBy, else the call's answered_by.
+async function answeredBy(twilio: Twilio | null, sid: string, form: Record<string, string>) {
+  if (form.AnsweredBy) return form.AnsweredBy
+  if (!twilio || !SID.test(sid)) return 'unknown'
+  const res = await twilio('GET', `/Calls/${sid}.json`).catch(() => null)
+  return (res && res.status < 400 && res.data?.answered_by) || 'unknown'
+}
+
+// The caller has no VA and no agent with them: complete the conference itself
+// (not only the caller's leg), close the row and drop the lead's transfer.
+// Twilio's participant list decides: anyone other than the caller and the
+// legs in `leaving` still queued, ringing or connected counts as company. No
+// list (an error, or the conference is already over): change nothing.
+async function endIfAlone(store: Store, twilio: Twilio, row: HelpCall, confSid: string | null, leaving: string[]) {
+  if (!confSid) return
+  const res = await twilio('GET', `/Conferences/${confSid}/Participants.json`).catch(() => null)
+  const list = res && res.status < 400 ? res.data?.participants : null
+  if (!Array.isArray(list)) {
+    if (res?.status !== 404) console.error('participants check failed:', confSid, res?.status, res?.data?.message)
+    return
+  }
+  const on = list.filter((p: any) => !LEFT.includes(p?.status) && !leaving.includes(p?.call_sid))
+  if (on.some((p: any) => p.call_sid !== row.call_sid)) return
+  const callerOn = on.some((p: any) => p.call_sid === row.call_sid)
+  // Claim the end first, so only one callback completes the conference.
+  const ended = await store.updateHelpCall(row.call_sid, {
+    status: 'ended', ended_at: now(), end_reason: callerOn ? 'caller_alone' : 'caller_hung_up',
+    ...(row.outcome == null ? { outcome: 'dropped' as const } : null),
+  }, OPEN)
+  if (!ended) return
+  if (callerOn) {
+    const done = await twilio('POST', `/Conferences/${confSid}.json`, { Status: 'completed' }).catch(() => null)
+    if (!done || done.status >= 400) console.error('end conference failed:', confSid, done?.status, done?.data?.message)
+  }
+  if (row.transfer_agent_id) await markLead(store, ended, 'dropped')
+}
+
+// The agent leg help-transfer dialed into the conference. Answered by a
+// person: the call is transferred and the VA may drop. On the phone leg (amd)
+// only AnsweredBy 'human' counts; machine_start, machine_end_beep / _silence /
+// _other, fax and unknown are voicemail or nobody, and so is no answer within
+// the leg's Timeout. Not answered: the leg is hung up and the row goes back to
+// no_answer (end_reason voicemail or no-answer), so the desk offers another
+// try or Book instead (Goal 9's fallback). Only while the row is
+// transferring, and only for the leg on the row (one from an earlier attempt
+// changes nothing).
+async function agentLeg(store: Store, twilio: Twilio | null, callSid: string, form: Record<string, string>, amd: boolean) {
   const s = form.CallStatus || ''
-  const answered = s === 'in-progress' || s === 'answered'
-  if (!answered && !FINAL.includes(s)) return twiml()
+  const picked = s === 'in-progress' || s === 'answered'
+  if (!picked && !FINAL.includes(s)) return twiml()
   const row = await store.helpCall(callSid)
   if (!row || row.status !== 'transferring') return twiml()
-  if (row.agent_call_sid && form.CallSid !== row.agent_call_sid) return twiml()
-  await store.updateHelpCall(callSid, answered
-    ? { status: 'transferred', transferred_at: now(), outcome: 'transferred' }
-    : { status: 'no_answer', agent_call_sid: null }, ['transferring'])
+  const leg = form.CallSid || ''
+  if (row.agent_call_sid && leg !== row.agent_call_sid) return twiml()
+
+  const by = picked && amd ? await answeredBy(twilio, leg, form) : null
+  if (picked && (!amd || by === 'human')) {
+    const won = await store.updateHelpCall(callSid,
+      { status: 'transferred', transferred_at: now(), outcome: 'transferred', end_reason: null }, ['transferring'])
+    if (won) await markLead(store, won, 'connected')
+    return twiml()
+  }
+
+  const back = await store.updateHelpCall(callSid,
+    { status: 'no_answer', agent_call_sid: null, end_reason: by?.startsWith('machine_') ? 'voicemail' : 'no-answer' }, ['transferring'])
+  if (!back) return twiml()
+  // A machine picked up, so the leg is live: hang it up. An ended leg is left alone.
+  if (picked && twilio && SID.test(leg)) {
+    const res = await twilio('POST', `/Calls/${leg}.json`, { Status: 'completed' }).catch(() => null)
+    if (!res || res.status >= 400) console.error('hang up agent leg failed:', leg, res?.status, res?.data?.message)
+  }
+  await markLead(store, back, 'dropped')
+  // The VA is already gone too: the caller would sit alone, so end the call.
+  if (twilio) await endIfAlone(store, twilio, back, row.conference_sid, SID.test(leg) ? [leg] : [])
   return twiml()
+}
+
+// A participant left. The leg is told by its CallSid against the row's stored
+// SIDs (the agent leg also by its 'agent' label), never by order.
+//   the caller   the conference ends with them (endConferenceOnExit true):
+//                close the row, nothing to hang up.
+//   VA or agent  nobody else with the caller: end the call. The agent leaving
+//                while the VA is on changes nothing.
+// A repeated or late callback, or one for a row already ended, is a no-op.
+// While still ringing (no VA joined yet) conference-end handles the caller.
+async function participantLeave(store: Store, twilio: Twilio | null, callSid: string, form: Record<string, string>) {
+  const row = await store.helpCall(callSid)
+  if (!row || row.status === 'ended' || row.status === 'ringing') return
+  const leg = form.CallSid || ''
+  if (!SID.test(leg)) return
+  if (leg === row.call_sid) {
+    const ended = await store.updateHelpCall(callSid, {
+      status: 'ended', ended_at: now(), end_reason: 'caller_hung_up',
+      ...(row.outcome == null ? { outcome: 'dropped' as const } : null),
+    }, OPEN)
+    if (ended && row.transfer_agent_id) await markLead(store, ended, 'dropped')
+    return
+  }
+  const isVa = leg === row.va_call_sid
+  const isAgent = leg === row.agent_call_sid || form.ParticipantLabel === 'agent'
+  if (!isVa && !isAgent) return
+  if (twilio) await endIfAlone(store, twilio, row, form.ConferenceSid || row.conference_sid, [leg])
 }
 
 async function conf(store: Store, twilio: Twilio | null, callSid: string, form: Record<string, string>) {
   const e = form.StatusCallbackEvent
   if (e === 'conference-start') {
     if (form.ConferenceSid) await store.updateHelpCall(callSid, { conference_sid: form.ConferenceSid })
+  } else if (e === 'participant-leave') {
+    await participantLeave(store, twilio, callSid, form)
   } else if (e === 'conference-end') {
     const row = await store.helpCall(callSid)
     if (!row || row.status === 'ended') return twiml()
@@ -242,7 +350,7 @@ export async function handle(req: Request, store: Store, twilio: Twilio | null, 
 
   if (event === 'va_join') return vaJoin(store, twilio, env, callSid, q.get('va') || '', form.CallSid || '')
   if (event === 'va_leg') return vaLeg(store, twilio, callSid, form)
-  if (event === 'agent_leg') return agentLeg(store, callSid, form)
+  if (event === 'agent_leg') return agentLeg(store, twilio, callSid, form, q.get('amd') === '1')
   if (event === 'conf') return conf(store, twilio, callSid, form)
   return twiml()
 }

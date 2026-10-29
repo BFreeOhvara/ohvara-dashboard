@@ -125,7 +125,8 @@ test('5. an agent on duty: exactly one Participants POST, EndConferenceOnExit fa
   assert.equal(p[0].path, '/Conferences/CF1/Participants.json')
   assert.deepEqual(p[0].params, {
     From: '+15125550199', To: '+15125550142', Label: 'agent', Beep: 'false', EndConferenceOnExit: 'false', Timeout: '25',
-    StatusCallback: 'https://x.supabase.co/functions/v1/help-voice?event=agent_leg&call=CA123', StatusCallbackMethod: 'POST',
+    MachineDetection: 'Enable', MachineDetectionTimeout: '10',
+    StatusCallback: 'https://x.supabase.co/functions/v1/help-voice?event=agent_leg&call=CA123&amd=1', StatusCallbackMethod: 'POST',
     StatusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
   })
   const r = w.rows[0]
