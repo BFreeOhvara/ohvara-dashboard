@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from './hooks/useAuth'
@@ -7,13 +8,14 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 import { ErrorBoundary } from './components/shared/ErrorBoundary'
 import { NativeBridge } from './components/native/NativeBridge'
+import { LEADS_PAGE } from './lib/leadsPage'
+import { usePortalV2 } from './lib/portalV2'
 // Side-effect import — attaches the beforeinstallprompt listener at app
 // boot (Prompt 286) so it's never missed while the user is still on Login.
 import './lib/installPrompt'
 
 import Login from './pages/Login'
 import Join from './pages/Join'
-import MortgageProtection from './pages/MortgageProtection'
 import ProtectLanding from './pages/public/ProtectLanding'
 import ConfirmEmail from './pages/ConfirmEmail'
 import ResetPassword from './pages/ResetPassword'
@@ -27,9 +29,16 @@ import AgentClients from './pages/agent/Clients'
 import AgentActivity from './pages/agent/Activity'
 import AgentBilling from './pages/agent/Billing'
 import AgentMore from './pages/agent/More'
-// P808: Leads hidden until migration 161 is live and Brayden approves the page.
-// import AgentLeads from './pages/agent/Leads'
+// The v2 agent portal (app_settings.agent_portal_v2, off by default): Today, Inbounds, Inbound detail.
+// Lazy, so a flag-off agent never downloads it.
+const V2Today = lazy(() => import('./pages/agent/v2/Today'))
+const V2Inbounds = lazy(() => import('./pages/agent/v2/Inbounds'))
+const V2InboundDetail = lazy(() => import('./pages/agent/v2/InboundDetail'))
+// P808: Leads mounts only in dev behind VITE_LEADS_PAGE=1; otherwise the page is not in the bundle.
+// The DEV check sits here, in this file, so a production build drops the import() and the chunk.
+const AgentLeads = import.meta.env.DEV && LEADS_PAGE ? lazy(() => import('./pages/agent/Leads')) : null
 import MyCalls from './pages/fulfillment/MyCalls'
+import VaLeads from './pages/fulfillment/VaLeads'
 import FulfillmentOverview from './pages/fulfillment/Overview'
 import FulfillmentPipeline from './pages/fulfillment/Pipeline'
 import MyPay, { GettingPaidRedirect } from './pages/fulfillment/MyPay'
@@ -55,6 +64,37 @@ function AdminTo({ to, children }) {
   const { search } = useLocation()
   if (profile?.role === 'admin') return <Navigate to={`${to}${search}`} replace />
   return children
+}
+
+// Old /mp ad links forward to /protect with the query string (utm tags) kept.
+function MpToProtect() {
+  const { search } = useLocation()
+  return <Navigate to={{ pathname: '/protect', search }} replace />
+}
+
+// /agent: the v2 Today when the flag is on, else the Overview exactly as before. ?portal=v1 skips the
+// wait and shows the Overview. While the flag is still loading a spinner shows, never the wrong page.
+function AgentHome() {
+  const v2 = usePortalV2()
+  if (v2.loading) return <Spinner />
+  if (v2.on) return <Suspense fallback={<Spinner />}><V2Today /></Suspense>
+  return <DashboardLayout><AgentOverview /></DashboardLayout>
+}
+
+// The v2-only routes: with the flag off they go back to /agent.
+function V2Only({ children }) {
+  const v2 = usePortalV2()
+  if (v2.loading) return <Spinner />
+  if (!v2.on) return <Navigate to="/agent" replace />
+  return <Suspense fallback={<Spinner />}>{children}</Suspense>
+}
+
+function Spinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[var(--bg-base)]">
+      <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
 }
 
 function RoleRedirect() {
@@ -97,9 +137,9 @@ export default function App() {
             <Route path="/join" element={<Join />} />
             <Route path="/join/:token" element={<Join />} />
             <Route path="/j/:token" element={<Join />} />
-            {/* Public mortgage-protection qualifier; no login. Posts to submit-mp-lead. */}
-            <Route path="/mp" element={<MortgageProtection />} />
-            {/* Public mortgage-protection landing + qualifier; no login. Posts to submit-mp-lead. */}
+            {/* /protect is the one public mortgage-protection page (landing + qualifier; no
+                login; posts to submit-mp-lead). /mp forwards to it, utm tags kept. */}
+            <Route path="/mp" element={<MpToProtect />} />
             <Route path="/protect" element={<ProtectLanding />} />
             <Route path="/confirm-email" element={<ConfirmEmail />} />
             <Route path="/reset-password" element={<ResetPassword />} />
@@ -134,7 +174,18 @@ export default function App() {
                 their replacements so bookmarks keep working. */}
             <Route path="/agent" element={
               <ProtectedRoute allowedRoles={['agent']}>
-                <DashboardLayout><AgentOverview /></DashboardLayout>
+                <AgentHome />
+              </ProtectedRoute>
+            } />
+            {/* v2 portal: Inbounds list and one inbound (flag off: back to /agent). */}
+            <Route path="/agent/inbounds" element={
+              <ProtectedRoute allowedRoles={['agent']}>
+                <V2Only><V2Inbounds /></V2Only>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/inbounds/:id" element={
+              <ProtectedRoute allowedRoles={['agent']}>
+                <V2Only><V2InboundDetail /></V2Only>
               </ProtectedRoute>
             } />
             <Route path="/agent/book" element={
@@ -154,8 +205,12 @@ export default function App() {
                 <DashboardLayout><AgentActivity /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* P808: Leads hidden (its tables aren't live yet); send it to Overview. */}
-            <Route path="/agent/leads" element={<Navigate to="/agent" replace />} />
+            {/* P808: the route mounts only in dev behind VITE_LEADS_PAGE=1; otherwise it redirects to Overview. */}
+            <Route path="/agent/leads" element={LEADS_PAGE ? (
+              <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <DashboardLayout><Suspense fallback={null}><AgentLeads /></Suspense></DashboardLayout>
+              </ProtectedRoute>
+            ) : <Navigate to="/agent" replace />} />
             {/* Prompt 691 — Billing, promoted out of Settings. */}
             <Route path="/agent/billing" element={
               <ProtectedRoute allowedRoles={['agent']}>
@@ -223,6 +278,12 @@ export default function App() {
             <Route path="/fulfillment/desk" element={
               <ProtectedRoute allowedRoles={['fulfillment', 'admin']}>
                 <AdminTo to="/admin/fulfillment"><DashboardLayout><MyCalls /></DashboardLayout></AdminTo>
+              </ProtectedRoute>
+            } />
+            {/* VA desk: the queue, claim, 4-item checklist and outcome. No admin twin, so admin sees the same page. */}
+            <Route path="/fulfillment/leads" element={
+              <ProtectedRoute allowedRoles={['fulfillment', 'admin']}>
+                <DashboardLayout><VaLeads /></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/fulfillment/pipeline" element={

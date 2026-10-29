@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "node scripts/run-tests.mjs",
+    "test:sql": "node scripts/run-sql-tests.mjs",
     "preview": "vite preview",
+    "shots:leads": "node scripts/leads-shots.mjs",
+    "shots:portal-v2": "node scripts/portal-v2-shots.mjs",
     "scrape:indeed": "node scrapers/indeed-scraper.js",
     "scrape:googlemaps": "node scrapers/googlemaps-scraper.js",
     "build:app": "vite build && npx cap sync"
@@ -52,6 +56,8 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.3",
+    "@electric-sql/pglite": "^0.5.13",
+    "@electric-sql/pglite-pgtap": "^0.0.14",
     "@eslint/js": "^10.0.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

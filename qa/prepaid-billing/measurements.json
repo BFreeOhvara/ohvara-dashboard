@@ -1,0 +1,866 @@
+[
+  {
+    "file": "app-main-1920-light.png",
+    "scenario": "main",
+    "width": 1920,
+    "theme": "light",
+    "requests": [
+      "agent_lead_balance",
+      "lead_prices",
+      "prepaid_topup_options",
+      "agent_lead_ledger"
+    ],
+    "pageErrors": [],
+    "pre": {
+      "left": 1260.5,
+      "top": 120,
+      "width": 380,
+      "height": 1117.94
+    },
+    "plan": {
+      "left": 520.5,
+      "top": 120,
+      "width": 720,
+      "height": 1029.75
+    },
+    "sideBySide": true,
+    "underPlan": false,
+    "scrollWidth": 1905,
+    "clientWidth": 1920,
+    "bodyScrollWidth": 1905,
+    "maxRight": 1905,
+    "balanceFont": "\"JetBrains Mono\"",
+    "balanceText": "$40.00",
+    "topups": [
+      {
+        "text": "+$100",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$250",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$500",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      }
+    ],
+    "history": [
+      "Lead delivered | Meta lead · Today, 4:23 PM | −$30.00 | Balance $40.00",
+      "Lead delivered | Google call · Today, 2:53 PM | −$55.00 | Balance $70.00",
+      "Funds added | Card top-up · Today, 11:53 AM | +$100.00 | Balance $125.00",
+      "Lead delivered | Meta lead · Yesterday, 10:53 AM | −$30.00 | Balance $25.00",
+      "Lead delivered | Google call · Oct 26, 12:53 PM | −$55.00 | Balance $55.00",
+      "Funds added | Card top-up · Oct 23, 4:53 PM | +$100.00 | Balance $110.00"
+    ]
+  },
+  {
+    "file": "app-main-1920-dark.png",
+    "scenario": "main",
+    "width": 1920,
+    "theme": "dark",
+    "requests": [
+      "agent_lead_balance",
+      "lead_prices",
+      "prepaid_topup_options",
+      "agent_lead_ledger"
+    ],
+    "pageErrors": [],
+    "pre": {
+      "left": 1260.5,
+      "top": 120,
+      "width": 380,
+      "height": 1117.94
+    },
+    "plan": {
+      "left": 520.5,
+      "top": 120,
+      "width": 720,
+      "height": 1029.75
+    },
+    "sideBySide": true,
+    "underPlan": false,
+    "scrollWidth": 1905,
+    "clientWidth": 1920,
+    "bodyScrollWidth": 1905,
+    "maxRight": 1905,
+    "balanceFont": "\"JetBrains Mono\"",
+    "balanceText": "$40.00",
+    "topups": [
+      {
+        "text": "+$100",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$250",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$500",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      }
+    ],
+    "history": [
+      "Lead delivered | Meta lead · Today, 4:23 PM | −$30.00 | Balance $40.00",
+      "Lead delivered | Google call · Today, 2:53 PM | −$55.00 | Balance $70.00",
+      "Funds added | Card top-up · Today, 11:53 AM | +$100.00 | Balance $125.00",
+      "Lead delivered | Meta lead · Yesterday, 10:53 AM | −$30.00 | Balance $25.00",
+      "Lead delivered | Google call · Oct 26, 12:53 PM | −$55.00 | Balance $55.00",
+      "Funds added | Card top-up · Oct 23, 4:53 PM | +$100.00 | Balance $110.00"
+    ]
+  },
+  {
+    "file": "app-main-1440-light.png",
+    "scenario": "main",
+    "width": 1440,
+    "theme": "light",
+    "requests": [
+      "agent_lead_balance",
+      "lead_prices",
+      "prepaid_topup_options",
+      "agent_lead_ledger"
+    ],
+    "pageErrors": [],
+    "pre": {
+      "left": 1020.5,
+      "top": 120,
+      "width": 380,
+      "height": 1117.94
+    },
+    "plan": {
+      "left": 280.5,
+      "top": 120,
+      "width": 720,
+      "height": 1029.75
+    },
+    "sideBySide": true,
+    "underPlan": false,
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "bodyScrollWidth": 1425,
+    "maxRight": 1425,
+    "balanceFont": "\"JetBrains Mono\"",
+    "balanceText": "$40.00",
+    "topups": [
+      {
+        "text": "+$100",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$250",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$500",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      }
+    ],
+    "history": [
+      "Lead delivered | Meta lead · Today, 4:23 PM | −$30.00 | Balance $40.00",
+      "Lead delivered | Google call · Today, 2:53 PM | −$55.00 | Balance $70.00",
+      "Funds added | Card top-up · Today, 11:53 AM | +$100.00 | Balance $125.00",
+      "Lead delivered | Meta lead · Yesterday, 10:53 AM | −$30.00 | Balance $25.00",
+      "Lead delivered | Google call · Oct 26, 12:53 PM | −$55.00 | Balance $55.00",
+      "Funds added | Card top-up · Oct 23, 4:53 PM | +$100.00 | Balance $110.00"
+    ]
+  },
+  {
+    "file": "app-main-1440-dark.png",
+    "scenario": "main",
+    "width": 1440,
+    "theme": "dark",
+    "requests": [
+      "agent_lead_balance",
+      "lead_prices",
+      "prepaid_topup_options",
+      "agent_lead_ledger"
+    ],
+    "pageErrors": [],
+    "pre": {
+      "left": 1020.5,
+      "top": 120,
+      "width": 380,
+      "height": 1117.94
+    },
+    "plan": {
+      "left": 280.5,
+      "top": 120,
+      "width": 720,
+      "height": 1029.75
+    },
+    "sideBySide": true,
+    "underPlan": false,
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "bodyScrollWidth": 1425,
+    "maxRight": 1425,
+    "balanceFont": "\"JetBrains Mono\"",
+    "balanceText": "$40.00",
+    "topups": [
+      {
+        "text": "+$100",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$250",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$500",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      }
+    ],
+    "history": [
+      "Lead delivered | Meta lead · Today, 4:23 PM | −$30.00 | Balance $40.00",
+      "Lead delivered | Google call · Today, 2:53 PM | −$55.00 | Balance $70.00",
+      "Funds added | Card top-up · Today, 11:53 AM | +$100.00 | Balance $125.00",
+      "Lead delivered | Meta lead · Yesterday, 10:53 AM | −$30.00 | Balance $25.00",
+      "Lead delivered | Google call · Oct 26, 12:53 PM | −$55.00 | Balance $55.00",
+      "Funds added | Card top-up · Oct 23, 4:53 PM | +$100.00 | Balance $110.00"
+    ]
+  },
+  {
+    "file": "app-main-390-light.png",
+    "scenario": "main",
+    "width": 390,
+    "theme": "light",
+    "requests": [
+      "agent_lead_balance",
+      "lead_prices",
+      "prepaid_topup_options",
+      "agent_lead_ledger"
+    ],
+    "pageErrors": [],
+    "pre": {
+      "left": 16,
+      "top": 1472,
+      "width": 358,
+      "height": 1128
+    },
+    "plan": {
+      "left": 16,
+      "top": 82,
+      "width": 358,
+      "height": 1376
+    },
+    "sideBySide": false,
+    "underPlan": true,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "bodyScrollWidth": 390,
+    "maxRight": 390,
+    "balanceFont": "\"JetBrains Mono\"",
+    "balanceText": "$40.00",
+    "topups": [
+      {
+        "text": "+$100",
+        "w": 100,
+        "h": 48,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$250",
+        "w": 100,
+        "h": 48,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$500",
+        "w": 100,
+        "h": 48,
+        "font": "\"JetBrains Mono\""
+      }
+    ],
+    "history": [
+      "Lead delivered | Meta lead · Today, 4:23 PM | −$30.00 | Balance $40.00",
+      "Lead delivered | Google call · Today, 2:53 PM | −$55.00 | Balance $70.00",
+      "Funds added | Card top-up · Today, 11:53 AM | +$100.00 | Balance $125.00",
+      "Lead delivered | Meta lead · Yesterday, 10:53 AM | −$30.00 | Balance $25.00",
+      "Lead delivered | Google call · Oct 26, 12:53 PM | −$55.00 | Balance $55.00",
+      "Funds added | Card top-up · Oct 23, 4:53 PM | +$100.00 | Balance $110.00"
+    ]
+  },
+  {
+    "file": "app-main-390-dark.png",
+    "scenario": "main",
+    "width": 390,
+    "theme": "dark",
+    "requests": [
+      "agent_lead_balance",
+      "lead_prices",
+      "prepaid_topup_options",
+      "agent_lead_ledger"
+    ],
+    "pageErrors": [],
+    "pre": {
+      "left": 16,
+      "top": 1472,
+      "width": 358,
+      "height": 1128
+    },
+    "plan": {
+      "left": 16,
+      "top": 82,
+      "width": 358,
+      "height": 1376
+    },
+    "sideBySide": false,
+    "underPlan": true,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "bodyScrollWidth": 390,
+    "maxRight": 390,
+    "balanceFont": "\"JetBrains Mono\"",
+    "balanceText": "$40.00",
+    "topups": [
+      {
+        "text": "+$100",
+        "w": 100,
+        "h": 48,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$250",
+        "w": 100,
+        "h": 48,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$500",
+        "w": 100,
+        "h": 48,
+        "font": "\"JetBrains Mono\""
+      }
+    ],
+    "history": [
+      "Lead delivered | Meta lead · Today, 4:23 PM | −$30.00 | Balance $40.00",
+      "Lead delivered | Google call · Today, 2:53 PM | −$55.00 | Balance $70.00",
+      "Funds added | Card top-up · Today, 11:53 AM | +$100.00 | Balance $125.00",
+      "Lead delivered | Meta lead · Yesterday, 10:53 AM | −$30.00 | Balance $25.00",
+      "Lead delivered | Google call · Oct 26, 12:53 PM | −$55.00 | Balance $55.00",
+      "Funds added | Card top-up · Oct 23, 4:53 PM | +$100.00 | Balance $110.00"
+    ]
+  },
+  {
+    "file": "app-empty-1440-light.png",
+    "scenario": "empty",
+    "width": 1440,
+    "theme": "light",
+    "requests": [
+      "agent_lead_balance",
+      "lead_prices",
+      "prepaid_topup_options",
+      "agent_lead_ledger"
+    ],
+    "pageErrors": [],
+    "pre": {
+      "left": 1020.5,
+      "top": 120,
+      "width": 380,
+      "height": 720.69
+    },
+    "plan": {
+      "left": 280.5,
+      "top": 120,
+      "width": 720,
+      "height": 1029.75
+    },
+    "sideBySide": true,
+    "underPlan": false,
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "bodyScrollWidth": 1425,
+    "maxRight": 1425,
+    "balanceFont": "\"JetBrains Mono\"",
+    "balanceText": "$0.00",
+    "topups": [
+      {
+        "text": "+$100",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$250",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$500",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      }
+    ],
+    "history": []
+  },
+  {
+    "file": "app-empty-390-dark.png",
+    "scenario": "empty",
+    "width": 390,
+    "theme": "dark",
+    "requests": [
+      "agent_lead_balance",
+      "lead_prices",
+      "prepaid_topup_options",
+      "agent_lead_ledger"
+    ],
+    "pageErrors": [],
+    "pre": {
+      "left": 16,
+      "top": 1472,
+      "width": 358,
+      "height": 710.5
+    },
+    "plan": {
+      "left": 16,
+      "top": 82,
+      "width": 358,
+      "height": 1376
+    },
+    "sideBySide": false,
+    "underPlan": true,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "bodyScrollWidth": 390,
+    "maxRight": 390,
+    "balanceFont": "\"JetBrains Mono\"",
+    "balanceText": "$0.00",
+    "topups": [
+      {
+        "text": "+$100",
+        "w": 100,
+        "h": 48,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$250",
+        "w": 100,
+        "h": 48,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$500",
+        "w": 100,
+        "h": 48,
+        "font": "\"JetBrains Mono\""
+      }
+    ],
+    "history": []
+  },
+  {
+    "file": "app-low-1440-light.png",
+    "scenario": "low",
+    "width": 1440,
+    "theme": "light",
+    "requests": [
+      "agent_lead_balance",
+      "lead_prices",
+      "prepaid_topup_options",
+      "agent_lead_ledger"
+    ],
+    "pageErrors": [],
+    "pre": {
+      "left": 1020.5,
+      "top": 120,
+      "width": 380,
+      "height": 1138.94
+    },
+    "plan": {
+      "left": 280.5,
+      "top": 120,
+      "width": 720,
+      "height": 1029.75
+    },
+    "sideBySide": true,
+    "underPlan": false,
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "bodyScrollWidth": 1425,
+    "maxRight": 1425,
+    "balanceFont": "\"JetBrains Mono\"",
+    "balanceText": "$19.00",
+    "topups": [
+      {
+        "text": "+$100",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$250",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$500",
+        "w": 105,
+        "h": 46,
+        "font": "\"JetBrains Mono\""
+      }
+    ],
+    "history": [
+      "Lead delivered | Meta lead · Today, 4:23 PM | −$30.00 | Balance $19.00",
+      "Lead delivered | Google call · Today, 2:53 PM | −$55.00 | Balance $70.00",
+      "Funds added | Card top-up · Today, 11:53 AM | +$100.00 | Balance $125.00",
+      "Lead delivered | Meta lead · Yesterday, 10:53 AM | −$30.00 | Balance $25.00",
+      "Lead delivered | Google call · Oct 26, 12:53 PM | −$55.00 | Balance $55.00",
+      "Funds added | Card top-up · Oct 23, 4:53 PM | +$100.00 | Balance $110.00"
+    ]
+  },
+  {
+    "file": "app-low-390-dark.png",
+    "scenario": "low",
+    "width": 390,
+    "theme": "dark",
+    "requests": [
+      "agent_lead_balance",
+      "lead_prices",
+      "prepaid_topup_options",
+      "agent_lead_ledger"
+    ],
+    "pageErrors": [],
+    "pre": {
+      "left": 16,
+      "top": 1472,
+      "width": 358,
+      "height": 1149
+    },
+    "plan": {
+      "left": 16,
+      "top": 82,
+      "width": 358,
+      "height": 1376
+    },
+    "sideBySide": false,
+    "underPlan": true,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "bodyScrollWidth": 390,
+    "maxRight": 390,
+    "balanceFont": "\"JetBrains Mono\"",
+    "balanceText": "$19.00",
+    "topups": [
+      {
+        "text": "+$100",
+        "w": 100,
+        "h": 48,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$250",
+        "w": 100,
+        "h": 48,
+        "font": "\"JetBrains Mono\""
+      },
+      {
+        "text": "+$500",
+        "w": 100,
+        "h": 48,
+        "font": "\"JetBrains Mono\""
+      }
+    ],
+    "history": [
+      "Lead delivered | Meta lead · Today, 4:23 PM | −$30.00 | Balance $19.00",
+      "Lead delivered | Google call · Today, 2:53 PM | −$55.00 | Balance $70.00",
+      "Funds added | Card top-up · Today, 11:53 AM | +$100.00 | Balance $125.00",
+      "Lead delivered | Meta lead · Yesterday, 10:53 AM | −$30.00 | Balance $25.00",
+      "Lead delivered | Google call · Oct 26, 12:53 PM | −$55.00 | Balance $55.00",
+      "Funds added | Card top-up · Oct 23, 4:53 PM | +$100.00 | Balance $110.00"
+    ]
+  },
+  {
+    "file": "app-loading-1440-light.png",
+    "scenario": "loading",
+    "width": 1440,
+    "theme": "light",
+    "requests": [
+      "agent_lead_balance",
+      "lead_prices",
+      "prepaid_topup_options",
+      "agent_lead_ledger"
+    ],
+    "pageErrors": [],
+    "pre": {
+      "left": 1020.5,
+      "top": 120,
+      "width": 380,
+      "height": 615
+    },
+    "plan": {
+      "left": 280.5,
+      "top": 120,
+      "width": 720,
+      "height": 1029.75
+    },
+    "sideBySide": true,
+    "underPlan": false,
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "bodyScrollWidth": 1425,
+    "maxRight": 1425,
+    "balanceFont": null,
+    "balanceText": null,
+    "topups": [],
+    "history": []
+  },
+  {
+    "file": "app-loading-390-dark.png",
+    "scenario": "loading",
+    "width": 390,
+    "theme": "dark",
+    "requests": [
+      "agent_lead_balance",
+      "lead_prices",
+      "prepaid_topup_options",
+      "agent_lead_ledger"
+    ],
+    "pageErrors": [],
+    "pre": {
+      "left": 16,
+      "top": 1472,
+      "width": 358,
+      "height": 607
+    },
+    "plan": {
+      "left": 16,
+      "top": 82,
+      "width": 358,
+      "height": 1376
+    },
+    "sideBySide": false,
+    "underPlan": true,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "bodyScrollWidth": 390,
+    "maxRight": 390,
+    "balanceFont": null,
+    "balanceText": null,
+    "topups": [],
+    "history": []
+  },
+  {
+    "file": "app-error-1440-light.png",
+    "scenario": "error",
+    "width": 1440,
+    "theme": "light",
+    "requests": [
+      "agent_lead_balance",
+      "lead_prices",
+      "prepaid_topup_options",
+      "agent_lead_ledger"
+    ],
+    "pageErrors": [],
+    "pre": {
+      "left": 1020.5,
+      "top": 120,
+      "width": 380,
+      "height": 191.25
+    },
+    "plan": {
+      "left": 280.5,
+      "top": 120,
+      "width": 720,
+      "height": 1029.75
+    },
+    "sideBySide": true,
+    "underPlan": false,
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "bodyScrollWidth": 1425,
+    "maxRight": 1425,
+    "balanceFont": null,
+    "balanceText": null,
+    "topups": [
+      {
+        "text": "Try again",
+        "w": 110,
+        "h": 46,
+        "font": "Manrope"
+      }
+    ],
+    "history": []
+  },
+  {
+    "file": "app-error-390-dark.png",
+    "scenario": "error",
+    "width": 390,
+    "theme": "dark",
+    "requests": [
+      "agent_lead_balance",
+      "lead_prices",
+      "prepaid_topup_options",
+      "agent_lead_ledger"
+    ],
+    "pageErrors": [],
+    "pre": {
+      "left": 16,
+      "top": 1472,
+      "width": 358,
+      "height": 187.25
+    },
+    "plan": {
+      "left": 16,
+      "top": 82,
+      "width": 358,
+      "height": 1376
+    },
+    "sideBySide": false,
+    "underPlan": true,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "bodyScrollWidth": 390,
+    "maxRight": 390,
+    "balanceFont": null,
+    "balanceText": null,
+    "topups": [
+      {
+        "text": "Try again",
+        "w": 110,
+        "h": 46,
+        "font": "Manrope"
+      }
+    ],
+    "history": []
+  },
+  {
+    "file": "mockup-1920-light.png",
+    "scenario": "mockup",
+    "width": 1920,
+    "theme": "light",
+    "pre": {
+      "left": 1168,
+      "top": 199.421875,
+      "width": 400
+    },
+    "plan": {
+      "left": 352,
+      "top": 199.421875,
+      "width": 796,
+      "height": 977.046875
+    },
+    "scrollWidth": 1920,
+    "clientWidth": 1920
+  },
+  {
+    "file": "mockup-1920-dark.png",
+    "scenario": "mockup",
+    "width": 1920,
+    "theme": "dark",
+    "pre": {
+      "left": 1168,
+      "top": 199.421875,
+      "width": 400
+    },
+    "plan": {
+      "left": 352,
+      "top": 199.421875,
+      "width": 796,
+      "height": 977.046875
+    },
+    "scrollWidth": 1920,
+    "clientWidth": 1920
+  },
+  {
+    "file": "mockup-1440-light.png",
+    "scenario": "mockup",
+    "width": 1440,
+    "theme": "light",
+    "pre": {
+      "left": 928,
+      "top": 199.421875,
+      "width": 400
+    },
+    "plan": {
+      "left": 112,
+      "top": 199.421875,
+      "width": 796,
+      "height": 977.046875
+    },
+    "scrollWidth": 1440,
+    "clientWidth": 1440
+  },
+  {
+    "file": "mockup-1440-dark.png",
+    "scenario": "mockup",
+    "width": 1440,
+    "theme": "dark",
+    "pre": {
+      "left": 928,
+      "top": 199.421875,
+      "width": 400
+    },
+    "plan": {
+      "left": 112,
+      "top": 199.421875,
+      "width": 796,
+      "height": 977.046875
+    },
+    "scrollWidth": 1440,
+    "clientWidth": 1440
+  },
+  {
+    "file": "mockup-390-light.png",
+    "scenario": "mockup",
+    "width": 390,
+    "theme": "light",
+    "pre": {
+      "left": 14,
+      "top": 1694.40625,
+      "width": 362
+    },
+    "plan": {
+      "left": 14,
+      "top": 300.234375,
+      "width": 362,
+      "height": 1380.171875
+    },
+    "scrollWidth": 390,
+    "clientWidth": 390
+  },
+  {
+    "file": "mockup-390-dark.png",
+    "scenario": "mockup",
+    "width": 390,
+    "theme": "dark",
+    "pre": {
+      "left": 14,
+      "top": 1694.40625,
+      "width": 362
+    },
+    "plan": {
+      "left": 14,
+      "top": 300.234375,
+      "width": 362,
+      "height": 1380.171875
+    },
+    "scrollWidth": 390,
+    "clientWidth": 390
+  }
+]

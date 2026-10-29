@@ -1418,12 +1418,15 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 .ov-bill-chip > i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.75); }
 .ov-bill-chip.is-active { background: rgba(74,222,128,0.16); border-color: rgba(74,222,128,0.4); color: #86EFAC; }
 .ov-bill-chip.is-active > i { background: #4ADE80; }
-.ov-bill-chip.is-warn { background: rgba(245,158,11,0.18); border-color: rgba(251,191,36,0.5); color: #FCD34D; }
-.ov-bill-chip.is-warn > i { background: #FBBF24; }
+.ov-bill-chip { --chip-warn-fg: #FCD34D; --chip-warn-dot: #FBBF24; }
+.ov-bill-chip.is-warn { background: rgba(245,158,11,0.18); border-color: rgba(251,191,36,0.5); color: var(--chip-warn-fg); }
+.ov-bill-chip.is-warn > i { background: var(--chip-warn-dot); }
 .ov-bill-chip.is-danger { background: rgba(239,68,68,0.18); border-color: rgba(248,113,113,0.5); color: #FCA5A5; }
 .ov-bill-chip.is-danger > i { background: #F87171; }
 [data-theme="light"] .ov-bill-chip { color: #FFFFFF; }
 [data-theme="light"] .ov-bill-chip > i { background: #FFFFFF; }
+/* The amber text and dot are yellow on the light (teal) hero: too faint. White, like the other chips. */
+[data-theme="light"] .ov-bill-chip { --chip-warn-fg: #FFFFFF; --chip-warn-dot: #FFFFFF; }
 
 /* The current plan (subscribed) or the most-bookings plan (no plan yet). */
 .ov-card.is-pick {
@@ -1460,6 +1463,70 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
   .ov-bill-num  { font-size: 40px; }
   .ov-bill-meter { padding: 20px 18px; }
   .ov-bill .ov-plan-first { order: -1; }
+}
+
+/* Billing page grid: the plan / cancellation blocks in one column, the prepaid
+   balance column (balance hero, price per lead, history) at 380px beside them.
+   Container width, not viewport, so the sidebar open or closed both work;
+   1040 = 640 plan column + 20 gap + 380. Below that: one column, plan first. */
+.ov-bill-cq { container-type: inline-size; }
+.ov-bill-grid {
+  display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "notice" "plan" "pre" "facts";
+}
+.ov-bill-notice { grid-area: notice; display: flex; flex-direction: column; gap: 10px; }
+.ov-bill-notice:empty { display: none; }
+.ov-bill-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.ov-bill-col.is-plan { grid-area: plan; }
+.ov-bill-col.is-pre { grid-area: pre; }
+.ov-bill-facts { grid-area: facts; min-width: 0; }
+/* Prepaid column empty (ledger tables not there yet, before migration 176):
+   no column, the plan blocks keep the full width as before. */
+.ov-bill-col.is-pre:empty { display: none; }
+.ov-bill-grid:has(> .ov-bill-col.is-pre:empty) { grid-template-areas: "notice" "plan" "facts"; }
+@container (min-width: 1040px) {
+  .ov-bill-grid:not(:has(> .ov-bill-col.is-pre:empty)) {
+    column-gap: 20px; grid-template-columns: minmax(0, 1fr) 380px; align-items: start;
+    grid-template-areas: "notice notice" "plan pre" "facts facts";
+  }
+}
+@media (max-width: 639.98px) {
+  .ov-bill-grid, .ov-bill-col { gap: 14px; }
+}
+.ov-mb-notice.is-info > svg { color: var(--ov-mute); }
+
+/* Prepaid balance column (PrepaidBalanceCard). */
+.ov-bal { display: flex; flex-direction: column; padding: 24px; }
+.ov-bal-top { display: flex; align-items: center; justify-content: space-between; gap: 8px 10px; flex-wrap: wrap; }
+.ov-bal-top .ov-hero-chip > i { width: 7px; height: 7px; border-radius: 50%; background: var(--ov-hero-dot); }
+.ov-bal-num {
+  margin: 16px 0 6px; font-family: var(--font-mono); font-size: 44px; font-weight: 600; line-height: 1.05;
+  letter-spacing: -0.03em; color: inherit; overflow-wrap: anywhere;
+}
+.ov-bal-line { margin: 0; font-size: 14px; color: var(--ov-hero-soft); }
+.ov-bal-line strong, .ov-bal-line b { color: inherit; font-weight: 600; }
+.ov-bal-label { margin: 20px 0 0; font-size: 13px; font-weight: 600; color: var(--ov-hero-soft); }
+.ov-bal-topups { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+.ov-bal-topups .ov-hero-btn {
+  flex: 1 1 80px; height: 46px; padding: 0 10px; font-family: var(--font-mono); font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.ov-bal-lock { margin: 14px 0 0; display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ov-hero-soft); }
+.ov-bal-err {
+  margin: 12px 0 0; display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 14px;
+  background: rgba(255,255,255,0.10); border: 1px solid var(--danger-bd); font-size: 13.5px; font-weight: 600; color: inherit;
+}
+.ov-bal-err > svg { flex-shrink: 0; margin-top: 1px; color: inherit; }
+.ov-bal-skel { display: block; border-radius: 10px; background: rgba(255,255,255,0.16); }
+.ov-bal-card { padding: 20px 22px; }
+.ov-bal-ico { width: 36px; height: 36px; flex-shrink: 0; border-radius: 11px; display: flex; align-items: center; justify-content: center; color: var(--ov-mid); }
+.ov-bal-ico.is-sm { width: 34px; height: 34px; border-radius: 10px; }
+.ov-bal-ico.is-in { background: var(--ov-up-tint); border-color: transparent; color: var(--ov-up); }
+@media (max-width: 639.98px) {
+  .ov-bal { padding: 22px 20px; }
+  .ov-bal-num { font-size: 40px; }
+  .ov-bal-topups .ov-hero-btn { height: 48px; }
+  .ov-bal-card { padding-left: 18px; padding-right: 18px; }
 }
 
 /* ── Prompt 734 — Manage billing / Subscribe inside the portal ───────────
@@ -4517,3 +4584,43 @@ html.is-native a, html.is-native img { -webkit-touch-callout: none; }
 }
 .ov-confirm-banner > svg { color: var(--warning); }
 .ph-main .ov-confirm-banner { margin: 12px 14px 0; }
+
+/* Agent Leads (/agent/leads): two columns from 1100px, settings sticky on the
+   right; one column below; on phones the settings card comes after the leads. */
+.ld-grid { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); max-width: 1120px; margin: 0 auto; }
+.ld-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.ld-side { min-width: 0; scroll-margin-top: 24px; }
+.ld-grid .ov-card, .ld-title { color: var(--ov-hi); }
+@media (min-width: 1100px) {
+  .ld-grid { grid-template-columns: minmax(0, 1fr) 380px; }
+  .ld-side > .ov-card { position: sticky; top: 24px; }
+}
+.ld-contact { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1 1 200px; max-width: 260px; }
+.ld-seg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 3px; border-radius: 999px; border: 1px solid var(--ov-line); background: var(--bg-muted); flex: 1 1 340px; }
+.ld-seg button { min-height: 36px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--ov-mute); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0 4px; white-space: nowrap; }
+.ld-seg button:disabled { opacity: .55; cursor: default; }
+.ld-seg button[aria-pressed="true"]:disabled { opacity: 1; }
+.ld-grid .ov-card { padding: 20px; }
+.ld-grid .ov-hero { padding: 24px; }
+.ld-btn { min-height: 40px; }
+.ld-chip-x { width: 32px; height: 32px; }
+.ld-hero-btn { min-height: 40px; }
+@media (max-width: 767.98px) {
+  .ld-grid { gap: 14px; }
+  .ld-grid .ov-card { padding: 16px; }
+  .ld-grid .ov-hero { padding: 20px 18px; }
+  .ld-main { gap: 14px; }
+  .ld-contact { max-width: none; flex-basis: 100%; }
+  .ld-seg { flex-basis: 100%; }
+  .ld-seg button { min-height: 44px; }
+  .ld-btn, .ld-hero-btn { min-height: 44px; }
+  .ld-chip-x { width: 44px; height: 44px; }
+  .ld-chip { min-height: 44px !important; }
+  .ld-save { width: 100%; }
+  .ld-foot { flex-direction: column; align-items: stretch !important; }
+  .ld-num { font-size: 40px !important; }
+  .ld-num-label { font-size: 17px !important; }
+  .ld-title { font-size: 18px !important; }
+  .ld-cap { font-size: 26px !important; }
+  .ld-side { order: 2; }
+}

@@ -1,5 +1,5 @@
 import {
-  Users, Home, Settings, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard, Phone,
+  Users, Home, Settings, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard, Phone, PhoneIncoming,
 } from 'lucide-react'
 
 // Each role's sidebar, grouped. Moved out of Sidebar.jsx by Prompt 722 so the
@@ -19,7 +19,7 @@ export const NAV = {
       { to: '/agent/clients', label: 'My Pipeline', icon: Users },
       // Prompt 690 — chronological log of what happened, next to My Pipeline.
       { to: '/agent/activity', label: 'Activity', icon: History },
-      // P808: Leads hidden until its migration is live and the page is approved.
+      // P808: Leads hidden until its migrations are live and the page is approved.
     ] },
     // Prompt 680 — Messages gets its own single-item group, as in Restorix.
     { group: 'Communications', items: [
@@ -61,6 +61,7 @@ export const NAV = {
     { group: 'Work', items: [
       // Prompt 748 — the role and the tab shared a name; the tab is "My calls".
       { to: '/fulfillment/desk', label: 'My calls', icon: Phone },
+      { to: '/fulfillment/leads', label: 'Leads', icon: PhoneIncoming },
       { to: '/fulfillment/pipeline', label: 'Pipeline', icon: ListFilter },
       // Prompt 753 — Getting Paid → My pay.
       { to: '/fulfillment/pay', label: 'My pay', icon: Wallet },
@@ -88,7 +89,6 @@ export function navEntry(role, pathname) {
 export const PAGE_TONE = {
   '/agent/book': 'teal',
   '/agent/activity': 'violet',
-  '/agent/leads': 'teal',
   '/agent/billing': 'amber',
   '/settings': 'slate',
 }

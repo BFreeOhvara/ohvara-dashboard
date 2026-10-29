@@ -12,6 +12,7 @@ import { AddSomeoneSheet } from '../admin/phone/AddSomeoneSheet'
 import { PhoneToast } from '../admin/phone/PhoneToast'
 import { useAdminPay } from '../admin/phone/useAdminPay'
 import { ConfirmEmailBanner } from './ConfirmEmailBanner'
+import { LEADS_PAGE } from '../../lib/leadsPage'
 
 // Prompt 772 — the agent's phone shell (under 768px): no sidebar, no top bar,
 // a bottom tab bar (Home, Clients, a raised + for Book a call, Messages, More)
@@ -30,7 +31,7 @@ const AGENT_TABS = [
   { to: '/agent/clients', label: 'Clients', icon: Users, on: p => p === '/agent/clients' },
   { to: '/agent/book', label: 'Book a call', icon: Plus, plus: true, on: () => false },
   { to: '/messages', label: 'Messages', icon: MessageSquare, on: p => p === '/messages', badge: true },
-  { to: '/agent/more', label: 'More', icon: Menu, on: p => ['/agent/more', '/agent/activity', '/agent/leads', '/agent/billing', '/settings'].includes(p) },
+  { to: '/agent/more', label: 'More', icon: Menu, on: p => ['/agent/more', '/agent/activity', ...(LEADS_PAGE ? ['/agent/leads'] : []), '/agent/billing', '/settings'].includes(p) },
 ]
 
 const FULFILL_TABS = [
@@ -52,8 +53,8 @@ const TABS = { agent: AGENT_TABS, fulfillment: FULFILL_TABS, admin: ADMIN_TABS }
 
 // Pages opened from More: a header with a back arrow to More.
 const SUB_PAGES = {
-  agent: { '/agent/activity': 'Activity', '/agent/leads': 'Leads', '/agent/billing': 'Billing', '/settings': 'Settings' },
-  fulfillment: { '/settings': 'Settings' },
+  agent: { '/agent/activity': 'Activity', ...(LEADS_PAGE ? { '/agent/leads': 'Leads' } : {}), '/agent/billing': 'Billing', '/settings': 'Settings' },
+  fulfillment: { '/fulfillment/leads': 'Leads', '/settings': 'Settings' },
   admin: { '/admin/users': 'People', '/admin/pipeline': 'Pipeline', '/settings': 'Settings' },
 }
 const MORE = { agent: '/agent/more', fulfillment: '/fulfillment/more', admin: '/admin/more' }

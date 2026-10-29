@@ -1,0 +1,1305 @@
+[
+  {
+    "file": "app-queue-1920-light.png",
+    "scenario": "queue",
+    "width": 1920,
+    "theme": "light",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "my_standing_threads",
+      "policies",
+      "notifications",
+      "my_money_banner",
+      "my_push_settings",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "recovery_config"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 1905,
+    "clientWidth": 1920,
+    "maxRight": 1905,
+    "counts": [
+      "Callback due  2",
+      "New  3",
+      "Not reached  2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(154, 74, 11)",
+        "borderColor": "rgba(154, 74, 11, 0.3)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      }
+    ],
+    "sidebarLeads": [
+      "Leads"
+    ],
+    "prog": null,
+    "outcomeLocked": false,
+    "bookOpen": null,
+    "heldName": null
+  },
+  {
+    "file": "app-held-3of4-1920-light.png",
+    "scenario": "held-3of4",
+    "width": 1920,
+    "theme": "light",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "my_standing_threads",
+      "policies",
+      "notifications",
+      "my_money_banner",
+      "my_push_settings",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "recovery_config"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 1905,
+    "clientWidth": 1920,
+    "maxRight": 1905,
+    "counts": [
+      "Callback due  2",
+      "New  3",
+      "Not reached  2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(154, 74, 11)",
+        "borderColor": "rgba(154, 74, 11, 0.3)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      }
+    ],
+    "sidebarLeads": [
+      "Leads"
+    ],
+    "prog": "3 of 4",
+    "outcomeLocked": true,
+    "bookOpen": null,
+    "heldName": "Darnell Hughes"
+  },
+  {
+    "file": "app-held-4of4-book-1920-light.png",
+    "scenario": "held-4of4-book",
+    "width": 1920,
+    "theme": "light",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "my_standing_threads",
+      "policies",
+      "notifications",
+      "my_money_banner",
+      "my_push_settings",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "recovery_config"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 1905,
+    "clientWidth": 1920,
+    "maxRight": 1905,
+    "counts": [
+      "Callback due  2",
+      "New  3",
+      "Not reached  2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(154, 74, 11)",
+        "borderColor": "rgba(154, 74, 11, 0.3)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      }
+    ],
+    "sidebarLeads": [
+      "Leads"
+    ],
+    "prog": "4 of 4",
+    "outcomeLocked": false,
+    "bookOpen": "Book a callOn an agent's calendar",
+    "heldName": "Darnell Hughes"
+  },
+  {
+    "file": "app-queue-1920-dark.png",
+    "scenario": "queue",
+    "width": 1920,
+    "theme": "dark",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "my_standing_threads",
+      "policies",
+      "notifications",
+      "my_money_banner",
+      "my_push_settings",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "recovery_config"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 1905,
+    "clientWidth": 1920,
+    "maxRight": 1905,
+    "counts": [
+      "Callback due  2",
+      "New  3",
+      "Not reached  2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(251, 191, 36)",
+        "borderColor": "rgba(245, 158, 11, 0.28)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      }
+    ],
+    "sidebarLeads": [
+      "Leads"
+    ],
+    "prog": null,
+    "outcomeLocked": false,
+    "bookOpen": null,
+    "heldName": null
+  },
+  {
+    "file": "app-held-3of4-1920-dark.png",
+    "scenario": "held-3of4",
+    "width": 1920,
+    "theme": "dark",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "my_standing_threads",
+      "policies",
+      "notifications",
+      "my_money_banner",
+      "my_push_settings",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "recovery_config"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 1905,
+    "clientWidth": 1920,
+    "maxRight": 1905,
+    "counts": [
+      "Callback due  2",
+      "New  3",
+      "Not reached  2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(251, 191, 36)",
+        "borderColor": "rgba(245, 158, 11, 0.28)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      }
+    ],
+    "sidebarLeads": [
+      "Leads"
+    ],
+    "prog": "3 of 4",
+    "outcomeLocked": true,
+    "bookOpen": null,
+    "heldName": "Darnell Hughes"
+  },
+  {
+    "file": "app-held-4of4-book-1920-dark.png",
+    "scenario": "held-4of4-book",
+    "width": 1920,
+    "theme": "dark",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "my_standing_threads",
+      "policies",
+      "notifications",
+      "my_money_banner",
+      "my_push_settings",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "recovery_config"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 1905,
+    "clientWidth": 1920,
+    "maxRight": 1905,
+    "counts": [
+      "Callback due  2",
+      "New  3",
+      "Not reached  2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(251, 191, 36)",
+        "borderColor": "rgba(245, 158, 11, 0.28)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      }
+    ],
+    "sidebarLeads": [
+      "Leads"
+    ],
+    "prog": "4 of 4",
+    "outcomeLocked": false,
+    "bookOpen": "Book a callOn an agent's calendar",
+    "heldName": "Darnell Hughes"
+  },
+  {
+    "file": "app-queue-1440-light.png",
+    "scenario": "queue",
+    "width": 1440,
+    "theme": "light",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "my_standing_threads",
+      "policies",
+      "notifications",
+      "my_money_banner",
+      "my_push_settings",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "recovery_config"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "maxRight": 1425,
+    "counts": [
+      "Callback due  2",
+      "New  3",
+      "Not reached  2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(154, 74, 11)",
+        "borderColor": "rgba(154, 74, 11, 0.3)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      }
+    ],
+    "sidebarLeads": [
+      "Leads"
+    ],
+    "prog": null,
+    "outcomeLocked": false,
+    "bookOpen": null,
+    "heldName": null
+  },
+  {
+    "file": "app-held-3of4-1440-light.png",
+    "scenario": "held-3of4",
+    "width": 1440,
+    "theme": "light",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "my_standing_threads",
+      "policies",
+      "notifications",
+      "my_money_banner",
+      "my_push_settings",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "recovery_config"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "maxRight": 1425,
+    "counts": [
+      "Callback due  2",
+      "New  3",
+      "Not reached  2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(154, 74, 11)",
+        "borderColor": "rgba(154, 74, 11, 0.3)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      }
+    ],
+    "sidebarLeads": [
+      "Leads"
+    ],
+    "prog": "3 of 4",
+    "outcomeLocked": true,
+    "bookOpen": null,
+    "heldName": "Darnell Hughes"
+  },
+  {
+    "file": "app-held-4of4-book-1440-light.png",
+    "scenario": "held-4of4-book",
+    "width": 1440,
+    "theme": "light",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "my_standing_threads",
+      "policies",
+      "notifications",
+      "my_money_banner",
+      "my_push_settings",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "recovery_config"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "maxRight": 1425,
+    "counts": [
+      "Callback due  2",
+      "New  3",
+      "Not reached  2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(154, 74, 11)",
+        "borderColor": "rgba(154, 74, 11, 0.3)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      }
+    ],
+    "sidebarLeads": [
+      "Leads"
+    ],
+    "prog": "4 of 4",
+    "outcomeLocked": false,
+    "bookOpen": "Book a callOn an agent's calendar",
+    "heldName": "Darnell Hughes"
+  },
+  {
+    "file": "app-queue-1440-dark.png",
+    "scenario": "queue",
+    "width": 1440,
+    "theme": "dark",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "my_standing_threads",
+      "policies",
+      "notifications",
+      "my_money_banner",
+      "my_push_settings",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "recovery_config"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "maxRight": 1425,
+    "counts": [
+      "Callback due  2",
+      "New  3",
+      "Not reached  2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(251, 191, 36)",
+        "borderColor": "rgba(245, 158, 11, 0.28)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      }
+    ],
+    "sidebarLeads": [
+      "Leads"
+    ],
+    "prog": null,
+    "outcomeLocked": false,
+    "bookOpen": null,
+    "heldName": null
+  },
+  {
+    "file": "app-held-3of4-1440-dark.png",
+    "scenario": "held-3of4",
+    "width": 1440,
+    "theme": "dark",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "my_standing_threads",
+      "policies",
+      "notifications",
+      "my_money_banner",
+      "my_push_settings",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "recovery_config"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "maxRight": 1425,
+    "counts": [
+      "Callback due  2",
+      "New  3",
+      "Not reached  2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(251, 191, 36)",
+        "borderColor": "rgba(245, 158, 11, 0.28)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      }
+    ],
+    "sidebarLeads": [
+      "Leads"
+    ],
+    "prog": "3 of 4",
+    "outcomeLocked": true,
+    "bookOpen": null,
+    "heldName": "Darnell Hughes"
+  },
+  {
+    "file": "app-held-4of4-book-1440-dark.png",
+    "scenario": "held-4of4-book",
+    "width": 1440,
+    "theme": "dark",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "my_standing_threads",
+      "policies",
+      "notifications",
+      "my_money_banner",
+      "my_push_settings",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "recovery_config"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "maxRight": 1425,
+    "counts": [
+      "Callback due  2",
+      "New  3",
+      "Not reached  2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(251, 191, 36)",
+        "borderColor": "rgba(245, 158, 11, 0.28)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      }
+    ],
+    "sidebarLeads": [
+      "Leads"
+    ],
+    "prog": "4 of 4",
+    "outcomeLocked": false,
+    "bookOpen": "Book a callOn an agent's calendar",
+    "heldName": "Darnell Hughes"
+  },
+  {
+    "file": "app-queue-390-light.png",
+    "scenario": "queue",
+    "width": 390,
+    "theme": "light",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "my_standing_threads",
+      "recovery_config"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "maxRight": 390,
+    "counts": [
+      "Callback due  2",
+      "New  3",
+      "Not reached  2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(154, 74, 11)",
+        "borderColor": "rgba(154, 74, 11, 0.3)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      }
+    ],
+    "sidebarLeads": [],
+    "prog": null,
+    "outcomeLocked": false,
+    "bookOpen": null,
+    "heldName": null
+  },
+  {
+    "file": "app-held-3of4-390-light.png",
+    "scenario": "held-3of4",
+    "width": 390,
+    "theme": "light",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "my_standing_threads",
+      "recovery_config"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "maxRight": 390,
+    "counts": [
+      "Callback due2",
+      "New3",
+      "Not reached2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(154, 74, 11)",
+        "borderColor": "rgba(154, 74, 11, 0.3)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      }
+    ],
+    "sidebarLeads": [],
+    "prog": "3 of 4",
+    "outcomeLocked": true,
+    "bookOpen": null,
+    "heldName": "Darnell Hughes"
+  },
+  {
+    "file": "app-held-4of4-book-390-light.png",
+    "scenario": "held-4of4-book",
+    "width": 390,
+    "theme": "light",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "my_standing_threads",
+      "recovery_config",
+      "policies"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "maxRight": 390,
+    "counts": [
+      "Callback due2",
+      "New3",
+      "Not reached2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(154, 74, 11)",
+        "borderColor": "rgba(154, 74, 11, 0.3)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(2, 79, 70, 0.13)"
+      }
+    ],
+    "sidebarLeads": [],
+    "prog": "4 of 4",
+    "outcomeLocked": false,
+    "bookOpen": "Book a callOn an agent's calendar",
+    "heldName": "Darnell Hughes"
+  },
+  {
+    "file": "app-queue-390-dark.png",
+    "scenario": "queue",
+    "width": 390,
+    "theme": "dark",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "my_standing_threads",
+      "recovery_config"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "maxRight": 390,
+    "counts": [
+      "Callback due  2",
+      "New  3",
+      "Not reached  2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(251, 191, 36)",
+        "borderColor": "rgba(245, 158, 11, 0.28)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      }
+    ],
+    "sidebarLeads": [],
+    "prog": null,
+    "outcomeLocked": false,
+    "bookOpen": null,
+    "heldName": null
+  },
+  {
+    "file": "app-held-3of4-390-dark.png",
+    "scenario": "held-3of4",
+    "width": 390,
+    "theme": "dark",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "my_standing_threads",
+      "recovery_config"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "maxRight": 390,
+    "counts": [
+      "Callback due2",
+      "New3",
+      "Not reached2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(251, 191, 36)",
+        "borderColor": "rgba(245, 158, 11, 0.28)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      }
+    ],
+    "sidebarLeads": [],
+    "prog": "3 of 4",
+    "outcomeLocked": true,
+    "bookOpen": null,
+    "heldName": "Darnell Hughes"
+  },
+  {
+    "file": "app-held-4of4-book-390-dark.png",
+    "scenario": "held-4of4-book",
+    "width": 390,
+    "theme": "dark",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "va_queue",
+      "va_agent_roster",
+      "app_settings",
+      "agent_billing_tiers",
+      "my_standing_threads",
+      "recovery_config",
+      "policies"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/leads",
+    "title": "Leads",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "maxRight": 390,
+    "counts": [
+      "Callback due2",
+      "New3",
+      "Not reached2"
+    ],
+    "sections": [
+      {
+        "label": "Callback due",
+        "cls": "ov-attn",
+        "names": [
+          "Rhonda Pickett",
+          "Walter Banks"
+        ],
+        "dueColor": "rgb(251, 191, 36)",
+        "borderColor": "rgba(245, 158, 11, 0.28)"
+      },
+      {
+        "label": "New",
+        "cls": "ov-card",
+        "names": [
+          "Alicia Moreno",
+          "Darnell Hughes",
+          "Susan Kowalski"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      },
+      {
+        "label": "Not reached",
+        "cls": "ov-card",
+        "names": [
+          "Terrence Boyd",
+          "Joyce Lindqvist"
+        ],
+        "dueColor": null,
+        "borderColor": "rgba(255, 255, 255, 0.09)"
+      }
+    ],
+    "sidebarLeads": [],
+    "prog": "4 of 4",
+    "outcomeLocked": false,
+    "bookOpen": "Book a callOn an agent's calendar",
+    "heldName": "Darnell Hughes"
+  },
+  {
+    "file": "app-more-390-light.png",
+    "scenario": "more",
+    "width": 390,
+    "theme": "light",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "my_standing_threads",
+      "recovery_config",
+      "fulfillment_payout_accounts",
+      "app_settings",
+      "agent_billing_tiers"
+    ],
+    "pageErrors": [],
+    "url": "/fulfillment/more",
+    "title": "More",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "maxRight": 390,
+    "counts": [],
+    "sections": [],
+    "sidebarLeads": [],
+    "prog": null,
+    "outcomeLocked": false,
+    "bookOpen": null,
+    "heldName": null
+  },
+  {
+    "file": "app-agent-redirect-1440-light.png",
+    "scenario": "agent-redirect",
+    "width": 1440,
+    "theme": "light",
+    "requests": [
+      "carriers",
+      "get_my_profile",
+      "my_standing_threads",
+      "policies",
+      "agent_weekly_usage",
+      "notifications",
+      "my_money_banner",
+      "my_push_settings",
+      "app_settings",
+      "agent_billing_tiers"
+    ],
+    "pageErrors": [],
+    "url": "/agent",
+    "title": "Overview",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "maxRight": 1425,
+    "counts": [],
+    "sections": [],
+    "sidebarLeads": [],
+    "prog": null,
+    "outcomeLocked": false,
+    "bookOpen": null,
+    "heldName": null
+  }
+]
