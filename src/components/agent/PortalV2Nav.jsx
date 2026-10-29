@@ -9,10 +9,10 @@ import { isRecent } from '../../lib/portalV2'
 import '../../pages/agent/v2/portalV2.css'
 
 // The agent portal v2 shell (behind app_settings.agent_portal_v2): from 768px a 256px sidebar
-// (Today, Inbounds with the new-inbound count, Settings; Calendar, Clients and Plan & billing are
-// greyed "Soon" rows, not links) and a 72px page header; under 768px no sidebar or header, a
-// 3-column bottom tab bar instead (Soon items are left out). Mockup:
-// ohvara/mockups/build-v2-portal-shell-today-inbounds-inb.html.
+// (Today, Inbounds with the new-inbound count, Calendar, Clients, Plan & billing, Settings) and a
+// 72px page header; under 768px no sidebar or header, a 6-column bottom tab bar instead. Mockups:
+// ohvara/mockups/build-v2-portal-shell-today-inbounds-inb.html and
+// ohvara/mockups/build-calendar-clients-and-plan-billing-.html.
 const initials = name => (name || '').trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase()).join('') || 'A'
 
 function useNewCount() {
@@ -29,19 +29,16 @@ function Sidebar({ active, count, profile }) {
       <Ico icon={icon} />{label}{badge > 0 && <span className="pv-count tab">{badge}</span>}
     </Link>
   )
-  const soon = (icon, label) => (
-    <span className="pv-nav soon" aria-disabled="true"><Ico icon={icon} />{label}<span className="pv-soon-tag">Soon</span></span>
-  )
   return (
     <aside className="pv-sb" aria-label="Main menu">
       <div className="pv-sb-head"><OhvaraMark height={30} /><span className="pv-wordmark">Ohvara Portal</span></div>
       <p className="pv-sb-grp">Your work</p>
       {link('today', '/agent', Sun, 'Today')}
       {link('inbounds', '/agent/inbounds', Inbox, 'Inbounds', count)}
-      {soon(CalendarDays, 'Calendar')}
-      {soon(Users, 'Clients')}
+      {link('calendar', '/agent/calendar', CalendarDays, 'Calendar')}
+      {link('clients', '/agent/clients', Users, 'Clients')}
       <p className="pv-sb-grp">Account</p>
-      {soon(CreditCard, 'Plan & billing')}
+      {link('plan', '/agent/plan', CreditCard, 'Plan & billing')}
       {link('settings', '/settings', Settings, 'Settings')}
       <div className="pv-me">
         <span className="pv-av" aria-hidden="true">{initials(profile?.full_name)}</span>
@@ -61,12 +58,15 @@ function TabBar({ active, count }) {
     <nav className="pv-tabbar" aria-label="Main menu">
       {tab('today', '/agent', Sun, 'Today')}
       {tab('inbounds', '/agent/inbounds', Inbox, 'Inbounds', count)}
+      {tab('calendar', '/agent/calendar', CalendarDays, 'Calendar')}
+      {tab('clients', '/agent/clients', Users, 'Clients')}
+      {tab('plan', '/agent/plan', CreditCard, 'Plan')}
       {tab('settings', '/settings', Settings, 'Settings')}
     </nav>
   )
 }
 
-// `active` is today | inbounds. `crumb` / `title` / `icon` fill the page header.
+// `active` is today | inbounds | calendar | clients | plan. `crumb` / `title` / `icon` fill the page header.
 export function PortalV2Layout({ active, crumb = 'Your work', title, icon = Sun, children }) {
   const { profile } = useAuth()
   const { pathname } = useLocation()

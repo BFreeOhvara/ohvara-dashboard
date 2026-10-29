@@ -202,7 +202,10 @@ export default function Clients() {
 
 const cap = s => s[0].toUpperCase() + s.slice(1)
 
-function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRows, phone }) {
+// The cancellation flow for one booking: where it stands (status sentence, journey steps) and the
+// agent's next step (Change this booking, Call & rebook, Confirm number). The drawer below and the
+// v2 Clients detail (pages/agent/v2/Clients.jsx, through CancellationFlow) both render from this, so there is one flow.
+function useCancellationFlow({ p, now, canMove, startRebook, isAdmin, agentRows, phone }) {
   const navigate = useNavigate()
   const stage = agentStageOf(p)
   const tab = tabOf(p)
@@ -266,6 +269,18 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRow
   }
 
   const onMessage = () => navigate(`/messages?dm=${dmId(p.agent_id, isAdmin ? 'admin' : p.assigned_fulfillment_id || 'admin')}`)
+  const messageLabel = isAdmin ? 'Message agent' : 'Message Fulfillment'
+  return { stage, tab, live, moving, move, tz, place, attempted, caller, steps, statusText, footer, onMessage, messageLabel }
+}
+
+// The same flow for pages that lay it out themselves: children(flow) renders it.
+export function CancellationFlow({ children, ...opts }) {
+  return children(useCancellationFlow(opts))
+}
+
+function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRows, phone }) {
+  const { stage, tab, live, moving, move, tz, place, attempted, caller, steps, statusText, footer, onMessage, messageLabel } =
+    useCancellationFlow({ p, now, canMove, startRebook, isAdmin, agentRows, phone })
 
   if (phone) {
     // The phone sheet's history reads as sentences; its note is the status
@@ -281,7 +296,7 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRow
       <PhoneClientSheet
         p={p} now={now} steps={history} footer={footer} picker={moving ? move.picker : null}
         note={stage === 'booked' && !live ? null : cap(statusText)}
-        onMessage={onMessage} messageLabel={isAdmin ? 'Message agent' : 'Message Fulfillment'} onClose={onClose}
+        onMessage={onMessage} messageLabel={messageLabel} onClose={onClose}
       />
     )
   }
@@ -290,7 +305,7 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRow
     <ClientDrawer
       p={p} tab={tab} onClose={onClose} footer={footer}
       onMessage={onMessage}
-      messageLabel={isAdmin ? 'Message agent' : 'Message Fulfillment'}
+      messageLabel={messageLabel}
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
         <InfoTile label="Fulfillment call" value={callWhen(p.scheduled_call_at, tz)} />
