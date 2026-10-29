@@ -9,6 +9,7 @@ import { DashboardLayout } from './components/layout/DashboardLayout'
 import { ErrorBoundary } from './components/shared/ErrorBoundary'
 import { NativeBridge } from './components/native/NativeBridge'
 import { LEADS_PAGE } from './lib/leadsPage'
+import { usePortalV2 } from './lib/portalV2'
 // Side-effect import — attaches the beforeinstallprompt listener at app
 // boot (Prompt 286) so it's never missed while the user is still on Login.
 import './lib/installPrompt'
@@ -28,6 +29,11 @@ import AgentClients from './pages/agent/Clients'
 import AgentActivity from './pages/agent/Activity'
 import AgentBilling from './pages/agent/Billing'
 import AgentMore from './pages/agent/More'
+// The v2 agent portal (app_settings.agent_portal_v2, off by default): Today, Inbounds, Inbound detail.
+// Lazy, so a flag-off agent never downloads it.
+const V2Today = lazy(() => import('./pages/agent/v2/Today'))
+const V2Inbounds = lazy(() => import('./pages/agent/v2/Inbounds'))
+const V2InboundDetail = lazy(() => import('./pages/agent/v2/InboundDetail'))
 // P808: Leads mounts only in dev behind VITE_LEADS_PAGE=1; otherwise the page is not in the bundle.
 // The DEV check sits here, in this file, so a production build drops the import() and the chunk.
 const AgentLeads = import.meta.env.DEV && LEADS_PAGE ? lazy(() => import('./pages/agent/Leads')) : null
@@ -64,6 +70,31 @@ function AdminTo({ to, children }) {
 function MpToProtect() {
   const { search } = useLocation()
   return <Navigate to={{ pathname: '/protect', search }} replace />
+}
+
+// /agent: the v2 Today when the flag is on, else the Overview exactly as before. ?portal=v1 skips the
+// wait and shows the Overview. While the flag is still loading a spinner shows, never the wrong page.
+function AgentHome() {
+  const v2 = usePortalV2()
+  if (v2.loading) return <Spinner />
+  if (v2.on) return <Suspense fallback={<Spinner />}><V2Today /></Suspense>
+  return <DashboardLayout><AgentOverview /></DashboardLayout>
+}
+
+// The v2-only routes: with the flag off they go back to /agent.
+function V2Only({ children }) {
+  const v2 = usePortalV2()
+  if (v2.loading) return <Spinner />
+  if (!v2.on) return <Navigate to="/agent" replace />
+  return <Suspense fallback={<Spinner />}>{children}</Suspense>
+}
+
+function Spinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[var(--bg-base)]">
+      <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
 }
 
 function RoleRedirect() {
@@ -143,7 +174,18 @@ export default function App() {
                 their replacements so bookmarks keep working. */}
             <Route path="/agent" element={
               <ProtectedRoute allowedRoles={['agent']}>
-                <DashboardLayout><AgentOverview /></DashboardLayout>
+                <AgentHome />
+              </ProtectedRoute>
+            } />
+            {/* v2 portal: Inbounds list and one inbound (flag off: back to /agent). */}
+            <Route path="/agent/inbounds" element={
+              <ProtectedRoute allowedRoles={['agent']}>
+                <V2Only><V2Inbounds /></V2Only>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/inbounds/:id" element={
+              <ProtectedRoute allowedRoles={['agent']}>
+                <V2Only><V2InboundDetail /></V2Only>
               </ProtectedRoute>
             } />
             <Route path="/agent/book" element={
