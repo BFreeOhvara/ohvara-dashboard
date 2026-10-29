@@ -76,7 +76,7 @@ const ringing = (over: Partial<HelpCall> = {}): HelpCall => ({
 })
 
 Deno.test('1. a bad signature is 403 on the inbound path and on every event', async () => {
-  for (const q of ['', '?event=va_join&call=CA123&va=' + VA1, '?event=va_leg&call=CA123', '?event=conf&call=CA123']) {
+  for (const q of ['', '?event=va_join&call=CA123&va=' + VA1, '?event=va_leg&call=CA123', '?event=agent_leg&call=CA123', '?event=conf&call=CA123']) {
     const w = world()
     const res = await handle(await signed(q, CALLER, 'nope'), w.store, w.twilio, ENV)
     assert.equal(res.status, 403, q)
@@ -232,6 +232,54 @@ Deno.test('conf: start saves the conference SID; end closes the row, dropped onl
   await handle(await signed('?event=conf&call=CA123', { StatusCallbackEvent: 'conference-end' }), left.store, left.twilio, ENV)
   assert.deepEqual([left.rows[0].status, left.rows[0].outcome], ['ended', null])
   assert.deepEqual(posts(left.calls).map(c => [c.path, c.params.Status]), [['/Calls/CAva1.json', 'canceled'], ['/Calls/CAva2.json', 'canceled']])
+})
+
+// A live CA123 with the agent CAag1 ringing (help-transfer dialed it).
+const transferring = (over: Partial<HelpCall> = {}) =>
+  ringing({ status: 'transferring', va_id: VA1, va_call_sid: 'CAva1', transfer_agent_id: VA2, agent_call_sid: 'CAag1', ...over })
+
+Deno.test('9. agent_leg with a bad signature: 403, no store write, no REST call', async () => {
+  const w = world({ rows: [transferring()] })
+  const res = await handle(await signed('?event=agent_leg&call=CA123', { CallSid: 'CAag1', CallStatus: 'in-progress' }, 'nope'), w.store, w.twilio, ENV)
+  assert.equal(res.status, 403)
+  assert.equal(w.writes.length, 0)
+  assert.equal(w.calls.length, 0)
+  assert.equal(w.rows[0].status, 'transferring')
+})
+
+Deno.test('10. agent_leg: no-answer and busy go back to no_answer (agent_call_sid cleared), answered is transferred', async () => {
+  for (const s of ['no-answer', 'busy', 'failed', 'canceled']) {
+    const w = world({ rows: [transferring()] })
+    await handle(await signed('?event=agent_leg&call=CA123', { CallSid: 'CAag1', CallStatus: s }), w.store, w.twilio, ENV)
+    assert.deepEqual([w.rows[0].status, w.rows[0].agent_call_sid, w.rows[0].outcome], ['no_answer', null, null], s)
+    assert.equal(w.calls.length, 0)
+  }
+  const w = world({ rows: [transferring()] })
+  // initiated / ringing change nothing.
+  for (const s of ['initiated', 'ringing']) {
+    await handle(await signed('?event=agent_leg&call=CA123', { CallSid: 'CAag1', CallStatus: s }), w.store, w.twilio, ENV)
+  }
+  assert.equal(w.writes.length, 0)
+  await handle(await signed('?event=agent_leg&call=CA123', { CallSid: 'CAag1', CallStatus: 'in-progress' }), w.store, w.twilio, ENV)
+  assert.deepEqual([w.rows[0].status, w.rows[0].outcome, w.rows[0].agent_call_sid], ['transferred', 'transferred', 'CAag1'])
+  assert.ok(w.rows[0].transferred_at)
+  // The agent hanging up later doesn't undo the transfer.
+  await handle(await signed('?event=agent_leg&call=CA123', { CallSid: 'CAag1', CallStatus: 'completed' }), w.store, w.twilio, ENV)
+  assert.equal(w.rows[0].status, 'transferred')
+  assert.equal(w.calls.length, 0)
+
+  // A leg from an earlier attempt changes nothing.
+  const old = world({ rows: [transferring({ agent_call_sid: 'CAag2' })] })
+  await handle(await signed('?event=agent_leg&call=CA123', { CallSid: 'CAag1', CallStatus: 'no-answer' }), old.store, old.twilio, ENV)
+  assert.equal(old.rows[0].status, 'transferring')
+  // A callback before help-transfer saved the agent's CallSid still counts.
+  const early = world({ rows: [transferring({ agent_call_sid: null })] })
+  await handle(await signed('?event=agent_leg&call=CA123', { CallSid: 'CAag1', CallStatus: 'failed' }), early.store, early.twilio, ENV)
+  assert.equal(early.rows[0].status, 'no_answer')
+  // Not transferring (the VA booked, the call ended): nothing changes.
+  const ended = world({ rows: [transferring({ status: 'ended', outcome: 'booked' })] })
+  await handle(await signed('?event=agent_leg&call=CA123', { CallSid: 'CAag1', CallStatus: 'in-progress' }), ended.store, ended.twilio, ENV)
+  assert.deepEqual([ended.rows[0].status, ended.rows[0].outcome], ['ended', 'booked'])
 })
 
 Deno.test('8. nothing is ever recorded: helpConference and every response', async () => {

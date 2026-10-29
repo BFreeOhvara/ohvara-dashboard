@@ -11,6 +11,8 @@
 //            ringing VA legs are canceled; a later one is hung up.
 //   va_leg   a VA leg's call status. Once every VA leg has ended and nobody
 //            joined, the caller hears a short message and is hung up.
+//   agent_leg the agent help-transfer dialed in: answered = transferred,
+//            ended unanswered = no_answer.
 //   conf     the conference's events: its start, and its end.
 //
 // help-transfer reuses helpConferenceName, helpConference, HelpCall and Store.
@@ -190,6 +192,23 @@ async function vaLeg(store: Store, twilio: Twilio | null, callSid: string, form:
   return twiml()
 }
 
+// The agent leg help-transfer dialed into the conference. Answered: the call
+// is transferred and the VA may drop. Ended before that: no_answer, so the
+// desk offers to book instead. Only while the row is transferring, and only
+// for the leg on the row (one from an earlier attempt changes nothing).
+async function agentLeg(store: Store, callSid: string, form: Record<string, string>) {
+  const s = form.CallStatus || ''
+  const answered = s === 'in-progress' || s === 'answered'
+  if (!answered && !FINAL.includes(s)) return twiml()
+  const row = await store.helpCall(callSid)
+  if (!row || row.status !== 'transferring') return twiml()
+  if (row.agent_call_sid && form.CallSid !== row.agent_call_sid) return twiml()
+  await store.updateHelpCall(callSid, answered
+    ? { status: 'transferred', transferred_at: now(), outcome: 'transferred' }
+    : { status: 'no_answer', agent_call_sid: null }, ['transferring'])
+  return twiml()
+}
+
 async function conf(store: Store, twilio: Twilio | null, callSid: string, form: Record<string, string>) {
   const e = form.StatusCallbackEvent
   if (e === 'conference-start') {
@@ -223,6 +242,7 @@ export async function handle(req: Request, store: Store, twilio: Twilio | null, 
 
   if (event === 'va_join') return vaJoin(store, twilio, env, callSid, q.get('va') || '', form.CallSid || '')
   if (event === 'va_leg') return vaLeg(store, twilio, callSid, form)
+  if (event === 'agent_leg') return agentLeg(store, callSid, form)
   if (event === 'conf') return conf(store, twilio, callSid, form)
   return twiml()
 }
