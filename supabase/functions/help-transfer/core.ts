@@ -8,7 +8,8 @@
 //             conference. The agent is picked here, never by the browser.
 //             Nobody on duty: status no_answer and code no_agent, so the desk
 //             offers "Book instead". help-voice ?event=agent_leg moves the row
-//             to transferred (the agent answered) or back to no_answer.
+//             to transferred (a person answered) or back to no_answer
+//             (voicemail, fax, unknown or no answer: agentLegParams).
 //   drop      the VA hangs up their own leg once the agent has answered. The
 //             conference is never ended here: the VA joined with
 //             endConferenceOnExit false, so the caller and agent keep talking.
@@ -75,6 +76,24 @@ async function findConference(twilio: Twilio, callSid: string): Promise<string |
   return data?.conferences?.[0]?.sid ?? null
 }
 
+// The agent's leg into the conference. EndConferenceOnExit stays 'false': the
+// agent leaving never ends the call by itself (help-voice ends it once the
+// caller would be alone). Timeout 25 s: not answered by then is no answer.
+// A phone (PSTN) leg also gets synchronous answering machine detection, so a
+// voicemail never counts as the agent picking up (help-voice ?amd=1 reads
+// AnsweredBy). A browser leg (client:...) gets none: AMD doesn't apply there.
+export function agentLegParams(env: Env, to: string, callSid: string): Record<string, string | string[]> {
+  const phone = !to.startsWith('client:')
+  const cb = new URLSearchParams({ event: 'agent_leg', call: callSid, ...(phone ? { amd: '1' } : null) })
+  return {
+    From: env.from!, To: to, Label: 'agent', Beep: 'false', EndConferenceOnExit: 'false', Timeout: '25',
+    // AMD adds a small Twilio charge per phone-leg call: expected, fine under the cap.
+    ...(phone ? { MachineDetection: 'Enable', MachineDetectionTimeout: '10' } : null),
+    StatusCallback: `${env.voiceUrl}?${cb}`, StatusCallbackMethod: 'POST',
+    StatusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+  }
+}
+
 async function transfer(store: Store, twilio: Twilio, env: Env, row: HelpCall) {
   if (row.status !== 'live' && row.status !== 'no_answer') refuse('This call can\'t be transferred right now.', 409, 'not_live')
   if (!env.from) refuse('No Twilio number to place calls from yet.', 503, 'no_from_number')
@@ -96,12 +115,8 @@ async function transfer(store: Store, twilio: Twilio, env: Env, row: HelpCall) {
     { status: 'transferring', transfer_agent_id: agent.agent_id, agent_call_sid: null, transfer_started_at: now() }, was)
   if (!claimed) refuse('A transfer is already ringing.', 409, 'busy')
 
-  const cb = new URLSearchParams({ event: 'agent_leg', call: row.call_sid })
-  const res = await twilio('POST', `/Conferences/${conf}/Participants.json`, {
-    From: env.from!, To: to, Label: 'agent', Beep: 'false', EndConferenceOnExit: 'false', Timeout: '25',
-    StatusCallback: `${env.voiceUrl}?${cb}`, StatusCallbackMethod: 'POST',
-    StatusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
-  }).catch(e => ({ status: 599, data: { message: (e as Error).message } }))
+  const res = await twilio('POST', `/Conferences/${conf}/Participants.json`, agentLegParams(env, to, row.call_sid))
+    .catch(e => ({ status: 599, data: { message: (e as Error).message } }))
   if (res.status >= 400 || !res.data?.call_sid) {
     await store.updateHelpCall(row.call_sid, { status: row.status, transfer_agent_id: null, transfer_started_at: null }, ['transferring'])
     refuse(res.data?.message || `Twilio refused it (${res.status})`, 502, 'twilio')

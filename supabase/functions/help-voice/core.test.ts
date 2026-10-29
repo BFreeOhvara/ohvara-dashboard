@@ -6,6 +6,7 @@
 import assert from 'node:assert/strict'
 import { handle, helpConference, helpConferenceName, twilioSignature, type HelpCall, type Store } from './core.ts'
 import type { Twilio } from '../_shared/twilio.ts'
+import { agentLegParams } from '../help-transfer/core.ts'
 
 const URL_ = 'https://x.supabase.co/functions/v1/help-voice'
 const TOKEN = 'secret-token'
@@ -14,11 +15,25 @@ const VA2 = '22222222-2222-4222-8222-222222222222'
 const ENV = { authToken: TOKEN, publicUrl: URL_, trackingNumber: '+15125550199' }
 const CALLER = { CallSid: 'CA123', From: '+15125550100', To: '+15125550199' }
 
-function world(over: { live?: boolean; vas?: string[]; rows?: HelpCall[]; legStatus?: Record<string, string> } = {}) {
+// No real HTTP, ever: every Twilio call goes through the fake below. Any
+// stray fetch is counted (and throws) so the leave / voicemail tests fail.
+let realFetches = 0
+globalThis.fetch = (() => { realFetches++; throw new Error('real fetch in a test') }) as typeof fetch
+const noRealFetch = () => assert.equal(realFetches, 0, 'a test made a real HTTP request')
+
+type Participant = { call_sid: string; label?: string; status: string }
+
+function world(over: {
+  live?: boolean; vas?: string[]; rows?: HelpCall[]; legStatus?: Record<string, string>
+  // conference SID -> who Twilio says is in it; answered_by per call SID.
+  participants?: Record<string, Participant[]>; answeredBy?: Record<string, string>
+} = {}) {
   const rows: HelpCall[] = over.rows ?? []
   const writes: any[] = []
   const calls: { method: string; path: string; params?: any }[] = []
   const legStatus: Record<string, string> = over.legStatus ?? {}
+  const participants: Record<string, Participant[]> = over.participants ?? {}
+  const leads: Record<string, string> = {}
   let n = 0
   const row = (sid: string) => rows.find(r => r.call_sid === sid) ?? null
   const store: Store = {
@@ -45,15 +60,28 @@ function world(over: { live?: boolean; vas?: string[]; rows?: HelpCall[]; legSta
       Object.assign(r, patch)
       return { ...r }
     },
+    async setLeadTransferStatus(id, status) {
+      writes.push(['lead', id, status])
+      leads[id] = status
+    },
   }
   const twilio: Twilio = async (method, path, params) => {
     calls.push({ method, path, params })
     if (method === 'POST' && path === '/Calls.json') return { status: 201, data: { sid: `CAva${++n}` } }
     const m = path.match(/^\/Calls\/(\w+)\.json$/)
-    if (method === 'GET' && m) return { status: 200, data: { status: legStatus[m[1]] ?? 'ringing' } }
+    if (method === 'GET' && m) return { status: 200, data: { status: legStatus[m[1]] ?? 'ringing', answered_by: over.answeredBy?.[m[1]] ?? null } }
+    const p = path.match(/^\/Conferences\/(\w+)\/Participants\.json$/)
+    if (method === 'GET' && p) {
+      return participants[p[1]] ? { status: 200, data: { participants: participants[p[1]] } } : { status: 404, data: { message: 'not found' } }
+    }
+    const c = path.match(/^\/Conferences\/(\w+)\.json$/)
+    if (method === 'POST' && c && params?.Status === 'completed') {
+      // Twilio ends the conference: everyone left, the conference is gone.
+      delete participants[c[1]]
+    }
     return { status: 200, data: {} }
   }
-  return { store, twilio, rows, writes, calls }
+  return { store, twilio, rows, writes, calls, participants, leads }
 }
 
 async function signed(query: string, form: Record<string, string>, sig?: string) {
@@ -299,4 +327,234 @@ Deno.test('8. nothing is ever recorded: helpConference and every response', asyn
   for (const b of bodies) assert.doesNotMatch(b, /record/i)
   for (const c of w.calls) assert.doesNotMatch(JSON.stringify(c.params ?? {}), /record/i)
   assert.equal(helpConference.length, 3)
+})
+
+// ── Live transfer: end the call when nobody is left, ignore agent voicemail ──
+const AGENT = '44444444-4444-4444-8444-444444444444'
+const LEAD = '66666666-6666-4666-8666-666666666666'
+// Everyone on CF9: the caller CA123, the VA CAva1 and the agent CAag1.
+const onCall = (): Participant[] => [
+  { call_sid: 'CA123', status: 'connected' },
+  { call_sid: 'CAva1', status: 'connected' },
+  { call_sid: 'CAag1', label: 'agent', status: 'connected' },
+]
+const handedOver = (over: Partial<HelpCall> = {}) => ringing({
+  status: 'transferred', conference_sid: 'CF9', va_id: VA1, va_call_sid: 'CAva1', transfer_agent_id: AGENT,
+  agent_call_sid: 'CAag1', outcome: 'transferred', lead_id: LEAD, transferred_at: 'then', ...over,
+})
+const confEnds = (calls: any[]) => calls.filter(c => c.method === 'POST' && /^\/Conferences\/\w+\.json$/.test(c.path))
+const hangups = (calls: any[], sid: string) => calls.filter(c => c.method === 'POST' && c.path === `/Calls/${sid}.json`)
+
+// Twilio drops the leg from the conference, then sends participant-leave.
+async function leave(w: ReturnType<typeof world>, sid: string, label?: string) {
+  if (w.participants.CF9) w.participants.CF9 = w.participants.CF9.filter(p => p.call_sid !== sid)
+  const form: Record<string, string> = { StatusCallbackEvent: 'participant-leave', ConferenceSid: 'CF9', CallSid: sid }
+  if (label) form.ParticipantLabel = label
+  const res = await handle(await signed('?event=conf&call=CA123', form), w.store, w.twilio, ENV)
+  assert.equal(res.status, 200)
+  return res
+}
+
+async function agentAnswer(w: ReturnType<typeof world>, form: Record<string, string>, amd = true) {
+  const q = `?event=agent_leg&call=CA123${amd ? '&amd=1' : ''}`
+  return handle(await signed(q, { CallSid: 'CAag1', CallStatus: 'in-progress', ...form }), w.store, w.twilio, ENV)
+}
+
+Deno.test('VA drops then agent leaves: conference completed, caller ended', async () => {
+  const w = world({ rows: [handedOver()], participants: { CF9: onCall() } })
+  await leave(w, 'CAva1')
+  assert.equal(posts(w.calls).length, 0)
+  assert.equal(w.rows[0].status, 'transferred')
+
+  await leave(w, 'CAag1', 'agent')
+  assert.deepEqual(confEnds(w.calls), [{ method: 'POST', path: '/Conferences/CF9.json', params: { Status: 'completed' } }])
+  // The conference is ended, not just the caller's leg.
+  assert.equal(hangups(w.calls, 'CA123').length, 0)
+  assert.deepEqual([w.rows[0].status, w.rows[0].end_reason, w.rows[0].outcome], ['ended', 'caller_alone', 'transferred'])
+  assert.ok(w.rows[0].ended_at)
+  assert.equal(w.leads[LEAD], 'dropped')
+  noRealFetch()
+})
+
+Deno.test('agent leaves while VA is on: call not ended', async () => {
+  const w = world({ rows: [handedOver()], participants: { CF9: onCall() } })
+  await leave(w, 'CAag1', 'agent')
+  assert.equal(posts(w.calls).length, 0)
+  assert.equal(w.writes.length, 0)
+  assert.equal(w.rows[0].status, 'transferred')
+  assert.equal(w.leads[LEAD], undefined)
+  // Twilio's list was checked, not guessed from order.
+  assert.deepEqual(w.calls.map(c => [c.method, c.path]), [['GET', '/Conferences/CF9/Participants.json']])
+  noRealFetch()
+})
+
+Deno.test('agent already gone then VA leaves: conference completed', async () => {
+  const w = world({ rows: [handedOver()], participants: { CF9: onCall() } })
+  await leave(w, 'CAag1', 'agent')
+  assert.equal(posts(w.calls).length, 0)
+  await leave(w, 'CAva1')
+  assert.deepEqual(confEnds(w.calls).map(c => [c.path, c.params.Status]), [['/Conferences/CF9.json', 'completed']])
+  assert.deepEqual([w.rows[0].status, w.rows[0].end_reason], ['ended', 'caller_alone'])
+  assert.equal(w.leads[LEAD], 'dropped')
+
+  // The VA hanging up on a live call nobody was transferred on: same, the
+  // caller isn't left in silence (no transfer, so the lead is not touched).
+  const solo = world({ rows: [handedOver({ status: 'live', transfer_agent_id: null, agent_call_sid: null, outcome: null })],
+    participants: { CF9: onCall().slice(0, 2) } })
+  await leave(solo, 'CAva1')
+  assert.equal(confEnds(solo.calls).length, 1)
+  assert.deepEqual([solo.rows[0].status, solo.rows[0].outcome], ['ended', 'dropped'])
+  assert.deepEqual(solo.leads, {})
+  noRealFetch()
+})
+
+Deno.test('caller hangs up first: legs ended, no error, no extra Twilio end call', async () => {
+  const w = world({ rows: [handedOver()], participants: { CF9: onCall() } })
+  const res = await leave(w, 'CA123')
+  assert.equal(res.status, 200)
+  assert.equal(w.calls.length, 0)
+  assert.deepEqual([w.rows[0].status, w.rows[0].end_reason, w.rows[0].outcome], ['ended', 'caller_hung_up', 'transferred'])
+  assert.ok(w.rows[0].ended_at)
+  assert.equal(w.leads[LEAD], 'dropped')
+  // The caller ended the conference (endConferenceOnExit true): Twilio's
+  // leave callbacks for the VA and agent, and conference-end, change nothing.
+  delete w.participants.CF9
+  const writes = w.writes.length
+  await leave(w, 'CAva1')
+  await leave(w, 'CAag1', 'agent')
+  await handle(await signed('?event=conf&call=CA123', { StatusCallbackEvent: 'conference-end', ConferenceSid: 'CF9' }), w.store, w.twilio, ENV)
+  assert.equal(w.calls.length, 0)
+  assert.equal(w.writes.length, writes)
+
+  // A transferring call where the caller leaves: dropped, still no Twilio call.
+  const t = world({ rows: [handedOver({ status: 'transferring', outcome: null, transferred_at: null })], participants: { CF9: onCall() } })
+  await leave(t, 'CA123')
+  assert.deepEqual([t.rows[0].status, t.rows[0].outcome], ['ended', 'dropped'])
+  assert.equal(t.calls.length, 0)
+  noRealFetch()
+})
+
+// The agent leg rings while the VA waits on the line with the caller.
+const ringingAgent = (over: Partial<HelpCall> = {}) =>
+  handedOver({ status: 'transferring', outcome: null, transferred_at: null, ...over })
+
+Deno.test('voicemail pickup (machine_end_beep) is not answered: leg hung up, fallback taken, never connected', async () => {
+  const w = world({ rows: [ringingAgent()], participants: { CF9: onCall() } })
+  await agentAnswer(w, { AnsweredBy: 'machine_end_beep' })
+  assert.deepEqual(hangups(w.calls, 'CAag1').map(c => c.params), [{ Status: 'completed' }])
+  const r = w.rows[0]
+  // Fallback: back to no_answer, so the desk offers another try or Book instead.
+  assert.deepEqual([r.status, r.agent_call_sid, r.end_reason, r.outcome, r.transferred_at], ['no_answer', null, 'voicemail', null, null])
+  assert.equal(w.leads[LEAD], 'dropped')
+  assert.ok(!w.writes.some(x => x[0] === 'lead' && x[2] === 'connected'))
+  // The VA is still on: the call goes on.
+  assert.equal(confEnds(w.calls).length, 0)
+  // The leg's later completed callback and its participant-leave change nothing.
+  const before = w.writes.length
+  await handle(await signed('?event=agent_leg&call=CA123&amd=1', { CallSid: 'CAag1', CallStatus: 'completed' }), w.store, w.twilio, ENV)
+  await leave(w, 'CAag1', 'agent')
+  assert.equal(w.writes.length, before)
+  assert.equal(confEnds(w.calls).length, 0)
+
+  // The VA had already hung up: the caller would sit alone, so the call ends.
+  const alone = world({ rows: [ringingAgent()], participants: { CF9: [onCall()[0], onCall()[2]] } })
+  await agentAnswer(alone, { AnsweredBy: 'machine_end_beep' })
+  assert.equal(hangups(alone.calls, 'CAag1').length, 1)
+  assert.deepEqual(confEnds(alone.calls).map(c => c.params), [{ Status: 'completed' }])
+  assert.deepEqual([alone.rows[0].status, alone.rows[0].end_reason, alone.rows[0].outcome], ['ended', 'caller_alone', 'dropped'])
+  assert.ok(!alone.writes.some(x => x[0] === 'lead' && x[2] === 'connected'))
+  noRealFetch()
+})
+
+Deno.test('unknown and fax and no-answer count as not answered', async () => {
+  const cases: [Record<string, string>, string, Record<string, string>?][] = [
+    [{ AnsweredBy: 'unknown' }, 'no-answer'],
+    [{ AnsweredBy: 'fax' }, 'no-answer'],
+    [{ AnsweredBy: 'machine_start' }, 'voicemail'],
+    [{ AnsweredBy: 'machine_end_silence' }, 'voicemail'],
+    [{ AnsweredBy: 'machine_end_other' }, 'voicemail'],
+    // No AnsweredBy on the callback: the call's answered_by is fetched.
+    [{}, 'no-answer', { CAag1: 'fax' }],
+    [{}, 'voicemail', { CAag1: 'machine_start' }],
+    // Twilio has no answer for it at all: unknown, not answered.
+    [{}, 'no-answer'],
+  ]
+  for (const [form, reason, answeredBy] of cases) {
+    const w = world({ rows: [ringingAgent()], participants: { CF9: onCall() }, answeredBy })
+    await agentAnswer(w, form)
+    const label = JSON.stringify([form, answeredBy])
+    assert.deepEqual([w.rows[0].status, w.rows[0].end_reason, w.rows[0].outcome], ['no_answer', reason, null], label)
+    assert.equal(hangups(w.calls, 'CAag1').filter(c => c.params?.Status === 'completed').length, 1, label)
+    assert.equal(w.leads[LEAD], 'dropped', label)
+    if (!form.AnsweredBy) assert.ok(w.calls.some(c => c.method === 'GET' && c.path === '/Calls/CAag1.json'), label)
+  }
+  // No answer within the leg's 25 s Timeout: Twilio ends the leg itself, so
+  // nothing is hung up; no_answer, never connected.
+  for (const s of ['no-answer', 'busy', 'failed', 'canceled']) {
+    const w = world({ rows: [ringingAgent()], participants: { CF9: onCall() } })
+    await handle(await signed('?event=agent_leg&call=CA123&amd=1', { CallSid: 'CAag1', CallStatus: s }), w.store, w.twilio, ENV)
+    assert.deepEqual([w.rows[0].status, w.rows[0].end_reason], ['no_answer', 'no-answer'], s)
+    assert.equal(hangups(w.calls, 'CAag1').length, 0, s)
+    assert.equal(w.leads[LEAD], 'dropped', s)
+  }
+  noRealFetch()
+})
+
+Deno.test('human on the phone leg counts as connected; browser leg gets no MachineDetection', async () => {
+  const w = world({ rows: [ringingAgent()], participants: { CF9: onCall() } })
+  await agentAnswer(w, { AnsweredBy: 'human' })
+  assert.deepEqual([w.rows[0].status, w.rows[0].outcome, w.rows[0].agent_call_sid], ['transferred', 'transferred', 'CAag1'])
+  assert.ok(w.rows[0].transferred_at)
+  assert.equal(w.leads[LEAD], 'connected')
+  assert.equal(posts(w.calls).length, 0)
+  // answered_by fetched when the callback has none.
+  const fetched = world({ rows: [ringingAgent()], answeredBy: { CAag1: 'human' } })
+  await agentAnswer(fetched, {})
+  assert.equal(fetched.rows[0].status, 'transferred')
+  assert.equal(fetched.leads[LEAD], 'connected')
+
+  const env = { from: '+15125550199', voiceUrl: URL_, configured: true }
+  const phone = agentLegParams(env, '+15125550142', 'CA123')
+  assert.equal(phone.MachineDetection, 'Enable')
+  assert.equal(phone.MachineDetectionTimeout, '10')
+  assert.equal(phone.EndConferenceOnExit, 'false')
+  assert.equal(phone.Timeout, '25')
+  assert.equal(phone.StatusCallback, `${URL_}?event=agent_leg&call=CA123&amd=1`)
+  const browser = agentLegParams(env, `client:${AGENT}`, 'CA123')
+  assert.ok(!('MachineDetection' in browser) && !('MachineDetectionTimeout' in browser))
+  assert.equal(browser.EndConferenceOnExit, 'false')
+  assert.equal(browser.StatusCallback, `${URL_}?event=agent_leg&call=CA123`)
+  // A person answering the browser leg (no amd) counts, with no answered_by lookup.
+  const web = world({ rows: [ringingAgent()] })
+  await agentAnswer(web, {}, false)
+  assert.equal(web.rows[0].status, 'transferred')
+  assert.equal(web.calls.length, 0)
+  noRealFetch()
+})
+
+Deno.test('repeated participant-leave is a no-op', async () => {
+  const w = world({ rows: [handedOver()], participants: { CF9: onCall() } })
+  await leave(w, 'CAva1')
+  await leave(w, 'CAag1', 'agent')
+  assert.equal(confEnds(w.calls).length, 1)
+  const calls = w.calls.length, writes = w.writes.length
+  // The same leave again, the other one late, and conference-end: nothing more.
+  await leave(w, 'CAag1', 'agent')
+  await leave(w, 'CAva1')
+  await leave(w, 'CA123')
+  await handle(await signed('?event=conf&call=CA123', { StatusCallbackEvent: 'conference-end', ConferenceSid: 'CF9' }), w.store, w.twilio, ENV)
+  assert.equal(w.calls.length, calls)
+  assert.equal(w.writes.length, writes)
+  assert.equal(confEnds(w.calls).length, 1)
+
+  // A late leave for a conference Twilio already completed (404): no-op.
+  const late = world({ rows: [handedOver()] })
+  await leave(late, 'CAag1', 'agent')
+  assert.equal(posts(late.calls).length, 0)
+  assert.equal(late.writes.length, 0)
+  // A leg that isn't on the row (an old VA leg, no label): nothing at all.
+  const stray = world({ rows: [handedOver()], participants: { CF9: onCall() } })
+  await leave(stray, 'CAva2')
+  assert.equal(stray.calls.length, 0)
+  noRealFetch()
 })
