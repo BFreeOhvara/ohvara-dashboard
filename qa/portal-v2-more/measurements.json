@@ -1,0 +1,262 @@
+{
+  "passes": [
+    {
+      "route": "calendar",
+      "width": 1920,
+      "theme": "light",
+      "shots": [
+        "calendar-1920-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1905,
+      "innerWidth": 1920,
+      "failures": []
+    },
+    {
+      "route": "calendar",
+      "width": 1920,
+      "theme": "dark",
+      "shots": [
+        "calendar-1920-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1905,
+      "innerWidth": 1920,
+      "failures": []
+    },
+    {
+      "route": "calendar",
+      "width": 1440,
+      "theme": "light",
+      "shots": [
+        "calendar-1440-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1425,
+      "innerWidth": 1440,
+      "failures": []
+    },
+    {
+      "route": "calendar",
+      "width": 1440,
+      "theme": "dark",
+      "shots": [
+        "calendar-1440-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1425,
+      "innerWidth": 1440,
+      "failures": []
+    },
+    {
+      "route": "calendar",
+      "width": 390,
+      "theme": "light",
+      "shots": [
+        "calendar-390-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "failures": []
+    },
+    {
+      "route": "calendar",
+      "width": 390,
+      "theme": "dark",
+      "shots": [
+        "calendar-390-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "failures": []
+    },
+    {
+      "route": "clients",
+      "width": 1920,
+      "theme": "light",
+      "shots": [
+        "clients-list-1920-light.png",
+        "clients-detail-1920-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1905,
+      "innerWidth": 1920,
+      "failures": []
+    },
+    {
+      "route": "clients",
+      "width": 1920,
+      "theme": "dark",
+      "shots": [
+        "clients-list-1920-dark.png",
+        "clients-detail-1920-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1905,
+      "innerWidth": 1920,
+      "failures": []
+    },
+    {
+      "route": "clients",
+      "width": 1440,
+      "theme": "light",
+      "shots": [
+        "clients-list-1440-light.png",
+        "clients-detail-1440-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1425,
+      "innerWidth": 1440,
+      "failures": []
+    },
+    {
+      "route": "clients",
+      "width": 1440,
+      "theme": "dark",
+      "shots": [
+        "clients-list-1440-dark.png",
+        "clients-detail-1440-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1425,
+      "innerWidth": 1440,
+      "failures": []
+    },
+    {
+      "route": "clients",
+      "width": 390,
+      "theme": "light",
+      "shots": [
+        "clients-list-390-light.png",
+        "clients-detail-390-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "failures": []
+    },
+    {
+      "route": "clients",
+      "width": 390,
+      "theme": "dark",
+      "shots": [
+        "clients-list-390-dark.png",
+        "clients-detail-390-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "failures": []
+    },
+    {
+      "route": "plan",
+      "width": 1920,
+      "theme": "light",
+      "shots": [
+        "plan-1920-light.png"
+      ],
+      "bannedMatch": null,
+      "moneyMatch": null,
+      "scrollWidth": 1905,
+      "innerWidth": 1920,
+      "failures": []
+    },
+    {
+      "route": "plan",
+      "width": 1920,
+      "theme": "dark",
+      "shots": [
+        "plan-1920-dark.png"
+      ],
+      "bannedMatch": null,
+      "moneyMatch": null,
+      "scrollWidth": 1905,
+      "innerWidth": 1920,
+      "failures": []
+    },
+    {
+      "route": "plan",
+      "width": 1440,
+      "theme": "light",
+      "shots": [
+        "plan-1440-light.png"
+      ],
+      "bannedMatch": null,
+      "moneyMatch": null,
+      "scrollWidth": 1425,
+      "innerWidth": 1440,
+      "failures": []
+    },
+    {
+      "route": "plan",
+      "width": 1440,
+      "theme": "dark",
+      "shots": [
+        "plan-1440-dark.png"
+      ],
+      "bannedMatch": null,
+      "moneyMatch": null,
+      "scrollWidth": 1425,
+      "innerWidth": 1440,
+      "failures": []
+    },
+    {
+      "route": "plan",
+      "width": 390,
+      "theme": "light",
+      "shots": [
+        "plan-390-light.png"
+      ],
+      "bannedMatch": null,
+      "moneyMatch": null,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "failures": []
+    },
+    {
+      "route": "plan",
+      "width": 390,
+      "theme": "dark",
+      "shots": [
+        "plan-390-dark.png"
+      ],
+      "bannedMatch": null,
+      "moneyMatch": null,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "failures": []
+    }
+  ],
+  "extra": [
+    {
+      "check": "cancellation flow from v2 Clients: status + journey, Change this booking -> /agent/book?change=, Confirm number writes agent_confirm_recovery_number once and moves on, Call & rebook opens the picker, Book a cancellation call -> /agent/book",
+      "failures": []
+    },
+    {
+      "check": "plan, membership_tiers empty: \"Plans are being set up\", How it works still shown",
+      "failures": []
+    },
+    {
+      "check": "plan, membership_tiers error: \"We couldn't load the plans\", How it works still shown",
+      "failures": []
+    },
+    {
+      "check": "flag off /agent/clients: old page, same text as the pre-change baseline and ?portal=v1 (767 chars)",
+      "failures": []
+    },
+    {
+      "check": "flag off /agent/billing: old page, same text as the pre-change baseline and ?portal=v1 (743 chars)",
+      "failures": []
+    },
+    {
+      "check": "flag off /agent/calendar goes back to /agent",
+      "failures": []
+    },
+    {
+      "check": "flag off /agent/plan goes back to /agent",
+      "failures": []
+    }
+  ]
+}
