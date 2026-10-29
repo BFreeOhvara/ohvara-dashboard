@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "test": "node scripts/run-tests.mjs",
     "preview": "vite preview",
+    "shots:leads": "node scripts/leads-shots.mjs",
     "scrape:indeed": "node scrapers/indeed-scraper.js",
     "scrape:googlemaps": "node scrapers/googlemaps-scraper.js",
     "build:app": "vite build && npx cap sync"
