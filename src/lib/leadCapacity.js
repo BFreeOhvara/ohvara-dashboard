@@ -5,7 +5,7 @@
 //
 //   T  lowest price_cents among active lead_prices rows (176). No active row:
 //      null, and nothing that needs a price is computed. Never guessed.
-//      recovery_config.price_per_lead_cents (161/162 comments) is not used.
+//      The older per-lead price that the 161/162 comments point at is not used.
 //   F  agents with agent_lead_settings.active, a balance (agent_lead_balance,
 //      no row = 0) of at least T, and a profile with role 'agent', is_active.
 //   C  sum of daily_cap over F. A null cap is left out and counted apart; 0 is
