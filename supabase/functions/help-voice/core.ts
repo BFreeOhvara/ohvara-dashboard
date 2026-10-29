@@ -142,6 +142,13 @@ async function inbound(store: Store, twilio: Twilio | null, env: Env, form: Reco
   const saved = await store.updateHelpCall(callSid, { ringing_va_call_sids: sids })
   // A VA answered before the SIDs were saved: cancel the rest here instead.
   if (saved && saved.status !== 'ringing') await cancelLegs(twilio, sids.filter(s => s !== saved.va_call_sid))
+  // Every leg ended before the SIDs were saved: va_leg ignored those
+  // callbacks, so end the caller here (this answers the caller's own webhook).
+  if (saved?.status === 'ringing' && await allEnded(twilio, sids)) {
+    if (await store.updateHelpCall(callSid, { status: 'ended', end_reason: 'no_va_answer', ended_at: now() }, ['ringing'])) {
+      return twiml(sorry())
+    }
+  }
   return twiml(helpConference(env.publicUrl, callSid, { startOnEnter: false, endOnExit: true }))
 }
 
@@ -162,12 +169,18 @@ async function legEnded(twilio: Twilio, sid: string) {
   return res.status < 400 && FINAL.includes(res.data?.status)
 }
 
+const allEnded = async (twilio: Twilio, sids: string[]) =>
+  (await Promise.all(sids.map(sid => legEnded(twilio, sid)))).every(Boolean)
+
 async function vaLeg(store: Store, twilio: Twilio | null, callSid: string, form: Record<string, string>) {
   if (!twilio || !FINAL.includes(form.CallStatus || '')) return twiml()
   const row = await store.helpCall(callSid)
   if (!row || row.status !== 'ringing') return twiml()
-  const others = (row.ringing_va_call_sids ?? []).filter(s => s !== form.CallSid)
-  for (const sid of others) if (!(await legEnded(twilio, sid))) return twiml()
+  const sids = row.ringing_va_call_sids ?? []
+  // This leg isn't in the saved list yet (inbound is still ringing the VAs):
+  // change nothing; inbound re-checks once the SIDs are saved.
+  if (!form.CallSid || !sids.includes(form.CallSid)) return twiml()
+  if (!(await allEnded(twilio, sids.filter(s => s !== form.CallSid)))) return twiml()
   // Nobody joined in time. Claim the end first, so only one callback ends
   // the caller's call; the row is kept.
   const ended = await store.updateHelpCall(callSid, { status: 'ended', end_reason: 'no_va_answer', ended_at: now() }, ['ringing'])

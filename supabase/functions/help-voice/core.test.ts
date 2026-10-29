@@ -192,6 +192,29 @@ Deno.test('7. every VA leg ends unanswered: the caller hears the message and the
   assert.equal(r.calls.length, 0)
 })
 
+Deno.test('7b. a VA leg ends before the SIDs are saved: nothing changes; inbound re-checks once they are', async () => {
+  // va_leg failed for CAva1 while the row's list is still empty.
+  const early = world({ rows: [ringing({ ringing_va_call_sids: [] })] })
+  await handle(await signed('?event=va_leg&call=CA123', { CallSid: 'CAva1', CallStatus: 'failed' }), early.store, early.twilio, ENV)
+  assert.equal(early.calls.length, 0)
+  assert.equal(early.rows[0].status, 'ringing')
+  assert.equal(early.writes.length, 0)
+
+  // Every leg had already ended when inbound saved the SIDs: the caller hears
+  // the message on its own webhook and the row ends no_va_answer.
+  const all = world({ legStatus: { CAva1: 'failed', CAva2: 'busy' } })
+  const xml = await (await handle(await signed('', CALLER), all.store, all.twilio, ENV)).text()
+  assert.match(xml, /<Say>Sorry, no one can take your call right now\. Please call back soon\.<\/Say><Hangup\/>/)
+  assert.doesNotMatch(xml, /<Dial/)
+  assert.deepEqual([all.rows[0].status, all.rows[0].end_reason], ['ended', 'no_va_answer'])
+  assert.deepEqual(posts(all.calls).map(c => c.path), ['/Calls.json', '/Calls.json'])
+
+  // One leg still ringing at save time: the caller waits in the conference.
+  const one = world({ legStatus: { CAva1: 'failed' } })
+  assert.match(await (await handle(await signed('', CALLER), one.store, one.twilio, ENV)).text(), /help-CA123<\/Conference>/)
+  assert.equal(one.rows[0].status, 'ringing')
+})
+
 Deno.test('conf: start saves the conference SID; end closes the row, dropped only if it was live', async () => {
   const w = world({ rows: [ringing({ status: 'live', va_id: VA1, va_call_sid: 'CAva1' })] })
   await handle(await signed('?event=conf&call=CA123', { StatusCallbackEvent: 'conference-start', ConferenceSid: 'CF9' }), w.store, w.twilio, ENV)
