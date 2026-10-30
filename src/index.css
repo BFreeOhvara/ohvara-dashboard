@@ -3386,6 +3386,8 @@ a.ov-hpill:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; 
 .af-lane.is-focus { background: color-mix(in srgb, var(--ov-data-a) 10%, transparent); box-shadow: inset 3px 0 0 var(--ov-data-a); }
 
 .au-page { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 18px; align-items: start; }
+/* Goal 7 — "On duty now" (components/admin/OnDutyNow) sits above the page; it keeps its height in fit mode. */
+.ov-set-card:has(+ .au-page) { flex-shrink: 0; margin-bottom: 18px; }
 .au-list { min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .au-list-top { padding: 16px 16px 12px; display: flex; flex-direction: column; gap: 12px; }
 .au-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.10); }
