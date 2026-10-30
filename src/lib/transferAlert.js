@@ -6,7 +6,7 @@ import { isDutyMissing } from './duty.js'
 export const POLL_MS = 4000
 export const RING_MS = 45000
 
-// The caller's own transfer (migration NNN_my_incoming_transfer): one row or null, and
+// The caller's own transfer (migration 182_my_incoming_transfer): one row or null, and
 // { missing: true } while the function isn't in the database yet.
 export async function myIncomingTransfer(db) {
   const { data, error } = await db.rpc('my_incoming_transfer')
