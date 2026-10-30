@@ -1,0 +1,92 @@
+[
+  {
+    "file": "overview-1440-light-v2.png",
+    "scrollWidth": 1425,
+    "width": 1440,
+    "todayCards": 5,
+    "amberBoxes": 1,
+    "oldAt": [
+      253,
+      1478,
+      1515,
+      1555,
+      1858
+    ],
+    "todayAt": [
+      329,
+      574,
+      733,
+      827,
+      1087
+    ],
+    "failures": []
+  },
+  {
+    "file": "overview-1440-dark-v2.png",
+    "scrollWidth": 1425,
+    "width": 1440,
+    "todayCards": 5,
+    "amberBoxes": 1,
+    "oldAt": [
+      253,
+      1478,
+      1515,
+      1555,
+      1858
+    ],
+    "todayAt": [
+      329,
+      574,
+      733,
+      827,
+      1087
+    ],
+    "failures": []
+  },
+  {
+    "file": "overview-390-light-v2.png",
+    "scrollWidth": 390,
+    "width": 390,
+    "todayCards": 6,
+    "amberBoxes": 0,
+    "oldAt": [
+      15,
+      81,
+      128,
+      221,
+      338,
+      375
+    ],
+    "todayAt": [
+      411,
+      656,
+      815,
+      909,
+      1169
+    ],
+    "failures": []
+  },
+  {
+    "file": "overview-390-dark-v2.png",
+    "scrollWidth": 390,
+    "width": 390,
+    "todayCards": 6,
+    "amberBoxes": 0,
+    "oldAt": [
+      15,
+      81,
+      128,
+      221,
+      338,
+      375
+    ],
+    "todayAt": [
+      411,
+      656,
+      815,
+      909,
+      1169
+    ],
+    "failures": []
+  }
+]
