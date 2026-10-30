@@ -1,0 +1,5115 @@
+{
+  "mode": "before",
+  "total": 62,
+  "failed": 48,
+  "results": [
+    {
+      "file": "agent-rows0-1920x1080-dark.png",
+      "case": "agent-rows0-1920x1080-dark",
+      "size": "1920x1080",
+      "theme": "dark",
+      "fixture": "rows0",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 1080)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 1080)",
+        "chart outside viewport (top 1182.1, bottom 1501.4, vh 1080)",
+        "attn outside viewport (top 966.1, bottom 1501.4, vh 1080)",
+        "attnBtn outside viewport (top 1434.4, bottom 1480.4, vh 1080)",
+        "page scrolls (1565 > 1080)"
+      ],
+      "measured": {
+        "vw": 1920,
+        "vh": 1080,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 464.5,
+            "right": 1696.5,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 464.5,
+            "right": 870.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 890.5,
+            "right": 1296.5,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1501.4,
+            "left": 1316.5,
+            "right": 1696.5,
+            "height": 535.3,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1434.4,
+            "bottom": 1480.4,
+            "left": 1341.5,
+            "right": 1671.5,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1501.4,
+            "left": 464.5,
+            "right": 1296.5,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 1,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1565,
+          "innerHeight": 1080,
+          "scrollWidth": 1905,
+          "innerWidth": 1920
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows4-1920x1080-dark.png",
+      "case": "agent-rows4-1920x1080-dark",
+      "size": "1920x1080",
+      "theme": "dark",
+      "fixture": "rows4",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 1080)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 1080)",
+        "chart outside viewport (top 1182.1, bottom 1509.1, vh 1080)",
+        "attn outside viewport (top 966.1, bottom 1509.1, vh 1080)",
+        "attnBtn outside viewport (top 1442.1, bottom 1488.1, vh 1080)",
+        "page scrolls (1573 > 1080)"
+      ],
+      "measured": {
+        "vw": 1920,
+        "vh": 1080,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 464.5,
+            "right": 1696.5,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 464.5,
+            "right": 870.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 890.5,
+            "right": 1296.5,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1316.5,
+            "right": 1696.5,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1341.5,
+            "right": 1671.5,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 464.5,
+            "right": 1296.5,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 4 in ClientsOpen in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 1080,
+          "scrollWidth": 1905,
+          "innerWidth": 1920
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-1920x1080-dark.png",
+      "case": "agent-rows12-1920x1080-dark",
+      "size": "1920x1080",
+      "theme": "dark",
+      "fixture": "rows12",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 1080)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 1080)",
+        "chart outside viewport (top 1182.1, bottom 1509.1, vh 1080)",
+        "attn outside viewport (top 966.1, bottom 1509.1, vh 1080)",
+        "attnBtn outside viewport (top 1442.1, bottom 1488.1, vh 1080)",
+        "page scrolls (1573 > 1080)",
+        "attention rows 4, expected 12",
+        "12 rows but no list scrolls inside the box"
+      ],
+      "measured": {
+        "vw": 1920,
+        "vh": 1080,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 464.5,
+            "right": 1696.5,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 464.5,
+            "right": 870.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 890.5,
+            "right": 1296.5,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1316.5,
+            "right": 1696.5,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1341.5,
+            "right": 1671.5,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 464.5,
+            "right": 1296.5,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 1080,
+          "scrollWidth": 1905,
+          "innerWidth": 1920
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-caught-1920x1080-dark.png",
+      "case": "agent-caught-1920x1080-dark",
+      "size": "1920x1080",
+      "theme": "dark",
+      "fixture": "caught",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 1080)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 1080)",
+        "chart outside viewport (top 1182.1, bottom 1501.4, vh 1080)",
+        "attn outside viewport (top 966.1, bottom 1501.4, vh 1080)",
+        "attnBtn outside viewport (top 1434.4, bottom 1480.4, vh 1080)",
+        "page scrolls (1565 > 1080)"
+      ],
+      "measured": {
+        "vw": 1920,
+        "vh": 1080,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 464.5,
+            "right": 1696.5,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 464.5,
+            "right": 870.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 890.5,
+            "right": 1296.5,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1501.4,
+            "left": 1316.5,
+            "right": 1696.5,
+            "height": 535.3,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1434.4,
+            "bottom": 1480.4,
+            "left": 1341.5,
+            "right": 1671.5,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1501.4,
+            "left": 464.5,
+            "right": 1296.5,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 3,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1565,
+          "innerHeight": 1080,
+          "scrollWidth": 1905,
+          "innerWidth": 1920
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows0-1440x900-dark.png",
+      "case": "agent-rows0-1440x900-dark",
+      "size": "1440x900",
+      "theme": "dark",
+      "fixture": "rows0",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 900)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 900)",
+        "chart outside viewport (top 1182.1, bottom 1501.4, vh 900)",
+        "attn outside viewport (top 966.1, bottom 1501.4, vh 900)",
+        "attnBtn outside viewport (top 1434.4, bottom 1480.4, vh 900)",
+        "page scrolls (1565 > 900)"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 900,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1501.4,
+            "left": 1021,
+            "right": 1401,
+            "height": 535.3,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1434.4,
+            "bottom": 1480.4,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1501.4,
+            "left": 280,
+            "right": 1001,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 1,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1565,
+          "innerHeight": 900,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows4-1440x900-dark.png",
+      "case": "agent-rows4-1440x900-dark",
+      "size": "1440x900",
+      "theme": "dark",
+      "fixture": "rows4",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 900)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 900)",
+        "chart outside viewport (top 1182.1, bottom 1509.1, vh 900)",
+        "attn outside viewport (top 966.1, bottom 1509.1, vh 900)",
+        "attnBtn outside viewport (top 1442.1, bottom 1488.1, vh 900)",
+        "page scrolls (1573 > 900)"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 900,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1021,
+            "right": 1401,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 280,
+            "right": 1001,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 4 in ClientsOpen in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 900,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-1440x900-dark.png",
+      "case": "agent-rows12-1440x900-dark",
+      "size": "1440x900",
+      "theme": "dark",
+      "fixture": "rows12",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 900)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 900)",
+        "chart outside viewport (top 1182.1, bottom 1509.1, vh 900)",
+        "attn outside viewport (top 966.1, bottom 1509.1, vh 900)",
+        "attnBtn outside viewport (top 1442.1, bottom 1488.1, vh 900)",
+        "page scrolls (1573 > 900)",
+        "attention rows 4, expected 12",
+        "12 rows but no list scrolls inside the box"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 900,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1021,
+            "right": 1401,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 280,
+            "right": 1001,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 900,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-caught-1440x900-dark.png",
+      "case": "agent-caught-1440x900-dark",
+      "size": "1440x900",
+      "theme": "dark",
+      "fixture": "caught",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 900)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 900)",
+        "chart outside viewport (top 1182.1, bottom 1501.4, vh 900)",
+        "attn outside viewport (top 966.1, bottom 1501.4, vh 900)",
+        "attnBtn outside viewport (top 1434.4, bottom 1480.4, vh 900)",
+        "page scrolls (1565 > 900)"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 900,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1501.4,
+            "left": 1021,
+            "right": 1401,
+            "height": 535.3,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1434.4,
+            "bottom": 1480.4,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1501.4,
+            "left": 280,
+            "right": 1001,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 3,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1565,
+          "innerHeight": 900,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows0-1920x950-dark.png",
+      "case": "agent-rows0-1920x950-dark",
+      "size": "1920x950",
+      "theme": "dark",
+      "fixture": "rows0",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 950)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 950)",
+        "chart outside viewport (top 1182.1, bottom 1501.4, vh 950)",
+        "attn outside viewport (top 966.1, bottom 1501.4, vh 950)",
+        "attnBtn outside viewport (top 1434.4, bottom 1480.4, vh 950)",
+        "page scrolls (1565 > 950)"
+      ],
+      "measured": {
+        "vw": 1920,
+        "vh": 950,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 464.5,
+            "right": 1696.5,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 464.5,
+            "right": 870.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 890.5,
+            "right": 1296.5,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1501.4,
+            "left": 1316.5,
+            "right": 1696.5,
+            "height": 535.3,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1434.4,
+            "bottom": 1480.4,
+            "left": 1341.5,
+            "right": 1671.5,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1501.4,
+            "left": 464.5,
+            "right": 1296.5,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 1,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1565,
+          "innerHeight": 950,
+          "scrollWidth": 1905,
+          "innerWidth": 1920
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows4-1920x950-dark.png",
+      "case": "agent-rows4-1920x950-dark",
+      "size": "1920x950",
+      "theme": "dark",
+      "fixture": "rows4",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 950)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 950)",
+        "chart outside viewport (top 1182.1, bottom 1509.1, vh 950)",
+        "attn outside viewport (top 966.1, bottom 1509.1, vh 950)",
+        "attnBtn outside viewport (top 1442.1, bottom 1488.1, vh 950)",
+        "page scrolls (1573 > 950)"
+      ],
+      "measured": {
+        "vw": 1920,
+        "vh": 950,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 464.5,
+            "right": 1696.5,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 464.5,
+            "right": 870.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 890.5,
+            "right": 1296.5,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1316.5,
+            "right": 1696.5,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1341.5,
+            "right": 1671.5,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 464.5,
+            "right": 1296.5,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 4 in ClientsOpen in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 950,
+          "scrollWidth": 1905,
+          "innerWidth": 1920
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-1920x950-dark.png",
+      "case": "agent-rows12-1920x950-dark",
+      "size": "1920x950",
+      "theme": "dark",
+      "fixture": "rows12",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 950)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 950)",
+        "chart outside viewport (top 1182.1, bottom 1509.1, vh 950)",
+        "attn outside viewport (top 966.1, bottom 1509.1, vh 950)",
+        "attnBtn outside viewport (top 1442.1, bottom 1488.1, vh 950)",
+        "page scrolls (1573 > 950)",
+        "attention rows 4, expected 12",
+        "12 rows but no list scrolls inside the box"
+      ],
+      "measured": {
+        "vw": 1920,
+        "vh": 950,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 464.5,
+            "right": 1696.5,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 464.5,
+            "right": 870.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 890.5,
+            "right": 1296.5,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1316.5,
+            "right": 1696.5,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1341.5,
+            "right": 1671.5,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 464.5,
+            "right": 1296.5,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 950,
+          "scrollWidth": 1905,
+          "innerWidth": 1920
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-caught-1920x950-dark.png",
+      "case": "agent-caught-1920x950-dark",
+      "size": "1920x950",
+      "theme": "dark",
+      "fixture": "caught",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 950)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 950)",
+        "chart outside viewport (top 1182.1, bottom 1501.4, vh 950)",
+        "attn outside viewport (top 966.1, bottom 1501.4, vh 950)",
+        "attnBtn outside viewport (top 1434.4, bottom 1480.4, vh 950)",
+        "page scrolls (1565 > 950)"
+      ],
+      "measured": {
+        "vw": 1920,
+        "vh": 950,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 464.5,
+            "right": 1696.5,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 464.5,
+            "right": 870.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 890.5,
+            "right": 1296.5,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1501.4,
+            "left": 1316.5,
+            "right": 1696.5,
+            "height": 535.3,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1434.4,
+            "bottom": 1480.4,
+            "left": 1341.5,
+            "right": 1671.5,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1501.4,
+            "left": 464.5,
+            "right": 1296.5,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 3,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1565,
+          "innerHeight": 950,
+          "scrollWidth": 1905,
+          "innerWidth": 1920
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows0-1440x780-dark.png",
+      "case": "agent-rows0-1440x780-dark",
+      "size": "1440x780",
+      "theme": "dark",
+      "fixture": "rows0",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 780)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 780)",
+        "chart outside viewport (top 1182.1, bottom 1501.4, vh 780)",
+        "attn outside viewport (top 966.1, bottom 1501.4, vh 780)",
+        "attnBtn outside viewport (top 1434.4, bottom 1480.4, vh 780)",
+        "page scrolls (1565 > 780)"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 780,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1501.4,
+            "left": 1021,
+            "right": 1401,
+            "height": 535.3,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1434.4,
+            "bottom": 1480.4,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1501.4,
+            "left": 280,
+            "right": 1001,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 1,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1565,
+          "innerHeight": 780,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows4-1440x780-dark.png",
+      "case": "agent-rows4-1440x780-dark",
+      "size": "1440x780",
+      "theme": "dark",
+      "fixture": "rows4",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 780)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 780)",
+        "chart outside viewport (top 1182.1, bottom 1509.1, vh 780)",
+        "attn outside viewport (top 966.1, bottom 1509.1, vh 780)",
+        "attnBtn outside viewport (top 1442.1, bottom 1488.1, vh 780)",
+        "page scrolls (1573 > 780)"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 780,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1021,
+            "right": 1401,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 280,
+            "right": 1001,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 4 in ClientsOpen in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 780,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-1440x780-dark.png",
+      "case": "agent-rows12-1440x780-dark",
+      "size": "1440x780",
+      "theme": "dark",
+      "fixture": "rows12",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 780)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 780)",
+        "chart outside viewport (top 1182.1, bottom 1509.1, vh 780)",
+        "attn outside viewport (top 966.1, bottom 1509.1, vh 780)",
+        "attnBtn outside viewport (top 1442.1, bottom 1488.1, vh 780)",
+        "page scrolls (1573 > 780)",
+        "attention rows 4, expected 12",
+        "12 rows but no list scrolls inside the box"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 780,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1021,
+            "right": 1401,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 280,
+            "right": 1001,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 780,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-caught-1440x780-dark.png",
+      "case": "agent-caught-1440x780-dark",
+      "size": "1440x780",
+      "theme": "dark",
+      "fixture": "caught",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 780)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 780)",
+        "chart outside viewport (top 1182.1, bottom 1501.4, vh 780)",
+        "attn outside viewport (top 966.1, bottom 1501.4, vh 780)",
+        "attnBtn outside viewport (top 1434.4, bottom 1480.4, vh 780)",
+        "page scrolls (1565 > 780)"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 780,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1501.4,
+            "left": 1021,
+            "right": 1401,
+            "height": 535.3,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1434.4,
+            "bottom": 1480.4,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1501.4,
+            "left": 280,
+            "right": 1001,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 3,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1565,
+          "innerHeight": 780,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows0-1280x700-dark.png",
+      "case": "agent-rows0-1280x700-dark",
+      "size": "1280x700",
+      "theme": "dark",
+      "fixture": "rows0",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1185.6, vh 700)",
+        "trend2 outside viewport (top 966.1, bottom 1185.6, vh 700)",
+        "chart outside viewport (top 1205.6, bottom 1545.1, vh 700)",
+        "attn outside viewport (top 966.1, bottom 1545.1, vh 700)",
+        "attnBtn outside viewport (top 1478.1, bottom 1524.1, vh 700)",
+        "page scrolls (1609 > 700)"
+      ],
+      "measured": {
+        "vw": 1280,
+        "vh": 700,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1241,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1185.6,
+            "left": 280,
+            "right": 550.5,
+            "height": 219.5,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1185.6,
+            "left": 570.5,
+            "right": 841,
+            "height": 219.5,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1545.1,
+            "left": 861,
+            "right": 1241,
+            "height": 579,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1478.1,
+            "bottom": 1524.1,
+            "left": 886,
+            "right": 1216,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1205.6,
+            "bottom": 1545.1,
+            "left": 280,
+            "right": 841,
+            "height": 339.5,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 1,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1609,
+          "innerHeight": 700,
+          "scrollWidth": 1265,
+          "innerWidth": 1280
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows4-1280x700-dark.png",
+      "case": "agent-rows4-1280x700-dark",
+      "size": "1280x700",
+      "theme": "dark",
+      "fixture": "rows4",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1185.6, vh 700)",
+        "trend2 outside viewport (top 966.1, bottom 1185.6, vh 700)",
+        "chart outside viewport (top 1205.6, bottom 1545.1, vh 700)",
+        "attn outside viewport (top 966.1, bottom 1545.1, vh 700)",
+        "attnBtn outside viewport (top 1478.1, bottom 1524.1, vh 700)",
+        "page scrolls (1609 > 700)"
+      ],
+      "measured": {
+        "vw": 1280,
+        "vh": 700,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1241,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1185.6,
+            "left": 280,
+            "right": 550.5,
+            "height": 219.5,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1185.6,
+            "left": 570.5,
+            "right": 841,
+            "height": 219.5,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1545.1,
+            "left": 861,
+            "right": 1241,
+            "height": 579,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1478.1,
+            "bottom": 1524.1,
+            "left": 886,
+            "right": 1216,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1205.6,
+            "bottom": 1545.1,
+            "left": 280,
+            "right": 841,
+            "height": 339.5,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 4 in ClientsOpen in Clients",
+        "pageScroll": {
+          "scrollHeight": 1609,
+          "innerHeight": 700,
+          "scrollWidth": 1265,
+          "innerWidth": 1280
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-1280x700-dark.png",
+      "case": "agent-rows12-1280x700-dark",
+      "size": "1280x700",
+      "theme": "dark",
+      "fixture": "rows12",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1185.6, vh 700)",
+        "trend2 outside viewport (top 966.1, bottom 1185.6, vh 700)",
+        "chart outside viewport (top 1205.6, bottom 1545.1, vh 700)",
+        "attn outside viewport (top 966.1, bottom 1545.1, vh 700)",
+        "attnBtn outside viewport (top 1478.1, bottom 1524.1, vh 700)",
+        "page scrolls (1609 > 700)",
+        "attention rows 4, expected 12",
+        "12 rows but no list scrolls inside the box"
+      ],
+      "measured": {
+        "vw": 1280,
+        "vh": 700,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1241,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1185.6,
+            "left": 280,
+            "right": 550.5,
+            "height": 219.5,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1185.6,
+            "left": 570.5,
+            "right": 841,
+            "height": 219.5,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1545.1,
+            "left": 861,
+            "right": 1241,
+            "height": 579,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1478.1,
+            "bottom": 1524.1,
+            "left": 886,
+            "right": 1216,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1205.6,
+            "bottom": 1545.1,
+            "left": 280,
+            "right": 841,
+            "height": 339.5,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 1609,
+          "innerHeight": 700,
+          "scrollWidth": 1265,
+          "innerWidth": 1280
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-caught-1280x700-dark.png",
+      "case": "agent-caught-1280x700-dark",
+      "size": "1280x700",
+      "theme": "dark",
+      "fixture": "caught",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1185.6, vh 700)",
+        "trend2 outside viewport (top 966.1, bottom 1185.6, vh 700)",
+        "chart outside viewport (top 1205.6, bottom 1545.1, vh 700)",
+        "attn outside viewport (top 966.1, bottom 1545.1, vh 700)",
+        "attnBtn outside viewport (top 1478.1, bottom 1524.1, vh 700)",
+        "page scrolls (1609 > 700)"
+      ],
+      "measured": {
+        "vw": 1280,
+        "vh": 700,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1241,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1185.6,
+            "left": 280,
+            "right": 550.5,
+            "height": 219.5,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1185.6,
+            "left": 570.5,
+            "right": 841,
+            "height": 219.5,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1545.1,
+            "left": 861,
+            "right": 1241,
+            "height": 579,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1478.1,
+            "bottom": 1524.1,
+            "left": 886,
+            "right": 1216,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1205.6,
+            "bottom": 1545.1,
+            "left": 280,
+            "right": 841,
+            "height": 339.5,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 3,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1609,
+          "innerHeight": 700,
+          "scrollWidth": 1265,
+          "innerWidth": 1280
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-worst-1440x780-dark.png",
+      "case": "agent-rows12-worst-1440x780-dark",
+      "size": "1440x780",
+      "theme": "dark",
+      "fixture": "rows12",
+      "banners": {
+        "call": true,
+        "err": true,
+        "confirm": true,
+        "grace": true
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 1197.9, bottom 1355.9, vh 780)",
+        "trend2 outside viewport (top 1197.9, bottom 1355.9, vh 780)",
+        "chart outside viewport (top 1375.9, bottom 1695.1, vh 780)",
+        "attn outside viewport (top 1197.9, bottom 1695.1, vh 780)",
+        "banner_call not showing",
+        "page scrolls (1759 > 780)"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 780,
+        "parts": {
+          "hero": {
+            "top": 256.3,
+            "bottom": 464,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 1197.9,
+            "bottom": 1355.9,
+            "left": 280,
+            "right": 630.5,
+            "height": 158,
+            "inside": false
+          },
+          "trend2": {
+            "top": 1197.9,
+            "bottom": 1355.9,
+            "left": 650.5,
+            "right": 1001,
+            "height": 158,
+            "inside": false
+          },
+          "attn": {
+            "top": 1197.9,
+            "bottom": 1695.1,
+            "left": 1021,
+            "right": 1401,
+            "height": 497.3,
+            "inside": false
+          },
+          "attnBtn": null,
+          "chart": {
+            "top": 1375.9,
+            "bottom": 1695.1,
+            "left": 280,
+            "right": 1001,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": {
+            "top": 484,
+            "bottom": 543.5,
+            "left": 280,
+            "right": 1401,
+            "height": 59.5,
+            "inside": true
+          },
+          "banner_confirm": {
+            "top": 104,
+            "bottom": 174,
+            "left": 280,
+            "right": 1401,
+            "height": 70,
+            "inside": true
+          },
+          "banner_grace": {
+            "top": 190,
+            "bottom": 236.3,
+            "left": 280,
+            "right": 1401,
+            "height": 46.3,
+            "inside": true
+          }
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 0,
+        "attnBtnText": null,
+        "pageScroll": {
+          "scrollHeight": 1759,
+          "innerHeight": 780,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-worst-1440x780-dark.png",
+      "case": "agent-rows12-worst-1440x780-dark",
+      "size": "1440x780",
+      "theme": "dark",
+      "fixture": "rows12",
+      "banners": {
+        "call": true,
+        "err": false,
+        "confirm": true,
+        "grace": true
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 1185.4, bottom 1381.4, vh 780)",
+        "trend2 outside viewport (top 1185.4, bottom 1381.4, vh 780)",
+        "chart outside viewport (top 1401.4, bottom 1728.4, vh 780)",
+        "attn outside viewport (top 1185.4, bottom 1728.4, vh 780)",
+        "attnBtn outside viewport (top 1661.4, bottom 1707.4, vh 780)",
+        "page scrolls (1792 > 780)",
+        "attention rows 4, expected 12",
+        "12 rows but no list scrolls inside the box"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 780,
+        "parts": {
+          "hero": {
+            "top": 256.3,
+            "bottom": 464,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 1185.4,
+            "bottom": 1381.4,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 1185.4,
+            "bottom": 1381.4,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 1185.4,
+            "bottom": 1728.4,
+            "left": 1021,
+            "right": 1401,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1661.4,
+            "bottom": 1707.4,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1401.4,
+            "bottom": 1728.4,
+            "left": 280,
+            "right": 1001,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": {
+            "top": 484,
+            "bottom": 531,
+            "left": 280,
+            "right": 1401,
+            "height": 47,
+            "inside": true
+          },
+          "banner_err": null,
+          "banner_confirm": {
+            "top": 104,
+            "bottom": 174,
+            "left": 280,
+            "right": 1401,
+            "height": 70,
+            "inside": true
+          },
+          "banner_grace": {
+            "top": 190,
+            "bottom": 236.3,
+            "left": 280,
+            "right": 1401,
+            "height": 46.3,
+            "inside": true
+          }
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 1792,
+          "innerHeight": 780,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-worst-1280x700-dark.png",
+      "case": "agent-rows12-worst-1280x700-dark",
+      "size": "1280x700",
+      "theme": "dark",
+      "fixture": "rows12",
+      "banners": {
+        "call": true,
+        "err": true,
+        "confirm": true,
+        "grace": true
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 1197.9, bottom 1355.9, vh 700)",
+        "trend2 outside viewport (top 1197.9, bottom 1355.9, vh 700)",
+        "chart outside viewport (top 1375.9, bottom 1715.4, vh 700)",
+        "attn outside viewport (top 1197.9, bottom 1715.4, vh 700)",
+        "banner_call not showing",
+        "page scrolls (1779 > 700)"
+      ],
+      "measured": {
+        "vw": 1280,
+        "vh": 700,
+        "parts": {
+          "hero": {
+            "top": 256.3,
+            "bottom": 464,
+            "left": 280,
+            "right": 1241,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 1197.9,
+            "bottom": 1355.9,
+            "left": 280,
+            "right": 550.5,
+            "height": 158,
+            "inside": false
+          },
+          "trend2": {
+            "top": 1197.9,
+            "bottom": 1355.9,
+            "left": 570.5,
+            "right": 841,
+            "height": 158,
+            "inside": false
+          },
+          "attn": {
+            "top": 1197.9,
+            "bottom": 1715.4,
+            "left": 861,
+            "right": 1241,
+            "height": 517.5,
+            "inside": false
+          },
+          "attnBtn": null,
+          "chart": {
+            "top": 1375.9,
+            "bottom": 1715.4,
+            "left": 280,
+            "right": 841,
+            "height": 339.5,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": {
+            "top": 484,
+            "bottom": 543.5,
+            "left": 280,
+            "right": 1241,
+            "height": 59.5,
+            "inside": true
+          },
+          "banner_confirm": {
+            "top": 104,
+            "bottom": 174,
+            "left": 280,
+            "right": 1241,
+            "height": 70,
+            "inside": true
+          },
+          "banner_grace": {
+            "top": 190,
+            "bottom": 236.3,
+            "left": 280,
+            "right": 1241,
+            "height": 46.3,
+            "inside": true
+          }
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 0,
+        "attnBtnText": null,
+        "pageScroll": {
+          "scrollHeight": 1779,
+          "innerHeight": 700,
+          "scrollWidth": 1265,
+          "innerWidth": 1280
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-worst-1280x700-dark.png",
+      "case": "agent-rows12-worst-1280x700-dark",
+      "size": "1280x700",
+      "theme": "dark",
+      "fixture": "rows12",
+      "banners": {
+        "call": true,
+        "err": false,
+        "confirm": true,
+        "grace": true
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 1185.4, bottom 1404.9, vh 700)",
+        "trend2 outside viewport (top 1185.4, bottom 1404.9, vh 700)",
+        "chart outside viewport (top 1424.9, bottom 1764.4, vh 700)",
+        "attn outside viewport (top 1185.4, bottom 1764.4, vh 700)",
+        "attnBtn outside viewport (top 1697.4, bottom 1743.4, vh 700)",
+        "page scrolls (1828 > 700)",
+        "attention rows 4, expected 12",
+        "12 rows but no list scrolls inside the box"
+      ],
+      "measured": {
+        "vw": 1280,
+        "vh": 700,
+        "parts": {
+          "hero": {
+            "top": 256.3,
+            "bottom": 464,
+            "left": 280,
+            "right": 1241,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 1185.4,
+            "bottom": 1404.9,
+            "left": 280,
+            "right": 550.5,
+            "height": 219.5,
+            "inside": false
+          },
+          "trend2": {
+            "top": 1185.4,
+            "bottom": 1404.9,
+            "left": 570.5,
+            "right": 841,
+            "height": 219.5,
+            "inside": false
+          },
+          "attn": {
+            "top": 1185.4,
+            "bottom": 1764.4,
+            "left": 861,
+            "right": 1241,
+            "height": 579,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1697.4,
+            "bottom": 1743.4,
+            "left": 886,
+            "right": 1216,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1424.9,
+            "bottom": 1764.4,
+            "left": 280,
+            "right": 841,
+            "height": 339.5,
+            "inside": false
+          },
+          "banner_call": {
+            "top": 484,
+            "bottom": 531,
+            "left": 280,
+            "right": 1241,
+            "height": 47,
+            "inside": true
+          },
+          "banner_err": null,
+          "banner_confirm": {
+            "top": 104,
+            "bottom": 174,
+            "left": 280,
+            "right": 1241,
+            "height": 70,
+            "inside": true
+          },
+          "banner_grace": {
+            "top": 190,
+            "bottom": 236.3,
+            "left": 280,
+            "right": 1241,
+            "height": 46.3,
+            "inside": true
+          }
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 1828,
+          "innerHeight": 700,
+          "scrollWidth": 1265,
+          "innerWidth": 1280
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-1200x800-dark.png",
+      "case": "agent-rows12-1200x800-dark",
+      "size": "1200x800",
+      "theme": "dark",
+      "fixture": "rows12",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": false,
+      "pass": true,
+      "fail": [],
+      "measured": {
+        "vw": 1200,
+        "vh": 800,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1161,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 1068.6,
+            "bottom": 1264.6,
+            "left": 280,
+            "right": 710.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 1068.6,
+            "bottom": 1264.6,
+            "left": 730.5,
+            "right": 1161,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 1284.6,
+            "bottom": 1752.6,
+            "left": 280,
+            "right": 1161,
+            "height": 468,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1685.6,
+            "bottom": 1731.6,
+            "left": 305,
+            "right": 1136,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1772.6,
+            "bottom": 2091.8,
+            "left": 280,
+            "right": 1161,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 2156,
+          "innerHeight": 800,
+          "scrollWidth": 1185,
+          "innerWidth": 1200
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-1440x680-dark.png",
+      "case": "agent-rows12-1440x680-dark",
+      "size": "1440x680",
+      "theme": "dark",
+      "fixture": "rows12",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": false,
+      "pass": true,
+      "fail": [],
+      "measured": {
+        "vw": 1440,
+        "vh": 680,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1021,
+            "right": 1401,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 280,
+            "right": 1001,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 680,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows4-390x844-dark.png",
+      "case": "agent-rows4-390x844-dark",
+      "size": "390x844",
+      "theme": "dark",
+      "fixture": "rows4",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": false,
+      "pass": true,
+      "fail": [],
+      "measured": {
+        "vw": 390,
+        "vh": 844,
+        "parts": {
+          "hero": {
+            "top": 160.6,
+            "bottom": 344.6,
+            "left": 16,
+            "right": 374,
+            "height": 184,
+            "inside": true
+          },
+          "trend1": null,
+          "trend2": null,
+          "attn": null,
+          "attnBtn": null,
+          "chart": null,
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "pageScroll": {
+          "scrollHeight": 2065,
+          "innerHeight": 844,
+          "scrollWidth": 390,
+          "innerWidth": 390
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "admin-rows4-1920x1080-dark.png",
+      "case": "admin-rows4-1920x1080-dark",
+      "size": "1920x1080",
+      "theme": "dark",
+      "route": "/admin",
+      "sha256": "ede6df3880197ad1b845473991d38859459f82e8900fceb7359c8735d21a87b3",
+      "pass": true,
+      "fail": [],
+      "measured": null
+    },
+    {
+      "file": "fulfillment-rows4-1920x1080-dark.png",
+      "case": "fulfillment-rows4-1920x1080-dark",
+      "size": "1920x1080",
+      "theme": "dark",
+      "route": "/fulfillment",
+      "sha256": "39e67464a65140a9982a01ebba7db2dc850f823578616e8685576d0ba4ee433d",
+      "pass": true,
+      "fail": [],
+      "measured": null
+    },
+    {
+      "file": "admin-rows4-1440x900-dark.png",
+      "case": "admin-rows4-1440x900-dark",
+      "size": "1440x900",
+      "theme": "dark",
+      "route": "/admin",
+      "sha256": "a9cf060ba1ab3a1004c83f7476e83f4a3dc3e950e1cdba9c0c11f3409b19b524",
+      "pass": true,
+      "fail": [],
+      "measured": null
+    },
+    {
+      "file": "fulfillment-rows4-1440x900-dark.png",
+      "case": "fulfillment-rows4-1440x900-dark",
+      "size": "1440x900",
+      "theme": "dark",
+      "route": "/fulfillment",
+      "sha256": "5069260db7a01ce9ac51e08876e7052ba26f272681687ba8422a91dfa41f1593",
+      "pass": true,
+      "fail": [],
+      "measured": null
+    },
+    {
+      "file": "agent-rows0-1920x1080-light.png",
+      "case": "agent-rows0-1920x1080-light",
+      "size": "1920x1080",
+      "theme": "light",
+      "fixture": "rows0",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 1080)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 1080)",
+        "chart outside viewport (top 1182.1, bottom 1501.4, vh 1080)",
+        "attn outside viewport (top 966.1, bottom 1501.4, vh 1080)",
+        "attnBtn outside viewport (top 1434.4, bottom 1480.4, vh 1080)",
+        "page scrolls (1565 > 1080)"
+      ],
+      "measured": {
+        "vw": 1920,
+        "vh": 1080,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 464.5,
+            "right": 1696.5,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 464.5,
+            "right": 870.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 890.5,
+            "right": 1296.5,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1501.4,
+            "left": 1316.5,
+            "right": 1696.5,
+            "height": 535.3,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1434.4,
+            "bottom": 1480.4,
+            "left": 1341.5,
+            "right": 1671.5,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1501.4,
+            "left": 464.5,
+            "right": 1296.5,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 1,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1565,
+          "innerHeight": 1080,
+          "scrollWidth": 1905,
+          "innerWidth": 1920
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows4-1920x1080-light.png",
+      "case": "agent-rows4-1920x1080-light",
+      "size": "1920x1080",
+      "theme": "light",
+      "fixture": "rows4",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 1080)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 1080)",
+        "chart outside viewport (top 1182.1, bottom 1509.1, vh 1080)",
+        "attn outside viewport (top 966.1, bottom 1509.1, vh 1080)",
+        "attnBtn outside viewport (top 1442.1, bottom 1488.1, vh 1080)",
+        "page scrolls (1573 > 1080)"
+      ],
+      "measured": {
+        "vw": 1920,
+        "vh": 1080,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 464.5,
+            "right": 1696.5,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 464.5,
+            "right": 870.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 890.5,
+            "right": 1296.5,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1316.5,
+            "right": 1696.5,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1341.5,
+            "right": 1671.5,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 464.5,
+            "right": 1296.5,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 4 in ClientsOpen in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 1080,
+          "scrollWidth": 1905,
+          "innerWidth": 1920
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-1920x1080-light.png",
+      "case": "agent-rows12-1920x1080-light",
+      "size": "1920x1080",
+      "theme": "light",
+      "fixture": "rows12",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 1080)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 1080)",
+        "chart outside viewport (top 1182.1, bottom 1509.1, vh 1080)",
+        "attn outside viewport (top 966.1, bottom 1509.1, vh 1080)",
+        "attnBtn outside viewport (top 1442.1, bottom 1488.1, vh 1080)",
+        "page scrolls (1573 > 1080)",
+        "attention rows 4, expected 12",
+        "12 rows but no list scrolls inside the box"
+      ],
+      "measured": {
+        "vw": 1920,
+        "vh": 1080,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 464.5,
+            "right": 1696.5,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 464.5,
+            "right": 870.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 890.5,
+            "right": 1296.5,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1316.5,
+            "right": 1696.5,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1341.5,
+            "right": 1671.5,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 464.5,
+            "right": 1296.5,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 1080,
+          "scrollWidth": 1905,
+          "innerWidth": 1920
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-caught-1920x1080-light.png",
+      "case": "agent-caught-1920x1080-light",
+      "size": "1920x1080",
+      "theme": "light",
+      "fixture": "caught",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 1080)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 1080)",
+        "chart outside viewport (top 1182.1, bottom 1501.4, vh 1080)",
+        "attn outside viewport (top 966.1, bottom 1501.4, vh 1080)",
+        "attnBtn outside viewport (top 1434.4, bottom 1480.4, vh 1080)",
+        "page scrolls (1565 > 1080)"
+      ],
+      "measured": {
+        "vw": 1920,
+        "vh": 1080,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 464.5,
+            "right": 1696.5,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 464.5,
+            "right": 870.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 890.5,
+            "right": 1296.5,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1501.4,
+            "left": 1316.5,
+            "right": 1696.5,
+            "height": 535.3,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1434.4,
+            "bottom": 1480.4,
+            "left": 1341.5,
+            "right": 1671.5,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1501.4,
+            "left": 464.5,
+            "right": 1296.5,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 3,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1565,
+          "innerHeight": 1080,
+          "scrollWidth": 1905,
+          "innerWidth": 1920
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows0-1440x900-light.png",
+      "case": "agent-rows0-1440x900-light",
+      "size": "1440x900",
+      "theme": "light",
+      "fixture": "rows0",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 900)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 900)",
+        "chart outside viewport (top 1182.1, bottom 1501.4, vh 900)",
+        "attn outside viewport (top 966.1, bottom 1501.4, vh 900)",
+        "attnBtn outside viewport (top 1434.4, bottom 1480.4, vh 900)",
+        "page scrolls (1565 > 900)"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 900,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1501.4,
+            "left": 1021,
+            "right": 1401,
+            "height": 535.3,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1434.4,
+            "bottom": 1480.4,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1501.4,
+            "left": 280,
+            "right": 1001,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 1,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1565,
+          "innerHeight": 900,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows4-1440x900-light.png",
+      "case": "agent-rows4-1440x900-light",
+      "size": "1440x900",
+      "theme": "light",
+      "fixture": "rows4",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 900)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 900)",
+        "chart outside viewport (top 1182.1, bottom 1509.1, vh 900)",
+        "attn outside viewport (top 966.1, bottom 1509.1, vh 900)",
+        "attnBtn outside viewport (top 1442.1, bottom 1488.1, vh 900)",
+        "page scrolls (1573 > 900)"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 900,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1021,
+            "right": 1401,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 280,
+            "right": 1001,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 4 in ClientsOpen in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 900,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-1440x900-light.png",
+      "case": "agent-rows12-1440x900-light",
+      "size": "1440x900",
+      "theme": "light",
+      "fixture": "rows12",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 900)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 900)",
+        "chart outside viewport (top 1182.1, bottom 1509.1, vh 900)",
+        "attn outside viewport (top 966.1, bottom 1509.1, vh 900)",
+        "attnBtn outside viewport (top 1442.1, bottom 1488.1, vh 900)",
+        "page scrolls (1573 > 900)",
+        "attention rows 4, expected 12",
+        "12 rows but no list scrolls inside the box"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 900,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1021,
+            "right": 1401,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 280,
+            "right": 1001,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 900,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-caught-1440x900-light.png",
+      "case": "agent-caught-1440x900-light",
+      "size": "1440x900",
+      "theme": "light",
+      "fixture": "caught",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 900)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 900)",
+        "chart outside viewport (top 1182.1, bottom 1501.4, vh 900)",
+        "attn outside viewport (top 966.1, bottom 1501.4, vh 900)",
+        "attnBtn outside viewport (top 1434.4, bottom 1480.4, vh 900)",
+        "page scrolls (1565 > 900)"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 900,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1501.4,
+            "left": 1021,
+            "right": 1401,
+            "height": 535.3,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1434.4,
+            "bottom": 1480.4,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1501.4,
+            "left": 280,
+            "right": 1001,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 3,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1565,
+          "innerHeight": 900,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows0-1920x950-light.png",
+      "case": "agent-rows0-1920x950-light",
+      "size": "1920x950",
+      "theme": "light",
+      "fixture": "rows0",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 950)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 950)",
+        "chart outside viewport (top 1182.1, bottom 1501.4, vh 950)",
+        "attn outside viewport (top 966.1, bottom 1501.4, vh 950)",
+        "attnBtn outside viewport (top 1434.4, bottom 1480.4, vh 950)",
+        "page scrolls (1565 > 950)"
+      ],
+      "measured": {
+        "vw": 1920,
+        "vh": 950,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 464.5,
+            "right": 1696.5,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 464.5,
+            "right": 870.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 890.5,
+            "right": 1296.5,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1501.4,
+            "left": 1316.5,
+            "right": 1696.5,
+            "height": 535.3,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1434.4,
+            "bottom": 1480.4,
+            "left": 1341.5,
+            "right": 1671.5,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1501.4,
+            "left": 464.5,
+            "right": 1296.5,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 1,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1565,
+          "innerHeight": 950,
+          "scrollWidth": 1905,
+          "innerWidth": 1920
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows4-1920x950-light.png",
+      "case": "agent-rows4-1920x950-light",
+      "size": "1920x950",
+      "theme": "light",
+      "fixture": "rows4",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 950)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 950)",
+        "chart outside viewport (top 1182.1, bottom 1509.1, vh 950)",
+        "attn outside viewport (top 966.1, bottom 1509.1, vh 950)",
+        "attnBtn outside viewport (top 1442.1, bottom 1488.1, vh 950)",
+        "page scrolls (1573 > 950)"
+      ],
+      "measured": {
+        "vw": 1920,
+        "vh": 950,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 464.5,
+            "right": 1696.5,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 464.5,
+            "right": 870.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 890.5,
+            "right": 1296.5,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1316.5,
+            "right": 1696.5,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1341.5,
+            "right": 1671.5,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 464.5,
+            "right": 1296.5,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 4 in ClientsOpen in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 950,
+          "scrollWidth": 1905,
+          "innerWidth": 1920
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-1920x950-light.png",
+      "case": "agent-rows12-1920x950-light",
+      "size": "1920x950",
+      "theme": "light",
+      "fixture": "rows12",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 950)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 950)",
+        "chart outside viewport (top 1182.1, bottom 1509.1, vh 950)",
+        "attn outside viewport (top 966.1, bottom 1509.1, vh 950)",
+        "attnBtn outside viewport (top 1442.1, bottom 1488.1, vh 950)",
+        "page scrolls (1573 > 950)",
+        "attention rows 4, expected 12",
+        "12 rows but no list scrolls inside the box"
+      ],
+      "measured": {
+        "vw": 1920,
+        "vh": 950,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 464.5,
+            "right": 1696.5,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 464.5,
+            "right": 870.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 890.5,
+            "right": 1296.5,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1316.5,
+            "right": 1696.5,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1341.5,
+            "right": 1671.5,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 464.5,
+            "right": 1296.5,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 950,
+          "scrollWidth": 1905,
+          "innerWidth": 1920
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-caught-1920x950-light.png",
+      "case": "agent-caught-1920x950-light",
+      "size": "1920x950",
+      "theme": "light",
+      "fixture": "caught",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 950)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 950)",
+        "chart outside viewport (top 1182.1, bottom 1501.4, vh 950)",
+        "attn outside viewport (top 966.1, bottom 1501.4, vh 950)",
+        "attnBtn outside viewport (top 1434.4, bottom 1480.4, vh 950)",
+        "page scrolls (1565 > 950)"
+      ],
+      "measured": {
+        "vw": 1920,
+        "vh": 950,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 464.5,
+            "right": 1696.5,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 464.5,
+            "right": 870.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 890.5,
+            "right": 1296.5,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1501.4,
+            "left": 1316.5,
+            "right": 1696.5,
+            "height": 535.3,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1434.4,
+            "bottom": 1480.4,
+            "left": 1341.5,
+            "right": 1671.5,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1501.4,
+            "left": 464.5,
+            "right": 1296.5,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 3,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1565,
+          "innerHeight": 950,
+          "scrollWidth": 1905,
+          "innerWidth": 1920
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows0-1440x780-light.png",
+      "case": "agent-rows0-1440x780-light",
+      "size": "1440x780",
+      "theme": "light",
+      "fixture": "rows0",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 780)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 780)",
+        "chart outside viewport (top 1182.1, bottom 1501.4, vh 780)",
+        "attn outside viewport (top 966.1, bottom 1501.4, vh 780)",
+        "attnBtn outside viewport (top 1434.4, bottom 1480.4, vh 780)",
+        "page scrolls (1565 > 780)"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 780,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1501.4,
+            "left": 1021,
+            "right": 1401,
+            "height": 535.3,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1434.4,
+            "bottom": 1480.4,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1501.4,
+            "left": 280,
+            "right": 1001,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 1,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1565,
+          "innerHeight": 780,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows4-1440x780-light.png",
+      "case": "agent-rows4-1440x780-light",
+      "size": "1440x780",
+      "theme": "light",
+      "fixture": "rows4",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 780)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 780)",
+        "chart outside viewport (top 1182.1, bottom 1509.1, vh 780)",
+        "attn outside viewport (top 966.1, bottom 1509.1, vh 780)",
+        "attnBtn outside viewport (top 1442.1, bottom 1488.1, vh 780)",
+        "page scrolls (1573 > 780)"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 780,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1021,
+            "right": 1401,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 280,
+            "right": 1001,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 4 in ClientsOpen in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 780,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-1440x780-light.png",
+      "case": "agent-rows12-1440x780-light",
+      "size": "1440x780",
+      "theme": "light",
+      "fixture": "rows12",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 780)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 780)",
+        "chart outside viewport (top 1182.1, bottom 1509.1, vh 780)",
+        "attn outside viewport (top 966.1, bottom 1509.1, vh 780)",
+        "attnBtn outside viewport (top 1442.1, bottom 1488.1, vh 780)",
+        "page scrolls (1573 > 780)",
+        "attention rows 4, expected 12",
+        "12 rows but no list scrolls inside the box"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 780,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1021,
+            "right": 1401,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 280,
+            "right": 1001,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 780,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-caught-1440x780-light.png",
+      "case": "agent-caught-1440x780-light",
+      "size": "1440x780",
+      "theme": "light",
+      "fixture": "caught",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1162.1, vh 780)",
+        "trend2 outside viewport (top 966.1, bottom 1162.1, vh 780)",
+        "chart outside viewport (top 1182.1, bottom 1501.4, vh 780)",
+        "attn outside viewport (top 966.1, bottom 1501.4, vh 780)",
+        "attnBtn outside viewport (top 1434.4, bottom 1480.4, vh 780)",
+        "page scrolls (1565 > 780)"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 780,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1501.4,
+            "left": 1021,
+            "right": 1401,
+            "height": 535.3,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1434.4,
+            "bottom": 1480.4,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1501.4,
+            "left": 280,
+            "right": 1001,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 3,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1565,
+          "innerHeight": 780,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows0-1280x700-light.png",
+      "case": "agent-rows0-1280x700-light",
+      "size": "1280x700",
+      "theme": "light",
+      "fixture": "rows0",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1185.6, vh 700)",
+        "trend2 outside viewport (top 966.1, bottom 1185.6, vh 700)",
+        "chart outside viewport (top 1205.6, bottom 1545.1, vh 700)",
+        "attn outside viewport (top 966.1, bottom 1545.1, vh 700)",
+        "attnBtn outside viewport (top 1478.1, bottom 1524.1, vh 700)",
+        "page scrolls (1609 > 700)"
+      ],
+      "measured": {
+        "vw": 1280,
+        "vh": 700,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1241,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1185.6,
+            "left": 280,
+            "right": 550.5,
+            "height": 219.5,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1185.6,
+            "left": 570.5,
+            "right": 841,
+            "height": 219.5,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1545.1,
+            "left": 861,
+            "right": 1241,
+            "height": 579,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1478.1,
+            "bottom": 1524.1,
+            "left": 886,
+            "right": 1216,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1205.6,
+            "bottom": 1545.1,
+            "left": 280,
+            "right": 841,
+            "height": 339.5,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 1,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1609,
+          "innerHeight": 700,
+          "scrollWidth": 1265,
+          "innerWidth": 1280
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows4-1280x700-light.png",
+      "case": "agent-rows4-1280x700-light",
+      "size": "1280x700",
+      "theme": "light",
+      "fixture": "rows4",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1185.6, vh 700)",
+        "trend2 outside viewport (top 966.1, bottom 1185.6, vh 700)",
+        "chart outside viewport (top 1205.6, bottom 1545.1, vh 700)",
+        "attn outside viewport (top 966.1, bottom 1545.1, vh 700)",
+        "attnBtn outside viewport (top 1478.1, bottom 1524.1, vh 700)",
+        "page scrolls (1609 > 700)"
+      ],
+      "measured": {
+        "vw": 1280,
+        "vh": 700,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1241,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1185.6,
+            "left": 280,
+            "right": 550.5,
+            "height": 219.5,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1185.6,
+            "left": 570.5,
+            "right": 841,
+            "height": 219.5,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1545.1,
+            "left": 861,
+            "right": 1241,
+            "height": 579,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1478.1,
+            "bottom": 1524.1,
+            "left": 886,
+            "right": 1216,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1205.6,
+            "bottom": 1545.1,
+            "left": 280,
+            "right": 841,
+            "height": 339.5,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 4 in ClientsOpen in Clients",
+        "pageScroll": {
+          "scrollHeight": 1609,
+          "innerHeight": 700,
+          "scrollWidth": 1265,
+          "innerWidth": 1280
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-1280x700-light.png",
+      "case": "agent-rows12-1280x700-light",
+      "size": "1280x700",
+      "theme": "light",
+      "fixture": "rows12",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1185.6, vh 700)",
+        "trend2 outside viewport (top 966.1, bottom 1185.6, vh 700)",
+        "chart outside viewport (top 1205.6, bottom 1545.1, vh 700)",
+        "attn outside viewport (top 966.1, bottom 1545.1, vh 700)",
+        "attnBtn outside viewport (top 1478.1, bottom 1524.1, vh 700)",
+        "page scrolls (1609 > 700)",
+        "attention rows 4, expected 12",
+        "12 rows but no list scrolls inside the box"
+      ],
+      "measured": {
+        "vw": 1280,
+        "vh": 700,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1241,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1185.6,
+            "left": 280,
+            "right": 550.5,
+            "height": 219.5,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1185.6,
+            "left": 570.5,
+            "right": 841,
+            "height": 219.5,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1545.1,
+            "left": 861,
+            "right": 1241,
+            "height": 579,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1478.1,
+            "bottom": 1524.1,
+            "left": 886,
+            "right": 1216,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1205.6,
+            "bottom": 1545.1,
+            "left": 280,
+            "right": 841,
+            "height": 339.5,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 1609,
+          "innerHeight": 700,
+          "scrollWidth": 1265,
+          "innerWidth": 1280
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-caught-1280x700-light.png",
+      "case": "agent-caught-1280x700-light",
+      "size": "1280x700",
+      "theme": "light",
+      "fixture": "caught",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 966.1, bottom 1185.6, vh 700)",
+        "trend2 outside viewport (top 966.1, bottom 1185.6, vh 700)",
+        "chart outside viewport (top 1205.6, bottom 1545.1, vh 700)",
+        "attn outside viewport (top 966.1, bottom 1545.1, vh 700)",
+        "attnBtn outside viewport (top 1478.1, bottom 1524.1, vh 700)",
+        "page scrolls (1609 > 700)"
+      ],
+      "measured": {
+        "vw": 1280,
+        "vh": 700,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1241,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1185.6,
+            "left": 280,
+            "right": 550.5,
+            "height": 219.5,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1185.6,
+            "left": 570.5,
+            "right": 841,
+            "height": 219.5,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1545.1,
+            "left": 861,
+            "right": 1241,
+            "height": 579,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1478.1,
+            "bottom": 1524.1,
+            "left": 886,
+            "right": 1216,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1205.6,
+            "bottom": 1545.1,
+            "left": 280,
+            "right": 841,
+            "height": 339.5,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 3,
+        "attnBtnText": "Open Clients",
+        "pageScroll": {
+          "scrollHeight": 1609,
+          "innerHeight": 700,
+          "scrollWidth": 1265,
+          "innerWidth": 1280
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-worst-1440x780-light.png",
+      "case": "agent-rows12-worst-1440x780-light",
+      "size": "1440x780",
+      "theme": "light",
+      "fixture": "rows12",
+      "banners": {
+        "call": true,
+        "err": true,
+        "confirm": true,
+        "grace": true
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 1197.9, bottom 1355.9, vh 780)",
+        "trend2 outside viewport (top 1197.9, bottom 1355.9, vh 780)",
+        "chart outside viewport (top 1375.9, bottom 1695.1, vh 780)",
+        "attn outside viewport (top 1197.9, bottom 1695.1, vh 780)",
+        "banner_call not showing",
+        "page scrolls (1759 > 780)"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 780,
+        "parts": {
+          "hero": {
+            "top": 256.3,
+            "bottom": 464,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 1197.9,
+            "bottom": 1355.9,
+            "left": 280,
+            "right": 630.5,
+            "height": 158,
+            "inside": false
+          },
+          "trend2": {
+            "top": 1197.9,
+            "bottom": 1355.9,
+            "left": 650.5,
+            "right": 1001,
+            "height": 158,
+            "inside": false
+          },
+          "attn": {
+            "top": 1197.9,
+            "bottom": 1695.1,
+            "left": 1021,
+            "right": 1401,
+            "height": 497.3,
+            "inside": false
+          },
+          "attnBtn": null,
+          "chart": {
+            "top": 1375.9,
+            "bottom": 1695.1,
+            "left": 280,
+            "right": 1001,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": {
+            "top": 484,
+            "bottom": 543.5,
+            "left": 280,
+            "right": 1401,
+            "height": 59.5,
+            "inside": true
+          },
+          "banner_confirm": {
+            "top": 104,
+            "bottom": 174,
+            "left": 280,
+            "right": 1401,
+            "height": 70,
+            "inside": true
+          },
+          "banner_grace": {
+            "top": 190,
+            "bottom": 236.3,
+            "left": 280,
+            "right": 1401,
+            "height": 46.3,
+            "inside": true
+          }
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 0,
+        "attnBtnText": null,
+        "pageScroll": {
+          "scrollHeight": 1759,
+          "innerHeight": 780,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-worst-1440x780-light.png",
+      "case": "agent-rows12-worst-1440x780-light",
+      "size": "1440x780",
+      "theme": "light",
+      "fixture": "rows12",
+      "banners": {
+        "call": true,
+        "err": false,
+        "confirm": true,
+        "grace": true
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 1185.4, bottom 1381.4, vh 780)",
+        "trend2 outside viewport (top 1185.4, bottom 1381.4, vh 780)",
+        "chart outside viewport (top 1401.4, bottom 1728.4, vh 780)",
+        "attn outside viewport (top 1185.4, bottom 1728.4, vh 780)",
+        "attnBtn outside viewport (top 1661.4, bottom 1707.4, vh 780)",
+        "page scrolls (1792 > 780)",
+        "attention rows 4, expected 12",
+        "12 rows but no list scrolls inside the box"
+      ],
+      "measured": {
+        "vw": 1440,
+        "vh": 780,
+        "parts": {
+          "hero": {
+            "top": 256.3,
+            "bottom": 464,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 1185.4,
+            "bottom": 1381.4,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 1185.4,
+            "bottom": 1381.4,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 1185.4,
+            "bottom": 1728.4,
+            "left": 1021,
+            "right": 1401,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1661.4,
+            "bottom": 1707.4,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1401.4,
+            "bottom": 1728.4,
+            "left": 280,
+            "right": 1001,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": {
+            "top": 484,
+            "bottom": 531,
+            "left": 280,
+            "right": 1401,
+            "height": 47,
+            "inside": true
+          },
+          "banner_err": null,
+          "banner_confirm": {
+            "top": 104,
+            "bottom": 174,
+            "left": 280,
+            "right": 1401,
+            "height": 70,
+            "inside": true
+          },
+          "banner_grace": {
+            "top": 190,
+            "bottom": 236.3,
+            "left": 280,
+            "right": 1401,
+            "height": 46.3,
+            "inside": true
+          }
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 1792,
+          "innerHeight": 780,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-worst-1280x700-light.png",
+      "case": "agent-rows12-worst-1280x700-light",
+      "size": "1280x700",
+      "theme": "light",
+      "fixture": "rows12",
+      "banners": {
+        "call": true,
+        "err": true,
+        "confirm": true,
+        "grace": true
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 1197.9, bottom 1355.9, vh 700)",
+        "trend2 outside viewport (top 1197.9, bottom 1355.9, vh 700)",
+        "chart outside viewport (top 1375.9, bottom 1715.4, vh 700)",
+        "attn outside viewport (top 1197.9, bottom 1715.4, vh 700)",
+        "banner_call not showing",
+        "page scrolls (1779 > 700)"
+      ],
+      "measured": {
+        "vw": 1280,
+        "vh": 700,
+        "parts": {
+          "hero": {
+            "top": 256.3,
+            "bottom": 464,
+            "left": 280,
+            "right": 1241,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 1197.9,
+            "bottom": 1355.9,
+            "left": 280,
+            "right": 550.5,
+            "height": 158,
+            "inside": false
+          },
+          "trend2": {
+            "top": 1197.9,
+            "bottom": 1355.9,
+            "left": 570.5,
+            "right": 841,
+            "height": 158,
+            "inside": false
+          },
+          "attn": {
+            "top": 1197.9,
+            "bottom": 1715.4,
+            "left": 861,
+            "right": 1241,
+            "height": 517.5,
+            "inside": false
+          },
+          "attnBtn": null,
+          "chart": {
+            "top": 1375.9,
+            "bottom": 1715.4,
+            "left": 280,
+            "right": 841,
+            "height": 339.5,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": {
+            "top": 484,
+            "bottom": 543.5,
+            "left": 280,
+            "right": 1241,
+            "height": 59.5,
+            "inside": true
+          },
+          "banner_confirm": {
+            "top": 104,
+            "bottom": 174,
+            "left": 280,
+            "right": 1241,
+            "height": 70,
+            "inside": true
+          },
+          "banner_grace": {
+            "top": 190,
+            "bottom": 236.3,
+            "left": 280,
+            "right": 1241,
+            "height": 46.3,
+            "inside": true
+          }
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 0,
+        "attnBtnText": null,
+        "pageScroll": {
+          "scrollHeight": 1779,
+          "innerHeight": 700,
+          "scrollWidth": 1265,
+          "innerWidth": 1280
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-worst-1280x700-light.png",
+      "case": "agent-rows12-worst-1280x700-light",
+      "size": "1280x700",
+      "theme": "light",
+      "fixture": "rows12",
+      "banners": {
+        "call": true,
+        "err": false,
+        "confirm": true,
+        "grace": true
+      },
+      "fit": true,
+      "pass": false,
+      "fail": [
+        "trend1 outside viewport (top 1185.4, bottom 1404.9, vh 700)",
+        "trend2 outside viewport (top 1185.4, bottom 1404.9, vh 700)",
+        "chart outside viewport (top 1424.9, bottom 1764.4, vh 700)",
+        "attn outside viewport (top 1185.4, bottom 1764.4, vh 700)",
+        "attnBtn outside viewport (top 1697.4, bottom 1743.4, vh 700)",
+        "page scrolls (1828 > 700)",
+        "attention rows 4, expected 12",
+        "12 rows but no list scrolls inside the box"
+      ],
+      "measured": {
+        "vw": 1280,
+        "vh": 700,
+        "parts": {
+          "hero": {
+            "top": 256.3,
+            "bottom": 464,
+            "left": 280,
+            "right": 1241,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 1185.4,
+            "bottom": 1404.9,
+            "left": 280,
+            "right": 550.5,
+            "height": 219.5,
+            "inside": false
+          },
+          "trend2": {
+            "top": 1185.4,
+            "bottom": 1404.9,
+            "left": 570.5,
+            "right": 841,
+            "height": 219.5,
+            "inside": false
+          },
+          "attn": {
+            "top": 1185.4,
+            "bottom": 1764.4,
+            "left": 861,
+            "right": 1241,
+            "height": 579,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1697.4,
+            "bottom": 1743.4,
+            "left": 886,
+            "right": 1216,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1424.9,
+            "bottom": 1764.4,
+            "left": 280,
+            "right": 841,
+            "height": 339.5,
+            "inside": false
+          },
+          "banner_call": {
+            "top": 484,
+            "bottom": 531,
+            "left": 280,
+            "right": 1241,
+            "height": 47,
+            "inside": true
+          },
+          "banner_err": null,
+          "banner_confirm": {
+            "top": 104,
+            "bottom": 174,
+            "left": 280,
+            "right": 1241,
+            "height": 70,
+            "inside": true
+          },
+          "banner_grace": {
+            "top": 190,
+            "bottom": 236.3,
+            "left": 280,
+            "right": 1241,
+            "height": 46.3,
+            "inside": true
+          }
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 1828,
+          "innerHeight": 700,
+          "scrollWidth": 1265,
+          "innerWidth": 1280
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-1200x800-light.png",
+      "case": "agent-rows12-1200x800-light",
+      "size": "1200x800",
+      "theme": "light",
+      "fixture": "rows12",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": false,
+      "pass": true,
+      "fail": [],
+      "measured": {
+        "vw": 1200,
+        "vh": 800,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1161,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 1068.6,
+            "bottom": 1264.6,
+            "left": 280,
+            "right": 710.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 1068.6,
+            "bottom": 1264.6,
+            "left": 730.5,
+            "right": 1161,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 1284.6,
+            "bottom": 1752.6,
+            "left": 280,
+            "right": 1161,
+            "height": 468,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1685.6,
+            "bottom": 1731.6,
+            "left": 305,
+            "right": 1136,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1772.6,
+            "bottom": 2091.8,
+            "left": 280,
+            "right": 1161,
+            "height": 319.3,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 2156,
+          "innerHeight": 800,
+          "scrollWidth": 1185,
+          "innerWidth": 1200
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows12-1440x680-light.png",
+      "case": "agent-rows12-1440x680-light",
+      "size": "1440x680",
+      "theme": "light",
+      "fixture": "rows12",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": false,
+      "pass": true,
+      "fail": [],
+      "measured": {
+        "vw": 1440,
+        "vh": 680,
+        "parts": {
+          "hero": {
+            "top": 104,
+            "bottom": 311.8,
+            "left": 280,
+            "right": 1401,
+            "height": 207.8,
+            "inside": true
+          },
+          "trend1": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 280,
+            "right": 630.5,
+            "height": 196,
+            "inside": false
+          },
+          "trend2": {
+            "top": 966.1,
+            "bottom": 1162.1,
+            "left": 650.5,
+            "right": 1001,
+            "height": 196,
+            "inside": false
+          },
+          "attn": {
+            "top": 966.1,
+            "bottom": 1509.1,
+            "left": 1021,
+            "right": 1401,
+            "height": 543,
+            "inside": false
+          },
+          "attnBtn": {
+            "top": 1442.1,
+            "bottom": 1488.1,
+            "left": 1046,
+            "right": 1376,
+            "height": 46,
+            "inside": false
+          },
+          "chart": {
+            "top": 1182.1,
+            "bottom": 1509.1,
+            "left": 280,
+            "right": 1001,
+            "height": 327,
+            "inside": false
+          },
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "attnRows": 4,
+        "attnBtnText": "See all 12 in ClientsSee all 12 in Clients",
+        "pageScroll": {
+          "scrollHeight": 1573,
+          "innerHeight": 680,
+          "scrollWidth": 1425,
+          "innerWidth": 1440
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "agent-rows4-390x844-light.png",
+      "case": "agent-rows4-390x844-light",
+      "size": "390x844",
+      "theme": "light",
+      "fixture": "rows4",
+      "banners": {
+        "call": false,
+        "err": false,
+        "confirm": false,
+        "grace": false
+      },
+      "fit": false,
+      "pass": true,
+      "fail": [],
+      "measured": {
+        "vw": 390,
+        "vh": 844,
+        "parts": {
+          "hero": {
+            "top": 160.6,
+            "bottom": 344.6,
+            "left": 16,
+            "right": 374,
+            "height": 184,
+            "inside": true
+          },
+          "trend1": null,
+          "trend2": null,
+          "attn": null,
+          "attnBtn": null,
+          "chart": null,
+          "banner_call": null,
+          "banner_err": null,
+          "banner_confirm": null,
+          "banner_grace": null
+        },
+        "clipped": [],
+        "scrollers": [],
+        "pageScroll": {
+          "scrollHeight": 2065,
+          "innerHeight": 844,
+          "scrollWidth": 390,
+          "innerWidth": 390
+        },
+        "fontsOk": "loaded"
+      }
+    },
+    {
+      "file": "admin-rows4-1920x1080-light.png",
+      "case": "admin-rows4-1920x1080-light",
+      "size": "1920x1080",
+      "theme": "light",
+      "route": "/admin",
+      "sha256": "896e7a421aa68ae8786749a7977d60cc2ddbf5ccb5c42fe31ea528565a88411b",
+      "pass": true,
+      "fail": [],
+      "measured": null
+    },
+    {
+      "file": "fulfillment-rows4-1920x1080-light.png",
+      "case": "fulfillment-rows4-1920x1080-light",
+      "size": "1920x1080",
+      "theme": "light",
+      "route": "/fulfillment",
+      "sha256": "1709a4372b6d8ea5225b17e8d9ed3c2265bb534eda05034bb9fd9aa3f16a7e2e",
+      "pass": true,
+      "fail": [],
+      "measured": null
+    },
+    {
+      "file": "admin-rows4-1440x900-light.png",
+      "case": "admin-rows4-1440x900-light",
+      "size": "1440x900",
+      "theme": "light",
+      "route": "/admin",
+      "sha256": "15f9e723d8a52f9c0b6099b198a97832ddf48efee29d0fddd3b004020613ca83",
+      "pass": true,
+      "fail": [],
+      "measured": null
+    },
+    {
+      "file": "fulfillment-rows4-1440x900-light.png",
+      "case": "fulfillment-rows4-1440x900-light",
+      "size": "1440x900",
+      "theme": "light",
+      "route": "/fulfillment",
+      "sha256": "77dbd67e126030f41d3ea92282c6b17f06d7a341c9bbc0c26362f53a7e51fe2f",
+      "pass": true,
+      "fail": [],
+      "measured": null
+    }
+  ]
+}
