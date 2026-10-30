@@ -1,5 +1,6 @@
 import {
   Users, Home, Settings, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard, Phone, PhoneIncoming,
+  Inbox, CalendarDays,
 } from 'lucide-react'
 
 // Each role's sidebar, grouped. Moved out of Sidebar.jsx by Prompt 722 so the
@@ -20,6 +21,9 @@ export const NAV = {
       // Prompt 690 — chronological log of what happened, next to My Pipeline.
       { to: '/agent/activity', label: 'Activity', icon: History },
       // P808: Leads hidden until its migrations are live and the page is approved.
+      // Portal parity (answer 0): the v2 Inbounds and Calendar, added for every agent after the old items.
+      { to: '/agent/inbounds', label: 'Inbounds', icon: Inbox },
+      { to: '/agent/calendar', label: 'Calendar', icon: CalendarDays },
     ] },
     // Prompt 680 — Messages gets its own single-item group, as in Restorix.
     { group: 'Communications', items: [
@@ -83,6 +87,9 @@ export function navEntry(role, pathname) {
   }
   return null
 }
+
+// One inbound (/agent/inbounds/:id) has no nav item of its own: it sits under Inbounds.
+export const isInboundDetail = pathname => /^\/agent\/inbounds\/[^/]+$/.test(pathname)
 
 // Prompt 722 — the page header's colour (a key of the .ov-tone-* classes).
 // Pages not listed are blue.

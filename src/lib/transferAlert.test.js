@@ -171,7 +171,15 @@ test('alert is portaled to body', () => {
   assert.match(alert, /if \(!on \|\| !row\) return null/, 'renders nothing while inactive')
   assert.match(alert, /We&rsquo;re calling your phone now\. Pick up\./)
   assert.doesNotMatch(alert, /#[0-9a-fA-F]{3,8}\b/, 'tokens only')
-  // Mounted exactly once, in the v2 shell.
-  const nav = src('../components/agent/PortalV2Nav.jsx')
-  assert.equal((nav.match(/<TransferAlert \/>/g) || []).length, 1)
+  // Mounted for every agent, once per layout path: DashboardLayout's desktop branch and PhoneShell
+  // (DashboardLayout returns PhoneShell on a phone). Gated on the agent role only; the v2 shell no longer mounts it.
+  for (const f of ['../components/layout/DashboardLayout.jsx', '../components/layout/PhoneShell.jsx']) {
+    const file = src(f)
+    assert.equal((file.match(/<TransferAlert \/>/g) || []).length, 1, f)
+    assert.match(file, /\{profile\?\.role === 'agent' && <TransferAlert \/>\}/, f)
+    assert.doesNotMatch(file, /usePortalV2/, f)
+  }
+  const layout = src('../components/layout/DashboardLayout.jsx')
+  assert.ok(layout.indexOf('<TransferAlert />') > layout.indexOf('<PhoneShell>'), 'desktop mount sits after the phone early return')
+  assert.doesNotMatch(src('../components/agent/PortalV2Nav.jsx'), /<TransferAlert \/>/)
 })

@@ -13,6 +13,8 @@ import { PhoneToast } from '../admin/phone/PhoneToast'
 import { useAdminPay } from '../admin/phone/useAdminPay'
 import { ConfirmEmailBanner } from './ConfirmEmailBanner'
 import { LEADS_PAGE } from '../../lib/leadsPage'
+import { TransferAlert } from '../agent/TransferAlert'
+import { useNewInboundCount } from '../../hooks/useInbounds'
 
 // Prompt 772 — the agent's phone shell (under 768px): no sidebar, no top bar,
 // a bottom tab bar (Home, Clients, a raised + for Book a call, Messages, More)
@@ -31,7 +33,8 @@ const AGENT_TABS = [
   { to: '/agent/clients', label: 'Clients', icon: Users, on: p => p === '/agent/clients' },
   { to: '/agent/book', label: 'Book a call', icon: Plus, plus: true, on: () => false },
   { to: '/messages', label: 'Messages', icon: MessageSquare, on: p => p === '/messages', badge: true },
-  { to: '/agent/more', label: 'More', icon: Menu, on: p => ['/agent/more', '/agent/activity', ...(LEADS_PAGE ? ['/agent/leads'] : []), '/agent/billing', '/settings'].includes(p) },
+  // Inbounds and Calendar open from More (portal parity answer 1); More shows the new-inbounds count.
+  { to: '/agent/more', label: 'More', icon: Menu, on: p => ['/agent/more', '/agent/activity', ...(LEADS_PAGE ? ['/agent/leads'] : []), '/agent/billing', '/settings', '/agent/calendar'].includes(p) || p.startsWith('/agent/inbounds'), inbounds: true },
 ]
 
 const FULFILL_TABS = [
@@ -53,7 +56,7 @@ const TABS = { agent: AGENT_TABS, fulfillment: FULFILL_TABS, admin: ADMIN_TABS }
 
 // Pages opened from More: a header with a back arrow to More.
 const SUB_PAGES = {
-  agent: { '/agent/activity': 'Activity', ...(LEADS_PAGE ? { '/agent/leads': 'Leads' } : {}), '/agent/billing': 'Billing', '/settings': 'Settings' },
+  agent: { '/agent/inbounds': 'Inbounds', '/agent/calendar': 'Calendar', '/agent/activity': 'Activity', ...(LEADS_PAGE ? { '/agent/leads': 'Leads' } : {}), '/agent/billing': 'Billing', '/settings': 'Settings' },
   fulfillment: { '/fulfillment/leads': 'Leads', '/settings': 'Settings' },
   admin: { '/admin/users': 'People', '/admin/pipeline': 'Pipeline', '/settings': 'Settings' },
 }
@@ -95,6 +98,12 @@ function PayDot() {
   return alert ? <span className="ph-tab-dot" aria-hidden="true" /> : null
 }
 
+// The agent's More tab: inbounds that came in today or yesterday.
+function InboundsBadge() {
+  const n = useNewInboundCount()
+  return n > 0 ? <span className="ph-tab-badge" aria-hidden="true">{n > 99 ? '99+' : n}</span> : null
+}
+
 function TabBar({ pathname, tabs }) {
   const { profile } = useAuth()
   useMessagesRealtime(profile?.id)
@@ -104,7 +113,7 @@ function TabBar({ pathname, tabs }) {
       {tabs.map(tab => {
         if (tab.call) return <CallTab key="call" tab={tab} />
         if (tab.add) return <AddTab key="add" tab={tab} />
-        const { to, label, icon: Icon, plus, on, badge, payDot } = tab
+        const { to, label, icon: Icon, plus, on, badge, payDot, inbounds } = tab
         const active = on(pathname)
         const count = badge && unread > 0 ? unread : 0
         return (
@@ -118,6 +127,7 @@ function TabBar({ pathname, tabs }) {
                   <Icon size={22} strokeWidth={active ? 2.2 : 1.9} aria-hidden="true" />
                   {count > 0 && <span className="ph-tab-badge" aria-hidden="true">{count > 99 ? '99+' : count}</span>}
                   {payDot && <PayDot />}
+                  {inbounds && <InboundsBadge />}
                 </span>
                 <span aria-hidden="true">{label}</span>
               </>
@@ -172,6 +182,9 @@ export function PhoneShell({ children }) {
           </div>
         </main>
         {tabs && <TabBar pathname={pathname} tabs={TABS[role]} />}
+        {/* Live-transfer alert for every agent (portal parity answer 2): silent unless Active. The one
+            mount on a phone; DashboardLayout's own mount is on its desktop branch only. */}
+        {profile?.role === 'agent' && <TransferAlert />}
       </div>
     </PhoneLayoutContext.Provider>
   )

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
-import { byLead } from '../lib/portalV2'
+import { byLead, isRecent } from '../lib/portalV2'
 
 // Data for the v2 agent portal (migration 180). Reads go through agent_inbounds() and
 // RLS-limited selects; the agent's only writes are the two RPCs at the bottom. The lists
@@ -22,6 +22,14 @@ export function useInbounds() {
       return data || []
     },
   })
+}
+
+// How many inbounds came in today or yesterday: the badge on the sidebar's Inbounds, the phone
+// More tab and More's Inbounds row. Same query (and key) as the Inbounds page.
+export function useNewInboundCount() {
+  const { profile } = useAuth()
+  const { data } = useInbounds()
+  return (data || []).filter(l => isRecent(l, profile?.timezone)).length
 }
 
 // Events the lists need across all of the agent's inbounds: every upcoming step, plus

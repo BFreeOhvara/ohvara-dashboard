@@ -1,6 +1,6 @@
 import { useState, useEffect, Fragment } from 'react'
 import { useLocation, Link } from 'react-router-dom'
-import { Menu, ChevronRight, Home } from 'lucide-react'
+import { Menu, ChevronRight, Home, Inbox } from 'lucide-react'
 import { Sidebar, COLLAPSE_KEY, SIDEBAR_W, SIDEBAR_W_COLLAPSED } from './Sidebar'
 import { GlobalSearch } from './GlobalSearch'
 import { ActiveCallProvider } from '../../contexts/ActiveCallContext'
@@ -10,16 +10,20 @@ import { useAgentBookings } from '../../hooks/useAgentBookings'
 import { useWeeklyUsage } from '../../hooks/useBillingTiers'
 import { usePolicyEvents } from '../../hooks/useAgentActivity'
 import { useStandingThreads, dmId } from '../../hooks/useDirectMessages'
+import { useInbounds } from '../../hooks/useInbounds'
 import { tabOf, sameLocalDay } from '../../lib/agentBookings'
 import { capState, formatReset, formatBillingDate, shownStatus, renewsAt } from '../../lib/billing'
-import { navEntry, PAGE_TONE } from '../../lib/nav'
+import { navEntry, isInboundDetail, PAGE_TONE } from '../../lib/nav'
+import { leadName } from '../../lib/portalV2'
 import { BillingGate } from './BillingGate'
 import { ErrorBoundary } from '../shared/ErrorBoundary'
 import { PhoneShell } from './PhoneShell'
 import { ConfirmEmailBanner } from './ConfirmEmailBanner'
 import { useIsPhone } from '../../hooks/usePhoneLayout'
 import { LEADS_PAGE } from '../../lib/leadsPage'
-import { PortalPreviewToggle } from '../agent/PortalPreviewToggle'
+import { TransferAlert } from '../agent/TransferAlert'
+// The transfer alert's styles (.pv-ta) live with the v2 pages.
+import '../../pages/agent/v2/portalV2.css'
 
 // Shell — Prompt 669 restyle to Restorix Portal's Layout.jsx, a 32/24 padded
 // main capped at 1280px. Prompt 722 rethought the header: a 72px sticky bar
@@ -43,6 +47,8 @@ const TITLES = {
   '/agent/book': ['Book a call', 'Get your client on the calendar with Fulfillment'],
   '/agent/clients': ['My Pipeline', 'Everyone booked with Fulfillment and where each cancellation stands'],
   '/agent/activity': ['Activity', 'What happened with your clients, newest first'],
+  '/agent/inbounds': ['Inbounds', 'Everyone who came in for you, and what we’re doing with each one'],
+  '/agent/calendar': ['Calendar', 'Every appointment, whoever booked it'],
   ...(LEADS_PAGE ? { '/agent/leads': ['Leads', 'Delivered to you. Call or text from your own phone'] } : {}),
   '/agent/billing': ['Billing', 'Your weekly subscription and next charge'],
   '/agent/carriers': ['Carrier Portals', 'Every carrier login in one directory'],
@@ -201,9 +207,19 @@ const AGENT_LINES = {
   '/settings': SettingsLine,
 }
 
+// One inbound: "Inbounds / <their name>", from the list the page already loads (same query key).
+function InboundTitle() {
+  const { pathname } = useLocation()
+  const { data } = useInbounds()
+  const id = pathname.split('/').pop()
+  const l = (data || []).find(x => x.lead_id === id)
+  return <h1 className="ov-hname">{l ? leadName(l) : 'Inbound'}</h1>
+}
+
 function PageTitle({ pathname }) {
   const { profile, session } = useAuth()
-  const entry = navEntry(profile?.role, pathname)
+  const detail = profile?.role === 'agent' && isInboundDetail(pathname)
+  const entry = detail ? { group: 'Inbounds', label: 'Inbound', icon: Inbox } : navEntry(profile?.role, pathname)
   const [title, sub] = TITLES[pathname] || ['', '']
   const name = entry?.label || title
   const Icon = entry?.icon || Home
@@ -216,7 +232,7 @@ function PageTitle({ pathname }) {
       <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div className="ov-hcrumb">
           {entry?.group && <><span className="ov-hgroup">{entry.group}</span><span className="ov-hgroup" aria-hidden="true">/</span></>}
-          <h1 className="ov-hname">{name}</h1>
+          {detail ? <InboundTitle /> : <h1 className="ov-hname">{name}</h1>}
         </div>
         {Line ? <Line profile={profile} session={session} /> : sub && <div className="ov-hline"><Plain>{sub}</Plain></div>}
       </div>
@@ -249,7 +265,7 @@ export function DashboardLayout({ children }) {
   // Prompt 773 — a Fulfillment rep too. Prompt 774 — and Admin.
   const phone = useIsPhone()
   if (phone && (profile?.role === 'agent' || profile?.role === 'fulfillment' || profile?.role === 'admin')) {
-    return <ActiveCallProvider><PhoneShell>{children}<PortalPreviewToggle /></PhoneShell></ActiveCallProvider>
+    return <ActiveCallProvider><PhoneShell>{children}</PhoneShell></ActiveCallProvider>
   }
 
   return (
@@ -269,7 +285,7 @@ export function DashboardLayout({ children }) {
           className="app-main flex-1 flex flex-col min-w-0 pt-[60px] md:pt-0"
           style={{ '--sb-w': `${collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W}px`, position: 'relative' }}
         >
-          <div className={`app-backdrop${['/agent', '/agent/book', '/agent/clients', '/agent/activity', '/agent/leads', '/agent/billing', '/settings', '/fulfillment', '/fulfillment/desk', '/fulfillment/leads', '/fulfillment/pipeline', '/fulfillment/pay', '/fulfillment/getting-paid'].includes(pathname) || pathname.startsWith('/admin') ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
+          <div className={`app-backdrop${['/agent', '/agent/book', '/agent/clients', '/agent/activity', '/agent/leads', '/agent/billing', '/agent/calendar', '/settings', '/fulfillment', '/fulfillment/desk', '/fulfillment/leads', '/fulfillment/pipeline', '/fulfillment/pay', '/fulfillment/getting-paid'].includes(pathname) || pathname.startsWith('/agent/inbounds') || pathname.startsWith('/admin') ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
           {/* Prompt 722 — one header for every size: a 60px fixed top bar on
               phones (menu, title, search, bell), the 72px sticky page header
               from md up. One instance, so the search hotkeys and the bell
@@ -299,11 +315,13 @@ export function DashboardLayout({ children }) {
                   header stay, and a new route clears it. */}
               <ConfirmEmailBanner />
               <ErrorBoundary resetKey={pathname}><BillingGate>{children}</BillingGate></ErrorBoundary>
-              <PortalPreviewToggle />
             </div>
           </main>
         </div>
       </div>
+      {/* Live-transfer alert for every agent (portal parity answer 2): silent unless Active. Mounted once
+          here on desktop; on a phone PhoneShell mounts it (this branch doesn't render there). */}
+      {profile?.role === 'agent' && <TransferAlert />}
     </ActiveCallProvider>
   )
 }

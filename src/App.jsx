@@ -9,8 +9,6 @@ import { DashboardLayout } from './components/layout/DashboardLayout'
 import { ErrorBoundary } from './components/shared/ErrorBoundary'
 import { NativeBridge } from './components/native/NativeBridge'
 import { LEADS_PAGE } from './lib/leadsPage'
-import { usePortalV2 } from './lib/portalV2'
-import { oldPageFor } from './lib/portalPreview'
 // Side-effect import — attaches the beforeinstallprompt listener at app
 // boot (Prompt 286) so it's never missed while the user is still on Login.
 import './lib/installPrompt'
@@ -30,14 +28,11 @@ import AgentClients from './pages/agent/Clients'
 import AgentActivity from './pages/agent/Activity'
 import AgentBilling from './pages/agent/Billing'
 import AgentMore from './pages/agent/More'
-// The v2 agent portal (behind the gate in src/lib/portalPreview.js, off by default): Today, Inbounds, Inbound detail,
-// Calendar, Clients, Plan & billing. Lazy, so a flag-off agent never downloads it.
-const V2Today = lazy(() => import('./pages/agent/v2/Today'))
+// Inbounds, Inbound detail and Calendar (from the v2 portal), added to the old portal for every agent
+// (portal parity answer 0). Lazy, so they download only when opened.
 const V2Inbounds = lazy(() => import('./pages/agent/v2/Inbounds'))
 const V2InboundDetail = lazy(() => import('./pages/agent/v2/InboundDetail'))
 const V2Calendar = lazy(() => import('./pages/agent/v2/Calendar'))
-const V2Clients = lazy(() => import('./pages/agent/v2/Clients'))
-const V2Plan = lazy(() => import('./pages/agent/v2/Plan'))
 // P808: Leads mounts only in dev behind VITE_LEADS_PAGE=1; otherwise the page is not in the bundle.
 // The DEV check sits here, in this file, so a production build drops the import() and the chunk.
 const AgentLeads = import.meta.env.DEV && LEADS_PAGE ? lazy(() => import('./pages/agent/Leads')) : null
@@ -74,40 +69,6 @@ function AdminTo({ to, children }) {
 function MpToProtect() {
   const { search } = useLocation()
   return <Navigate to={{ pathname: '/protect', search }} replace />
-}
-
-// /agent: the v2 Today when the flag is on, else the Overview exactly as before. ?portal=v1 skips the
-// wait and shows the Overview. While the flag is still loading a spinner shows, never the wrong page.
-function AgentHome() {
-  const v2 = usePortalV2()
-  if (v2.loading) return <Spinner />
-  if (v2.on) return <Suspense fallback={<Spinner />}><V2Today /></Suspense>
-  return <DashboardLayout><AgentOverview /></DashboardLayout>
-}
-
-// /agent/clients: the v2 Clients when the flag is on, else My Pipeline exactly as before (?portal=v1 too).
-function AgentClientsRoute() {
-  const v2 = usePortalV2()
-  if (v2.loading) return <Spinner />
-  if (v2.on) return <Suspense fallback={<Spinner />}><V2Clients /></Suspense>
-  return <DashboardLayout><AgentClients /></DashboardLayout>
-}
-
-// The v2-only routes: with v2 off they go to the matching old page (Plan: Billing, the rest: /agent).
-function V2Only({ children }) {
-  const v2 = usePortalV2()
-  const { pathname } = useLocation()
-  if (v2.loading) return <Spinner />
-  if (!v2.on) return <Navigate to={oldPageFor(pathname)} replace />
-  return <Suspense fallback={<Spinner />}>{children}</Suspense>
-}
-
-function Spinner() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--bg-base)]">
-      <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-    </div>
-  )
 }
 
 function RoleRedirect() {
@@ -187,30 +148,26 @@ export default function App() {
                 their replacements so bookmarks keep working. */}
             <Route path="/agent" element={
               <ProtectedRoute allowedRoles={['agent']}>
-                <AgentHome />
+                <DashboardLayout><AgentOverview /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* v2 portal: Inbounds list, one inbound, Calendar, Plan & billing (flag off: back to /agent). */}
+            {/* Inbounds list, one inbound and Calendar, in the old chrome for every agent. Old v2 Plan links land on Billing. */}
             <Route path="/agent/inbounds" element={
               <ProtectedRoute allowedRoles={['agent']}>
-                <V2Only><V2Inbounds /></V2Only>
+                <DashboardLayout><Suspense fallback={null}><V2Inbounds /></Suspense></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/inbounds/:id" element={
               <ProtectedRoute allowedRoles={['agent']}>
-                <V2Only><V2InboundDetail /></V2Only>
+                <DashboardLayout><Suspense fallback={null}><V2InboundDetail /></Suspense></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/calendar" element={
               <ProtectedRoute allowedRoles={['agent']}>
-                <V2Only><V2Calendar /></V2Only>
+                <DashboardLayout><Suspense fallback={null}><V2Calendar /></Suspense></DashboardLayout>
               </ProtectedRoute>
             } />
-            <Route path="/agent/plan" element={
-              <ProtectedRoute allowedRoles={['agent']}>
-                <V2Only><V2Plan /></V2Only>
-              </ProtectedRoute>
-            } />
+            <Route path="/agent/plan" element={<Navigate to="/agent/billing" replace />} />
             <Route path="/agent/book" element={
               <ProtectedRoute allowedRoles={['agent', 'admin']}>
                 <DashboardLayout><AgentBookCall /></DashboardLayout>
@@ -218,7 +175,7 @@ export default function App() {
             } />
             <Route path="/agent/clients" element={
               <ProtectedRoute allowedRoles={['agent', 'admin']}>
-                <AdminTo to="/admin/pipeline"><AgentClientsRoute /></AdminTo>
+                <AdminTo to="/admin/pipeline"><DashboardLayout><AgentClients /></DashboardLayout></AdminTo>
               </ProtectedRoute>
             } />
             {/* Prompt 690 — Activity: chronological log (policy_events +

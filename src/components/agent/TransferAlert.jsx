@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useAgentDuty } from '../../hooks/useAgentDuty'
 import { transferWatch, myIncomingTransfer, playRing, audioContext } from '../../lib/transferAlert'
 
-// Live-transfer alert, mounted once in PortalV2Layout. While the agent is Active and the tab
+// Live-transfer alert, mounted once per screen (DashboardLayout on desktop, PhoneShell on a phone). While the agent is Active and the tab
 // is visible it asks my_incoming_transfer() every 4s; a row rings the portal and shows this
 // over the page while help-transfer calls their phone. Portaled to <body> because .page-enter
 // keeps a transform that would trap position: fixed (Gotchas). Inactive: no polls, no ring.

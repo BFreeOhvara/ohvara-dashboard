@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { Activity, UserPlus, Bell, Moon, Sun, Settings, TriangleAlert, ChevronRight, LogOut } from 'lucide-react'
+import { Activity, UserPlus, Bell, Moon, Sun, Settings, TriangleAlert, ChevronRight, LogOut, Inbox, CalendarDays } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useTheme } from '../../hooks/useTheme'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
@@ -12,10 +12,11 @@ import { BugReportModal } from '../../components/shared/BugReportButton'
 import { AccountRows } from '../../components/shared/AccountRows'
 import { isNativeApp } from '../../lib/native'
 import { NATIVE_BILLING_TEXT } from '../../components/native/NativeBillingNote'
+import { useNewInboundCount } from '../../hooks/useInbounds'
 
 // Prompt 772 — More, the phone layout's fifth tab (mockup More.dc.html): the
 // profile, a Billing card (plan, weekly price, next charge, this week's
-// bookings, Manage billing), then Activity, Invite an agent, Notifications,
+// bookings, Manage billing), then Inbounds (new count) and Calendar (portal parity answer 1), Activity, Invite an agent, Notifications,
 // Theme (one tap flips it, like P766), Settings and Report a problem, and
 // Sign out. Desktop has no More page: the sidebar holds all of this, so the
 // route sends a desktop visitor home.
@@ -54,6 +55,7 @@ export default function More() {
   const [modal, setModal] = useState(null) // 'invite' | 'report'
   const { data: tiers = [] } = useBillingTiers()
   const { data: usage } = useWeeklyUsage(profile?.id)
+  const newInbounds = useNewInboundCount()
 
   if (!phone) return <Navigate to="/agent" replace />
 
@@ -78,7 +80,7 @@ export default function More() {
 
       <section className="ov-hero ph-profile">
         <Avatar profile={profile} size={54} />
-        <span style={{ flex: 1, minWidth: 0, color: '#FFFFFF' }}>
+        <span style={{ flex: 1, minWidth: 0, color: 'inherit' }}>
           <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, overflowWrap: 'anywhere' }}>{profile?.full_name || 'Your account'}</span>
           <span style={{ display: 'block', fontSize: 13, color: 'var(--ov-hero-soft)' }}>{planLine ? `${planLine} plan` : 'Agent'}</span>
         </span>
@@ -123,6 +125,8 @@ export default function More() {
       </section>
 
       <section className="ov-card ph-menu">
+        <Row icon={Inbox} tone="blue" label="Inbounds" right={newInbounds > 0 ? `${newInbounds} new` : null} onClick={() => navigate('/agent/inbounds')} />
+        <Row icon={CalendarDays} tone="teal" label="Calendar" onClick={() => navigate('/agent/calendar')} />
         <Row icon={Activity} tone="blue" label="Activity" onClick={() => navigate('/agent/activity')} />
         <Row icon={UserPlus} tone="teal" label="Invite an agent" onClick={() => setModal('invite')} />
         <Row icon={Bell} tone="amber" label="Notifications" onClick={() => navigate('/settings#notifications')} />

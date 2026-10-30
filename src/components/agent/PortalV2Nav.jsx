@@ -1,30 +1,19 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Sun, Inbox, Settings, CalendarDays, Users, CreditCard, CircleAlert } from 'lucide-react'
-import { useAuth } from '../../hooks/useAuth'
-import { useInbounds } from '../../hooks/useInbounds'
 import { OhvaraMark } from '../ui/OhvaraMark'
-import { BillingGate } from '../layout/BillingGate'
-import { ErrorBoundary } from '../shared/ErrorBoundary'
-import { TransferAlert } from './TransferAlert'
-import { PortalPreviewToggle } from './PortalPreviewToggle'
-import { isRecent } from '../../lib/portalV2'
 import '../../pages/agent/v2/portalV2.css'
 
-// The agent portal v2 shell (behind the gate in src/lib/portalPreview.js): from 768px a 256px sidebar
-// (Today, Inbounds with the new-inbound count, Calendar, Clients, Plan & billing, Settings) and a
-// 72px page header; under 768px no sidebar or header, a 6-column bottom tab bar instead. Mockups:
+// Bits the v2 pages share. The v2 pages now render inside the old DashboardLayout (portal parity
+// answer 0), so PortalV2Layout below is a pass-through. The v2 shell's own Sidebar and TabBar are
+// kept, unused, until the v2 code is retired. Mockups:
 // ohvara/mockups/build-v2-portal-shell-today-inbounds-inb.html and
 // ohvara/mockups/build-calendar-clients-and-plan-billing-.html.
 const initials = name => (name || '').trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase()).join('') || 'A'
 
-function useNewCount() {
-  const { profile } = useAuth()
-  const { data } = useInbounds()
-  return (data || []).filter(l => isRecent(l, profile?.timezone)).length
-}
-
 export const Ico = ({ icon: Icon, size = 18 }) => <Icon size={size} strokeWidth={2} className="pv-i" aria-hidden="true" />
 
+// Unused since the v2 pages moved into DashboardLayout (kept until the v2 code is retired).
+// eslint-disable-next-line no-unused-vars
 function Sidebar({ active, count, profile }) {
   const link = (key, to, icon, label, badge) => (
     <Link to={to} className={`pv-nav${active === key ? ' on' : ''}`} aria-current={active === key ? 'page' : undefined}>
@@ -50,6 +39,8 @@ function Sidebar({ active, count, profile }) {
   )
 }
 
+// Unused since the v2 pages moved into DashboardLayout (kept until the v2 code is retired).
+// eslint-disable-next-line no-unused-vars
 function TabBar({ active, count }) {
   const tab = (key, to, icon, label, badge) => (
     <Link to={to} className={active === key ? 'on' : undefined} aria-current={active === key ? 'page' : undefined}>
@@ -68,30 +59,11 @@ function TabBar({ active, count }) {
   )
 }
 
-// `active` is today | inbounds | calendar | clients | plan. `crumb` / `title` / `icon` fill the page header.
-// The live-transfer alert (TransferAlert) is mounted here once, so it rings on every v2 page.
-export function PortalV2Layout({ active, crumb = 'Your work', title, icon = Sun, children }) {
-  const { profile } = useAuth()
-  const { pathname } = useLocation()
-  const count = useNewCount()
-  return (
-    <div className="pv">
-      <Sidebar active={active} count={count} profile={profile} />
-      <div className="app-main pv-main" style={{ '--sb-w': '256px' }}>
-        <div className="app-backdrop app-backdrop--v2" aria-hidden="true" />
-        <header className="pv-hdr">
-          <span className="pv-htile" aria-hidden="true"><Ico icon={icon} size={20} /></span>
-          <div className="pv-grow"><p className="pv-crumb">{crumb}</p><h2>{title}</h2></div>
-        </header>
-        <main className="pv-content">
-          <ErrorBoundary resetKey={pathname}><BillingGate>{children}</BillingGate></ErrorBoundary>
-          <PortalPreviewToggle onV2 />
-        </main>
-      </div>
-      <TabBar active={active} count={count} />
-      <TransferAlert />
-    </div>
-  )
+// Pass-through: the page renders inside DashboardLayout (sidebar or PhoneShell, header, bell, search,
+// BillingGate, the transfer alert). The props the pages still pass are ignored. .pv scopes the v2
+// type rules (portalV2.css) and .pv-flow spaces the page's sections.
+export function PortalV2Layout({ children }) {
+  return <div className="pv pv-flow">{children}</div>
 }
 
 // Bits the three pages share.

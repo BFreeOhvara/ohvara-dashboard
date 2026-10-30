@@ -117,8 +117,9 @@ test('wiring: one gate, guard redirects with replace, link renders null, choice 
   assert.match(hook, /isPreviewUser\(user\) \? readPreviewChoice\(\) : null/)
   assert.match(hook, /useV2\(\{ flagOn: portalFlagOn\(data\), user, choice \}\)/)
   assert.doesNotMatch(hook, /agent_portal_v2/)
+  // Portal parity answer 0: the routes no longer read the flag (Inbounds and Calendar are for every agent).
   const app = src('../App.jsx')
-  assert.match(app, /if \(!v2\.on\) return <Navigate to=\{oldPageFor\(pathname\)\} replace \/>/)
+  assert.doesNotMatch(app, /usePortalV2|V2Only|PortalV2Layout/)
   const toggle = src('../components/agent/PortalPreviewToggle.jsx')
   assert.match(toggle, /if \(!link\) return null/)
   // The preview logic never looks at the URL (only ?portal=v1 in portalV2.js, which can only turn v2 off).

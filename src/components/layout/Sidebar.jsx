@@ -17,6 +17,7 @@ import { GetAppModal } from './GetAppModal'
 import { InviteAgentModal } from '../shared/InviteAgentModal'
 import { AddSomeone } from '../shared/AddSomeone'
 import { AccountMenu } from './AccountMenu'
+import { useNewInboundCount } from '../../hooks/useInbounds'
 
 // Sidebar — Prompt 722 rebuilt the chrome on the v16 language (DESIGN.md v16
 // "P722 — App chrome"). Kept from before: the titled groups, each role's items
@@ -43,6 +44,17 @@ export const SIDEBAR_W_COLLAPSED = 72
 const DRAWER_W = 300
 
 const badgeText = n => (n > 99 ? '99+' : n)
+
+// Inbounds (agents only, the one row that has it): inbounds that came in today or yesterday. Its own
+// component so the inbounds query runs only where the row exists.
+function InboundsBadge({ expanded }) {
+  const n = useNewInboundCount()
+  if (!n) return null
+  const label = `${n} new`
+  return expanded
+    ? <span className="ov-sb-badge is-msg" aria-label={label}>{badgeText(n)}</span>
+    : <span className="ov-sb-dot is-msg" aria-label={label} />
+}
 
 export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) {
   const { profile, signOut } = useAuth()
@@ -151,6 +163,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
                     >
                       <Icon size={18} strokeWidth={1.8} style={{ flexShrink: 0 }} />
                       {expanded && <span className="ov-sb-label">{label}</span>}
+                      {to === '/agent/inbounds' && <InboundsBadge expanded={expanded} />}
                       {badge && (expanded
                         ? <span className={`ov-sb-badge is-${badge.tone}`} aria-label={badge.label}>{badgeText(badge.n)}</span>
                         : <span className={`ov-sb-dot is-${badge.tone}`} aria-label={badge.label} />)}
