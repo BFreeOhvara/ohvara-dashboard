@@ -1,8 +1,6 @@
 // Screenshots and checks for the v2 agent portal's Calendar, Clients and Plan & billing with every
 // Supabase call mocked: no real project, account or credentials are touched, nothing is written.
 //   node scripts/portal-v2-more-shots.mjs [outDir]            (npm run shots:portal-v2-more)
-//   node scripts/portal-v2-more-shots.mjs [outDir] --baseline (only the flag-off pages, saved as the
-//                                                              "before" text to compare against)
 // Writes PNGs plus measurements.json into outDir (default qa/portal-v2-more) and exits 1 on any failure.
 // Checks (all against the mock):
 //   18 passes = 3 routes (/agent/calendar, /agent/clients list + one detail, /agent/plan) x 1920/1440/390
@@ -10,24 +8,20 @@
 //   scrollWidth <= width. Plan also: no /\$\s?\d/, 4 tier cards, every choose button disabled.
 //   Clients detail shows servicing tasks. The cancellation flow runs from v2 Clients (Change this
 //   booking, Confirm number end to end, Call & rebook, Book a cancellation call).
-//   Flag off: /agent/clients and /agent/billing are the old pages (same text as the baseline run on
-//   the pre-change code, and as ?portal=v1); /agent/calendar and /agent/plan go back to /agent.
 import process from 'node:process'
-import { mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync, rmSync } from 'node:fs'
+import { mkdirSync, writeFileSync, readdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { createServer } from 'vite'
 import { chromium } from 'playwright'
 import { zonedTimeToUtcIso } from '../src/lib/timezones.js'
 
 const args = process.argv.slice(2)
-const BASELINE = args.includes('--baseline')
 const OUT = args.find(a => !a.startsWith('--')) || 'qa/portal-v2-more'
-const BASE_FILE = join(OUT, 'baseline-flag-off.json')
 const SB = 'https://mock.supabase.co'
 const SB_HOST = new URL(SB).host
 const PORT = Number(process.env.PORT) || 5700 + Math.floor(Math.random() * 400)
 mkdirSync(OUT, { recursive: true })
-if (!BASELINE) for (const f of readdirSync(OUT)) if (/\.png$/.test(f)) rmSync(join(OUT, f))
+for (const f of readdirSync(OUT)) if (/\.png$/.test(f)) rmSync(join(OUT, f))
 
 // What the app chrome asks for besides the page's own queries. Anything else fails a v2 pass.
 const ALLOWED = {
@@ -146,7 +140,7 @@ const json = (route, status, body, extra = {}) => route.fulfill({ status, header
 const inList = v => (v || '').replace(/^in\.\(/, '').replace(/\)$/, '').split(',').map(s => s.replace(/"/g, '')).filter(Boolean)
 
 // ── The mock ─────────────────────────────────────────────────────────────────
-// opts: { flag, tiers: 'rows' | 'empty' | 'error', loose } — loose: the old pages run, so requests
+// opts: { tiers: 'rows' | 'empty' | 'error', loose } — loose: the old pages run, so requests
 // outside the v2 list are answered empty and recorded, not failed.
 async function mock(page, opts, state) {
   await page.route('**/*', async route => {
@@ -192,7 +186,7 @@ async function mock(page, opts, state) {
       if (method === 'HEAD') return odd(`HEAD table ${table}`, null)
       if (method !== 'GET') { state.writes.push({ name: `${method} ${table}` }); return json(route, 200, []) }
       switch (table) {
-        case 'app_settings': return rows([{ id: 1, agent_portal_v2: opts.flag, agent_billing_enforced: false }])
+        case 'app_settings': return rows([{ id: 1, agent_billing_enforced: false }])
         case 'inbound_events': {
           const lead = (q.get('lead_id') || '').replace('eq.', '')
           const list = lead ? state.events.filter(e => e.lead_id === lead)
@@ -307,7 +301,7 @@ const expectFor = {
 }
 
 async function pass(route, w, theme) {
-  const { ctx, page, state } = await open(w, theme, { flag: true, tiers: 'rows' })
+  const { ctx, page, state } = await open(w, theme, { tiers: 'rows' })
   const failures = []
   const shots = []
   let text = ''
@@ -339,37 +333,14 @@ async function pass(route, w, theme) {
   await ctx.close()
 }
 
-// The old pages with the flag off: no v2 shell, the old sidebar, and the main area's text.
-async function oldPage(url, opts, shot) {
-  const { ctx, page, state } = await open(1440, 'dark', { ...opts, loose: true })
-  await page.goto(`${base}${url}`, { waitUntil: 'domcontentloaded' })
-  await page.waitForSelector('main', { timeout: 20000 })
-  await page.evaluate(() => document.fonts.ready)
-  await page.waitForTimeout(1500)
-  const info = await page.evaluate(() => ({
-    v2: !!document.querySelector('.pv'), path: location.pathname, text: document.querySelector('main')?.innerText ?? '',
-    side: [...document.querySelectorAll('aside a')].map(a => a.textContent.trim()).join('|'),
-  }))
-  if (shot) await page.screenshot({ path: join(OUT, shot), fullPage: true })
-  await ctx.close()
-  return { ...info, pageErrors: state.pageErrors }
-}
-
-const OLD = [['clients', '/agent/clients'], ['billing', '/agent/billing']]
-
 try {
-  if (BASELINE) {
-    const saved = {}
-    for (const [name, url] of OLD) saved[name] = await oldPage(url, { flag: false }, null)
-    writeFileSync(BASE_FILE, JSON.stringify(saved, null, 2) + '\n')
-    console.log(`baseline saved: ${BASE_FILE} (${OLD.map(([n]) => `${n} ${saved[n].text.length} chars`).join(', ')})`)
-  } else {
+  {
     // 1. The 18 passes
     for (const r of ROUTES) for (const w of [1920, 1440, 390]) for (const theme of ['light', 'dark']) await pass(r, w, theme)
 
     // 2. The cancellation flow from v2 Clients (1440 light).
     {
-      const { ctx, page, state } = await open(1440, 'light', { flag: true, tiers: 'rows', loose: true })
+      const { ctx, page, state } = await open(1440, 'light', { tiers: 'rows', loose: true })
       const failures = []
       const go = async u => { await page.goto(`${base}${u}`, { waitUntil: 'domcontentloaded' }); await ready(page) }
       const card = () => page.locator('section[aria-label="Cancellations"]')
@@ -416,7 +387,7 @@ try {
 
     // 3. Plan with zero rows, and a failed read.
     for (const [tiers, want] of [['empty', 'Plans are being set up'], ['error', "We couldn't load the plans"]]) {
-      const { ctx, page, state } = await open(390, 'dark', { flag: true, tiers })
+      const { ctx, page, state } = await open(390, 'dark', { tiers })
       const failures = []
       await page.goto(`${base}/agent/plan`, { waitUntil: 'domcontentloaded' })
       await page.getByText(want).waitFor({ timeout: 20000 }).catch(() => failures.push(`plan ${tiers}: "${want}" not shown`))
@@ -428,37 +399,14 @@ try {
       extra.push({ check: `plan, membership_tiers ${tiers}: "${want}", How it works still shown`, failures })
       await ctx.close()
     }
-
-    // 4. Flag off: the old pages, the same as before this change and as ?portal=v1; the new routes go home.
-    {
-      const before = existsSync(BASE_FILE) ? JSON.parse(readFileSync(BASE_FILE, 'utf8')) : null
-      for (const [name, url] of OLD) {
-        const failures = []
-        const off = await oldPage(url, { flag: false }, `old-${name}-flag-off-1440-dark.png`)
-        const v1 = await oldPage(`${url}?portal=v1`, { flag: true }, null)
-        check(failures, !off.v2 && off.path === url, `${name}: flag off shows v2 or moved (${off.path})`)
-        check(failures, /Book a call/.test(off.side), `${name}: old sidebar missing (${off.side})`)
-        check(failures, off.pageErrors.length === 0, `${name}: pageErrors ${off.pageErrors.join(' | ')}`)
-        check(failures, off.text.length > 0 && off.text === v1.text, `${name}: flag off and ?portal=v1 differ`)
-        if (before) check(failures, off.text === before[name].text && off.side === before[name].side, `${name}: text differs from the pre-change baseline`)
-        else failures.push(`${name}: no baseline file (${BASE_FILE}); run with --baseline on the pre-change code first`)
-        extra.push({ check: `flag off ${url}: old page, same text as ${before ? 'the pre-change baseline and ' : ''}?portal=v1 (${off.text.length} chars)`, failures })
-      }
-      for (const url of ['/agent/calendar', '/agent/plan']) {
-        const failures = []
-        const off = await oldPage(url, { flag: false }, null)
-        check(failures, off.path === '/agent' && !off.v2, `${url}: flag off landed on ${off.path} (v2=${off.v2})`)
-        extra.push({ check: `flag off ${url} goes back to /agent`, failures })
-      }
-    }
   }
 } finally {
-  if (!BASELINE) writeFileSync(join(OUT, 'measurements.json'), JSON.stringify({ passes: results, extra }, null, 2) + '\n')
+  writeFileSync(join(OUT, 'measurements.json'), JSON.stringify({ passes: results, extra }, null, 2) + '\n')
   await browser.close()
   await server.close()
 }
 
-if (!BASELINE) {
+{
   for (const r of results) console.log(`${r.route.padEnd(9)} ${String(r.width).padEnd(5)} ${r.theme.padEnd(5)} banned=${r.bannedMatch}${r.moneyMatch !== undefined ? ` money=${r.moneyMatch}` : ''} scroll=${r.scrollWidth}/${r.innerWidth} ${r.failures.length ? `FAIL: ${r.failures.join(' / ')}` : 'ok'}`)
   for (const e of extra) console.log(`${e.failures.length ? 'FAIL' : 'ok  '} ${e.check}${e.failures.length ? ` -> ${e.failures.join(' / ')}` : ''}`)
   const failed = results.filter(r => r.failures.length).length + extra.filter(e => e.failures.length).length
