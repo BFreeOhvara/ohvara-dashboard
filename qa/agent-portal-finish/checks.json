@@ -2,13 +2,13 @@
   "mocked": true,
   "note": "Every Supabase call is mocked; names, events, balances and counts are fixtures, not live data.",
   "agentId": "3f2b2df7-40b1-4921-80e2-09981c819642",
-  "generatedAt": "2026-10-30T19:59:34.445Z",
+  "generatedAt": "2026-10-30T20:03:47.097Z",
   "oldCommit": "2b8337a",
   "oldCommitFull": "2b8337a63cf6e7411e49f4d9d7a7336ddf2bdb94",
   "oldIsParentOfMerge": "3db9106 (master-side parent; not 3db9106^1 = 84be192)",
-  "newCommit": "dd4da1d",
-  "newCommitFull": "dd4da1d22ea3bcae31b9f402483f5e741a23ae3d",
-  "checkoutHead": "0466471910417a28f368444369007099dc951ace",
+  "newCommit": "76cee0d",
+  "newCommitFull": "76cee0daa8f082bb6e6cdf3bddfda1b7e100426b",
+  "checkoutHead": "94c3f6198d33342ccdd85448d236efd6c9da9aba",
   "newAppSourceDiffersFromMaster": [],
   "oldRenderMethod": {
     "summary": "localStorage ov_portal_preview=v1, flag column absent",
@@ -1613,8 +1613,8 @@
       "name": "new side serves this checkout, and its app code equals origin/master",
       "ok": true,
       "detail": {
-        "head": "0466471910417a28f368444369007099dc951ace",
-        "master": "dd4da1d22ea3bcae31b9f402483f5e741a23ae3d",
+        "head": "94c3f6198d33342ccdd85448d236efd6c9da9aba",
+        "master": "76cee0daa8f082bb6e6cdf3bddfda1b7e100426b",
         "differs": []
       }
     },

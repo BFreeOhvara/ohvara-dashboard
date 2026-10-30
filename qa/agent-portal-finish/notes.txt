@@ -12,7 +12,7 @@ inbound steps, 3 policy events, a $40.00 prepaid balance and its history, 4 memb
 WHICH VERSIONS
 OLD = commit 2b8337a (2b8337a63cf6e7411e49f4d9d7a7336ddf2bdb94), the master-side parent of merge 3db9106.
      Not 3db9106^1, which is branch commit 84be192 and already has the Activity events.
-NEW = origin/master dd4da1d (dd4da1d22ea3bcae31b9f402483f5e741a23ae3d), merged into this branch as 0466471.
+NEW = origin/master 76cee0d (76cee0daa8f082bb6e6cdf3bddfda1b7e100426b), merged into this branch (checkout head in checks.json). 76cee0d is the lead-wording merge (migration 191 and agent-billing strings, no src change).
      checks.json proves no app file differs from origin/master (only tests and scripts).
 OLD RENDER METHOD: localStorage ov_portal_preview=v1 set before the page loads, and the app_settings mock returns
 its row with the flag column absent (read as off). The URL switch is not used.
