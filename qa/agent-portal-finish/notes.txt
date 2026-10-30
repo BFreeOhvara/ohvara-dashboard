@@ -77,5 +77,5 @@ OTHER NOTES
 - No sideways scroll at 390 on all 16 phone shots (old and new): scrollWidth <= clientWidth for each, in checks.json.
 - scripts/portal-v2-shots.mjs and scripts/portal-v2-more-shots.mjs: flag, ?portal=v1 and flag-off checks removed.
   portal-v2-more-shots.mjs was already stale before this task: it waits for a .pv-content shell that no JSX renders (gone before 2b8337a),
-  so it times out on its first page (seen). portal-v2-shots.mjs has the same wait; its run did not finish, so its result was not seen. Both need a rewrite or retirement; not done here.
+  so it times out on its first page (seen). portal-v2-shots.mjs also exited 1 on the final run (its failure reason was not read; it has the same .pv-content wait). Both need a rewrite or retirement; not done here.
   scripts/overview-today-shots.mjs runs clean (4 ok); its desktop Today strip check now reads "Appointments this month".
