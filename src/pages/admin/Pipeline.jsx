@@ -8,7 +8,7 @@ import { dmId } from '../../hooks/useDirectMessages'
 import {
   ClientSearch, PipelineSummary, PipelineList, ClientDrawer, InfoTile, StatusNote, Journey, OvSelect, LoadError,
 } from '../../components/agent/AgentUI'
-import { attentionReason } from '../../lib/fulfillmentFlags'
+import { attentionReason, needsCancellation } from '../../lib/fulfillmentFlags'
 import { whenShort } from '../../lib/fulfillmentDay'
 import { callWhen } from '../../lib/scheduling'
 import { isLive, stageOf, fulfillTabOf, RANGES, useNow, startOfWeek, startOfMonth, placeOf } from '../../lib/agentBookings'
@@ -74,7 +74,7 @@ export default function AdminPipeline() {
   // P780 — a failed load says so instead of "0 clients".
   const failed = isError && !raw.length
   const { data: profiles = [] } = useAllProfiles()
-  const rows = useMemo(() => excludeTestAccounts(raw, profile?.id), [raw, profile?.id])
+  const rows = useMemo(() => excludeTestAccounts(raw, profile?.id).filter(needsCancellation), [raw, profile?.id])
 
   const agentId = params.get('agent') || ''
   const stageParam = params.get('stage')

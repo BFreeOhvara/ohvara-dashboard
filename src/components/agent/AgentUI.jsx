@@ -1,4 +1,4 @@
-import { Children, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useImperativeHandle } from 'react'
+import { Children, Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useImperativeHandle } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send, MapPin, Moon, ChevronDown, PencilLine, CircleCheck, ClipboardList } from 'lucide-react'
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
@@ -351,9 +351,9 @@ const OV_TITLE = {
   margin: 0, fontFamily: DISPLAY, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ov-hi)',
 }
 
-export function IconChip({ icon: Icon, color, tint, size = 36, radius = 11, iconSize = 18 }) {
+export function IconChip({ icon: Icon, color, tint, size = 36, radius = 11, iconSize = 18, className }) {
   return (
-    <span style={{
+    <span className={className} style={{
       width: size, height: size, borderRadius: radius, flexShrink: 0, background: tint, color,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
@@ -367,9 +367,9 @@ export function IconChip({ icon: Icon, color, tint, size = 36, radius = 11, icon
 // `compact` (Prompt 758, the admin Overview) is the same panel a size tighter.
 // Prompt 768 (QA Finding 7) — a load that failed says so, instead of looking
 // like a brand-new empty account. `what` finishes "Couldn't load …".
-export function LoadError({ what, onRetry, style }) {
+export function LoadError({ what, onRetry, style, className }) {
   return (
-    <div role="alert" style={{
+    <div role="alert" className={className} style={{
       display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 16,
       background: 'var(--danger-dim)', border: 'var(--border-w) solid var(--danger-bd)', color: 'var(--danger)', ...style,
     }}>
@@ -388,7 +388,8 @@ export function LoadError({ what, onRetry, style }) {
   )
 }
 
-export function HeroPanel({ greeting, sub, dateLong, dateShort, timezone, onBook, action, compact }) {
+// `fit` (the agent Overview's one-screen mode) only adds class names; the sizes live in the .ov-fitag rules in index.css.
+export function HeroPanel({ greeting, sub, dateLong, dateShort, timezone, onBook, action, compact, fit }) {
   const { label: actionLabel, icon: ActionIcon, onClick: onAction } = action || { label: 'Submit', icon: CalendarPlus, onClick: onBook }
   const dot = <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ov-hero-dot)' }} />
   return (
@@ -415,21 +416,22 @@ export function HeroPanel({ greeting, sub, dateLong, dateShort, timezone, onBook
       </div>
 
       {/* Tablet and up: text left; big clock and Book a call right. */}
-      <div className="hidden sm:flex" style={{ flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: compact ? 28 : 32, padding: compact ? '30px 36px' : '36px 40px' }}>
-        <div style={{ flex: '1 1 380px', minWidth: 0 }}>
+      <div className={`hidden sm:flex${fit ? ' ag-hero' : ''}`} style={{ flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: compact ? 28 : 32, padding: compact ? '30px 36px' : '36px 40px' }}>
+        <div className={fit ? 'ag-hero-l' : undefined} style={{ flex: '1 1 380px', minWidth: 0 }}>
           <span className="ov-hero-chip">{dot}{dateLong}</span>
           <h1 style={{ margin: compact ? '16px 0 0' : '18px 0 0', fontFamily: DISPLAY, fontSize: compact ? 44 : 46, fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.035em', color: 'inherit' }}>
             {greeting}
           </h1>
           <p style={{ margin: compact ? '10px 0 0' : '12px 0 0', fontSize: compact ? 16 : 17, color: 'var(--ov-hero-soft)' }}>{sub}</p>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: compact ? 16 : 18 }}>
+        <div className={fit ? 'ag-hero-r' : undefined} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: compact ? 16 : 18 }}>
           <DayClock
             timezone={timezone}
+            className={fit ? 'ag-clock' : undefined} periodClassName={fit ? 'ag-clock-p' : undefined}
             style={{ fontFamily: DISPLAY, fontSize: compact ? 58 : 64, fontWeight: 600, lineHeight: 1, letterSpacing: '-0.04em' }}
             periodStyle={{ marginLeft: 10, fontSize: compact ? 21 : 22, fontWeight: 500, color: 'var(--ov-hero-soft)' }}
           />
-          <button type="button" onClick={onAction} className="ov-hero-btn" style={{ height: compact ? 46 : 48, padding: compact ? '0 22px' : '0 24px', fontSize: 15 }}>
+          <button type="button" onClick={onAction} className={`ov-hero-btn${fit ? ' ag-hero-btn' : ''}`} style={{ height: compact ? 46 : 48, padding: compact ? '0 22px' : '0 24px', fontSize: 15 }}>
             <ActionIcon size={18} strokeWidth={2.1} /> {actionLabel}
           </button>
         </div>
@@ -456,17 +458,17 @@ function TrendChip({ diff, small }) {
 
 // Mon–Sun bars: today full strength, earlier days 45%, days not reached yet
 // a 4px stub.
-function WeekStrip({ counts, todayIdx, color, small }) {
+function WeekStrip({ counts, todayIdx, color, small, fit }) {
   const h = small ? 30 : 44
   const max = Math.max(0, ...counts)
   return (
-    <span aria-hidden="true" style={{ display: 'flex', alignItems: 'flex-end', gap: small ? 3 : 5, height: h, flexShrink: 0 }}>
+    <span aria-hidden="true" className={fit ? 'ag-strip' : undefined} style={{ display: 'flex', alignItems: 'flex-end', gap: small ? 3 : 5, height: h, flexShrink: 0 }}>
       {counts.map((c, i) => {
         const future = i > todayIdx
         return (
           <span key={i} style={{
             width: small ? 6 : 10, borderRadius: 3,
-            height: future || !max ? 4 : Math.max(4, Math.round((c / max) * h)),
+            height: future || !max ? 4 : fit ? `${Math.max(12, Math.round((c / max) * 100))}%` : Math.max(4, Math.round((c / max) * h)),
             background: future ? 'var(--ov-stub)' : color, opacity: future || i === todayIdx ? 1 : 0.45,
           }} />
         )
@@ -476,32 +478,32 @@ function WeekStrip({ counts, todayIdx, color, small }) {
 }
 
 // A real <button>; spans inside (a button only takes phrasing content).
-export function TrendCard({ label, icon, tone, value, diff, week, todayIdx, onClick }) {
+export function TrendCard({ label, icon, tone, value, diff, week, todayIdx, onClick, fit }) {
   const color = `var(--ov-data-${tone})`
   const tint = `var(--ov-data-${tone}-tint)`
   return (
     <button
       type="button" onClick={onClick}
-      className="ov-card ov-link px-4 pt-4 pb-[18px] sm:px-6 sm:pt-[22px] sm:pb-6"
+      className={`ov-card ov-link px-4 pt-4 pb-[18px] sm:px-6 sm:pt-[22px] sm:pb-6${fit ? ' ag-trend' : ''}`}
       style={{ display: 'block', width: '100%', minWidth: 0 }}
     >
-      <span className="hidden sm:flex" style={{ flexDirection: 'column', gap: 22 }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <IconChip icon={icon} color={color} tint={tint} />
-          <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-mid)' }}>{label}</span>
+      <span className={`hidden sm:flex${fit ? ' ag-trend-d' : ''}`} style={{ flexDirection: 'column', gap: 22 }}>
+        <span className={fit ? 'ag-th' : undefined} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <IconChip icon={icon} color={color} tint={tint} className={fit ? 'ag-chip' : undefined} />
+          <span className={fit ? 'ag-tl' : undefined} style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-mid)' }}>{label}</span>
           <ArrowUpRight size={16} strokeWidth={2} style={{ color: 'var(--ov-faint)', flexShrink: 0 }} />
         </span>
-        <span style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
-          <span style={{ display: 'block', minWidth: 0 }}>
-            <span style={{ ...OV_NUM, display: 'block', fontSize: 52, letterSpacing: '-0.035em' }}>{value}</span>
+        <span className={fit ? 'ag-tb' : undefined} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
+          <span className={fit ? 'ag-tn' : undefined} style={{ display: 'block', minWidth: 0 }}>
+            <span className={fit ? 'ag-num' : undefined} style={{ ...OV_NUM, display: 'block', fontSize: 52, letterSpacing: '-0.035em' }}>{value}</span>
             {diff != null && (
-              <span style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 8px' }}>
+              <span className={fit ? 'ag-td' : undefined} style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 8px' }}>
                 <TrendChip diff={diff} />
-                {diff !== 0 && <span style={{ fontSize: 13, color: 'var(--ov-mute)' }}>than last week</span>}
+                {diff !== 0 && <span className={fit ? 'ag-than' : undefined} style={{ fontSize: 13, color: 'var(--ov-mute)' }}>than last week</span>}
               </span>
             )}
           </span>
-          <WeekStrip counts={week} todayIdx={todayIdx} color={color} />
+          <WeekStrip counts={week} todayIdx={todayIdx} color={color} fit={fit} />
         </span>
       </span>
 
@@ -3591,11 +3593,11 @@ function comingWhen(iso, now, tz) {
   return `${day}, ${fmtSlotTime(iso, tz)}`
 }
 
-function CallDateTile({ iso, booked, tz }) {
+function CallDateTile({ iso, booked, tz, className }) {
   const d = new Date(iso)
   const z = tz ? { timeZone: tz } : null
   return (
-    <span style={{
+    <span className={className} style={{
       width: 46, height: 46, flexShrink: 0, boxSizing: 'border-box', borderRadius: 13,
       background: booked ? 'var(--ov-st-booked-tint)' : 'var(--ov-stub)',
       color: booked ? 'var(--ov-st-booked)' : 'var(--ov-mid)',
@@ -3616,15 +3618,17 @@ function CallDateTile({ iso, booked, tz }) {
 // Portal parity T3 (answer 4) — `texts` (Today's Texts waiting, from
 // useTextsWaiting in TodayCards.jsx) fold into this one amber box; each row
 // opens that inbound. Without texts the box is exactly the old one.
-export function AttentionCard({ items, loading, onGo, texts = [] }) {
+// `fit` (the agent Overview on a 1280x700+ screen): no row cap; the rows scroll inside .ag-list and the
+// button stays pinned in .ag-foot. Without it (phones, other pages) the cap of 4 and the old layout stay.
+export function AttentionCard({ items, loading, onGo, texts = [], fit }) {
   const pad = 'p-[18px] sm:px-6 sm:pt-6 sm:pb-5'
   const area = { gridArea: 'attn', minWidth: 0 }
   const title = <h2 style={{ ...OV_TITLE, flex: 1, minWidth: 0 }} className="text-[18px] sm:text-[19px]">Needs your attention</h2>
 
   if (loading) {
     return (
-      <div className={`ov-card flex flex-col ${pad}`} style={area}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className={`ov-card flex flex-col ${pad}${fit ? ' ag-box' : ''}`} style={area}>
+        <div className={fit ? 'ag-bh' : undefined} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {title}
           <span style={{ fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, color: 'var(--ov-mute)' }}>—</span>
         </div>
@@ -3633,7 +3637,8 @@ export function AttentionCard({ items, loading, onGo, texts = [] }) {
   }
 
   const count = items.length + texts.length
-  const shown = items.slice(0, ATTN_ROWS)
+  const shown = fit ? items : items.slice(0, ATTN_ROWS)
+  const shownTexts = fit ? texts : texts.slice(0, ATTN_ROWS)
   const more = n => (items.length > n ? `See all ${items.length} in Clients` : 'Open in Clients')
   const toConfirm = items.filter(p => agentStageOf(p) === 'confirmNumber').length
   const toCall = items.length - toConfirm
@@ -3642,13 +3647,15 @@ export function AttentionCard({ items, loading, onGo, texts = [] }) {
     texts.length && `${texts.length} ${texts.length === 1 ? 'text' : 'texts'} waiting`,
   ].filter(Boolean).join(' · ')
   const go = p => onGo(`/agent/clients?open=${p.id}&stage=needs`)
+  const Rows = fit ? 'div' : Fragment
+  const rowsProps = fit ? { className: 'ag-list' } : {}
 
   return (
-    <div className={`ov-attn flex flex-col ${pad}`} style={area}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <IconChip icon={TriangleAlert} color="var(--ov-warn)" tint="var(--ov-warn-tint)" />
+    <div className={`ov-attn flex flex-col ${pad}${fit ? ' ag-box' : ''}`} style={area}>
+      <div className={fit ? 'ag-bh' : undefined} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <IconChip icon={TriangleAlert} color="var(--ov-warn)" tint="var(--ov-warn-tint)" className={fit ? 'ag-chip' : undefined} />
         {title}
-        <span style={{
+        <span className={fit ? 'ag-badge' : undefined} style={{
           minWidth: 30, height: 30, boxSizing: 'border-box', padding: '0 10px', borderRadius: 999,
           background: 'var(--ov-badge-bg)', color: 'var(--ov-badge-fg)', fontFamily: DISPLAY, fontSize: 15, fontWeight: 700,
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontVariantNumeric: 'tabular-nums',
@@ -3656,10 +3663,11 @@ export function AttentionCard({ items, loading, onGo, texts = [] }) {
           {count}
         </span>
       </div>
-      <p style={{ margin: '14px 0 6px', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-soft)' }}>
+      <p className={fit ? 'ag-intro' : undefined} style={{ margin: '14px 0 6px', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-soft)' }}>
         {intro}. Open one to see what to do.
       </p>
 
+      <Rows {...rowsProps}>
       {shown.map((p, i) => {
         const name = fullName(p)
         const meta = [p.current_carrier || 'Carrier not noted', NEEDS_WHY[agentStageOf(p)]].filter(Boolean).join(' · ')
@@ -3667,18 +3675,18 @@ export function AttentionCard({ items, loading, onGo, texts = [] }) {
           <div key={p.id} role="button" tabIndex={0} aria-label={`Open ${name}`}
             onClick={() => go(p)}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(p) } }}
-            className={`ov-attn-row ${i >= 3 ? 'hidden sm:flex' : 'flex'}`} style={{ alignItems: 'center', gap: 12, padding: '14px 0', cursor: 'pointer' }}>
-            <span style={{
+            className={`ov-attn-row ${i >= 3 ? 'hidden sm:flex' : 'flex'}${fit ? ' ag-row' : ''}`} style={{ alignItems: 'center', gap: 12, padding: '14px 0', cursor: 'pointer' }}>
+            <span className={fit ? 'ag-av' : undefined} style={{
               width: 38, height: 38, flexShrink: 0, borderRadius: '50%', background: 'var(--ov-warn-tint)', color: 'var(--ov-warn)',
               fontSize: 12.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               {initialsOf(name)}
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
-              <div style={{ marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>{meta}</div>
+              <div className={fit ? 'ag-rn' : undefined} style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
+              <div className={fit ? 'ag-ri' : undefined} style={{ marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>{meta}</div>
             </div>
-            <button type="button" className="ov-ghost h-10 sm:h-[34px]" tabIndex={-1} aria-hidden="true"
+            <button type="button" className={`ov-ghost h-10 sm:h-[34px]${fit ? ' ag-open' : ''}`} tabIndex={-1} aria-hidden="true"
               style={{ padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               Open <ArrowRight size={14} strokeWidth={2.2} />
             </button>
@@ -3686,31 +3694,32 @@ export function AttentionCard({ items, loading, onGo, texts = [] }) {
         )
       })}
 
-      {texts.slice(0, ATTN_ROWS).map(t => (
+      {shownTexts.map(t => (
         <div key={`text-${t.id}`} role="button" tabIndex={0} aria-label={`Open ${t.name}'s text`}
           onClick={() => onGo(t.to)}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onGo(t.to) } }}
-          className="ov-attn-row flex" style={{ alignItems: 'center', gap: 12, padding: '14px 0', cursor: 'pointer' }}>
-          <span style={{
+          className={`ov-attn-row flex${fit ? ' ag-row' : ''}`} style={{ alignItems: 'center', gap: 12, padding: '14px 0', cursor: 'pointer' }}>
+          <span className={fit ? 'ag-av' : undefined} style={{
             width: 38, height: 38, flexShrink: 0, borderRadius: '50%', background: 'var(--ov-warn-tint)', color: 'var(--ov-warn)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <MessageSquare size={17} strokeWidth={2} />
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
-            <div style={{ marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>
+            <div className={fit ? 'ag-rn' : undefined} style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
+            <div className={fit ? 'ag-ri' : undefined} style={{ marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>
               {t.when} · “{t.body}”
             </div>
           </div>
-          <button type="button" className="ov-ghost h-10 sm:h-[34px]" tabIndex={-1} aria-hidden="true"
+          <button type="button" className={`ov-ghost h-10 sm:h-[34px]${fit ? ' ag-open' : ''}`} tabIndex={-1} aria-hidden="true"
             style={{ padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             Open <ArrowRight size={14} strokeWidth={2.2} />
           </button>
         </div>
       ))}
+      </Rows>
 
-      <div style={{ marginTop: 'auto', paddingTop: 14 }}>
+      <div className={fit ? 'ag-foot' : undefined} style={{ marginTop: 'auto', paddingTop: 14 }}>
         {items.length > 0 || texts.length === 0 ? (
           <button type="button" className="ov-primary" onClick={() => onGo('/agent/clients?stage=needs')}>
             <span className="sm:hidden">{more(3)}</span>
@@ -3729,27 +3738,33 @@ export function AttentionCard({ items, loading, onGo, texts = [] }) {
 
 // The calm state: nobody needs the agent, so show what is coming up.
 // `upcoming`: booked rows with a future call, soonest first.
-export function ComingUpCard({ upcoming, now, onGo }) {
+// `fit`: as AttentionCard, every upcoming call is listed in a scrolling .ag-list with the button pinned.
+export function ComingUpCard({ upcoming, now, onGo, fit }) {
   const pad = 'p-[18px] sm:px-6 sm:pt-6 sm:pb-5'
   const area = { gridArea: 'attn', minWidth: 0 }
   const title = <h2 style={{ ...OV_TITLE, flex: 1, minWidth: 0 }} className="text-[18px] sm:text-[19px]">You&rsquo;re all caught up</h2>
   const n = upcoming.length
   const [next, ...rest] = upcoming
-  const list = rest.slice(0, 3)
+  const list = fit ? rest : rest.slice(0, 3)
+  const Body = fit ? 'div' : Fragment
+  const bodyProps = fit ? { className: n === 0 ? 'ag-empty' : 'ag-list' } : {}
+  const Foot = fit ? 'div' : Fragment
+  const footProps = fit ? { className: 'ag-foot' } : {}
 
   return (
-    <div className={`ov-card flex flex-col ${pad}`} style={area}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <IconChip icon={Check} color="var(--ov-up)" tint="var(--ov-up-tint)" iconSize={18} />
+    <div className={`ov-card flex flex-col ${pad}${fit ? ' ag-box' : ''}`} style={area}>
+      <div className={fit ? 'ag-bh' : undefined} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <IconChip icon={Check} color="var(--ov-up)" tint="var(--ov-up-tint)" iconSize={18} className={fit ? 'ag-chip' : undefined} />
         {title}
       </div>
-      <p style={{ margin: '12px 0 0', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-soft)' }}>
+      <p className={fit ? 'ag-intro' : undefined} style={{ margin: '12px 0 0', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-soft)' }}>
         {n ? 'Nobody is waiting on you. Here’s what’s coming up.' : 'Nobody is waiting on you.'}
       </p>
 
       {n === 0 ? (
         <>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '28px 10px' }}>
+          <Body {...bodyProps}>
+          <div className={fit ? 'ag-empty-in' : undefined} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '28px 10px' }}>
             <span style={{
               width: 68, height: 68, borderRadius: 22, background: 'var(--ov-st-booked-tint)', color: 'var(--ov-st-booked)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -3763,34 +3778,39 @@ export function ComingUpCard({ upcoming, now, onGo }) {
               Submit your next client when they say yes.
             </div>
           </div>
-          <button type="button" className="ov-primary" onClick={() => onGo('/agent/book')}>
-            <CalendarPlus size={17} strokeWidth={2.1} /> Submit
-          </button>
+          </Body>
+          <Foot {...footProps}>
+            <button type="button" className="ov-primary" onClick={() => onGo('/agent/book')}>
+              <CalendarPlus size={17} strokeWidth={2.1} /> Submit
+            </button>
+          </Foot>
         </>
       ) : (
         <>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '22px 0 10px' }}>
+          <Body {...bodyProps}>
+          <div className={fit ? 'ag-upl' : undefined} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '22px 0 10px' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-mute)' }}>Up next</span>
             <span style={{ fontSize: 12.5, color: 'var(--ov-faint)' }}>{n} {n === 1 ? 'call' : 'calls'} booked</span>
           </div>
 
           <div
+            className={fit ? 'ag-next' : undefined}
             style={{
               display: 'flex', alignItems: 'center', gap: 14, padding: 14, borderRadius: 16,
               background: 'var(--ov-st-booked-tint)', border: '1px solid var(--ov-st-booked-edge)',
             }}>
-            <CallDateTile iso={next.scheduled_call_at} tz={next.client_timezone} booked />
+            <CallDateTile iso={next.scheduled_call_at} tz={next.client_timezone} booked className={fit ? 'ag-tile' : undefined} />
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fullName(next)}</span>
-              <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mid)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span className={fit ? 'ag-nm-b' : undefined} style={{ display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fullName(next)}</span>
+              <span className={fit ? 'ag-nm-s' : undefined} style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mid)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {next.current_carrier || 'Carrier not noted'}
               </span>
             </span>
             <span style={{ textAlign: 'right', lineHeight: 1.25, flexShrink: 0 }}>
-              <span style={{ display: 'block', fontFamily: DISPLAY, fontSize: 17, fontWeight: 700, color: 'var(--ov-st-booked)', whiteSpace: 'nowrap' }}>
+              <span className={fit ? 'ag-tm-b' : undefined} style={{ display: 'block', fontFamily: DISPLAY, fontSize: 17, fontWeight: 700, color: 'var(--ov-st-booked)', whiteSpace: 'nowrap' }}>
                 {fmtSlotTime(next.scheduled_call_at, next.client_timezone)}
               </span>
-              <span style={{ display: 'block', fontSize: 12, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>{untilLabel(next.scheduled_call_at, now)}</span>
+              <span className={fit ? 'ag-tm-s' : undefined} style={{ display: 'block', fontSize: 12, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>{untilLabel(next.scheduled_call_at, now)}</span>
             </span>
           </div>
 
@@ -3798,12 +3818,12 @@ export function ComingUpCard({ upcoming, now, onGo }) {
             <div style={{ marginTop: 6 }}>
               {list.map((p, i) => (
                 <div key={p.id}
-                  className={`ov-up-row ${i >= 2 ? 'hidden sm:flex' : 'flex'}`}
+                  className={`ov-up-row ${i >= 2 ? 'hidden sm:flex' : 'flex'}${fit ? ' ag-up' : ''}`}
                   style={{ alignItems: 'center', gap: 14, padding: '11px 4px' }}>
-                  <CallDateTile iso={p.scheduled_call_at} tz={p.client_timezone} />
+                  <CallDateTile iso={p.scheduled_call_at} tz={p.client_timezone} className={fit ? 'ag-tile' : undefined} />
                   <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fullName(p)}</span>
-                    <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span className={fit ? 'ag-nm-b' : undefined} style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fullName(p)}</span>
+                    <span className={fit ? 'ag-nm-s' : undefined} style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {comingWhen(p.scheduled_call_at, now, p.client_timezone)} · {p.current_carrier || 'Carrier not noted'}
                     </span>
                   </span>
@@ -3811,11 +3831,14 @@ export function ComingUpCard({ upcoming, now, onGo }) {
               ))}
             </div>
           )}
+          </Body>
 
-          <div style={{ height: 14 }} />
-          <button type="button" className="ov-primary" style={{ marginTop: 'auto' }} onClick={() => onGo('/agent/clients?stage=booked')}>
-            Open Clients <ArrowRight size={15} strokeWidth={2.2} />
-          </button>
+          {!fit && <div style={{ height: 14 }} />}
+          <Foot {...footProps}>
+            <button type="button" className="ov-primary" style={{ marginTop: 'auto' }} onClick={() => onGo('/agent/clients?stage=booked')}>
+              Open Clients <ArrowRight size={15} strokeWidth={2.2} />
+            </button>
+          </Foot>
         </>
       )}
     </div>
@@ -3829,7 +3852,7 @@ export function ComingUpCard({ upcoming, now, onGo }) {
 // date range), `firstLabel` (legend, "Booked"), `firstWord` (first total and
 // tooltips, "booked") and `emptyText`. The defaults are the agent's.
 export function LastWeekChart({
-  days, loading, className = '',
+  days, loading, className = '', fit,
   subtitle = 'calls you booked and old policies confirmed cancelled',
   firstLabel = 'Booked', firstWord = 'booked',
   emptyText = 'No calls last week. Book one when your next client says yes.',
@@ -3848,12 +3871,12 @@ export function LastWeekChart({
   const total = (v, word) => (
     <div>
       <div className="ov-lw-num" style={OV_NUM}>{loading ? '—' : v}</div>
-      <div style={{ marginTop: 6, fontSize: 13, color: 'var(--ov-mute)' }}>{word}</div>
+      <div className={fit ? 'ov-lw-word' : undefined} style={{ marginTop: 6, fontSize: 13, color: 'var(--ov-mute)' }}>{word}</div>
     </div>
   )
 
   return (
-    <div className={`ov-card ov-lw ${className}`}>
+    <div className={`ov-card ov-lw ${fit ? 'ag-lw ' : ''}${className}`}>
       <div className="ov-lw-head">
         <div className="ov-lw-titles">
           <h2 style={OV_TITLE} className="text-[18px] sm:text-[19px]">Last week</h2>
@@ -3867,7 +3890,7 @@ export function LastWeekChart({
         <div className="ov-lw-totals">{total(booked, firstWord)}{total(cancelled, 'cancelled')}</div>
 
         {empty ? (
-          <div style={{ flex: 1, minWidth: 0, minHeight: 176, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 14, color: 'var(--ov-mute)' }}>
+          <div className={fit ? 'ov-lw-none' : undefined} style={{ flex: 1, minWidth: 0, minHeight: 176, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 14, color: 'var(--ov-mute)' }}>
             {emptyText}
           </div>
         ) : (
@@ -3877,7 +3900,7 @@ export function LastWeekChart({
                 <span key={i} className="ov-lw-tick" style={{ bottom: `calc(${i * 25}% - 7px)` }}>{i * step}</span>
               ))}
             </div>
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className={fit ? 'ov-lw-stack' : undefined} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div
                 className="ov-lw-plot" role="img"
                 aria-label={`Last week: ${booked} ${firstWord}, ${cancelled} cancelled`}

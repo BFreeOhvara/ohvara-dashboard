@@ -17,6 +17,13 @@ export const STALE_RETRY_H = 48     // called but not resolved, this long since 
 export const LIVE_STALE_MIN = 45    // call still marked live this long → flagged
 export const SLOT_MS = 30 * 60e3    // Book a call's slot length; the overlap window
 
+// A deal written with no old policy (replaced_old_policy === false, migration
+// 187) has nothing to cancel: it never reaches a rep, never shows as a
+// "Cancel with <carrier>" call, and can never create cancel pay. null (every
+// older row) and true still need the call. Every Fulfillment list and count
+// goes through this.
+export const needsCancellation = p => p.replaced_old_policy !== false
+
 function hoursSince(iso, now) {
   return iso ? (now - new Date(iso)) / HOUR : 0
 }

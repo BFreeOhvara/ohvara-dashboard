@@ -1,15 +1,17 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js'
 
-// Prompt 673 — the agent retainer (weekly, agent pays Ohvara). Prompt 692 made
-// it tiered: each row of agent_billing_tiers (migration 119) is a weekly price
-// plus a weekly submission cap, and gets its own recurring Price here. Migration
-// 113 holds the state on profiles; this function is the only thing that writes
-// it (service role), apart from an admin by hand.
+// Prompt 673: the agent retainer (weekly, agent pays Ohvara). There is one
+// platform subscription now: Policy Servicing, a weekly price made from
+// app_settings.agent_billing_weekly_cents. Inbounds are bought on top of it: a
+// weekly amount per inbound type (Live Calls, Booked Appointments), one more
+// item on the same subscription, tracked in agent_inbound_spend. Migration 113
+// holds the state on profiles; this function is the only thing that writes it
+// (service role), apart from an admin by hand.
 //
-// Prompt 734 — billing is managed inside the portal: Embedded Checkout to
+// Prompt 734: billing is managed inside the portal: Embedded Checkout to
 // subscribe, and our own actions for the card (SetupIntent + Payment Element),
-// plan switch, cancel / renew and invoices, instead of Stripe's hosted
-// Customer Portal. Card numbers are still only typed into Stripe's own fields.
+// cancel / renew and invoices, instead of Stripe's hosted Customer Portal. Card
+// numbers are still only typed into Stripe's own fields.
 //
 // Not the dead pre-pivot Payouts system: that used Stripe *Connect* to pay
 // reps (stripe_account_id). This is Customers + Subscriptions, money the other
@@ -23,16 +25,14 @@ import type { SupabaseClient } from 'npm:@supabase/supabase-js'
 //                       Signed in, it also re-syncs from Stripe, so a missed or
 //                       late webhook heals the next time the agent opens Billing.
 //                       Signed out, it returns the booleans only (ops check).
-//     overview        — plan, status, period end, scheduled change, card,
-//                       last 12 invoices, publishable key (Manage billing).
-//     checkout        — { tier }: an Embedded Checkout session's client_secret.
+//     overview:       servicing, inbound, next charge, card, last 12 invoices,
+//                       publishable key (Manage billing).
+//     inbound_get:    what the agent buys on top, and the settings for it.
+//     inbound_set:    { type, weekly_cents, paused }: change one inbound type.
+//     checkout:       an Embedded Checkout session's client_secret.
 //     setup_card      — a SetupIntent's client_secret for the Payment Element.
 //     set_default_card— { payment_method }: makes it the card for the customer
 //                       and the subscription; retries a past-due invoice.
-//     preview_change  — { tier }: what a plan switch costs / when it happens.
-//     change_plan     — { tier }: upgrade now (bills the difference) or
-//                       downgrade at the end of the paid week (a schedule).
-//     cancel_change   — undo a scheduled downgrade.
 //     cancel / resume — cancel_at_period_end on / off.
 //     portal          — the old Customer Portal link. No UI points at it.
 //   Every action works on the caller's own customer and subscription, read
@@ -153,7 +153,7 @@ function formEncode(obj: Record<string, unknown>, prefix = '', out = new URLSear
 }
 
 // List/retrieve calls must say method: 'GET'; params alone means a POST (create).
-async function stripe(path: string, init: { method?: string; params?: Record<string, unknown> } = {}) {
+async function stripe(path: string, init: { method?: string; params?: Record<string, unknown>; idempotencyKey?: string } = {}) {
   const method = init.method || (init.params ? 'POST' : 'GET')
   const qs = method === 'GET' && init.params ? `?${formEncode(init.params)}` : ''
   const res = await (ENV.fetch || fetch)(`https://api.stripe.com/v1/${path}${qs}`, {
@@ -162,6 +162,7 @@ async function stripe(path: string, init: { method?: string; params?: Record<str
       Authorization: `Bearer ${ENV.stripeKey}`,
       'Stripe-Version': STRIPE_VERSION,
       ...(method !== 'GET' ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
+      ...(init.idempotencyKey ? { 'Idempotency-Key': init.idempotencyKey } : {}),
     },
     body: method !== 'GET' && init.params ? formEncode(init.params) : undefined,
   })
@@ -172,120 +173,110 @@ async function stripe(path: string, init: { method?: string; params?: Record<str
 
 const idOf = (x: any): string | null => (typeof x === 'string' ? x : x?.id ?? null)
 
-// ── Tiers + Prices ───────────────────────────────────────────────────────────
+// ── Lines + Prices ───────────────────────────────────────────────────────────
 
-type Tier = {
-  key: string; name: string; weekly_cents: number; weekly_cap: number | null
-  stripe_lookup_key: string | null; stripe_price_id: string | null; stripe_product_id: string | null; sort_order: number
+const INBOUND_TYPES = ['live_call', 'booked_appointment'] as const
+type InboundType = typeof INBOUND_TYPES[number]
+type Line = 'servicing' | InboundType
+
+const LINE_LABEL: Record<Line, string> = {
+  servicing: 'Policy Servicing',
+  live_call: 'Live Calls',
+  booked_appointment: 'Booked Appointments',
+}
+const isLine = (x: unknown): x is Line => typeof x === 'string' && Object.hasOwn(LINE_LABEL, x)
+
+// Each line has one Product with a fixed id, tagged line=<line>. Stripe has no
+// metadata on an inline price_data, and an invoice line's own metadata is the
+// subscription's, so the Product is what still names an inbound line once its
+// subscription item is gone.
+const PRODUCT_PREFIX = 'ohvara_line_'
+
+// Which line a Price belongs to, from its own tag or its Product. null = none
+// of ours, which is what an old tier price looks like.
+function lineOfPrice(price: any): Line | null {
+  if (isLine(price?.metadata?.line)) return price.metadata.line
+  const product = idOf(price?.product)
+  const key = product?.startsWith(PRODUCT_PREFIX) ? product.slice(PRODUCT_PREFIX.length) : null
+  return isLine(key) ? key : null
 }
 
-async function loadTiers(admin: SupabaseClient): Promise<Tier[]> {
-  const { data, error } = await admin.from('agent_billing_tiers').select('*').eq('is_active', true).order('sort_order')
-  if (error) throw new Error(`Couldn't load billing tiers: ${error.message}`)
-  return (data || []) as Tier[]
+const lineOfItem = (item: any): Line | null => (isLine(item?.metadata?.line) ? item.metadata.line : lineOfPrice(item?.price))
+
+// The item tagged line=servicing, else the one item with no tag of ours: an
+// agent still on an old tier price keeps it, and it shows as the servicing line.
+function servicingItem(sub: any) {
+  const items: any[] = sub?.items?.data || []
+  return items.find(i => lineOfItem(i) === 'servicing') || items.find(i => !lineOfItem(i)) || null
 }
 
-// A stored id this Stripe account can't see (it was made under another key,
-// e.g. sandbox ids left behind after going live) or that was archived/deleted
-// counts as not stored: the caller makes a new one. That's what broke Manage
-// billing in the P673 live test ("No such product").
-async function usableProduct(id: string | null): Promise<string | null> {
-  if (!id) return null
+const inboundItems = (sub: any, type: InboundType): any[] => (sub?.items?.data || []).filter((i: any) => lineOfItem(i) === type)
+
+async function ensureLineProduct(line: Line): Promise<string> {
+  const id = `${PRODUCT_PREFIX}${line}`
   try {
     const p = await stripe(`products/${id}`)
-    return p.deleted || p.active === false ? null : p.id
+    if (p.active === false) await stripe(`products/${id}`, { params: { active: true } })
+    return id
   } catch (e) {
-    if (isMissing(e)) return null
-    throw e
+    if (!isMissing(e)) throw e
   }
-}
-
-// Each tier gets its OWN Stripe Product: the Customer Portal's plan switcher
-// refuses two Prices with the same billing interval under one Product. The
-// first tier keeps the original Product (Prompt 673's subscribers are on it);
-// every later tier gets a dedicated one, remembered in stripe_product_id.
-async function productFor(admin: SupabaseClient, tier: Tier, tiers: Tier[], current: any): Promise<string> {
-  const stored = await usableProduct(tier.stripe_product_id)
-  if (stored) return stored
-  const first = tiers[0]
-  if (tier.key === first.key) {
-    if (current?.product) return current.product
-  } else if (current?.product) {
-    // A dedicated product left by an earlier run, as opposed to the first tier's.
-    const firstStored = await usableProduct(first.stripe_product_id)
-    const f = firstStored ? null : first.stripe_lookup_key
-      ? (await stripe('prices', { method: 'GET', params: { lookup_keys: [first.stripe_lookup_key], active: true, limit: 1 } })).data?.[0]
-      : null
-    const firstProduct = firstStored || f?.product
-    if (current.product !== firstProduct) return current.product
-  }
-  return (await stripe('products', {
-    params: {
-      name: tier.key === first.key ? 'Ohvara agent portal access' : `Ohvara agent portal access: ${tier.name}`,
-      description: 'Weekly retainer: portal access and that week\'s batch of cancellations.',
-      metadata: { ...TAG, tier: tier.key },
-    },
-  })).id
-}
-
-// A tier's weekly Price, created on first use and found again by lookup key.
-// If the tier's price changes, a new Price takes over the lookup key; existing
-// subscriptions stay on whatever they signed up at until moved by hand.
-async function ensureTierPrice(admin: SupabaseClient, tier: Tier, tiers: Tier[]): Promise<string> {
-  const lookup = tier.stripe_lookup_key || `ohvara_agent_${tier.key}_weekly`
-  const found = await stripe('prices', { method: 'GET', params: { lookup_keys: [lookup], active: true, limit: 1 } })
-  const current = found.data?.[0]
-  const product = await productFor(admin, tier, tiers, current)
-  let id: string
-  if (current && current.product === product && current.unit_amount === tier.weekly_cents && current.recurring?.interval === 'week') {
-    id = current.id
-    // Prices created before tiers existed carry no tier tag.
-    if (current.metadata?.tier !== tier.key) await stripe(`prices/${id}`, { params: { metadata: { ...TAG, tier: tier.key } } })
-  } else {
-    id = (await stripe('prices', {
-      params: {
-        product, currency: 'usd', unit_amount: tier.weekly_cents, recurring: { interval: 'week' },
-        nickname: tier.name, lookup_key: lookup, transfer_lookup_key: true, metadata: { ...TAG, tier: tier.key },
-      },
-    })).id
-    // Moved to a different product: retire the old Price (existing subscribers keep it).
-    if (current && current.product !== product) await stripe(`prices/${current.id}`, { params: { active: false } })
-  }
-  if (tier.stripe_price_id !== id || tier.stripe_lookup_key !== lookup || tier.stripe_product_id !== product) {
-    const { error } = await admin.from('agent_billing_tiers')
-      .update({ stripe_price_id: id, stripe_lookup_key: lookup, stripe_product_id: product, updated_at: new Date(now()).toISOString() })
-      .eq('key', tier.key)
-    if (error) throw new Error(`Couldn't save the Stripe price: ${error.message}`)
-    tier.stripe_price_id = id
-    tier.stripe_lookup_key = lookup
-    tier.stripe_product_id = product
+  try {
+    await stripe('products', { params: { id, name: LINE_LABEL[line], metadata: { ...TAG, line } } })
+  } catch (e) {
+    // Two first-time requests at once: the other one made it.
+    if (!(e instanceof StripeError && e.code === 'resource_already_exists')) throw e
   }
   return id
 }
 
+type Settings = {
+  agent_billing_weekly_cents: number
+  inbound_est_cents_live_call: number
+  inbound_est_cents_booked_appt: number
+  inbound_min_weekly_cents: number
+  inbound_spend_presets: number[]
+}
+
+async function loadSettings(admin: SupabaseClient): Promise<Settings> {
+  const { data, error } = await admin.from('app_settings')
+    .select('agent_billing_weekly_cents, inbound_est_cents_live_call, inbound_est_cents_booked_appt, inbound_min_weekly_cents, inbound_spend_presets')
+    .eq('id', 1).single()
+  if (error || !data) throw new Error(`Couldn't load billing settings: ${error?.message ?? 'no row'}`)
+  return data as Settings
+}
+
+const SERVICING_LOOKUP = 'ohvara_servicing_weekly'
+
+// The servicing Price, found again by lookup key. When the amount in settings
+// changes a new Price takes over the key and the old one is retired; subscribers
+// stay on whatever they signed up at until moved by hand.
+async function ensureServicingPrice(admin: SupabaseClient): Promise<string> {
+  const { agent_billing_weekly_cents: cents } = await loadSettings(admin)
+  const found = await stripe('prices', { method: 'GET', params: { lookup_keys: [SERVICING_LOOKUP], active: true, limit: 1 } })
+  const current = found.data?.[0]
+  if (current && current.unit_amount === cents && current.recurring?.interval === 'week') return current.id
+  const created = await stripe('prices', {
+    params: {
+      product: await ensureLineProduct('servicing'), currency: 'usd', unit_amount: cents, recurring: { interval: 'week' },
+      nickname: LINE_LABEL.servicing, lookup_key: SERVICING_LOOKUP, transfer_lookup_key: true, metadata: { ...TAG, line: 'servicing' },
+    },
+  })
+  if (current) await stripe(`prices/${current.id}`, { params: { active: false } })
+  return created.id
+}
+
 // Our own Customer Portal configuration (found by metadata), so the account's
 // default portal settings can't change what agents are allowed to do. Only the
-// legacy `portal` action uses it since Prompt 734.
-async function ensurePortalConfig(admin: SupabaseClient): Promise<string> {
-  const tiers = await loadTiers(admin)
-  const products: { product: string; prices: string[] }[] = []
-  for (const t of tiers) {
-    const price = await ensureTierPrice(admin, t, tiers)
-    products.push({ product: t.stripe_product_id as string, prices: [price] })
-  }
-
+// legacy `portal` action uses it since Prompt 734. No plan switching: there is
+// one subscription, and inbound amounts change through inbound_set.
+async function ensurePortalConfig(): Promise<string> {
   const features = {
     invoice_history: { enabled: true },
     payment_method_update: { enabled: true },
     subscription_cancel: { enabled: true, mode: 'at_period_end', proration_behavior: 'none' },
     customer_update: { enabled: false },
-    subscription_update: {
-      enabled: products.length > 1,
-      default_allowed_updates: ['price'],
-      products,
-      proration_behavior: 'always_invoice',
-      schedule_at_period_end: { conditions: [{ type: 'decreasing_item_amount' }] },
-    },
+    subscription_update: { enabled: false },
   }
 
   const list = await stripe('billing_portal/configurations', { method: 'GET', params: { active: true, limit: 100 } })
@@ -295,26 +286,15 @@ async function ensurePortalConfig(admin: SupabaseClient): Promise<string> {
     return mine.id
   }
   const created = await stripe('billing_portal/configurations', {
-    params: { business_profile: { headline: 'Ohvara agent portal access' }, features, metadata: TAG },
+    params: { business_profile: { headline: 'Ohvara Policy Servicing' }, features, metadata: TAG },
   })
   return created.id
-}
-
-// Which tier a Stripe Price belongs to: its own tag first, then by id or
-// lookup key. null = unrecognised (keep whatever the profile already has).
-function tierOfPrice(price: any, tiers: Tier[]): string | null {
-  if (!price) return null
-  if (typeof price === 'string') return tiers.find(t => t.stripe_price_id === price)?.key ?? null
-  const tagged = price.metadata?.tier
-  if (tagged && tiers.some(t => t.key === tagged)) return tagged
-  const hit = tiers.find(t => t.stripe_price_id === price.id || (price.lookup_key && t.stripe_lookup_key === price.lookup_key))
-  return hit?.key ?? null
 }
 
 // ── Subscription -> profile ──────────────────────────────────────────────────
 
 const LIVE = ['active', 'trialing', 'past_due']
-const PROFILE_COLS = 'id, role, email, full_name, billing_exempt, billing_status, billing_tier, stripe_customer_id, stripe_subscription_id, billing_grace_until'
+const PROFILE_COLS = 'id, role, email, full_name, billing_exempt, billing_status, stripe_customer_id, stripe_subscription_id, billing_grace_until'
 
 async function profileFor(admin: SupabaseClient, sub: any) {
   const customerId = idOf(sub.customer)
@@ -327,7 +307,7 @@ async function profileFor(admin: SupabaseClient, sub: any) {
   return data
 }
 
-const periodEndOf = (sub: any) => sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end ?? null
+const periodEndOf = (sub: any) => sub.current_period_end ?? servicingItem(sub)?.current_period_end ?? null
 
 // Maps a Stripe subscription onto the 113 columns.
 //   active / trialing      -> active (or canceled if cancel_at_period_end)
@@ -347,7 +327,6 @@ async function syncSubscription(admin: SupabaseClient, sub: any, profile?: any) 
   }
 
   const at = new Date(now())
-  const tier = tierOfPrice(sub.items?.data?.[0]?.price, await loadTiers(admin))
   const periodEnd = periodEndOf(sub)
   const patch: Record<string, unknown> = {
     stripe_customer_id: idOf(sub.customer),
@@ -355,7 +334,6 @@ async function syncSubscription(admin: SupabaseClient, sub: any, profile?: any) 
     billing_current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
     billing_updated_at: at.toISOString(),
   }
-  if (tier) patch.billing_tier = tier
 
   switch (sub.status) {
     case 'active':
@@ -410,7 +388,7 @@ async function ownSubscription(me: any) {
 async function liveSubscription(me: any) {
   const sub = await ownSubscription(me)
   if (!sub || !LIVE.includes(sub.status)) {
-    throw new AppError(409, 'You don\'t have a subscription right now. Pick a plan to start one.', 'no_subscription')
+    throw new AppError(409, 'You don\'t have a subscription right now. Start Policy Servicing first.', 'no_subscription')
   }
   return sub
 }
@@ -692,67 +670,92 @@ async function defaultMethod(customerId: string, sub: any) {
 // and didn't go through (open with attempts, or written off).
 function invoiceRow(inv: any) {
   const failed = inv.status === 'uncollectible' || (inv.status === 'open' && (inv.attempt_count || 0) > 0)
-  const line = inv.lines?.data?.[0]
+  const totals = new Map<Line, number>()
+  for (const l of inv.lines?.data || []) {
+    const line = lineOfPrice(l.price) ?? 'servicing'
+    totals.set(line, (totals.get(line) || 0) + (l.amount || 0))
+  }
+  const lines = (Object.keys(LINE_LABEL) as Line[]).filter(k => totals.has(k)).map(k => ({ label: LINE_LABEL[k], amount_cents: totals.get(k) as number }))
   return {
     id: inv.id,
+    date: iso(inv.created),
     created: iso(inv.created),
     amount_cents: inv.status === 'paid' ? inv.amount_paid : inv.amount_due,
     status: inv.status === 'paid' ? 'paid' : inv.status === 'void' ? 'void' : failed ? 'failed' : 'open',
-    description: line?.price?.nickname ? `${line.price.nickname} plan, weekly` : line?.description || inv.description || 'Weekly plan',
+    lines,
+    description: lines.map(l => l.label).join(' + ') || inv.description || LINE_LABEL.servicing,
     receipt_url: inv.hosted_invoice_url || null,
     pdf_url: inv.invoice_pdf || null,
   }
 }
 
-const tierInfo = (t: Tier | undefined | null) => (t ? { tier: t.key, name: t.name, weekly_cents: t.weekly_cents, weekly_cap: t.weekly_cap } : null)
-
-// A downgrade waiting for the end of the paid week: the schedule's phase
-// after the current one, on a different price.
-async function scheduledChange(sub: any, tiers: Tier[]) {
-  const schedId = idOf(sub?.schedule)
-  if (!schedId) return null
-  const sched = await stripe(`subscription_schedules/${schedId}`)
-  if (!['not_started', 'active'].includes(sched.status)) return null
-  const curPrice = sub.items?.data?.[0]?.price?.id
-  const next = (sched.phases || []).find((ph: any) => ph.start_date >= (periodEndOf(sub) ?? Infinity) - 1)
-  const priceId = idOf(next?.items?.[0]?.price)
-  if (!next || !priceId || priceId === curPrice) return null
-  const t = tiers.find(x => x.stripe_price_id === priceId)
-  return t ? { ...tierInfo(t), at: iso(next.start_date) } : null
+function planOf(sub: any) {
+  const item = servicingItem(sub)
+  if (!item) return null
+  return { tier: null, name: LINE_LABEL.servicing, weekly_cents: item.price?.unit_amount ?? null, weekly_cap: null }
 }
 
-function planOf(sub: any, tiers: Tier[]) {
-  const price = sub?.items?.data?.[0]?.price
-  if (!price) return null
-  const key = tierOfPrice(price, tiers)
-  const t = tiers.find(x => x.key === key)
-  return { tier: key, name: t?.name ?? price.nickname ?? null, weekly_cents: price.unit_amount ?? t?.weekly_cents ?? null, weekly_cap: t?.weekly_cap ?? null }
+type Flags = { configured: boolean; mode: 'test' | 'live' | null; webhook_configured: boolean }
+type SpendRow = { inbound_type: InboundType; weekly_cents: number; paused: boolean; updated_at: string }
+
+const isComped = (me: any) => !!me.billing_exempt || me.billing_status === 'exempt'
+
+async function loadSpend(admin: SupabaseClient, agentId: string): Promise<SpendRow[]> {
+  const { data, error } = await admin.from('agent_inbound_spend').select('inbound_type, weekly_cents, paused, updated_at').eq('agent_id', agentId)
+  if (error) throw new Error(`Couldn't load inbound spend: ${error.message}`)
+  return (data || []) as SpendRow[]
 }
 
-async function overview(admin: SupabaseClient, me: any) {
-  const tiers = await loadTiers(admin)
-  const base = { publishable_key: ENV.publishableKey || null }
-  if (!me.stripe_customer_id) return { ...base, billing_status: me.billing_status, subscription: null, card: null, invoices: [] }
+const estimatesOf = (s: Settings): Record<InboundType, number> => ({
+  live_call: s.inbound_est_cents_live_call,
+  booked_appointment: s.inbound_est_cents_booked_appt,
+})
+
+// Both types, always; a type with no row is 0 and not paused.
+function inboundLines(rows: SpendRow[], s: Settings) {
+  const est = estimatesOf(s)
+  return INBOUND_TYPES.map(type => {
+    const row = rows.find(r => r.inbound_type === type)
+    const weekly_cents = row?.weekly_cents ?? 0
+    return { type, label: LINE_LABEL[type], weekly_cents, paused: row?.paused ?? false, estimate_count: Math.floor(weekly_cents / est[type]) }
+  })
+}
+
+// Read-only for a comped account and with Stripe not configured: neither calls Stripe.
+async function overview(admin: SupabaseClient, me: any, flags: Flags) {
+  const [settings, rows] = await Promise.all([loadSettings(admin), loadSpend(admin, me.id)])
+  const inbound = inboundLines(rows, settings)
+  const base = { configured: flags.configured, publishable_key: ENV.publishableKey || null, inbound }
+  const quiet = { ...base, billing_status: me.billing_status, subscription: null, card: null, invoices: [], next_charge_cents: 0 }
+  const servicing = (status: string, comped: boolean) => ({ price_cents: settings.agent_billing_weekly_cents, status, next_charge_at: null, comped })
+  if (isComped(me)) return { ...quiet, servicing: servicing('active', true) }
+  if (!flags.configured || !me.stripe_customer_id) return { ...quiet, servicing: servicing(me.billing_status, false) }
 
   const sub = await ownSubscription(me)
   let billing_status = me.billing_status
   if (sub) billing_status = (await syncSubscription(admin, sub, me)).billing_status ?? billing_status
 
-  const [card, invoices, scheduled] = await Promise.all([
+  const [card, invoices] = await Promise.all([
     defaultMethod(me.stripe_customer_id, sub),
     stripe('invoices', { method: 'GET', params: { customer: me.stripe_customer_id, limit: 12 } }),
-    sub && LIVE.includes(sub.status) ? scheduledChange(sub, tiers) : null,
   ])
+
+  const live = !!sub && LIVE.includes(sub.status)
+  const price_cents = (live ? servicingItem(sub)?.price?.unit_amount : null) ?? settings.agent_billing_weekly_cents
+  const renews = live && !sub.cancel_at_period_end
+  const inboundCents = inbound.filter(l => !l.paused).reduce((sum, l) => sum + l.weekly_cents, 0)
 
   return {
     ...base,
     billing_status,
+    servicing: { price_cents, status: billing_status, next_charge_at: renews ? iso(periodEndOf(sub)) : null, comped: false },
+    next_charge_cents: renews ? price_cents + inboundCents : 0,
     subscription: sub ? {
       status: sub.status,
       cancel_at_period_end: !!sub.cancel_at_period_end,
       current_period_end: iso(periodEndOf(sub)),
-      plan: planOf(sub, tiers),
-      scheduled,
+      plan: planOf(sub),
+      scheduled: null,
     } : null,
     card,
     invoices: (invoices.data || []).filter((i: any) => i.status !== 'draft').map(invoiceRow),
@@ -766,7 +769,7 @@ function needPublishableKey() {
 
 async function setupCard(me: any) {
   const publishable_key = needPublishableKey()
-  if (!me.stripe_customer_id) throw new AppError(409, 'No subscription yet. Pick a plan first.', 'no_subscription')
+  if (!me.stripe_customer_id) throw new AppError(409, 'No subscription yet. Start Policy Servicing first.', 'no_subscription')
   const si = await stripe('setup_intents', {
     params: {
       customer: me.stripe_customer_id,
@@ -781,7 +784,7 @@ async function setupCard(me: any) {
 async function setDefaultCard(admin: SupabaseClient, me: any, body: any) {
   const pmId = String(body.payment_method || '')
   if (!/^pm_[A-Za-z0-9]+$/.test(pmId)) throw new AppError(400, 'That card couldn\'t be saved. Try again.')
-  if (!me.stripe_customer_id) throw new AppError(409, 'No subscription yet. Pick a plan first.', 'no_subscription')
+  if (!me.stripe_customer_id) throw new AppError(409, 'No subscription yet. Start Policy Servicing first.', 'no_subscription')
 
   let pm: any
   try {
@@ -819,108 +822,11 @@ async function setDefaultCard(admin: SupabaseClient, me: any, body: any) {
   return { card: methodOf(pm), retry, billing_status }
 }
 
-// Shared checks for a plan switch: a live, not-cancelling subscription and a
-// different active tier. The price always comes from agent_billing_tiers.
-async function planSwitch(admin: SupabaseClient, me: any, body: any) {
-  const sub = await liveSubscription(me)
-  if (sub.cancel_at_period_end) throw new AppError(409, 'Your plan is set to cancel. Renew it first, then switch.', 'canceling')
-  const tiers = await loadTiers(admin)
-  const target = tiers.find(t => t.key === body.tier)
-  if (!target) throw new AppError(400, 'That plan isn\'t available.')
-  const item = sub.items?.data?.[0]
-  if (!item) throw new AppError(409, 'Your subscription has no plan on it. Contact support.')
-  const price = await ensureTierPrice(admin, target, tiers)
-  const currentKey = tierOfPrice(item.price, tiers)
-  if (price === item.price?.id || currentKey === target.key) throw new AppError(409, 'You\'re already on that plan.', 'same_plan')
-  const currentCents = item.price?.unit_amount ?? 0
-  const direction = target.weekly_cents > currentCents ? 'up' : 'down'
-  return { sub, tiers, target, item, price, direction }
-}
-
-// Seconds; a browser-supplied proration date is only used if it's recent, so
-// the charge matches the preview the agent confirmed.
-function prorationDate(raw: unknown) {
-  const t = Math.floor(now() / 1000)
-  const n = Number(raw)
-  return Number.isFinite(n) && n <= t && t - n < 15 * 60 ? Math.floor(n) : t
-}
-
-async function previewChange(admin: SupabaseClient, me: any, body: any) {
-  const { sub, target, item, price, direction } = await planSwitch(admin, me, body)
-  if (direction === 'down') {
-    return { direction, ...tierInfo(target), at: iso(periodEndOf(sub)) }
-  }
-  const proration_date = Math.floor(now() / 1000)
-  const upcoming = await stripe('invoices/upcoming', {
-    method: 'GET',
-    params: {
-      customer: me.stripe_customer_id,
-      subscription: sub.id,
-      subscription_items: [{ id: item.id, price }],
-      subscription_proration_behavior: 'always_invoice',
-      subscription_proration_date: proration_date,
-    },
-  })
-  const amount_cents = (upcoming.lines?.data || [])
-    .filter((l: any) => l.proration)
-    .reduce((s: number, l: any) => s + (l.amount || 0), 0)
-  return { direction, ...tierInfo(target), amount_cents: Math.max(0, amount_cents), proration_date }
-}
-
 async function releaseSchedule(sub: any) {
   const schedId = idOf(sub.schedule)
   if (!schedId) return
   const sched = await stripe(`subscription_schedules/${schedId}`)
   if (['not_started', 'active'].includes(sched.status)) await stripe(`subscription_schedules/${schedId}/release`, { params: {} })
-}
-
-async function changePlan(admin: SupabaseClient, me: any, body: any) {
-  const { sub, target, item, price, direction } = await planSwitch(admin, me, body)
-
-  if (direction === 'up') {
-    // An upgrade replaces any downgrade that was waiting.
-    await releaseSchedule(sub)
-    // pending_if_incomplete: the plan only changes if the difference is paid.
-    const updated = await stripe(`subscriptions/${sub.id}`, {
-      params: {
-        items: [{ id: item.id, price }],
-        proration_behavior: 'always_invoice',
-        proration_date: prorationDate(body.proration_date),
-        payment_behavior: 'pending_if_incomplete',
-      },
-    })
-    if (updated.pending_update) {
-      throw new AppError(402, 'Your card was declined, so your plan didn\'t change. Update your card and try again.', 'payment_failed')
-    }
-    const { billing_status } = await syncSubscription(admin, updated, me)
-    return { ok: true, direction, ...tierInfo(target), billing_status }
-  }
-
-  // Downgrade at the end of the paid week: a schedule with the current price
-  // until then and the new one after; it releases the subscription afterwards.
-  const schedId = idOf(sub.schedule)
-  const sched = schedId
-    ? await stripe(`subscription_schedules/${schedId}`)
-    : await stripe('subscription_schedules', { params: { from_subscription: sub.id } })
-  const t = Math.floor(now() / 1000)
-  const cur = (sched.phases || []).find((ph: any) => ph.start_date <= t && t < ph.end_date) || sched.phases?.[0]
-  const end = periodEndOf(sub) ?? cur?.end_date
-  await stripe(`subscription_schedules/${sched.id}`, {
-    params: {
-      end_behavior: 'release',
-      phases: [
-        { items: [{ price: item.price.id, quantity: 1 }], start_date: cur.start_date, end_date: end, proration_behavior: 'none' },
-        { items: [{ price, quantity: 1 }], iterations: 1, proration_behavior: 'none' },
-      ],
-    },
-  })
-  return { ok: true, direction, ...tierInfo(target), at: iso(end) }
-}
-
-async function cancelChange(me: any) {
-  const sub = await liveSubscription(me)
-  await releaseSchedule(sub)
-  return { ok: true }
 }
 
 async function cancelSub(admin: SupabaseClient, me: any) {
@@ -944,7 +850,165 @@ async function resumeSub(admin: SupabaseClient, me: any) {
   return { ok: true, billing_status, renews_on: iso(periodEndOf(updated)) }
 }
 
+// ── Inbound spend ────────────────────────────────────────────────────────────
+
+const MAX_WEEKLY_CENTS = 99999999 // the most Stripe takes as a unit_amount
+
+// `sub` is the live subscription when the caller already has it (null = none).
+async function inboundState(admin: SupabaseClient, me: any, flags: Flags, sub?: any) {
+  const comped = isComped(me)
+  const [settings, rows] = await Promise.all([loadSettings(admin), loadSpend(admin, me.id)])
+  let live = sub
+  if (live === undefined) {
+    const own = !comped && flags.configured ? await ownSubscription(me) : null
+    live = own && LIVE.includes(own.status) ? own : null
+  }
+  return {
+    configured: flags.configured,
+    comped,
+    billed: !comped,
+    subscribed: comped || !!live,
+    mode: flags.mode ?? 'test',
+    min_weekly_cents: settings.inbound_min_weekly_cents,
+    presets: settings.inbound_spend_presets,
+    estimate_cents: estimatesOf(settings),
+    types: inboundLines(rows, settings),
+  }
+}
+
+// Makes the subscription carry one item for this type at `wanted` cents, or
+// none at 0. proration none: nothing is charged now and the new amount bills at
+// the next weekly renewal. Already right = no Stripe write, so a repeat is
+// harmless. A duplicate item left by two requests at once is cleaned up here too.
+async function syncInboundItem(sub: any, type: InboundType, wanted: number, version: string) {
+  const [keep, ...extra] = inboundItems(sub, type)
+  const right = wanted ? keep?.price?.unit_amount === wanted && (keep.quantity ?? 1) === 1 : !keep
+  if (right && !extra.length) return sub
+
+  // A waiting downgrade would otherwise be stranded: nothing can undo it now.
+  await releaseSchedule(sub)
+
+  const items: Record<string, unknown>[] = extra.map(i => ({ id: i.id, deleted: true }))
+  if (wanted) {
+    items.push({
+      ...(keep ? { id: keep.id } : {}),
+      price_data: { currency: 'usd', product: await ensureLineProduct(type), unit_amount: wanted, recurring: { interval: 'week' } },
+      quantity: 1,
+      metadata: { line: type },
+    })
+  } else if (keep) {
+    items.push({ id: keep.id, deleted: true })
+  }
+  // A double tap collapses into one Stripe write. The row's updated_at keeps a
+  // later return to the same amount from replaying this one, and the minute
+  // keeps a Stripe error from being replayed to every retry for a day.
+  const minute = Math.floor(now() / 60000)
+  const idempotencyKey = ['inbound', sub.id, type, wanted, version, minute, ...items.map(i => i.id ?? 'new')].join(':')
+  return stripe(`subscriptions/${sub.id}`, { params: { items, proration_behavior: 'none' }, idempotencyKey })
+}
+
+async function logSpendChange(admin: SupabaseClient, agentId: string, type: InboundType, prev: SpendRow | undefined, cents: number, paused: boolean) {
+  const { error } = await admin.from('agent_inbound_spend_log').insert({
+    agent_id: agentId, inbound_type: type,
+    old_cents: prev?.weekly_cents ?? 0, new_cents: cents,
+    old_paused: prev?.paused ?? false, new_paused: paused,
+  })
+  if (error) throw new Error(`Couldn't log the inbound change: ${error.message}`)
+}
+
+async function saveSpend(admin: SupabaseClient, agentId: string, type: InboundType, cents: number, paused: boolean) {
+  const { error } = await admin.from('agent_inbound_spend').upsert(
+    { agent_id: agentId, inbound_type: type, weekly_cents: cents, paused, updated_at: new Date(now()).toISOString() },
+    { onConflict: 'agent_id,inbound_type' },
+  )
+  if (error) throw new Error(`Couldn't save the inbound change: ${error.message}`)
+}
+
+// Order matters and is the point of this function:
+//   1. bad input               400, nothing else runs
+//   2. comped                  409, no Stripe call
+//   3. live Stripe key         403, no Stripe call
+//   4. no live subscription    409
+//   5. Stripe, then the log, then the row. If Stripe fails nothing was written
+//      and the agent can retry. If the database fails after Stripe, the retry
+//      finds Stripe already right and finishes the writes.
+async function inboundSet(admin: SupabaseClient, me: any, body: any, flags: Flags) {
+  const { type, weekly_cents: cents } = body
+  if (!INBOUND_TYPES.includes(type)) throw new AppError(400, 'That inbound type isn\'t available.')
+  if (!Number.isInteger(cents) || cents < 0 || cents > MAX_WEEKLY_CENTS) throw new AppError(400, 'Enter a weekly amount in whole cents, 0 or more.')
+  if (body.paused !== undefined && typeof body.paused !== 'boolean') throw new AppError(400, 'Paused must be true or false.')
+  const { inbound_min_weekly_cents: min } = await loadSettings(admin)
+  if (cents > 0 && cents < min) throw new AppError(400, `The weekly minimum is $${(min / 100).toFixed(2)}, or 0 for none.`)
+
+  if (isComped(me)) throw new AppError(409, 'Your account isn\'t billed.')
+  if (flags.mode === 'live') throw new AppError(403, 'Inbound spend is test mode only for now.')
+
+  const sub = flags.configured ? await ownSubscription(me) : null
+  if (!sub || !LIVE.includes(sub.status)) throw new AppError(409, 'Start Policy Servicing first.')
+
+  const prev = (await loadSpend(admin, me.id)).find(r => r.inbound_type === type)
+  const paused: boolean = body.paused ?? prev?.paused ?? false
+  const updated = await syncInboundItem(sub, type, paused ? 0 : cents, prev?.updated_at ?? 'new')
+
+  if ((prev?.weekly_cents ?? 0) !== cents || (prev?.paused ?? false) !== paused) {
+    await logSpendChange(admin, me.id, type, prev, cents, paused)
+    await saveSpend(admin, me.id, type, cents, paused)
+  }
+  return inboundState(admin, me, flags, updated)
+}
+
+// Checkout starts a subscription with the servicing item only, so spend left
+// from an ended subscription would read as bought while nothing bills for it.
+async function clearSpend(admin: SupabaseClient, agentId: string) {
+  for (const row of await loadSpend(admin, agentId)) {
+    if (!row.weekly_cents && !row.paused) continue
+    await logSpendChange(admin, agentId, row.inbound_type, row, 0, false)
+    await saveSpend(admin, agentId, row.inbound_type, 0, false)
+  }
+}
+
 // ── App actions ──────────────────────────────────────────────────────────────
+
+// CONTRACT for the frontend. Called with invokeBilling(action, body) from
+// src/lib/billing.js. Errors are JSON { error: 'plain message' } with a status.
+//
+// inbound_get (no body): 200 for every agent including comped:
+//   { configured: bool, comped: bool, billed: bool (false when comped),
+//     subscribed: bool (live servicing subscription, or comped),
+//     mode: 'test'|'live' ('test' when no Stripe key is set),
+//     min_weekly_cents: int, presets: int[],
+//     estimate_cents: { live_call: int, booked_appointment: int },
+//     types: [{ type: 'live_call'|'booked_appointment',
+//               label: 'Live Calls'|'Booked Appointments',
+//               weekly_cents: int, paused: bool, estimate_count: int }] }
+//   estimate_count = floor(weekly_cents / estimate cents). Both types are always
+//   listed; a type never set is weekly_cents 0, paused false.
+//
+// inbound_set body { type, weekly_cents, paused }: 200 returns the same shape as
+// inbound_get after the change. A change applies at the next weekly renewal.
+//   400 invalid input (unknown type, non-integer, negative, between 1 and min-1
+//       cents, or above Stripe's limit of 99999999 cents).
+//   409 'Start Policy Servicing first.' for a billed agent with no live servicing
+//       subscription (also when Stripe is not configured).
+//   409 "Your account isn't billed." for a comped agent.
+//   403 'Inbound spend is test mode only for now.' when the Stripe key mode is
+//       live, before any Stripe call.
+//
+// overview (no body): 200 for every agent, comped read-only:
+//   { configured,
+//     servicing: { price_cents, status, next_charge_at, comped },
+//     inbound: [{ type, label, weekly_cents, paused, estimate_count }],
+//     next_charge_cents (servicing + active unpaused inbound),
+//     invoices: [{ id, date, amount_cents, status,
+//                  lines: [{ label: 'Policy Servicing'|'Live Calls'|'Booked Appointments', amount_cents }] }] }
+//   plus the existing card, portal and cancel fields ManageBilling already uses,
+//   unchanged: publishable_key, billing_status, card, subscription { status,
+//   cancel_at_period_end, current_period_end, plan, scheduled (always null now) },
+//   and created, description, receipt_url, pdf_url on each invoice.
+//   servicing.status is a billing_status value ('active' when comped);
+//   next_charge_at is null and next_charge_cents is 0 when nothing will renew
+//   (comped, no live subscription, or set to cancel).
+//   With no Stripe key: configured false, subscription and card null, invoices [].
 
 export async function handle(req: Request, admin: SupabaseClient): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -953,7 +1017,7 @@ export async function handle(req: Request, admin: SupabaseClient): Promise<Respo
 
   const STRIPE_KEY = ENV.stripeKey
   const configured = !!STRIPE_KEY
-  const mode = !STRIPE_KEY ? null : STRIPE_KEY.startsWith('sk_live_') || STRIPE_KEY.startsWith('rk_live_') ? 'live' : 'test'
+  const mode: Flags['mode'] = !STRIPE_KEY ? null : STRIPE_KEY.startsWith('sk_live_') || STRIPE_KEY.startsWith('rk_live_') ? 'live' : 'test'
   const flags = { configured, mode, webhook_configured: !!ENV.webhookSecret }
 
   const jwt = (req.headers.get('Authorization') || '').replace(/^Bearer /, '')
@@ -982,7 +1046,13 @@ export async function handle(req: Request, admin: SupabaseClient): Promise<Respo
     }
 
     if (me.role !== 'agent') return json({ error: 'Only agents are billed' }, 403)
-    if (me.billing_exempt || me.billing_status === 'exempt') return json({ error: 'Your account isn\'t billed.' }, 409)
+
+    // These three answer a comped account and an unconfigured Stripe themselves.
+    if (action === 'inbound_get') return json(await inboundState(admin, me, flags))
+    if (action === 'inbound_set') return json(await inboundSet(admin, me, body, flags))
+    if (action === 'overview') return json(await overview(admin, me, flags))
+
+    if (isComped(me)) return json({ error: 'Your account isn\'t billed.' }, 409)
     if (!configured) {
       return json({ error: 'Billing isn\'t set up yet: the Stripe account hasn\'t been connected.', code: 'not_configured' }, 503)
     }
@@ -990,21 +1060,14 @@ export async function handle(req: Request, admin: SupabaseClient): Promise<Respo
     const returnUrl = safeReturnUrl(body.return_url)
 
     switch (action) {
-      case 'overview': return json(await overview(admin, me))
       case 'setup_card': return json(await setupCard(me))
       case 'set_default_card': return json(await setDefaultCard(admin, me, body))
-      case 'preview_change': return json(await previewChange(admin, me, body))
-      case 'change_plan': return json(await changePlan(admin, me, body))
-      case 'cancel_change': return json(await cancelChange(me))
       case 'cancel': return json(await cancelSub(admin, me))
       case 'resume': return json(await resumeSub(admin, me))
     }
 
     if (action === 'checkout') {
       const publishable_key = needPublishableKey()
-      const tiers = await loadTiers(admin)
-      const tier = tiers.find(t => t.key === body.tier) || (body.tier ? null : tiers[0])
-      if (!tier) return json({ error: 'That plan isn\'t available.' }, 400)
 
       let customerId = me.stripe_customer_id
       if (customerId) {
@@ -1032,7 +1095,8 @@ export async function handle(req: Request, admin: SupabaseClient): Promise<Respo
         if (error) throw new Error(`Couldn't save the Stripe customer: ${error.message}`)
       }
 
-      const price = await ensureTierPrice(admin, tier, tiers)
+      const price = await ensureServicingPrice(admin)
+      await clearSpend(admin, me.id)
       // Embedded Checkout: the card box renders inside /agent/billing. Stripe
       // fills in {CHECKOUT_SESSION_ID} itself, so it must not be URL-encoded.
       const back = new URL(returnUrl)
@@ -1043,8 +1107,8 @@ export async function handle(req: Request, admin: SupabaseClient): Promise<Respo
           customer: customerId,
           client_reference_id: me.id,
           line_items: [{ price, quantity: 1 }],
-          subscription_data: { metadata: { ...TAG, profile_id: me.id, tier: tier.key } },
-          metadata: { ...TAG, profile_id: me.id, tier: tier.key },
+          subscription_data: { metadata: { ...TAG, profile_id: me.id } },
+          metadata: { ...TAG, profile_id: me.id },
           return_url: `${back.origin}${back.pathname}?session_id={CHECKOUT_SESSION_ID}`,
         },
       })
@@ -1053,15 +1117,8 @@ export async function handle(req: Request, admin: SupabaseClient): Promise<Respo
 
     if (action === 'portal') {
       if (!me.stripe_customer_id) return json({ error: 'No subscription yet. Subscribe first.' }, 409)
-      const configuration = await ensurePortalConfig(admin)
+      const configuration = await ensurePortalConfig()
       const params: Record<string, unknown> = { customer: me.stripe_customer_id, configuration, return_url: returnUrl }
-      if (body.flow === 'change_plan' && me.stripe_subscription_id && ['active', 'past_due'].includes(me.billing_status)) {
-        params.flow_data = {
-          type: 'subscription_update',
-          subscription_update: { subscription: me.stripe_subscription_id },
-          after_completion: { type: 'redirect', redirect: { return_url: returnUrl } },
-        }
-      }
       const session = await stripe('billing_portal/sessions', { params })
       return json({ url: session.url })
     }
