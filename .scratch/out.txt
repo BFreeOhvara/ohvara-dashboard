@@ -1,0 +1,30 @@
+shot 1280 light open: scrollW=1265 clientW=1280 sideways=false h1="Create your Ohvara account." minControlH=44
+shot 1280 light closed: scrollW=1265 clientW=1280 sideways=false h1="The Ohvara Portal." minControlH=Infinity
+shot 1280 dark open: scrollW=1265 clientW=1280 sideways=false h1="Create your Ohvara account." minControlH=44
+shot 1280 dark closed: scrollW=1265 clientW=1280 sideways=false h1="The Ohvara Portal." minControlH=Infinity
+shot 390 light open: scrollW=375 clientW=390 sideways=false h1="Create your Ohvara account." minControlH=44
+shot 390 light closed: scrollW=375 clientW=390 sideways=false h1="The Ohvara Portal." minControlH=Infinity
+shot 390 dark open: scrollW=375 clientW=390 sideways=false h1="Create your Ohvara account." minControlH=44
+shot 390 dark closed: scrollW=375 clientW=390 sideways=false h1="The Ohvara Portal." minControlH=Infinity
+status=error: heading="Sign-up isn’t open yet" forms=0
+status=missing: heading="Sign-up isn’t open yet" forms=0
+native /signup: heading="Sign-up isn’t available in the app" forms=0 statusCalls=0
+native /signup?early=1 forms=0
+native login: note="New to Ohvara? Accounts are invite-only. Ask your agent or support@ohvara.com for an invite." createLink=0
+closed + ?early=1: form shown=1
+web login status=open: note="New here? Create an account" createLink=1
+web login status=closed: note="New to Ohvara? Accounts are invite-only. Ask your agent or support@ohvara.com for an invite." createLink=0
+web login status=error: note="New to Ohvara? Accounts are invite-only. Ask your agent or support@ohvara.com for an invite." createLink=0
+empty submit -> [ 'Type your full name.' ]
+no email -> [ 'Type a valid email address.' ]
+bad email -> [ 'Type a valid email address.' ]
+no number -> [ 'Your password needs 8 or more characters and a number.' ]
+terms unticked -> [ 'Agree to the Terms and Privacy Policy to continue.' ]
+signup requests so far (expect 0): 0
+ticked -> signup request body keys: 1 action,full_name,email,password,agree_terms agree_terms= true
+neutral banner: We couldn’t sign you in | If you already have an account, sign in or reset your password. | Sign in | Reset your password
+page text mentions "already exists"/"taken"/"registered": false
+email field highlighted as bad: 0
+429 -> Too many tries | Wait a few minutes, then try again. buttonDisabled= true
+429 390 sideways= false
+403 -> closed state, forms= 0
