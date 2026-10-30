@@ -20,7 +20,6 @@ import { ErrorBoundary } from '../shared/ErrorBoundary'
 import { PhoneShell } from './PhoneShell'
 import { ConfirmEmailBanner } from './ConfirmEmailBanner'
 import { useIsPhone } from '../../hooks/usePhoneLayout'
-import { LEADS_PAGE } from '../../lib/leadsPage'
 import { TransferAlert } from '../agent/TransferAlert'
 // The transfer alert's styles (.pv-ta) live with the v2 pages.
 import '../../pages/agent/v2/portalV2.css'
@@ -47,9 +46,8 @@ const TITLES = {
   '/agent/book': ['Submit', 'Get your client on the calendar with Fulfillment'],
   '/agent/clients': ['Clients', 'Calls in progress on one side, your clients on the other'],
   '/agent/activity': ['Activity', 'What happened with your clients, newest first'],
-  '/agent/inbounds': ['Inbounds', 'Everyone who came in for you, and what we’re doing with each one'],
+  '/agent/leads': ['Leads', 'Everyone who came in for you, and what we’re doing with each one'],
   '/agent/calendar': ['Calendar', 'Every appointment, whoever booked it'],
-  ...(LEADS_PAGE ? { '/agent/leads': ['Leads', 'Delivered to you. Call or text from your own phone'] } : {}),
   '/agent/billing': ['Billing', 'Your weekly subscription and next charge'],
   '/agent/carriers': ['Carrier Portals', 'Every carrier login in one directory'],
   '/agent/stats': ['Performance', 'Production, persistency, and leaderboard — switch the view'],
@@ -293,7 +291,7 @@ export function DashboardLayout({ children }) {
           className="app-main flex-1 flex flex-col min-w-0 pt-[60px] md:pt-0"
           style={{ '--sb-w': `${collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W}px`, position: 'relative' }}
         >
-          <div className={`app-backdrop${['/agent', '/agent/book', '/agent/clients', '/agent/activity', '/agent/leads', '/agent/billing', '/agent/calendar', '/settings', '/fulfillment', '/fulfillment/desk', '/fulfillment/leads', '/fulfillment/pipeline', '/fulfillment/pay', '/fulfillment/getting-paid'].includes(pathname) || pathname.startsWith('/agent/inbounds') || pathname.startsWith('/admin') ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
+          <div className={`app-backdrop${['/agent', '/agent/book', '/agent/clients', '/agent/activity', '/agent/leads', '/agent/billing', '/agent/calendar', '/settings', '/fulfillment', '/fulfillment/desk', '/fulfillment/leads', '/fulfillment/pipeline', '/fulfillment/pay', '/fulfillment/getting-paid'].includes(pathname) || pathname.startsWith('/agent/leads') || pathname.startsWith('/admin') ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
           {/* Prompt 722 — one header for every size: a 60px fixed top bar on
               phones (menu, title, search, bell), the 72px sticky page header
               from md up. One instance, so the search hotkeys and the bell

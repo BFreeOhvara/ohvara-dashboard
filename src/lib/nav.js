@@ -2,7 +2,6 @@ import {
   Users, Home, Settings, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard, Phone, PhoneIncoming,
   Inbox, CalendarDays,
 } from 'lucide-react'
-import { LEADS_PAGE } from './leadsPage'
 
 // Each role's sidebar, grouped. Moved out of Sidebar.jsx by Prompt 722 so the
 // page header (group / page name / icon) and the header search's "Go to" read
@@ -11,19 +10,18 @@ export const NAV = {
   // Prompt 665 — agent portal rebuilt around booking Fulfillment calls.
   // Prompt 676 — grouped the way Restorix Portal's Layout.jsx is instead of
   // one flat list. Regrouped and renamed (Clients, Submit) on Oct 30: Today,
-  // Servicing, Communications, Account; a Leads group between Today and
-  // Servicing only when LEADS_PAGE is on. Calendar sits in the Leads group and
-  // exists only with it (its route redirects to Overview while Leads is off).
+  // Servicing, Communications, Account; a Leads group (Leads, Calendar)
+  // between Today and Servicing, for every agent.
   agent: [
     { group: 'Today', items: [
       { to: '/agent', label: 'Overview', icon: Home },
       // Prompt 690 — chronological log of what happened.
       { to: '/agent/activity', label: 'Activity', icon: History },
     ] },
-    ...(LEADS_PAGE ? [{ group: 'Leads', items: [
+    { group: 'Leads', items: [
       { to: '/agent/leads', label: 'Leads', icon: Inbox },
       { to: '/agent/calendar', label: 'Calendar', icon: CalendarDays },
-    ] }] : []),
+    ] },
     { group: 'Servicing', items: [
       { to: '/agent/clients', label: 'Clients', icon: Users },
       { to: '/agent/book', label: 'Submit', icon: CalendarPlus },
@@ -91,8 +89,8 @@ export function navEntry(role, pathname) {
   return null
 }
 
-// One inbound (/agent/inbounds/:id) has no nav item of its own: it sits under Inbounds.
-export const isInboundDetail = pathname => /^\/agent\/inbounds\/[^/]+$/.test(pathname)
+// One inbound (/agent/leads/:id) has no nav item of its own: it sits under Leads.
+export const isInboundDetail = pathname => /^\/agent\/leads\/[^/]+$/.test(pathname)
 
 // Prompt 722 — the page header's colour (a key of the .ov-tone-* classes).
 // Pages not listed are blue.

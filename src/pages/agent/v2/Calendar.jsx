@@ -63,7 +63,7 @@ function useAppointments(tz) {
       const booked = lev.filter(e => e.kind === 'booked' && e.state !== 'skipped' && (e.detail?.appointment_at === at || e.at === at))[0]
       out.push({
         id: `i-${l.lead_id}`, at, name: leadName(l), what: WHAT[l.inbound_product] || 'Appointment', by: bookedBy(booked),
-        phone: l.phone, open: `/agent/inbounds/${l.lead_id}`, openLabel: 'Open inbound', change: null, clientTz: null, place: null,
+        phone: l.phone, open: `/agent/leads/${l.lead_id}`, openLabel: 'Open inbound', change: null, clientTz: null, place: null,
         reminders: lev.filter(e => e.kind === 'reminder' && e.state !== 'skipped').sort((a, b) => new Date(a.at) - new Date(b.at)),
       })
     }

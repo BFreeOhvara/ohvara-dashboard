@@ -87,7 +87,7 @@ async function open(theme, w) {
   return { ctx, page }
 }
 
-const ROUTES = { '/agent': 'overview', '/agent/clients': 'clients', '/agent/book': 'book', '/agent/more': 'more' }
+const ROUTES = { '/agent': 'overview', '/agent/clients': 'clients', '/agent/book': 'book', '/agent/more': 'more', '/agent/leads': 'leads', '/agent/calendar': 'calendar' }
 const scrollInfo = page => page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }))
 
 try {
@@ -99,14 +99,28 @@ try {
         await page.waitForSelector(w === 1440 ? '.ov-sb-nav' : '.ph-tabbar, .ph-book', { timeout: 30000 })
         await page.waitForTimeout(1200)
         await page.screenshot({ path: join(OUT, `${name}-${w}-${theme}.png`), fullPage: false })
+        // /agent/more is the phone's page: a desktop visit goes home by design.
+        if (!(route === '/agent/more' && w === 1440)) check(`${route} stays put (${w} ${theme})`, new URL(page.url()).pathname === route, new URL(page.url()).pathname)
+        if (w === 390 && route === '/agent/more') {
+          const rows = await page.$$eval('main button, main a', els => els.map(e => e.textContent.trim()).filter(Boolean))
+          check(`More page has Leads and Calendar rows, no Inbounds row (${theme})`, rows.some(t => t.startsWith('Leads')) && rows.some(t => t.startsWith('Calendar')) && !rows.some(t => /^Inbounds/.test(t)), rows)
+          for (const [label, path] of [['Leads', '/agent/leads'], ['Calendar', '/agent/calendar']]) {
+            await page.locator('main button', { hasText: new RegExp('^' + label) }).first().click()
+            await page.waitForTimeout(800)
+            check(`More > ${label} lands on ${path} (${theme})`, new URL(page.url()).pathname === path, new URL(page.url()).pathname)
+            await page.goto(base + route, { waitUntil: 'domcontentloaded' })
+            await page.waitForSelector('.ph-tabbar, .ph-book', { timeout: 30000 })
+          }
+        }
         if (w === 390) {
           const s = await scrollInfo(page)
           check(`no sideways scroll ${route} ${w} ${theme}`, s.sw <= s.cw, s)
         }
         if (w === 1440 && route === '/agent' && theme === 'dark') {
           const groups = await page.$$eval('.ov-sb-nav [role=group]', gs => gs.map(g => ({ group: g.getAttribute('aria-label'), items: [...g.querySelectorAll('.ov-sb-label')].map(e => e.textContent.trim()) })))
-          check('sidebar has exactly the four groups', JSON.stringify(groups) === JSON.stringify([
+          check('sidebar has exactly the five groups', JSON.stringify(groups) === JSON.stringify([
             { group: 'Today', items: ['Overview', 'Activity'] },
+            { group: 'Leads', items: ['Leads', 'Calendar'] },
             { group: 'Servicing', items: ['Clients', 'Submit'] },
             { group: 'Communications', items: ['Messages'] },
             { group: 'Account', items: ['Billing', 'Settings'] },
@@ -133,14 +147,13 @@ try {
           await page.waitForTimeout(500)
           return page.$$eval('.ov-gs-page-icon ~ .ov-gs-name', e => e.map(x => x.textContent.trim()))
         }
-        for (const q of ['leads', 'calendar']) { const r = await pagesFor(q); check(`Go-to '${q}' shows no page`, r.length === 0, r) }
-        for (const [q, want] of [['clients', 'Clients'], ['submit', 'Submit']]) { const r = await pagesFor(q); check(`Go-to '${q}' finds the page`, r.includes(want), r) }
+        for (const [q, want] of [['leads', 'Leads'], ['calendar', 'Calendar'], ['clients', 'Clients'], ['submit', 'Submit']]) { const r = await pagesFor(q); check(`Go-to '${q}' finds the page`, r.includes(want), r) }
         await input.fill('alma'); await page.waitForTimeout(500)
         const foot = await page.$$eval('.ov-gs-foot span', e => e.map(x => x.textContent.trim()))
         check("footer hint reads 'Enter to open in Clients' (client row active)", foot.some(t => t === 'Enter to open in Clients'), foot)
         await page.screenshot({ path: join(OUT, 'goto-client-1440-dark.png') })
         // Redirects
-        for (const [from, to] of [['/agent/inbounds', '/agent'], ['/agent/policies', '/agent/clients'], ['/agent/submissions', '/agent/book']]) {
+        for (const [from, to] of [['/agent/inbounds', '/agent/leads'], ['/agent/inbounds/abc', '/agent/leads/abc'], ['/agent/policies', '/agent/clients'], ['/agent/submissions', '/agent/book']]) {
           await page.goto(base + from, { waitUntil: 'domcontentloaded' })
           await page.waitForTimeout(1500)
           check(`${from} lands on ${to}`, new URL(page.url()).pathname === to, new URL(page.url()).pathname)

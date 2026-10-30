@@ -11,7 +11,6 @@ import {
   isRecent, cameInAt, nextLine, whenText, PRODUCT_LABEL, PRODUCT_SHORT, LIVE_RESULT,
 } from '../../lib/inbounds'
 import { DEFAULT_TIMEZONE } from '../../lib/timezones'
-import { LEADS_PAGE } from '../../lib/leadsPage'
 import './todayCards.css'
 
 // Portal parity T3: Today's cards (v2 Today, /agent) inside the old Overview, in its card
@@ -22,7 +21,7 @@ import './todayCards.css'
 // "No texts waiting / all caught up" card are left out: the Overview already shows both.
 // Each card loads and fails on its own.
 
-const lead = id => `/agent/inbounds/${id}`
+const lead = id => `/agent/leads/${id}`
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
 const Pill = ({ tone, children }) => <span className={`tc-pill tc-p-${tone}`}>{children}</span>
@@ -330,7 +329,7 @@ export function TodayStrip() {
       </div>
 
       <div className="tcs-links">
-        {LEADS_PAGE && <Link className="ov-ghost" to="/agent/calendar">Today’s appointments{!loading && !failed && <b>{todayCount}</b>}<ChevronRight size={14} strokeWidth={2.2} aria-hidden="true" /></Link>}
+        <Link className="ov-ghost" to="/agent/calendar">Today’s appointments{!loading && !failed && <b>{todayCount}</b>}<ChevronRight size={14} strokeWidth={2.2} aria-hidden="true" /></Link>
         <Link className="ov-ghost" to="/agent/activity">New inbounds{!loading && !failed && <b>{recentCount}</b>}<ChevronRight size={14} strokeWidth={2.2} aria-hidden="true" /></Link>
       </div>
     </section>
@@ -382,7 +381,7 @@ export function TodayCards({ showTexts = false }) {
                     )
                   })}
                 </div>
-                {LEADS_PAGE && <div className="tc-foot"><Link className="ov-ghost tc-btn" to="/agent/leads">See all leads<ArrowRight size={15} strokeWidth={2.2} aria-hidden="true" /></Link></div>}
+                <div className="tc-foot"><Link className="ov-ghost tc-btn" to="/agent/leads">See all leads<ArrowRight size={15} strokeWidth={2.2} aria-hidden="true" /></Link></div>
               </>
             ) : <Note icon={Inbox}>No new inbounds yet. They show up here as soon as they come in. You don&rsquo;t need to refresh.</Note>}
       </section>

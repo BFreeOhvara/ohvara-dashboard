@@ -8,7 +8,6 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 import { ErrorBoundary } from './components/shared/ErrorBoundary'
 import { NativeBridge } from './components/native/NativeBridge'
-import { LEADS_PAGE } from './lib/leadsPage'
 // Side-effect import — attaches the beforeinstallprompt listener at app
 // boot (Prompt 286) so it's never missed while the user is still on Login.
 import './lib/installPrompt'
@@ -32,11 +31,8 @@ import AgentMore from './pages/agent/More'
 // (portal parity answer 0). Lazy, so they download only when opened.
 const V2InboundDetail = lazy(() => import('./pages/agent/v2/InboundDetail'))
 const V2Calendar = lazy(() => import('./pages/agent/v2/Calendar'))
-// P808: Leads mounts only in dev behind VITE_LEADS_PAGE=1; otherwise the page is not in the bundle.
-// The DEV check sits here, in this file, so a production build drops the import() and the chunk.
 // Inbounds IS the Leads page: /agent/leads serves it for every agent, in production too.
 const V2Inbounds = lazy(() => import('./pages/agent/v2/Inbounds'))
-const AgentLeads = import.meta.env.DEV && LEADS_PAGE ? lazy(() => import('./pages/agent/Leads')) : null
 import MyCalls from './pages/fulfillment/MyCalls'
 import VaLeads from './pages/fulfillment/VaLeads'
 import FulfillmentOverview from './pages/fulfillment/Overview'
@@ -168,11 +164,11 @@ export default function App() {
                 <DashboardLayout><Suspense fallback={null}><V2InboundDetail /></Suspense></DashboardLayout>
               </ProtectedRoute>
             } />
-            <Route path="/agent/calendar" element={LEADS_PAGE ? (
+            <Route path="/agent/calendar" element={
               <ProtectedRoute allowedRoles={['agent']}>
                 <DashboardLayout><Suspense fallback={null}><V2Calendar /></Suspense></DashboardLayout>
               </ProtectedRoute>
-            ) : <Navigate to="/agent" replace />} />
+            } />
             <Route path="/agent/plan" element={<Navigate to="/agent/billing" replace />} />
             <Route path="/agent/book" element={
               <ProtectedRoute allowedRoles={['agent', 'admin']}>
@@ -191,16 +187,12 @@ export default function App() {
                 <DashboardLayout><AgentActivity /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* The v2 Inbounds page (Get inbounds slot, pipeline, live calls). VITE_LEADS_PAGE=1 in dev still opens the old P808 Leads page for its shots script. */}
-            <Route path="/agent/leads" element={LEADS_PAGE ? (
-              <ProtectedRoute allowedRoles={['agent', 'admin']}>
-                <DashboardLayout><Suspense fallback={null}><AgentLeads /></Suspense></DashboardLayout>
-              </ProtectedRoute>
-            ) : (
+            {/* The v2 Inbounds page (Get inbounds slot, pipeline, live calls), for every agent. */}
+            <Route path="/agent/leads" element={
               <ProtectedRoute allowedRoles={['agent']}>
                 <DashboardLayout><Suspense fallback={null}><V2Inbounds /></Suspense></DashboardLayout>
               </ProtectedRoute>
-            )} />
+            } />
             {/* Prompt 691 — Billing, promoted out of Settings. */}
             <Route path="/agent/billing" element={
               <ProtectedRoute allowedRoles={['agent']}>

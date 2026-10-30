@@ -220,7 +220,7 @@ export function matchInbounds(list, query) {
 }
 
 // Where an inbound opens.
-export const inboundPath = leadId => `/agent/inbounds/${leadId}`
+export const inboundPath = leadId => `/agent/leads/${leadId}`
 
 // Activity feed items for one day's finished inbound steps. Only done steps of inbounds in the agent's
 // own list count (scheduled and skipped steps are not events, notes live on the detail page).

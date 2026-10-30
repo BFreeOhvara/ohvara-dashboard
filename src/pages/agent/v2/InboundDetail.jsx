@@ -12,7 +12,7 @@ import {
 } from '../../../lib/inbounds'
 import { DEFAULT_TIMEZONE } from '../../../lib/timezones'
 
-// Inbound detail (/agent/inbounds/:id): who they are, a timeline of what we did and what happens next,
+// Inbound detail (/agent/leads/:id): who they are, a timeline of what we did and what happens next,
 // the outcome buttons, the text thread (read only) and notes. Mockup:
 // ohvara/mockups/build-v2-portal-shell-today-inbounds-inb.html.
 
@@ -177,7 +177,7 @@ export default function InboundDetail() {
   const l = (inb.data || []).find(x => x.lead_id === id)
   const events = ev.data || []
   const now = useMemo(() => new Date().getTime(), [ev.dataUpdatedAt]) // eslint-disable-line react-hooks/exhaustive-deps
-  const back = <Link className="ov-ghost pv-btn pv-back" to="/agent/inbounds"><Ico icon={ArrowLeft} />Inbounds</Link>
+  const back = <Link className="ov-ghost pv-btn pv-back" to="/agent/leads"><Ico icon={ArrowLeft} />Leads</Link>
   const shell = children => <PortalV2Layout active="inbounds" crumb="Inbounds" title={l ? leadName(l) : 'Inbound'} icon={Inbox}>{back}{children}</PortalV2Layout>
 
   if (inb.isLoading) {
@@ -195,7 +195,7 @@ export default function InboundDetail() {
         <span className="pv-tile"><Ico icon={Inbox} size={20} /></span>
         <h3>This inbound isn&rsquo;t here</h3>
         <p className="pv-sub">It may belong to another agent, or the link is old.</p>
-        <Link className="ov-ghost pv-btn" to="/agent/inbounds"><Ico icon={ArrowLeft} size={14} />Back to inbounds</Link>
+        <Link className="ov-ghost pv-btn" to="/agent/leads"><Ico icon={ArrowLeft} size={14} />Back to leads</Link>
       </section>,
     )
   }

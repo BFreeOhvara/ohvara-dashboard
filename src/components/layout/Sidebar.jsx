@@ -163,7 +163,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
                     >
                       <Icon size={18} strokeWidth={1.8} style={{ flexShrink: 0 }} />
                       {expanded && <span className="ov-sb-label">{label}</span>}
-                      {to === '/agent/inbounds' && <InboundsBadge expanded={expanded} />}
+                      {to === '/agent/leads' && <InboundsBadge expanded={expanded} />}
                       {badge && (expanded
                         ? <span className={`ov-sb-badge is-${badge.tone}`} aria-label={badge.label}>{badgeText(badge.n)}</span>
                         : <span className={`ov-sb-dot is-${badge.tone}`} aria-label={badge.label} />)}
