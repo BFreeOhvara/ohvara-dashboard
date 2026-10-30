@@ -122,16 +122,6 @@ const WELCOME = '.lk-hero'
 const ADD = 'Add a Servicing plan to submit deals'
 
 try {
-  // The Leads page only mounts with VITE_LEADS_PAGE=1, so its pass-through has its own run.
-  if (process.env.VITE_LEADS_PAGE === '1') {
-    const st = state(BASE)
-    const { ctx, page } = await open('dark', 1280, st)
-    await go(page, '/agent/leads?portalstub=none')
-    check('none /agent/leads stays open (Leads page on)', !(await has(page, WELCOME)) && new URL(page.url()).pathname === '/agent/leads', page.url())
-    await ctx.close()
-    throw new Error('done')
-  }
-
   // ── every stub, both widths, both themes ─────────────────────────────────
   const EXPECT = {
     none: { '/agent': 'welcome', '/agent/book': 'welcome', '/agent/clients': 'welcome' },
@@ -160,7 +150,7 @@ try {
         }
       }
       // Locked, these stay open.
-      for (const route of ['/settings', '/agent/billing', ...(w === 390 ? ['/agent/more'] : [])]) {
+      for (const route of ['/settings', '/agent/billing', '/agent/leads', ...(w === 390 ? ['/agent/more'] : [])]) {
         await go(page, `${route}?portalstub=none`)
         check(`none ${route} ${w} ${theme} stays open`, !(await has(page, WELCOME)))
         const s = await noSideways(page)
@@ -170,7 +160,7 @@ try {
         await go(page, '/agent/more?portalstub=none')
         await shot(page, `more-locked-390-${theme}`)
         check(`More while locked: no plan, no meter (${theme})`, await hasText(page, 'No plan yet') && !(await has(page, '.ph-meter')) && !(await hasText(page, 'Standard plan')))
-        check(`More while locked: its pages dim (${theme})`, await page.locator('.ph-mrow.is-locked').count() === 3)
+        check(`More while locked: its pages dim (${theme})`, await page.locator('.ph-mrow.is-locked').count() === 2)
         await page.getByRole('button', { name: 'Choose a plan' }).click()
         await page.waitForSelector(WELCOME)
         await page.waitForTimeout(500)
@@ -358,8 +348,6 @@ try {
     await shot(page, `native-leadsonly-390-${theme}`)
     await ctx.close()
   }
-} catch (e) {
-  if (e.message !== 'done') throw e
 } finally {
   await browser.close()
   await server.close()

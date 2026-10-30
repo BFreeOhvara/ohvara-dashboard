@@ -381,7 +381,7 @@ export function TodayCards({ showTexts = false }) {
                     )
                   })}
                 </div>
-                <div className="tc-foot"><Link className="ov-ghost tc-btn" to="/agent/inbounds">See all inbounds<ArrowRight size={15} strokeWidth={2.2} aria-hidden="true" /></Link></div>
+                <div className="tc-foot"><Link className="ov-ghost tc-btn" to="/agent/leads">See all leads<ArrowRight size={15} strokeWidth={2.2} aria-hidden="true" /></Link></div>
               </>
             ) : <Note icon={Inbox}>No new inbounds yet. They show up here as soon as they come in. You don&rsquo;t need to refresh.</Note>}
       </section>

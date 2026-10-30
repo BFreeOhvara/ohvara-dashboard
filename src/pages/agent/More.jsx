@@ -17,7 +17,7 @@ import { useNewInboundCount } from '../../hooks/useInbounds'
 
 // Prompt 772 — More, the phone layout's fifth tab (mockup More.dc.html): the
 // profile, a Billing card (plan, weekly price, next charge, this week's
-// bookings, Manage billing), then Inbounds (new count) and Calendar (portal parity answer 1), Activity, Invite an agent, Notifications,
+// bookings, Manage billing), then Leads (new count) and Calendar (portal parity answer 1), Activity, Invite an agent, Notifications,
 // Theme (one tap flips it, like P766), Settings and Report a problem, and
 // Sign out. Desktop has no More page: the sidebar holds all of this, so the
 // route sends a desktop visitor home.
@@ -132,7 +132,7 @@ export default function More() {
       </section>
 
       <section className="ov-card ph-menu">
-        <Row icon={Inbox} tone="blue" label="Inbounds" locked={selfLocked} right={newInbounds > 0 ? `${newInbounds} new` : null} onClick={() => navigate('/agent/inbounds')} />
+        <Row icon={Inbox} tone="blue" label="Leads" right={newInbounds > 0 ? `${newInbounds} new` : null} onClick={() => navigate('/agent/leads')} />
         <Row icon={CalendarDays} tone="teal" label="Calendar" locked={selfLocked} onClick={() => navigate('/agent/calendar')} />
         <Row icon={Activity} tone="blue" label="Activity" locked={selfLocked} onClick={() => navigate('/agent/activity')} />
         <Row icon={UserPlus} tone="teal" label="Invite an agent" onClick={() => setModal('invite')} />

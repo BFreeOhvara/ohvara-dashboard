@@ -44,7 +44,7 @@ export const SIDEBAR_W = 256
 export const SIDEBAR_W_COLLAPSED = 72
 const DRAWER_W = 300
 
-const OPEN_WHEN_LOCKED = ['/agent', '/agent/billing', '/settings']
+const OPEN_WHEN_LOCKED = ['/agent', '/agent/leads', '/agent/billing', '/settings']
 
 const badgeText = n => (n > 99 ? '99+' : n)
 
@@ -173,7 +173,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
                       <Icon size={18} strokeWidth={1.8} style={{ flexShrink: 0 }} />
                       {expanded && <span className="ov-sb-label">{label}</span>}
                       {expanded && dimmed(to) && <Lock size={14} strokeWidth={2} className="ov-sb-lock" aria-label="Locked" />}
-                      {to === '/agent/inbounds' && <InboundsBadge expanded={expanded} />}
+                      {to === '/agent/leads' && <InboundsBadge expanded={expanded} />}
                       {badge && (expanded
                         ? <span className={`ov-sb-badge is-${badge.tone}`} aria-label={badge.label}>{badgeText(badge.n)}</span>
                         : <span className={`ov-sb-dot is-${badge.tone}`} aria-label={badge.label} />)}

@@ -9,7 +9,7 @@ import { useAuth } from './useAuth'
 // assigned_rep_id = auth.uid() (admin sees all), so the explicit filter is for
 // admins who open the page: they see their own. The agent's status is
 // leads.agent_status (161); the qualifier answers sit in qualifier_answers.
-// ?sample=1 (dev + VITE_LEADS_PAGE only) reads src/lib/leadsSample.js instead.
+// ?sample=1 (dev only) reads src/lib/leadsSample.js instead.
 const MP_LEAD_TYPE = 'mortgage_protection'
 const LEAD_COLS = 'id, created_at, contact_name, phone, state, qualifier_answers, agent_status, delivered_at'
 export const LEAD_LIMIT = 200

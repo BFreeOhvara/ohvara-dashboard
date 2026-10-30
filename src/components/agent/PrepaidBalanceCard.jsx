@@ -22,8 +22,8 @@ const topupLabel = cents => {
   const d = cents / 100
   return `+$${d.toLocaleString('en-US', { minimumFractionDigits: Number.isInteger(d) ? 0 : 2, maximumFractionDigits: 2 })}`
 }
-const TYPE_LABEL = { mortgage_protection: 'Meta lead', policy_help: 'Google call' }
-const TYPE_SOURCE = { mortgage_protection: 'Form filled in from a Meta ad', policy_help: 'Call from a Google ad' }
+const TYPE_LABEL = { mortgage_protection: 'Inbound form', policy_help: 'Inbound call' }
+const TYPE_SOURCE = { mortgage_protection: 'Form filled in by the client', policy_help: 'Call from the client' }
 const TYPE_ICON = { policy_help: Phone }
 const TypeIcon = ({ type, size = 17 }) => {
   const Icon = TYPE_ICON[type] || FileText
@@ -55,7 +55,7 @@ function coverageLine(balance, prices) {
   if (!covered.length) return null
   const list = (arr, sep) => arr.map((c, i) => <span key={c.label}>{i > 0 && sep}<b>{c.n} {plural(c.n, c.label)}</b></span>)
   if (!short.length) return <>About {list(covered, ' or ')} at today's prices.</>
-  return <>Enough for {list(covered, ' and ')}, not {short.map(c => `a ${c.label}`).join(' or ')}.</>
+  return <>Enough for {list(covered, ' and ')}, not {short.map(c => `${/^[aeiou]/i.test(c.label) ? 'an' : 'a'} ${c.label}`).join(' or ')}.</>
 }
 
 // Until migration 176 is applied the four tables don't exist: PostgREST answers

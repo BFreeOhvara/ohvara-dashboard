@@ -9,7 +9,7 @@ import {
 } from '../../../lib/inbounds'
 import { DEFAULT_TIMEZONE } from '../../../lib/timezones'
 
-// Inbounds (/agent/inbounds): two tabs, Booked appointments (a five-column board) and Live calls
+// Leads (/agent/leads): two tabs, Booked appointments (a five-column board) and Live calls
 // (filter chips and a log). Each tab has an explainer that is open on the first view and stays
 // collapsed after, unless the agent opens it again (remembered per tab in this browser).
 // Mockup: ohvara/mockups/build-v2-portal-shell-today-inbounds-inb.html.
@@ -190,12 +190,12 @@ export default function Inbounds() {
   const live = list.filter(l => l.inbound_product === 'live_call')
 
   return (
-    <PortalV2Layout active="inbounds" title="Inbounds" icon={Inbox}>
+    <PortalV2Layout active="inbounds" title="Leads" icon={Inbox}>
       <nav className="pv-seg2" aria-label="Inbound type">
-        <Link to="/agent/inbounds" className={tab === 'booked' ? 'on' : undefined} aria-current={tab === 'booked' ? 'page' : undefined}>
+        <Link to="/agent/leads" className={tab === 'booked' ? 'on' : undefined} aria-current={tab === 'booked' ? 'page' : undefined}>
           Booked appointments <span className="n tab">{inb.isLoading ? ' ' : booked.length}</span>
         </Link>
-        <Link to="/agent/inbounds?tab=live" className={tab === 'live' ? 'on' : undefined} aria-current={tab === 'live' ? 'page' : undefined}>
+        <Link to="/agent/leads?tab=live" className={tab === 'live' ? 'on' : undefined} aria-current={tab === 'live' ? 'page' : undefined}>
           Live calls <span className="n tab">{inb.isLoading ? ' ' : live.length}</span>
         </Link>
       </nav>
