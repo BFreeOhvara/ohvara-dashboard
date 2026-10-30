@@ -246,7 +246,7 @@ export function GlobalSearch() {
       {!items.length && <p className="ov-gs-empty">No {role === 'agent' ? 'clients, inbounds' : 'clients'} or pages match &ldquo;{query.trim()}&rdquo;</p>}
       <div className="ov-gs-foot hidden lg:flex" aria-hidden="true">
         <span>↑ ↓ to move</span>
-        <span>{items[active]?.kind === 'page' ? 'Enter to go' : items[active]?.kind === 'inbound' ? 'Enter to open the inbound' : isFulfill ? 'Enter to open the call' : isAdmin ? 'Enter to open in Pipeline' : 'Enter to open in My Pipeline'}</span>
+        <span>{items[active]?.kind === 'page' ? 'Enter to go' : items[active]?.kind === 'inbound' ? 'Enter to open the inbound' : isFulfill ? 'Enter to open the call' : isAdmin ? 'Enter to open in Pipeline' : 'Enter to open in Clients'}</span>
         <span>Esc to close</span>
       </div>
     </div>

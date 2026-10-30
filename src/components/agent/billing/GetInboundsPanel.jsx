@@ -239,7 +239,7 @@ export function GetInboundsPanel() {
   const [sheet, setSheet] = useState(null) // { type, choose }
   const [rowError, setRowError] = useState('')
 
-  const wrap = { width: '100%', display: 'flex', flexDirection: 'column', gap: phone ? 14 : 20, minWidth: 0 }
+  const wrap = { maxWidth: 1120, width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: phone ? 14 : 20, minWidth: 0 }
 
   if (isNativeApp()) return <div style={wrap}><NativeBillingNote /></div>
 

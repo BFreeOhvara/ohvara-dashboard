@@ -90,15 +90,3 @@ test('admin and Fulfillment make no agent_inbounds call', () => {
   // The only Activity code that reaches agent_inbounds goes through those hooks.
   assert.doesNotMatch(src('../pages/agent/Activity.jsx') + src('../components/layout/DashboardLayout.jsx'), /rpc\('agent_inbounds'\)/)
 })
-
-test('portalV2.js keeps only the flag: just Overview, Clients and Billing import it', () => {
-  const flag = src('./portalV2.js')
-  assert.match(flag, /export function usePortalV2/)
-  assert.doesNotMatch(flag, /export const (leadName|STAGE)/)
-  const importers = ['../pages/agent/Overview.jsx', '../pages/agent/Clients.jsx', '../pages/agent/Billing.jsx']
-  for (const f of importers) assert.match(src(f), /lib\/portalV2'/)
-  for (const f of [
-    '../components/layout/DashboardLayout.jsx', '../components/agent/ClientsV2Parts.jsx', '../components/agent/TodayCards.jsx',
-    '../pages/agent/v2/Calendar.jsx', '../pages/agent/v2/Inbounds.jsx', '../pages/agent/v2/InboundDetail.jsx', '../hooks/useInbounds.js',
-  ]) assert.doesNotMatch(src(f), /lib\/portalV2'/)
-})

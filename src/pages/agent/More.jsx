@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { Activity, UserPlus, Bell, Moon, Sun, Settings, TriangleAlert, ChevronRight, LogOut, Inbox, CalendarDays } from 'lucide-react'
+import { Activity, UserPlus, Bell, Moon, Sun, Settings, TriangleAlert, ChevronRight, LogOut, PhoneIncoming, CalendarDays } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useTheme } from '../../hooks/useTheme'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
@@ -125,7 +125,7 @@ export default function More() {
       </section>
 
       <section className="ov-card ph-menu">
-        <Row icon={Inbox} tone="blue" label="Inbounds" right={newInbounds > 0 ? `${newInbounds} new` : null} onClick={() => navigate('/agent/inbounds')} />
+        {!isNativeApp() && <Row icon={PhoneIncoming} tone="teal" label="Inbounds" right={newInbounds > 0 ? `${newInbounds} new` : null} onClick={() => navigate('/agent/inbounds')} />}
         <Row icon={CalendarDays} tone="teal" label="Calendar" onClick={() => navigate('/agent/calendar')} />
         <Row icon={Activity} tone="blue" label="Activity" onClick={() => navigate('/agent/activity')} />
         <Row icon={UserPlus} tone="teal" label="Invite an agent" onClick={() => setModal('invite')} />

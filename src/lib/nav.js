@@ -1,7 +1,9 @@
 import {
   Users, Home, Settings, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard, Phone, PhoneIncoming,
-  Inbox, CalendarDays,
+  Inbox,
 } from 'lucide-react'
+import { LEADS_PAGE } from './leadsPage'
+import { isNativeApp } from './native'
 
 // Each role's sidebar, grouped. Moved out of Sidebar.jsx by Prompt 722 so the
 // page header (group / page name / icon) and the header search's "Go to" read
@@ -9,21 +11,22 @@ import {
 export const NAV = {
   // Prompt 665 — agent portal rebuilt around booking Fulfillment calls.
   // Prompt 676 — grouped the way Restorix Portal's Layout.jsx is instead of
-  // one flat list. Prompt 678 — Training and Performance removed, Team folded
-  // into Work, so no group is empty or single-item (bar Today / Account).
+  // one flat list. Regrouped and renamed (Clients, Submit) on Oct 30: Today,
+  // Servicing, Communications, Account; a Leads group between Today and
+  // Servicing only when LEADS_PAGE is on. Calendar joins the Leads group when
+  // its route exists.
   agent: [
     { group: 'Today', items: [
       { to: '/agent', label: 'Overview', icon: Home },
-    ] },
-    { group: 'Work', items: [
-      { to: '/agent/book', label: 'Book a call', icon: CalendarPlus },
-      { to: '/agent/clients', label: 'My Pipeline', icon: Users },
-      // Prompt 690 — chronological log of what happened, next to My Pipeline.
+      // Prompt 690 — chronological log of what happened.
       { to: '/agent/activity', label: 'Activity', icon: History },
-      // P808: Leads hidden until its migrations are live and the page is approved.
-      // Portal parity (answer 0): the v2 Inbounds and Calendar, added for every agent after the old items.
-      { to: '/agent/inbounds', label: 'Inbounds', icon: Inbox },
-      { to: '/agent/calendar', label: 'Calendar', icon: CalendarDays },
+    ] },
+    ...(LEADS_PAGE ? [{ group: 'Leads', items: [
+      { to: '/agent/leads', label: 'Leads', icon: Inbox },
+    ] }] : []),
+    { group: 'Servicing', items: [
+      { to: '/agent/clients', label: 'Clients', icon: Users },
+      { to: '/agent/book', label: 'Submit', icon: CalendarPlus },
     ] },
     // Prompt 680 — Messages gets its own single-item group, as in Restorix.
     { group: 'Communications', items: [
@@ -32,6 +35,8 @@ export const NAV = {
     // Prompt 693 — Billing is about the agent's own account standing, so it
     // sits with Settings; Team removed.
     { group: 'Account', items: [
+      // Get inbounds is the agent's weekly spend: no entry in the phone app, like Billing's controls.
+      ...(isNativeApp() ? [] : [{ to: '/agent/inbounds', label: 'Inbounds', icon: PhoneIncoming }]),
       { to: '/agent/billing', label: 'Billing', icon: CreditCard },
       { to: '/settings', label: 'Settings', icon: Settings },
     ] },

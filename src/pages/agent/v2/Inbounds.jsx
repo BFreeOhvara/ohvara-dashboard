@@ -8,9 +8,6 @@ import {
   COLUMNS, LIVE_RESULT, leadName, phoneDisplay, appointmentAt, nextLine, cardSub, cameInAt, whenText, apptText, stageOf,
 } from '../../../lib/inbounds'
 import { DEFAULT_TIMEZONE } from '../../../lib/timezones'
-import { useAppSettings } from '../../../hooks/useAppSettings'
-import { billingAccess } from '../../../lib/billing'
-import { GetInboundsPanel } from '../../../components/agent/billing/GetInboundsPanel'
 
 // Inbounds (/agent/inbounds): two tabs, Booked appointments (a five-column board) and Live calls
 // (filter chips and a log). Each tab has an explainer that is open on the first view and stays
@@ -180,20 +177,7 @@ function LiveLog({ list, evMap, tz }) {
   )
 }
 
-// Get inbounds sits on top. BillingGate lets a locked agent reach this page for that panel only: the list stays locked.
 export default function Inbounds() {
-  const { profile } = useAuth()
-  const { data: settings } = useAppSettings()
-  const { locked } = billingAccess(profile, !!settings?.agent_billing_enforced)
-  return (
-    <PortalV2Layout active="inbounds" title="Inbounds" icon={Inbox}>
-      <GetInboundsPanel />
-      {!locked && <InboundList />}
-    </PortalV2Layout>
-  )
-}
-
-function InboundList() {
   const { profile } = useAuth()
   const tz = profile?.timezone || DEFAULT_TIMEZONE
   const [params] = useSearchParams()
@@ -206,7 +190,7 @@ function InboundList() {
   const live = list.filter(l => l.inbound_product === 'live_call')
 
   return (
-    <>
+    <PortalV2Layout active="inbounds" title="Inbounds" icon={Inbox}>
       <nav className="pv-seg2" aria-label="Inbound type">
         <Link to="/agent/inbounds" className={tab === 'booked' ? 'on' : undefined} aria-current={tab === 'booked' ? 'page' : undefined}>
           Booked appointments <span className="n tab">{inb.isLoading ? ' ' : booked.length}</span>
@@ -233,6 +217,6 @@ function InboundList() {
       ) : inb.isError ? (
         <ErrorCard title="We couldn't load your inbounds" text="Nothing was lost. Check your connection and try again." onRetry={() => inb.refetch()} />
       ) : tab === 'booked' ? <Board list={booked} evMap={evMap} tz={tz} /> : <LiveLog list={live} evMap={evMap} tz={tz} />}
-    </>
+    </PortalV2Layout>
   )
 }

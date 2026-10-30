@@ -2,7 +2,7 @@
    old .ov-card / .ov-tile / .ov-range / .ov-input / .ov-ghost from index.css; this file only lays
    them out. Ported from the v2 page's .pv-* rules as .cv2-*, tokens only (light + dark). */
 
-/* My Pipeline's right column with v2 on: the old list box, then "Your clients". */
+/* My Pipeline's right column for an agent: the old list box, then "Your clients". */
 .cv2-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 @media (min-width: 1024px) { .cv2-col { gap: 20px; } }
 /* Fit mode (index.css P726): the column is the page height, split evenly between the two boxes;

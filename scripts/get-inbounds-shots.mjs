@@ -150,9 +150,19 @@ async function pageShot(name, theme, w) {
 
 async function overviewShot(name, theme, w) {
   const { ctx, page, log, errors } = await open(name, theme, w, '/agent')
-  await page.getByRole('button', { name: /book a call/i }).first().waitFor({ timeout: 45000 })
+  await page.getByRole('button', { name: /book a call|submit/i }).first().waitFor({ timeout: 45000 })
   await page.waitForTimeout(800)
   await record(page, log, errors, `overview-${name}-${w}-${theme}.png`, { scenario: `overview-${name}`, width: w })
+  await ctx.close()
+}
+
+// The entry into the page: a More row on a phone, a sidebar row on desktop. Neither in the phone app.
+async function navShot(name, theme, w) {
+  const { ctx, page, log, errors } = await open(name, theme, w, w === 390 ? '/agent/more' : '/settings')
+  await page.getByText('Settings').first().waitFor({ timeout: 45000 })
+  await page.waitForTimeout(800)
+  const entry = w === 390 ? page.getByRole('button', { name: 'Inbounds' }) : page.locator('a[href="/agent/inbounds"]')
+  await record(page, log, errors, `nav-${name}-${w}-${theme}.png`, { scenario: `nav-${name}`, width: w, navEntries: await entry.count() })
   await ctx.close()
 }
 
@@ -231,6 +241,7 @@ try {
     for (const w of [1440, 390]) await overviewShot(name, name === 'spending' ? 'dark' : 'light', w)
   }
   await overviewShot('empty', 'dark', 390); await overviewShot('empty', 'dark', 1440)
+  for (const name of ['spending', 'native']) for (const w of [1440, 390]) await navShot(name, 'light', w)
   for (const w of [1440, 390]) for (const theme of ['light', 'dark']) await sheetFlows(theme, w)
 } finally {
   writeFileSync(join(OUT, 'measurements.json'), JSON.stringify(results, null, 2))

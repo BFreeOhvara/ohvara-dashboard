@@ -388,7 +388,7 @@ export function LoadError({ what, onRetry, style }) {
 }
 
 export function HeroPanel({ greeting, sub, dateLong, dateShort, timezone, onBook, action, compact }) {
-  const { label: actionLabel, icon: ActionIcon, onClick: onAction } = action || { label: 'Book a call', icon: CalendarPlus, onClick: onBook }
+  const { label: actionLabel, icon: ActionIcon, onClick: onAction } = action || { label: 'Submit', icon: CalendarPlus, onClick: onBook }
   const dot = <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ov-hero-dot)' }} />
   return (
     <section className="ov-hero" style={{ position: 'relative', overflow: 'hidden' }}>
@@ -679,7 +679,7 @@ export function AttentionPanel({ items, loading, now, onGo }) {
 
   const count = items.length
   const shown = items.slice(0, ATTN_ROWS)
-  const more = n => (count > n ? `See all ${count} in My Pipeline` : 'Open in My Pipeline')
+  const more = n => (count > n ? `See all ${count} in Clients` : 'Open in Clients')
 
   return (
     <div className={`ov-attn flex flex-col ${pad}`} style={area}>
@@ -1003,7 +1003,7 @@ export function ChangedMark({ was }) {
 export function BookSwitch({ value, onChange }) {
   const opts = [{ value: 'new', label: 'New booking' }, { value: 'change', label: 'Change a booking' }]
   return (
-    <div className="ov-range ov-book-switch" role="group" aria-label="Book a call">
+    <div className="ov-range ov-book-switch" role="group" aria-label="Submit">
       {opts.map(o => (
         <button key={o.value} type="button" aria-pressed={value === o.value} onClick={() => value !== o.value && onChange(o.value)}
           className={value === o.value ? 'is-on' : ''} style={{ height: 40, padding: '0 18px', fontSize: 14.5 }}>
@@ -1537,7 +1537,7 @@ export function BookedCard({ name, at, now, onAnother, onPipeline, tz, location 
             background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.18)',
             display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer',
           }}>
-            See it in My Pipeline <ArrowRight size={15} strokeWidth={2} />
+            See it in Clients <ArrowRight size={15} strokeWidth={2} />
           </button>
         </div>
       </section>
@@ -1874,7 +1874,7 @@ function NextCall({ next, onOpenNext, onBook, nextLabel, nextEmpty, tz }) {
     <>
       <span className="pl-ntile"><CalendarDays size={18} strokeWidth={1.9} style={{ color: 'var(--ov-faint)' }} /></span>
       <span className="k">{nextLabel}<b>{nextEmpty}</b></span>
-      {onBook && <button type="button" className="ov-primary" onClick={onBook}><CalendarPlus size={16} strokeWidth={2} aria-hidden="true" />Book a call</button>}
+      {onBook && <button type="button" className="ov-primary" onClick={onBook}><CalendarPlus size={16} strokeWidth={2} aria-hidden="true" />Submit</button>}
     </>
   )
 }
@@ -2349,7 +2349,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
       <EmptyState icon={CalendarPlus} tab={tab} action={onBook && (
         <button type="button" className="ov-ghost" onClick={onBook}
           style={{ height: 40, padding: '0 18px', borderRadius: 999, fontSize: 13.5, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 7, cursor: 'pointer' }}>
-          <CalendarPlus size={15} strokeWidth={2} /> Book a call
+          <CalendarPlus size={15} strokeWidth={2} /> Submit
         </button>
       )}>
         No calls waiting. Book one when your next client says yes.
@@ -2968,7 +2968,7 @@ export function ActivityDrawer({ p, name, agentName, steps, highlight, currentIc
           width: '100%', height: 50, borderRadius: 999, fontSize: 15, cursor: 'pointer',
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}>
-          Go to My Pipeline <ArrowRight size={16} strokeWidth={2.2} />
+          Go to Clients <ArrowRight size={16} strokeWidth={2.2} />
         </button>
       )}
     >
@@ -3583,7 +3583,7 @@ export function AttentionCard({ items, loading, onGo, texts = [] }) {
 
   const count = items.length + texts.length
   const shown = items.slice(0, ATTN_ROWS)
-  const more = n => (items.length > n ? `See all ${items.length} in My Pipeline` : 'Open in My Pipeline')
+  const more = n => (items.length > n ? `See all ${items.length} in Clients` : 'Open in Clients')
   const toConfirm = items.filter(p => agentStageOf(p) === 'confirmNumber').length
   const toCall = items.length - toConfirm
   const intro = [
@@ -3709,11 +3709,11 @@ export function ComingUpCard({ upcoming, now, onGo }) {
               Nothing on the books yet
             </div>
             <div style={{ marginTop: 6, maxWidth: 250, fontSize: 14, lineHeight: 1.5, color: 'var(--ov-mute)' }}>
-              Book a call when your next client says yes.
+              Submit your next client when they say yes.
             </div>
           </div>
           <button type="button" className="ov-primary" onClick={() => onGo('/agent/book')}>
-            <CalendarPlus size={17} strokeWidth={2.1} /> Book a call
+            <CalendarPlus size={17} strokeWidth={2.1} /> Submit
           </button>
         </>
       ) : (
@@ -3763,7 +3763,7 @@ export function ComingUpCard({ upcoming, now, onGo }) {
 
           <div style={{ height: 14 }} />
           <button type="button" className="ov-primary" style={{ marginTop: 'auto' }} onClick={() => onGo('/agent/clients?stage=booked')}>
-            Open My Pipeline <ArrowRight size={15} strokeWidth={2.2} />
+            Open Clients <ArrowRight size={15} strokeWidth={2.2} />
           </button>
         </>
       )}

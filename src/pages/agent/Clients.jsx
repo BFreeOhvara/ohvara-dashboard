@@ -19,7 +19,6 @@ import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { PhoneClients } from '../../components/agent/phone/PhoneClients'
 import { PhoneClientSheet } from '../../components/agent/phone/PhoneClientSheet'
 import { MyPipelineClients } from '../../components/agent/ClientsV2Parts'
-import { usePortalV2 } from '../../lib/portalV2'
 
 // My Pipeline (Prompt 665, was My Clients until 680) — replaces My Policies.
 //
@@ -76,11 +75,11 @@ import { usePortalV2 } from '../../lib/portalV2'
 // In progress. ?stage=all means Booked on desktop and no filter on the phone.
 // Range, the agent filter and the search scope / span both sides.
 //
-// Portal parity T5 — with v2 on, an agent also gets the v2 Clients parts
-// (components/agent/ClientsV2Parts.jsx): a "Your clients" box under the list
-// box (sold inbounds merged with existing clients, All / From inbounds /
+// Portal parity T5 — every agent also gets the v2 Clients parts
+// (components/agent/ClientsV2Parts.jsx): a "Your clients" box under the Clients
+// side's list box (sold inbounds merged with existing clients, All / From inbounds /
 // Existing) whose rows open a drawer with Call / Text, Policies, Servicing,
-// the cancellation flow and Consent. With v2 off the page is as before.
+// the cancellation flow and Consent. Admin's page stays without them.
 
 const RANGE_VALUES = RANGES.map(r => r.value)
 // Old ?stage= values still arrive from the Overview (attention rows, the
@@ -104,7 +103,7 @@ export default function Clients() {
   const navigate = useNavigate()
   const phone = usePhoneLayout()
   const now = useNow()
-  const v2 = usePortalV2().on && !isAdmin
+  const yourClients = !isAdmin
   const [params, setParams] = useSearchParams()
   const openId = params.get('open')
   const rebook = params.get('rebook') === '1'
@@ -197,9 +196,9 @@ export default function Clients() {
   )
 
   const onBook = isAdmin ? undefined : () => navigate('/agent/book')
-  // With v2 on, the "Your clients" box under the list covers sold leads and servicing, so the Coming soon
+  // An agent's "Your clients" box under the list covers sold leads and servicing, so the Coming soon
   // sections would contradict it.
-  const soon = !v2
+  const soon = !yourClients
   const sideSwitch = (
     <SideSwitch side={side} onSide={onSide} loading={isLoading} progress={progressRows.length} clients={clientCount} attention={attention} className="pl-side" />
   )
@@ -225,7 +224,7 @@ export default function Clients() {
           side={side} onSide={onSide} soon={soon} onBook={onBook} emptyRange={emptyRange}
           onFilter={t => setParam('stage', t, null)} onOpen={p => openOnly(p.id)}
         />
-        {v2 && side === 'clients' && <MyPipelineClients className="cv2-phone" />}
+        {yourClients && side === 'clients' && <MyPipelineClients className="cv2-phone" />}
         {detail}
       </>
     )
@@ -252,7 +251,7 @@ export default function Clients() {
             next={nextCall} onOpenNext={openFromSearch} onBook={onBook}
           />
         </div>
-        {v2 && side === 'clients' ? <div className="cv2-col">{pipelineList}<MyPipelineClients /></div> : pipelineList}
+        {yourClients && side === 'clients' ? <div className="cv2-col">{pipelineList}<MyPipelineClients /></div> : pipelineList}
       </div>
 
       {detail}
