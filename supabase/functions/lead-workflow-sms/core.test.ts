@@ -1,7 +1,7 @@
 /**
  * Unit tests for the Booked Appointments texts. Everything is faked: no
  * database, no Twilio, no network. The fake inbound_events store keeps the
- * NNN unique index (one scheduled/done row per lead, step and seq). Every
+ * 184 unique index (one scheduled/done row per lead, step and seq). Every
  * "nothing sent" case counts calls to the fake `send`.
  * Run: deno test --node-modules-dir=none supabase/functions/lead-workflow-sms/
  *  or: node --test supabase/functions/lead-workflow-sms/core.test.ts
