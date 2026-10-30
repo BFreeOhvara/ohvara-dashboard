@@ -1,78 +1,80 @@
-inbounds-empty-1440-light.png                  scroll=1425/1440 controls=3 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-empty-1440-dark.png                   scroll=1425/1440 controls=3 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-empty-390-light.png                   scroll=390/390 controls=3 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-empty-390-dark.png                    scroll=390/390 controls=3 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-spending-1440-light.png               scroll=1425/1440 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-spending-1440-dark.png                scroll=1425/1440 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-spending-390-light.png                scroll=390/390 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-spending-390-dark.png                 scroll=390/390 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-paused-1440-light.png                 scroll=1425/1440 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-paused-1440-dark.png                  scroll=1425/1440 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-paused-390-light.png                  scroll=390/390 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-paused-390-dark.png                   scroll=390/390 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-error-1440-light.png                  scroll=1425/1440 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-error-1440-dark.png                   scroll=1425/1440 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-error-390-light.png                   scroll=390/390 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-error-390-dark.png                    scroll=390/390 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-notsub-1440-light.png                 scroll=1425/1440 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-notsub-1440-dark.png                  scroll=1425/1440 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-notsub-390-light.png                  scroll=390/390 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-notsub-390-dark.png                   scroll=390/390 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-comped-1440-light.png                 scroll=1425/1440 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-comped-1440-dark.png                  scroll=1425/1440 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-comped-390-light.png                  scroll=390/390 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-comped-390-dark.png                   scroll=390/390 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-native-1440-light.png                 scroll=1425/1440 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=2
-inbounds-native-1440-dark.png                  scroll=1425/1440 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=2
-inbounds-native-390-light.png                  scroll=390/390 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=2
-inbounds-native-390-dark.png                   scroll=390/390 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=2
-inbounds-allpaused-1440-light.png              scroll=1425/1440 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-allpaused-390-dark.png                scroll=390/390 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-notopen-1440-light.png                scroll=1425/1440 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-notopen-390-dark.png                  scroll=390/390 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-locked-1440-light.png                 scroll=1425/1440 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-locked-390-dark.png                   scroll=390/390 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-spending-1920-light.png               scroll=1905/1920 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-spending-1920-dark.png                scroll=1905/1920 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-loading-1440-light.png                scroll=1425/1440 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-loading-390-dark.png                  scroll=390/390 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-overview-empty-1440-light.png                  scroll=1425/1440 controls=0 card=["Start"] gets=1 sets=0 small=0 banned=— err=0
-overview-empty-390-light.png                   scroll=390/390 controls=0 card=["Start"] gets=1 sets=0 small=0 banned=— err=0
-overview-spending-1440-dark.png                scroll=1425/1440 controls=0 card=[] gets=1 sets=0 small=0 banned=— err=0
-overview-spending-390-dark.png                 scroll=390/390 controls=0 card=[] gets=1 sets=0 small=0 banned=— err=0
-overview-allpaused-1440-light.png              scroll=1425/1440 controls=0 card=["Open"] gets=1 sets=0 small=0 banned=— err=0
-overview-allpaused-390-light.png               scroll=390/390 controls=0 card=["Open"] gets=1 sets=0 small=0 banned=— err=0
-overview-comped-1440-light.png                 scroll=1425/1440 controls=0 card=[] gets=1 sets=0 small=0 banned=— err=0
-overview-comped-390-light.png                  scroll=390/390 controls=0 card=[] gets=1 sets=0 small=0 banned=— err=0
-overview-native-1440-light.png                 scroll=1425/1440 controls=0 card=[] gets=0 sets=0 small=0 banned=— err=2
-overview-native-390-light.png                  scroll=390/390 controls=0 card=[] gets=0 sets=0 small=0 banned=— err=2
-overview-empty-390-dark.png                    scroll=390/390 controls=0 card=["Start"] gets=1 sets=0 small=0 banned=— err=0
-overview-empty-1440-dark.png                   scroll=1425/1440 controls=0 card=["Start"] gets=1 sets=0 small=0 banned=— err=0
-nav-spending-1440-light.png                    scroll=1425/1440 controls=2 card=[] gets=0 sets=0 small=0 banned=null err=0
-nav-spending-390-light.png                     scroll=390/390 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=0
-nav-native-1440-light.png                      scroll=1425/1440 controls=2 card=[] gets=0 sets=0 small=0 banned=null err=2
-nav-native-390-light.png                       scroll=390/390 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=2
-sheet-change-1440-light.png                    scroll=1425/1440 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-below-min-1440-light.png                 scroll=1425/1440 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-below-min-server-1440-light.png          scroll=1425/1440 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
-after-save-and-pause-1440-light.png            scroll=1425/1440 controls=4 card=[] gets=3 sets=3 small=0 banned=null err=0
-sheet-refused-1440-light.png                   scroll=1425/1440 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
-sheet-start-1440-light.png                     scroll=1425/1440 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-change-1440-dark.png                     scroll=1425/1440 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-below-min-1440-dark.png                  scroll=1425/1440 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-below-min-server-1440-dark.png           scroll=1425/1440 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
-after-save-and-pause-1440-dark.png             scroll=1425/1440 controls=4 card=[] gets=3 sets=3 small=0 banned=null err=0
-sheet-refused-1440-dark.png                    scroll=1425/1440 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
-sheet-start-1440-dark.png                      scroll=1425/1440 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-change-390-light.png                     scroll=390/390 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-below-min-390-light.png                  scroll=390/390 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-below-min-server-390-light.png           scroll=390/390 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
-after-save-and-pause-390-light.png             scroll=390/390 controls=4 card=[] gets=3 sets=3 small=0 banned=null err=0
-sheet-refused-390-light.png                    scroll=390/390 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
-sheet-start-390-light.png                      scroll=390/390 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-change-390-dark.png                      scroll=390/390 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-below-min-390-dark.png                   scroll=390/390 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-below-min-server-390-dark.png            scroll=390/390 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
-after-save-and-pause-390-dark.png              scroll=390/390 controls=4 card=[] gets=3 sets=3 small=0 banned=null err=0
-sheet-refused-390-dark.png                     scroll=390/390 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
-sheet-start-390-dark.png                       scroll=390/390 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
+links-1440 {"notsubStart":"/agent/billing","cardStart":"/agent/inbounds"}
+links-390 {"notsubStart":"/agent/billing","cardStart":"/agent/inbounds"}
+inbounds-empty-1440-light.png                  scroll=1425/1440 height=900 controls=3 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-empty-1440-dark.png                   scroll=1425/1440 height=900 controls=3 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-empty-390-light.png                   scroll=390/390 height=1267 controls=3 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-empty-390-dark.png                    scroll=390/390 height=1267 controls=3 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-spending-1440-light.png               scroll=1425/1440 height=900 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-spending-1440-dark.png                scroll=1425/1440 height=900 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-spending-390-light.png                scroll=390/390 height=1271 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-spending-390-dark.png                 scroll=390/390 height=1271 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-paused-1440-light.png                 scroll=1425/1440 height=900 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-paused-1440-dark.png                  scroll=1425/1440 height=900 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-paused-390-light.png                  scroll=390/390 height=1342 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-paused-390-dark.png                   scroll=390/390 height=1342 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-error-1440-light.png                  scroll=1425/1440 height=900 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-error-1440-dark.png                   scroll=1425/1440 height=900 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-error-390-light.png                   scroll=390/390 height=844 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-error-390-dark.png                    scroll=390/390 height=844 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-notsub-1440-light.png                 scroll=1425/1440 height=900 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-notsub-1440-dark.png                  scroll=1425/1440 height=900 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-notsub-390-light.png                  scroll=390/390 height=844 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-notsub-390-dark.png                   scroll=390/390 height=844 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-comped-1440-light.png                 scroll=1425/1440 height=900 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-comped-1440-dark.png                  scroll=1425/1440 height=900 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-comped-390-light.png                  scroll=390/390 height=844 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-comped-390-dark.png                   scroll=390/390 height=844 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-native-1440-light.png                 scroll=1425/1440 height=900 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=2
+inbounds-native-1440-dark.png                  scroll=1425/1440 height=900 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=2
+inbounds-native-390-light.png                  scroll=390/390 height=844 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=2
+inbounds-native-390-dark.png                   scroll=390/390 height=844 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=2
+inbounds-allpaused-1440-light.png              scroll=1425/1440 height=900 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-allpaused-390-dark.png                scroll=390/390 height=1248 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-notopen-1440-light.png                scroll=1425/1440 height=900 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-notopen-390-dark.png                  scroll=390/390 height=844 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-locked-1440-light.png                 scroll=1425/1440 height=900 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-locked-390-dark.png                   scroll=390/390 height=844 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-spending-1920-light.png               scroll=1905/1920 height=1080 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-spending-1920-dark.png                scroll=1905/1920 height=1080 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-loading-1440-light.png                scroll=1425/1440 height=900 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
+inbounds-loading-390-dark.png                  scroll=390/390 height=844 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
+overview-empty-1440-light.png                  scroll=1425/1440 height=1640 controls=0 card=["Start"] gets=1 sets=0 small=0 banned=— err=0
+overview-empty-390-light.png                   scroll=390/390 height=1727 controls=0 card=["Start"] gets=1 sets=0 small=0 banned=— err=0
+overview-spending-1440-dark.png                scroll=1425/1440 height=1546 controls=0 card=[] gets=1 sets=0 small=0 banned=— err=0
+overview-spending-390-dark.png                 scroll=390/390 height=1639 controls=0 card=[] gets=1 sets=0 small=0 banned=— err=0
+overview-allpaused-1440-light.png              scroll=1425/1440 height=1640 controls=0 card=["Open"] gets=1 sets=0 small=0 banned=— err=0
+overview-allpaused-390-light.png               scroll=390/390 height=1728 controls=0 card=["Open"] gets=1 sets=0 small=0 banned=— err=0
+overview-comped-1440-light.png                 scroll=1425/1440 height=1546 controls=0 card=[] gets=1 sets=0 small=0 banned=— err=0
+overview-comped-390-light.png                  scroll=390/390 height=1639 controls=0 card=[] gets=1 sets=0 small=0 banned=— err=0
+overview-native-1440-light.png                 scroll=1425/1440 height=1546 controls=0 card=[] gets=0 sets=0 small=0 banned=— err=2
+overview-native-390-light.png                  scroll=390/390 height=1645 controls=0 card=[] gets=0 sets=0 small=0 banned=— err=2
+overview-empty-390-dark.png                    scroll=390/390 height=1727 controls=0 card=["Start"] gets=1 sets=0 small=0 banned=— err=0
+overview-empty-1440-dark.png                   scroll=1425/1440 height=1640 controls=0 card=["Start"] gets=1 sets=0 small=0 banned=— err=0
+nav-spending-1440-light.png                    scroll=1425/1440 height=900 controls=2 card=[] gets=0 sets=0 small=0 banned=null err=0
+nav-spending-390-light.png                     scroll=390/390 height=1128 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=0
+nav-native-1440-light.png                      scroll=1425/1440 height=900 controls=2 card=[] gets=0 sets=0 small=0 banned=null err=2
+nav-native-390-light.png                       scroll=390/390 height=990 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=2
+sheet-change-1440-light.png                    scroll=1425/1440 height=900 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
+sheet-below-min-1440-light.png                 scroll=1425/1440 height=900 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
+sheet-below-min-server-1440-light.png          scroll=1425/1440 height=900 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
+after-save-and-pause-1440-light.png            scroll=1425/1440 height=900 controls=4 card=[] gets=3 sets=3 small=0 banned=null err=0
+sheet-refused-1440-light.png                   scroll=1425/1440 height=900 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
+sheet-start-1440-light.png                     scroll=1425/1440 height=900 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
+sheet-change-1440-dark.png                     scroll=1425/1440 height=900 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
+sheet-below-min-1440-dark.png                  scroll=1425/1440 height=900 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
+sheet-below-min-server-1440-dark.png           scroll=1425/1440 height=900 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
+after-save-and-pause-1440-dark.png             scroll=1425/1440 height=900 controls=4 card=[] gets=3 sets=3 small=0 banned=null err=0
+sheet-refused-1440-dark.png                    scroll=1425/1440 height=900 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
+sheet-start-1440-dark.png                      scroll=1425/1440 height=900 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
+sheet-change-390-light.png                     scroll=390/390 height=1271 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
+sheet-below-min-390-light.png                  scroll=390/390 height=1271 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
+sheet-below-min-server-390-light.png           scroll=390/390 height=1271 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
+after-save-and-pause-390-light.png             scroll=390/390 height=1342 controls=4 card=[] gets=3 sets=3 small=0 banned=null err=0
+sheet-refused-390-light.png                    scroll=390/390 height=1271 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
+sheet-start-390-light.png                      scroll=390/390 height=1267 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
+sheet-change-390-dark.png                      scroll=390/390 height=1271 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
+sheet-below-min-390-dark.png                   scroll=390/390 height=1271 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
+sheet-below-min-server-390-dark.png            scroll=390/390 height=1271 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
+after-save-and-pause-390-dark.png              scroll=390/390 height=1342 controls=4 card=[] gets=3 sets=3 small=0 banned=null err=0
+sheet-refused-390-dark.png                     scroll=390/390 height=1271 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
+sheet-start-390-dark.png                       scroll=390/390 height=1267 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0

@@ -51,7 +51,7 @@ function Hero({ phone, eyebrow, title, sub, chips, cta, total }) {
         {chips?.length > 0 && (
           <div style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {chips.map(c => (
-              <span key={c.text} className="ov-hero-chip" style={{ maxWidth: '100%' }}>
+              <span key={c.key || c.text} className="ov-hero-chip" style={{ maxWidth: '100%' }}>
                 {c.dot && <i style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ov-hero-dot)', flexShrink: 0 }} />}
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.text}</span>
               </span>
@@ -257,7 +257,11 @@ export function GetInboundsPanel() {
   if (state === 'not_open') return <div style={wrap}><Hero phone={phone} title="Get inbounds" sub={WORDS.notOpen} /></div>
 
   const tier = tiers.find(t => t.key === profile?.billing_tier)
-  const servicing = tier ? { text: `On top of Policy Servicing, ${formatWeekly(tier.weekly_cents)} a week`, dot: true } : null
+  const servicing = tier ? {
+    key: 'servicing',
+    dot: true,
+    text: <>On top of Policy Servicing, <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, fontVariantNumeric: 'tabular-nums' }}>{formatWeekly(tier.weekly_cents)}</span> a week</>,
+  } : null
   const readOnly = state === 'comped' || state === 'not_subscribed'
 
   const actions = {

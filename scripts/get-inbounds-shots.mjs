@@ -98,7 +98,7 @@ const measure = page => page.evaluate(() => {
     .filter(b => { const r = b.getBoundingClientRect(); return r.width > 0 && r.height < 44 })
     .map(b => `${b.textContent.trim() || b.getAttribute('aria-label')}:${Math.round(b.getBoundingClientRect().height)}`)
   return {
-    scrollWidth: de.scrollWidth, clientWidth: de.clientWidth, theme: de.getAttribute('data-theme'),
+    scrollWidth: de.scrollWidth, clientWidth: de.clientWidth, scrollHeight: de.scrollHeight, theme: de.getAttribute('data-theme'),
     text: document.body.innerText,
     controls: [...document.querySelectorAll('button')].map(b => b.getAttribute('aria-label') || b.textContent.trim()).filter(t => /^(Start|Change|Pause|Resume|Save)\b/.test(t)),
     startCard: [...document.querySelectorAll('a.ov-ghost[href="/agent/inbounds"]')].map(a => a.textContent.trim()),
@@ -176,6 +176,30 @@ async function loadingShot(theme, w) {
   await ctx.close()
 }
 
+// Where the Start buttons go: not subscribed to Billing, the Overview / Home card to the page. Comped never sends.
+const pathAfter = async (page, name) => {
+  await page.getByRole(name === 'Start card' ? 'link' : 'button', { name: 'Start', exact: true }).first().click()
+  await page.waitForTimeout(500)
+  return new URL(page.url()).pathname
+}
+async function linkChecks(w) {
+  const out = {}
+  {
+    const { ctx, page } = await open('notsub', 'light', w, '/agent/inbounds')
+    await page.getByText(READY.notsub).first().waitFor({ timeout: 45000 })
+    out.notsubStart = await pathAfter(page, 'Start')
+    await ctx.close()
+  }
+  {
+    const { ctx, page } = await open('empty', 'light', w, '/agent')
+    await page.locator('a.ov-ghost[href="/agent/inbounds"]').first().waitFor({ timeout: 45000 })
+    out.cardStart = await pathAfter(page, 'Start card')
+    await ctx.close()
+  }
+  console.log(`links-${w} ${JSON.stringify(out)}`)
+  results.push({ file: `links-${w}`, ...out })
+}
+
 // Sheet flows: opens above the page, live line, below-minimum server message, a refused save, a good save, row pause.
 async function sheetFlows(theme, w) {
   const tag = `${w}-${theme}`
@@ -243,11 +267,12 @@ try {
   await overviewShot('empty', 'dark', 390); await overviewShot('empty', 'dark', 1440)
   for (const name of ['spending', 'native']) for (const w of [1440, 390]) await navShot(name, 'light', w)
   for (const w of [1440, 390]) for (const theme of ['light', 'dark']) await sheetFlows(theme, w)
+  for (const w of [1440, 390]) await linkChecks(w)
 } finally {
   writeFileSync(join(OUT, 'measurements.json'), JSON.stringify(results, null, 2))
   await browser.close()
   await server.close()
 }
-for (const r of results) {
-  console.log(`${r.file.padEnd(46)} scroll=${r.scrollWidth}/${r.clientWidth} controls=${r.controls.length} card=${JSON.stringify(r.startCard)} gets=${r.gets} sets=${r.sets.length} small=${r.small.length} banned=${r.banned} err=${r.pageErrors.length}`)
+for (const r of results.filter(x => x.controls)) {
+  console.log(`${r.file.padEnd(46)} scroll=${r.scrollWidth}/${r.clientWidth} height=${r.scrollHeight} controls=${r.controls.length} card=${JSON.stringify(r.startCard)} gets=${r.gets} sets=${r.sets.length} small=${r.small.length} banned=${r.banned} err=${r.pageErrors.length}`)
 }
