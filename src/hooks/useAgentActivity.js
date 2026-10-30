@@ -1,16 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { EVENT_SELECT, fetchActivityFeed } from '../lib/activityFeedFallback'
 
 // Activity tab (Prompts 690, 694): one day's status changes + call-time moves
 // from policy_events, written by a trigger on policies (migration 118).
 // RLS = whoever can read the policy. `day` is a local-midnight Date.
 // `agentId` narrows to one agent; null = everything RLS allows (admin).
-
-const EVENT_SELECT = `
-  id, policy_id, agent_id, kind, from_status, actor_name, actor_role, detail, at,
-  policy:policies ( client_first_name, client_last_name, state, client_city, client_timezone ),
-  agent:profiles!policy_events_agent_id_fkey ( full_name )
-`
 
 export function usePolicyEvents(day, agentId = null) {
   const start = new Date(day)
@@ -34,6 +29,25 @@ export function usePolicyEvents(day, agentId = null) {
       if (error) throw error
       return data || []
     },
+    refetchInterval: 30e3,
+  })
+}
+
+// The Activity page's feed: every kind of event on one day, from
+// agent_activity_feed() (migration 185). Rows are { id, kind, at, lead_id, agent_id,
+// title, meta }, newest first. If that function is missing or not callable the loader
+// (lib/activityFeedFallback) falls back to policy_events in the same shape, so the page
+// shows the day's rows or its empty state, never an error for a missing function.
+export function useActivityFeed(day, agentId = null) {
+  const start = new Date(day)
+  start.setHours(0, 0, 0, 0)
+  const end = new Date(start)
+  end.setDate(end.getDate() + 1)
+  const startISO = start.toISOString()
+  const endISO = end.toISOString()
+  return useQuery({
+    queryKey: ['activity-feed', startISO, agentId ?? 'visible'],
+    queryFn: () => fetchActivityFeed(supabase, startISO, endISO, agentId),
     refetchInterval: 30e3,
   })
 }

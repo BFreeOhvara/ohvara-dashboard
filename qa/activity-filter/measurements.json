@@ -1,0 +1,218 @@
+[
+  {
+    "w": 390,
+    "theme": "light",
+    "sw": 390,
+    "cw": 390,
+    "small": [],
+    "money": [
+      "\"JetBrains Mono\", \"IBM Plex Mono\", monospace",
+      "\"JetBrains Mono\", \"IBM Plex Mono\", monospace"
+    ],
+    "kinds": 18,
+    "chips": [
+      "All23",
+      "Leads3",
+      "Texts3",
+      "Calls4",
+      "Bookings5",
+      "Outcomes2",
+      "Clients3"
+    ]
+  },
+  {
+    "w": 390,
+    "theme": "dark",
+    "sw": 390,
+    "cw": 390,
+    "small": [],
+    "money": [
+      "\"JetBrains Mono\", \"IBM Plex Mono\", monospace",
+      "\"JetBrains Mono\", \"IBM Plex Mono\", monospace"
+    ],
+    "kinds": 18,
+    "chips": [
+      "All23",
+      "Leads3",
+      "Texts3",
+      "Calls4",
+      "Bookings5",
+      "Outcomes2",
+      "Clients3"
+    ]
+  },
+  {
+    "w": 768,
+    "theme": "light",
+    "sw": 753,
+    "cw": 768,
+    "small": [
+      "ov-fchip is-all is-on 68x36",
+      "ov-fchip ov-ghost 96x36",
+      "ov-fchip ov-ghost 93x36",
+      "ov-fchip ov-ghost 89x36",
+      "ov-fchip ov-ghost 117x36",
+      "ov-fchip ov-ghost 124x36",
+      "ov-fchip ov-ghost 103x36"
+    ],
+    "money": [
+      "\"JetBrains Mono\", \"IBM Plex Mono\", monospace",
+      "\"JetBrains Mono\", \"IBM Plex Mono\", monospace"
+    ],
+    "kinds": 18,
+    "chips": [
+      "All23",
+      "Leads3",
+      "Texts3",
+      "Calls4",
+      "Bookings5",
+      "Outcomes2",
+      "Clients3"
+    ]
+  },
+  {
+    "w": 768,
+    "theme": "dark",
+    "sw": 753,
+    "cw": 768,
+    "small": [
+      "ov-fchip is-all is-on 68x36",
+      "ov-fchip ov-ghost 96x36",
+      "ov-fchip ov-ghost 93x36",
+      "ov-fchip ov-ghost 89x36",
+      "ov-fchip ov-ghost 117x36",
+      "ov-fchip ov-ghost 124x36",
+      "ov-fchip ov-ghost 103x36"
+    ],
+    "money": [
+      "\"JetBrains Mono\", \"IBM Plex Mono\", monospace",
+      "\"JetBrains Mono\", \"IBM Plex Mono\", monospace"
+    ],
+    "kinds": 18,
+    "chips": [
+      "All23",
+      "Leads3",
+      "Texts3",
+      "Calls4",
+      "Bookings5",
+      "Outcomes2",
+      "Clients3"
+    ]
+  },
+  {
+    "w": 1440,
+    "theme": "light",
+    "sw": 1425,
+    "cw": 1440,
+    "small": [
+      "ov-fchip is-all is-on 68x36",
+      "ov-fchip ov-ghost 96x36",
+      "ov-fchip ov-ghost 93x36",
+      "ov-fchip ov-ghost 89x36",
+      "ov-fchip ov-ghost 117x36",
+      "ov-fchip ov-ghost 124x36",
+      "ov-fchip ov-ghost 103x36"
+    ],
+    "money": [
+      "\"JetBrains Mono\", \"IBM Plex Mono\", monospace",
+      "\"JetBrains Mono\", \"IBM Plex Mono\", monospace"
+    ],
+    "kinds": 18,
+    "chips": [
+      "All23",
+      "Leads3",
+      "Texts3",
+      "Calls4",
+      "Bookings5",
+      "Outcomes2",
+      "Clients3"
+    ]
+  },
+  {
+    "w": 1440,
+    "theme": "dark",
+    "sw": 1425,
+    "cw": 1440,
+    "small": [
+      "ov-fchip is-all is-on 68x36",
+      "ov-fchip ov-ghost 96x36",
+      "ov-fchip ov-ghost 93x36",
+      "ov-fchip ov-ghost 89x36",
+      "ov-fchip ov-ghost 117x36",
+      "ov-fchip ov-ghost 124x36",
+      "ov-fchip ov-ghost 103x36"
+    ],
+    "money": [
+      "\"JetBrains Mono\", \"IBM Plex Mono\", monospace",
+      "\"JetBrains Mono\", \"IBM Plex Mono\", monospace"
+    ],
+    "kinds": 18,
+    "chips": [
+      "All23",
+      "Leads3",
+      "Texts3",
+      "Calls4",
+      "Bookings5",
+      "Outcomes2",
+      "Clients3"
+    ]
+  },
+  {
+    "w": 1920,
+    "theme": "light",
+    "sw": 1905,
+    "cw": 1920,
+    "small": [
+      "ov-fchip is-all is-on 68x36",
+      "ov-fchip ov-ghost 96x36",
+      "ov-fchip ov-ghost 93x36",
+      "ov-fchip ov-ghost 89x36",
+      "ov-fchip ov-ghost 117x36",
+      "ov-fchip ov-ghost 124x36",
+      "ov-fchip ov-ghost 103x36"
+    ],
+    "money": [
+      "\"JetBrains Mono\", \"IBM Plex Mono\", monospace",
+      "\"JetBrains Mono\", \"IBM Plex Mono\", monospace"
+    ],
+    "kinds": 18,
+    "chips": [
+      "All23",
+      "Leads3",
+      "Texts3",
+      "Calls4",
+      "Bookings5",
+      "Outcomes2",
+      "Clients3"
+    ]
+  },
+  {
+    "w": 1920,
+    "theme": "dark",
+    "sw": 1905,
+    "cw": 1920,
+    "small": [
+      "ov-fchip is-all is-on 68x36",
+      "ov-fchip ov-ghost 96x36",
+      "ov-fchip ov-ghost 93x36",
+      "ov-fchip ov-ghost 89x36",
+      "ov-fchip ov-ghost 117x36",
+      "ov-fchip ov-ghost 124x36",
+      "ov-fchip ov-ghost 103x36"
+    ],
+    "money": [
+      "\"JetBrains Mono\", \"IBM Plex Mono\", monospace",
+      "\"JetBrains Mono\", \"IBM Plex Mono\", monospace"
+    ],
+    "kinds": 18,
+    "chips": [
+      "All23",
+      "Leads3",
+      "Texts3",
+      "Calls4",
+      "Bookings5",
+      "Outcomes2",
+      "Clients3"
+    ]
+  }
+]

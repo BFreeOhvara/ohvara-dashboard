@@ -1,0 +1,422 @@
+[
+  {
+    "name": "1920x1080-light week: blocks",
+    "pass": true,
+    "blocks": 17,
+    "days": 6
+  },
+  {
+    "name": "1920x1080-light week: today highlighted",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-light week: now marker",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-light week: fits the screen",
+    "pass": true,
+    "sh": 1080,
+    "ih": 1080
+  },
+  {
+    "name": "1920x1080-light week: grid inside viewport",
+    "pass": true,
+    "bottom": 1056,
+    "ih": 1080
+  },
+  {
+    "name": "1920x1080-light week: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-light panel: name, phone, state, stage, both zones",
+    "pass": true,
+    "text": "Inbound appointment\nElena Marsh\n\nToday, 2:30 PM\nin 2 hr 20 min\n\nPhone\n(555) 010-0148\nText\nState\nOhio\nStage\nBooked\nYour time\n2:30 PM\nCentral\nTheir time\n3:30 PM\nEastern\nOpen inbound\nCall"
+  },
+  {
+    "name": "1920x1080-light panel: tel and sms links",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-light panel: no Reschedule on an inbound",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-light panel: still fits",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-light panel: Reschedule links to the existing change flow",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-light panel: live badge, no Reschedule",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-light day: opens from a day header with quiet Open rows",
+    "pass": true,
+    "open": 12,
+    "cards": 5,
+    "label": "Friday, Oct 30\nToday"
+  },
+  {
+    "name": "1920x1080-light day: empty Sunday explains",
+    "pass": true,
+    "msg": "Nothing booked on Sunday",
+    "label": "Sunday, Nov 1"
+  },
+  {
+    "name": "1920x1080-light week: next and previous",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-light page errors",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-light empty: explains and links to Book a call",
+    "pass": true,
+    "h3": "Nothing booked this week",
+    "cta": "/agent/book",
+    "text": "Booked calls and inbounds that book on your calendar show up here."
+  },
+  {
+    "name": "1920x1080-light fail: error card with Try again",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-light fail: Try again recovers",
+    "pass": true
+  },
+  {
+    "name": "1440x900-light week: blocks",
+    "pass": true,
+    "blocks": 17,
+    "days": 6
+  },
+  {
+    "name": "1440x900-light week: today highlighted",
+    "pass": true
+  },
+  {
+    "name": "1440x900-light week: now marker",
+    "pass": true
+  },
+  {
+    "name": "1440x900-light week: fits the screen",
+    "pass": true,
+    "sh": 900,
+    "ih": 900
+  },
+  {
+    "name": "1440x900-light week: grid inside viewport",
+    "pass": true,
+    "bottom": 876,
+    "ih": 900
+  },
+  {
+    "name": "1440x900-light week: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440x900-light panel: name, phone, state, stage, both zones",
+    "pass": true,
+    "text": "Inbound appointment\nElena Marsh\n\nToday, 2:30 PM\nin 2 hr 20 min\n\nPhone\n(555) 010-0148\nText\nState\nOhio\nStage\nBooked\nYour time\n2:30 PM\nCentral\nTheir time\n3:30 PM\nEastern\nOpen inbound\nCall"
+  },
+  {
+    "name": "1440x900-light panel: tel and sms links",
+    "pass": true
+  },
+  {
+    "name": "1440x900-light panel: no Reschedule on an inbound",
+    "pass": true
+  },
+  {
+    "name": "1440x900-light panel: still fits",
+    "pass": true
+  },
+  {
+    "name": "1440x900-light panel: Reschedule links to the existing change flow",
+    "pass": true
+  },
+  {
+    "name": "1440x900-light panel: live badge, no Reschedule",
+    "pass": true
+  },
+  {
+    "name": "1440x900-light day: opens from a day header with quiet Open rows",
+    "pass": true,
+    "open": 12,
+    "cards": 5,
+    "label": "Friday, Oct 30\nToday"
+  },
+  {
+    "name": "1440x900-light day: empty Sunday explains",
+    "pass": true,
+    "msg": "Nothing booked on Sunday",
+    "label": "Sunday, Nov 1"
+  },
+  {
+    "name": "1440x900-light week: next and previous",
+    "pass": true
+  },
+  {
+    "name": "1440x900-light page errors",
+    "pass": true
+  },
+  {
+    "name": "1440x900-light empty: explains and links to Book a call",
+    "pass": true,
+    "h3": "Nothing booked this week",
+    "cta": "/agent/book",
+    "text": "Booked calls and inbounds that book on your calendar show up here."
+  },
+  {
+    "name": "1440x900-light fail: error card with Try again",
+    "pass": true
+  },
+  {
+    "name": "1440x900-light fail: Try again recovers",
+    "pass": true
+  },
+  {
+    "name": "390-light agenda: rows link out, no panel, no sideways scroll",
+    "pass": true,
+    "rows": [
+      "/agent/inbounds/sample-inbound-10",
+      "/agent/clients?open=sample-booking-live",
+      "/agent/inbounds/sample-inbound-11",
+      "/agent/clients?open=sample-booking-12",
+      "/agent/inbounds/sample-inbound-13",
+      "/agent/inbounds/sample-inbound-14",
+      "/agent/clients?open=sample-booking-15"
+    ],
+    "desk": 17,
+    "panel": false,
+    "sw": 0
+  },
+  {
+    "name": "390-light page errors",
+    "pass": true
+  },
+  {
+    "name": "390-light empty: shows and no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-light fail: shows and no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-dark week: blocks",
+    "pass": true,
+    "blocks": 17,
+    "days": 6
+  },
+  {
+    "name": "1920x1080-dark week: today highlighted",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-dark week: now marker",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-dark week: fits the screen",
+    "pass": true,
+    "sh": 1080,
+    "ih": 1080
+  },
+  {
+    "name": "1920x1080-dark week: grid inside viewport",
+    "pass": true,
+    "bottom": 1056,
+    "ih": 1080
+  },
+  {
+    "name": "1920x1080-dark week: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-dark panel: name, phone, state, stage, both zones",
+    "pass": true,
+    "text": "Inbound appointment\nElena Marsh\n\nToday, 2:30 PM\nin 2 hr 20 min\n\nPhone\n(555) 010-0148\nText\nState\nOhio\nStage\nBooked\nYour time\n2:30 PM\nCentral\nTheir time\n3:30 PM\nEastern\nOpen inbound\nCall"
+  },
+  {
+    "name": "1920x1080-dark panel: tel and sms links",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-dark panel: no Reschedule on an inbound",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-dark panel: still fits",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-dark panel: Reschedule links to the existing change flow",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-dark panel: live badge, no Reschedule",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-dark day: opens from a day header with quiet Open rows",
+    "pass": true,
+    "open": 12,
+    "cards": 5,
+    "label": "Friday, Oct 30\nToday"
+  },
+  {
+    "name": "1920x1080-dark day: empty Sunday explains",
+    "pass": true,
+    "msg": "Nothing booked on Sunday",
+    "label": "Sunday, Nov 1"
+  },
+  {
+    "name": "1920x1080-dark week: next and previous",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-dark page errors",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-dark empty: explains and links to Book a call",
+    "pass": true,
+    "h3": "Nothing booked this week",
+    "cta": "/agent/book",
+    "text": "Booked calls and inbounds that book on your calendar show up here."
+  },
+  {
+    "name": "1920x1080-dark fail: error card with Try again",
+    "pass": true
+  },
+  {
+    "name": "1920x1080-dark fail: Try again recovers",
+    "pass": true
+  },
+  {
+    "name": "1440x900-dark week: blocks",
+    "pass": true,
+    "blocks": 17,
+    "days": 6
+  },
+  {
+    "name": "1440x900-dark week: today highlighted",
+    "pass": true
+  },
+  {
+    "name": "1440x900-dark week: now marker",
+    "pass": true
+  },
+  {
+    "name": "1440x900-dark week: fits the screen",
+    "pass": true,
+    "sh": 900,
+    "ih": 900
+  },
+  {
+    "name": "1440x900-dark week: grid inside viewport",
+    "pass": true,
+    "bottom": 876,
+    "ih": 900
+  },
+  {
+    "name": "1440x900-dark week: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440x900-dark panel: name, phone, state, stage, both zones",
+    "pass": true,
+    "text": "Inbound appointment\nElena Marsh\n\nToday, 2:30 PM\nin 2 hr 20 min\n\nPhone\n(555) 010-0148\nText\nState\nOhio\nStage\nBooked\nYour time\n2:30 PM\nCentral\nTheir time\n3:30 PM\nEastern\nOpen inbound\nCall"
+  },
+  {
+    "name": "1440x900-dark panel: tel and sms links",
+    "pass": true
+  },
+  {
+    "name": "1440x900-dark panel: no Reschedule on an inbound",
+    "pass": true
+  },
+  {
+    "name": "1440x900-dark panel: still fits",
+    "pass": true
+  },
+  {
+    "name": "1440x900-dark panel: Reschedule links to the existing change flow",
+    "pass": true
+  },
+  {
+    "name": "1440x900-dark panel: live badge, no Reschedule",
+    "pass": true
+  },
+  {
+    "name": "1440x900-dark day: opens from a day header with quiet Open rows",
+    "pass": true,
+    "open": 12,
+    "cards": 5,
+    "label": "Friday, Oct 30\nToday"
+  },
+  {
+    "name": "1440x900-dark day: empty Sunday explains",
+    "pass": true,
+    "msg": "Nothing booked on Sunday",
+    "label": "Sunday, Nov 1"
+  },
+  {
+    "name": "1440x900-dark week: next and previous",
+    "pass": true
+  },
+  {
+    "name": "1440x900-dark page errors",
+    "pass": true
+  },
+  {
+    "name": "1440x900-dark empty: explains and links to Book a call",
+    "pass": true,
+    "h3": "Nothing booked this week",
+    "cta": "/agent/book",
+    "text": "Booked calls and inbounds that book on your calendar show up here."
+  },
+  {
+    "name": "1440x900-dark fail: error card with Try again",
+    "pass": true
+  },
+  {
+    "name": "1440x900-dark fail: Try again recovers",
+    "pass": true
+  },
+  {
+    "name": "390-dark agenda: rows link out, no panel, no sideways scroll",
+    "pass": true,
+    "rows": [
+      "/agent/inbounds/sample-inbound-10",
+      "/agent/clients?open=sample-booking-live",
+      "/agent/inbounds/sample-inbound-11",
+      "/agent/clients?open=sample-booking-12",
+      "/agent/inbounds/sample-inbound-13",
+      "/agent/inbounds/sample-inbound-14",
+      "/agent/clients?open=sample-booking-15"
+    ],
+    "desk": 17,
+    "panel": false,
+    "sw": 0
+  },
+  {
+    "name": "390-dark page errors",
+    "pass": true
+  },
+  {
+    "name": "390-dark empty: shows and no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-dark fail: shows and no sideways scroll",
+    "pass": true
+  }
+]
