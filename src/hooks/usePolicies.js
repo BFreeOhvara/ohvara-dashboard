@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { needsCancellation } from '../lib/fulfillmentFlags'
 
 // The pipeline behind My Policies / Submissions (Prompt 326, migration 072).
 //
@@ -110,7 +111,7 @@ const FULFILLMENT_SELECT = `
   call_live_since, last_call_outcome, call_attempts, last_call_at,
   recovery_step, recovery_retry_at, recovery_am_sent_at, recovery_pm_sent_at,
   missed_step, missed_retry_at,
-  client_city, client_timezone, carrier_id,
+  client_city, client_timezone, carrier_id, replaced_old_policy,
   agent:profiles!policies_agent_id_fkey ( id, full_name, caller_id_verified_at, caller_id_enabled ),
   assigned:profiles!policies_assigned_fulfillment_id_fkey ( id, full_name ),
   details:policy_fulfillment_details ( current_carrier )
@@ -132,7 +133,10 @@ export function useFulfillmentQueue(opts = {}) {
       // Prompt 745 — the Overview shows the carrier being left. The details
       // row is a 1:1 embed (an object or a one-item array, depending on how
       // PostgREST resolves it) and only readable by the assigned rep or admin.
-      return (data || []).map(p => {
+      // Migration 187 — a deal with no old policy keeps fulfillment_assigned
+      // (it counts toward the week and shows on Clients) but is nothing for a
+      // rep to cancel, so no Fulfillment screen gets it. null still shows.
+      return (data || []).filter(needsCancellation).map(p => {
         const d = Array.isArray(p.details) ? p.details[0] : p.details
         return { ...p, current_carrier: d?.current_carrier || null }
       })
