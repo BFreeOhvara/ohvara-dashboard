@@ -3436,7 +3436,10 @@ function CallDateTile({ iso, booked, tz }) {
 // The amber state (Prompt 732): the Needs attention tab and nothing else.
 // Each row (and its Open button) goes to My Pipeline's Needs attention tab with
 // that client's drawer open; no confirm or re-book starts from here.
-export function AttentionCard({ items, loading, onGo }) {
+// Portal parity T3 (answer 4) — `texts` (Today's Texts waiting, from
+// useTextsWaiting in TodayCards.jsx) fold into this one amber box; each row
+// opens that inbound. Without texts the box is exactly the old one.
+export function AttentionCard({ items, loading, onGo, texts = [] }) {
   const pad = 'p-[18px] sm:px-6 sm:pt-6 sm:pb-5'
   const area = { gridArea: 'attn', minWidth: 0 }
   const title = <h2 style={{ ...OV_TITLE, flex: 1, minWidth: 0 }} className="text-[18px] sm:text-[19px]">Needs your attention</h2>
@@ -3452,12 +3455,15 @@ export function AttentionCard({ items, loading, onGo }) {
     )
   }
 
-  const count = items.length
+  const count = items.length + texts.length
   const shown = items.slice(0, ATTN_ROWS)
-  const more = n => (count > n ? `See all ${count} in My Pipeline` : 'Open in My Pipeline')
+  const more = n => (items.length > n ? `See all ${items.length} in My Pipeline` : 'Open in My Pipeline')
   const toConfirm = items.filter(p => agentStageOf(p) === 'confirmNumber').length
-  const toCall = count - toConfirm
-  const intro = [toConfirm && `${toConfirm} to confirm`, toCall && `${toCall} to call`].filter(Boolean).join(' · ')
+  const toCall = items.length - toConfirm
+  const intro = [
+    toConfirm && `${toConfirm} to confirm`, toCall && `${toCall} to call`,
+    texts.length && `${texts.length} ${texts.length === 1 ? 'text' : 'texts'} waiting`,
+  ].filter(Boolean).join(' · ')
   const go = p => onGo(`/agent/clients?open=${p.id}&stage=needs`)
 
   return (
@@ -3503,12 +3509,42 @@ export function AttentionCard({ items, loading, onGo }) {
         )
       })}
 
+      {texts.slice(0, ATTN_ROWS).map(t => (
+        <div key={`text-${t.id}`} role="button" tabIndex={0} aria-label={`Open ${t.name}'s text`}
+          onClick={() => onGo(t.to)}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onGo(t.to) } }}
+          className="ov-attn-row flex" style={{ alignItems: 'center', gap: 12, padding: '14px 0', cursor: 'pointer' }}>
+          <span style={{
+            width: 38, height: 38, flexShrink: 0, borderRadius: '50%', background: 'var(--ov-warn-tint)', color: 'var(--ov-warn)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <MessageSquare size={17} strokeWidth={2} />
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
+            <div style={{ marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>
+              {t.when} · “{t.body}”
+            </div>
+          </div>
+          <button type="button" className="ov-ghost h-10 sm:h-[34px]" tabIndex={-1} aria-hidden="true"
+            style={{ padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            Open <ArrowRight size={14} strokeWidth={2.2} />
+          </button>
+        </div>
+      ))}
+
       <div style={{ marginTop: 'auto', paddingTop: 14 }}>
-        <button type="button" className="ov-primary" onClick={() => onGo('/agent/clients?stage=needs')}>
-          <span className="sm:hidden">{more(3)}</span>
-          <span className="hidden sm:inline">{more(ATTN_ROWS)}</span>
-          <ArrowRight size={15} strokeWidth={2.2} />
-        </button>
+        {items.length > 0 || texts.length === 0 ? (
+          <button type="button" className="ov-primary" onClick={() => onGo('/agent/clients?stage=needs')}>
+            <span className="sm:hidden">{more(3)}</span>
+            <span className="hidden sm:inline">{more(ATTN_ROWS)}</span>
+            <ArrowRight size={15} strokeWidth={2.2} />
+          </button>
+        ) : (
+          <button type="button" className="ov-primary" onClick={() => onGo('/agent/inbounds')}>
+            Open Inbounds <ArrowRight size={15} strokeWidth={2.2} />
+          </button>
+        )}
       </div>
     </div>
   )
