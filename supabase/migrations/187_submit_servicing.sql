@@ -6,8 +6,8 @@
 -- lines named here added. No row is changed. submit_live stays off.
 --
 -- Why: Book a call becomes Submit. Leads and Servicing are two independent
--- products, so an agent can be Leads only. Later requests go through the same
--- queue. There is no weekly cap (188).
+-- products, so an agent can be Leads only. A submission counts 1 of the week's
+-- 7/16; later requests go through the same queue and don't count.
 --
 -- FRONTEND CONTRACT (the builders rely on these names):
 --   profiles.has_servicing      read it through get_my_profile() or
@@ -25,7 +25,7 @@
 --     so p_replaced, p_best_time and p_sms_consent carry a default too; the body
 --     still refuses a null p_replaced or p_best_time.
 --   rpc agent_submit_service_request(p_policy, p_kind, p_note, p_best_time)
---   error hints: no_servicing, not_live. Two more on the same errors
+--   error hints: weekly_cap, no_servicing, not_live. Two more on the same errors
 --     the portal already shows: booking_rule (a Yes deal's time, from the
 --     147 trigger) and no_old_policy (a rep, call time or leaving-carrier was
 --     put on a No deal).
@@ -68,9 +68,12 @@
 --                                      all need a rep, a time or a no_answer: fine
 --   fulfillment_pick_rep (156)         counts only rows held by a rep: fine
 --
--- THE WEEKLY CAP: 188 makes enforce_weekly_submission_cap a no-op ("the weekly
--- submission cap goes away"), so neither RPC counts or refuses on the cap. There
--- is no weekly_cap error from Submit. agent_weekly_usage still counts the rows.
+-- THE WEEKLY CAP: agent_submit_deal is security definer, so inside it current_user
+-- is the owner and enforce_weekly_submission_cap returns early. The RPC takes the
+-- same advisory lock and reads agent_weekly_usage itself. Comped agents: since
+-- 131, billing_exempt only stops billing and locking. A comped agent keeps the cap
+-- of its tier and comped agents sit on Premium (16), so the 8th deal goes through
+-- on Premium and the 17th doesn't. The RPC does the same, not a free pass.
 --
 -- THE has_servicing GUARD is a sibling trigger, not a new line in
 -- enforce_weekly_submission_cap. a2_ fires before policies_booking_rules and
@@ -81,9 +84,10 @@
 -- file NEXT_inbound_spend.sql, no number yet): no name collides. It adds
 -- agent_inbound_spend, agent_inbound_spend_log and app_settings.inbound_* and no
 -- servicing flag, so has_servicing is a new name here. It does replace
--- enforce_weekly_submission_cap with a body that never refuses (188). That can't
--- remove the guard here, which lives in its own trigger. agent_submit_deal has no
--- cap check of its own, so it agrees with 188.
+-- enforce_weekly_submission_cap with a body that never refuses. That can't remove
+-- the guard here, which lives in its own trigger. It also doesn't stop the check
+-- inside agent_submit_deal: if that branch merges and the cap is meant to go for
+-- Submit too, this RPC's check has to go with it.
 --
 -- service_requests is separate from servicing_tasks (180). That table is the work
 -- on a client, seeded by Sold, with its own kinds and statuses and no best time.
@@ -506,6 +510,7 @@ declare
   v_agent    uuid := auth.uid();
   v_servicing boolean;
   v_name     text;
+  u          record;
   v_first    text := nullif(btrim(p_first), '');
   v_last     text := nullif(btrim(p_last), '');
   v_phone    text := nullif(btrim(p_phone), '');
@@ -526,6 +531,16 @@ begin
   end if;
   if not v_servicing then
     raise exception 'Servicing is not on your plan' using errcode = 'P0001', hint = 'no_servicing';
+  end if;
+
+  -- The same lock and the same rules as enforce_weekly_submission_cap (147),
+  -- which steps aside here because current_user is the owner.
+  perform pg_advisory_xact_lock(hashtextextended('weekly_cap:' || v_agent::text, 0));
+  select * into u from public.agent_weekly_usage(v_agent);
+  if found and u.enforced and u.weekly_cap is not null and u.used >= u.weekly_cap then
+    raise exception 'Weekly submission cap reached: % of % used this week on the % plan.',
+      u.used, u.weekly_cap, u.tier_name
+      using errcode = 'P0001', hint = 'weekly_cap';
   end if;
 
   if v_first is null or v_last is null then
@@ -647,7 +662,7 @@ create trigger service_requests_updated_at
   for each row execute function public.set_updated_at();
 
 comment on table public.service_requests is
-  'An agent asking for work on a client. Written only by agent_submit_service_request. Isn''t a counted submission.';
+  'An agent asking for work on a client. Written only by agent_submit_service_request. Doesn''t count against the weekly cap.';
 
 create or replace function public.agent_submit_service_request(
   p_policy    uuid,

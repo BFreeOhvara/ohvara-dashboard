@@ -1,4 +1,4 @@
--- p_submit_servicing — pgTAP checks for 187_submit_servicing.sql: Submit a deal,
+-- p_submit_servicing — pgTAP checks for 187_submit_servicing.sql and 192_submit_no_weekly_cap.sql: Submit a deal,
 -- the has_servicing flag, No deals staying away from reps, no weekly cap (188), and
 -- service requests.
 --
@@ -225,8 +225,8 @@ select is((select assigned_fulfillment_id from public.policies where id = (selec
           'a19 the No deal still has none');
 
 -- ── b. No weekly cap (188) ──────────────────────────────────────────────────
--- 188 made enforce_weekly_submission_cap a no-op, and agent_submit_deal has no
--- check of its own. Agent A has 1 this week and is on Standard (7). With
+-- 188 made enforce_weekly_submission_cap a no-op, and 192 took the check out of
+-- agent_submit_deal. Agent A has 1 this week and is on Standard (7). With
 -- agent_billing_enforced on, nothing refuses at 7, in the RPC or the trigger.
 update public.app_settings set agent_billing_enforced = true where id = 1;
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-00000000000a","role":"authenticated"}', true),
