@@ -242,9 +242,7 @@
     "theme": "light",
     "controls": [],
     "startCard": [],
-    "small": [
-      "Try again:33"
-    ],
+    "small": [],
     "banned": null,
     "sets": [],
     "gets": 1,
@@ -259,9 +257,7 @@
     "theme": "dark",
     "controls": [],
     "startCard": [],
-    "small": [
-      "Try again:33"
-    ],
+    "small": [],
     "banned": null,
     "sets": [],
     "gets": 1,
@@ -683,7 +679,7 @@
       "Start"
     ],
     "small": [],
-    "banned": null,
+    "banned": "—",
     "sets": [],
     "gets": 1,
     "pageErrors": [],
@@ -700,7 +696,7 @@
       "Start"
     ],
     "small": [],
-    "banned": null,
+    "banned": "—",
     "sets": [],
     "gets": 1,
     "pageErrors": [],
@@ -715,7 +711,7 @@
     "controls": [],
     "startCard": [],
     "small": [],
-    "banned": null,
+    "banned": "—",
     "sets": [],
     "gets": 1,
     "pageErrors": [],
@@ -730,7 +726,7 @@
     "controls": [],
     "startCard": [],
     "small": [],
-    "banned": null,
+    "banned": "—",
     "sets": [],
     "gets": 1,
     "pageErrors": [],
@@ -747,7 +743,7 @@
       "Open"
     ],
     "small": [],
-    "banned": null,
+    "banned": "—",
     "sets": [],
     "gets": 1,
     "pageErrors": [],
@@ -764,7 +760,7 @@
       "Open"
     ],
     "small": [],
-    "banned": null,
+    "banned": "—",
     "sets": [],
     "gets": 1,
     "pageErrors": [],
@@ -779,7 +775,7 @@
     "controls": [],
     "startCard": [],
     "small": [],
-    "banned": null,
+    "banned": "—",
     "sets": [],
     "gets": 1,
     "pageErrors": [],
@@ -794,7 +790,7 @@
     "controls": [],
     "startCard": [],
     "small": [],
-    "banned": null,
+    "banned": "—",
     "sets": [],
     "gets": 1,
     "pageErrors": [],
@@ -809,7 +805,7 @@
     "controls": [],
     "startCard": [],
     "small": [],
-    "banned": null,
+    "banned": "—",
     "sets": [],
     "gets": 0,
     "pageErrors": [
@@ -827,7 +823,7 @@
     "controls": [],
     "startCard": [],
     "small": [],
-    "banned": null,
+    "banned": "—",
     "sets": [],
     "gets": 0,
     "pageErrors": [
@@ -847,7 +843,7 @@
       "Start"
     ],
     "small": [],
-    "banned": null,
+    "banned": "—",
     "sets": [],
     "gets": 1,
     "pageErrors": [],
@@ -864,12 +860,88 @@
       "Start"
     ],
     "small": [],
-    "banned": null,
+    "banned": "—",
     "sets": [],
     "gets": 1,
     "pageErrors": [],
     "scenario": "overview-empty",
     "width": 1440
+  },
+  {
+    "file": "nav-spending-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [
+      "Change profile photo",
+      "Save changes"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 0,
+    "pageErrors": [],
+    "scenario": "nav-spending",
+    "width": 1440,
+    "navEntries": 1
+  },
+  {
+    "file": "nav-spending-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 0,
+    "pageErrors": [],
+    "scenario": "nav-spending",
+    "width": 390,
+    "navEntries": 1
+  },
+  {
+    "file": "nav-native-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [
+      "Change profile photo",
+      "Save changes"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 0,
+    "pageErrors": [
+      "CapacitorException: \"App\" plugin is not implemented on ios",
+      "CapacitorException: \"Network\" plugin is not implemented on ios"
+    ],
+    "scenario": "nav-native",
+    "width": 1440,
+    "navEntries": 0
+  },
+  {
+    "file": "nav-native-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 0,
+    "pageErrors": [
+      "CapacitorException: \"App\" plugin is not implemented on ios",
+      "CapacitorException: \"Network\" plugin is not implemented on ios"
+    ],
+    "scenario": "nav-native",
+    "width": 390,
+    "navEntries": 0
   },
   {
     "file": "sheet-change-1440-light.png",
@@ -944,7 +1016,7 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "live_call",
         "weekly_cents": 4000,
         "paused": false
@@ -974,21 +1046,21 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "live_call",
         "weekly_cents": 4000,
         "paused": false
       },
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "live_call",
         "weekly_cents": 50000,
         "paused": false
       },
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "booked_appointment",
         "weekly_cents": 30000,
         "paused": true
@@ -1018,7 +1090,7 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "live_call",
         "weekly_cents": 60000,
         "paused": false
@@ -1125,7 +1197,7 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "live_call",
         "weekly_cents": 4000,
         "paused": false
@@ -1155,21 +1227,21 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "live_call",
         "weekly_cents": 4000,
         "paused": false
       },
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "live_call",
         "weekly_cents": 50000,
         "paused": false
       },
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "booked_appointment",
         "weekly_cents": 30000,
         "paused": true
@@ -1199,7 +1271,7 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "live_call",
         "weekly_cents": 60000,
         "paused": false
@@ -1306,7 +1378,7 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "live_call",
         "weekly_cents": 4000,
         "paused": false
@@ -1336,21 +1408,21 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "live_call",
         "weekly_cents": 4000,
         "paused": false
       },
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "live_call",
         "weekly_cents": 50000,
         "paused": false
       },
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "booked_appointment",
         "weekly_cents": 30000,
         "paused": true
@@ -1380,7 +1452,7 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "live_call",
         "weekly_cents": 60000,
         "paused": false
@@ -1487,7 +1559,7 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "live_call",
         "weekly_cents": 4000,
         "paused": false
@@ -1517,21 +1589,21 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "live_call",
         "weekly_cents": 4000,
         "paused": false
       },
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "live_call",
         "weekly_cents": 50000,
         "paused": false
       },
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "booked_appointment",
         "weekly_cents": 30000,
         "paused": true
@@ -1561,7 +1633,7 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5868/agent/billing",
+        "return_url": "http://localhost:5891/agent/billing",
         "type": "live_call",
         "weekly_cents": 60000,
         "paused": false
