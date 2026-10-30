@@ -2,7 +2,7 @@
 // are touched and nothing is written. Every number, name and event on these pages is a fixture, so the shots are
 // labelled mocked (checks.json: mocked true).
 //   node scripts/agent-portal-finish-shots.mjs [outDir] [oldRoot]
-// Writes into outDir (default qa/agent-portal-finish):
+// Writes into outDir (default qa/agent-portal-finish). pipeline = /agent/clients?stage=cancelled, the Clients side of My Pipeline:
 //   old/{overview|pipeline|billing|activity}-{1440|390}-{light|dark}.png   16 shots, the app at commit 2b8337a
 //   new/<the same 16 names>.png + billing-available-soon-{light,dark}.png  this checkout (fresh master)
 //   empty/activity-empty-1440-light.png, empty/activity-empty-390-dark.png an agent with policy events and no inbounds
@@ -260,7 +260,8 @@ const browser = await chromium.launch({ args: ['--hide-scrollbars'] })
 const SIZES = { 1440: { width: 1440, height: 900 }, 390: { width: 390, height: 844 } }
 const PAGES = [
   { name: 'overview', path: '/agent' },
-  { name: 'pipeline', path: '/agent/clients' },
+  // The "Your clients" box lives on the Clients side of My Pipeline (the default view is In progress), so the shots open that side.
+  { name: 'pipeline', path: '/agent/clients?stage=cancelled' },
   { name: 'billing', path: '/agent/billing' },
   { name: 'activity', path: '/agent/activity' },
 ]
@@ -359,7 +360,7 @@ async function shoot(side, w, theme) {
       if (await tiers.count()) await tiers.first().screenshot({ path: join(OUT, 'new', `billing-available-soon-${theme}.png`) })
       else check(`Available soon cards found to crop (${theme})`, false, '.pl2-tiers missing')
     }
-    check(`${file} lands on ${pg.path}`, m.url === pg.path, m.url)
+    check(`${file} lands on ${pg.path}`, m.url === pg.path.split('?')[0], m.url)
     check(`${file} no page error, no write, nothing blocked beyond the mock`, state.errors.length === 0 && state.writes.length === 0, { errors: state.errors, writes: state.writes })
     state.errors.length = 0
     state.writes.length = 0
