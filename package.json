@@ -10,6 +10,7 @@
     "test": "node scripts/run-tests.mjs",
     "test:sql": "node scripts/run-sql-tests.mjs",
     "preview": "vite preview",
+    "shots:leads": "node scripts/leads-shots.mjs",
     "shots:inbounds": "node scripts/inbounds-shots.mjs",
     "shots:portal-v2": "node scripts/portal-v2-shots.mjs",
     "shots:portal-v2-more": "node scripts/portal-v2-more-shots.mjs",
