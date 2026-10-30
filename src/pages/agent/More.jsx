@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { Activity, UserPlus, Bell, Moon, Sun, Settings, TriangleAlert, ChevronRight, LogOut } from 'lucide-react'
+import { Activity, UserPlus, Bell, Moon, Sun, Settings, TriangleAlert, ChevronRight, LogOut, CalendarPlus } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useTheme } from '../../hooks/useTheme'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
@@ -15,10 +15,11 @@ import { NATIVE_BILLING_TEXT } from '../../components/native/NativeBillingNote'
 
 // Prompt 772 — More, the phone layout's fifth tab (mockup More.dc.html): the
 // profile, a Billing card (plan, weekly price, next charge, this week's
-// bookings, Manage billing), then Activity, Invite an agent, Notifications,
-// Theme (one tap flips it, like P766), Settings and Report a problem, and
-// Sign out. Desktop has no More page: the sidebar holds all of this, so the
-// route sends a desktop visitor home.
+// bookings, Manage billing), then Book a call, Activity, Invite an agent,
+// Notifications, Theme (one tap flips it, like P766), Settings and Report a
+// problem, and Sign out. It is the v2 tab bar's More tab (Oct 29); Messages is
+// on this page's own tab bar. Desktop has no More page: the v2 sidebar holds
+// all of this, so the route sends a desktop visitor home.
 
 const TONES = {
   blue: ['var(--ov-data-a)', 'var(--ov-data-a-tint)'],
@@ -123,6 +124,7 @@ export default function More() {
       </section>
 
       <section className="ov-card ph-menu">
+        <Row icon={CalendarPlus} tone="teal" label="Book a call" onClick={() => navigate('/agent/book')} />
         <Row icon={Activity} tone="blue" label="Activity" onClick={() => navigate('/agent/activity')} />
         <Row icon={UserPlus} tone="teal" label="Invite an agent" onClick={() => setModal('invite')} />
         <Row icon={Bell} tone="amber" label="Notifications" onClick={() => navigate('/settings#notifications')} />

@@ -16,8 +16,8 @@ import { PhoneSheet } from '../../components/agent/phone/PhoneSheet'
 // Pipeline (P726/P729) scoped to the rep: "Find any client" with the rep's
 // recent calls, "Your pipeline" (total, agent filter, range, bar, three status
 // rows, the next call), and one list box with three tabs (Booked, No answer,
-// Cancelled; no Needs attention, that's the agent's). It's the same components as
-// src/pages/agent/Clients.jsx, switched with props, so the two can't drift.
+// Cancelled; no Needs attention, that's the agent's). It's the same AgentUI components the
+// agent's old My Pipeline used (retired Oct 29 for v2 Clients), switched with props.
 //
 // A rep sees the rows assigned to them; admin sees every rep's, with a rep
 // picker above the agent one. A row opens the My calls drawer (P748) over this

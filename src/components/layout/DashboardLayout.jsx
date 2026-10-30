@@ -6,11 +6,9 @@ import { GlobalSearch } from './GlobalSearch'
 import { ActiveCallProvider } from '../../contexts/ActiveCallContext'
 import { NotificationBell } from '../notifications/NotificationBell'
 import { useAuth } from '../../hooks/useAuth'
-import { useAgentBookings } from '../../hooks/useAgentBookings'
 import { useWeeklyUsage } from '../../hooks/useBillingTiers'
 import { usePolicyEvents } from '../../hooks/useAgentActivity'
 import { useStandingThreads, dmId } from '../../hooks/useDirectMessages'
-import { tabOf, sameLocalDay } from '../../lib/agentBookings'
 import { capState, formatReset, formatBillingDate, shownStatus, renewsAt } from '../../lib/billing'
 import { navEntry, PAGE_TONE } from '../../lib/nav'
 import { BillingGate } from './BillingGate'
@@ -19,7 +17,6 @@ import { PhoneShell } from './PhoneShell'
 import { ConfirmEmailBanner } from './ConfirmEmailBanner'
 import { useIsPhone } from '../../hooks/usePhoneLayout'
 import { LEADS_PAGE } from '../../lib/leadsPage'
-import { PortalPreviewToggle } from '../agent/PortalPreviewToggle'
 
 // Shell — Prompt 669 restyle to Restorix Portal's Layout.jsx, a 32/24 padded
 // main capped at 1280px. Prompt 722 rethought the header: a 72px sticky bar
@@ -35,13 +32,11 @@ import { PortalPreviewToggle } from '../agent/PortalPreviewToggle'
 
 // Export's TITLES map, keyed by route instead of by mockup page id.
 const TITLES = {
-  '/agent': ['Overview', 'Your day at a glance'],
   '/agent/live': ['Live Call', 'Duty status & incoming transfers'],
   '/agent/calls': ['My Calls', 'Schedule, activity, and graded calls'],
   '/agent/quoter': ['Quoter', 'InsuranceToolkits — multi-carrier instant quoting'],
   '/agent/underwriting': ['Underwriting', 'AI chat assistant for carrier placement based on client health'],
   '/agent/book': ['Book a call', 'Get your client on the calendar with Fulfillment'],
-  '/agent/clients': ['My Pipeline', 'Everyone booked with Fulfillment and where each cancellation stands'],
   '/agent/activity': ['Activity', 'What happened with your clients, newest first'],
   ...(LEADS_PAGE ? { '/agent/leads': ['Leads', 'Delivered to you. Call or text from your own phone'] } : {}),
   '/agent/billing': ['Billing', 'Your weekly subscription and next charge'],
@@ -107,18 +102,6 @@ function LiveLine({ items }) {
   )
 }
 
-function OverviewLine({ profile }) {
-  const { data: rows = [] } = useAgentBookings(profile.id)
-  const now = new Date()
-  const today = rows.filter(p => sameLocalDay(p.scheduled_call_at, now)).length
-  const needs = rows.filter(p => tabOf(p) === 'needs').length
-  return <LiveLine items={[
-    <Plain>{now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</Plain>,
-    today > 0 && <Pill tone="blue">{plural(today, 'call')} today</Pill>,
-    needs > 0 && <Pill tone="amber" to="/agent/clients?stage=needs">{needs} {needs === 1 ? 'needs' : 'need'} attention</Pill>,
-  ]} />
-}
-
 function BookLine({ profile }) {
   const { data: usage, isLoading } = useWeeklyUsage(profile.id)
   if (isLoading) return null
@@ -127,18 +110,6 @@ function BookLine({ profile }) {
   return <LiveLine items={[
     <Pill tone="teal">{cap.used} of {cap.cap} bookings used this week</Pill>,
     <Plain>Resets {formatReset(usage.week_end, profile.timezone)}</Plain>,
-  ]} />
-}
-
-function PipelineLine({ profile }) {
-  const { data: rows = [], isLoading } = useAgentBookings(profile.id)
-  if (isLoading) return null
-  const needs = rows.filter(p => tabOf(p) === 'needs').length
-  const booked = rows.filter(p => tabOf(p) === 'booked').length
-  return <LiveLine items={[
-    <Plain>{plural(rows.length, 'client')}</Plain>,
-    needs > 0 && <Pill tone="amber" to="/agent/clients?stage=needs">{needs} {needs === 1 ? 'needs' : 'need'} attention</Pill>,
-    booked > 0 && <Pill tone="blue">{booked} booked</Pill>,
   ]} />
 }
 
@@ -192,9 +163,7 @@ function SettingsLine({ session, profile }) {
 }
 
 const AGENT_LINES = {
-  '/agent': OverviewLine,
   '/agent/book': BookLine,
-  '/agent/clients': PipelineLine,
   '/agent/activity': ActivityLine,
   '/messages': MessagesLine,
   '/agent/billing': BillingLine,
@@ -230,9 +199,9 @@ export function DashboardLayout({ children }) {
   // Prompt 701: Messages fills the content area edge to edge (as Restorix's
   // does) instead of sitting in the padded, max-width page container.
   const isFullBleed = pathname === '/messages'
-  // Prompt 726: My Pipeline (and, Prompt 749, Fulfillment's Pipeline) fills the height under the header on a tall
-  // desktop screen (the .ov-fit rules in index.css) so only its list scrolls. Admin Users (P762) too.
-  const isFit = pathname === '/agent/clients' || pathname === '/fulfillment/pipeline' || pathname === '/admin/pipeline' || pathname === '/admin/users'
+  // Prompt 749: Fulfillment's Pipeline fills the height under the header on a tall desktop screen (the .ov-fit
+  // rules in index.css) so only its list scrolls. Admin Users (P762) too. (Agent My Pipeline is v2 Clients now.)
+  const isFit = pathname === '/fulfillment/pipeline' || pathname === '/admin/pipeline' || pathname === '/admin/users'
   // Prompt 763: the Admin Overview fits one screen from 700px tall (.ov-fitao in index.css); shorter, it scrolls.
   const isFitAo = pathname === '/admin'
 
@@ -249,7 +218,7 @@ export function DashboardLayout({ children }) {
   // Prompt 773 — a Fulfillment rep too. Prompt 774 — and Admin.
   const phone = useIsPhone()
   if (phone && (profile?.role === 'agent' || profile?.role === 'fulfillment' || profile?.role === 'admin')) {
-    return <ActiveCallProvider><PhoneShell>{children}<PortalPreviewToggle /></PhoneShell></ActiveCallProvider>
+    return <ActiveCallProvider><PhoneShell>{children}</PhoneShell></ActiveCallProvider>
   }
 
   return (
@@ -269,7 +238,7 @@ export function DashboardLayout({ children }) {
           className="app-main flex-1 flex flex-col min-w-0 pt-[60px] md:pt-0"
           style={{ '--sb-w': `${collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W}px`, position: 'relative' }}
         >
-          <div className={`app-backdrop${['/agent', '/agent/book', '/agent/clients', '/agent/activity', '/agent/leads', '/agent/billing', '/settings', '/fulfillment', '/fulfillment/desk', '/fulfillment/leads', '/fulfillment/pipeline', '/fulfillment/pay', '/fulfillment/getting-paid'].includes(pathname) || pathname.startsWith('/admin') ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
+          <div className={`app-backdrop${['/agent/book', '/agent/activity', '/agent/leads', '/agent/billing', '/settings', '/fulfillment', '/fulfillment/desk', '/fulfillment/leads', '/fulfillment/pipeline', '/fulfillment/pay', '/fulfillment/getting-paid'].includes(pathname) || pathname.startsWith('/admin') ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
           {/* Prompt 722 — one header for every size: a 60px fixed top bar on
               phones (menu, title, search, bell), the 72px sticky page header
               from md up. One instance, so the search hotkeys and the bell
@@ -299,7 +268,6 @@ export function DashboardLayout({ children }) {
                   header stay, and a new route clears it. */}
               <ConfirmEmailBanner />
               <ErrorBoundary resetKey={pathname}><BillingGate>{children}</BillingGate></ErrorBoundary>
-              <PortalPreviewToggle />
             </div>
           </main>
         </div>

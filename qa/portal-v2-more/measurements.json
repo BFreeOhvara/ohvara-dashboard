@@ -243,19 +243,55 @@
       "failures": []
     },
     {
-      "check": "flag off /agent/clients: old page, same text as the pre-change baseline and ?portal=v1 (767 chars)",
+      "check": "v2 sidebar at 1440: Today, Inbounds, Calendar, Clients, Book a call, Plan & billing, Manage billing, Activity, Messages, Settings; Book a call, Manage billing, Activity, Messages open with Today one click back",
       "failures": []
     },
     {
-      "check": "flag off /agent/billing: old page, same text as the pre-change baseline and ?portal=v1 (743 chars)",
+      "check": "v2 tab bar at 390 light: Today, Inbounds, Calendar, Clients, Plan, More; More loads (390/390); Book a call, Activity, Manage billing, Settings open from More",
       "failures": []
     },
     {
-      "check": "flag off /agent/calendar goes back to /agent",
+      "check": "v2 tab bar at 390 dark: Today, Inbounds, Calendar, Clients, Plan, More; More loads (390/390)",
       "failures": []
     },
     {
-      "check": "flag off /agent/plan goes back to /agent",
+      "check": "old URL /agent?x=1 -> /agent?x=1 (v2)",
+      "failures": []
+    },
+    {
+      "check": "old URL /agent/clients?x=1 -> /agent/clients?x=1 (v2)",
+      "failures": []
+    },
+    {
+      "check": "old URL /agent/policies?x=1 -> /agent/clients?x=1 (v2)",
+      "failures": []
+    },
+    {
+      "check": "old URL /agent/book?x=1 -> /agent/book?x=1 (older page, loads)",
+      "failures": []
+    },
+    {
+      "check": "old URL /agent/submissions?x=1 -> /agent/book?x=1 (older page, loads)",
+      "failures": []
+    },
+    {
+      "check": "old URL /agent/activity?x=1 -> /agent/activity?x=1 (older page, loads)",
+      "failures": []
+    },
+    {
+      "check": "old URL /agent/billing?x=1 -> /agent/billing?x=1 (older page, loads)",
+      "failures": []
+    },
+    {
+      "check": "old URL /agent/more?x=1 -> /agent/more?x=1 (older page, loads)",
+      "failures": []
+    },
+    {
+      "check": "agent opens / -> /agent (v2 Today)",
+      "failures": []
+    },
+    {
+      "check": "fulfillment opens / -> /fulfillment (Fulfillment Overview, unchanged)",
       "failures": []
     }
   ]

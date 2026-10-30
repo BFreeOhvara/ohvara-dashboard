@@ -519,22 +519,6 @@
     {
       "check": "transfer alert 390 dark: Inactive, no poll, no alert",
       "failures": []
-    },
-    {
-      "check": "flag off: old Overview (no v2 shell, old sidebar: Overview|Book a call|My Pipeline|Activity|Messages|Billing|Settings)",
-      "failures": []
-    },
-    {
-      "check": "flag off: /agent/inbounds goes back to /agent",
-      "failures": []
-    },
-    {
-      "check": "flag on, ?portal=v1: old Overview (no v2 shell, old sidebar: Overview|Book a call|My Pipeline|Activity|Messages|Billing|Settings)",
-      "failures": []
-    },
-    {
-      "check": "flag off and ?portal=v1 render the same Overview text",
-      "failures": []
     }
   ]
 }
