@@ -5,6 +5,7 @@ import { useInbounds } from '../../hooks/useInbounds'
 import { OhvaraMark } from '../ui/OhvaraMark'
 import { BillingGate } from '../layout/BillingGate'
 import { ErrorBoundary } from '../shared/ErrorBoundary'
+import { TransferAlert } from './TransferAlert'
 import { isRecent } from '../../lib/portalV2'
 import '../../pages/agent/v2/portalV2.css'
 
@@ -67,6 +68,7 @@ function TabBar({ active, count }) {
 }
 
 // `active` is today | inbounds | calendar | clients | plan. `crumb` / `title` / `icon` fill the page header.
+// The live-transfer alert (TransferAlert) is mounted here once, so it rings on every v2 page.
 export function PortalV2Layout({ active, crumb = 'Your work', title, icon = Sun, children }) {
   const { profile } = useAuth()
   const { pathname } = useLocation()
@@ -85,6 +87,7 @@ export function PortalV2Layout({ active, crumb = 'Your work', title, icon = Sun,
         </main>
       </div>
       <TabBar active={active} count={count} />
+      <TransferAlert />
     </div>
   )
 }

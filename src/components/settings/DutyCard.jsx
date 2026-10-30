@@ -1,50 +1,47 @@
 import { useState } from 'react'
 import { Headset, Check } from 'lucide-react'
-import { DUTY_LIVE, isDutyMissing } from '../../lib/duty'
-import { useMyDuty, useSetMyDuty } from '../../hooks/useAgentDuty'
+import { dutySince } from '../../lib/duty'
+import { useAgentDuty } from '../../hooks/useAgentDuty'
+import { useAuth } from '../../hooks/useAuth'
 import { Switch } from '../ui/Switch'
 import { SettingsCard, SettingsChip } from '../agent/AgentUI'
 
-// Goal 7 — Settings → Client contact, agents only. The agent's own on-duty
-// switch for live transfers (agent_duty, migration 172). It writes only their
-// own row and sends nothing to anyone. Hidden behind DUTY_LIVE, and hidden
-// when the table isn't there yet.
+// Goal 7 — Settings → Client contact, agents only. The agent's own Active switch for live
+// transfers (agent_duty, migration 174), the same hook as Today's switch, so the two agree.
+// It writes only their own row and sends nothing to anyone. Hidden until it answers, and
+// while the table isn't there yet (Today says Coming soon instead).
 export function DutyCard() {
-  if (!DUTY_LIVE) return null
-  return <DutyCardLive />
-}
-
-function DutyCardLive() {
-  const { data: row, isLoading, error } = useMyDuty()
-  const save = useSetMyDuty()
+  const { profile } = useAuth()
+  const duty = useAgentDuty()
   const [saved, setSaved] = useState(false)
 
-  if (isDutyMissing(error) || isDutyMissing(save.error)) return null
-  const on = !!row?.on_duty
+  if (duty.soon || duty.loading) return null
+  const { on, since, failed } = duty
 
   function flip(next) {
     setSaved(false)
-    save.mutate(next, {
+    duty.toggle(next, {
       onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 2000) },
     })
   }
 
   return (
-    <SettingsCard icon={Headset} title="On duty for live transfers"
-      sub="Turn this on when you can take a live transfer call. Off means none come to you."
-      right={!isLoading && !error ? <SettingsChip tone={on ? 'on' : 'off'}>{on ? 'On duty' : 'Off duty'}</SettingsChip> : null}>
+    <SettingsCard icon={Headset} title="Live call transfers"
+      sub="Turn this on when you can take a live call. Transfers only come to you while you're active."
+      right={!failed ? <SettingsChip tone={on ? 'on' : 'off'}>{on ? 'Active' : 'Not active'}</SettingsChip> : null}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingTop: 16, borderTop: '1px solid var(--ov-line)' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>On duty</p>
+          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>Active</p>
           <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--ov-mute)' }}>
-            {isLoading ? 'Loading…' : on ? 'On. Live transfers can come to you.' : 'Off. No live transfers come to you.'}
+            {on ? `${since ? `Active since ${dutySince(since, new Date(), profile?.timezone || undefined)}` : 'Active'}. Live calls can come to you.`
+              : 'Not active. Live calls are booked on your calendar instead.'}
           </p>
         </div>
-        <Switch checked={on} disabled={isLoading || !!error || save.isPending} onChange={flip} label="On duty for live transfers" />
+        <Switch checked={on} disabled={failed} onChange={flip} label="Active for live call transfers" />
       </div>
 
-      {error && <p role="alert" style={errText}>Couldn’t load your duty status. Refresh to try again.</p>}
-      {save.isError && <p role="alert" style={errText}>Couldn’t save that. Try again.</p>}
+      {failed && <p role="alert" style={errText}>Couldn’t load your status. Refresh to try again.</p>}
+      {duty.saveFailed && <p role="alert" style={errText}>Couldn’t save that. Try again.</p>}
       {saved && (
         <span role="status" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13.5, fontWeight: 600, color: 'var(--ov-st-cancelled)' }}>
           <Check size={15} strokeWidth={2.4} /> Saved

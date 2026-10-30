@@ -24,13 +24,9 @@ function tierContents(t) {
   const keys = t.product_keys || []
   const base = BASES.find(k => keys.includes(k))
   const extras = keys.filter(k => !BASES.includes(k) && PRODUCT[k])
-  const items = []
-  if (extras.length) {
-    if (base) items.push({ text: `Everything in ${BASE_NAME[base]}` })
-    for (const k of extras) for (const text of PRODUCT[k].items) items.push({ text, plus: !!base })
-  } else if (base) {
-    for (const text of PRODUCT[base].items) items.push({ text })
-  }
+  const items = extras.length
+    ? [...(base ? [{ text: `Everything in ${BASE_NAME[base]}` }] : []), ...extras.flatMap(k => PRODUCT[k].items.map(text => ({ text, plus: !!base })))]
+    : base ? PRODUCT[base].items.map(text => ({ text })) : []
   const blurb = t.description || PRODUCT[extras[extras.length - 1] || base]?.blurb || null
   return { items, blurb, live: keys.includes('live_calls') }
 }
@@ -131,7 +127,7 @@ export default function Plan() {
           steps={[
             'They call in, or pick a time for us to call them.',
             'An Ohvara VA answers and asks a few questions.',
-            'If you’re active, the VA transfers the call to you live. Your portal rings and your phone gets a push.',
+            'If you’re active, the VA transfers the call to you live. Your portal rings and we call your phone.',
             'If you’re not active, the VA books them on your calendar at the first open time within the hour.',
           ]}
           youDo={['Turn on Active when you can take calls. You must be active to get live transfers.', 'Pick up when it rings.', 'Mark each one Sold, Follow up or Not interested.']}

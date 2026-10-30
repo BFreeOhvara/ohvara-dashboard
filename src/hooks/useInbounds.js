@@ -98,22 +98,6 @@ export function useWaitingTexts() {
   })
 }
 
-// The Live call transfers switch. Display only for now; it never writes. agent_duty (migration 174)
-// may not exist yet: any error reads as 'soon' (the card says Coming soon), not as a failure.
-export function useAgentDuty() {
-  const { profile } = useAuth()
-  return useQuery({
-    queryKey: ['agent-duty', profile?.id],
-    enabled: !!profile?.id,
-    retry: false,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('agent_duty').select('on_duty').eq('agent_id', profile.id).limit(1)
-      if (error) return { soon: true }
-      return { soon: false, on: data?.[0]?.on_duty === true }
-    },
-  })
-}
-
 // Plan usage: the agent's membership tier (membership_tiers, migration 180). The tier is named by
 // profiles.membership_tier; nothing sets that yet, so until it does the card shows its "no number" state.
 export function useMembershipTier() {

@@ -1,34 +1,28 @@
 import { PhoneIncoming } from 'lucide-react'
-import { DUTY_LIVE, isDutyMissing, dutySince } from '../../lib/duty'
+import { isDutyMissing, dutySince } from '../../lib/duty'
 import { useOnDutyAgents } from '../../hooks/useAgentDuty'
 import { SettingsCard, SettingsChip, LoadError } from '../agent/AgentUI'
 import { DISPLAY } from '../../lib/exportStyles'
 
 // Goal 7 — Admin Overview (desktop and phone): who is on duty for live
-// transfers right now, from on_duty_agents() (migration 172). View only.
-// Hidden behind DUTY_LIVE, and hidden when the function isn't there yet.
-export function OnDutyNow() {
-  if (!DUTY_LIVE) return null
-  return <OnDutyNowLive />
-}
-
+// transfers right now, from on_duty_agents() (migration 174). View only.
+// Hidden until it answers (no flash while 174 isn't applied) and while the function isn't there.
 const note = { margin: 0, fontSize: 14, color: 'var(--ov-mute)' }
 
-function OnDutyNowLive() {
+export function OnDutyNow() {
   const { data, error, isLoading, refetch } = useOnDutyAgents()
-  if (isDutyMissing(error)) return null
+  if (isLoading || isDutyMissing(error)) return null
   const rows = data || []
 
   return (
     <SettingsCard icon={PhoneIncoming} title="On duty now" gap={12}
       sub="Agents who can take a live transfer right now."
-      right={!error && !isLoading ? (
+      right={!error ? (
         <SettingsChip tone={rows.length ? 'on' : 'off'}>
           <span style={{ fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums' }}>{rows.length}</span> on duty
         </SettingsChip>
       ) : null}>
       {error ? <LoadError what="who is on duty" onRetry={refetch} />
-        : isLoading ? <p style={note}>Loading…</p>
         : !rows.length ? <p style={note}>Nobody is on duty</p>
         : (
           <div>

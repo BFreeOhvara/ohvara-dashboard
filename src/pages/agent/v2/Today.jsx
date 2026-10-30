@@ -2,7 +2,9 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Sun, Phone, ChevronRight, Zap, CalendarDays, Info, Inbox, MessageSquare, Check } from 'lucide-react'
 import { useAuth } from '../../../hooks/useAuth'
-import { useInbounds, useInboundEvents, useAgentDuty, useMembershipTier, useWaitingTexts } from '../../../hooks/useInbounds'
+import { useInbounds, useInboundEvents, useMembershipTier, useWaitingTexts } from '../../../hooks/useInbounds'
+import { useAgentDuty } from '../../../hooks/useAgentDuty'
+import { dutySince } from '../../../lib/duty'
 import { PortalV2Layout, Ico, Pill, Skel, ErrorCard } from '../../../components/agent/PortalV2Nav'
 import {
   stageOf, leadName, firstName, phoneDisplay, telHref, appointmentAt, timeText, clockParts, untilWords, sameDay, dateText,
@@ -10,8 +12,8 @@ import {
 } from '../../../lib/portalV2'
 import { DEFAULT_TIMEZONE } from '../../../lib/timezones'
 
-// Today (/agent when the v2 portal is on): the next appointment, the Live call transfers
-// switch (display only), plan usage, today's appointments, new inbounds and texts waiting.
+// Today (/agent when the v2 portal is on): the next appointment, the Active switch for live
+// call transfers (useAgentDuty; Coming soon until agent_duty is there), plan usage, today's appointments, new inbounds and texts waiting.
 // Each card loads and fails on its own. Mockup: ohvara/mockups/build-v2-portal-shell-today-inbounds-inb.html.
 
 const lead = id => `/agent/inbounds/${id}`
@@ -70,27 +72,30 @@ function Hero({ appts, now, tz, evMap }) {
   )
 }
 
-function DutyCard() {
-  const { data, isLoading } = useAgentDuty()
-  const soon = !isLoading && data?.soon
-  const on = !!data?.on
+function DutyCard({ tz }) {
+  const { on, since, soon, loading, failed, saveFailed, toggle } = useAgentDuty()
+  const live = !loading && !soon && !failed
   return (
     <section className="ov-card pv-card a-active" aria-label="Live call transfers">
       <div className="pv-act-head">
         <span className="pv-tile"><Ico icon={Zap} size={20} /></span>
         <div className="pv-grow">
           <h3>Live call transfers</h3>
-          <p className="pv-sub">{isLoading ? 'Checking…' : soon ? 'Coming soon' : on ? "You're active" : "You're not active"}</p>
+          <p className="pv-sub">
+            {loading ? 'Checking…' : soon ? 'Coming soon' : failed ? "Couldn't check right now"
+              : on ? (since ? `Active since ${dutySince(since, new Date(), tz)}` : "You're active") : "You're not active"}
+          </p>
         </div>
-        <span className={`pv-sw ${soon || isLoading ? 'off' : `${on ? 'on ' : ''}ro`}`} role="switch" aria-checked={!soon && on} aria-disabled="true"
-          aria-label={soon ? 'Live call transfers (coming soon)' : 'Active for live call transfers (display only)'} title="Display only for now"><i /></span>
+        <button type="button" className={`pv-sw${on ? ' on' : ''}`} role="switch" aria-checked={on} disabled={!live}
+          aria-label={soon ? 'Active for live call transfers (coming soon)' : 'Active for live call transfers'}
+          onClick={() => toggle(!on)}><i /></button>
       </div>
       <p className="pv-act-body">
         {soon
           ? 'Soon you can turn this on to take callers live the moment our VA checks the fit. Until then, every live call is booked on your calendar.'
           : "While you're active, our VA sends callers straight to you. When you're not, we book them on your calendar instead."}
       </p>
-      {!soon && <p className="pv-act-foot">Shown here for now. You&rsquo;ll turn this on and off here soon.</p>}
+      {saveFailed && <p className="pv-act-err" role="alert">Couldn&rsquo;t save that. Try again.</p>}
     </section>
   )
 }
@@ -209,7 +214,7 @@ export default function Today() {
           <div className="a-hero"><ErrorCard title="We couldn't load today" text="Your inbounds are safe. Check your connection and try again." onRetry={() => inb.refetch()} /></div>
         ) : <Hero appts={appts} now={now} tz={tz} evMap={evMap} />}
 
-        <DutyCard />
+        <DutyCard tz={tz} />
 
         <section className="ov-card pv-card a-appts" aria-label="Today's appointments">
           <div className="pv-card-head"><div className="pv-grow"><h3>Today&rsquo;s appointments</h3><p className="pv-sub">{loading ? ' ' : `${today.length} today, times in your time zone`}</p></div></div>
