@@ -1,0 +1,12 @@
+src/App.jsx
+src/components/agent/PortalV2Nav.jsx
+src/components/agent/TransferAlert.jsx
+src/components/layout/DashboardLayout.jsx
+src/components/layout/PhoneShell.jsx
+src/components/layout/Sidebar.jsx
+src/hooks/useInbounds.js
+src/index.css
+src/lib/nav.js
+src/lib/portalPreview.test.js
+src/lib/transferAlert.test.js
+src/pages/agent/More.jsx

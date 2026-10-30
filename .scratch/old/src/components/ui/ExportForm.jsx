@@ -1,0 +1,121 @@
+import { useState, useRef, useEffect } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { control, fieldLabel, MONO } from '../../lib/exportStyles'
+
+// Field primitives for the pages ported from the approved Claude Design
+// export. The raw style objects live in lib/exportStyles.js — re-exporting
+// them from here too would break fast refresh (a module may export components
+// or constants, not both).
+
+export function Field({ label, children, style }) {
+  return (
+    <div style={style}>
+      <p style={fieldLabel}>{label}</p>
+      {children}
+    </div>
+  )
+}
+
+// `error` (Prompt 401) is opt-in and additive — every existing caller that
+// doesn't pass it renders exactly as before, just highlights the border red
+// for pages doing their own required-field validation (currently only
+// Submissions' New Submission form).
+export function TextField({ label, mono, style, error, ...props }) {
+  return (
+    <Field label={label}>
+      <input
+        {...props}
+        style={{
+          ...control, ...(mono ? { fontFamily: MONO } : null),
+          ...(error ? { border: '1px solid var(--danger)' } : null),
+          ...style,
+        }}
+      />
+    </Field>
+  )
+}
+
+// Prompt 388: every dropdown in the app now uses this one component — the
+// native-select-backed SelectField above was retired since a native
+// <select>'s option panel can't be restyled to match (browser/OS chrome).
+// Prompt 387: a native <select>'s open direction is chosen by the browser,
+// and that heuristic isn't "is there room below" — it's closer to "which
+// half of the viewport is the trigger in." A select low on a long form
+// (e.g. New Submission's State field, several rows down) pops upward and
+// covers the page above it even when the page has plenty of room below —
+// there's no CSS to override a native select's popup direction. This is a
+// real DOM dropdown standing in for one, so it always opens below its own
+// trigger like every other element on the page.
+export function AnchoredSelectField({ label, value, onChange, options, placeholder = 'Select…', style, error }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function onClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  const selected = options.find(o => o.value === value)
+
+  return (
+    <div ref={ref} style={{ position: 'relative', ...style }}>
+      {label && <p style={fieldLabel}>{label}</p>}
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          ...control, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          cursor: 'pointer', textAlign: 'left',
+          color: selected ? 'var(--text-primary)' : 'var(--text-muted)',
+          ...(error ? { border: '1px solid var(--danger)' } : null),
+        }}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <ChevronDown size={14} style={{ flexShrink: 0, color: 'var(--text-muted)' }} />
+      </button>
+
+      {open && (
+        <div
+          className="scrollbar-thin"
+          style={{
+            position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
+            maxHeight: 240, overflowY: 'auto',
+            background: 'var(--bg-overlay)', border: 'var(--border-w) solid var(--border-strong)', borderRadius: 10,
+            boxShadow: '0 16px 40px rgba(0,0,0,0.22)', zIndex: 20, padding: 4,
+          }}
+        >
+          {options.map(o => (
+            <div
+              key={o.value}
+              onClick={() => { onChange(o.value); setOpen(false) }}
+              style={{
+                padding: '8px 10px', fontSize: 14, cursor: 'pointer', borderRadius: 6,
+                color: o.value === value ? 'var(--accent)' : 'var(--text-primary)',
+                background: o.value === value ? 'var(--accent-dim)' : 'transparent',
+              }}
+              onMouseEnter={e => { if (o.value !== value) e.currentTarget.style.background = 'var(--bg-elevated)' }}
+              onMouseLeave={e => { if (o.value !== value) e.currentTarget.style.background = 'transparent' }}
+            >
+              {o.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// One-line honest note for anything the export draws but this build can't
+// populate yet. Never substitute invented data for one of these.
+export function GapNote({ children }) {
+  return (
+    <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+      {children}
+    </p>
+  )
+}
