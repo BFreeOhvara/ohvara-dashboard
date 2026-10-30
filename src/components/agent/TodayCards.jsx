@@ -9,7 +9,7 @@ import { AttentionCard, ComingUpCard, IconChip, LoadError } from './AgentUI'
 import {
   stageOf, leadName, phoneDisplay, telHref, appointmentAt, timeText, clockParts, untilWords, sameDay, dateText,
   isRecent, cameInAt, nextLine, whenText, PRODUCT_LABEL, PRODUCT_SHORT, LIVE_RESULT,
-} from '../../lib/portalV2'
+} from '../../lib/inbounds'
 import { DEFAULT_TIMEZONE } from '../../lib/timezones'
 import './todayCards.css'
 

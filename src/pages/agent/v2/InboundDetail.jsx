@@ -9,7 +9,7 @@ import { PortalV2Layout, Ico, Skel, ErrorCard } from '../../../components/agent/
 import {
   stageOf, leadName, firstName, phoneDisplay, telHref, stateName, appointmentAt, apptText, timeText, dateText, dayLabel, dayKey,
   upcomingWords, buildTimeline, eventTitle, eventSub, cameInAt, PRODUCT_LABEL, OUTCOME_LABEL,
-} from '../../../lib/portalV2'
+} from '../../../lib/inbounds'
 import { DEFAULT_TIMEZONE } from '../../../lib/timezones'
 
 // Inbound detail (/agent/inbounds/:id): who they are, a timeline of what we did and what happens next,

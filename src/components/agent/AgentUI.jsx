@@ -2696,7 +2696,7 @@ function KindBar({ counts, height }) {
 // "Today's activity" (Prompt 733: display only, like "Your pipeline"): the total,
 // a bar sized by status and one plain row per status with its count and share of
 // the day. Nothing in it is a button. `counts` is keyed by ACTIVITY_ROWS; the
-// Needs attention row shows only when it has something in it.
+// Needs attention and Inbounds rows show only when they have something in them.
 export function ActivityBox({ dayKey, slideClass, title, counts }) {
   const total = ACTIVITY_ROWS.reduce((s, k) => s + counts[k], 0)
   const pct = n => (total ? Math.round((n / total) * 100) : 0)
@@ -2714,7 +2714,7 @@ export function ActivityBox({ dayKey, slideClass, title, counts }) {
           </div>
           <div className="sm:px-1"><KindBar counts={counts} height={10} /></div>
           <div className="ov-actrows sm:px-1">
-            {ACTIVITY_ROWS.filter(k => k !== 'needs' || counts.needs > 0).map(k => (
+            {ACTIVITY_ROWS.filter(k => (k !== 'needs' && k !== 'inbound') || counts[k] > 0).map(k => (
               <div key={k} className={`pl-row2${counts[k] ? '' : ' is-zero'}`}>
                 <i style={{ background: rowTone(k).fg }} />
                 <span className="l">{rowMeta(k).label}</span>
@@ -2739,7 +2739,7 @@ function EventRow({ item, on, linked, showAgent, onOpen }) {
   const time = new Date(item.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   const [clock, ampm] = time.split(/\s+/)
   return (
-    <button type="button" aria-haspopup="dialog" onClick={() => onOpen(item)}
+    <button type="button" aria-haspopup={item.inbound ? undefined : 'dialog'} onClick={() => onOpen(item)}
       className={`ov-event${on ? ' is-on' : ''} w-full flex items-start gap-3 sm:gap-4 px-2 py-3 sm:px-4 sm:py-[14px]`}
       style={{ position: 'relative', '--ev-tint': t.tint, ...(on ? { boxShadow: `inset 0 0 0 1px ${t.edge}` } : null) }}>
       {linked && <span aria-hidden="true" className="hidden sm:block" style={{ position: 'absolute', left: 105, top: 50, bottom: -14, width: 2, background: 'var(--ov-line)' }} />}
