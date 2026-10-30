@@ -1,0 +1,91 @@
+
+> ohvara-dashboard@0.0.0 lint
+> eslint .
+
+
+C:\Users\freem\.atlas\work\ohvara\atlas_571aaa25-get-inbounds-panel-on-a-minimal-\scrapers\googlemaps-scraper.js
+   27:22  error  'process' is not defined                            no-undef
+   28:22  error  'process' is not defined                            no-undef
+   32:3   error  'process' is not defined                            no-undef
+  278:7   error  'totalFiltered' is assigned a value but never used  no-unused-vars
+  311:3   error  'process' is not defined                            no-undef
+
+C:\Users\freem\.atlas\work\ohvara\atlas_571aaa25-get-inbounds-panel-on-a-minimal-\scrapers\indeed-scraper.js
+   26:23  error  'process' is not defined  no-undef
+   27:23  error  'process' is not defined  no-undef
+   31:3   error  'process' is not defined  no-undef
+  288:3   error  'process' is not defined  no-undef
+
+C:\Users\freem\.atlas\work\ohvara\atlas_571aaa25-get-inbounds-panel-on-a-minimal-\src\components\ui\DayFilterBar.jsx
+  14:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  36:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  61:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\freem\.atlas\work\ohvara\atlas_571aaa25-get-inbounds-panel-on-a-minimal-\src\components\ui\RangeCalendar.jsx
+   9:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           react-refresh/only-export-components
+  23:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           react-refresh/only-export-components
+  25:33  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  23 | export function useRangeCalendar(repId, timezone) {
+  24 |   const tz = timezone || DEFAULT_TIMEZONE
+> 25 |   const todayStr = zonedDateStr(Date.now(), tz)
+     |                                 ^^^^^^^^^^ Cannot call impure function
+  26 |   const firstCallDateStr = useFirstGradedCallDate(repId, tz)
+  27 |   const [rangeStart, setRangeStart] = useState(null)
+  28 |   const [rangeEnd, setRangeEnd] = useState(null)  react-hooks/purity
+
+C:\Users\freem\.atlas\work\ohvara\atlas_571aaa25-get-inbounds-panel-on-a-minimal-\src\contexts\ActiveCallContext.jsx
+  14:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\freem\.atlas\work\ohvara\atlas_571aaa25-get-inbounds-panel-on-a-minimal-\src\contexts\SecretsContext.jsx
+  45:18  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  43 |
+  44 |   useEffect(() => {
+> 45 |     if (profile) fetchCapabilities()
+     |                  ^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  46 |     else { setLoading(false) }
+  47 |   }, [profile?.id])
+  48 |  react-hooks/set-state-in-effect
+  47:6   warning  React Hook useEffect has missing dependencies: 'fetchCapabilities' and 'profile'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react-hooks/exhaustive-deps
+  56:17  error    Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         react-refresh/only-export-components
+  61:17  error    Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         react-refresh/only-export-components
+
+C:\Users\freem\.atlas\work\ohvara\atlas_571aaa25-get-inbounds-panel-on-a-minimal-\src\hooks\useAuth.jsx
+  199:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\freem\.atlas\work\ohvara\atlas_571aaa25-get-inbounds-panel-on-a-minimal-\src\hooks\usePolicies.js
+  282:15  error  'annual_premium' is assigned a value but never used  no-unused-vars
+  295:15  error  'annual_premium' is assigned a value but never used  no-unused-vars
+  295:31  error  'agent' is assigned a value but never used           no-unused-vars
+
+C:\Users\freem\.atlas\work\ohvara\atlas_571aaa25-get-inbounds-panel-on-a-minimal-\src\lib\activityFeedMigration.test.js
+  14:14  error  'process' is not defined  no-undef
+
+C:\Users\freem\.atlas\work\ohvara\atlas_571aaa25-get-inbounds-panel-on-a-minimal-\src\pages\Login.jsx
+  95:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  93 |   useEffect(() => {
+  94 |     if (!loading && session && !profile && !submitting && !mfaRequired) {
+> 95 |       setError('Signed in but your profile didn’t load. Refresh the page, or write to ' + SUPPORT_EMAIL + '.')
+     |       ^^^^^^^^ Avoid calling setState() directly within an effect
+  96 |     }
+  97 |   }, [loading, session, profile, submitting, mfaRequired])
+  98 |  react-hooks/set-state-in-effect
+
+✖ 26 problems (25 errors, 1 warning)
+

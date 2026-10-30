@@ -1,3 +1,55 @@
+GET INBOUNDS: FINAL CHECK ON TOP OF 8283449 (Oct 30)
+
+LINT
+Branch (after fix): 25 errors, 1 warning. Full output: lint-branch.txt
+Main (merge base 1e93a61): 26 errors, 1 warning. Full output: lint-main.txt
+npm run lint still exits 1 on both.
+Fixed in this branch: src/components/layout/DashboardLayout.jsx, react-hooks/set-state-in-effect (old error, also on main). It was the only lint error in a file this branch adds or changes.
+New errors from this branch: 0. Old errors left in files this branch changes: 0.
+Pass rule (Vera, Oct 30): MET. Every remaining error is on main in the same file with the same rule.
+A separate fix task is needed for these 25 errors in 10 files, none of them touched by this branch:
+scrapers/googlemaps-scraper.js: 5 (no-undef 4, no-unused-vars 1)
+scrapers/indeed-scraper.js: 4 (no-undef 4)
+src/components/ui/DayFilterBar.jsx: 3 (react-refresh/only-export-components 3)
+src/components/ui/RangeCalendar.jsx: 3 (react-refresh/only-export-components 2, react-hooks/purity 1)
+src/contexts/ActiveCallContext.jsx: 1 (react-refresh/only-export-components 1)
+src/contexts/SecretsContext.jsx: 3 (react-hooks/set-state-in-effect 1, react-refresh/only-export-components 2), plus the 1 warning (react-hooks/exhaustive-deps)
+src/hooks/useAuth.jsx: 1 (react-refresh/only-export-components 1)
+src/hooks/usePolicies.js: 3 (no-unused-vars 3)
+src/lib/activityFeedMigration.test.js: 1 (no-undef 1)
+src/pages/Login.jsx: 1 (react-hooks/set-state-in-effect 1)
+How main was linted: the worktree guard refused a temporary worktree and git archive, so this worktree was reset to 1e93a61, linted, and reset back to 8283449. Same node_modules, nothing else touched.
+
+CHECKS AFTER THE FIX
+npm run build: exit 0.
+npm test: 104 pass, 0 fail (billingInbound: 10 pass, 0 fail).
+Wording grep from done-means: no matches (grep exit 1).
+Drawer behaviour (the only thing the fix changes): at 390 with a role outside the phone shell, the menu drawer opened, then a route change that did not come from a nav link closed it, and the scrim went away. The layout did not remount. PASS.
+
+SHOTS
+Kept the 78 shots; the fix does not change rendered output. All 78 were re-rendered to a scratch folder and compared:
+65 are byte-identical.
+12 Overview shots differ only inside the hero, where the clock and greeting moved from 11:25 AM "Good morning" to past noon "Good afternoon". Page sizes are the same.
+after-save-and-pause-390-dark differs in one small patch by at most 3 of 255 per colour channel, which cannot be seen.
+All 80 measurement entries match on scroll width, page height, controls, Start card, small targets and banned wording.
+
+MOCKUP COMPARISON (mockup HTML read in full, its 1920 light image, 17 of the 78 shots opened by eye; the rest rely on the measurements and on matching the same states)
+Matches: hero, rows, how it works, sheet, Start card and paused card, comped read-only, not subscribed, loading, native note, Inbounds first in the More list, Start card placement on both Overviews.
+Differences:
+1. Phone sheet has a 44px close button. The mockup's phone sheet has none; its desktop drawer does.
+2. A refused below-minimum save shows the server message in a red notice under the local hint. The mockup's below-minimum state shows only the hint with Save off. Done-means asks for the server message.
+3. App chrome is current master, not the mockup's drawing: sidebar groups (Servicing, Submit), search placeholder, the Submit button in place of Book a call, and the extra Overview cards. More also has the Billing card, Calendar and Theme. This branch did not change these.
+4. Error strip shows the mock server's message "Couldn't reach billing right now." instead of the mockup's fallback text, as the mockup's notes ask.
+5. Overview at 1440x900 already scrolled without the card (page height 1546); the Start card makes it 1640. The mockup asked to tell Vera if the chart scrolls.
+Not differences: in full-page phone shots the tab bar sits mid-image because a fixed bar is captured once. The "—" flagged on Overview measurements is the existing Appointments left this month placeholder, not this branch's.
+Native shots log 2 page errors: Capacitor App and Network plugins are not implemented under the faked iPhone bridge. The native page itself shows no controls and makes no inbound calls.
+
+NOT CHECKED
+Real backend: inbound_get and inbound_set are mocked; the backend is not on master.
+A real iPhone or the App Review build: native is a faked bridge in the browser.
+Eagle's review and Brayden's merge guard: they happen after the runner pushes.
+
+MEASUREMENTS FROM THE 78 SHOTS (8283449)
 links-1440 {"notsubStart":"/agent/billing","cardStart":"/agent/inbounds"}
 links-390 {"notsubStart":"/agent/billing","cardStart":"/agent/inbounds"}
 inbounds-empty-1440-light.png                  scroll=1425/1440 height=900 controls=3 card=[] gets=1 sets=0 small=0 banned=null err=0

@@ -258,7 +258,12 @@ export function DashboardLayout({ children }) {
   const isFitAo = pathname === '/admin'
 
   const [navOpen, setNavOpen] = useState(false)
-  useEffect(() => { setNavOpen(false) }, [pathname])
+  // Navigating closes the drawer. Adjusted during render, so no extra paint with it still open.
+  const [navPath, setNavPath] = useState(pathname)
+  if (navPath !== pathname) {
+    setNavPath(pathname)
+    setNavOpen(false)
+  }
 
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1')
   useEffect(() => { localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0') }, [collapsed])
