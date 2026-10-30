@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { CalendarPlus, Check } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
-import { HeroPanel, TrendCard, AttentionCard, ComingUpCard, LastWeekChart, LoadError } from '../../components/agent/AgentUI'
+import { HeroPanel, TrendCard, LastWeekChart, LoadError } from '../../components/agent/AgentUI'
 import { stageOf, agentStageOf, tabOf, useNow } from '../../lib/agentBookings'
 import { addDaysStr } from '../../lib/scheduling'
 import { DEFAULT_TIMEZONE, zonedDateStr, zonedTimeToUtcIso } from '../../lib/timezones'
@@ -12,7 +12,6 @@ import { fullName } from '../../lib/policyFormat'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { PhoneHome } from '../../components/agent/phone/PhoneHome'
 import { TodayCards, AttentionWithTexts } from '../../components/agent/TodayCards'
-import { usePortalV2 } from '../../lib/portalV2'
 
 // Agent Overview (Prompt 665) — the landing page. "Your day at a glance".
 //
@@ -34,9 +33,8 @@ import { usePortalV2 } from '../../lib/portalV2'
 // Prompt 672 — the trend cards open My Clients on the matching slice of its
 // Pipeline (?range= / ?stage=).
 //
-// Portal parity T3 — with the v2 portal on, Today's cards (TodayCards) sit under
-// the hero (on a phone, under PhoneHome) and Texts waiting folds into the
-// attention box. With it off the page is exactly the old one.
+// Portal parity T3 — for every agent, Today's cards (TodayCards) sit under the
+// hero (on a phone, under PhoneHome) and Texts waiting folds into the attention box.
 
 // Prompt 768 (QA Finding 6) — days and weeks are the agent's profile zone,
 // the same zone the weekly cap and its meter use (agent_weekly_usage), so
@@ -55,7 +53,6 @@ export default function Overview() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const phone = usePhoneLayout()
-  const { on: v2 } = usePortalV2()
   const now = useNow()
   const { data: rows = [], isLoading: loadingRows, isError, refetch } = useAgentBookings(profile?.id)
   // A failed load shows dashes, not zeros (Prompt 768).
@@ -134,7 +131,7 @@ export default function Overview() {
   // Prompt 772 — the phone layout's Home, from the same numbers.
   if (phone) {
     const home = <PhoneHome g={g} greeting={greeting} sub={sub} isLoading={isLoading} isError={isError} refetch={refetch} now={now} tz={tz} />
-    return v2 ? <div className="tc-phone">{home}<TodayCards showTexts /></div> : home
+    return <div className="tc-phone">{home}<TodayCards showTexts /></div>
   }
 
   return (
@@ -159,7 +156,7 @@ export default function Overview() {
         </div>
       )}
 
-      {v2 && <TodayCards />}
+      <TodayCards />
 
       <div className="ov-grid">
         <div className="grid grid-cols-2 gap-[14px] sm:gap-5" style={{ gridArea: 'trend', minWidth: 0 }}>
@@ -177,10 +174,7 @@ export default function Overview() {
           />
         </div>
 
-        {v2 ? <AttentionWithTexts items={g.attention} loading={isLoading} upcoming={g.upcoming} now={now} onGo={navigate} />
-          : isLoading || g.attention.length > 0
-            ? <AttentionCard items={g.attention} loading={isLoading} onGo={navigate} />
-            : <ComingUpCard upcoming={g.upcoming} now={now} onGo={navigate} />}
+        <AttentionWithTexts items={g.attention} loading={isLoading} upcoming={g.upcoming} now={now} onGo={navigate} />
 
         <div style={{ gridArea: 'chart', display: 'flex', minWidth: 0 }}>
           <LastWeekChart days={g.lastWeek} loading={isLoading} />

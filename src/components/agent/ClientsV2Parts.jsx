@@ -20,7 +20,7 @@ import './clientsV2Parts.css'
 // inbound is that client's old policy, so it joins them instead of showing twice. A client opens in
 // the old drawer with Call / Text, Policies, Servicing, the cancellation flow (the old page's own
 // CancellationFlow, not a copy) and Consent. My Pipeline (pages/agent/Clients.jsx) renders
-// MyPipelineClients when v2 is on; the old v2 page (pages/agent/v2/Clients.jsx) renders the same parts.
+// MyPipelineClients for every agent; the old v2 page (pages/agent/v2/Clients.jsx) renders the same parts.
 // Classes are .cv2-* (clientsV2Parts.css) on top of .ov-card / .ov-tile / .ov-range / .ov-input / .ov-ghost.
 
 const CLIENT_FILTERS = [

@@ -3,7 +3,7 @@ import { US_STATES } from './usStates.js'
 
 // Inbound helpers: stage words, names, time words and event shaping for the agent's Today,
 // Inbounds, Inbound detail, header search and Activity. Data comes from migration 180
-// (agent_inbounds(), inbound_events). Moved out of portalV2.js, which keeps only the flag.
+// (agent_inbounds(), inbound_events).
 
 // ── Stages (leads.inbound_stage) ─────────────────────────────────────────────
 export const STAGE = {
