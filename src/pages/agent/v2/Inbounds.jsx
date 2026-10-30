@@ -11,12 +11,12 @@ import {
 import { DEFAULT_TIMEZONE } from '../../../lib/timezones'
 import './inboundsExtra.css'
 
-// Inbounds (/agent/inbounds): two tabs, Booked appointments (a five-column board) and Live calls
+// Inbounds, served at /agent/leads: two tabs, Booked appointments (a five-column board) and Live calls
 // (filter chips and a log). Each tab has an explainer that is open on the first view and stays
 // collapsed after, unless the agent opens it again (remembered per tab in this browser).
 // Mockup: ohvara/mockups/update-the-existing-inbounds-page-get-in.html.
 //
-// Dev only: /agent/inbounds?sample=1 shows made-up people from src/lib/inboundsSample.js in place of the
+// Dev only: /agent/leads?sample=1 shows made-up people from src/lib/inboundsSample.js in place of the
 // real list (never put in the query cache, so the sidebar badge never sees it). Add &empty=1 for the
 // "no inbounds yet" state and &fail=1 for the error state (Try again then loads the sample).
 // import.meta.env.DEV is false in a production build, so that code and the fixture drop out of it.
@@ -78,7 +78,7 @@ function Card({ l, appt, evs, tz }) {
   const NIcon = NEXT_ICON[nx.kind]
   const done = ['sold', 'follow_up', 'lost'].includes(l.inbound_stage)
   return (
-    <Link className="pv-icard inb-card" to={`/agent/inbounds/${l.lead_id}`}>
+    <Link className="pv-icard inb-card" to={`/agent/leads/${l.lead_id}`}>
       <h4>{leadName(l)}</h4>
       <p className="pv-sub">{cardSub(l, appt, tz)}</p>
       {!done && <p className={`pv-next${nx.up ? ' up' : ''}`}><Ico icon={NIcon} size={14} />{nx.text}</p>}
@@ -221,7 +221,7 @@ function LiveLog({ list, evMap, tz }) {
             const [otone, otext] = outcomeOf(l)
             const when = whenText(cameInAt(l), tz)
             return (
-              <Link key={l.lead_id} className="pv-log-row" to={`/agent/inbounds/${l.lead_id}`}>
+              <Link key={l.lead_id} className="pv-log-row" to={`/agent/leads/${l.lead_id}`}>
                 <span className="when">{when}</span>
                 <div className="who"><h4>{leadName(l)}</h4>{phoneDisplay(l.phone) && <p className="pv-sub">{phoneDisplay(l.phone)}</p>}</div>
                 <div className="what">{r && <Pill tone={r.pill}>{r.label}</Pill>}<span>{what(l, appointmentAt(evMap.get(l.lead_id)), tz)}</span></div>
@@ -284,7 +284,7 @@ function tabTo(tab, params) {
   if (tab === 'live') q.set('tab', 'live')
   if (import.meta.env.DEV) DEV_FLAGS.forEach(k => { if (params.get(k)) q.set(k, params.get(k)) })
   const qs = q.toString()
-  return `/agent/inbounds${qs ? `?${qs}` : ''}`
+  return `/agent/leads${qs ? `?${qs}` : ''}`
 }
 
 const NO_EVENTS = new Map()
