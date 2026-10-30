@@ -66,7 +66,7 @@ const deps: Deps = {
   },
   async replied(leadId) {
     const { data, error } = await db.from('lead_sms_replies').select('id').eq('lead_id', leadId).limit(1)
-    // lead_sms_replies (NNN_lead_sms_replies) may not be applied yet.
+    // lead_sms_replies (183_lead_sms_replies) may not be applied yet.
     if (error) {
       if (error.code === '42P01' || error.code === 'PGRST205') return false
       throw error
