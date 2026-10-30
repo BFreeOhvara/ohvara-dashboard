@@ -177,7 +177,6 @@ test('alert is portaled to body', () => {
     const file = src(f)
     assert.equal((file.match(/<TransferAlert \/>/g) || []).length, 1, f)
     assert.match(file, /\{profile\?\.role === 'agent' && <TransferAlert \/>\}/, f)
-    assert.doesNotMatch(file, /usePortalV2/, f)
   }
   const layout = src('../components/layout/DashboardLayout.jsx')
   assert.ok(layout.indexOf('<TransferAlert />') > layout.indexOf('<PhoneShell>'), 'desktop mount sits after the phone early return')

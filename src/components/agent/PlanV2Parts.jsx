@@ -4,7 +4,7 @@ import { useMembershipTiers } from '../../hooks/useMembershipTiers'
 import './planV2Parts.css'
 
 // Portal parity T6: what v2's Plan & billing page showed that Billing doesn't, drawn under the old
-// Billing page (P719 card style) when usePortalV2().on. Display only: the membership_tiers rows
+// Billing page (P719 card style) for every agent. Display only: the membership_tiers rows
 // (migration 180) in row order with "Available soon" buttons, which membership the agent is on,
 // How it works for Live Calls and Booked Appointments, After a sale and Payment. Nothing here
 // calls Stripe or agent-billing; the weekly plan, its Stripe buttons and the lead balance stay in
