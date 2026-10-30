@@ -3,7 +3,8 @@
     "file": "inbounds-empty-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1504,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [
       "Start",
@@ -23,7 +24,8 @@
     "file": "inbounds-empty-1440-dark.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1504,
+    "clientHeight": 900,
     "theme": "dark",
     "controls": [
       "Start",
@@ -43,7 +45,8 @@
     "file": "inbounds-empty-390-light.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1267,
+    "scrollHeight": 2375,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [
       "Start",
@@ -63,7 +66,8 @@
     "file": "inbounds-empty-390-dark.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1267,
+    "scrollHeight": 2375,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [
       "Start",
@@ -83,7 +87,8 @@
     "file": "inbounds-spending-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1408,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [
       "Change Live Calls",
@@ -104,7 +109,8 @@
     "file": "inbounds-spending-1440-dark.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1408,
+    "clientHeight": 900,
     "theme": "dark",
     "controls": [
       "Change Live Calls",
@@ -125,7 +131,8 @@
     "file": "inbounds-spending-390-light.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1271,
+    "scrollHeight": 2864,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [
       "Change Live Calls",
@@ -146,7 +153,8 @@
     "file": "inbounds-spending-390-dark.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1271,
+    "scrollHeight": 2864,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [
       "Change Live Calls",
@@ -167,7 +175,8 @@
     "file": "inbounds-paused-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1409,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [
       "Change Live Calls",
@@ -188,7 +197,8 @@
     "file": "inbounds-paused-1440-dark.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1409,
+    "clientHeight": 900,
     "theme": "dark",
     "controls": [
       "Change Live Calls",
@@ -209,7 +219,8 @@
     "file": "inbounds-paused-390-light.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1342,
+    "scrollHeight": 2935,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [
       "Change Live Calls",
@@ -230,7 +241,8 @@
     "file": "inbounds-paused-390-dark.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1342,
+    "scrollHeight": 2935,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [
       "Change Live Calls",
@@ -251,7 +263,8 @@
     "file": "inbounds-error-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1017,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [],
     "startCard": [],
@@ -267,7 +280,8 @@
     "file": "inbounds-error-1440-dark.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1017,
+    "clientHeight": 900,
     "theme": "dark",
     "controls": [],
     "startCard": [],
@@ -283,7 +297,8 @@
     "file": "inbounds-error-390-light.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 844,
+    "scrollHeight": 1500,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [],
     "startCard": [],
@@ -299,7 +314,8 @@
     "file": "inbounds-error-390-dark.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 844,
+    "scrollHeight": 1500,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [],
     "startCard": [],
@@ -315,7 +331,8 @@
     "file": "inbounds-notsub-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1266,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [
       "Start"
@@ -333,7 +350,8 @@
     "file": "inbounds-notsub-1440-dark.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1266,
+    "clientHeight": 900,
     "theme": "dark",
     "controls": [
       "Start"
@@ -351,7 +369,8 @@
     "file": "inbounds-notsub-390-light.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 844,
+    "scrollHeight": 1904,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [
       "Start"
@@ -369,7 +388,8 @@
     "file": "inbounds-notsub-390-dark.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 844,
+    "scrollHeight": 1904,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [
       "Start"
@@ -384,74 +404,11 @@
     "width": 390
   },
   {
-    "file": "inbounds-comped-1440-light.png",
-    "scrollWidth": 1425,
-    "clientWidth": 1440,
-    "scrollHeight": 900,
-    "theme": "light",
-    "controls": [],
-    "startCard": [],
-    "small": [],
-    "banned": null,
-    "sets": [],
-    "gets": 1,
-    "pageErrors": [],
-    "scenario": "comped",
-    "width": 1440
-  },
-  {
-    "file": "inbounds-comped-1440-dark.png",
-    "scrollWidth": 1425,
-    "clientWidth": 1440,
-    "scrollHeight": 900,
-    "theme": "dark",
-    "controls": [],
-    "startCard": [],
-    "small": [],
-    "banned": null,
-    "sets": [],
-    "gets": 1,
-    "pageErrors": [],
-    "scenario": "comped",
-    "width": 1440
-  },
-  {
-    "file": "inbounds-comped-390-light.png",
-    "scrollWidth": 390,
-    "clientWidth": 390,
-    "scrollHeight": 844,
-    "theme": "light",
-    "controls": [],
-    "startCard": [],
-    "small": [],
-    "banned": null,
-    "sets": [],
-    "gets": 1,
-    "pageErrors": [],
-    "scenario": "comped",
-    "width": 390
-  },
-  {
-    "file": "inbounds-comped-390-dark.png",
-    "scrollWidth": 390,
-    "clientWidth": 390,
-    "scrollHeight": 844,
-    "theme": "dark",
-    "controls": [],
-    "startCard": [],
-    "small": [],
-    "banned": null,
-    "sets": [],
-    "gets": 1,
-    "pageErrors": [],
-    "scenario": "comped",
-    "width": 390
-  },
-  {
     "file": "inbounds-native-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
     "scrollHeight": 900,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [],
     "startCard": [],
@@ -471,6 +428,7 @@
     "scrollWidth": 1425,
     "clientWidth": 1440,
     "scrollHeight": 900,
+    "clientHeight": 900,
     "theme": "dark",
     "controls": [],
     "startCard": [],
@@ -490,6 +448,7 @@
     "scrollWidth": 390,
     "clientWidth": 390,
     "scrollHeight": 844,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [],
     "startCard": [],
@@ -509,6 +468,7 @@
     "scrollWidth": 390,
     "clientWidth": 390,
     "scrollHeight": 844,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [],
     "startCard": [],
@@ -527,7 +487,8 @@
     "file": "inbounds-allpaused-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1417,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [
       "Change Live Calls",
@@ -548,7 +509,8 @@
     "file": "inbounds-allpaused-390-dark.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1248,
+    "scrollHeight": 2356,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [
       "Change Live Calls",
@@ -569,7 +531,8 @@
     "file": "inbounds-notopen-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 937,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [],
     "startCard": [],
@@ -585,7 +548,8 @@
     "file": "inbounds-notopen-390-dark.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 844,
+    "scrollHeight": 1416,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [],
     "startCard": [],
@@ -601,7 +565,8 @@
     "file": "inbounds-locked-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1266,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [
       "Start"
@@ -619,7 +584,8 @@
     "file": "inbounds-locked-390-dark.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 844,
+    "scrollHeight": 1904,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [
       "Start"
@@ -637,7 +603,8 @@
     "file": "inbounds-spending-1920-light.png",
     "scrollWidth": 1905,
     "clientWidth": 1920,
-    "scrollHeight": 1080,
+    "scrollHeight": 1408,
+    "clientHeight": 1080,
     "theme": "light",
     "controls": [
       "Change Live Calls",
@@ -658,7 +625,8 @@
     "file": "inbounds-spending-1920-dark.png",
     "scrollWidth": 1905,
     "clientWidth": 1920,
-    "scrollHeight": 1080,
+    "scrollHeight": 1408,
+    "clientHeight": 1080,
     "theme": "dark",
     "controls": [
       "Change Live Calls",
@@ -679,7 +647,8 @@
     "file": "inbounds-loading-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1152,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [],
     "startCard": [],
@@ -695,7 +664,8 @@
     "file": "inbounds-loading-390-dark.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 844,
+    "scrollHeight": 2329,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [],
     "startCard": [],
@@ -711,13 +681,18 @@
     "file": "overview-empty-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 1640,
+    "scrollHeight": 900,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [],
     "startCard": [
       "Start"
     ],
-    "small": [],
+    "small": [
+      "Active for live call transfers:36",
+      "Today’s appointments0:34",
+      "New inbounds0:34"
+    ],
     "banned": "—",
     "sets": [],
     "gets": 1,
@@ -730,6 +705,7 @@
     "scrollWidth": 390,
     "clientWidth": 390,
     "scrollHeight": 1727,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [],
     "startCard": [
@@ -747,11 +723,16 @@
     "file": "overview-spending-1440-dark.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 1546,
+    "scrollHeight": 900,
+    "clientHeight": 900,
     "theme": "dark",
     "controls": [],
     "startCard": [],
-    "small": [],
+    "small": [
+      "Active for live call transfers:36",
+      "Today’s appointments0:34",
+      "New inbounds5:34"
+    ],
     "banned": "—",
     "sets": [],
     "gets": 1,
@@ -763,7 +744,8 @@
     "file": "overview-spending-390-dark.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1639,
+    "scrollHeight": 1977,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [],
     "startCard": [],
@@ -779,13 +761,18 @@
     "file": "overview-allpaused-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 1640,
+    "scrollHeight": 900,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [],
     "startCard": [
       "Open"
     ],
-    "small": [],
+    "small": [
+      "Active for live call transfers:36",
+      "Today’s appointments0:34",
+      "New inbounds0:34"
+    ],
     "banned": "—",
     "sets": [],
     "gets": 1,
@@ -798,6 +785,7 @@
     "scrollWidth": 390,
     "clientWidth": 390,
     "scrollHeight": 1728,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [],
     "startCard": [
@@ -815,11 +803,16 @@
     "file": "overview-comped-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 1546,
+    "scrollHeight": 900,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [],
     "startCard": [],
-    "small": [],
+    "small": [
+      "Active for live call transfers:36",
+      "Today’s appointments0:34",
+      "New inbounds0:34"
+    ],
     "banned": "—",
     "sets": [],
     "gets": 1,
@@ -832,6 +825,7 @@
     "scrollWidth": 390,
     "clientWidth": 390,
     "scrollHeight": 1639,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [],
     "startCard": [],
@@ -847,11 +841,16 @@
     "file": "overview-native-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 1546,
+    "scrollHeight": 900,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [],
     "startCard": [],
-    "small": [],
+    "small": [
+      "Active for live call transfers:36",
+      "Today’s appointments0:34",
+      "New inbounds0:34"
+    ],
     "banned": "—",
     "sets": [],
     "gets": 0,
@@ -867,6 +866,7 @@
     "scrollWidth": 390,
     "clientWidth": 390,
     "scrollHeight": 1645,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [],
     "startCard": [],
@@ -886,6 +886,7 @@
     "scrollWidth": 390,
     "clientWidth": 390,
     "scrollHeight": 1727,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [],
     "startCard": [
@@ -903,13 +904,18 @@
     "file": "overview-empty-1440-dark.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 1640,
+    "scrollHeight": 900,
+    "clientHeight": 900,
     "theme": "dark",
     "controls": [],
     "startCard": [
       "Start"
     ],
-    "small": [],
+    "small": [
+      "Active for live call transfers:36",
+      "Today’s appointments0:34",
+      "New inbounds0:34"
+    ],
     "banned": "—",
     "sets": [],
     "gets": 1,
@@ -922,6 +928,7 @@
     "scrollWidth": 1425,
     "clientWidth": 1440,
     "scrollHeight": 900,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [
       "Change profile photo",
@@ -942,6 +949,7 @@
     "scrollWidth": 390,
     "clientWidth": 390,
     "scrollHeight": 1128,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [],
     "startCard": [],
@@ -959,6 +967,7 @@
     "scrollWidth": 1425,
     "clientWidth": 1440,
     "scrollHeight": 900,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [
       "Change profile photo",
@@ -982,6 +991,7 @@
     "scrollWidth": 390,
     "clientWidth": 390,
     "scrollHeight": 990,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [],
     "startCard": [],
@@ -998,10 +1008,271 @@
     "navEntries": 0
   },
   {
-    "file": "sheet-change-1440-light.png",
+    "file": "links-1440",
+    "notsubStart": "/agent/billing",
+    "cardStart": "/agent/leads"
+  },
+  {
+    "file": "links-390",
+    "notsubStart": "/agent/billing",
+    "cardStart": "/agent/leads"
+  },
+  {
+    "file": "inbounds-spending-livetab-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "scrollHeight": 1346,
+    "clientHeight": 900,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 0,
+    "pageErrors": [],
+    "scenario": "spending-livetab",
+    "width": 1440
+  },
+  {
+    "file": "routes-1440",
+    "spendingLands": "/agent/leads",
+    "lockedLands": "/agent/leads",
+    "liveTab": "/agent/leads?tab=live",
+    "panelOnLiveTab": 1
+  },
+  {
+    "file": "inbounds-spending-livetab-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "scrollHeight": 2308,
+    "clientHeight": 844,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 0,
+    "pageErrors": [],
+    "scenario": "spending-livetab",
+    "width": 390
+  },
+  {
+    "file": "routes-390",
+    "spendingLands": "/agent/leads",
+    "lockedLands": "/agent/leads",
+    "liveTab": "/agent/leads?tab=live",
+    "panelOnLiveTab": 1
+  },
+  {
+    "file": "overview-fit-empty-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
     "scrollHeight": 900,
+    "clientHeight": 900,
+    "theme": "light",
+    "controls": [],
+    "startCard": [
+      "Start"
+    ],
+    "small": [
+      "Active for live call transfers:36",
+      "Today’s appointments0:34",
+      "New inbounds0:34"
+    ],
+    "banned": "—",
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "overview-fit-empty",
+    "width": 1440,
+    "fit": {
+      "gridHeight": 501,
+      "gridBottom": 880,
+      "chartHeight": 343,
+      "innerHeight": 900,
+      "cut": []
+    },
+    "viewport": true
+  },
+  {
+    "file": "overview-fit-empty-1280-light.png",
+    "scrollWidth": 1265,
+    "clientWidth": 1280,
+    "scrollHeight": 700,
+    "clientHeight": 700,
+    "theme": "light",
+    "controls": [],
+    "startCard": [
+      "Start"
+    ],
+    "small": [
+      "Submit:40",
+      "Active for live call transfers:30",
+      "Today’s appointments0:30",
+      "New inbounds0:30",
+      "Submit:40"
+    ],
+    "banned": "—",
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "overview-fit-empty",
+    "width": 1280,
+    "fit": {
+      "gridHeight": 356,
+      "gridBottom": 684,
+      "chartHeight": 256,
+      "innerHeight": 700,
+      "cut": []
+    },
+    "viewport": true
+  },
+  {
+    "file": "overview-fit-spending-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "scrollHeight": 900,
+    "clientHeight": 900,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [
+      "Active for live call transfers:36",
+      "Today’s appointments0:34",
+      "New inbounds5:34"
+    ],
+    "banned": "—",
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "overview-fit-spending",
+    "width": 1440,
+    "fit": {
+      "gridHeight": 591,
+      "gridBottom": 880,
+      "chartHeight": 433,
+      "innerHeight": 900,
+      "cut": []
+    },
+    "viewport": true
+  },
+  {
+    "file": "overview-fit-spending-1280-light.png",
+    "scrollWidth": 1265,
+    "clientWidth": 1280,
+    "scrollHeight": 700,
+    "clientHeight": 700,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [
+      "Submit:40",
+      "Active for live call transfers:30",
+      "Today’s appointments0:30",
+      "New inbounds5:30",
+      "Submit:40"
+    ],
+    "banned": "—",
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "overview-fit-spending",
+    "width": 1280,
+    "fit": {
+      "gridHeight": 442,
+      "gridBottom": 684,
+      "chartHeight": 342,
+      "innerHeight": 700,
+      "cut": []
+    },
+    "viewport": true
+  },
+  {
+    "file": "inbounds-comped-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "scrollHeight": 1218,
+    "clientHeight": 900,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "comped",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-comped-1440-dark.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "scrollHeight": 1218,
+    "clientHeight": 900,
+    "theme": "dark",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "comped",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-comped-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "scrollHeight": 1804,
+    "clientHeight": 844,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "comped",
+    "width": 390
+  },
+  {
+    "file": "inbounds-comped-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "scrollHeight": 1804,
+    "clientHeight": 844,
+    "theme": "dark",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "comped",
+    "width": 390
+  },
+  {
+    "file": "sheet-change-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "scrollHeight": 1408,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [
       "Change Live Calls",
@@ -1031,7 +1302,8 @@
     "file": "sheet-below-min-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1408,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [
       "Change Live Calls",
@@ -1057,7 +1329,8 @@
     "file": "sheet-below-min-server-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1408,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [
       "Change Live Calls",
@@ -1073,7 +1346,7 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "live_call",
         "weekly_cents": 4000,
         "paused": false
@@ -1083,14 +1356,15 @@
     "pageErrors": [],
     "scenario": "sheet-below-min-server",
     "width": 1440,
-    "server": "The minimum is $100 a week.",
+    "server": "The weekly minimum is $100.00, or 0 for none.",
     "viewport": true
   },
   {
     "file": "after-save-and-pause-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1409,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [
       "Change Live Calls",
@@ -1104,21 +1378,21 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "live_call",
         "weekly_cents": 4000,
         "paused": false
       },
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "live_call",
         "weekly_cents": 50000,
         "paused": false
       },
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "booked_appointment",
         "weekly_cents": 30000,
         "paused": true
@@ -1133,7 +1407,8 @@
     "file": "sheet-refused-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1408,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [
       "Change Live Calls",
@@ -1149,7 +1424,7 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "live_call",
         "weekly_cents": 60000,
         "paused": false
@@ -1166,7 +1441,8 @@
     "file": "sheet-start-1440-light.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1504,
+    "clientHeight": 900,
     "theme": "light",
     "controls": [
       "Start",
@@ -1188,7 +1464,8 @@
     "file": "sheet-change-1440-dark.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1408,
+    "clientHeight": 900,
     "theme": "dark",
     "controls": [
       "Change Live Calls",
@@ -1218,7 +1495,8 @@
     "file": "sheet-below-min-1440-dark.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1408,
+    "clientHeight": 900,
     "theme": "dark",
     "controls": [
       "Change Live Calls",
@@ -1244,7 +1522,8 @@
     "file": "sheet-below-min-server-1440-dark.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1408,
+    "clientHeight": 900,
     "theme": "dark",
     "controls": [
       "Change Live Calls",
@@ -1260,7 +1539,7 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "live_call",
         "weekly_cents": 4000,
         "paused": false
@@ -1270,14 +1549,15 @@
     "pageErrors": [],
     "scenario": "sheet-below-min-server",
     "width": 1440,
-    "server": "The minimum is $100 a week.",
+    "server": "The weekly minimum is $100.00, or 0 for none.",
     "viewport": true
   },
   {
     "file": "after-save-and-pause-1440-dark.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1409,
+    "clientHeight": 900,
     "theme": "dark",
     "controls": [
       "Change Live Calls",
@@ -1291,21 +1571,21 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "live_call",
         "weekly_cents": 4000,
         "paused": false
       },
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "live_call",
         "weekly_cents": 50000,
         "paused": false
       },
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "booked_appointment",
         "weekly_cents": 30000,
         "paused": true
@@ -1320,7 +1600,8 @@
     "file": "sheet-refused-1440-dark.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1408,
+    "clientHeight": 900,
     "theme": "dark",
     "controls": [
       "Change Live Calls",
@@ -1336,7 +1617,7 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "live_call",
         "weekly_cents": 60000,
         "paused": false
@@ -1353,7 +1634,8 @@
     "file": "sheet-start-1440-dark.png",
     "scrollWidth": 1425,
     "clientWidth": 1440,
-    "scrollHeight": 900,
+    "scrollHeight": 1504,
+    "clientHeight": 900,
     "theme": "dark",
     "controls": [
       "Start",
@@ -1375,7 +1657,8 @@
     "file": "sheet-change-390-light.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1271,
+    "scrollHeight": 2864,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [
       "Change Live Calls",
@@ -1405,7 +1688,8 @@
     "file": "sheet-below-min-390-light.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1271,
+    "scrollHeight": 2864,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [
       "Change Live Calls",
@@ -1431,7 +1715,8 @@
     "file": "sheet-below-min-server-390-light.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1271,
+    "scrollHeight": 2864,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [
       "Change Live Calls",
@@ -1447,7 +1732,7 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "live_call",
         "weekly_cents": 4000,
         "paused": false
@@ -1457,14 +1742,15 @@
     "pageErrors": [],
     "scenario": "sheet-below-min-server",
     "width": 390,
-    "server": "The minimum is $100 a week.",
+    "server": "The weekly minimum is $100.00, or 0 for none.",
     "viewport": true
   },
   {
     "file": "after-save-and-pause-390-light.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1342,
+    "scrollHeight": 2935,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [
       "Change Live Calls",
@@ -1478,21 +1764,21 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "live_call",
         "weekly_cents": 4000,
         "paused": false
       },
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "live_call",
         "weekly_cents": 50000,
         "paused": false
       },
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "booked_appointment",
         "weekly_cents": 30000,
         "paused": true
@@ -1507,7 +1793,8 @@
     "file": "sheet-refused-390-light.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1271,
+    "scrollHeight": 2864,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [
       "Change Live Calls",
@@ -1523,7 +1810,7 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "live_call",
         "weekly_cents": 60000,
         "paused": false
@@ -1540,7 +1827,8 @@
     "file": "sheet-start-390-light.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1267,
+    "scrollHeight": 2375,
+    "clientHeight": 844,
     "theme": "light",
     "controls": [
       "Start",
@@ -1562,7 +1850,8 @@
     "file": "sheet-change-390-dark.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1271,
+    "scrollHeight": 2864,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [
       "Change Live Calls",
@@ -1592,7 +1881,8 @@
     "file": "sheet-below-min-390-dark.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1271,
+    "scrollHeight": 2864,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [
       "Change Live Calls",
@@ -1618,7 +1908,8 @@
     "file": "sheet-below-min-server-390-dark.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1271,
+    "scrollHeight": 2864,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [
       "Change Live Calls",
@@ -1634,7 +1925,7 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "live_call",
         "weekly_cents": 4000,
         "paused": false
@@ -1644,14 +1935,15 @@
     "pageErrors": [],
     "scenario": "sheet-below-min-server",
     "width": 390,
-    "server": "The minimum is $100 a week.",
+    "server": "The weekly minimum is $100.00, or 0 for none.",
     "viewport": true
   },
   {
     "file": "after-save-and-pause-390-dark.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1342,
+    "scrollHeight": 2935,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [
       "Change Live Calls",
@@ -1665,21 +1957,21 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "live_call",
         "weekly_cents": 4000,
         "paused": false
       },
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "live_call",
         "weekly_cents": 50000,
         "paused": false
       },
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "booked_appointment",
         "weekly_cents": 30000,
         "paused": true
@@ -1694,7 +1986,8 @@
     "file": "sheet-refused-390-dark.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1271,
+    "scrollHeight": 2864,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [
       "Change Live Calls",
@@ -1710,7 +2003,7 @@
     "sets": [
       {
         "action": "inbound_set",
-        "return_url": "http://localhost:5824/agent/billing",
+        "return_url": "http://localhost:5739/agent/billing",
         "type": "live_call",
         "weekly_cents": 60000,
         "paused": false
@@ -1727,7 +2020,8 @@
     "file": "sheet-start-390-dark.png",
     "scrollWidth": 390,
     "clientWidth": 390,
-    "scrollHeight": 1267,
+    "scrollHeight": 2375,
+    "clientHeight": 844,
     "theme": "dark",
     "controls": [
       "Start",
@@ -1744,15 +2038,5 @@
     "scenario": "sheet-start",
     "width": 390,
     "viewport": true
-  },
-  {
-    "file": "links-1440",
-    "notsubStart": "/agent/billing",
-    "cardStart": "/agent/inbounds"
-  },
-  {
-    "file": "links-390",
-    "notsubStart": "/agent/billing",
-    "cardStart": "/agent/inbounds"
   }
 ]

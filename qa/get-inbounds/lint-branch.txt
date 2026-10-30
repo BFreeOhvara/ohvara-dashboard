@@ -3,6 +3,9 @@
 > eslint .
 
 
+C:\Users\freem\.atlas\work\ohvara\atlas_571aaa25-get-inbounds-panel-on-a-minimal-\._lint.cjs
+  2:44  error  Parsing error: Unexpected token ') + '
+
 C:\Users\freem\.atlas\work\ohvara\atlas_571aaa25-get-inbounds-panel-on-a-minimal-\scrapers\googlemaps-scraper.js
    27:22  error  'process' is not defined                            no-undef
    28:22  error  'process' is not defined                            no-undef
@@ -87,5 +90,5 @@ Calling setState synchronously within an effect body causes cascading renders th
   97 |   }, [loading, session, profile, submitting, mfaRequired])
   98 |  react-hooks/set-state-in-effect
 
-✖ 26 problems (25 errors, 1 warning)
+✖ 27 problems (26 errors, 1 warning)
 
