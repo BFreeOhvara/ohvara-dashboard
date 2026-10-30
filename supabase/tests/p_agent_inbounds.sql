@@ -1,4 +1,4 @@
--- p_inbound_agent_checks — pgTAP checks for who can see and change an inbound's
+-- p_agent_inbounds — pgTAP checks for who can see and change an inbound's
 -- outcome and notes: agent_inbounds(), inbound_events RLS, set_inbound_outcome
 -- and add_inbound_note (180_agent_inbounds.sql, with the caller check fixed by
 -- 181_fix_inbound_agent_checks.sql).
