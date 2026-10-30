@@ -1,0 +1,167 @@
+/* /signup — the approved mockup (media/signup/Signup + SignupPhone in the vault).
+   Built on the --ov tokens from index.css, so it follows the light/dark theme
+   (unlike the navy-only sign-in / invite pages). The few tokens the mockup adds
+   (input fill and edge, the solid button's text) are defined once here. */
+
+.su {
+  --su-input-bg: rgba(0,0,0,0.28);
+  --su-input-edge: rgba(255,255,255,0.10);
+  --su-solid-bg: #FFFFFF;
+  --su-solid-fg: #0D1730;
+  min-height: 100vh; min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 600px);
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas: "brand card" "mid card" "foot card";
+  background-color: #07080D;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 85% -10%, rgba(75,121,206,0.30) 0%, transparent 70%),
+    radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px);
+  background-size: auto, 24px 24px;
+  color: var(--ov-hi);
+  font-family: 'Manrope', system-ui, sans-serif; font-size: 15px; line-height: 1.45;
+  overflow-x: hidden;
+}
+[data-theme="light"] .su {
+  --su-input-bg: #F6FAF9;
+  --su-input-edge: rgba(2,79,70,0.18);
+  --su-solid-bg: #07332E;
+  --su-solid-fg: #FFFFFF;
+  background-color: #EEF2F3;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 85% -10%, rgba(0,191,166,0.22) 0%, transparent 70%),
+    radial-gradient(rgba(2,79,70,0.13) 1px, transparent 1px);
+}
+.su *, .su *::before, .su *::after { box-sizing: border-box; }
+.su a:not(.su-btn) { color: inherit; text-decoration: none; }
+.su svg { flex-shrink: 0; display: block; }
+
+.su-brand {
+  grid-area: brand; display: flex; align-items: center; gap: 12px; min-width: 0;
+  padding: 48px 56px 0;
+  font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 20px; font-weight: 600;
+}
+.su-mid { grid-area: mid; display: flex; flex-direction: column; justify-content: center; padding: 28px 56px; min-width: 0; }
+.su h1 {
+  font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 54px; font-weight: 700;
+  letter-spacing: -0.045em; line-height: 1.04; overflow-wrap: anywhere;
+}
+.su h1 span { color: var(--ov-data-b); }
+.su-sub { margin-top: 16px; max-width: 500px; font-size: 17px; line-height: 1.55; color: var(--ov-soft); }
+.su-perks { margin-top: 32px; display: flex; flex-direction: column; gap: 12px; max-width: 470px; }
+.su-perk { display: flex; gap: 14px; padding: 16px; align-items: flex-start; }
+.su-perk i {
+  width: 36px; height: 36px; border-radius: 12px; flex: none; display: grid; place-items: center;
+  background: var(--ov-data-b-tint); color: var(--ov-data-b);
+}
+.su-perk b { display: block; font-size: 15.5px; font-weight: 700; }
+.su-perk span span { display: block; margin-top: 2px; font-size: 13.5px; line-height: 1.45; color: var(--ov-mute); }
+.su-foot {
+  grid-area: foot; display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 0 56px 48px;
+  font-size: 13px; color: var(--ov-faint);
+}
+.su-foot a { color: var(--ov-mute); }
+.su-r { grid-area: card; display: flex; align-items: center; justify-content: center; padding: 30px 40px; min-width: 0; }
+
+.su .su-card { width: 100%; max-width: 470px; padding: 30px 32px 26px; border-radius: 28px; }
+.su-card h2 { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 30px; font-weight: 700; letter-spacing: -0.03em; }
+.su-card .lede { margin-top: 6px; font-size: 14.5px; color: var(--ov-mute); }
+.su-tile {
+  width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center;
+  background: var(--ov-st-noanswer-tint); color: var(--ov-st-noanswer);
+}
+.su-card h2.su-closed-h { margin-top: 16px; font-size: 28px; }
+.su-card .lede.su-closed-p { line-height: 1.5; }
+
+/* fields */
+.su-fld { display: block; margin-top: 14px; }
+.su-lab { display: block; font-size: 13px; font-weight: 600; color: var(--ov-mid); margin-bottom: 7px; }
+.su-inp {
+  display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 14px 0 16px; border-radius: 16px;
+  background: var(--su-input-bg); border: 1px solid var(--su-input-edge); color: var(--ov-hi); min-width: 0;
+}
+.su-inp > svg { color: var(--ov-mute); }
+.su-inp input {
+  flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; background: transparent;
+  color: inherit; font: inherit; font-size: 16px;
+}
+.su-inp input::placeholder { color: var(--ov-faint); opacity: 1; }
+.su-inp:focus-within { border-color: var(--ov-data-a); box-shadow: 0 0 0 4px var(--ov-data-a-tint); }
+.su-inp.is-err { border-color: var(--danger); box-shadow: 0 0 0 3px var(--danger-dim); }
+.su-eye {
+  width: 44px; height: 44px; margin-right: -10px; flex: none; display: flex; align-items: center; justify-content: center;
+  border: 0; background: transparent; color: var(--ov-mute); cursor: pointer; border-radius: 12px;
+}
+.su-eye:focus-visible { outline: 2px solid var(--ov-data-a); outline-offset: -2px; }
+.su-hints { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.su-hint { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--ov-mute); }
+.su-hint.ok { color: var(--ov-up); }
+.su-hint i { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid currentColor; }
+.su-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.su-cbrow {
+  position: relative; margin-top: 6px; min-height: 44px; display: flex; align-items: center; gap: 10px;
+  font-size: 13.5px; line-height: 1.45; color: var(--ov-mid); cursor: pointer;
+}
+.su-cbrow input { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; margin: 0; opacity: 0; cursor: pointer; }
+.su-cb {
+  width: 22px; height: 22px; flex: none; border-radius: 7px; border: 1.5px solid var(--su-input-edge);
+  background: var(--su-input-bg); display: flex; align-items: center; justify-content: center; color: var(--su-solid-fg);
+}
+.su-cb.on { background: var(--su-solid-bg); border-color: var(--su-solid-bg); }
+.su-cb.bad { border-color: var(--danger); box-shadow: 0 0 0 3px var(--danger-dim); }
+.su-cbrow input:focus-visible + .su-cb { outline: 2px solid var(--ov-data-a); outline-offset: 2px; }
+.su-cbrow a, .su .su-lnk {
+  color: var(--ov-data-a); font-weight: 600; text-decoration: underline;
+  text-decoration-color: var(--ov-stub); text-underline-offset: 3px;
+}
+.su-lnk { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; cursor: pointer; }
+.su-ferr { margin-top: 8px; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--danger); }
+
+.su-note {
+  display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; margin-top: 16px; border-radius: 16px;
+  font-size: 14px; line-height: 1.5; color: var(--ov-mid); border: 1px solid transparent;
+}
+.su-note b { display: block; font-size: 14.5px; color: var(--ov-hi); font-weight: 700; }
+.su-note > svg { margin-top: 2px; }
+.su-note.info { background: var(--ov-st-booked-tint); border-color: var(--ov-st-booked-edge); }
+.su-note.info > svg { color: var(--ov-st-booked); }
+.su-note.quiet { background: var(--ov-st-noanswer-tint); border-color: var(--ov-st-noanswer-edge); }
+.su-note.quiet > svg { color: var(--ov-st-noanswer); }
+.su-acts { display: flex; flex-wrap: wrap; gap: 2px 16px; margin-top: 4px; font-size: 13.5px; }
+.su-acts a { display: inline-flex; align-items: center; min-height: 44px; }
+
+.su-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 52px; margin-top: 18px;
+  padding: 0 22px; border-radius: 999px; font-size: 15.5px; white-space: nowrap; font-family: inherit; text-decoration: none;
+}
+.su-btn:disabled, .su-btn[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
+.su-below { margin-top: 16px; font-size: 13px; color: var(--ov-mute); text-align: center; }
+.su-below a { display: inline-block; padding: 12px 4px; margin: -12px 0; }
+.su-acts2 { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+.su-acts2 .su-btn { margin-top: 0; }
+
+@media (max-width: 1099.98px) {
+  .su { grid-template-columns: minmax(0, 1fr) minmax(0, 520px); }
+  .su-brand { padding: 40px 32px 0; }
+  .su-mid { padding: 28px 32px; }
+  .su-foot { padding: 0 32px 40px; }
+  .su h1 { font-size: 44px; }
+  .su-r { padding: 30px 24px; }
+}
+
+/* phone: one column, the card sits right under the headline */
+@media (max-width: 767.98px) {
+  .su {
+    display: block; padding: 26px 14px 24px;
+  }
+  .su-brand { padding: 0 8px; font-size: 18px; }
+  .su-mid { padding: 0; }
+  .su h1 { font-size: 34px; margin: 22px 8px 0; }
+  .su-sub { margin: 10px 8px 0; font-size: 15px; }
+  .su-perks { display: none; }
+  .su-r { display: block; padding: 0; margin-top: 22px; }
+  .su .su-card { max-width: none; padding: 22px 20px 20px; border-radius: 26px; }
+  .su-card h2 { font-size: 26px; }
+  .su-foot { margin: 20px 8px 0; padding: 0; }
+}

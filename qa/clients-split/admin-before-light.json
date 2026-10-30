@@ -1,0 +1,17 @@
+{
+ "total": "20 clients · 6 cancelled",
+ "tabs": [
+  "Needs attention Stuck or overdue 1",
+  "Booked Waiting for Fulfillment’s call 8",
+  "No answer Being retried 5",
+  "Cancelled Old policy cancelled 6"
+ ],
+ "rows": [
+  "Needs attention 1 5%",
+  "Booked 8 40%",
+  "No answer 5 25%",
+  "Cancelled 6 30%"
+ ],
+ "nan": false,
+ "side": false
+}

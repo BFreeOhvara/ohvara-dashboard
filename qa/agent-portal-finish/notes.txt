@@ -1,0 +1,81 @@
+Eagle decides: these cards are on master for every agent now. On hold, a follow-up removes Billing.jsx:24.
+
+AGENT PORTAL FINISH: 16 old + 16 new shots, 2 Available soon crops, 2 empty-agent shots
+Made by scripts/agent-portal-finish-shots.mjs. Evidence in checks.json (118 checks, all passed on the final run).
+
+MOCKED DATA (read this first)
+Every Supabase call is mocked. No live data, no login, no seed, no SQL. Everything on these pages is a fixture:
+the test agent (id from src/lib/testAccounts.js, shown as "Test Agent"), 6 policies, 8 inbounds, today's finished
+inbound steps, 3 policy events, a $40.00 prepaid balance and its history, 4 membership plans with no prices
+("Price set by Ohvara"). The browser clock is fixed to today 4:20 PM Chicago. Treat every number as made up.
+
+WHICH VERSIONS
+OLD = commit 2b8337a (2b8337a63cf6e7411e49f4d9d7a7336ddf2bdb94), the master-side parent of merge 3db9106.
+     Not 3db9106^1, which is branch commit 84be192 and already has the Activity events.
+NEW = origin/master 76cee0d (76cee0daa8f082bb6e6cdf3bddfda1b7e100426b), merged into this branch (checkout head in checks.json). 76cee0d is the lead-wording merge (migration 191 and agent-billing strings, no src change).
+     checks.json proves no app file differs from origin/master (only tests and scripts).
+OLD RENDER METHOD: localStorage ov_portal_preview=v1 set before the page loads, and the app_settings mock returns
+its row with the flag column absent (read as off). The URL switch is not used.
+The old side really is old, each true on old and false on new, at all four size/theme combos:
+  Overview: no Today cards text (Live call transfers, Today's appointments, New inbounds)
+  My Pipeline: no "Your clients" box
+  Billing: no "Available soon"
+  Activity: no inbound rows (fixture rows)
+Old Overview is "Book a call / My Pipeline / Inbounds" in the sidebar; new is the regrouped sidebar.
+
+OTHER GOALS SHOW IN THE DIFFERENCE
+The new shots also carry the nav regroup (Today / Leads / Servicing / Communications / Account, Book a call -> Submit,
+Inbounds -> Leads), the pipeline split (In progress and Clients sides), the one-screen desktop Overview with its slim
+Today strip, and the Prepaid card wording. The My Pipeline title reads "My Pipeline" on old and "Clients" on new.
+
+MY PIPELINE SHOTS ARE THE CLIENTS SIDE
+The "Your clients" box only exists on the Clients side of the new page (the default view, In progress, does not
+render it). So the pipeline shots open /agent/clients?stage=cancelled on both sides. The default In progress view
+is not in these shots.
+
+ACTIVITY VERSION IN THE NEW SHOTS
+Master's Activity with the all-events feed and type filter chips (7fd94301 is merged: 024b55b, 1fc6d4a). Migration 185
+(agent_activity_feed) is not applied, so the mock answers that function with a 404 and the page uses its
+policy_events fallback, as it would on live today. It adds the day's finished inbound steps as "Lead update" rows.
+7fd94301 is already on master, so this page will not change when it merges. It changes when 185 is applied.
+FINDING for a fix task (not fixed here, tests and checks only): on that fallback every inbound step is one kind,
+"inbound", so a text, a VA call, a booking and an outcome all show as "Lead update" and count under Leads
+(box: Leads 9, Texts 0, Calls 0, Outcomes 0; chips the same). Casey's "Booked with you" counts under Leads, not
+Bookings. The six kinds are only told apart once 185 is applied and the feed function answers.
+
+EMPTY AGENT (empty/)
+Rendered /agent/activity with the test agent having 3 policy events and no inbounds at all (agent_inbounds,
+inbound_events and replies all empty). DOM checks passed at 1440 light and 390 dark: 3 event rows, none are inbound
+rows, no "Lead update" pill, no "Inbounds" row or word, no "No new leads" note, no "Nothing yet today" block.
+What does show: the approved filter chips (All 3, Leads 0, Texts 0, Calls 0, Bookings 3, Outcomes 0, Clients 0) and the
+Activity box's one row per type, "Leads 0 0%" among them. Those are the type filter and its counts, not an inbound
+event row or an empty inbound block. Eagle can judge whether a "Leads 0" row is wanted for an agent with none.
+
+EVERY EVENT KIND: SEEN LIVE OR FIXTURE-ONLY
+Not seen live. The test agent's login is not available to this run, so nothing was opened on the real preview, and no
+seed was run. Every kind below is fixture-only:
+  came_in        fixture-only (test + shots)
+  text_sent      fixture-only (test + shots). 185 leaves inbound_events text_sent out of the feed on purpose.
+  text_received  fixture-only (test + shots). Texts stay fixture-only: sms_live is off.
+  va_call        fixture-only (test + shots)
+  booked         fixture-only (test + shots)
+  transferred    fixture-only (test + shots)
+  outcome        fixture-only (test + shots)
+  feed kinds inbound, text_auto, text_reply, va_call, booked, transferred, outcome: fixture-only, test only
+  (through the kind map). No feed row is drawn in the shots because the function is not applied.
+The test (src/lib/activityInboundKinds.test.js, 12 tests) proves each kind gives one item with its words, leadId and
+page /agent/inbounds/{leadId}, and that Activity.jsx calls navigate(inboundPath(item.leadId)). A tap that really opens
+the inbound has not been seen on a real row.
+
+BILLING CALLOUT
+new/billing-available-soon-light.png and -dark.png crop the four Available soon cards (1440). New Billing at 390 dark
+and 1440 shows the Prepaid card saying "Inbound form" and "Inbound call" (old says Meta lead / Google call); checks.json
+confirms no "Meta" or "Google" in the new Billing text.
+
+OTHER NOTES
+- Phone shots are full-page captures: the fixed bottom tab bar appears part-way down the image. That is the capture, not the page.
+- No sideways scroll at 390 on all 16 phone shots (old and new): scrollWidth <= clientWidth for each, in checks.json.
+- scripts/portal-v2-shots.mjs and scripts/portal-v2-more-shots.mjs: flag, ?portal=v1 and flag-off checks removed.
+  portal-v2-more-shots.mjs was already stale before this task: it waits for a .pv-content shell that no JSX renders (gone before 2b8337a),
+  so it times out on its first page (seen). portal-v2-shots.mjs also exited 1 on the final run (its failure reason was not read; it has the same .pv-content wait). Both need a rewrite or retirement; not done here.
+  scripts/overview-today-shots.mjs runs clean (4 ok); its desktop Today strip check now reads "Appointments this month".

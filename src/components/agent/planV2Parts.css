@@ -1,0 +1,68 @@
+/* Portal parity T6: v2 Plan's parts on the old Billing page (components/agent/PlanV2Parts.jsx).
+   Cards are the v16 .ov-card / .ov-box surfaces from index.css; these .pl2-* rules are the v2
+   .pv-* rules the parts used, copied here with index.css tokens only (no portalV2.css tokens). */
+.pl2 { max-width: 1120px; width: 100%; margin: 16px auto 0; display: flex; flex-direction: column; gap: 22px; color: var(--ov-hi); font-size: 15px; line-height: 1.45; }
+.pl2 h2, .pl2 h3 { font-family: var(--font-display); font-weight: 600; margin: 0; color: var(--ov-hi); }
+.pl2 h4, .pl2 p { margin: 0; }
+.pl2-group { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.pl2-hd { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; padding: 0 4px; }
+.pl2-hd h2 { font-size: 19px; letter-spacing: -0.01em; }
+.pl2-sub { color: var(--ov-mute); font-size: 13.5px; }
+.pl2-hd .pl2-sub { font-size: 13px; }
+.pl2-grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.pl2-mono { font-family: var(--font-mono); }
+
+/* Which membership the agent is on (v2 Plan's "Your plan" hero, as one line: Billing keeps one hero). */
+.pl2-mine { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; padding: 0 4px; font-size: 14px; color: var(--ov-mid); }
+.pl2-mine b { color: var(--ov-hi); font-weight: 600; }
+.pl2-mine .pl2-dot { color: var(--ov-faint); }
+.pl2-mine > span:last-child { color: var(--ov-mute); }
+
+.pl2-card { padding: 22px 24px; min-width: 0; }
+.pl2-card h3 { font-size: 19px; letter-spacing: -0.01em; line-height: 1.25; }
+.pl2-card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.pl2-tile { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; background: var(--ov-st-booked-tint); color: var(--ov-st-booked); }
+.pl2-tile.is-a { background: var(--ov-data-a-tint); color: var(--ov-data-a); }
+.pl2-tile.is-b { background: var(--ov-data-b-tint); color: var(--ov-data-b); }
+.pl2-tile.is-err { background: var(--danger-dim); color: var(--danger); }
+
+/* Membership tier cards */
+.pl2-tiers { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.pl2-tier { display: flex; flex-direction: column; gap: 14px; }
+.pl2-tier.is-mine { border-color: var(--ov-st-booked-edge); }
+.pl2-tier-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.pl2-tier .pl2-sub { margin-top: -8px; }
+.pl2-tag { height: 26px; padding: 0 11px; border-radius: 999px; background: var(--ov-st-booked-tint); color: var(--ov-st-booked); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.pl2-price { padding: 12px 14px; border-radius: 14px; }
+.pl2-price b { display: block; font-family: var(--font-display); font-weight: 600; font-size: 20px; letter-spacing: -0.01em; color: var(--ov-mid); }
+.pl2-price b.pl2-mono { font-family: var(--font-mono); letter-spacing: 0; color: var(--ov-hi); }
+.pl2-price span { font-size: 12.5px; color: var(--ov-mute); }
+.pl2-inc { display: flex; flex-direction: column; gap: 8px; flex: 1; list-style: none; margin: 0; padding: 0; }
+.pl2-inc li { display: flex; gap: 8px; font-size: 14px; color: var(--ov-mid); line-height: 1.4; }
+.pl2-inc li::before { content: "\2713"; color: var(--ov-data-a); font-weight: 700; flex-shrink: 0; }
+.pl2-inc li.plus::before { content: "+"; }
+.pl2-must { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 14px; font-size: 13.5px; font-weight: 700; color: var(--ov-data-b); background: var(--ov-data-b-tint); border: 1px solid var(--ov-line); }
+.pl2-must svg { margin-top: 2px; }
+.pl2-soon { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 44px; padding: 0 18px; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 700; border: 1px dashed var(--ov-line); background: transparent; color: var(--ov-faint); cursor: not-allowed; }
+.pl2-skel { display: block; border-radius: 10px; background: var(--ov-stub); }
+.pl2-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 26px 22px; }
+.pl2-btn { min-height: 44px; padding: 0 18px; border-radius: 999px; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+/* How it works + the two notes */
+.pl2-two { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
+.pl2-steps { display: flex; flex-direction: column; gap: 12px; counter-reset: s; margin: 0 0 16px; padding: 0; list-style: none; }
+.pl2-steps li { display: flex; gap: 12px; font-size: 14.5px; color: var(--ov-mid); line-height: 1.45; counter-increment: s; }
+.pl2-steps li::before { content: counter(s); width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-family: var(--font-display); font-weight: 600; font-size: 13px; background: var(--ov-data-a-tint); color: var(--ov-data-a); }
+.pl2-youdo { padding: 14px; border-radius: 14px; }
+.pl2-youdo h4 { font-size: 15px; font-weight: 700; margin-bottom: 8px; color: var(--ov-hi); }
+.pl2-youdo ul { display: flex; flex-direction: column; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.pl2-youdo li { display: flex; gap: 8px; font-size: 14px; color: var(--ov-mid); }
+.pl2-youdo li::before { content: "\2022"; color: var(--ov-data-a); font-weight: 700; }
+.pl2-note { display: flex; gap: 14px; align-items: flex-start; }
+
+@media (max-width: 639.98px) {
+  .pl2 { margin-top: 14px; gap: 18px; }
+  .pl2-group, .pl2-tiers, .pl2-two { gap: 14px; }
+  .pl2-card { padding: 18px; }
+  .pl2-card h3, .pl2-hd h2 { font-size: 18px; }
+}

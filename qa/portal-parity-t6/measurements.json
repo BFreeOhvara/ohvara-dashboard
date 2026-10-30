@@ -1,0 +1,2014 @@
+[
+  {
+    "file": "billing-1440-light-master.png",
+    "url": "/agent/billing",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "crumb": "Account / Billing",
+    "planParts": false,
+    "sections": [
+      "Ohvara",
+      "Collapse sidebar",
+      "Main",
+      "Today",
+      "Work",
+      "Communications",
+      "Account",
+      "Bookings this week",
+      "Open menu",
+      "Search clients and pages",
+      "Search",
+      "Notifications",
+      "Your plan",
+      "5 days to renewal",
+      "5 days left",
+      "This week's bookings",
+      "Plans",
+      "Prepaid balance",
+      "Add $100.00",
+      "Add $250.00",
+      "Add $500.00",
+      "Price per lead",
+      "History",
+      "How billing works"
+    ],
+    "money": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Manrope"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$100",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$250",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$500",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$55.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$100.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$70.00",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Manrope"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      }
+    ],
+    "pageErrors": [],
+    "calls": [
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5399/agent/billing\"}",
+      "GET /functions/v1/fetch-secrets ",
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5399/agent/billing\"}"
+    ]
+  },
+  {
+    "file": "billing-1440-dark-master.png",
+    "url": "/agent/billing",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "crumb": "Account / Billing",
+    "planParts": false,
+    "sections": [
+      "Ohvara",
+      "Collapse sidebar",
+      "Main",
+      "Today",
+      "Work",
+      "Communications",
+      "Account",
+      "Bookings this week",
+      "Open menu",
+      "Search clients and pages",
+      "Search",
+      "Notifications",
+      "Your plan",
+      "5 days to renewal",
+      "5 days left",
+      "This week's bookings",
+      "Plans",
+      "Prepaid balance",
+      "Add $100.00",
+      "Add $250.00",
+      "Add $500.00",
+      "Price per lead",
+      "History",
+      "How billing works"
+    ],
+    "money": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Manrope"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$100",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$250",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$500",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$55.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$100.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$70.00",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Manrope"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      }
+    ],
+    "pageErrors": [],
+    "calls": [
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5399/agent/billing\"}",
+      "GET /functions/v1/fetch-secrets ",
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5399/agent/billing\"}"
+    ]
+  },
+  {
+    "file": "billing-390-light-master.png",
+    "url": "/agent/billing",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "crumb": null,
+    "planParts": false,
+    "sections": [
+      "Back",
+      "Your plan",
+      "5 days to renewal",
+      "5 days left",
+      "This week's bookings",
+      "Plans",
+      "Prepaid balance",
+      "Add $100.00",
+      "Add $250.00",
+      "Add $500.00",
+      "Price per lead",
+      "History",
+      "How billing works",
+      "Main",
+      "Home",
+      "Clients",
+      "Book a call",
+      "Messages",
+      "More"
+    ],
+    "money": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$100",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$250",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$500",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$55.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$100.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$70.00",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      }
+    ],
+    "pageErrors": [],
+    "calls": [
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5399/agent/billing\"}",
+      "GET /functions/v1/fetch-secrets ",
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5399/agent/billing\"}"
+    ]
+  },
+  {
+    "file": "billing-390-dark-master.png",
+    "url": "/agent/billing",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "crumb": null,
+    "planParts": false,
+    "sections": [
+      "Back",
+      "Your plan",
+      "5 days to renewal",
+      "5 days left",
+      "This week's bookings",
+      "Plans",
+      "Prepaid balance",
+      "Add $100.00",
+      "Add $250.00",
+      "Add $500.00",
+      "Price per lead",
+      "History",
+      "How billing works",
+      "Main",
+      "Home",
+      "Clients",
+      "Book a call",
+      "Messages",
+      "More"
+    ],
+    "money": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$100",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$250",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$500",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$55.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$100.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$70.00",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      }
+    ],
+    "pageErrors": [],
+    "calls": [
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5399/agent/billing\"}",
+      "GET /functions/v1/fetch-secrets ",
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5399/agent/billing\"}"
+    ]
+  },
+  {
+    "file": "billing-1440-light-master-plan.png",
+    "url": "/agent/billing",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "crumb": "Account / Billing",
+    "planParts": false,
+    "sections": [
+      "Ohvara",
+      "Collapse sidebar",
+      "Main",
+      "Today",
+      "Work",
+      "Communications",
+      "Account",
+      "Bookings this week",
+      "Open menu",
+      "Search clients and pages",
+      "Search",
+      "Notifications",
+      "Your plan",
+      "5 days to renewal",
+      "5 days left",
+      "This week's bookings",
+      "Plans",
+      "Prepaid balance",
+      "Add $100.00",
+      "Add $250.00",
+      "Add $500.00",
+      "Price per lead",
+      "History",
+      "How billing works"
+    ],
+    "money": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Manrope"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$100",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$250",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$500",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$55.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$100.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$70.00",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Manrope"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      }
+    ],
+    "pageErrors": [],
+    "calls": [
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5587/agent/billing\"}",
+      "GET /functions/v1/fetch-secrets ",
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5587/agent/billing\"}"
+    ]
+  },
+  {
+    "file": "billing-1440-dark-master-plan.png",
+    "url": "/agent/billing",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "crumb": "Account / Billing",
+    "planParts": false,
+    "sections": [
+      "Ohvara",
+      "Collapse sidebar",
+      "Main",
+      "Today",
+      "Work",
+      "Communications",
+      "Account",
+      "Bookings this week",
+      "Open menu",
+      "Search clients and pages",
+      "Search",
+      "Notifications",
+      "Your plan",
+      "5 days to renewal",
+      "5 days left",
+      "This week's bookings",
+      "Plans",
+      "Prepaid balance",
+      "Add $100.00",
+      "Add $250.00",
+      "Add $500.00",
+      "Price per lead",
+      "History",
+      "How billing works"
+    ],
+    "money": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Manrope"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$100",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$250",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$500",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$55.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$100.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$70.00",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Manrope"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      }
+    ],
+    "pageErrors": [],
+    "calls": [
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5587/agent/billing\"}",
+      "GET /functions/v1/fetch-secrets ",
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5587/agent/billing\"}"
+    ]
+  },
+  {
+    "file": "billing-390-light-master-plan.png",
+    "url": "/agent/billing",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "crumb": null,
+    "planParts": false,
+    "sections": [
+      "Back",
+      "Your plan",
+      "5 days to renewal",
+      "5 days left",
+      "This week's bookings",
+      "Plans",
+      "Prepaid balance",
+      "Add $100.00",
+      "Add $250.00",
+      "Add $500.00",
+      "Price per lead",
+      "History",
+      "How billing works",
+      "Main",
+      "Home",
+      "Clients",
+      "Book a call",
+      "Messages",
+      "More"
+    ],
+    "money": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$100",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$250",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$500",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$55.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$100.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$70.00",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      }
+    ],
+    "pageErrors": [],
+    "calls": [
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5587/agent/billing\"}",
+      "GET /functions/v1/fetch-secrets ",
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5587/agent/billing\"}"
+    ]
+  },
+  {
+    "file": "billing-390-dark-master-plan.png",
+    "url": "/agent/billing",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "crumb": null,
+    "planParts": false,
+    "sections": [
+      "Back",
+      "Your plan",
+      "5 days to renewal",
+      "5 days left",
+      "This week's bookings",
+      "Plans",
+      "Prepaid balance",
+      "Add $100.00",
+      "Add $250.00",
+      "Add $500.00",
+      "Price per lead",
+      "History",
+      "How billing works",
+      "Main",
+      "Home",
+      "Clients",
+      "Book a call",
+      "Messages",
+      "More"
+    ],
+    "money": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$100",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$250",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$500",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$55.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$100.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$70.00",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      }
+    ],
+    "pageErrors": [],
+    "calls": [
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5587/agent/billing\"}",
+      "GET /functions/v1/fetch-secrets ",
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5587/agent/billing\"}"
+    ]
+  },
+  {
+    "file": "billing-1440-light-pre-t2-plan.png",
+    "url": "/agent/plan",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "crumb": null,
+    "planParts": false,
+    "sections": [
+      "Main menu",
+      "Ohvara",
+      "Your plan",
+      "Plans",
+      "Cancellations",
+      "Cancellations",
+      "Servicing",
+      "Servicing",
+      "Servicing + Appointments",
+      "Servicing + Appointments",
+      "Servicing + Live Calls",
+      "Servicing + Live Calls",
+      "How it works",
+      "Live Calls",
+      "Booked Appointments",
+      "After a sale",
+      "Payment",
+      "Main menu"
+    ],
+    "money": [
+      {
+        "text": "$297",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$899.50",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [],
+    "pageErrors": [],
+    "calls": [
+      "GET /functions/v1/fetch-secrets "
+    ]
+  },
+  {
+    "file": "billing-1440-dark-pre-t2-plan.png",
+    "url": "/agent/plan",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "crumb": null,
+    "planParts": false,
+    "sections": [
+      "Main menu",
+      "Ohvara",
+      "Your plan",
+      "Plans",
+      "Cancellations",
+      "Cancellations",
+      "Servicing",
+      "Servicing",
+      "Servicing + Appointments",
+      "Servicing + Appointments",
+      "Servicing + Live Calls",
+      "Servicing + Live Calls",
+      "How it works",
+      "Live Calls",
+      "Booked Appointments",
+      "After a sale",
+      "Payment",
+      "Main menu"
+    ],
+    "money": [
+      {
+        "text": "$297",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$899.50",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [],
+    "pageErrors": [],
+    "calls": [
+      "GET /functions/v1/fetch-secrets "
+    ]
+  },
+  {
+    "file": "billing-390-light-pre-t2-plan.png",
+    "url": "/agent/plan",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "crumb": null,
+    "planParts": false,
+    "sections": [
+      "Main menu",
+      "Ohvara",
+      "Your plan",
+      "Plans",
+      "Cancellations",
+      "Cancellations",
+      "Servicing",
+      "Servicing",
+      "Servicing + Appointments",
+      "Servicing + Appointments",
+      "Servicing + Live Calls",
+      "Servicing + Live Calls",
+      "How it works",
+      "Live Calls",
+      "Booked Appointments",
+      "After a sale",
+      "Payment",
+      "Main menu"
+    ],
+    "money": [
+      {
+        "text": "$297",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$899.50",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [],
+    "pageErrors": [],
+    "calls": [
+      "GET /functions/v1/fetch-secrets "
+    ]
+  },
+  {
+    "file": "billing-390-dark-pre-t2-plan.png",
+    "url": "/agent/plan",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "crumb": null,
+    "planParts": false,
+    "sections": [
+      "Main menu",
+      "Ohvara",
+      "Your plan",
+      "Plans",
+      "Cancellations",
+      "Cancellations",
+      "Servicing",
+      "Servicing",
+      "Servicing + Appointments",
+      "Servicing + Appointments",
+      "Servicing + Live Calls",
+      "Servicing + Live Calls",
+      "How it works",
+      "Live Calls",
+      "Booked Appointments",
+      "After a sale",
+      "Payment",
+      "Main menu"
+    ],
+    "money": [
+      {
+        "text": "$297",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$899.50",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [],
+    "pageErrors": [],
+    "calls": [
+      "GET /functions/v1/fetch-secrets "
+    ]
+  },
+  {
+    "file": "billing-1440-light-v2.png",
+    "url": "/agent/billing",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "crumb": "Account / Billing",
+    "planParts": true,
+    "sections": [
+      "Ohvara",
+      "Collapse sidebar",
+      "Main",
+      "Today",
+      "Work",
+      "Communications",
+      "Account",
+      "Bookings this week",
+      "Open menu",
+      "Search clients and pages",
+      "Search",
+      "Notifications",
+      "Your plan",
+      "5 days to renewal",
+      "5 days left",
+      "This week's bookings",
+      "Plans",
+      "Prepaid balance",
+      "Add $100.00",
+      "Add $250.00",
+      "Add $500.00",
+      "Price per lead",
+      "History",
+      "How billing works",
+      "Membership plans",
+      "Cancellations",
+      "Cancellations",
+      "Servicing",
+      "Servicing",
+      "Servicing + Appointments",
+      "Servicing + Appointments",
+      "Servicing + Live Calls",
+      "Servicing + Live Calls",
+      "How it works",
+      "Live Calls",
+      "Booked Appointments",
+      "After a sale",
+      "Membership payment"
+    ],
+    "money": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Manrope"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$100",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$250",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$500",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$55.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$100.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$70.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$297",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$899.50",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Manrope"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      }
+    ],
+    "pageErrors": [],
+    "calls": [
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5359/agent/billing\"}",
+      "GET /functions/v1/fetch-secrets ",
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5359/agent/billing\"}"
+    ]
+  },
+  {
+    "file": "billing-1440-dark-v2.png",
+    "url": "/agent/billing",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "crumb": "Account / Billing",
+    "planParts": true,
+    "sections": [
+      "Ohvara",
+      "Collapse sidebar",
+      "Main",
+      "Today",
+      "Work",
+      "Communications",
+      "Account",
+      "Bookings this week",
+      "Open menu",
+      "Search clients and pages",
+      "Search",
+      "Notifications",
+      "Your plan",
+      "5 days to renewal",
+      "5 days left",
+      "This week's bookings",
+      "Plans",
+      "Prepaid balance",
+      "Add $100.00",
+      "Add $250.00",
+      "Add $500.00",
+      "Price per lead",
+      "History",
+      "How billing works",
+      "Membership plans",
+      "Cancellations",
+      "Cancellations",
+      "Servicing",
+      "Servicing",
+      "Servicing + Appointments",
+      "Servicing + Appointments",
+      "Servicing + Live Calls",
+      "Servicing + Live Calls",
+      "How it works",
+      "Live Calls",
+      "Booked Appointments",
+      "After a sale",
+      "Membership payment"
+    ],
+    "money": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Manrope"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$100",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$250",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$500",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$55.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$100.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$70.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$297",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$899.50",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Manrope"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      }
+    ],
+    "pageErrors": [],
+    "calls": [
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5359/agent/billing\"}",
+      "GET /functions/v1/fetch-secrets ",
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5359/agent/billing\"}"
+    ]
+  },
+  {
+    "file": "billing-390-light-v2.png",
+    "url": "/agent/billing",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "crumb": null,
+    "planParts": true,
+    "sections": [
+      "Back",
+      "Your plan",
+      "5 days to renewal",
+      "5 days left",
+      "This week's bookings",
+      "Plans",
+      "Prepaid balance",
+      "Add $100.00",
+      "Add $250.00",
+      "Add $500.00",
+      "Price per lead",
+      "History",
+      "How billing works",
+      "Membership plans",
+      "Cancellations",
+      "Cancellations",
+      "Servicing",
+      "Servicing",
+      "Servicing + Appointments",
+      "Servicing + Appointments",
+      "Servicing + Live Calls",
+      "Servicing + Live Calls",
+      "How it works",
+      "Live Calls",
+      "Booked Appointments",
+      "After a sale",
+      "Membership payment",
+      "Main",
+      "Home",
+      "Clients",
+      "Book a call",
+      "Messages",
+      "More"
+    ],
+    "money": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$100",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$250",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$500",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$55.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$100.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$70.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$297",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$899.50",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      }
+    ],
+    "pageErrors": [],
+    "calls": [
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5359/agent/billing\"}",
+      "GET /functions/v1/fetch-secrets ",
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5359/agent/billing\"}"
+    ]
+  },
+  {
+    "file": "billing-390-dark-v2.png",
+    "url": "/agent/billing",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "crumb": null,
+    "planParts": true,
+    "sections": [
+      "Back",
+      "Your plan",
+      "5 days to renewal",
+      "5 days left",
+      "This week's bookings",
+      "Plans",
+      "Prepaid balance",
+      "Add $100.00",
+      "Add $250.00",
+      "Add $500.00",
+      "Price per lead",
+      "History",
+      "How billing works",
+      "Membership plans",
+      "Cancellations",
+      "Cancellations",
+      "Servicing",
+      "Servicing",
+      "Servicing + Appointments",
+      "Servicing + Appointments",
+      "Servicing + Live Calls",
+      "Servicing + Live Calls",
+      "How it works",
+      "Live Calls",
+      "Booked Appointments",
+      "After a sale",
+      "Membership payment",
+      "Main",
+      "Home",
+      "Clients",
+      "Book a call",
+      "Messages",
+      "More"
+    ],
+    "money": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$100",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$250",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$500",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$55.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$100.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$70.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$297",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$899.50",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      }
+    ],
+    "pageErrors": [],
+    "calls": [
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5359/agent/billing\"}",
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5359/agent/billing\"}",
+      "GET /functions/v1/fetch-secrets "
+    ]
+  },
+  {
+    "file": "billing-1440-light-v1.png",
+    "url": "/agent/billing?portal=v1",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "crumb": "Account / Billing",
+    "planParts": false,
+    "sections": [
+      "Ohvara",
+      "Collapse sidebar",
+      "Main",
+      "Today",
+      "Work",
+      "Communications",
+      "Account",
+      "Bookings this week",
+      "Open menu",
+      "Search clients and pages",
+      "Search",
+      "Notifications",
+      "Your plan",
+      "5 days to renewal",
+      "5 days left",
+      "This week's bookings",
+      "Plans",
+      "Prepaid balance",
+      "Add $100.00",
+      "Add $250.00",
+      "Add $500.00",
+      "Price per lead",
+      "History",
+      "How billing works"
+    ],
+    "money": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Manrope"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$100",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$250",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$500",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$55.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$100.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$70.00",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Manrope"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      }
+    ],
+    "pageErrors": [],
+    "calls": [
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5342/agent/billing\"}",
+      "GET /functions/v1/fetch-secrets ",
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5342/agent/billing\"}"
+    ]
+  },
+  {
+    "file": "billing-1440-dark-v1.png",
+    "url": "/agent/billing?portal=v1",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "crumb": "Account / Billing",
+    "planParts": false,
+    "sections": [
+      "Ohvara",
+      "Collapse sidebar",
+      "Main",
+      "Today",
+      "Work",
+      "Communications",
+      "Account",
+      "Bookings this week",
+      "Open menu",
+      "Search clients and pages",
+      "Search",
+      "Notifications",
+      "Your plan",
+      "5 days to renewal",
+      "5 days left",
+      "This week's bookings",
+      "Plans",
+      "Prepaid balance",
+      "Add $100.00",
+      "Add $250.00",
+      "Add $500.00",
+      "Price per lead",
+      "History",
+      "How billing works"
+    ],
+    "money": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Manrope"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$100",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$250",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$500",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$55.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$100.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$70.00",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Manrope"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      }
+    ],
+    "pageErrors": [],
+    "calls": [
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5342/agent/billing\"}",
+      "GET /functions/v1/fetch-secrets ",
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5342/agent/billing\"}"
+    ]
+  },
+  {
+    "file": "billing-390-light-v1.png",
+    "url": "/agent/billing?portal=v1",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "crumb": null,
+    "planParts": false,
+    "sections": [
+      "Back",
+      "Your plan",
+      "5 days to renewal",
+      "5 days left",
+      "This week's bookings",
+      "Plans",
+      "Prepaid balance",
+      "Add $100.00",
+      "Add $250.00",
+      "Add $500.00",
+      "Price per lead",
+      "History",
+      "How billing works",
+      "Main",
+      "Home",
+      "Clients",
+      "Book a call",
+      "Messages",
+      "More"
+    ],
+    "money": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$100",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$250",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$500",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$55.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$100.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$70.00",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      }
+    ],
+    "pageErrors": [],
+    "calls": [
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5342/agent/billing\"}",
+      "GET /functions/v1/fetch-secrets ",
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5342/agent/billing\"}"
+    ]
+  },
+  {
+    "file": "billing-390-dark-v1.png",
+    "url": "/agent/billing?portal=v1",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "crumb": null,
+    "planParts": false,
+    "sections": [
+      "Back",
+      "Your plan",
+      "5 days to renewal",
+      "5 days left",
+      "This week's bookings",
+      "Plans",
+      "Prepaid balance",
+      "Add $100.00",
+      "Add $250.00",
+      "Add $500.00",
+      "Price per lead",
+      "History",
+      "How billing works",
+      "Main",
+      "Home",
+      "Clients",
+      "Book a call",
+      "Messages",
+      "More"
+    ],
+    "money": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$100",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$250",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "+$500",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$55.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$30.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$40.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$100.00",
+        "font": "JetBrains Mono"
+      },
+      {
+        "text": "$70.00",
+        "font": "JetBrains Mono"
+      }
+    ],
+    "moneyNotMono": [
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$350",
+        "font": "Space Grotesk"
+      },
+      {
+        "text": "$500",
+        "font": "Space Grotesk"
+      }
+    ],
+    "pageErrors": [],
+    "calls": [
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5342/agent/billing\"}",
+      "GET /functions/v1/fetch-secrets ",
+      "POST /functions/v1/agent-billing {\"action\":\"status\",\"return_url\":\"http://localhost:5342/agent/billing\"}"
+    ]
+  }
+]

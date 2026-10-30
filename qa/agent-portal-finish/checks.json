@@ -1,0 +1,2426 @@
+{
+  "mocked": true,
+  "note": "Every Supabase call is mocked; names, events, balances and counts are fixtures, not live data.",
+  "agentId": "3f2b2df7-40b1-4921-80e2-09981c819642",
+  "generatedAt": "2026-10-30T20:03:47.097Z",
+  "oldCommit": "2b8337a",
+  "oldCommitFull": "2b8337a63cf6e7411e49f4d9d7a7336ddf2bdb94",
+  "oldIsParentOfMerge": "3db9106 (master-side parent; not 3db9106^1 = 84be192)",
+  "newCommit": "76cee0d",
+  "newCommitFull": "76cee0daa8f082bb6e6cdf3bddfda1b7e100426b",
+  "checkoutHead": "94c3f6198d33342ccdd85448d236efd6c9da9aba",
+  "newAppSourceDiffersFromMaster": [],
+  "oldRenderMethod": {
+    "summary": "localStorage ov_portal_preview=v1, flag column absent",
+    "localStorage": {
+      "ov_portal_preview": "v1"
+    },
+    "setBefore": "page load (context.addInitScript)",
+    "appSettingsRow": {
+      "id": 1,
+      "agent_billing_enforced": false
+    },
+    "flagColumn": "absent from the app_settings row, read as off",
+    "urlSwitch": false
+  },
+  "activityVersion": {
+    "new": "Activity from master with the all-events feed (7fd94301 merged): type filter chips, per-kind rows. agent_activity_feed answers 404 in the mock (migration 185 not applied), so the page uses its policy_events fallback and adds the finished inbound steps as Lead update rows.",
+    "old": "Activity at 2b8337a: policy_events only, no inbound rows."
+  },
+  "oldSideChecks": {
+    "old": {
+      "overview": {
+        "check": "no Today cards text (Live call transfers, Today’s appointments, New inbounds)",
+        "looksOld": {
+          "1440-light": true,
+          "1440-dark": true,
+          "390-light": true,
+          "390-dark": true
+        }
+      },
+      "pipeline": {
+        "check": "no \"Your clients\" box",
+        "looksOld": {
+          "1440-light": true,
+          "1440-dark": true,
+          "390-light": true,
+          "390-dark": true
+        }
+      },
+      "billing": {
+        "check": "no \"Available soon\" on Billing",
+        "looksOld": {
+          "1440-light": true,
+          "1440-dark": true,
+          "390-light": true,
+          "390-dark": true
+        }
+      },
+      "activity": {
+        "check": "no inbound rows (no inbound client names, no Lead update pill, no inbound row)",
+        "looksOld": {
+          "1440-light": true,
+          "1440-dark": true,
+          "390-light": true,
+          "390-dark": true
+        }
+      }
+    },
+    "new": {
+      "overview": {
+        "check": "no Today cards text (Live call transfers, Today’s appointments, New inbounds)",
+        "looksOld": {
+          "1440-light": false,
+          "1440-dark": false,
+          "390-light": false,
+          "390-dark": false
+        }
+      },
+      "pipeline": {
+        "check": "no \"Your clients\" box",
+        "looksOld": {
+          "1440-light": false,
+          "1440-dark": false,
+          "390-light": false,
+          "390-dark": false
+        }
+      },
+      "billing": {
+        "check": "no \"Available soon\" on Billing",
+        "looksOld": {
+          "1440-light": false,
+          "1440-dark": false,
+          "390-light": false,
+          "390-dark": false
+        }
+      },
+      "activity": {
+        "check": "no inbound rows (no inbound client names, no Lead update pill, no inbound row)",
+        "looksOld": {
+          "1440-light": false,
+          "1440-dark": false,
+          "390-light": false,
+          "390-dark": false
+        }
+      }
+    },
+    "allOldTrue_allNewFalse": true
+  },
+  "stoppedBecauseOldIsNotOld": false,
+  "empty": [
+    {
+      "file": "empty/activity-empty-1440-light.png",
+      "width": 1440,
+      "theme": "light",
+      "mocked": true,
+      "eventRows": 3,
+      "eventKinds": [
+        "moved",
+        "booked",
+        "no_answer"
+      ],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "inboundNames": [],
+      "inboundsCountRow": false,
+      "anyInboundsWord": [],
+      "emptyLeadsBlock": false,
+      "emptyAllBlock": false,
+      "chips": [
+        "All3",
+        "Leads0",
+        "Texts0",
+        "Calls0",
+        "Bookings3",
+        "Outcomes0",
+        "Clients0"
+      ],
+      "boxRows": [
+        {
+          "label": "Leads",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Texts",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Calls",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Bookings",
+          "count": "3",
+          "zero": false
+        },
+        {
+          "label": "Outcomes",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Clients",
+          "count": "0",
+          "zero": true
+        }
+      ],
+      "scrollWidth": 1425,
+      "clientWidth": 1440
+    },
+    {
+      "file": "empty/activity-empty-390-dark.png",
+      "width": 390,
+      "theme": "dark",
+      "mocked": true,
+      "eventRows": 3,
+      "eventKinds": [
+        "moved",
+        "booked",
+        "no_answer"
+      ],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "inboundNames": [],
+      "inboundsCountRow": false,
+      "anyInboundsWord": [],
+      "emptyLeadsBlock": false,
+      "emptyAllBlock": false,
+      "chips": [
+        "All3",
+        "Leads0",
+        "Texts0",
+        "Calls0",
+        "Bookings3",
+        "Outcomes0",
+        "Clients0"
+      ],
+      "boxRows": [
+        {
+          "label": "Leads",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Texts",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Calls",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Bookings",
+          "count": "3",
+          "zero": false
+        },
+        {
+          "label": "Outcomes",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Clients",
+          "count": "0",
+          "zero": true
+        }
+      ],
+      "scrollWidth": 390,
+      "clientWidth": 390
+    }
+  ],
+  "shots": [
+    {
+      "file": "old/overview-1440-light.png",
+      "side": "old",
+      "page": "overview",
+      "route": "/agent",
+      "width": 1440,
+      "theme": "light",
+      "mocked": true,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "url": "/agent",
+      "title": "Overview",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": true,
+      "eventKinds": []
+    },
+    {
+      "file": "old/pipeline-1440-light.png",
+      "side": "old",
+      "page": "pipeline",
+      "route": "/agent/clients?stage=cancelled",
+      "width": 1440,
+      "theme": "light",
+      "mocked": true,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "url": "/agent/clients",
+      "title": "My Pipeline",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": true,
+      "eventKinds": []
+    },
+    {
+      "file": "old/billing-1440-light.png",
+      "side": "old",
+      "page": "billing",
+      "route": "/agent/billing",
+      "width": 1440,
+      "theme": "light",
+      "mocked": true,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "url": "/agent/billing",
+      "title": "Billing",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": true,
+        "google": true
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": true,
+      "eventKinds": []
+    },
+    {
+      "file": "old/activity-1440-light.png",
+      "side": "old",
+      "page": "activity",
+      "route": "/agent/activity",
+      "width": 1440,
+      "theme": "light",
+      "mocked": true,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "url": "/agent/activity",
+      "title": "Activity",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 3,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [
+        {
+          "label": "Booked",
+          "count": "2",
+          "zero": false
+        },
+        {
+          "label": "Calls",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "No answer",
+          "count": "1",
+          "zero": false
+        },
+        {
+          "label": "Cancelled",
+          "count": "0",
+          "zero": true
+        }
+      ],
+      "hasError": null,
+      "looksOld": true,
+      "eventKinds": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "file": "old/overview-1440-dark.png",
+      "side": "old",
+      "page": "overview",
+      "route": "/agent",
+      "width": 1440,
+      "theme": "dark",
+      "mocked": true,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "url": "/agent",
+      "title": "Overview",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": true,
+      "eventKinds": []
+    },
+    {
+      "file": "old/pipeline-1440-dark.png",
+      "side": "old",
+      "page": "pipeline",
+      "route": "/agent/clients?stage=cancelled",
+      "width": 1440,
+      "theme": "dark",
+      "mocked": true,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "url": "/agent/clients",
+      "title": "My Pipeline",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": true,
+      "eventKinds": []
+    },
+    {
+      "file": "old/billing-1440-dark.png",
+      "side": "old",
+      "page": "billing",
+      "route": "/agent/billing",
+      "width": 1440,
+      "theme": "dark",
+      "mocked": true,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "url": "/agent/billing",
+      "title": "Billing",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": true,
+        "google": true
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": true,
+      "eventKinds": []
+    },
+    {
+      "file": "old/activity-1440-dark.png",
+      "side": "old",
+      "page": "activity",
+      "route": "/agent/activity",
+      "width": 1440,
+      "theme": "dark",
+      "mocked": true,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "url": "/agent/activity",
+      "title": "Activity",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 3,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [
+        {
+          "label": "Booked",
+          "count": "2",
+          "zero": false
+        },
+        {
+          "label": "Calls",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "No answer",
+          "count": "1",
+          "zero": false
+        },
+        {
+          "label": "Cancelled",
+          "count": "0",
+          "zero": true
+        }
+      ],
+      "hasError": null,
+      "looksOld": true,
+      "eventKinds": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "file": "old/overview-390-light.png",
+      "side": "old",
+      "page": "overview",
+      "route": "/agent",
+      "width": 390,
+      "theme": "light",
+      "mocked": true,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "url": "/agent",
+      "title": "Good afternoon, Test",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": true,
+      "eventKinds": []
+    },
+    {
+      "file": "old/pipeline-390-light.png",
+      "side": "old",
+      "page": "pipeline",
+      "route": "/agent/clients?stage=cancelled",
+      "width": 390,
+      "theme": "light",
+      "mocked": true,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "url": "/agent/clients",
+      "title": "Clients",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": true,
+      "eventKinds": []
+    },
+    {
+      "file": "old/billing-390-light.png",
+      "side": "old",
+      "page": "billing",
+      "route": "/agent/billing",
+      "width": 390,
+      "theme": "light",
+      "mocked": true,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "url": "/agent/billing",
+      "title": "Billing",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": true,
+        "google": true
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": true,
+      "eventKinds": []
+    },
+    {
+      "file": "old/activity-390-light.png",
+      "side": "old",
+      "page": "activity",
+      "route": "/agent/activity",
+      "width": 390,
+      "theme": "light",
+      "mocked": true,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "url": "/agent/activity",
+      "title": "Activity",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 3,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [
+        {
+          "label": "Booked",
+          "count": "2",
+          "zero": false
+        },
+        {
+          "label": "Calls",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "No answer",
+          "count": "1",
+          "zero": false
+        },
+        {
+          "label": "Cancelled",
+          "count": "0",
+          "zero": true
+        }
+      ],
+      "hasError": null,
+      "looksOld": true,
+      "eventKinds": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "file": "old/overview-390-dark.png",
+      "side": "old",
+      "page": "overview",
+      "route": "/agent",
+      "width": 390,
+      "theme": "dark",
+      "mocked": true,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "url": "/agent",
+      "title": "Good afternoon, Test",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": true,
+      "eventKinds": []
+    },
+    {
+      "file": "old/pipeline-390-dark.png",
+      "side": "old",
+      "page": "pipeline",
+      "route": "/agent/clients?stage=cancelled",
+      "width": 390,
+      "theme": "dark",
+      "mocked": true,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "url": "/agent/clients",
+      "title": "Clients",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": true,
+      "eventKinds": []
+    },
+    {
+      "file": "old/billing-390-dark.png",
+      "side": "old",
+      "page": "billing",
+      "route": "/agent/billing",
+      "width": 390,
+      "theme": "dark",
+      "mocked": true,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "url": "/agent/billing",
+      "title": "Billing",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": true,
+        "google": true
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": true,
+      "eventKinds": []
+    },
+    {
+      "file": "old/activity-390-dark.png",
+      "side": "old",
+      "page": "activity",
+      "route": "/agent/activity",
+      "width": 390,
+      "theme": "dark",
+      "mocked": true,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "url": "/agent/activity",
+      "title": "Activity",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 3,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [
+        {
+          "label": "Booked",
+          "count": "2",
+          "zero": false
+        },
+        {
+          "label": "Calls",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "No answer",
+          "count": "1",
+          "zero": false
+        },
+        {
+          "label": "Cancelled",
+          "count": "0",
+          "zero": true
+        }
+      ],
+      "hasError": null,
+      "looksOld": true,
+      "eventKinds": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "file": "new/overview-1440-light.png",
+      "side": "new",
+      "page": "overview",
+      "route": "/agent",
+      "width": 1440,
+      "theme": "light",
+      "mocked": true,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "url": "/agent",
+      "title": "Overview",
+      "todayCards": [
+        "Live call transfers",
+        "Today’s appointments",
+        "New inbounds"
+      ],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": false,
+      "eventKinds": []
+    },
+    {
+      "file": "new/pipeline-1440-light.png",
+      "side": "new",
+      "page": "pipeline",
+      "route": "/agent/clients?stage=cancelled",
+      "width": 1440,
+      "theme": "light",
+      "mocked": true,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "url": "/agent/clients",
+      "title": "Clients",
+      "todayCards": [],
+      "yourClients": true,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": false,
+      "eventKinds": []
+    },
+    {
+      "file": "new/billing-1440-light.png",
+      "side": "new",
+      "page": "billing",
+      "route": "/agent/billing",
+      "width": 1440,
+      "theme": "light",
+      "mocked": true,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "url": "/agent/billing",
+      "title": "Billing",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 4,
+      "availableSoonText": true,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": true,
+        "inboundCall": true,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": false,
+      "eventKinds": []
+    },
+    {
+      "file": "new/activity-1440-light.png",
+      "side": "new",
+      "page": "activity",
+      "route": "/agent/activity",
+      "width": 1440,
+      "theme": "light",
+      "mocked": true,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "url": "/agent/activity",
+      "title": "Activity",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [
+        "Quinn Example",
+        "Casey Example",
+        "Morgan Placeholder"
+      ],
+      "inboundRows": 9,
+      "leadUpdatePills": 9,
+      "eventRows": 12,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [
+        "All12",
+        "Leads9",
+        "Texts0",
+        "Calls0",
+        "Bookings3",
+        "Outcomes0",
+        "Clients0"
+      ],
+      "boxRows": [
+        {
+          "label": "Leads",
+          "count": "9",
+          "zero": false
+        },
+        {
+          "label": "Texts",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Calls",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Bookings",
+          "count": "3",
+          "zero": false
+        },
+        {
+          "label": "Outcomes",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Clients",
+          "count": "0",
+          "zero": true
+        }
+      ],
+      "hasError": null,
+      "looksOld": false,
+      "eventKinds": [
+        "moved",
+        "booked",
+        "no_answer",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound"
+      ]
+    },
+    {
+      "file": "new/overview-1440-dark.png",
+      "side": "new",
+      "page": "overview",
+      "route": "/agent",
+      "width": 1440,
+      "theme": "dark",
+      "mocked": true,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "url": "/agent",
+      "title": "Overview",
+      "todayCards": [
+        "Live call transfers",
+        "Today’s appointments",
+        "New inbounds"
+      ],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": false,
+      "eventKinds": []
+    },
+    {
+      "file": "new/pipeline-1440-dark.png",
+      "side": "new",
+      "page": "pipeline",
+      "route": "/agent/clients?stage=cancelled",
+      "width": 1440,
+      "theme": "dark",
+      "mocked": true,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "url": "/agent/clients",
+      "title": "Clients",
+      "todayCards": [],
+      "yourClients": true,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": false,
+      "eventKinds": []
+    },
+    {
+      "file": "new/billing-1440-dark.png",
+      "side": "new",
+      "page": "billing",
+      "route": "/agent/billing",
+      "width": 1440,
+      "theme": "dark",
+      "mocked": true,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "url": "/agent/billing",
+      "title": "Billing",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 4,
+      "availableSoonText": true,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": true,
+        "inboundCall": true,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": false,
+      "eventKinds": []
+    },
+    {
+      "file": "new/activity-1440-dark.png",
+      "side": "new",
+      "page": "activity",
+      "route": "/agent/activity",
+      "width": 1440,
+      "theme": "dark",
+      "mocked": true,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "url": "/agent/activity",
+      "title": "Activity",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [
+        "Quinn Example",
+        "Casey Example",
+        "Morgan Placeholder"
+      ],
+      "inboundRows": 9,
+      "leadUpdatePills": 9,
+      "eventRows": 12,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [
+        "All12",
+        "Leads9",
+        "Texts0",
+        "Calls0",
+        "Bookings3",
+        "Outcomes0",
+        "Clients0"
+      ],
+      "boxRows": [
+        {
+          "label": "Leads",
+          "count": "9",
+          "zero": false
+        },
+        {
+          "label": "Texts",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Calls",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Bookings",
+          "count": "3",
+          "zero": false
+        },
+        {
+          "label": "Outcomes",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Clients",
+          "count": "0",
+          "zero": true
+        }
+      ],
+      "hasError": null,
+      "looksOld": false,
+      "eventKinds": [
+        "moved",
+        "booked",
+        "no_answer",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound"
+      ]
+    },
+    {
+      "file": "new/overview-390-light.png",
+      "side": "new",
+      "page": "overview",
+      "route": "/agent",
+      "width": 390,
+      "theme": "light",
+      "mocked": true,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "url": "/agent",
+      "title": "Good afternoon, Test",
+      "todayCards": [
+        "Live call transfers",
+        "Today’s appointments",
+        "New inbounds"
+      ],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [
+        "Casey Example"
+      ],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": false,
+      "eventKinds": []
+    },
+    {
+      "file": "new/pipeline-390-light.png",
+      "side": "new",
+      "page": "pipeline",
+      "route": "/agent/clients?stage=cancelled",
+      "width": 390,
+      "theme": "light",
+      "mocked": true,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "url": "/agent/clients",
+      "title": "Clients",
+      "todayCards": [],
+      "yourClients": true,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": false,
+      "eventKinds": []
+    },
+    {
+      "file": "new/billing-390-light.png",
+      "side": "new",
+      "page": "billing",
+      "route": "/agent/billing",
+      "width": 390,
+      "theme": "light",
+      "mocked": true,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "url": "/agent/billing",
+      "title": "Billing",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 4,
+      "availableSoonText": true,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": true,
+        "inboundCall": true,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": false,
+      "eventKinds": []
+    },
+    {
+      "file": "new/activity-390-light.png",
+      "side": "new",
+      "page": "activity",
+      "route": "/agent/activity",
+      "width": 390,
+      "theme": "light",
+      "mocked": true,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "url": "/agent/activity",
+      "title": "Activity",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [
+        "Quinn Example",
+        "Casey Example",
+        "Morgan Placeholder"
+      ],
+      "inboundRows": 9,
+      "leadUpdatePills": 9,
+      "eventRows": 12,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [
+        "All12",
+        "Leads9",
+        "Texts0",
+        "Calls0",
+        "Bookings3",
+        "Outcomes0",
+        "Clients0"
+      ],
+      "boxRows": [
+        {
+          "label": "Leads",
+          "count": "9",
+          "zero": false
+        },
+        {
+          "label": "Texts",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Calls",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Bookings",
+          "count": "3",
+          "zero": false
+        },
+        {
+          "label": "Outcomes",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Clients",
+          "count": "0",
+          "zero": true
+        }
+      ],
+      "hasError": null,
+      "looksOld": false,
+      "eventKinds": [
+        "moved",
+        "booked",
+        "no_answer",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound"
+      ]
+    },
+    {
+      "file": "new/overview-390-dark.png",
+      "side": "new",
+      "page": "overview",
+      "route": "/agent",
+      "width": 390,
+      "theme": "dark",
+      "mocked": true,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "url": "/agent",
+      "title": "Good afternoon, Test",
+      "todayCards": [
+        "Live call transfers",
+        "Today’s appointments",
+        "New inbounds"
+      ],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [
+        "Casey Example"
+      ],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": false,
+      "eventKinds": []
+    },
+    {
+      "file": "new/pipeline-390-dark.png",
+      "side": "new",
+      "page": "pipeline",
+      "route": "/agent/clients?stage=cancelled",
+      "width": 390,
+      "theme": "dark",
+      "mocked": true,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "url": "/agent/clients",
+      "title": "Clients",
+      "todayCards": [],
+      "yourClients": true,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": false,
+      "eventKinds": []
+    },
+    {
+      "file": "new/billing-390-dark.png",
+      "side": "new",
+      "page": "billing",
+      "route": "/agent/billing",
+      "width": 390,
+      "theme": "dark",
+      "mocked": true,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "url": "/agent/billing",
+      "title": "Billing",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 4,
+      "availableSoonText": true,
+      "inboundNames": [],
+      "inboundRows": 0,
+      "leadUpdatePills": 0,
+      "eventRows": 0,
+      "prepaid": {
+        "inboundForm": true,
+        "inboundCall": true,
+        "meta": false,
+        "google": false
+      },
+      "chips": [],
+      "boxRows": [],
+      "hasError": null,
+      "looksOld": false,
+      "eventKinds": []
+    },
+    {
+      "file": "new/activity-390-dark.png",
+      "side": "new",
+      "page": "activity",
+      "route": "/agent/activity",
+      "width": 390,
+      "theme": "dark",
+      "mocked": true,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "url": "/agent/activity",
+      "title": "Activity",
+      "todayCards": [],
+      "yourClients": false,
+      "availableSoon": 0,
+      "availableSoonText": false,
+      "inboundNames": [
+        "Quinn Example",
+        "Casey Example",
+        "Morgan Placeholder"
+      ],
+      "inboundRows": 9,
+      "leadUpdatePills": 9,
+      "eventRows": 12,
+      "prepaid": {
+        "inboundForm": false,
+        "inboundCall": false,
+        "meta": false,
+        "google": false
+      },
+      "chips": [
+        "All12",
+        "Leads9",
+        "Texts0",
+        "Calls0",
+        "Bookings3",
+        "Outcomes0",
+        "Clients0"
+      ],
+      "boxRows": [
+        {
+          "label": "Leads",
+          "count": "9",
+          "zero": false
+        },
+        {
+          "label": "Texts",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Calls",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Bookings",
+          "count": "3",
+          "zero": false
+        },
+        {
+          "label": "Outcomes",
+          "count": "0",
+          "zero": true
+        },
+        {
+          "label": "Clients",
+          "count": "0",
+          "zero": true
+        }
+      ],
+      "hasError": null,
+      "looksOld": false,
+      "eventKinds": [
+        "moved",
+        "booked",
+        "no_answer",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound",
+        "inbound"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "name": "old commit is 2b8337a",
+      "ok": true,
+      "detail": "2b8337a63cf6e7411e49f4d9d7a7336ddf2bdb94"
+    },
+    {
+      "name": "new side serves this checkout, and its app code equals origin/master",
+      "ok": true,
+      "detail": {
+        "head": "94c3f6198d33342ccdd85448d236efd6c9da9aba",
+        "master": "76cee0daa8f082bb6e6cdf3bddfda1b7e100426b",
+        "differs": []
+      }
+    },
+    {
+      "name": "old/overview-1440-light.png lands on /agent",
+      "ok": true,
+      "detail": "/agent"
+    },
+    {
+      "name": "old/overview-1440-light.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "old/pipeline-1440-light.png lands on /agent/clients?stage=cancelled",
+      "ok": true,
+      "detail": "/agent/clients"
+    },
+    {
+      "name": "old/pipeline-1440-light.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "old/billing-1440-light.png lands on /agent/billing",
+      "ok": true,
+      "detail": "/agent/billing"
+    },
+    {
+      "name": "old/billing-1440-light.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "old/activity-1440-light.png lands on /agent/activity",
+      "ok": true,
+      "detail": "/agent/activity"
+    },
+    {
+      "name": "old/activity-1440-light.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "old/overview-1440-dark.png lands on /agent",
+      "ok": true,
+      "detail": "/agent"
+    },
+    {
+      "name": "old/overview-1440-dark.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "old/pipeline-1440-dark.png lands on /agent/clients?stage=cancelled",
+      "ok": true,
+      "detail": "/agent/clients"
+    },
+    {
+      "name": "old/pipeline-1440-dark.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "old/billing-1440-dark.png lands on /agent/billing",
+      "ok": true,
+      "detail": "/agent/billing"
+    },
+    {
+      "name": "old/billing-1440-dark.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "old/activity-1440-dark.png lands on /agent/activity",
+      "ok": true,
+      "detail": "/agent/activity"
+    },
+    {
+      "name": "old/activity-1440-dark.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "old/overview-390-light.png lands on /agent",
+      "ok": true,
+      "detail": "/agent"
+    },
+    {
+      "name": "old/overview-390-light.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "old/pipeline-390-light.png lands on /agent/clients?stage=cancelled",
+      "ok": true,
+      "detail": "/agent/clients"
+    },
+    {
+      "name": "old/pipeline-390-light.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "old/billing-390-light.png lands on /agent/billing",
+      "ok": true,
+      "detail": "/agent/billing"
+    },
+    {
+      "name": "old/billing-390-light.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "old/activity-390-light.png lands on /agent/activity",
+      "ok": true,
+      "detail": "/agent/activity"
+    },
+    {
+      "name": "old/activity-390-light.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "old/overview-390-dark.png lands on /agent",
+      "ok": true,
+      "detail": "/agent"
+    },
+    {
+      "name": "old/overview-390-dark.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "old/pipeline-390-dark.png lands on /agent/clients?stage=cancelled",
+      "ok": true,
+      "detail": "/agent/clients"
+    },
+    {
+      "name": "old/pipeline-390-dark.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "old/billing-390-dark.png lands on /agent/billing",
+      "ok": true,
+      "detail": "/agent/billing"
+    },
+    {
+      "name": "old/billing-390-dark.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "old/activity-390-dark.png lands on /agent/activity",
+      "ok": true,
+      "detail": "/agent/activity"
+    },
+    {
+      "name": "old/activity-390-dark.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "OLD is old: no Today cards text (Live call transfers, Today’s appointments, New inbounds)",
+      "ok": true,
+      "detail": {
+        "1440-light": true,
+        "1440-dark": true,
+        "390-light": true,
+        "390-dark": true
+      }
+    },
+    {
+      "name": "OLD is old: no \"Your clients\" box",
+      "ok": true,
+      "detail": {
+        "1440-light": true,
+        "1440-dark": true,
+        "390-light": true,
+        "390-dark": true
+      }
+    },
+    {
+      "name": "OLD is old: no \"Available soon\" on Billing",
+      "ok": true,
+      "detail": {
+        "1440-light": true,
+        "1440-dark": true,
+        "390-light": true,
+        "390-dark": true
+      }
+    },
+    {
+      "name": "OLD is old: no inbound rows (no inbound client names, no Lead update pill, no inbound row)",
+      "ok": true,
+      "detail": {
+        "1440-light": true,
+        "1440-dark": true,
+        "390-light": true,
+        "390-dark": true
+      }
+    },
+    {
+      "name": "new/overview-1440-light.png lands on /agent",
+      "ok": true,
+      "detail": "/agent"
+    },
+    {
+      "name": "new/overview-1440-light.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "new/pipeline-1440-light.png lands on /agent/clients?stage=cancelled",
+      "ok": true,
+      "detail": "/agent/clients"
+    },
+    {
+      "name": "new/pipeline-1440-light.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "new/billing-1440-light.png lands on /agent/billing",
+      "ok": true,
+      "detail": "/agent/billing"
+    },
+    {
+      "name": "new/billing-1440-light.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "new/activity-1440-light.png lands on /agent/activity",
+      "ok": true,
+      "detail": "/agent/activity"
+    },
+    {
+      "name": "new/activity-1440-light.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "new/overview-1440-dark.png lands on /agent",
+      "ok": true,
+      "detail": "/agent"
+    },
+    {
+      "name": "new/overview-1440-dark.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "new/pipeline-1440-dark.png lands on /agent/clients?stage=cancelled",
+      "ok": true,
+      "detail": "/agent/clients"
+    },
+    {
+      "name": "new/pipeline-1440-dark.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "new/billing-1440-dark.png lands on /agent/billing",
+      "ok": true,
+      "detail": "/agent/billing"
+    },
+    {
+      "name": "new/billing-1440-dark.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "new/activity-1440-dark.png lands on /agent/activity",
+      "ok": true,
+      "detail": "/agent/activity"
+    },
+    {
+      "name": "new/activity-1440-dark.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "new/overview-390-light.png lands on /agent",
+      "ok": true,
+      "detail": "/agent"
+    },
+    {
+      "name": "new/overview-390-light.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "new/pipeline-390-light.png lands on /agent/clients?stage=cancelled",
+      "ok": true,
+      "detail": "/agent/clients"
+    },
+    {
+      "name": "new/pipeline-390-light.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "new/billing-390-light.png lands on /agent/billing",
+      "ok": true,
+      "detail": "/agent/billing"
+    },
+    {
+      "name": "new/billing-390-light.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "new/activity-390-light.png lands on /agent/activity",
+      "ok": true,
+      "detail": "/agent/activity"
+    },
+    {
+      "name": "new/activity-390-light.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "new/overview-390-dark.png lands on /agent",
+      "ok": true,
+      "detail": "/agent"
+    },
+    {
+      "name": "new/overview-390-dark.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "new/pipeline-390-dark.png lands on /agent/clients?stage=cancelled",
+      "ok": true,
+      "detail": "/agent/clients"
+    },
+    {
+      "name": "new/pipeline-390-dark.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "new/billing-390-dark.png lands on /agent/billing",
+      "ok": true,
+      "detail": "/agent/billing"
+    },
+    {
+      "name": "new/billing-390-dark.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "new/activity-390-dark.png lands on /agent/activity",
+      "ok": true,
+      "detail": "/agent/activity"
+    },
+    {
+      "name": "new/activity-390-dark.png no page error, no write, nothing blocked beyond the mock",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": []
+      }
+    },
+    {
+      "name": "NEW is not old: no Today cards text (Live call transfers, Today’s appointments, New inbounds) is false",
+      "ok": true,
+      "detail": {
+        "1440-light": false,
+        "1440-dark": false,
+        "390-light": false,
+        "390-dark": false
+      }
+    },
+    {
+      "name": "NEW is not old: no \"Your clients\" box is false",
+      "ok": true,
+      "detail": {
+        "1440-light": false,
+        "1440-dark": false,
+        "390-light": false,
+        "390-dark": false
+      }
+    },
+    {
+      "name": "NEW is not old: no \"Available soon\" on Billing is false",
+      "ok": true,
+      "detail": {
+        "1440-light": false,
+        "1440-dark": false,
+        "390-light": false,
+        "390-dark": false
+      }
+    },
+    {
+      "name": "NEW is not old: no inbound rows (no inbound client names, no Lead update pill, no inbound row) is false",
+      "ok": true,
+      "detail": {
+        "1440-light": false,
+        "1440-dark": false,
+        "390-light": false,
+        "390-dark": false
+      }
+    },
+    {
+      "name": "new Activity shows the inbound rows from the fixture (Lead update pills)",
+      "ok": true,
+      "detail": [
+        {
+          "f": "new/activity-1440-light.png",
+          "rows": 9,
+          "pills": 9
+        },
+        {
+          "f": "new/activity-1440-dark.png",
+          "rows": 9,
+          "pills": 9
+        },
+        {
+          "f": "new/activity-390-light.png",
+          "rows": 9,
+          "pills": 9
+        },
+        {
+          "f": "new/activity-390-dark.png",
+          "rows": 9,
+          "pills": 9
+        }
+      ]
+    },
+    {
+      "name": "new Billing: four Available soon cards, Prepaid card says Inbound form and Inbound call, never Meta or Google",
+      "ok": true,
+      "detail": [
+        {
+          "f": "new/billing-1440-light.png",
+          "soon": 4,
+          "inboundForm": true,
+          "inboundCall": true,
+          "meta": false,
+          "google": false
+        },
+        {
+          "f": "new/billing-1440-dark.png",
+          "soon": 4,
+          "inboundForm": true,
+          "inboundCall": true,
+          "meta": false,
+          "google": false
+        },
+        {
+          "f": "new/billing-390-light.png",
+          "soon": 4,
+          "inboundForm": true,
+          "inboundCall": true,
+          "meta": false,
+          "google": false
+        },
+        {
+          "f": "new/billing-390-dark.png",
+          "soon": 4,
+          "inboundForm": true,
+          "inboundCall": true,
+          "meta": false,
+          "google": false
+        }
+      ]
+    },
+    {
+      "name": "no sideways scroll old/overview-390-light.png",
+      "ok": true,
+      "detail": "390<=390"
+    },
+    {
+      "name": "no sideways scroll old/pipeline-390-light.png",
+      "ok": true,
+      "detail": "390<=390"
+    },
+    {
+      "name": "no sideways scroll old/billing-390-light.png",
+      "ok": true,
+      "detail": "390<=390"
+    },
+    {
+      "name": "no sideways scroll old/activity-390-light.png",
+      "ok": true,
+      "detail": "390<=390"
+    },
+    {
+      "name": "no sideways scroll old/overview-390-dark.png",
+      "ok": true,
+      "detail": "390<=390"
+    },
+    {
+      "name": "no sideways scroll old/pipeline-390-dark.png",
+      "ok": true,
+      "detail": "390<=390"
+    },
+    {
+      "name": "no sideways scroll old/billing-390-dark.png",
+      "ok": true,
+      "detail": "390<=390"
+    },
+    {
+      "name": "no sideways scroll old/activity-390-dark.png",
+      "ok": true,
+      "detail": "390<=390"
+    },
+    {
+      "name": "no sideways scroll new/overview-390-light.png",
+      "ok": true,
+      "detail": "390<=390"
+    },
+    {
+      "name": "no sideways scroll new/pipeline-390-light.png",
+      "ok": true,
+      "detail": "390<=390"
+    },
+    {
+      "name": "no sideways scroll new/billing-390-light.png",
+      "ok": true,
+      "detail": "390<=390"
+    },
+    {
+      "name": "no sideways scroll new/activity-390-light.png",
+      "ok": true,
+      "detail": "390<=390"
+    },
+    {
+      "name": "no sideways scroll new/overview-390-dark.png",
+      "ok": true,
+      "detail": "390<=390"
+    },
+    {
+      "name": "no sideways scroll new/pipeline-390-dark.png",
+      "ok": true,
+      "detail": "390<=390"
+    },
+    {
+      "name": "no sideways scroll new/billing-390-dark.png",
+      "ok": true,
+      "detail": "390<=390"
+    },
+    {
+      "name": "no sideways scroll new/activity-390-dark.png",
+      "ok": true,
+      "detail": "390<=390"
+    },
+    {
+      "name": "no sideways scroll old/overview-1440-light.png (desktop, for the record)",
+      "ok": true,
+      "detail": "1425<=1440"
+    },
+    {
+      "name": "no sideways scroll old/pipeline-1440-light.png (desktop, for the record)",
+      "ok": true,
+      "detail": "1425<=1440"
+    },
+    {
+      "name": "no sideways scroll old/billing-1440-light.png (desktop, for the record)",
+      "ok": true,
+      "detail": "1425<=1440"
+    },
+    {
+      "name": "no sideways scroll old/activity-1440-light.png (desktop, for the record)",
+      "ok": true,
+      "detail": "1425<=1440"
+    },
+    {
+      "name": "no sideways scroll old/overview-1440-dark.png (desktop, for the record)",
+      "ok": true,
+      "detail": "1425<=1440"
+    },
+    {
+      "name": "no sideways scroll old/pipeline-1440-dark.png (desktop, for the record)",
+      "ok": true,
+      "detail": "1425<=1440"
+    },
+    {
+      "name": "no sideways scroll old/billing-1440-dark.png (desktop, for the record)",
+      "ok": true,
+      "detail": "1425<=1440"
+    },
+    {
+      "name": "no sideways scroll old/activity-1440-dark.png (desktop, for the record)",
+      "ok": true,
+      "detail": "1425<=1440"
+    },
+    {
+      "name": "no sideways scroll new/overview-1440-light.png (desktop, for the record)",
+      "ok": true,
+      "detail": "1425<=1440"
+    },
+    {
+      "name": "no sideways scroll new/pipeline-1440-light.png (desktop, for the record)",
+      "ok": true,
+      "detail": "1425<=1440"
+    },
+    {
+      "name": "no sideways scroll new/billing-1440-light.png (desktop, for the record)",
+      "ok": true,
+      "detail": "1425<=1440"
+    },
+    {
+      "name": "no sideways scroll new/activity-1440-light.png (desktop, for the record)",
+      "ok": true,
+      "detail": "1425<=1440"
+    },
+    {
+      "name": "no sideways scroll new/overview-1440-dark.png (desktop, for the record)",
+      "ok": true,
+      "detail": "1425<=1440"
+    },
+    {
+      "name": "no sideways scroll new/pipeline-1440-dark.png (desktop, for the record)",
+      "ok": true,
+      "detail": "1425<=1440"
+    },
+    {
+      "name": "no sideways scroll new/billing-1440-dark.png (desktop, for the record)",
+      "ok": true,
+      "detail": "1425<=1440"
+    },
+    {
+      "name": "no sideways scroll new/activity-1440-dark.png (desktop, for the record)",
+      "ok": true,
+      "detail": "1425<=1440"
+    },
+    {
+      "name": "empty agent 1440 light: policy events show (3 rows)",
+      "ok": true,
+      "detail": [
+        "moved",
+        "booked",
+        "no_answer"
+      ]
+    },
+    {
+      "name": "empty agent 1440 light: no inbound event row, no Lead update pill",
+      "ok": true,
+      "detail": {
+        "rows": 0,
+        "pills": 0,
+        "names": []
+      }
+    },
+    {
+      "name": "empty agent 1440 light: no Inbounds count row, no \"Inbounds\" word anywhere",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "empty agent 1440 light: no empty inbound block (no \"No new leads\" note, no \"Nothing yet today\")",
+      "ok": true,
+      "detail": {
+        "emptyLeadsBlock": false,
+        "emptyAllBlock": false,
+        "inboundsLabel": false,
+        "anyInboundsWord": []
+      }
+    },
+    {
+      "name": "empty agent 1440 light: no page error, no write, no sideways scroll",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": [],
+        "sw": "1425<=1440"
+      }
+    },
+    {
+      "name": "empty agent 390 dark: policy events show (3 rows)",
+      "ok": true,
+      "detail": [
+        "moved",
+        "booked",
+        "no_answer"
+      ]
+    },
+    {
+      "name": "empty agent 390 dark: no inbound event row, no Lead update pill",
+      "ok": true,
+      "detail": {
+        "rows": 0,
+        "pills": 0,
+        "names": []
+      }
+    },
+    {
+      "name": "empty agent 390 dark: no Inbounds count row, no \"Inbounds\" word anywhere",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "empty agent 390 dark: no empty inbound block (no \"No new leads\" note, no \"Nothing yet today\")",
+      "ok": true,
+      "detail": {
+        "emptyLeadsBlock": false,
+        "emptyAllBlock": false,
+        "inboundsLabel": false,
+        "anyInboundsWord": []
+      }
+    },
+    {
+      "name": "empty agent 390 dark: no page error, no write, no sideways scroll",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "writes": [],
+        "sw": "390<=390"
+      }
+    }
+  ]
+}
