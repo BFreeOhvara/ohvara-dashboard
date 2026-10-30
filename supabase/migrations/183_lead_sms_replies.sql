@@ -1,11 +1,10 @@
--- NNN — Lead text replies for the VA queue (Roadmap Goal 8 groundwork).
+-- 183 — Lead text replies for the VA queue (Roadmap Goal 8 groundwork).
 --
 -- NOT APPLIED. Written from a worktree; applying it is a separate, checked
 -- step. Additive only: one table, two indexes on it, a trigger and four
 -- functions, each created only if it isn't there yet (or replaced in place).
 -- Nothing is dropped, renamed, truncated or deleted. Creates no index on
--- leads and grants nothing on sms_e164. NNN is a placeholder: the file takes
--- the number the migration ledger reserved for this task before it merges.
+-- leads and grants nothing on sms_e164.
 --
 -- HOLD: merge only after Goal 1's 166_lead_types_delivery is merged (one lead
 -- model first). This file does not use leads.lead_type, so it applies before
