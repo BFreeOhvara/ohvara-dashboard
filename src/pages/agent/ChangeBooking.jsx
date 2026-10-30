@@ -710,7 +710,7 @@ function SavedCard({ name, at, tz, rebook, onPipeline, onAnother }) {
         )}
         <div style={{ marginTop: 28, display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
           <button type="button" onClick={onPipeline} className="ov-hero-btn" style={{ height: 50, padding: '0 26px', fontSize: 15 }}>
-            <ArrowLeft size={17} strokeWidth={2.1} /> Back to My Pipeline
+            <ArrowLeft size={17} strokeWidth={2.1} /> Back to Clients
           </button>
           <button type="button" onClick={onAnother} style={{
             height: 50, boxSizing: 'border-box', padding: '0 24px', borderRadius: 999, fontSize: 15, fontWeight: 600, color: '#fff',

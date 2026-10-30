@@ -30,7 +30,6 @@ import AgentBilling from './pages/agent/Billing'
 import AgentMore from './pages/agent/More'
 // Inbounds, Inbound detail and Calendar (from the v2 portal), added to the old portal for every agent
 // (portal parity answer 0). Lazy, so they download only when opened.
-const V2Inbounds = lazy(() => import('./pages/agent/v2/Inbounds'))
 const V2InboundDetail = lazy(() => import('./pages/agent/v2/InboundDetail'))
 const V2Calendar = lazy(() => import('./pages/agent/v2/Calendar'))
 // P808: Leads mounts only in dev behind VITE_LEADS_PAGE=1; otherwise the page is not in the bundle.
@@ -151,12 +150,8 @@ export default function App() {
                 <DashboardLayout><AgentOverview /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* Inbounds list, one inbound and Calendar, in the old chrome for every agent. Old v2 Plan links land on Billing. */}
-            <Route path="/agent/inbounds" element={
-              <ProtectedRoute allowedRoles={['agent']}>
-                <DashboardLayout><Suspense fallback={null}><V2Inbounds /></Suspense></DashboardLayout>
-              </ProtectedRoute>
-            } />
+            {/* Inbounds is now Leads: the old list URL lands on /agent/leads (which itself lands on /agent while Leads is off). One inbound and Calendar keep their routes. Old v2 Plan links land on Billing. */}
+            <Route path="/agent/inbounds" element={<Navigate to="/agent/leads" replace />} />
             <Route path="/agent/inbounds/:id" element={
               <ProtectedRoute allowedRoles={['agent']}>
                 <DashboardLayout><Suspense fallback={null}><V2InboundDetail /></Suspense></DashboardLayout>
