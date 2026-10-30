@@ -143,7 +143,7 @@ export function PlanV2Parts() {
       <section aria-labelledby="pl2-how" className="pl2-group">
         <div className="pl2-hd">
           <h2 id="pl2-how">How it works</h2>
-          <span className="pl2-sub">What we do with every inbound, and what you do</span>
+          <span className="pl2-sub">What we do with every lead, and what you do</span>
         </div>
         <div className="pl2-two">
           <How

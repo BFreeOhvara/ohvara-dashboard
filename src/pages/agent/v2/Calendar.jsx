@@ -30,7 +30,7 @@ import './calendarExtra.css'
 
 // ── Tones: status colours from the --ov-st-* vars, teal for a call happening now ─────────────────────
 const KIND = {
-  i: { icon: Inbox, word: 'Inbound', label: 'Inbound appointment', open: 'Open inbound' },
+  i: { icon: Inbox, word: 'Lead', label: 'Lead appointment', open: 'Open lead' },
   c: { icon: Phone, word: 'Booked call', label: 'Cancellation call', open: 'Open booking' },
 }
 const KEYS = [
@@ -188,7 +188,7 @@ function Key() {
     <div className="cal-key" aria-label="Key">
       {KEYS.map(k => <span key={k.tone} className={`cal-t-${k.tone}`}><i />{k.label}</span>)}
       <u className="kinds" />
-      <span className="kinds"><Ico icon={Inbox} size={13} />Inbound</span>
+      <span className="kinds"><Ico icon={Inbox} size={13} />Lead</span>
       <span className="kinds"><Ico icon={Phone} size={13} />Booked call</span>
     </div>
   )
@@ -418,7 +418,7 @@ function Panel({ a, tz, nowMs, today, onClose }) {
           </div>
         )}
       </div>
-      {a.mark && <p className="cal-note">After you meet, mark the outcome on the inbound: Sold, Follow up or Not interested.</p>}
+      {a.mark && <p className="cal-note">After you meet, mark the outcome on the lead: Sold, Follow up or Not interested.</p>}
     </section>
   )
 }
@@ -440,7 +440,7 @@ function EmptyMessage({ title, text, full, keys = true }) {
       {keys && (
         <div className="cal-keys">
           <div><Ico icon={Phone} size={16} /><span><b>Booked calls</b>Cancellation calls you book for your clients.</span></div>
-          <div><Ico icon={Inbox} size={16} /><span><b>Inbounds</b>People our VA books at your first open time.</span></div>
+          <div><Ico icon={Inbox} size={16} /><span><b>Leads</b>People our VA books at your first open time.</span></div>
         </div>
       )}
       <Link className="ov-solid cal-cta" to="/agent/book" style={full ? { width: '100%' } : undefined}><Ico icon={CalendarPlus} size={17} />Book a call</Link>
@@ -519,7 +519,7 @@ function Agenda({ days, items, from, today, tz, nowMs, onNext }) {
                 {i === firstLater && <div className="cal-ag-now">Now · {timeText(new Date(nowMs).toISOString(), tz)}</div>}
                 <AgendaRow a={a} tz={tz} nowMs={nowMs} />
               </div>
-            )) : <p className="cal-ag-empty"><b>Nothing booked</b>Booked calls and inbounds that book for this day show up here.</p>}
+            )) : <p className="cal-ag-empty"><b>Nothing booked</b>Booked calls and leads that book for this day show up here.</p>}
           </div>
         )
       })}
@@ -628,7 +628,7 @@ export default function Calendar() {
         <DayGrid day={anchor} items={inDay} today={today} tz={tz} nowMs={nowMs} selId={sel?.id} onPick={pick}>
           {inDay.length === 0 && (
             <div className="cal-over day">
-              <EmptyMessage title={`Nothing booked ${dayName}`} text="Booked calls and inbounds that book for this day show up here, with their phone number and both time zones." keys={false} />
+              <EmptyMessage title={`Nothing booked ${dayName}`} text="Booked calls and leads that book for this day show up here, with their phone number and both time zones." keys={false} />
             </div>
           )}
         </DayGrid>
@@ -637,7 +637,7 @@ export default function Calendar() {
     ) : (
       <div className={`cal-main pv-only-desk${weekEmpty ? ' full' : ''}`}>
         <WeekGrid days={days} items={inWeek} today={today} tz={tz} nowMs={nowMs} selId={sel?.id} onPick={pick} onDay={openDay}>
-          {weekEmpty && <div className="cal-over"><EmptyMessage title="Nothing booked this week" text="Booked calls and inbounds that book on your calendar show up here." /></div>}
+          {weekEmpty && <div className="cal-over"><EmptyMessage title="Nothing booked this week" text="Booked calls and leads that book on your calendar show up here." /></div>}
         </WeekGrid>
         {!weekEmpty && rail}
       </div>
@@ -648,7 +648,7 @@ export default function Calendar() {
         <div className="cal-ph-flow pv-only-phone">
           <Strip days={days} items={inWeek} from={from} today={today} onPick={setPhFrom} blank={weekEmpty} />
           {weekEmpty
-            ? <EmptyMessage title="Nothing booked this week" text="Booked calls and inbounds that book on your calendar show up here." full />
+            ? <EmptyMessage title="Nothing booked this week" text="Booked calls and leads that book on your calendar show up here." full />
             : <Agenda days={days} items={inWeek} from={from} today={today} tz={tz} nowMs={nowMs} onNext={() => go(1)} />}
         </div>
       </>

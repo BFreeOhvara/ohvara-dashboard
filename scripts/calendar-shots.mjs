@@ -104,7 +104,7 @@ try {
         /Elena Marsh/.test(panel.text) && /\(555\) 010-0148/.test(panel.text) && /Ohio/.test(panel.text) && /Booked/.test(panel.text) && /Your time/.test(panel.text) && /Their time/.test(panel.text),
         panel.text, { text: panel.text })
       check(`${tag} panel: tel and sms links`, panel.tel === 'tel:+15550100148' && panel.sms === 'sms:+15550100148', JSON.stringify(panel))
-      check(`${tag} panel: no Reschedule on an inbound`, !panel.links.includes('Reschedule') && panel.links.includes('Open inbound'), JSON.stringify(panel.links))
+      check(`${tag} panel: no Reschedule on an inbound`, !panel.links.includes('Reschedule') && panel.links.includes('Open lead'), JSON.stringify(panel.links))
       const fitP = await page.evaluate(() => ({ sh: document.documentElement.scrollHeight, ih: innerHeight }))
       check(`${tag} panel: still fits`, fitP.sh <= fitP.ih + 1, JSON.stringify(fitP))
       await shot(page, `calendar-panel-inbound-${tag}`)
@@ -142,7 +142,7 @@ try {
       const emp = await page.evaluate(() => ({
         h3: document.querySelector('.cal-msg h3')?.innerText, cta: document.querySelector('.cal-msg a.cal-cta')?.getAttribute('href'), text: document.querySelector('.cal-msg p')?.innerText,
       }))
-      check(`${tag} empty: explains and links to Book a call`, emp.h3 === 'Nothing booked this week' && emp.cta === '/agent/book' && /Booked calls and inbounds that book on your calendar show up here\./.test(emp.text), JSON.stringify(emp), emp)
+      check(`${tag} empty: explains and links to Book a call`, emp.h3 === 'Nothing booked this week' && emp.cta === '/agent/book' && /Booked calls and leads that book on your calendar show up here\./.test(emp.text), JSON.stringify(emp), emp)
       await shot(page, `calendar-empty-${tag}`)
       await ctx.close()
       // Error

@@ -25,7 +25,7 @@ import './clientsV2Parts.css'
 
 const CLIENT_FILTERS = [
   { key: 'all', label: 'All' },
-  { key: 'inbound', label: 'From inbounds' },
+  { key: 'inbound', label: 'From leads' },
   { key: 'existing', label: 'Existing' },
 ]
 const phone10 = raw => digits(raw).slice(-10)
@@ -94,7 +94,7 @@ function useV2Clients() {
   }
 }
 
-// Search (name, or 3+ digits of the phone) and the All / From inbounds / Existing filter.
+// Search (name, or 3+ digits of the phone) and the All / From leads / Existing filter.
 function useClientFilter(clients) {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
@@ -112,7 +112,7 @@ function useClientFilter(clients) {
 
 // ── List ─────────────────────────────────────────────────────────────────────
 export function SourceChip({ c }) {
-  return c.source === 'inbound' ? <span className="cv2-chip a">From an inbound</span> : <span className="cv2-chip">Existing</span>
+  return c.source === 'inbound' ? <span className="cv2-chip a">From a lead</span> : <span className="cv2-chip">Existing</span>
 }
 
 export function ClientsV2Row({ c, on, tz, onOpen }) {
@@ -144,7 +144,7 @@ export function ClientsV2Card({ data, activeId, onOpen, className = '' }) {
   else if (clients.length === 0) {
     body = (
       <div className="cv2-empty">
-        <p className="cv2-sub">When you mark an inbound Sold, they show up here and servicing starts. Clients you already had show up once you book a cancellation for them.</p>
+        <p className="cv2-sub">When you mark a lead Sold, they show up here and servicing starts. Clients you already had show up once you book a cancellation for them.</p>
         <Link className="ov-ghost cv2-btn" to="/agent/book">Book a cancellation call</Link>
       </div>
     )
@@ -333,7 +333,7 @@ export function ConsentCard() {
 
 function clientSubLine(c, tz) {
   return c.source === 'inbound'
-    ? [c.soldAt ? `Sold ${dateText(c.soldAt, tz)} from an inbound` : 'Sold from an inbound', c.place].filter(Boolean).join(' · ')
+    ? [c.soldAt ? `Sold ${dateText(c.soldAt, tz)} from a lead` : 'Sold from a lead', c.place].filter(Boolean).join(' · ')
     : ['Existing client', c.place].filter(Boolean).join(' · ')
 }
 

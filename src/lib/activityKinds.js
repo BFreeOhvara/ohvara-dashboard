@@ -58,7 +58,7 @@ const ROW_META = {
   no_answer:   { label: 'No answer', pill: 'No answer', base: '--ov-st-noanswer', icon: PhoneMissed },
   cancelled:   EVENT_KIND.cancelled,
   needs:       { label: 'Needs attention', pill: 'Needs attention', base: '--ov-st-needs' },
-  inbound:     { label: 'Inbounds', pill: 'Inbound', base: '--ov-kind-moved' },
+  inbound:     { label: 'Leads', pill: 'Lead', base: '--ov-kind-moved' },
 }
 const TAB_ROW = { booked: 'booked', noAnswer: 'no_answer', needs: 'needs', cancelled: 'cancelled' }
 // Prompt 760: Reassigned (admin gave the call to another Fulfillment person) counts the same way.

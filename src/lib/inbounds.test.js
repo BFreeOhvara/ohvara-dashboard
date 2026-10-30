@@ -65,9 +65,9 @@ test('inboundActivityItems: no events or no inbounds gives nothing', () => {
   assert.deepEqual(inboundActivityItems([ev('e1', 'l-1', 'came_in', 'done')], []), [])
 })
 
-test('Activity: the status model keeps its Inbounds row; the Leads kind reads New lead', () => {
+test('Activity: the status model keeps its Leads row; the Leads kind reads New lead', () => {
   assert.ok(ACTIVITY_ROWS.includes('inbound'))
-  assert.equal(rowMeta('inbound').label, 'Inbounds')
+  assert.equal(rowMeta('inbound').label, 'Leads')
   assert.equal(kindMeta('inbound').pill, 'New lead')
   assert.equal(activityRow('inbound', null), 'inbound')
   assert.equal(activityRow('moved', 'noAnswer'), 'no_answer')
@@ -97,7 +97,7 @@ test('Inbounds sample: the page loads the fixture only behind import.meta.env.DE
   assert.match(page, /import\.meta\.env\.DEV && sampleOn/)
   assert.match(page, /import\('\.\.\/\.\.\/\.\.\/lib\/inboundsSample'\)/)
   assert.match(page, /<GetInboundsSlot \/>/)
-  assert.match(page, /You&rsquo;re not getting inbounds yet/)
+  assert.match(page, /You&rsquo;re not getting leads yet/)
   assert.doesNotMatch(page, /^import .*inboundsSample/m) // dynamic import only, never a static one
   assert.match(src('./inboundsSample.js'), /^\/\/ SAMPLE-FIXTURE-INB/)
 })

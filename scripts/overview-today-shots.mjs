@@ -151,7 +151,7 @@ const SIZES = { 1440: { width: 1440, height: 900 }, 390: { width: 390, height: 8
 // The old Overview's cards, in page order (desktop; the phone gets PhoneHome's sections).
 const OLD_DESKTOP = ['Good afternoon, Jordan', 'Booked this week', 'Cancelled this week', 'Needs your attention', 'Last week']
 const OLD_PHONE = ['Good afternoon, Jordan', 'Bookings this week', 'Needs you', 'Up next', 'Booked this week', 'Cancelled this week']
-const TODAY = ['Next appointment', 'Live call transfers', 'Appointments left this month', 'Today’s appointments', 'New inbounds']
+const TODAY = ['Next appointment', 'Live call transfers', 'Appointments left this month', 'Today’s appointments', 'New leads']
 const results = []
 let failed = false
 

@@ -287,11 +287,11 @@ const expectFor = {
     } else {
       check(failures, m.text.includes('Oct 26 – Nov 1'), 'calendar: no "Oct 26 – Nov 1" range')
       check(failures, m.events >= 12, `calendar: ${m.events} events in the week grid, expected 12+`)
-      for (const s of ['Later today', 'Open inbound', 'Next up']) check(failures, m.text.includes(s), `calendar: missing "${s}"`)
+      for (const s of ['Later today', 'Open lead', 'Next up']) check(failures, m.text.includes(s), `calendar: missing "${s}"`)
     }
   },
   clients: ({ failures, m, view, w }) => {
-    if (view === 'list' || w !== 390) for (const s of ['Dana Rivera', 'From an inbound', 'Existing', 'Lee Park', 'All', 'From inbounds']) check(failures, m.text.includes(s), `clients list: missing "${s}"`)
+    if (view === 'list' || w !== 390) for (const s of ['Dana Rivera', 'From a lead', 'Existing', 'Lee Park', 'All', 'From leads']) check(failures, m.text.includes(s), `clients list: missing "${s}"`)
     if (view === 'detail' || w !== 390) {
       for (const s of ['Policies', 'Mutual of Omaha', '$64.20', 'Chargeback watch', 'Month 1 of 12', 'Draft date change', 'Requested', 'Scheduled', 'Done', 'Request servicing', 'Cancellations', 'Waiting for Fulfillment', 'Consent']) check(failures, m.text.includes(s), `clients detail: missing "${s}"`)
       check(failures, m.tasks >= 4, `clients detail: ${m.tasks} servicing tasks, expected 4`)
