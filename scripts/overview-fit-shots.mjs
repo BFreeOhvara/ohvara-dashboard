@@ -97,6 +97,7 @@ const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers
 const json = (route, status, body) => route.fulfill({ status, headers: { ...CORS, 'content-type': 'application/json' }, body: JSON.stringify(body) })
 
 async function mock(page, { profile, rows, failPolicies, grace }) {
+  let policyCalls = 0 // failPolicies 'stale': the first load works, every refetch after it fails (the rows stay cached)
   await page.route(`${SB}/**`, async route => {
     const req = route.request()
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS })
@@ -108,7 +109,8 @@ async function mock(page, { profile, rows, failPolicies, grace }) {
     if (path === '/rest/v1/rpc/get_my_profile') return json(route, 200, profile)
     const table = path.replace('/rest/v1/', '')
     if (table === 'policies') {
-      if (failPolicies) return json(route, 500, { code: 'XX000', message: 'mock failure', details: null, hint: null })
+      policyCalls++
+      if (failPolicies === true || (failPolicies === 'stale' && policyCalls > 1)) return json(route, 500, { code: 'XX000', message: 'mock failure', details: null, hint: null })
       return reply(rows)
     }
     if (table === 'app_settings') return reply([{ id: 1, agent_billing_enforced: !!grace }])
@@ -151,7 +153,7 @@ const measure = page => page.evaluate(() => {
       if ((oy === 'auto' || oy === 'scroll') && visible(e)) out.scrollers.push({ cls: String(e.className).slice(0, 40), scrollHeight: e.scrollHeight, clientHeight: e.clientHeight, scrolls: e.scrollHeight > e.clientHeight + 1, bottom: +e.getBoundingClientRect().bottom.toFixed(1) })
     }
     out.attnRows = [...box.querySelectorAll('.ov-attn-row, .ov-up-row')].filter(visible).length
-    out.attnBtnText = parts.attnBtn ? parts.attnBtn.textContent.trim() : null
+    out.attnBtnText = parts.attnBtn ? parts.attnBtn.innerText.trim() : null
   }
   out.pageScroll = { scrollHeight: document.documentElement.scrollHeight, innerHeight: vh, scrollWidth: document.documentElement.scrollWidth, innerWidth: vw }
   out.fontsOk = document.fonts.status
@@ -183,7 +185,7 @@ async function open({ route = '/agent', w, h, theme, fixture = 'rows4', call = f
   await mock(page, { profile, rows, failPolicies: err, grace })
   await page.goto(`${base}${route}`, { waitUntil: 'domcontentloaded' })
   if (route === '/agent' && !phone) {
-    if (err) await page.locator('[role="alert"]').first().waitFor({ timeout: 40000 })
+    if (err) await page.locator('[role="alert"]').first().waitFor({ timeout: 90000 })
     else await page.waitForFunction(() => /Needs your attention|all caught up/.test(document.querySelector('.ov-grid')?.textContent || '') && !/Needs your attention—$/.test(document.querySelector('.ov-grid')?.children[1]?.textContent || ''), null, { timeout: 30000 })
   } else {
     await page.waitForSelector('.ov-hero, .ph-main, .tc-phone', { timeout: 30000 })
@@ -193,7 +195,7 @@ async function open({ route = '/agent', w, h, theme, fixture = 'rows4', call = f
   return { ctx, page, errors }
 }
 
-const tag = o => [o.route === '/agent' || !o.route ? 'agent' : o.route.slice(1), o.fixture, o.worst ? 'worst' : null, `${o.w}x${o.h}`, o.theme].filter(Boolean).join('-')
+const tag = o => [o.route === '/agent' || !o.route ? 'agent' : o.route.slice(1), o.fixture, o.worst ? `worst-${o.err === 'stale' ? 'stale-error' : o.err ? 'load-failed' : 'banners'}` : null, `${o.w}x${o.h}`, o.theme].filter(Boolean).join('-')
 
 async function agentCase(o) {
   try { await agentCaseRun(o) } catch (e) {
@@ -261,7 +263,8 @@ try {
     for (const [w, h] of FIT_SIZES) for (const fixture of ['rows0', 'rows4', 'rows12', 'caught']) await agentCase({ w, h, theme, fixture })
     // Worst case: call banner, LoadError, ConfirmEmailBanner (and the payment banner) all showing.
     for (const [w, h] of [[1440, 780], [1280, 700]]) {
-      await agentCase({ w, h, theme, fixture: 'rows12', call: true, err: true, confirm: true, grace: true, worst: true })
+      await agentCase({ w, h, theme, fixture: 'rows12', call: true, err: 'stale', confirm: true, grace: true, worst: true }) // the three banners plus the payment one: refetch failed, old rows still cached
+      await agentCase({ w, h, theme, fixture: 'rows12', err: true, confirm: true, grace: true, worst: true }) // first load failed: dashes, no list
       await agentCase({ w, h, theme, fixture: 'rows12', call: true, confirm: true, grace: true, worst: true }) // banners without the load error: the list and button stay in view
     }
     // Under 1280 wide or 700 tall: not fit mode. The cap stays at 4, the page scrolls as today.

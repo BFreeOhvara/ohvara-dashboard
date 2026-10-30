@@ -79,11 +79,11 @@ function useTextsWaiting() {
 
 // The Overview's side box with Today's Texts waiting folded in: amber while a client or a
 // text needs the agent, otherwise the calm "You're all caught up" box.
-export function AttentionWithTexts({ items, loading, upcoming, now, onGo }) {
+export function AttentionWithTexts({ items, loading, upcoming, now, onGo, fit }) {
   const { rows } = useTextsWaiting()
   return loading || items.length > 0 || rows.length > 0
-    ? <AttentionCard items={items} loading={loading} onGo={onGo} texts={loading ? [] : rows} />
-    : <ComingUpCard upcoming={upcoming} now={now} onGo={onGo} />
+    ? <AttentionCard items={items} loading={loading} onGo={onGo} texts={loading ? [] : rows} fit={fit} />
+    : <ComingUpCard upcoming={upcoming} now={now} onGo={onGo} fit={fit} />
 }
 
 function NextAppointment({ appts, now, tz, evMap, loading, failed, onRetry }) {
@@ -272,13 +272,75 @@ function TextsCard() {
   )
 }
 
+// Booked appointments that came in this month (the plan meter's "used").
+function usedThisMonth(list, now, tz) {
+  const monthKey = now.toLocaleDateString('en-CA', { timeZone: tz }).slice(0, 7)
+  return list.filter(l => l.inbound_product === 'booked_appointment' && ['booked', 'met', 'sold', 'follow_up'].includes(l.inbound_stage)
+    && new Date(cameInAt(l)).toLocaleDateString('en-CA', { timeZone: tz }).slice(0, 7) === monthKey).length
+}
+
+// The Overview on a 1280x700+ screen (fit mode) has no room for the five cards, so it shows this one slim row:
+// Next appointment, the Live call transfers switch and Appointments left, from the same hooks as the cards.
+// Today's appointments lives on the Calendar and New inbounds in Activity (each row there opens its inbound);
+// the two links carry the counts. Under 1280x700 and on phones the five cards are shown as before.
+export function TodayStrip() {
+  const { tz, inb, now, list, appts } = useToday()
+  const { on, since, soon, loading: dutyLoading, failed: dutyFailed, toggle } = useAgentDuty()
+  const { data: tier, isLoading: tierLoading, isError: tierFailed } = useMembershipTier()
+  const loading = inb.isLoading
+  const failed = inb.isError
+  const next = appts.find(a => a.l.inbound_stage === 'booked' && new Date(a.at) >= now)
+  const todayCount = appts.filter(a => sameDay(a.at, now, tz)).length
+  const recentCount = list.filter(l => isRecent(l, tz, now.getTime())).length
+  const total = tier?.monthly_appointments
+  const has = Number.isInteger(total) && total > 0
+  const left = has ? Math.max(0, total - usedThisMonth(list, now, tz)) : null
+  const dutyLive = !dutyLoading && !soon && !dutyFailed
+
+  return (
+    <section className="ov-card tcs" aria-label="Today">
+      <div className="tcs-seg tcs-next">
+        <span className="tcs-tile"><CalendarClock size={16} strokeWidth={2} aria-hidden="true" /></span>
+        <div className="tcs-t">
+          <b>Next appointment</b>
+          <span>{loading ? '—' : failed ? 'Couldn’t load your appointments' : next ? `${timeText(next.at, tz)} · ${leadName(next.l)}` : 'Nothing booked today'}</span>
+        </div>
+        {next && !loading && !failed && <span className="tc-chip tcs-chip">{untilWords(next.at, tz, now.getTime())}</span>}
+      </div>
+
+      <div className="tcs-seg tcs-duty">
+        <span className="tcs-tile"><Zap size={16} strokeWidth={2} aria-hidden="true" /></span>
+        <div className="tcs-t">
+          <b>Live call transfers</b>
+          <span>{dutyLoading ? 'Checking…' : soon ? 'Coming soon' : dutyFailed ? 'Couldn’t check right now'
+            : on ? (since ? `Active since ${dutySince(since, new Date(), tz)}` : 'You’re active') : 'You’re not active'}</span>
+        </div>
+        <button type="button" className={`tc-sw${on ? ' on' : ''}`} role="switch" aria-checked={on} disabled={!dutyLive}
+          aria-label={soon ? 'Active for live call transfers (coming soon)' : 'Active for live call transfers'}
+          onClick={() => toggle(!on)}><i /></button>
+      </div>
+
+      <div className="tcs-seg tcs-plan">
+        <span className="tcs-tile"><CalendarDays size={16} strokeWidth={2} aria-hidden="true" /></span>
+        <div className="tcs-t">
+          <b>{tierLoading || loading || tierFailed || !has ? '—' : `${left} of ${total} left`}</b>
+          <span>Appointments this month</span>
+        </div>
+      </div>
+
+      <div className="tcs-links">
+        <Link className="ov-ghost" to="/agent/calendar">Today’s appointments{!loading && !failed && <b>{todayCount}</b>}<ChevronRight size={14} strokeWidth={2.2} aria-hidden="true" /></Link>
+        <Link className="ov-ghost" to="/agent/activity">New inbounds{!loading && !failed && <b>{recentCount}</b>}<ChevronRight size={14} strokeWidth={2.2} aria-hidden="true" /></Link>
+      </div>
+    </section>
+  )
+}
+
 export function TodayCards({ showTexts = false }) {
   const { tz, inb, now, evMap, list, appts } = useToday()
   const today = appts.filter(a => sameDay(a.at, now, tz))
   const recent = list.filter(l => isRecent(l, tz, now.getTime()))
-  const monthKey = now.toLocaleDateString('en-CA', { timeZone: tz }).slice(0, 7)
-  const used = list.filter(l => l.inbound_product === 'booked_appointment' && ['booked', 'met', 'sold', 'follow_up'].includes(l.inbound_stage)
-    && new Date(cameInAt(l)).toLocaleDateString('en-CA', { timeZone: tz }).slice(0, 7) === monthKey).length
+  const used = usedThisMonth(list, now, tz)
 
   const loading = inb.isLoading
   const failed = inb.isError
