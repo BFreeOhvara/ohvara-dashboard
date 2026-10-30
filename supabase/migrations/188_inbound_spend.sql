@@ -7,10 +7,11 @@
 -- profiles.billing_tier and migration 176 (prepaid ledger, unapplied) stay as
 -- they are; the app just stops using the tiers.
 --
--- The file name carries no number yet: the runner reserved none for this task.
--- It takes its reserved number before merging.
+-- 187 (Submit, on master) calls this file NEXT_inbound_spend.sql; it is this file.
+-- Its agent_submit_deal does its own cap check from agent_weekly_usage. That check
+-- is not touched here, so it keeps refusing on the tier cap until it is removed.
 --
---   app_settings               agent_billing_weekly_cents is the servicing price;
+--   app_settings              agent_billing_weekly_cents is the servicing price;
 --                              the agent-billing function makes its Stripe Price
 --                              from it. An agent on an older price keeps that
 --                              price: nothing here or in the function reprices
@@ -27,9 +28,9 @@
 -- policy and no write grant for anon or authenticated: writes go through the
 -- agent-billing function with the service role.
 --
--- agent_id has no on delete action, like the ledger in 176: this is money
--- history. Delete my account (156) anonymises the profile and keeps its row, so
--- these references never get in its way.
+-- agent_id has no cascade, like the ledger in 176: this is money history.
+-- Closing an account (156) anonymises the profile and keeps its row, so these
+-- references never get in its way.
 
 -- ── settings ────────────────────────────────────────────────────────────────
 
