@@ -366,7 +366,7 @@ export function IconChip({ icon: Icon, color, tint, size = 36, radius = 11, icon
 // `compact` (Prompt 758, the admin Overview) is the same panel a size tighter.
 // Prompt 768 (QA Finding 7) — a load that failed says so, instead of looking
 // like a brand-new empty account. `what` finishes "Couldn't load …".
-export function LoadError({ what, onRetry, style }) {
+export function LoadError({ what, onRetry, style, tall }) {
   return (
     <div role="alert" style={{
       display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 16,
@@ -378,7 +378,7 @@ export function LoadError({ what, onRetry, style }) {
         <button type="button" onClick={onRetry} style={{
           flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 10,
           border: 'var(--border-w) solid var(--danger-bd)', background: 'transparent', color: 'var(--danger)',
-          fontSize: 13, fontWeight: 600, cursor: 'pointer',
+          fontSize: 13, fontWeight: 600, cursor: 'pointer', ...(tall ? { minHeight: 44 } : null),
         }}>
           <RefreshCw size={14} strokeWidth={2.2} /> Try again
         </button>
@@ -1030,7 +1030,11 @@ export function CarrierInput({ carriers, text, picked, onText, onPick, onUseText
   const [active, setActive] = useState(0)
   const [asking, setAsking] = useState(null) // the name an admin is about to add
   const inputRef = useRef(null)
-  const listId = 'carrier-suggest'
+  // Two carrier boxes can share a page (Submit's new and old carrier), so the
+  // ids can't be fixed strings.
+  const uid = useId()
+  const inputId = `carrier-input-${uid}`
+  const listId = `carrier-suggest-${uid}`
   const hits = useMemo(() => (picked ? [] : rankCarriers(carriers, text)), [carriers, text, picked])
   const trimmed = text.trim()
   const useRow = !picked && trimmed.length >= 2 && hits.length === 0
@@ -1074,12 +1078,12 @@ export function CarrierInput({ carriers, text, picked, onText, onPick, onUseText
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0, position: 'relative' }}>
-      <label htmlFor="carrier-input" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>{label}</label>
+      <label htmlFor={inputId} style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>{label}</label>
       <span className={`ov-input${error ? ' is-error' : ''}${changed ? ' is-changed' : ''}`}>
         <Building2 size={17} strokeWidth={1.9} style={{ flexShrink: 0 }} />
         <span className="ov-complete-wrap">
           <input
-            ref={inputRef} id="carrier-input" value={text} autoComplete="off" spellCheck={false} placeholder="e.g. Mutual of Omaha"
+            ref={inputRef} id={inputId} value={text} autoComplete="off" spellCheck={false} placeholder="e.g. Mutual of Omaha"
             role="combobox" aria-expanded={shown} aria-controls={listId} aria-autocomplete="both" aria-invalid={error || undefined}
             aria-activedescendant={shown ? `${listId}-${at}` : undefined} autoFocus={autoFocus}
             onChange={e => { onText(e.target.value); setOpen(true); setActive(0); setAsking(null) }}
@@ -1447,7 +1451,7 @@ export function BookingSummary({ name, phone, carrier, scheduledAt, now, onBook,
 // "3 of 7 bookings this week" with one segment per allowed booking; at the
 // cap everything turns amber. `pill` is the phone version.
 // Prompt 730 — `note` replaces the plan line (Change a booking's "never uses one").
-export function WeeklyUsage({ cap, resets, pill, note }) {
+export function WeeklyUsage({ cap, resets, pill, note, noun = 'bookings' }) {
   const warn = cap.atCap
   if (pill) {
     return (
@@ -1466,7 +1470,7 @@ export function WeeklyUsage({ cap, resets, pill, note }) {
         <span style={{ ...OV_NUM, fontSize: 30, letterSpacing: '-0.03em', ...(warn ? { color: 'var(--ov-warn)' } : null) }}>
           {cap.used}<span style={{ fontSize: 17, fontWeight: 500, color: 'var(--ov-mute)' }}> of {cap.cap}</span>
         </span>
-        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ov-mid)' }}>bookings this week</span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ov-mid)' }}>{noun} this week</span>
       </div>
       <div aria-hidden="true" style={{ display: 'flex', gap: 5 }}>
         {Array.from({ length: cap.cap }, (_, i) => (
@@ -1491,8 +1495,11 @@ function scriptWhen(iso, now, tz) {
 
 // The success screen after a booking, with the line to read to the client.
 // Prompt 724 — optional `tz` (the client's zone) and `location`.
-export function BookedCard({ name, at, now, onAnother, onPipeline, tz, location }) {
-  const { time, period, full } = bookingWhen(at, now, tz)
+// Submit (new deal flow) reuses it for a deal with no call: `chip`, `extraChip`,
+// `line` (instead of the day and time) and `box` (instead of the script) swap
+// the words, `anotherLabel` / `pipelineLabel` the two buttons.
+export function BookedCard({ name, at, now, onAnother, onPipeline, tz, location, anotherLabel = 'Book another', pipelineLabel = 'See it in Clients', chip = 'Booked with Fulfillment', extraChip, line, box }) {
+  const { time, period, full } = at ? bookingWhen(at, now, tz) : {}
   return (
     <div className="pt-6 sm:pt-[72px]" style={{ maxWidth: 620, margin: '0 auto' }}>
       <section className="ov-hero px-5 pt-10 pb-8 sm:px-11 sm:pt-12 sm:pb-10"
@@ -1504,14 +1511,17 @@ export function BookedCard({ name, at, now, onAnother, onPipeline, tz, location 
         }}>
           <Check size={34} strokeWidth={2.4} />
         </span>
-        <span className="ov-hero-chip" style={{ marginTop: 26 }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#34E0C4' }} />Booked with Fulfillment
-        </span>
+        <div style={{ marginTop: 26, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <span className="ov-hero-chip">
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#34E0C4' }} />{chip}
+          </span>
+          {extraChip && <span className="ov-hero-chip">{extraChip}</span>}
+        </div>
         <h1 className="text-[32px] sm:text-[40px]" style={{ margin: '18px 0 0', fontFamily: DISPLAY, fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.035em', color: '#fff' }}>
           {name}
         </h1>
         <p style={{ margin: '10px 0 0', fontFamily: DISPLAY, fontSize: 20, fontWeight: 500, color: 'var(--ov-hero-soft)' }}>
-          {full} at {time} {period}
+          {line || `${full} at ${time} ${period}`}
         </p>
         {location && (
           <PlaceLine location={location} style={{ marginTop: 8, justifyContent: 'center', fontSize: 15, color: 'var(--ov-hero-soft)' }} />
@@ -1520,24 +1530,28 @@ export function BookedCard({ name, at, now, onAnother, onPipeline, tz, location 
           marginTop: 30, width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'flex-start', gap: 14, textAlign: 'left',
           padding: '18px 20px', borderRadius: 16, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
         }}>
-          <MessageSquareText size={19} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 2, color: 'var(--ov-hero-dot)' }} />
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-hero-soft)' }}>Say this before you hang up</div>
-            <p style={{ margin: '6px 0 0', fontSize: 16, lineHeight: 1.55, color: '#fff' }}>
-              &ldquo;You&rsquo;re all set for {scriptWhen(at, now, tz)}. Our Underwriting Team will give you a call right at that time to get everything squared away.&rdquo;
-            </p>
-          </div>
+          {box || (
+            <>
+              <MessageSquareText size={19} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 2, color: 'var(--ov-hero-dot)' }} />
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-hero-soft)' }}>Say this before you hang up</div>
+                <p style={{ margin: '6px 0 0', fontSize: 16, lineHeight: 1.55, color: '#fff' }}>
+                  &ldquo;You&rsquo;re all set for {scriptWhen(at, now, tz)}. Our Underwriting Team will give you a call right at that time to get everything squared away.&rdquo;
+                </p>
+              </div>
+            </>
+          )}
         </div>
         <div style={{ marginTop: 28, display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
           <button type="button" onClick={onAnother} className="ov-hero-btn" style={{ height: 50, padding: '0 26px', fontSize: 15 }}>
-            <CalendarPlus size={18} strokeWidth={2.1} /> Book another
+            <CalendarPlus size={18} strokeWidth={2.1} /> {anotherLabel}
           </button>
           <button type="button" onClick={onPipeline} style={{
             height: 50, boxSizing: 'border-box', padding: '0 24px', borderRadius: 999, fontSize: 15, fontWeight: 600, color: '#fff',
             background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.18)',
             display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer',
           }}>
-            See it in Clients <ArrowRight size={15} strokeWidth={2} />
+            {pipelineLabel} <ArrowRight size={15} strokeWidth={2} />
           </button>
         </div>
       </section>

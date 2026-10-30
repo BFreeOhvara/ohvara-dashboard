@@ -16,6 +16,7 @@ const SELECT = `
   call_live_since, last_call_outcome, call_attempts, last_call_at,
   recovery_step, recovery_retry_at, recovery_am_sent_at, recovery_pm_sent_at,
   missed_step, missed_retry_at, sms_consent,
+  replaced_old_policy, new_carrier_name, best_time, policy_number,
   created_at, updated_at,
   agent:profiles!policies_agent_id_fkey ( id, full_name ),
   assigned:profiles!policies_assigned_fulfillment_id_fkey ( id, full_name ),
@@ -114,6 +115,31 @@ export function useBookCall() {
         })
       if (dErr) throw new Error(`Booked, but the carrier note didn't save: ${dErr.message}`)
       return policy
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),
+  })
+}
+
+// New deal flow (migration 187) — Submit a deal: one RPC writes the policy, its
+// intake row and the 'submitted' event, and counts as one of the week's
+// submissions. `replaced` true = an old policy to cancel (a rep works it: old
+// carrier + call time required); false = none (no call, no old carrier, never
+// goes to a rep). Returns the new policy id. Refusals carry a hint: weekly_cap,
+// no_servicing, not_live (plus booking_rule / no_old_policy from the triggers).
+export function useSubmitDeal() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ firstName, lastName, phone, city, state, timezone, newCarrierId, policyNumber, replaced, oldCarrierId, scheduledAt, bestTime, smsConsent }) => {
+      const { data, error } = await supabase.rpc('agent_submit_deal', {
+        p_first: firstName, p_last: lastName, p_phone: phone || null,
+        p_city: city || null, p_state: state || null, p_timezone: timezone || null,
+        p_new_carrier: newCarrierId, p_policy_number: policyNumber || null,
+        p_replaced: replaced, p_old_carrier: replaced ? oldCarrierId : null,
+        p_at: replaced ? scheduledAt : null, p_best_time: bestTime,
+        p_sms_consent: !!smsConsent,
+      })
+      if (error) throw error
+      return data
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['policies'] }),
   })
