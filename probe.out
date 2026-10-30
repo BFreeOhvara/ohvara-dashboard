@@ -1,0 +1,6 @@
+
+> ohvara-dashboard@0.0.0 test
+> node scripts/run-tests.mjs
+
+Wording check failed: agents see "lead"/"leads", never "inbound". Reword these (code names, routes and columns stay):
+  src/lib/activityKinds.js:140  inbound next to other words "New inbound"
