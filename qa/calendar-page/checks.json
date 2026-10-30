@@ -185,12 +185,12 @@
     "name": "390-light agenda: rows link out, no panel, no sideways scroll",
     "pass": true,
     "rows": [
-      "/agent/inbounds/sample-inbound-10",
+      "/agent/leads/sample-inbound-10",
       "/agent/clients?open=sample-booking-live",
-      "/agent/inbounds/sample-inbound-11",
+      "/agent/leads/sample-inbound-11",
       "/agent/clients?open=sample-booking-12",
-      "/agent/inbounds/sample-inbound-13",
-      "/agent/inbounds/sample-inbound-14",
+      "/agent/leads/sample-inbound-13",
+      "/agent/leads/sample-inbound-14",
       "/agent/clients?open=sample-booking-15"
     ],
     "desk": 17,
@@ -395,12 +395,12 @@
     "name": "390-dark agenda: rows link out, no panel, no sideways scroll",
     "pass": true,
     "rows": [
-      "/agent/inbounds/sample-inbound-10",
+      "/agent/leads/sample-inbound-10",
       "/agent/clients?open=sample-booking-live",
-      "/agent/inbounds/sample-inbound-11",
+      "/agent/leads/sample-inbound-11",
       "/agent/clients?open=sample-booking-12",
-      "/agent/inbounds/sample-inbound-13",
-      "/agent/inbounds/sample-inbound-14",
+      "/agent/leads/sample-inbound-13",
+      "/agent/leads/sample-inbound-14",
       "/agent/clients?open=sample-booking-15"
     ],
     "desk": 17,

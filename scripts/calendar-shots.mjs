@@ -163,7 +163,7 @@ try {
       rows: [...document.querySelectorAll('.cal-agr')].map(a => a.getAttribute('href')), desk: document.querySelectorAll('.cal-ev').length,
       panel: [...document.querySelectorAll('.cal-panel')].some(e => e.getClientRects().length), sw: document.documentElement.scrollWidth - innerWidth,
     }))
-    check(`${tag} agenda: rows link out, no panel, no sideways scroll`, ph.rows.length >= 4 && ph.rows.every(h => /^\/agent\/(inbounds\/|clients\?open=)/.test(h)) && !ph.panel && ph.sw <= 0, JSON.stringify(ph), ph)
+    check(`${tag} agenda: rows link out, no panel, no sideways scroll`, ph.rows.length >= 4 && ph.rows.every(h => /^\/agent\/(leads\/|clients\?open=)/.test(h)) && !ph.panel && ph.sw <= 0, JSON.stringify(ph), ph)
     await shot(page, `calendar-agenda-${tag}`, true)
     await page.locator('.cal-strip button').nth(2).click()
     await shot(page, `calendar-agenda-earlier-${tag}`, true)
