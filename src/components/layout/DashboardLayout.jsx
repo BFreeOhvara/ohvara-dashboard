@@ -44,8 +44,8 @@ const TITLES = {
   '/agent/calls': ['My Calls', 'Schedule, activity, and graded calls'],
   '/agent/quoter': ['Quoter', 'InsuranceToolkits — multi-carrier instant quoting'],
   '/agent/underwriting': ['Underwriting', 'AI chat assistant for carrier placement based on client health'],
-  '/agent/book': ['Book a call', 'Get your client on the calendar with Fulfillment'],
-  '/agent/clients': ['My Pipeline', 'Everyone booked with Fulfillment and where each cancellation stands'],
+  '/agent/book': ['Submit', 'Get your client on the calendar with Fulfillment'],
+  '/agent/clients': ['Clients', 'Calls in progress on one side, your clients on the other'],
   '/agent/activity': ['Activity', 'What happened with your clients, newest first'],
   '/agent/inbounds': ['Inbounds', 'Everyone who came in for you, and what we’re doing with each one'],
   '/agent/calendar': ['Calendar', 'Every appointment, whoever booked it'],
@@ -141,8 +141,10 @@ function PipelineLine({ profile }) {
   if (isLoading) return null
   const needs = rows.filter(p => tabOf(p) === 'needs').length
   const booked = rows.filter(p => tabOf(p) === 'booked').length
+  const clients = rows.filter(p => tabOf(p) === 'cancelled').length
   return <LiveLine items={[
-    <Plain>{plural(rows.length, 'client')}</Plain>,
+    <Plain>{rows.length - clients} in progress</Plain>,
+    <Plain>{plural(clients, 'client')}</Plain>,
     needs > 0 && <Pill tone="amber" to="/agent/clients?stage=needs">{needs} {needs === 1 ? 'needs' : 'need'} attention</Pill>,
     booked > 0 && <Pill tone="blue">{booked} booked</Pill>,
   ]} />
@@ -254,6 +256,9 @@ export function DashboardLayout({ children }) {
   const isFit = pathname === '/agent/clients' || pathname === '/fulfillment/pipeline' || pathname === '/admin/pipeline' || pathname === '/admin/users'
   // Prompt 763: the Admin Overview fits one screen from 700px tall (.ov-fitao in index.css); shorter, it scrolls.
   const isFitAo = pathname === '/admin'
+  // The agent Overview fits one screen too, with its own rules (.ov-fitag in index.css; not .ov-fitao, whose
+  // selectors are the Admin page's). From 1280px wide and 700px tall; shorter or narrower it scrolls as before.
+  const isFitAg = pathname === '/agent'
 
   const [navOpen, setNavOpen] = useState(false)
   useEffect(() => { setNavOpen(false) }, [pathname])
@@ -273,7 +278,7 @@ export function DashboardLayout({ children }) {
 
   return (
     <ActiveCallProvider>
-      <div className={isFit ? 'ov-fit' : isFitAo ? 'ov-fitao' : undefined} style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)' }}>
+      <div className={isFit ? 'ov-fit' : isFitAo ? 'ov-fitao' : isFitAg ? 'ov-fitag' : undefined} style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)' }}>
         <Sidebar
           open={navOpen}
           onClose={() => setNavOpen(false)}
@@ -306,7 +311,7 @@ export function DashboardLayout({ children }) {
           </header>
 
           <main
-            className={`scrollbar-thin ${isFullWidth ? 'h-screen overflow-hidden flex flex-col' : isFullBleed ? '' : 'px-4 md:px-6'}${isFit ? ' ov-fit-main' : isFitAo ? ' ov-fitao-main' : ''}`}
+            className={`scrollbar-thin ${isFullWidth ? 'h-screen overflow-hidden flex flex-col' : isFullBleed ? '' : 'px-4 md:px-6'}${isFit ? ' ov-fit-main' : isFitAo ? ' ov-fitao-main' : isFitAg ? ' ov-fitag-main' : ''}`}
             style={isFullWidth ? { position: 'relative', zIndex: 1 } : isFullBleed ? { flex: 1, width: '100%', position: 'relative', zIndex: 1 } : { flex: 1, paddingTop: 32, paddingBottom: 64, maxWidth: isFit && (!pathname.startsWith('/admin') || pathname === '/admin/pipeline') ? 1680 : 1280, width: '100%', margin: '0 auto', position: 'relative', zIndex: 1 }}
           >
             <div

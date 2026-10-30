@@ -60,7 +60,7 @@ const SECTIONS = [
   { key: 'contact',     label: 'Client contact',     sub: 'Caller ID and text follow-up', icon: PhoneForwarded,    lede: 'How Fulfillment reaches your clients for you.', roles: ['agent', 'admin'] },
   { key: 'team',        label: 'Team tools',         sub: 'Live Room, pay, App Review', icon: Wrench,           lede: 'Company-wide settings only admins can change.', roles: ['admin'] },
   // Prompt 758 — Carrier hours left the admin sidebar and lives here.
-  { key: 'carriers',    label: 'Carrier hours',      sub: 'When each carrier takes calls', icon: Building2,        lede: 'Service hours set the bookable times in Book a call.', roles: ['admin'] },
+  { key: 'carriers',    label: 'Carrier hours',      sub: 'When each carrier takes calls', icon: Building2,        lede: 'Service hours set the bookable times in Submit.', roles: ['admin'] },
 ]
 
 // Old tab hashes → new sections.

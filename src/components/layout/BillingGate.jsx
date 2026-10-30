@@ -48,7 +48,7 @@ export function BillingGate({ children }) {
   return (
     <>
       {grace && (
-        <div style={{
+        <div className="ov-grace-banner" style={{
           display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 20,
           padding: '12px 16px', borderRadius: 12,
           background: 'var(--warning-dim)', border: '1px solid var(--warning-bd)',

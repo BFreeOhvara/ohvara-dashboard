@@ -1,10 +1,10 @@
-import { Children, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useImperativeHandle } from 'react'
+import { Children, Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useImperativeHandle } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send, MapPin, Moon, ChevronDown, PencilLine } from 'lucide-react'
+import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send, MapPin, Moon, ChevronDown, PencilLine, CircleCheck, ClipboardList } from 'lucide-react'
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
 import { SLOTS, slotTo24h, slotToISO, localDateISO, callWhen, callAt, fmtSlotTime, clientSlotISO, slotState, dayIn, addDaysStr } from '../../lib/scheduling'
 import { rankCarriers, exactCarrier } from '../../lib/carriers'
-import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, isMissedHold, MISSED_LABEL, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, digits, matchClients, placeOf } from '../../lib/agentBookings'
+import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, isMissedHold, MISSED_LABEL, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, PROGRESS_TABS, COMING_SOON, digits, matchClients, placeOf } from '../../lib/agentBookings'
 import { US_STATES, zonedDateStr } from '../../lib/timezones'
 import { whenShort, daysBetween, dayShort, timeText } from '../../lib/fulfillmentDay'
 import { DayClock } from '../ui/DayClock'
@@ -350,9 +350,9 @@ const OV_TITLE = {
   margin: 0, fontFamily: DISPLAY, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ov-hi)',
 }
 
-export function IconChip({ icon: Icon, color, tint, size = 36, radius = 11, iconSize = 18 }) {
+export function IconChip({ icon: Icon, color, tint, size = 36, radius = 11, iconSize = 18, className }) {
   return (
-    <span style={{
+    <span className={className} style={{
       width: size, height: size, borderRadius: radius, flexShrink: 0, background: tint, color,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
@@ -366,9 +366,9 @@ export function IconChip({ icon: Icon, color, tint, size = 36, radius = 11, icon
 // `compact` (Prompt 758, the admin Overview) is the same panel a size tighter.
 // Prompt 768 (QA Finding 7) — a load that failed says so, instead of looking
 // like a brand-new empty account. `what` finishes "Couldn't load …".
-export function LoadError({ what, onRetry, style }) {
+export function LoadError({ what, onRetry, style, className }) {
   return (
-    <div role="alert" style={{
+    <div role="alert" className={className} style={{
       display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 16,
       background: 'var(--danger-dim)', border: 'var(--border-w) solid var(--danger-bd)', color: 'var(--danger)', ...style,
     }}>
@@ -387,8 +387,9 @@ export function LoadError({ what, onRetry, style }) {
   )
 }
 
-export function HeroPanel({ greeting, sub, dateLong, dateShort, timezone, onBook, action, compact }) {
-  const { label: actionLabel, icon: ActionIcon, onClick: onAction } = action || { label: 'Book a call', icon: CalendarPlus, onClick: onBook }
+// `fit` (the agent Overview's one-screen mode) only adds class names; the sizes live in the .ov-fitag rules in index.css.
+export function HeroPanel({ greeting, sub, dateLong, dateShort, timezone, onBook, action, compact, fit }) {
+  const { label: actionLabel, icon: ActionIcon, onClick: onAction } = action || { label: 'Submit', icon: CalendarPlus, onClick: onBook }
   const dot = <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ov-hero-dot)' }} />
   return (
     <section className="ov-hero" style={{ position: 'relative', overflow: 'hidden' }}>
@@ -414,21 +415,22 @@ export function HeroPanel({ greeting, sub, dateLong, dateShort, timezone, onBook
       </div>
 
       {/* Tablet and up: text left; big clock and Book a call right. */}
-      <div className="hidden sm:flex" style={{ flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: compact ? 28 : 32, padding: compact ? '30px 36px' : '36px 40px' }}>
-        <div style={{ flex: '1 1 380px', minWidth: 0 }}>
+      <div className={`hidden sm:flex${fit ? ' ag-hero' : ''}`} style={{ flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: compact ? 28 : 32, padding: compact ? '30px 36px' : '36px 40px' }}>
+        <div className={fit ? 'ag-hero-l' : undefined} style={{ flex: '1 1 380px', minWidth: 0 }}>
           <span className="ov-hero-chip">{dot}{dateLong}</span>
           <h1 style={{ margin: compact ? '16px 0 0' : '18px 0 0', fontFamily: DISPLAY, fontSize: compact ? 44 : 46, fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.035em', color: 'inherit' }}>
             {greeting}
           </h1>
           <p style={{ margin: compact ? '10px 0 0' : '12px 0 0', fontSize: compact ? 16 : 17, color: 'var(--ov-hero-soft)' }}>{sub}</p>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: compact ? 16 : 18 }}>
+        <div className={fit ? 'ag-hero-r' : undefined} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: compact ? 16 : 18 }}>
           <DayClock
             timezone={timezone}
+            className={fit ? 'ag-clock' : undefined} periodClassName={fit ? 'ag-clock-p' : undefined}
             style={{ fontFamily: DISPLAY, fontSize: compact ? 58 : 64, fontWeight: 600, lineHeight: 1, letterSpacing: '-0.04em' }}
             periodStyle={{ marginLeft: 10, fontSize: compact ? 21 : 22, fontWeight: 500, color: 'var(--ov-hero-soft)' }}
           />
-          <button type="button" onClick={onAction} className="ov-hero-btn" style={{ height: compact ? 46 : 48, padding: compact ? '0 22px' : '0 24px', fontSize: 15 }}>
+          <button type="button" onClick={onAction} className={`ov-hero-btn${fit ? ' ag-hero-btn' : ''}`} style={{ height: compact ? 46 : 48, padding: compact ? '0 22px' : '0 24px', fontSize: 15 }}>
             <ActionIcon size={18} strokeWidth={2.1} /> {actionLabel}
           </button>
         </div>
@@ -455,17 +457,17 @@ function TrendChip({ diff, small }) {
 
 // Mon–Sun bars: today full strength, earlier days 45%, days not reached yet
 // a 4px stub.
-function WeekStrip({ counts, todayIdx, color, small }) {
+function WeekStrip({ counts, todayIdx, color, small, fit }) {
   const h = small ? 30 : 44
   const max = Math.max(0, ...counts)
   return (
-    <span aria-hidden="true" style={{ display: 'flex', alignItems: 'flex-end', gap: small ? 3 : 5, height: h, flexShrink: 0 }}>
+    <span aria-hidden="true" className={fit ? 'ag-strip' : undefined} style={{ display: 'flex', alignItems: 'flex-end', gap: small ? 3 : 5, height: h, flexShrink: 0 }}>
       {counts.map((c, i) => {
         const future = i > todayIdx
         return (
           <span key={i} style={{
             width: small ? 6 : 10, borderRadius: 3,
-            height: future || !max ? 4 : Math.max(4, Math.round((c / max) * h)),
+            height: future || !max ? 4 : fit ? `${Math.max(12, Math.round((c / max) * 100))}%` : Math.max(4, Math.round((c / max) * h)),
             background: future ? 'var(--ov-stub)' : color, opacity: future || i === todayIdx ? 1 : 0.45,
           }} />
         )
@@ -475,32 +477,32 @@ function WeekStrip({ counts, todayIdx, color, small }) {
 }
 
 // A real <button>; spans inside (a button only takes phrasing content).
-export function TrendCard({ label, icon, tone, value, diff, week, todayIdx, onClick }) {
+export function TrendCard({ label, icon, tone, value, diff, week, todayIdx, onClick, fit }) {
   const color = `var(--ov-data-${tone})`
   const tint = `var(--ov-data-${tone}-tint)`
   return (
     <button
       type="button" onClick={onClick}
-      className="ov-card ov-link px-4 pt-4 pb-[18px] sm:px-6 sm:pt-[22px] sm:pb-6"
+      className={`ov-card ov-link px-4 pt-4 pb-[18px] sm:px-6 sm:pt-[22px] sm:pb-6${fit ? ' ag-trend' : ''}`}
       style={{ display: 'block', width: '100%', minWidth: 0 }}
     >
-      <span className="hidden sm:flex" style={{ flexDirection: 'column', gap: 22 }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <IconChip icon={icon} color={color} tint={tint} />
-          <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-mid)' }}>{label}</span>
+      <span className={`hidden sm:flex${fit ? ' ag-trend-d' : ''}`} style={{ flexDirection: 'column', gap: 22 }}>
+        <span className={fit ? 'ag-th' : undefined} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <IconChip icon={icon} color={color} tint={tint} className={fit ? 'ag-chip' : undefined} />
+          <span className={fit ? 'ag-tl' : undefined} style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-mid)' }}>{label}</span>
           <ArrowUpRight size={16} strokeWidth={2} style={{ color: 'var(--ov-faint)', flexShrink: 0 }} />
         </span>
-        <span style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
-          <span style={{ display: 'block', minWidth: 0 }}>
-            <span style={{ ...OV_NUM, display: 'block', fontSize: 52, letterSpacing: '-0.035em' }}>{value}</span>
+        <span className={fit ? 'ag-tb' : undefined} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
+          <span className={fit ? 'ag-tn' : undefined} style={{ display: 'block', minWidth: 0 }}>
+            <span className={fit ? 'ag-num' : undefined} style={{ ...OV_NUM, display: 'block', fontSize: 52, letterSpacing: '-0.035em' }}>{value}</span>
             {diff != null && (
-              <span style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 8px' }}>
+              <span className={fit ? 'ag-td' : undefined} style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 8px' }}>
                 <TrendChip diff={diff} />
-                {diff !== 0 && <span style={{ fontSize: 13, color: 'var(--ov-mute)' }}>than last week</span>}
+                {diff !== 0 && <span className={fit ? 'ag-than' : undefined} style={{ fontSize: 13, color: 'var(--ov-mute)' }}>than last week</span>}
               </span>
             )}
           </span>
-          <WeekStrip counts={week} todayIdx={todayIdx} color={color} />
+          <WeekStrip counts={week} todayIdx={todayIdx} color={color} fit={fit} />
         </span>
       </span>
 
@@ -679,7 +681,7 @@ export function AttentionPanel({ items, loading, now, onGo }) {
 
   const count = items.length
   const shown = items.slice(0, ATTN_ROWS)
-  const more = n => (count > n ? `See all ${count} in My Pipeline` : 'Open in My Pipeline')
+  const more = n => (count > n ? `See all ${count} in Clients` : 'Open in Clients')
 
   return (
     <div className={`ov-attn flex flex-col ${pad}`} style={area}>
@@ -1003,7 +1005,7 @@ export function ChangedMark({ was }) {
 export function BookSwitch({ value, onChange }) {
   const opts = [{ value: 'new', label: 'New booking' }, { value: 'change', label: 'Change a booking' }]
   return (
-    <div className="ov-range ov-book-switch" role="group" aria-label="Book a call">
+    <div className="ov-range ov-book-switch" role="group" aria-label="Submit">
       {opts.map(o => (
         <button key={o.value} type="button" aria-pressed={value === o.value} onClick={() => value !== o.value && onChange(o.value)}
           className={value === o.value ? 'is-on' : ''} style={{ height: 40, padding: '0 18px', fontSize: 14.5 }}>
@@ -1537,7 +1539,7 @@ export function BookedCard({ name, at, now, onAnother, onPipeline, tz, location 
             background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.18)',
             display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer',
           }}>
-            See it in My Pipeline <ArrowRight size={15} strokeWidth={2} />
+            See it in Clients <ArrowRight size={15} strokeWidth={2} />
           </button>
         </div>
       </section>
@@ -1853,24 +1855,29 @@ export function PipelineSummary({
         ))}
       </div>
       <div className="pl-next">
-        {foot || (next ? (
-          <>
-            <span className="pl-ntile">
-              <small style={{ color: stVar('booked') }}>{new Date(next.scheduled_call_at).toLocaleDateString('en-US', { month: 'short', timeZone: tz }).toUpperCase()}</small>
-              <b>{new Date(next.scheduled_call_at).toLocaleDateString('en-US', { day: 'numeric', timeZone: tz })}</b>
-            </span>
-            <span className="k">{nextLabel}<b>{fullName(next)}</b></span>
-            <button type="button" className="ov-ghost" onClick={() => onOpenNext(next)}>Open</button>
-          </>
-        ) : (
-          <>
-            <span className="pl-ntile"><CalendarDays size={18} strokeWidth={1.9} style={{ color: 'var(--ov-faint)' }} /></span>
-            <span className="k">{nextLabel}<b>{nextEmpty}</b></span>
-            {onBook && <button type="button" className="ov-primary" onClick={onBook}><CalendarPlus size={16} strokeWidth={2} aria-hidden="true" />Book a call</button>}
-          </>
-        ))}
+        {foot || <NextCall next={next} onOpenNext={onOpenNext} onBook={onBook} nextLabel={nextLabel} nextEmpty={nextEmpty} tz={tz} />}
       </div>
     </section>
+  )
+}
+
+// The next Fulfillment call line at the foot of the pipeline box (both summaries use it).
+function NextCall({ next, onOpenNext, onBook, nextLabel, nextEmpty, tz }) {
+  return next ? (
+    <>
+      <span className="pl-ntile">
+        <small style={{ color: stVar('booked') }}>{new Date(next.scheduled_call_at).toLocaleDateString('en-US', { month: 'short', timeZone: tz }).toUpperCase()}</small>
+        <b>{new Date(next.scheduled_call_at).toLocaleDateString('en-US', { day: 'numeric', timeZone: tz })}</b>
+      </span>
+      <span className="k">{nextLabel}<b>{fullName(next)}</b></span>
+      <button type="button" className="ov-ghost" onClick={() => onOpenNext(next)}>Open</button>
+    </>
+  ) : (
+    <>
+      <span className="pl-ntile"><CalendarDays size={18} strokeWidth={1.9} style={{ color: 'var(--ov-faint)' }} /></span>
+      <span className="k">{nextLabel}<b>{nextEmpty}</b></span>
+      {onBook && <button type="button" className="ov-primary" onClick={onBook}><CalendarPlus size={16} strokeWidth={2} aria-hidden="true" />Submit</button>}
+    </>
   )
 }
 
@@ -1883,7 +1890,7 @@ export function PipelineSummary({
 //
 // Prompt 749 — the Fulfillment Pipeline passes `tabs` + `tabFn` (three tabs) and
 // `meanings` (the line under each tab's name); the rest goes to StatusList.
-export function PipelineList({ rows, tab, onTab, list, tabs = PIPELINE_TABS, tabFn = tabOf, meanings, ...status }) {
+export function PipelineList({ rows, tab, onTab, list, tabs = PIPELINE_TABS, tabFn = tabOf, meanings, head, ...status }) {
   const split = useMemo(() => tabCounts(rows, tabFn, tabs), [rows, tabFn, tabs])
   const { counts } = split
   const tabRefs = useRef({})
@@ -1910,6 +1917,7 @@ export function PipelineList({ rows, tab, onTab, list, tabs = PIPELINE_TABS, tab
 
   return (
     <section className="ov-card pl-list">
+      {head}
       <div role="tablist" aria-label="Pipeline status" className={`pl-tabs hidden sm:grid ${tabs.length === 3 ? 'grid-cols-3' : 'grid-cols-2 lg:grid-cols-4'}`} onKeyDown={e => onKeyDown(e, tabRefs)}>
         {tabs.map(t => {
           const on = t === tab
@@ -1955,6 +1963,126 @@ export function PipelineList({ rows, tab, onTab, list, tabs = PIPELINE_TABS, tab
       <div className="pl-body">
         <StatusList key={tab} tab={tab} rows={list} {...status} />
       </div>
+    </section>
+  )
+}
+
+// ── My Pipeline: In progress vs Clients ──────────────────────────────────
+// The agent's My Pipeline splits into two sides. The switch tops the list box and the summary's bar
+// and rows follow the selected side. All of it is additive: PipelineSummary / PipelineList /
+// tabCounts behave as before for the Fulfillment and Admin Pipelines.
+//
+// `progress` / `clients` are the side counts, `attention` the Needs attention count (an amber badge
+// on In progress, hidden at 0). `short` is the phone's number-only badge.
+export function SideSwitch({ side, onSide, progress, clients, attention = 0, loading, short, className = '' }) {
+  const one = (key, label, n, badge) => (
+    <button type="button" aria-pressed={side === key} className={side === key ? 'is-on' : ''} onClick={() => side !== key && onSide(key)}>
+      {label}<b>{loading ? '—' : n}</b>{badge}
+    </button>
+  )
+  return (
+    <div className={className}>
+      <div className="ov-range pl-seg" role="group" aria-label="Pipeline side">
+        {one('progress', 'In progress', progress, !loading && attention > 0 && (
+          <span className="pl-seg-att" aria-label={`${attention} need attention`}>{short ? attention : `${attention} need attention`}</span>
+        ))}
+        {one('clients', 'Clients', clients)}
+      </div>
+    </div>
+  )
+}
+
+const SOON_ICON = { sold: CircleCheck, servicing: ClipboardList }
+
+// "Your pipeline" for the split page: `rows` are the range/agent scoped rows of BOTH sides. The total
+// line reads for both; the bar and rows follow `side`. Sold leads and Servicing have no data yet, so
+// they read "Coming soon" (never 0); `soon` off hides them (the v2 "Your clients" box covers that).
+export function SidePipelineSummary({
+  rows, side, tab, range, ranges, onRange, agentFilter, next, onOpenNext, onBook,
+  title = 'Your pipeline', soon = true, nextLabel = 'Next Fulfillment call', nextEmpty = 'No calls booked',
+}) {
+  const progressRows = useMemo(() => rows.filter(p => tabOf(p) !== 'cancelled'), [rows])
+  const { counts } = useMemo(() => tabCounts(progressRows, tabOf, PROGRESS_TABS), [progressRows])
+  const prog = progressRows.length
+  const clients = rows.length - prog
+  const pct = n => (prog ? Math.round((n / prog) * 100) : 0)
+  const tz = next?.client_timezone || undefined
+  return (
+    <section className="ov-card pl-pipe">
+      <div className="pl-lbl">{title}</div>
+      <div className="pl-total">
+        <b>{rows.length}</b>total · {prog} in progress · {clients} {clients === 1 ? 'client' : 'clients'}
+      </div>
+      {agentFilter && <div style={{ marginTop: 12 }}>{agentFilter}</div>}
+      <div style={{ marginTop: 12 }}><RangeSwitch ranges={ranges} value={range} onChange={onRange} full /></div>
+      <div style={{ marginTop: 14 }}>
+        {side === 'progress'
+          ? <PipelineBar counts={counts} tab={tab} height={6} tabs={PROGRESS_TABS} />
+          : <PipelineBar counts={{ cancelled: clients }} tab="cancelled" height={6} tabs={['cancelled']} />}
+      </div>
+      <div className="pl-rows">
+        {side === 'progress' ? PROGRESS_TABS.map(t => (
+          <div key={t} className="pl-row2">
+            <i style={{ background: stVar(t) }} />
+            <span className="l">{PIPELINE_TAB[t].label}</span>
+            <span className="c">{counts[t]}</span>
+            <span className="p">{pct(counts[t])}%</span>
+          </div>
+        )) : (
+          <>
+            <div className="pl-row2">
+              <i style={{ background: stVar('cancelled') }} />
+              <span className="l">Cancelled clients</span>
+              <span className="c">{clients}</span>
+              <span className="p" />
+            </div>
+            {soon && COMING_SOON.map(c => (
+              <div key={c.key} className="pl-row2 is-off">
+                <i />
+                <span className="l">{c.title}</span>
+                <span className="soon-t">Coming soon</span>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+      <div className="pl-next">
+        <NextCall next={next} onOpenNext={onOpenNext} onBook={onBook} nextLabel={nextLabel} nextEmpty={nextEmpty} tz={tz} />
+      </div>
+    </section>
+  )
+}
+
+// The Clients side of the list box: the switch (`head`), a "Cancelled clients" head over today's
+// cancelled columns (with Show more paging), then a pinned strip of two Coming soon cards. `list` is
+// the sorted Cancelled rows; `count` the head's number; the rest goes to StatusList.
+export function ClientsSide({ head, list, count, soon = true, ...status }) {
+  return (
+    <section className="ov-card pl-list">
+      {head}
+      <div className="pl-sec">
+        <span className="ic" aria-hidden="true"><Check size={17} strokeWidth={2.4} /></span>
+        <span style={{ minWidth: 0 }}>
+          <b>Cancelled clients{!status.loading && <span>{count}</span>}</b>
+          <p>Clients whose old policy Fulfillment has cancelled.</p>
+        </span>
+      </div>
+      <div className="pl-body">
+        <StatusList tab="cancelled" rows={list} emptyText="No cancelled clients yet." {...status} />
+      </div>
+      {soon && (
+        <div className="pl-soon-strip">
+          {COMING_SOON.map(c => (
+            <div key={c.key} className="pl-soon">
+              <span className="ic" aria-hidden="true">{(() => { const I = SOON_ICON[c.key]; return <I size={16} strokeWidth={2} /> })()}</span>
+              <div style={{ minWidth: 0 }}>
+                <div className="hdl"><b>{c.title}</b><span className="soon">Coming soon</span></div>
+                <p>{c.text}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   )
 }
@@ -2196,7 +2324,7 @@ function NeedsGroupHead({ icon: Icon, title, count, line }) {
 // row actions, the booking agent in its own column, times in `tz`.
 // Prompt 759 — the Admin Pipeline adds a Needs attention tab to it: `fulfill.reason(p)`
 // is the row's status text there, and `fulfill.tint(p)` an optional row background.
-export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebook, onConfirm, canMove, loading, emptyRange, onBook, fulfill }) {
+export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebook, onConfirm, canMove, loading, emptyRange, onBook, fulfill, emptyText }) {
   const [limit, setLimit] = useState(PAGE)
 
   if (loading) return <EmptyState tab={tab}>Loading clients…</EmptyState>
@@ -2217,13 +2345,13 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
       )
     }
     if (tab === 'noAnswer') return <EmptyState icon={PhoneMissed} tab={tab}>No missed calls.</EmptyState>
-    if (tab === 'cancelled') return <EmptyState icon={Inbox} tab={tab}>No cancellations yet.</EmptyState>
+    if (tab === 'cancelled') return <EmptyState icon={Inbox} tab={tab}>{emptyText || 'No cancellations yet.'}</EmptyState>
     if (fulfill) return <EmptyState icon={Phone} tab={tab}>No calls waiting right now.</EmptyState>
     return (
       <EmptyState icon={CalendarPlus} tab={tab} action={onBook && (
         <button type="button" className="ov-ghost" onClick={onBook}
           style={{ height: 40, padding: '0 18px', borderRadius: 999, fontSize: 13.5, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 7, cursor: 'pointer' }}>
-          <CalendarPlus size={15} strokeWidth={2} /> Book a call
+          <CalendarPlus size={15} strokeWidth={2} /> Submit
         </button>
       )}>
         No calls waiting. Book one when your next client says yes.
@@ -2842,7 +2970,7 @@ export function ActivityDrawer({ p, name, agentName, steps, highlight, currentIc
           width: '100%', height: 50, borderRadius: 999, fontSize: 15, cursor: 'pointer',
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}>
-          Go to My Pipeline <ArrowRight size={16} strokeWidth={2.2} />
+          Go to Clients <ArrowRight size={16} strokeWidth={2.2} />
         </button>
       )}
     >
@@ -3414,11 +3542,11 @@ function comingWhen(iso, now, tz) {
   return `${day}, ${fmtSlotTime(iso, tz)}`
 }
 
-function CallDateTile({ iso, booked, tz }) {
+function CallDateTile({ iso, booked, tz, className }) {
   const d = new Date(iso)
   const z = tz ? { timeZone: tz } : null
   return (
-    <span style={{
+    <span className={className} style={{
       width: 46, height: 46, flexShrink: 0, boxSizing: 'border-box', borderRadius: 13,
       background: booked ? 'var(--ov-st-booked-tint)' : 'var(--ov-stub)',
       color: booked ? 'var(--ov-st-booked)' : 'var(--ov-mid)',
@@ -3439,15 +3567,17 @@ function CallDateTile({ iso, booked, tz }) {
 // Portal parity T3 (answer 4) — `texts` (Today's Texts waiting, from
 // useTextsWaiting in TodayCards.jsx) fold into this one amber box; each row
 // opens that inbound. Without texts the box is exactly the old one.
-export function AttentionCard({ items, loading, onGo, texts = [] }) {
+// `fit` (the agent Overview on a 1280x700+ screen): no row cap; the rows scroll inside .ag-list and the
+// button stays pinned in .ag-foot. Without it (phones, other pages) the cap of 4 and the old layout stay.
+export function AttentionCard({ items, loading, onGo, texts = [], fit }) {
   const pad = 'p-[18px] sm:px-6 sm:pt-6 sm:pb-5'
   const area = { gridArea: 'attn', minWidth: 0 }
   const title = <h2 style={{ ...OV_TITLE, flex: 1, minWidth: 0 }} className="text-[18px] sm:text-[19px]">Needs your attention</h2>
 
   if (loading) {
     return (
-      <div className={`ov-card flex flex-col ${pad}`} style={area}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className={`ov-card flex flex-col ${pad}${fit ? ' ag-box' : ''}`} style={area}>
+        <div className={fit ? 'ag-bh' : undefined} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {title}
           <span style={{ fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, color: 'var(--ov-mute)' }}>—</span>
         </div>
@@ -3456,8 +3586,9 @@ export function AttentionCard({ items, loading, onGo, texts = [] }) {
   }
 
   const count = items.length + texts.length
-  const shown = items.slice(0, ATTN_ROWS)
-  const more = n => (items.length > n ? `See all ${items.length} in My Pipeline` : 'Open in My Pipeline')
+  const shown = fit ? items : items.slice(0, ATTN_ROWS)
+  const shownTexts = fit ? texts : texts.slice(0, ATTN_ROWS)
+  const more = n => (items.length > n ? `See all ${items.length} in Clients` : 'Open in Clients')
   const toConfirm = items.filter(p => agentStageOf(p) === 'confirmNumber').length
   const toCall = items.length - toConfirm
   const intro = [
@@ -3465,13 +3596,15 @@ export function AttentionCard({ items, loading, onGo, texts = [] }) {
     texts.length && `${texts.length} ${texts.length === 1 ? 'text' : 'texts'} waiting`,
   ].filter(Boolean).join(' · ')
   const go = p => onGo(`/agent/clients?open=${p.id}&stage=needs`)
+  const Rows = fit ? 'div' : Fragment
+  const rowsProps = fit ? { className: 'ag-list' } : {}
 
   return (
-    <div className={`ov-attn flex flex-col ${pad}`} style={area}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <IconChip icon={TriangleAlert} color="var(--ov-warn)" tint="var(--ov-warn-tint)" />
+    <div className={`ov-attn flex flex-col ${pad}${fit ? ' ag-box' : ''}`} style={area}>
+      <div className={fit ? 'ag-bh' : undefined} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <IconChip icon={TriangleAlert} color="var(--ov-warn)" tint="var(--ov-warn-tint)" className={fit ? 'ag-chip' : undefined} />
         {title}
-        <span style={{
+        <span className={fit ? 'ag-badge' : undefined} style={{
           minWidth: 30, height: 30, boxSizing: 'border-box', padding: '0 10px', borderRadius: 999,
           background: 'var(--ov-badge-bg)', color: 'var(--ov-badge-fg)', fontFamily: DISPLAY, fontSize: 15, fontWeight: 700,
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontVariantNumeric: 'tabular-nums',
@@ -3479,10 +3612,11 @@ export function AttentionCard({ items, loading, onGo, texts = [] }) {
           {count}
         </span>
       </div>
-      <p style={{ margin: '14px 0 6px', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-soft)' }}>
+      <p className={fit ? 'ag-intro' : undefined} style={{ margin: '14px 0 6px', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-soft)' }}>
         {intro}. Open one to see what to do.
       </p>
 
+      <Rows {...rowsProps}>
       {shown.map((p, i) => {
         const name = fullName(p)
         const meta = [p.current_carrier || 'Carrier not noted', NEEDS_WHY[agentStageOf(p)]].filter(Boolean).join(' · ')
@@ -3490,18 +3624,18 @@ export function AttentionCard({ items, loading, onGo, texts = [] }) {
           <div key={p.id} role="button" tabIndex={0} aria-label={`Open ${name}`}
             onClick={() => go(p)}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(p) } }}
-            className={`ov-attn-row ${i >= 3 ? 'hidden sm:flex' : 'flex'}`} style={{ alignItems: 'center', gap: 12, padding: '14px 0', cursor: 'pointer' }}>
-            <span style={{
+            className={`ov-attn-row ${i >= 3 ? 'hidden sm:flex' : 'flex'}${fit ? ' ag-row' : ''}`} style={{ alignItems: 'center', gap: 12, padding: '14px 0', cursor: 'pointer' }}>
+            <span className={fit ? 'ag-av' : undefined} style={{
               width: 38, height: 38, flexShrink: 0, borderRadius: '50%', background: 'var(--ov-warn-tint)', color: 'var(--ov-warn)',
               fontSize: 12.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               {initialsOf(name)}
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
-              <div style={{ marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>{meta}</div>
+              <div className={fit ? 'ag-rn' : undefined} style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
+              <div className={fit ? 'ag-ri' : undefined} style={{ marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>{meta}</div>
             </div>
-            <button type="button" className="ov-ghost h-10 sm:h-[34px]" tabIndex={-1} aria-hidden="true"
+            <button type="button" className={`ov-ghost h-10 sm:h-[34px]${fit ? ' ag-open' : ''}`} tabIndex={-1} aria-hidden="true"
               style={{ padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               Open <ArrowRight size={14} strokeWidth={2.2} />
             </button>
@@ -3509,31 +3643,32 @@ export function AttentionCard({ items, loading, onGo, texts = [] }) {
         )
       })}
 
-      {texts.slice(0, ATTN_ROWS).map(t => (
+      {shownTexts.map(t => (
         <div key={`text-${t.id}`} role="button" tabIndex={0} aria-label={`Open ${t.name}'s text`}
           onClick={() => onGo(t.to)}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onGo(t.to) } }}
-          className="ov-attn-row flex" style={{ alignItems: 'center', gap: 12, padding: '14px 0', cursor: 'pointer' }}>
-          <span style={{
+          className={`ov-attn-row flex${fit ? ' ag-row' : ''}`} style={{ alignItems: 'center', gap: 12, padding: '14px 0', cursor: 'pointer' }}>
+          <span className={fit ? 'ag-av' : undefined} style={{
             width: 38, height: 38, flexShrink: 0, borderRadius: '50%', background: 'var(--ov-warn-tint)', color: 'var(--ov-warn)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <MessageSquare size={17} strokeWidth={2} />
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
-            <div style={{ marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>
+            <div className={fit ? 'ag-rn' : undefined} style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
+            <div className={fit ? 'ag-ri' : undefined} style={{ marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>
               {t.when} · “{t.body}”
             </div>
           </div>
-          <button type="button" className="ov-ghost h-10 sm:h-[34px]" tabIndex={-1} aria-hidden="true"
+          <button type="button" className={`ov-ghost h-10 sm:h-[34px]${fit ? ' ag-open' : ''}`} tabIndex={-1} aria-hidden="true"
             style={{ padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             Open <ArrowRight size={14} strokeWidth={2.2} />
           </button>
         </div>
       ))}
+      </Rows>
 
-      <div style={{ marginTop: 'auto', paddingTop: 14 }}>
+      <div className={fit ? 'ag-foot' : undefined} style={{ marginTop: 'auto', paddingTop: 14 }}>
         {items.length > 0 || texts.length === 0 ? (
           <button type="button" className="ov-primary" onClick={() => onGo('/agent/clients?stage=needs')}>
             <span className="sm:hidden">{more(3)}</span>
@@ -3552,27 +3687,33 @@ export function AttentionCard({ items, loading, onGo, texts = [] }) {
 
 // The calm state: nobody needs the agent, so show what is coming up.
 // `upcoming`: booked rows with a future call, soonest first.
-export function ComingUpCard({ upcoming, now, onGo }) {
+// `fit`: as AttentionCard, every upcoming call is listed in a scrolling .ag-list with the button pinned.
+export function ComingUpCard({ upcoming, now, onGo, fit }) {
   const pad = 'p-[18px] sm:px-6 sm:pt-6 sm:pb-5'
   const area = { gridArea: 'attn', minWidth: 0 }
   const title = <h2 style={{ ...OV_TITLE, flex: 1, minWidth: 0 }} className="text-[18px] sm:text-[19px]">You&rsquo;re all caught up</h2>
   const n = upcoming.length
   const [next, ...rest] = upcoming
-  const list = rest.slice(0, 3)
+  const list = fit ? rest : rest.slice(0, 3)
+  const Body = fit ? 'div' : Fragment
+  const bodyProps = fit ? { className: n === 0 ? 'ag-empty' : 'ag-list' } : {}
+  const Foot = fit ? 'div' : Fragment
+  const footProps = fit ? { className: 'ag-foot' } : {}
 
   return (
-    <div className={`ov-card flex flex-col ${pad}`} style={area}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <IconChip icon={Check} color="var(--ov-up)" tint="var(--ov-up-tint)" iconSize={18} />
+    <div className={`ov-card flex flex-col ${pad}${fit ? ' ag-box' : ''}`} style={area}>
+      <div className={fit ? 'ag-bh' : undefined} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <IconChip icon={Check} color="var(--ov-up)" tint="var(--ov-up-tint)" iconSize={18} className={fit ? 'ag-chip' : undefined} />
         {title}
       </div>
-      <p style={{ margin: '12px 0 0', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-soft)' }}>
+      <p className={fit ? 'ag-intro' : undefined} style={{ margin: '12px 0 0', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-soft)' }}>
         {n ? 'Nobody is waiting on you. Here’s what’s coming up.' : 'Nobody is waiting on you.'}
       </p>
 
       {n === 0 ? (
         <>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '28px 10px' }}>
+          <Body {...bodyProps}>
+          <div className={fit ? 'ag-empty-in' : undefined} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '28px 10px' }}>
             <span style={{
               width: 68, height: 68, borderRadius: 22, background: 'var(--ov-st-booked-tint)', color: 'var(--ov-st-booked)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -3583,37 +3724,42 @@ export function ComingUpCard({ upcoming, now, onGo }) {
               Nothing on the books yet
             </div>
             <div style={{ marginTop: 6, maxWidth: 250, fontSize: 14, lineHeight: 1.5, color: 'var(--ov-mute)' }}>
-              Book a call when your next client says yes.
+              Submit your next client when they say yes.
             </div>
           </div>
-          <button type="button" className="ov-primary" onClick={() => onGo('/agent/book')}>
-            <CalendarPlus size={17} strokeWidth={2.1} /> Book a call
-          </button>
+          </Body>
+          <Foot {...footProps}>
+            <button type="button" className="ov-primary" onClick={() => onGo('/agent/book')}>
+              <CalendarPlus size={17} strokeWidth={2.1} /> Submit
+            </button>
+          </Foot>
         </>
       ) : (
         <>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '22px 0 10px' }}>
+          <Body {...bodyProps}>
+          <div className={fit ? 'ag-upl' : undefined} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '22px 0 10px' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-mute)' }}>Up next</span>
             <span style={{ fontSize: 12.5, color: 'var(--ov-faint)' }}>{n} {n === 1 ? 'call' : 'calls'} booked</span>
           </div>
 
           <div
+            className={fit ? 'ag-next' : undefined}
             style={{
               display: 'flex', alignItems: 'center', gap: 14, padding: 14, borderRadius: 16,
               background: 'var(--ov-st-booked-tint)', border: '1px solid var(--ov-st-booked-edge)',
             }}>
-            <CallDateTile iso={next.scheduled_call_at} tz={next.client_timezone} booked />
+            <CallDateTile iso={next.scheduled_call_at} tz={next.client_timezone} booked className={fit ? 'ag-tile' : undefined} />
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fullName(next)}</span>
-              <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mid)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span className={fit ? 'ag-nm-b' : undefined} style={{ display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fullName(next)}</span>
+              <span className={fit ? 'ag-nm-s' : undefined} style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mid)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {next.current_carrier || 'Carrier not noted'}
               </span>
             </span>
             <span style={{ textAlign: 'right', lineHeight: 1.25, flexShrink: 0 }}>
-              <span style={{ display: 'block', fontFamily: DISPLAY, fontSize: 17, fontWeight: 700, color: 'var(--ov-st-booked)', whiteSpace: 'nowrap' }}>
+              <span className={fit ? 'ag-tm-b' : undefined} style={{ display: 'block', fontFamily: DISPLAY, fontSize: 17, fontWeight: 700, color: 'var(--ov-st-booked)', whiteSpace: 'nowrap' }}>
                 {fmtSlotTime(next.scheduled_call_at, next.client_timezone)}
               </span>
-              <span style={{ display: 'block', fontSize: 12, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>{untilLabel(next.scheduled_call_at, now)}</span>
+              <span className={fit ? 'ag-tm-s' : undefined} style={{ display: 'block', fontSize: 12, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>{untilLabel(next.scheduled_call_at, now)}</span>
             </span>
           </div>
 
@@ -3621,12 +3767,12 @@ export function ComingUpCard({ upcoming, now, onGo }) {
             <div style={{ marginTop: 6 }}>
               {list.map((p, i) => (
                 <div key={p.id}
-                  className={`ov-up-row ${i >= 2 ? 'hidden sm:flex' : 'flex'}`}
+                  className={`ov-up-row ${i >= 2 ? 'hidden sm:flex' : 'flex'}${fit ? ' ag-up' : ''}`}
                   style={{ alignItems: 'center', gap: 14, padding: '11px 4px' }}>
-                  <CallDateTile iso={p.scheduled_call_at} tz={p.client_timezone} />
+                  <CallDateTile iso={p.scheduled_call_at} tz={p.client_timezone} className={fit ? 'ag-tile' : undefined} />
                   <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fullName(p)}</span>
-                    <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span className={fit ? 'ag-nm-b' : undefined} style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fullName(p)}</span>
+                    <span className={fit ? 'ag-nm-s' : undefined} style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {comingWhen(p.scheduled_call_at, now, p.client_timezone)} · {p.current_carrier || 'Carrier not noted'}
                     </span>
                   </span>
@@ -3634,11 +3780,14 @@ export function ComingUpCard({ upcoming, now, onGo }) {
               ))}
             </div>
           )}
+          </Body>
 
-          <div style={{ height: 14 }} />
-          <button type="button" className="ov-primary" style={{ marginTop: 'auto' }} onClick={() => onGo('/agent/clients?stage=booked')}>
-            Open My Pipeline <ArrowRight size={15} strokeWidth={2.2} />
-          </button>
+          {!fit && <div style={{ height: 14 }} />}
+          <Foot {...footProps}>
+            <button type="button" className="ov-primary" style={{ marginTop: 'auto' }} onClick={() => onGo('/agent/clients?stage=booked')}>
+              Open Clients <ArrowRight size={15} strokeWidth={2.2} />
+            </button>
+          </Foot>
         </>
       )}
     </div>
@@ -3652,7 +3801,7 @@ export function ComingUpCard({ upcoming, now, onGo }) {
 // date range), `firstLabel` (legend, "Booked"), `firstWord` (first total and
 // tooltips, "booked") and `emptyText`. The defaults are the agent's.
 export function LastWeekChart({
-  days, loading, className = '',
+  days, loading, className = '', fit,
   subtitle = 'calls you booked and old policies confirmed cancelled',
   firstLabel = 'Booked', firstWord = 'booked',
   emptyText = 'No calls last week. Book one when your next client says yes.',
@@ -3671,12 +3820,12 @@ export function LastWeekChart({
   const total = (v, word) => (
     <div>
       <div className="ov-lw-num" style={OV_NUM}>{loading ? '—' : v}</div>
-      <div style={{ marginTop: 6, fontSize: 13, color: 'var(--ov-mute)' }}>{word}</div>
+      <div className={fit ? 'ov-lw-word' : undefined} style={{ marginTop: 6, fontSize: 13, color: 'var(--ov-mute)' }}>{word}</div>
     </div>
   )
 
   return (
-    <div className={`ov-card ov-lw ${className}`}>
+    <div className={`ov-card ov-lw ${fit ? 'ag-lw ' : ''}${className}`}>
       <div className="ov-lw-head">
         <div className="ov-lw-titles">
           <h2 style={OV_TITLE} className="text-[18px] sm:text-[19px]">Last week</h2>
@@ -3690,7 +3839,7 @@ export function LastWeekChart({
         <div className="ov-lw-totals">{total(booked, firstWord)}{total(cancelled, 'cancelled')}</div>
 
         {empty ? (
-          <div style={{ flex: 1, minWidth: 0, minHeight: 176, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 14, color: 'var(--ov-mute)' }}>
+          <div className={fit ? 'ov-lw-none' : undefined} style={{ flex: 1, minWidth: 0, minHeight: 176, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 14, color: 'var(--ov-mute)' }}>
             {emptyText}
           </div>
         ) : (
@@ -3700,7 +3849,7 @@ export function LastWeekChart({
                 <span key={i} className="ov-lw-tick" style={{ bottom: `calc(${i * 25}% - 7px)` }}>{i * step}</span>
               ))}
             </div>
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className={fit ? 'ov-lw-stack' : undefined} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div
                 className="ov-lw-plot" role="img"
                 aria-label={`Last week: ${booked} ${firstWord}, ${cancelled} cancelled`}

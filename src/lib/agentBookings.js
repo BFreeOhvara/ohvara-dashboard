@@ -28,6 +28,8 @@ export const STAGE = {
   inProgress:   { label: 'In progress',  tone: 'warning', fill: 'var(--warning)' },
   noAnswer:     { label: 'No answer',    tone: 'muted',   fill: 'var(--text-muted)' },
   cancelled:    { label: 'Cancelled',    tone: 'success', fill: 'var(--success)' },
+  // Migration 187 — a deal with no old policy: nothing to cancel, no call time.
+  submitted:    { label: 'Submitted',    tone: 'teal',    fill: 'var(--teal)' },
   // Prompt 702 — agent-only statuses (see agentStageOf).
   confirmNumber:  { label: 'Confirm number',  tone: 'teal',    fill: 'var(--teal)' },
   needsAttention: { label: 'Needs attention', tone: 'warning', fill: 'var(--warning)' },
@@ -42,6 +44,7 @@ export const SUBSTATUS_LABEL = {
 export const isLive = p => !!p.call_live_since && p.fulfillment_stage !== 'Complete'
 
 export function stageOf(p) {
+  if (p.replaced_old_policy === false) return 'submitted'
   if (p.fulfillment_stage === 'Complete') return 'cancelled'
   if (isLive(p)) return 'inProgress'
   if (p.last_call_outcome === 'no_answer') return 'noAnswer'
@@ -109,6 +112,17 @@ export function tabOf(p) {
   const s = agentStageOf(p)
   return s === 'confirmNumber' || s === 'needsAttention' ? 'needs' : s
 }
+
+// My Pipeline's two sides: In progress (Booked, No answer, Needs attention) and
+// Clients (the servicing book; for now only the Cancelled rows are real data).
+// Additive: PIPELINE_TABS / tabOf above are unchanged.
+export const PROGRESS_TABS = ['booked', 'noAnswer', 'needs']
+export const sideOfTab = t => (t === 'cancelled' ? 'clients' : 'progress')
+// The Clients side's two sections with no data yet (no servicing tables, no sold-to-client link).
+export const COMING_SOON = [
+  { key: 'sold', title: 'Sold leads', text: 'Leads you mark Sold and submit for servicing, and clients you submit yourself, will land here.' },
+  { key: 'servicing', title: 'Servicing', text: 'Each client’s policies and servicing steps will show here: packet check, review call and chargeback watch.' },
+]
 
 // Prompt 749 — the Fulfillment Pipeline's three tabs. A rep has no Needs
 // attention: every No answer stays theirs, whatever step the text flow is on,

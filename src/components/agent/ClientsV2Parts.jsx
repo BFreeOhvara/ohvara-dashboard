@@ -20,7 +20,7 @@ import './clientsV2Parts.css'
 // inbound is that client's old policy, so it joins them instead of showing twice. A client opens in
 // the old drawer with Call / Text, Policies, Servicing, the cancellation flow (the old page's own
 // CancellationFlow, not a copy) and Consent. My Pipeline (pages/agent/Clients.jsx) renders
-// MyPipelineClients when v2 is on; the old v2 page (pages/agent/v2/Clients.jsx) renders the same parts.
+// MyPipelineClients for every agent; the old v2 page (pages/agent/v2/Clients.jsx) renders the same parts.
 // Classes are .cv2-* (clientsV2Parts.css) on top of .ov-card / .ov-tile / .ov-range / .ov-input / .ov-ghost.
 
 const CLIENT_FILTERS = [
@@ -315,7 +315,7 @@ export function CancellationsCard({ c, now, startRebook, agentRows }) {
       <CardHead icon={Trash2} tone="a" title="Cancellations" sub="Cancel the old policy once the new one is in force" />
       {c.bookings.length ? c.bookings.map(p => <Cancellation key={p.id} p={p} now={now} startRebook={startRebook} agentRows={agentRows} />) : (
         <>
-          <p className="cv2-sub" style={{ marginBottom: 12 }}>Replacing an old policy? Book a call and Fulfillment cancels it with the carrier.</p>
+          <p className="cv2-sub" style={{ marginBottom: 12 }}>Replacing an old policy? Submit it and Fulfillment cancels it with the carrier.</p>
           <Link className="ov-ghost cv2-btn" to="/agent/book">Book a cancellation call</Link>
         </>
       )}

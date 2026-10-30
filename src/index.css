@@ -1291,6 +1291,31 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 @media (max-width: 639.98px) {
   .pl-grp { margin: 12px 0 10px; border: 1px solid var(--ov-st-needs-edge); border-radius: 14px; }
 }
+/* My Pipeline split: the In progress | Clients switch tops the list box (an .ov-range, two wide). */
+.pl-side { flex-shrink: 0; padding: 16px 16px 0; }
+.pl-side + .pl-tabs { padding-top: 12px; }
+.ov-range.pl-seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; box-sizing: border-box; }
+.pl-seg button { height: 44px; min-width: 0; padding: 0 14px; display: flex; align-items: center; justify-content: center; gap: 9px; font-size: 14.5px; }
+.pl-seg button b { font-family: var(--font-display); font-size: 18px; font-weight: 700; letter-spacing: -0.02em; color: var(--ov-mid); font-variant-numeric: tabular-nums; }
+.pl-seg button.is-on b { color: inherit; }
+.pl-seg-att { height: 22px; padding: 0 8px; border-radius: 999px; background: var(--ov-badge-bg); color: var(--ov-badge-fg); display: inline-flex; align-items: center; font-size: 12px; font-weight: 700; }
+/* Clients side: section head, then the pinned Coming soon strip. */
+.pl-sec { flex-shrink: 0; padding: 14px 20px 12px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--ov-line); }
+.pl-sec .ic { width: 32px; height: 32px; flex-shrink: 0; border-radius: 10px; background: var(--ov-st-cancelled-tint); color: var(--ov-st-cancelled); display: flex; align-items: center; justify-content: center; }
+.pl-sec b { display: block; font-size: 15px; font-weight: 600; color: var(--ov-hi); }
+.pl-sec b span { margin-left: 6px; font-family: var(--font-display); color: var(--ov-st-cancelled); }
+.pl-sec p { margin: 0; font-size: 12.5px; color: var(--ov-mute); }
+.pl-soon-strip { flex-shrink: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px 16px; border-top: 1px solid var(--ov-line); background: var(--ov-table-head); }
+@media (max-width: 1023.98px) { .pl-soon-strip { grid-template-columns: minmax(0, 1fr); } }
+.pl-soon { display: flex; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1px dashed var(--ov-stub); min-width: 0; }
+.pl-soon .ic { width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px; background: var(--ov-stub); color: var(--ov-mid); display: flex; align-items: center; justify-content: center; }
+.pl-soon .hdl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pl-soon b { font-size: 14px; font-weight: 600; color: var(--ov-hi); }
+.pl-soon p { margin: 3px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--ov-mute); }
+.soon { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; background: var(--ov-stub); color: var(--ov-mid); white-space: nowrap; }
+.pl-row2.is-off i { background: var(--ov-stub); }
+.pl-row2.is-off .l { color: var(--ov-mute); }
+.pl-row2 .soon-t { grid-column: 3 / 5; text-align: right; font-size: 12.5px; font-weight: 600; color: var(--ov-faint); }
 .pl-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 @media (min-width: 640px) { .pl-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 16px; } }
 .pl-empty {
@@ -3091,6 +3116,188 @@ a.ov-hpill:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; 
   .ov-fitao .ao-needs { padding: 16px 20px; }
 }
 
+/* Agent Overview fits one screen (Dot's mockup and sizes note: build-agent-overview-fits-one-desktop-sc).
+   DashboardLayout puts .ov-fitag on the wrapper (and .ov-fitag-main on <main>) for /agent only. The sizes of the
+   shared components (HeroPanel, TrendCard, AttentionCard, ComingUpCard, LastWeekChart) are inline styles, so the
+   rules below use !important and sit in this one block; the components only get their ag-* class names when the
+   Overview passes the opt-in `fit` prop (JS matches the same 1280x700 query), so Admin, Fulfillment and the
+   phone are untouched. Tiers: 820 tall and up (1920x1080, 1920x950, 1440x900), then short (700 to 819 tall:
+   1440x780, 1280x700). The right column is 340 under 1440 wide, 380 from 1440, 420 from 1680. */
+@media (min-width: 1280px) and (min-height: 700px) {
+  .ov-fitag { height: 100dvh; min-height: 0 !important; overflow: hidden; }
+  .ov-fitag .app-main { min-height: 0; }
+  .ov-fitag .ov-fitag-main { min-height: 0; display: flex; flex-direction: column; padding-top: 20px !important; padding-bottom: 20px !important; max-width: 1680px !important; }
+  .ov-fitag .ov-fitag-main > div { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+  .ov-fitag .ov-fitag-main > div > * { flex-shrink: 0; }
+  .ov-fitag .ov-fitag-main > div > .ag-page { flex: 1 1 0; min-height: 0; }
+  .ov-fitag .ag-page { gap: 16px; }
+  .ov-fitag .ag-page > * { flex-shrink: 0; }
+  .ov-fitag .ag-page > .ov-grid { flex: 1 1 0 !important; min-height: 0; gap: 16px; grid-template-columns: minmax(0, 1fr) 380px; grid-template-rows: auto minmax(0, 1fr); }
+
+  /* banners */
+  .ov-fitag .ov-confirm-banner { flex-wrap: nowrap; margin-bottom: 16px; padding: 8px 14px; }
+  .ov-fitag .ov-confirm-banner .ov-ghost { height: 36px !important; min-height: 0 !important; padding: 0 16px !important; font-size: 13.5px !important; font-weight: 700; }
+  .ov-fitag .ov-grace-banner { margin-bottom: 16px !important; padding: 9px 16px !important; flex-wrap: nowrap !important; }
+  .ov-fitag .ag-err { padding: 9px 16px !important; }
+
+  /* hero: the DOM stays chip, h1, p; the h1 moves up, chip and sub share the second line, clock and button sit in a row */
+  .ov-fitag .ag-hero { flex-wrap: nowrap !important; gap: 32px !important; padding: 18px 28px !important; }
+  .ov-fitag .ag-hero-l { flex: 1 1 0 !important; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; row-gap: 6px; }
+  .ov-fitag .ag-hero-l h1 { order: -1; flex: 0 0 100%; margin: 0 !important; font-size: 32px !important; line-height: 1.1 !important; }
+  .ov-fitag .ag-hero-l .ov-hero-chip { height: 28px; font-size: 13px; }
+  .ov-fitag .ag-hero-l p { margin: 0 !important; font-size: 14.5px !important; }
+  .ov-fitag .ag-hero-r { flex-direction: row !important; align-items: center !important; gap: 22px !important; flex-shrink: 0; }
+  .ov-fitag .ag-clock { font-size: 44px !important; letter-spacing: -0.04em; }
+  .ov-fitag .ag-clock-p { margin-left: 7px !important; font-size: 17px !important; }
+  .ov-fitag .ag-hero-btn { height: 44px !important; padding: 0 22px !important; font-size: 14.5px !important; }
+
+  /* trend cards */
+  .ov-fitag .ag-trends { gap: 16px !important; }
+  .ov-fitag .ag-trend { padding: 14px 20px !important; }
+  .ov-fitag .ag-trend-d { gap: 10px !important; }
+  .ov-fitag .ag-th { gap: 10px !important; }
+  .ov-fitag .ag-chip { width: 30px !important; height: 30px !important; border-radius: 10px !important; }
+  .ov-fitag .ag-chip svg { width: 15px; height: 15px; }
+  .ov-fitag .ag-tl { font-size: 13.5px !important; }
+  .ov-fitag .ag-tb { gap: 14px !important; }
+  .ov-fitag .ag-num { font-size: 40px !important; }
+  .ov-fitag .ag-td { margin-top: 8px !important; flex-wrap: nowrap !important; }
+  .ov-fitag .ag-strip { height: 36px !important; gap: 4px !important; }
+  .ov-fitag .ag-strip > span { width: 8px !important; min-height: 4px; }
+
+  /* attention and coming-up boxes: the rows scroll in .ag-list, the button is pinned in .ag-foot */
+  .ov-fitag .ag-box { min-height: 0; padding: 16px 20px !important; }
+  .ov-fitag .ag-bh h2 { font-size: 18px !important; }
+  .ov-fitag .ag-badge { min-width: 28px !important; height: 28px !important; padding: 0 9px !important; font-size: 14px !important; }
+  .ov-fitag .ag-intro { flex: none; margin: 10px 0 4px !important; font-size: 13.5px !important; line-height: 1.45 !important; }
+  .ov-fitag .ag-list { flex: 1 1 0; min-height: 0; overflow-y: auto; margin-right: -8px; padding-right: 8px; scrollbar-width: thin; scrollbar-color: var(--ov-stub) transparent; }
+  .ov-fitag .ag-row { padding: 11px 0 !important; gap: 12px !important; }
+  .ov-fitag .ag-av { width: 36px !important; height: 36px !important; font-size: 12px !important; }
+  .ov-fitag .ag-rn { font-size: 14px !important; }
+  .ov-fitag .ag-ri { font-size: 12.5px !important; line-height: 1.35; }
+  .ov-fitag .ag-open { height: 32px !important; padding: 0 12px !important; font-size: 12.5px !important; }
+  .ov-fitag .ag-foot { flex: none; margin-top: 0 !important; padding-top: 12px !important; border-top: 1px solid var(--ov-line); }
+  .ov-fitag .ag-foot .ov-primary { height: 44px; font-size: 14px; }
+  .ov-fitag .ag-upl { margin: 14px 0 8px !important; }
+  .ov-fitag .ag-next { gap: 12px !important; padding: 11px !important; border-radius: 14px !important; }
+  .ov-fitag .ag-tile { width: 42px !important; height: 42px !important; border-radius: 12px !important; }
+  .ov-fitag .ag-nm-b { font-size: 14.5px !important; }
+  .ov-fitag .ag-nm-s { font-size: 12.5px !important; }
+  .ov-fitag .ag-tm-b { font-size: 16px !important; }
+  .ov-fitag .ag-tm-s { font-size: 12px !important; }
+  .ov-fitag .ag-up { gap: 12px !important; padding: 9px 4px !important; }
+  .ov-fitag .ag-up + .ag-up { border-top: 1px solid var(--ov-line); }
+  .ov-fitag .ag-up .ag-nm-b { font-size: 14px !important; font-weight: 600 !important; }
+  .ov-fitag .ag-up .ag-nm-s { color: var(--ov-mute) !important; }
+  .ov-fitag .ag-empty { flex: 1 1 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+  .ov-fitag .ag-empty-in { flex: 1 0 auto !important; padding: 8px !important; }
+  .ov-fitag .ag-empty-in > span { width: 56px !important; height: 56px !important; border-radius: 18px !important; }
+  .ov-fitag .ag-empty-in > div:first-of-type { margin-top: 14px !important; font-size: 20px !important; }
+  .ov-fitag .ag-empty-in > div:last-of-type { margin-top: 4px !important; font-size: 13.5px !important; line-height: 1.45 !important; }
+
+  /* last week chart: the plot takes all the height the card has left; the axis leaves room for the day labels */
+  .ov-fitag .ag-chartw { min-height: 0; }
+  .ov-fitag .ag-lw { min-height: 0; gap: 14px; padding: 16px 20px 14px; }
+  .ov-fitag .ag-lw .ov-lw-head { flex: none; flex-wrap: nowrap; gap: 12px 20px; }
+  .ov-fitag .ag-lw .ov-lw-titles h2 { font-size: 17px !important; line-height: 1.25; }
+  .ov-fitag .ag-lw .ov-lw-titles p { margin: 1px 0 0 !important; font-size: 13px !important; }
+  .ov-fitag .ag-lw .ov-lw-body { flex: 1 1 0; min-height: 0; margin-top: 0; gap: 24px; }
+  .ov-fitag .ag-lw .ov-lw-totals { width: 104px; gap: 18px; padding-right: 20px; }
+  .ov-fitag .ag-lw .ov-lw-num { font-size: 30px; }
+  .ov-fitag .ag-lw .ov-lw-word { margin-top: 4px !important; }
+  .ov-fitag .ag-lw .ov-lw-chart { min-height: 0; }
+  .ov-fitag .ag-lw .ov-lw-axis { height: auto; margin-bottom: 38px; }
+  .ov-fitag .ag-lw .ov-lw-stack { min-height: 0; }
+  .ov-fitag .ag-lw .ov-lw-plot { height: auto; flex: 1 1 0; min-height: 0; }
+  .ov-fitag .ag-lw .ov-lw-xs { height: 28px; flex: none; }
+  .ov-fitag .ag-lw .ov-lw-none { min-height: 0 !important; padding: 0 12px; }
+}
+@media (min-width: 1280px) and (min-height: 700px) and (max-width: 1439.98px) {
+  .ov-fitag .ag-page > .ov-grid { grid-template-columns: minmax(0, 1fr) 340px; }
+  .ov-fitag .ag-than { display: none; }
+  .ov-fitag .ag-lw .ov-lw-sub-wide { display: none; }
+  .ov-fitag .ag-lw .ov-lw-sub-narrow { display: block; }
+}
+@media (min-width: 1680px) and (min-height: 700px) {
+  .ov-fitag .ag-page > .ov-grid { grid-template-columns: minmax(0, 1fr) 420px; }
+  .ov-fitag .ag-lw .ov-lw-bar { width: 40px; }
+}
+/* Short tier: 700 to 819 tall (1440x780, 1280x700). Every size drops a step and each trend card goes to one line. */
+@media (min-width: 1280px) and (min-height: 700px) and (max-height: 819.98px) {
+  .ov-fitag .ov-fitag-main { padding-top: 16px !important; padding-bottom: 16px !important; }
+  .ov-fitag .ag-page, .ov-fitag .ag-page > .ov-grid, .ov-fitag .ag-trends { gap: 12px !important; }
+  .ov-fitag .ov-confirm-banner { margin-bottom: 12px; padding: 6px 14px; font-size: 13px; }
+  .ov-fitag .ov-confirm-banner .ov-ghost { height: 32px !important; padding: 0 14px !important; font-size: 13px !important; }
+  .ov-fitag .ov-grace-banner { margin-bottom: 12px !important; padding: 7px 14px !important; font-size: 13px; }
+  .ov-fitag .ag-call { padding: 9px 14px !important; }
+  .ov-fitag .ag-call p { font-size: 13.5px !important; }
+  .ov-fitag .ag-err { padding: 6px 14px !important; }
+  .ov-fitag .ag-err p { font-size: 13.5px !important; }
+  .ov-fitag .ag-err button { padding: 4px 10px !important; font-size: 12.5px !important; }
+  .ov-fitag .ag-hero { padding: 12px 24px !important; }
+  .ov-fitag .ag-hero-l { row-gap: 4px; }
+  .ov-fitag .ag-hero-l h1 { font-size: 26px !important; }
+  .ov-fitag .ag-hero-l .ov-hero-chip { height: 24px; padding: 0 10px; font-size: 12.5px; }
+  .ov-fitag .ag-hero-l p { font-size: 13px !important; }
+  .ov-fitag .ag-clock { font-size: 34px !important; }
+  .ov-fitag .ag-clock-p { font-size: 14px !important; margin-left: 5px !important; }
+  .ov-fitag .ag-hero-r { gap: 18px !important; }
+  .ov-fitag .ag-hero-btn { height: 40px !important; padding: 0 18px !important; font-size: 14px !important; }
+  .ov-fitag .ag-trend { padding: 12px 16px !important; }
+  .ov-fitag .ag-trend-d { gap: 6px !important; }
+  .ov-fitag .ag-chip { width: 26px !important; height: 26px !important; border-radius: 8px !important; }
+  .ov-fitag .ag-tl { font-size: 13px !important; }
+  .ov-fitag .ag-tb { align-items: center !important; gap: 12px !important; }
+  .ov-fitag .ag-tn { display: flex !important; align-items: center; gap: 10px; }
+  .ov-fitag .ag-num { font-size: 30px !important; }
+  .ov-fitag .ag-td { margin-top: 0 !important; }
+  .ov-fitag .ag-strip { height: 28px !important; gap: 3px !important; }
+  .ov-fitag .ag-strip > span { width: 7px !important; }
+  .ov-fitag .ag-box { padding: 12px 16px !important; }
+  .ov-fitag .ag-bh { gap: 10px !important; }
+  .ov-fitag .ag-bh h2 { font-size: 16px !important; }
+  .ov-fitag .ag-badge { min-width: 26px !important; height: 26px !important; padding: 0 8px !important; font-size: 13.5px !important; }
+  .ov-fitag .ag-intro { margin: 6px 0 2px !important; font-size: 12.5px !important; line-height: 1.4 !important; }
+  .ov-fitag .ag-row { padding: 8px 0 !important; gap: 10px !important; }
+  .ov-fitag .ag-av { width: 32px !important; height: 32px !important; font-size: 11.5px !important; }
+  .ov-fitag .ag-rn { font-size: 13.5px !important; }
+  .ov-fitag .ag-ri { font-size: 12px !important; }
+  .ov-fitag .ag-open { height: 28px !important; padding: 0 10px !important; font-size: 12px !important; }
+  .ov-fitag .ag-foot { padding-top: 10px !important; }
+  .ov-fitag .ag-foot .ov-primary { height: 40px; font-size: 13.5px; }
+  .ov-fitag .ag-upl { margin: 8px 0 6px !important; }
+  .ov-fitag .ag-next { padding: 8px !important; gap: 10px !important; border-radius: 12px !important; }
+  .ov-fitag .ag-tile { width: 36px !important; height: 36px !important; border-radius: 10px !important; }
+  .ov-fitag .ag-tile > span:first-child { font-size: 9.5px !important; }
+  .ov-fitag .ag-tile > span:last-child { margin-top: 2px !important; font-size: 14px !important; }
+  .ov-fitag .ag-nm-b { font-size: 13.5px !important; }
+  .ov-fitag .ag-nm-s { font-size: 12px !important; }
+  .ov-fitag .ag-tm-b { font-size: 14.5px !important; }
+  .ov-fitag .ag-tm-s { font-size: 11.5px !important; }
+  .ov-fitag .ag-up { padding: 7px 4px !important; gap: 10px !important; }
+  .ov-fitag .ag-up .ag-nm-b { font-size: 13.5px !important; }
+  .ov-fitag .ag-empty-in { padding: 2px 8px !important; }
+  .ov-fitag .ag-empty-in > span { width: 38px !important; height: 38px !important; border-radius: 12px !important; }
+  .ov-fitag .ag-empty-in > div:first-of-type { margin-top: 6px !important; font-size: 16px !important; }
+  .ov-fitag .ag-empty-in > div:last-of-type { margin-top: 2px !important; font-size: 12.5px !important; line-height: 1.35 !important; }
+  .ov-fitag .ag-lw { padding: 10px 16px 8px; gap: 6px; }
+  .ov-fitag .ag-lw .ov-lw-titles { display: flex; align-items: baseline; gap: 8px; }
+  .ov-fitag .ag-lw .ov-lw-titles h2 { font-size: 16px !important; }
+  .ov-fitag .ag-lw .ov-lw-titles p { margin: 0 !important; font-size: 12.5px !important; }
+  .ov-fitag .ag-lw .ov-lw-body { gap: 16px; }
+  .ov-fitag .ag-lw .ov-lw-totals { gap: 4px; padding-right: 12px; }
+  .ov-fitag .ag-lw .ov-lw-totals > div { display: flex; align-items: baseline; gap: 5px; }
+  .ov-fitag .ag-lw .ov-lw-num { font-size: 22px; }
+  .ov-fitag .ag-lw .ov-lw-word { margin-top: 0 !important; font-size: 12px !important; }
+  .ov-fitag .ag-lw .ov-lw-chart { padding-top: 4px; }
+  .ov-fitag .ag-lw .ov-lw-axis { margin-bottom: 19px; }
+  .ov-fitag .ag-lw .ov-lw-stack { gap: 4px !important; }
+  .ov-fitag .ag-lw .ov-lw-xs { height: 15px; }
+  .ov-fitag .ag-lw .ov-lw-date { display: none; }
+  .ov-fitag .ag-lw .ov-lw-sub-wide { display: none; }
+  .ov-fitag .ag-lw .ov-lw-sub-narrow { display: block; }
+}
+
 /* ── Prompt 760 — Admin Fulfillment: the whole desk, as dots ─────────────── */
 .af-page { display: flex; flex-direction: column; gap: 14px; --af-ring: #10121A; }
 [data-theme="light"] .af-page { --af-ring: #FFFFFF; }
@@ -4179,6 +4386,15 @@ button.nt-phone:hover { color: var(--ov-hi); }
 }
 .ph-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .ph-seg.ph-seg-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* My Pipeline on a phone: the In progress | Clients switch (an .ov-range, 52px with its track), sentence-case
+   group labels and the Coming soon cards. */
+.ph-side { margin-top: 12px; }
+.ph-side .ov-range.pl-seg button { gap: 7px; }
+.ph-side .pl-seg-att { min-width: 20px; height: 20px; padding: 0 6px; justify-content: center; font-size: 11.5px; font-weight: 800; }
+.ph-group-label.is-sentence { font-size: 13px; letter-spacing: 0; text-transform: none; }
+.ph-group-label .soon { margin-left: auto; }
+.ph-soon { padding: 14px; display: flex; gap: 12px; font-size: 13px; line-height: 1.45; color: var(--ov-mute); }
+.ph-soon .ic { width: 34px; height: 34px; flex: none; border-radius: 10px; background: var(--ov-stub); color: var(--ov-mid); display: flex; align-items: center; justify-content: center; }
 .ph-plus.is-live { background: var(--ph-live-red); box-shadow: 0 12px 28px -8px rgba(239,68,68,0.8), 0 0 0 5px var(--ph-plus-ring); }
 button.ph-tab { border: 0; background: none; padding: 0; font: inherit; cursor: pointer; }
 
