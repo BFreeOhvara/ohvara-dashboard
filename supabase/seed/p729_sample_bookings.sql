@@ -2,11 +2,12 @@
 -- Booked list is long enough to scroll inside its box. Fake data, safe to delete.
 -- Idempotent: keyed on the client name, so running it twice adds nothing.
 --
--- Remove them:
---   delete from policies where agent_id = '3f2b2df7-40b1-4921-80e2-09981c819642'
---     and client_first_name = 'Test Client' and notes like 'P729 SAMPLE DATA%';
---   (policy_fulfillment_details rows go with them via the foreign key; if not,
---    delete from policy_fulfillment_details where full_legal_name like 'Test Client Sample Data %' first.)
+-- Remove them: from now on scripts/wipe_agent_sample.py removes these rows,
+-- after scripts/seed_agent_sample.py has marked them is_sample (it marks the
+-- 12 bookings and their policy_fulfillment_details). Don't delete them by
+-- hand: the wipe's one transaction also clears their bell rows, and their
+-- policy_events go only by the foreign-key cascade (a direct delete raises).
+-- admin_audit_log keeps one row per removed booking by design.
 --
 -- Run as the service role / SQL editor (not as `authenticated`) so the
 -- weekly-cap trigger is skipped. created_at is set before this week's Monday
