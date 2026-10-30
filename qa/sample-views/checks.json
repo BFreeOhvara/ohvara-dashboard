@@ -1,0 +1,728 @@
+[
+  {
+    "name": "1920-light inbounds booked: 5 stage columns, a card in each",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 2
+      },
+      {
+        "title": "Contacting",
+        "cards": 3
+      },
+      {
+        "title": "Booked",
+        "cards": 3
+      },
+      {
+        "title": "Met",
+        "cards": 2
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 4
+      }
+    ]
+  },
+  {
+    "name": "1920-light inbounds booked: no Start banner when filled",
+    "pass": true
+  },
+  {
+    "name": "1920-light inbounds booked: no error text",
+    "pass": true
+  },
+  {
+    "name": "1920-light inbounds booked: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920-light inbounds live: at least 5 rows",
+    "pass": true,
+    "rows": 7
+  },
+  {
+    "name": "1920-light inbounds live: no error text",
+    "pass": true
+  },
+  {
+    "name": "1920-light inbounds live: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920-light inbounds empty: Start banner with a Start link",
+    "pass": true,
+    "start": {
+      "text": "You’re not getting inbounds yet\n\nPick a weekly amount and we’ll start sending you Live Calls, Booked Appointments, or both.\n\nStart",
+      "href": "/agent/billing"
+    }
+  },
+  {
+    "name": "1920-light inbounds empty: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "1920-light inbounds fail: error card with Try again",
+    "pass": true
+  },
+  {
+    "name": "1920-light inbounds fail: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "1920-light inbounds fail: Try again recovers",
+    "pass": true
+  },
+  {
+    "name": "1920-light calendar week: >=6 blocks over >=4 days",
+    "pass": true,
+    "blocks": 17,
+    "days": 6
+  },
+  {
+    "name": "1920-light calendar week: today highlighted",
+    "pass": true
+  },
+  {
+    "name": "1920-light calendar week: now line",
+    "pass": true
+  },
+  {
+    "name": "1920-light calendar week: no error text",
+    "pass": true
+  },
+  {
+    "name": "1920-light calendar panel: opens with the appointment",
+    "pass": true,
+    "panel": "Inbound appointment\nElena Marsh\n\nToday, 2:30 PM\nin 2 hr 20 min\n\nPhone\n(555) 010-0148\nText\nState\nOhio\nStage\nBooked\nYour time\n2:30 PM\nCentral\nTheir time\n3:30 PM\nEastern\nOpen inbound\nCall"
+  },
+  {
+    "name": "1920-light calendar day view: opens on today with cards",
+    "pass": true,
+    "cards": 5,
+    "label": "Friday, Oct 30\nToday"
+  },
+  {
+    "name": "1920-light calendar day view: no error text",
+    "pass": true
+  },
+  {
+    "name": "1920-light calendar sample: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920-light calendar empty: explains and offers Book a call",
+    "pass": true,
+    "emp": "Nothing booked this week\n\nBooked calls and inbounds that book on your calendar show up here.\n\nBooked calls\nCancellation calls you book for your clients.\nInbounds\nPeople our VA books at your first open time.\nBook a call"
+  },
+  {
+    "name": "1920-light calendar empty: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "1920-light calendar fail: error card with Try again",
+    "pass": true
+  },
+  {
+    "name": "1920-light calendar fail: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "1440-light inbounds booked: 5 stage columns, a card in each",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 2
+      },
+      {
+        "title": "Contacting",
+        "cards": 3
+      },
+      {
+        "title": "Booked",
+        "cards": 3
+      },
+      {
+        "title": "Met",
+        "cards": 2
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 4
+      }
+    ]
+  },
+  {
+    "name": "1440-light inbounds booked: no Start banner when filled",
+    "pass": true
+  },
+  {
+    "name": "1440-light inbounds booked: no error text",
+    "pass": true
+  },
+  {
+    "name": "1440-light inbounds booked: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440-light inbounds live: at least 5 rows",
+    "pass": true,
+    "rows": 7
+  },
+  {
+    "name": "1440-light inbounds live: no error text",
+    "pass": true
+  },
+  {
+    "name": "1440-light inbounds live: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440-light inbounds empty: Start banner with a Start link",
+    "pass": true,
+    "start": {
+      "text": "You’re not getting inbounds yet\n\nPick a weekly amount and we’ll start sending you Live Calls, Booked Appointments, or both.\n\nStart",
+      "href": "/agent/billing"
+    }
+  },
+  {
+    "name": "1440-light inbounds empty: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "1440-light inbounds fail: error card with Try again",
+    "pass": true
+  },
+  {
+    "name": "1440-light inbounds fail: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "1440-light inbounds fail: Try again recovers",
+    "pass": true
+  },
+  {
+    "name": "1440-light calendar week: >=6 blocks over >=4 days",
+    "pass": true,
+    "blocks": 17,
+    "days": 6
+  },
+  {
+    "name": "1440-light calendar week: today highlighted",
+    "pass": true
+  },
+  {
+    "name": "1440-light calendar week: now line",
+    "pass": true
+  },
+  {
+    "name": "1440-light calendar week: no error text",
+    "pass": true
+  },
+  {
+    "name": "1440-light calendar panel: opens with the appointment",
+    "pass": true,
+    "panel": "Inbound appointment\nElena Marsh\n\nToday, 2:30 PM\nin 2 hr 20 min\n\nPhone\n(555) 010-0148\nText\nState\nOhio\nStage\nBooked\nYour time\n2:30 PM\nCentral\nTheir time\n3:30 PM\nEastern\nOpen inbound\nCall"
+  },
+  {
+    "name": "1440-light calendar day view: opens on today with cards",
+    "pass": true,
+    "cards": 5,
+    "label": "Friday, Oct 30\nToday"
+  },
+  {
+    "name": "1440-light calendar day view: no error text",
+    "pass": true
+  },
+  {
+    "name": "1440-light calendar sample: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440-light calendar empty: explains and offers Book a call",
+    "pass": true,
+    "emp": "Nothing booked this week\n\nBooked calls and inbounds that book on your calendar show up here.\n\nBooked calls\nCancellation calls you book for your clients.\nInbounds\nPeople our VA books at your first open time.\nBook a call"
+  },
+  {
+    "name": "1440-light calendar empty: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "1440-light calendar fail: error card with Try again",
+    "pass": true
+  },
+  {
+    "name": "1440-light calendar fail: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "390-light inbounds booked: 5 stage columns, a card in each",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 2
+      },
+      {
+        "title": "Contacting",
+        "cards": 3
+      },
+      {
+        "title": "Booked",
+        "cards": 3
+      },
+      {
+        "title": "Met",
+        "cards": 2
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 4
+      }
+    ]
+  },
+  {
+    "name": "390-light inbounds booked: no Start banner when filled",
+    "pass": true
+  },
+  {
+    "name": "390-light inbounds booked: no error text",
+    "pass": true
+  },
+  {
+    "name": "390-light inbounds booked: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-light inbounds live: at least 5 rows",
+    "pass": true,
+    "rows": 7
+  },
+  {
+    "name": "390-light inbounds live: no error text",
+    "pass": true
+  },
+  {
+    "name": "390-light inbounds live: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-light inbounds empty: Start banner with a Start link",
+    "pass": true,
+    "start": {
+      "text": "You’re not getting inbounds yet\n\nPick a weekly amount and we’ll start sending you Live Calls, Booked Appointments, or both.\n\nStart",
+      "href": "/agent/billing"
+    }
+  },
+  {
+    "name": "390-light inbounds empty: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "390-light inbounds fail: error card with Try again",
+    "pass": true
+  },
+  {
+    "name": "390-light inbounds fail: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "390-light inbounds fail: Try again recovers",
+    "pass": true
+  },
+  {
+    "name": "390-light calendar agenda: rows shown",
+    "pass": true,
+    "rows": 7
+  },
+  {
+    "name": "390-light calendar agenda: no error text",
+    "pass": true
+  },
+  {
+    "name": "390-light calendar sample: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-light calendar empty: explains and offers Book a call",
+    "pass": true,
+    "emp": "Nothing booked this week\n\nBooked calls and inbounds that book on your calendar show up here.\n\nBooked calls\nCancellation calls you book for your clients.\nInbounds\nPeople our VA books at your first open time.\nBook a call"
+  },
+  {
+    "name": "390-light calendar empty: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "390-light calendar fail: error card with Try again",
+    "pass": true
+  },
+  {
+    "name": "390-light calendar fail: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "1920-dark inbounds booked: 5 stage columns, a card in each",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 2
+      },
+      {
+        "title": "Contacting",
+        "cards": 3
+      },
+      {
+        "title": "Booked",
+        "cards": 3
+      },
+      {
+        "title": "Met",
+        "cards": 2
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 4
+      }
+    ]
+  },
+  {
+    "name": "1920-dark inbounds booked: no Start banner when filled",
+    "pass": true
+  },
+  {
+    "name": "1920-dark inbounds booked: no error text",
+    "pass": true
+  },
+  {
+    "name": "1920-dark inbounds booked: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920-dark inbounds live: at least 5 rows",
+    "pass": true,
+    "rows": 7
+  },
+  {
+    "name": "1920-dark inbounds live: no error text",
+    "pass": true
+  },
+  {
+    "name": "1920-dark inbounds live: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920-dark inbounds empty: Start banner with a Start link",
+    "pass": true,
+    "start": {
+      "text": "You’re not getting inbounds yet\n\nPick a weekly amount and we’ll start sending you Live Calls, Booked Appointments, or both.\n\nStart",
+      "href": "/agent/billing"
+    }
+  },
+  {
+    "name": "1920-dark inbounds empty: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "1920-dark inbounds fail: error card with Try again",
+    "pass": true
+  },
+  {
+    "name": "1920-dark inbounds fail: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "1920-dark inbounds fail: Try again recovers",
+    "pass": true
+  },
+  {
+    "name": "1920-dark calendar week: >=6 blocks over >=4 days",
+    "pass": true,
+    "blocks": 17,
+    "days": 6
+  },
+  {
+    "name": "1920-dark calendar week: today highlighted",
+    "pass": true
+  },
+  {
+    "name": "1920-dark calendar week: now line",
+    "pass": true
+  },
+  {
+    "name": "1920-dark calendar week: no error text",
+    "pass": true
+  },
+  {
+    "name": "1920-dark calendar panel: opens with the appointment",
+    "pass": true,
+    "panel": "Inbound appointment\nElena Marsh\n\nToday, 2:30 PM\nin 2 hr 20 min\n\nPhone\n(555) 010-0148\nText\nState\nOhio\nStage\nBooked\nYour time\n2:30 PM\nCentral\nTheir time\n3:30 PM\nEastern\nOpen inbound\nCall"
+  },
+  {
+    "name": "1920-dark calendar day view: opens on today with cards",
+    "pass": true,
+    "cards": 5,
+    "label": "Friday, Oct 30\nToday"
+  },
+  {
+    "name": "1920-dark calendar day view: no error text",
+    "pass": true
+  },
+  {
+    "name": "1920-dark calendar sample: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920-dark calendar empty: explains and offers Book a call",
+    "pass": true,
+    "emp": "Nothing booked this week\n\nBooked calls and inbounds that book on your calendar show up here.\n\nBooked calls\nCancellation calls you book for your clients.\nInbounds\nPeople our VA books at your first open time.\nBook a call"
+  },
+  {
+    "name": "1920-dark calendar empty: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "1920-dark calendar fail: error card with Try again",
+    "pass": true
+  },
+  {
+    "name": "1920-dark calendar fail: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "1440-dark inbounds booked: 5 stage columns, a card in each",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 2
+      },
+      {
+        "title": "Contacting",
+        "cards": 3
+      },
+      {
+        "title": "Booked",
+        "cards": 3
+      },
+      {
+        "title": "Met",
+        "cards": 2
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 4
+      }
+    ]
+  },
+  {
+    "name": "1440-dark inbounds booked: no Start banner when filled",
+    "pass": true
+  },
+  {
+    "name": "1440-dark inbounds booked: no error text",
+    "pass": true
+  },
+  {
+    "name": "1440-dark inbounds booked: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440-dark inbounds live: at least 5 rows",
+    "pass": true,
+    "rows": 7
+  },
+  {
+    "name": "1440-dark inbounds live: no error text",
+    "pass": true
+  },
+  {
+    "name": "1440-dark inbounds live: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440-dark inbounds empty: Start banner with a Start link",
+    "pass": true,
+    "start": {
+      "text": "You’re not getting inbounds yet\n\nPick a weekly amount and we’ll start sending you Live Calls, Booked Appointments, or both.\n\nStart",
+      "href": "/agent/billing"
+    }
+  },
+  {
+    "name": "1440-dark inbounds empty: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "1440-dark inbounds fail: error card with Try again",
+    "pass": true
+  },
+  {
+    "name": "1440-dark inbounds fail: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "1440-dark inbounds fail: Try again recovers",
+    "pass": true
+  },
+  {
+    "name": "1440-dark calendar week: >=6 blocks over >=4 days",
+    "pass": true,
+    "blocks": 17,
+    "days": 6
+  },
+  {
+    "name": "1440-dark calendar week: today highlighted",
+    "pass": true
+  },
+  {
+    "name": "1440-dark calendar week: now line",
+    "pass": true
+  },
+  {
+    "name": "1440-dark calendar week: no error text",
+    "pass": true
+  },
+  {
+    "name": "1440-dark calendar panel: opens with the appointment",
+    "pass": true,
+    "panel": "Inbound appointment\nElena Marsh\n\nToday, 2:30 PM\nin 2 hr 20 min\n\nPhone\n(555) 010-0148\nText\nState\nOhio\nStage\nBooked\nYour time\n2:30 PM\nCentral\nTheir time\n3:30 PM\nEastern\nOpen inbound\nCall"
+  },
+  {
+    "name": "1440-dark calendar day view: opens on today with cards",
+    "pass": true,
+    "cards": 5,
+    "label": "Friday, Oct 30\nToday"
+  },
+  {
+    "name": "1440-dark calendar day view: no error text",
+    "pass": true
+  },
+  {
+    "name": "1440-dark calendar sample: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440-dark calendar empty: explains and offers Book a call",
+    "pass": true,
+    "emp": "Nothing booked this week\n\nBooked calls and inbounds that book on your calendar show up here.\n\nBooked calls\nCancellation calls you book for your clients.\nInbounds\nPeople our VA books at your first open time.\nBook a call"
+  },
+  {
+    "name": "1440-dark calendar empty: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "1440-dark calendar fail: error card with Try again",
+    "pass": true
+  },
+  {
+    "name": "1440-dark calendar fail: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "390-dark inbounds booked: 5 stage columns, a card in each",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 2
+      },
+      {
+        "title": "Contacting",
+        "cards": 3
+      },
+      {
+        "title": "Booked",
+        "cards": 3
+      },
+      {
+        "title": "Met",
+        "cards": 2
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 4
+      }
+    ]
+  },
+  {
+    "name": "390-dark inbounds booked: no Start banner when filled",
+    "pass": true
+  },
+  {
+    "name": "390-dark inbounds booked: no error text",
+    "pass": true
+  },
+  {
+    "name": "390-dark inbounds booked: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-dark inbounds live: at least 5 rows",
+    "pass": true,
+    "rows": 7
+  },
+  {
+    "name": "390-dark inbounds live: no error text",
+    "pass": true
+  },
+  {
+    "name": "390-dark inbounds live: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-dark inbounds empty: Start banner with a Start link",
+    "pass": true,
+    "start": {
+      "text": "You’re not getting inbounds yet\n\nPick a weekly amount and we’ll start sending you Live Calls, Booked Appointments, or both.\n\nStart",
+      "href": "/agent/billing"
+    }
+  },
+  {
+    "name": "390-dark inbounds empty: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "390-dark inbounds fail: error card with Try again",
+    "pass": true
+  },
+  {
+    "name": "390-dark inbounds fail: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "390-dark inbounds fail: Try again recovers",
+    "pass": true
+  },
+  {
+    "name": "390-dark calendar agenda: rows shown",
+    "pass": true,
+    "rows": 7
+  },
+  {
+    "name": "390-dark calendar agenda: no error text",
+    "pass": true
+  },
+  {
+    "name": "390-dark calendar sample: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-dark calendar empty: explains and offers Book a call",
+    "pass": true,
+    "emp": "Nothing booked this week\n\nBooked calls and inbounds that book on your calendar show up here.\n\nBooked calls\nCancellation calls you book for your clients.\nInbounds\nPeople our VA books at your first open time.\nBook a call"
+  },
+  {
+    "name": "390-dark calendar empty: no sideways scroll, no page errors",
+    "pass": true
+  },
+  {
+    "name": "390-dark calendar fail: error card with Try again",
+    "pass": true
+  },
+  {
+    "name": "390-dark calendar fail: no sideways scroll, no page errors",
+    "pass": true
+  }
+]
