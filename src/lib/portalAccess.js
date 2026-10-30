@@ -67,7 +67,7 @@ export function portalState(profile, access, settings, now = Date.now()) {
 // too for a self-signup: on a phone it's the way to Billing, Settings and Sign out.
 const PAUSED_PASS = ['/settings', '/agent/billing', '/agent/leads']
 const WELCOME_PASS = [...PAUSED_PASS, '/agent/more']
-const SERVICING_PAGES = ['/agent/book', '/agent/clients']
+const SERVICING_PAGES = ['/agent/submit', '/agent/book', '/agent/clients']
 
 // What a page shows for a portalState: 'open' | 'welcome' | 'paused' | 'servicing'.
 export function gateView(state, pathname) {

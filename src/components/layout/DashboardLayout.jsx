@@ -9,6 +9,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { usePortal } from '../../hooks/usePortalAccess'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
 import { useWeeklyUsage } from '../../hooks/useBillingTiers'
+import { useSubmitLive } from '../../hooks/useAppSettings'
 import { usePolicyEvents } from '../../hooks/useAgentActivity'
 import { useStandingThreads, dmId } from '../../hooks/useDirectMessages'
 import { useInbounds, useInboundActivity } from '../../hooks/useInbounds'
@@ -44,7 +45,7 @@ const TITLES = {
   '/agent/calls': ['My Calls', 'Schedule, activity, and graded calls'],
   '/agent/quoter': ['Quoter', 'InsuranceToolkits — multi-carrier instant quoting'],
   '/agent/underwriting': ['Underwriting', 'AI chat assistant for carrier placement based on client health'],
-  '/agent/book': ['Submit', 'Get your client on the calendar with Fulfillment'],
+  '/agent/submit': ['Submit', 'Submit a deal for servicing or request a service'],
   '/agent/clients': ['Clients', 'Calls in progress on one side, your clients on the other'],
   '/agent/activity': ['Activity', 'What happened with your clients, newest first'],
   '/agent/calendar': ['Calendar', 'Every appointment, whoever booked it'],
@@ -126,8 +127,16 @@ function OverviewLine({ profile }) {
 
 function BookLine({ profile }) {
   const { data: usage, isLoading } = useWeeklyUsage(profile.id)
+  const { live } = useSubmitLive()
   if (isLoading) return null
   const cap = capState(usage)
+  // Submit page on: the plain subtitle and the count. Off: today's booking line.
+  if (live) {
+    return <LiveLine items={[
+      <Plain>Submit a deal for servicing or request a service</Plain>,
+      cap?.cap != null && <Pill tone="teal">{cap.used} of {cap.cap} used</Pill>,
+    ]} />
+  }
   if (cap?.cap == null) return <LiveLine items={[<Plain>No weekly limit</Plain>]} />
   return <LiveLine items={[
     <Pill tone="teal">{cap.used} of {cap.cap} bookings used this week</Pill>,
@@ -203,7 +212,7 @@ function SettingsLine({ session, profile }) {
 
 const AGENT_LINES = {
   '/agent': OverviewLine,
-  '/agent/book': BookLine,
+  '/agent/submit': BookLine,
   '/agent/clients': PipelineLine,
   '/agent/activity': ActivityLine,
   '/messages': MessagesLine,
@@ -319,7 +328,7 @@ export function DashboardLayout({ children }) {
           className="app-main flex-1 flex flex-col min-w-0 pt-[60px] md:pt-0"
           style={{ '--sb-w': `${collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W}px`, position: 'relative' }}
         >
-          <div className={`app-backdrop${['/agent', '/agent/book', '/agent/clients', '/agent/activity', '/agent/leads', '/agent/billing', '/agent/calendar', '/settings', '/fulfillment', '/fulfillment/desk', '/fulfillment/leads', '/fulfillment/pipeline', '/fulfillment/pay', '/fulfillment/getting-paid'].includes(pathname) || pathname.startsWith('/agent/inbounds') || pathname.startsWith('/admin') ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
+          <div className={`app-backdrop${['/agent', '/agent/submit', '/agent/clients', '/agent/activity', '/agent/leads', '/agent/billing', '/agent/calendar', '/settings', '/fulfillment', '/fulfillment/desk', '/fulfillment/leads', '/fulfillment/pipeline', '/fulfillment/pay', '/fulfillment/getting-paid'].includes(pathname) || pathname.startsWith('/agent/inbounds') || pathname.startsWith('/admin') ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
           {/* Prompt 722 — one header for every size: a 60px fixed top bar on
               phones (menu, title, search, bell), the 72px sticky page header
               from md up. One instance, so the search hotkeys and the bell

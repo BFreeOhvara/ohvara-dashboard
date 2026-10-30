@@ -4,7 +4,7 @@ import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
 import { SLOTS, slotTo24h, slotToISO, localDateISO, callWhen, callAt, fmtSlotTime, clientSlotISO, slotState, dayIn, addDaysStr } from '../../lib/scheduling'
 import { rankCarriers, exactCarrier } from '../../lib/carriers'
-import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, isMissedHold, MISSED_LABEL, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, PROGRESS_TABS, COMING_SOON, digits, matchClients, placeOf } from '../../lib/agentBookings'
+import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, isMissedHold, MISSED_LABEL, canRebook, sameLocalDay, tabOf, isSubmittedOnly, SUBMITTED_LABEL, NO_OLD_POLICY, reviewCallLine, PIPELINE_TABS, PROGRESS_TABS, COMING_SOON, digits, matchClients, placeOf } from '../../lib/agentBookings'
 import { US_STATES, zonedDateStr } from '../../lib/timezones'
 import { whenShort, daysBetween, dayShort, timeText } from '../../lib/fulfillmentDay'
 import { DayClock } from '../ui/DayClock'
@@ -174,7 +174,7 @@ export function ClientRow({ p, now, onClick, onRebook, rebookLabel = 'Re-book', 
       ...(p.client_timezone ? { timeZone: p.client_timezone } : null),
     })
     : 'No time'
-  const leaving = p.current_carrier || 'Not noted'
+  const leaving = isSubmittedOnly(p) ? NO_OLD_POLICY : p.current_carrier || 'Not noted'
   return (
     <div
       onClick={onClick}
@@ -367,7 +367,7 @@ export function IconChip({ icon: Icon, color, tint, size = 36, radius = 11, icon
 // `compact` (Prompt 758, the admin Overview) is the same panel a size tighter.
 // Prompt 768 (QA Finding 7) — a load that failed says so, instead of looking
 // like a brand-new empty account. `what` finishes "Couldn't load …".
-export function LoadError({ what, onRetry, style, className }) {
+export function LoadError({ what, onRetry, style, className, tall }) {
   return (
     <div role="alert" className={className} style={{
       display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 16,
@@ -379,7 +379,7 @@ export function LoadError({ what, onRetry, style, className }) {
         <button type="button" onClick={onRetry} style={{
           flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 10,
           border: 'var(--border-w) solid var(--danger-bd)', background: 'transparent', color: 'var(--danger)',
-          fontSize: 13, fontWeight: 600, cursor: 'pointer',
+          fontSize: 13, fontWeight: 600, cursor: 'pointer', ...(tall ? { minHeight: 44 } : null),
         }}>
           <RefreshCw size={14} strokeWidth={2.2} /> Try again
         </button>
@@ -559,7 +559,7 @@ export function ActivityChart({ days, loading, compact, className = '' }) {
 
   const bars = empty ? (
     <div style={{ flex: 1, minWidth: 0, minHeight: area + 26, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 14, color: 'var(--ov-mute)' }}>
-      No calls in the last {n} days. Book one when your next client says yes.
+      No calls in the last {n} days. Submit when your next client says yes.
     </div>
   ) : (
     <div
@@ -1033,7 +1033,11 @@ export function CarrierInput({ carriers, text, picked, onText, onPick, onUseText
   const [active, setActive] = useState(0)
   const [asking, setAsking] = useState(null) // the name an admin is about to add
   const inputRef = useRef(null)
-  const listId = 'carrier-suggest'
+  // Two carrier boxes can share a page (Submit's new and old carrier), so the
+  // ids can't be fixed strings.
+  const uid = useId()
+  const inputId = `carrier-input-${uid}`
+  const listId = `carrier-suggest-${uid}`
   const hits = useMemo(() => (picked ? [] : rankCarriers(carriers, text)), [carriers, text, picked])
   const trimmed = text.trim()
   const useRow = !picked && trimmed.length >= 2 && hits.length === 0
@@ -1077,12 +1081,12 @@ export function CarrierInput({ carriers, text, picked, onText, onPick, onUseText
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0, position: 'relative' }}>
-      <label htmlFor="carrier-input" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>{label}</label>
+      <label htmlFor={inputId} style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>{label}</label>
       <span className={`ov-input${error ? ' is-error' : ''}${changed ? ' is-changed' : ''}`}>
         <Building2 size={17} strokeWidth={1.9} style={{ flexShrink: 0 }} />
         <span className="ov-complete-wrap">
           <input
-            ref={inputRef} id="carrier-input" value={text} autoComplete="off" spellCheck={false} placeholder="e.g. Mutual of Omaha"
+            ref={inputRef} id={inputId} value={text} autoComplete="off" spellCheck={false} placeholder="e.g. Mutual of Omaha"
             role="combobox" aria-expanded={shown} aria-controls={listId} aria-autocomplete="both" aria-invalid={error || undefined}
             aria-activedescendant={shown ? `${listId}-${at}` : undefined} autoFocus={autoFocus}
             onChange={e => { onText(e.target.value); setOpen(true); setActive(0); setAsking(null) }}
@@ -1450,7 +1454,9 @@ export function BookingSummary({ name, phone, carrier, scheduledAt, now, onBook,
 // "3 of 7 bookings this week" with one segment per allowed booking; at the
 // cap everything turns amber. `pill` is the phone version.
 // Prompt 730 — `note` replaces the plan line (Change a booking's "never uses one").
-export function WeeklyUsage({ cap, resets, pill, note }) {
+// Submit page — `title` ('Submissions this week') puts the label on the left and
+// "5 of 16" on the right; without it the line stays "5 of 16 bookings this week".
+export function WeeklyUsage({ cap, resets, pill, note, noun = 'bookings', title }) {
   const warn = cap.atCap
   if (pill) {
     return (
@@ -1465,11 +1471,11 @@ export function WeeklyUsage({ cap, resets, pill, note }) {
   }
   return (
     <div className="ov-card" style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '20px 22px' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', ...(title ? { justifyContent: 'space-between', flexDirection: 'row-reverse' } : null) }}>
         <span style={{ ...OV_NUM, fontSize: 30, letterSpacing: '-0.03em', ...(warn ? { color: 'var(--ov-warn)' } : null) }}>
           {cap.used}<span style={{ fontSize: 17, fontWeight: 500, color: 'var(--ov-mute)' }}> of {cap.cap}</span>
         </span>
-        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ov-mid)' }}>bookings this week</span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ov-mid)' }}>{title || `${noun} this week`}</span>
       </div>
       <div aria-hidden="true" style={{ display: 'flex', gap: 5 }}>
         {Array.from({ length: cap.cap }, (_, i) => (
@@ -1494,8 +1500,11 @@ function scriptWhen(iso, now, tz) {
 
 // The success screen after a booking, with the line to read to the client.
 // Prompt 724 — optional `tz` (the client's zone) and `location`.
-export function BookedCard({ name, at, now, onAnother, onPipeline, tz, location }) {
-  const { time, period, full } = bookingWhen(at, now, tz)
+// Submit (new deal flow) reuses it for a deal with no call: `chip`, `extraChip`,
+// `line` (instead of the day and time) and `box` (instead of the script) swap
+// the words, `anotherLabel` / `pipelineLabel` the two buttons.
+export function BookedCard({ name, at, now, onAnother, onPipeline, tz, location, anotherLabel = 'Book another', pipelineLabel = 'See it in Clients', chip = 'Booked with Fulfillment', extraChip, line, box }) {
+  const { time, period, full } = at ? bookingWhen(at, now, tz) : {}
   return (
     <div className="pt-6 sm:pt-[72px]" style={{ maxWidth: 620, margin: '0 auto' }}>
       <section className="ov-hero px-5 pt-10 pb-8 sm:px-11 sm:pt-12 sm:pb-10"
@@ -1507,14 +1516,17 @@ export function BookedCard({ name, at, now, onAnother, onPipeline, tz, location 
         }}>
           <Check size={34} strokeWidth={2.4} />
         </span>
-        <span className="ov-hero-chip" style={{ marginTop: 26 }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#34E0C4' }} />Booked with Fulfillment
-        </span>
+        <div style={{ marginTop: 26, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <span className="ov-hero-chip">
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#34E0C4' }} />{chip}
+          </span>
+          {extraChip && <span className="ov-hero-chip">{extraChip}</span>}
+        </div>
         <h1 className="text-[32px] sm:text-[40px]" style={{ margin: '18px 0 0', fontFamily: DISPLAY, fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.035em', color: '#fff' }}>
           {name}
         </h1>
         <p style={{ margin: '10px 0 0', fontFamily: DISPLAY, fontSize: 20, fontWeight: 500, color: 'var(--ov-hero-soft)' }}>
-          {full} at {time} {period}
+          {line || `${full} at ${time} ${period}`}
         </p>
         {location && (
           <PlaceLine location={location} style={{ marginTop: 8, justifyContent: 'center', fontSize: 15, color: 'var(--ov-hero-soft)' }} />
@@ -1523,24 +1535,28 @@ export function BookedCard({ name, at, now, onAnother, onPipeline, tz, location 
           marginTop: 30, width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'flex-start', gap: 14, textAlign: 'left',
           padding: '18px 20px', borderRadius: 16, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
         }}>
-          <MessageSquareText size={19} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 2, color: 'var(--ov-hero-dot)' }} />
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-hero-soft)' }}>Say this before you hang up</div>
-            <p style={{ margin: '6px 0 0', fontSize: 16, lineHeight: 1.55, color: '#fff' }}>
-              &ldquo;You&rsquo;re all set for {scriptWhen(at, now, tz)}. Our Underwriting Team will give you a call right at that time to get everything squared away.&rdquo;
-            </p>
-          </div>
+          {box || (
+            <>
+              <MessageSquareText size={19} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 2, color: 'var(--ov-hero-dot)' }} />
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ov-hero-soft)' }}>Say this before you hang up</div>
+                <p style={{ margin: '6px 0 0', fontSize: 16, lineHeight: 1.55, color: '#fff' }}>
+                  &ldquo;You&rsquo;re all set for {scriptWhen(at, now, tz)}. Our Underwriting Team will give you a call right at that time to get everything squared away.&rdquo;
+                </p>
+              </div>
+            </>
+          )}
         </div>
         <div style={{ marginTop: 28, display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
           <button type="button" onClick={onAnother} className="ov-hero-btn" style={{ height: 50, padding: '0 26px', fontSize: 15 }}>
-            <CalendarPlus size={18} strokeWidth={2.1} /> Book another
+            <CalendarPlus size={18} strokeWidth={2.1} /> {anotherLabel}
           </button>
           <button type="button" onClick={onPipeline} style={{
             height: 50, boxSizing: 'border-box', padding: '0 24px', borderRadius: 999, fontSize: 15, fontWeight: 600, color: '#fff',
             background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.18)',
             display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer',
           }}>
-            See it in Clients <ArrowRight size={15} strokeWidth={2} />
+            {pipelineLabel} <ArrowRight size={15} strokeWidth={2} />
           </button>
         </div>
       </section>
@@ -1587,6 +1603,7 @@ function nextStep(p, now) {
 // The "what's happening" phrase in search results.
 function searchPhrase(p) {
   const stage = agentStageOf(p)
+  if (stage === 'submitted') return SUBMITTED_LABEL
   if (stage === 'booked') return isLive(p) ? 'On a call now' : `Call ${callWhen(p.scheduled_call_at, p.client_timezone)}`
   if (stage === 'cancelled') return `Cancelled ${monthDay(p.fulfillment_completed_at || p.updated_at)}`
   if (stage === 'confirmNumber') return 'Needs attention: confirm number'
@@ -2115,8 +2132,8 @@ const NEEDS_GROUPS = [
 
 function CarrierCell({ p }) {
   return (
-    <span style={{ minWidth: 0, fontSize: 14, color: p.current_carrier ? 'var(--ov-soft)' : 'var(--ov-mute)', ...ellipsis }}>
-      {p.current_carrier || 'Not noted'}
+    <span style={{ minWidth: 0, fontSize: 14, color: p.current_carrier && !isSubmittedOnly(p) ? 'var(--ov-soft)' : 'var(--ov-mute)', ...ellipsis }}>
+      {isSubmittedOnly(p) ? NO_OLD_POLICY : p.current_carrier || 'Not noted'}
     </span>
   )
 }
@@ -2355,7 +2372,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
           <CalendarPlus size={15} strokeWidth={2} /> Submit
         </button>
       )}>
-        No calls waiting. Book one when your next client says yes.
+        No calls waiting. Submit when your next client says yes.
       </EmptyState>
     )
   }
@@ -2421,8 +2438,15 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
     switch (tab) {
       case 'booked':
         return [
-          <DateTile key="d" iso={p.scheduled_call_at} tz={p.client_timezone} />,
-          <span key="s" style={plain}>{isLive(p) ? <LiveLabel /> : 'Waiting for Fulfillment'}</span>,
+          isSubmittedOnly(p)
+            ? (
+              <span key="d" style={{ minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap' }}>No call time</span>
+                <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', ...ellipsis }}>{reviewCallLine(p)}</span>
+              </span>
+            )
+            : <DateTile key="d" iso={p.scheduled_call_at} tz={p.client_timezone} />,
+          <span key="s" style={plain}>{isLive(p) ? <LiveLabel /> : isSubmittedOnly(p) ? SUBMITTED_LABEL : 'Waiting for Fulfillment'}</span>,
           <span key="c" style={{ display: 'flex', justifyContent: 'flex-end' }}>{chevron}</span>,
         ]
       case 'noAnswer':
@@ -2464,7 +2488,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
       if (tab === 'noAnswer') return `No answer · try ${Math.max(1, p.call_attempts || 0)}${p.scheduled_call_at ? ` · next ${whenShort(p.scheduled_call_at, now, fulfill.tz)}` : ''}${by}`
       return `Cancelled ${monthDay(p.fulfillment_completed_at || p.updated_at)}${by}`
     }
-    if (tab === 'booked') return isLive(p) ? <LiveLabel /> : `Call ${callWhen(p.scheduled_call_at, p.client_timezone)}`
+    if (tab === 'booked') return isLive(p) ? <LiveLabel /> : isSubmittedOnly(p) ? `${SUBMITTED_LABEL} · ${reviewCallLine(p)}` : `Call ${callWhen(p.scheduled_call_at, p.client_timezone)}`
     if (tab === 'noAnswer') return [triesText(p.call_attempts || 0), lastOn(p, now), nextStep(p, now)].filter(Boolean).join(' · ')
     if (tab === 'needs') return NEEDS_WHY[agentStageOf(p)]
     return `Cancelled ${monthDay(p.fulfillment_completed_at || p.updated_at)} · booked ${monthDay(p.created_at)}`
@@ -2482,7 +2506,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ov-hi)', ...ellipsis }}>{name}</div>
             <div style={{ marginTop: 1, display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, fontSize: 12.5, color: 'var(--ov-mute)' }}>
               <Building2 size={13} strokeWidth={1.8} style={{ flexShrink: 0, color: 'var(--ov-faint)' }} />
-              <span style={ellipsis}>{p.current_carrier || 'Not noted'}{showAgent && !fulfill ? ` · ${p.agent?.full_name || '—'}` : ''}</span>
+              <span style={ellipsis}>{isSubmittedOnly(p) ? NO_OLD_POLICY : p.current_carrier || 'Not noted'}{showAgent && !fulfill ? ` · ${p.agent?.full_name || '—'}` : ''}</span>
             </div>
             {placeOf(p) && <PlaceLine location={placeOf(p)} size={13} style={{ marginTop: 1, gap: 5, fontSize: 12.5, color: 'var(--ov-mute)' }} />}
           </div>
@@ -2999,6 +3023,7 @@ function storyStatus(p, now) {
   const tab = tabOf(p)
   if (tab === 'booked') {
     if (isLive(p)) return 'On a call now'
+    if (isSubmittedOnly(p)) return SUBMITTED_LABEL
     return p.scheduled_call_at ? `Fulfillment calls ${callAt(p.scheduled_call_at, p.client_timezone)}` : 'Waiting for Fulfillment'
   }
   if (tab === 'noAnswer') return nextStep(p, now)
@@ -3780,7 +3805,7 @@ export function ComingUpCard({ upcoming, now, onGo, fit }) {
           </div>
           </Body>
           <Foot {...footProps}>
-            <button type="button" className="ov-primary" onClick={() => onGo('/agent/book')}>
+            <button type="button" className="ov-primary" onClick={() => onGo('/agent/submit')}>
               <CalendarPlus size={17} strokeWidth={2.1} /> Submit
             </button>
           </Foot>
@@ -3855,7 +3880,7 @@ export function LastWeekChart({
   days, loading, className = '', fit,
   subtitle = 'calls you booked and old policies confirmed cancelled',
   firstLabel = 'Booked', firstWord = 'booked',
-  emptyText = 'No calls last week. Book one when your next client says yes.',
+  emptyText = 'No calls last week. Submit when your next client says yes.',
 }) {
   const booked = days.reduce((s, d) => s + d.booked, 0)
   const cancelled = days.reduce((s, d) => s + d.cancelled, 0)

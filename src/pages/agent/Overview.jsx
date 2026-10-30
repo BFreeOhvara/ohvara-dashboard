@@ -156,7 +156,7 @@ export default function Overview() {
       <HeroPanel
         fit={fit} greeting={greeting} sub={sub} timezone={profile?.timezone}
         dateLong={dateLabel('long')} dateShort={dateLabel('short')}
-        onBook={() => navigate('/agent/book')}
+        onBook={() => navigate('/agent/submit')}
       />
 
       {isError && <LoadError what="your calls" onRetry={() => refetch()} className="ag-err" />}

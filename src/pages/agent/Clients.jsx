@@ -13,7 +13,7 @@ import {
 import { fmtBooking, callWhen, clientSlotISO, slotState, openBookingIsos, dayIn, addDaysStr, dateLabel, dayGone, carrierDaySlots, firstOpenDay } from '../../lib/scheduling'
 import { bookingCarrier, viewerHoursSummary } from '../../lib/carriers'
 import { viewerTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
-import { isLive, agentStageOf, stageOf, tabOf, canRebook, PIPELINE_TABS, PROGRESS_TABS, sideOfTab, RANGES, SUBSTATUS_LABEL, digits, useNow, startOfWeek, startOfMonth, placeOf } from '../../lib/agentBookings'
+import { isLive, agentStageOf, stageOf, tabOf, canRebook, PIPELINE_TABS, PROGRESS_TABS, sideOfTab, RANGES, SUBSTATUS_LABEL, SUBMITTED_LABEL, isSubmittedOnly, reviewCallLine, digits, useNow, startOfWeek, startOfMonth, placeOf } from '../../lib/agentBookings'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { PhoneClients } from '../../components/agent/phone/PhoneClients'
@@ -57,7 +57,7 @@ import { MyPipelineClients } from '../../components/agent/ClientsV2Parts'
 //
 // Prompt 730 — a Booked client's "Move to a different time" is now "Change
 // this booking": it opens Book a call's Change a booking with them picked
-// (/agent/book?change=<id>), where details and time are fixed in place. The
+// (/agent/submit?change=<id>), where details and time are fixed in place. The
 // in-drawer picker stays only for re-booking a Needs attention lead.
 //
 // Prompt 732 — a No answer client is Fulfillment's: its rows end in a chevron
@@ -195,7 +195,7 @@ export default function Clients() {
     />
   )
 
-  const onBook = isAdmin ? undefined : () => navigate('/agent/book')
+  const onBook = isAdmin ? undefined : () => navigate('/agent/submit')
   // An agent's "Your clients" box under the list covers sold leads and servicing, so the Coming soon
   // sections would contradict it.
   const soon = !yourClients
@@ -279,7 +279,11 @@ function useCancellationFlow({ p, now, canMove, startRebook, isAdmin, agentRows,
 
   const attempted = (p.call_attempts || 0) > 0 || stage === 'cancelled'
   const caller = p.assigned?.full_name || 'Fulfillment'
-  const steps = [
+  const submittedOnly = isSubmittedOnly(p)
+  // A deal with no old policy has no call to wait on: it was submitted, and servicing starts from there.
+  const steps = submittedOnly ? [
+    { label: 'Submitted for servicing', at: p.created_at, done: true },
+  ] : [
     { label: 'Booked', at: p.created_at, done: true },
     {
       label: attempted ? `Called by ${caller}` : 'Waiting for Fulfillment to call',
@@ -291,6 +295,7 @@ function useCancellationFlow({ p, now, canMove, startRebook, isAdmin, agentRows,
     { label: 'Old policy cancelled', at: p.fulfillment_completed_at, done: stage === 'cancelled' },
   ]
   const statusText = {
+    submitted: `${SUBMITTED_LABEL}. ${reviewCallLine(p)}, their local time.`,
     booked: live ? 'On a call right now' : 'Waiting for Fulfillment',
     noAnswer: `No answer${SUBSTATUS_LABEL[p.cancellation_substatus] ? ` · ${SUBSTATUS_LABEL[p.cancellation_substatus].toLowerCase()}` : ''} — ${{
       retry_locked: `retry call locked for ${fmtBooking(p.recovery_retry_at, tz)}; we've texted them a link to pick another time`,
@@ -307,7 +312,7 @@ function useCancellationFlow({ p, now, canMove, startRebook, isAdmin, agentRows,
     footer = move.actions
   } else if ((stage === 'booked' || stage === 'noAnswer') && !live && canMove) {
     footer = (
-      <button type="button" className={phone ? 'ov-solid' : 'ov-ghost'} onClick={() => navigate(`/agent/book?change=${p.id}`)} style={{ ...big, fontWeight: phone ? 700 : 600 }}>
+      <button type="button" className={phone ? 'ov-solid' : 'ov-ghost'} onClick={() => navigate(`/agent/submit?change=${p.id}`)} style={{ ...big, fontWeight: phone ? 700 : 600 }}>
         <PencilLine size={16} strokeWidth={2} /> {phone ? 'Change booking' : 'Change this booking'}
       </button>
     )
@@ -340,6 +345,7 @@ export function CancellationFlow({ children, ...opts }) {
 function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRows, phone }) {
   const { stage, tab, live, moving, move, tz, place, attempted, caller, steps, statusText, footer, onMessage, messageLabel } =
     useCancellationFlow({ p, now, canMove, startRebook, isAdmin, agentRows, phone })
+  const submittedOnly = isSubmittedOnly(p)
 
   if (phone) {
     // The phone sheet's history reads as sentences; its note is the status
@@ -367,8 +373,19 @@ function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRow
       messageLabel={messageLabel}
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
-        <InfoTile label="Fulfillment call" value={callWhen(p.scheduled_call_at, tz)} />
-        <InfoTile label="Carrier" value={p.current_carrier || 'Not noted'} />
+        {submittedOnly ? (
+          <>
+            <InfoTile label="Status" value={SUBMITTED_LABEL} />
+            <InfoTile label="Old policy" value="None to cancel" />
+            <InfoTile label="New carrier" value={p.new_carrier_name || p.carrier_name || 'Not noted'} />
+            <InfoTile label="Best time" value={p.best_time ? `${p.best_time[0].toUpperCase()}${p.best_time.slice(1)}, their time` : 'Not picked'} />
+          </>
+        ) : (
+          <>
+            <InfoTile label="Fulfillment call" value={callWhen(p.scheduled_call_at, tz)} />
+            <InfoTile label="Carrier" value={p.current_carrier || 'Not noted'} />
+          </>
+        )}
         {place && (
           <div style={{ gridColumn: '1 / -1' }}>
             <InfoTile label="Where they live" value={

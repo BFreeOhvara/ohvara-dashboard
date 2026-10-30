@@ -98,7 +98,7 @@ function bookingItem(p, tz, nowMs) {
     id: `p-${p.id}`, kind: 'c', at: p.scheduled_call_at, ms, name: fullName(p), tone, pill, label, short: null, mark: false, live, since: live ? p.call_live_since : null,
     phone: p.client_phone, state: p.client_city ? place : stateName(p.state) || null, place: place || null,
     clientTz: p.client_timezone || (p.state ? inferTimezoneFromState(p.state) : null),
-    open: `/agent/clients?open=${p.id}`, change: canChange ? `/agent/book?change=${p.id}` : null, day: dayKey(p.scheduled_call_at, tz),
+    open: `/agent/clients?open=${p.id}`, change: canChange ? `/agent/submit?change=${p.id}` : null, day: dayKey(p.scheduled_call_at, tz),
   }
 }
 
@@ -443,7 +443,7 @@ function EmptyMessage({ title, text, full, keys = true }) {
           <div><Ico icon={Inbox} size={16} /><span><b>Leads</b>People our VA books at your first open time.</span></div>
         </div>
       )}
-      <Link className="ov-solid cal-cta" to="/agent/book" style={full ? { width: '100%' } : undefined}><Ico icon={CalendarPlus} size={17} />Book a call</Link>
+      <Link className="ov-solid cal-cta" to="/agent/submit" style={full ? { width: '100%' } : undefined}><Ico icon={CalendarPlus} size={17} />Submit</Link>
     </section>
   )
 }

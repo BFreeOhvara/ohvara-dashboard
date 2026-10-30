@@ -24,7 +24,7 @@ export const NAV = {
     ] },
     { group: 'Servicing', items: [
       { to: '/agent/clients', label: 'Clients', icon: Users },
-      { to: '/agent/book', label: 'Submit', icon: CalendarPlus },
+      { to: '/agent/submit', label: 'Submit', icon: CalendarPlus },
     ] },
     // Prompt 680 — Messages gets its own single-item group, as in Restorix.
     { group: 'Communications', items: [
@@ -95,7 +95,7 @@ export const isInboundDetail = pathname => /^\/agent\/inbounds\/[^/]+$/.test(pat
 // Prompt 722 — the page header's colour (a key of the .ov-tone-* classes).
 // Pages not listed are blue.
 export const PAGE_TONE = {
-  '/agent/book': 'teal',
+  '/agent/submit': 'teal',
   '/agent/activity': 'violet',
   '/agent/billing': 'amber',
   '/settings': 'slate',

@@ -1,6 +1,6 @@
 import { timezoneAbbr, zonedDateStr, DEFAULT_TIMEZONE } from '../../../lib/timezones'
 import { daysBetween, inLabel, timeText } from '../../../lib/fulfillmentDay'
-import { agentStageOf, isLive, isMissedHold, recoveryLabel, placeOf } from '../../../lib/agentBookings'
+import { agentStageOf, isLive, isMissedHold, recoveryLabel, placeOf, isSubmittedOnly, NO_OLD_POLICY } from '../../../lib/agentBookings'
 
 // Prompt 772 — small helpers shared by the agent's phone screens.
 
@@ -43,13 +43,14 @@ const monthDay = iso => new Date(iso).toLocaleDateString('en-US', { month: 'shor
 const cap = s => (s ? s[0].toUpperCase() + s.slice(1) : s)
 
 // One client row's sub line: carrier · City, ST.
-export const clientSub = p => [p.current_carrier || p.carrier_name, placeOf(p)].filter(Boolean).join(' · ') || 'Carrier not noted'
+export const clientSub = p => [isSubmittedOnly(p) ? NO_OLD_POLICY : p.current_carrier || p.carrier_name, placeOf(p)].filter(Boolean).join(' · ') || 'Carrier not noted'
 
 // The right side of a client row: [top, under, colour].
 export function clientEnd(p, nowMs, { first } = {}) {
   const stage = agentStageOf(p)
   const tz = p.client_timezone || undefined
   const tries = p.call_attempts || 0
+  if (stage === 'submitted') return ['Submitted', 'for servicing', 'var(--ov-st-booked)']
   if (stage === 'confirmNumber') return ['Confirm number', 'No answer', 'var(--ov-st-needs)']
   if (stage === 'needsAttention') return ['Call them', 'Couldn’t reach', 'var(--nt-purple)']
   if (stage === 'cancelled') return ['Cancelled', p.fulfillment_completed_at ? monthDay(p.fulfillment_completed_at) : '', 'var(--ov-st-cancelled)']

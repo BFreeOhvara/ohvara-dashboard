@@ -13,7 +13,6 @@
 //   closes it; Inactive + the same row waiting = no poll and no alert.
 //   Explainers open on first view, collapsed after, user choice remembered. Detail timeline has 1+ upcoming step.
 //   Sold click: timeline gains the outcome and became_client events. Failed save rolls back with Try again.
-//   Flag off: /agent is the old Overview, /agent/inbounds goes back to /agent; ?portal=v1 (flag on) is the same Overview.
 import process from 'node:process'
 import { mkdirSync, writeFileSync, readdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
@@ -151,7 +150,7 @@ const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers
 const json = (route, status, body) => route.fulfill({ status, headers: { ...CORS, 'content-type': 'application/json' }, body: JSON.stringify(body) })
 
 // ── The mock ─────────────────────────────────────────────────────────────────
-// opts: { flag, duty: 'live' | 'off' | '404', tier, failNextOutcome, transfer }
+// opts: { duty: 'live' | 'off' | '404', tier, failNextOutcome, transfer }
 // state: per-context copy of the data, plus what the page asked for.
 async function mock(page, opts, state) {
   await page.route('**/*', async route => {
@@ -219,7 +218,7 @@ async function mock(page, opts, state) {
       }
       if (method !== 'GET') { state.unexpected.push(`${method} table ${table}`); return json(route, 200, []) }
       switch (table) {
-        case 'app_settings': state.reads.add(table); return rows([{ id: 1, agent_portal_v2: opts.flag, agent_billing_enforced: false }])
+        case 'app_settings': state.reads.add(table); return rows([{ id: 1, agent_billing_enforced: false }])
         case 'inbound_events': {
           state.reads.add(table)
           const lead = (q.get('lead_id') || '').replace('eq.', '')
@@ -342,7 +341,7 @@ const ROUTES = [
   { name: 'plan', path: '/agent/plan' },
   { name: 'settings', path: '/settings#contact', ready: '.ov-set-main' },
 ]
-const LIVE_OPTS = { flag: true, duty: 'live', tier: 'servicing_appointments' }
+const LIVE_OPTS = { duty: 'live', tier: 'servicing_appointments' }
 const expectFor = {
   today: ({ failures, text }) => {
     for (const s of ['Riley Example', 'Active since 2:14 PM', 'Texts waiting', 'Today’s appointments', 'Live call transfers']) check(failures, text.includes(s), `today: missing "${s}"`)
@@ -373,7 +372,7 @@ try {
 
   // 2. agent_duty 404: Today shows Coming soon, no error. Plan tier with no appointment number reads "—".
   for (const theme of ['light', 'dark']) {
-    const { ctx, page, state } = await open(1440, theme, { flag: true, duty: '404', tier: 'servicing' })
+    const { ctx, page, state } = await open(1440, theme, { duty: '404', tier: 'servicing' })
     const failures = []
     await page.goto(`${base}/agent`, { waitUntil: 'domcontentloaded' })
     await ready(page)
@@ -557,41 +556,6 @@ try {
       extra.push({ check: duty === 'live' ? `transfer alert ${w} ${theme}: Active, open over the page, portaled to body, Dismiss closes it (${state.transferPolls} polls)` : `transfer alert ${w} ${theme}: Inactive, no poll, no alert`, failures })
       await ctx.close()
     }
-  }
-
-  // 6. Flag off, and ?portal=v1 with the flag on, both show the old Overview.
-  {
-    const old = {}
-    for (const [label, opts, url] of [
-      ['flag off', { flag: false, duty: '404' }, '/agent'],
-      ['flag on, ?portal=v1', { flag: true, duty: 'live' }, '/agent?portal=v1'],
-    ]) {
-      const { ctx, page, state } = await open(1440, 'dark', opts)
-      const failures = []
-      await page.goto(`${base}${url}`, { waitUntil: 'domcontentloaded' })
-      await page.waitForSelector('.ov-card, .ov-hero', { timeout: 20000 })
-      await page.evaluate(() => document.fonts.ready)
-      await page.waitForTimeout(900)
-      const info = await page.evaluate(() => ({
-        v2: !!document.querySelector('.pv'), text: document.querySelector('main')?.innerText ?? '',
-        side: [...document.querySelectorAll('aside a')].map(a => a.textContent.trim()).join('|'),
-      }))
-      await page.screenshot({ path: join(OUT, `overview-${label.startsWith('flag off') ? 'flag-off' : 'portal-v1'}-1440-dark.png`), fullPage: true })
-      check(failures, !info.v2, `${label}: v2 shell is showing`)
-      check(failures, /Book a call/.test(info.side), `${label}: old sidebar missing (${info.side})`)
-      check(failures, state.pageErrors.length === 0, `${label}: pageErrors ${state.pageErrors.join(' | ')}`)
-      check(failures, state.unexpected.length === 0, `${label}: unexpected ${[...new Set(state.unexpected)].join(', ')}`)
-      old[label] = info
-      extra.push({ check: `${label}: old Overview (no v2 shell, old sidebar: ${info.side})`, failures })
-      if (label === 'flag off') {
-        await page.goto(`${base}/agent/inbounds`, { waitUntil: 'domcontentloaded' })
-        await page.waitForURL(`${base}/agent`, { timeout: 10000 }).catch(() => failures.push('flag off: /agent/inbounds did not return to /agent'))
-        extra.push({ check: 'flag off: /agent/inbounds goes back to /agent', failures: failures.filter(f => f.includes('did not return')) })
-      }
-      await ctx.close()
-    }
-    const same = old['flag off'].text === old['flag on, ?portal=v1'].text
-    extra.push({ check: 'flag off and ?portal=v1 render the same Overview text', failures: same ? [] : ['Overview text differs between flag off and ?portal=v1'] })
   }
 } finally {
   writeFileSync(join(OUT, 'measurements.json'), JSON.stringify({ passes: results, extra }, null, 2) + '\n')
