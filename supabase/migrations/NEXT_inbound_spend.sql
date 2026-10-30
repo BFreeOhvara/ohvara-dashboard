@@ -26,6 +26,10 @@
 -- RLS: an agent reads only their own rows, admin reads all. No agent write
 -- policy and no write grant for anon or authenticated: writes go through the
 -- agent-billing function with the service role.
+--
+-- agent_id has no on delete action, like the ledger in 176: this is money
+-- history. Delete my account (156) anonymises the profile and keeps its row, so
+-- these references never get in its way.
 
 -- ── settings ────────────────────────────────────────────────────────────────
 
@@ -115,8 +119,9 @@ comment on table public.agent_inbound_spend_log is
 
 -- ── the weekly submission cap goes away ─────────────────────────────────────
 
--- Same name and signature as 119, so policies_enforce_weekly_cap keeps pointing
--- at it. It no longer counts anything or refuses a booking.
+-- Replaces the body from 119, last rewritten by 147. Same name and signature, so
+-- policies_enforce_weekly_cap keeps pointing at it, on insert and on update. It
+-- no longer counts anything or refuses a booking.
 create or replace function public.enforce_weekly_submission_cap()
 returns trigger
 language plpgsql
