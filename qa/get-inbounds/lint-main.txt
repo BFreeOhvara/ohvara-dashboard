@@ -17,7 +17,7 @@ C:\Users\freem\.atlas\work\ohvara\atlas_571aaa25-get-inbounds-panel-on-a-minimal
   288:3   error  'process' is not defined  no-undef
 
 C:\Users\freem\.atlas\work\ohvara\atlas_571aaa25-get-inbounds-panel-on-a-minimal-\src\components\layout\DashboardLayout.jsx
-  261:21  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+  264:21  error  Error: Calling setState synchronously within an effect can trigger cascading renders
 
 Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
 * Update external systems with the latest state from React.
@@ -25,13 +25,13 @@ Effects are intended to synchronize state between React and external systems suc
 
 Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
 
-  259 |
-  260 |   const [navOpen, setNavOpen] = useState(false)
-> 261 |   useEffect(() => { setNavOpen(false) }, [pathname])
-      |                     ^^^^^^^^^^ Avoid calling setState() directly within an effect
   262 |
-  263 |   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1')
-  264 |   useEffect(() => { localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0') }, [collapsed])  react-hooks/set-state-in-effect
+  263 |   const [navOpen, setNavOpen] = useState(false)
+> 264 |   useEffect(() => { setNavOpen(false) }, [pathname])
+      |                     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  265 |
+  266 |   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1')
+  267 |   useEffect(() => { localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0') }, [collapsed])  react-hooks/set-state-in-effect
 
 C:\Users\freem\.atlas\work\ohvara\atlas_571aaa25-get-inbounds-panel-on-a-minimal-\src\components\ui\DayFilterBar.jsx
   14:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components

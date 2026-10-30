@@ -1,13 +1,25 @@
-GET INBOUNDS: FINAL CHECK ON TOP OF 8283449 (Oct 30)
+GET INBOUNDS: PANEL ON /agent/leads, MERGED WITH MASTER b7d643a (Oct 30)
+
+WHAT CHANGED SINCE THE LAST RESULTS (Eagle's send-back)
+Merged origin/master. One conflict, src/pages/agent/Overview.jsx, keeping the Start card, TodayStrip and LoadError's ag-err class.
+The panel now sits on /agent/leads, above the v2 Inbounds list (src/pages/agent/BillingInbounds.jsx wraps both). /agent/inbounds redirects to /agent/leads.
+Nav entry, sidebar badge, More row, Start card, page titles and the list's tab links all use /agent/leads.
+BillingGate's allow list is back to master's: /agent/leads was already on it, and /agent/inbounds redirects before the gate runs.
+
+CHECKS ON THE FINAL CODE
+npm run build: exit 0.
+npm test: 104 pass, 0 fail.
+Wording grep from done-means: no matches (grep exit 1).
+src/index.css: not changed against master.
 
 LINT
-Branch (after fix): 25 errors, 1 warning. Full output: lint-branch.txt
-Main (merge base 1e93a61): 26 errors, 1 warning. Full output: lint-main.txt
+Branch: 25 errors, 1 warning. Full output: lint-branch.txt
+Main (b7d643a): 26 errors, 1 warning. Full output: lint-main.txt
 npm run lint still exits 1 on both.
-Fixed in this branch: src/components/layout/DashboardLayout.jsx, react-hooks/set-state-in-effect (old error, also on main). It was the only lint error in a file this branch adds or changes.
-New errors from this branch: 0. Old errors left in files this branch changes: 0.
+New errors from this branch, by file and rule: 0.
+Only difference: src/components/layout/DashboardLayout.jsx react-hooks/set-state-in-effect is on main and fixed here.
 Pass rule (Vera, Oct 30): MET. Every remaining error is on main in the same file with the same rule.
-A separate fix task is needed for these 25 errors in 10 files, none of them touched by this branch:
+A separate fix task is needed for these 25 errors in 10 files, none of them changed by this branch:
 scrapers/googlemaps-scraper.js: 5 (no-undef 4, no-unused-vars 1)
 scrapers/indeed-scraper.js: 4 (no-undef 4)
 src/components/ui/DayFilterBar.jsx: 3 (react-refresh/only-export-components 3)
@@ -18,115 +30,45 @@ src/hooks/useAuth.jsx: 1 (react-refresh/only-export-components 1)
 src/hooks/usePolicies.js: 3 (no-unused-vars 3)
 src/lib/activityFeedMigration.test.js: 1 (no-undef 1)
 src/pages/Login.jsx: 1 (react-hooks/set-state-in-effect 1)
-How main was linted: the worktree guard refused a temporary worktree and git archive, so this worktree was reset to 1e93a61, linted, and reset back to 8283449. Same node_modules, nothing else touched.
+How main was linted: this worktree was reset to b7d643a, linted, and reset back. Same node_modules.
 
-CHECKS AFTER THE FIX
-npm run build: exit 0.
-npm test: 104 pass, 0 fail (billingInbound: 10 pass, 0 fail).
-Wording grep from done-means: no matches (grep exit 1).
-Drawer behaviour (the only thing the fix changes): at 390 with a role outside the phone shell, the menu drawer opened, then a route change that did not come from a nav link closed it, and the scrim went away. The layout did not remount. PASS.
+SHOTS (84 PNGs, all retaken, measurements.json has the numbers)
+The script opens /agent/leads with every Supabase call mocked, including the people on the list.
+No sideways scroll: 0 of 84 shots have scrollWidth above clientWidth.
+Phone touch targets: no panel, sheet or Start card control under 44px at 390.
+Banned words on the Inbounds page: none. Overview shots flag only the "—" placeholder on Appointments left this month, which this branch did not add.
+Redirect: /agent/inbounds lands on /agent/leads at 1440 and 390, also with billing locked (scenario locked shows the panel, not the gate).
+Tabs: Live calls goes to /agent/leads?tab=live and the panel stays on top.
+Sheet: parent is document.body, on screen and on top at both widths and themes.
+Below minimum: the sheet shows "The weekly minimum is $100.00, or 0 for none." Refused save shows "Inbound spend is test mode only for now." Both are the backend's real wording, read from supabase/functions/agent-billing/core.ts.
+Comped (mock now matches the backend, subscribed true): read-only, 0 controls, 0 inbound_set calls, no error.
+Not subscribed: Start goes to /agent/billing.
+Native (faked iPhone bridge): the note only, 0 spend controls, 0 billing calls on the page, Overview and Home, no Start card, no nav entry at either width. The 2 page errors in these shots are Capacitor App and Network plugins not implemented under the fake bridge.
+Start card: shows at zero active spend on /agent at 1440 and on phone Home at 390; gone with spend, comped and native. All-paused shows the "Open" version. It links to /agent/leads.
+Nav: 1 entry on web, 0 in the phone app.
+Overview one-screen fit with the Start card (master's new layout):
+  1440x900: page stays 900 tall, no scroll. Chart 343 with the card, 433 without.
+  1280x700: page stays 700 tall, no scroll, no card clipped. Chart 256 with the card, 342 without.
 
-SHOTS
-Kept the 78 shots; the fix does not change rendered output. All 78 were re-rendered to a scratch folder and compared:
-65 are byte-identical.
-12 Overview shots differ only inside the hero, where the clock and greeting moved from 11:25 AM "Good morning" to past noon "Good afternoon". Page sizes are the same.
-after-save-and-pause-390-dark differs in one small patch by at most 3 of 255 per colour channel, which cannot be seen.
-All 80 measurement entries match on scroll width, page height, controls, Start card, small targets and banned wording.
-
-MOCKUP COMPARISON (mockup HTML read in full, its 1920 light image, 17 of the 78 shots opened by eye; the rest rely on the measurements and on matching the same states)
-Matches: hero, rows, how it works, sheet, Start card and paused card, comped read-only, not subscribed, loading, native note, Inbounds first in the More list, Start card placement on both Overviews.
+MOCKUP COMPARISON (mockup HTML read in full last run and its nav lines again now; its 1920 light image and 10 of the new shots opened by eye; the rest rely on measurements)
+Matches: hero, rows, how it works, sheet, Start card, comped read-only, not subscribed, native note, sidebar entry under Account, page title and subtitle.
 Differences:
-1. Phone sheet has a 44px close button. The mockup's phone sheet has none; its desktop drawer does.
-2. A refused below-minimum save shows the server message in a red notice under the local hint. The mockup's below-minimum state shows only the hint with Save off. Done-means asks for the server message.
-3. App chrome is current master, not the mockup's drawing: sidebar groups (Servicing, Submit), search placeholder, the Submit button in place of Book a call, and the extra Overview cards. More also has the Billing card, Calendar and Theme. This branch did not change these.
-4. Error strip shows the mock server's message "Couldn't reach billing right now." instead of the mockup's fallback text, as the mockup's notes ask.
-5. Overview at 1440x900 already scrolled without the card (page height 1546); the Start card makes it 1640. The mockup asked to tell Vera if the chart scrolls.
-Not differences: in full-page phone shots the tab bar sits mid-image because a fixed bar is captured once. The "—" flagged on Overview measurements is the existing Appointments left this month placeholder, not this branch's.
-Native shots log 2 page errors: Capacitor App and Network plugins are not implemented under the faked iPhone bridge. The native page itself shows no controls and makes no inbound calls.
+1. The mockup is a minimal page with the panel alone. Eagle moved the panel onto /agent/leads, so the v2 tabs, explainer and board now sit under it. On a first visit the page has two how-it-works blocks; the list's explainer collapses on later visits.
+2. Phone sheet has a 44px close button. The mockup's phone sheet has none; its desktop drawer does.
+3. A refused below-minimum save shows the server message in a red notice under the local hint, as done-means asks. The mockup shows only the hint with Save off.
+4. App chrome is current master, not the mockup's drawing (sidebar groups, Submit, the slim Today strip on Overview).
+5. Error strip shows the mock server's message, not the mockup's fallback text, as the mockup's notes ask.
+6. At 1280x700 the sidebar's extra row pushes Billing partly under the This week card and Settings out of view. The nav list scrolls (overflow-y auto), so both stay reachable. Master's list was already tight at this height; I did not shoot master to compare.
+
+KNOWN RISKS
+The panel's servicing chip reads profile.billing_tier and agent_billing_tiers. The new agent-billing code no longer references billing_tier, so an agent without a tier gets no chip, which is quietly different from the mockup. It needs inbound_get or the Billing task to supply the servicing price.
+origin/atlas/ced8fc12 hides the More row while LEADS_PAGE is off. Merged as it is, it would hide this page's only phone entry.
+origin/atlas/d41adef6 rewrites v2/Inbounds.jsx and adds its own "not getting inbounds yet" state and an empty GetInboundsSlot. Merged as it is, it would duplicate the panel's empty state.
+Old Leads.jsx and LEADS_PAGE stay as a dev-only path. Retiring them is the fix on door 8fb13bcd, not done here.
+In the phone app /agent/leads shows only the note, per the brief, so agents there do not see the list. TodayCards' "See all inbounds" link reaches that note.
 
 NOT CHECKED
-Real backend: inbound_get and inbound_set are mocked; the backend is not on master.
+Real backend: inbound_get and inbound_set are mocked. The contract was read from core.ts, but migration 188 is not applied and nothing was called.
 A real iPhone or the App Review build: native is a faked bridge in the browser.
+scripts/nav-regroup-shots.mjs: its redirect line was updated for the new landing page, but the script was not run.
 Eagle's review and Brayden's merge guard: they happen after the runner pushes.
-
-MEASUREMENTS FROM THE 78 SHOTS (8283449)
-links-1440 {"notsubStart":"/agent/billing","cardStart":"/agent/inbounds"}
-links-390 {"notsubStart":"/agent/billing","cardStart":"/agent/inbounds"}
-inbounds-empty-1440-light.png                  scroll=1425/1440 height=900 controls=3 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-empty-1440-dark.png                   scroll=1425/1440 height=900 controls=3 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-empty-390-light.png                   scroll=390/390 height=1267 controls=3 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-empty-390-dark.png                    scroll=390/390 height=1267 controls=3 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-spending-1440-light.png               scroll=1425/1440 height=900 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-spending-1440-dark.png                scroll=1425/1440 height=900 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-spending-390-light.png                scroll=390/390 height=1271 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-spending-390-dark.png                 scroll=390/390 height=1271 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-paused-1440-light.png                 scroll=1425/1440 height=900 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-paused-1440-dark.png                  scroll=1425/1440 height=900 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-paused-390-light.png                  scroll=390/390 height=1342 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-paused-390-dark.png                   scroll=390/390 height=1342 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-error-1440-light.png                  scroll=1425/1440 height=900 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-error-1440-dark.png                   scroll=1425/1440 height=900 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-error-390-light.png                   scroll=390/390 height=844 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-error-390-dark.png                    scroll=390/390 height=844 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-notsub-1440-light.png                 scroll=1425/1440 height=900 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-notsub-1440-dark.png                  scroll=1425/1440 height=900 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-notsub-390-light.png                  scroll=390/390 height=844 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-notsub-390-dark.png                   scroll=390/390 height=844 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-comped-1440-light.png                 scroll=1425/1440 height=900 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-comped-1440-dark.png                  scroll=1425/1440 height=900 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-comped-390-light.png                  scroll=390/390 height=844 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-comped-390-dark.png                   scroll=390/390 height=844 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-native-1440-light.png                 scroll=1425/1440 height=900 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=2
-inbounds-native-1440-dark.png                  scroll=1425/1440 height=900 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=2
-inbounds-native-390-light.png                  scroll=390/390 height=844 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=2
-inbounds-native-390-dark.png                   scroll=390/390 height=844 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=2
-inbounds-allpaused-1440-light.png              scroll=1425/1440 height=900 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-allpaused-390-dark.png                scroll=390/390 height=1248 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-notopen-1440-light.png                scroll=1425/1440 height=900 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-notopen-390-dark.png                  scroll=390/390 height=844 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-locked-1440-light.png                 scroll=1425/1440 height=900 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-locked-390-dark.png                   scroll=390/390 height=844 controls=1 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-spending-1920-light.png               scroll=1905/1920 height=1080 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-spending-1920-dark.png                scroll=1905/1920 height=1080 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-loading-1440-light.png                scroll=1425/1440 height=900 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-inbounds-loading-390-dark.png                  scroll=390/390 height=844 controls=0 card=[] gets=1 sets=0 small=0 banned=null err=0
-overview-empty-1440-light.png                  scroll=1425/1440 height=1640 controls=0 card=["Start"] gets=1 sets=0 small=0 banned=— err=0
-overview-empty-390-light.png                   scroll=390/390 height=1727 controls=0 card=["Start"] gets=1 sets=0 small=0 banned=— err=0
-overview-spending-1440-dark.png                scroll=1425/1440 height=1546 controls=0 card=[] gets=1 sets=0 small=0 banned=— err=0
-overview-spending-390-dark.png                 scroll=390/390 height=1639 controls=0 card=[] gets=1 sets=0 small=0 banned=— err=0
-overview-allpaused-1440-light.png              scroll=1425/1440 height=1640 controls=0 card=["Open"] gets=1 sets=0 small=0 banned=— err=0
-overview-allpaused-390-light.png               scroll=390/390 height=1728 controls=0 card=["Open"] gets=1 sets=0 small=0 banned=— err=0
-overview-comped-1440-light.png                 scroll=1425/1440 height=1546 controls=0 card=[] gets=1 sets=0 small=0 banned=— err=0
-overview-comped-390-light.png                  scroll=390/390 height=1639 controls=0 card=[] gets=1 sets=0 small=0 banned=— err=0
-overview-native-1440-light.png                 scroll=1425/1440 height=1546 controls=0 card=[] gets=0 sets=0 small=0 banned=— err=2
-overview-native-390-light.png                  scroll=390/390 height=1645 controls=0 card=[] gets=0 sets=0 small=0 banned=— err=2
-overview-empty-390-dark.png                    scroll=390/390 height=1727 controls=0 card=["Start"] gets=1 sets=0 small=0 banned=— err=0
-overview-empty-1440-dark.png                   scroll=1425/1440 height=1640 controls=0 card=["Start"] gets=1 sets=0 small=0 banned=— err=0
-nav-spending-1440-light.png                    scroll=1425/1440 height=900 controls=2 card=[] gets=0 sets=0 small=0 banned=null err=0
-nav-spending-390-light.png                     scroll=390/390 height=1128 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=0
-nav-native-1440-light.png                      scroll=1425/1440 height=900 controls=2 card=[] gets=0 sets=0 small=0 banned=null err=2
-nav-native-390-light.png                       scroll=390/390 height=990 controls=0 card=[] gets=0 sets=0 small=0 banned=null err=2
-sheet-change-1440-light.png                    scroll=1425/1440 height=900 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-below-min-1440-light.png                 scroll=1425/1440 height=900 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-below-min-server-1440-light.png          scroll=1425/1440 height=900 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
-after-save-and-pause-1440-light.png            scroll=1425/1440 height=900 controls=4 card=[] gets=3 sets=3 small=0 banned=null err=0
-sheet-refused-1440-light.png                   scroll=1425/1440 height=900 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
-sheet-start-1440-light.png                     scroll=1425/1440 height=900 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-change-1440-dark.png                     scroll=1425/1440 height=900 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-below-min-1440-dark.png                  scroll=1425/1440 height=900 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-below-min-server-1440-dark.png           scroll=1425/1440 height=900 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
-after-save-and-pause-1440-dark.png             scroll=1425/1440 height=900 controls=4 card=[] gets=3 sets=3 small=0 banned=null err=0
-sheet-refused-1440-dark.png                    scroll=1425/1440 height=900 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
-sheet-start-1440-dark.png                      scroll=1425/1440 height=900 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-change-390-light.png                     scroll=390/390 height=1271 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-below-min-390-light.png                  scroll=390/390 height=1271 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-below-min-server-390-light.png           scroll=390/390 height=1271 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
-after-save-and-pause-390-light.png             scroll=390/390 height=1342 controls=4 card=[] gets=3 sets=3 small=0 banned=null err=0
-sheet-refused-390-light.png                    scroll=390/390 height=1271 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
-sheet-start-390-light.png                      scroll=390/390 height=1267 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-change-390-dark.png                      scroll=390/390 height=1271 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-below-min-390-dark.png                   scroll=390/390 height=1271 controls=6 card=[] gets=1 sets=0 small=0 banned=null err=0
-sheet-below-min-server-390-dark.png            scroll=390/390 height=1271 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
-after-save-and-pause-390-dark.png              scroll=390/390 height=1342 controls=4 card=[] gets=3 sets=3 small=0 banned=null err=0
-sheet-refused-390-dark.png                     scroll=390/390 height=1271 controls=6 card=[] gets=1 sets=1 small=0 banned=null err=0
-sheet-start-390-dark.png                       scroll=390/390 height=1267 controls=4 card=[] gets=1 sets=0 small=0 banned=null err=0
