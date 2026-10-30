@@ -1,11 +1,10 @@
--- NNN — Booked Appointments text workflows, sending off (Agent Portal Rework,
+-- 184 — Booked Appointments text workflows, sending off (Agent Portal Rework,
 -- build step 5; Brayden approved Oct 29).
 --
 -- NOT APPLIED. Written from a worktree; applying it is a separate, checked
 -- step. Additive only: one new column on recovery_config and one new partial
 -- unique index on inbound_events. Nothing is removed, renamed or emptied, and
--- no grant changes. NNN is a placeholder: the file takes the number the
--- migration ledger reserved for this task before it merges.
+-- no grant changes.
 --
 -- APPLY ORDER: after 180_agent_inbounds and 181_fix_inbound_agent_checks. The
 -- check below stops the whole file if either is missing.
