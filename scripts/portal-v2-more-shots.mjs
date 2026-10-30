@@ -32,7 +32,7 @@ if (!BASELINE) for (const f of readdirSync(OUT)) if (/\.png$/.test(f)) rmSync(jo
 // What the app chrome asks for besides the page's own queries. Anything else fails a v2 pass.
 const ALLOWED = {
   tables: { carriers: [], notifications: [], agent_billing_tiers: [] },
-  rpc: { my_standing_threads: [], agent_weekly_usage: [], my_money_banner: null, my_push_settings: { push_on: false } },
+  rpc: { my_standing_threads: [], agent_weekly_usage: [], my_money_banner: null, my_push_settings: { push_on: false }, my_incoming_transfer: [] },
   functions: { 'fetch-secrets': { capabilities: {}, secrets: [] } },
 }
 

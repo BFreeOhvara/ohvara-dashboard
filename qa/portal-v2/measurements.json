@@ -257,6 +257,174 @@
       "innerWidth": 390,
       "upcoming": 4,
       "failures": []
+    },
+    {
+      "route": "plan",
+      "width": 1920,
+      "theme": "light",
+      "duty": "live",
+      "shots": [
+        "plan-1920-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1905,
+      "innerWidth": 1920,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "plan",
+      "width": 1920,
+      "theme": "dark",
+      "duty": "live",
+      "shots": [
+        "plan-1920-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1905,
+      "innerWidth": 1920,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "plan",
+      "width": 1440,
+      "theme": "light",
+      "duty": "live",
+      "shots": [
+        "plan-1440-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1425,
+      "innerWidth": 1440,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "plan",
+      "width": 1440,
+      "theme": "dark",
+      "duty": "live",
+      "shots": [
+        "plan-1440-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1425,
+      "innerWidth": 1440,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "plan",
+      "width": 390,
+      "theme": "light",
+      "duty": "live",
+      "shots": [
+        "plan-390-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "plan",
+      "width": 390,
+      "theme": "dark",
+      "duty": "live",
+      "shots": [
+        "plan-390-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "settings",
+      "width": 1920,
+      "theme": "light",
+      "duty": "live",
+      "shots": [
+        "settings-1920-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1905,
+      "innerWidth": 1920,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "settings",
+      "width": 1920,
+      "theme": "dark",
+      "duty": "live",
+      "shots": [
+        "settings-1920-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1905,
+      "innerWidth": 1920,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "settings",
+      "width": 1440,
+      "theme": "light",
+      "duty": "live",
+      "shots": [
+        "settings-1440-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1425,
+      "innerWidth": 1440,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "settings",
+      "width": 1440,
+      "theme": "dark",
+      "duty": "live",
+      "shots": [
+        "settings-1440-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 1425,
+      "innerWidth": 1440,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "settings",
+      "width": 390,
+      "theme": "light",
+      "duty": "live",
+      "shots": [
+        "settings-390-light.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "upcoming": 0,
+      "failures": []
+    },
+    {
+      "route": "settings",
+      "width": 390,
+      "theme": "dark",
+      "duty": "live",
+      "shots": [
+        "settings-390-dark.png"
+      ],
+      "bannedMatch": null,
+      "scrollWidth": 390,
+      "innerWidth": 390,
+      "upcoming": 0,
+      "failures": []
     }
   ],
   "extra": [
@@ -278,6 +446,78 @@
     },
     {
       "check": "failed save rolls back with Try again; retry saves; note saves",
+      "failures": []
+    },
+    {
+      "check": "Active switch 1920 light: Off -> On (Active since 4:20 PM after reload) -> Settings agrees -> Off from Settings",
+      "failures": []
+    },
+    {
+      "check": "Active switch 1920 dark: Off -> On (Active since 4:20 PM after reload) -> Settings agrees -> Off from Settings",
+      "failures": []
+    },
+    {
+      "check": "Active switch 1440 light: Off -> On (Active since 4:20 PM after reload) -> Settings agrees -> Off from Settings",
+      "failures": []
+    },
+    {
+      "check": "Active switch 1440 dark: Off -> On (Active since 4:20 PM after reload) -> Settings agrees -> Off from Settings",
+      "failures": []
+    },
+    {
+      "check": "Active switch 390 light: Off -> On (Active since 4:20 PM after reload) -> Settings agrees -> Off from Settings",
+      "failures": []
+    },
+    {
+      "check": "Active switch 390 dark: Off -> On (Active since 4:20 PM after reload) -> Settings agrees -> Off from Settings",
+      "failures": []
+    },
+    {
+      "check": "transfer alert 1920 light: Active, open over the page, portaled to body, Dismiss closes it (2 polls)",
+      "failures": []
+    },
+    {
+      "check": "transfer alert 1920 light: Inactive, no poll, no alert",
+      "failures": []
+    },
+    {
+      "check": "transfer alert 1920 dark: Active, open over the page, portaled to body, Dismiss closes it (2 polls)",
+      "failures": []
+    },
+    {
+      "check": "transfer alert 1920 dark: Inactive, no poll, no alert",
+      "failures": []
+    },
+    {
+      "check": "transfer alert 1440 light: Active, open over the page, portaled to body, Dismiss closes it (2 polls)",
+      "failures": []
+    },
+    {
+      "check": "transfer alert 1440 light: Inactive, no poll, no alert",
+      "failures": []
+    },
+    {
+      "check": "transfer alert 1440 dark: Active, open over the page, portaled to body, Dismiss closes it (2 polls)",
+      "failures": []
+    },
+    {
+      "check": "transfer alert 1440 dark: Inactive, no poll, no alert",
+      "failures": []
+    },
+    {
+      "check": "transfer alert 390 light: Active, open over the page, portaled to body, Dismiss closes it (2 polls)",
+      "failures": []
+    },
+    {
+      "check": "transfer alert 390 light: Inactive, no poll, no alert",
+      "failures": []
+    },
+    {
+      "check": "transfer alert 390 dark: Active, open over the page, portaled to body, Dismiss closes it (2 polls)",
+      "failures": []
+    },
+    {
+      "check": "transfer alert 390 dark: Inactive, no poll, no alert",
       "failures": []
     },
     {

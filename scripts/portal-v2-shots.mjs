@@ -1,11 +1,16 @@
-// Screenshots and checks for the v2 agent portal (Today, Inbounds, Inbound detail) with every
+// Screenshots and checks for the v2 agent portal (Today, Inbounds, Inbound detail, Plan, Settings' Active card) with every
 // Supabase call mocked: no real project, account or credentials are touched, nothing is written.
 //   node scripts/portal-v2-shots.mjs [outDir]      (npm run shots:portal-v2)
 // Writes PNGs plus measurements.json into outDir (default qa/portal-v2) and exits 1 on any failure.
 // Checks (all against the mock, none against the live database):
-//   18 passes = 3 routes (/agent, /agent/inbounds with both tabs, /agent/inbounds/:id) x 1920/1440/390 x light/dark;
-//   each asserts no /\b(meta|facebook|google|ads?)\b/i in document.body.innerText and scrollWidth <= width.
-//   agent_duty live (18 passes) and agent_duty 404 (Today at 1440 light + dark: "Coming soon", no error).
+//   30 passes = 5 routes (/agent, /agent/inbounds with both tabs, /agent/inbounds/:id, /agent/plan, /settings#contact)
+//   x 1920/1440/390 x light/dark; each asserts no /\b(meta|facebook|google|ads?)\b/i in document.body.innerText and
+//   scrollWidth <= width.
+//   agent_duty live (30 passes, "Active since 2:14 PM") and agent_duty 404 (Today at 1440 light + dark: "Coming soon").
+//   Active switch at every size and theme: Today Off, click, reload shows "Active since 4:20 PM", Settings agrees, Settings
+//   flips it back Off and Today agrees (agent_duty upserts on_duty true then false, nothing else written).
+//   Transfer alert at every size and theme: Active + a my_incoming_transfer row = the alert, portaled to <body>, Dismiss
+//   closes it; Inactive + the same row waiting = no poll and no alert.
 //   Explainers open on first view, collapsed after, user choice remembered. Detail timeline has 1+ upcoming step.
 //   Sold click: timeline gains the outcome and became_client events. Failed save rolls back with Try again.
 //   Flag off: /agent is the old Overview, /agent/inbounds goes back to /agent; ?portal=v1 (flag on) is the same Overview.
@@ -26,7 +31,8 @@ for (const f of readdirSync(OUT)) if (/\.png$/.test(f)) rmSync(join(OUT, f))
 // ── What the app chrome genuinely asks for besides the v2 queries ────────────
 // A table, rpc or function not listed here (and not one of the v2 ones) fails the run.
 const ALLOWED = {
-  tables: { carriers: [], policies: [], notifications: [], agent_billing_tiers: [] },
+  // recovery_config: Settings → Client contact's text follow-up card; every live switch off.
+  tables: { carriers: [], policies: [], notifications: [], agent_billing_tiers: [], recovery_config: [{ id: 1, sms_live: false, voice_live: false, recording_live: false }] },
   rpc: { my_standing_threads: [], agent_weekly_usage: [], my_money_banner: null, my_push_settings: { push_on: false } },
   functions: { 'fetch-secrets': { capabilities: {}, secrets: [] } },
 }
@@ -126,6 +132,9 @@ const REPLIES = [
   { id: 'r1', lead_id: id(7), body: 'Sounds good, see you then', received_at: at(0, '11:31'), handled_at: null },
   { id: 'r2', lead_id: id(3), body: 'Can you call me after 5?', received_at: at(0, '09:14'), handled_at: null },
 ]
+// What my_incoming_transfer() returns while help-transfer puts a call through (first name only).
+const TRANSFER = { help_call_id: 'f0000001-0000-4000-8000-000000000000', transfer_started_at: new Date(NOW.getTime() - 20e3).toISOString(), lead_id: id(7), caller_label: 'Dana' }
+const DUTY_ROW = { live: { on_duty: true, since: at(0, '14:14') }, off: { on_duty: false, since: null } }
 const TIERS = [
   { key: 'servicing', name: 'Servicing', monthly_appointments: null, is_active: true, sort_order: 20 },
   { key: 'servicing_appointments', name: 'Servicing + Appointments', monthly_appointments: 12, is_active: true, sort_order: 30 },
@@ -142,7 +151,7 @@ const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers
 const json = (route, status, body) => route.fulfill({ status, headers: { ...CORS, 'content-type': 'application/json' }, body: JSON.stringify(body) })
 
 // ── The mock ─────────────────────────────────────────────────────────────────
-// opts: { flag, duty: 'live' | '404', tier, failNextOutcome }
+// opts: { flag, duty: 'live' | 'off' | '404', tier, failNextOutcome, transfer }
 // state: per-context copy of the data, plus what the page asked for.
 async function mock(page, opts, state) {
   await page.route('**/*', async route => {
@@ -166,11 +175,18 @@ async function mock(page, opts, state) {
     if (path.startsWith('/functions/v1/')) {
       const name = path.replace('/functions/v1/', '')
       if (method === 'GET' && name in ALLOWED.functions) return json(route, 200, ALLOWED.functions[name])
+      // Settings → Client contact's Caller ID card asks for its status (a read); any other action fails the run.
+      if (method === 'POST' && name === 'agent-caller-id' && JSON.parse(req.postData() || '{}').action === 'status') return json(route, 200, { configured: false })
       state.unexpected.push(`${method} function ${name}`); return json(route, 200, {})
     }
     if (path.startsWith('/rest/v1/rpc/')) {
       const name = path.replace('/rest/v1/rpc/', '')
       if (name === 'agent_inbounds') { state.reads.add('agent_inbounds'); return json(route, 200, state.inbounds) }
+      if (name === 'my_incoming_transfer') {
+        // Like the function: the agent's own transferring call, only while on duty.
+        state.transferPolls++
+        return json(route, 200, opts.transfer && state.duty?.on_duty ? [TRANSFER] : [])
+      }
       if (name === 'set_inbound_outcome' || name === 'add_inbound_note') {
         const body = JSON.parse(req.postData() || '{}')
         state.writes.push({ name, body })
@@ -193,6 +209,14 @@ async function mock(page, opts, state) {
     }
     if (path.startsWith('/rest/v1/')) {
       const table = path.replace('/rest/v1/', '')
+      if (table === 'agent_duty' && method === 'POST' && opts.duty !== '404') {
+        // The upsert from the Active switch. The server stamps since (agent_duty_guard, 174).
+        const body = JSON.parse(req.postData() || '{}')
+        state.writes.push({ name: 'agent_duty', body, onConflict: q.get('on_conflict') })
+        const was = state.duty
+        state.duty = { on_duty: body.on_duty, since: body.on_duty ? (was?.on_duty ? was.since : NOW.toISOString()) : null }
+        return route.fulfill({ status: 201, headers: CORS, body: '' })
+      }
       if (method !== 'GET') { state.unexpected.push(`${method} table ${table}`); return json(route, 200, []) }
       switch (table) {
         case 'app_settings': state.reads.add(table); return rows([{ id: 1, agent_portal_v2: opts.flag, agent_billing_enforced: false }])
@@ -213,7 +237,7 @@ async function mock(page, opts, state) {
         case 'agent_duty':
           state.reads.add(table)
           if (opts.duty === '404') return json(route, 404, { code: 'PGRST205', message: "Could not find the table 'public.agent_duty' in the schema cache", details: null, hint: null })
-          return json(route, 200, [{ on_duty: true }])
+          return rows(state.duty ? [state.duty] : [])
         default:
           if (table in ALLOWED.tables) return rows(ALLOWED.tables[table])
           state.unexpected.push(`GET table ${table}`); return json(route, 200, single ? null : [])
@@ -248,21 +272,22 @@ async function open(w, theme, opts) {
   await ctx.clock.setFixedTime(NOW)
   const page = await ctx.newPage()
   const state = {
-    unexpected: [], reads: new Set(), writes: [], pageErrors: [], failed: false,
-    inbounds: structuredClone(INBOUNDS), events: structuredClone(EVENTS),
+    unexpected: [], reads: new Set(), writes: [], pageErrors: [], failed: false, transferPolls: 0,
+    inbounds: structuredClone(INBOUNDS), events: structuredClone(EVENTS), duty: structuredClone(DUTY_ROW[opts.duty] ?? null),
   }
   page.on('pageerror', e => state.pageErrors.push(String(e)))
   await mock(page, opts, state)
   return { ctx, page, state }
 }
 
-async function ready(page) {
-  await page.waitForSelector('.pv-content', { timeout: 20000 })
+async function ready(page, sel = '.pv-content') {
+  await page.waitForSelector(sel, { timeout: 20000 })
   await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]') && !document.querySelector('.pv-skel'), null, { timeout: 20000 })
   await page.evaluate(() => document.fonts.ready)
   await page.waitForTimeout(500)
 }
 const measure = page => page.evaluate(() => ({
+  alert: !!document.querySelector('.pv-ta'), alertInBody: document.querySelector('.pv-ta')?.parentElement === document.body,
   text: document.body.innerText,
   scrollWidth: document.documentElement.scrollWidth, width: document.documentElement.clientWidth,
   errorCards: document.querySelectorAll('[role="alert"]').length,
@@ -278,7 +303,7 @@ async function pass(route, w, theme, opts, expect) {
   const shots = []
   let text = ''
   const grab = async (suffix) => {
-    await ready(page)
+    await ready(page, route.ready)
     const m = await measure(page)
     text += `\n${m.text}`
     check(failures, m.scrollWidth <= m.width, `${suffix}: sideways scroll ${m.scrollWidth}>${m.width}`)
@@ -314,17 +339,27 @@ const ROUTES = [
   { name: 'today', path: '/agent' },
   { name: 'inbounds', path: '/agent/inbounds', tabs: true },
   { name: 'detail', path: `/agent/inbounds/${id(7)}` },
+  { name: 'plan', path: '/agent/plan' },
+  { name: 'settings', path: '/settings#contact', ready: '.ov-set-main' },
 ]
 const LIVE_OPTS = { flag: true, duty: 'live', tier: 'servicing_appointments' }
 const expectFor = {
   today: ({ failures, text }) => {
-    for (const s of ['Riley Example', "You're active", 'Texts waiting', 'Today’s appointments', 'Live call transfers']) check(failures, text.includes(s), `today: missing "${s}"`)
+    for (const s of ['Riley Example', 'Active since 2:14 PM', 'Texts waiting', 'Today’s appointments', 'Live call transfers']) check(failures, text.includes(s), `today: missing "${s}"`)
+    check(failures, !/Display only|Shown here for now/.test(text), 'today: display-only copy still shown')
     check(failures, !text.includes('Coming soon'), 'today: shows Coming soon while duty is live')
     check(failures, /4\s*of 12 left/.test(text) && /8 used/.test(text), 'today: plan usage is not "4 of 12 left, 8 used"')
   },
   inbounds: ({ failures, text, tab }) => {
     if (tab === 'booked') for (const s of ['How booked appointments work', 'Avery Sample', 'Sold / Follow up / Lost', 'Dana Sample']) check(failures, text.includes(s), `inbounds booked: missing "${s}"`)
     else for (const s of ['How live calls work', 'Quinn Example', 'Transferred', 'Missed', 'Not marked', 'Bartholomew-Christophersonwilliamson']) check(failures, text.includes(s), `inbounds live: missing "${s}"`)
+  },
+  plan: ({ failures, text }) => {
+    check(failures, text.includes('Your portal rings and we call your phone.'), 'plan: missing "Your portal rings and we call your phone."')
+    check(failures, !/\bpush\b/i.test(text), 'plan: still promises a push')
+  },
+  settings: ({ failures, text }) => {
+    for (const s of ['Live call transfers', 'Active since 2:14 PM']) check(failures, text.includes(s), `settings: missing "${s}"`)
   },
   detail: ({ failures, m, text }) => {
     check(failures, m.upcoming >= 1, `detail: ${m.upcoming} upcoming steps, expected 1+`)
@@ -333,7 +368,7 @@ const expectFor = {
 }
 
 try {
-  // 1. The 18 passes
+  // 1. The 30 passes
   for (const r of ROUTES) for (const w of [1920, 1440, 390]) for (const theme of ['light', 'dark']) await pass(r, w, theme, LIVE_OPTS, expectFor[r.name])
 
   // 2. agent_duty 404: Today shows Coming soon, no error. Plan tier with no appointment number reads "—".
@@ -427,6 +462,103 @@ try {
     await ctx.close()
   }
 
+  // 6a. The Active switch, both ways, at every size and theme: Today Off -> click -> reload shows Active since
+  //     4:20 PM -> Settings agrees -> Settings flips it Off -> Today agrees. Only agent_duty is written.
+  for (const w of [1920, 1440, 390]) for (const theme of ['light', 'dark']) {
+    const { ctx, page, state } = await open(w, theme, { ...LIVE_OPTS, duty: 'off' })
+    const failures = []
+    const sw = page.locator('.a-active [role="switch"]')
+    const setSw = page.getByRole('switch', { name: 'Active for live call transfers' })
+    const text = () => page.evaluate(() => document.body.innerText)
+    const fit = async label => { const m = await measure(page); check(failures, m.scrollWidth <= m.width, `${label}: sideways scroll ${m.scrollWidth}>${m.width}`) }
+    try {
+      await page.goto(`${base}/agent`, { waitUntil: 'domcontentloaded' })
+      await ready(page)
+      check(failures, await sw.getAttribute('aria-checked') === 'false', 'switch: not Off at first')
+      check(failures, (await text()).includes("You're not active"), 'switch: no "You\'re not active"')
+      check(failures, !(await sw.getAttribute('aria-disabled')), 'switch: has aria-disabled')
+      const box = await sw.boundingBox()
+      check(failures, box && box.height >= 44 && box.width >= 44, `switch: touch target ${box?.width}x${box?.height}`)
+      await fit('switch off')
+      await page.screenshot({ path: join(OUT, `today-switch-off-${w}-${theme}.png`), fullPage: true })
+      await sw.click()
+      await page.waitForFunction(() => document.querySelector('.a-active [role="switch"]')?.getAttribute('aria-checked') === 'true', null, { timeout: 10000 })
+      await page.waitForTimeout(400)
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await ready(page)
+      check(failures, await sw.getAttribute('aria-checked') === 'true', 'switch: not On after reload')
+      check(failures, (await text()).includes('Active since 4:20 PM'), 'switch: no "Active since 4:20 PM" after reload')
+      await fit('switch on')
+      await page.screenshot({ path: join(OUT, `today-switch-on-${w}-${theme}.png`), fullPage: true })
+      await page.goto(`${base}/settings#contact`, { waitUntil: 'domcontentloaded' })
+      await ready(page, '.ov-set-main')
+      await setSw.waitFor({ timeout: 10000 })
+      check(failures, await setSw.getAttribute('aria-checked') === 'true', 'settings: switch not On')
+      check(failures, (await text()).includes('Active since 4:20 PM'), 'settings: no "Active since 4:20 PM"')
+      await fit('settings on')
+      await page.screenshot({ path: join(OUT, `settings-duty-on-${w}-${theme}.png`), fullPage: true })
+      await setSw.click()
+      await page.getByText('Not active. Live calls are booked on your calendar instead.').waitFor({ timeout: 10000 })
+      await page.waitForTimeout(400)
+      await page.goto(`${base}/agent`, { waitUntil: 'domcontentloaded' })
+      await ready(page)
+      check(failures, await sw.getAttribute('aria-checked') === 'false', 'switch: Today not Off after Settings flipped it')
+    } catch (e) {
+      failures.push(`switch flow: ${String(e.message).split('\n')[0]}`)
+    }
+    const duty = state.writes.filter(x => x.name === 'agent_duty')
+    check(failures, duty.map(x => x.body.on_duty).join() === 'true,false', `switch: agent_duty writes ${JSON.stringify(duty.map(x => x.body))}`)
+    check(failures, duty.every(x => x.body.agent_id === AGENT && x.onConflict === 'agent_id'), 'switch: wrote a row that is not the agent\'s own')
+    check(failures, state.writes.length === duty.length, `switch: other writes ${state.writes.map(x => x.name)}`)
+    check(failures, state.pageErrors.length === 0, `switch: pageErrors ${state.pageErrors.join(' | ')}`)
+    check(failures, state.unexpected.length === 0, `switch: unexpected ${[...new Set(state.unexpected)].join(', ')}`)
+    extra.push({ check: `Active switch ${w} ${theme}: Off -> On (Active since 4:20 PM after reload) -> Settings agrees -> Off from Settings`, failures })
+    await ctx.close()
+  }
+
+  // 6b. The transfer alert at every size and theme: Active rings (alert portaled to <body>, Dismiss closes it);
+  //     Inactive with the same call waiting never polls and never shows.
+  for (const w of [1920, 1440, 390]) for (const theme of ['light', 'dark']) {
+    for (const duty of ['live', 'off']) {
+      const { ctx, page, state } = await open(w, theme, { ...LIVE_OPTS, duty, transfer: true })
+      const failures = []
+      try {
+        await page.goto(`${base}/agent`, { waitUntil: 'domcontentloaded' })
+        await ready(page)
+        if (duty === 'live') {
+          await page.waitForSelector('.pv-ta', { timeout: 10000 })
+          await page.waitForTimeout(300)
+          const m = await measure(page)
+          check(failures, m.alertInBody, 'alert: not a direct child of <body>')
+          check(failures, m.text.includes('Live call for you: Dana.') && m.text.includes('We’re calling your phone now. Pick up.'), 'alert: wrong words')
+          check(failures, !/\+?1?\s*\(?555\)?/.test(await page.locator('.pv-ta').innerText()), 'alert: shows a phone number')
+          check(failures, m.scrollWidth <= m.width, `alert: sideways scroll ${m.scrollWidth}>${m.width}`)
+          const inView = await page.locator('.pv-ta').evaluate(el => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight })
+          check(failures, inView, 'alert: not fully on screen')
+          const btn = await page.getByRole('button', { name: 'Dismiss' }).boundingBox()
+          check(failures, btn && btn.height >= 44, `alert: Dismiss is ${btn?.height}px tall`)
+          await page.screenshot({ path: join(OUT, `today-alert-${w}-${theme}.png`) })
+          await page.getByRole('button', { name: 'Dismiss' }).click()
+          await page.waitForTimeout(4500)
+          check(failures, !(await measure(page)).alert, 'alert: still open after Dismiss')
+        } else {
+          await page.waitForTimeout(9000)
+          const m = await measure(page)
+          check(failures, !m.alert, 'inactive: alert showed')
+          check(failures, state.transferPolls === 0, `inactive: polled my_incoming_transfer ${state.transferPolls} time(s)`)
+          await page.screenshot({ path: join(OUT, `today-inactive-no-alert-${w}-${theme}.png`) })
+        }
+      } catch (e) {
+        failures.push(`alert flow: ${String(e.message).split('\n')[0]}`)
+      }
+      check(failures, state.pageErrors.length === 0, `alert: pageErrors ${state.pageErrors.join(' | ')}`)
+      check(failures, state.unexpected.length === 0, `alert: unexpected ${[...new Set(state.unexpected)].join(', ')}`)
+      check(failures, state.writes.length === 0, `alert: writes ${state.writes.map(x => x.name)}`)
+      extra.push({ check: duty === 'live' ? `transfer alert ${w} ${theme}: Active, open over the page, portaled to body, Dismiss closes it (${state.transferPolls} polls)` : `transfer alert ${w} ${theme}: Inactive, no poll, no alert`, failures })
+      await ctx.close()
+    }
+  }
+
   // 6. Flag off, and ?portal=v1 with the flag on, both show the old Overview.
   {
     const old = {}
@@ -471,4 +603,4 @@ for (const r of results) console.log(`${r.route.padEnd(9)} ${String(r.width).pad
 for (const e of extra) console.log(`${e.failures.length ? 'FAIL' : 'ok  '} ${e.check}${e.failures.length ? ` -> ${e.failures.join(' / ')}` : ''}`)
 const failed = results.filter(r => r.failures.length).length + extra.filter(e => e.failures.length).length
 console.log(`${results.length} passes, ${extra.length} extra checks, ${failed} failed`)
-process.exit(failed || results.length !== 18 ? 1 : 0)
+process.exit(failed || results.length !== 30 ? 1 : 0)

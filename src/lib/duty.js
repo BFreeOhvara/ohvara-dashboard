@@ -1,6 +1,6 @@
 // Active for live transfers (Goal 7, Agent Portal Rework step 4). An agent flips their own
 // row in public.agent_duty from Today or Settings → Client contact; an admin sees who is
-// active through public.on_duty_agents() (migration 174). No DUTY_LIVE flag: the switch is
+// active through public.on_duty_agents() (migration 174). No on/off flag in code: the switch is
 // live when agent_duty answers and says "Coming soon" while the table is missing, so it turns
 // on by itself once 174 is applied.
 

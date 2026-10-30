@@ -128,7 +128,7 @@
 .pv-ta { position: fixed; z-index: 221; top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(440px, calc(100vw - 28px)); box-sizing: border-box; padding: 22px 20px 20px; display: flex; flex-direction: column; gap: 10px; }
 .pv-ta-top { display: flex; align-items: center; gap: 12px; }
 .pv-ta-ring { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--ov-hero-chip); border: 1px solid var(--ov-hero-chip-edge); flex-shrink: 0; animation: pvTaRing 1.2s ease-in-out infinite; }
-.pv-ta h2 { margin: 6px 0 0; font-family: var(--font-display); font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; overflow-wrap: anywhere; }
+.pv-ta h2 { margin: 6px 0 0; color: inherit; font-family: var(--font-display); font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; overflow-wrap: anywhere; }
 .pv-ta p { margin: 0; font-size: 15px; color: var(--ov-hero-soft); }
 .pv-ta-btn { min-height: 44px; padding: 0 22px; margin-top: 8px; font-size: 14.5px; font-family: inherit; align-self: flex-start; }
 @keyframes pvTaRing { 0%, 100% { transform: rotate(0); } 10%, 30% { transform: rotate(-12deg); } 20%, 40% { transform: rotate(12deg); } 50% { transform: rotate(0); } }
