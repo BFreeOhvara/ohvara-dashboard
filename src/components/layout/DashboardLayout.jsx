@@ -47,7 +47,7 @@ const TITLES = {
   '/agent/book': ['Book a call', 'Get your client on the calendar with Fulfillment'],
   '/agent/clients': ['My Pipeline', 'Calls in progress on one side, your clients on the other'],
   '/agent/activity': ['Activity', 'What happened with your clients, newest first'],
-  '/agent/inbounds': ['Inbounds', 'Everyone who came in for you, and what we’re doing with each one'],
+  '/agent/inbounds': ['Inbounds', 'Your weekly amounts, and everyone who came in for you'],
   '/agent/calendar': ['Calendar', 'Every appointment, whoever booked it'],
   ...(LEADS_PAGE ? { '/agent/leads': ['Leads', 'Delivered to you. Call or text from your own phone'] } : {}),
   '/agent/billing': ['Billing', 'Your weekly subscription and next charge'],

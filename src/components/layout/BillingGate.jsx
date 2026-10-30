@@ -25,7 +25,7 @@ export function BillingGate({ children }) {
   const { locked, grace } = billingAccess(profile, !!settings?.agent_billing_enforced)
   const price = formatWeekly(tiers[0]?.weekly_cents)
 
-  if (locked && !['/settings', '/agent/billing', '/agent/leads'].includes(pathname)) {
+  if (locked && !['/settings', '/agent/billing', '/agent/leads', '/agent/inbounds'].includes(pathname)) {
     return (
       <div style={{ ...card, maxWidth: 520, margin: '48px auto 0', textAlign: 'center', padding: '36px 28px' }}>
         <div style={{

@@ -11,6 +11,7 @@ import { NotificationBell } from '../../notifications/NotificationBell'
 import { Avatar } from '../../ui/Avatar'
 import { LiveDot } from '../../ui/LiveDot'
 import { LoadError } from '../AgentUI'
+import { StartInboundsCard } from '../billing/StartInboundsCard'
 import { dayTile, untilText } from './phoneBits'
 
 // Prompt 772 — the agent's Home on a phone (mockup Main.dc.html): date chip,
@@ -137,6 +138,8 @@ export function PhoneHome({ g, greeting, sub, isLoading, isError, refetch, now, 
           </div>
         </section>
       )}
+
+      <StartInboundsCard />
 
       <section aria-labelledby="ph-next">
         <div className="ph-sechead">

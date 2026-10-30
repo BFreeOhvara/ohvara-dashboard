@@ -12,6 +12,7 @@ import { fullName } from '../../lib/policyFormat'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { PhoneHome } from '../../components/agent/phone/PhoneHome'
 import { TodayCards, AttentionWithTexts } from '../../components/agent/TodayCards'
+import { StartInboundsCard } from '../../components/agent/billing/StartInboundsCard'
 import { usePortalV2 } from '../../lib/portalV2'
 
 // Agent Overview (Prompt 665) — the landing page. "Your day at a glance".
@@ -144,6 +145,8 @@ export default function Overview() {
         dateLong={dateLabel('long')} dateShort={dateLabel('short')}
         onBook={() => navigate('/agent/book')}
       />
+
+      <StartInboundsCard />
 
       {isError && <LoadError what="your calls" onRetry={() => refetch()} />}
 

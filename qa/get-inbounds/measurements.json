@@ -1,0 +1,1598 @@
+[
+  {
+    "file": "inbounds-empty-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [
+      "Start",
+      "Start Live Calls",
+      "Start Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "empty",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-empty-1440-dark.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "dark",
+    "controls": [
+      "Start",
+      "Start Live Calls",
+      "Start Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "empty",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-empty-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [
+      "Start",
+      "Start Live Calls",
+      "Start Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "empty",
+    "width": 390
+  },
+  {
+    "file": "inbounds-empty-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [
+      "Start",
+      "Start Live Calls",
+      "Start Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "empty",
+    "width": 390
+  },
+  {
+    "file": "inbounds-spending-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "spending",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-spending-1440-dark.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "dark",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "spending",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-spending-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "spending",
+    "width": 390
+  },
+  {
+    "file": "inbounds-spending-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "spending",
+    "width": 390
+  },
+  {
+    "file": "inbounds-paused-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Resume Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "paused",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-paused-1440-dark.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "dark",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Resume Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "paused",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-paused-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Resume Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "paused",
+    "width": 390
+  },
+  {
+    "file": "inbounds-paused-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Resume Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "paused",
+    "width": 390
+  },
+  {
+    "file": "inbounds-error-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [
+      "Try again:33"
+    ],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "error",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-error-1440-dark.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "dark",
+    "controls": [],
+    "startCard": [],
+    "small": [
+      "Try again:33"
+    ],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "error",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-error-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "error",
+    "width": 390
+  },
+  {
+    "file": "inbounds-error-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "error",
+    "width": 390
+  },
+  {
+    "file": "inbounds-notsub-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [
+      "Start"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "notsub",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-notsub-1440-dark.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "dark",
+    "controls": [
+      "Start"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "notsub",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-notsub-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [
+      "Start"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "notsub",
+    "width": 390
+  },
+  {
+    "file": "inbounds-notsub-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [
+      "Start"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "notsub",
+    "width": 390
+  },
+  {
+    "file": "inbounds-comped-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "comped",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-comped-1440-dark.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "dark",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "comped",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-comped-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "comped",
+    "width": 390
+  },
+  {
+    "file": "inbounds-comped-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "comped",
+    "width": 390
+  },
+  {
+    "file": "inbounds-native-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 0,
+    "pageErrors": [
+      "CapacitorException: \"App\" plugin is not implemented on ios",
+      "CapacitorException: \"Network\" plugin is not implemented on ios"
+    ],
+    "scenario": "native",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-native-1440-dark.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "dark",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 0,
+    "pageErrors": [
+      "CapacitorException: \"App\" plugin is not implemented on ios",
+      "CapacitorException: \"Network\" plugin is not implemented on ios"
+    ],
+    "scenario": "native",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-native-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 0,
+    "pageErrors": [
+      "CapacitorException: \"App\" plugin is not implemented on ios",
+      "CapacitorException: \"Network\" plugin is not implemented on ios"
+    ],
+    "scenario": "native",
+    "width": 390
+  },
+  {
+    "file": "inbounds-native-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 0,
+    "pageErrors": [
+      "CapacitorException: \"App\" plugin is not implemented on ios",
+      "CapacitorException: \"Network\" plugin is not implemented on ios"
+    ],
+    "scenario": "native",
+    "width": 390
+  },
+  {
+    "file": "inbounds-allpaused-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Resume Live Calls",
+      "Change Booked Appointments",
+      "Resume Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "allpaused",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-allpaused-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [
+      "Change Live Calls",
+      "Resume Live Calls",
+      "Change Booked Appointments",
+      "Resume Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "allpaused",
+    "width": 390
+  },
+  {
+    "file": "inbounds-notopen-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "notopen",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-notopen-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "notopen",
+    "width": 390
+  },
+  {
+    "file": "inbounds-locked-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [
+      "Start"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "locked",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-locked-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [
+      "Start"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "locked",
+    "width": 390
+  },
+  {
+    "file": "inbounds-spending-1920-light.png",
+    "scrollWidth": 1905,
+    "clientWidth": 1920,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "spending",
+    "width": 1920
+  },
+  {
+    "file": "inbounds-spending-1920-dark.png",
+    "scrollWidth": 1905,
+    "clientWidth": 1920,
+    "theme": "dark",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "spending",
+    "width": 1920
+  },
+  {
+    "file": "inbounds-loading-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "loading",
+    "width": 1440
+  },
+  {
+    "file": "inbounds-loading-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "loading",
+    "width": 390
+  },
+  {
+    "file": "overview-empty-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [],
+    "startCard": [
+      "Start"
+    ],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "overview-empty",
+    "width": 1440
+  },
+  {
+    "file": "overview-empty-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [],
+    "startCard": [
+      "Start"
+    ],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "overview-empty",
+    "width": 390
+  },
+  {
+    "file": "overview-spending-1440-dark.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "dark",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "overview-spending",
+    "width": 1440
+  },
+  {
+    "file": "overview-spending-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "overview-spending",
+    "width": 390
+  },
+  {
+    "file": "overview-allpaused-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [],
+    "startCard": [
+      "Open"
+    ],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "overview-allpaused",
+    "width": 1440
+  },
+  {
+    "file": "overview-allpaused-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [],
+    "startCard": [
+      "Open"
+    ],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "overview-allpaused",
+    "width": 390
+  },
+  {
+    "file": "overview-comped-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "overview-comped",
+    "width": 1440
+  },
+  {
+    "file": "overview-comped-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "overview-comped",
+    "width": 390
+  },
+  {
+    "file": "overview-native-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 0,
+    "pageErrors": [
+      "CapacitorException: \"App\" plugin is not implemented on ios",
+      "CapacitorException: \"Network\" plugin is not implemented on ios"
+    ],
+    "scenario": "overview-native",
+    "width": 1440
+  },
+  {
+    "file": "overview-native-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 0,
+    "pageErrors": [
+      "CapacitorException: \"App\" plugin is not implemented on ios",
+      "CapacitorException: \"Network\" plugin is not implemented on ios"
+    ],
+    "scenario": "overview-native",
+    "width": 390
+  },
+  {
+    "file": "overview-empty-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [],
+    "startCard": [
+      "Start"
+    ],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "overview-empty",
+    "width": 390
+  },
+  {
+    "file": "overview-empty-1440-dark.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "dark",
+    "controls": [],
+    "startCard": [
+      "Start"
+    ],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "overview-empty",
+    "width": 1440
+  },
+  {
+    "file": "sheet-change-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments",
+      "Pause",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-change",
+    "width": 1440,
+    "placed": {
+      "parentIsBody": true,
+      "onScreen": true,
+      "onTop": true
+    },
+    "live": "about 10 a week\nAn estimate. It moves from week to week.",
+    "viewport": true
+  },
+  {
+    "file": "sheet-below-min-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments",
+      "Pause",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-below-min",
+    "width": 1440,
+    "below": "Below the minimum\nAn estimate. It moves from week to week.",
+    "hint": "The minimum is $100 a week.",
+    "viewport": true
+  },
+  {
+    "file": "sheet-below-min-server-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments",
+      "Pause",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "live_call",
+        "weekly_cents": 4000,
+        "paused": false
+      }
+    ],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-below-min-server",
+    "width": 1440,
+    "server": "The minimum is $100 a week.",
+    "viewport": true
+  },
+  {
+    "file": "after-save-and-pause-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Resume Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "live_call",
+        "weekly_cents": 4000,
+        "paused": false
+      },
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "live_call",
+        "weekly_cents": 50000,
+        "paused": false
+      },
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "booked_appointment",
+        "weekly_cents": 30000,
+        "paused": true
+      }
+    ],
+    "gets": 3,
+    "pageErrors": [],
+    "scenario": "after-save-and-pause",
+    "width": 1440
+  },
+  {
+    "file": "sheet-refused-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments",
+      "Pause",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "live_call",
+        "weekly_cents": 60000,
+        "paused": false
+      }
+    ],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-refused",
+    "width": 1440,
+    "server": "Inbound spend is test mode only for now.",
+    "viewport": true
+  },
+  {
+    "file": "sheet-start-1440-light.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "light",
+    "controls": [
+      "Start",
+      "Start Live Calls",
+      "Start Booked Appointments",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-start",
+    "width": 1440,
+    "viewport": true
+  },
+  {
+    "file": "sheet-change-1440-dark.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "dark",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments",
+      "Pause",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-change",
+    "width": 1440,
+    "placed": {
+      "parentIsBody": true,
+      "onScreen": true,
+      "onTop": true
+    },
+    "live": "about 10 a week\nAn estimate. It moves from week to week.",
+    "viewport": true
+  },
+  {
+    "file": "sheet-below-min-1440-dark.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "dark",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments",
+      "Pause",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-below-min",
+    "width": 1440,
+    "below": "Below the minimum\nAn estimate. It moves from week to week.",
+    "hint": "The minimum is $100 a week.",
+    "viewport": true
+  },
+  {
+    "file": "sheet-below-min-server-1440-dark.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "dark",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments",
+      "Pause",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "live_call",
+        "weekly_cents": 4000,
+        "paused": false
+      }
+    ],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-below-min-server",
+    "width": 1440,
+    "server": "The minimum is $100 a week.",
+    "viewport": true
+  },
+  {
+    "file": "after-save-and-pause-1440-dark.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "dark",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Resume Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "live_call",
+        "weekly_cents": 4000,
+        "paused": false
+      },
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "live_call",
+        "weekly_cents": 50000,
+        "paused": false
+      },
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "booked_appointment",
+        "weekly_cents": 30000,
+        "paused": true
+      }
+    ],
+    "gets": 3,
+    "pageErrors": [],
+    "scenario": "after-save-and-pause",
+    "width": 1440
+  },
+  {
+    "file": "sheet-refused-1440-dark.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "dark",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments",
+      "Pause",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "live_call",
+        "weekly_cents": 60000,
+        "paused": false
+      }
+    ],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-refused",
+    "width": 1440,
+    "server": "Inbound spend is test mode only for now.",
+    "viewport": true
+  },
+  {
+    "file": "sheet-start-1440-dark.png",
+    "scrollWidth": 1425,
+    "clientWidth": 1440,
+    "theme": "dark",
+    "controls": [
+      "Start",
+      "Start Live Calls",
+      "Start Booked Appointments",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-start",
+    "width": 1440,
+    "viewport": true
+  },
+  {
+    "file": "sheet-change-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments",
+      "Pause",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-change",
+    "width": 390,
+    "placed": {
+      "parentIsBody": true,
+      "onScreen": true,
+      "onTop": true
+    },
+    "live": "about 10 a week\nAn estimate. It moves from week to week.",
+    "viewport": true
+  },
+  {
+    "file": "sheet-below-min-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments",
+      "Pause",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-below-min",
+    "width": 390,
+    "below": "Below the minimum\nAn estimate. It moves from week to week.",
+    "hint": "The minimum is $100 a week.",
+    "viewport": true
+  },
+  {
+    "file": "sheet-below-min-server-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments",
+      "Pause",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "live_call",
+        "weekly_cents": 4000,
+        "paused": false
+      }
+    ],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-below-min-server",
+    "width": 390,
+    "server": "The minimum is $100 a week.",
+    "viewport": true
+  },
+  {
+    "file": "after-save-and-pause-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Resume Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "live_call",
+        "weekly_cents": 4000,
+        "paused": false
+      },
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "live_call",
+        "weekly_cents": 50000,
+        "paused": false
+      },
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "booked_appointment",
+        "weekly_cents": 30000,
+        "paused": true
+      }
+    ],
+    "gets": 3,
+    "pageErrors": [],
+    "scenario": "after-save-and-pause",
+    "width": 390
+  },
+  {
+    "file": "sheet-refused-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments",
+      "Pause",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "live_call",
+        "weekly_cents": 60000,
+        "paused": false
+      }
+    ],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-refused",
+    "width": 390,
+    "server": "Inbound spend is test mode only for now.",
+    "viewport": true
+  },
+  {
+    "file": "sheet-start-390-light.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "light",
+    "controls": [
+      "Start",
+      "Start Live Calls",
+      "Start Booked Appointments",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-start",
+    "width": 390,
+    "viewport": true
+  },
+  {
+    "file": "sheet-change-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments",
+      "Pause",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-change",
+    "width": 390,
+    "placed": {
+      "parentIsBody": true,
+      "onScreen": true,
+      "onTop": true
+    },
+    "live": "about 10 a week\nAn estimate. It moves from week to week.",
+    "viewport": true
+  },
+  {
+    "file": "sheet-below-min-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments",
+      "Pause",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-below-min",
+    "width": 390,
+    "below": "Below the minimum\nAn estimate. It moves from week to week.",
+    "hint": "The minimum is $100 a week.",
+    "viewport": true
+  },
+  {
+    "file": "sheet-below-min-server-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments",
+      "Pause",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "live_call",
+        "weekly_cents": 4000,
+        "paused": false
+      }
+    ],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-below-min-server",
+    "width": 390,
+    "server": "The minimum is $100 a week.",
+    "viewport": true
+  },
+  {
+    "file": "after-save-and-pause-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Resume Booked Appointments"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "live_call",
+        "weekly_cents": 4000,
+        "paused": false
+      },
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "live_call",
+        "weekly_cents": 50000,
+        "paused": false
+      },
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "booked_appointment",
+        "weekly_cents": 30000,
+        "paused": true
+      }
+    ],
+    "gets": 3,
+    "pageErrors": [],
+    "scenario": "after-save-and-pause",
+    "width": 390
+  },
+  {
+    "file": "sheet-refused-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [
+      "Change Live Calls",
+      "Pause Live Calls",
+      "Change Booked Appointments",
+      "Pause Booked Appointments",
+      "Pause",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [
+      {
+        "action": "inbound_set",
+        "return_url": "http://localhost:5868/agent/billing",
+        "type": "live_call",
+        "weekly_cents": 60000,
+        "paused": false
+      }
+    ],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-refused",
+    "width": 390,
+    "server": "Inbound spend is test mode only for now.",
+    "viewport": true
+  },
+  {
+    "file": "sheet-start-390-dark.png",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "theme": "dark",
+    "controls": [
+      "Start",
+      "Start Live Calls",
+      "Start Booked Appointments",
+      "Save"
+    ],
+    "startCard": [],
+    "small": [],
+    "banned": null,
+    "sets": [],
+    "gets": 1,
+    "pageErrors": [],
+    "scenario": "sheet-start",
+    "width": 390,
+    "viewport": true
+  }
+]
