@@ -101,7 +101,5 @@ test('the page keeps the filter in the URL and hides the chip row on an empty da
   assert.match(page, /params\.get\('types'\)/)
   assert.match(page, /filter=\{feed\.length \?/)
   const hook = readFileSync(new URL('../hooks/useAgentActivity.js', import.meta.url), 'utf8')
-  assert.match(hook, /rpc\('agent_activity_feed'/)
-  assert.match(hook, /PGRST202/)
-  assert.match(hook, /42883/)
+  assert.match(hook, /fetchActivityFeed\(supabase,/)
 })
