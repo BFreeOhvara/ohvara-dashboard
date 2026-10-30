@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
-import { ChevronLeft, ChevronRight, X, ChevronsUpDown } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, ChevronsUpDown, Lock } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import { usePortal } from '../../hooks/usePortalAccess'
 import { useUnreadMessageCount, useMessagesRealtime } from '../../hooks/usePolicyMessages'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
 import { useWeeklyUsage } from '../../hooks/useBillingTiers'
@@ -43,6 +44,8 @@ export const SIDEBAR_W = 256
 export const SIDEBAR_W_COLLAPSED = 72
 const DRAWER_W = 300
 
+const OPEN_WHEN_LOCKED = ['/agent', '/agent/billing', '/settings']
+
 const badgeText = n => (n > 99 ? '99+' : n)
 
 // Inbounds (agents only, the one row that has it): inbounds that came in today or yesterday. Its own
@@ -76,6 +79,12 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
   const { data: usage } = useWeeklyUsage(isAgent ? profile.id : null)
   const cap = isAgent ? capState(usage) : null
 
+  // A locked self-signup: rows dim with a lock (they still lead to the welcome) and
+  // the bookings card says why.
+  const portal = usePortal()
+  const selfLocked = portal.self && portal.locked && !portal.loading
+  const dimmed = to => selfLocked && !OPEN_WHEN_LOCKED.includes(to)
+
   // The phone drawer is always full width — collapsing is a desktop thing.
   const expanded = !collapsed || open
   const width = open ? DRAWER_W : expanded ? SIDEBAR_W : SIDEBAR_W_COLLAPSED
@@ -107,7 +116,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
     return null
   }
 
-  const plan = isAgent ? usage?.tier_name : null
+  const plan = isAgent && !selfLocked ? usage?.tier_name : null
   const subline = [roleLabel(role), plan].filter(Boolean).join(' · ')
 
   return (
@@ -159,10 +168,11 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
                       onClick={onClose}
                       title={expanded ? undefined : label}
                       aria-label={expanded ? undefined : label}
-                      className={({ isActive }) => clsx('ov-sb-row', isActive && 'is-active', !expanded && 'is-icon')}
+                      className={({ isActive }) => clsx('ov-sb-row', isActive && 'is-active', !expanded && 'is-icon', dimmed(to) && 'is-locked')}
                     >
                       <Icon size={18} strokeWidth={1.8} style={{ flexShrink: 0 }} />
                       {expanded && <span className="ov-sb-label">{label}</span>}
+                      {expanded && dimmed(to) && <Lock size={14} strokeWidth={2} className="ov-sb-lock" aria-label="Locked" />}
                       {to === '/agent/inbounds' && <InboundsBadge expanded={expanded} />}
                       {badge && (expanded
                         ? <span className={`ov-sb-badge is-${badge.tone}`} aria-label={badge.label}>{badgeText(badge.n)}</span>
@@ -176,7 +186,14 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
         </nav>
 
         <div className="ov-sb-foot">
-          {expanded && cap?.cap != null && (
+          {expanded && selfLocked && (
+            <div className="ov-sb-usage">
+              <span className="ov-sb-usage-title">Not active yet</span>
+              <div className="ov-sb-usage-note">Pick a plan to open your portal.</div>
+            </div>
+          )}
+
+          {expanded && !selfLocked && !portal.needsServicing && cap?.cap != null && (
             <div className="ov-sb-usage">
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                 <span className="ov-sb-usage-title">This week</span>

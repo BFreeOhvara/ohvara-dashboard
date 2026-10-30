@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useUnreadMessageCount, useMessagesRealtime } from '../../hooks/usePolicyMessages'
 import { PhoneLayoutContext } from '../../hooks/usePhoneLayout'
 import { usePortalPhone } from '../../contexts/portalPhone'
+import { usePortal } from '../../hooks/usePortalAccess'
 import { BillingGate } from './BillingGate'
 import { ErrorBoundary } from '../shared/ErrorBoundary'
 import { PullToRefresh } from '../native/PullToRefresh'
@@ -104,7 +105,10 @@ function InboundsBadge() {
   return n > 0 ? <span className="ph-tab-badge" aria-hidden="true">{n > 99 ? '99+' : n}</span> : null
 }
 
-function TabBar({ pathname, tabs }) {
+// A locked self-signup: these tabs are dimmed (they still lead to the welcome).
+const DIMMED_WHEN_LOCKED = ['/agent/clients', '/agent/book', '/messages']
+
+function TabBar({ pathname, tabs, locked }) {
   const { profile } = useAuth()
   useMessagesRealtime(profile?.id)
   const unread = useUnreadMessageCount(!!profile?.id)
@@ -117,7 +121,7 @@ function TabBar({ pathname, tabs }) {
         const active = on(pathname)
         const count = badge && unread > 0 ? unread : 0
         return (
-          <Link key={to} to={to} className={`ph-tab${active ? ' is-on' : ''}`} aria-current={active ? 'page' : undefined}
+          <Link key={to} to={to} className={`ph-tab${active ? ' is-on' : ''}${locked && DIMMED_WHEN_LOCKED.includes(to) ? ' is-locked' : ''}`} aria-current={active ? 'page' : undefined}
             aria-label={count ? `${label}, ${count} unread` : label}>
             {plus ? (
               <span className="ph-plus"><Icon size={26} strokeWidth={2.6} aria-hidden="true" /></span>
@@ -163,7 +167,12 @@ export function PhoneShell({ children }) {
   const role = profile?.role === 'fulfillment' || profile?.role === 'admin' ? profile.role : 'agent'
   const params = new URLSearchParams(search)
   const inChat = pathname === '/messages' && (params.has('dm') || params.has('thread'))
-  const tabs = pathname !== '/agent/book' && !inChat
+  const portal = usePortal()
+  // Book a call hides the tab bar because it has its own back arrow. When the gate
+  // replaces that page the arrow is gone, so the tab bar stays.
+  const gatedBook = pathname === '/agent/book' && (portal.view === 'welcome' || portal.view === 'servicing')
+  const tabs = (pathname !== '/agent/book' || gatedBook) && !inChat
+  const selfLocked = portal.self && portal.locked && !portal.loading
   const sub = SUB_PAGES[role][pathname]
   const cls = ['ph-app', tabs && 'has-tabs', pathname === '/messages' && 'is-bleed', sub && 'has-sub'].filter(Boolean).join(' ')
   return (
@@ -181,7 +190,7 @@ export function PhoneShell({ children }) {
             </ErrorBoundary>
           </div>
         </main>
-        {tabs && <TabBar pathname={pathname} tabs={TABS[role]} />}
+        {tabs && <TabBar pathname={pathname} tabs={TABS[role]} locked={selfLocked} />}
         {/* Live-transfer alert for every agent (portal parity answer 2): silent unless Active. The one
             mount on a phone; DashboardLayout's own mount is on its desktop branch only. */}
         {profile?.role === 'agent' && <TransferAlert />}
