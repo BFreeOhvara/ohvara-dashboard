@@ -6,6 +6,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { configure, handle } from './core.ts'
+import { activeCents, aboutText, estimateCount } from '../../../src/lib/billingInbound.js'
 
 const AGENT = '33333333-3333-4333-8333-333333333333'
 const NOW = Date.parse('2026-10-30T15:00:00Z')
@@ -580,4 +581,183 @@ test('the removed plan actions are unknown, and comped is still refused on the r
   const r = await call(fakeAdmin(comped()), fakeStripe(), { action: 'cancel' })
   assert.equal(r.status, 409)
   assert.equal(r.body.error, "Your account isn't billed.")
+})
+
+// ── group 1: the amount rules (fills the gaps in "bad input is 400") ────────
+
+test('inbound_set: anything from 1 cent to one below the minimum is refused, naming the minimum', async () => {
+  for (const cents of [1, 2500, 4999]) {
+    const a = fakeAdmin(agent())
+    const s = fakeStripe()
+    const r = await call(a, s, { action: 'inbound_set', type: 'live_call', weekly_cents: cents, paused: false })
+    assert.equal(r.status, 400, `${cents} cents`)
+    assert.equal(r.body.error, 'The weekly minimum is $50.00, or 0 for none.')
+    assert.equal(s.calls.length, 0)
+    assert.equal(a.writes.length, 0)
+  }
+})
+
+test('inbound_set: exactly the minimum is accepted and sent to Stripe as that amount', async () => {
+  const a = fakeAdmin(agent())
+  const s = stripeFor(sub([SERVICING]))
+  const r = await call(a, s, { action: 'inbound_set', type: 'booked_appointment', weekly_cents: 5000, paused: false })
+  assert.equal(r.status, 200)
+  assert.equal(posts(s).length, 1)
+  assert.equal(posts(s)[0].form.get('items[0][price_data][unit_amount]'), '5000')
+  assert.equal(a.db.agent_inbound_spend[0].weekly_cents, 5000)
+})
+
+test('inbound_set: 0 is accepted even though it is under the minimum', async () => {
+  const a = fakeAdmin(agent(), [spendRow('live_call', 10000)])
+  const s = stripeFor(sub([SERVICING, LIVE_CALL]))
+  const r = await call(a, s, { action: 'inbound_set', type: 'live_call', weekly_cents: 0, paused: false })
+  assert.equal(r.status, 200)
+  assert.equal(r.body.types[0].weekly_cents, 0)
+})
+
+test('inbound_set: the minimum comes from settings, not from the code', async () => {
+  const a = fakeAdmin(agent())
+  a.db.app_settings[0].inbound_min_weekly_cents = 7500
+  const s = stripeFor(sub([SERVICING]))
+  const low = await call(a, s, { action: 'inbound_set', type: 'live_call', weekly_cents: 5000, paused: false })
+  assert.equal(low.status, 400)
+  assert.equal(low.body.error, 'The weekly minimum is $75.00, or 0 for none.')
+  assert.equal(posts(s).length, 0)
+  const ok = await call(a, s, { action: 'inbound_set', type: 'live_call', weekly_cents: 7500, paused: false })
+  assert.equal(ok.status, 200)
+  assert.equal(posts(s)[0].form.get('items[0][price_data][unit_amount]'), '7500')
+})
+
+test('inbound_set: each real change writes exactly one log row, a repeat writes none', async () => {
+  const a = fakeAdmin(agent())
+  const at250 = { ...LIVE_CALL, price: { ...LIVE_CALL.price, unit_amount: 25000 } }
+  const steps: [string, any[], Record<string, unknown>, number][] = [
+    ['set 110', [SERVICING], { weekly_cents: 11000, paused: false }, 1],
+    ['raise to 250', [SERVICING, LIVE_CALL], { weekly_cents: 25000, paused: false }, 2],
+    ['repeat 250', [SERVICING, at250], { weekly_cents: 25000, paused: false }, 2],
+    ['pause', [SERVICING, at250], { weekly_cents: 25000, paused: true }, 3],
+    ['clear to 0', [SERVICING], { weekly_cents: 0, paused: false }, 4],
+  ]
+  for (const [label, items, change, total] of steps) {
+    const r = await call(a, stripeFor(sub(items)), { action: 'inbound_set', type: 'live_call', ...change })
+    assert.equal(r.status, 200, label)
+    assert.equal(logs(a).length, total, label)
+  }
+  assert.deepEqual(logs(a).map((w: any) => [w.row.old_cents, w.row.new_cents, w.row.old_paused, w.row.new_paused]), [
+    [0, 11000, false, false], [11000, 25000, false, false], [25000, 25000, false, true], [25000, 0, true, false],
+  ])
+})
+
+test('inbound_set: pausing one type leaves the other type and its amount alone', async () => {
+  const a = fakeAdmin(agent(), [spendRow('live_call', 10000), spendRow('booked_appointment', 25000)])
+  const BOOKED = { id: 'si_ba', quantity: 1, metadata: { line: 'booked_appointment' }, price: { id: 'price_ba', unit_amount: 25000, metadata: {}, product: 'ohvara_line_booked_appointment' } }
+  const s = stripeFor(sub([SERVICING, LIVE_CALL, BOOKED]))
+  const r = await call(a, s, { action: 'inbound_set', type: 'live_call', weekly_cents: 10000, paused: true })
+  assert.equal(r.status, 200)
+  const ids = [...posts(s)[0].form.entries()].filter(([k]) => k.endsWith('[id]')).map(([, v]) => v)
+  assert.deepEqual(ids, ['si_lc'])
+  assert.deepEqual(r.body.types.map((t: any) => [t.type, t.weekly_cents, t.paused]), [['live_call', 10000, true], ['booked_appointment', 25000, false]])
+})
+
+// ── group 8: the estimate and the next charge, checked against the panel helper ──
+
+test('estimate_count is floor(weekly cents / the estimate from settings), per type', async () => {
+  const table: [string, number, number][] = [
+    ['live_call', 5499, 0], ['live_call', 5500, 1], ['live_call', 10999, 1], ['live_call', 11000, 2], ['live_call', 25000, 4],
+    ['booked_appointment', 8999, 0], ['booked_appointment', 9000, 1], ['booked_appointment', 17999, 1], ['booked_appointment', 50000, 5],
+  ]
+  for (const [type, cents, want] of table) {
+    const a = fakeAdmin(comped(), [spendRow(type, cents)])
+    const r = await call(a, fakeStripe(), { action: 'inbound_get' })
+    const row = r.body.types.find((t: any) => t.type === type)
+    const estimate = r.body.estimate_cents[type]
+    assert.equal(row.estimate_count, want, `${type} ${cents}`)
+    assert.equal(row.estimate_count, Math.floor(cents / estimate), `${type} ${cents} floor`)
+    assert.equal(row.estimate_count, estimateCount(cents, estimate), `${type} ${cents} helper agrees`)
+  }
+})
+
+test('estimate_count follows the estimate in settings when it changes', async () => {
+  const a = fakeAdmin(comped(), [spendRow('live_call', 25000)])
+  a.db.app_settings[0].inbound_est_cents_live_call = 2000
+  const r = await call(a, fakeStripe(), { action: 'inbound_get' })
+  assert.equal(r.body.estimate_cents.live_call, 2000)
+  assert.equal(r.body.types[0].estimate_count, 12)
+  assert.equal(aboutText(r.body.types[0].estimate_count), 'about 12 a week')
+})
+
+test('the panel says "about N a week" for the server count, and "less than 1 a week" under one', async () => {
+  const a = fakeAdmin(comped(), [spendRow('live_call', 25000), spendRow('booked_appointment', 5000)])
+  const r = await call(a, fakeStripe(), { action: 'inbound_get' })
+  assert.deepEqual(r.body.types.map((t: any) => aboutText(t.estimate_count)), ['about 4 a week', 'less than 1 a week'])
+})
+
+test('overview: next_charge_cents is servicing plus the helper\'s active (unpaused) inbound', async () => {
+  const cases: [any[], number][] = [
+    [[spendRow('live_call', 10000), spendRow('booked_appointment', 25000, true)], 29900 + 10000],
+    [[spendRow('live_call', 10000), spendRow('booked_appointment', 25000)], 29900 + 35000],
+    [[spendRow('live_call', 10000, true), spendRow('booked_appointment', 25000, true)], 29900],
+    [[], 29900],
+  ]
+  for (const [rows, want] of cases) {
+    const got = await call(fakeAdmin(agent(), rows), stripeFor(sub([SERVICING])), { action: 'inbound_get' })
+    const ov = await call(fakeAdmin(agent(), rows), overviewStripe(sub([SERVICING])), { action: 'overview' })
+    assert.equal(ov.body.next_charge_cents, want)
+    assert.equal(ov.body.next_charge_cents, ov.body.servicing.price_cents + activeCents(got.body))
+  }
+})
+
+// ── group 9 (the words the server sends back; the file scan is in sourceScan.test.ts) ──
+
+test('wording: no answer the server gives names Meta, Google, Facebook, tiers or per-call pricing', async () => {
+  const banned = /\b(Meta|Facebook)\b|Google(?! Pay)|\bper (call|appointment|booking)\b|\b(Standard|Premium) plan\b|\btier\b/i
+  const seen: string[] = []
+  const say = async (admin: any, s: ReturnType<typeof fakeStripe>, body: unknown, key?: string) => {
+    const texts: string[] = []
+    JSON.stringify((await call(admin, s, body, key)).body, (_k, v) => { if (typeof v === 'string') texts.push(v); return v })
+    seen.push(texts.join(' | '))
+  }
+  const set = { action: 'inbound_set', type: 'live_call', weekly_cents: 10000, paused: false }
+  await say(fakeAdmin(agent()), fakeStripe(), set, 'sk_live_x')
+  await say(fakeAdmin(comped()), fakeStripe(), set)
+  await say(fakeAdmin(agent({ stripe_customer_id: null, stripe_subscription_id: null })), fakeStripe(), set)
+  await say(fakeAdmin(agent()), fakeStripe(), { ...set, weekly_cents: 100 })
+  await say(fakeAdmin(agent()), fakeStripe(), { ...set, type: 'lead' })
+  await say(fakeAdmin(agent()), fakeStripe(), { action: 'inbound_set', type: 'live_call', weekly_cents: 1.5 })
+  await say(fakeAdmin(comped()), fakeStripe(), { action: 'inbound_get' })
+  await say(fakeAdmin(agent(), [spendRow('live_call', 10000)]), overviewStripe(sub([SERVICING, LIVE_CALL])), { action: 'overview' })
+  assert.equal(seen.length, 8)
+  for (const text of seen) assert.doesNotMatch(text, banned, text)
+})
+
+// ── group 7: the servicing price follows app_settings, whatever the amount is ──
+
+test('servicing price: a different amount in settings is the amount sent to Stripe, not 29900', async () => {
+  const a = fakeAdmin(agent())
+  a.db.app_settings[0].agent_billing_weekly_cents = 31900
+  const s = checkoutStripe([])
+  await call(a, s, { action: 'checkout' })
+  const created = s.calls.find(c => c.path === 'prices' && c.method === 'POST')!
+  assert.equal(created.form.get('unit_amount'), '31900')
+})
+
+test('servicing price: moving settings from 299 to 319 makes a new price; the same amount is reused', async () => {
+  const a = fakeAdmin(agent())
+  a.db.app_settings[0].agent_billing_weekly_cents = 31900
+  const moved = checkoutStripe([{ id: 'price_old', unit_amount: 29900, recurring: { interval: 'week' } }])
+  await call(a, moved, { action: 'checkout' })
+  assert.equal(moved.calls.find(c => c.path === 'prices' && c.method === 'POST')!.form.get('unit_amount'), '31900')
+  assert.equal(moved.calls.find(c => c.path === 'prices/price_old')!.form.get('active'), 'false')
+
+  const same = checkoutStripe([{ id: 'price_same', unit_amount: 31900, recurring: { interval: 'week' } }])
+  await call(a, same, { action: 'checkout' })
+  assert.equal(same.calls.filter(c => c.path === 'prices' && c.method === 'POST').length, 0)
+  assert.equal(same.calls.find(c => c.path === 'checkout/sessions')!.form.get('line_items[0][price]'), 'price_same')
+})
+
+test('servicing price: the overview fallback and the comped line show the settings amount', async () => {
+  const a = fakeAdmin(comped())
+  a.db.app_settings[0].agent_billing_weekly_cents = 31900
+  const r = await call(a, fakeStripe(), { action: 'overview' })
+  assert.equal(r.body.servicing.price_cents, 31900)
 })

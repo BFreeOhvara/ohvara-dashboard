@@ -1,0 +1,134 @@
+[
+  {
+    "name": "signup-closed-1920-dark",
+    "tag": "A",
+    "text": "Go to sign in",
+    "color": "rgb(13, 23, 48)",
+    "bg": "rgb(255, 255, 255)",
+    "deco": "none",
+    "sw": 1905,
+    "cw": 1920,
+    "differs": true
+  },
+  {
+    "name": "signup-closed-1920-light",
+    "tag": "A",
+    "text": "Go to sign in",
+    "color": "rgb(255, 255, 255)",
+    "bg": "rgb(7, 51, 46)",
+    "deco": "none",
+    "sw": 1905,
+    "cw": 1920,
+    "differs": true
+  },
+  {
+    "name": "signup-closed-1440-dark",
+    "tag": "A",
+    "text": "Go to sign in",
+    "color": "rgb(13, 23, 48)",
+    "bg": "rgb(255, 255, 255)",
+    "deco": "none",
+    "sw": 1425,
+    "cw": 1440,
+    "differs": true
+  },
+  {
+    "name": "signup-closed-1440-light",
+    "tag": "A",
+    "text": "Go to sign in",
+    "color": "rgb(255, 255, 255)",
+    "bg": "rgb(7, 51, 46)",
+    "deco": "none",
+    "sw": 1425,
+    "cw": 1440,
+    "differs": true
+  },
+  {
+    "name": "signup-closed-390-dark",
+    "tag": "A",
+    "text": "Go to sign in",
+    "color": "rgb(13, 23, 48)",
+    "bg": "rgb(255, 255, 255)",
+    "deco": "none",
+    "sw": 390,
+    "cw": 390,
+    "differs": true
+  },
+  {
+    "name": "signup-closed-390-light",
+    "tag": "A",
+    "text": "Go to sign in",
+    "color": "rgb(255, 255, 255)",
+    "bg": "rgb(7, 51, 46)",
+    "deco": "none",
+    "sw": 390,
+    "cw": 390,
+    "differs": true
+  },
+  {
+    "name": "signup-open-1920-dark",
+    "tag": "BUTTON",
+    "text": "Create account",
+    "color": "rgb(13, 23, 48)",
+    "bg": "rgb(255, 255, 255)",
+    "deco": "none",
+    "sw": 1905,
+    "cw": 1920,
+    "differs": true
+  },
+  {
+    "name": "signup-open-1920-light",
+    "tag": "BUTTON",
+    "text": "Create account",
+    "color": "rgb(255, 255, 255)",
+    "bg": "rgb(7, 51, 46)",
+    "deco": "none",
+    "sw": 1905,
+    "cw": 1920,
+    "differs": true
+  },
+  {
+    "name": "signup-open-1440-dark",
+    "tag": "BUTTON",
+    "text": "Create account",
+    "color": "rgb(13, 23, 48)",
+    "bg": "rgb(255, 255, 255)",
+    "deco": "none",
+    "sw": 1425,
+    "cw": 1440,
+    "differs": true
+  },
+  {
+    "name": "signup-open-1440-light",
+    "tag": "BUTTON",
+    "text": "Create account",
+    "color": "rgb(255, 255, 255)",
+    "bg": "rgb(7, 51, 46)",
+    "deco": "none",
+    "sw": 1425,
+    "cw": 1440,
+    "differs": true
+  },
+  {
+    "name": "signup-open-390-dark",
+    "tag": "BUTTON",
+    "text": "Create account",
+    "color": "rgb(13, 23, 48)",
+    "bg": "rgb(255, 255, 255)",
+    "deco": "none",
+    "sw": 390,
+    "cw": 390,
+    "differs": true
+  },
+  {
+    "name": "signup-open-390-light",
+    "tag": "BUTTON",
+    "text": "Create account",
+    "color": "rgb(255, 255, 255)",
+    "bg": "rgb(7, 51, 46)",
+    "deco": "none",
+    "sw": 390,
+    "cw": 390,
+    "differs": true
+  }
+]

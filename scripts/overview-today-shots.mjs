@@ -1,8 +1,8 @@
 // Portal parity T3 shots: /agent (the old Overview + Today's cards) at 1440 and 390, light and dark, with every
 // Supabase call mocked (no real project, account or credentials; nothing is written).
 //   node scripts/overview-today-shots.mjs [outDir] [label] [appRoot]
-// label v2 = /agent (v2 on: the agent_portal_v2 flag is true in the mock), v1 = /agent?portal=v1,
-// master = /agent served from appRoot (a `git archive master` copy of the app) for the "old" side.
+// label new (default) = /agent as it is in this checkout, with the Today cards; old = /agent served from appRoot
+// (a `git archive <commit>` copy of an app from before the Today cards), which must show none of them.
 // Writes overview-<width>-<theme>-<label>.png and overview-<label>.json (card order, scroll width) to outDir
 // and exits 1 on any failure: sideways scroll, a page error, a write, or an old card missing.
 import process from 'node:process'
@@ -13,7 +13,7 @@ import { chromium } from 'playwright'
 import { zonedTimeToUtcIso } from '../src/lib/timezones.js'
 
 const OUT = process.argv[2] || 'qa/portal-parity-overview'
-const LABEL = process.argv[3] || 'v2'
+const LABEL = process.argv[3] || 'new'
 const ROOT = resolve(process.argv[4] || '.')
 const SB = 'https://mock.supabase.co'
 const SB_HOST = new URL(SB).host
@@ -129,7 +129,7 @@ async function mock(page, state) {
     const table = path.replace('/rest/v1/', '')
     if (method !== 'GET') { state.writes.push(`${method} ${table}`); return json(route, 200, []) }
     switch (table) {
-      case 'app_settings': return rows([{ id: 1, agent_portal_v2: true, agent_billing_enforced: false }])
+      case 'app_settings': return rows([{ id: 1, agent_billing_enforced: false }])
       case 'policies': return json(route, 200, POLICIES)
       case 'inbound_events': return json(route, 200, EVENTS)
       case 'lead_sms_replies': return json(route, 200, REPLIES)
@@ -151,7 +151,9 @@ const SIZES = { 1440: { width: 1440, height: 900 }, 390: { width: 390, height: 8
 // The old Overview's cards, in page order (desktop; the phone gets PhoneHome's sections).
 const OLD_DESKTOP = ['Good afternoon, Jordan', 'Booked this week', 'Cancelled this week', 'Needs your attention', 'Last week']
 const OLD_PHONE = ['Good afternoon, Jordan', 'Bookings this week', 'Needs you', 'Up next', 'Booked this week', 'Cancelled this week']
+// The desktop Overview fits one screen, so its slim Today strip words the plan card "Appointments this month".
 const TODAY = ['Next appointment', 'Live call transfers', 'Appointments left this month', 'Today’s appointments', 'New inbounds']
+const TODAY_DESKTOP = TODAY.map(t => (t === 'Appointments left this month' ? 'Appointments this month' : t))
 const results = []
 let failed = false
 
@@ -171,7 +173,7 @@ for (const w of [1440, 390]) {
     page.on('pageerror', e => state.errors.push(String(e)))
     await mock(page, state)
     const failures = []
-    await page.goto(`${base}/agent${LABEL === 'v1' ? '?portal=v1' : ''}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`${base}/agent`, { waitUntil: 'domcontentloaded' })
     await page.waitForSelector(w === 390 ? '.ph-stack' : '.ov-hero', { timeout: 30000 })
     await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]') && !document.querySelector('.tc-skel')
       && !/Loading your calls/.test(document.body.innerText), null, { timeout: 20000 })
@@ -191,9 +193,10 @@ for (const w of [1440, 390]) {
     const oldAt = order(old)
     if (oldAt.some(i => i < 0)) failures.push(`old card missing: ${old.filter((_, i) => oldAt[i] < 0).join(', ')}`)
     if (oldAt.some((v, i) => i && v < oldAt[i - 1])) failures.push('old cards out of order')
-    const todayAt = order(TODAY)
-    if (LABEL === 'v2' && todayAt.some(i => i < 0)) failures.push(`Today card missing: ${TODAY.filter((_, i) => todayAt[i] < 0).join(', ')}`)
-    if (LABEL !== 'v2' && m.todayCards) failures.push(`${m.todayCards} Today card(s) with v2 off`)
+    const todayWant = w === 390 ? TODAY : TODAY_DESKTOP
+    const todayAt = order(todayWant)
+    if (LABEL === 'new' && todayAt.some(i => i < 0)) failures.push(`Today card missing: ${todayWant.filter((_, i) => todayAt[i] < 0).join(', ')}`)
+    if (LABEL !== 'new' && m.todayCards) failures.push(`${m.todayCards} Today card(s) in the old app`)
     if (m.scrollWidth > m.width) failures.push(`sideways scroll ${m.scrollWidth}>${m.width}`)
     if (m.amberBoxes > 1) failures.push(`${m.amberBoxes} amber boxes`)
     if (w === 390 && m.smallTargets.length) failures.push(`touch targets under 44px: ${m.smallTargets.join(' | ')}`)
