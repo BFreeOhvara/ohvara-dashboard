@@ -25,9 +25,13 @@ const PROPS = new Set(['label', 'title', 'placeholder', 'aria-label', 'text', 's
 const CODE_TOKEN = /^[a-z0-9_.:/\-]+$/
 const ROUTE = /^\/agent\/inbounds(\/|$)/
 
+// Billing helper no rendered page imports yet; a Deno test under supabase/ pins its exact text, so it stays as on master.
+const NOT_RENDERED = new Set(['src/lib/billingInbound.js'])
+
 const files = globSync('src/**/*.{js,jsx}')
   .map(f => f.replaceAll('\\', '/'))
   .filter(f => !/\.test\.jsx?$/.test(f))
+  .filter(f => !NOT_RENDERED.has(f))
   .sort()
 
 const hits = []

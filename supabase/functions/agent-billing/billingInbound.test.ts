@@ -46,15 +46,15 @@ test('aboutText says "about N a week", and "less than 1 a week" under one', () =
 })
 
 test('aboutInboundsText keeps "about" and the singular', () => {
-  assert.equal(h.aboutInboundsText(1), 'about 1 lead a week')
-  assert.equal(h.aboutInboundsText(3), 'about 3 leads a week')
-  assert.equal(h.aboutInboundsText(0), 'less than 1 lead a week')
+  assert.equal(h.aboutInboundsText(1), 'about 1 inbound a week')
+  assert.equal(h.aboutInboundsText(3), 'about 3 inbounds a week')
+  assert.equal(h.aboutInboundsText(0), 'less than 1 inbound a week')
 })
 
 test('every estimate the panel prints is worded as an estimate, never a promise', () => {
   for (let n = 0; n <= 12; n++) {
     assert.match(h.aboutText(n), /^(about \d+ a week|less than 1 a week)$/)
-    assert.match(h.aboutInboundsText(n), /^(about \d+ leads? a week|less than 1 lead a week)$/)
+    assert.match(h.aboutInboundsText(n), /^(about \d+ inbounds? a week|less than 1 inbound a week)$/)
   }
 })
 

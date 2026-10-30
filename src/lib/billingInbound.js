@@ -12,7 +12,7 @@ export const WHAT_YOU_GET = {
 
 export const HOW_IT_WORKS = [
   ['Set a weekly amount', 'Pick an amount for Live Calls, Booked Appointments, or both.'],
-  ['We send you leads', 'Our team talks to each person first, then sends them to you through the week.'],
+  ['We send you inbounds', 'Our team talks to each person first, then sends them to you through the week.'],
   ['Change or pause any time', 'Every “about” number is an estimate and moves from week to week.'],
 ]
 
@@ -26,8 +26,8 @@ export const estimateCount = (cents, estimateCents) => (estimateCents > 0 && cen
 export const aboutText = count => (count >= 1 ? `about ${count} a week` : 'less than 1 a week')
 
 export function aboutInboundsText(count) {
-  if (count < 1) return 'less than 1 lead a week'
-  return `about ${count} lead${count === 1 ? '' : 's'} a week`
+  if (count < 1) return 'less than 1 inbound a week'
+  return `about ${count} inbound${count === 1 ? '' : 's'} a week`
 }
 
 // What the agent typed in the custom box, in cents. Whole dollars only; null when there's no number.
