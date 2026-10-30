@@ -1,6 +1,6 @@
 -- p_submit_servicing — pgTAP checks for 187_submit_servicing.sql: Submit a deal,
--- the has_servicing flag, No deals staying away from reps, the weekly cap on the
--- RPC, and service requests.
+-- the has_servicing flag, No deals staying away from reps, no weekly cap (188), and
+-- service requests.
 --
 -- RUN: at apply time, by Brayden's apply step, against the applied migration. No
 -- robot can run SQL against Ohvara, and none did. Everything runs in one
@@ -10,12 +10,9 @@
 -- PGlite and runs this file there. It has no database URL and can't reach Ohvara.
 -- A pass there is not a pass on the real stack: it is a stand-in for Supabase.
 --
--- Case (b) differs from how it was first asked for: "the 8th deal is allowed when
--- the agent is billing_exempt". Since 131 a comped agent gets the cap of its tier
--- (Prompt 725), and comped agents sit on Premium (16). So the 8th goes through for
--- a comped agent on Premium and the 17th is refused, and a comped agent left on
--- Standard is refused at the 8th. That is what the trigger does, and the RPC
--- mirrors the trigger.
+-- Case (b) differs from how it was first asked for: 188 made the weekly cap a
+-- no-op, so b checks that nothing refuses at the old 7 and 16, for the RPCs and
+-- the direct insert alike, comped or not.
 --
 -- Cast: agent A (Standard, 7), agent B (A's competitor for (d)), agent C
 -- (has_servicing off), agent D (comped, Premium), agent E (comped, Standard),
@@ -24,7 +21,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(83);
+select plan(81);
 
 -- ── seed (as the table owner) ───────────────────────────────────────────────
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -227,48 +224,41 @@ select is((select assigned_fulfillment_id from public.policies where client_last
 select is((select assigned_fulfillment_id from public.policies where id = (select id from ids where name = 'no')), null::uuid,
           'a19 the No deal still has none');
 
--- ── b. The weekly cap on the RPC ────────────────────────────────────────────
--- Agent A has 1 this week. Standard is 7.
+-- ── b. No weekly cap (188) ──────────────────────────────────────────────────
+-- 188 made enforce_weekly_submission_cap a no-op, and agent_submit_deal has no
+-- check of its own. Agent A has 1 this week and is on Standard (7). With
+-- agent_billing_enforced on, nothing refuses at 7, in the RPC or the trigger.
 update public.app_settings set agent_billing_enforced = true where id = 1;
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-00000000000a","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select is(public.p_submit_many(6), 6, 'b1 deals 2 to 7 go through with the cap on');
-select is((select used from public.agent_weekly_usage()), 7, 'b2 agent A is at 7');
-select is(public.p_submit_hint($$ select public.p_submit_no('Eighth') $$), 'weekly_cap', 'b3 the 8th is refused with hint weekly_cap');
-select throws_ok($$ select public.p_submit_no('Eighth') $$, 'P0001',
-                 'Weekly submission cap reached: 7 of 7 used this week on the Standard plan.', 'b4 errcode P0001 and the same words as the trigger');
-select is(public.p_submit_hint($$ select public.p_submit_yes('Eighth', public.p_submit_slot(10)) $$), 'weekly_cap', 'b5 a Yes deal is refused too');
+select is(public.p_submit_many(6), 6, 'b1 deals 2 to 7 go through');
+select is((select used from public.agent_weekly_usage()), 7, 'b2 agent A is at 7, their tier''s old cap');
+select is(public.p_submit_hint($$ select public.p_submit_no('Eighth') $$), 'no error', 'b3 the 8th No deal goes through');
+select is(public.p_submit_hint($$ select public.p_submit_yes('Eighth', public.p_submit_slot(10)) $$), 'no error', 'b4 a Yes deal goes through too');
 select is(public.p_submit_hint($$ insert into public.policies (agent_id, client_first_name, client_last_name, fulfillment_assigned,
                                     carrier_id, carrier_name, client_timezone, scheduled_call_at)
                                   values ('aaaaaaaa-aaaa-4aaa-8aaa-00000000000a', 'Direct', 'Eighth', true,
                                     'dddddddd-dddd-4ddd-8ddd-000000000001', 'P Submit Leaving Life', 'America/Chicago', public.p_submit_slot(11)) $$),
-          'weekly_cap', 'b6 the direct insert still hits the trigger''s cap');
-select is((select used from public.agent_weekly_usage()), 7, 'b7 the refusals used nothing');
+          'no error', 'b5 the direct insert goes through: the trigger no longer refuses');
+select is((select used from public.agent_weekly_usage()), 10, 'b6 all three counted, none refused');
 reset role;
-
-update public.app_settings set agent_billing_enforced = false where id = 1;
-select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-00000000000a","role":"authenticated"}', true),
-       set_config('role', 'authenticated', true);
-select is(public.p_submit_hint($$ select public.p_submit_no('Eighth') $$), 'no error', 'b8 with the flag off the 8th goes through');
-reset role;
-update public.app_settings set agent_billing_enforced = true where id = 1;
 
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-00000000000d","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select is(public.p_submit_many(8), 8, 'b9 a comped agent on Premium: the 8th goes through with the cap on');
-select is(public.p_submit_many(8), 8, 'b10 and up to their 16');
-select is(public.p_submit_hint($$ select public.p_submit_no('Seventeenth') $$), 'weekly_cap', 'b11 the 17th is refused: comped keeps the tier''s cap (131)');
+select is(public.p_submit_many(8), 8, 'b7 a comped agent on Premium: the 8th goes through');
+select is(public.p_submit_many(8), 8, 'b8 and up to their old 16');
+select is(public.p_submit_hint($$ select public.p_submit_no('Seventeenth') $$), 'no error', 'b9 the 17th goes through too');
 reset role;
 
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-00000000000e","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select is(public.p_submit_many(7), 7, 'b12 a comped agent left on Standard gets 7');
-select is(public.p_submit_hint($$ select public.p_submit_no('Eighth') $$), 'weekly_cap', 'b13 and is refused at the 8th, as the trigger would');
+select is(public.p_submit_many(7), 7, 'b10 a comped agent left on Standard gets 7');
+select is(public.p_submit_hint($$ select public.p_submit_no('Eighth') $$), 'no error', 'b11 and the 8th goes through');
 reset role;
 
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-00000000000f","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select is(public.p_submit_many(8), 8, 'b14 a tier with no cap: the 8th goes through');
+select is(public.p_submit_many(8), 8, 'b12 a tier with no cap: the 8th goes through');
 reset role;
 update public.app_settings set agent_billing_enforced = false where id = 1;
 
