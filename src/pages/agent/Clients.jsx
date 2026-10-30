@@ -18,6 +18,8 @@ import { excludeTestAccounts } from '../../lib/testAccounts'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { PhoneClients } from '../../components/agent/phone/PhoneClients'
 import { PhoneClientSheet } from '../../components/agent/phone/PhoneClientSheet'
+import { MyPipelineClients } from '../../components/agent/ClientsV2Parts'
+import { usePortalV2 } from '../../lib/portalV2'
 
 // My Pipeline (Prompt 665, was My Clients until 680) — replaces My Policies.
 //
@@ -65,6 +67,12 @@ import { PhoneClientSheet } from '../../components/agent/phone/PhoneClientSheet'
 // Prompt 772 — on the agent's phone layout the page is PhoneClients (one
 // grouped list, a four-part status filter, no tabs) and a client opens as a
 // bottom sheet (PhoneClientSheet) with the same next steps as the drawer.
+//
+// Portal parity T5 — with v2 on, an agent also gets the v2 Clients parts
+// (components/agent/ClientsV2Parts.jsx): a "Your clients" box under the list
+// box (sold inbounds merged with existing clients, All / From inbounds /
+// Existing) whose rows open a drawer with Call / Text, Policies, Servicing,
+// the cancellation flow and Consent. With v2 off the page is as before.
 
 const RANGE_VALUES = RANGES.map(r => r.value)
 // Old ?stage= values still arrive from the Overview (attention rows, the
@@ -88,6 +96,7 @@ export default function Clients() {
   const navigate = useNavigate()
   const phone = usePhoneLayout()
   const now = useNow()
+  const v2 = usePortalV2().on && !isAdmin
   const [params, setParams] = useSearchParams()
   const openId = params.get('open')
   const rebook = params.get('rebook') === '1'
@@ -128,14 +137,16 @@ export default function Clients() {
   const list = useMemo(() => scoped.filter(p => tabOf(p) === tab).sort(SORT[tab]), [scoped, tab])
 
   const canMove = p => isAdmin || p.agent_id === profile?.id
-  const openOnly = id => update(next => { next.set('open', id); next.delete('rebook') })
-  const startRebook = id => update(next => { next.set('open', id); next.set('rebook', '1') })
+  // ?client= is the v2 "Your clients" drawer; one drawer at a time.
+  const openOnly = id => update(next => { next.set('open', id); next.delete('rebook'); next.delete('client') })
+  const startRebook = id => update(next => { next.set('open', id); next.set('rebook', '1'); next.delete('client') })
   const close = () => update(next => { next.delete('open'); next.delete('rebook') })
   // A search pick also switches to that client's tab, so their row is the
   // highlighted one behind the drawer.
   const openFromSearch = p => update(next => {
     next.set('open', p.id)
     next.delete('rebook')
+    next.delete('client')
     const t = tabOf(p)
     if (t === 'booked') next.delete('stage'); else next.set('stage', t)
   })
@@ -150,6 +161,16 @@ export default function Clients() {
     />
   )
 
+  const pipelineList = (
+    <PipelineList
+      rows={scoped} tab={tab} onTab={t => setParam('stage', t, 'booked')} list={list}
+      now={now} showAgent={isAdmin} activeId={openId}
+      onOpen={openOnly} onRebook={startRebook} onConfirm={openOnly} canMove={canMove}
+      loading={isLoading} emptyRange={scoped.length === 0 && range !== 'all' ? range : null}
+      onBook={isAdmin ? undefined : () => navigate('/agent/book')}
+    />
+  )
+
   if (phone) {
     // No ?stage= means no filter here (the desktop opens on Booked); 'all' too.
     const filter = PIPELINE_TABS.includes(stageParam) ? stageParam : stageParam && stageParam !== 'all' ? STAGE_ALIAS[stageParam] || null : null
@@ -159,6 +180,7 @@ export default function Clients() {
           rows={scoped} loading={isLoading} error={loadError} filter={filter} sort={SORT} now={now}
           onFilter={t => setParam('stage', t, null)} onOpen={p => openOnly(p.id)}
         />
+        {v2 && <MyPipelineClients className="cv2-phone" />}
         {detail}
       </>
     )
@@ -186,13 +208,7 @@ export default function Clients() {
             onBook={isAdmin ? undefined : () => navigate('/agent/book')}
           />
         </div>
-        <PipelineList
-          rows={scoped} tab={tab} onTab={t => setParam('stage', t, 'booked')} list={list}
-          now={now} showAgent={isAdmin} activeId={openId}
-          onOpen={openOnly} onRebook={startRebook} onConfirm={openOnly} canMove={canMove}
-          loading={isLoading} emptyRange={scoped.length === 0 && range !== 'all' ? range : null}
-          onBook={isAdmin ? undefined : () => navigate('/agent/book')}
-        />
+        {v2 ? <div className="cv2-col">{pipelineList}<MyPipelineClients /></div> : pipelineList}
       </div>
 
       {detail}
