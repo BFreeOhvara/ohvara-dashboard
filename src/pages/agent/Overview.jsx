@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CalendarPlus, Check } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
@@ -11,7 +11,7 @@ import { LiveDot } from '../../components/ui/LiveDot'
 import { fullName } from '../../lib/policyFormat'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { PhoneHome } from '../../components/agent/phone/PhoneHome'
-import { TodayCards, AttentionWithTexts } from '../../components/agent/TodayCards'
+import { TodayCards, TodayStrip, AttentionWithTexts } from '../../components/agent/TodayCards'
 import { StartInboundsCard } from '../../components/agent/billing/StartInboundsCard'
 
 // Agent Overview (Prompt 665) — the landing page. "Your day at a glance".
@@ -47,6 +47,22 @@ const dayStartMs = (day, tz) => new Date(zonedTimeToUtcIso(`${day}T00:00`, tz)).
 const labelDate = day => new Date(`${day}T12:00:00Z`)
 const hourIn = (ms, tz) => +new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hourCycle: 'h23' }).format(new Date(ms)) % 24
 
+// One-screen mode: from 1280px wide and 700px tall the page fits the height under the header (the .ov-fitag rules
+// in index.css, switched on in DashboardLayout for /agent). Shorter or narrower it scrolls as before. This hook
+// decides what only JS can: the row cap, the scrolling list and the Today strip.
+const FIT_QUERY = '(min-width: 1280px) and (min-height: 700px)'
+function useFit() {
+  const [fit, setFit] = useState(() => typeof window !== 'undefined' && window.matchMedia(FIT_QUERY).matches)
+  useEffect(() => {
+    const mq = window.matchMedia(FIT_QUERY)
+    const on = () => setFit(mq.matches)
+    on()
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return fit
+}
+
 // Needs attention first, then Confirm number, then the rest.
 const ATTN_RANK = { needsAttention: 0, confirmNumber: 1 }
 
@@ -54,6 +70,7 @@ export default function Overview() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const phone = usePhoneLayout()
+  const fit = useFit() && !phone
   const now = useNow()
   const { data: rows = [], isLoading: loadingRows, isError, refetch } = useAgentBookings(profile?.id)
   // A failed load shows dashes, not zeros (Prompt 768).
@@ -136,19 +153,19 @@ export default function Overview() {
   }
 
   return (
-    <div className="flex flex-col gap-[14px] sm:gap-5">
+    <div className="ag-page flex flex-col gap-[14px] sm:gap-5">
       <HeroPanel
-        greeting={greeting} sub={sub} timezone={profile?.timezone}
+        fit={fit} greeting={greeting} sub={sub} timezone={profile?.timezone}
         dateLong={dateLabel('long')} dateShort={dateLabel('short')}
         onBook={() => navigate('/agent/book')}
       />
 
       <StartInboundsCard />
 
-      {isError && <LoadError what="your calls" onRetry={() => refetch()} />}
+      {isError && <LoadError what="your calls" onRetry={() => refetch()} className="ag-err" />}
 
       {g.live.length > 0 && (
-        <div style={{
+        <div className="ag-call" style={{
           display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 16,
           background: 'var(--danger-dim)', border: 'var(--border-w) solid var(--danger-bd)', color: 'var(--danger)',
         }}>
@@ -159,28 +176,28 @@ export default function Overview() {
         </div>
       )}
 
-      <TodayCards />
+      {fit ? <TodayStrip /> : <TodayCards />}
 
       <div className="ov-grid">
-        <div className="grid grid-cols-2 gap-[14px] sm:gap-5" style={{ gridArea: 'trend', minWidth: 0 }}>
+        <div className="ag-trends grid grid-cols-2 gap-[14px] sm:gap-5" style={{ gridArea: 'trend', minWidth: 0 }}>
           <TrendCard
             label="Booked this week" icon={CalendarPlus} tone="a"
             value={isLoading ? '—' : g.booked.value} diff={isLoading ? null : g.booked.diff}
-            week={g.booked.week} todayIdx={g.todayIdx}
+            week={g.booked.week} todayIdx={g.todayIdx} fit={fit}
             onClick={() => navigate('/agent/clients?range=week&stage=all')}
           />
           <TrendCard
             label="Cancelled this week" icon={Check} tone="b"
             value={isLoading ? '—' : g.cancelled.value} diff={isLoading ? null : g.cancelled.diff}
-            week={g.cancelled.week} todayIdx={g.todayIdx}
+            week={g.cancelled.week} todayIdx={g.todayIdx} fit={fit}
             onClick={() => navigate('/agent/clients?stage=cancelled')}
           />
         </div>
 
-        <AttentionWithTexts items={g.attention} loading={isLoading} upcoming={g.upcoming} now={now} onGo={navigate} />
+        <AttentionWithTexts items={g.attention} loading={isLoading} upcoming={g.upcoming} now={now} onGo={navigate} fit={fit} />
 
-        <div style={{ gridArea: 'chart', display: 'flex', minWidth: 0 }}>
-          <LastWeekChart days={g.lastWeek} loading={isLoading} />
+        <div className="ag-chartw" style={{ gridArea: 'chart', display: 'flex', minWidth: 0 }}>
+          <LastWeekChart days={g.lastWeek} loading={isLoading} fit={fit} />
         </div>
       </div>
     </div>

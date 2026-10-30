@@ -256,6 +256,9 @@ export function DashboardLayout({ children }) {
   const isFit = pathname === '/agent/clients' || pathname === '/fulfillment/pipeline' || pathname === '/admin/pipeline' || pathname === '/admin/users'
   // Prompt 763: the Admin Overview fits one screen from 700px tall (.ov-fitao in index.css); shorter, it scrolls.
   const isFitAo = pathname === '/admin'
+  // The agent Overview fits one screen too, with its own rules (.ov-fitag in index.css; not .ov-fitao, whose
+  // selectors are the Admin page's). From 1280px wide and 700px tall; shorter or narrower it scrolls as before.
+  const isFitAg = pathname === '/agent'
 
   const [navOpen, setNavOpen] = useState(false)
   // Navigating closes the drawer. Adjusted during render, so no extra paint with it still open.
@@ -280,7 +283,7 @@ export function DashboardLayout({ children }) {
 
   return (
     <ActiveCallProvider>
-      <div className={isFit ? 'ov-fit' : isFitAo ? 'ov-fitao' : undefined} style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)' }}>
+      <div className={isFit ? 'ov-fit' : isFitAo ? 'ov-fitao' : isFitAg ? 'ov-fitag' : undefined} style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)' }}>
         <Sidebar
           open={navOpen}
           onClose={() => setNavOpen(false)}
@@ -313,7 +316,7 @@ export function DashboardLayout({ children }) {
           </header>
 
           <main
-            className={`scrollbar-thin ${isFullWidth ? 'h-screen overflow-hidden flex flex-col' : isFullBleed ? '' : 'px-4 md:px-6'}${isFit ? ' ov-fit-main' : isFitAo ? ' ov-fitao-main' : ''}`}
+            className={`scrollbar-thin ${isFullWidth ? 'h-screen overflow-hidden flex flex-col' : isFullBleed ? '' : 'px-4 md:px-6'}${isFit ? ' ov-fit-main' : isFitAo ? ' ov-fitao-main' : isFitAg ? ' ov-fitag-main' : ''}`}
             style={isFullWidth ? { position: 'relative', zIndex: 1 } : isFullBleed ? { flex: 1, width: '100%', position: 'relative', zIndex: 1 } : { flex: 1, paddingTop: 32, paddingBottom: 64, maxWidth: isFit && (!pathname.startsWith('/admin') || pathname === '/admin/pipeline') ? 1680 : 1280, width: '100%', margin: '0 auto', position: 'relative', zIndex: 1 }}
           >
             <div
