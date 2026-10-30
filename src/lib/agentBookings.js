@@ -28,6 +28,8 @@ export const STAGE = {
   inProgress:   { label: 'In progress',  tone: 'warning', fill: 'var(--warning)' },
   noAnswer:     { label: 'No answer',    tone: 'muted',   fill: 'var(--text-muted)' },
   cancelled:    { label: 'Cancelled',    tone: 'success', fill: 'var(--success)' },
+  // Migration 187 — a deal with no old policy: nothing to cancel, no call time.
+  submitted:    { label: 'Submitted',    tone: 'teal',    fill: 'var(--teal)' },
   // Prompt 702 — agent-only statuses (see agentStageOf).
   confirmNumber:  { label: 'Confirm number',  tone: 'teal',    fill: 'var(--teal)' },
   needsAttention: { label: 'Needs attention', tone: 'warning', fill: 'var(--warning)' },
@@ -42,6 +44,7 @@ export const SUBSTATUS_LABEL = {
 export const isLive = p => !!p.call_live_since && p.fulfillment_stage !== 'Complete'
 
 export function stageOf(p) {
+  if (p.replaced_old_policy === false) return 'submitted'
   if (p.fulfillment_stage === 'Complete') return 'cancelled'
   if (isLive(p)) return 'inProgress'
   if (p.last_call_outcome === 'no_answer') return 'noAnswer'

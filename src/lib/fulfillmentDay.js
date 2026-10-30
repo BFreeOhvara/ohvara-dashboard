@@ -2,6 +2,7 @@ import { zonedDateStr, zonedTimeToUtcIso, DEFAULT_TIMEZONE } from './timezones'
 import { addDaysStr } from './scheduling'
 import { isLive, stageOf } from './agentBookings'
 import { fullName } from './policyFormat'
+import { needsCancellation } from './fulfillmentFlags'
 
 // Prompt 745 — the Fulfillment Overview's day and week maths. Everything is
 // read in the signed-in profile's zone (profiles.timezone), never the
@@ -150,6 +151,7 @@ export function buildCalls(rows, nowMs, tz, { from, to, events = null } = {}) {
   })
 
   for (const p of rows) {
+    if (!needsCancellation(p)) continue
     const live = isLive(p)
     const complete = p.fulfillment_stage === 'Complete'
     if (live && inRange(p.call_live_since)) out.push(call(p, p.call_live_since, 'live', { done: true }))
