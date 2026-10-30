@@ -5,17 +5,21 @@ import { Search, ArrowRight, CornerDownLeft, X } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
 import { useFulfillmentQueue } from '../../hooks/usePolicies'
+import { useInbounds } from '../../hooks/useInbounds'
 import { matchClients, tabOf, agentStageOf, stageOf, isLive, placeOf, useNow } from '../../lib/agentBookings'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 import { callWhen } from '../../lib/scheduling'
 import { fullName } from '../../lib/policyFormat'
+import { matchInbounds, inboundPath, leadName, phoneDisplay, stageOf as inboundStageOf, cameInAt } from '../../lib/inbounds'
+import { kindTone } from '../../lib/activityKinds'
 import { CALL_TONE } from '../../lib/fulfillmentDay'
 import { NAV } from '../../lib/nav'
 import { StatusPill } from '../agent/AgentUI'
 
 // Header search (Prompt 722). Clients by name / phone / carrier — the same
 // rows and matching as My Pipeline's "Find any client" (matchClients) — plus
-// "Go to" pages from the role's nav. Ctrl/⌘ K or "/" focuses it from anywhere
+// an agent's Inbounds by name / phone (matchInbounds; admin and Fulfillment make no
+// inbound call), plus "Go to" pages from the role's nav. Ctrl/⌘ K or "/" focuses it from anywhere
 // (not while typing in a field; on My Pipeline "/" stays with the page's own
 // search). A desktop box from 1024px; below that an icon button that opens it
 // as a full-screen sheet. Agents and admins only (DashboardLayout hides it for
@@ -75,6 +79,24 @@ function FulfillPill({ tone }) {
   )
 }
 
+// An inbound's row: "(555) 010-0142 · Came in Oct 30", its stage as the pill.
+function inboundMeta(l) {
+  return [phoneDisplay(l.phone), `Came in ${monthDay(cameInAt(l))}`].filter(Boolean).join(' · ')
+}
+
+function InboundPill({ stage }) {
+  const t = kindTone('inbound')
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6, height: 24, padding: '0 10px', borderRadius: 999,
+      background: t.tint, color: t.fg, fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: t.fg }} />
+      {stage}
+    </span>
+  )
+}
+
 function Highlight({ text, q }) {
   const i = q ? text.toLowerCase().indexOf(q) : -1
   if (i < 0) return text
@@ -101,6 +123,8 @@ export function GlobalSearch() {
 
   const { data: raw = [] } = useAgentBookings(isAdmin ? null : profile?.id, { enabled: !!profile?.id && !isFulfill && (!isAdmin || wanted) })
   const { data: queue = [] } = useFulfillmentQueue({ enabled: !!profile?.id && isFulfill })
+  // Inbounds are an agent's own list: no call for admin or Fulfillment.
+  const { data: inboundList = [] } = useInbounds({ enabled: !!profile?.id && role === 'agent' })
   const rows = useMemo(() => {
     if (isFulfill) return queue.filter(p => p.assigned_fulfillment_id === profile?.id)
     return isAdmin ? excludeTestAccounts(raw, profile?.id) : raw
@@ -111,7 +135,8 @@ export function GlobalSearch() {
   const pages = useMemo(() => (NAV[role] || []).flatMap(g => g.items)
     .map(i => (role === 'agent' && i.to === '/agent/billing' ? { ...i, label: 'Billing · manage plan' } : i))
     .filter(i => !q || i.label.toLowerCase().includes(q)), [role, q])
-  const items = [...clients.map(p => ({ kind: 'client', p })), ...pages.map(page => ({ kind: 'page', page }))]
+  const inbounds = useMemo(() => (role === 'agent' ? matchInbounds(inboundList, q).slice(0, MAX_CLIENTS) : []), [inboundList, role, q])
+  const items = [...clients.map(p => ({ kind: 'client', p })), ...inbounds.map(l => ({ kind: 'inbound', l })), ...pages.map(page => ({ kind: 'page', page }))]
   const active = Math.min(hi, Math.max(0, items.length - 1))
 
   const open = focused || sheet
@@ -138,6 +163,7 @@ export function GlobalSearch() {
   const choose = item => {
     close()
     if (item.kind === 'page') { navigate(item.page.to); return }
+    if (item.kind === 'inbound') { navigate(inboundPath(item.l.lead_id)); return }
     if (isFulfill) { navigate(`/fulfillment/desk?open=${item.p.id}`); return }
     const tab = tabOf(item.p)
     navigate(`/agent/clients?open=${item.p.id}${tab === 'booked' ? '' : `&stage=${tab}`}`)
@@ -157,8 +183,8 @@ export function GlobalSearch() {
     // this box as a login form's username field (it offered saved logins).
     type: 'search', name: 'q', value: query, autoComplete: 'off', spellCheck: false,
     'data-lpignore': 'true', 'data-1p-ignore': 'true', 'data-form-type': 'other',
-    placeholder: isFulfill ? 'Search clients, carriers, pages' : 'Search clients, pages…',
-    'aria-label': isFulfill ? 'Search clients, carriers and pages' : 'Search clients and pages',
+    placeholder: isFulfill ? 'Search clients, carriers, pages' : role === 'agent' ? 'Search clients, inbounds, pages…' : 'Search clients, pages…',
+    'aria-label': isFulfill ? 'Search clients, carriers and pages' : role === 'agent' ? 'Search clients, inbounds and pages' : 'Search clients and pages',
     role: 'combobox', 'aria-expanded': open, 'aria-controls': listId, 'aria-autocomplete': 'list',
     'aria-activedescendant': open && items[active] ? optId(active) : undefined,
     onChange, onKeyDown,
@@ -183,10 +209,29 @@ export function GlobalSearch() {
           </div>
         )
       })}
-      {clients.length > 0 && pages.length > 0 && <div className="ov-gs-sep" role="presentation" />}
+      {clients.length > 0 && inbounds.length > 0 && <div className="ov-gs-sep" role="presentation" />}
+      {inbounds.length > 0 && <div className="ov-gs-head" role="presentation">Inbounds</div>}
+      {inbounds.map((l, k) => {
+        const i = clients.length + k
+        const name = leadName(l)
+        return (
+          <div key={l.lead_id} id={optId(i)} role="option" aria-selected={i === active}
+            className={`ov-gs-item${i === active ? ' is-active' : ''}`}
+            onMouseDown={e => e.preventDefault()} onMouseEnter={() => setHi(i)} onClick={() => choose(items[i])}>
+            <span className="ov-gs-avatar" aria-hidden="true">{initials(name)}</span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span className="ov-gs-name"><Highlight text={name} q={q} /></span>
+              <span className="ov-gs-meta">{inboundMeta(l)}</span>
+            </span>
+            <InboundPill stage={inboundStageOf(l).label} />
+            <CornerDownLeft size={15} strokeWidth={2} className="ov-gs-enter" aria-hidden="true" />
+          </div>
+        )
+      })}
+      {(clients.length > 0 || inbounds.length > 0) && pages.length > 0 && <div className="ov-gs-sep" role="presentation" />}
       {pages.length > 0 && <div className="ov-gs-head" role="presentation">Go to</div>}
       {pages.map((page, j) => {
-        const i = clients.length + j
+        const i = clients.length + inbounds.length + j
         const Icon = page.icon
         return (
           <div key={page.to + page.label} id={optId(i)} role="option" aria-selected={i === active}
@@ -198,10 +243,10 @@ export function GlobalSearch() {
           </div>
         )
       })}
-      {!items.length && <p className="ov-gs-empty">No clients or pages match &ldquo;{query.trim()}&rdquo;</p>}
+      {!items.length && <p className="ov-gs-empty">No {role === 'agent' ? 'clients, inbounds' : 'clients'} or pages match &ldquo;{query.trim()}&rdquo;</p>}
       <div className="ov-gs-foot hidden lg:flex" aria-hidden="true">
         <span>↑ ↓ to move</span>
-        <span>{items[active]?.kind === 'page' ? 'Enter to go' : isFulfill ? 'Enter to open the call' : isAdmin ? 'Enter to open in Pipeline' : 'Enter to open in My Pipeline'}</span>
+        <span>{items[active]?.kind === 'page' ? 'Enter to go' : items[active]?.kind === 'inbound' ? 'Enter to open the inbound' : isFulfill ? 'Enter to open the call' : isAdmin ? 'Enter to open in Pipeline' : 'Enter to open in My Pipeline'}</span>
         <span>Esc to close</span>
       </div>
     </div>

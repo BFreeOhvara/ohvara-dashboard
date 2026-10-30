@@ -1,10 +1,10 @@
-import { CalendarCheck, PhoneCall, PhoneMissed, CircleCheck, CalendarArrowUp, Undo2, Pencil } from 'lucide-react'
+import { CalendarCheck, PhoneCall, PhoneMissed, CircleCheck, CalendarArrowUp, Undo2, Pencil, Inbox } from 'lucide-react'
 
 // Prompt 718 — policy_events.kind on the Activity page: filter label, pill
 // text, colour tokens and icon. Kinds reuse the status colours (a booking is
 // the same blue here as on My Pipeline); Moved has its own violet. Prompt 730:
 // Edited (Change a booking fixed a detail) shares Moved's violet.
-export const EVENT_KINDS = ['booked', 'in_progress', 'no_answer', 'cancelled', 'moved', 'edited']
+export const EVENT_KINDS = ['booked', 'in_progress', 'no_answer', 'cancelled', 'moved', 'edited', 'inbound']
 export const EVENT_KIND = {
   booked:      { label: 'Booked',    pill: 'Booked',      base: '--ov-st-booked',    icon: CalendarCheck },
   in_progress: { label: 'Calls',     pill: 'In progress', base: '--ov-st-needs',     icon: PhoneCall },
@@ -12,6 +12,8 @@ export const EVENT_KIND = {
   cancelled:   { label: 'Cancelled', pill: 'Cancelled',   base: '--ov-st-cancelled', icon: CircleCheck },
   moved:       { label: 'Moved',     pill: 'Moved',       base: '--ov-kind-moved',   icon: CalendarArrowUp },
   edited:      { label: 'Edited',    pill: 'Edited',      base: '--ov-kind-moved',   icon: Pencil },
+  // A finished step on an inbound (inbound_events). It has its own row in the Activity box.
+  inbound:     { label: 'Inbounds',  pill: 'Inbound',     base: '--ov-kind-moved',   icon: Inbox },
 }
 export const kindMeta = kind => EVENT_KIND[kind] || EVENT_KIND.moved
 
@@ -19,13 +21,14 @@ export const kindMeta = kind => EVENT_KIND[kind] || EVENT_KIND.moved
 // the status it shows. Moved and Edited events have no row or pill of their own: they
 // count (and read) as the status the client is in now (My Pipeline's tabOf). No current
 // status falls back to Booked, since a call being moved or fixed means it was booked.
-export const ACTIVITY_ROWS = ['booked', 'in_progress', 'no_answer', 'cancelled', 'needs']
+export const ACTIVITY_ROWS = ['booked', 'in_progress', 'no_answer', 'cancelled', 'needs', 'inbound']
 const ROW_META = {
   booked:      EVENT_KIND.booked,
   in_progress: EVENT_KIND.in_progress,
   no_answer:   EVENT_KIND.no_answer,
   cancelled:   EVENT_KIND.cancelled,
   needs:       { label: 'Needs attention', pill: 'Needs attention', base: '--ov-st-needs' },
+  inbound:     EVENT_KIND.inbound,
 }
 const TAB_ROW = { booked: 'booked', noAnswer: 'no_answer', needs: 'needs', cancelled: 'cancelled' }
 // Prompt 760: Reassigned (admin gave the call to another Fulfillment person) counts the same way.
