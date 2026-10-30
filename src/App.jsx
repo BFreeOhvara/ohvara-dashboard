@@ -157,11 +157,11 @@ export default function App() {
                 <DashboardLayout><Suspense fallback={null}><V2InboundDetail /></Suspense></DashboardLayout>
               </ProtectedRoute>
             } />
-            <Route path="/agent/calendar" element={
+            <Route path="/agent/calendar" element={LEADS_PAGE ? (
               <ProtectedRoute allowedRoles={['agent']}>
                 <DashboardLayout><Suspense fallback={null}><V2Calendar /></Suspense></DashboardLayout>
               </ProtectedRoute>
-            } />
+            ) : <Navigate to="/agent" replace />} />
             <Route path="/agent/plan" element={<Navigate to="/agent/billing" replace />} />
             <Route path="/agent/book" element={
               <ProtectedRoute allowedRoles={['agent', 'admin']}>

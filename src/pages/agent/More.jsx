@@ -13,6 +13,7 @@ import { AccountRows } from '../../components/shared/AccountRows'
 import { isNativeApp } from '../../lib/native'
 import { NATIVE_BILLING_TEXT } from '../../components/native/NativeBillingNote'
 import { useNewInboundCount } from '../../hooks/useInbounds'
+import { LEADS_PAGE } from '../../lib/leadsPage'
 
 // Prompt 772 — More, the phone layout's fifth tab (mockup More.dc.html): the
 // profile, a Billing card (plan, weekly price, next charge, this week's
@@ -125,8 +126,8 @@ export default function More() {
       </section>
 
       <section className="ov-card ph-menu">
-        <Row icon={Inbox} tone="blue" label="Inbounds" right={newInbounds > 0 ? `${newInbounds} new` : null} onClick={() => navigate('/agent/inbounds')} />
-        <Row icon={CalendarDays} tone="teal" label="Calendar" onClick={() => navigate('/agent/calendar')} />
+        {LEADS_PAGE && <Row icon={Inbox} tone="blue" label="Leads" right={newInbounds > 0 ? `${newInbounds} new` : null} onClick={() => navigate('/agent/leads')} />}
+        {LEADS_PAGE && <Row icon={CalendarDays} tone="teal" label="Calendar" onClick={() => navigate('/agent/calendar')} />}
         <Row icon={Activity} tone="blue" label="Activity" onClick={() => navigate('/agent/activity')} />
         <Row icon={UserPlus} tone="teal" label="Invite an agent" onClick={() => setModal('invite')} />
         <Row icon={Bell} tone="amber" label="Notifications" onClick={() => navigate('/settings#notifications')} />

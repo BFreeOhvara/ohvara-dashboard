@@ -1,5 +1,6 @@
 import { Children, Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useImperativeHandle } from 'react'
 import { createPortal } from 'react-dom'
+import { LEADS_PAGE } from '../../lib/leadsPage'
 import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send, MapPin, Moon, ChevronDown, PencilLine, CircleCheck, ClipboardList } from 'lucide-react'
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
 import { SLOTS, slotTo24h, slotToISO, localDateISO, callWhen, callAt, fmtSlotTime, clientSlotISO, slotState, dayIn, addDaysStr } from '../../lib/scheduling'
@@ -3675,11 +3676,11 @@ export function AttentionCard({ items, loading, onGo, texts = [], fit }) {
             <span className="hidden sm:inline">{more(ATTN_ROWS)}</span>
             <ArrowRight size={15} strokeWidth={2.2} />
           </button>
-        ) : (
-          <button type="button" className="ov-primary" onClick={() => onGo('/agent/inbounds')}>
-            Open Inbounds <ArrowRight size={15} strokeWidth={2.2} />
+        ) : LEADS_PAGE ? (
+          <button type="button" className="ov-primary" onClick={() => onGo('/agent/leads')}>
+            Open Leads <ArrowRight size={15} strokeWidth={2.2} />
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 import {
   Users, Home, Settings, CalendarPlus, MessageSquare, ListFilter, Wallet, History, CreditCard, Phone, PhoneIncoming,
-  Inbox,
+  Inbox, CalendarDays,
 } from 'lucide-react'
 import { LEADS_PAGE } from './leadsPage'
 
@@ -12,8 +12,8 @@ export const NAV = {
   // Prompt 676 — grouped the way Restorix Portal's Layout.jsx is instead of
   // one flat list. Regrouped and renamed (Clients, Submit) on Oct 30: Today,
   // Servicing, Communications, Account; a Leads group between Today and
-  // Servicing only when LEADS_PAGE is on. Calendar joins the Leads group when
-  // its route exists.
+  // Servicing only when LEADS_PAGE is on. Calendar sits in the Leads group and
+  // exists only with it (its route redirects to Overview while Leads is off).
   agent: [
     { group: 'Today', items: [
       { to: '/agent', label: 'Overview', icon: Home },
@@ -22,6 +22,7 @@ export const NAV = {
     ] },
     ...(LEADS_PAGE ? [{ group: 'Leads', items: [
       { to: '/agent/leads', label: 'Leads', icon: Inbox },
+      { to: '/agent/calendar', label: 'Calendar', icon: CalendarDays },
     ] }] : []),
     { group: 'Servicing', items: [
       { to: '/agent/clients', label: 'Clients', icon: Users },
