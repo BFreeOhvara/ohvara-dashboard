@@ -1,0 +1,472 @@
+{
+  "report": [
+    {
+      "name": "clients-1440-light-v2",
+      "url": "/agent/clients",
+      "side": "here",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": true,
+        "fromInbounds": true,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      }
+    },
+    {
+      "name": "clients-1440-light-v1",
+      "url": "/agent/clients?portal=v1",
+      "side": "here",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": false,
+        "fromInbounds": false,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      }
+    },
+    {
+      "name": "clients-1440-light-master-v1",
+      "url": "/agent/clients?portal=v1",
+      "side": "master",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": false,
+        "fromInbounds": false,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      }
+    },
+    {
+      "name": "clients-1440-light-master-v2",
+      "url": "/agent/clients",
+      "side": "prev",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": false,
+        "fromInbounds": true,
+        "stageTabs": false,
+        "findAnyClient": false,
+        "yourPipeline": false,
+        "header": false
+      }
+    },
+    {
+      "name": "clients-390-light-v2",
+      "url": "/agent/clients",
+      "side": "here",
+      "scrollWidth": 390,
+      "width": 390,
+      "has": {
+        "yourClients": true,
+        "fromInbounds": true,
+        "stageTabs": false,
+        "findAnyClient": false,
+        "yourPipeline": false,
+        "header": false
+      }
+    },
+    {
+      "name": "clients-390-light-v1",
+      "url": "/agent/clients?portal=v1",
+      "side": "here",
+      "scrollWidth": 390,
+      "width": 390,
+      "has": {
+        "yourClients": false,
+        "fromInbounds": false,
+        "stageTabs": false,
+        "findAnyClient": false,
+        "yourPipeline": false,
+        "header": false
+      }
+    },
+    {
+      "name": "clients-390-light-master-v1",
+      "url": "/agent/clients?portal=v1",
+      "side": "master",
+      "scrollWidth": 390,
+      "width": 390,
+      "has": {
+        "yourClients": false,
+        "fromInbounds": false,
+        "stageTabs": false,
+        "findAnyClient": false,
+        "yourPipeline": false,
+        "header": false
+      }
+    },
+    {
+      "name": "clients-390-light-master-v2",
+      "url": "/agent/clients",
+      "side": "prev",
+      "scrollWidth": 390,
+      "width": 390,
+      "has": {
+        "yourClients": false,
+        "fromInbounds": true,
+        "stageTabs": false,
+        "findAnyClient": false,
+        "yourPipeline": false,
+        "header": false
+      }
+    },
+    {
+      "name": "clients-1440-light-v2-open-client",
+      "url": "/agent/clients?client=b0000011-0000-4000-8000-000000000000",
+      "side": "here",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": true,
+        "fromInbounds": true,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      }
+    },
+    {
+      "name": "clients-390-light-v2-open-client",
+      "url": "/agent/clients?client=b0000011-0000-4000-8000-000000000000",
+      "side": "here",
+      "scrollWidth": 390,
+      "width": 390,
+      "has": {
+        "yourClients": true,
+        "fromInbounds": true,
+        "stageTabs": false,
+        "findAnyClient": false,
+        "yourPipeline": false,
+        "header": false
+      }
+    },
+    {
+      "name": "clients-1440-light-v2-open-booking",
+      "url": "/agent/clients?open=c0000105-0000-4000-8000-000000000000&stage=needs",
+      "side": "here",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": true,
+        "fromInbounds": true,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      }
+    },
+    {
+      "name": "clients-1440-light-v1-open-booking",
+      "url": "/agent/clients?portal=v1&open=c0000105-0000-4000-8000-000000000000&stage=needs",
+      "side": "here",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": false,
+        "fromInbounds": false,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      }
+    },
+    {
+      "name": "clients-1440-light-master-v1-open-booking",
+      "url": "/agent/clients?portal=v1&open=c0000105-0000-4000-8000-000000000000&stage=needs",
+      "side": "master",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": false,
+        "fromInbounds": false,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      }
+    },
+    {
+      "name": "clients-1440-dark-v2",
+      "url": "/agent/clients",
+      "side": "here",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": true,
+        "fromInbounds": true,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      }
+    },
+    {
+      "name": "clients-1440-dark-v1",
+      "url": "/agent/clients?portal=v1",
+      "side": "here",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": false,
+        "fromInbounds": false,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      }
+    },
+    {
+      "name": "clients-1440-dark-master-v1",
+      "url": "/agent/clients?portal=v1",
+      "side": "master",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": false,
+        "fromInbounds": false,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      }
+    },
+    {
+      "name": "clients-1440-dark-master-v2",
+      "url": "/agent/clients",
+      "side": "prev",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": false,
+        "fromInbounds": true,
+        "stageTabs": false,
+        "findAnyClient": false,
+        "yourPipeline": false,
+        "header": false
+      }
+    },
+    {
+      "name": "clients-390-dark-v2",
+      "url": "/agent/clients",
+      "side": "here",
+      "scrollWidth": 390,
+      "width": 390,
+      "has": {
+        "yourClients": true,
+        "fromInbounds": true,
+        "stageTabs": false,
+        "findAnyClient": false,
+        "yourPipeline": false,
+        "header": false
+      }
+    },
+    {
+      "name": "clients-390-dark-v1",
+      "url": "/agent/clients?portal=v1",
+      "side": "here",
+      "scrollWidth": 390,
+      "width": 390,
+      "has": {
+        "yourClients": false,
+        "fromInbounds": false,
+        "stageTabs": false,
+        "findAnyClient": false,
+        "yourPipeline": false,
+        "header": false
+      }
+    },
+    {
+      "name": "clients-390-dark-master-v1",
+      "url": "/agent/clients?portal=v1",
+      "side": "master",
+      "scrollWidth": 390,
+      "width": 390,
+      "has": {
+        "yourClients": false,
+        "fromInbounds": false,
+        "stageTabs": false,
+        "findAnyClient": false,
+        "yourPipeline": false,
+        "header": false
+      }
+    },
+    {
+      "name": "clients-390-dark-master-v2",
+      "url": "/agent/clients",
+      "side": "prev",
+      "scrollWidth": 390,
+      "width": 390,
+      "has": {
+        "yourClients": false,
+        "fromInbounds": true,
+        "stageTabs": false,
+        "findAnyClient": false,
+        "yourPipeline": false,
+        "header": false
+      }
+    },
+    {
+      "name": "clients-1440-dark-v2-open-client",
+      "url": "/agent/clients?client=b0000011-0000-4000-8000-000000000000",
+      "side": "here",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": true,
+        "fromInbounds": true,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      }
+    },
+    {
+      "name": "clients-390-dark-v2-open-client",
+      "url": "/agent/clients?client=b0000011-0000-4000-8000-000000000000",
+      "side": "here",
+      "scrollWidth": 390,
+      "width": 390,
+      "has": {
+        "yourClients": true,
+        "fromInbounds": true,
+        "stageTabs": false,
+        "findAnyClient": false,
+        "yourPipeline": false,
+        "header": false
+      }
+    },
+    {
+      "name": "clients-1440-dark-v2-open-booking",
+      "url": "/agent/clients?open=c0000105-0000-4000-8000-000000000000&stage=needs",
+      "side": "here",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": true,
+        "fromInbounds": true,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      }
+    },
+    {
+      "name": "clients-1440-dark-v1-open-booking",
+      "url": "/agent/clients?portal=v1&open=c0000105-0000-4000-8000-000000000000&stage=needs",
+      "side": "here",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": false,
+        "fromInbounds": false,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      }
+    },
+    {
+      "name": "clients-1440-dark-master-v1-open-booking",
+      "url": "/agent/clients?portal=v1&open=c0000105-0000-4000-8000-000000000000&stage=needs",
+      "side": "master",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": false,
+        "fromInbounds": false,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      }
+    },
+    {
+      "name": "needs-link-1440-light-v1",
+      "url": "/agent/clients?portal=v1",
+      "side": "here",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": true,
+        "fromInbounds": true,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      },
+      "needsLink": {
+        "url": "/agent/clients?stage=needs",
+        "selectedTab": "Needs attention"
+      }
+    },
+    {
+      "name": "needs-link-1440-light-master-v1",
+      "url": "/agent/clients?portal=v1",
+      "side": "master",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": false,
+        "fromInbounds": false,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      },
+      "needsLink": {
+        "url": "/agent/clients?stage=needs",
+        "selectedTab": "Needs attention"
+      }
+    },
+    {
+      "name": "needs-link-1440-light-v2",
+      "url": "/agent/clients",
+      "side": "here",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": true,
+        "fromInbounds": true,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      },
+      "needsLink": {
+        "url": "/agent/clients?stage=needs",
+        "selectedTab": "Needs attention"
+      }
+    },
+    {
+      "name": "clients-1440-light-v2-filter-inbounds",
+      "url": "/agent/clients",
+      "side": "here",
+      "scrollWidth": 1425,
+      "width": 1440,
+      "has": {
+        "yourClients": true,
+        "fromInbounds": true,
+        "stageTabs": true,
+        "findAnyClient": true,
+        "yourPipeline": true,
+        "header": true
+      },
+      "rowsAfterFilter": [
+        "Logan Sample",
+        "Emerson Placeholder",
+        "Sage Placeholder"
+      ]
+    }
+  ],
+  "fails": []
+}
