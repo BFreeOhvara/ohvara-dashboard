@@ -36,7 +36,7 @@ test('matchInbounds: nothing for an empty query or an empty list; unnamed caller
 })
 
 test('choosing an inbound opens its detail page', () => {
-  assert.equal(inboundPath('abc-123'), '/agent/inbounds/abc-123')
+  assert.equal(inboundPath('abc-123'), '/agent/leads/abc-123')
   assert.match(src('../components/layout/GlobalSearch.jsx'), /navigate\(inboundPath\(item\.l\.lead_id\)\)/)
 })
 

@@ -79,7 +79,7 @@ function inboundItem(l, at, tz, nowMs) {
     id: `i-${l.lead_id}`, kind: 'i', at, ms: new Date(at).getTime(), name: leadName(l), tone, pill, label, short, mark, live: false, since: null,
     phone: l.phone, state: stateName(l.state) || null, place: null,
     clientTz: l.state ? inferTimezoneFromState(l.state) : null,
-    open: `/agent/inbounds/${l.lead_id}`, change: null, day: dayKey(at, tz),
+    open: `/agent/leads/${l.lead_id}`, change: null, day: dayKey(at, tz),
   }
 }
 

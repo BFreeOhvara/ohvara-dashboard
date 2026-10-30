@@ -25,7 +25,7 @@ function Sidebar({ active, count, profile }) {
       <div className="pv-sb-head"><OhvaraMark height={30} /><span className="pv-wordmark">Ohvara Portal</span></div>
       <p className="pv-sb-grp">Your work</p>
       {link('today', '/agent', Sun, 'Today')}
-      {link('inbounds', '/agent/inbounds', Inbox, 'Inbounds', count)}
+      {link('inbounds', '/agent/leads', Inbox, 'Leads', count)}
       {link('calendar', '/agent/calendar', CalendarDays, 'Calendar')}
       {link('clients', '/agent/clients', Users, 'Clients')}
       <p className="pv-sb-grp">Account</p>
@@ -50,7 +50,7 @@ function TabBar({ active, count }) {
   return (
     <nav className="pv-tabbar" aria-label="Main menu">
       {tab('today', '/agent', Sun, 'Today')}
-      {tab('inbounds', '/agent/inbounds', Inbox, 'Inbounds', count)}
+      {tab('inbounds', '/agent/leads', Inbox, 'Leads', count)}
       {tab('calendar', '/agent/calendar', CalendarDays, 'Calendar')}
       {tab('clients', '/agent/clients', Users, 'Clients')}
       {tab('plan', '/agent/plan', CreditCard, 'Plan')}

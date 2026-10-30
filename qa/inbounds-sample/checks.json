@@ -1,0 +1,274 @@
+[
+ {
+  "name": "board fits the screen 1920 dark",
+  "ok": true,
+  "detail": {
+   "sw": 1905,
+   "cw": 1920,
+   "sh": 1080,
+   "ch": 1080
+  }
+ },
+ {
+  "name": "card in every column 1920 dark",
+  "ok": true,
+  "detail": [
+   2,
+   3,
+   3,
+   2,
+   4
+  ]
+ },
+ {
+  "name": "live log fits 1920 dark",
+  "ok": true,
+  "detail": {
+   "sw": 1905,
+   "cw": 1920,
+   "sh": 1080,
+   "ch": 1080
+  }
+ },
+ {
+  "name": "live rows 1920 dark",
+  "ok": true,
+  "detail": 7
+ },
+ {
+  "name": "board fits the screen 1440 dark",
+  "ok": true,
+  "detail": {
+   "sw": 1425,
+   "cw": 1440,
+   "sh": 900,
+   "ch": 900
+  }
+ },
+ {
+  "name": "card in every column 1440 dark",
+  "ok": true,
+  "detail": [
+   2,
+   3,
+   3,
+   2,
+   4
+  ]
+ },
+ {
+  "name": "sidebar badge ignores sample data",
+  "ok": true,
+  "detail": [
+   "1"
+  ]
+ },
+ {
+  "name": "live log fits 1440 dark",
+  "ok": true,
+  "detail": {
+   "sw": 1425,
+   "cw": 1440,
+   "sh": 900,
+   "ch": 900
+  }
+ },
+ {
+  "name": "live rows 1440 dark",
+  "ok": true,
+  "detail": 7
+ },
+ {
+  "name": "Start links to /agent/billing",
+  "ok": true,
+  "detail": "/agent/billing"
+ },
+ {
+  "name": "Try again recovers",
+  "ok": true
+ },
+ {
+  "name": "no sideways scroll booked 390 dark",
+  "ok": true,
+  "detail": {
+   "sw": 390,
+   "cw": 390,
+   "sh": 2507,
+   "ch": 844
+  }
+ },
+ {
+  "name": "card in every column 390 dark",
+  "ok": true,
+  "detail": [
+   2,
+   3,
+   3,
+   2,
+   4
+  ]
+ },
+ {
+  "name": "no sideways scroll live 390 dark",
+  "ok": true,
+  "detail": {
+   "sw": 390,
+   "cw": 390,
+   "sh": 1756,
+   "ch": 844
+  }
+ },
+ {
+  "name": "live rows 390 dark",
+  "ok": true,
+  "detail": 7
+ },
+ {
+  "name": "no sideways scroll empty 390 dark",
+  "ok": true,
+  "detail": {
+   "sw": 390,
+   "cw": 390,
+   "sh": 1334,
+   "ch": 844
+  }
+ },
+ {
+  "name": "no sideways scroll fail 390 dark",
+  "ok": true,
+  "detail": {
+   "sw": 390,
+   "cw": 390,
+   "sh": 844,
+   "ch": 844
+  }
+ },
+ {
+  "name": "board fits the screen 1920 light",
+  "ok": true,
+  "detail": {
+   "sw": 1905,
+   "cw": 1920,
+   "sh": 1080,
+   "ch": 1080
+  }
+ },
+ {
+  "name": "card in every column 1920 light",
+  "ok": true,
+  "detail": [
+   2,
+   3,
+   3,
+   2,
+   4
+  ]
+ },
+ {
+  "name": "live log fits 1920 light",
+  "ok": true,
+  "detail": {
+   "sw": 1905,
+   "cw": 1920,
+   "sh": 1080,
+   "ch": 1080
+  }
+ },
+ {
+  "name": "live rows 1920 light",
+  "ok": true,
+  "detail": 7
+ },
+ {
+  "name": "board fits the screen 1440 light",
+  "ok": true,
+  "detail": {
+   "sw": 1425,
+   "cw": 1440,
+   "sh": 900,
+   "ch": 900
+  }
+ },
+ {
+  "name": "card in every column 1440 light",
+  "ok": true,
+  "detail": [
+   2,
+   3,
+   3,
+   2,
+   4
+  ]
+ },
+ {
+  "name": "live log fits 1440 light",
+  "ok": true,
+  "detail": {
+   "sw": 1425,
+   "cw": 1440,
+   "sh": 900,
+   "ch": 900
+  }
+ },
+ {
+  "name": "live rows 1440 light",
+  "ok": true,
+  "detail": 7
+ },
+ {
+  "name": "no sideways scroll booked 390 light",
+  "ok": true,
+  "detail": {
+   "sw": 390,
+   "cw": 390,
+   "sh": 2507,
+   "ch": 844
+  }
+ },
+ {
+  "name": "card in every column 390 light",
+  "ok": true,
+  "detail": [
+   2,
+   3,
+   3,
+   2,
+   4
+  ]
+ },
+ {
+  "name": "no sideways scroll live 390 light",
+  "ok": true,
+  "detail": {
+   "sw": 390,
+   "cw": 390,
+   "sh": 1756,
+   "ch": 844
+  }
+ },
+ {
+  "name": "live rows 390 light",
+  "ok": true,
+  "detail": 7
+ },
+ {
+  "name": "no sideways scroll empty 390 light",
+  "ok": true,
+  "detail": {
+   "sw": 390,
+   "cw": 390,
+   "sh": 1334,
+   "ch": 844
+  }
+ },
+ {
+  "name": "no sideways scroll fail 390 light",
+  "ok": true,
+  "detail": {
+   "sw": 390,
+   "cw": 390,
+   "sh": 844,
+   "ch": 844
+  }
+ }
+]
