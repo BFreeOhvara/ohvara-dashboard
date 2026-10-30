@@ -28,7 +28,7 @@ export function StartInboundsCard() {
         <b style={{ fontSize: 15, fontWeight: 700, color: 'var(--ov-hi)', marginRight: phone ? 0 : 6 }}>{title}</b>
         {!phone && <span>{line}</span>}
       </div>
-      <Link to="/agent/inbounds" className="ov-ghost" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, height: 44, minWidth: 92, padding: '0 20px', borderRadius: 999, fontSize: 14, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+      <Link to="/agent/leads" className="ov-ghost" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, height: 44, minWidth: 92, padding: '0 20px', borderRadius: 999, fontSize: 14, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
         {button}
       </Link>
     </section>

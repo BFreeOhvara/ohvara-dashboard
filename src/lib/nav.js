@@ -35,8 +35,8 @@ export const NAV = {
     // Prompt 693 — Billing is about the agent's own account standing, so it
     // sits with Settings; Team removed.
     { group: 'Account', items: [
-      // Get inbounds is the agent's weekly spend: no entry in the phone app, like Billing's controls.
-      ...(isNativeApp() ? [] : [{ to: '/agent/inbounds', label: 'Inbounds', icon: PhoneIncoming }]),
+      // The Inbounds page opens with the agent's weekly spend: no entry in the phone app, like Billing's controls.
+      ...(isNativeApp() || LEADS_PAGE ? [] : [{ to: '/agent/leads', label: 'Inbounds', icon: PhoneIncoming }]),
       { to: '/agent/billing', label: 'Billing', icon: CreditCard },
       { to: '/settings', label: 'Settings', icon: Settings },
     ] },

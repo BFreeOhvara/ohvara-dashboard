@@ -151,12 +151,8 @@ export default function App() {
                 <DashboardLayout><AgentOverview /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* The Get inbounds panel. One inbound and Calendar keep their routes. Old v2 Plan links land on Billing. */}
-            <Route path="/agent/inbounds" element={
-              <ProtectedRoute allowedRoles={['agent']}>
-                <DashboardLayout><Suspense fallback={null}><BillingInbounds /></Suspense></DashboardLayout>
-              </ProtectedRoute>
-            } />
+            {/* The Inbounds page now lives at /agent/leads, so the old list URL lands there. One inbound and Calendar keep their routes. Old v2 Plan links land on Billing. */}
+            <Route path="/agent/inbounds" element={<Navigate to="/agent/leads" replace />} />
             <Route path="/agent/inbounds/:id" element={
               <ProtectedRoute allowedRoles={['agent']}>
                 <DashboardLayout><Suspense fallback={null}><V2InboundDetail /></Suspense></DashboardLayout>
@@ -185,12 +181,16 @@ export default function App() {
                 <DashboardLayout><AgentActivity /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* P808: the route mounts only in dev behind VITE_LEADS_PAGE=1; otherwise it redirects to Overview. */}
+            {/* The Inbounds page: the Get inbounds panel over the v2 list. P808's old Leads page mounts only in dev behind VITE_LEADS_PAGE=1. */}
             <Route path="/agent/leads" element={LEADS_PAGE ? (
               <ProtectedRoute allowedRoles={['agent', 'admin']}>
                 <DashboardLayout><Suspense fallback={null}><AgentLeads /></Suspense></DashboardLayout>
               </ProtectedRoute>
-            ) : <Navigate to="/agent" replace />} />
+            ) : (
+              <ProtectedRoute allowedRoles={['agent']}>
+                <DashboardLayout><Suspense fallback={null}><BillingInbounds /></Suspense></DashboardLayout>
+              </ProtectedRoute>
+            )} />
             {/* Prompt 691 — Billing, promoted out of Settings. */}
             <Route path="/agent/billing" element={
               <ProtectedRoute allowedRoles={['agent']}>

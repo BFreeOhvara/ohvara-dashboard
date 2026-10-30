@@ -1,4 +1,4 @@
-// Get inbounds (/agent/inbounds): the words and sums behind the panel, the sheet and the Start cards.
+// Get inbounds (top of /agent/leads): the words and sums behind the panel, the sheet and the Start cards.
 // No imports, so Deno can test it too. The estimate numbers only ever become "about N a week".
 
 export const TYPE_ORDER = ['live_call', 'booked_appointment']

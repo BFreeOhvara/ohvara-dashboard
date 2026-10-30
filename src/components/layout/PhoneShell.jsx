@@ -36,7 +36,7 @@ const AGENT_TABS = [
   { to: '/messages', label: 'Messages', icon: MessageSquare, on: p => p === '/messages', badge: true },
   // Inbounds and Calendar open from More (portal parity answer 1); More shows the new-inbounds count,
   // except in the phone app, where the Inbounds row is hidden.
-  { to: '/agent/more', label: 'More', icon: Menu, on: p => ['/agent/more', '/agent/activity', ...(LEADS_PAGE ? ['/agent/leads'] : []), '/agent/billing', '/settings', '/agent/calendar'].includes(p) || p.startsWith('/agent/inbounds'), inbounds: !isNativeApp() },
+  { to: '/agent/more', label: 'More', icon: Menu, on: p => ['/agent/more', '/agent/activity', '/agent/leads', '/agent/billing', '/settings', '/agent/calendar'].includes(p) || p.startsWith('/agent/inbounds'), inbounds: !isNativeApp() },
 ]
 
 const FULFILL_TABS = [
@@ -58,7 +58,7 @@ const TABS = { agent: AGENT_TABS, fulfillment: FULFILL_TABS, admin: ADMIN_TABS }
 
 // Pages opened from More: a header with a back arrow to More.
 const SUB_PAGES = {
-  agent: { '/agent/inbounds': 'Inbounds', '/agent/calendar': 'Calendar', '/agent/activity': 'Activity', ...(LEADS_PAGE ? { '/agent/leads': 'Leads' } : {}), '/agent/billing': 'Billing', '/settings': 'Settings' },
+  agent: { '/agent/inbounds': 'Inbounds', '/agent/calendar': 'Calendar', '/agent/activity': 'Activity', '/agent/leads': LEADS_PAGE ? 'Leads' : 'Inbounds', '/agent/billing': 'Billing', '/settings': 'Settings' },
   fulfillment: { '/fulfillment/leads': 'Leads', '/settings': 'Settings' },
   admin: { '/admin/users': 'People', '/admin/pipeline': 'Pipeline', '/settings': 'Settings' },
 }

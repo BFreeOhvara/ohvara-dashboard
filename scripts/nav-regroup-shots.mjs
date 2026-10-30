@@ -140,7 +140,7 @@ try {
         check("footer hint reads 'Enter to open in Clients' (client row active)", foot.some(t => t === 'Enter to open in Clients'), foot)
         await page.screenshot({ path: join(OUT, 'goto-client-1440-dark.png') })
         // Redirects
-        for (const [from, to] of [['/agent/inbounds', '/agent'], ['/agent/policies', '/agent/clients'], ['/agent/submissions', '/agent/book']]) {
+        for (const [from, to] of [['/agent/inbounds', '/agent/leads'], ['/agent/policies', '/agent/clients'], ['/agent/submissions', '/agent/book']]) {
           await page.goto(base + from, { waitUntil: 'domcontentloaded' })
           await page.waitForTimeout(1500)
           check(`${from} lands on ${to}`, new URL(page.url()).pathname === to, new URL(page.url()).pathname)

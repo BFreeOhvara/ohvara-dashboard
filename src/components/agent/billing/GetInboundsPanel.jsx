@@ -13,7 +13,7 @@ import {
 } from '../../../lib/billingInbound'
 import { isNativeApp } from '../../../lib/native'
 
-// Get inbounds, at the top of /agent/inbounds: the weekly amount per type, Change / Pause, what you get and
+// Get inbounds, at the top of the Inbounds page (/agent/leads): the weekly amount per type, Change / Pause, what you get and
 // how it works. Which state shows, in order: phone-app note, load error, loading, not open yet, comped
 // (read-only, nothing can call inbound_set), not subscribed (Start goes to Billing), empty, all paused, spending.
 // Mockup: ohvara/mockups/get-inbounds-panel-on-a-minimal-agent-in.html.

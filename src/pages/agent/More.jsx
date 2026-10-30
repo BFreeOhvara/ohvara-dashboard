@@ -125,7 +125,7 @@ export default function More() {
       </section>
 
       <section className="ov-card ph-menu">
-        {!isNativeApp() && <Row icon={PhoneIncoming} tone="teal" label="Inbounds" right={newInbounds > 0 ? `${newInbounds} new` : null} onClick={() => navigate('/agent/inbounds')} />}
+        {!isNativeApp() && <Row icon={PhoneIncoming} tone="teal" label="Inbounds" right={newInbounds > 0 ? `${newInbounds} new` : null} onClick={() => navigate('/agent/leads')} />}
         <Row icon={CalendarDays} tone="teal" label="Calendar" onClick={() => navigate('/agent/calendar')} />
         <Row icon={Activity} tone="blue" label="Activity" onClick={() => navigate('/agent/activity')} />
         <Row icon={UserPlus} tone="teal" label="Invite an agent" onClick={() => setModal('invite')} />
