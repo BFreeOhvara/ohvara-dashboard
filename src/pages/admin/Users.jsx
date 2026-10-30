@@ -237,7 +237,7 @@ function AdminUsersDesktop() {
   )
 }
 
-const dutyTime = iso => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' })
+const dutyTime = iso => (iso ? new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' }) : '—')
 
 // Who can take a live transfer right now. Count and rows share one array.
 function OnDutyCard() {
@@ -249,7 +249,7 @@ function OnDutyCard() {
       icon={PhoneIncoming}
       title="Live transfers · on duty now"
       sub="Agents who can take a live transfer right now."
-      right={!error && !isLoading && <SettingsChip tone="on"><span style={{ fontFamily: 'var(--font-mono)' }}>{rows.length}</span></SettingsChip>}
+      right={!error && !isLoading && <SettingsChip tone={rows.length ? 'on' : 'off'}><span style={{ fontFamily: 'var(--font-mono)' }}>{rows.length}</span></SettingsChip>}
       gap={10}
     >
       {error ? (isDutyMissing(error)
@@ -262,7 +262,7 @@ function OnDutyCard() {
             {rows.map((a, i) => (
               <div key={a.agent_id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', columnGap: 12, rowGap: 2, padding: '10px 0', borderTop: i ? '1px solid var(--ov-line)' : 'none' }}>
                 <b style={{ fontWeight: 500, minWidth: 0, overflowWrap: 'anywhere' }}>{a.full_name || 'Unnamed'}</b>
-                <span style={{ fontSize: 13.5, color: 'var(--ov-mute)' }}>On since <span style={{ fontFamily: 'var(--font-mono)' }}>{dutyTime(a.updated_at)}</span></span>
+                <span style={{ fontSize: 13.5, color: 'var(--ov-mute)' }}>On since <span style={{ fontFamily: 'var(--font-mono)' }}>{dutyTime(a.since)}</span></span>
               </div>
             ))}
           </div>

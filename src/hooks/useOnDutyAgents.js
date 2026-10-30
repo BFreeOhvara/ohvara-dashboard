@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 // Agents who can take a live transfer right now. on_duty_agents() returns
-// agent_id, full_name, updated_at. Refreshed every 30s.
+// agent_id, full_name, since. Refreshed every 30s.
 export function useOnDutyAgents() {
   return useQuery({
     queryKey: ['on-duty-agents'],
