@@ -1,0 +1,676 @@
+[
+  {
+    "name": "/agent/inbounds forwards with its query string",
+    "pass": true
+  },
+  {
+    "name": "/agent/inbounds/:id forwards with its query string",
+    "pass": true
+  },
+  {
+    "name": "1920-light board: five stage columns, a card in every one",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 2,
+        "empty": null
+      },
+      {
+        "title": "Contacting",
+        "cards": 3,
+        "empty": null
+      },
+      {
+        "title": "Booked",
+        "cards": 3,
+        "empty": null
+      },
+      {
+        "title": "Met",
+        "cards": 2,
+        "empty": null
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 4,
+        "empty": null
+      }
+    ]
+  },
+  {
+    "name": "1920-light board: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920-light board: no Start state when there are inbounds",
+    "pass": true
+  },
+  {
+    "name": "1920-light page errors",
+    "pass": true
+  },
+  {
+    "name": "1920-light live: at least 5 rows",
+    "pass": true,
+    "rows": 7
+  },
+  {
+    "name": "1920-light live: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920-light empty: not-getting-inbounds state with Start",
+    "pass": true,
+    "h": "You’re not getting inbounds yet",
+    "to": "/agent/billing",
+    "label": "Start",
+    "open": true
+  },
+  {
+    "name": "1920-light empty: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920-light real, no inbounds: Start state and no fixture",
+    "pass": true
+  },
+  {
+    "name": "1920-light real, one inbound: four empty stages each explain themselves",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 1,
+        "empty": null
+      },
+      {
+        "title": "Contacting",
+        "cards": 0,
+        "empty": "Nobody to reach right now\nAnyone we haven't reached yet waits here while our VA keeps trying."
+      },
+      {
+        "title": "Booked",
+        "cards": 0,
+        "empty": "Nothing booked yet\nWhen our VA books someone, they show here and on your calendar."
+      },
+      {
+        "title": "Met",
+        "cards": 0,
+        "empty": "Nobody to mark\nAfter you meet someone, they move here so you can mark how it went."
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 0,
+        "empty": "No outcomes yet\nEveryone you mark Sold, Follow up or Not interested ends up here."
+      }
+    ]
+  },
+  {
+    "name": "1920-light real, one inbound: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920-light real: page errors",
+    "pass": true
+  },
+  {
+    "name": "1920-light fail: error card with Try again, no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440-light board: five stage columns, a card in every one",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 2,
+        "empty": null
+      },
+      {
+        "title": "Contacting",
+        "cards": 3,
+        "empty": null
+      },
+      {
+        "title": "Booked",
+        "cards": 3,
+        "empty": null
+      },
+      {
+        "title": "Met",
+        "cards": 2,
+        "empty": null
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 4,
+        "empty": null
+      }
+    ]
+  },
+  {
+    "name": "1440-light board: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440-light board: no Start state when there are inbounds",
+    "pass": true
+  },
+  {
+    "name": "1440-light page errors",
+    "pass": true
+  },
+  {
+    "name": "1440-light live: at least 5 rows",
+    "pass": true,
+    "rows": 7
+  },
+  {
+    "name": "1440-light live: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440-light empty: not-getting-inbounds state with Start",
+    "pass": true,
+    "h": "You’re not getting inbounds yet",
+    "to": "/agent/billing",
+    "label": "Start",
+    "open": true
+  },
+  {
+    "name": "1440-light empty: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440-light real, no inbounds: Start state and no fixture",
+    "pass": true
+  },
+  {
+    "name": "1440-light real, one inbound: four empty stages each explain themselves",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 1,
+        "empty": null
+      },
+      {
+        "title": "Contacting",
+        "cards": 0,
+        "empty": "Nobody to reach right now\nAnyone we haven't reached yet waits here while our VA keeps trying."
+      },
+      {
+        "title": "Booked",
+        "cards": 0,
+        "empty": "Nothing booked yet\nWhen our VA books someone, they show here and on your calendar."
+      },
+      {
+        "title": "Met",
+        "cards": 0,
+        "empty": "Nobody to mark\nAfter you meet someone, they move here so you can mark how it went."
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 0,
+        "empty": "No outcomes yet\nEveryone you mark Sold, Follow up or Not interested ends up here."
+      }
+    ]
+  },
+  {
+    "name": "1440-light real, one inbound: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440-light real: page errors",
+    "pass": true
+  },
+  {
+    "name": "1440-light fail: error card with Try again, no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-light board: five stage columns, a card in every one",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 2,
+        "empty": null
+      },
+      {
+        "title": "Contacting",
+        "cards": 3,
+        "empty": null
+      },
+      {
+        "title": "Booked",
+        "cards": 3,
+        "empty": null
+      },
+      {
+        "title": "Met",
+        "cards": 2,
+        "empty": null
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 4,
+        "empty": null
+      }
+    ]
+  },
+  {
+    "name": "390-light board: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-light board: no Start state when there are inbounds",
+    "pass": true
+  },
+  {
+    "name": "390-light page errors",
+    "pass": true
+  },
+  {
+    "name": "390-light live: at least 5 rows",
+    "pass": true,
+    "rows": 7
+  },
+  {
+    "name": "390-light live: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-light empty: not-getting-inbounds state with Start",
+    "pass": true,
+    "h": "You’re not getting inbounds yet",
+    "to": "/agent/billing",
+    "label": "Start",
+    "open": true
+  },
+  {
+    "name": "390-light empty: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-light real, no inbounds: Start state and no fixture",
+    "pass": true
+  },
+  {
+    "name": "390-light real, one inbound: four empty stages each explain themselves",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 1,
+        "empty": null
+      },
+      {
+        "title": "Contacting",
+        "cards": 0,
+        "empty": "Nobody to reach right now\nAnyone we haven't reached yet waits here while our VA keeps trying."
+      },
+      {
+        "title": "Booked",
+        "cards": 0,
+        "empty": "Nothing booked yet\nWhen our VA books someone, they show here and on your calendar."
+      },
+      {
+        "title": "Met",
+        "cards": 0,
+        "empty": "Nobody to mark\nAfter you meet someone, they move here so you can mark how it went."
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 0,
+        "empty": "No outcomes yet\nEveryone you mark Sold, Follow up or Not interested ends up here."
+      }
+    ]
+  },
+  {
+    "name": "390-light real, one inbound: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-light real: page errors",
+    "pass": true
+  },
+  {
+    "name": "390-light fail: error card with Try again, no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920-dark board: five stage columns, a card in every one",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 2,
+        "empty": null
+      },
+      {
+        "title": "Contacting",
+        "cards": 3,
+        "empty": null
+      },
+      {
+        "title": "Booked",
+        "cards": 3,
+        "empty": null
+      },
+      {
+        "title": "Met",
+        "cards": 2,
+        "empty": null
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 4,
+        "empty": null
+      }
+    ]
+  },
+  {
+    "name": "1920-dark board: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920-dark board: no Start state when there are inbounds",
+    "pass": true
+  },
+  {
+    "name": "1920-dark page errors",
+    "pass": true
+  },
+  {
+    "name": "1920-dark live: at least 5 rows",
+    "pass": true,
+    "rows": 7
+  },
+  {
+    "name": "1920-dark live: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920-dark empty: not-getting-inbounds state with Start",
+    "pass": true,
+    "h": "You’re not getting inbounds yet",
+    "to": "/agent/billing",
+    "label": "Start",
+    "open": true
+  },
+  {
+    "name": "1920-dark empty: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920-dark real, no inbounds: Start state and no fixture",
+    "pass": true
+  },
+  {
+    "name": "1920-dark real, one inbound: four empty stages each explain themselves",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 1,
+        "empty": null
+      },
+      {
+        "title": "Contacting",
+        "cards": 0,
+        "empty": "Nobody to reach right now\nAnyone we haven't reached yet waits here while our VA keeps trying."
+      },
+      {
+        "title": "Booked",
+        "cards": 0,
+        "empty": "Nothing booked yet\nWhen our VA books someone, they show here and on your calendar."
+      },
+      {
+        "title": "Met",
+        "cards": 0,
+        "empty": "Nobody to mark\nAfter you meet someone, they move here so you can mark how it went."
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 0,
+        "empty": "No outcomes yet\nEveryone you mark Sold, Follow up or Not interested ends up here."
+      }
+    ]
+  },
+  {
+    "name": "1920-dark real, one inbound: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1920-dark real: page errors",
+    "pass": true
+  },
+  {
+    "name": "1920-dark fail: error card with Try again, no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440-dark board: five stage columns, a card in every one",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 2,
+        "empty": null
+      },
+      {
+        "title": "Contacting",
+        "cards": 3,
+        "empty": null
+      },
+      {
+        "title": "Booked",
+        "cards": 3,
+        "empty": null
+      },
+      {
+        "title": "Met",
+        "cards": 2,
+        "empty": null
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 4,
+        "empty": null
+      }
+    ]
+  },
+  {
+    "name": "1440-dark board: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440-dark board: no Start state when there are inbounds",
+    "pass": true
+  },
+  {
+    "name": "1440-dark page errors",
+    "pass": true
+  },
+  {
+    "name": "1440-dark live: at least 5 rows",
+    "pass": true,
+    "rows": 7
+  },
+  {
+    "name": "1440-dark live: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440-dark empty: not-getting-inbounds state with Start",
+    "pass": true,
+    "h": "You’re not getting inbounds yet",
+    "to": "/agent/billing",
+    "label": "Start",
+    "open": true
+  },
+  {
+    "name": "1440-dark empty: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440-dark real, no inbounds: Start state and no fixture",
+    "pass": true
+  },
+  {
+    "name": "1440-dark real, one inbound: four empty stages each explain themselves",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 1,
+        "empty": null
+      },
+      {
+        "title": "Contacting",
+        "cards": 0,
+        "empty": "Nobody to reach right now\nAnyone we haven't reached yet waits here while our VA keeps trying."
+      },
+      {
+        "title": "Booked",
+        "cards": 0,
+        "empty": "Nothing booked yet\nWhen our VA books someone, they show here and on your calendar."
+      },
+      {
+        "title": "Met",
+        "cards": 0,
+        "empty": "Nobody to mark\nAfter you meet someone, they move here so you can mark how it went."
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 0,
+        "empty": "No outcomes yet\nEveryone you mark Sold, Follow up or Not interested ends up here."
+      }
+    ]
+  },
+  {
+    "name": "1440-dark real, one inbound: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "1440-dark real: page errors",
+    "pass": true
+  },
+  {
+    "name": "1440-dark fail: error card with Try again, no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-dark board: five stage columns, a card in every one",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 2,
+        "empty": null
+      },
+      {
+        "title": "Contacting",
+        "cards": 3,
+        "empty": null
+      },
+      {
+        "title": "Booked",
+        "cards": 3,
+        "empty": null
+      },
+      {
+        "title": "Met",
+        "cards": 2,
+        "empty": null
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 4,
+        "empty": null
+      }
+    ]
+  },
+  {
+    "name": "390-dark board: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-dark board: no Start state when there are inbounds",
+    "pass": true
+  },
+  {
+    "name": "390-dark page errors",
+    "pass": true
+  },
+  {
+    "name": "390-dark live: at least 5 rows",
+    "pass": true,
+    "rows": 7
+  },
+  {
+    "name": "390-dark live: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-dark empty: not-getting-inbounds state with Start",
+    "pass": true,
+    "h": "You’re not getting inbounds yet",
+    "to": "/agent/billing",
+    "label": "Start",
+    "open": true
+  },
+  {
+    "name": "390-dark empty: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-dark real, no inbounds: Start state and no fixture",
+    "pass": true
+  },
+  {
+    "name": "390-dark real, one inbound: four empty stages each explain themselves",
+    "pass": true,
+    "cols": [
+      {
+        "title": "New",
+        "cards": 1,
+        "empty": null
+      },
+      {
+        "title": "Contacting",
+        "cards": 0,
+        "empty": "Nobody to reach right now\nAnyone we haven't reached yet waits here while our VA keeps trying."
+      },
+      {
+        "title": "Booked",
+        "cards": 0,
+        "empty": "Nothing booked yet\nWhen our VA books someone, they show here and on your calendar."
+      },
+      {
+        "title": "Met",
+        "cards": 0,
+        "empty": "Nobody to mark\nAfter you meet someone, they move here so you can mark how it went."
+      },
+      {
+        "title": "Sold / Follow up / Lost",
+        "cards": 0,
+        "empty": "No outcomes yet\nEveryone you mark Sold, Follow up or Not interested ends up here."
+      }
+    ]
+  },
+  {
+    "name": "390-dark real, one inbound: no sideways scroll",
+    "pass": true
+  },
+  {
+    "name": "390-dark real: page errors",
+    "pass": true
+  },
+  {
+    "name": "390-dark fail: error card with Try again, no sideways scroll",
+    "pass": true
+  }
+]
