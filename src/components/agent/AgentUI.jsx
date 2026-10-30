@@ -3372,11 +3372,9 @@ export function Composer({ value, onChange, onSubmit, placeholder, busy, error, 
 }
 
 // ── Prompt 723 — Overview final touches ───────────────────────────────────
-// The attention box had two states (AttentionCard = someone needs the agent,
+// The attention box has two states (AttentionCard = someone needs the agent,
 // ComingUpCard = nobody does), and the chart becomes last Monday to Sunday.
-// AttentionCard went with the agent Overview (Oct 29); ComingUpCard and
-// LastWeekChart stay for Fulfillment. AttentionPanel and ActivityChart above
-// are left in place, unused.
+// AttentionPanel and ActivityChart above are left in place, unused.
 
 const startOfDay = d => {
   const x = new Date(d)
@@ -3432,6 +3430,87 @@ function CallDateTile({ iso, booked, tz }) {
       </span>
       <span style={{ marginTop: 3, fontFamily: DISPLAY, fontSize: 18, fontWeight: 700 }}>{z ? d.toLocaleDateString('en-US', { day: 'numeric', ...z }) : d.getDate()}</span>
     </span>
+  )
+}
+
+// The amber state (Prompt 732): the Needs attention tab and nothing else.
+// Each row (and its Open button) goes to My Pipeline's Needs attention tab with
+// that client's drawer open; no confirm or re-book starts from here.
+export function AttentionCard({ items, loading, onGo }) {
+  const pad = 'p-[18px] sm:px-6 sm:pt-6 sm:pb-5'
+  const area = { gridArea: 'attn', minWidth: 0 }
+  const title = <h2 style={{ ...OV_TITLE, flex: 1, minWidth: 0 }} className="text-[18px] sm:text-[19px]">Needs your attention</h2>
+
+  if (loading) {
+    return (
+      <div className={`ov-card flex flex-col ${pad}`} style={area}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {title}
+          <span style={{ fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, color: 'var(--ov-mute)' }}>—</span>
+        </div>
+      </div>
+    )
+  }
+
+  const count = items.length
+  const shown = items.slice(0, ATTN_ROWS)
+  const more = n => (count > n ? `See all ${count} in My Pipeline` : 'Open in My Pipeline')
+  const toConfirm = items.filter(p => agentStageOf(p) === 'confirmNumber').length
+  const toCall = count - toConfirm
+  const intro = [toConfirm && `${toConfirm} to confirm`, toCall && `${toCall} to call`].filter(Boolean).join(' · ')
+  const go = p => onGo(`/agent/clients?open=${p.id}&stage=needs`)
+
+  return (
+    <div className={`ov-attn flex flex-col ${pad}`} style={area}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <IconChip icon={TriangleAlert} color="var(--ov-warn)" tint="var(--ov-warn-tint)" />
+        {title}
+        <span style={{
+          minWidth: 30, height: 30, boxSizing: 'border-box', padding: '0 10px', borderRadius: 999,
+          background: 'var(--ov-badge-bg)', color: 'var(--ov-badge-fg)', fontFamily: DISPLAY, fontSize: 15, fontWeight: 700,
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontVariantNumeric: 'tabular-nums',
+        }}>
+          {count}
+        </span>
+      </div>
+      <p style={{ margin: '14px 0 6px', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-soft)' }}>
+        {intro}. Open one to see what to do.
+      </p>
+
+      {shown.map((p, i) => {
+        const name = fullName(p)
+        const meta = [p.current_carrier || 'Carrier not noted', NEEDS_WHY[agentStageOf(p)]].filter(Boolean).join(' · ')
+        return (
+          <div key={p.id} role="button" tabIndex={0} aria-label={`Open ${name}`}
+            onClick={() => go(p)}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(p) } }}
+            className={`ov-attn-row ${i >= 3 ? 'hidden sm:flex' : 'flex'}`} style={{ alignItems: 'center', gap: 12, padding: '14px 0', cursor: 'pointer' }}>
+            <span style={{
+              width: 38, height: 38, flexShrink: 0, borderRadius: '50%', background: 'var(--ov-warn-tint)', color: 'var(--ov-warn)',
+              fontSize: 12.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {initialsOf(name)}
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
+              <div style={{ marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>{meta}</div>
+            </div>
+            <button type="button" className="ov-ghost h-10 sm:h-[34px]" tabIndex={-1} aria-hidden="true"
+              style={{ padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              Open <ArrowRight size={14} strokeWidth={2.2} />
+            </button>
+          </div>
+        )
+      })}
+
+      <div style={{ marginTop: 'auto', paddingTop: 14 }}>
+        <button type="button" className="ov-primary" onClick={() => onGo('/agent/clients?stage=needs')}>
+          <span className="sm:hidden">{more(3)}</span>
+          <span className="hidden sm:inline">{more(ATTN_ROWS)}</span>
+          <ArrowRight size={15} strokeWidth={2.2} />
+        </button>
+      </div>
+    </div>
   )
 }
 

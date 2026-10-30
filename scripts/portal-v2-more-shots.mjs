@@ -1,6 +1,8 @@
 // Screenshots and checks for the v2 agent portal's Calendar, Clients and Plan & billing with every
 // Supabase call mocked: no real project, account or credentials are touched, nothing is written.
 //   node scripts/portal-v2-more-shots.mjs [outDir]            (npm run shots:portal-v2-more)
+//   node scripts/portal-v2-more-shots.mjs [outDir] --baseline (only the flag-off pages, saved as the
+//                                                              "before" text to compare against)
 // Writes PNGs plus measurements.json into outDir (default qa/portal-v2-more) and exits 1 on any failure.
 // Checks (all against the mock):
 //   18 passes = 3 routes (/agent/calendar, /agent/clients list + one detail, /agent/plan) x 1920/1440/390
@@ -8,25 +10,24 @@
 //   scrollWidth <= width. Plan also: no /\$\s?\d/, 4 tier cards, every choose button disabled.
 //   Clients detail shows servicing tasks. The cancellation flow runs from v2 Clients (Change this
 //   booking, Confirm number end to end, Call & rebook, Book a cancellation call).
-//   Nav (v2 is the only agent portal): the sidebar's 10 links at 1440, and Book a call, Manage billing,
-//   Activity and Messages each one click from it (older pages, with Overview back to /agent); the tab bar's
-//   6 tabs at 390 ending in More, More at 390 light + dark, and Book a call, Activity, Manage billing and
-//   Settings each one tap from More. Old URLs with ?x=1: /agent, /agent/clients and /agent/policies land on
-//   v2 with ?x=1 kept; /agent/book, /agent/submissions, /agent/activity, /agent/billing and /agent/more load.
-//   Opening / as a mocked agent lands on /agent (v2 Today); as a mocked Fulfillment rep, on /fulfillment.
+//   Flag off: /agent/clients and /agent/billing are the old pages (same text as the baseline run on
+//   the pre-change code, and as ?portal=v1); /agent/calendar and /agent/plan go back to /agent.
 import process from 'node:process'
-import { mkdirSync, writeFileSync, readdirSync, rmSync } from 'node:fs'
+import { mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { createServer } from 'vite'
 import { chromium } from 'playwright'
 import { zonedTimeToUtcIso } from '../src/lib/timezones.js'
 
-const OUT = process.argv[2] || 'qa/portal-v2-more'
+const args = process.argv.slice(2)
+const BASELINE = args.includes('--baseline')
+const OUT = args.find(a => !a.startsWith('--')) || 'qa/portal-v2-more'
+const BASE_FILE = join(OUT, 'baseline-flag-off.json')
 const SB = 'https://mock.supabase.co'
 const SB_HOST = new URL(SB).host
 const PORT = Number(process.env.PORT) || 5700 + Math.floor(Math.random() * 400)
 mkdirSync(OUT, { recursive: true })
-for (const f of readdirSync(OUT)) if (/\.png$/.test(f)) rmSync(join(OUT, f))
+if (!BASELINE) for (const f of readdirSync(OUT)) if (/\.png$/.test(f)) rmSync(join(OUT, f))
 
 // What the app chrome asks for besides the page's own queries. Anything else fails a v2 pass.
 const ALLOWED = {
@@ -145,7 +146,7 @@ const json = (route, status, body, extra = {}) => route.fulfill({ status, header
 const inList = v => (v || '').replace(/^in\.\(/, '').replace(/\)$/, '').split(',').map(s => s.replace(/"/g, '')).filter(Boolean)
 
 // ── The mock ─────────────────────────────────────────────────────────────────
-// opts: { tiers: 'rows' | 'empty' | 'error', loose, role } — loose: the old pages run, so requests
+// opts: { flag, tiers: 'rows' | 'empty' | 'error', loose } — loose: the old pages run, so requests
 // outside the v2 list are answered empty and recorded, not failed.
 async function mock(page, opts, state) {
   await page.route('**/*', async route => {
@@ -165,7 +166,7 @@ async function mock(page, opts, state) {
     const rows = all => json(route, 200, single ? all[0] ?? null : all)
     const odd = (what, body = []) => { (opts.loose ? state.loose : state.unexpected).push(what); return json(route, 200, body) }
 
-    if (path === '/rest/v1/rpc/get_my_profile') return json(route, 200, opts.role ? { ...PROFILE, role: opts.role } : PROFILE)
+    if (path === '/rest/v1/rpc/get_my_profile') return json(route, 200, PROFILE)
     if (path.startsWith('/auth/v1/')) return odd(`${method} auth ${path.replace('/auth/v1/', '')}`, {})
     if (path.startsWith('/functions/v1/')) {
       const name = path.replace('/functions/v1/', '')
@@ -191,7 +192,7 @@ async function mock(page, opts, state) {
       if (method === 'HEAD') return odd(`HEAD table ${table}`, null)
       if (method !== 'GET') { state.writes.push({ name: `${method} ${table}` }); return json(route, 200, []) }
       switch (table) {
-        case 'app_settings': return rows([{ id: 1, agent_billing_enforced: false }])
+        case 'app_settings': return rows([{ id: 1, agent_portal_v2: opts.flag, agent_billing_enforced: false }])
         case 'inbound_events': {
           const lead = (q.get('lead_id') || '').replace('eq.', '')
           const list = lead ? state.events.filter(e => e.lead_id === lead)
@@ -306,7 +307,7 @@ const expectFor = {
 }
 
 async function pass(route, w, theme) {
-  const { ctx, page, state } = await open(w, theme, { tiers: 'rows' })
+  const { ctx, page, state } = await open(w, theme, { flag: true, tiers: 'rows' })
   const failures = []
   const shots = []
   let text = ''
@@ -338,199 +339,129 @@ async function pass(route, w, theme) {
   await ctx.close()
 }
 
-// Where a page ended up and what it shows: v2 shell or not, the main area's text, a way back to Today.
-async function landed(page) {
+// The old pages with the flag off: no v2 shell, the old sidebar, and the main area's text.
+async function oldPage(url, opts, shot) {
+  const { ctx, page, state } = await open(1440, 'dark', { ...opts, loose: true })
+  await page.goto(`${base}${url}`, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('main', { timeout: 20000 })
   await page.evaluate(() => document.fonts.ready)
   await page.waitForTimeout(1500)
-  return page.evaluate(() => ({
-    v2: !!document.querySelector('.pv'), path: location.pathname, search: location.search,
-    text: document.querySelector('main')?.innerText ?? '', crashed: !!document.querySelector('.ov-crash'),
-    // Today one tap away: the v2 nav, the older sidebar's Overview, the phone tab bar's Home, or a back arrow.
-    home: [...document.querySelectorAll('a[href="/agent"]')].some(a => a.offsetParent) || !!document.querySelector('.ph-back'),
-    scrollWidth: document.documentElement.scrollWidth, width: document.documentElement.clientWidth,
+  const info = await page.evaluate(() => ({
+    v2: !!document.querySelector('.pv'), path: location.pathname, text: document.querySelector('main')?.innerText ?? '',
+    side: [...document.querySelectorAll('aside a')].map(a => a.textContent.trim()).join('|'),
   }))
-}
-const loads = (failures, label, info) => {
-  check(failures, info.text.trim().length > 0 && !info.crashed, `${label}: page is blank or crashed`)
-  check(failures, info.scrollWidth <= info.width, `${label}: sideways scroll ${info.scrollWidth}>${info.width}`)
+  if (shot) await page.screenshot({ path: join(OUT, shot), fullPage: true })
+  await ctx.close()
+  return { ...info, pageErrors: state.pageErrors }
 }
 
-const SIDEBAR = ['Today', 'Inbounds', 'Calendar', 'Clients', 'Book a call', 'Plan & billing', 'Manage billing', 'Activity', 'Messages', 'Settings']
-const TABS = ['Today', 'Inbounds', 'Calendar', 'Clients', 'Plan', 'More']
-const label = t => t.replace(/\d+$/, '').trim()
+const OLD = [['clients', '/agent/clients'], ['billing', '/agent/billing']]
 
 try {
-  // 1. The 18 passes
-  for (const r of ROUTES) for (const w of [1920, 1440, 390]) for (const theme of ['light', 'dark']) await pass(r, w, theme)
+  if (BASELINE) {
+    const saved = {}
+    for (const [name, url] of OLD) saved[name] = await oldPage(url, { flag: false }, null)
+    writeFileSync(BASE_FILE, JSON.stringify(saved, null, 2) + '\n')
+    console.log(`baseline saved: ${BASE_FILE} (${OLD.map(([n]) => `${n} ${saved[n].text.length} chars`).join(', ')})`)
+  } else {
+    // 1. The 18 passes
+    for (const r of ROUTES) for (const w of [1920, 1440, 390]) for (const theme of ['light', 'dark']) await pass(r, w, theme)
 
-  // 2. The cancellation flow from v2 Clients (1440 light).
-  {
-    const { ctx, page, state } = await open(1440, 'light', { tiers: 'rows', loose: true })
-    const failures = []
-    const go = async u => { await page.goto(`${base}${u}`, { waitUntil: 'domcontentloaded' }); await ready(page) }
-    const card = () => page.locator('section[aria-label="Cancellations"]')
-    // a. Booked: the old status sentence and journey; Change this booking opens the old Change a booking.
-    await go(`/agent/clients?open=${LEE}`)
-    const a = await card().innerText()
-    check(failures, /Waiting for Fulfillment/.test(a) && /Journey/.test(a) && /Old policy cancelled/.test(a), `flow a: card text ${JSON.stringify(a)}`)
-    await page.screenshot({ path: join(OUT, 'flow-a-booked-1440-light.png'), fullPage: true })
-    await card().getByRole('button', { name: 'Change this booking' }).click()
-    await page.waitForURL(u => u.pathname === '/agent/book' && u.searchParams.get('change') === LEE, { timeout: 10000 }).catch(() => failures.push('flow a: did not open /agent/book?change='))
-    await page.getByText('Change a booking', { exact: false }).first().waitFor({ timeout: 15000 }).catch(() => failures.push('flow a: old Change a booking page not shown'))
-    await page.waitForTimeout(800)
-    await page.screenshot({ path: join(OUT, 'flow-a-change-booking-1440-light.png'), fullPage: true })
-    // b. Confirm number, end to end: the old ConfirmNumber writes agent_confirm_recovery_number and the card moves on.
-    await go(`/agent/clients?open=${SAM}`)
-    check(failures, /Confirm their number to continue/.test(await card().innerText()), 'flow b: no Confirm number status')
-    await card().getByRole('button', { name: 'Yes, this is the right number' }).click()
-    await page.waitForFunction(() => /texting them a link to pick a time/.test(document.querySelector('section[aria-label="Cancellations"]')?.innerText || ''), null, { timeout: 10000 })
-      .catch(() => failures.push('flow b: card did not move on to the text follow-up'))
-    const wb = state.writes.filter(x => x.name === 'agent_confirm_recovery_number')
-    check(failures, wb.length === 1 && wb[0].body.p_policy === SAM && wb[0].body.p_phone === null, `flow b: writes ${JSON.stringify(state.writes)}`)
-    await page.screenshot({ path: join(OUT, 'flow-b-confirmed-1440-light.png'), fullPage: true })
-    // c. Needs attention: Call & rebook opens the old re-book picker in place.
-    await go(`/agent/clients?open=${MAX}`)
-    await card().getByRole('button', { name: /Call & rebook/ }).click()
-    await card().getByText('Re-book for', { exact: false }).waitFor({ timeout: 10000 }).catch(() => failures.push('flow c: re-book picker not shown'))
-    check(failures, await card().getByRole('button', { name: 'Cancel' }).isVisible(), 'flow c: no Cancel on the picker')
-    await page.screenshot({ path: join(OUT, 'flow-c-rebook-1440-light.png'), fullPage: true })
-    // d. A sold inbound with no booking: Book a cancellation call opens the old Book a call.
-    await go(`/agent/clients?open=${uid('b', 2)}`)
-    await card().getByRole('link', { name: 'Book a cancellation call' }).click()
-    await page.waitForURL(u => u.pathname === '/agent/book', { timeout: 10000 }).catch(() => failures.push('flow d: did not open /agent/book'))
-    await page.waitForSelector('main', { timeout: 15000 })
-    await page.waitForTimeout(1200)
-    const d = await page.evaluate(() => ({ v2: !!document.querySelector('.pv'), text: document.querySelector('main')?.innerText || '' }))
-    check(failures, !d.v2 && /Book/.test(d.text), 'flow d: old Book a call not shown')
-    await page.screenshot({ path: join(OUT, 'flow-d-book-call-1440-light.png'), fullPage: true })
-    check(failures, state.pageErrors.length === 0, `flow: pageErrors ${state.pageErrors.join(' | ')}`)
-    const otherWrites = state.writes.filter(x => x.name !== 'agent_confirm_recovery_number')
-    check(failures, otherWrites.length === 0, `flow: other writes ${JSON.stringify(otherWrites)}`)
-    extra.push({ check: 'cancellation flow from v2 Clients: status + journey, Change this booking -> /agent/book?change=, Confirm number writes agent_confirm_recovery_number once and moves on, Call & rebook opens the picker, Book a cancellation call -> /agent/book', failures })
-    await ctx.close()
-  }
-
-  // 3. Plan with zero rows, and a failed read.
-  for (const [tiers, want] of [['empty', 'Plans are being set up'], ['error', "We couldn't load the plans"]]) {
-    const { ctx, page, state } = await open(390, 'dark', { tiers })
-    const failures = []
-    await page.goto(`${base}/agent/plan`, { waitUntil: 'domcontentloaded' })
-    await page.getByText(want).waitFor({ timeout: 20000 }).catch(() => failures.push(`plan ${tiers}: "${want}" not shown`))
-    await page.waitForTimeout(400)
-    const m = await measure(page)
-    check(failures, m.text.includes('How it works') && m.text.match(MONEY) === null && BANNED.exec(m.text) === null && m.scrollWidth <= m.width, `plan ${tiers}: page checks`)
-    check(failures, state.pageErrors.length === 0, `plan ${tiers}: pageErrors`)
-    await page.screenshot({ path: join(OUT, `plan-${tiers}-390-dark.png`), fullPage: true })
-    extra.push({ check: `plan, membership_tiers ${tiers}: "${want}", How it works still shown`, failures })
-    await ctx.close()
-  }
-
-  // 4a. The v2 sidebar at 1440: every link, and the older pages each one click away with Today one click back.
-  {
-    const { ctx, page, state } = await open(1440, 'light', { tiers: 'rows', loose: true })
-    const failures = []
-    await page.goto(`${base}/agent/calendar`, { waitUntil: 'domcontentloaded' })
-    await ready(page)
-    const side = (await page.locator('aside.pv-sb a').allInnerTexts()).map(label)
-    check(failures, side.join('|') === SIDEBAR.join('|'), `sidebar links: ${side.join('|')}`)
-    for (const [name, path] of [['Book a call', '/agent/book'], ['Manage billing', '/agent/billing'], ['Activity', '/agent/activity'], ['Messages', '/messages']]) {
-      await page.goto(`${base}/agent/calendar`, { waitUntil: 'domcontentloaded' })
-      await ready(page)
-      await page.locator('aside.pv-sb').getByRole('link', { name, exact: true }).click()
-      await page.waitForURL(u => u.pathname === path, { timeout: 10000 }).catch(() => failures.push(`sidebar ${name}: did not open ${path}`))
-      const info = await landed(page)
-      loads(failures, `sidebar ${name}`, info)
-      check(failures, info.home, `sidebar ${name}: no link back to /agent`)
-      await page.screenshot({ path: join(OUT, `nav-sidebar-${path.split('/').pop()}-1440-light.png`), fullPage: true })
+    // 2. The cancellation flow from v2 Clients (1440 light).
+    {
+      const { ctx, page, state } = await open(1440, 'light', { flag: true, tiers: 'rows', loose: true })
+      const failures = []
+      const go = async u => { await page.goto(`${base}${u}`, { waitUntil: 'domcontentloaded' }); await ready(page) }
+      const card = () => page.locator('section[aria-label="Cancellations"]')
+      // a. Booked: the old status sentence and journey; Change this booking opens the old Change a booking.
+      await go(`/agent/clients?open=${LEE}`)
+      const a = await card().innerText()
+      check(failures, /Waiting for Fulfillment/.test(a) && /Journey/.test(a) && /Old policy cancelled/.test(a), `flow a: card text ${JSON.stringify(a)}`)
+      await page.screenshot({ path: join(OUT, 'flow-a-booked-1440-light.png'), fullPage: true })
+      await card().getByRole('button', { name: 'Change this booking' }).click()
+      await page.waitForURL(u => u.pathname === '/agent/book' && u.searchParams.get('change') === LEE, { timeout: 10000 }).catch(() => failures.push('flow a: did not open /agent/book?change='))
+      await page.getByText('Change a booking', { exact: false }).first().waitFor({ timeout: 15000 }).catch(() => failures.push('flow a: old Change a booking page not shown'))
+      await page.waitForTimeout(800)
+      await page.screenshot({ path: join(OUT, 'flow-a-change-booking-1440-light.png'), fullPage: true })
+      // b. Confirm number, end to end: the old ConfirmNumber writes agent_confirm_recovery_number and the card moves on.
+      await go(`/agent/clients?open=${SAM}`)
+      check(failures, /Confirm their number to continue/.test(await card().innerText()), 'flow b: no Confirm number status')
+      await card().getByRole('button', { name: 'Yes, this is the right number' }).click()
+      await page.waitForFunction(() => /texting them a link to pick a time/.test(document.querySelector('section[aria-label="Cancellations"]')?.innerText || ''), null, { timeout: 10000 })
+        .catch(() => failures.push('flow b: card did not move on to the text follow-up'))
+      const wb = state.writes.filter(x => x.name === 'agent_confirm_recovery_number')
+      check(failures, wb.length === 1 && wb[0].body.p_policy === SAM && wb[0].body.p_phone === null, `flow b: writes ${JSON.stringify(state.writes)}`)
+      await page.screenshot({ path: join(OUT, 'flow-b-confirmed-1440-light.png'), fullPage: true })
+      // c. Needs attention: Call & rebook opens the old re-book picker in place.
+      await go(`/agent/clients?open=${MAX}`)
+      await card().getByRole('button', { name: /Call & rebook/ }).click()
+      await card().getByText('Re-book for', { exact: false }).waitFor({ timeout: 10000 }).catch(() => failures.push('flow c: re-book picker not shown'))
+      check(failures, await card().getByRole('button', { name: 'Cancel' }).isVisible(), 'flow c: no Cancel on the picker')
+      await page.screenshot({ path: join(OUT, 'flow-c-rebook-1440-light.png'), fullPage: true })
+      // d. A sold inbound with no booking: Book a cancellation call opens the old Book a call.
+      await go(`/agent/clients?open=${uid('b', 2)}`)
+      await card().getByRole('link', { name: 'Book a cancellation call' }).click()
+      await page.waitForURL(u => u.pathname === '/agent/book', { timeout: 10000 }).catch(() => failures.push('flow d: did not open /agent/book'))
+      await page.waitForSelector('main', { timeout: 15000 })
+      await page.waitForTimeout(1200)
+      const d = await page.evaluate(() => ({ v2: !!document.querySelector('.pv'), text: document.querySelector('main')?.innerText || '' }))
+      check(failures, !d.v2 && /Book/.test(d.text), 'flow d: old Book a call not shown')
+      await page.screenshot({ path: join(OUT, 'flow-d-book-call-1440-light.png'), fullPage: true })
+      check(failures, state.pageErrors.length === 0, `flow: pageErrors ${state.pageErrors.join(' | ')}`)
+      const otherWrites = state.writes.filter(x => x.name !== 'agent_confirm_recovery_number')
+      check(failures, otherWrites.length === 0, `flow: other writes ${JSON.stringify(otherWrites)}`)
+      extra.push({ check: 'cancellation flow from v2 Clients: status + journey, Change this booking -> /agent/book?change=, Confirm number writes agent_confirm_recovery_number once and moves on, Call & rebook opens the picker, Book a cancellation call -> /agent/book', failures })
+      await ctx.close()
     }
-    check(failures, state.pageErrors.length === 0, `sidebar: pageErrors ${state.pageErrors.join(' | ')}`)
-    check(failures, state.writes.length === 0, `sidebar: writes ${JSON.stringify(state.writes)}`)
-    extra.push({ check: `v2 sidebar at 1440: ${SIDEBAR.join(', ')}; Book a call, Manage billing, Activity, Messages open with Today one click back`, failures })
-    await ctx.close()
-  }
 
-  // 4b. The v2 tab bar at 390: six tabs ending in More; More opens /agent/more (light and dark, no sideways
-  //     scroll), and Book a call, Activity, Manage billing and Settings each open from it.
-  for (const theme of ['light', 'dark']) {
-    const { ctx, page, state } = await open(390, theme, { tiers: 'rows', loose: true })
-    const failures = []
-    const toMore = async () => {
-      await page.goto(`${base}/agent/calendar`, { waitUntil: 'domcontentloaded' })
-      await ready(page)
-      await page.locator('nav.pv-tabbar').getByRole('link', { name: 'More', exact: true }).click()
-      await page.waitForURL(u => u.pathname === '/agent/more', { timeout: 10000 }).catch(() => failures.push('More tab: did not open /agent/more'))
-      return landed(page)
+    // 3. Plan with zero rows, and a failed read.
+    for (const [tiers, want] of [['empty', 'Plans are being set up'], ['error', "We couldn't load the plans"]]) {
+      const { ctx, page, state } = await open(390, 'dark', { flag: true, tiers })
+      const failures = []
+      await page.goto(`${base}/agent/plan`, { waitUntil: 'domcontentloaded' })
+      await page.getByText(want).waitFor({ timeout: 20000 }).catch(() => failures.push(`plan ${tiers}: "${want}" not shown`))
+      await page.waitForTimeout(400)
+      const m = await measure(page)
+      check(failures, m.text.includes('How it works') && m.text.match(MONEY) === null && BANNED.exec(m.text) === null && m.scrollWidth <= m.width, `plan ${tiers}: page checks`)
+      check(failures, state.pageErrors.length === 0, `plan ${tiers}: pageErrors`)
+      await page.screenshot({ path: join(OUT, `plan-${tiers}-390-dark.png`), fullPage: true })
+      extra.push({ check: `plan, membership_tiers ${tiers}: "${want}", How it works still shown`, failures })
+      await ctx.close()
     }
-    await page.goto(`${base}/agent/calendar`, { waitUntil: 'domcontentloaded' })
-    await ready(page)
-    const tabs = (await page.locator('nav.pv-tabbar a').allInnerTexts()).map(label)
-    check(failures, tabs.join('|') === TABS.join('|'), `tab bar: ${tabs.join('|')}`)
-    const more = await toMore()
-    loads(failures, 'More', more)
-    check(failures, more.home, 'More: no Home tab back to /agent')
-    for (const row of ['Book a call', 'Activity', 'Manage billing', 'Settings']) check(failures, more.text.includes(row), `More: no "${row}"`)
-    await page.screenshot({ path: join(OUT, `nav-more-390-${theme}.png`), fullPage: true })
-    if (theme === 'light') {
-      for (const [name, path, file] of [['Book a call', '/agent/book', 'book'], ['Activity', '/agent/activity', 'activity'], ['Manage billing', '/agent/billing', 'billing'], ['Settings', '/settings', 'settings']]) {
-        await toMore()
-        await page.locator('main').getByRole('button', { name, exact: true }).first().click()
-        await page.waitForURL(u => u.pathname === path, { timeout: 10000 }).catch(() => failures.push(`More ${name}: did not open ${path}`))
-        const info = await landed(page)
-        loads(failures, `More ${name}`, info)
-        check(failures, info.home, `More ${name}: no way back (Home tab or back arrow)`)
-        await page.screenshot({ path: join(OUT, `nav-more-${file}-390-light.png`), fullPage: true })
+
+    // 4. Flag off: the old pages, the same as before this change and as ?portal=v1; the new routes go home.
+    {
+      const before = existsSync(BASE_FILE) ? JSON.parse(readFileSync(BASE_FILE, 'utf8')) : null
+      for (const [name, url] of OLD) {
+        const failures = []
+        const off = await oldPage(url, { flag: false }, `old-${name}-flag-off-1440-dark.png`)
+        const v1 = await oldPage(`${url}?portal=v1`, { flag: true }, null)
+        check(failures, !off.v2 && off.path === url, `${name}: flag off shows v2 or moved (${off.path})`)
+        check(failures, /Book a call/.test(off.side), `${name}: old sidebar missing (${off.side})`)
+        check(failures, off.pageErrors.length === 0, `${name}: pageErrors ${off.pageErrors.join(' | ')}`)
+        check(failures, off.text.length > 0 && off.text === v1.text, `${name}: flag off and ?portal=v1 differ`)
+        if (before) check(failures, off.text === before[name].text && off.side === before[name].side, `${name}: text differs from the pre-change baseline`)
+        else failures.push(`${name}: no baseline file (${BASE_FILE}); run with --baseline on the pre-change code first`)
+        extra.push({ check: `flag off ${url}: old page, same text as ${before ? 'the pre-change baseline and ' : ''}?portal=v1 (${off.text.length} chars)`, failures })
+      }
+      for (const url of ['/agent/calendar', '/agent/plan']) {
+        const failures = []
+        const off = await oldPage(url, { flag: false }, null)
+        check(failures, off.path === '/agent' && !off.v2, `${url}: flag off landed on ${off.path} (v2=${off.v2})`)
+        extra.push({ check: `flag off ${url} goes back to /agent`, failures })
       }
     }
-    check(failures, state.pageErrors.length === 0, `tab bar ${theme}: pageErrors ${state.pageErrors.join(' | ')}`)
-    check(failures, state.writes.length === 0, `tab bar ${theme}: writes ${JSON.stringify(state.writes)}`)
-    extra.push({ check: `v2 tab bar at 390 ${theme}: ${TABS.join(', ')}; More loads (${more.scrollWidth}/${more.width})${theme === 'light' ? '; Book a call, Activity, Manage billing, Settings open from More' : ''}`, failures })
-    await ctx.close()
-  }
-
-  // 5. Old agent URLs with ?x=1: covered ones land on v2 with the query kept, the rest still load.
-  for (const [url, want, v2, w] of [
-    ['/agent', '/agent', true, 1440], ['/agent/clients', '/agent/clients', true, 1440], ['/agent/policies', '/agent/clients', true, 1440],
-    ['/agent/book', '/agent/book', false, 1440], ['/agent/submissions', '/agent/book', false, 1440],
-    ['/agent/activity', '/agent/activity', false, 1440], ['/agent/billing', '/agent/billing', false, 1440], ['/agent/more', '/agent/more', false, 390],
-  ]) {
-    const { ctx, page, state } = await open(w, 'dark', { tiers: 'rows', loose: true })
-    const failures = []
-    await page.goto(`${base}${url}?x=1`, { waitUntil: 'domcontentloaded' })
-    const info = await landed(page)
-    check(failures, info.path === want && info.search === '?x=1', `${url}?x=1 landed on ${info.path}${info.search}`)
-    check(failures, info.v2 === v2, `${url}: ${v2 ? 'not the v2 shell' : 'v2 shell on an older page'}`)
-    loads(failures, url, info)
-    check(failures, state.pageErrors.length === 0, `${url}: pageErrors ${state.pageErrors.join(' | ')}`)
-    await page.screenshot({ path: join(OUT, `old-url${url.replaceAll('/', '-')}-${w}-dark.png`), fullPage: true })
-    extra.push({ check: `old URL ${url}?x=1 -> ${info.path}${info.search} (${v2 ? 'v2' : 'older page, loads'})`, failures })
-    await ctx.close()
-  }
-
-  // 6. Opening / : an agent lands on /agent (v2 Today), a Fulfillment rep on /fulfillment as before (mocked profiles).
-  for (const [role, want, v2] of [['agent', '/agent', true], ['fulfillment', '/fulfillment', false]]) {
-    const { ctx, page, state } = await open(1440, 'light', { tiers: 'rows', loose: true, role })
-    const failures = []
-    await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' })
-    await page.waitForURL(u => u.pathname === want, { timeout: 15000 }).catch(() => {})
-    const info = await landed(page)
-    check(failures, info.path === want, `${role}: / landed on ${info.path}`)
-    check(failures, info.v2 === v2, `${role}: v2 shell ${info.v2 ? 'shown' : 'missing'}`)
-    if (role === 'agent') check(failures, /Today/.test(await page.locator('.pv-hdr').innerText().catch(() => '')), 'agent: header is not Today')
-    loads(failures, role, info)
-    check(failures, state.pageErrors.length === 0, `${role}: pageErrors ${state.pageErrors.join(' | ')}`)
-    await page.screenshot({ path: join(OUT, `root-${role}-1440-light.png`), fullPage: true })
-    extra.push({ check: `${role} opens / -> ${info.path} (${v2 ? 'v2 Today' : 'Fulfillment Overview, unchanged'})`, failures })
-    await ctx.close()
   }
 } finally {
-  writeFileSync(join(OUT, 'measurements.json'), JSON.stringify({ passes: results, extra }, null, 2) + '\n')
+  if (!BASELINE) writeFileSync(join(OUT, 'measurements.json'), JSON.stringify({ passes: results, extra }, null, 2) + '\n')
   await browser.close()
   await server.close()
 }
 
-for (const r of results) console.log(`${r.route.padEnd(9)} ${String(r.width).padEnd(5)} ${r.theme.padEnd(5)} banned=${r.bannedMatch}${r.moneyMatch !== undefined ? ` money=${r.moneyMatch}` : ''} scroll=${r.scrollWidth}/${r.innerWidth} ${r.failures.length ? `FAIL: ${r.failures.join(' / ')}` : 'ok'}`)
-for (const e of extra) console.log(`${e.failures.length ? 'FAIL' : 'ok  '} ${e.check}${e.failures.length ? ` -> ${e.failures.join(' / ')}` : ''}`)
-const failed = results.filter(r => r.failures.length).length + extra.filter(e => e.failures.length).length
-console.log(`${results.length} passes, ${extra.length} extra checks, ${failed} failed`)
-process.exit(failed || results.length !== 18 ? 1 : 0)
+if (!BASELINE) {
+  for (const r of results) console.log(`${r.route.padEnd(9)} ${String(r.width).padEnd(5)} ${r.theme.padEnd(5)} banned=${r.bannedMatch}${r.moneyMatch !== undefined ? ` money=${r.moneyMatch}` : ''} scroll=${r.scrollWidth}/${r.innerWidth} ${r.failures.length ? `FAIL: ${r.failures.join(' / ')}` : 'ok'}`)
+  for (const e of extra) console.log(`${e.failures.length ? 'FAIL' : 'ok  '} ${e.check}${e.failures.length ? ` -> ${e.failures.join(' / ')}` : ''}`)
+  const failed = results.filter(r => r.failures.length).length + extra.filter(e => e.failures.length).length
+  console.log(`${results.length} passes, ${extra.length} extra checks, ${failed} failed`)
+  process.exit(failed || results.length !== 18 ? 1 : 0)
+}
