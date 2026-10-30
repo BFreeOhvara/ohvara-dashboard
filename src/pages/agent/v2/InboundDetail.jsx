@@ -8,7 +8,7 @@ import { useInbounds, useLeadEvents, useLeadTexts, useSetOutcome, useAddNote } f
 import { PortalV2Layout, Ico, Skel, ErrorCard } from '../../../components/agent/PortalV2Nav'
 import {
   stageOf, leadName, firstName, phoneDisplay, telHref, stateName, appointmentAt, apptText, timeText, dateText, dayLabel, dayKey,
-  upcomingWords, buildTimeline, eventTitle, eventSub, cameInAt, whenText, PRODUCT_LABEL, OUTCOME_LABEL,
+  upcomingWords, buildTimeline, eventTitle, eventSub, cameInAt, PRODUCT_LABEL, OUTCOME_LABEL,
 } from '../../../lib/portalV2'
 import { DEFAULT_TIMEZONE } from '../../../lib/timezones'
 
@@ -69,7 +69,7 @@ function Timeline({ events, tz, now }) {
   )
 }
 
-function Outcome({ l, tz }) {
+function Outcome({ l, tz, due }) {
   const set = useSetOutcome(l.lead_id)
   const [last, setLast] = useState(null) // { outcome, at } of the last save
   const [asked, setAsked] = useState(null)
@@ -80,7 +80,7 @@ function Outcome({ l, tz }) {
   const current = set.isPending ? asked : l.outcome
   const name = firstName(leadName(l))
   return (
-    <section className="ov-card pv-card a-out" aria-label="Outcome">
+    <section className={`${due ? 'ov-attn' : 'ov-card'} pv-card a-out`} aria-label="Outcome">
       <div className="pv-card-head">
         <div className="pv-grow"><h3>How did it go?</h3><p className="pv-sub">Mark this after you meet {name}. Sold makes them your client and servicing starts.</p></div>
       </div>
@@ -92,7 +92,7 @@ function Outcome({ l, tz }) {
       </div>
       {set.isPending && <p className="pv-saved">Saving&hellip;</p>}
       {!set.isPending && !set.isError && last && (
-        <p className="pv-saved">&#10003; Marked {OUTCOME_LABEL[last.outcome]} at {timeText(last.at, tz)}.{last.outcome === 'sold' ? ` ${name} is now your client.` : ''}</p>
+        <p className="pv-saved">{'✓'} Marked {OUTCOME_LABEL[last.outcome]} at {timeText(last.at, tz)}.{last.outcome === 'sold' ? ` ${name} is now your client.` : ''}</p>
       )}
       {set.isError && (
         <p className="pv-inline-err" role="alert">
@@ -177,14 +177,14 @@ export default function InboundDetail() {
   const l = (inb.data || []).find(x => x.lead_id === id)
   const events = ev.data || []
   const now = useMemo(() => new Date().getTime(), [ev.dataUpdatedAt]) // eslint-disable-line react-hooks/exhaustive-deps
-  const back = <Link className="pv-back" to="/agent/inbounds"><Ico icon={ArrowLeft} />Inbounds</Link>
+  const back = <Link className="ov-ghost pv-btn pv-back" to="/agent/inbounds"><Ico icon={ArrowLeft} />Inbounds</Link>
   const shell = children => <PortalV2Layout active="inbounds" crumb="Inbounds" title={l ? leadName(l) : 'Inbound'} icon={Inbox}>{back}{children}</PortalV2Layout>
 
   if (inb.isLoading) {
     return shell(
-      <section className="ov-hero pv-hero" aria-busy="true">
-        <Skel w={160} h={28} style={{ borderRadius: 999 }} /><Skel w="60%" h={30} style={{ marginTop: 16 }} /><Skel w="45%" h={14} style={{ marginTop: 10 }} />
-        <Skel w="100%" h={44} style={{ marginTop: 16, borderRadius: 999 }} />
+      <section className="ov-card pv-card" aria-busy="true">
+        <Skel w={160} h={26} style={{ borderRadius: 999 }} /><Skel w="45%" h={14} style={{ marginTop: 14 }} />
+        <Skel w="100%" h={46} style={{ marginTop: 16, borderRadius: 999 }} />
       </section>,
     )
   }
@@ -211,19 +211,18 @@ export default function InboundDetail() {
 
   return shell(
     <>
-      <section className="ov-hero pv-hero pv-d-hero" aria-label="Inbound">
+      <section className="ov-card pv-card pv-d-card" aria-label="Inbound">
         <div className="pv-d-chips">
-          <span className="ov-hero-chip">{PRODUCT_LABEL[l.inbound_product] || 'Inbound'}</span>
-          <span className="ov-hero-chip"><i className="pv-dot" />{stageText}</span>
+          <span className="pv-chip b">{PRODUCT_LABEL[l.inbound_product] || 'Inbound'}</span>
+          <span className="pv-chip"><i className="pv-dot" />{stageText}</span>
         </div>
-        <h1>{leadName(l)}</h1>
-        <p className="pv-sub" style={{ marginTop: 4 }}>{num ? place : `No phone number on file. Our VA is finding one.`}</p>
+        <p className="pv-sub">{num ? place : `No phone number on file. Our VA is finding one.`}</p>
         {num && call && (
           <div className="pv-d-num"><b className="tab">{num}</b>
-            <a className="ov-hero-btn pv-btn-hero" href={call}><Ico icon={Phone} />Call {first}</a>
+            <a className="ov-primary" href={call}><Ico icon={Phone} />Call {first}</a>
           </div>
         )}
-        {chips.length > 0 && <div className="pv-ans">{chips.map((c, i) => <span key={i} className="ov-hero-chip">{c}</span>)}</div>}
+        {chips.length > 0 && <div className="pv-ans">{chips.map((c, i) => <span key={i} className="pv-chip">{c}</span>)}</div>}
       </section>
 
       <div className="pv-detail">
@@ -233,7 +232,7 @@ export default function InboundDetail() {
             ? <p className="pv-inline-err" role="alert"><span>We couldn&rsquo;t load the timeline.</span><button type="button" onClick={() => ev.refetch()}>Try again</button></p>
             : <Timeline events={events} tz={tz} now={now} />}
         </section>
-        <Outcome key={l.lead_id} l={l} tz={tz} />
+        <Outcome key={l.lead_id} l={l} tz={tz} due={!l.outcome && !!appt && new Date(appt).getTime() < now} />
         <Texts l={l} tz={tz} />
         <Notes l={l} events={events} tz={tz} />
       </div>
