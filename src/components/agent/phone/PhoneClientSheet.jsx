@@ -1,6 +1,6 @@
 import { Phone, MapPin, ShieldCheck, MessageSquare } from 'lucide-react'
 import { fullName } from '../../../lib/policyFormat'
-import { digits, tabOf, stageOf } from '../../../lib/agentBookings'
+import { digits, tabOf, stageOf, isSubmittedOnly } from '../../../lib/agentBookings'
 import { US_STATES } from '../../../lib/timezones'
 import { PhoneSheet } from './PhoneSheet'
 import { dayTile, dayTime, untilText, zoneWord, initials, statusPhrase } from './phoneBits'
@@ -90,7 +90,7 @@ export function PhoneClientSheet({ p, now, steps, note, footer, picker, onMessag
             )}
             <div className="ph-info-row">
               <ShieldCheck size={18} strokeWidth={2} style={{ color: 'var(--ov-mute)', flex: 'none' }} aria-hidden="true" />
-              <span style={{ flex: 1, minWidth: 0 }}><span className="ph-info-k">Carrier they’re leaving</span><span className="ph-info-v">{carrier || 'Not noted'}</span></span>
+              <span style={{ flex: 1, minWidth: 0 }}><span className="ph-info-k">{isSubmittedOnly(p) ? 'Old policy' : 'Carrier they’re leaving'}</span><span className="ph-info-v">{isSubmittedOnly(p) ? 'None to cancel' : carrier || 'Not noted'}</span></span>
             </div>
           </div>
 

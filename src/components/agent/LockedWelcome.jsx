@@ -446,7 +446,7 @@ export function UnlockedMoment({ portal }) {
     ? 'Your portal is open.'
     : `Your portal is open. You have ${left} ${left === 1 ? 'submission' : 'submissions'} this week.`
   const next = [
-    ['/agent/book', CalendarPlus, 'Submit a deal', 'A deal you just closed, or a client you already have.'],
+    ['/agent/submit', CalendarPlus, 'Submit a deal', 'A deal you just closed, or a client you already have.'],
     ['/agent/clients', Users, 'See your clients', 'Each step we take shows up on the client and in Activity.'],
     ['/agent/billing', CreditCard, 'Check Billing', 'Your plan, next charge and history in one place.'],
   ]
@@ -454,7 +454,7 @@ export function UnlockedMoment({ portal }) {
     <div className="lk-cq">
       <div className="lk">
         <Hero chip="Servicing is on" title={`You’re in${firstName(portal.profile) ? `, ${firstName(portal.profile)}` : ''}.`} line={line}>
-          <Link to="/agent/book" className="ov-hero-btn">Submit your first deal</Link>
+          <Link to="/agent/submit" className="ov-hero-btn">Submit your first deal</Link>
           <button type="button" className="ov-ghost" onClick={() => portal.setMoment(false)}>Look around</button>
         </Hero>
         <div className="lk-next">
@@ -472,14 +472,14 @@ export function UnlockedMoment({ portal }) {
 }
 
 const SERVICING_COPY = {
-  '/agent/book': { title: 'Submit', text: 'You’re getting Leads. To submit the deals you close and have us service them, add a Servicing plan.' },
+  '/agent/submit': { title: 'Submit', text: 'You’re getting Leads. To submit the deals you close and have us service them, add a Servicing plan.' },
   '/agent/clients': { title: 'Clients', text: 'Clients you submit for Servicing show up here. Add a plan to start submitting.' },
 }
 
 export function AddServicingCard() {
   const { pathname } = useLocation()
   const phone = usePhoneLayout()
-  const { title, text } = SERVICING_COPY[pathname] || SERVICING_COPY['/agent/book']
+  const { title, text } = SERVICING_COPY[pathname] || SERVICING_COPY['/agent/submit']
   const tile = <span className="lk-tile"><ShieldCheck size={24} strokeWidth={2} aria-hidden="true" /></span>
   return (
     <div className="lk-cq">

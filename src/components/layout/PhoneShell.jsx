@@ -31,7 +31,7 @@ import { useNewInboundCount } from '../../hooks/useInbounds'
 const AGENT_TABS = [
   { to: '/agent', label: 'Home', icon: House, on: p => p === '/agent' },
   { to: '/agent/clients', label: 'Clients', icon: Users, on: p => p === '/agent/clients' },
-  { to: '/agent/book', label: 'Submit', icon: Plus, plus: true, on: () => false },
+  { to: '/agent/submit', label: 'Submit', icon: Plus, plus: true, on: () => false },
   { to: '/messages', label: 'Messages', icon: MessageSquare, on: p => p === '/messages', badge: true },
   // Leads and Calendar open from More (portal parity answer 1); More shows the new-inbounds count.
   { to: '/agent/more', label: 'More', icon: Menu, on: p => ['/agent/more', '/agent/activity', '/agent/leads', '/agent/billing', '/settings', '/agent/calendar'].includes(p) || p.startsWith('/agent/inbounds'), inbounds: true },
@@ -105,7 +105,7 @@ function InboundsBadge() {
 }
 
 // A locked self-signup: these tabs are dimmed (they still lead to the welcome).
-const DIMMED_WHEN_LOCKED = ['/agent/clients', '/agent/book', '/messages']
+const DIMMED_WHEN_LOCKED = ['/agent/clients', '/agent/submit', '/messages']
 
 function TabBar({ pathname, tabs, locked }) {
   const { profile } = useAuth()
@@ -169,8 +169,8 @@ export function PhoneShell({ children }) {
   const portal = usePortal()
   // Book a call hides the tab bar because it has its own back arrow. When the gate
   // replaces that page the arrow is gone, so the tab bar stays.
-  const gatedBook = pathname === '/agent/book' && (portal.view === 'welcome' || portal.view === 'servicing')
-  const tabs = (pathname !== '/agent/book' || gatedBook) && !inChat
+  const gatedBook = pathname === '/agent/submit' && (portal.view === 'welcome' || portal.view === 'servicing')
+  const tabs = (pathname !== '/agent/submit' || gatedBook) && !inChat
   const selfLocked = portal.self && portal.locked && !portal.loading
   const sub = SUB_PAGES[role][pathname]
   const cls = ['ph-app', tabs && 'has-tabs', pathname === '/messages' && 'is-bleed', sub && 'has-sub'].filter(Boolean).join(' ')

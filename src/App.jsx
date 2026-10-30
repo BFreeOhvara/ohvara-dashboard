@@ -23,7 +23,7 @@ import Settings from './pages/Settings'
 import Messages from './pages/Messages'
 
 import AgentOverview from './pages/agent/Overview'
-import AgentBookCall from './pages/agent/BookCall'
+import AgentSubmit from './pages/agent/Submit'
 import AgentClients from './pages/agent/Clients'
 import AgentActivity from './pages/agent/Activity'
 import AgentBilling from './pages/agent/Billing'
@@ -56,6 +56,13 @@ const qc = new QueryClient({
 function InboundsToLeads() {
   const { search } = useLocation()
   return <Navigate to={`/agent/leads${search}`} replace />
+}
+
+// Book a call is now Submit: /agent/book and /agent/book?change=<id> land on
+// /agent/submit with the whole query string.
+function BookToSubmit() {
+  const { search } = useLocation()
+  return <Navigate to={`/agent/submit${search}`} replace />
 }
 
 // Prompt 758 — an admin who lands on a page that now has an Admin home (old
@@ -148,7 +155,7 @@ export default function App() {
                 cancellation team's Fulfillment Queue. Pre-pivot setter
                 (rep), old closer, and client routes are gone; old bookmarks
                 fall through to the catch-all redirect. */}
-            {/* Prompt 665 — agent portal: Overview, Book a call, My Clients,
+            {/* Prompt 665 — agent portal: Overview, Submit, My Clients,
                 Team. Old Submissions / My Policies URLs redirect to
                 their replacements so bookmarks keep working. */}
             <Route path="/agent" element={
@@ -169,11 +176,13 @@ export default function App() {
               </ProtectedRoute>
             } />
             <Route path="/agent/plan" element={<Navigate to="/agent/billing" replace />} />
-            <Route path="/agent/book" element={
+            <Route path="/agent/submit" element={
               <ProtectedRoute allowedRoles={['agent', 'admin']}>
-                <DashboardLayout><AgentBookCall /></DashboardLayout>
+                <DashboardLayout><AgentSubmit /></DashboardLayout>
               </ProtectedRoute>
             } />
+            {/* Book a call became Submit: the whole query string is kept (?change=<id>). */}
+            <Route path="/agent/book" element={<BookToSubmit />} />
             <Route path="/agent/clients" element={
               <ProtectedRoute allowedRoles={['agent', 'admin']}>
                 <AdminTo to="/admin/pipeline"><DashboardLayout><AgentClients /></DashboardLayout></AdminTo>
@@ -209,7 +218,7 @@ export default function App() {
             {/* Prompt 678 — Training and Performance removed; old links land on Overview. */}
             <Route path="/agent/training" element={<Navigate to="/" replace />} />
             <Route path="/agent/performance" element={<Navigate to="/" replace />} />
-            <Route path="/agent/submissions" element={<Navigate to="/agent/book" replace />} />
+            <Route path="/agent/submissions" element={<Navigate to="/agent/submit" replace />} />
             <Route path="/agent/policies" element={<Navigate to="/agent/clients" replace />} />
             {/* Prompt 758 — the Admin side: Overview, Pipeline, Fulfillment,
                 Payouts, Users (P759-P762 replace the stand-in pages). Settings

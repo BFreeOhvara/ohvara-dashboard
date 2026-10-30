@@ -6,6 +6,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { usePortal } from '../../hooks/usePortalAccess'
 import { useUnreadMessageCount, useMessagesRealtime } from '../../hooks/usePolicyMessages'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
+import { useSubmitLive } from '../../hooks/useAppSettings'
 import { useWeeklyUsage } from '../../hooks/useBillingTiers'
 import { tabOf } from '../../lib/agentBookings'
 import { capState, formatReset } from '../../lib/billing'
@@ -75,6 +76,8 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
   // Agents only: "needs attention" on Clients and this week's bookings card.
   // Same queries (and keys) Clients and Submit already use.
   const { data: bookings = [] } = useAgentBookings(isAgent ? profile.id : null, { enabled: isAgent })
+  // The weekly count says submissions once the Submit page is live, bookings until then.
+  const noun = useSubmitLive().live ? 'submissions' : 'bookings'
   const needsYou = useMemo(() => (isAgent ? bookings.filter(p => tabOf(p) === 'needs').length : 0), [bookings, isAgent])
   const { data: usage } = useWeeklyUsage(isAgent ? profile.id : null)
   const cap = isAgent ? capState(usage) : null
@@ -203,9 +206,9 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
                 <span className="ov-sb-usage-num">{cap.used}</span>
                 {cap.atCap
                   ? <span> of {cap.cap} · <span className="ov-sb-usage-full">Limit reached</span></span>
-                  : <span> of {cap.cap} bookings</span>}
+                  : <span> of {cap.cap} {noun}</span>}
               </div>
-              <div className="ov-sb-track" role="progressbar" aria-label="Bookings this week" aria-valuemin={0} aria-valuemax={cap.cap} aria-valuenow={cap.used}>
+              <div className="ov-sb-track" role="progressbar" aria-label={`${noun[0].toUpperCase()}${noun.slice(1)} this week`} aria-valuemin={0} aria-valuemax={cap.cap} aria-valuenow={cap.used}>
                 <div className={clsx('ov-sb-fill', cap.atCap && 'is-full')} style={{ width: `${Math.min(100, cap.cap ? (cap.used / cap.cap) * 100 : 100)}%` }} />
               </div>
             </div>

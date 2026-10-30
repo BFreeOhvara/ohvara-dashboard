@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Search, Plus, ChevronRight, X, ArrowUpDown } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { useRevokeInvite, useSendAgentInvite, useSetUserRole, useSetUserAccess } from '../../hooks/useProfiles'
+import { useRevokeInvite, useSendAgentInvite, useSetUserRole, useSetUserAccess, useSetHasServicing } from '../../hooks/useProfiles'
 import { useMissedStrikes } from '../../hooks/useRepCallEvents'
 import { usePeopleWeek } from '../../hooks/usePeopleWeek'
 import { usePayouts } from '../../hooks/useFulfillmentPayouts'
@@ -12,6 +12,7 @@ import { OvSelect, LoadError } from '../../components/agent/AgentUI'
 import { AddSomeone } from '../../components/shared/AddSomeone'
 import { OnDutyNow } from '../../components/admin/OnDutyNow'
 import { Avatar } from '../../components/ui/Avatar'
+import { Switch } from '../../components/ui/Switch'
 import { attentionReason } from '../../lib/fulfillmentFlags'
 import { whenShort } from '../../lib/fulfillmentDay'
 import { isLive, stageOf, useNow } from '../../lib/agentBookings'
@@ -411,7 +412,30 @@ function Person({ u, s, rows, events, now, tz, dates, todayStr, week, numbersLoa
       </div>
 
       <AccessStrip u={u} rows={rows} onRole={onRole} />
+      {isAgent && <ServicingStrip u={u} />}
     </div>
+  )
+}
+
+// ── Servicing on or off ─────────────────────────────────────────────────────
+// Off = Leads only: the agent sees what Servicing gives on the Submit page (once it's
+// live) instead of the deal and request forms. Reversible, so there's no confirm.
+function ServicingStrip({ u }) {
+  const set = useSetHasServicing()
+  const on = u.has_servicing !== false
+  const comped = !!u.billing_exempt
+  return (
+    <section className="ov-card au-access" aria-label="Servicing">
+      <span className="au-access-h">Servicing</span>
+      <span className="au-access-sign" style={{ whiteSpace: 'normal' }}>
+        {on ? <><b>On.</b> Can submit deals and service requests.</>
+          : comped ? <><b>Off, but comped.</b> Comped accounts keep Submit either way.</>
+            : <><b>Off: Leads only.</b> Sees what Servicing gives and how to add it.</>}
+      </span>
+      <span className="au-access-gap" />
+      {set.isError && <span className="au-err" role="alert">That didn’t save. Try again.</span>}
+      <Switch checked={on} disabled={set.isPending} onChange={v => set.mutate({ userId: u.id, on: v })} label="Servicing" />
+    </section>
   )
 }
 

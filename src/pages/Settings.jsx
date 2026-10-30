@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import {
   User, ShieldCheck, SlidersHorizontal, PhoneForwarded, Wrench, Building2, Mail, KeyRound, Smartphone, LogOut, Moon, Sun,
-  Check, Globe, Video, PhoneCall, ArrowLeft, ArrowRight, X, Copy, Loader2, Trash2, Bell,
+  Check, Globe, Video, ToggleRight, PhoneCall, ArrowLeft, ArrowRight, X, Copy, Loader2, Trash2, Bell,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -165,7 +165,7 @@ export default function Settings() {
         {open === 'preferences' && <PreferencesSection profile={profile} />}
         {open === 'notifications' && <NotificationsSection profile={profile} />}
         {open === 'contact'     && <>{profile.role === 'agent' && <DutyCard />}<CallerIdPanel profile={profile} /><TextFollowUpPanel profile={profile} /></>}
-        {open === 'team'        && <><LiveRoomCard /><FulfillmentPayAdminPanel /><AppReviewLoginsCard /></>}
+        {open === 'team'        && <><LiveRoomCard /><SubmitLiveCard /><FulfillmentPayAdminPanel /><AppReviewLoginsCard /></>}
         {open === 'carriers'    && <Carriers />}
       </div>
     </div>
@@ -1110,6 +1110,30 @@ function AppReviewLoginsCard() {
         </div>
       )}
       {error && <p role="alert" style={errText}>{error}</p>}
+    </SettingsCard>
+  )
+}
+
+// Migration 187 — the company-wide switch for the Submit page (app_settings.submit_live).
+// Off by default: agents see today's booking flow. Turn it on once someone is working
+// the submissions and service requests. Only a person flips it, here.
+function SubmitLiveCard() {
+  const { data: settings, isLoading } = useAppSettings()
+  const update = useUpdateAppSettings()
+  const on = settings?.submit_live === true
+  return (
+    <SettingsCard icon={ToggleRight} title="Submit page live" sub="Opens the new Submit page to every agent: new deals and service requests."
+      right={<SettingsChip tone={on ? 'on' : 'off'}>{on ? 'Live' : 'Off'}</SettingsChip>}>
+      <label className="ov-box" style={{ ...box, gap: 14, cursor: 'pointer' }}>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <b style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>{update.isPending ? 'Saving…' : on ? 'On' : 'Off'}</b>
+          <span style={{ display: 'block', marginTop: 2, fontSize: 13, lineHeight: 1.45, color: 'var(--ov-mute)' }}>
+            {on ? 'Agents choose a new deal or a service request. Someone needs to be working them.' : 'Agents see today’s booking flow. Turn on once someone is working submissions and requests.'}
+          </span>
+        </span>
+        <Switch checked={on} disabled={isLoading || update.isPending || !settings} onChange={v => update.mutate({ submit_live: v })} label="Submit page live" />
+      </label>
+      {update.error && <p role="alert" style={errText}>{update.error.message || 'Couldn’t save that.'}</p>}
     </SettingsCard>
   )
 }

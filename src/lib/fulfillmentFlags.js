@@ -15,7 +15,7 @@ const HOUR = 3600e3
 export const STALE_WAITING_H = 24   // never called, this long past its call → flagged
 export const STALE_RETRY_H = 48     // called but not resolved, this long since → flagged
 export const LIVE_STALE_MIN = 45    // call still marked live this long → flagged
-export const SLOT_MS = 30 * 60e3    // Book a call's slot length; the overlap window
+export const SLOT_MS = 30 * 60e3    // Submit's slot length; the overlap window
 
 // A deal written with no old policy (replaced_old_policy === false, migration
 // 187) has nothing to cancel: it never reaches a rep, never shows as a

@@ -28,3 +28,11 @@ export function useUpdateAppSettings() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['app-settings'] }),
   })
 }
+
+// Migration 187 — the Submit page's master switch. Only a loaded `true` turns it
+// on: undefined (the column isn't there yet), false, loading and a failed load
+// all read as off, so today's booking flow is what an agent sees.
+export function useSubmitLive() {
+  const { data, isLoading } = useAppSettings()
+  return { live: data?.submit_live === true, loading: isLoading }
+}

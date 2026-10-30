@@ -190,7 +190,7 @@ test('a comped agent (billing_exempt) is never locked', () => {
 // ── What each page shows ────────────────────────────────────────────────────
 test('gateView: a locked self-signup sees the welcome page everywhere but Billing, Settings, Leads and More', () => {
   const s = portalState(selfAgent(), nothing, on, NOW)
-  for (const p of ['/agent', '/agent/book', '/agent/clients', '/agent/activity', '/messages']) {
+  for (const p of ['/agent', '/agent/book', '/agent/submit', '/agent/clients', '/agent/activity', '/messages']) {
     assert.equal(gateView(s, p), 'welcome', p)
   }
   for (const p of ['/settings', '/agent/billing', '/agent/leads', '/agent/more']) {
@@ -210,7 +210,7 @@ test('gateView: a locked invited agent sees the paused page, with Billing, Setti
 
 test('gateView: a Leads-only payer is told to add Servicing on Book and Clients only', () => {
   const s = portalState(selfAgent(), leadsOnly, on, NOW)
-  assert.equal(gateView(s, '/agent/book'), 'servicing')
+  assert.equal(gateView(s, '/agent/book'), 'servicing'); assert.equal(gateView(s, '/agent/submit'), 'servicing')
   assert.equal(gateView(s, '/agent/clients'), 'servicing')
   assert.equal(gateView(s, '/agent'), 'open')
   assert.equal(gateView(s, '/agent/leads'), 'open')
@@ -218,5 +218,5 @@ test('gateView: a Leads-only payer is told to add Servicing on Book and Clients 
 
 test('gateView: an unlocked agent sees every page', () => {
   const s = portalState(selfAgent({ billing_status: 'active' }), servicing, on, NOW)
-  for (const p of ['/agent', '/agent/book', '/agent/clients', '/agent/billing']) assert.equal(gateView(s, p), 'open', p)
+  for (const p of ['/agent', '/agent/book', '/agent/submit', '/agent/clients', '/agent/billing']) assert.equal(gateView(s, p), 'open', p)
 })

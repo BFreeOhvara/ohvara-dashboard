@@ -145,7 +145,7 @@ export function ClientsV2Card({ data, activeId, onOpen, className = '' }) {
     body = (
       <div className="cv2-empty">
         <p className="cv2-sub">When you mark an inbound Sold, they show up here and servicing starts. Clients you already had show up once you book a cancellation for them.</p>
-        <Link className="ov-ghost cv2-btn" to="/agent/book">Book a cancellation call</Link>
+        <Link className="ov-ghost cv2-btn" to="/agent/submit">Book a cancellation call</Link>
       </div>
     )
   } else if (f.shown.length === 0) body = <p className="cv2-sub cv2-pad">No clients match.</p>
@@ -316,7 +316,7 @@ export function CancellationsCard({ c, now, startRebook, agentRows }) {
       {c.bookings.length ? c.bookings.map(p => <Cancellation key={p.id} p={p} now={now} startRebook={startRebook} agentRows={agentRows} />) : (
         <>
           <p className="cv2-sub" style={{ marginBottom: 12 }}>Replacing an old policy? Submit it and Fulfillment cancels it with the carrier.</p>
-          <Link className="ov-ghost cv2-btn" to="/agent/book">Book a cancellation call</Link>
+          <Link className="ov-ghost cv2-btn" to="/agent/submit">Book a cancellation call</Link>
         </>
       )}
     </section>

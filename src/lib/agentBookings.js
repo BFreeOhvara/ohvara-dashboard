@@ -110,8 +110,19 @@ export function agentStageOf(p) {
 export const PIPELINE_TABS = ['booked', 'noAnswer', 'needs', 'cancelled']
 export function tabOf(p) {
   const s = agentStageOf(p)
+  // A deal with no old policy (stage 'submitted') has no call to wait on; it sits
+  // on the Booked tab, worded by the helpers below.
+  if (s === 'submitted') return 'booked'
   return s === 'confirmNumber' || s === 'needsAttention' ? 'needs' : s
 }
+
+// Migration 187 — a No-old-policy deal: no call time, no carrier to cancel.
+export const isSubmittedOnly = p => stageOf(p) === 'submitted'
+export const SUBMITTED_LABEL = 'Submitted for servicing'
+export const NO_OLD_POLICY = 'No old policy'
+const BEST_WORD = { morning: 'morning', afternoon: 'afternoon', evening: 'evening' }
+// "Review call, afternoon" (or "No call time" when the best time wasn't saved).
+export const reviewCallLine = p => (BEST_WORD[p.best_time] ? `Review call, ${BEST_WORD[p.best_time]}` : 'No call time')
 
 // My Pipeline's two sides: In progress (Booked, No answer, Needs attention) and
 // Clients (the servicing book; for now only the Cancelled rows are real data).

@@ -4,7 +4,7 @@ import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
 import { SLOTS, slotTo24h, slotToISO, localDateISO, callWhen, callAt, fmtSlotTime, clientSlotISO, slotState, dayIn, addDaysStr } from '../../lib/scheduling'
 import { rankCarriers, exactCarrier } from '../../lib/carriers'
-import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, isMissedHold, MISSED_LABEL, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, PROGRESS_TABS, COMING_SOON, digits, matchClients, placeOf } from '../../lib/agentBookings'
+import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, isMissedHold, MISSED_LABEL, canRebook, sameLocalDay, tabOf, isSubmittedOnly, SUBMITTED_LABEL, NO_OLD_POLICY, reviewCallLine, PIPELINE_TABS, PROGRESS_TABS, COMING_SOON, digits, matchClients, placeOf } from '../../lib/agentBookings'
 import { US_STATES, zonedDateStr } from '../../lib/timezones'
 import { whenShort, daysBetween, dayShort, timeText } from '../../lib/fulfillmentDay'
 import { DayClock } from '../ui/DayClock'
@@ -174,7 +174,7 @@ export function ClientRow({ p, now, onClick, onRebook, rebookLabel = 'Re-book', 
       ...(p.client_timezone ? { timeZone: p.client_timezone } : null),
     })
     : 'No time'
-  const leaving = p.current_carrier || 'Not noted'
+  const leaving = isSubmittedOnly(p) ? NO_OLD_POLICY : p.current_carrier || 'Not noted'
   return (
     <div
       onClick={onClick}
@@ -559,7 +559,7 @@ export function ActivityChart({ days, loading, compact, className = '' }) {
 
   const bars = empty ? (
     <div style={{ flex: 1, minWidth: 0, minHeight: area + 26, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 14, color: 'var(--ov-mute)' }}>
-      No calls in the last {n} days. Book one when your next client says yes.
+      No calls in the last {n} days. Submit when your next client says yes.
     </div>
   ) : (
     <div
@@ -1454,7 +1454,9 @@ export function BookingSummary({ name, phone, carrier, scheduledAt, now, onBook,
 // "3 of 7 bookings this week" with one segment per allowed booking; at the
 // cap everything turns amber. `pill` is the phone version.
 // Prompt 730 — `note` replaces the plan line (Change a booking's "never uses one").
-export function WeeklyUsage({ cap, resets, pill, note, noun = 'bookings' }) {
+// Submit page — `title` ('Submissions this week') puts the label on the left and
+// "5 of 16" on the right; without it the line stays "5 of 16 bookings this week".
+export function WeeklyUsage({ cap, resets, pill, note, noun = 'bookings', title }) {
   const warn = cap.atCap
   if (pill) {
     return (
@@ -1469,11 +1471,11 @@ export function WeeklyUsage({ cap, resets, pill, note, noun = 'bookings' }) {
   }
   return (
     <div className="ov-card" style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '20px 22px' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', ...(title ? { justifyContent: 'space-between', flexDirection: 'row-reverse' } : null) }}>
         <span style={{ ...OV_NUM, fontSize: 30, letterSpacing: '-0.03em', ...(warn ? { color: 'var(--ov-warn)' } : null) }}>
           {cap.used}<span style={{ fontSize: 17, fontWeight: 500, color: 'var(--ov-mute)' }}> of {cap.cap}</span>
         </span>
-        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ov-mid)' }}>{noun} this week</span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ov-mid)' }}>{title || `${noun} this week`}</span>
       </div>
       <div aria-hidden="true" style={{ display: 'flex', gap: 5 }}>
         {Array.from({ length: cap.cap }, (_, i) => (
@@ -1601,6 +1603,7 @@ function nextStep(p, now) {
 // The "what's happening" phrase in search results.
 function searchPhrase(p) {
   const stage = agentStageOf(p)
+  if (stage === 'submitted') return SUBMITTED_LABEL
   if (stage === 'booked') return isLive(p) ? 'On a call now' : `Call ${callWhen(p.scheduled_call_at, p.client_timezone)}`
   if (stage === 'cancelled') return `Cancelled ${monthDay(p.fulfillment_completed_at || p.updated_at)}`
   if (stage === 'confirmNumber') return 'Needs attention: confirm number'
@@ -2129,8 +2132,8 @@ const NEEDS_GROUPS = [
 
 function CarrierCell({ p }) {
   return (
-    <span style={{ minWidth: 0, fontSize: 14, color: p.current_carrier ? 'var(--ov-soft)' : 'var(--ov-mute)', ...ellipsis }}>
-      {p.current_carrier || 'Not noted'}
+    <span style={{ minWidth: 0, fontSize: 14, color: p.current_carrier && !isSubmittedOnly(p) ? 'var(--ov-soft)' : 'var(--ov-mute)', ...ellipsis }}>
+      {isSubmittedOnly(p) ? NO_OLD_POLICY : p.current_carrier || 'Not noted'}
     </span>
   )
 }
@@ -2369,7 +2372,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
           <CalendarPlus size={15} strokeWidth={2} /> Submit
         </button>
       )}>
-        No calls waiting. Book one when your next client says yes.
+        No calls waiting. Submit when your next client says yes.
       </EmptyState>
     )
   }
@@ -2435,8 +2438,15 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
     switch (tab) {
       case 'booked':
         return [
-          <DateTile key="d" iso={p.scheduled_call_at} tz={p.client_timezone} />,
-          <span key="s" style={plain}>{isLive(p) ? <LiveLabel /> : 'Waiting for Fulfillment'}</span>,
+          isSubmittedOnly(p)
+            ? (
+              <span key="d" style={{ minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--ov-hi)', whiteSpace: 'nowrap' }}>No call time</span>
+                <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-mute)', ...ellipsis }}>{reviewCallLine(p)}</span>
+              </span>
+            )
+            : <DateTile key="d" iso={p.scheduled_call_at} tz={p.client_timezone} />,
+          <span key="s" style={plain}>{isLive(p) ? <LiveLabel /> : isSubmittedOnly(p) ? SUBMITTED_LABEL : 'Waiting for Fulfillment'}</span>,
           <span key="c" style={{ display: 'flex', justifyContent: 'flex-end' }}>{chevron}</span>,
         ]
       case 'noAnswer':
@@ -2478,7 +2488,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
       if (tab === 'noAnswer') return `No answer · try ${Math.max(1, p.call_attempts || 0)}${p.scheduled_call_at ? ` · next ${whenShort(p.scheduled_call_at, now, fulfill.tz)}` : ''}${by}`
       return `Cancelled ${monthDay(p.fulfillment_completed_at || p.updated_at)}${by}`
     }
-    if (tab === 'booked') return isLive(p) ? <LiveLabel /> : `Call ${callWhen(p.scheduled_call_at, p.client_timezone)}`
+    if (tab === 'booked') return isLive(p) ? <LiveLabel /> : isSubmittedOnly(p) ? `${SUBMITTED_LABEL} · ${reviewCallLine(p)}` : `Call ${callWhen(p.scheduled_call_at, p.client_timezone)}`
     if (tab === 'noAnswer') return [triesText(p.call_attempts || 0), lastOn(p, now), nextStep(p, now)].filter(Boolean).join(' · ')
     if (tab === 'needs') return NEEDS_WHY[agentStageOf(p)]
     return `Cancelled ${monthDay(p.fulfillment_completed_at || p.updated_at)} · booked ${monthDay(p.created_at)}`
@@ -2496,7 +2506,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ov-hi)', ...ellipsis }}>{name}</div>
             <div style={{ marginTop: 1, display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, fontSize: 12.5, color: 'var(--ov-mute)' }}>
               <Building2 size={13} strokeWidth={1.8} style={{ flexShrink: 0, color: 'var(--ov-faint)' }} />
-              <span style={ellipsis}>{p.current_carrier || 'Not noted'}{showAgent && !fulfill ? ` · ${p.agent?.full_name || '—'}` : ''}</span>
+              <span style={ellipsis}>{isSubmittedOnly(p) ? NO_OLD_POLICY : p.current_carrier || 'Not noted'}{showAgent && !fulfill ? ` · ${p.agent?.full_name || '—'}` : ''}</span>
             </div>
             {placeOf(p) && <PlaceLine location={placeOf(p)} size={13} style={{ marginTop: 1, gap: 5, fontSize: 12.5, color: 'var(--ov-mute)' }} />}
           </div>
@@ -3013,6 +3023,7 @@ function storyStatus(p, now) {
   const tab = tabOf(p)
   if (tab === 'booked') {
     if (isLive(p)) return 'On a call now'
+    if (isSubmittedOnly(p)) return SUBMITTED_LABEL
     return p.scheduled_call_at ? `Fulfillment calls ${callAt(p.scheduled_call_at, p.client_timezone)}` : 'Waiting for Fulfillment'
   }
   if (tab === 'noAnswer') return nextStep(p, now)
@@ -3794,7 +3805,7 @@ export function ComingUpCard({ upcoming, now, onGo, fit }) {
           </div>
           </Body>
           <Foot {...footProps}>
-            <button type="button" className="ov-primary" onClick={() => onGo('/agent/book')}>
+            <button type="button" className="ov-primary" onClick={() => onGo('/agent/submit')}>
               <CalendarPlus size={17} strokeWidth={2.1} /> Submit
             </button>
           </Foot>
@@ -3869,7 +3880,7 @@ export function LastWeekChart({
   days, loading, className = '', fit,
   subtitle = 'calls you booked and old policies confirmed cancelled',
   firstLabel = 'Booked', firstWord = 'booked',
-  emptyText = 'No calls last week. Book one when your next client says yes.',
+  emptyText = 'No calls last week. Submit when your next client says yes.',
 }) {
   const booked = days.reduce((s, d) => s + d.booked, 0)
   const cancelled = days.reduce((s, d) => s + d.cancelled, 0)

@@ -201,6 +201,19 @@ export function useSetUserRole() {
   })
 }
 
+// Migration 187 — Servicing on or off for one agent. An admin writes the column
+// directly (profiles_admin_update); the guard trigger refuses everyone else.
+export function useSetHasServicing() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ userId, on }) => {
+      const { error } = await supabase.from('profiles').update({ has_servicing: on }).eq('id', userId)
+      if (error) throw error
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['profiles'] }),
+  })
+}
+
 export function useSetUserAccess() {
   const qc = useQueryClient()
   return useMutation({

@@ -18,7 +18,7 @@ import { keepSubmitVisible, EMAIL_RE, SUPPORT_EMAIL } from '../components/auth/a
 
 const PERKS = {
   agent: [
-    [CalendarCheck, 'Book a call in under a minute', 'Pick a time that fits the client and the carrier.'],
+    [CalendarCheck, 'Submit a client in under a minute', 'Pick a time that fits the client and the carrier.'],
     [PhoneCall, 'We make the cancel call', 'Our team gets the old policy cancelled, on the record.'],
     [Eye, 'Watch it happen live', 'Booked, called, cancelled. Every step shows up for you.'],
   ],
@@ -37,7 +37,7 @@ function Story({ role, pay }) {
     <>
       <h1 className="sx-h1 sx-h1--join">You’re invited to <span className="sx-grad">Ohvara.</span></h1>
       <p className="sx-lede sx-desk-only">
-        {role === 'fulfillment' ? 'Make the cancel calls. Get paid every Monday.' : 'Book the call. We handle the cancel, and you watch it happen.'}
+        {role === 'fulfillment' ? 'Make the cancel calls. Get paid every Monday.' : 'Submit the client. We handle the cancel, and you watch it happen.'}
       </p>
       <div className="sx-perks">
         {perks.map(([Icon, t, s], i) => {

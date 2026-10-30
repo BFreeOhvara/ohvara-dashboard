@@ -105,7 +105,7 @@ export function PhoneHome({ g, greeting, sub, isLoading, isError, refetch, now, 
             {!usageLoading && <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-hero-soft)' }}>{ringSub}</span>}
           </span>
         </div>
-        <button type="button" className="ov-hero-btn ph-bookbtn" onClick={() => navigate('/agent/book')}>
+        <button type="button" className="ov-hero-btn ph-bookbtn" onClick={() => navigate('/agent/submit')}>
           <CalendarPlus size={18} strokeWidth={2.2} aria-hidden="true" />Submit
         </button>
       </section>
@@ -146,7 +146,7 @@ export function PhoneHome({ g, greeting, sub, isLoading, isError, refetch, now, 
         </div>
         {isLoading ? <div className="ov-card ph-card ph-empty">Loading…</div>
           : next.length === 0 ? (
-            <div className="ov-card ph-card ph-empty">Nothing booked yet. Tap + to book a call.</div>
+            <div className="ov-card ph-card ph-empty">Nothing booked yet. Tap + to submit.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {next.map((p, i) => {
