@@ -1,0 +1,94 @@
+/* Inbounds page only (imported by Inbounds.jsx). Built on the .pv-* rules in portalV2.css and the
+   tokens in index.css; nothing here is a new colour. Mockup: ohvara/mockups/update-the-existing-inbounds-page-get-in.html */
+
+/* status tabs */
+.inb-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.inb-tab { --c: var(--ov-data-a); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 8px; padding: 12px; min-height: 64px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--c) 30%, transparent); background: linear-gradient(90deg, color-mix(in srgb, var(--c) 13%, transparent), var(--ov-surface-tint)); }
+.inb-tab.live { --c: var(--ov-data-b); }
+.inb-tab > svg { display: none; color: var(--c); grid-row: span 2; }
+.inb-tab .nm { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--c); line-height: 1.2; }
+.inb-tab .n { grid-row: span 2; font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--c); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.inb-tab .ln { font-size: 12px; color: var(--ov-mute); }
+.inb-tab.on { border-color: var(--c); background: linear-gradient(90deg, color-mix(in srgb, var(--c) 30%, transparent), color-mix(in srgb, var(--c) 6%, transparent)); box-shadow: 0 0 0 1px var(--c), 0 12px 28px -14px var(--c); }
+.inb-tab.on .n { color: var(--ov-hi); }
+.inb-tab.on .ln { color: var(--ov-mid); }
+
+/* explainer: 64px when collapsed so the board keeps the screen */
+.inb-explain { padding: 0; }
+.inb-explain summary { padding: 12px 14px; min-height: 64px; flex-wrap: wrap; }
+.inb-explain summary .pv-tile { display: none; }
+.inb-explain summary .pv-sub { font-size: 13px; }
+.inb-explain .pv-tog { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; margin-left: auto; border-radius: 999px; border: 1px solid var(--ov-ghost-edge); background: var(--ov-ghost-bg); font-size: 13.5px; font-weight: 600; color: var(--ov-hi); white-space: nowrap; }
+.inb-body { padding: 0 14px 16px; }
+.inb-body .pv-steps { margin-top: 2px; }
+
+/* column surfaces, cards inside them */
+.inb-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 14px; border-radius: 16px; background: var(--ov-card-bg); border: 1px solid var(--ov-card-edge); box-shadow: var(--ov-card-shadow); }
+.inb-col .pv-col-head b { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: currentColor; line-height: 1.2; }
+.inb-col .pv-col-head { min-height: 22px; }
+.inb-col .pv-col-sub { margin-top: 0; padding: 0 2px 8px; border-bottom: 1px solid var(--ov-line); }
+.inb-col-body { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.inb-col-body > * { flex-shrink: 0; }
+.pv-icard.inb-card { padding: 12px; border-radius: 14px; background: var(--ov-surface-tint); border: 1px solid var(--ov-line); min-height: 44px; }
+.inb-card:hover { background: var(--ov-hover); border-color: var(--ov-ghost-edge); }
+.inb-card .pv-next { margin-top: 2px; padding-top: 8px; border-top: 1px solid var(--ov-line); }
+.inb-card .pv-next svg { color: var(--ov-mute); }
+.inb-og { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; padding: 0 2px; margin-top: 2px; }
+.inb-og i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.inb-og span { margin-left: auto; color: var(--ov-hi); font-family: var(--font-display); font-variant-numeric: tabular-nums; }
+.inb-og.sold { color: var(--ov-st-cancelled); } .inb-og.fu { color: var(--ov-mid); } .inb-og.lost { color: var(--ov-st-noanswer); }
+.inb-col-empty { padding: 14px; border-radius: 14px; border: 1px dashed var(--ov-ghost-edge); color: var(--ov-mute); font-size: 13px; line-height: 1.45; text-align: left; }
+.inb-col-empty b { display: block; color: var(--ov-mid); font-size: 13.5px; font-weight: 700; margin-bottom: 2px; }
+@media (max-width: 1179.98px) { [aria-busy] .inb-col:nth-child(n+3) { display: none; } }
+.inb-skel { padding: 12px; border-radius: 14px; background: var(--ov-surface-tint); border: 1px solid var(--ov-line); }
+
+/* live calls log */
+.inb-log { padding: 10px 14px; }
+.inb-log-rows { min-width: 0; }
+
+/* "You're not getting inbounds yet" */
+.inb-start { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 40px; padding: 22px 20px; }
+.inb-start-t { flex: 1 1 100%; min-width: 0; }
+.inb-start h2 { font-size: 26px; letter-spacing: -0.03em; line-height: 1.1; color: inherit; }
+.inb-start p { margin-top: 8px; font-size: 14.5px; color: var(--ov-hero-soft); max-width: 600px; }
+.inb-start .ov-hero-btn { width: 100%; height: 50px; padding: 0 30px; font-size: 16px; }
+
+/* what each result means, in the empty log */
+.inb-key { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; width: 100%; margin-top: 6px; }
+.inb-key div { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px 14px; border-radius: 14px; background: var(--ov-surface-tint); border: 1px solid var(--ov-line); font-size: 13.5px; color: var(--ov-mid); min-width: 0; }
+
+@media (min-width: 768px) {
+  .inb-tabs { gap: 12px; }
+  .inb-tab { grid-template-columns: 22px minmax(0, 1fr) auto; gap: 2px 12px; padding: 11px 16px; }
+  .inb-tab > svg { display: block; }
+  .inb-tab .nm { font-size: 17px; }
+  .inb-tab .n { font-size: 26px; }
+  .inb-tab .ln { font-size: 13px; }
+  .inb-explain summary { padding: 11px 18px; flex-wrap: nowrap; }
+  .inb-explain summary .pv-tile { display: grid; }
+  .inb-explain .pv-tog { min-height: 40px; }
+  .inb-body { padding: 0 18px 18px; }
+  .inb-col { border-radius: 18px; }
+  .inb-log { padding: 10px 18px; }
+  .inb-start { padding: 28px 32px; flex-wrap: nowrap; }
+  .inb-start-t { flex: 1 1 auto; }
+  .inb-start h2 { font-size: 34px; letter-spacing: -0.035em; }
+  .inb-start p { font-size: 15.5px; }
+  .inb-start .ov-hero-btn { width: auto; min-width: 148px; height: 48px; font-size: 15px; }
+  .inb-key { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* From 1180 wide and 700 tall the page fits the screen. Height budget: 72 header + 24 top + 64 tabs + 16 + 64 explainer
+   + 16 + 24 bottom = 280, plus 4 for borders. The negative margin trims DashboardLayout's 32 / 64 padding to 24 / 24. */
+@media (min-width: 1180px) {
+  .inb-page { gap: 16px; margin: -8px 0 -40px; }
+}
+@media (min-width: 1180px) and (min-height: 700px) {
+  .inb-col { height: calc(100dvh - 284px); }
+  .inb-col-body { flex: 1 1 auto; overflow-y: auto; scrollbar-width: thin; margin-right: -6px; padding-right: 6px; }
+  .inb-log-rows { max-height: calc(100dvh - 410px); overflow-y: auto; scrollbar-width: thin; }
+}
+/* At 1920 the board takes the width Overview and Clients use: 1632 wide, centred inside the 1280 column. */
+@media (min-width: 1600px) {
+  .inb-page { width: min(1632px, 100vw - var(--sb-w, 256px) - 48px); margin-left: calc((100% - min(1632px, 100vw - var(--sb-w, 256px) - 48px)) / 2); }
+}
