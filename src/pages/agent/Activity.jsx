@@ -2,11 +2,14 @@ import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, CalendarDays, Inbox, Sun, Clock, Moon } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { usePolicyEvents, usePolicyStory } from '../../hooks/useAgentActivity'
+import { useActivityFeed, usePolicyStory } from '../../hooks/useAgentActivity'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
 import { useInboundActivity } from '../../hooks/useInbounds'
-import { DayHero, ActivityBox, ActivityFeed, FeedNote, ActivityDrawer, LoadError } from '../../components/agent/AgentUI'
-import { ACTIVITY_ROWS, activityRow, EVENT_ICON, kindTone, eventIconKey } from '../../lib/activityKinds'
+import { DayHero, ActivityBox, ActivityFilter, ActivityFeed, FeedNote, ActivityDrawer, LoadError } from '../../components/agent/AgentUI'
+import {
+  EVENT_KIND, EVENT_ICON, kindTone, eventIconKey, groupOf, groupTone, groupCounts, visibleGroups, toggleGroup, parseSelected, filterItems,
+  EMPTY_ALL, EMPTY_MANY,
+} from '../../lib/activityKinds'
 import { fullName } from '../../lib/policyFormat'
 import { callWhen, callAt } from '../../lib/scheduling'
 import { SUBSTATUS_LABEL, tabOf, useNow } from '../../lib/agentBookings'
@@ -36,8 +39,11 @@ import { inboundPath } from '../../lib/inbounds'
 // Admin lands here too and sees every agent's activity (test account held out,
 // same as My Pipeline), with the agent named on each row.
 //
-// An agent's finished inbound steps (inbound_events, state done) join the feed under their own
-// Inbounds row; one opens that inbound's page. Admin makes no inbound call and sees no inbound rows.
+// Every kind of event comes from agent_activity_feed() (migration 185): leads, texts, calls,
+// bookings, outcomes, client updates. Filter chips (All plus one per group that has a source,
+// multi-select, kept in the URL as ?types=) narrow the day's rows client-side; the Activity box
+// counts the whole day by group. Before that migration is applied the hook falls back to
+// policy_events, and an agent's finished inbound steps (inbound_events) join the feed as before.
 
 const firstName = s => String(s || '').trim().split(/\s+/)[0] || ''
 const isTyping = el => el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))
@@ -74,24 +80,62 @@ function editedText(d) {
 const correctionText = e => (e.detail?.correction
   ? `Result changed to ${e.kind === 'cancelled' ? 'Cancelled' : 'No answer'}` : null)
 
-// The feed's sentence for one event.
-function describe(e) {
-  const d = e.detail || {}
-  const tz = tzOf(e)
-  const fixed = correctionText(e)
-  if (fixed) return fixed
-  const attempt = d.attempt > 1 ? ` (try ${d.attempt})` : ''
-  switch (e.kind) {
+// The feed's sentence for one row of agent_activity_feed(). Rows carry no old/new values
+// (an edit lists field names only) and no phone numbers; a text reply shows its preview.
+const FIELDS = fields => (fields || []).map(f => (FIELD_LABEL[f] || f).toLowerCase())
+const OUTCOME_LABEL = { follow_up: 'Follow up', not_interested: 'Not interested', sold: 'Sold' }
+function rowText(r) {
+  const m = r.meta || {}
+  const tz = m.client_timezone || undefined
+  const attempt = m.attempt > 1 ? ` (try ${m.attempt})` : ''
+  switch (r.kind) {
     case 'booked':
-      if (e.from_status) return d.scheduled_call_at ? `Back to Booked, call set for ${callAt(d.scheduled_call_at, tz)}` : 'Back to Booked'
-      return `Booked a call with Fulfillment${d.scheduled_call_at ? ` for ${callAt(d.scheduled_call_at, tz)}` : ''}`
-    case 'in_progress':  return `${who(e)} started a call${attempt}`
-    case 'no_answer':    return `Call ended with no answer${attempt}${reasonOf(d)}`
+      if (String(r.id).startsWith('lead_booked:')) return 'VA booked an appointment'
+      if (m.rebook || /again/i.test(r.title)) return m.to ? `Back to Booked, call set for ${callAt(m.to, tz)}` : 'Back to Booked'
+      return `Booked a call with Fulfillment${m.to ? ` for ${callAt(m.to, tz)}` : ''}`
+    case 'in_progress':  return `${who(m)} started a call${attempt}`
+    case 'no_answer':    return `Call ended with no answer${attempt}${reasonOf(m)}`
     case 'cancelled':    return 'Old policy confirmed cancelled'
-    case 'moved':        return `Call moved to ${callAt(d.to, tz)}`
-    case 'edited':       return editedText(d)
-    case 'reassigned':   return `Fulfillment call given to ${d.to_name || 'another rep'}`
-    default:             return e.kind
+    case 'moved':        return `Call moved to ${callAt(m.to, tz)}`
+    case 'edited': {
+      const f = FIELDS(m.changed_fields)
+      return f.length === 1 ? `${FIELD_LABEL[m.changed_fields[0]] || m.changed_fields[0]} changed` : f.length ? `Details changed: ${f.join(', ')}` : 'Details changed'
+    }
+    case 'reassigned':   return `Fulfillment call given to ${m.to_name || 'another rep'}`
+    case 'text_auto':    return m.reason === 'just_submitted' ? 'Sent automatically: welcome text' : 'Sent automatically: follow-up text'
+    case 'text_reply':   return m.preview ? `“${m.preview}”` : r.title
+    case 'va_call':
+      if (m.reason === 'not_reached') return `VA call, try ${m.attempt || 1}`
+      if (m.reason === 'callback') return m.to ? `Reached, callback set for ${callAt(m.to, tz)}` : 'Reached, callback set'
+      if (m.reason === 'not_interested') return 'Reached, not interested'
+      return r.title
+    case 'transferred':
+      return m.reason === 'connected' ? 'VA transferred the live call to you' : m.reason === 'dropped' ? 'The live transfer dropped' : 'A live transfer was requested'
+    case 'outcome':
+      if (m.result_to) return `Result changed to ${m.result_to === 'cancelled' ? 'Cancelled' : 'No-show'}`
+      return OUTCOME_LABEL[m.reason] ? `Outcome marked: ${OUTCOME_LABEL[m.reason]}` : r.title
+    case 'sold':         return 'Marked Sold. Now a client'
+    default:             return r.title || EVENT_KIND[r.kind]?.label || r.kind
+  }
+}
+
+// Where tapping a row goes: the client's story drawer, the lead's page, or Billing.
+function targetOf(r) {
+  const m = r.meta || {}
+  if (groupOf(r.kind) === 'billing') return 'billing'
+  if (/^(policy_event|policy_message):/.test(String(r.id)) && m.policy_id) return 'drawer'
+  if (r.lead_id) return 'lead'
+  return m.policy_id ? 'drawer' : null
+}
+
+// One rpc row as a feed item.
+function feedItem(r) {
+  const m = r.meta || {}
+  return {
+    key: `r-${r.id}`, id: r.id, eventId: String(r.id).replace(/^policy_event:/, ''), kind: r.kind, reason: m.reason, rebook: !!m.rebook,
+    at: r.at, policyId: m.policy_id, leadId: r.lead_id, agentId: r.agent_id, target: targetOf(r),
+    client: fullName({ client_first_name: m.client_first_name, client_last_name: m.client_last_name }).replace(/^—$/, ''),
+    agent: r.agent_name, text: rowText(r), cents: typeof m.amount_cents === 'number' ? m.amount_cents : null,
   }
 }
 
@@ -180,25 +224,25 @@ export default function Activity() {
   const day = addDays(today, -back)
   const title = dayTitle(day, now)
 
-  const events = usePolicyEvents(day, isAdmin ? null : profile?.id)
+  const events = useActivityFeed(day, isAdmin ? null : profile?.id)
   const bookings = useAgentBookings(isAdmin ? null : profile?.id)
   const inbound = useInboundActivity(day)
 
-  // `row` is the status an event counts and reads under: its own for Booked / Calls /
-  // No answer / Cancelled, the client's current one for Moved and Edited.
   const bookingOf = new Map((bookings.data || []).map(p => [p.id, p]))
-  const all = (events.data || []).map(e => ({
-    key: `e-${e.id}`, id: e.id, kind: e.kind, rebook: !!e.from_status, at: e.at, policyId: e.policy_id, agentId: e.agent_id,
-    client: fullName(e.policy), agent: e.agent?.full_name, text: describe(e),
-    row: activityRow(e.kind, bookingOf.has(e.policy_id) ? tabOf(bookingOf.get(e.policy_id)) : null),
-  }))
-  const feed = isAdmin ? excludeTestAccounts(all, profile?.id, 'agentId') : [...all, ...inbound.items]
+  const all = (events.data?.rows || []).map(feedItem)
+  // Before migration 185 is applied (fromFunction false) an agent's finished inbound steps
+  // join the feed as before; the function returns them as lead, text, call and outcome rows.
+  const extra = !isAdmin && events.data && !events.data.fromFunction ? inbound.items.map(i => ({ ...i, target: 'lead', pill: 'Lead update' })) : []
+  const feed = isAdmin ? excludeTestAccounts(all, profile?.id, 'agentId') : [...all, ...extra]
 
-  const counts = Object.fromEntries(ACTIVITY_ROWS.map(k => [k, 0]))
-  feed.forEach(i => { counts[i.row] += 1 })
-  const clients = new Set(feed.map(i => i.policyId || i.leadId)).size
+  // The type filter (kept in the URL like the open client) narrows the day's rows.
+  const selected = parseSelected(params.get('types'))
+  const counts = groupCounts(feed)
+  const chips = visibleGroups().map(g => ({ ...g, count: counts[g.key] }))
+  const shownFeed = filterItems(feed, selected)
+  const clients = new Set(feed.map(i => i.policyId || i.leadId).filter(Boolean)).size
   const groups = PARTS
-    .map(part => ({ ...part, items: feed.filter(i => part.test(new Date(i.at).getHours())).sort((a, b) => new Date(a.at) - new Date(b.at)) }))
+    .map(part => ({ ...part, items: shownFeed.filter(i => part.test(new Date(i.at).getHours())).sort((a, b) => new Date(a.at) - new Date(b.at)) }))
     .filter(g => g.items.length)
 
   // ── The open client's drawer (in the URL, so refresh works) ──
@@ -207,8 +251,13 @@ export default function Activity() {
     fn(next)
     setParams(next, { replace: true })
   }
-  const openClient = item => item.inbound ? navigate(inboundPath(item.leadId)) : withParams(next => { next.set('client', item.policyId); next.set('event', item.id) })
+  const openClient = item => {
+    if (item.target === 'billing') return navigate('/agent/billing')
+    if (item.target === 'lead') return navigate(inboundPath(item.leadId))
+    withParams(next => { next.set('client', item.policyId); next.set('event', item.eventId) })
+  }
   const closeClient = () => withParams(next => { next.delete('client'); next.delete('event') })
+  const setTypes = keys => withParams(next => { if (keys.length) next.set('types', keys.join(',')); else next.delete('types') })
 
   // ── Moving between days ──
   const goTo = target => {
@@ -271,8 +320,14 @@ export default function Activity() {
   else if (events.error) note = <LoadError what="this day's activity" onRetry={() => events.refetch()} />
   else if (!feed.length) {
     note = back === 0
-      ? <FeedNote icon={Inbox} tone={kindTone('booked')}>Nothing yet today. Bookings, calls and cancellations show up here as they happen.</FeedNote>
+      ? <FeedNote icon={Inbox} tone={kindTone('booked')}>{EMPTY_ALL}</FeedNote>
       : <FeedNote icon={CalendarDays} tone={kindTone('no_answer')}>Nothing happened on this day.</FeedNote>
+  } else if (!shownFeed.length) {
+    // The filter leaves nothing: one chip gets its own sentence, several get a shared one.
+    const only = selected.length === 1 ? chips.find(g => g.key === selected[0]) : null
+    note = only
+      ? <FeedNote icon={EVENT_KIND[only.kinds[0]].icon} tone={groupTone(only)}>{only.empty}</FeedNote>
+      : <FeedNote icon={Inbox} tone={{ fg: 'var(--ov-mid)', tint: 'var(--ov-neutral-tint)' }} action={{ label: 'Clear filter', onClick: () => setTypes([]) }}>{EMPTY_MANY}</FeedNote>
   }
 
   const slideClass = dir === 'prev' ? 'ov-slide-from-left' : dir === 'next' ? 'ov-slide-from-right' : undefined
@@ -304,12 +359,18 @@ export default function Activity() {
 
       <ActivityBox
         dayKey={dayKey} slideClass={slideClass}
-        title={boxTitle(back, day)} counts={counts}
+        title={boxTitle(back, day)} rows={chips} cancelled={feed.filter(i => i.kind === 'cancelled').length}
       />
 
       <ActivityFeed
         dayKey={dayKey} slideClass={slideClass}
-        groups={groups} note={note} activeKey={drawerOpen && eventId ? `e-${eventId}` : null} onOpen={openClient} showAgent={isAdmin}
+        filter={feed.length ? (
+          <ActivityFilter
+            groups={chips} selected={selected} total={feed.length} shown={shownFeed.length}
+            onToggle={key => setTypes(toggleGroup(selected, key))} onClear={() => setTypes([])}
+          />
+        ) : null}
+        groups={groups} note={note} activeKey={drawerOpen && eventId ? `r-policy_event:${eventId}` : null} onOpen={openClient} showAgent={isAdmin}
         {...swipe}
       />
 

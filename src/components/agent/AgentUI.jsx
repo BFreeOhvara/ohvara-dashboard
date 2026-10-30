@@ -12,7 +12,8 @@ import { LiveDot } from '../ui/LiveDot'
 import { Avatar } from '../ui/Avatar'
 import { fullName } from '../../lib/policyFormat'
 import { useAuth } from '../../hooks/useAuth'
-import { ACTIVITY_ROWS, rowMeta, rowTone, EVENT_ICON, kindTone, eventIconKey } from '../../lib/activityKinds'
+import { fmtCents } from '../../lib/payPeriod'
+import { EVENT_ICON, itemMeta, itemTone, groupTone } from '../../lib/activityKinds'
 
 // Shared pieces for the agent portal pages (Prompt 665).
 // Prompt 669 — restyled to Restorix Portal's design system: eyebrow-labelled
@@ -2807,24 +2808,26 @@ export function DayHero({ dayKey, slideClass, tag, dateLong, dateShort, summary,
   )
 }
 
-function KindBar({ counts, height }) {
-  const total = ACTIVITY_ROWS.reduce((s, k) => s + counts[k], 0)
+// The day as a bar sized by group, same colours as the filter chips.
+function KindBar({ rows, height }) {
+  const total = rows.reduce((s, r) => s + r.count, 0)
   return (
     <div aria-hidden="true" style={{ display: 'flex', gap: height > 8 ? 4 : 3 }}>
       {total === 0 && <span style={{ flex: 1, height, borderRadius: 6, background: 'var(--ov-stub)' }} />}
-      {ACTIVITY_ROWS.filter(k => counts[k] > 0).map(k => (
-        <span key={k} style={{ flex: `${counts[k]} 1 0`, height, borderRadius: 6, background: rowTone(k).fg }} />
+      {rows.filter(r => r.count > 0).map(r => (
+        <span key={r.key} style={{ flex: `${r.count} 1 0`, height, borderRadius: 6, background: groupTone(r).fg }} />
       ))}
     </div>
   )
 }
 
 // "Today's activity" (Prompt 733: display only, like "Your pipeline"): the total,
-// a bar sized by status and one plain row per status with its count and share of
-// the day. Nothing in it is a button. `counts` is keyed by ACTIVITY_ROWS; the
-// Needs attention and Inbounds rows show only when they have something in them.
-export function ActivityBox({ dayKey, slideClass, title, counts }) {
-  const total = ACTIVITY_ROWS.reduce((s, k) => s + counts[k], 0)
+// a bar sized by type and one plain row per type with its count and share of the day.
+// Nothing in it is a button. `rows` are the filter groups that have a source
+// ([{ key, label, base, count }]), so Billing drops out until billing events exist;
+// `cancelled` is the day's cancelled count (shown beside the total on wider screens).
+export function ActivityBox({ dayKey, slideClass, title, rows, cancelled = 0 }) {
+  const total = rows.reduce((s, r) => s + r.count, 0)
   const pct = n => (total ? Math.round((n / total) * 100) : 0)
   return (
     <div className="ov-card p-4 sm:px-[22px] sm:pt-[22px] sm:pb-5">
@@ -2835,17 +2838,17 @@ export function ActivityBox({ dayKey, slideClass, title, counts }) {
             <span style={{ marginLeft: 'auto', ...OV_NUM, fontSize: 30, letterSpacing: '-0.03em' }}>{total}</span>
             <span style={{ fontSize: 14.5, color: 'var(--ov-soft)' }}>
               event{total === 1 ? '' : 's'}
-              {counts.cancelled > 0 && <span className="hidden sm:inline"> · <span style={{ fontWeight: 600, color: 'var(--ov-st-cancelled)' }}>{counts.cancelled} cancelled</span></span>}
+              {cancelled > 0 && <span className="hidden sm:inline"> · <span style={{ fontWeight: 600, color: 'var(--ov-st-cancelled)' }}>{cancelled} cancelled</span></span>}
             </span>
           </div>
-          <div className="sm:px-1"><KindBar counts={counts} height={10} /></div>
+          <div className="sm:px-1"><KindBar rows={rows} height={10} /></div>
           <div className="ov-actrows sm:px-1">
-            {ACTIVITY_ROWS.filter(k => (k !== 'needs' && k !== 'inbound') || counts[k] > 0).map(k => (
-              <div key={k} className={`pl-row2${counts[k] ? '' : ' is-zero'}`}>
-                <i style={{ background: rowTone(k).fg }} />
-                <span className="l">{rowMeta(k).label}</span>
-                <span className="c">{counts[k]}</span>
-                <span className="p">{pct(counts[k])}%</span>
+            {rows.map(r => (
+              <div key={r.key} className={`pl-row2${r.count ? '' : ' is-zero'}`}>
+                <i style={{ background: groupTone(r).fg }} />
+                <span className="l">{r.label}</span>
+                <span className="c">{r.count}</span>
+                <span className="p">{pct(r.count)}%</span>
               </div>
             ))}
           </div>
@@ -2855,26 +2858,67 @@ export function ActivityBox({ dayKey, slideClass, title, counts }) {
   )
 }
 
-// One feed event: a button that opens that client's drawer. The pill is the status the
-// event counts under (item.row), so a Moved or Edited event shows where the client is now;
-// the node on the line keeps the event's own icon and colour.
+// The type filter above the feed: All plus one chip per group that has a source.
+// Multi-select; `selected` is a list of group keys (empty = All). Chips wrap, never scroll.
+// `total` is the day's event count, `shown` how many the filter leaves.
+export function ActivityFilter({ groups, selected, total, shown, onToggle, onClear }) {
+  const all = selected.length === 0
+  const status = <span className="fb-status"><b>{selected.length} selected</b> · {shown} of {total} events</span>
+  const clear = <button type="button" className="fb-clear" onClick={onClear}>Clear</button>
+  return (
+    <div className="ov-filter" role="group" aria-label="Filter by type">
+      <div className="fb-top">
+        <span className="fb-label">Filter by type</span>
+        {!all && <>{status}{clear}</>}
+      </div>
+      <div className="fb-chips">
+        <button type="button" aria-pressed={all} onClick={onClear} className={`ov-fchip is-all${all ? ' is-on' : ' ov-ghost'}`}>
+          <span>All</span><span className="fc-n">{total}</span>
+        </button>
+        {groups.map(g => {
+          const on = selected.includes(g.key)
+          const t = groupTone(g)
+          return (
+            <button key={g.key} type="button" aria-pressed={on} onClick={() => onToggle(g.key)}
+              className={`ov-fchip${on ? ' is-on' : ' ov-ghost'}${g.count ? '' : ' is-zero'}`}
+              style={{ '--k': t.fg, '--k-tint': t.tint, '--k-edge': t.edge }}>
+              {on ? <span className="fc-check"><Check size={14} strokeWidth={2.6} /></span> : <span className="fc-dot" style={{ background: t.fg }} />}
+              <span>{g.label}</span><span className="fc-n">{g.count}</span>
+            </button>
+          )
+        })}
+      </div>
+      {!all && <div className="fb-side">{status}{clear}</div>}
+    </div>
+  )
+}
+
+// One feed event: a button that opens its client (the story drawer) or lead, or Billing.
+// The pill and node say what the event is (the kind's own colour and icon); a row with
+// nowhere to go renders without the button and the chevron. `item.cents` is a money amount.
 function EventRow({ item, on, linked, showAgent, onOpen }) {
-  const t = kindTone(item.kind)
-  const pt = rowTone(item.row)
-  const Icon = EVENT_ICON[eventIconKey(item)]
+  const meta = itemMeta(item)
+  const t = itemTone(item)
+  const Icon = item.kind === 'booked' && item.rebook ? EVENT_ICON.rebook : meta.icon
+  const pill = item.pill || meta.pill
   const time = new Date(item.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   const [clock, ampm] = time.split(/\s+/)
+  const solid = item.kind === 'sold'
+  const open = !!item.target
+  const Shell = open ? 'button' : 'div'
   return (
-    <button type="button" aria-haspopup={item.inbound ? undefined : 'dialog'} onClick={() => onOpen(item)}
+    <Shell {...(open ? { type: 'button', onClick: () => onOpen(item), 'aria-haspopup': item.target === 'drawer' ? 'dialog' : undefined } : null)}
+      data-kind={item.kind}
       className={`ov-event${on ? ' is-on' : ''} w-full flex items-start gap-3 sm:gap-4 px-2 py-3 sm:px-4 sm:py-[14px]`}
-      style={{ position: 'relative', '--ev-tint': t.tint, ...(on ? { boxShadow: `inset 0 0 0 1px ${t.edge}` } : null) }}>
+      style={{ position: 'relative', '--ev-tint': t.tint, cursor: open ? undefined : 'default', ...(on ? { boxShadow: `inset 0 0 0 1px ${t.edge}` } : null) }}>
       {linked && <span aria-hidden="true" className="hidden sm:block" style={{ position: 'absolute', left: 105, top: 50, bottom: -14, width: 2, background: 'var(--ov-line)' }} />}
       <span className="hidden sm:block" style={{ width: 58, flexShrink: 0, paddingTop: 6, textAlign: 'right', whiteSpace: 'nowrap' }}>
         <span style={{ fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, color: 'var(--ov-hi)' }}>{clock}</span>
         <span style={{ marginLeft: 3, fontSize: 11, fontWeight: 600, color: 'var(--ov-mute)' }}>{ampm}</span>
       </span>
       <span className="w-8 h-8 sm:w-[34px] sm:h-[34px]" style={{
-        position: 'relative', zIndex: 1, flexShrink: 0, borderRadius: '50%', background: t.tint, color: t.fg,
+        position: 'relative', zIndex: 1, flexShrink: 0, borderRadius: '50%',
+        background: solid ? t.fg : t.tint, color: solid ? 'var(--ov-on-kind)' : t.fg,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         boxShadow: `0 0 0 4px var(--ov-page)${on ? `, 0 0 0 6px ${t.edge}` : ''}`,
       }}>
@@ -2882,41 +2926,48 @@ function EventRow({ item, on, linked, showAgent, onOpen }) {
       </span>
       <span style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-          <span style={{ minWidth: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', ...ellipsis }}>
-            {item.client}
+          <span style={{ minWidth: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)', ...(item.client ? ellipsis : { lineHeight: 1.3 }) }}>
+            {item.client || meta.label}
             {showAgent && item.agent && <span style={{ fontWeight: 500, color: 'var(--ov-mute)' }}> · {item.agent}</span>}
           </span>
           <span className="hidden sm:inline-flex" style={{
             flexShrink: 0, alignItems: 'center', gap: 6, height: 24, padding: '0 10px', borderRadius: 999,
-            background: pt.tint, color: pt.fg, fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
+            background: t.tint, color: t.fg, fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
           }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: pt.fg }} />{rowMeta(item.row).pill}
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: t.fg }} />{pill}
           </span>
           <span className="sm:hidden" style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: 'var(--ov-mute)', whiteSpace: 'nowrap' }}>{time}</span>
         </span>
-        <span style={{ display: 'block', marginTop: 3, fontSize: 13.5, lineHeight: 1.45, color: 'var(--ov-soft)' }}>{item.text}</span>
+        <span style={{ display: 'block', marginTop: 3, fontSize: 13.5, lineHeight: 1.45, color: 'var(--ov-soft)' }}>
+          <span className="sm:hidden" style={{ fontWeight: 600, color: t.fg }}>{pill} · </span>
+          {item.text}
+          {item.cents != null && <> <span className="ov-money" style={{ color: 'var(--ov-hi)' }}>{fmtCents(item.cents)}</span></>}
+        </span>
       </span>
-      <ChevronRight size={18} strokeWidth={2} aria-hidden="true" style={{ alignSelf: 'center', flexShrink: 0, color: 'var(--ov-faint)' }} />
-    </button>
+      {open && <ChevronRight size={18} strokeWidth={2} aria-hidden="true" style={{ alignSelf: 'center', flexShrink: 0, color: 'var(--ov-faint)' }} />}
+    </Shell>
   )
 }
 
-// Centred empty/loading/error note for the feed, with an optional icon chip.
-export function FeedNote({ icon, tone, error, children }) {
+// Centred empty/loading/error note for the feed, with an optional icon chip and an
+// optional button (the filtered empty state's "Clear filter").
+export function FeedNote({ icon, tone, error, action, children }) {
   return (
-    <div style={{ padding: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center' }}>
+    <div className="px-3 py-8 sm:p-12" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center' }}>
       {icon && <IconChip icon={icon} color={tone.fg} tint={tone.tint} size={36} radius={11} iconSize={18} />}
       <p style={{ margin: 0, maxWidth: 360, fontSize: 14, lineHeight: 1.5, color: error ? 'var(--danger)' : 'var(--ov-mute)' }}>{children}</p>
+      {action && <button type="button" className="ov-ghost ne-clear" onClick={action.onClick}>{action.label}</button>}
     </div>
   )
 }
 
-// The day's events as a timeline, grouped by part of day (earliest first, P741).
-// `groups`: [{ key, label, icon, items }]; `note` replaces them when set.
+// The day's events as a timeline, grouped by part of day (earliest first, P741), under
+// the type filter. `groups`: [{ key, label, icon, items }]; `note` replaces them when set.
 // Touch handlers (the phone swipe) go on the card.
-export function ActivityFeed({ dayKey, slideClass, groups, note, activeKey, onOpen, showAgent, ...touch }) {
+export function ActivityFeed({ dayKey, slideClass, filter, groups, note, activeKey, onOpen, showAgent, ...touch }) {
   return (
     <section className="ov-card px-3 py-[6px] sm:py-4" style={{ minWidth: 0 }} aria-label="Events" {...touch}>
+      {filter}
       <div className="ov-slide-frame">
         <div key={dayKey} data-day-slide="" className={slideClass}>
           {note || groups.map((g, gi) => {

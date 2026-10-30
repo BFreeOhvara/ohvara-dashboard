@@ -1370,6 +1370,19 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
   --ov-kind-moved: #C4B5FD;
   --ov-kind-moved-tint: rgba(167,139,250,0.15);
   --ov-kind-moved-edge: rgba(196,181,253,0.45);
+  /* Activity type filter (P718 follow-up): Leads, Texts, Calls and Clients each get a colour. */
+  --ov-kind-lead: #67E8F9;
+  --ov-kind-lead-tint: rgba(34,211,238,0.14);
+  --ov-kind-lead-edge: rgba(103,232,249,0.45);
+  --ov-kind-text: #F9A8D4;
+  --ov-kind-text-tint: rgba(236,72,153,0.15);
+  --ov-kind-text-edge: rgba(249,168,212,0.45);
+  --ov-kind-call: #2DD4BF;
+  --ov-kind-call-tint: rgba(20,184,166,0.16);
+  --ov-kind-call-edge: rgba(45,212,191,0.45);
+  --ov-kind-client: #A5B4FC;
+  --ov-kind-client-tint: rgba(129,140,248,0.16);
+  --ov-kind-client-edge: rgba(165,180,252,0.45);
   --ov-page: #07080D;
   --ov-on-kind: #0B0D14;
   --ov-neutral-tint: rgba(255,255,255,0.08);
@@ -1379,6 +1392,18 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
   --ov-kind-moved: #6D28D9;
   --ov-kind-moved-tint: #EDE4FB;
   --ov-kind-moved-edge: rgba(109,40,217,0.4);
+  --ov-kind-lead: #0369A1;
+  --ov-kind-lead-tint: #DCEFFA;
+  --ov-kind-lead-edge: rgba(3,105,161,0.40);
+  --ov-kind-text: #BE185D;
+  --ov-kind-text-tint: #FBE3EE;
+  --ov-kind-text-edge: rgba(190,24,93,0.40);
+  --ov-kind-call: #0F766E;
+  --ov-kind-call-tint: #D5F0EC;
+  --ov-kind-call-edge: rgba(15,118,110,0.40);
+  --ov-kind-client: #4338CA;
+  --ov-kind-client-tint: #E4E6FB;
+  --ov-kind-client-edge: rgba(67,56,202,0.40);
   --ov-page: #EEF2F3;
   --ov-on-kind: #FFFFFF;
   --ov-neutral-tint: rgba(2,79,70,0.06);
@@ -1428,6 +1453,38 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 /* Activity box (Prompt 733): plain status rows (the My Pipeline .pl-row2 look), two columns from 640px. */
 .ov-actrows { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 48px; }
 .ov-actrows .pl-row2.is-zero .l, .ov-actrows .pl-row2.is-zero .c { color: var(--ov-faint); }
+
+/* Activity type filter: the chip row above the feed, and the per-filter empty note. */
+.ov-filter { padding: 0 16px 14px; border-bottom: 1px solid var(--ov-line); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.fb-top { display: none; }
+.fb-label { font-size: 13.5px; font-weight: 600; color: var(--ov-mute); }
+.fb-chips { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.fb-side { margin-left: auto; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.fb-status { font-size: 13.5px; color: var(--ov-mute); white-space: nowrap; }
+.fb-status b { font-weight: 700; color: var(--ov-hi); }
+.fb-clear { height: 36px; padding: 0 12px; border: none; border-radius: 999px; background: transparent; color: var(--ov-st-booked); font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.ov-fchip { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 13px; border-radius: 999px; font-size: 13.5px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.ov-fchip.ov-ghost { color: var(--ov-mid); }
+.fc-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.fc-n { font-family: var(--font-display); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ov-mute); }
+.ov-fchip.is-on { border: 1px solid var(--k-edge); background: var(--k-tint); color: var(--k); }
+.ov-fchip.is-on .fc-n { color: inherit; }
+.fc-check { display: flex; margin-left: -2px; }
+.ov-fchip.is-all.is-on { border: 1px solid var(--ov-hi); background: var(--ov-hi); color: var(--ov-page); }
+.ov-fchip.is-zero:not(.is-on), .ov-fchip.is-zero:not(.is-on) .fc-n { color: var(--ov-mute); }
+.ov-fchip:focus-visible, .fb-clear:focus-visible, .ne-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ne-clear { height: 36px; padding: 0 16px; border-radius: 999px; font-size: 13.5px; font-weight: 600; cursor: pointer; color: var(--ov-hi); }
+.ov-money { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+@media (max-width: 639px) {
+  .ov-filter { padding: 10px 4px 12px; gap: 8px; display: block; }
+  .fb-top { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: -6px; }
+  .fb-top .fb-status { margin-left: auto; }
+  .fb-side { display: none; }
+  .fb-clear { height: 44px; padding: 0 8px 0 4px; }
+  .ov-fchip { height: 44px; padding: 0 12px; gap: 6px; }
+  .fb-chips { gap: 6px; }
+  .ne-clear { height: 44px; }
+}
 @media (min-width: 640px) {
   .ov-actrows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ov-actrows .pl-row2:nth-child(2) { border-top: none; }

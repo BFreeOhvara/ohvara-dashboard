@@ -65,17 +65,18 @@ test('inboundActivityItems: no events or no inbounds gives nothing', () => {
   assert.deepEqual(inboundActivityItems([ev('e1', 'l-1', 'came_in', 'done')], []), [])
 })
 
-test('Activity: Inbounds is its own row and kind; policy events keep their rows', () => {
+test('Activity: the status model keeps its Inbounds row; the Leads kind reads New lead', () => {
   assert.ok(ACTIVITY_ROWS.includes('inbound'))
   assert.equal(rowMeta('inbound').label, 'Inbounds')
-  assert.equal(kindMeta('inbound').pill, 'Inbound')
+  assert.equal(kindMeta('inbound').pill, 'New lead')
   assert.equal(activityRow('inbound', null), 'inbound')
   assert.equal(activityRow('moved', 'noAnswer'), 'no_answer')
   assert.equal(activityRow('booked', null), 'booked')
 })
 
-test('Activity box: the Inbounds row shows only when counts.inbound > 0', () => {
-  assert.match(src('../components/agent/AgentUI.jsx'), /ACTIVITY_ROWS\.filter\(k => \(k !== 'needs' && k !== 'inbound'\) \|\| counts\[k\] > 0\)/)
+test('Activity box: one row per filter group that has a source (Billing stays out until it has events)', () => {
+  assert.match(src('../components/agent/AgentUI.jsx'), /export function ActivityBox\(\{ dayKey, slideClass, title, rows, cancelled = 0 \}\)/)
+  assert.match(src('../pages/agent/Activity.jsx'), /const chips = visibleGroups\(\)\.map/)
 })
 
 test('admin and Fulfillment make no agent_inbounds call', () => {
