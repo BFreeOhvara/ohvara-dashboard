@@ -34,6 +34,8 @@ const V2InboundDetail = lazy(() => import('./pages/agent/v2/InboundDetail'))
 const V2Calendar = lazy(() => import('./pages/agent/v2/Calendar'))
 // P808: Leads mounts only in dev behind VITE_LEADS_PAGE=1; otherwise the page is not in the bundle.
 // The DEV check sits here, in this file, so a production build drops the import() and the chunk.
+// The Inbounds list is dev-only for now (live agents are redirected to Leads); same DEV check, so production drops the chunk.
+const V2Inbounds = import.meta.env.DEV ? lazy(() => import('./pages/agent/v2/Inbounds')) : null
 const AgentLeads = import.meta.env.DEV && LEADS_PAGE ? lazy(() => import('./pages/agent/Leads')) : null
 import MyCalls from './pages/fulfillment/MyCalls'
 import VaLeads from './pages/fulfillment/VaLeads'
@@ -151,7 +153,11 @@ export default function App() {
               </ProtectedRoute>
             } />
             {/* Inbounds is now Leads: the old list URL lands on /agent/leads (which itself lands on /agent while Leads is off). One inbound and Calendar keep their routes. Old v2 Plan links land on Billing. */}
-            <Route path="/agent/inbounds" element={<Navigate to="/agent/leads" replace />} />
+            <Route path="/agent/inbounds" element={V2Inbounds ? (
+              <ProtectedRoute allowedRoles={['agent']}>
+                <DashboardLayout><Suspense fallback={null}><V2Inbounds /></Suspense></DashboardLayout>
+              </ProtectedRoute>
+            ) : <Navigate to="/agent/leads" replace />} />
             <Route path="/agent/inbounds/:id" element={
               <ProtectedRoute allowedRoles={['agent']}>
                 <DashboardLayout><Suspense fallback={null}><V2InboundDetail /></Suspense></DashboardLayout>
