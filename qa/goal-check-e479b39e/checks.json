@@ -1,0 +1,401 @@
+[
+  {
+    "name": "no sideways scroll /agent 1920 dark",
+    "ok": true,
+    "detail": {
+      "sw": 1905,
+      "cw": 1920
+    }
+  },
+  {
+    "name": "sidebar has exactly the four groups",
+    "ok": true,
+    "detail": [
+      {
+        "group": "Today",
+        "items": [
+          "Overview",
+          "Activity"
+        ]
+      },
+      {
+        "group": "Servicing",
+        "items": [
+          "Clients",
+          "Submit"
+        ]
+      },
+      {
+        "group": "Communications",
+        "items": [
+          "Messages"
+        ]
+      },
+      {
+        "group": "Account",
+        "items": [
+          "Billing",
+          "Settings"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Clients amber needs-attention badge shows",
+    "ok": true,
+    "detail": [
+      "1"
+    ]
+  },
+  {
+    "name": "no sideways scroll /agent/clients 1920 dark",
+    "ok": true,
+    "detail": {
+      "sw": 1905,
+      "cw": 1920
+    }
+  },
+  {
+    "name": "header on /agent/clients",
+    "ok": true,
+    "detail": "Clients"
+  },
+  {
+    "name": "no sideways scroll /agent/book 1920 dark",
+    "ok": true,
+    "detail": {
+      "sw": 1905,
+      "cw": 1920
+    }
+  },
+  {
+    "name": "header on /agent/book",
+    "ok": true,
+    "detail": "Submit"
+  },
+  {
+    "name": "no sideways scroll /agent/more 1920 dark",
+    "ok": true,
+    "detail": {
+      "sw": 1905,
+      "cw": 1920
+    }
+  },
+  {
+    "name": "Go-to 'leads' shows no page",
+    "ok": true,
+    "detail": []
+  },
+  {
+    "name": "Go-to 'calendar' shows no page",
+    "ok": true,
+    "detail": []
+  },
+  {
+    "name": "Go-to 'clients' finds the page",
+    "ok": true,
+    "detail": [
+      "Clients"
+    ]
+  },
+  {
+    "name": "Go-to 'submit' finds the page",
+    "ok": true,
+    "detail": [
+      "Submit"
+    ]
+  },
+  {
+    "name": "footer hint reads 'Enter to open in Clients' (client row active)",
+    "ok": true,
+    "detail": [
+      "↑ ↓ to move",
+      "Enter to open in Clients",
+      "Esc to close"
+    ]
+  },
+  {
+    "name": "/agent/inbounds lands on /agent",
+    "ok": true,
+    "detail": "/agent"
+  },
+  {
+    "name": "/agent/policies lands on /agent/clients",
+    "ok": true,
+    "detail": "/agent/clients"
+  },
+  {
+    "name": "/agent/submissions lands on /agent/book",
+    "ok": true,
+    "detail": "/agent/book"
+  },
+  {
+    "name": "no sideways scroll /agent 1440 dark",
+    "ok": true,
+    "detail": {
+      "sw": 1425,
+      "cw": 1440
+    }
+  },
+  {
+    "name": "sidebar has exactly the four groups",
+    "ok": true,
+    "detail": [
+      {
+        "group": "Today",
+        "items": [
+          "Overview",
+          "Activity"
+        ]
+      },
+      {
+        "group": "Servicing",
+        "items": [
+          "Clients",
+          "Submit"
+        ]
+      },
+      {
+        "group": "Communications",
+        "items": [
+          "Messages"
+        ]
+      },
+      {
+        "group": "Account",
+        "items": [
+          "Billing",
+          "Settings"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Clients amber needs-attention badge shows",
+    "ok": true,
+    "detail": [
+      "1"
+    ]
+  },
+  {
+    "name": "no sideways scroll /agent/clients 1440 dark",
+    "ok": true,
+    "detail": {
+      "sw": 1425,
+      "cw": 1440
+    }
+  },
+  {
+    "name": "header on /agent/clients",
+    "ok": true,
+    "detail": "Clients"
+  },
+  {
+    "name": "no sideways scroll /agent/book 1440 dark",
+    "ok": true,
+    "detail": {
+      "sw": 1425,
+      "cw": 1440
+    }
+  },
+  {
+    "name": "header on /agent/book",
+    "ok": true,
+    "detail": "Submit"
+  },
+  {
+    "name": "no sideways scroll /agent/more 1440 dark",
+    "ok": true,
+    "detail": {
+      "sw": 1425,
+      "cw": 1440
+    }
+  },
+  {
+    "name": "Go-to 'leads' shows no page",
+    "ok": true,
+    "detail": []
+  },
+  {
+    "name": "Go-to 'calendar' shows no page",
+    "ok": true,
+    "detail": []
+  },
+  {
+    "name": "Go-to 'clients' finds the page",
+    "ok": true,
+    "detail": [
+      "Clients"
+    ]
+  },
+  {
+    "name": "Go-to 'submit' finds the page",
+    "ok": true,
+    "detail": [
+      "Submit"
+    ]
+  },
+  {
+    "name": "footer hint reads 'Enter to open in Clients' (client row active)",
+    "ok": true,
+    "detail": [
+      "↑ ↓ to move",
+      "Enter to open in Clients",
+      "Esc to close"
+    ]
+  },
+  {
+    "name": "/agent/inbounds lands on /agent",
+    "ok": true,
+    "detail": "/agent"
+  },
+  {
+    "name": "/agent/policies lands on /agent/clients",
+    "ok": true,
+    "detail": "/agent/clients"
+  },
+  {
+    "name": "/agent/submissions lands on /agent/book",
+    "ok": true,
+    "detail": "/agent/book"
+  },
+  {
+    "name": "no sideways scroll /agent 390 dark",
+    "ok": true,
+    "detail": {
+      "sw": 390,
+      "cw": 390
+    }
+  },
+  {
+    "name": "phone bar + is labelled Submit",
+    "ok": true,
+    "detail": [
+      "Home",
+      "Clients",
+      "Submit",
+      "Messages",
+      "More"
+    ]
+  },
+  {
+    "name": "no sideways scroll /agent/clients 390 dark",
+    "ok": true,
+    "detail": {
+      "sw": 390,
+      "cw": 390
+    }
+  },
+  {
+    "name": "no sideways scroll /agent/book 390 dark",
+    "ok": true,
+    "detail": {
+      "sw": 390,
+      "cw": 390
+    }
+  },
+  {
+    "name": "no sideways scroll /agent/more 390 dark",
+    "ok": true,
+    "detail": {
+      "sw": 390,
+      "cw": 390
+    }
+  },
+  {
+    "name": "no sideways scroll /agent 1920 light",
+    "ok": true,
+    "detail": {
+      "sw": 1905,
+      "cw": 1920
+    }
+  },
+  {
+    "name": "no sideways scroll /agent/clients 1920 light",
+    "ok": true,
+    "detail": {
+      "sw": 1905,
+      "cw": 1920
+    }
+  },
+  {
+    "name": "no sideways scroll /agent/book 1920 light",
+    "ok": true,
+    "detail": {
+      "sw": 1905,
+      "cw": 1920
+    }
+  },
+  {
+    "name": "no sideways scroll /agent/more 1920 light",
+    "ok": true,
+    "detail": {
+      "sw": 1905,
+      "cw": 1920
+    }
+  },
+  {
+    "name": "no sideways scroll /agent 1440 light",
+    "ok": true,
+    "detail": {
+      "sw": 1425,
+      "cw": 1440
+    }
+  },
+  {
+    "name": "no sideways scroll /agent/clients 1440 light",
+    "ok": true,
+    "detail": {
+      "sw": 1425,
+      "cw": 1440
+    }
+  },
+  {
+    "name": "no sideways scroll /agent/book 1440 light",
+    "ok": true,
+    "detail": {
+      "sw": 1425,
+      "cw": 1440
+    }
+  },
+  {
+    "name": "no sideways scroll /agent/more 1440 light",
+    "ok": true,
+    "detail": {
+      "sw": 1425,
+      "cw": 1440
+    }
+  },
+  {
+    "name": "no sideways scroll /agent 390 light",
+    "ok": true,
+    "detail": {
+      "sw": 390,
+      "cw": 390
+    }
+  },
+  {
+    "name": "no sideways scroll /agent/clients 390 light",
+    "ok": true,
+    "detail": {
+      "sw": 390,
+      "cw": 390
+    }
+  },
+  {
+    "name": "no sideways scroll /agent/book 390 light",
+    "ok": true,
+    "detail": {
+      "sw": 390,
+      "cw": 390
+    }
+  },
+  {
+    "name": "no sideways scroll /agent/more 390 light",
+    "ok": true,
+    "detail": {
+      "sw": 390,
+      "cw": 390
+    }
+  }
+]
