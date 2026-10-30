@@ -12,6 +12,7 @@
 // ============================================================
 
 import { createClient } from 'npm:@supabase/supabase-js'
+import { isLockedSelfSignup, LOCKED_MESSAGE } from '../_shared/portalAccess.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,6 +38,7 @@ Deno.serve(async (req) => {
   if (caller?.role !== 'agent' && caller?.role !== 'admin') {
     return json({ error: 'Forbidden — closer or admin only' }, 403)
   }
+  if (await isLockedSelfSignup(admin, user.id)) return json({ error: LOCKED_MESSAGE }, 403)
 
   const { appointment_id } = await req.json().catch(() => ({}))
   if (!appointment_id) return json({ error: 'appointment_id is required' }, 400)
