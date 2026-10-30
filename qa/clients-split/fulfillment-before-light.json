@@ -1,0 +1,15 @@
+{
+ "total": "20 clients · 6 cancelled",
+ "tabs": [
+  "Booked Waiting for your call 8",
+  "No answer On your calendar to try again 6",
+  "Cancelled Old policy cancelled 6"
+ ],
+ "rows": [
+  "Booked 8 40%",
+  "No answer 6 30%",
+  "Cancelled 6 30%"
+ ],
+ "nan": false,
+ "side": false
+}
