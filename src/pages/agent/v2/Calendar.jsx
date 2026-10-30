@@ -215,7 +215,7 @@ function Panel({ a, isNext, tz, nowMs, today }) {
         {rem && <div className="pv-itile full"><span>Reminders</span><b>{rem}</b></div>}
       </div>
       <div className="pv-acts2">
-        <Link className="ov-hero-btn pv-btn-hero full" to={a.open}>{a.openLabel}</Link>
+        <Link className="ov-primary full" to={a.open}>{a.openLabel}</Link>
         {call && <a className="ov-ghost pv-btn" href={call}>Call</a>}
         {a.change && <Link className="ov-ghost pv-btn" to={a.change}>Change time</Link>}
       </div>
@@ -299,7 +299,6 @@ export default function Calendar() {
 
   return (
     <PortalV2Layout active="calendar" title="Calendar" icon={CalendarDays}>
-      <div className="pv-ph1"><h1>Calendar</h1><p className="pv-sub">Every appointment, whoever booked it.</p></div>
       <div className="pv-grid2 cal">
         <div className="pv-col2">{body}</div>
         {!error && !loading && (
