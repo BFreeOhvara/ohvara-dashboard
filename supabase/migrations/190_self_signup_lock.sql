@@ -1,8 +1,8 @@
--- NEXT — Self-signup: the lock, in the database.
+-- 190 — Self-signup: the lock, in the database.
 --
 -- NOT APPLIED. Written from a worktree; applying it is a separate, checked step.
--- No number yet: this brief reached the builder without one. Rename the file to
--- the reserved number before applying (as NEXT_inbound_spend.sql became 188).
+-- The number comes from a scan of branches, not from the ledger: this brief
+-- reached the builder without one. If 190 is taken, only this name changes.
 -- Additive: new columns, one new table, new functions and triggers, policies
 -- re-created with the same name and the same rule plus one condition. No row is
 -- changed. self_signup_open stays off.
