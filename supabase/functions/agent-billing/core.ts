@@ -934,14 +934,14 @@ async function saveSpend(admin: SupabaseClient, agentId: string, type: InboundTy
 //      finds Stripe already right and finishes the writes.
 async function inboundSet(admin: SupabaseClient, me: any, body: any, flags: Flags) {
   const { type, weekly_cents: cents } = body
-  if (!INBOUND_TYPES.includes(type)) throw new AppError(400, 'That inbound type isn\'t available.')
+  if (!INBOUND_TYPES.includes(type)) throw new AppError(400, 'That lead type isn\'t available.')
   if (!Number.isInteger(cents) || cents < 0 || cents > MAX_WEEKLY_CENTS) throw new AppError(400, 'Enter a weekly amount in whole cents, 0 or more.')
   if (body.paused !== undefined && typeof body.paused !== 'boolean') throw new AppError(400, 'Paused must be true or false.')
   const { inbound_min_weekly_cents: min } = await loadSettings(admin)
   if (cents > 0 && cents < min) throw new AppError(400, `The weekly minimum is $${(min / 100).toFixed(2)}, or 0 for none.`)
 
   if (isComped(me)) throw new AppError(409, 'Your account isn\'t billed.')
-  if (flags.mode === 'live') throw new AppError(403, 'Inbound spend is test mode only for now.')
+  if (flags.mode === 'live') throw new AppError(403, 'Lead spend is test mode only for now.')
 
   const sub = flags.configured ? await ownSubscription(me) : null
   if (!sub || !LIVE.includes(sub.status)) throw new AppError(409, 'Start Policy Servicing first.')
@@ -991,7 +991,7 @@ async function clearSpend(admin: SupabaseClient, agentId: string) {
 //   409 'Start Policy Servicing first.' for a billed agent with no live servicing
 //       subscription (also when Stripe is not configured).
 //   409 "Your account isn't billed." for a comped agent.
-//   403 'Inbound spend is test mode only for now.' when the Stripe key mode is
+//   403 'Lead spend is test mode only for now.' when the Stripe key mode is
 //       live, before any Stripe call.
 //
 // overview (no body): 200 for every agent, comped read-only:
