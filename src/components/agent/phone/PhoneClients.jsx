@@ -138,7 +138,7 @@ function BookButton({ onBook }) {
     <div style={{ display: 'flex', justifyContent: 'center', padding: '0 14px 16px' }}>
       <button type="button" className="ov-ghost" onClick={onBook}
         style={{ height: 44, padding: '0 18px', borderRadius: 999, fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 7, cursor: 'pointer' }}>
-        <CalendarPlus size={15} strokeWidth={2} aria-hidden="true" /> Book a call
+        <CalendarPlus size={15} strokeWidth={2} aria-hidden="true" /> Submit
       </button>
     </div>
   )

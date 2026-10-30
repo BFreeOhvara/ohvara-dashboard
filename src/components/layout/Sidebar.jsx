@@ -28,8 +28,8 @@ import { useNewInboundCount } from '../../hooks/useInbounds'
 //   outlined style, baseline-aligned so the text sits on the bird's bottom line.
 // - Rows 40px / radius 12; the active row has a fill, a soft shadow and a 3px
 //   glowing bar on the rail's left edge.
-// - Badges: Messages unread; agents also get My Pipeline's "needs attention" count
-//   (amber), from the same useAgentBookings rows My Pipeline reads.
+// - Badges: Messages unread; agents also get Clients' "needs attention" count
+//   (amber), from the same useAgentBookings rows Clients reads.
 // - Agents with a weekly cap get a "This week" bookings card.
 // - The account card opens the animated AccountMenu (theme, phone app, invite
 //   an agent [agents only, P731], report a problem / bug reports, sign out) —
@@ -69,8 +69,8 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
   useMessagesRealtime(profile?.id)
   const unreadMessages = useUnreadMessageCount(!!profile?.id)
 
-  // Agents only: "needs attention" on My Pipeline and this week's bookings card.
-  // Same queries (and keys) My Pipeline and Book a call already use.
+  // Agents only: "needs attention" on Clients and this week's bookings card.
+  // Same queries (and keys) Clients and Submit already use.
   const { data: bookings = [] } = useAgentBookings(isAgent ? profile.id : null, { enabled: isAgent })
   const needsYou = useMemo(() => (isAgent ? bookings.filter(p => tabOf(p) === 'needs').length : 0), [bookings, isAgent])
   const { data: usage } = useWeeklyUsage(isAgent ? profile.id : null)

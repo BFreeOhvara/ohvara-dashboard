@@ -106,7 +106,7 @@ export function PhoneHome({ g, greeting, sub, isLoading, isError, refetch, now, 
           </span>
         </div>
         <button type="button" className="ov-hero-btn ph-bookbtn" onClick={() => navigate('/agent/book')}>
-          <CalendarPlus size={18} strokeWidth={2.2} aria-hidden="true" />Book a call
+          <CalendarPlus size={18} strokeWidth={2.2} aria-hidden="true" />Submit
         </button>
       </section>
 

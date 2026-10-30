@@ -315,7 +315,7 @@ export function CancellationsCard({ c, now, startRebook, agentRows }) {
       <CardHead icon={Trash2} tone="a" title="Cancellations" sub="Cancel the old policy once the new one is in force" />
       {c.bookings.length ? c.bookings.map(p => <Cancellation key={p.id} p={p} now={now} startRebook={startRebook} agentRows={agentRows} />) : (
         <>
-          <p className="cv2-sub" style={{ marginBottom: 12 }}>Replacing an old policy? Book a call and Fulfillment cancels it with the carrier.</p>
+          <p className="cv2-sub" style={{ marginBottom: 12 }}>Replacing an old policy? Submit it and Fulfillment cancels it with the carrier.</p>
           <Link className="ov-ghost cv2-btn" to="/agent/book">Book a cancellation call</Link>
         </>
       )}
