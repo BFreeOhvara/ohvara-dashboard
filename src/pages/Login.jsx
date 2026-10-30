@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { Mail, Lock, ShieldCheck, Loader2, ArrowRight, ArrowLeft, MailCheck, Check } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase, setKeepSignedIn, keepSignedIn } from '../lib/supabase'
 import { isNativeApp, webUrl } from '../lib/native'
+import { useSignupOpen } from '../lib/signupStatus'
 import { CodeBoxes } from '../components/agent/AgentUI'
 import { AuthPage, AuField, PasswordField, AuCheck, AuAlert } from '../components/auth/AuthShell'
 import { keepSubmitVisible, EMAIL_RE, SUPPORT_EMAIL } from '../components/auth/authUtils'
@@ -63,6 +64,9 @@ function AppGlyph() {
 export default function Login() {
   const { signIn, signOut, session, profile, loading, mfaRequired } = useAuth()
   const navigate = useNavigate()
+  const [search] = useSearchParams()
+  // Sign-up open (web only): swaps the invite-only note for a Create account link. Closed or unknown keeps the note.
+  const signupOpen = useSignupOpen()
   // Prompt 775 — Delete my account lands here; the note shows once.
   const [deleted] = useState(() => {
     try { const v = sessionStorage.getItem('ohvara-deleted') === '1'; sessionStorage.removeItem('ohvara-deleted'); return v } catch { return false }
@@ -73,7 +77,7 @@ export default function Login() {
   const [error, setError]       = useState('')
   const [wrong, setWrong]       = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [forgotMode, setForgotMode]   = useState(false)
+  const [forgotMode, setForgotMode]   = useState(() => search.get('forgot') === '1') // /signup's "Reset your password" link
   const [resetEmail, setResetEmail]   = useState('')
   const [resetSent, setResetSent]     = useState(false)
   const [resetError, setResetError]   = useState('')
@@ -233,10 +237,14 @@ export default function Login() {
                 : loading && session ? 'Loading…'
                 : <>Sign in<ArrowRight size={17} strokeWidth={2.4} /></>}
             </button>
-            <div className="sx-invite-note">
-              New to Ohvara? Accounts are invite-only.<br />
-              Ask your agent or <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> for an invite.
-            </div>
+            {signupOpen === true && !isNativeApp() ? (
+              <div className="sx-invite-note">New here? <Link to="/signup">Create an account</Link></div>
+            ) : (
+              <div className="sx-invite-note">
+                New to Ohvara? Accounts are invite-only.<br />
+                Ask your agent or <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> for an invite.
+              </div>
+            )}
           </form>
         )}
       </section>

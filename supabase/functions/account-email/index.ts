@@ -9,6 +9,9 @@
 //     answer. Sends Supabase's own reset email only when the address belongs
 //     to an account whose email is confirmed (not a text-invite account that
 //     hasn't clicked its confirm link, not a legacy @ohvara.internal one).
+//     A self-signup account still waiting on its link does get it: the mail
+//     only reaches the real inbox owner, so a stranger who registers someone
+//     else's email can't lock that person out.
 //   { action: 'confirm', token }             → { ok: true } | { error } — the /confirm-email link
 //   { action: 'resend' } + Authorization     → { ok: true } | { error } — the banner's "Send again"
 import { createClient } from 'npm:@supabase/supabase-js'
@@ -51,7 +54,14 @@ Deno.serve(async req => {
       const { data: rows } = await db.from('profiles')
         .select('id, email_confirm_pending, is_active').ilike('email', likeEscape(email)).limit(1)
       const p = rows?.[0]
-      if (p && !p.email_confirm_pending && p.is_active !== false && !email.endsWith('@ohvara.internal')) {
+      // Its own read, only for a pending account: every other reset keeps
+      // working whether or not signup_source is on the database yet.
+      let mayReset = !p?.email_confirm_pending
+      if (p?.email_confirm_pending) {
+        const { data: s } = await db.from('profiles').select('signup_source').eq('id', p.id).maybeSingle()
+        mayReset = s?.signup_source === 'self'
+      }
+      if (p && mayReset && p.is_active !== false && !email.endsWith('@ohvara.internal')) {
         // Supabase's own recovery mail (its sender, its per-address limits), as before.
         const anon = createClient(URL_, Deno.env.get('SUPABASE_ANON_KEY')!, { auth: { persistSession: false } })
         const { error } = await anon.auth.resetPasswordForEmail(email, { redirectTo: safeRedirect(body.redirect_to) })

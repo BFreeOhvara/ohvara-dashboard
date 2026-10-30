@@ -177,8 +177,8 @@ export default function InboundDetail() {
   const l = (inb.data || []).find(x => x.lead_id === id)
   const events = ev.data || []
   const now = useMemo(() => new Date().getTime(), [ev.dataUpdatedAt]) // eslint-disable-line react-hooks/exhaustive-deps
-  const back = <Link className="ov-ghost pv-btn pv-back" to="/agent/inbounds"><Ico icon={ArrowLeft} />Inbounds</Link>
-  const shell = children => <PortalV2Layout active="inbounds" crumb="Inbounds" title={l ? leadName(l) : 'Inbound'} icon={Inbox}>{back}{children}</PortalV2Layout>
+  const back = <Link className="ov-ghost pv-btn pv-back" to="/agent/leads"><Ico icon={ArrowLeft} />Leads</Link>
+  const shell = children => <PortalV2Layout active="inbounds" crumb="Leads" title={l ? leadName(l) : 'Inbound'} icon={Inbox}>{back}{children}</PortalV2Layout>
 
   if (inb.isLoading) {
     return shell(
@@ -195,7 +195,7 @@ export default function InboundDetail() {
         <span className="pv-tile"><Ico icon={Inbox} size={20} /></span>
         <h3>This inbound isn&rsquo;t here</h3>
         <p className="pv-sub">It may belong to another agent, or the link is old.</p>
-        <Link className="ov-ghost pv-btn" to="/agent/inbounds"><Ico icon={ArrowLeft} size={14} />Back to inbounds</Link>
+        <Link className="ov-ghost pv-btn" to="/agent/leads"><Ico icon={ArrowLeft} size={14} />Back to leads</Link>
       </section>,
     )
   }

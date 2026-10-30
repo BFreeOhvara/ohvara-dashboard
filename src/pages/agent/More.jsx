@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { Activity, UserPlus, Bell, Moon, Sun, Settings, TriangleAlert, ChevronRight, LogOut, Inbox, CalendarDays } from 'lucide-react'
+import { Activity, UserPlus, Bell, Moon, Sun, Settings, TriangleAlert, ChevronRight, LogOut, Inbox, CalendarDays, Lock } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import { usePortal } from '../../hooks/usePortalAccess'
 import { useTheme } from '../../hooks/useTheme'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { useBillingTiers, useWeeklyUsage } from '../../hooks/useBillingTiers'
@@ -16,7 +17,7 @@ import { useNewInboundCount } from '../../hooks/useInbounds'
 
 // Prompt 772 — More, the phone layout's fifth tab (mockup More.dc.html): the
 // profile, a Billing card (plan, weekly price, next charge, this week's
-// bookings, Manage billing), then Inbounds (new count) and Calendar (portal parity answer 1), Activity, Invite an agent, Notifications,
+// bookings, Manage billing), then Leads (new count) and Calendar (portal parity answer 1), Activity, Invite an agent, Notifications,
 // Theme (one tap flips it, like P766), Settings and Report a problem, and
 // Sign out. Desktop has no More page: the sidebar holds all of this, so the
 // route sends a desktop visitor home.
@@ -35,14 +36,16 @@ const STATUS = {
   none: ['No plan', 'var(--ov-mute)'],
 }
 
-function Row({ icon: Icon, tone, label, right, onClick }) {
+function Row({ icon: Icon, tone, label, right, onClick, locked }) {
   const [color, tint] = TONES[tone]
   return (
-    <button type="button" className="ph-mrow" onClick={onClick}>
+    <button type="button" className={`ph-mrow${locked ? ' is-locked' : ''}`} onClick={onClick}>
       <span className="ph-mrow-icon" style={{ background: tint, color }}><Icon size={18} strokeWidth={2} aria-hidden="true" /></span>
       <span className="ph-mrow-label">{label}</span>
       {right && <span style={{ fontSize: 13, color: 'var(--ov-mute)' }}>{right}</span>}
-      <ChevronRight size={15} strokeWidth={2.2} className="ph-chev" aria-hidden="true" />
+      {locked
+        ? <Lock size={15} strokeWidth={2} aria-label="Locked" style={{ color: 'var(--ov-faint)' }} />
+        : <ChevronRight size={15} strokeWidth={2.2} className="ph-chev" aria-hidden="true" />}
     </button>
   )
 }
@@ -56,17 +59,21 @@ export default function More() {
   const { data: tiers = [] } = useBillingTiers()
   const { data: usage } = useWeeklyUsage(profile?.id)
   const newInbounds = useNewInboundCount()
+  // A locked self-signup: no plan to show, its pages dim, and Choose a plan is the welcome.
+  const portal = usePortal()
+  const selfLocked = portal.self && portal.locked && !portal.loading
 
   if (!phone) return <Navigate to="/agent" replace />
 
   const light = theme === 'light'
   const comped = isComped(profile)
   const status = shownStatus(profile)
-  const tier = tiers.find(t => t.key === profile?.billing_tier) || tiers.find(t => t.key === usage?.tier)
+  const tier = selfLocked ? null : tiers.find(t => t.key === profile?.billing_tier) || tiers.find(t => t.key === usage?.tier)
   const cap = capState(usage)
   const next = formatBillingDate(renewsAt(profile, usage), profile?.timezone)
   const [statusText, statusColor] = comped ? ['Not charged', 'var(--ov-up)'] : STATUS[status] || STATUS.none
-  const planLine = [profile?.role === 'agent' ? 'Agent' : null, usage?.tier_name || tier?.name].filter(Boolean).join(' · ')
+  const planName = selfLocked ? null : usage?.tier_name || tier?.name
+  const planLine = [profile?.role === 'agent' ? 'Agent' : null, planName].filter(Boolean).join(' · ')
   const subscribed = comped || ['active', 'past_due', 'canceled'].includes(status)
 
   async function handleSignOut() {
@@ -82,7 +89,7 @@ export default function More() {
         <Avatar profile={profile} size={54} />
         <span style={{ flex: 1, minWidth: 0, color: 'inherit' }}>
           <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, overflowWrap: 'anywhere' }}>{profile?.full_name || 'Your account'}</span>
-          <span style={{ display: 'block', fontSize: 13, color: 'var(--ov-hero-soft)' }}>{planLine ? `${planLine} plan` : 'Agent'}</span>
+          <span style={{ display: 'block', fontSize: 13, color: 'var(--ov-hero-soft)' }}>{planName ? `${planLine} plan` : 'Agent'}</span>
         </span>
       </section>
 
@@ -103,7 +110,7 @@ export default function More() {
         ) : (
           <div style={{ marginTop: 6, fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--ov-hi)' }}>No plan yet</div>
         )}
-        {cap?.cap != null && (
+        {!selfLocked && cap?.cap != null && (
           <>
             <div className="ph-meter" role="progressbar" aria-label="Bookings this week" aria-valuemin={0} aria-valuemax={cap.cap} aria-valuenow={cap.used}>
               <span style={{ width: `${Math.min(100, (cap.used / cap.cap) * 100)}%` }} />
@@ -117,7 +124,7 @@ export default function More() {
         {isNativeApp() ? (
           <p style={{ margin: '14px 0 0', fontSize: 13.5, color: 'var(--ov-mute)' }}>{NATIVE_BILLING_TEXT}</p>
         ) : (
-          <button type="button" className="ov-ghost" onClick={() => navigate(subscribed ? '/agent/billing?manage=1' : '/agent/billing')}
+          <button type="button" className="ov-ghost" onClick={() => navigate(selfLocked ? '/agent#plans' : subscribed ? '/agent/billing?manage=1' : '/agent/billing')}
             style={{ marginTop: 14, width: '100%', height: 46, borderRadius: 999, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
             {subscribed ? 'Manage billing' : 'Choose a plan'}
           </button>
@@ -125,9 +132,9 @@ export default function More() {
       </section>
 
       <section className="ov-card ph-menu">
-        <Row icon={Inbox} tone="blue" label="Inbounds" right={newInbounds > 0 ? `${newInbounds} new` : null} onClick={() => navigate('/agent/inbounds')} />
-        <Row icon={CalendarDays} tone="teal" label="Calendar" onClick={() => navigate('/agent/calendar')} />
-        <Row icon={Activity} tone="blue" label="Activity" onClick={() => navigate('/agent/activity')} />
+        <Row icon={Inbox} tone="blue" label="Leads" right={newInbounds > 0 ? `${newInbounds} new` : null} onClick={() => navigate('/agent/leads')} />
+        <Row icon={CalendarDays} tone="teal" label="Calendar" locked={selfLocked} onClick={() => navigate('/agent/calendar')} />
+        <Row icon={Activity} tone="blue" label="Activity" locked={selfLocked} onClick={() => navigate('/agent/activity')} />
         <Row icon={UserPlus} tone="teal" label="Invite an agent" onClick={() => setModal('invite')} />
         <Row icon={Bell} tone="amber" label="Notifications" onClick={() => navigate('/settings#notifications')} />
         <button type="button" className="ph-mrow" onClick={() => setTheme(light ? 'dark' : 'light')}

@@ -83,19 +83,28 @@ function CardFields({ onSaved, onCancel }) {
   )
 }
 
-export function CheckoutEmbed({ tier, onError }) {
+// returnUrl: where Stripe comes back to (default /agent/billing). onSession hears
+// about the session (the locked welcome reads the key's mode for its Test mode
+// pill). waiting replaces the default "Opening…" line.
+export function CheckoutEmbed({ tier, onError, returnUrl, onSession, waiting }) {
   const [session, setSession] = useState(null) // { client_secret, publishable_key }
 
   useEffect(() => {
     let live = true
-    invokeBilling('checkout', { tier })
-      .then(d => { if (live) setSession(d) })
+    invokeBilling('checkout', { tier, ...(returnUrl ? { return_url: returnUrl } : null) })
+      .then(async d => {
+        // Stripe.js blocked or offline: say so instead of an empty box.
+        await getStripe(d.publishable_key)
+        if (!live) return
+        onSession?.(d)
+        setSession(d)
+      })
       .catch(e => { if (live) onError(e) })
     return () => { live = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tier])
 
-  if (!session) return <Waiting label="Opening secure checkout…" />
+  if (!session) return waiting || <Waiting label="Opening secure checkout…" />
   return (
     <div className="ov-mb-embed">
       <EmbeddedCheckoutProvider stripe={getStripe(session.publishable_key)} options={{ clientSecret: session.client_secret }}>

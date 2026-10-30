@@ -6,6 +6,7 @@ import { GlobalSearch } from './GlobalSearch'
 import { ActiveCallProvider } from '../../contexts/ActiveCallContext'
 import { NotificationBell } from '../notifications/NotificationBell'
 import { useAuth } from '../../hooks/useAuth'
+import { usePortal } from '../../hooks/usePortalAccess'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
 import { useWeeklyUsage } from '../../hooks/useBillingTiers'
 import { usePolicyEvents } from '../../hooks/useAgentActivity'
@@ -20,7 +21,6 @@ import { ErrorBoundary } from '../shared/ErrorBoundary'
 import { PhoneShell } from './PhoneShell'
 import { ConfirmEmailBanner } from './ConfirmEmailBanner'
 import { useIsPhone } from '../../hooks/usePhoneLayout'
-import { LEADS_PAGE } from '../../lib/leadsPage'
 import { TransferAlert } from '../agent/TransferAlert'
 // The transfer alert's styles (.pv-ta) live with the v2 pages.
 import '../../pages/agent/v2/portalV2.css'
@@ -47,9 +47,8 @@ const TITLES = {
   '/agent/book': ['Submit', 'Get your client on the calendar with Fulfillment'],
   '/agent/clients': ['Clients', 'Calls in progress on one side, your clients on the other'],
   '/agent/activity': ['Activity', 'What happened with your clients, newest first'],
-  '/agent/inbounds': ['Inbounds', 'Everyone who came in for you, and what we’re doing with each one'],
   '/agent/calendar': ['Calendar', 'Every appointment, whoever booked it'],
-  ...(LEADS_PAGE ? { '/agent/leads': ['Leads', 'Delivered to you. Call or text from your own phone'] } : {}),
+  '/agent/leads': ['Leads', 'Everyone who came in for you, and what we’re doing with each one'],
   '/agent/billing': ['Billing', 'Your weekly subscription and next charge'],
   '/agent/carriers': ['Carrier Portals', 'Every carrier login in one directory'],
   '/agent/stats': ['Performance', 'Production, persistency, and leaderboard — switch the view'],
@@ -212,25 +211,49 @@ const AGENT_LINES = {
   '/settings': SettingsLine,
 }
 
-// One inbound: "Inbounds / <their name>", from the list the page already loads (same query key).
+// One inbound: "Leads / <their name>", from the list the page already loads (same query key).
 function InboundTitle() {
   const { pathname } = useLocation()
   const { data } = useInbounds()
   const id = pathname.split('/').pop()
   const l = (data || []).find(x => x.lead_id === id)
-  return <h1 className="ov-hname">{l ? leadName(l) : 'Inbound'}</h1>
+  return <h1 className="ov-hname">{l ? leadName(l) : 'Lead'}</h1>
+}
+
+// What the header says over a gated page (usePortal's view), for a self-signup.
+const GATE_TITLES = {
+  welcome: { group: 'Today', label: 'Welcome', icon: Home, line: 'Pick a plan to open your portal' },
+  confirm: { group: 'Today', label: 'Welcome', icon: Home, line: 'Confirming your payment' },
+  unlocked: { line: 'Servicing is on' },
+  servicing: { line: 'Servicing plan needed to submit deals' },
 }
 
 function PageTitle({ pathname }) {
   const { profile, session } = useAuth()
+  const { view } = usePortal()
+  const gate = GATE_TITLES[view]
   const detail = profile?.role === 'agent' && isInboundDetail(pathname)
-  const entry = detail ? { group: 'Inbounds', label: 'Inbound', icon: Inbox } : navEntry(profile?.role, pathname)
+  const entry = gate?.label ? gate : detail ? { group: 'Leads', label: 'Lead', icon: Inbox } : navEntry(profile?.role, pathname)
   const [title, sub] = TITLES[pathname] || ['', '']
   const name = entry?.label || title
   const Icon = entry?.icon || Home
-  const tone = PAGE_TONE[pathname] || 'blue'
-  const Line = profile?.role === 'agent' ? AGENT_LINES[pathname] : null
+  const tone = gate?.label ? 'blue' : PAGE_TONE[pathname] || 'blue'
+  const Line = profile?.role === 'agent' && !gate ? AGENT_LINES[pathname] : null
   if (!name) return null
+  if (gate) {
+    return (
+      <div className={`ov-htitle ov-tone-${tone}`}>
+        <span className="ov-htile" aria-hidden="true"><Icon size={20} strokeWidth={2} /></span>
+        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div className="ov-hcrumb">
+            {entry?.group && <><span className="ov-hgroup">{entry.group}</span><span className="ov-hgroup" aria-hidden="true">/</span></>}
+            <h1 className="ov-hname">{name}</h1>
+          </div>
+          <div className="ov-hline"><Plain>{view === 'servicing' && pathname === '/agent/clients' ? 'Servicing plan needed' : gate.line}</Plain></div>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className={`ov-htitle ov-tone-${tone}`}>
       <span className="ov-htile" aria-hidden="true"><Icon size={20} strokeWidth={2} /></span>
@@ -253,12 +276,15 @@ export function DashboardLayout({ children }) {
   const isFullBleed = pathname === '/messages'
   // Prompt 726: My Pipeline (and, Prompt 749, Fulfillment's Pipeline) fills the height under the header on a tall
   // desktop screen (the .ov-fit rules in index.css) so only its list scrolls. Admin Users (P762) too.
-  const isFit = pathname === '/agent/clients' || pathname === '/fulfillment/pipeline' || pathname === '/admin/pipeline' || pathname === '/admin/users'
+  // A gated self-signup's page isn't the real one, so it scrolls like any other.
+  const { view } = usePortal()
+  const gated = !['open', 'paused'].includes(view)
+  const isFit = !gated && (pathname === '/agent/clients' || pathname === '/fulfillment/pipeline' || pathname === '/admin/pipeline' || pathname === '/admin/users')
   // Prompt 763: the Admin Overview fits one screen from 700px tall (.ov-fitao in index.css); shorter, it scrolls.
   const isFitAo = pathname === '/admin'
   // The agent Overview fits one screen too, with its own rules (.ov-fitag in index.css; not .ov-fitao, whose
   // selectors are the Admin page's). From 1280px wide and 700px tall; shorter or narrower it scrolls as before.
-  const isFitAg = pathname === '/agent'
+  const isFitAg = !gated && pathname === '/agent'
 
   const [navOpen, setNavOpen] = useState(false)
   useEffect(() => { setNavOpen(false) }, [pathname])

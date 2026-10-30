@@ -13,6 +13,7 @@
 // recovery_config.sms_live is on (the number is SMS-capable and A2P-registered).
 // All the rules live in logic.ts; this file wires the database, env and fetch.
 import { createClient } from 'npm:@supabase/supabase-js'
+import { isLockedSelfSignup } from '../_shared/portalAccess.ts'
 import { handle, type Channel, type Deps } from './logic.ts'
 
 const corsHeaders = {
@@ -43,6 +44,7 @@ const deps: Deps = {
     // Prompt 775 — an App Review sample account can't send real invites (treated as access off).
     return { id: data.user.id, role: p?.role ?? null, is_active: p?.is_demo ? false : (p?.is_active ?? null), full_name: p?.full_name ?? null }
   },
+  lockedSelfSignup: userId => isLockedSelfSignup(db, userId),
   async smsLive() {
     // Prompt 776 — invite texts aren't in the A2P campaign yet, so they need
     // their own switch on top of sms_live.

@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js'
+import { isLockedSelfSignup, LOCKED_MESSAGE } from '../_shared/portalAccess.ts'
 
 // Prompt 666 — an agent verifies their own cell as an outbound Caller ID on the
 // "Ohvara" Twilio sub-account, so Fulfillment can call clients showing the
@@ -98,6 +99,8 @@ Deno.serve(async (req) => {
 
   // Prompt 775 — an App Review sample account never gets a verification call.
   if (me.is_demo) return json({ error: 'Caller ID is not available on a sample account.', code: 'demo' }, 403)
+  // A verification is a real Twilio call; 'status' above sends nothing.
+  if (await isLockedSelfSignup(admin, me.id)) return json({ error: LOCKED_MESSAGE }, 403)
 
   if (!configured) {
     return json({ error: 'Calling isn\'t set up yet — the Twilio account hasn\'t been connected.', code: 'not_configured' }, 503)

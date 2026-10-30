@@ -177,7 +177,7 @@ test('inbound_set: a live key refuses with 403 before any Stripe call or write',
   const s = fakeStripe()
   const r = await call(a, s, { action: 'inbound_set', type: 'live_call', weekly_cents: 10000, paused: false }, 'sk_live_x')
   assert.equal(r.status, 403)
-  assert.equal(r.body.error, 'Inbound spend is test mode only for now.')
+  assert.equal(r.body.error, 'Lead spend is test mode only for now.')
   assert.equal(s.calls.length, 0)
   assert.equal(a.writes.length, 0)
 })

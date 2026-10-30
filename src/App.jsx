@@ -8,13 +8,13 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 import { ErrorBoundary } from './components/shared/ErrorBoundary'
 import { NativeBridge } from './components/native/NativeBridge'
-import { LEADS_PAGE } from './lib/leadsPage'
 // Side-effect import — attaches the beforeinstallprompt listener at app
 // boot (Prompt 286) so it's never missed while the user is still on Login.
 import './lib/installPrompt'
 
 import Login from './pages/Login'
 import Join from './pages/Join'
+import Signup from './pages/Signup'
 import ProtectLanding from './pages/public/ProtectLanding'
 import ConfirmEmail from './pages/ConfirmEmail'
 import ResetPassword from './pages/ResetPassword'
@@ -32,9 +32,7 @@ import AgentMore from './pages/agent/More'
 // (portal parity answer 0). Lazy, so they download only when opened.
 const V2InboundDetail = lazy(() => import('./pages/agent/v2/InboundDetail'))
 const V2Calendar = lazy(() => import('./pages/agent/v2/Calendar'))
-// P808: Leads mounts only in dev behind VITE_LEADS_PAGE=1; otherwise the page is not in the bundle.
-// The DEV check sits here, in this file, so a production build drops the import() and the chunk.
-const AgentLeads = import.meta.env.DEV && LEADS_PAGE ? lazy(() => import('./pages/agent/Leads')) : null
+const V2Inbounds = lazy(() => import('./pages/agent/v2/Inbounds'))
 import MyCalls from './pages/fulfillment/MyCalls'
 import VaLeads from './pages/fulfillment/VaLeads'
 import FulfillmentOverview from './pages/fulfillment/Overview'
@@ -53,6 +51,12 @@ const qc = new QueryClient({
   // arrives via explicit invalidations, not a focus-triggered refetch wave.
   defaultOptions: { queries: { staleTime: 30000, retry: 1, refetchOnWindowFocus: false } },
 })
+
+// The old Inbounds list URL lands on Leads, keeping ?tab=live.
+function InboundsToLeads() {
+  const { search } = useLocation()
+  return <Navigate to={`/agent/leads${search}`} replace />
+}
 
 // Prompt 758 — an admin who lands on a page that now has an Admin home (old
 // bookmarks, links inside the agent / Fulfillment pages) goes there instead,
@@ -110,6 +114,8 @@ export default function App() {
             <Route path="/join" element={<Join />} />
             <Route path="/join/:token" element={<Join />} />
             <Route path="/j/:token" element={<Join />} />
+            {/* Public sign-up. Shows "isn't open yet" (no form) unless self-signup's status says open, and never in the phone app. */}
+            <Route path="/signup" element={<Signup />} />
             {/* /protect is the one public mortgage-protection page (landing + qualifier; no
                 login; posts to submit-mp-lead). /mp forwards to it, utm tags kept. */}
             <Route path="/mp" element={<MpToProtect />} />
@@ -150,8 +156,8 @@ export default function App() {
                 <DashboardLayout><AgentOverview /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* Inbounds is now Leads: the old list URL lands on /agent/leads (which itself lands on /agent while Leads is off). One inbound and Calendar keep their routes. Old v2 Plan links land on Billing. */}
-            <Route path="/agent/inbounds" element={<Navigate to="/agent/leads" replace />} />
+            {/* Inbounds is now Leads: the old list URL lands on /agent/leads (query kept, so ?tab=live survives). One inbound and Calendar keep their routes. Old v2 Plan links land on Billing. */}
+            <Route path="/agent/inbounds" element={<InboundsToLeads />} />
             <Route path="/agent/inbounds/:id" element={
               <ProtectedRoute allowedRoles={['agent']}>
                 <DashboardLayout><Suspense fallback={null}><V2InboundDetail /></Suspense></DashboardLayout>
@@ -180,12 +186,12 @@ export default function App() {
                 <DashboardLayout><AgentActivity /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* P808: the route mounts only in dev behind VITE_LEADS_PAGE=1; otherwise it redirects to Overview. */}
-            <Route path="/agent/leads" element={LEADS_PAGE ? (
-              <ProtectedRoute allowedRoles={['agent', 'admin']}>
-                <DashboardLayout><Suspense fallback={null}><AgentLeads /></Suspense></DashboardLayout>
+            {/* Leads: the v2 Inbounds page (Booked appointments, Live calls), always on. */}
+            <Route path="/agent/leads" element={
+              <ProtectedRoute allowedRoles={['agent']}>
+                <DashboardLayout><Suspense fallback={null}><V2Inbounds /></Suspense></DashboardLayout>
               </ProtectedRoute>
-            ) : <Navigate to="/agent" replace />} />
+            } />
             {/* Prompt 691 — Billing, promoted out of Settings. */}
             <Route path="/agent/billing" element={
               <ProtectedRoute allowedRoles={['agent']}>

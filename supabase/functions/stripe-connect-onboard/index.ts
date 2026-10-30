@@ -17,6 +17,7 @@
 // ============================================================
 
 import { createClient } from 'npm:@supabase/supabase-js'
+import { isLockedSelfSignup, LOCKED_MESSAGE } from '../_shared/portalAccess.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -55,6 +56,7 @@ Deno.serve(async (req) => {
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
   const { data: { user }, error: authError } = await admin.auth.getUser(authHeader.replace('Bearer ', ''))
   if (authError || !user) return json({ error: 'Invalid or expired token' }, 401)
+  if (await isLockedSelfSignup(admin, user.id)) return json({ error: LOCKED_MESSAGE }, 403)
 
   const body = await req.json().catch(() => ({}))
   const checkStatus = !!body?.checkStatus

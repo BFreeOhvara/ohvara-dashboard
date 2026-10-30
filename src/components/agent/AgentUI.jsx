@@ -3741,8 +3741,8 @@ export function AttentionCard({ items, loading, onGo, texts = [], fit }) {
             <ArrowRight size={15} strokeWidth={2.2} />
           </button>
         ) : (
-          <button type="button" className="ov-primary" onClick={() => onGo('/agent/inbounds')}>
-            Open Inbounds <ArrowRight size={15} strokeWidth={2.2} />
+          <button type="button" className="ov-primary" onClick={() => onGo('/agent/leads')}>
+            Open Leads <ArrowRight size={15} strokeWidth={2.2} />
           </button>
         )}
       </div>

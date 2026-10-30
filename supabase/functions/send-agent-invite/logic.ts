@@ -6,6 +6,8 @@
 // agent never sees it. Nothing this returns, and nothing it logs, contains the
 // token, the link or the destination.
 
+import { LOCKED_MESSAGE } from '../_shared/portalAccess.ts'
+
 export type Channel = 'email' | 'sms'
 export type InviteRole = 'agent' | 'fulfillment'
 
@@ -25,6 +27,8 @@ export type Deps = {
   env: Env
   // The signed-in caller from the request's JWT, with their profile; null when the JWT is bad.
   caller(jwt: string): Promise<Caller | null>
+  // A self-signup agent who hasn't chosen a plan (_shared/portalAccess.ts).
+  lockedSelfSignup(userId: string): Promise<boolean>
   smsLive(): Promise<boolean>
   // Invites this agent created since `since`, optionally only those to one destination.
   countSent(createdBy: string, since: string, dest?: { channel: Channel; to: string }): Promise<number>
@@ -200,6 +204,11 @@ export async function handle(deps: Deps, jwt: string, body: Record<string, unkno
   if (body.action === 'status') return { status: 200, body: await status(deps) }
   if (body.action !== 'send') return { status: 400, body: { error: 'Unknown action' } }
 
+  // Before anything is made or sent: a free account can't use Ohvara's email
+  // and text senders (the inviter's name goes in the subject line). 'status'
+  // stays open, it sends nothing and the invite form needs it to show this.
+  if (await deps.lockedSelfSignup(caller.id)) return { status: 403, body: { error: LOCKED_MESSAGE } }
+
   const channel = body.channel
   if (channel !== 'email' && channel !== 'sms') return { status: 400, body: { error: 'Pick text or email' } }
 
@@ -218,7 +227,7 @@ export async function handle(deps: Deps, jwt: string, body: Record<string, unkno
 
   const now = deps.now()
   const since = new Date(now.getTime() - DAY_MS).toISOString()
-  const dest = { channel, to }
+  const dest: { channel: Channel; to: string } = { channel, to }
   if ((await deps.countSent(caller.id, since)) >= DAILY_LIMIT) return { status: 429, body: { error: MSG.tooMany } }
   if ((await deps.countSent(caller.id, since, dest)) >= PER_DEST_LIMIT) return { status: 429, body: { error: MSG.tooMany } }
 

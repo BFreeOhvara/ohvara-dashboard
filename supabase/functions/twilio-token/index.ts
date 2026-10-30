@@ -23,6 +23,7 @@
 // ============================================================
 
 import { createClient } from 'npm:@supabase/supabase-js'
+import { isLockedSelfSignup, LOCKED_MESSAGE } from '../_shared/portalAccess.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -116,6 +117,13 @@ Deno.serve(async (req) => {
   if (authError || !user) {
     return new Response(JSON.stringify({ error: 'Invalid or expired token' }), {
       status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  // This token places real calls on Ohvara's Twilio account.
+  if (await isLockedSelfSignup(adminClient, user.id)) {
+    return new Response(JSON.stringify({ error: LOCKED_MESSAGE }), {
+      status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 

@@ -91,3 +91,13 @@ test('admin and Fulfillment make no agent_inbounds call', () => {
   // The only Activity code that reaches agent_inbounds goes through those hooks.
   assert.doesNotMatch(src('../pages/agent/Activity.jsx') + src('../components/layout/DashboardLayout.jsx'), /rpc\('agent_inbounds'\)/)
 })
+
+test('Inbounds sample: the page loads the fixture only behind import.meta.env.DEV, and the Get inbounds slot is mounted', () => {
+  const page = src('../pages/agent/v2/Inbounds.jsx')
+  assert.match(page, /import\.meta\.env\.DEV && sampleOn/)
+  assert.match(page, /import\('\.\.\/\.\.\/\.\.\/lib\/inboundsSample'\)/)
+  assert.match(page, /<GetInboundsSlot \/>/)
+  assert.match(page, /You&rsquo;re not getting inbounds yet/)
+  assert.doesNotMatch(page, /^import .*inboundsSample/m) // dynamic import only, never a static one
+  assert.match(src('./inboundsSample.js'), /^\/\/ SAMPLE-FIXTURE-INB/)
+})
