@@ -7,13 +7,13 @@ import { useAgentBookings, useRebookCall, useConfirmRecoveryNumber } from '../..
 import { useCarriers, useCarrierHours, useAddCarrier, useSetBookingCarrier } from '../../hooks/useCarriers'
 import { AnchoredSelectField } from '../../components/ui/ExportForm'
 import {
-  ClientSearch, PipelineSummary, PipelineList, ClientDrawer, InfoTile, StatusNote, Journey, DayChoice, SlotGrid, CarrierInput, SlotSkeleton,
+  ClientSearch, SidePipelineSummary, SideSwitch, ClientsSide, PipelineList, ClientDrawer, InfoTile, StatusNote, Journey, DayChoice, SlotGrid, CarrierInput, SlotSkeleton,
   LoadError,
 } from '../../components/agent/AgentUI'
 import { fmtBooking, callWhen, clientSlotISO, slotState, openBookingIsos, dayIn, addDaysStr, dateLabel, dayGone, carrierDaySlots, firstOpenDay } from '../../lib/scheduling'
 import { bookingCarrier, viewerHoursSummary } from '../../lib/carriers'
 import { viewerTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
-import { isLive, agentStageOf, stageOf, tabOf, canRebook, PIPELINE_TABS, RANGES, SUBSTATUS_LABEL, digits, useNow, startOfWeek, startOfMonth, placeOf } from '../../lib/agentBookings'
+import { isLive, agentStageOf, stageOf, tabOf, canRebook, PIPELINE_TABS, PROGRESS_TABS, sideOfTab, RANGES, SUBSTATUS_LABEL, digits, useNow, startOfWeek, startOfMonth, placeOf } from '../../lib/agentBookings'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { PhoneClients } from '../../components/agent/phone/PhoneClients'
@@ -67,9 +67,17 @@ import { MyPipelineClients } from '../../components/agent/ClientsV2Parts'
 // grouped list, a four-part status filter, no tabs) and a client opens as a
 // bottom sheet (PhoneClientSheet) with the same next steps as the drawer.
 //
+// My Pipeline split (Brayden: "doesn't like the mixed look") — the list box has
+// two sides. In progress holds Booked, No answer and Needs attention (the
+// three status tabs); Clients holds the Cancelled rows (the only servicing-book
+// data there is) over two labelled Coming soon sections. The side comes from
+// ?stage= (cancelled = Clients), else from the opened row's own status, else
+// In progress. ?stage=all means Booked on desktop and no filter on the phone.
+// Range, the agent filter and the search scope / span both sides.
+//
 // Portal parity T5 — every agent also gets the v2 Clients parts
-// (components/agent/ClientsV2Parts.jsx): a "Your clients" box under the list
-// box (sold inbounds merged with existing clients, All / From inbounds /
+// (components/agent/ClientsV2Parts.jsx): a "Your clients" box under the Clients
+// side's list box (sold inbounds merged with existing clients, All / From inbounds /
 // Existing) whose rows open a drawer with Call / Text, Policies, Servicing,
 // the cancellation flow and Consent. Admin's page stays without them.
 
@@ -95,6 +103,7 @@ export default function Clients() {
   const navigate = useNavigate()
   const phone = usePhoneLayout()
   const now = useNow()
+  const yourClients = !isAdmin
   const [params, setParams] = useSearchParams()
   const openId = params.get('open')
   const rebook = params.get('rebook') === '1'
@@ -104,8 +113,21 @@ export default function Clients() {
   const loadError = isError ? <LoadError what="your clients" onRetry={() => refetch()} /> : null
   const rows = useMemo(() => (isAdmin ? excludeTestAccounts(raw, profile?.id) : raw), [raw, isAdmin, profile?.id])
 
+  // Looked up from every row, not the tab's list, so a link from Overview
+  // opens its client whichever tab is selected.
+  const openRow = openId ? rows.find(p => p.id === openId) : null
+
+  // ?stage=all is "no stage" (a link from Overview); the opened row then picks the side and tab.
   const stageParam = params.get('stage')
-  const tab = PIPELINE_TABS.includes(stageParam) ? stageParam : STAGE_ALIAS[stageParam] || 'booked'
+  const stageTab = stageParam === 'all' ? null : PIPELINE_TABS.includes(stageParam) ? stageParam : STAGE_ALIAS[stageParam] || null
+  const rowTab = useMemo(() => {
+    const r = openId ? rows.find(p => p.id === openId) : null
+    return r ? tabOf(r) : null
+  }, [rows, openId])
+  const tab = stageTab || rowTab || 'booked'
+  const side = sideOfTab(tab)
+  // The In progress tab left behind when switching to Clients, so switching back lands where you were.
+  const [lastProgress, setLastProgress] = useState('booked')
   const range = RANGE_VALUES.includes(params.get('range')) ? params.get('range') : 'all'
   const update = fn => {
     const next = new URLSearchParams(params)
@@ -133,13 +155,24 @@ export default function Clients() {
     .reduce((best, p) => (!best || p.scheduled_call_at < best.scheduled_call_at ? p : best), null), [byAgent, now])
 
   const list = useMemo(() => scoped.filter(p => tabOf(p) === tab).sort(SORT[tab]), [scoped, tab])
+  // Both sides' rows and counts (range + agent scoped). Cancelled stays out of the In progress rows.
+  const progressRows = useMemo(() => scoped.filter(p => tabOf(p) !== 'cancelled'), [scoped])
+  const clientCount = scoped.length - progressRows.length
+  const attention = useMemo(() => progressRows.filter(p => tabOf(p) === 'needs').length, [progressRows])
+  const emptyRange = scoped.length === 0 && range !== 'all' ? range : null
 
   const canMove = p => isAdmin || p.agent_id === profile?.id
   // ?client= is the v2 "Your clients" drawer; one drawer at a time.
   const openOnly = id => update(next => { next.set('open', id); next.delete('rebook'); next.delete('client') })
   const startRebook = id => update(next => { next.set('open', id); next.set('rebook', '1'); next.delete('client') })
-  const close = () => update(next => { next.delete('open'); next.delete('rebook') })
-  // A search pick also switches to that client's tab, so their row is the
+  // A drawer opened with no ?stage= took its side from the row; closing it keeps that side
+  // (the phone has no tab filter, so only Clients needs writing there).
+  const close = () => update(next => {
+    next.delete('open')
+    next.delete('rebook')
+    if (!stageTab && rowTab && (phone ? rowTab === 'cancelled' : rowTab !== 'booked')) next.set('stage', rowTab)
+  })
+  // A search pick also switches to that client's side and tab, so their row is the
   // highlighted one behind the drawer.
   const openFromSearch = p => update(next => {
     next.set('open', p.id)
@@ -148,9 +181,12 @@ export default function Clients() {
     const t = tabOf(p)
     if (t === 'booked') next.delete('stage'); else next.set('stage', t)
   })
-  // Looked up from every row, not the tab's list, so a link from Overview
-  // opens its client whichever tab is selected.
-  const openRow = openId ? rows.find(p => p.id === openId) : null
+  // Desktop returns to the last In progress tab; the phone's In progress is "no filter".
+  const onSide = s => {
+    if (s === 'clients' && side === 'progress') setLastProgress(tab)
+    if (phone) setParam('stage', s === 'clients' ? 'cancelled' : null, null)
+    else setParam('stage', s === 'clients' ? 'cancelled' : lastProgress, 'booked')
+  }
 
   const detail = openRow && (
     <ClientDetail
@@ -159,26 +195,36 @@ export default function Clients() {
     />
   )
 
-  const pipelineList = (
+  const onBook = isAdmin ? undefined : () => navigate('/agent/book')
+  // An agent's "Your clients" box under the list covers sold leads and servicing, so the Coming soon
+  // sections would contradict it.
+  const soon = !yourClients
+  const sideSwitch = (
+    <SideSwitch side={side} onSide={onSide} loading={isLoading} progress={progressRows.length} clients={clientCount} attention={attention} className="pl-side" />
+  )
+  const shared = {
+    now, showAgent: isAdmin, activeId: openId, onOpen: openOnly, canMove, loading: isLoading, emptyRange,
+  }
+  const pipelineList = side === 'clients' ? (
+    <ClientsSide head={sideSwitch} list={list} count={clientCount} soon={soon} {...shared} />
+  ) : (
     <PipelineList
-      rows={scoped} tab={tab} onTab={t => setParam('stage', t, 'booked')} list={list}
-      now={now} showAgent={isAdmin} activeId={openId}
-      onOpen={openOnly} onRebook={startRebook} onConfirm={openOnly} canMove={canMove}
-      loading={isLoading} emptyRange={scoped.length === 0 && range !== 'all' ? range : null}
-      onBook={isAdmin ? undefined : () => navigate('/agent/book')}
+      head={sideSwitch} rows={progressRows} tabs={PROGRESS_TABS} tab={tab} onTab={t => setParam('stage', t, 'booked')} list={list}
+      onRebook={startRebook} onConfirm={openOnly} onBook={onBook} {...shared}
     />
   )
 
   if (phone) {
-    // No ?stage= means no filter here (the desktop opens on Booked); 'all' too.
-    const filter = PIPELINE_TABS.includes(stageParam) ? stageParam : stageParam && stageParam !== 'all' ? STAGE_ALIAS[stageParam] || null : null
+    // No ?stage= means no filter here (the desktop opens on Booked); 'all' too. Cancelled is the Clients side.
+    const filter = stageTab && stageTab !== 'cancelled' ? stageTab : null
     return (
       <>
         <PhoneClients
           rows={scoped} loading={isLoading} error={loadError} filter={filter} sort={SORT} now={now}
+          side={side} onSide={onSide} soon={soon} onBook={onBook} emptyRange={emptyRange}
           onFilter={t => setParam('stage', t, null)} onOpen={p => openOnly(p.id)}
         />
-        {!isAdmin && <MyPipelineClients className="cv2-phone" />}
+        {yourClients && side === 'clients' && <MyPipelineClients className="cv2-phone" />}
         {detail}
       </>
     )
@@ -192,8 +238,8 @@ export default function Clients() {
           <ClientSearch
             rows={scoped} recentRows={byAgent} onOpen={openFromSearch} hotkey={!openRow}
           />
-          <PipelineSummary
-            rows={scoped} tab={tab}
+          <SidePipelineSummary
+            rows={scoped} side={side} tab={tab} soon={soon} title={isAdmin ? 'Everyone’s pipeline' : 'Your pipeline'}
             range={range} ranges={RANGES} onRange={v => setParam('range', v, 'all')}
             agentFilter={isAdmin && agents.length > 1 ? (
               <AnchoredSelectField
@@ -202,11 +248,10 @@ export default function Clients() {
                 style={{ width: '100%' }}
               />
             ) : null}
-            next={nextCall} onOpenNext={openFromSearch}
-            onBook={isAdmin ? undefined : () => navigate('/agent/book')}
+            next={nextCall} onOpenNext={openFromSearch} onBook={onBook}
           />
         </div>
-        {isAdmin ? pipelineList : <div className="cv2-col">{pipelineList}<MyPipelineClients /></div>}
+        {yourClients && side === 'clients' ? <div className="cv2-col">{pipelineList}<MyPipelineClients /></div> : pipelineList}
       </div>
 
       {detail}

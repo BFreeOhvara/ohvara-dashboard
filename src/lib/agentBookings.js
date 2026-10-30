@@ -110,6 +110,17 @@ export function tabOf(p) {
   return s === 'confirmNumber' || s === 'needsAttention' ? 'needs' : s
 }
 
+// My Pipeline's two sides: In progress (Booked, No answer, Needs attention) and
+// Clients (the servicing book; for now only the Cancelled rows are real data).
+// Additive: PIPELINE_TABS / tabOf above are unchanged.
+export const PROGRESS_TABS = ['booked', 'noAnswer', 'needs']
+export const sideOfTab = t => (t === 'cancelled' ? 'clients' : 'progress')
+// The Clients side's two sections with no data yet (no servicing tables, no sold-to-client link).
+export const COMING_SOON = [
+  { key: 'sold', title: 'Sold leads', text: 'Leads you mark Sold and submit for servicing, and clients you submit yourself, will land here.' },
+  { key: 'servicing', title: 'Servicing', text: 'Each client’s policies and servicing steps will show here: packet check, review call and chargeback watch.' },
+]
+
 // Prompt 749 — the Fulfillment Pipeline's three tabs. A rep has no Needs
 // attention: every No answer stays theirs, whatever step the text flow is on,
 // and a live call sits on Booked as a pulse (like the agent side).

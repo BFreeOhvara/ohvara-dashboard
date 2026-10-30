@@ -45,7 +45,7 @@ const TITLES = {
   '/agent/quoter': ['Quoter', 'InsuranceToolkits — multi-carrier instant quoting'],
   '/agent/underwriting': ['Underwriting', 'AI chat assistant for carrier placement based on client health'],
   '/agent/book': ['Book a call', 'Get your client on the calendar with Fulfillment'],
-  '/agent/clients': ['My Pipeline', 'Everyone booked with Fulfillment and where each cancellation stands'],
+  '/agent/clients': ['My Pipeline', 'Calls in progress on one side, your clients on the other'],
   '/agent/activity': ['Activity', 'What happened with your clients, newest first'],
   '/agent/inbounds': ['Inbounds', 'Everyone who came in for you, and what we’re doing with each one'],
   '/agent/calendar': ['Calendar', 'Every appointment, whoever booked it'],
@@ -141,8 +141,10 @@ function PipelineLine({ profile }) {
   if (isLoading) return null
   const needs = rows.filter(p => tabOf(p) === 'needs').length
   const booked = rows.filter(p => tabOf(p) === 'booked').length
+  const clients = rows.filter(p => tabOf(p) === 'cancelled').length
   return <LiveLine items={[
-    <Plain>{plural(rows.length, 'client')}</Plain>,
+    <Plain>{rows.length - clients} in progress</Plain>,
+    <Plain>{plural(clients, 'client')}</Plain>,
     needs > 0 && <Pill tone="amber" to="/agent/clients?stage=needs">{needs} {needs === 1 ? 'needs' : 'need'} attention</Pill>,
     booked > 0 && <Pill tone="blue">{booked} booked</Pill>,
   ]} />

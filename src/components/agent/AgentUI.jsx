@@ -1,10 +1,10 @@
 import { Children, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useImperativeHandle } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send, MapPin, Moon, ChevronDown, PencilLine } from 'lucide-react'
+import { ChevronRight, MessageCircleMore, CalendarPlus, ArrowUpRight, ArrowRight, TrendingUp, TrendingDown, TriangleAlert, Check, Sun, Clock, User, MessageSquareText, Search, Building2, RefreshCw, Phone, PhoneMissed, X, MessageSquare, Inbox, CalendarX, ChevronLeft, CalendarDays, CreditCard, ShieldCheck, Headset, Send, MapPin, Moon, ChevronDown, PencilLine, CircleCheck, ClipboardList } from 'lucide-react'
 import { card, eyebrow, control, MONO, DISPLAY } from '../../lib/exportStyles'
 import { SLOTS, slotTo24h, slotToISO, localDateISO, callWhen, callAt, fmtSlotTime, clientSlotISO, slotState, dayIn, addDaysStr } from '../../lib/scheduling'
 import { rankCarriers, exactCarrier } from '../../lib/carriers'
-import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, isMissedHold, MISSED_LABEL, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, digits, matchClients, placeOf } from '../../lib/agentBookings'
+import { STAGE, TONE, stageOf, agentStageOf, isLive, recoveryLabel, isMissedHold, MISSED_LABEL, canRebook, sameLocalDay, tabOf, PIPELINE_TABS, PROGRESS_TABS, COMING_SOON, digits, matchClients, placeOf } from '../../lib/agentBookings'
 import { US_STATES, zonedDateStr } from '../../lib/timezones'
 import { whenShort, daysBetween, dayShort, timeText } from '../../lib/fulfillmentDay'
 import { DayClock } from '../ui/DayClock'
@@ -1853,24 +1853,29 @@ export function PipelineSummary({
         ))}
       </div>
       <div className="pl-next">
-        {foot || (next ? (
-          <>
-            <span className="pl-ntile">
-              <small style={{ color: stVar('booked') }}>{new Date(next.scheduled_call_at).toLocaleDateString('en-US', { month: 'short', timeZone: tz }).toUpperCase()}</small>
-              <b>{new Date(next.scheduled_call_at).toLocaleDateString('en-US', { day: 'numeric', timeZone: tz })}</b>
-            </span>
-            <span className="k">{nextLabel}<b>{fullName(next)}</b></span>
-            <button type="button" className="ov-ghost" onClick={() => onOpenNext(next)}>Open</button>
-          </>
-        ) : (
-          <>
-            <span className="pl-ntile"><CalendarDays size={18} strokeWidth={1.9} style={{ color: 'var(--ov-faint)' }} /></span>
-            <span className="k">{nextLabel}<b>{nextEmpty}</b></span>
-            {onBook && <button type="button" className="ov-primary" onClick={onBook}><CalendarPlus size={16} strokeWidth={2} aria-hidden="true" />Book a call</button>}
-          </>
-        ))}
+        {foot || <NextCall next={next} onOpenNext={onOpenNext} onBook={onBook} nextLabel={nextLabel} nextEmpty={nextEmpty} tz={tz} />}
       </div>
     </section>
+  )
+}
+
+// The next Fulfillment call line at the foot of the pipeline box (both summaries use it).
+function NextCall({ next, onOpenNext, onBook, nextLabel, nextEmpty, tz }) {
+  return next ? (
+    <>
+      <span className="pl-ntile">
+        <small style={{ color: stVar('booked') }}>{new Date(next.scheduled_call_at).toLocaleDateString('en-US', { month: 'short', timeZone: tz }).toUpperCase()}</small>
+        <b>{new Date(next.scheduled_call_at).toLocaleDateString('en-US', { day: 'numeric', timeZone: tz })}</b>
+      </span>
+      <span className="k">{nextLabel}<b>{fullName(next)}</b></span>
+      <button type="button" className="ov-ghost" onClick={() => onOpenNext(next)}>Open</button>
+    </>
+  ) : (
+    <>
+      <span className="pl-ntile"><CalendarDays size={18} strokeWidth={1.9} style={{ color: 'var(--ov-faint)' }} /></span>
+      <span className="k">{nextLabel}<b>{nextEmpty}</b></span>
+      {onBook && <button type="button" className="ov-primary" onClick={onBook}><CalendarPlus size={16} strokeWidth={2} aria-hidden="true" />Book a call</button>}
+    </>
   )
 }
 
@@ -1883,7 +1888,7 @@ export function PipelineSummary({
 //
 // Prompt 749 — the Fulfillment Pipeline passes `tabs` + `tabFn` (three tabs) and
 // `meanings` (the line under each tab's name); the rest goes to StatusList.
-export function PipelineList({ rows, tab, onTab, list, tabs = PIPELINE_TABS, tabFn = tabOf, meanings, ...status }) {
+export function PipelineList({ rows, tab, onTab, list, tabs = PIPELINE_TABS, tabFn = tabOf, meanings, head, ...status }) {
   const split = useMemo(() => tabCounts(rows, tabFn, tabs), [rows, tabFn, tabs])
   const { counts } = split
   const tabRefs = useRef({})
@@ -1910,6 +1915,7 @@ export function PipelineList({ rows, tab, onTab, list, tabs = PIPELINE_TABS, tab
 
   return (
     <section className="ov-card pl-list">
+      {head}
       <div role="tablist" aria-label="Pipeline status" className={`pl-tabs hidden sm:grid ${tabs.length === 3 ? 'grid-cols-3' : 'grid-cols-2 lg:grid-cols-4'}`} onKeyDown={e => onKeyDown(e, tabRefs)}>
         {tabs.map(t => {
           const on = t === tab
@@ -1955,6 +1961,126 @@ export function PipelineList({ rows, tab, onTab, list, tabs = PIPELINE_TABS, tab
       <div className="pl-body">
         <StatusList key={tab} tab={tab} rows={list} {...status} />
       </div>
+    </section>
+  )
+}
+
+// ── My Pipeline: In progress vs Clients ──────────────────────────────────
+// The agent's My Pipeline splits into two sides. The switch tops the list box and the summary's bar
+// and rows follow the selected side. All of it is additive: PipelineSummary / PipelineList /
+// tabCounts behave as before for the Fulfillment and Admin Pipelines.
+//
+// `progress` / `clients` are the side counts, `attention` the Needs attention count (an amber badge
+// on In progress, hidden at 0). `short` is the phone's number-only badge.
+export function SideSwitch({ side, onSide, progress, clients, attention = 0, loading, short, className = '' }) {
+  const one = (key, label, n, badge) => (
+    <button type="button" aria-pressed={side === key} className={side === key ? 'is-on' : ''} onClick={() => side !== key && onSide(key)}>
+      {label}<b>{loading ? '—' : n}</b>{badge}
+    </button>
+  )
+  return (
+    <div className={className}>
+      <div className="ov-range pl-seg" role="group" aria-label="Pipeline side">
+        {one('progress', 'In progress', progress, !loading && attention > 0 && (
+          <span className="pl-seg-att" aria-label={`${attention} need attention`}>{short ? attention : `${attention} need attention`}</span>
+        ))}
+        {one('clients', 'Clients', clients)}
+      </div>
+    </div>
+  )
+}
+
+const SOON_ICON = { sold: CircleCheck, servicing: ClipboardList }
+
+// "Your pipeline" for the split page: `rows` are the range/agent scoped rows of BOTH sides. The total
+// line reads for both; the bar and rows follow `side`. Sold leads and Servicing have no data yet, so
+// they read "Coming soon" (never 0); `soon` off hides them (the v2 "Your clients" box covers that).
+export function SidePipelineSummary({
+  rows, side, tab, range, ranges, onRange, agentFilter, next, onOpenNext, onBook,
+  title = 'Your pipeline', soon = true, nextLabel = 'Next Fulfillment call', nextEmpty = 'No calls booked',
+}) {
+  const progressRows = useMemo(() => rows.filter(p => tabOf(p) !== 'cancelled'), [rows])
+  const { counts } = useMemo(() => tabCounts(progressRows, tabOf, PROGRESS_TABS), [progressRows])
+  const prog = progressRows.length
+  const clients = rows.length - prog
+  const pct = n => (prog ? Math.round((n / prog) * 100) : 0)
+  const tz = next?.client_timezone || undefined
+  return (
+    <section className="ov-card pl-pipe">
+      <div className="pl-lbl">{title}</div>
+      <div className="pl-total">
+        <b>{rows.length}</b>total · {prog} in progress · {clients} {clients === 1 ? 'client' : 'clients'}
+      </div>
+      {agentFilter && <div style={{ marginTop: 12 }}>{agentFilter}</div>}
+      <div style={{ marginTop: 12 }}><RangeSwitch ranges={ranges} value={range} onChange={onRange} full /></div>
+      <div style={{ marginTop: 14 }}>
+        {side === 'progress'
+          ? <PipelineBar counts={counts} tab={tab} height={6} tabs={PROGRESS_TABS} />
+          : <PipelineBar counts={{ cancelled: clients }} tab="cancelled" height={6} tabs={['cancelled']} />}
+      </div>
+      <div className="pl-rows">
+        {side === 'progress' ? PROGRESS_TABS.map(t => (
+          <div key={t} className="pl-row2">
+            <i style={{ background: stVar(t) }} />
+            <span className="l">{PIPELINE_TAB[t].label}</span>
+            <span className="c">{counts[t]}</span>
+            <span className="p">{pct(counts[t])}%</span>
+          </div>
+        )) : (
+          <>
+            <div className="pl-row2">
+              <i style={{ background: stVar('cancelled') }} />
+              <span className="l">Cancelled clients</span>
+              <span className="c">{clients}</span>
+              <span className="p" />
+            </div>
+            {soon && COMING_SOON.map(c => (
+              <div key={c.key} className="pl-row2 is-off">
+                <i />
+                <span className="l">{c.title}</span>
+                <span className="soon-t">Coming soon</span>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+      <div className="pl-next">
+        <NextCall next={next} onOpenNext={onOpenNext} onBook={onBook} nextLabel={nextLabel} nextEmpty={nextEmpty} tz={tz} />
+      </div>
+    </section>
+  )
+}
+
+// The Clients side of the list box: the switch (`head`), a "Cancelled clients" head over today's
+// cancelled columns (with Show more paging), then a pinned strip of two Coming soon cards. `list` is
+// the sorted Cancelled rows; `count` the head's number; the rest goes to StatusList.
+export function ClientsSide({ head, list, count, soon = true, ...status }) {
+  return (
+    <section className="ov-card pl-list">
+      {head}
+      <div className="pl-sec">
+        <span className="ic" aria-hidden="true"><Check size={17} strokeWidth={2.4} /></span>
+        <span style={{ minWidth: 0 }}>
+          <b>Cancelled clients{!status.loading && <span>{count}</span>}</b>
+          <p>Clients whose old policy Fulfillment has cancelled.</p>
+        </span>
+      </div>
+      <div className="pl-body">
+        <StatusList tab="cancelled" rows={list} emptyText="No cancelled clients yet." {...status} />
+      </div>
+      {soon && (
+        <div className="pl-soon-strip">
+          {COMING_SOON.map(c => (
+            <div key={c.key} className="pl-soon">
+              <span className="ic" aria-hidden="true">{(() => { const I = SOON_ICON[c.key]; return <I size={16} strokeWidth={2} /> })()}</span>
+              <div style={{ minWidth: 0 }}>
+                <div className="hdl"><b>{c.title}</b><span className="soon">Coming soon</span></div>
+                <p>{c.text}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   )
 }
@@ -2196,7 +2322,7 @@ function NeedsGroupHead({ icon: Icon, title, count, line }) {
 // row actions, the booking agent in its own column, times in `tz`.
 // Prompt 759 — the Admin Pipeline adds a Needs attention tab to it: `fulfill.reason(p)`
 // is the row's status text there, and `fulfill.tint(p)` an optional row background.
-export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebook, onConfirm, canMove, loading, emptyRange, onBook, fulfill }) {
+export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebook, onConfirm, canMove, loading, emptyRange, onBook, fulfill, emptyText }) {
   const [limit, setLimit] = useState(PAGE)
 
   if (loading) return <EmptyState tab={tab}>Loading clients…</EmptyState>
@@ -2217,7 +2343,7 @@ export function StatusList({ tab, rows, now, showAgent, activeId, onOpen, onRebo
       )
     }
     if (tab === 'noAnswer') return <EmptyState icon={PhoneMissed} tab={tab}>No missed calls.</EmptyState>
-    if (tab === 'cancelled') return <EmptyState icon={Inbox} tab={tab}>No cancellations yet.</EmptyState>
+    if (tab === 'cancelled') return <EmptyState icon={Inbox} tab={tab}>{emptyText || 'No cancellations yet.'}</EmptyState>
     if (fulfill) return <EmptyState icon={Phone} tab={tab}>No calls waiting right now.</EmptyState>
     return (
       <EmptyState icon={CalendarPlus} tab={tab} action={onBook && (

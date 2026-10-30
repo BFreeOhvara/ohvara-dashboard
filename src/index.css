@@ -1291,6 +1291,31 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 @media (max-width: 639.98px) {
   .pl-grp { margin: 12px 0 10px; border: 1px solid var(--ov-st-needs-edge); border-radius: 14px; }
 }
+/* My Pipeline split: the In progress | Clients switch tops the list box (an .ov-range, two wide). */
+.pl-side { flex-shrink: 0; padding: 16px 16px 0; }
+.pl-side + .pl-tabs { padding-top: 12px; }
+.ov-range.pl-seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; box-sizing: border-box; }
+.pl-seg button { height: 44px; min-width: 0; padding: 0 14px; display: flex; align-items: center; justify-content: center; gap: 9px; font-size: 14.5px; }
+.pl-seg button b { font-family: var(--font-display); font-size: 18px; font-weight: 700; letter-spacing: -0.02em; color: var(--ov-mid); font-variant-numeric: tabular-nums; }
+.pl-seg button.is-on b { color: inherit; }
+.pl-seg-att { height: 22px; padding: 0 8px; border-radius: 999px; background: var(--ov-badge-bg); color: var(--ov-badge-fg); display: inline-flex; align-items: center; font-size: 12px; font-weight: 700; }
+/* Clients side: section head, then the pinned Coming soon strip. */
+.pl-sec { flex-shrink: 0; padding: 14px 20px 12px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--ov-line); }
+.pl-sec .ic { width: 32px; height: 32px; flex-shrink: 0; border-radius: 10px; background: var(--ov-st-cancelled-tint); color: var(--ov-st-cancelled); display: flex; align-items: center; justify-content: center; }
+.pl-sec b { display: block; font-size: 15px; font-weight: 600; color: var(--ov-hi); }
+.pl-sec b span { margin-left: 6px; font-family: var(--font-display); color: var(--ov-st-cancelled); }
+.pl-sec p { margin: 0; font-size: 12.5px; color: var(--ov-mute); }
+.pl-soon-strip { flex-shrink: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px 16px; border-top: 1px solid var(--ov-line); background: var(--ov-table-head); }
+@media (max-width: 1023.98px) { .pl-soon-strip { grid-template-columns: minmax(0, 1fr); } }
+.pl-soon { display: flex; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1px dashed var(--ov-stub); min-width: 0; }
+.pl-soon .ic { width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px; background: var(--ov-stub); color: var(--ov-mid); display: flex; align-items: center; justify-content: center; }
+.pl-soon .hdl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pl-soon b { font-size: 14px; font-weight: 600; color: var(--ov-hi); }
+.pl-soon p { margin: 3px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--ov-mute); }
+.soon { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; background: var(--ov-stub); color: var(--ov-mid); white-space: nowrap; }
+.pl-row2.is-off i { background: var(--ov-stub); }
+.pl-row2.is-off .l { color: var(--ov-mute); }
+.pl-row2 .soon-t { grid-column: 3 / 5; text-align: right; font-size: 12.5px; font-weight: 600; color: var(--ov-faint); }
 .pl-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 @media (min-width: 640px) { .pl-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 16px; } }
 .pl-empty {
@@ -4179,6 +4204,15 @@ button.nt-phone:hover { color: var(--ov-hi); }
 }
 .ph-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .ph-seg.ph-seg-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* My Pipeline on a phone: the In progress | Clients switch (an .ov-range, 52px with its track), sentence-case
+   group labels and the Coming soon cards. */
+.ph-side { margin-top: 12px; }
+.ph-side .ov-range.pl-seg button { gap: 7px; }
+.ph-side .pl-seg-att { min-width: 20px; height: 20px; padding: 0 6px; justify-content: center; font-size: 11.5px; font-weight: 800; }
+.ph-group-label.is-sentence { font-size: 13px; letter-spacing: 0; text-transform: none; }
+.ph-group-label .soon { margin-left: auto; }
+.ph-soon { padding: 14px; display: flex; gap: 12px; font-size: 13px; line-height: 1.45; color: var(--ov-mute); }
+.ph-soon .ic { width: 34px; height: 34px; flex: none; border-radius: 10px; background: var(--ov-stub); color: var(--ov-mid); display: flex; align-items: center; justify-content: center; }
 .ph-plus.is-live { background: var(--ph-live-red); box-shadow: 0 12px 28px -8px rgba(239,68,68,0.8), 0 0 0 5px var(--ph-plus-ring); }
 button.ph-tab { border: 0; background: none; padding: 0; font: inherit; cursor: pointer; }
 
