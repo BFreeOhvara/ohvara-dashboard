@@ -1,31 +1,37 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Lock, AlertTriangle } from 'lucide-react'
-import { useAuth } from '../../hooks/useAuth'
-import { useAppSettings } from '../../hooks/useAppSettings'
 import { useBillingTiers } from '../../hooks/useBillingTiers'
-import { billingAccess, formatBillingDate, formatWeekly } from '../../lib/billing'
+import { usePortal, useEndMomentOffHome } from '../../hooks/usePortalAccess'
+import { formatBillingDate, formatWeekly } from '../../lib/billing'
 import { card, primaryBtn, sectionTitle, MONO } from '../../lib/exportStyles'
 import { isNativeApp } from '../../lib/native'
 import { NATIVE_BILLING_TEXT } from '../native/NativeBillingNote'
+import { LockedWelcome, ConfirmPayment, UnlockedMoment, AddServicingCard } from '../agent/LockedWelcome'
 
-// Prompt 673 — wraps every page's content. Inert unless
-// app_settings.agent_billing_enforced is on (it's off until Stripe is live).
+// Prompt 673 — wraps every page's content. For an invited agent it's inert
+// unless app_settings.agent_billing_enforced is on (it's off until Stripe is live).
 //
 // Locked = a full lock screen in place of the page, not a read-only overlay:
 // a half-working portal invites "why can't I book?" confusion, and the agent's
 // existing clients are still being worked by Fulfillment regardless. Billing
 // (and Settings) stay reachable so paying is always one click away. The
 // sidebar stays too. Prompt 691 — Billing is its own page, /agent/billing.
+// Self-signup agents are locked until they pay, whatever the flag says, and see
+// the welcome instead of the paused card. The rules: lib/portalAccess.js.
 export function BillingGate({ children }) {
-  const { profile } = useAuth()
-  const { data: settings } = useAppSettings()
-  const { pathname } = useLocation()
+  const portal = usePortal()
+  useEndMomentOffHome(portal)
+  const { profile, grace, view } = portal
   const { data: tiers = [] } = useBillingTiers()
 
-  const { locked, grace } = billingAccess(profile, !!settings?.agent_billing_enforced)
   const price = formatWeekly(tiers[0]?.weekly_cents)
 
-  if (locked && !['/settings', '/agent/billing', '/agent/leads'].includes(pathname)) {
+  if (view === 'loading') return null
+  if (view === 'welcome') return <LockedWelcome portal={portal} />
+  if (view === 'confirm') return <ConfirmPayment portal={portal} />
+  if (view === 'unlocked') return <UnlockedMoment portal={portal} />
+  if (view === 'servicing') return <AddServicingCard />
+  if (view === 'paused') {
     return (
       <div style={{ ...card, maxWidth: 520, margin: '48px auto 0', textAlign: 'center', padding: '36px 28px' }}>
         <div style={{

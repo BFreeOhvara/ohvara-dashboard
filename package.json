@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "test": "node scripts/run-tests.mjs",
+    "test:unit": "node --test \"src/lib/**/*.test.js\"",
     "test:sql": "node scripts/run-sql-tests.mjs",
     "preview": "vite preview",
     "shots:leads": "node scripts/leads-shots.mjs",

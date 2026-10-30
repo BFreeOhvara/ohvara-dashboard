@@ -1,0 +1,146 @@
+[
+  {
+    "name": "signup-open-1920-light",
+    "sideways": false,
+    "sw": 1905,
+    "cw": 1920,
+    "errText": null,
+    "pageErrors": []
+  },
+  {
+    "name": "signup-open-1920-dark",
+    "sideways": false,
+    "sw": 1905,
+    "cw": 1920,
+    "errText": null,
+    "pageErrors": []
+  },
+  {
+    "name": "signup-open-1440-light",
+    "sideways": false,
+    "sw": 1425,
+    "cw": 1440,
+    "errText": null,
+    "pageErrors": []
+  },
+  {
+    "name": "signup-open-1440-dark",
+    "sideways": false,
+    "sw": 1425,
+    "cw": 1440,
+    "errText": null,
+    "pageErrors": []
+  },
+  {
+    "name": "signup-open-390-light",
+    "sideways": false,
+    "sw": 390,
+    "cw": 390,
+    "errText": null,
+    "pageErrors": []
+  },
+  {
+    "name": "signup-open-390-dark",
+    "sideways": false,
+    "sw": 390,
+    "cw": 390,
+    "errText": null,
+    "pageErrors": []
+  },
+  {
+    "name": "signup-closed-1920-light",
+    "sideways": false,
+    "sw": 1905,
+    "cw": 1920,
+    "errText": null,
+    "pageErrors": []
+  },
+  {
+    "name": "signup-closed-1920-dark",
+    "sideways": false,
+    "sw": 1905,
+    "cw": 1920,
+    "errText": null,
+    "pageErrors": []
+  },
+  {
+    "name": "signup-closed-1440-light",
+    "sideways": false,
+    "sw": 1425,
+    "cw": 1440,
+    "errText": null,
+    "pageErrors": []
+  },
+  {
+    "name": "signup-closed-1440-dark",
+    "sideways": false,
+    "sw": 1425,
+    "cw": 1440,
+    "errText": null,
+    "pageErrors": []
+  },
+  {
+    "name": "signup-closed-390-light",
+    "sideways": false,
+    "sw": 390,
+    "cw": 390,
+    "errText": null,
+    "pageErrors": []
+  },
+  {
+    "name": "signup-closed-390-dark",
+    "sideways": false,
+    "sw": 390,
+    "cw": 390,
+    "errText": null,
+    "pageErrors": []
+  },
+  {
+    "name": "locked-1920-light",
+    "sideways": false,
+    "sw": 1905,
+    "cw": 1920,
+    "errText": null,
+    "pageErrors": []
+  },
+  {
+    "name": "locked-1920-dark",
+    "sideways": false,
+    "sw": 1905,
+    "cw": 1920,
+    "errText": null,
+    "pageErrors": []
+  },
+  {
+    "name": "locked-1440-light",
+    "sideways": false,
+    "sw": 1425,
+    "cw": 1440,
+    "errText": null,
+    "pageErrors": []
+  },
+  {
+    "name": "locked-1440-dark",
+    "sideways": false,
+    "sw": 1425,
+    "cw": 1440,
+    "errText": null,
+    "pageErrors": []
+  },
+  {
+    "name": "locked-390-light",
+    "sideways": false,
+    "sw": 390,
+    "cw": 390,
+    "errText": null,
+    "pageErrors": []
+  },
+  {
+    "name": "locked-390-dark",
+    "sideways": false,
+    "sw": 390,
+    "cw": 390,
+    "errText": null,
+    "pageErrors": []
+  }
+]

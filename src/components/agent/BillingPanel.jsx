@@ -221,8 +221,9 @@ export function BillingPanel({ profile }) {
           )}
         </div>
 
+        {/* The prepaid top-up isn't the approved way to buy Leads, so a self-signup never sees it. */}
         <div className="ov-bill-col is-pre">
-          <PrepaidBalanceCard agentId={profile.id} />
+          {profile.signup_source !== 'self' && <PrepaidBalanceCard agentId={profile.id} />}
         </div>
         <div className="ov-bill-facts"><BillingFacts /></div>
       </div>

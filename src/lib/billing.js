@@ -33,29 +33,9 @@ export const TONE_STYLE = {
   muted:   { background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: 'var(--border-w) solid var(--border)' },
 }
 
-const future = (iso, now) => !!iso && new Date(iso).getTime() > now
-
-// Does this profile currently get into the portal?
-//   { locked, grace } — grace = past_due but still inside the buffer.
-// Only agents are ever billed; everyone else always has access.
-export function billingAccess(profile, enforced, now = Date.now()) {
-  // Gate applies only to role=agent with billing_exempt=false (P673).
-  if (!profile || profile.role !== 'agent' || profile.billing_exempt || !enforced) return { locked: false, grace: false }
-  switch (profile.billing_status) {
-    case 'active':
-    case 'exempt':
-      return { locked: false, grace: false }
-    case 'past_due':
-      return future(profile.billing_grace_until, now)
-        ? { locked: false, grace: true }
-        : { locked: true, grace: false }
-    case 'canceled':
-      // Cancelled at period end: the paid week still counts.
-      return { locked: !future(profile.billing_current_period_end, now), grace: false }
-    default:
-      return { locked: true, grace: false }
-  }
-}
+// The unlock decision lives in portalAccess.js, which has no imports so it can
+// be tested on its own.
+export { billingAccess, portalState, gateView } from './portalAccess'
 
 // Prompt 725 — a comped agent (billing_exempt) is shown to the agent exactly
 // as an active subscriber on its tier: it never pays and is never locked, but
@@ -128,7 +108,11 @@ let stripeKey = null
 export function getStripe(publishableKey) {
   if (publishableKey !== stripeKey) {
     stripeKey = publishableKey
-    stripeLoad = import('@stripe/stripe-js/pure').then(m => m.loadStripe(publishableKey))
+    // A failed load isn't kept, so Try again really tries again.
+    stripeLoad = import('@stripe/stripe-js/pure').then(m => m.loadStripe(publishableKey)).catch(e => {
+      stripeKey = null
+      throw e
+    })
   }
   return stripeLoad
 }

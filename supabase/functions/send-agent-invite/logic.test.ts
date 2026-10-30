@@ -5,7 +5,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { handle, type Caller, type Deps } from './logic.ts'
-import { LOCKED_MESSAGE } from '../_shared/portalAccess.ts'
+import { LOCKED_MESSAGE, isLockedSelfSignup } from '../_shared/portalAccess.ts'
 
 function fake(caller: Caller, locked: boolean) {
   const touched: string[] = []
@@ -54,6 +54,60 @@ test('an agent who is not locked sends exactly as before', async () => {
 
 test('admin sends exactly as before', async () => {
   const { d, touched } = fake({ ...agent, role: 'admin' }, false)
+  assert.deepEqual(await handle(d, 'jwt', { ...send, role: 'fulfillment' }), { status: 200, body: { ok: true } })
+  assert.ok(touched.includes('insertInvite'))
+})
+
+// ── The same checks with the real guard (_shared/portalAccess.ts) in front of a fake database ──
+
+// A service-role client that answers for one profile and one agent_portal_access result.
+function guardDb(profile: unknown, access: unknown, rpcError: { code: string } | null = null) {
+  const chain = { select: () => chain, eq: () => chain, maybeSingle: async () => ({ data: profile, error: null }) }
+  return {
+    from: () => chain,
+    rpc: async () => ({ data: rpcError ? null : access, error: rpcError }),
+  }
+}
+
+function wired(caller: Caller, profile: unknown, access: unknown, rpcError: { code: string } | null = null) {
+  const f = fake(caller, false)
+  const db = guardDb(profile, access, rpcError)
+  f.d.lockedSelfSignup = id => isLockedSelfSignup(db, id)
+  return f
+}
+
+test('real guard: a locked self-signup caller is refused on email and on text, before any write or send', async () => {
+  for (const body of [send, { action: 'send', channel: 'sms', to: '5125550123' }]) {
+    const { d, touched } = wired(agent, { role: 'agent', signup_source: 'self' }, { unlocked: false })
+    assert.deepEqual(await handle(d, 'jwt', body), { status: 403, body: { error: LOCKED_MESSAGE } })
+    assert.deepEqual(touched, [], 'no count, lookup, insert, delete or fetch happened')
+  }
+})
+
+test('real guard: a self-signup caller whose access cannot be read is refused before any write', async () => {
+  const { d, touched } = wired(agent, { role: 'agent', signup_source: 'self' }, null, { code: 'PGRST202' })
+  assert.deepEqual(await handle(d, 'jwt', send), { status: 403, body: { error: LOCKED_MESSAGE } })
+  assert.deepEqual(touched, [])
+})
+
+test('real guard: an unlocked self-signup agent sends the invite', async () => {
+  const { d, touched } = wired(agent, { role: 'agent', signup_source: 'self' }, { unlocked: true })
+  assert.deepEqual(await handle(d, 'jwt', send), { status: 200, body: { ok: true } })
+  assert.ok(touched.includes('insertInvite'))
+  assert.ok(touched.includes('fetch'))
+})
+
+test('real guard: an invited agent sends the invite, even though their access would read as not unlocked', async () => {
+  for (const signup_source of ['invite', null]) {
+    const { d, touched } = wired(agent, { role: 'agent', signup_source }, { unlocked: false })
+    assert.deepEqual(await handle(d, 'jwt', send), { status: 200, body: { ok: true } })
+    assert.ok(touched.includes('insertInvite'))
+  }
+})
+
+test('real guard: an admin sends the invite', async () => {
+  const admin = { ...agent, role: 'admin' }
+  const { d, touched } = wired(admin, { role: 'admin', signup_source: 'self' }, { unlocked: false })
   assert.deepEqual(await handle(d, 'jwt', { ...send, role: 'fulfillment' }), { status: 200, body: { ok: true } })
   assert.ok(touched.includes('insertInvite'))
 })

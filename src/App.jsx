@@ -14,6 +14,7 @@ import './lib/installPrompt'
 
 import Login from './pages/Login'
 import Join from './pages/Join'
+import Signup from './pages/Signup'
 import ProtectLanding from './pages/public/ProtectLanding'
 import ConfirmEmail from './pages/ConfirmEmail'
 import ResetPassword from './pages/ResetPassword'
@@ -113,6 +114,8 @@ export default function App() {
             <Route path="/join" element={<Join />} />
             <Route path="/join/:token" element={<Join />} />
             <Route path="/j/:token" element={<Join />} />
+            {/* Public sign-up. Shows "isn't open yet" (no form) unless self-signup's status says open, and never in the phone app. */}
+            <Route path="/signup" element={<Signup />} />
             {/* /protect is the one public mortgage-protection page (landing + qualifier; no
                 login; posts to submit-mp-lead). /mp forwards to it, utm tags kept. */}
             <Route path="/mp" element={<MpToProtect />} />
