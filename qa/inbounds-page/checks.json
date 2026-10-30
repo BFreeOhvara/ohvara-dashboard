@@ -47,6 +47,17 @@
     "pass": true
   },
   {
+    "name": "1920-light header: page title Leads (and on desktop its subtitle) is in the top bar",
+    "pass": true,
+    "h1": [
+      "Leads"
+    ]
+  },
+  {
+    "name": "1920-light wording: the word \"inbound\" is not on the page",
+    "pass": true
+  },
+  {
     "name": "1920-light page errors",
     "pass": true
   },
@@ -62,10 +73,14 @@
   {
     "name": "1920-light empty: not-getting-inbounds state with Start",
     "pass": true,
-    "h": "You’re not getting inbounds yet",
+    "h": "You’re not getting leads yet",
     "to": "/agent/billing",
     "label": "Start",
     "open": true
+  },
+  {
+    "name": "1920-light empty: header title kept, no \"inbound\" wording",
+    "pass": true
   },
   {
     "name": "1920-light empty: no sideways scroll",
@@ -158,6 +173,17 @@
     "pass": true
   },
   {
+    "name": "1440-light header: page title Leads (and on desktop its subtitle) is in the top bar",
+    "pass": true,
+    "h1": [
+      "Leads"
+    ]
+  },
+  {
+    "name": "1440-light wording: the word \"inbound\" is not on the page",
+    "pass": true
+  },
+  {
     "name": "1440-light page errors",
     "pass": true
   },
@@ -173,10 +199,14 @@
   {
     "name": "1440-light empty: not-getting-inbounds state with Start",
     "pass": true,
-    "h": "You’re not getting inbounds yet",
+    "h": "You’re not getting leads yet",
     "to": "/agent/billing",
     "label": "Start",
     "open": true
+  },
+  {
+    "name": "1440-light empty: header title kept, no \"inbound\" wording",
+    "pass": true
   },
   {
     "name": "1440-light empty: no sideways scroll",
@@ -269,6 +299,17 @@
     "pass": true
   },
   {
+    "name": "390-light header: page title Leads (and on desktop its subtitle) is in the top bar",
+    "pass": true,
+    "h1": [
+      "Leads"
+    ]
+  },
+  {
+    "name": "390-light wording: the word \"inbound\" is not on the page",
+    "pass": true
+  },
+  {
     "name": "390-light page errors",
     "pass": true
   },
@@ -284,10 +325,14 @@
   {
     "name": "390-light empty: not-getting-inbounds state with Start",
     "pass": true,
-    "h": "You’re not getting inbounds yet",
+    "h": "You’re not getting leads yet",
     "to": "/agent/billing",
     "label": "Start",
     "open": true
+  },
+  {
+    "name": "390-light empty: header title kept, no \"inbound\" wording",
+    "pass": true
   },
   {
     "name": "390-light empty: no sideways scroll",
@@ -380,6 +425,17 @@
     "pass": true
   },
   {
+    "name": "1920-dark header: page title Leads (and on desktop its subtitle) is in the top bar",
+    "pass": true,
+    "h1": [
+      "Leads"
+    ]
+  },
+  {
+    "name": "1920-dark wording: the word \"inbound\" is not on the page",
+    "pass": true
+  },
+  {
     "name": "1920-dark page errors",
     "pass": true
   },
@@ -395,10 +451,14 @@
   {
     "name": "1920-dark empty: not-getting-inbounds state with Start",
     "pass": true,
-    "h": "You’re not getting inbounds yet",
+    "h": "You’re not getting leads yet",
     "to": "/agent/billing",
     "label": "Start",
     "open": true
+  },
+  {
+    "name": "1920-dark empty: header title kept, no \"inbound\" wording",
+    "pass": true
   },
   {
     "name": "1920-dark empty: no sideways scroll",
@@ -491,6 +551,17 @@
     "pass": true
   },
   {
+    "name": "1440-dark header: page title Leads (and on desktop its subtitle) is in the top bar",
+    "pass": true,
+    "h1": [
+      "Leads"
+    ]
+  },
+  {
+    "name": "1440-dark wording: the word \"inbound\" is not on the page",
+    "pass": true
+  },
+  {
     "name": "1440-dark page errors",
     "pass": true
   },
@@ -506,10 +577,14 @@
   {
     "name": "1440-dark empty: not-getting-inbounds state with Start",
     "pass": true,
-    "h": "You’re not getting inbounds yet",
+    "h": "You’re not getting leads yet",
     "to": "/agent/billing",
     "label": "Start",
     "open": true
+  },
+  {
+    "name": "1440-dark empty: header title kept, no \"inbound\" wording",
+    "pass": true
   },
   {
     "name": "1440-dark empty: no sideways scroll",
@@ -602,6 +677,17 @@
     "pass": true
   },
   {
+    "name": "390-dark header: page title Leads (and on desktop its subtitle) is in the top bar",
+    "pass": true,
+    "h1": [
+      "Leads"
+    ]
+  },
+  {
+    "name": "390-dark wording: the word \"inbound\" is not on the page",
+    "pass": true
+  },
+  {
     "name": "390-dark page errors",
     "pass": true
   },
@@ -617,10 +703,14 @@
   {
     "name": "390-dark empty: not-getting-inbounds state with Start",
     "pass": true,
-    "h": "You’re not getting inbounds yet",
+    "h": "You’re not getting leads yet",
     "to": "/agent/billing",
     "label": "Start",
     "open": true
+  },
+  {
+    "name": "390-dark empty: header title kept, no \"inbound\" wording",
+    "pass": true
   },
   {
     "name": "390-dark empty: no sideways scroll",

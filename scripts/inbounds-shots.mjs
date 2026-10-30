@@ -113,6 +113,12 @@ try {
       check(`${tag} board: no sideways scroll`, (await sideways(page)) <= 0, 'sideways scroll')
       const slot = await page.evaluate(() => ({ start: !!document.querySelector('.inb-start'), tabs: document.querySelectorAll('.inb-tab').length }))
       check(`${tag} board: no Start state when there are inbounds`, !slot.start && slot.tabs === 2, JSON.stringify(slot))
+      const hd = await page.evaluate(() => ({
+        text: document.body.innerText, h: [...document.querySelectorAll('h1')].map(e => e.innerText.trim()).filter(Boolean),
+        page: document.querySelector('.inb-page')?.innerText || '',
+      }))
+      check(`${tag} header: page title Leads (and on desktop its subtitle) is in the top bar`, hd.h.includes('Leads') && (phone || /Everyone who came in for you/.test(hd.text)), JSON.stringify(hd.h), { h1: hd.h })
+      check(`${tag} wording: the word "inbound" is not on the page`, !/inbound/i.test(hd.page), (hd.page.match(/.{0,30}inbound.{0,30}/i) || [''])[0])
       await shot(page, `board-${tag}`, phone)
       check(`${tag} page errors`, errors.length === 0, errors.join(' | '))
       await ctx.close()
@@ -130,7 +136,8 @@ try {
         h: document.querySelector('.inb-start h2')?.innerText, to: document.querySelector('.inb-start a')?.getAttribute('href'),
         label: document.querySelector('.inb-start a')?.innerText.trim(), open: document.querySelector('.inb-explain')?.open,
       }))
-      check(`${tag} empty: not-getting-inbounds state with Start`, /not getting inbounds yet/.test(st.h) && st.label === 'Start' && st.to === '/agent/billing' && st.open === true, JSON.stringify(st), st)
+      check(`${tag} empty: not-getting-inbounds state with Start`, /not getting leads yet/.test(st.h) && st.label === 'Start' && st.to === '/agent/billing' && st.open === true, JSON.stringify(st), st)
+      check(`${tag} empty: header title kept, no "inbound" wording`, (await page.evaluate(() => [...document.querySelectorAll('h1')].some(e => e.innerText.trim() === 'Leads'))) && !/inbound/i.test(await page.evaluate(() => document.querySelector('.inb-page').innerText)), 'header missing or inbound wording')
       check(`${tag} empty: no sideways scroll`, (await sideways(page)) <= 0, 'sideways scroll')
       await shot(page, `empty-${tag}`, phone)
       await ctx.close()

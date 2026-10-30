@@ -62,7 +62,7 @@ async function mock(page) {
   })
 }
 
-const SIZES = { 1440: { width: 1440, height: 900 }, 390: { width: 390, height: 844 } }
+const SIZES = { 1920: { width: 1920, height: 1080 }, 1440: { width: 1440, height: 900 }, 390: { width: 390, height: 844 } }
 process.env.VITE_SUPABASE_URL = SB
 process.env.VITE_SUPABASE_ANON_KEY = 'mock-anon-key'
 const server = await createServer({ server: { port: PORT, strictPort: true, fs: { strict: false } }, logLevel: 'error' })
@@ -87,16 +87,16 @@ async function open(theme, w) {
   return { ctx, page }
 }
 
-const ROUTES = { '/agent': 'overview', '/agent/clients': 'clients', '/agent/book': 'book', '/agent/more': 'more', '/agent/leads': 'leads', '/agent/calendar': 'calendar' }
+const ROUTES = { '/agent': 'overview', '/agent/leads': 'leads', '/agent/calendar': 'calendar', '/agent/clients': 'clients', '/agent/book': 'book', '/agent/more': 'more' }
 const scrollInfo = page => page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }))
 
 try {
   for (const theme of ['dark', 'light']) {
-    for (const w of [1440, 390]) {
+    for (const w of [1920, 1440, 390]) {
       const { ctx, page } = await open(theme, w)
       for (const [route, name] of Object.entries(ROUTES)) {
         await page.goto(base + route, { waitUntil: 'domcontentloaded' })
-        await page.waitForSelector(w === 1440 ? '.ov-sb-nav' : '.ph-tabbar, .ph-book', { timeout: 30000 })
+        await page.waitForSelector(w !== 390 ? '.ov-sb-nav' : '.ph-tabbar, .ph-book', { timeout: 30000 })
         await page.waitForTimeout(1200)
         await page.screenshot({ path: join(OUT, `${name}-${w}-${theme}.png`), fullPage: false })
         // /agent/more is the phone's page: a desktop visit goes home by design.
@@ -116,9 +116,9 @@ try {
           const s = await scrollInfo(page)
           check(`no sideways scroll ${route} ${w} ${theme}`, s.sw <= s.cw, s)
         }
-        if (w === 1440 && route === '/agent' && theme === 'dark') {
+        if (w !== 390 && route === '/agent' && theme === 'dark') {
           const groups = await page.$$eval('.ov-sb-nav [role=group]', gs => gs.map(g => ({ group: g.getAttribute('aria-label'), items: [...g.querySelectorAll('.ov-sb-label')].map(e => e.textContent.trim()) })))
-          check('sidebar has exactly the five groups', JSON.stringify(groups) === JSON.stringify([
+          check(`sidebar has the five groups, Leads between Today and Servicing (${w})`, JSON.stringify(groups) === JSON.stringify([
             { group: 'Today', items: ['Overview', 'Activity'] },
             { group: 'Leads', items: ['Leads', 'Calendar'] },
             { group: 'Servicing', items: ['Clients', 'Submit'] },
@@ -128,9 +128,17 @@ try {
           const badge = await page.$$eval('.ov-sb-badge.is-amber', e => e.map(x => x.textContent.trim()))
           check('Clients amber needs-attention badge shows', badge.length === 1 && badge[0] === '1', badge)
         }
-        if (w === 1440 && theme === 'dark' && (route === '/agent/clients' || route === '/agent/book')) {
+        if (w !== 390 && theme === 'dark' && ['/agent/clients', '/agent/book', '/agent/leads', '/agent/calendar'].includes(route)) {
           const h = (await page.locator('h1.ov-hname').first().textContent()).trim()
-          check(`header on ${route}`, h === (route === '/agent/clients' ? 'Clients' : 'Submit'), h)
+          check(`header on ${route} (${w})`, h === { '/agent/clients': 'Clients', '/agent/book': 'Submit', '/agent/leads': 'Leads', '/agent/calendar': 'Calendar' }[route], h)
+        }
+        if (w === 390 && route === '/agent/more') {
+          const rows = await page.$$eval('.ph-mrow .ph-mrow-label', e => e.map(x => x.textContent.trim()))
+          check(`More page has Leads and Calendar, no Inbounds (${theme})`, rows.includes('Leads') && rows.includes('Calendar') && !rows.includes('Inbounds'), rows)
+        }
+        if (w === 390 && (route === '/agent/leads' || route === '/agent/calendar')) {
+          const t = (await page.locator('.ph-h1, h1').first().textContent()).trim()
+          check(`phone title on ${route} (${theme})`, t === (route === '/agent/leads' ? 'Leads' : 'Calendar'), t)
         }
         if (w === 390 && theme === 'dark' && route === '/agent') {
           const labels = await page.$$eval('.ph-tabbar a, .ph-tabbar button', els => els.map(e => e.getAttribute('aria-label')))

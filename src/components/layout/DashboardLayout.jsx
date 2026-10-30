@@ -46,8 +46,8 @@ const TITLES = {
   '/agent/book': ['Submit', 'Get your client on the calendar with Fulfillment'],
   '/agent/clients': ['Clients', 'Calls in progress on one side, your clients on the other'],
   '/agent/activity': ['Activity', 'What happened with your clients, newest first'],
-  '/agent/leads': ['Leads', 'Everyone who came in for you, and what we’re doing with each one'],
   '/agent/calendar': ['Calendar', 'Every appointment, whoever booked it'],
+  '/agent/leads': ['Leads', 'Everyone who came in for you, and what we’re doing with each one'],
   '/agent/billing': ['Billing', 'Your weekly subscription and next charge'],
   '/agent/carriers': ['Carrier Portals', 'Every carrier login in one directory'],
   '/agent/stats': ['Performance', 'Production, persistency, and leaderboard — switch the view'],
@@ -210,19 +210,19 @@ const AGENT_LINES = {
   '/settings': SettingsLine,
 }
 
-// One inbound: "Inbounds / <their name>", from the list the page already loads (same query key).
+// One inbound: "Leads / <their name>", from the list the page already loads (same query key).
 function InboundTitle() {
   const { pathname } = useLocation()
   const { data } = useInbounds()
   const id = pathname.split('/').pop()
   const l = (data || []).find(x => x.lead_id === id)
-  return <h1 className="ov-hname">{l ? leadName(l) : 'Inbound'}</h1>
+  return <h1 className="ov-hname">{l ? leadName(l) : 'Lead'}</h1>
 }
 
 function PageTitle({ pathname }) {
   const { profile, session } = useAuth()
   const detail = profile?.role === 'agent' && isInboundDetail(pathname)
-  const entry = detail ? { group: 'Inbounds', label: 'Inbound', icon: Inbox } : navEntry(profile?.role, pathname)
+  const entry = detail ? { group: 'Leads', label: 'Lead', icon: Inbox } : navEntry(profile?.role, pathname)
   const [title, sub] = TITLES[pathname] || ['', '']
   const name = entry?.label || title
   const Icon = entry?.icon || Home

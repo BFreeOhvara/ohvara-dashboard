@@ -31,7 +31,6 @@ import AgentMore from './pages/agent/More'
 // (portal parity answer 0). Lazy, so they download only when opened.
 const V2InboundDetail = lazy(() => import('./pages/agent/v2/InboundDetail'))
 const V2Calendar = lazy(() => import('./pages/agent/v2/Calendar'))
-// Inbounds IS the Leads page: /agent/leads serves it for every agent, in production too.
 const V2Inbounds = lazy(() => import('./pages/agent/v2/Inbounds'))
 import MyCalls from './pages/fulfillment/MyCalls'
 import VaLeads from './pages/fulfillment/VaLeads'

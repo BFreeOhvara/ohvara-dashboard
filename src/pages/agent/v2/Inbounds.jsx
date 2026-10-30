@@ -11,7 +11,7 @@ import {
 import { DEFAULT_TIMEZONE } from '../../../lib/timezones'
 import './inboundsExtra.css'
 
-// Inbounds, served at /agent/leads: two tabs, Booked appointments (a five-column board) and Live calls
+// Leads, served at /agent/leads: two tabs, Booked appointments (a five-column board) and Live calls
 // (filter chips and a log). Each tab has an explainer that is open on the first view and stays
 // collapsed after, unless the agent opens it again (remembered per tab in this browser).
 // Mockup: ohvara/mockups/update-the-existing-inbounds-page-get-in.html.
@@ -269,7 +269,7 @@ function StartHero() {
   return (
     <section className="ov-hero inb-start">
       <div className="inb-start-t">
-        <h2>You&rsquo;re not getting inbounds yet</h2>
+        <h2>You&rsquo;re not getting leads yet</h2>
         <p>Pick a weekly amount and we&rsquo;ll start sending you Live Calls, Booked Appointments, or both.</p>
       </div>
       <Link to="/agent/billing" className="ov-hero-btn">Start<ArrowRight size={17} strokeWidth={2.2} aria-hidden="true" /></Link>
@@ -328,14 +328,14 @@ export default function Inbounds() {
   const lineB = isLoading ? ' ' : isError ? "Couldn't load" : liveLine(live, tz)
 
   return (
-    <PortalV2Layout active="inbounds" title="Inbounds" icon={Inbox}>
+    <PortalV2Layout active="inbounds" title="Leads" icon={Inbox}>
       <div className="pv-flow inb-page">
         {/* Goal fe2f2055 (Billing) mounts the Get inbounds panel here, without rewriting this page. */}
         <GetInboundsSlot />
 
         {isEmpty && <StartHero />}
 
-        <nav className="inb-tabs" aria-label="Inbound type">
+        <nav className="inb-tabs" aria-label="Lead type">
           <InbTab to={tabTo('booked', params)} on={tab === 'booked'} icon={CalendarDays} name="Booked appointments" n={nA} line={lineA} />
           <InbTab to={tabTo('live', params)} on={tab === 'live'} live icon={Phone} name="Live calls" n={nB} line={lineB} />
         </nav>
@@ -357,7 +357,7 @@ export default function Inbounds() {
             ))
           )
         ) : isError ? (
-          <ErrorCard title="We couldn't load your inbounds" text="Nothing was lost. Check your connection and try again." onRetry={retry} />
+          <ErrorCard title="We couldn't load your leads" text="Nothing was lost. Check your connection and try again." onRetry={retry} />
         ) : isEmpty ? null : tab === 'booked' ? <Board list={booked} evMap={evMap} tz={tz} /> : <LiveLog list={live} evMap={evMap} tz={tz} />}
       </div>
     </PortalV2Layout>

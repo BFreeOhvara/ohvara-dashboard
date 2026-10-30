@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js'
+import { isLockedSelfSignup, LOCKED_MESSAGE } from '../_shared/portalAccess.ts'
 
 // Prompt 666 — Fulfillment's "Call client": a two-leg Twilio call. Twilio
 // rings the Fulfillment rep at their own number on file, then dials the client
@@ -44,6 +45,7 @@ Deno.serve(async (req) => {
   const jwt = (req.headers.get('Authorization') || '').replace(/^Bearer /, '')
   const { data: { user } } = await admin.auth.getUser(jwt)
   if (!user) return json({ error: 'Not signed in' }, 401)
+  if (await isLockedSelfSignup(admin, user.id)) return json({ error: LOCKED_MESSAGE }, 403)
 
   const { data: me } = await admin.from('profiles').select('id, role, phone').eq('id', user.id).single()
   if (!me || !['fulfillment', 'admin'].includes(me.role)) return json({ error: 'Fulfillment only' }, 403)

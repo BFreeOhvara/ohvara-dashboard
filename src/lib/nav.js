@@ -10,8 +10,8 @@ export const NAV = {
   // Prompt 665 — agent portal rebuilt around booking Fulfillment calls.
   // Prompt 676 — grouped the way Restorix Portal's Layout.jsx is instead of
   // one flat list. Regrouped and renamed (Clients, Submit) on Oct 30: Today,
-  // Servicing, Communications, Account; a Leads group (Leads, Calendar)
-  // between Today and Servicing, for every agent.
+  // Servicing, Communications, Account; an always-on Leads group (Leads,
+  // Calendar) sits between Today and Servicing.
   agent: [
     { group: 'Today', items: [
       { to: '/agent', label: 'Overview', icon: Home },

@@ -32,7 +32,7 @@ const AGENT_TABS = [
   { to: '/agent/clients', label: 'Clients', icon: Users, on: p => p === '/agent/clients' },
   { to: '/agent/book', label: 'Submit', icon: Plus, plus: true, on: () => false },
   { to: '/messages', label: 'Messages', icon: MessageSquare, on: p => p === '/messages', badge: true },
-  // Inbounds and Calendar open from More (portal parity answer 1); More shows the new-inbounds count.
+  // Leads and Calendar open from More (portal parity answer 1); More shows the new-inbounds count.
   { to: '/agent/more', label: 'More', icon: Menu, on: p => ['/agent/more', '/agent/activity', '/agent/leads', '/agent/billing', '/settings', '/agent/calendar'].includes(p) || p.startsWith('/agent/leads/'), inbounds: true },
 ]
 

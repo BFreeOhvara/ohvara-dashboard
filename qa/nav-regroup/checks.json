@@ -1,11 +1,11 @@
 [
   {
-    "name": "/agent stays put (1440 dark)",
+    "name": "/agent stays put (1920 dark)",
     "ok": true,
     "detail": "/agent"
   },
   {
-    "name": "sidebar has exactly the five groups",
+    "name": "sidebar has the five groups, Leads between Today and Servicing (1920)",
     "ok": true,
     "detail": [
       {
@@ -52,12 +52,129 @@
     ]
   },
   {
+    "name": "/agent/leads stays put (1920 dark)",
+    "ok": true,
+    "detail": "/agent/leads"
+  },
+  {
+    "name": "header on /agent/leads (1920)",
+    "ok": true,
+    "detail": "Leads"
+  },
+  {
+    "name": "/agent/calendar stays put (1920 dark)",
+    "ok": true,
+    "detail": "/agent/calendar"
+  },
+  {
+    "name": "header on /agent/calendar (1920)",
+    "ok": true,
+    "detail": "Calendar"
+  },
+  {
+    "name": "/agent/clients stays put (1920 dark)",
+    "ok": true,
+    "detail": "/agent/clients"
+  },
+  {
+    "name": "header on /agent/clients (1920)",
+    "ok": true,
+    "detail": "Clients"
+  },
+  {
+    "name": "/agent/book stays put (1920 dark)",
+    "ok": true,
+    "detail": "/agent/book"
+  },
+  {
+    "name": "header on /agent/book (1920)",
+    "ok": true,
+    "detail": "Submit"
+  },
+  {
+    "name": "/agent/more stays put (1920 dark)",
+    "ok": false,
+    "detail": "/agent"
+  },
+  {
+    "name": "/agent stays put (1440 dark)",
+    "ok": true,
+    "detail": "/agent"
+  },
+  {
+    "name": "sidebar has the five groups, Leads between Today and Servicing (1440)",
+    "ok": true,
+    "detail": [
+      {
+        "group": "Today",
+        "items": [
+          "Overview",
+          "Activity"
+        ]
+      },
+      {
+        "group": "Leads",
+        "items": [
+          "Leads",
+          "Calendar"
+        ]
+      },
+      {
+        "group": "Servicing",
+        "items": [
+          "Clients",
+          "Submit"
+        ]
+      },
+      {
+        "group": "Communications",
+        "items": [
+          "Messages"
+        ]
+      },
+      {
+        "group": "Account",
+        "items": [
+          "Billing",
+          "Settings"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Clients amber needs-attention badge shows",
+    "ok": true,
+    "detail": [
+      "1"
+    ]
+  },
+  {
+    "name": "/agent/leads stays put (1440 dark)",
+    "ok": true,
+    "detail": "/agent/leads"
+  },
+  {
+    "name": "header on /agent/leads (1440)",
+    "ok": true,
+    "detail": "Leads"
+  },
+  {
+    "name": "/agent/calendar stays put (1440 dark)",
+    "ok": true,
+    "detail": "/agent/calendar"
+  },
+  {
+    "name": "header on /agent/calendar (1440)",
+    "ok": true,
+    "detail": "Calendar"
+  },
+  {
     "name": "/agent/clients stays put (1440 dark)",
     "ok": true,
     "detail": "/agent/clients"
   },
   {
-    "name": "header on /agent/clients",
+    "name": "header on /agent/clients (1440)",
     "ok": true,
     "detail": "Clients"
   },
@@ -67,19 +184,9 @@
     "detail": "/agent/book"
   },
   {
-    "name": "header on /agent/book",
+    "name": "header on /agent/book (1440)",
     "ok": true,
     "detail": "Submit"
-  },
-  {
-    "name": "/agent/leads stays put (1440 dark)",
-    "ok": true,
-    "detail": "/agent/leads"
-  },
-  {
-    "name": "/agent/calendar stays put (1440 dark)",
-    "ok": true,
-    "detail": "/agent/calendar"
   },
   {
     "name": "Go-to 'leads' finds the page",
@@ -163,6 +270,42 @@
     ]
   },
   {
+    "name": "/agent/leads stays put (390 dark)",
+    "ok": true,
+    "detail": "/agent/leads"
+  },
+  {
+    "name": "no sideways scroll /agent/leads 390 dark",
+    "ok": true,
+    "detail": {
+      "sw": 390,
+      "cw": 390
+    }
+  },
+  {
+    "name": "phone title on /agent/leads (dark)",
+    "ok": true,
+    "detail": "Leads"
+  },
+  {
+    "name": "/agent/calendar stays put (390 dark)",
+    "ok": true,
+    "detail": "/agent/calendar"
+  },
+  {
+    "name": "no sideways scroll /agent/calendar 390 dark",
+    "ok": true,
+    "detail": {
+      "sw": 390,
+      "cw": 390
+    }
+  },
+  {
+    "name": "phone title on /agent/calendar (dark)",
+    "ok": true,
+    "detail": "Calendar"
+  },
+  {
     "name": "/agent/clients stays put (390 dark)",
     "ok": true,
     "detail": "/agent/clients"
@@ -230,45 +373,55 @@
     }
   },
   {
-    "name": "/agent/leads stays put (390 dark)",
+    "name": "More page has Leads and Calendar, no Inbounds (dark)",
+    "ok": true,
+    "detail": [
+      "Leads",
+      "Calendar",
+      "Activity",
+      "Invite an agent",
+      "Notifications",
+      "Theme",
+      "Settings",
+      "Report a problem",
+      "Get the phone app",
+      "Delete my account"
+    ]
+  },
+  {
+    "name": "/agent stays put (1920 light)",
+    "ok": true,
+    "detail": "/agent"
+  },
+  {
+    "name": "/agent/leads stays put (1920 light)",
     "ok": true,
     "detail": "/agent/leads"
   },
   {
-    "name": "no sideways scroll /agent/leads 390 dark",
-    "ok": true,
-    "detail": {
-      "sw": 390,
-      "cw": 390
-    }
-  },
-  {
-    "name": "/agent/calendar stays put (390 dark)",
+    "name": "/agent/calendar stays put (1920 light)",
     "ok": true,
     "detail": "/agent/calendar"
   },
   {
-    "name": "no sideways scroll /agent/calendar 390 dark",
+    "name": "/agent/clients stays put (1920 light)",
     "ok": true,
-    "detail": {
-      "sw": 390,
-      "cw": 390
-    }
+    "detail": "/agent/clients"
+  },
+  {
+    "name": "/agent/book stays put (1920 light)",
+    "ok": true,
+    "detail": "/agent/book"
+  },
+  {
+    "name": "/agent/more stays put (1920 light)",
+    "ok": false,
+    "detail": "/agent"
   },
   {
     "name": "/agent stays put (1440 light)",
     "ok": true,
     "detail": "/agent"
-  },
-  {
-    "name": "/agent/clients stays put (1440 light)",
-    "ok": true,
-    "detail": "/agent/clients"
-  },
-  {
-    "name": "/agent/book stays put (1440 light)",
-    "ok": true,
-    "detail": "/agent/book"
   },
   {
     "name": "/agent/leads stays put (1440 light)",
@@ -279,6 +432,16 @@
     "name": "/agent/calendar stays put (1440 light)",
     "ok": true,
     "detail": "/agent/calendar"
+  },
+  {
+    "name": "/agent/clients stays put (1440 light)",
+    "ok": true,
+    "detail": "/agent/clients"
+  },
+  {
+    "name": "/agent/book stays put (1440 light)",
+    "ok": true,
+    "detail": "/agent/book"
   },
   {
     "name": "/agent stays put (390 light)",
@@ -292,6 +455,42 @@
       "sw": 390,
       "cw": 390
     }
+  },
+  {
+    "name": "/agent/leads stays put (390 light)",
+    "ok": true,
+    "detail": "/agent/leads"
+  },
+  {
+    "name": "no sideways scroll /agent/leads 390 light",
+    "ok": true,
+    "detail": {
+      "sw": 390,
+      "cw": 390
+    }
+  },
+  {
+    "name": "phone title on /agent/leads (light)",
+    "ok": true,
+    "detail": "Leads"
+  },
+  {
+    "name": "/agent/calendar stays put (390 light)",
+    "ok": true,
+    "detail": "/agent/calendar"
+  },
+  {
+    "name": "no sideways scroll /agent/calendar 390 light",
+    "ok": true,
+    "detail": {
+      "sw": 390,
+      "cw": 390
+    }
+  },
+  {
+    "name": "phone title on /agent/calendar (light)",
+    "ok": true,
+    "detail": "Calendar"
   },
   {
     "name": "/agent/clients stays put (390 light)",
@@ -361,29 +560,19 @@
     }
   },
   {
-    "name": "/agent/leads stays put (390 light)",
+    "name": "More page has Leads and Calendar, no Inbounds (light)",
     "ok": true,
-    "detail": "/agent/leads"
-  },
-  {
-    "name": "no sideways scroll /agent/leads 390 light",
-    "ok": true,
-    "detail": {
-      "sw": 390,
-      "cw": 390
-    }
-  },
-  {
-    "name": "/agent/calendar stays put (390 light)",
-    "ok": true,
-    "detail": "/agent/calendar"
-  },
-  {
-    "name": "no sideways scroll /agent/calendar 390 light",
-    "ok": true,
-    "detail": {
-      "sw": 390,
-      "cw": 390
-    }
+    "detail": [
+      "Leads",
+      "Calendar",
+      "Activity",
+      "Invite an agent",
+      "Notifications",
+      "Theme",
+      "Settings",
+      "Report a problem",
+      "Get the phone app",
+      "Delete my account"
+    ]
   }
 ]
