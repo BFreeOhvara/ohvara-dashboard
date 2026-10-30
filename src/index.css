@@ -792,7 +792,15 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 .ov-link { transition: border-color 120ms ease; text-align: left; font: inherit; color: inherit; cursor: pointer; }
 .ov-link:hover { border-color: rgba(255,255,255,0.14); }
 [data-theme="light"] .ov-link:hover { border-color: rgba(2,79,70,0.22); }
-.ov-link:focus-visible, .ov-ghost:focus-visible, .ov-hero-btn:focus-visible {
+/* Portal preview list: the small "Preview v2" / "Back to old pages" text link under agent pages. */
+.ov-preview { display: flex; justify-content: center; margin: 8px 0 0; }
+.ov-preview-link {
+  min-height: 44px; padding: 0 12px; border: none; background: none; cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 600; color: var(--ov-soft);
+  text-decoration: underline; text-decoration-color: var(--ov-line); text-underline-offset: 3px;
+}
+.ov-preview-link:hover { color: var(--ov-mid); text-decoration-color: currentColor; }
+.ov-link:focus-visible, .ov-ghost:focus-visible, .ov-hero-btn:focus-visible, .ov-preview-link:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px;
 }
 

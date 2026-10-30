@@ -8,17 +8,17 @@ import { useServicingTasks, useClientPolicies, TASK_LABEL, TASK_STATUS, watchPro
 import { useIsPhone } from '../../../hooks/usePhoneLayout'
 import { PortalV2Layout, Ico, Skel, ErrorCard } from '../../../components/agent/PortalV2Nav'
 import { StatusNote, Journey } from '../../../components/agent/AgentUI'
-import { CancellationFlow } from '../../../components/agent/CancellationFlow'
+import { CancellationFlow } from '../Clients'
 import { leadName, stateName, dateText, timeText, telHref } from '../../../lib/portalV2'
 import { fullName, money } from '../../../lib/policyFormat'
 import { agentStageOf, STAGE, placeOf, digits, useNow } from '../../../lib/agentBookings'
 import { DEFAULT_TIMEZONE } from '../../../lib/timezones'
 
-// Clients (/agent/clients): one list of the people the agent sold
+// Clients (/agent/clients when the v2 portal is on): one list of the people the agent sold
 // (inbounds with outcome 'sold') and the clients they already had (their booked cancellations,
 // useAgentBookings). A booking with the same phone as a sold inbound is that client's old policy,
 // so it joins them instead of showing twice. The detail shows policies, servicing_tasks and the
-// cancellation flow, which is the old My Pipeline's own (components/agent/CancellationFlow, with
+// cancellation flow, which is the old page's own (CancellationFlow from ../Clients, with
 // AgentUI's StatusNote and Journey), not a copy. Mockup: ohvara/mockups/build-calendar-clients-and-plan-billing-.html.
 
 const FILTERS = [

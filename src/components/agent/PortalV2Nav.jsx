@@ -1,19 +1,18 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Sun, Inbox, Settings, CalendarDays, Users, CreditCard, CircleAlert, CalendarPlus, History, Wallet, MessageSquare, Menu } from 'lucide-react'
+import { Sun, Inbox, Settings, CalendarDays, Users, CreditCard, CircleAlert } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useInbounds } from '../../hooks/useInbounds'
 import { OhvaraMark } from '../ui/OhvaraMark'
 import { BillingGate } from '../layout/BillingGate'
 import { ErrorBoundary } from '../shared/ErrorBoundary'
 import { TransferAlert } from './TransferAlert'
+import { PortalPreviewToggle } from './PortalPreviewToggle'
 import { isRecent } from '../../lib/portalV2'
 import '../../pages/agent/v2/portalV2.css'
 
-// The agent portal v2 shell: from 768px a 256px sidebar (Today, Inbounds with the new-inbound count,
-// Calendar, Clients, Book a call; Plan & billing, Manage billing, Activity, Messages, Settings) and a
-// 72px page header; under 768px no sidebar or header, a 6-column bottom tab bar instead (Today,
-// Inbounds, Calendar, Clients, Plan, More). Book a call, Manage billing, Activity and More are the
-// older pages; they open in the older layout, whose Overview / Home link comes back to /agent. Mockups:
+// The agent portal v2 shell (behind the gate in src/lib/portalPreview.js): from 768px a 256px sidebar
+// (Today, Inbounds with the new-inbound count, Calendar, Clients, Plan & billing, Settings) and a
+// 72px page header; under 768px no sidebar or header, a 6-column bottom tab bar instead. Mockups:
 // ohvara/mockups/build-v2-portal-shell-today-inbounds-inb.html and
 // ohvara/mockups/build-calendar-clients-and-plan-billing-.html.
 const initials = name => (name || '').trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase()).join('') || 'A'
@@ -40,12 +39,8 @@ function Sidebar({ active, count, profile }) {
       {link('inbounds', '/agent/inbounds', Inbox, 'Inbounds', count)}
       {link('calendar', '/agent/calendar', CalendarDays, 'Calendar')}
       {link('clients', '/agent/clients', Users, 'Clients')}
-      {link('book', '/agent/book', CalendarPlus, 'Book a call')}
       <p className="pv-sb-grp">Account</p>
       {link('plan', '/agent/plan', CreditCard, 'Plan & billing')}
-      {link('billing', '/agent/billing', Wallet, 'Manage billing')}
-      {link('activity', '/agent/activity', History, 'Activity')}
-      {link('messages', '/messages', MessageSquare, 'Messages')}
       {link('settings', '/settings', Settings, 'Settings')}
       <div className="pv-me">
         <span className="pv-av" aria-hidden="true">{initials(profile?.full_name)}</span>
@@ -68,7 +63,7 @@ function TabBar({ active, count }) {
       {tab('calendar', '/agent/calendar', CalendarDays, 'Calendar')}
       {tab('clients', '/agent/clients', Users, 'Clients')}
       {tab('plan', '/agent/plan', CreditCard, 'Plan')}
-      {tab('more', '/agent/more', Menu, 'More')}
+      {tab('settings', '/settings', Settings, 'Settings')}
     </nav>
   )
 }
@@ -90,6 +85,7 @@ export function PortalV2Layout({ active, crumb = 'Your work', title, icon = Sun,
         </header>
         <main className="pv-content">
           <ErrorBoundary resetKey={pathname}><BillingGate>{children}</BillingGate></ErrorBoundary>
+          <PortalPreviewToggle onV2 />
         </main>
       </div>
       <TabBar active={active} count={count} />

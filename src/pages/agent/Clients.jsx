@@ -1,19 +1,210 @@
 import { useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Phone, Calendar, PencilLine } from 'lucide-react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { Phone, Calendar, MapPin, PencilLine } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { dmId } from '../../hooks/useDirectMessages'
-import { useRebookCall, useConfirmRecoveryNumber } from '../../hooks/useAgentBookings'
+import { useAgentBookings, useRebookCall, useConfirmRecoveryNumber } from '../../hooks/useAgentBookings'
 import { useCarriers, useCarrierHours, useAddCarrier, useSetBookingCarrier } from '../../hooks/useCarriers'
-import { DayChoice, SlotGrid, CarrierInput, SlotSkeleton } from './AgentUI'
+import { AnchoredSelectField } from '../../components/ui/ExportForm'
+import {
+  ClientSearch, PipelineSummary, PipelineList, ClientDrawer, InfoTile, StatusNote, Journey, DayChoice, SlotGrid, CarrierInput, SlotSkeleton,
+  LoadError,
+} from '../../components/agent/AgentUI'
 import { fmtBooking, callWhen, clientSlotISO, slotState, openBookingIsos, dayIn, addDaysStr, dateLabel, dayGone, carrierDaySlots, firstOpenDay } from '../../lib/scheduling'
 import { bookingCarrier, viewerHoursSummary } from '../../lib/carriers'
 import { viewerTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
-import { isLive, agentStageOf, stageOf, tabOf, canRebook, SUBSTATUS_LABEL, digits, placeOf } from '../../lib/agentBookings'
+import { isLive, agentStageOf, stageOf, tabOf, canRebook, PIPELINE_TABS, RANGES, SUBSTATUS_LABEL, digits, useNow, startOfWeek, startOfMonth, placeOf } from '../../lib/agentBookings'
+import { excludeTestAccounts } from '../../lib/testAccounts'
+import { usePhoneLayout } from '../../hooks/usePhoneLayout'
+import { PhoneClients } from '../../components/agent/phone/PhoneClients'
+import { PhoneClientSheet } from '../../components/agent/phone/PhoneClientSheet'
+
+// My Pipeline (Prompt 665, was My Clients until 680) — replaces My Policies.
+//
+// Naming: "My Policies" read as an in-force book of business, which this
+// dashboard doesn't track (Brayden, 2026-10-01). Every row an agent creates
+// is a client whose EXISTING policy is being cancelled, so this is a log of
+// clients you've booked and where each cancellation stands.
+//
+// Admin lands here too (nav "Clients") and sees every agent's bookings, with
+// an agent filter; the test account is held out of that company-wide view.
+//
+// Prompt 672 — status and range live in the URL (?stage=noAnswer&range=week)
+// so Overview's tiles link straight to the matching slice. Range is by
+// booking date and scopes the whole page.
+//
+// Prompt 696/702 — a No answer lead in the automated text-and-retry flow is
+// the system's; Confirm number and Needs attention are the agent's.
+//
+// Prompt 717 — rebuilt on the v16 language as a rethink: a "Find any client"
+// search that always looks across every status, the "Your pipeline" box with
+// four status tabs (Booked, No answer, Needs attention, Cancelled — tabOf), one
+// list per tab with columns built for that status, and client details in a
+// right-side drawer. The page always opens on Booked; ?stage= wins. The page
+// scrolls normally now (the P686/P707 fixed-height column is gone).
+//
+// Prompt 724 — rows show the client's "City, ST" and call times in the
+// client's own zone (policies.client_timezone; older rows fall back to the
+// viewer's). Move / Re-book follow Book a call's rules: client-local slots,
+// 30 minutes' notice, no second booking at a time the agent already has.
+//
+// Prompt 726 — new layout: two equal boxes on the left (Find any client with
+// Recently booked; Your pipeline with status tiles and the next Fulfillment
+// call) and one list box on the right with the status tabs on top. The page
+// never scrolls on a tall desktop screen; the list scrolls inside its box, so
+// switching status moves nothing. Needs attention shows two groups.
+//
+// Prompt 730 — a Booked client's "Move to a different time" is now "Change
+// this booking": it opens Book a call's Change a booking with them picked
+// (/agent/book?change=<id>), where details and time are fixed in place. The
+// in-drawer picker stays only for re-booking a Needs attention lead.
+//
+// Prompt 732 — a No answer client is Fulfillment's: its rows end in a chevron
+// and its drawer offers Change this booking, never a re-book.
+//
+// Prompt 772 — on the agent's phone layout the page is PhoneClients (one
+// grouped list, a four-part status filter, no tabs) and a client opens as a
+// bottom sheet (PhoneClientSheet) with the same next steps as the drawer.
+
+const RANGE_VALUES = RANGES.map(r => r.value)
+// Old ?stage= values still arrive from the Overview (attention rows, the
+// "Booked this week" tile) and Activity.
+const STAGE_ALIAS = { confirmNumber: 'needs', needsAttention: 'needs', all: 'booked' }
+
+const byCall = (a, b) => (a.scheduled_call_at || '9').localeCompare(b.scheduled_call_at || '9')
+const byLastCall = (a, b) => (a.last_call_at || '').localeCompare(b.last_call_at || '')
+const SORT = {
+  booked: byCall,
+  noAnswer: byLastCall,
+  // Needs attention first, then the oldest last call.
+  needs: (a, b) => (agentStageOf(a) === 'needsAttention' ? 0 : 1) - (agentStageOf(b) === 'needsAttention' ? 0 : 1) || byLastCall(a, b),
+  // Newest cancellation first.
+  cancelled: (a, b) => (b.fulfillment_completed_at || b.updated_at || '').localeCompare(a.fulfillment_completed_at || a.updated_at || ''),
+}
+
+export default function Clients() {
+  const { profile } = useAuth()
+  const isAdmin = profile?.role === 'admin'
+  const navigate = useNavigate()
+  const phone = usePhoneLayout()
+  const now = useNow()
+  const [params, setParams] = useSearchParams()
+  const openId = params.get('open')
+  const rebook = params.get('rebook') === '1'
+
+  const { data: raw = [], isLoading, isError, refetch } = useAgentBookings(isAdmin ? null : profile?.id)
+  // P778 — a failed load says so (not "No clients yet"), on both layouts.
+  const loadError = isError ? <LoadError what="your clients" onRetry={() => refetch()} /> : null
+  const rows = useMemo(() => (isAdmin ? excludeTestAccounts(raw, profile?.id) : raw), [raw, isAdmin, profile?.id])
+
+  const stageParam = params.get('stage')
+  const tab = PIPELINE_TABS.includes(stageParam) ? stageParam : STAGE_ALIAS[stageParam] || 'booked'
+  const range = RANGE_VALUES.includes(params.get('range')) ? params.get('range') : 'all'
+  const update = fn => {
+    const next = new URLSearchParams(params)
+    fn(next)
+    setParams(next, { replace: true })
+  }
+  const setParam = (key, value, fallback) => update(next => { if (value === fallback) next.delete(key); else next.set(key, value) })
+  const [agentId, setAgentId] = useState('')
+
+  const agents = useMemo(() => [...new Map(rows.map(p => [p.agent_id, p.agent?.full_name || 'Unknown'])).entries()]
+    .map(([id, name]) => ({ value: id, label: name }))
+    .sort((a, b) => a.label.localeCompare(b.label)), [rows])
+
+  // Agent scope alone (Recently booked and the next call ignore the range).
+  const byAgent = useMemo(() => rows.filter(p => !agentId || p.agent_id === agentId), [rows, agentId])
+  // Range + agent scope the search, the pipeline and the list alike.
+  const scoped = useMemo(() => {
+    const from = range === 'week' ? startOfWeek(new Date(now)).getTime()
+      : range === 'month' ? startOfMonth(new Date(now)).getTime() : null
+    return from == null ? byAgent : byAgent.filter(p => new Date(p.created_at).getTime() >= from)
+  }, [byAgent, range, now])
+  // The soonest booked call still ahead (same rule as the Overview's coming-up box).
+  const nextCall = useMemo(() => byAgent
+    .filter(p => stageOf(p) === 'booked' && p.scheduled_call_at && new Date(p.scheduled_call_at).getTime() > now)
+    .reduce((best, p) => (!best || p.scheduled_call_at < best.scheduled_call_at ? p : best), null), [byAgent, now])
+
+  const list = useMemo(() => scoped.filter(p => tabOf(p) === tab).sort(SORT[tab]), [scoped, tab])
+
+  const canMove = p => isAdmin || p.agent_id === profile?.id
+  const openOnly = id => update(next => { next.set('open', id); next.delete('rebook') })
+  const startRebook = id => update(next => { next.set('open', id); next.set('rebook', '1') })
+  const close = () => update(next => { next.delete('open'); next.delete('rebook') })
+  // A search pick also switches to that client's tab, so their row is the
+  // highlighted one behind the drawer.
+  const openFromSearch = p => update(next => {
+    next.set('open', p.id)
+    next.delete('rebook')
+    const t = tabOf(p)
+    if (t === 'booked') next.delete('stage'); else next.set('stage', t)
+  })
+  // Looked up from every row, not the tab's list, so a link from Overview
+  // opens its client whichever tab is selected.
+  const openRow = openId ? rows.find(p => p.id === openId) : null
+
+  const detail = openRow && (
+    <ClientDetail
+      key={`${openRow.id}:${rebook}`} p={openRow} now={now} canMove={canMove(openRow)} startRebook={rebook} isAdmin={isAdmin} onClose={close}
+      agentRows={raw.filter(r => r.agent_id === openRow.agent_id)} phone={phone}
+    />
+  )
+
+  if (phone) {
+    // No ?stage= means no filter here (the desktop opens on Booked); 'all' too.
+    const filter = PIPELINE_TABS.includes(stageParam) ? stageParam : stageParam && stageParam !== 'all' ? STAGE_ALIAS[stageParam] || null : null
+    return (
+      <>
+        <PhoneClients
+          rows={scoped} loading={isLoading} error={loadError} filter={filter} sort={SORT} now={now}
+          onFilter={t => setParam('stage', t, null)} onOpen={p => openOnly(p.id)}
+        />
+        {detail}
+      </>
+    )
+  }
+
+  return (
+    <>
+      {loadError && <div style={{ marginBottom: 16 }}>{loadError}</div>}
+      <div className="pl-page">
+        <div className="pl-rail">
+          <ClientSearch
+            rows={scoped} recentRows={byAgent} onOpen={openFromSearch} hotkey={!openRow}
+          />
+          <PipelineSummary
+            rows={scoped} tab={tab}
+            range={range} ranges={RANGES} onRange={v => setParam('range', v, 'all')}
+            agentFilter={isAdmin && agents.length > 1 ? (
+              <AnchoredSelectField
+                value={agentId} onChange={setAgentId}
+                options={[{ value: '', label: 'All agents' }, ...agents]}
+                style={{ width: '100%' }}
+              />
+            ) : null}
+            next={nextCall} onOpenNext={openFromSearch}
+            onBook={isAdmin ? undefined : () => navigate('/agent/book')}
+          />
+        </div>
+        <PipelineList
+          rows={scoped} tab={tab} onTab={t => setParam('stage', t, 'booked')} list={list}
+          now={now} showAgent={isAdmin} activeId={openId}
+          onOpen={openOnly} onRebook={startRebook} onConfirm={openOnly} canMove={canMove}
+          loading={isLoading} emptyRange={scoped.length === 0 && range !== 'all' ? range : null}
+          onBook={isAdmin ? undefined : () => navigate('/agent/book')}
+        />
+      </div>
+
+      {detail}
+    </>
+  )
+}
+
+const cap = s => s[0].toUpperCase() + s.slice(1)
 
 // The cancellation flow for one booking: where it stands (status sentence, journey steps) and the
-// agent's next step (Change this booking, Call & rebook, Confirm number). Moved here unchanged from the
-// old My Pipeline page (pages/agent/Clients.jsx, retired Oct 29); the v2 Clients detail renders it.
+// agent's next step (Change this booking, Call & rebook, Confirm number). The drawer below and the
+// v2 Clients detail (pages/agent/v2/Clients.jsx, through CancellationFlow) both render from this, so there is one flow.
 function useCancellationFlow({ p, now, canMove, startRebook, isAdmin, agentRows, phone }) {
   const navigate = useNavigate()
   const stage = agentStageOf(p)
@@ -85,6 +276,59 @@ function useCancellationFlow({ p, now, canMove, startRebook, isAdmin, agentRows,
 // The same flow for pages that lay it out themselves: children(flow) renders it.
 export function CancellationFlow({ children, ...opts }) {
   return children(useCancellationFlow(opts))
+}
+
+function ClientDetail({ p, now, canMove, startRebook, isAdmin, onClose, agentRows, phone }) {
+  const { stage, tab, live, moving, move, tz, place, attempted, caller, steps, statusText, footer, onMessage, messageLabel } =
+    useCancellationFlow({ p, now, canMove, startRebook, isAdmin, agentRows, phone })
+
+  if (phone) {
+    // The phone sheet's history reads as sentences; its note is the status
+    // text whenever it says what happens next (not for a plain Booked call).
+    const history = [
+      { label: 'Booked by you', at: p.created_at, done: true },
+      attempted
+        ? { label: `Called by ${caller}`, at: steps[1].at, done: true }
+        : { label: `Waiting for ${caller} to call`, next: true },
+      { label: 'Old policy cancelled', at: p.fulfillment_completed_at, done: stage === 'cancelled' },
+    ]
+    return (
+      <PhoneClientSheet
+        p={p} now={now} steps={history} footer={footer} picker={moving ? move.picker : null}
+        note={stage === 'booked' && !live ? null : cap(statusText)}
+        onMessage={onMessage} messageLabel={messageLabel} onClose={onClose}
+      />
+    )
+  }
+
+  return (
+    <ClientDrawer
+      p={p} tab={tab} onClose={onClose} footer={footer}
+      onMessage={onMessage}
+      messageLabel={messageLabel}
+    >
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+        <InfoTile label="Fulfillment call" value={callWhen(p.scheduled_call_at, tz)} />
+        <InfoTile label="Carrier" value={p.current_carrier || 'Not noted'} />
+        {place && (
+          <div style={{ gridColumn: '1 / -1' }}>
+            <InfoTile label="Where they live" value={
+              <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><MapPin size={16} strokeWidth={2} style={{ flexShrink: 0 }} />{place}</span>
+            } />
+          </div>
+        )}
+        {(p.call_attempts || 0) > 0 && stage !== 'cancelled' && (
+          <InfoTile label="Calls so far" value={`${p.call_attempts} ${p.call_attempts === 1 ? 'try' : 'tries'}`} />
+        )}
+      </div>
+      {moving ? move.picker : (
+        <>
+          <StatusNote tab={tab} live={live && stage === 'booked'}>{cap(statusText)}</StatusNote>
+          <Journey steps={steps} tab={tab} />
+        </>
+      )}
+    </ClientDrawer>
+  )
 }
 
 // Prompt 696 — the checkpoint after two unanswered calls: nothing else is sent
