@@ -1,0 +1,92 @@
+[
+  {
+    "file": "overview-1440-light-v1.png",
+    "scrollWidth": 1425,
+    "width": 1440,
+    "todayCards": 0,
+    "amberBoxes": 1,
+    "oldAt": [
+      253,
+      329,
+      366,
+      406,
+      580
+    ],
+    "todayAt": [
+      -1,
+      -1,
+      -1,
+      -1,
+      -1
+    ],
+    "failures": []
+  },
+  {
+    "file": "overview-1440-dark-v1.png",
+    "scrollWidth": 1425,
+    "width": 1440,
+    "todayCards": 0,
+    "amberBoxes": 1,
+    "oldAt": [
+      253,
+      329,
+      366,
+      406,
+      580
+    ],
+    "todayAt": [
+      -1,
+      -1,
+      -1,
+      -1,
+      -1
+    ],
+    "failures": []
+  },
+  {
+    "file": "overview-390-light-v1.png",
+    "scrollWidth": 390,
+    "width": 390,
+    "todayCards": 0,
+    "amberBoxes": 0,
+    "oldAt": [
+      15,
+      81,
+      128,
+      221,
+      338,
+      375
+    ],
+    "todayAt": [
+      -1,
+      -1,
+      -1,
+      -1,
+      -1
+    ],
+    "failures": []
+  },
+  {
+    "file": "overview-390-dark-v1.png",
+    "scrollWidth": 390,
+    "width": 390,
+    "todayCards": 0,
+    "amberBoxes": 0,
+    "oldAt": [
+      15,
+      81,
+      128,
+      221,
+      338,
+      375
+    ],
+    "todayAt": [
+      -1,
+      -1,
+      -1,
+      -1,
+      -1
+    ],
+    "failures": []
+  }
+]

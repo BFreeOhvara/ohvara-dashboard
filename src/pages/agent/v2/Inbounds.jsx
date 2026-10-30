@@ -191,7 +191,6 @@ export default function Inbounds() {
 
   return (
     <PortalV2Layout active="inbounds" title="Inbounds" icon={Inbox}>
-      <div className="pv-ph1"><h1>Inbounds</h1><p className="pv-sub">Everyone who came in for you, and what we&rsquo;re doing with each one.</p></div>
       <nav className="pv-seg2" aria-label="Inbound type">
         <Link to="/agent/inbounds" className={tab === 'booked' ? 'on' : undefined} aria-current={tab === 'booked' ? 'page' : undefined}>
           Booked appointments <span className="n tab">{inb.isLoading ? ' ' : booked.length}</span>

@@ -111,13 +111,13 @@ test('switch shows Coming soon when agent_duty is missing', () => {
   // A save that finds the table gone flips the switch to soon too.
   assert.equal(dutyState({ data: { on_duty: true } }, { error: MISSING }).soon, true)
 
-  // Today renders the soon state as the "Coming soon" line, disables the switch, and has no
-  // old code flag or "display only" leftovers.
-  const today = src('../pages/agent/v2/Today.jsx')
+  // Today's cards (TodayCards, inside the Overview since portal parity T3) render the soon state
+  // as the "Coming soon" line, disable the switch, and have no old code flag or "display only" leftovers.
+  const today = src('../components/agent/TodayCards.jsx')
   assert.match(today, /soon \? 'Coming soon'/)
   assert.match(today, /role="switch"[^>]*disabled=\{!live\}/)
   assert.doesNotMatch(today, new RegExp(["aria-disabled", "Display only", "Shown here for now", "DUTY" + "_LIVE"].join("|")))
-  assert.match(today, /import \{ useAgentDuty \} from '..\/..\/..\/hooks\/useAgentDuty'/)
+  assert.match(today, /import \{ useAgentDuty \} from '..\/..\/hooks\/useAgentDuty'/)
   assert.doesNotMatch(src('../hooks/useInbounds.js'), /function useAgentDuty/)
 })
 
