@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js'
 import Anthropic from 'npm:@anthropic-ai/sdk'
+import { isLockedSelfSignup, LOCKED_MESSAGE } from '../_shared/portalAccess.ts'
 
 // Prompt 728 — a carrier's policyholder service hours, so Book a call only
 // offers times the carrier the client is leaving is open (the Fulfillment
@@ -197,6 +198,7 @@ Deno.serve(async (req) => {
   if (!user) return json({ error: 'Sign in first' }, 401)
   const { data: me } = await admin.from('profiles').select('role, is_active').eq('id', user.id).maybeSingle()
   if (!me?.is_active || !['agent', 'admin'].includes(me.role)) return json({ error: 'Agents and admins only' }, 403)
+  if (await isLockedSelfSignup(admin, user.id)) return json({ error: LOCKED_MESSAGE }, 403)
   const isAdmin = me.role === 'admin'
 
   let body: any = {}
