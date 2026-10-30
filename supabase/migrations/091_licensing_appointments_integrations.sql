@@ -34,7 +34,9 @@ create policy "Admins manage all licenses" on agent_licenses for all
   with check (public.is_admin());
 
 -- ── agent_carrier_appointments: per-agent status against the real carrier directory ──
-create type appointment_status as enum ('pending', 'active');
+-- 001 already creates appointment_status (the calendar's), so add 'active' to
+-- it instead of creating the type again; replay-safe on a clean database.
+alter type appointment_status add value if not exists 'active';
 
 create table if not exists agent_carrier_appointments (
   id           uuid primary key default gen_random_uuid(),
