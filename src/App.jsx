@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { SecretsProvider } from './contexts/SecretsContext'
@@ -34,6 +34,8 @@ const V2InboundDetail = lazy(() => import('./pages/agent/v2/InboundDetail'))
 const V2Calendar = lazy(() => import('./pages/agent/v2/Calendar'))
 // P808: Leads mounts only in dev behind VITE_LEADS_PAGE=1; otherwise the page is not in the bundle.
 // The DEV check sits here, in this file, so a production build drops the import() and the chunk.
+// Inbounds IS the Leads page: /agent/leads serves it for every agent, in production too.
+const V2Inbounds = lazy(() => import('./pages/agent/v2/Inbounds'))
 const AgentLeads = import.meta.env.DEV && LEADS_PAGE ? lazy(() => import('./pages/agent/Leads')) : null
 import MyCalls from './pages/fulfillment/MyCalls'
 import VaLeads from './pages/fulfillment/VaLeads'
@@ -62,6 +64,14 @@ function AdminTo({ to, children }) {
   const { search } = useLocation()
   if (profile?.role === 'admin') return <Navigate to={`${to}${search}`} replace />
   return children
+}
+
+// Inbounds is now Leads: the old /agent/inbounds and /agent/inbounds/:id URLs forward to
+// /agent/leads and /agent/leads/:id, query string kept.
+function InboundToLead() {
+  const { id } = useParams()
+  const { search } = useLocation()
+  return <Navigate to={{ pathname: id ? `/agent/leads/${id}` : '/agent/leads', search }} replace />
 }
 
 // Old /mp ad links forward to /protect with the query string (utm tags) kept.
@@ -150,9 +160,10 @@ export default function App() {
                 <DashboardLayout><AgentOverview /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* Inbounds is now Leads: the old list URL lands on /agent/leads (which itself lands on /agent while Leads is off). One inbound and Calendar keep their routes. Old v2 Plan links land on Billing. */}
-            <Route path="/agent/inbounds" element={<Navigate to="/agent/leads" replace />} />
-            <Route path="/agent/inbounds/:id" element={
+            {/* Inbounds is now Leads: /agent/leads serves the v2 Inbounds page for every agent; the old /agent/inbounds URLs land on it. Calendar keeps its route. Old v2 Plan links land on Billing. */}
+            <Route path="/agent/inbounds" element={<InboundToLead />} />
+            <Route path="/agent/inbounds/:id" element={<InboundToLead />} />
+            <Route path="/agent/leads/:id" element={
               <ProtectedRoute allowedRoles={['agent']}>
                 <DashboardLayout><Suspense fallback={null}><V2InboundDetail /></Suspense></DashboardLayout>
               </ProtectedRoute>
@@ -180,12 +191,16 @@ export default function App() {
                 <DashboardLayout><AgentActivity /></DashboardLayout>
               </ProtectedRoute>
             } />
-            {/* P808: the route mounts only in dev behind VITE_LEADS_PAGE=1; otherwise it redirects to Overview. */}
+            {/* The v2 Inbounds page (Get inbounds slot, pipeline, live calls). VITE_LEADS_PAGE=1 in dev still opens the old P808 Leads page for its shots script. */}
             <Route path="/agent/leads" element={LEADS_PAGE ? (
               <ProtectedRoute allowedRoles={['agent', 'admin']}>
                 <DashboardLayout><Suspense fallback={null}><AgentLeads /></Suspense></DashboardLayout>
               </ProtectedRoute>
-            ) : <Navigate to="/agent" replace />} />
+            ) : (
+              <ProtectedRoute allowedRoles={['agent']}>
+                <DashboardLayout><Suspense fallback={null}><V2Inbounds /></Suspense></DashboardLayout>
+              </ProtectedRoute>
+            )} />
             {/* Prompt 691 — Billing, promoted out of Settings. */}
             <Route path="/agent/billing" element={
               <ProtectedRoute allowedRoles={['agent']}>
