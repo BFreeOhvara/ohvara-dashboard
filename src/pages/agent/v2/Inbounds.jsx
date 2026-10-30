@@ -6,7 +6,7 @@ import { useInbounds, useInboundEvents } from '../../../hooks/useInbounds'
 import { PortalV2Layout, Ico, Pill, Skel, ErrorCard } from '../../../components/agent/PortalV2Nav'
 import {
   COLUMNS, LIVE_RESULT, leadName, phoneDisplay, appointmentAt, nextLine, cardSub, cameInAt, whenText, apptText, stageOf,
-} from '../../../lib/portalV2'
+} from '../../../lib/inbounds'
 import { DEFAULT_TIMEZONE } from '../../../lib/timezones'
 
 // Inbounds (/agent/inbounds): two tabs, Booked appointments (a five-column board) and Live calls

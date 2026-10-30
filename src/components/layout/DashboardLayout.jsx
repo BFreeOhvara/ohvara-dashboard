@@ -10,11 +10,11 @@ import { useAgentBookings } from '../../hooks/useAgentBookings'
 import { useWeeklyUsage } from '../../hooks/useBillingTiers'
 import { usePolicyEvents } from '../../hooks/useAgentActivity'
 import { useStandingThreads, dmId } from '../../hooks/useDirectMessages'
-import { useInbounds } from '../../hooks/useInbounds'
+import { useInbounds, useInboundActivity } from '../../hooks/useInbounds'
 import { tabOf, sameLocalDay } from '../../lib/agentBookings'
 import { capState, formatReset, formatBillingDate, shownStatus, renewsAt } from '../../lib/billing'
 import { navEntry, isInboundDetail, PAGE_TONE } from '../../lib/nav'
-import { leadName } from '../../lib/portalV2'
+import { leadName } from '../../lib/inbounds'
 import { BillingGate } from './BillingGate'
 import { ErrorBoundary } from '../shared/ErrorBoundary'
 import { PhoneShell } from './PhoneShell'
@@ -151,9 +151,12 @@ function PipelineLine({ profile }) {
 function ActivityLine({ profile }) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const { data: events, isLoading } = usePolicyEvents(today, profile.id)
-  if (isLoading) return null
-  if (!events?.length) return <LiveLine items={[<Plain>Nothing yet today</Plain>]} />
+  const { data: policyEvents = [], isLoading } = usePolicyEvents(today, profile.id)
+  const inbound = useInboundActivity(today)
+  if (isLoading || inbound.isLoading) return null
+  // The same events the Activity page counts: policy events plus the day's finished inbound steps.
+  const events = [...policyEvents, ...inbound.items].sort((a, b) => new Date(b.at) - new Date(a.at))
+  if (!events.length) return <LiveLine items={[<Plain>Nothing yet today</Plain>]} />
   const latest = new Date(events[0].at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   return <LiveLine items={[
     <Pill tone="violet">{plural(events.length, 'event')} today</Pill>,

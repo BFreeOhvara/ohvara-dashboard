@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
-import { byLead, isRecent } from '../lib/portalV2'
+import { byLead, isRecent, inboundActivityItems } from '../lib/inbounds'
 
 // Data for the v2 agent portal (migration 180). Reads go through agent_inbounds() and
 // RLS-limited selects; the agent's only writes are the two RPCs at the bottom. The lists
@@ -9,12 +9,13 @@ import { byLead, isRecent } from '../lib/portalV2'
 const LIVE = { refetchInterval: 30000 }
 const EVENT_COLS = 'id, lead_id, kind, state, at, label, detail, actor_name, actor_role, created_at'
 
-// Every inbound assigned to this agent (both products), newest first.
-export function useInbounds() {
+// Every inbound assigned to this agent (both products), newest first. `enabled: false` makes no
+// agent_inbounds call at all (admin and Fulfillment never ask for it).
+export function useInbounds({ enabled = true } = {}) {
   const { profile } = useAuth()
   return useQuery({
     queryKey: ['inbounds', profile?.id],
-    enabled: !!profile?.id,
+    enabled: !!profile?.id && enabled,
     ...LIVE,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('agent_inbounds')
@@ -48,6 +49,45 @@ export function useInboundEvents() {
       return byLead(data)
     },
   })
+}
+
+// One day's finished steps across all of the agent's inbounds, for the Activity page and header line.
+// `day` is a local-midnight Date, like usePolicyEvents. Scheduled and skipped steps are not events yet.
+export function useInboundDayEvents(day, { enabled = true } = {}) {
+  const { profile } = useAuth()
+  const start = new Date(day)
+  start.setHours(0, 0, 0, 0)
+  const end = new Date(start)
+  end.setDate(end.getDate() + 1)
+  const startISO = start.toISOString()
+  return useQuery({
+    queryKey: ['inbound-events', 'day', startISO, profile?.id],
+    enabled: !!profile?.id && enabled,
+    ...LIVE,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('inbound_events').select(EVENT_COLS)
+        .eq('state', 'done').neq('kind', 'note')
+        .gte('at', startISO).lt('at', end.toISOString())
+        .order('at', { ascending: false }).limit(1000)
+      if (error) throw error
+      return data || []
+    },
+  })
+}
+
+// The day's inbound steps as Activity items (agents only). Same events for the page and the header line.
+export function useInboundActivity(day) {
+  const { profile } = useAuth()
+  const enabled = profile?.role === 'agent'
+  const events = useInboundDayEvents(day, { enabled })
+  const leads = useInbounds({ enabled })
+  const items = inboundActivityItems(events.data, leads.data)
+  return {
+    items,
+    isLoading: enabled && (events.isLoading || leads.isLoading),
+    error: events.error || leads.error,
+    refetch: () => { events.refetch(); leads.refetch() },
+  }
 }
 
 // One inbound's whole timeline, done and scheduled.

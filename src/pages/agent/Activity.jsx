@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, CalendarDays, Inbox, Sun, Clock, Moon } from
 import { useAuth } from '../../hooks/useAuth'
 import { usePolicyEvents, usePolicyStory } from '../../hooks/useAgentActivity'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
+import { useInboundActivity } from '../../hooks/useInbounds'
 import { DayHero, ActivityBox, ActivityFeed, FeedNote, ActivityDrawer, LoadError } from '../../components/agent/AgentUI'
 import { ACTIVITY_ROWS, activityRow, EVENT_ICON, kindTone, eventIconKey } from '../../lib/activityKinds'
 import { fullName } from '../../lib/policyFormat'
@@ -11,6 +12,7 @@ import { callWhen, callAt } from '../../lib/scheduling'
 import { SUBSTATUS_LABEL, tabOf, useNow } from '../../lib/agentBookings'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 import { slideOut } from '../../lib/daySlide'
+import { inboundPath } from '../../lib/inbounds'
 
 // Activity (Prompt 690) — what actually happened, earliest first (P741). My Pipeline
 // shows where each client stands NOW; this is the history behind it: every
@@ -33,6 +35,9 @@ import { slideOut } from '../../lib/daySlide'
 //
 // Admin lands here too and sees every agent's activity (test account held out,
 // same as My Pipeline), with the agent named on each row.
+//
+// An agent's finished inbound steps (inbound_events, state done) join the feed under their own
+// Inbounds row; one opens that inbound's page. Admin makes no inbound call and sees no inbound rows.
 
 const firstName = s => String(s || '').trim().split(/\s+/)[0] || ''
 const isTyping = el => el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))
@@ -177,6 +182,7 @@ export default function Activity() {
 
   const events = usePolicyEvents(day, isAdmin ? null : profile?.id)
   const bookings = useAgentBookings(isAdmin ? null : profile?.id)
+  const inbound = useInboundActivity(day)
 
   // `row` is the status an event counts and reads under: its own for Booked / Calls /
   // No answer / Cancelled, the client's current one for Moved and Edited.
@@ -186,11 +192,11 @@ export default function Activity() {
     client: fullName(e.policy), agent: e.agent?.full_name, text: describe(e),
     row: activityRow(e.kind, bookingOf.has(e.policy_id) ? tabOf(bookingOf.get(e.policy_id)) : null),
   }))
-  const feed = isAdmin ? excludeTestAccounts(all, profile?.id, 'agentId') : all
+  const feed = isAdmin ? excludeTestAccounts(all, profile?.id, 'agentId') : [...all, ...inbound.items]
 
   const counts = Object.fromEntries(ACTIVITY_ROWS.map(k => [k, 0]))
   feed.forEach(i => { counts[i.row] += 1 })
-  const clients = new Set(feed.map(i => i.policyId)).size
+  const clients = new Set(feed.map(i => i.policyId || i.leadId)).size
   const groups = PARTS
     .map(part => ({ ...part, items: feed.filter(i => part.test(new Date(i.at).getHours())).sort((a, b) => new Date(a.at) - new Date(b.at)) }))
     .filter(g => g.items.length)
@@ -201,7 +207,7 @@ export default function Activity() {
     fn(next)
     setParams(next, { replace: true })
   }
-  const openClient = item => withParams(next => { next.set('client', item.policyId); next.set('event', item.id) })
+  const openClient = item => item.inbound ? navigate(inboundPath(item.leadId)) : withParams(next => { next.set('client', item.policyId); next.set('event', item.id) })
   const closeClient = () => withParams(next => { next.delete('client'); next.delete('event') })
 
   // ── Moving between days ──
