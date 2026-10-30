@@ -10,6 +10,7 @@ import { ErrorBoundary } from './components/shared/ErrorBoundary'
 import { NativeBridge } from './components/native/NativeBridge'
 import { LEADS_PAGE } from './lib/leadsPage'
 import { usePortalV2 } from './lib/portalV2'
+import { oldPageFor } from './lib/portalPreview'
 // Side-effect import — attaches the beforeinstallprompt listener at app
 // boot (Prompt 286) so it's never missed while the user is still on Login.
 import './lib/installPrompt'
@@ -29,7 +30,7 @@ import AgentClients from './pages/agent/Clients'
 import AgentActivity from './pages/agent/Activity'
 import AgentBilling from './pages/agent/Billing'
 import AgentMore from './pages/agent/More'
-// The v2 agent portal (app_settings.agent_portal_v2, off by default): Today, Inbounds, Inbound detail,
+// The v2 agent portal (behind the gate in src/lib/portalPreview.js, off by default): Today, Inbounds, Inbound detail,
 // Calendar, Clients, Plan & billing. Lazy, so a flag-off agent never downloads it.
 const V2Today = lazy(() => import('./pages/agent/v2/Today'))
 const V2Inbounds = lazy(() => import('./pages/agent/v2/Inbounds'))
@@ -92,11 +93,12 @@ function AgentClientsRoute() {
   return <DashboardLayout><AgentClients /></DashboardLayout>
 }
 
-// The v2-only routes: with the flag off they go back to /agent.
+// The v2-only routes: with v2 off they go to the matching old page (Plan: Billing, the rest: /agent).
 function V2Only({ children }) {
   const v2 = usePortalV2()
+  const { pathname } = useLocation()
   if (v2.loading) return <Spinner />
-  if (!v2.on) return <Navigate to="/agent" replace />
+  if (!v2.on) return <Navigate to={oldPageFor(pathname)} replace />
   return <Suspense fallback={<Spinner />}>{children}</Suspense>
 }
 

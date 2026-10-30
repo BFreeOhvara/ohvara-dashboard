@@ -1,25 +1,33 @@
 import { useLocation } from 'react-router-dom'
 import { useAppSettings } from '../hooks/useAppSettings'
+import { useAuth } from '../hooks/useAuth'
+import { isPreviewUser, portalFlagOn, readPreviewChoice, useV2 } from './portalPreview'
 import { DEFAULT_TIMEZONE, zonedDateStr } from './timezones'
 import { US_STATES } from './usStates'
 
 // Agent portal v2: the flag, the stage words and the time words the new pages share.
 // The pages are Today (/agent), Inbounds (/agent/inbounds) and Inbound detail
 // (/agent/inbounds/:id). Data comes from migration 180 (agent_inbounds(), inbound_events,
-// set_inbound_outcome, add_inbound_note, membership_tiers, app_settings.agent_portal_v2).
+// set_inbound_outcome, add_inbound_note, membership_tiers, the app_settings flag).
 
 // ── The flag ────────────────────────────────────────────────────────────────
-// On only when app_settings.agent_portal_v2 is true. ?portal=v1 forces the old portal
-// for that visit (nothing is saved). Anything else (column missing, query failed,
-// still loading) is off, so a real agent never lands on a half-working page.
+// On when the gate in portalPreview.js says so: the app_settings flag for everyone, or a preview-list
+// user who hasn't chosen the old pages. ?portal=v1 forces the old portal for that visit (nothing is
+// saved). Anything else (column missing, query failed, still loading) is off, so a real agent never
+// lands on a half-working page.
 export const portalForcedV1 = search => new URLSearchParams(search).get('portal') === 'v1'
 
 export function usePortalV2() {
   const { search } = useLocation()
   const forced = portalForcedV1(search)
   const { data, isLoading } = useAppSettings()
+  const { session } = useAuth()
+  const user = session?.user
+  // Only a preview user's browser storage is ever read.
+  const choice = isPreviewUser(user) ? readPreviewChoice() : null
+  const on = useV2({ flagOn: portalFlagOn(data), user, choice })
   if (forced) return { on: false, loading: false }
-  return { on: data?.agent_portal_v2 === true, loading: isLoading }
+  return { on, loading: isLoading }
 }
 
 // ── Stages (leads.inbound_stage) ─────────────────────────────────────────────

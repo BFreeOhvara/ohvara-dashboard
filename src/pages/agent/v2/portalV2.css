@@ -1,4 +1,4 @@
-/* Agent portal v2 (behind app_settings.agent_portal_v2): shell, Today, Inbounds, Inbound detail,
+/* Agent portal v2 (behind the gate in src/lib/portalPreview.js): shell, Today, Inbounds, Inbound detail,
    Calendar, Clients, Plan & billing. Built from ohvara/mockups/build-v2-portal-shell-today-inbounds-inb.html
    and build-calendar-clients-and-plan-billing-.html in the vault. Surfaces reuse
    .ov-card / .ov-hero / .ov-attn / .ov-ghost / .ov-hero-chip / .ov-hero-btn from index.css; everything

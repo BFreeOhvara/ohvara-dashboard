@@ -19,6 +19,7 @@ import { PhoneShell } from './PhoneShell'
 import { ConfirmEmailBanner } from './ConfirmEmailBanner'
 import { useIsPhone } from '../../hooks/usePhoneLayout'
 import { LEADS_PAGE } from '../../lib/leadsPage'
+import { PortalPreviewToggle } from '../agent/PortalPreviewToggle'
 
 // Shell — Prompt 669 restyle to Restorix Portal's Layout.jsx, a 32/24 padded
 // main capped at 1280px. Prompt 722 rethought the header: a 72px sticky bar
@@ -248,7 +249,7 @@ export function DashboardLayout({ children }) {
   // Prompt 773 — a Fulfillment rep too. Prompt 774 — and Admin.
   const phone = useIsPhone()
   if (phone && (profile?.role === 'agent' || profile?.role === 'fulfillment' || profile?.role === 'admin')) {
-    return <ActiveCallProvider><PhoneShell>{children}</PhoneShell></ActiveCallProvider>
+    return <ActiveCallProvider><PhoneShell>{children}<PortalPreviewToggle /></PhoneShell></ActiveCallProvider>
   }
 
   return (
@@ -298,6 +299,7 @@ export function DashboardLayout({ children }) {
                   header stay, and a new route clears it. */}
               <ConfirmEmailBanner />
               <ErrorBoundary resetKey={pathname}><BillingGate>{children}</BillingGate></ErrorBoundary>
+              <PortalPreviewToggle />
             </div>
           </main>
         </div>

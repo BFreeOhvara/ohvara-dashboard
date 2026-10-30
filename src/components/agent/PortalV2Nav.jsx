@@ -6,10 +6,11 @@ import { OhvaraMark } from '../ui/OhvaraMark'
 import { BillingGate } from '../layout/BillingGate'
 import { ErrorBoundary } from '../shared/ErrorBoundary'
 import { TransferAlert } from './TransferAlert'
+import { PortalPreviewToggle } from './PortalPreviewToggle'
 import { isRecent } from '../../lib/portalV2'
 import '../../pages/agent/v2/portalV2.css'
 
-// The agent portal v2 shell (behind app_settings.agent_portal_v2): from 768px a 256px sidebar
+// The agent portal v2 shell (behind the gate in src/lib/portalPreview.js): from 768px a 256px sidebar
 // (Today, Inbounds with the new-inbound count, Calendar, Clients, Plan & billing, Settings) and a
 // 72px page header; under 768px no sidebar or header, a 6-column bottom tab bar instead. Mockups:
 // ohvara/mockups/build-v2-portal-shell-today-inbounds-inb.html and
@@ -84,6 +85,7 @@ export function PortalV2Layout({ active, crumb = 'Your work', title, icon = Sun,
         </header>
         <main className="pv-content">
           <ErrorBoundary resetKey={pathname}><BillingGate>{children}</BillingGate></ErrorBoundary>
+          <PortalPreviewToggle onV2 />
         </main>
       </div>
       <TabBar active={active} count={count} />
