@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Check, ChevronDown, Info, Lock, Phone } from 'lucide-react'
-import { useCarriers, useCarrierHours } from '../../hooks/useCarriers'
+import { useCarrierHours } from '../../hooks/useCarriers'
 import { useClientTimezone } from '../../hooks/useClientTimezone'
-import { useAgentTaken, useChecklistDraft } from '../../hooks/useVaDesk'
+import { useAgentTaken, useChecklistDraft, useVaCarriers } from '../../hooks/useVaDesk'
 import { US_STATES } from '../../lib/usStates'
 import { inferTimezoneFromState } from '../../lib/timezones'
 import { firstName, initialsOf, telHref } from '../../lib/fulfillmentCall'
@@ -243,7 +243,7 @@ function BookPanel({ desk, row, checklist, roster, onDone, now }) {
   const [err, setErr] = useState(null) // { text, retry: 'book' | 'record' }
   const [bookingId, setBookingId] = useState(null)
 
-  const { data: carriers = [] } = useCarriers()
+  const { data: carriers = [] } = useVaCarriers()
   const picked = carriers.find(c => c.name === checklist.carrier) || null
   const { carrier, checking } = useCarrierHours(picked)
   const resolved = useClientTimezone(row.city || '', checklist.state || '')
@@ -466,7 +466,7 @@ export default function VaDesk({ desk, row, expiresAt, onBack }) {
   const [done, setDone] = useState(null)
   const [ended, setEnded] = useState(false)
   const draft = useChecklistDraft(row)
-  const carriersQ = useCarriers()
+  const carriersQ = useVaCarriers()
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000)

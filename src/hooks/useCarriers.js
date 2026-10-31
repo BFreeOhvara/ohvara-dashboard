@@ -7,7 +7,7 @@ import { hoursFresh, FALLBACK_HOURS } from '../lib/carriers'
 // carrier by name + aliases, with each one's policyholder service hours,
 // filled in lazily by the carrier-hours edge function.
 
-export function useCarriers() {
+export function useCarriers(opts = {}) {
   return useQuery({
     queryKey: ['carriers'],
     staleTime: 5 * 60e3,
@@ -19,6 +19,7 @@ export function useCarriers() {
       if (error) throw error
       return data || []
     },
+    ...opts,
   })
 }
 

@@ -1,0 +1,147 @@
+[
+  {
+    "name": "fulfill 390 light: landed on the route",
+    "pass": true,
+    "detail": "/fulfillment/leads"
+  },
+  {
+    "name": "fulfill 390 light: theme applied",
+    "pass": true,
+    "detail": "light"
+  },
+  {
+    "name": "fulfill 390 light: expect text \"Question type\" shows",
+    "pass": true
+  },
+  {
+    "name": "fulfill 390 light: checklist at 2 of 4, outcome locked",
+    "pass": true
+  },
+  {
+    "name": "fulfill 390 light: not the empty, loading or error state",
+    "pass": true
+  },
+  {
+    "name": "fulfill 390 light: no sideways scroll",
+    "pass": true,
+    "detail": "390/390"
+  },
+  {
+    "name": "fulfill 390 light: no page errors",
+    "pass": true,
+    "detail": []
+  },
+  {
+    "name": "fulfill 390 light: no va_ call or policies read",
+    "pass": true,
+    "detail": []
+  },
+  {
+    "name": "fulfill 390 light: no table write",
+    "pass": true,
+    "detail": []
+  },
+  {
+    "name": "fulfill 390 light: every other request (the signed-in page chrome)",
+    "pass": true,
+    "detail": [
+      "GET /rest/v1/carriers",
+      "POST /rest/v1/rpc/get_my_profile",
+      "GET /functions/v1/fetch-secrets",
+      "GET /rest/v1/app_settings",
+      "GET /rest/v1/agent_billing_tiers",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "GET /rest/v1/recovery_config"
+    ]
+  },
+  {
+    "name": "fulfill 390 dark: landed on the route",
+    "pass": true,
+    "detail": "/fulfillment/leads"
+  },
+  {
+    "name": "fulfill 390 dark: theme applied",
+    "pass": true,
+    "detail": "dark"
+  },
+  {
+    "name": "fulfill 390 dark: expect text \"Question type\" shows",
+    "pass": true
+  },
+  {
+    "name": "fulfill 390 dark: checklist at 2 of 4, outcome locked",
+    "pass": true
+  },
+  {
+    "name": "fulfill 390 dark: not the empty, loading or error state",
+    "pass": true
+  },
+  {
+    "name": "fulfill 390 dark: no sideways scroll",
+    "pass": true,
+    "detail": "390/390"
+  },
+  {
+    "name": "fulfill 390 dark: no page errors",
+    "pass": true,
+    "detail": []
+  },
+  {
+    "name": "fulfill 390 dark: no va_ call or policies read",
+    "pass": true,
+    "detail": []
+  },
+  {
+    "name": "fulfill 390 dark: no table write",
+    "pass": true,
+    "detail": []
+  },
+  {
+    "name": "fulfill 390 dark: every other request (the signed-in page chrome)",
+    "pass": true,
+    "detail": [
+      "GET /rest/v1/carriers",
+      "POST /rest/v1/rpc/get_my_profile",
+      "GET /functions/v1/fetch-secrets",
+      "GET /rest/v1/app_settings",
+      "GET /rest/v1/agent_billing_tiers",
+      "POST /rest/v1/rpc/my_standing_threads",
+      "GET /rest/v1/recovery_config"
+    ]
+  },
+  {
+    "name": "sample: tapping a lead in the queue opens the checklist",
+    "pass": true
+  },
+  {
+    "name": "sample book flow: finishes with no va_ call, policies request or write",
+    "pass": true,
+    "detail": []
+  },
+  {
+    "name": "no flag: the page calls va_queue",
+    "pass": true
+  },
+  {
+    "name": "no flag: no sample lead shows",
+    "pass": true
+  },
+  {
+    "name": "signed out: lands on /login",
+    "pass": true,
+    "detail": "http://localhost:5549/login"
+  },
+  {
+    "name": "signed out: no checklist",
+    "pass": true
+  },
+  {
+    "name": "wrong role (agent): turned away to /agent",
+    "pass": true,
+    "detail": "http://localhost:5549/agent"
+  },
+  {
+    "name": "wrong role (agent): no checklist",
+    "pass": true
+  }
+]

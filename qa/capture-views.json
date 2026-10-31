@@ -1,0 +1,22 @@
+{
+  "_recipe": "1. Give the view a plain path or ?query that opens it (use an existing one if there is one) behind the same ProtectedRoute as its parent. 2. If it needs a call or lead, make a dev-only sample that does not touch live data. 3. Add an entry under views with route, role, widths, themes, triggers (the source files that should cause the shot), and expect (text only the real view shows). 4. Run the runner shots for that route and open the images.",
+  "views": [
+    {
+      "id": "va-qualify",
+      "route": "/fulfillment/leads?sample=1",
+      "role": "fulfill",
+      "widths": [390],
+      "themes": ["light", "dark"],
+      "triggers": [
+        "src/components/fulfillment/VaDesk.jsx",
+        "src/components/fulfillment/vaDesk.css",
+        "src/pages/fulfillment/VaLeads.jsx",
+        "src/hooks/useVaDesk.js",
+        "src/lib/vaQueue.js",
+        "src/lib/vaSample.js"
+      ],
+      "expect": "Question type",
+      "note": "The qualify view is the held-lead desk on /fulfillment/leads; users open it by tapping a lead in the queue. ?sample=1 works on the dev server only: the made-up queue comes back with one lead already held, so the page opens the checklist at 2 of 4. The empty state says 'Pick a lead to start' and never shows 'Question type'."
+    }
+  ]
+}

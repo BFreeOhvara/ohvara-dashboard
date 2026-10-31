@@ -2,7 +2,9 @@ import { useCallback, useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAgentBookings, useBookCall } from './useAgentBookings'
+import { useCarriers } from './useCarriers'
 import { stageOf } from '../lib/agentBookings'
+import { leadsSample } from '../lib/leadsPage'
 import { openBookingIsos } from '../lib/scheduling'
 import { splitName, startingChecklist } from '../lib/vaQueue'
 
@@ -14,16 +16,24 @@ import { splitName, startingChecklist } from '../lib/vaQueue'
 // agent the VA picked) and then va_set_lead_outcome('booked') ties it to the
 // lead. A transfer is only a record. Nothing here texts, emails or calls
 // anyone: there is no send path in this file.
+//
+// ?sample=1 (dev only) reads and changes src/lib/vaSample.js in memory instead,
+// so screenshots can open the held-lead view without a real lead.
 
 const KEY = ['va-desk']
+const mode = () => (import.meta.env.DEV && leadsSample() ? 'sample' : 'live')
 
 // The queue: new, not reached and callbacks that are due. Polled so another
 // VA's claim or a new lead shows without a refresh.
 export function useVaQueue() {
   return useQuery({
-    queryKey: [...KEY, 'queue'],
+    queryKey: [...KEY, 'queue', mode()],
     refetchInterval: 30e3,
     queryFn: async () => {
+      if (import.meta.env.DEV && leadsSample()) {
+        const { sampleQueue } = await import('../lib/vaSample')
+        return sampleQueue()
+      }
       const { data, error } = await supabase.rpc('va_queue')
       if (error) throw error
       return data || []
@@ -35,9 +45,13 @@ export function useVaQueue() {
 // isn't built yet.
 export function useVaRoster() {
   return useQuery({
-    queryKey: [...KEY, 'roster'],
+    queryKey: [...KEY, 'roster', mode()],
     staleTime: 60e3,
     queryFn: async () => {
+      if (import.meta.env.DEV && leadsSample()) {
+        const { sampleRoster } = await import('../lib/vaSample')
+        return sampleRoster()
+      }
       const { data, error } = await supabase.rpc('va_agent_roster')
       if (error) throw error
       return data || []
@@ -45,10 +59,25 @@ export function useVaRoster() {
   })
 }
 
+// The carrier directory for the checklist and the booking times.
+export function useVaCarriers() {
+  let sample = {}
+  if (import.meta.env.DEV && leadsSample()) {
+    sample = {
+      queryKey: [...KEY, 'carriers', 'sample'],
+      queryFn: async () => {
+        const { sampleCarriers } = await import('../lib/vaSample')
+        return sampleCarriers()
+      },
+    }
+  }
+  return useCarriers(sample)
+}
+
 // The times an agent already has booked, so those slots show as taken. Not
 // every VA can read every agent's rows; an empty list is the safe fallback.
 export function useAgentTaken(agentId) {
-  const q = useAgentBookings(agentId, { enabled: !!agentId, refetchInterval: false })
+  const q = useAgentBookings(agentId, { enabled: !!agentId && mode() === 'live', refetchInterval: false })
   const rows = q.data
   const isos = useMemo(() => openBookingIsos(rows, { stageOf }), [rows])
   return { isos, loading: !!agentId && q.isLoading }
@@ -108,6 +137,10 @@ export function useVaDesk() {
   // Takes a lead for 15 minutes. Resolves with the hold's end time.
   const claim = useMutation({
     mutationFn: async leadId => {
+      if (import.meta.env.DEV && leadsSample()) {
+        const { sampleClaim } = await import('../lib/vaSample')
+        return sampleClaim(leadId)
+      }
       const { data, error } = await supabase.rpc('va_claim', { p_lead: leadId })
       if (error) throw error
       return data
@@ -117,6 +150,10 @@ export function useVaDesk() {
 
   const release = useMutation({
     mutationFn: async leadId => {
+      if (import.meta.env.DEV && leadsSample()) {
+        const { sampleRelease } = await import('../lib/vaSample')
+        return sampleRelease(leadId)
+      }
       const { error } = await supabase.rpc('va_release', { p_lead: leadId })
       if (error) throw error
     },
@@ -126,6 +163,10 @@ export function useVaDesk() {
   // not_reached | callback | transferred | booked (+ the booking row's id).
   const record = useMutation({
     mutationFn: async ({ leadId, outcome, agentId = null, callbackAt = null, bookingId = null, checklist = null }) => {
+      if (import.meta.env.DEV && leadsSample()) {
+        const { sampleRecord } = await import('../lib/vaSample')
+        return sampleRecord(leadId)
+      }
       const { error } = await supabase.rpc('va_set_lead_outcome', {
         p_lead: leadId,
         p_agent: agentId,
@@ -146,6 +187,7 @@ export function useVaDesk() {
   const book = useMutation({
     mutationFn: async ({ lead, agentId, scheduledAt, timezone, carrier, checklist, bookingId = null }) => {
       let id = bookingId
+      if (!id && import.meta.env.DEV && leadsSample()) id = 'sample-booking'
       if (!id) {
         const { first, last } = splitName(lead.contact_name)
         const policy = await bookCall.mutateAsync({
