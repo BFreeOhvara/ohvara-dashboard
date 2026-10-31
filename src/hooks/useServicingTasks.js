@@ -2,8 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 
-// The v2 Clients page's server reads (migration 180). Read only: nothing here writes.
-//   useServicingTasks()   every servicing_tasks row on this agent's clients (RLS: agent_id = auth.uid()).
+// The v2 Clients page's server reads (migrations 180, 193). Read only: nothing here writes.
+//   useServicingTasks()   every servicing_tasks row on this agent's clients, steps and requests alike.
 //   useClientPolicies(ids) the policies a sold inbound points at (leads.client_policy_id) plus the
 //                         client's booked cancellations, with the fields the Policies card shows.
 const TASK_COLS = 'id, agent_id, lead_id, policy_id, kind, status, due_at, done_at, note, created_at'
@@ -47,6 +47,7 @@ export const TASK_LABEL = {
 export const TASK_STATUS = {
   requested: { label: 'Requested', chip: 'req' },
   scheduled: { label: 'Scheduled', chip: 'sch' },
+  in_progress: { label: 'In progress', chip: 'sch' },
   done: { label: 'Done', chip: 'done' },
 }
 

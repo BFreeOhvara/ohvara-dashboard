@@ -23,7 +23,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(70);
+select plan(74);
 
 -- ── seed (as the table owner) ───────────────────────────────────────────────
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -64,8 +64,8 @@ select (select count(*) from public.notification_emails) as emails,
 select is(
   (select array_agg(p.proname::text order by p.proname) from pg_proc p
     where p.pronamespace = 'public'::regnamespace and p.proname like 'va\_%'),
-  array['va_agent_roster', 'va_claim', 'va_queue', 'va_release', 'va_save_policy_help_lead', 'va_set_lead_outcome'],
-  'a0 the va_* functions are exactly the six this test covers (a new one needs new cases)');
+  array['va_agent_roster', 'va_claim', 'va_lead_replies', 'va_mark_reply_handled', 'va_queue', 'va_release', 'va_save_policy_help_lead', 'va_set_lead_outcome'],
+  'a0 the va_* functions are exactly these eight (a new one needs new cases)');
 
 select ok(not has_function_privilege('anon', p.oid, 'execute'),
           format('a1 anon has no execute on %s', p.proname))

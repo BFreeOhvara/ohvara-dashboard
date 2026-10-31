@@ -124,7 +124,7 @@ select is((
     'policies', 'policy_fulfillment_details', 'policy_messages', 'policy_message_reads',
     'direct_messages', 'direct_message_reads', 'messages', 'team_conversations', 'team_messages',
     'agent_lead_settings', 'agent_duty', 'agent_licenses', 'agent_carrier_appointments', 'agent_monthly_goals',
-    'leads', 'inbound_events', 'service_requests', 'servicing_tasks', 'fulfillment_cancels',
+    'leads', 'inbound_events', 'servicing_tasks', 'fulfillment_cancels',
     'appointments', 'calls', 'closer_followups', 'training_progress', 'bug_reports']) t
    where to_regclass('public.' || t) is not null
      and not exists (select 1 from pg_trigger g
