@@ -121,4 +121,4 @@ PASS [o13] the whole file also runs top to bottom in one go
 PASS [o16] the file holds the stop rules Brayden asked for, before section 1
 PASS [o14] the seed leaves sms_live off
 
-Result: all passed. 98 checks in 51.3 s. Exit code 0.
+Result: all passed. 98 checks in 52.8 s. Exit code 0.
