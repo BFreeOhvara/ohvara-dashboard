@@ -1,0 +1,16 @@
+{
+  "rows": [
+    {
+      "id": "overview.book-data-hook",
+      "page": "Overview",
+      "title": "Overview data: book stages, submissions, steps, steps-done counts and leads flag",
+      "status": "checking",
+      "files": [
+        "src/lib/overviewBook.js",
+        "src/hooks/useOverviewBook.js",
+        "src/lib/overviewBook.test.js"
+      ],
+      "notes": "Data layer only, read only. useOverviewBook() returns { book, submissions, steps: { dueSoon, doneByDay }, hasLeads, hasServicing, isLoading, isError, refetch }; the return shape is documented at the top of the hook. Book needs migration 193 (agent_clients); until it is applied book.available is false and the numbers are null. Saves need servicing_tasks.outcome (193) and read 0 until then. Spec: brain/ohvara/Agent Portal Servicing Spec.md, Overview."
+    }
+  ]
+}
