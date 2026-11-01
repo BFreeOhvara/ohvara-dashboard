@@ -1,17 +1,19 @@
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Search, ShieldCheck, ListChecks, Trash2, Phone, MessageSquareText, Users, ChevronLeft } from 'lucide-react'
+import { Search, ShieldCheck, ListChecks, Trash2, Phone, MessageSquareText, Users, ChevronLeft, Plus, MessageSquare } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useIsPhone } from '../../hooks/usePhoneLayout'
 import { useInbounds } from '../../hooks/useInbounds'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
+import { useSubmitLive } from '../../hooks/useAppSettings'
 import { useServicingTasks, useClientPolicies, TASK_LABEL, TASK_STATUS, watchProgress } from '../../hooks/useServicingTasks'
 import { ClientDrawer, StatusNote, Journey, LoadError } from './AgentUI'
 import { CancellationFlow } from '../../pages/agent/Clients'
 import { leadName, stateName, dateText, timeText, telHref } from '../../lib/inbounds'
 import { fullName, money } from '../../lib/policyFormat'
 import { agentStageOf, STAGE, placeOf, digits, policyNumberMatches, useNow } from '../../lib/agentBookings'
-import { DEFAULT_TIMEZONE } from '../../lib/timezones'
+import { DEFAULT_TIMEZONE, formatDual, inferTimezoneFromState, needsCityLookup } from '../../lib/timezones'
+import { SMS_CONSENT_SCRIPT } from '../../lib/smsConsent'
 import './clientsV2Parts.css'
 
 // The v2 Clients page's own parts (portal parity T5), drawn in the old My Pipeline's cards and list
@@ -29,11 +31,11 @@ const CLIENT_FILTERS = [
   { key: 'existing', label: 'Existing' },
 ]
 const phone10 = raw => digits(raw).slice(-10)
-const initials = name => (name || '').trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase()).join('') || '?'
+export const initials = name => (name || '').trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase()).join('') || '?'
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 const cap = s => s[0].toUpperCase() + s.slice(1)
 
-function buildClients(sold, bookings, tasks) {
+export function buildClients(sold, bookings, tasks) {
   const used = new Set()
   const out = []
   for (const l of sold) {
@@ -43,14 +45,14 @@ function buildClients(sold, bookings, tasks) {
     const ids = new Set(old.map(p => p.id))
     out.push({
       id: l.lead_id, source: 'inbound', name: leadName(l), phone: l.phone, state: l.state,
-      place: [l.city, l.state].filter(Boolean).join(', '), soldAt: l.outcome_at, newPolicyId: l.client_policy_id, bookings: old,
+      city: l.city, place: [l.city, l.state].filter(Boolean).join(', '), soldAt: l.outcome_at, newPolicyId: l.client_policy_id, bookings: old,
       tasks: tasks.filter(t => t.lead_id === l.lead_id || (t.policy_id && (t.policy_id === l.client_policy_id || ids.has(t.policy_id)))),
     })
   }
   for (const p of bookings) {
     if (used.has(p.id)) continue
     out.push({
-      id: p.id, source: 'existing', name: fullName(p), phone: p.client_phone, state: p.state, place: placeOf(p),
+      id: p.id, source: 'existing', name: fullName(p), phone: p.client_phone, state: p.state, city: p.client_city, place: placeOf(p),
       soldAt: null, newPolicyId: null, bookings: [p], tasks: tasks.filter(t => t.policy_id === p.id),
     })
   }
@@ -61,7 +63,7 @@ const policyCount = c => (c.newPolicyId ? 1 : 0) + c.bookings.length
 const openTasks = c => c.tasks.filter(t => t.kind !== 'chargeback_watch' && t.status !== 'done')
   .sort((a, b) => (a.status === 'scheduled' ? 0 : 1) - (b.status === 'scheduled' ? 0 : 1) || new Date(a.due_at || a.created_at) - new Date(b.due_at || b.created_at))
 
-function nextLine(c, tz) {
+export function nextLine(c, tz) {
   const t = openTasks(c)[0]
   if (t?.status === 'scheduled') return `Next: ${TASK_LABEL[t.kind]}${t.due_at ? `, ${dateText(t.due_at, tz)}` : ''}`
   if (t) return `${TASK_LABEL[t.kind]} requested`
@@ -75,7 +77,7 @@ function nextLine(c, tz) {
 
 // ── Data ─────────────────────────────────────────────────────────────────────
 // Everything the parts read: sold inbounds + bookings + servicing tasks, merged, and their policies.
-function useV2Clients() {
+export function useV2Clients() {
   const { profile } = useAuth()
   const tz = profile?.timezone || DEFAULT_TIMEZONE
   const inb = useInbounds()
@@ -89,6 +91,7 @@ function useV2Clients() {
   return {
     tz, clients, policies: pol.data, agentRows: bk.data || [],
     loading: inb.isLoading || bk.isLoading, error: inb.isError || bk.isError,
+    detailLoading: tasks.isLoading || pol.isLoading, policiesError: pol.isError, refetchPolicies: () => pol.refetch(),
     refetch: () => { inb.refetch(); bk.refetch() },
     tasksError: tasks.isError, refetchTasks: () => tasks.refetch(),
   }
@@ -288,7 +291,7 @@ export function ServicingCard({ c, tz, now, tasksError, onRetry }) {
           ) : !w && <p className="cv2-sub">Servicing starts once the policy is placed: packet check, review call and chargeback watch.</p>}
         </>
       )}
-      <button type="button" className="cv2-soon" disabled aria-disabled="true">Request servicing &middot; Coming soon</button>
+      <RequestLink c={c} className="ov-ghost cv2-btn cv2-req" />
     </section>
   )
 }
@@ -327,10 +330,56 @@ export function CancellationsCard({ c, now, startRebook, agentRows }) {
   )
 }
 
-export function ConsentCard() {
+// The client's own zone: a booking's saved one, else the state's single zone. `found` is a looked-up zone
+// for a split state (the client page does the lookup; the drawer doesn't).
+export const clientZoneOf = (c, found = null) => c.bookings.find(p => p.client_timezone)?.client_timezone
+  || (c.state && !needsCityLookup(c.state) ? inferTimezoneFromState(c.state) : found)
+
+// The newest policy of this client: a sold lead's new policy, else the newest booking. null until one is placed.
+export const requestPolicyId = c => c.newPolicyId
+  || [...c.bookings].sort((x, y) => new Date(y.created_at) - new Date(x.created_at))[0]?.id || null
+
+// "Request a service": only with submit_live on and Servicing on the account (Submit shows BookCall otherwise).
+export function RequestLink({ c, className = 'ov-ghost cv2-btn' }) {
+  const { live } = useSubmitLive()
+  const { profile } = useAuth()
+  if (!live || profile?.has_servicing === false) return null
+  const id = requestPolicyId(c)
+  if (!id) {
+    return (
+      <span className="cv2-reqwrap">
+        <button type="button" className={className} disabled aria-disabled="true"><Plus size={16} strokeWidth={2.2} aria-hidden="true" />Request a service</button>
+        <span className="cv2-sub">Available once the policy is placed</span>
+      </span>
+    )
+  }
+  return <Link className={className} to={`/agent/submit?kind=request&policy=${id}`}><Plus size={16} strokeWidth={2.2} aria-hidden="true" />Request a service</Link>
+}
+
+// The stored text consent for this client's bookings (policies.sms_consent, migration 157), newest first;
+// nothing but "No text consent on file" without one. The script is the one Ohvara registered, word for word.
+export function ConsentCard({ c, policies, tz, clientTz }) {
+  const { profile } = useAuth()
+  const rec = c.bookings.map(b => policies?.get(b.id)).filter(p => p?.sms_consent)
+    .sort((x, y) => new Date(y.sms_consent_at || 0) - new Date(x.sms_consent_at || 0))[0]
+  if (!rec) {
+    return (
+      <section className="ov-card cv2-card cv2-nocon" aria-label="Text consent">
+        <span className="cv2-tile" aria-hidden="true"><MessageSquare size={18} strokeWidth={2} /></span>
+        <span className="cv2-h4">No text consent on file</span>
+      </section>
+    )
+  }
   return (
-    <section className="ov-card cv2-card" aria-label="Consent">
-      <div className="cv2-consent"><b>Consent</b>Consent wording goes here once Ohvara sets it.</div>
+    <section className="ov-card cv2-card" aria-label="Text consent">
+      <CardHead icon={MessageSquare} tone="a" title="Text consent" sub="For the texts about the cancellation call" />
+      <dl className="ov-tile cv2-consent-rec">
+        <div><dt>Recorded by</dt><dd>{rec.sms_consent_by && rec.sms_consent_by === profile?.id ? 'You' : 'Ohvara team'}</dd></div>
+        <div><dt>Script</dt><dd>{rec.sms_consent_version || 'v1'}</dd></div>
+        {rec.sms_consent_at && <div className="w"><dt>When</dt><dd>{dateText(rec.sms_consent_at, tz)} · {formatDual(rec.sms_consent_at, tz, clientTz)}</dd></div>}
+      </dl>
+      <h4 className="cv2-h4 cv2-script-h">The script</h4>
+      <p className="cv2-script">{SMS_CONSENT_SCRIPT}</p>
     </section>
   )
 }
@@ -349,7 +398,7 @@ export function ClientV2Cards({ c, data, now, startRebook }) {
       <PoliciesCard c={c} policies={data.policies} tz={data.tz} />
       <ServicingCard c={c} tz={data.tz} now={now} tasksError={data.tasksError} onRetry={data.refetchTasks} />
       <CancellationsCard c={c} now={now} startRebook={startRebook} agentRows={data.agentRows} />
-      <ConsentCard />
+      <ConsentCard c={c} policies={data.policies} tz={data.tz} clientTz={clientZoneOf(c)} />
     </>
   )
 }
@@ -358,6 +407,7 @@ export function ClientV2Cards({ c, data, now, startRebook }) {
 export function ClientV2Drawer({ c, data, now, startRebook, onClose }) {
   return (
     <ClientDrawer name={c.name} meta={<><SourceChip c={c} /><span className="cv2-meta">{clientSubLine(c, data.tz)}</span></>} onClose={onClose}>
+      <Link className="ov-ghost cv2-btn cv2-open" to={`/agent/clients/${c.id}`}>Open client page</Link>
       <ClientV2Cards c={c} data={data} now={now} startRebook={startRebook} />
     </ClientDrawer>
   )

@@ -220,3 +220,11 @@ test('gateView: an unlocked agent sees every page', () => {
   const s = portalState(selfAgent({ billing_status: 'active' }), servicing, on, NOW)
   for (const p of ['/agent', '/agent/book', '/agent/submit', '/agent/clients', '/agent/billing']) assert.equal(gateView(s, p), 'open', p)
 })
+
+test('gateView: one client page (/agent/clients/<id>) follows the Clients rules', () => {
+  const id = '/agent/clients/abc'
+  assert.equal(gateView(portalState(selfAgent(), leadsOnly, on, NOW), id), 'servicing', 'Leads only')
+  assert.equal(gateView(portalState(selfAgent(), nothing, on, NOW), id), 'welcome', 'locked self-signup')
+  assert.equal(gateView(portalState(agent(), null, on, NOW), id), 'paused', 'paused account')
+  assert.equal(gateView(portalState(selfAgent({ billing_status: 'active' }), servicing, on, NOW), id), 'open', 'Servicing agent')
+})

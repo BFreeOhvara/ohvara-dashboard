@@ -1,0 +1,83 @@
+<section class="sec" data-mock-page="Overview">
+  <div class="sec-label"><b>Fulfillment Overview</b><span>/fulfillment · the four jobs, what to do next, My pay</span></div>
+  <header class="apphead"><h1>Overview</h1></header>
+  <div class="page"><div class="col" style="gap:20px">
+
+    <section class="ov-hero" aria-label="Today">
+      <div class="hero-top"><span class="ph"><i></i>Sunday, Nov 1 · 3:15 PM</span></div>
+      <h2 class="hero-big">Good afternoon, Alex</h2>
+      <div class="hero-mid">
+        <div><div class="clock"><b class="tab">12</b><span>things to do today</span></div><p class="sub" style="margin-top:6px">Next up: a callback for Riley Sample at 3:30 PM.</p></div>
+        <div class="hero-acts"><a class="hero-call" href="#next"><svg width="18" height="18"><use href="#i-phone"/></svg>Start the next one</a></div>
+      </div>
+      <p class="rule"><svg width="18" height="18"><use href="#i-info"/></svg>Logistics only. Any coverage question goes to a licensed agent.</p>
+    </section>
+
+    <div class="counts four" aria-label="The four jobs">
+      <a class="ov-card job" href="#live"><span class="top"><span class="tile"><svg width="20" height="20"><use href="#i-wave"/></svg></span><h3>Live calls waiting</h3></span><b class="tab">0</b><span class="sub">Live calls are switched off for now.</span></a>
+      <a class="ov-attn job" href="#callbacks"><span class="top"><span class="tile"><svg width="20" height="20"><use href="#i-phone"/></svg></span><h3>Callbacks due</h3></span><b class="tab">4</b><span class="sub">Oldest was due 2:45 PM.</span></a>
+      <a class="ov-card job" href="#noshows"><span class="top"><span class="tile"><svg width="20" height="20"><use href="#i-cal"/></svg></span><h3>No-shows to rebook</h3></span><b class="tab">2</b><span class="sub">Rebook inside the hour.</span></a>
+      <a class="ov-card job" href="#servicing"><span class="top"><span class="tile"><svg width="20" height="20"><use href="#i-clip"/></svg></span><h3>Servicing due</h3></span><b class="tab">6</b><span class="sub">3 due today, 3 coming up.</span></a>
+    </div>
+
+    <div class="grid two-col">
+      <section class="ov-card qsec" id="next" aria-label="What to do next">
+        <div class="qsec-h"><h2>What to do next</h2><span class="qn tab">12</span></div>
+        <a class="todo" href="#"><span class="kind warn">Callback</span><span class="grow"><span class="nm" style="font-weight:700">Riley Sample</span><span class="meta sub" style="display:block">Ohio · Policy help · asked for 3:30 PM</span></span><span class="when tab">3:30 PM</span><svg class="chev" width="18" height="18" style="color:var(--ov-faint)"><use href="#i-chev"/></svg></a>
+        <a class="todo" href="#"><span class="kind blue">Rebook</span><span class="grow"><span class="nm" style="font-weight:700">Casey Demo</span><span class="meta sub" style="display:block">Missed a 2:00 PM appointment · 1st rebook try</span></span><span class="when tab">By 3:00 PM</span><svg class="chev" width="18" height="18" style="color:var(--ov-faint)"><use href="#i-chev"/></svg></a>
+        <a class="todo" href="#"><span class="kind">Servicing</span><span class="grow"><span class="nm" style="font-weight:700">Packet check · Jordan Placeholder</span><span class="meta sub" style="display:block">Carrier Placeholder A · effective Nov 4</span></span><span class="when tab">Today</span><svg class="chev" width="18" height="18" style="color:var(--ov-faint)"><use href="#i-chev"/></svg></a>
+        <a class="todo" href="#"><span class="kind">Servicing</span><span class="grow"><span class="nm" style="font-weight:700">Payment check, month 3 of 12 · Maximiliana-Alexandrina Featherstonehaugh-Worthington</span><span class="meta sub" style="display:block">Carrier Placeholder B</span></span><span class="when tab">Today</span><svg class="chev" width="18" height="18" style="color:var(--ov-faint)"><use href="#i-chev"/></svg></a>
+        <a class="todo" href="#"><span class="kind warn">Lapse save</span><span class="grow"><span class="nm" style="font-weight:700">Sam Example</span><span class="meta sub" style="display:block">Missed October payment · due in 1 business day</span></span><span class="when tab">Mon</span><svg class="chev" width="18" height="18" style="color:var(--ov-faint)"><use href="#i-chev"/></svg></a>
+        <a class="todo" href="#"><span class="grow"><span class="nm" style="font-weight:700;color:var(--ov-data-a)">See the other 7</span></span><svg class="chev" width="18" height="18" style="color:var(--ov-faint)"><use href="#i-chev"/></svg></a>
+      </section>
+
+      <section class="ov-card" aria-label="My pay">
+        <div class="card-h"><h2>My pay</h2><a class="ov-ghost" href="#">Open My pay</a></div>
+        <span class="money big-money">$84.00</span>
+        <p class="sub" style="margin-top:6px">Verified this week · test values</p>
+        <div style="margin-top:12px">
+          <div class="pay-row"><span class="sub">Old policies confirmed cancelled</span><span class="money">$60.00</span></div>
+          <div class="pay-row"><span class="sub">Waiting on verification</span><span class="money">$24.00</span></div>
+          <div class="pay-row"><span class="sub">Paid out</span><span class="money">$0.00</span></div>
+        </div>
+        <p class="info" style="margin-top:12px">Payouts are off for now. Verified pay keeps adding up here.</p>
+      </section>
+    </div>
+  </div></div>
+</section>
+
+<section class="sec" data-mock-page="Overview states">
+  <div class="gal-h"><h2>Overview states</h2><p class="sub">Each panel is one piece of the page in that state.</p></div>
+  <div class="gallery">
+    <div class="gp"><p class="cap-l">1 · Loading</p>
+      <div class="ov-hero" aria-busy="true"><span class="ov-skel" style="width:140px;height:14px;opacity:.6"></span><span class="ov-skel" style="width:60%;height:34px;margin:16px 0 12px;opacity:.6"></span><span class="ov-skel" style="width:150px;height:44px;opacity:.6"></span></div>
+      <div class="counts" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="ov-card count"><span class="ov-skel" style="width:70%;height:14px"></span><span class="ov-skel" style="width:40px;height:30px;margin-top:10px"></span></div><div class="ov-card count"><span class="ov-skel" style="width:70%;height:14px"></span><span class="ov-skel" style="width:40px;height:30px;margin-top:10px"></span></div></div>
+    </div>
+    <div class="gp"><p class="cap-l">2 · All caught up</p>
+      <div class="ov-card empty"><span class="tile"><svg width="20" height="20"><use href="#i-check"/></svg></span><h3>You're all caught up</h3><p class="sub">No callbacks, rebooks or servicing steps are due. New ones show up here on their own.</p></div>
+      <div class="counts" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="ov-card count"><p>Callbacks due</p><b class="tab">0</b></div><div class="ov-card count"><p>Servicing due</p><b class="tab">0</b></div></div>
+    </div>
+    <div class="gp"><p class="cap-l">3 · Couldn't load</p>
+      <div class="ov-card empty" role="alert"><span class="tile err"><svg width="20" height="20"><use href="#i-err"/></svg></span><h3>We couldn't load your day</h3><p class="sub">Nothing was changed. Check your connection and try again.</p><button class="ov-ghost">Try again</button></div>
+    </div>
+    <div class="gp"><p class="cap-l">4 · Live calls on (voice_live) and a call waiting</p>
+      <a class="ov-attn job" style="display:flex" href="#live"><span class="top"><span class="tile"><svg width="20" height="20"><use href="#i-wave"/></svg></span><h3>Live calls waiting</h3></span><b class="tab">1</b><span class="sub">Rings on any page. Answer opens the call panel.</span></a>
+      <p class="sub" style="padding:0 4px">Mocked off, as live today. The switch is never flipped from this page.</p>
+    </div>
+    <div class="gp"><p class="cap-l">5 · My pay, nothing verified yet</p>
+      <section class="ov-card"><div class="card-h"><h2>My pay</h2></div><span class="money big-money">$0.00</span><p class="sub" style="margin-top:6px">Nothing verified this week yet. Confirmed cancels show up here.</p></section>
+    </div>
+  </div>
+</section>
+
+<div class="notes"><b>Design note for Finn (build from this)</b><ul>
+<li><b>Route:</b> <code>/fulfillment</code> (the existing Overview). Fulfillment role; admin gets the same page for the whole team (copy swaps "your" for "the team's"). Phone layout keeps the Today fold (<code>usePhoneLayout</code>).</li>
+<li><b>Layout:</b> v16. Hero (46px greeting, 32px on phones, count clock 52px / 40px), then four job tiles (4 across, 2 across on phones), then What to do next (left, 1.5fr) and My pay (right, 1fr) from 1100px; stacked below that. Max width 1240px.</li>
+<li><b>The four jobs:</b> Live calls waiting, Callbacks due, No-shows to rebook, Servicing due. One count function returns all four plus the next list (Fulfillment Build Order, Lane A item 7). Each tile links to its desk: Leads desk (Live calls tab), Leads desk (Callback), Leads desk (Appointments, no-show filter), Servicing. Live calls shows 0 and the line "Live calls are switched off for now" while <code>voice_live</code> is off; the tile never flips the switch.</li>
+<li><b>Colour:</b> tokens only. Amber (<code>.ov-attn</code>) only on a tile with something due and the "Callback" / "Lapse save" chips. Green only on the caught-up tick. Selected or link accent is <code>--ov-data-a</code>.</li>
+<li><b>My pay:</b> money in JetBrains Mono (<code>.money</code>), big figure 40px / 34px on phones. Test values only; rates are read from settings and are Brayden's. The "Payouts are off" line shows while <code>payouts_live</code> is off. No pay line for appointments, transfers or servicing until rates are set.</li>
+<li><b>What to do next:</b> top 5 by due time across the four jobs, then "See the other N". Rows are 64px+ links to the item on its desk. Long client names wrap.</li>
+<li><b>Nothing goes out:</b> no button here sends a text, email or call.</li>
+<li><b>Phones (390):</b> every control is 44px or taller, tiles in 2 columns, nothing scrolls sideways.</li>
+<li><b>Mockup only:</b> names, carriers and amounts are made-up samples. Fonts fall back to system fonts and the backdrop dot grid isn't drawn; the real app gets both from <code>DashboardLayout</code>. The phone and desktop layouts come from the same page: open it at 390 and at 1440 to see each.</li>
+</ul></div>

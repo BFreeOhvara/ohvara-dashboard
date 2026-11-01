@@ -73,6 +73,48 @@
       "notes": "Never 'live' while recording_live is off. Covered in 199 by has_recording: true on a client leg whose conference (conference_sid, same policy) has a fulfillment_recordings row with status ready. An agent gets only the true/false, never the audio, sid or id, and no grant was added. Before recording_live goes on: fulfillment-voice's leg callback sets conference_sid to null when Twilio sends none, which would keep this false."
     },
     {
+      "id": "client-page.contact-log-card",
+      "page": "Client page",
+      "title": "Texts and calls card: every text and call with the full words, both time zones, All / Texts / Calls",
+      "status": "checking",
+      "files": [
+        "src/hooks/useClientContactLog.js",
+        "src/components/agent/ClientPageLog.jsx",
+        "src/components/agent/clientPageLog.css",
+        "src/lib/clientPageLog.js",
+        "src/lib/clientPageLog.test.js"
+      ],
+      "notes": "ContactLogCard calls rpc contact_log (migration 199) with p_client_key / p_lead. Words show when stored, otherwise the row label. A missing function shows a quiet muted note, any other failure shows the error with Try again. Not mounted yet: the client-page task mounts it."
+    },
+    {
+      "id": "client-page.team-thread",
+      "page": "Client page",
+      "title": "Team thread card: the client thread with Fulfillment, switcher for several policies, composer",
+      "status": "checking",
+      "files": [
+        "src/hooks/useClientContactLog.js",
+        "src/components/agent/ClientPageLog.jsx",
+        "src/components/agent/clientPageLog.css",
+        "src/lib/clientPageLog.js",
+        "src/lib/clientPageLog.test.js"
+      ],
+      "notes": "TeamThreadCard reads useThreadMessages and sends through the existing useSendMessage (policy_messages). Opens on the newest policy. Not mounted yet: the client-page task mounts it."
+    },
+    {
+      "id": "client-page.client-activity",
+      "page": "Client page",
+      "title": "Activity card: calls booked, tried and finished on the client, newest first",
+      "status": "checking",
+      "files": [
+        "src/hooks/useClientContactLog.js",
+        "src/components/agent/ClientPageLog.jsx",
+        "src/components/agent/clientPageLog.css",
+        "src/lib/clientPageLog.js",
+        "src/lib/clientPageLog.test.js"
+      ],
+      "notes": "ClientActivityCard reads policy_events for the client policies, newest first, 50 at most. Not mounted yet: the client-page task mounts it."
+    },
+    {
       "id": "activity.submitted-row",
       "page": "Activity",
       "title": "A submit shows as one row: Submitted for servicing",
@@ -135,6 +177,86 @@
       "notes": "Migration 202 (not applied). One log row gives one row: billing_spend_pause when the pause state changed (paused or resumed), else billing_spend_change. An upline gets zero, even passing p_agent; Fulfillment gets zero. billing_subscription stays pending and a plan change needs 201. PENDING_KINDS is unchanged, so the Billing chip stays hidden until that is flipped."
     },
     {
+      "id": "overview.your-book-row",
+      "page": "Overview",
+      "title": "Your book: Protected, Setting up, Needs attention, Requests open",
+      "status": "checking",
+      "files": [
+        "src/pages/agent/Overview.jsx",
+        "src/components/agent/OverviewBlocks.jsx",
+        "src/index.css",
+        "src/hooks/useOverviewBook.js"
+      ],
+      "notes": "Four tiles from useOverviewBook().book, each a link to /agent/clients?stage=<key> (protected, setting_up, needs_attention, requests). Clients.jsx does not read these keys yet and falls back to the Booked tab: follow-up for the Clients goal is \"Clients should read these stage keys\". Until migration 193 is applied (agent_clients missing) every tile shows a dash and a plain note, never a zero. Loading shows dashes; a failed load shows LoadError with Try again."
+    },
+    {
+      "id": "overview.this-week-submissions",
+      "page": "Overview",
+      "title": "This week: X of N submissions used, resets Monday",
+      "status": "checking",
+      "files": [
+        "src/pages/agent/Overview.jsx",
+        "src/components/agent/OverviewBlocks.jsx",
+        "src/index.css",
+        "src/components/agent/phone/PhoneHome.jsx"
+      ],
+      "notes": "From agent_weekly_usage (7 or 16 from the plan), opens /agent/submit. Limit reached shows in the needs token. Loading shows dashes; failed load shows LoadError. On the phone the submissions ring card is the same number."
+    },
+    {
+      "id": "overview.coming-up-steps",
+      "page": "Overview",
+      "title": "Coming up: next steps with a due date",
+      "status": "checking",
+      "files": [
+        "src/pages/agent/Overview.jsx",
+        "src/components/agent/OverviewBlocks.jsx",
+        "src/index.css",
+        "src/components/agent/phone/PhoneHome.jsx"
+      ],
+      "notes": "Open steps with a due_at (review calls, packet checks, annual reviews), soonest first, each linking to the client. The data hook leaves out chargeback_watch and requests; lapse_save is a request there, so it does not show here (the mockup lists lapse saves: open question for the hook). The caught-up box keeps its call list headed \"Up next\". Empty, loading and error states in plain words."
+    },
+    {
+      "id": "overview.steps-done-chart",
+      "page": "Overview",
+      "title": "Steps done: last Monday to Sunday in four kinds (replaces Booked / Cancelled)",
+      "status": "checking",
+      "files": [
+        "src/pages/agent/Overview.jsx",
+        "src/components/agent/OverviewBlocks.jsx",
+        "src/index.css",
+        "src/components/agent/AgentUI.jsx"
+      ],
+      "notes": "Stacked bar per day: packet checks, review calls, cancellations, saves, on the LastWeekChart classes. The Booked / Cancelled chart and trend cards are gone from the agent Overview (Fulfillment still uses LastWeekChart). With servicing_tasks.outcome missing the chart still renders and Saves shows a dash."
+    },
+    {
+      "id": "overview.leads-strip-conditional",
+      "page": "Overview",
+      "title": "The whole Today strip shows only for agents who have Leads",
+      "status": "checking",
+      "files": [
+        "src/pages/agent/Overview.jsx",
+        "src/components/agent/OverviewBlocks.jsx",
+        "src/components/agent/TodayCards.jsx",
+        "src/components/agent/phone/PhoneHome.jsx",
+        "src/index.css"
+      ],
+      "notes": "hasLeads (leads_weekly_cents > 0 or any inbound) shows TodayStrip / TodayCards; otherwise one small Get leads card opens /agent/leads. A paused Leads buyer (leads_weekly_cents 0 with inbounds) keeps today's appointments. On the phone Texts waiting stays for agents with Leads."
+    },
+    {
+      "id": "overview.leads-only-layout",
+      "page": "Overview",
+      "title": "Leads-only agents (has_servicing false): Leads panels fill the page",
+      "status": "checking",
+      "files": [
+        "src/pages/agent/Overview.jsx",
+        "src/components/agent/OverviewBlocks.jsx",
+        "src/components/agent/TodayCards.jsx",
+        "src/components/agent/todayCards.css",
+        "scripts/overview-fit-shots.mjs"
+      ],
+      "notes": "Hides Your book, This week, Coming up and Steps done; the five Today cards and the Texts waiting box sit in three columns and two rows with no hole. Same test as Submit.jsx:37. scripts/overview-fit-shots.mjs measures Servicing only, Leads only, Both and a paused buyer at 1920x1080, 1440x900 and 1280x700."
+    },
+    {
       "id": "request.grant-handoff",
       "page": "Clients",
       "title": "A service request moves through functions, not Fulfillment's direct status grant",
@@ -159,6 +281,68 @@
         "src/hooks/useServicingTasks.js"
       ],
       "notes": "3+ characters, ignores case, spaces and dashes, shared by the header, Clients card and phone search."
+    },
+    {
+      "id": "clients.search-box",
+      "page": "Clients",
+      "title": "Phone client search placeholder",
+      "status": "live",
+      "files": [
+        "src/components/agent/phone/PhoneClients.jsx"
+      ],
+      "notes": "The phone placeholder reads \"Name, phone or policy no.\" and fits at 390 width without clipping."
+    },
+    {
+      "id": "client-page.route",
+      "page": "Client page",
+      "title": "/agent/clients/:clientId: one page per client, with the Servicing plan gate",
+      "files": [
+        "src/pages/agent/ClientPage.jsx",
+        "src/App.jsx",
+        "src/lib/portalAccess.js",
+        "src/lib/portalAccess.test.js",
+        "src/components/layout/DashboardLayout.jsx",
+        "src/components/layout/PhoneShell.jsx"
+      ],
+      "notes": "Route beside /agent/clients (agent + admin, AdminTo /admin/pipeline). :clientId is a lead id or a booking id. Unknown id shows Client not found with a back link. gateView counts /agent/clients/<id> as a Servicing page. Drawer and phone sheet link to it. Shots and checks: qa/goal-check-134a9cda/shots.mjs.",
+      "status": "checking"
+    },
+    {
+      "id": "client-page.request-button",
+      "page": "Client page",
+      "title": "Request a service from the client page: opens the request form with this client picked",
+      "files": [
+        "src/components/agent/ClientsV2Parts.jsx",
+        "src/pages/agent/Submit.jsx",
+        "src/pages/agent/ServiceRequest.jsx",
+        "src/pages/agent/ClientPage.jsx"
+      ],
+      "notes": "Shown only when submit_live is on and the agent has Servicing. Link /agent/submit?kind=request&policy=<newest policy id>. ServiceRequest preselects it and looks up a lead client's new policy (useClientPolicies); an unknown id leaves the normal picker. A lead with no policy yet shows it disabled: Available once the policy is placed. The old Coming soon button is gone.",
+      "status": "checking"
+    },
+    {
+      "id": "client-page.policy-timeline",
+      "page": "Client page",
+      "title": "One card per policy: carrier, product, premium, dates and the servicing timeline",
+      "files": [
+        "src/pages/agent/ClientPage.jsx",
+        "src/components/agent/clientsV2Parts.css",
+        "src/hooks/useServicingTasks.js"
+      ],
+      "notes": "Each step shows its done date or scheduled time; chargeback watch is month n of 12. Open requests have their own card with status. Draft dates are not stored on policies, so only Effective, Placed and Replaced show. The Text consent card shows only for bookings with policies.sms_consent true, with the existing script and no new wording.",
+      "status": "checking"
+    },
+    {
+      "id": "client-page.both-time-zones",
+      "page": "Client page",
+      "title": "Times in the agent's zone with the client's beside it",
+      "files": [
+        "src/lib/timezones.js",
+        "src/lib/timezones.test.js",
+        "src/pages/agent/ClientPage.jsx"
+      ],
+      "notes": "formatDual(iso, agentTz, clientTz) gives 2:00 PM your time / 1:00 PM client; one time when the zones read the same or the client zone is unknown. Client zone: a booking's saved zone, else the state's zone (city lookup for split states).",
+      "status": "checking"
     }
   ]
 }

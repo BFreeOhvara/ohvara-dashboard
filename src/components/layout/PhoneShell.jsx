@@ -30,7 +30,7 @@ import { useNewInboundCount } from '../../hooks/useInbounds'
 
 const AGENT_TABS = [
   { to: '/agent', label: 'Home', icon: House, on: p => p === '/agent' },
-  { to: '/agent/clients', label: 'Clients', icon: Users, on: p => p === '/agent/clients' },
+  { to: '/agent/clients', label: 'Clients', icon: Users, on: p => p === '/agent/clients' || p.startsWith('/agent/clients/') },
   { to: '/agent/submit', label: 'Submit', icon: Plus, plus: true, on: () => false },
   { to: '/messages', label: 'Messages', icon: MessageSquare, on: p => p === '/messages', badge: true },
   // Leads and Calendar open from More (portal parity answer 1); More shows the new-inbounds count.

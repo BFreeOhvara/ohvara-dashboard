@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Check, ChevronRight, Search, Send, Sun, Clock, Moon } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
+import { useClientPolicies } from '../../hooks/useServicingTasks'
 import { REQUEST_KINDS, NOTE_LABEL, kindLabel, useSubmitServiceRequest } from '../../hooks/useServiceRequests'
 import { useWeeklyUsage } from '../../hooks/useBillingTiers'
 import { capState, formatReset } from '../../lib/billing'
@@ -68,20 +69,25 @@ function Choice({ on, onClick, title, hint, icon: Icon }) {
 
 const errRing = on => (on ? { borderRadius: 14, outline: '1px solid var(--danger)', outlineOffset: 6 } : null)
 
-export default function ServiceRequest({ onBack }) {
+// `policyId` (from the client page) opens with that client picked; a lead client's new policy isn't a booking,
+// so it is looked up and added to the list. An id that isn't found leaves the normal picker.
+export default function ServiceRequest({ onBack, policyId = null }) {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const phone = usePhoneLayout()
   const now = useNow(60e3)
   const goBack = onBack || (() => navigate(-1))
-  const { data: rows = [], isLoading, isError, refetch } = useAgentBookings(profile?.id)
+  const { data: booked = [], isLoading, isError, refetch } = useAgentBookings(profile?.id)
+  const lookup = useClientPolicies(policyId && !booked.some(p => p.id === policyId) ? [policyId] : [])
+  const extra = policyId ? lookup.data?.get(policyId) : null
+  const rows = useMemo(() => (extra && !booked.some(p => p.id === extra.id) ? [...booked, extra] : booked), [booked, extra])
   const send = useSubmitServiceRequest()
   const { data: usage } = useWeeklyUsage(profile?.id)
   const cap = capState(usage)
   const resets = formatReset(usage?.week_end, profile?.timezone)
 
   const [query, setQuery] = useState('')
-  const [pickedId, setPickedId] = useState(null)
+  const [pickedId, setPickedId] = useState(policyId || null)
   const [kind, setKind] = useState(null)
   const [note, setNote] = useState('')
   const [best, setBest] = useState(null)

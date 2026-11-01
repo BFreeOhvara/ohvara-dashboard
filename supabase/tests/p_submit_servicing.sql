@@ -25,7 +25,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(83);
+select plan(84);
 
 -- ── seed (as the table owner) ───────────────────────────────────────────────
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -329,15 +329,15 @@ select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-0000000
 select is((select count(*) from public.servicing_tasks where requested_by = 'agent'), 1::bigint, 'd6 agent A sees their own request');
 select throws_ok(format($$ insert into public.servicing_tasks (agent_id, policy_id, kind) values ('aaaaaaaa-aaaa-4aaa-8aaa-00000000000a', %L, 'carrier_call') $$, (select id from ids where name = 'no')),
                  '42501', 'permission denied for table servicing_tasks', 'd7 not even on their own client');
-update public.servicing_tasks set status = 'done';
+select throws_ok($$ update public.servicing_tasks set status = 'done' $$, '42501', 'permission denied for table servicing_tasks', 'd7b an agent cannot update the status directly');
 select is((select status from public.servicing_tasks where id = (select id from ids where name = 'req')), 'requested', 'd8 an agent cannot change the status');
 reset role;
 
 select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8bbb-000000000001","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select is((select count(*) from public.servicing_tasks where requested_by = 'agent'), 1::bigint, 'd9 Fulfillment sees the queue');
-select lives_ok(format($$ update public.servicing_tasks set status = 'in_progress' where id = %L $$, (select id from ids where name = 'req')),
-                'd10 Fulfillment can change the status');
+select is((select count(*) from public.va_servicing_queue() q where q.task_id = (select id from ids where name = 'req') and q.requested_by = 'agent'), 1::bigint, 'd9 Fulfillment sees the request through va_servicing_queue()');
+select throws_ok(format($$ update public.servicing_tasks set status = 'in_progress' where id = %L $$, (select id from ids where name = 'req')),
+                 '42501', 'permission denied for table servicing_tasks', 'd10 Fulfillment cannot change the status directly');
 select throws_ok(format($$ update public.servicing_tasks set note = 'changed' where id = %L $$, (select id from ids where name = 'req')),
                  '42501', 'permission denied for table servicing_tasks', 'd11 and nothing else');
 reset role;

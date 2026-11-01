@@ -14,7 +14,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(120);
+select plan(121);
 
 -- ── seed (as the table owner) ───────────────────────────────────────────────
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -353,7 +353,8 @@ select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8193-0000000
 select throws_ok($$ insert into public.servicing_tasks (agent_id, policy_id, kind)
                     select agent_id, policy_id, 'carrier_call' from public.policy_servicing_status where client_last_name = 'OfA' $$,
                  '42501', 'permission denied for table servicing_tasks', 'c21 A cannot insert servicing_tasks');
-update public.servicing_tasks set status = 'done' where agent_id = 'aaaaaaaa-aaaa-4aaa-8193-00000000000a';
+select throws_ok($$ update public.servicing_tasks set status = 'done' where agent_id = 'aaaaaaaa-aaaa-4aaa-8193-00000000000a' $$,
+                 '42501', 'permission denied for table servicing_tasks', 'c21b A cannot update the status directly');
 reset role;
 select is((select t.status from public.servicing_tasks t join public.policies p on p.id = t.policy_id where p.client_last_name = 'OfA'), 'requested',
           'c22 A cannot update the status of their own task');
@@ -364,21 +365,21 @@ reset role;
 
 select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8193-000000000001","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select lives_ok(format($$ update public.servicing_tasks set status = 'in_progress' where id = %L $$, (select id from ids where name = 'b_task')),
-                'c24 Fulfillment can update the status');
+select throws_ok(format($$ update public.servicing_tasks set status = 'in_progress' where id = %L $$, (select id from ids where name = 'b_task')),
+                 '42501', 'permission denied for table servicing_tasks', 'c24 Fulfillment cannot update the status');
 select throws_ok(format($$ update public.servicing_tasks set note = 'changed' where id = %L $$, (select id from ids where name = 'b_task')),
                  '42501', 'permission denied for table servicing_tasks', 'c25 Fulfillment cannot update the note');
 select throws_ok(format($$ update public.servicing_tasks set outcome = 'saved' where id = %L $$, (select id from ids where name = 'b_task')),
                  '42501', 'permission denied for table servicing_tasks', 'c26 Fulfillment cannot update the outcome');
 reset role;
-select is((select status from public.servicing_tasks where id = (select id from ids where name = 'b_task')), 'in_progress', 'c27 Fulfillment''s status change saved');
+select is((select status from public.servicing_tasks where id = (select id from ids where name = 'b_task')), 'requested', 'c27 the status is unchanged');
 
 select set_config('request.jwt.claims', '{"sub":"cccccccc-cccc-4ccc-8193-000000000001","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select lives_ok(format($$ update public.servicing_tasks set status = 'scheduled' where id = %L $$, (select id from ids where name = 'b_task')),
-                'c28 admin can update the status');
+select throws_ok(format($$ update public.servicing_tasks set status = 'scheduled' where id = %L $$, (select id from ids where name = 'b_task')),
+                 '42501', 'permission denied for table servicing_tasks', 'c28 admin cannot update directly');
 reset role;
-select is((select status from public.servicing_tasks where id = (select id from ids where name = 'b_task')), 'scheduled', 'c29 admin''s status change saved');
+select is((select status from public.servicing_tasks where id = (select id from ids where name = 'b_task')), 'requested', 'c29 admin cannot update directly: the status is unchanged and nothing moved back');
 
 -- Demo wall. The task names A as its agent, so only the wall can hide it.
 select set_config('request.jwt.claims', '', true);
@@ -430,12 +431,8 @@ select public.p_ss_policy('DoneStamp', interval '3 months 10 days');
 insert into ids select 'stamp', public.p_ss_task('DoneStamp', 'lapse_save', 'in_progress', now() + interval '1 day');
 update public.servicing_tasks set outcome = 'saved' where id = (select id from ids where name = 'stamp');
 select is((select done_at from public.servicing_tasks where id = (select id from ids where name = 'stamp')), null, 'd0 an open task has no done_at');
-select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8193-000000000001","role":"authenticated"}', true),
-       set_config('role', 'authenticated', true);
 update public.servicing_tasks set status = 'done' where id = (select id from ids where name = 'stamp');
-reset role;
-select set_config('request.jwt.claims', '', true);
-select is((select done_at from public.servicing_tasks where id = (select id from ids where name = 'stamp')), now(), 'd1 Fulfillment setting status done stamps done_at');
+select is((select done_at from public.servicing_tasks where id = (select id from ids where name = 'stamp')), now(), 'd1 setting status done stamps done_at');
 select is(public.p_ss_row('DoneStamp'), public.p_ss_expect('needs_attention', 'saved_watch', now() + interval '14 days'),
           'd2 a saved task with that stamp reads needs attention');
 

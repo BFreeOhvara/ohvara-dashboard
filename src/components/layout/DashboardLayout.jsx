@@ -242,12 +242,14 @@ function PageTitle({ pathname }) {
   const { view } = usePortal()
   const gate = GATE_TITLES[view]
   const detail = profile?.role === 'agent' && isInboundDetail(pathname)
-  const entry = gate?.label ? gate : detail ? { group: 'Leads', label: 'Lead', icon: Inbox } : navEntry(profile?.role, pathname)
-  const [title, sub] = TITLES[pathname] || ['', '']
+  // One client's page sits under Clients: same title, tone and header line as the list.
+  const key = pathname.startsWith('/agent/clients/') ? '/agent/clients' : pathname
+  const entry = gate?.label ? gate : detail ? { group: 'Leads', label: 'Lead', icon: Inbox } : navEntry(profile?.role, key)
+  const [title, sub] = TITLES[key] || ['', '']
   const name = entry?.label || title
   const Icon = entry?.icon || Home
-  const tone = gate?.label ? 'blue' : PAGE_TONE[pathname] || 'blue'
-  const Line = profile?.role === 'agent' && !gate ? AGENT_LINES[pathname] : null
+  const tone = gate?.label ? 'blue' : PAGE_TONE[key] || 'blue'
+  const Line = profile?.role === 'agent' && !gate ? AGENT_LINES[key] : null
   if (!name) return null
   if (gate) {
     return (
@@ -258,7 +260,7 @@ function PageTitle({ pathname }) {
             {entry?.group && <><span className="ov-hgroup">{entry.group}</span><span className="ov-hgroup" aria-hidden="true">/</span></>}
             <h1 className="ov-hname">{name}</h1>
           </div>
-          <div className="ov-hline"><Plain>{view === 'servicing' && pathname === '/agent/clients' ? 'Servicing plan needed' : gate.line}</Plain></div>
+          <div className="ov-hline"><Plain>{view === 'servicing' && key === '/agent/clients' ? 'Servicing plan needed' : gate.line}</Plain></div>
         </div>
       </div>
     )
@@ -328,7 +330,7 @@ export function DashboardLayout({ children }) {
           className="app-main flex-1 flex flex-col min-w-0 pt-[60px] md:pt-0"
           style={{ '--sb-w': `${collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W}px`, position: 'relative' }}
         >
-          <div className={`app-backdrop${['/agent', '/agent/submit', '/agent/clients', '/agent/activity', '/agent/leads', '/agent/billing', '/agent/calendar', '/settings', '/fulfillment', '/fulfillment/desk', '/fulfillment/leads', '/fulfillment/pipeline', '/fulfillment/pay', '/fulfillment/getting-paid'].includes(pathname) || pathname.startsWith('/agent/inbounds') || pathname.startsWith('/admin') ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
+          <div className={`app-backdrop${['/agent', '/agent/submit', '/agent/clients', '/agent/activity', '/agent/leads', '/agent/billing', '/agent/calendar', '/settings', '/fulfillment', '/fulfillment/desk', '/fulfillment/leads', '/fulfillment/pipeline', '/fulfillment/pay', '/fulfillment/getting-paid'].includes(pathname) || pathname.startsWith('/agent/inbounds') || pathname.startsWith('/agent/clients/') || pathname.startsWith('/admin') ? ' app-backdrop--v2' : ''}`} aria-hidden="true" />
           {/* Prompt 722 — one header for every size: a 60px fixed top bar on
               phones (menu, title, search, bell), the 72px sticky page header
               from md up. One instance, so the search hotkeys and the bell
