@@ -58,11 +58,12 @@
 --               Twilio id. lead-workflow-sms marks a row done before it sends, so a done
 --               row with no id may not have gone out. 185 left these rows out on purpose;
 --               section 8 says every text, so they are in now.
---   billing_spend_change   agent_inbound_spend_log, id spend_log:<id>, amount unchanged
---               pause state. meta: inbound_type, amount_cents.
---   billing_spend_pause    same source when the pause state changed: 'Lead spend paused.' or
+--   billing_spend_change   agent_inbound_spend_log, id spend_log:<id>: the amount changed
+--               and the pause state didn't. meta: inbound_type, amount_cents.
+--   billing_spend_pause    same source, when the pause state changed: 'Lead spend paused.' or
 --               'Lead spend resumed.', reason paused or resumed. meta: inbound_type, and
---               amount_cents only when the amount changed too. One log row is one feed row.
+--               amount_cents only when the amount changed too. One log row is one feed
+--               row, and a log row that changed nothing is none.
 -- Still pending, no rows:
 --   billing_subscription   no charge-history source exists through 197.
 --   a plan change          needs 201.

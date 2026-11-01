@@ -257,7 +257,8 @@ select public.p_ae_owner();
 select public.p_ae_as('V');
 insert into ids select 'c_new', public.va_save_policy_help_lead('Nia', 'Newcaller', '5125550205', 'Austin', 'TX', '{}'::jsonb, 'transfer', public.p_ae_id('A'));
 select public.p_ae_as('A');
-select is(public.p_ae_n('c_new', 'transferred'), 1::bigint, 'c1 a new caller gives one requested row');
+select is((select count(*) from public.p_ae_feed() f where f.lead_id = public.p_ae_i('c_new') and f.kind = 'transferred' and f.id like 'inbound_event:%'), 1::bigint,
+          'c1 a new caller gives one requested event row');
 select is((select concat_ws('|', f.agent_id, f.meta ->> 'reason', f.meta ->> 'actor_name', f.meta ->> 'actor_role', f.title)
              from public.p_ae_feed() f where f.lead_id = public.p_ae_i('c_new') and f.kind = 'transferred'),
           public.p_ae_id('A') || '|requested|Test va_v|fulfillment|A live transfer was requested.', 'c2 for the agent, with the VA as actor');
@@ -273,7 +274,8 @@ select public.p_ae_as('V');
 select is(public.va_save_policy_help_lead('Otto', 'Oldcaller', '5125550206', 'Austin', 'TX', null, 'transfer', public.p_ae_id('A')), public.p_ae_i('c_old'),
           'c6 an existing caller keeps their lead');
 select public.p_ae_as('A');
-select is(public.p_ae_n('c_old', 'transferred'), 1::bigint, 'c7 and gives one requested row');
+select is((select count(*) from public.p_ae_feed() f where f.lead_id = public.p_ae_i('c_old') and f.kind = 'transferred' and f.id like 'inbound_event:%'), 1::bigint,
+          'c7 and gives one requested event row');
 select is((select concat_ws('|', f.meta ->> 'reason', f.meta ->> 'actor_name') from public.p_ae_feed() f where f.lead_id = public.p_ae_i('c_old') and f.kind = 'transferred'),
           'requested|Test va_v', 'c8 with the VA as actor');
 select is(public.p_ae_n('c_old', 'va_call'), 0::bigint, 'c9 and no va_call row');
