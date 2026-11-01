@@ -16,7 +16,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(423);
+select plan(429);
 
 -- ── seed (as the table owner) ───────────────────────────────────────────────
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -585,16 +585,27 @@ select public.p_vs_owner();
 select is((select due_at from public.servicing_tasks where id = public.p_vs_id('sc_other')), now() + interval '1 day', 'g17 the refused calls left due_at alone');
 select is(public.p_vs_events('sc_free') || '/' || public.p_vs_events('sc_sch') || '/' || public.p_vs_events('sc_other'), 'scheduled/scheduled/', 'g18 each schedule writes one event, a refused one none');
 
--- 196's schedule keeps working next to the trigger, and moves nothing back.
+-- 196's two functions are admin only: VAs use only va_servicing_*.
 select public.p_vs_task('sc_196_req');
 select public.p_vs_task('sc_196_prog', 'carrier_call', 'in_progress');
+select public.p_vs_task('sc_196_finish');
+select public.p_vs_task('sc_196_sent');
+update public.servicing_tasks set sent_to_agent_at = now() where id = public.p_vs_id('sc_196_sent');
 select public.p_vs_as('v1');
+select throws_ok(format('select public.fulfillment_schedule_request(%L, now() + interval ''8 days'')', public.p_vs_id('sc_196_req')), '42501', 'Only an admin can do this', 'g19a a VA cannot call fulfillment_schedule_request');
+select throws_ok(format('select public.fulfillment_finish_request(%L, ''Told them it is covered'')', public.p_vs_id('sc_196_req')), '42501', 'Only an admin can do this', 'g19b or finish a request in free text');
+select public.p_vs_as('z');
 select public.fulfillment_schedule_request(public.p_vs_id(k), now() + interval '8 days') from unnest(array['sc_196_req', 'sc_196_prog']) k;
+select lives_ok(format('select public.fulfillment_finish_request(%L, ''Sorted with the carrier'')', public.p_vs_id('sc_196_finish')), 'g19c admin can finish a request');
+select throws_ok(format('select public.fulfillment_schedule_request(%L, now() + interval ''8 days'')', public.p_vs_id('sc_196_sent')), '22023', 'This request is with the agent', 'g19d admin cannot schedule a task sent to the agent');
+select throws_ok(format('select public.fulfillment_finish_request(%L, ''x'')', public.p_vs_id('sc_196_sent')), '22023', 'This request is with the agent', 'g19e or answer around the agent');
 select public.p_vs_owner();
 select is((select concat_ws('|', status, due_at = now() + interval '8 days') from public.servicing_tasks where id = public.p_vs_id('sc_196_req')),
-          'scheduled|t', 'g19 fulfillment_schedule_request moves requested to scheduled');
+          'scheduled|t', 'g19 as admin, fulfillment_schedule_request moves requested to scheduled');
 select is((select concat_ws('|', status, due_at = now() + interval '8 days') from public.servicing_tasks where id = public.p_vs_id('sc_196_prog')),
           'in_progress|t', 'g20 and on in_progress only changes due_at');
+select is((select concat_ws('|', status, outcome_note) from public.servicing_tasks where id = public.p_vs_id('sc_196_finish')),
+          'done|Sorted with the carrier', 'g21 finish stores the admin''s note');
 
 -- ── h. Direct reads and writes ──────────────────────────────────────────────
 select public.p_vs_task('rd_free', 'carrier_call', 'requested', null, 'a', 'agent', 'free task note');

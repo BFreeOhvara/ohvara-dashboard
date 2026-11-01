@@ -68,8 +68,18 @@
 --     from the view, so its stage would be wrong for them.
 --   agent_activity_feed: same signature and grants. kind servicing, title = the label.
 --     The done event is skipped, because the servicing_done row already shows it.
---   rpc fulfillment_schedule_request (196): same signature and refusals. On in_progress
---     it now moves only due_at, because a move back to scheduled is refused.
+--   rpc fulfillment_schedule_request, fulfillment_finish_request (196): same names and
+--     signatures, admin only now. 42501 'Only an admin can do this' for everyone else;
+--     22023 'This request is with the agent' on a task sent to the agent. On in_progress
+--     schedule moves only due_at, because a move back to scheduled is refused.
+--   rpc agent_my_service_requests (196), unchanged. The agent reads outcome on a
+--     VA-worked request, and outcome_note only when an admin finished the request.
+--
+-- THIS REPLACES THE FULFILLMENT PATH PLANNED IN 196. fulfillment_finish_request let any
+-- VA finish a request from any open state, with no claim, in free text the agent reads.
+-- That breaks the no-skipping rule and the unlicensed VA rule, so both of 196's functions
+-- are admin only here and VAs use only va_servicing_*. No screen calls them yet. Until
+-- this file is applied, 196 is live and a VA can still call them through the API.
 --
 -- A VA'S DIRECT READ IS THEIR OWN LIVE CLAIM ONLY. That is narrower than the scope's
 -- "own + unclaimed", on purpose: the row holds the note and servicing_task_notes inherit
@@ -166,6 +176,8 @@ comment on table public.servicing_tasks is
   'Every servicing step and every request on a client. Written only by set_inbound_outcome, agent_submit_service_request, agent_submit_deal, fulfillment_schedule_request, fulfillment_finish_request, the va_servicing_* functions, agent_servicing_clear_sent and the service role. A request doesn''t count against the weekly cap.';
 comment on column public.servicing_tasks.outcome is
   'How the step ended, one closed list per kind (migration 200). A lapse_save: saved, lapsed or client_cancelled.';
+comment on column public.servicing_tasks.outcome_note is
+  'An admin''s words on how a request ended, set only by fulfillment_finish_request. The agent reads outcome on a VA-worked request, and this only when an admin finished the request.';
 comment on column public.servicing_tasks.cancel_reason is 'Why it was cancelled. Never copied into an event.';
 comment on column public.servicing_tasks.sent_to_agent_at is 'Set while a question waits on the agent.';
 comment on column public.servicing_tasks.sent_question is 'The VA''s question for the agent. Never copied into an event or a notice.';
@@ -200,9 +212,12 @@ create trigger servicing_tasks_status_order
   before update on public.servicing_tasks
   for each row execute function public.servicing_tasks_status_order();
 
--- 196, with one line changed: the trigger above refuses in_progress back to scheduled,
--- which is what this function did. It moves requested to scheduled and otherwise only
--- changes due_at. Everything else is 196's.
+-- ── 3b. 196's two functions, admin only ──────────────────────────────────────
+-- Each is 196's whole, with the role check and its refusal changed to admin, and a
+-- 22023 refusal added for a task sent to the agent, so admin can't answer around the
+-- agent either. Schedule has one more changed line: the trigger above refuses
+-- in_progress back to scheduled, so it moves requested to scheduled and otherwise only
+-- changes due_at. The grant to authenticated stays: the function does the refusing.
 create or replace function public.fulfillment_schedule_request(p_task uuid, p_at timestamptz)
 returns void
 language plpgsql
@@ -212,8 +227,8 @@ as $$
 declare
   v_task record;
 begin
-  if not (public.is_admin() or public.is_fulfillment()) then
-    raise exception 'Only Fulfillment can do this' using errcode = '42501';
+  if not public.is_admin() then
+    raise exception 'Only an admin can do this' using errcode = '42501';
   end if;
   if p_task is null then
     raise exception 'Pick a request' using errcode = '22023';
@@ -222,7 +237,7 @@ begin
     raise exception 'Pick a time in the future' using errcode = '22023';
   end if;
 
-  select id, policy_id, requested_by, status into v_task
+  select id, policy_id, requested_by, status, sent_to_agent_at into v_task
     from servicing_tasks where id = p_task
     for update;
   if not found
@@ -236,6 +251,9 @@ begin
   if v_task.status not in ('requested', 'scheduled', 'in_progress') then
     raise exception 'This request is closed' using errcode = '22023';
   end if;
+  if v_task.sent_to_agent_at is not null then
+    raise exception 'This request is with the agent' using errcode = '22023';
+  end if;
 
   update servicing_tasks
      set status = case when status = 'requested' then 'scheduled' else status end, due_at = p_at
@@ -245,6 +263,65 @@ $$;
 
 revoke all on function public.fulfillment_schedule_request(uuid, timestamptz) from public, anon;
 grant execute on function public.fulfillment_schedule_request(uuid, timestamptz) to authenticated;
+
+create or replace function public.fulfillment_finish_request(p_task uuid, p_outcome_note text, p_outcome text default null)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_note text := nullif(btrim(coalesce(p_outcome_note, ''), E' \t\n\r\f\v'), '');
+  v_task record;
+begin
+  if not public.is_admin() then
+    raise exception 'Only an admin can do this' using errcode = '42501';
+  end if;
+  if p_task is null then
+    raise exception 'Pick a request' using errcode = '22023';
+  end if;
+  if v_note is null then
+    raise exception 'Say what happened' using errcode = '22023';
+  end if;
+  if length(v_note) > 1000 then
+    raise exception 'Keep the outcome to 1000 characters' using errcode = '22023';
+  end if;
+  if p_outcome is not null and p_outcome not in ('saved', 'lapsed', 'client_cancelled') then
+    raise exception 'Unknown outcome %', p_outcome using errcode = '22023';
+  end if;
+
+  select id, policy_id, requested_by, status, kind, sent_to_agent_at into v_task
+    from servicing_tasks where id = p_task
+    for update;
+  if not found
+     or (v_task.policy_id is not null
+         and public.policy_is_demo(v_task.policy_id) is distinct from public.my_is_demo()) then
+    raise exception 'Request not found' using errcode = 'P0002';
+  end if;
+  if v_task.requested_by not in ('agent', 'client') then
+    raise exception 'This is not a service request' using errcode = '22023';
+  end if;
+  if v_task.status not in ('requested', 'scheduled', 'in_progress') then
+    raise exception 'This request is closed' using errcode = '22023';
+  end if;
+  if v_task.sent_to_agent_at is not null then
+    raise exception 'This request is with the agent' using errcode = '22023';
+  end if;
+  if v_task.kind <> 'lapse_save' and p_outcome is not null then
+    raise exception 'Only a lapse save has an outcome key' using errcode = '22023';
+  end if;
+  if v_task.kind = 'lapse_save' and p_outcome is null then
+    raise exception 'Say how the lapse save ended' using errcode = '22023';
+  end if;
+
+  update servicing_tasks
+     set status = 'done', outcome_note = v_note, outcome = p_outcome
+   where id = p_task;
+end;
+$$;
+
+revoke all on function public.fulfillment_finish_request(uuid, text, text) from public, anon;
+grant execute on function public.fulfillment_finish_request(uuid, text, text) to authenticated;
 
 -- ── 4. The side rule ────────────────────────────────────────────────────────
 -- Never policy_is_demo(null): it returns the caller's own side, so it walls nothing.
