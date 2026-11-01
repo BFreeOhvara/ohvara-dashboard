@@ -4959,6 +4959,17 @@ html.is-native a, html.is-native img { -webkit-touch-callout: none; }
 .ov-bk-n { flex: none; margin-right: 14px; font-size: 34px; letter-spacing: -0.035em; }
 .ov-bk-go { position: absolute; top: 9px; right: 11px; color: var(--ov-faint); }
 @media (max-width: 1439.98px) { .ov-bk-row { gap: 12px; } .ov-bk-tile { padding: 12px 14px; gap: 10px; } .ov-bk-n { font-size: 30px; } }
+/* Under 1280 four boxes in a row are too narrow for the words: two by two, still chip + words + number on a row. */
+@media (min-width: 640px) and (max-width: 1279.98px) { .ov-bk-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* 768 to 1023: the sidebar is open and the page is narrow, so each box takes the phone layout (number over words). */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .ov-bk-tile { display: grid; grid-template-columns: 1fr; gap: 10px; padding: 14px; }
+  .ov-bk-n { order: 2; margin-right: 0; font-size: 38px; }
+  .ov-bk-t { order: 3; }
+  .ov-bk-go { top: 12px; right: 12px; }
+}
+/* 1280 to 1439: the words fit on one line unless the number runs to three digits; then they wrap, never cut. */
+@media (min-width: 1280px) and (max-width: 1439.98px) { .ov-bk-t b, .ov-bk-t span { white-space: normal; } }
 @media (max-width: 639.98px) {
   .ov-bk-head { flex-wrap: wrap; gap: 2px 12px; }
   .ov-bk-head p { white-space: normal; }
