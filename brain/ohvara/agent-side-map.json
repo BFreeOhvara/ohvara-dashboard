@@ -18,9 +18,11 @@
       "title": "Every text and call to the client: when, words or call result, who",
       "status": "checking",
       "files": [
-        "supabase/tests/contact_log_agent_scope.sql"
+        "supabase/migrations/199_contact_log.sql",
+        "supabase/tests/contact_log_agent_scope.sql",
+        "supabase/tests/p_contact_log.sql"
       ],
-      "notes": "contact_log is not on master yet: it is NEXT_contact_log.sql on atlas/ab139968, with no number. No competing function written, so migration 199 is unused so far. Agent-scope test is written and passes against that branch's file in the local stand-in. Gaps still open after it lands: words from 198 (lead_followup_sms_log.body, recovery_sms_log.body, inbound_events.detail.body), label, text status, has_recording, is_sample."
+      "notes": "contact_log is migration 199, written and not applied; tests pass in the local stand-in only. It returns label, text_status, has_recording and is_sample after the 16 original columns. Words on follow-up, recovery and workflow texts show once 198 lands and stay null until then, with no dependency on it."
     },
     {
       "id": "client-page.fulfillment-call",
@@ -28,9 +30,11 @@
       "title": "Fulfillment and cancellation calls show on the client's contact log",
       "status": "checking",
       "files": [
-        "supabase/tests/contact_log_agent_scope.sql"
+        "supabase/migrations/199_contact_log.sql",
+        "supabase/tests/contact_log_agent_scope.sql",
+        "supabase/tests/p_contact_log.sql"
       ],
-      "notes": "Never 'live' while voice_live is off. Covered by contact_log's two client call sources on atlas/ab139968 once it lands: policy_events (no_answer, in_progress, cancelled) and fulfillment_voice_legs (party client). Not on master yet."
+      "notes": "Never 'live' while voice_live is off. Covered in 199 by two client call sources: policy_events (no_answer, in_progress, cancelled) and fulfillment_voice_legs (party client). Written, not applied."
     },
     {
       "id": "client-page.call-recording",
@@ -38,9 +42,11 @@
       "title": "A call on the client page says when a recording exists",
       "status": "checking",
       "files": [
-        "supabase/tests/contact_log_agent_scope.sql"
+        "supabase/migrations/199_contact_log.sql",
+        "supabase/tests/contact_log_agent_scope.sql",
+        "supabase/tests/p_contact_log.sql"
       ],
-      "notes": "Never 'live' while recording_live is off. Not covered yet: contact_log has no has_recording. Source is fulfillment_recordings (145), one row per call_sid with status ready. Admin only: its RLS and fulfillment-recording both refuse agents, so an agent gets at most the true/false, never the audio."
+      "notes": "Never 'live' while recording_live is off. Covered in 199 by has_recording: true on a client leg whose conference (conference_sid, same policy) has a fulfillment_recordings row with status ready. An agent gets only the true/false, never the audio, sid or id, and no grant was added. Before recording_live goes on: fulfillment-voice's leg callback sets conference_sid to null when Twilio sends none, which would keep this false."
     }
   ]
 }

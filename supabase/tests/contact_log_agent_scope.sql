@@ -9,11 +9,10 @@
 -- PGlite and runs this file there. It can't reach Ohvara. A pass there is not a pass on
 -- the real stack: it is a stand-in for Supabase.
 --
--- NEEDS contact_log(text, uuid, timestamptz, int) from the contact log migration
--- (atlas/ab139968, NEXT_contact_log.sql when this was written). Until that is on master
--- a1 fails and the file stops with 42883 "function public.contact_log(text, uuid) does
--- not exist". That is on purpose: a security test that skips itself when the function
--- is gone reads as a pass.
+-- NEEDS contact_log(text, uuid, timestamptz, int) from 199_contact_log.sql. If that is
+-- ever missing, a1 fails and the file stops with 42883 "function public.contact_log(text,
+-- uuid) does not exist". That is on purpose: a security test that skips itself when the
+-- function is gone reads as a pass.
 --
 -- Only names the function already returns are read, one by one, so a later migration
 -- that adds columns doesn't break this file. p_contact_log.sql covers each source's
@@ -27,10 +26,11 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(32);
+select plan(46);
 
 -- ── helpers ─────────────────────────────────────────────────────────────────
-create temp table seen (who text not null, id text, lead_id uuid, policy_id uuid, agent_id uuid, channel text, body text);
+create temp table seen (who text not null, id text, lead_id uuid, policy_id uuid, agent_id uuid, channel text, body text,
+                        has_recording boolean, is_sample boolean);
 grant all on seen to authenticated;
 
 create function public.p_cas_claims(p_caller uuid) returns text language sql as $f$
@@ -43,8 +43,8 @@ returns void language plpgsql as $f$
 begin
   perform set_config('request.jwt.claims', public.p_cas_claims(p_caller), true);
   perform set_config('role', 'authenticated', true);
-  insert into seen (who, id, lead_id, policy_id, agent_id, channel, body)
-  select p_who, c.id, c.lead_id, c.policy_id, c.agent_id, c.channel, c.body
+  insert into seen (who, id, lead_id, policy_id, agent_id, channel, body, has_recording, is_sample)
+  select p_who, c.id, c.lead_id, c.policy_id, c.agent_id, c.channel, c.body, c.has_recording, c.is_sample
     from public.contact_log(p_key, p_lead) c;
   perform set_config('role', 'none', true);
   perform set_config('request.jwt.claims', '', true);
@@ -214,6 +214,59 @@ select is((select count(*) from pg_class c
 select ok((select p.prosecdef and p.proconfig @> array['search_path=public'] from pg_proc p
             where p.oid = 'public.contact_log(text, uuid, timestamptz, int)'::regprocedure),
           'f7 contact_log is security definer with a pinned search_path');
+
+-- ── g. has_recording: true only for a ready recording on the caller's own client ──
+-- As the table owner, after the counts above. A conference per leg, so each outcome shows
+-- on its own row. A recording's call_sid is the rep's leg, never the client's.
+insert into public.fulfillment_voice_legs (call_sid, policy_id, party, conference_sid, status, started_at) values
+  ('CA_rec_ready',   'dddddddd-dddd-4ddd-8ddd-000000000001', 'client',  'CF_a_ready',   'ended', '2026-10-02 10:00:00+00'),
+  ('CA_rec_going',   'dddddddd-dddd-4ddd-8ddd-000000000001', 'client',  'CF_a_going',   'ended', '2026-10-02 10:01:00+00'),
+  ('CA_rec_failed',  'dddddddd-dddd-4ddd-8ddd-000000000001', 'client',  'CF_a_failed',  'ended', '2026-10-02 10:02:00+00'),
+  ('CA_rec_none',    'dddddddd-dddd-4ddd-8ddd-000000000001', 'client',  'CF_a_none',    'ended', '2026-10-02 10:03:00+00'),
+  ('CA_rec_null',    'dddddddd-dddd-4ddd-8ddd-000000000001', 'client',  null,           'ended', '2026-10-02 10:04:00+00'),
+  ('CA_rec_b_conf',  'dddddddd-dddd-4ddd-8ddd-000000000001', 'client',  'CF_b_ready',   'ended', '2026-10-02 10:05:00+00'),
+  ('CA_rec_by_sid',  'dddddddd-dddd-4ddd-8ddd-000000000001', 'client',  'CF_a_by_sid',  'ended', '2026-10-02 10:06:00+00'),
+  ('CA_rec_b',       'dddddddd-dddd-4ddd-8ddd-000000000002', 'client',  'CF_b_ready',   'ended', '2026-10-02 11:00:00+00');
+insert into public.fulfillment_recordings (call_sid, policy_id, conference_sid, recording_sid, status) values
+  ('CA_rep_ready',   'dddddddd-dddd-4ddd-8ddd-000000000001', 'CF_a_ready',  'RE_scope_ready',  'ready'),
+  ('CA_rep_going',   'dddddddd-dddd-4ddd-8ddd-000000000001', 'CF_a_going',  null,              'recording'),
+  ('CA_rep_failed',  'dddddddd-dddd-4ddd-8ddd-000000000001', 'CF_a_failed', 'RE_scope_failed', 'failed'),
+  ('CA_rep_null',    'dddddddd-dddd-4ddd-8ddd-000000000001', null,          'RE_scope_null',   'ready'),
+  ('CA_rec_by_sid',  'dddddddd-dddd-4ddd-8ddd-000000000001', 'CF_a_other',  'RE_scope_by_sid', 'ready'),
+  ('CA_rep_b',       'dddddddd-dddd-4ddd-8ddd-000000000002', 'CF_b_ready',  'RE_scope_b',      'ready');
+
+-- ── h. is_sample: the row's own flag, and the policy's where the source has none ──
+insert into public.lead_followup_sms_log (lead_id, stage, status, is_sample, created_at) values
+  ('cccccccc-cccc-4ccc-8ccc-000000000001', 'not_reached', 'sent', true, '2026-10-02 10:10:00+00');
+update public.policies set is_sample = true where id = 'dddddddd-dddd-4ddd-8ddd-000000000003';
+
+select public.p_cas_load('a_new', 'aaaaaaaa-aaaa-4aaa-8aaa-000000000001'),
+       public.p_cas_load('b_new', 'aaaaaaaa-aaaa-4aaa-8aaa-000000000002');
+
+create function public.p_cas_rec(p_who text, p_sid text) returns boolean language sql as $f$
+  select s.has_recording from seen s where s.who = p_who and s.id = 'fulfillment_voice_legs:' || p_sid
+$f$;
+
+select is(public.p_cas_rec('a_new', 'CA_rec_ready'), true, 'g1 A''s client leg with a ready recording reads true');
+select is(public.p_cas_rec('a_new', 'CA_rec_going'), false, 'g2 still recording reads false');
+select is(public.p_cas_rec('a_new', 'CA_rec_failed'), false, 'g3 a failed recording reads false');
+select is(public.p_cas_rec('a_new', 'CA_rec_none'), false, 'g4 no recording reads false');
+select is(public.p_cas_rec('a_new', 'CA_rec_null'), false, 'g5 no conference never matches a recording with no conference');
+select is(public.p_cas_rec('a_new', 'CA_rec_b_conf'), false, 'g6 B''s ready recording does not turn A''s leg true, even on the same conference');
+select is(public.p_cas_rec('a_new', 'CA_rec_by_sid'), false, 'g7 a recording that shares only the call_sid reads false');
+select is(public.p_cas_rec('b_new', 'CA_rec_b'), true, 'g8 B''s own leg reads true for B');
+select is(public.p_cas_rec('a_new', 'CA_rec_b'), null, 'g9 and A does not get that row at all');
+select is((select count(*) from seen where who = 'a_new' and has_recording and id not like 'fulfillment_voice_legs:%'), 0::bigint,
+          'g10 no other source ever reads true');
+select is((select count(*) from seen where who = 'a_new' and has_recording), 1::bigint, 'g11 A has exactly one true row');
+select ok(pg_get_function_result('public.contact_log(text, uuid, timestamptz, int)'::regprocedure) !~ '(recording_sid|recording_id|recording_url)',
+          'g12 no recording sid, id or URL column comes back');
+
+select is((select is_sample from seen where who = 'a_new' and body is null and id in (
+             select 'lead_followup_sms_log:' || f.id::text from public.lead_followup_sms_log f where f.is_sample)), true,
+          'h1 a follow-up marked sample reads is_sample true');
+select is((select is_sample from seen where who = 'a_new' and policy_id = 'dddddddd-dddd-4ddd-8ddd-000000000003'), true,
+          'h2 a recovery text, which has no flag of its own, reads its sample policy''s');
 
 select * from finish();
 rollback;

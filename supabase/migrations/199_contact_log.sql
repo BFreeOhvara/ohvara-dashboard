@@ -1,4 +1,4 @@
--- NEXT — contact_log: one read-only list of every text and call that went to an
+-- 199 — contact_log: one read-only list of every text and call that went to an
 -- agent's own client or lead, with when, the words or the result, and who sent it.
 --
 -- NOT APPLIED. Written from a worktree; applying it is a separate, checked step. It
@@ -7,9 +7,8 @@
 -- isn't checked at create, so without that the file could apply cleanly and fail on
 -- first call. Additive: one new function. No table, policy, index or grant changes on
 -- anything that exists. It sends nothing and every live switch stays as it is.
---
--- NEXT IS A PLACEHOLDER. No number was reserved for this task when it was written.
--- Rename the file and replace NEXT here and in the guard once the runner reserves one.
+-- The guard also needs 157 (recovery_sms_log.skipped) and 186 (is_sample). It does not
+-- need 198: see GAPS.
 --
 -- Why: the Servicing Spec says "there is no single contact log today." Agents should
 -- never have to guess what was said to their people, and the Client and lead pages
@@ -47,6 +46,16 @@
 --     kind          the source's own key. Stage, step, recovery kind or policy event
 --                   kind; transfer_status on a leads.va_outcome row. Null elsewhere.
 --     attempts      the attempt count on policy_events and leads.va_outcome rows.
+--     label         plain words from source and kind, like 'Follow-up text sent'.
+--     text_status   sent on an outgoing text, received on an incoming one, null on a
+--                   call. Only what really happened is listed, so failed and skipped
+--                   never appear.
+--     has_recording true only on a client leg in fulfillment_voice_legs whose
+--                   conference has a ready recording. False on every other source.
+--     is_sample     the row's own is_sample where 186 added one (lead_followup_sms_log,
+--                   lead_sms_replies, inbound_events, help_calls, policy_events). The
+--                   lead's for reminder_log, calls and the VA columns; the policy's for
+--                   recovery_sms_log and fulfillment_voice_legs.
 --   Sender from a role: fulfillment or admin = va; agent or closer = agent; no person
 --   = system. The brief's map has no old rep role: a calls row by a rep reads agent,
 --   because a person placed it and sender_name says who.
@@ -56,7 +65,8 @@
 --   can_view_agent has no is_active check, so it isn't used.
 --   Null role, or anything other than admin or agent: no rows and no error. That
 --   includes fulfillment, closer, rep, an inactive agent and a null auth.uid().
---   Agent: self plus public.downline_of(self). Admin: all.
+--   Agent: self plus public.downline_of(self). Admin: all. The same rule as
+--   policies_select (can_view_agent) and agent_activity_feed. Fulfillment stays at zero.
 --   Client rows: policies where p.agent_id is one of those, or admin, and always
 --   p.is_demo = my_is_demo(). Definer rights skip the demo wall, so that line must be
 --   there. Lead rows: leads where lead_type <> 'cancellation' and coalesce(
@@ -72,14 +82,14 @@
 --
 -- USED, one union branch each. Only things that happened.
 --   Texts:
---   1. lead_followup_sms_log  lead, out, status = 'sent', created_at. No words.
+--   1. lead_followup_sms_log  lead, out, status = 'sent', created_at, body from 198.
 --   2. lead_sms_replies       lead, in, lead_id not null, received_at, body as stored.
 --   3. inbound_events         lead, out, kind in text_sent or reminder, state = 'done',
---                             detail has step, at. Body stays null even with
---                             detail.summary or label set: "Asks for a good time to
+--                             detail has step, at. Body is detail.body only, never
+--                             detail.summary or label: "Asks for a good time to
 --                             talk." reads like words but isn't what was sent.
---   4. recovery_sms_log       client, out, ok is true and skipped is null, created_at.
---                             No words.
+--   4. recovery_sms_log       client, out, ok is true and skipped is null, created_at,
+--                             body from 198.
 --   5. reminder_log           lead through appointments.lead_id, out, status = 'sent',
 --                             channel = 'sms', twilio_message_sid not null, send_time,
 --                             body = message_body. process-reminders has a stub mode:
@@ -143,12 +153,17 @@
 --     row, which carries transfer_status as its kind.
 --   follow_up_queue and appointments.scheduled_at: planned times, not contact.
 --   fulfillment_recordings: a recording of a call the legs already list, and only an
---     admin can read them (145).
+--     admin can read them (145). Used for one thing: the has_recording true or false on
+--     a client leg, matched on conference_sid, because the recording's call_sid is the
+--     rep's browser leg and never the client's. No recording_sid, URL or id comes back,
+--     and this file adds no grant on the table.
 --   send-agent-invite and agent-caller-id: they reach the agent, not a client or lead.
 --
 -- GAPS:
---   No stored words: lead_followup_sms_log, inbound_events, recovery_sms_log. Their rows
---   return a null body.
+--   Words on lead_followup_sms_log, recovery_sms_log and inbound_events come from 198
+--   (atlas/97e34105), which may land after this file. Until it does, and on any row sent
+--   before it, the body is null. 198 is not in the guard, and the two log branches read
+--   the column through to_jsonb, so neither order fails.
 --   The leads VA columns keep only the latest call; earlier attempts survive only as a
 --   count.
 --   A reply is matched to a lead by phone only, so a client's reply to a recovery text
@@ -160,59 +175,75 @@
 --   reminder_log rows on those leads stay hidden by the access rule.
 --   lead-workflow-sms marks a step done just before it sends, then skipped if Twilio
 --   refuses. A crash between the two leaves a done row for a text that never went.
+--   has_recording stays false until both voice_live and recording_live are on, and on
+--   any leg or recording with no conference_sid. fulfillment-voice's leg callback writes
+--   conference_sid = form.ConferenceSid || null, so a callback from Twilio without that
+--   field blanks the leg and it reads false. It can only miss a recording, never invent one.
 
 -- ── 1. Guard ────────────────────────────────────────────────────────────────
 do $$
 begin
   if to_regclass('public.policy_servicing_status') is null or to_regclass('public.agent_clients') is null then
-    raise exception 'NEXT needs 193_servicing_model applied first';
+    raise exception '199 needs 193_servicing_model applied first';
   end if;
   if to_regclass('public.lead_followup_sms_log') is null then
-    raise exception 'NEXT needs 177_lead_followup_sms_log applied first';
+    raise exception '199 needs 177_lead_followup_sms_log applied first';
   end if;
   if to_regclass('public.recovery_sms_log') is null then
-    raise exception 'NEXT needs 122_no_answer_recovery applied first';
+    raise exception '199 needs 122_no_answer_recovery applied first';
   end if;
   if to_regclass('public.lead_sms_replies') is null then
-    raise exception 'NEXT needs 183_lead_sms_replies applied first';
+    raise exception '199 needs 183_lead_sms_replies applied first';
   end if;
   if to_regclass('public.inbound_events') is null then
-    raise exception 'NEXT needs 180_agent_inbounds applied first';
+    raise exception '199 needs 180_agent_inbounds applied first';
   end if;
   if to_regclass('public.reminder_log') is null then
-    raise exception 'NEXT needs 004_reminder_log applied first';
+    raise exception '199 needs 004_reminder_log applied first';
   end if;
   if to_regclass('public.appointments') is null or to_regclass('public.calls') is null then
-    raise exception 'NEXT needs 001_initial_schema applied first';
+    raise exception '199 needs 001_initial_schema applied first';
   end if;
   if to_regclass('public.help_calls') is null then
-    raise exception 'NEXT needs 179_help_calls applied first';
+    raise exception '199 needs 179_help_calls applied first';
   end if;
   if to_regclass('public.policy_events') is null then
-    raise exception 'NEXT needs 118_policy_events applied first';
+    raise exception '199 needs 118_policy_events applied first';
   end if;
   if to_regclass('public.fulfillment_voice_legs') is null then
-    raise exception 'NEXT needs 137_portal_phone applied first';
+    raise exception '199 needs 137_portal_phone applied first';
   end if;
   if not exists (select 1 from information_schema.columns
                   where table_schema = 'public' and table_name = 'leads' and column_name = 'va_outcome') then
-    raise exception 'NEXT needs 175_va_desk applied first';
+    raise exception '199 needs 175_va_desk applied first';
   end if;
   if not exists (select 1 from information_schema.columns
                   where table_schema = 'public' and table_name = 'leads' and column_name = 'lead_type') then
-    raise exception 'NEXT needs 166_lead_types_delivery applied first';
+    raise exception '199 needs 166_lead_types_delivery applied first';
   end if;
   if not exists (select 1 from information_schema.columns
                   where table_schema = 'public' and table_name = 'policies' and column_name = 'is_demo')
      or to_regprocedure('public.my_is_demo()') is null then
-    raise exception 'NEXT needs 156_phone_app applied first';
+    raise exception '199 needs 156_phone_app applied first';
   end if;
   if not exists (select 1 from information_schema.columns
                   where table_schema = 'public' and table_name = 'recovery_sms_log' and column_name = 'skipped') then
-    raise exception 'NEXT needs 157_text_consent applied first';
+    raise exception '199 needs 157_text_consent applied first';
   end if;
   if to_regprocedure('public.downline_of(uuid)') is null then
-    raise exception 'NEXT needs 072_insurance_launch applied first';
+    raise exception '199 needs 072_insurance_launch applied first';
+  end if;
+  if to_regclass('public.fulfillment_recordings') is null
+     or not exists (select 1 from information_schema.columns
+                     where table_schema = 'public' and table_name = 'fulfillment_recordings' and column_name = 'conference_sid') then
+    raise exception '199 needs 145_pay_per_cancel applied first';
+  end if;
+  -- 186 skips a table that isn't there yet, so each column is checked, not just one.
+  if (select count(*) from information_schema.columns
+       where table_schema = 'public' and column_name = 'is_sample'
+         and table_name in ('policies', 'leads', 'lead_followup_sms_log', 'lead_sms_replies',
+                            'inbound_events', 'help_calls', 'policy_events')) <> 7 then
+    raise exception '199 needs 186_is_sample_flag applied after every table it lists';
   end if;
 end $$;
 
@@ -226,7 +257,8 @@ create or replace function public.contact_log(
 returns table (
   id text, subject text, client_key text, lead_id uuid, policy_id uuid, agent_id uuid,
   occurred_at timestamptz, channel text, direction text, body text, call_result text,
-  sender_type text, sender_name text, source text, kind text, attempts int
+  sender_type text, sender_name text, source text, kind text, attempts int,
+  label text, text_status text, has_recording boolean, is_sample boolean
 )
 language plpgsql
 stable
@@ -257,7 +289,7 @@ begin
 
   return query
   with my_clients as (
-    select p.id as policy_id, p.agent_id, s.client_key
+    select p.id as policy_id, p.agent_id, s.client_key, p.is_sample
       from policies p
       left join policy_servicing_status s on s.policy_id = p.id
      where (v_role = 'admin' or p.agent_id = any (v_agents))
@@ -267,7 +299,7 @@ begin
   ),
   my_leads as (
     select l.id as lead_id, coalesce(l.assigned_rep_id, l.transfer_agent_id) as agent_id,
-           l.va_outcome, l.va_attempts, l.va_last_worked_by, l.va_last_worked_at, l.transfer_status
+           l.va_outcome, l.va_attempts, l.va_last_worked_by, l.va_last_worked_at, l.transfer_status, l.is_sample
       from leads l
      where l.lead_type <> 'cancellation'
        and (v_role = 'admin' or coalesce(l.assigned_rep_id, l.transfer_agent_id) = any (v_agents))
@@ -275,12 +307,14 @@ begin
        and (p_lead is null or l.id = p_lead)
   ),
   entries as (
+    -- to_jsonb, not f.body: 198 may not be there, and a missing column would fail on call.
     -- 1. lead_followup_sms_log
     select 'lead_followup_sms_log' as source, f.id::text as row_id, 'lead' as subject,
            null::text as client_key, ml.lead_id, null::uuid as policy_id, ml.agent_id,
            f.created_at as occurred_at, 'text' as channel, 'out' as direction,
-           null::text as body, null::text as call_result,
-           'system' as sender, null::text as sender_name, f.stage as kind, null::int as attempts
+           to_jsonb(f) ->> 'body' as body, null::text as call_result,
+           'system' as sender, null::text as sender_name, f.stage as kind, null::int as attempts,
+           false as has_recording, f.is_sample
       from lead_followup_sms_log f
       join my_leads ml on ml.lead_id = f.lead_id
      where f.status = 'sent'
@@ -291,7 +325,8 @@ begin
            null, ml.lead_id, null, ml.agent_id,
            r.received_at, 'text', 'in',
            r.body, null,
-           'lead', null, null, null
+           'lead', null, null, null,
+           false, r.is_sample
       from lead_sms_replies r
       join my_leads ml on ml.lead_id = r.lead_id
 
@@ -300,8 +335,9 @@ begin
     select 'inbound_events', ev.id::text, 'lead',
            null, ml.lead_id, null, ml.agent_id,
            ev.at, 'text', 'out',
-           null, null,
-           'system', null, ev.detail ->> 'step', null
+           ev.detail ->> 'body', null,
+           'system', null, ev.detail ->> 'step', null,
+           false, ev.is_sample
       from inbound_events ev
       join my_leads ml on ml.lead_id = ev.lead_id
      where ev.kind in ('text_sent', 'reminder')
@@ -313,8 +349,9 @@ begin
     select 'recovery_sms_log', rs.id::text, 'client',
            mc.client_key, null, mc.policy_id, mc.agent_id,
            rs.created_at, 'text', 'out',
-           null, null,
-           'system', null, rs.kind, null
+           to_jsonb(rs) ->> 'body', null,
+           'system', null, rs.kind, null,
+           false, mc.is_sample
       from recovery_sms_log rs
       join my_clients mc on mc.policy_id = rs.policy_id
      where rs.ok is true
@@ -326,7 +363,8 @@ begin
            null, ml.lead_id, null, ml.agent_id,
            rl.send_time, 'text', 'out',
            rl.message_body, null,
-           'system', null, null, null
+           'system', null, null, null,
+           false, ml.is_sample
       from reminder_log rl
       join appointments a on a.id = rl.appointment_id
       join my_leads ml on ml.lead_id = a.lead_id
@@ -341,7 +379,8 @@ begin
            null, ml.lead_id, null, ml.agent_id,
            c.created_at, 'call', 'out',
            null, coalesce(c.call_outcome, c.outcome::text),
-           caller.role::text, caller.full_name, null, null
+           caller.role::text, caller.full_name, null, null,
+           false, ml.is_sample
       from calls c
       join my_leads ml on ml.lead_id = c.lead_id
       left join profiles caller on caller.id = c.rep_id
@@ -352,7 +391,8 @@ begin
            null, ml.lead_id, null, ml.agent_id,
            h.created_at, 'call', 'in',
            null, coalesce(h.outcome, h.status),
-           'lead', null, null, null
+           'lead', null, null, null,
+           false, h.is_sample
       from help_calls h
       join my_leads ml on ml.lead_id = h.lead_id
 
@@ -362,19 +402,25 @@ begin
            mc.client_key, null, mc.policy_id, mc.agent_id,
            pe.at, 'call', 'out',
            null, pe.kind,
-           pe.actor_role, pe.actor_name, pe.kind, (pe.detail ->> 'attempt')::int
+           pe.actor_role, pe.actor_name, pe.kind, (pe.detail ->> 'attempt')::int,
+           false, pe.is_sample
       from policy_events pe
       join my_clients mc on mc.policy_id = pe.policy_id
      where pe.kind in ('no_answer', 'in_progress', 'cancelled')
        and pe.detail ->> 'correction' is distinct from 'true'
 
     union all
-    -- 9. fulfillment_voice_legs
+    -- 9. fulfillment_voice_legs. Only the true or false leaves fulfillment_recordings.
     select 'fulfillment_voice_legs', vl.call_sid, 'client',
            mc.client_key, null, mc.policy_id, mc.agent_id,
            vl.started_at, 'call', 'out',
            null, case when vl.answered_at is not null then 'answered' else coalesce(vl.end_reason, vl.status) end,
-           'va', null, null, null
+           'va', null, null, null,
+           exists (select 1 from fulfillment_recordings rec
+                    where rec.conference_sid = vl.conference_sid
+                      and rec.policy_id = vl.policy_id
+                      and rec.status = 'ready'),
+           mc.is_sample
       from fulfillment_voice_legs vl
       join my_clients mc on mc.policy_id = vl.policy_id
      where vl.party = 'client'
@@ -385,7 +431,8 @@ begin
            null, ml.lead_id, null, ml.agent_id,
            ml.va_last_worked_at, 'call', 'out',
            null, ml.va_outcome,
-           va.role::text, va.full_name, ml.transfer_status, ml.va_attempts
+           va.role::text, va.full_name, ml.transfer_status, ml.va_attempts,
+           false, ml.is_sample
       from my_leads ml
       left join profiles va on va.id = ml.va_last_worked_by
      where ml.va_outcome is not null
@@ -398,7 +445,37 @@ begin
               when e.sender in ('agent', 'closer', 'rep') then 'agent'
               when e.sender in ('lead', 'client') then e.sender
               else 'system' end,
-         e.sender_name, e.source, e.kind, e.attempts
+         e.sender_name, e.source, e.kind, e.attempts,
+         case e.source
+           when 'lead_followup_sms_log' then 'Follow-up text sent'
+           when 'lead_sms_replies' then 'Reply received'
+           when 'inbound_events' then
+             case when e.kind = 'instant' then 'Welcome text sent'
+                  when e.kind = 'not_reached_monthly' then 'Monthly check-in text sent'
+                  when e.kind like 'not_reached%' then 'Follow-up text sent'
+                  when e.kind = 'confirm' then 'Confirmation text sent'
+                  when e.kind like 'reminder%' then 'Reminder text sent'
+                  when e.kind = 'no_show_rebook' then 'Rebook text sent'
+                  else 'Text sent' end
+           when 'recovery_sms_log' then
+             case when e.kind in ('text1', 'text2') then 'Missed call text sent'
+                  when e.kind in ('am', 'pm') then 'Call reminder text sent'
+                  when e.kind like 'apology%' then 'Apology text sent'
+                  when e.kind = 'confirm' then 'Confirmation text sent'
+                  else 'Text sent' end
+           when 'reminder_log' then 'Reminder text sent'
+           when 'calls' then 'Call to lead'
+           when 'help_calls' then 'Call from lead'
+           when 'policy_events' then
+             case e.kind when 'in_progress' then 'Call started'
+                         when 'no_answer' then 'Call not answered'
+                         else 'Old policy cancelled' end
+           when 'fulfillment_voice_legs' then 'Call to client'
+           else 'VA call to lead' end,
+         case when e.channel <> 'text' then null
+              when e.direction = 'in' then 'received'
+              else 'sent' end,
+         e.has_recording, e.is_sample
     from entries e
    where p_before is null or e.occurred_at < p_before
    order by e.occurred_at desc, 1 desc

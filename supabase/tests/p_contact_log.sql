@@ -1,4 +1,4 @@
--- p_contact_log — pgTAP checks for NEXT_contact_log.sql: one read-only list of every
+-- p_contact_log — pgTAP checks for 199_contact_log.sql: one read-only list of every
 -- text and call that went to an agent's own client or lead.
 --
 -- RUN: at apply time, by the apply step, against the applied migration. No robot can
@@ -16,10 +16,12 @@
 -- that as the table owner. p_cl_row prints one row with its ids as the names below, so
 -- an expected value reads: subject|client_key|lead|policy|agent|time|channel|direction
 -- |body|call_result|sender_type|sender_name|source|kind|attempts, with - for null.
+-- Section k reads the four columns after those: label, text_status, has_recording and
+-- is_sample.
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(141);
+select plan(180);
 
 -- ── helpers ─────────────────────────────────────────────────────────────────
 create temp table ids (name text primary key, id uuid not null default gen_random_uuid());
@@ -56,7 +58,8 @@ begin
   perform set_config('request.jwt.claims', case when p_name is null then '' else public.p_cl_claims(p_name) end, true);
   perform set_config('role', 'authenticated', true);
   insert into seen (who, id, subject, client_key, lead_id, policy_id, agent_id, occurred_at, channel, direction,
-                    body, call_result, sender_type, sender_name, source, kind, attempts)
+                    body, call_result, sender_type, sender_name, source, kind, attempts,
+                    label, text_status, has_recording, is_sample)
   select p_who, c.* from public.contact_log(p_key, p_lead, p_before, p_limit) c;
   perform set_config('role', 'none', true);
   perform set_config('request.jwt.claims', '', true);
@@ -369,7 +372,7 @@ select is((select notes || call_notes || recording_url || twilio_recording_url |
 select is((select count(*) from seen s where s.who in ('a', 'u', 'z') and s.source = 'calls'), 9::bigint, 'c6 and the calls row came back to each of A, U and Z');
 select is((select count(*) from seen s where to_jsonb(s)::text like '%MARKER%'), 0::bigint, 'c7 no returned row anywhere holds a marker');
 select is(pg_get_function_result('public.contact_log(text, uuid, timestamptz, int)'::regprocedure),
-          'TABLE(id text, subject text, client_key text, lead_id uuid, policy_id uuid, agent_id uuid, occurred_at timestamp with time zone, channel text, direction text, body text, call_result text, sender_type text, sender_name text, source text, kind text, attempts integer)',
+          'TABLE(id text, subject text, client_key text, lead_id uuid, policy_id uuid, agent_id uuid, occurred_at timestamp with time zone, channel text, direction text, body text, call_result text, sender_type text, sender_name text, source text, kind text, attempts integer, label text, text_status text, has_recording boolean, is_sample boolean)',
           'c8 the columns are exactly the contract''s');
 select public.p_cl_load('a_cancel', 'A', null, public.p_cl_id('la_cancel'));
 select is(public.p_cl_count('a_cancel'), 0::bigint, 'c9 a cancellation lead with its own rows returns nothing by id');
@@ -475,7 +478,7 @@ select is((select prosecdef from pg_proc where oid = 'public.contact_log(text, u
 select is((select provolatile::text from pg_proc where oid = 'public.contact_log(text, uuid, timestamptz, int)'::regprocedure), 's', 'h8 it is stable');
 select ok((select proconfig @> array['search_path=public'] from pg_proc where oid = 'public.contact_log(text, uuid, timestamptz, int)'::regprocedure), 'h9 its search_path is set');
 select ok((select prosrc !~* '\m(insert|update|delete|truncate|drop|alter)\M' from pg_proc where oid = 'public.contact_log(text, uuid, timestamptz, int)'::regprocedure), 'h10 its source has no write');
-select ok((select prosrc !~* '(call_notes|recording|transcript|grade|feedback|\.notes)' from pg_proc where oid = 'public.contact_log(text, uuid, timestamptz, int)'::regprocedure), 'h11 its source never names a notes, recording or grade field');
+select ok((select prosrc !~* '(call_notes|recording_sid|recording_url|rec\.id|transcript|grade|feedback|\.notes)' from pg_proc where oid = 'public.contact_log(text, uuid, timestamptz, int)'::regprocedure), 'h11 its source never names a notes, recording sid or URL, or grade field');
 select ok((select prosrc ~ 'p\.is_demo = \(select public\.my_is_demo\(\)\)' from pg_proc where oid = 'public.contact_log(text, uuid, timestamptz, int)'::regprocedure), 'h12 the demo line is there');
 
 select throws_ok($$ insert into public.contact_log (id) values ('x') $$, '42P01', null, 'h13 insert into public.contact_log fails for the owner');
@@ -534,6 +537,105 @@ select is(public.p_cl_count('b_neg'), 0::bigint, 'j9 a negative limit is 0');
 select set_config('request.jwt.claims', public.p_cl_claims('B'), true), set_config('role', 'authenticated', true);
 select is((select count(*) from public.contact_log()), 200::bigint, 'j10 called with no arguments it returns 200');
 reset role;
+
+-- ── k. Label, text_status, has_recording, is_sample ─────────────────────────
+create function public.p_cl_new(p_who text, p_source text, p_row text) returns text language sql as $f$
+  select concat_ws('|', s.label, coalesce(s.text_status, '-'), s.has_recording::text, s.is_sample::text)
+    from seen s where s.who = p_who and s.id = public.p_cl_rid(p_source, p_row)
+$f$;
+
+select is(public.p_cl_new('a', 'lead_followup_sms_log', 'r_followup'), 'Follow-up text sent|sent|false|false', 'k1 an older follow-up text');
+select is(public.p_cl_new('a', 'lead_sms_replies', 'r_reply'), 'Reply received|received|false|false', 'k2 a reply');
+select is(public.p_cl_new('a', 'inbound_events', 'r_inbound'), 'Follow-up text sent|sent|false|false', 'k3 a workflow follow-up step');
+select is(public.p_cl_new('a', 'inbound_events', 'r_inbound_rem'), 'Confirmation text sent|sent|false|false', 'k4 a workflow confirmation step');
+select is(public.p_cl_new('a', 'recovery_sms_log', 'r_recovery'), 'Missed call text sent|sent|false|false', 'k5 a recovery text');
+select is(public.p_cl_new('a', 'reminder_log', 'r_reminder'), 'Reminder text sent|sent|false|false', 'k6 a reminder');
+select is(public.p_cl_new('a', 'calls', 'r_call_va'), 'Call to lead|-|false|false', 'k7 a calls row has no text_status');
+select is(public.p_cl_new('a', 'help_calls', 'r_help'), 'Call from lead|-|false|false', 'k8 a help call');
+select is(public.p_cl_new('a', 'policy_events', 'r_ev_start'), 'Call started|-|false|false', 'k9 a call start');
+select is(public.p_cl_new('a', 'policy_events', 'r_ev_result'), 'Call not answered|-|false|false', 'k10 a no answer');
+select is(public.p_cl_new('a', 'policy_events', 'r_ev_cancel'), 'Old policy cancelled|-|false|false', 'k11 a cancelled event');
+select is(public.p_cl_new('a', 'fulfillment_voice_legs', 'CA_answered'), 'Call to client|-|false|false', 'k12 a client leg');
+select is(public.p_cl_new('a', 'leads.va_outcome', 'la'), 'VA call to lead|-|false|false', 'k13 the VA columns');
+select is((select count(*) from seen where who = 'a' and label is null), 0::bigint, 'k14 every row has a label');
+select is((select count(*) from seen where who = 'a' and channel = 'call' and text_status is not null), 0::bigint, 'k15 no call has a text_status');
+select is((select count(*) from seen where who = 'a' and channel = 'text' and text_status not in ('sent', 'received')), 0::bigint,
+          'k16 a text is only ever sent or received');
+select is((select count(*) from seen where who = 'a' and channel = 'text' and direction = 'in' and text_status <> 'received'), 0::bigint,
+          'k17 an inbound text is received');
+
+-- Words: 198 is not in this replay, so the same call that gave null above gets the words
+-- once its two columns exist. Rolled back with the file. inbound_events needs no column.
+select is((select count(*) from information_schema.columns where table_schema = 'public' and column_name = 'body'
+            and table_name in ('lead_followup_sms_log', 'recovery_sms_log')), 0::bigint, 'k18 this replay has no 198 columns: i2 ran without them');
+alter table public.lead_followup_sms_log add column body text;
+alter table public.recovery_sms_log add column body text;
+update public.lead_followup_sms_log set body = 'Exact follow-up words' where id = public.p_cl_id('r_followup');
+update public.lead_followup_sms_log set body = 'Failed words' where id = public.p_cl_id('h_fu_fail');
+update public.recovery_sms_log set body = 'Exact recovery words' where id = public.p_cl_id('r_recovery');
+insert into public.inbound_events (id, lead_id, agent_id, kind, state, at, label, detail) values
+  (public.p_cl_id('r_ie_words'), public.p_cl_id('la'), public.p_cl_id('A'), 'text_sent', 'done', '2026-10-01 09:40:00+00', 'Welcome text',
+   '{"step":"instant","seq":1,"summary":"Thanks them.","body":"Exact workflow words"}');
+
+-- Recordings. The markers must never come back.
+update public.fulfillment_voice_legs set conference_sid = 'CF_ready'  where call_sid = 'CA_answered';
+update public.fulfillment_voice_legs set conference_sid = 'CF_failed' where call_sid = 'CA_missed';
+update public.fulfillment_voice_legs set conference_sid = 'CF_ready'  where call_sid = 'CA_carrier';
+insert into public.fulfillment_recordings (id, call_sid, policy_id, rep_id, conference_sid, recording_sid, status) values
+  (public.p_cl_id('rec_ready'),  'CA_rep_1',   public.p_cl_id('pa'), public.p_cl_id('R'), 'CF_ready',  'MARKER_rec_ready',  'ready'),
+  (public.p_cl_id('rec_failed'), 'CA_rep_2',   public.p_cl_id('pa'), public.p_cl_id('R'), 'CF_failed', 'MARKER_rec_failed', 'failed'),
+  (public.p_cl_id('rec_sid'),    'CA_ringing', public.p_cl_id('pa'), public.p_cl_id('R'), 'CF_elsewhere', 'MARKER_rec_sid', 'ready');
+
+-- Sample rows, each by the route its source takes.
+update public.lead_sms_replies set is_sample = true where id = public.p_cl_id('r_reply');
+update public.lead_followup_sms_log set is_sample = true where id = public.p_cl_id('r_tie_one');
+update public.inbound_events set is_sample = true where id = public.p_cl_id('r_inbound');
+update public.help_calls set is_sample = true where id = public.p_cl_id('r_help');
+insert into public.policy_events (id, policy_id, agent_id, kind, detail, at, is_sample) values
+  (public.p_cl_id('r_ev_sample'), public.p_cl_id('pa_other'), public.p_cl_id('A'), 'no_answer', '{"attempt":1}', '2026-10-01 09:50:00+00', true);
+insert into public.leads (id, business_name, contact_name, phone, state, lead_type, assigned_rep_id, va_outcome, va_attempts, va_last_worked_at, is_sample)
+values (public.p_cl_id('la_sample'), 'Sample', 'Sample', '+15125550298', 'TX', 'policy_help', public.p_cl_id('A'), 'callback', 1, '2026-10-01 09:51:00+00', true);
+insert into public.appointments (id, lead_id, scheduled_at) values (public.p_cl_id('appt_sample'), public.p_cl_id('la_sample'), '2026-10-02 17:00:00+00');
+insert into public.reminder_log (id, appointment_id, scheduled_time, send_time, status, channel, message_body, twilio_message_sid) values
+  (public.p_cl_id('r_rem_sample'), public.p_cl_id('appt_sample'), '2026-10-01 09:52:00+00', '2026-10-01 09:52:00+00', 'sent', 'sms', 'Sample reminder', 'SM_rem_sample');
+insert into public.calls (id, lead_id, rep_id, call_outcome, created_at) values
+  (public.p_cl_id('r_call_sample'), public.p_cl_id('la_sample'), public.p_cl_id('A'), 'no_answer', '2026-10-01 09:53:00+00');
+update public.policies set is_sample = true where id = public.p_cl_id('pa_same');
+insert into public.fulfillment_voice_legs (call_sid, policy_id, party, status, started_at) values
+  ('CA_sample', public.p_cl_id('pa_same'), 'client', 'ended', '2026-10-01 09:54:00+00');
+
+select public.p_cl_load('a2', 'A'), public.p_cl_load('b2', 'B'), public.p_cl_load('r2', 'R'), public.p_cl_load('z2', 'Z');
+
+select is((select body from seen where who = 'a2' and id = public.p_cl_rid('lead_followup_sms_log', 'r_followup')), 'Exact follow-up words', 'k19 after 198 a follow-up shows its words');
+select is((select body from seen where who = 'a2' and id = public.p_cl_rid('recovery_sms_log', 'r_recovery')), 'Exact recovery words', 'k20 and a recovery text');
+select is((select body from seen where who = 'a2' and id = public.p_cl_rid('inbound_events', 'r_ie_words')), 'Exact workflow words', 'k21 and a workflow text, from detail.body');
+select is((select body from seen where who = 'a2' and id = public.p_cl_rid('inbound_events', 'r_inbound')), null, 'k22 a workflow text with only a summary stays null');
+select is((select body from seen where who = 'a2' and id = public.p_cl_rid('lead_followup_sms_log', 'r_tie_one')), null, 'k23 an older follow-up with no words stays null');
+select is(public.p_cl_has('a2', 'lead_followup_sms_log', 'h_fu_fail'), 0::bigint, 'k24 a failed text with words stays hidden');
+select is((select label from seen where who = 'a2' and id = public.p_cl_rid('inbound_events', 'r_ie_words')), 'Welcome text sent', 'k25 the instant step reads as a welcome text');
+
+select is(public.p_cl_new('a2', 'fulfillment_voice_legs', 'CA_answered'), 'Call to client|-|true|false', 'k26 a client leg with a ready recording reads true');
+select is(public.p_cl_new('a2', 'fulfillment_voice_legs', 'CA_missed'), 'Call to client|-|false|false', 'k27 a failed recording reads false');
+select is(public.p_cl_new('a2', 'fulfillment_voice_legs', 'CA_ringing'), 'Call to client|-|false|false', 'k28 a recording that only shares the call_sid reads false');
+select is(public.p_cl_has('a2', 'fulfillment_voice_legs', 'CA_carrier'), 0::bigint, 'k29 the carrier leg in the same conference stays hidden');
+select is((select count(*) from seen where who = 'a2' and has_recording and source <> 'fulfillment_voice_legs'), 0::bigint, 'k30 no other source reads true');
+select is((select count(*) from seen s where to_jsonb(s)::text like '%MARKER%'), 0::bigint, 'k31 no recording sid came back to anyone, admin included');
+select is(public.p_cl_count('r2'), 0::bigint, 'k32 the rep on the recording still gets zero rows');
+
+select is((select count(*) from seen where who = 'a2' and is_sample and id in (
+             public.p_cl_rid('lead_sms_replies', 'r_reply'), public.p_cl_rid('lead_followup_sms_log', 'r_tie_one'),
+             public.p_cl_rid('inbound_events', 'r_inbound'), public.p_cl_rid('help_calls', 'r_help'),
+             public.p_cl_rid('policy_events', 'r_ev_sample'))), 5::bigint, 'k33 sources with their own is_sample read it');
+select is((select count(*) from seen where who = 'a2' and is_sample and id in (
+             public.p_cl_rid('reminder_log', 'r_rem_sample'), public.p_cl_rid('calls', 'r_call_sample'),
+             public.p_cl_rid('leads.va_outcome', 'la_sample'))), 3::bigint, 'k34 reminder_log, calls and the VA columns read the lead''s');
+select is((select count(*) from seen where who = 'a2' and is_sample and id in (
+             public.p_cl_rid('recovery_sms_log', 'r_recovery_same'), 'fulfillment_voice_legs:CA_sample')), 2::bigint,
+          'k35 recovery_sms_log and fulfillment_voice_legs read the policy''s');
+select is(public.p_cl_new('a2', 'policy_events', 'r_ev_start'), 'Call started|-|false|false', 'k36 a policy_events row on a policy that isn''t sample reads false');
+select is((select is_sample from seen where who = 'a2' and id = public.p_cl_rid('policy_events', 'r_ev_sample')), true, 'k37 a sample event on a real policy reads its own flag');
+select is((select count(*) from seen where who = 'a2' and is_sample is null), 0::bigint, 'k38 is_sample is never null');
+select is((select count(*) from seen where who = 'a2' and has_recording is null), 0::bigint, 'k39 has_recording is never null');
 
 select * from finish();
 rollback;
