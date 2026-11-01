@@ -8,7 +8,7 @@
 -- first call. Additive: one new function. No table, policy, index or grant changes on
 -- anything that exists. It sends nothing and every live switch stays as it is.
 -- The guard also needs 157 (recovery_sms_log.skipped) and 186 (is_sample). It does not
--- need 198: see GAPS.
+-- need 198 or 177: see GAPS.
 --
 -- Why: the Servicing Spec says "there is no single contact log today." Agents should
 -- never have to guess what was said to their people, and the Client and lead pages
@@ -55,7 +55,8 @@
 --     is_sample     the row's own is_sample where 186 added one (lead_followup_sms_log,
 --                   lead_sms_replies, inbound_events, help_calls, policy_events). The
 --                   lead's for reminder_log, calls and the VA columns; the policy's for
---                   recovery_sms_log and fulfillment_voice_legs.
+--                   recovery_sms_log and fulfillment_voice_legs. Also the lead's on a
+--                   lead_followup_sms_log with no column: see GAPS.
 --   Sender from a role: fulfillment or admin = va; agent or closer = agent; no person
 --   = system. The brief's map has no old rep role: a calls row by a rep reads agent,
 --   because a person placed it and sender_name says who.
@@ -83,6 +84,8 @@
 -- USED, one union branch each. Only things that happened.
 --   Texts:
 --   1. lead_followup_sms_log  lead, out, status = 'sent', created_at, body from 198.
+--                             Read through execute, only if the table is there: see
+--                             GAPS.
 --   2. lead_sms_replies       lead, in, lead_id not null, received_at, body as stored.
 --   3. inbound_events         lead, out, kind in text_sent or reminder, state = 'done',
 --                             detail has step, at. Body is detail.body only, never
@@ -164,6 +167,11 @@
 --   (atlas/97e34105), which may land after this file. Until it does, and on any row sent
 --   before it, the body is null. 198 is not in the guard, and the two log branches read
 --   the column through to_jsonb, so neither order fails.
+--   177 (lead_followup_sms_log) is on master but isn't on Ohvara and was never approved
+--   for it (the dry run of this file, Nov 1). The function checks for the table on each
+--   call: with none, the follow-up texts return no rows and no error, because nothing can
+--   have been logged there. Once 177 is applied its rows show with no change here. 186
+--   skipped that table, so until 186 runs again those rows read the lead's is_sample.
 --   The leads VA columns keep only the latest call; earlier attempts survive only as a
 --   count.
 --   A reply is matched to a lead by phone only, so a client's reply to a recovery text
@@ -185,9 +193,6 @@ do $$
 begin
   if to_regclass('public.policy_servicing_status') is null or to_regclass('public.agent_clients') is null then
     raise exception '199 needs 193_servicing_model applied first';
-  end if;
-  if to_regclass('public.lead_followup_sms_log') is null then
-    raise exception '199 needs 177_lead_followup_sms_log applied first';
   end if;
   if to_regclass('public.recovery_sms_log') is null then
     raise exception '199 needs 122_no_answer_recovery applied first';
@@ -241,8 +246,8 @@ begin
   -- 186 skips a table that isn't there yet, so each column is checked, not just one.
   if (select count(*) from information_schema.columns
        where table_schema = 'public' and column_name = 'is_sample'
-         and table_name in ('policies', 'leads', 'lead_followup_sms_log', 'lead_sms_replies',
-                            'inbound_events', 'help_calls', 'policy_events')) <> 7 then
+         and table_name in ('policies', 'leads', 'lead_sms_replies',
+                            'inbound_events', 'help_calls', 'policy_events')) <> 6 then
     raise exception '199 needs 186_is_sample_flag applied after every table it lists';
   end if;
 end $$;
@@ -270,6 +275,8 @@ declare
   v_uid    uuid := auth.uid();
   v_role   text;
   v_agents uuid[] := '{}';
+  v_leads  uuid[] := '{}';
+  v_sent   jsonb := '[]';
 begin
   if p_client_key is not null and p_lead is not null then
     raise exception 'Pass a client key or a lead, not both' using errcode = '22023';
@@ -287,6 +294,25 @@ begin
     v_agents := array(select v_uid union select d.id from public.downline_of(v_uid) d);
   end if;
 
+  if p_client_key is null then
+    v_leads := array(
+      select l.id
+        from leads l
+       where l.lead_type <> 'cancellation'
+         and (v_role = 'admin' or coalesce(l.assigned_rep_id, l.transfer_agent_id) = any (v_agents))
+         and (p_lead is null or l.id = p_lead));
+  end if;
+
+  -- execute, not a plain select: 177 may not be there, and a missing table would fail every call.
+  -- to_jsonb, not f.body: 198 may not be there either, and a missing column would too.
+  if to_regclass('public.lead_followup_sms_log') is not null then
+    execute $sql$
+      select coalesce(jsonb_agg(to_jsonb(f)), '[]')
+        from lead_followup_sms_log f
+       where f.status = 'sent' and f.lead_id = any ($1)
+    $sql$ into v_sent using v_leads;
+  end if;
+
   return query
   with my_clients as (
     select p.id as policy_id, p.agent_id, s.client_key, p.is_sample
@@ -301,23 +327,18 @@ begin
     select l.id as lead_id, coalesce(l.assigned_rep_id, l.transfer_agent_id) as agent_id,
            l.va_outcome, l.va_attempts, l.va_last_worked_by, l.va_last_worked_at, l.transfer_status, l.is_sample
       from leads l
-     where l.lead_type <> 'cancellation'
-       and (v_role = 'admin' or coalesce(l.assigned_rep_id, l.transfer_agent_id) = any (v_agents))
-       and p_client_key is null
-       and (p_lead is null or l.id = p_lead)
+     where l.id = any (v_leads)
   ),
   entries as (
-    -- to_jsonb, not f.body: 198 may not be there, and a missing column would fail on call.
-    -- 1. lead_followup_sms_log
-    select 'lead_followup_sms_log' as source, f.id::text as row_id, 'lead' as subject,
+    -- 1. lead_followup_sms_log, from the rows read above
+    select 'lead_followup_sms_log' as source, f ->> 'id' as row_id, 'lead' as subject,
            null::text as client_key, ml.lead_id, null::uuid as policy_id, ml.agent_id,
-           f.created_at as occurred_at, 'text' as channel, 'out' as direction,
-           to_jsonb(f) ->> 'body' as body, null::text as call_result,
-           'system' as sender, null::text as sender_name, f.stage as kind, null::int as attempts,
-           false as has_recording, f.is_sample
-      from lead_followup_sms_log f
-      join my_leads ml on ml.lead_id = f.lead_id
-     where f.status = 'sent'
+           (f ->> 'created_at')::timestamptz as occurred_at, 'text' as channel, 'out' as direction,
+           f ->> 'body' as body, null::text as call_result,
+           'system' as sender, null::text as sender_name, f ->> 'stage' as kind, null::int as attempts,
+           false as has_recording, coalesce((f ->> 'is_sample')::boolean, ml.is_sample) as is_sample
+      from jsonb_array_elements(v_sent) as sent(f)
+      join my_leads ml on ml.lead_id = (f ->> 'lead_id')::uuid
 
     union all
     -- 2. lead_sms_replies
@@ -496,5 +517,5 @@ comment on function public.contact_log(text, uuid, timestamptz, int) is
 --     from unnest(array['anon', 'authenticated', 'service_role']) r;
 --     -- anon false, authenticated true, service_role false
 --   select r, has_table_privilege('authenticated', r, 'select')
---     from unnest(array['public.lead_followup_sms_log', 'public.recovery_sms_log', 'public.lead_sms_replies']) r;
---     -- all false
+--     from unnest(array['public.recovery_sms_log', 'public.lead_sms_replies']) r;
+--     -- all false. Add public.lead_followup_sms_log once 177 is applied.

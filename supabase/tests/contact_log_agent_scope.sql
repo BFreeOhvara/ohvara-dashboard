@@ -14,6 +14,10 @@
 -- uuid) does not exist". That is on purpose: a security test that skips itself when the
 -- function is gone reads as a pass.
 --
+-- NEEDS 177 too: the seed writes lead_followup_sms_log rows, so on a database without it
+-- this file stops at the seed. The function itself doesn't need it; p_contact_log.sql
+-- section l covers that case.
+--
 -- Only names the function already returns are read, one by one, so a later migration
 -- that adds columns doesn't break this file. p_contact_log.sql covers each source's
 -- values, the demo wall, uplines and other roles; this file is only the agent wall.

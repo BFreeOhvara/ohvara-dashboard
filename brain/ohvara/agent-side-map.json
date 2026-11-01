@@ -22,7 +22,7 @@
         "supabase/tests/contact_log_agent_scope.sql",
         "supabase/tests/p_contact_log.sql"
       ],
-      "notes": "contact_log is migration 199, written and not applied; tests pass in the local stand-in only. It returns label, text_status, has_recording and is_sample after the 16 original columns. Words on follow-up, recovery and workflow texts show once 198 lands and stay null until then, with no dependency on it."
+      "notes": "contact_log is migration 199, written and not applied; tests pass in the local stand-in only. It returns label, text_status, has_recording and is_sample after the 16 original columns. Words on follow-up, recovery and workflow texts show once 198 lands and stay null until then, with no dependency on it. 177 isn't on Ohvara, so follow-up texts return no rows until it is applied."
     },
     {
       "id": "client-page.fulfillment-call",

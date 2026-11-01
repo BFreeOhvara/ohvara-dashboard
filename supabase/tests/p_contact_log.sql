@@ -21,7 +21,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(180);
+select plan(190);
 
 -- ── helpers ─────────────────────────────────────────────────────────────────
 create temp table ids (name text primary key, id uuid not null default gen_random_uuid());
@@ -636,6 +636,32 @@ select is(public.p_cl_new('a2', 'policy_events', 'r_ev_start'), 'Call started|-|
 select is((select is_sample from seen where who = 'a2' and id = public.p_cl_rid('policy_events', 'r_ev_sample')), true, 'k37 a sample event on a real policy reads its own flag');
 select is((select count(*) from seen where who = 'a2' and is_sample is null), 0::bigint, 'k38 is_sample is never null');
 select is((select count(*) from seen where who = 'a2' and has_recording is null), 0::bigint, 'k39 has_recording is never null');
+
+-- ── l. No 177: what Ohvara has today ───────────────────────────────────────────
+-- 186 skipped a table that wasn't there, so first the table with no is_sample column.
+insert into public.lead_followup_sms_log (id, lead_id, stage, status, created_at) values
+  (public.p_cl_id('r_fu_sample_lead'), public.p_cl_id('la_sample'), 'not_reached', 'sent', '2026-10-01 09:55:00+00');
+alter table public.lead_followup_sms_log drop column is_sample;
+select public.p_cl_load('a_nocol', 'A');
+select is((select is_sample from seen where who = 'a_nocol' and id = public.p_cl_rid('lead_followup_sms_log', 'r_fu_sample_lead')), true,
+          'l1 with no is_sample column, a follow-up on a sample lead reads the lead''s');
+select is((select is_sample from seen where who = 'a_nocol' and id = public.p_cl_rid('lead_followup_sms_log', 'r_followup')), false,
+          'l2 and one on a real lead reads false');
+
+drop table public.lead_followup_sms_log;
+select public.p_cl_load('a_no177', 'A'), public.p_cl_load('b_no177', 'B'), public.p_cl_load('z_no177', 'Z'),
+       public.p_cl_load('a_no177_lead', 'A', null, public.p_cl_id('la')),
+       public.p_cl_load('b_no177_a_lead', 'B', null, public.p_cl_id('la'));
+select is(to_regclass('public.lead_followup_sms_log')::text, null, 'l3 the table is gone');
+select is((select count(*) from seen where who = 'a_no177' and source = 'lead_followup_sms_log'), 0::bigint, 'l4 no follow-up rows and no error');
+select is((select count(*) from seen where who = 'a_no177'),
+          (select count(*) from seen where who = 'a_nocol' and source <> 'lead_followup_sms_log'),
+          'l5 every other row A had comes back the same');
+select is((select count(distinct source) from seen where who = 'a_no177'), 9::bigint, 'l6 the other nine sources all came back');
+select ok(public.p_cl_count('a_no177_lead') > 0, 'l7 asking for A''s lead works');
+select is((select count(*) from seen where who = 'a_no177_lead' and lead_id is distinct from public.p_cl_id('la')), 0::bigint, 'l8 and it holds only that lead');
+select is(public.p_cl_count('b_no177_a_lead'), 0::bigint, 'l9 B asking for A''s lead still gets zero');
+select is(public.p_cl_shared('a_no177', 'b_no177'), 0::bigint, 'l10 A and B still share no row');
 
 select * from finish();
 rollback;
