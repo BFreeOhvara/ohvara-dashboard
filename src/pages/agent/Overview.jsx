@@ -1,49 +1,48 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarPlus, Check } from 'lucide-react'
+import { PhoneIncoming } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
-import { HeroPanel, TrendCard, LastWeekChart, LoadError } from '../../components/agent/AgentUI'
+import { useOverviewBook } from '../../hooks/useOverviewBook'
+import { HeroPanel, LoadError } from '../../components/agent/AgentUI'
+import { BookRow, WeekSubmissions, ComingUpSteps, StepsDoneChart, GetLeadsCard } from '../../components/agent/OverviewBlocks'
 import { stageOf, agentStageOf, tabOf, useNow } from '../../lib/agentBookings'
 import { addDaysStr } from '../../lib/scheduling'
-import { DEFAULT_TIMEZONE, zonedDateStr, zonedTimeToUtcIso } from '../../lib/timezones'
+import { DEFAULT_TIMEZONE, zonedDateStr } from '../../lib/timezones'
 import { LiveDot } from '../../components/ui/LiveDot'
 import { fullName } from '../../lib/policyFormat'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { PhoneHome } from '../../components/agent/phone/PhoneHome'
-import { TodayCards, TodayStrip, AttentionWithTexts } from '../../components/agent/TodayCards'
+import { TodayCards, TodayStrip, AttentionWithTexts, useAppointmentsLeftToday } from '../../components/agent/TodayCards'
 
 // Agent Overview (Prompt 665) — the landing page. "Your day at a glance".
 //
 // Prompt 714 — v2, the pilot for the portal-wide visual upgrade: a hero
-// (greeting, big clock, Book a call), two trend cards against last week, a
-// chart, and a "Needs your attention" list with a next step per No answer
-// client. The With Fulfillment tile and the "Your calls" list are gone.
-// Everything comes from the useAgentBookings rows already loaded.
+// (greeting, big clock, Submit), a chart, and a "Needs your attention" list
+// with a next step per No answer client. Everything the attention box shows
+// comes from the useAgentBookings rows already loaded.
 //
 // Prompt 723 — the side box has two states: amber "Needs your attention" when
 // a client didn't pick up, otherwise "You're all caught up" with the next
-// booked calls. The chart is last Monday to Sunday (was 14 days), and the
-// box's button is the blue .ov-primary.
+// booked calls ("Up next").
 //
 // Prompt 732 — "Needs your attention" is the Needs attention tab and nothing
 // else: a No answer client is Fulfillment's to work, so it never shows here.
 // The rows only open My Pipeline on that client; nothing starts from here.
 //
-// Prompt 672 — the trend cards open My Clients on the matching slice of its
-// Pipeline (?range= / ?stage=).
-//
-// Portal parity T3 — for every agent, Today's cards (TodayCards) sit under the
+// Portal parity T3 — for an agent with Leads, Today's cards (TodayCards) sit under the
 // hero (on a phone, under PhoneHome) and Texts waiting folds into the attention box.
+//
+// Servicing Overview (Agent Portal Servicing Spec, Overview) — the page is about looking after the agent's
+// book, not counting cancellations: Your book (four stage tiles), This week (submissions used), Coming up
+// (next steps) and Steps done (last week, four kinds) replace the Booked / Cancelled trend cards and chart.
+// The whole Today strip (appointments, live transfers, New leads) shows only for an agent who has Leads;
+// otherwise one small Get leads card takes its place. An agent with Leads and no Servicing
+// (profile.has_servicing === false, the Submit.jsx:37 test) sees only the Leads panels, filling the screen.
+// The numbers come from useOverviewBook() (src/hooks/useOverviewBook.js); the blocks are in OverviewBlocks.jsx.
 
-// Prompt 768 (QA Finding 6) — days and weeks are the agent's profile zone,
-// the same zone the weekly cap and its meter use (agent_weekly_usage), so
-// "Booked this week" and the meter always reset together. Days are
-// YYYY-MM-DD strings in that zone.
-const dowOf = day => (new Date(`${day}T12:00:00Z`).getUTCDay() + 6) % 7 // Mon = 0
-const dayStartMs = (day, tz) => new Date(zonedTimeToUtcIso(`${day}T00:00`, tz)).getTime()
-// Noon UTC on that date, for the chart's labels (same date in every US zone).
-const labelDate = day => new Date(`${day}T12:00:00Z`)
+// Days are YYYY-MM-DD strings in the agent's profile zone (Prompt 768), the zone the weekly cap and the
+// Overview's data layer (src/lib/overviewBook.js) use.
 const hourIn = (ms, tz) => +new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hourCycle: 'h23' }).format(new Date(ms)) % 24
 
 // One-screen mode: from 1280px wide and 700px tall the page fits the height under the header (the .ov-fitag rules
@@ -64,6 +63,7 @@ function useFit() {
 
 // Needs attention first, then Confirm number, then the rest.
 const ATTN_RANK = { needsAttention: 0, confirmNumber: 1 }
+const plural = (n, one) => `${n} ${one}${n === 1 ? '' : 's'}`
 
 export default function Overview() {
   const { profile } = useAuth()
@@ -74,36 +74,18 @@ export default function Overview() {
   const { data: rows = [], isLoading: loadingRows, isError, refetch } = useAgentBookings(profile?.id)
   // A failed load shows dashes, not zeros (Prompt 768).
   const isLoading = loadingRows || isError
+  const ov = useOverviewBook()
+  const { hasLeads, hasServicing, leadsStatus } = ov
+  // A Leads buyer is known at once; anyone else waits for the lead list before the Get leads card shows.
+  const getLeads = !hasLeads && leadsStatus === 'ready'
+  const left = useAppointmentsLeftToday()
 
   const tz = profile?.timezone || DEFAULT_TIMEZONE
 
   const g = useMemo(() => {
     const today = zonedDateStr(now, tz)
-    const weekStartDay = addDaysStr(today, -dowOf(today))
-    const weekStart = dayStartMs(weekStartDay, tz)
-    const lastWeekStart = dayStartMs(addDaysStr(weekStartDay, -7), tz)
     const ms = iso => new Date(iso).getTime()
     const dayOf = iso => (iso ? zonedDateStr(ms(iso), tz) : null)
-
-    // Booked = when the call was booked; Cancelled = when the old policy was
-    // confirmed cancelled.
-    const bookedAt = rows.map(p => p.created_at).filter(Boolean)
-    const cancelledAt = rows
-      .filter(p => stageOf(p) === 'cancelled' && p.fulfillment_completed_at)
-      .map(p => p.fulfillment_completed_at)
-    const since = (list, from) => list.filter(iso => ms(iso) >= from).length
-    const between = (list, from, to) => list.filter(iso => ms(iso) >= from && ms(iso) < to).length
-    const onDay = (list, day) => list.filter(iso => dayOf(iso) === day).length
-
-    const weekDays = Array.from({ length: 7 }, (_, i) => addDaysStr(weekStartDay, i))
-    // Last Monday to Sunday (weeks run Monday to Sunday everywhere).
-    const lastWeek = Array.from({ length: 7 }, (_, i) => {
-      const day = addDaysStr(weekStartDay, i - 7)
-      return { date: labelDate(day), booked: onDay(bookedAt, day), cancelled: onDay(cancelledAt, day) }
-    })
-
-    const bookedThisWeek = since(bookedAt, weekStart)
-    const cancelledThisWeek = since(cancelledAt, weekStart)
     const lastCall = p => (p.last_call_at ? ms(p.last_call_at) : 0)
     const attention = rows
       .filter(p => tabOf(p) === 'needs')
@@ -117,18 +99,6 @@ export default function Overview() {
     return {
       todays: rows.filter(p => dayOf(p.scheduled_call_at) === today).length,
       live: rows.filter(p => stageOf(p) === 'inProgress'),
-      todayIdx: dowOf(today),
-      booked: {
-        value: bookedThisWeek,
-        diff: bookedThisWeek - between(bookedAt, lastWeekStart, weekStart),
-        week: weekDays.map(d => onDay(bookedAt, d)),
-      },
-      cancelled: {
-        value: cancelledThisWeek,
-        diff: cancelledThisWeek - between(cancelledAt, lastWeekStart, weekStart),
-        week: weekDays.map(d => onDay(cancelledAt, d)),
-      },
-      lastWeek,
       attention,
       upcoming,
     }
@@ -140,24 +110,51 @@ export default function Overview() {
   const dateLabel = month => new Date(now).toLocaleDateString('en-US', {
     timeZone: tz, weekday: 'long', month, day: 'numeric',
   })
-  const sub = isError ? 'Couldn’t load your calls.'
-    : isLoading ? 'Loading your calls…'
-    : g.todays ? `${g.todays} call${g.todays === 1 ? '' : 's'} on the books today.`
-      : 'Nothing on the books today yet.'
+  const tomorrow = addDaysStr(zonedDateStr(now, tz), 1)
+  const tomorrowSteps = ov.steps.dueSoon.filter(s => zonedDateStr(new Date(s.dueAt).getTime(), tz) === tomorrow).length
+  const sub = hasServicing
+    ? (ov.steps.dueSoonStatus === 'error' ? 'Couldn’t load your steps.'
+      : ov.steps.dueSoonStatus === 'loading' ? 'Loading your steps…'
+        : tomorrowSteps ? `${plural(tomorrowSteps, 'step')} scheduled for tomorrow.` : 'Nothing scheduled for tomorrow.')
+    : (left.failed ? 'Couldn’t load your appointments.'
+      : left.loading ? 'Loading your appointments…'
+        : left.count ? `${plural(left.count, 'appointment')} left today.` : 'No appointments left today.')
 
   // Prompt 772 — the phone layout's Home, from the same numbers.
   if (phone) {
-    const home = <PhoneHome g={g} greeting={greeting} sub={sub} isLoading={isLoading} isError={isError} refetch={refetch} now={now} tz={tz} />
-    return <div className="tc-phone">{home}<TodayCards showTexts /></div>
+    const home = <PhoneHome g={g} ov={ov} greeting={greeting} sub={sub} isLoading={isLoading} isError={isError} refetch={refetch} now={now} tz={tz} />
+    return (
+      <div className="tc-phone">
+        {home}
+        {hasLeads && hasServicing && <h2 className="ph-h2" style={{ margin: '6px 0 -6px' }}>Your leads today</h2>}
+        {hasLeads && <TodayCards showTexts />}
+        {getLeads && <GetLeadsCard />}
+      </div>
+    )
+  }
+
+  const hero = (
+    <HeroPanel
+      fit={fit} greeting={greeting} sub={sub} timezone={profile?.timezone}
+      dateLong={dateLabel('long')} dateShort={dateLabel('short')}
+      onBook={() => navigate('/agent/submit')}
+      action={hasServicing ? undefined : { label: 'Open Leads', icon: PhoneIncoming, onClick: () => navigate('/agent/leads') }}
+    />
+  )
+
+  // Leads only: no book, no weekly count, no steps. The Leads panels take the whole page.
+  if (!hasServicing) {
+    return (
+      <div className="ag-page flex flex-col gap-[14px] sm:gap-5" data-ov="leads-only">
+        {hero}
+        {hasLeads ? <TodayCards fitGrid={fit} showTexts={!fit} /> : getLeads ? <GetLeadsCard /> : null}
+      </div>
+    )
   }
 
   return (
     <div className="ag-page flex flex-col gap-[14px] sm:gap-5">
-      <HeroPanel
-        fit={fit} greeting={greeting} sub={sub} timezone={profile?.timezone}
-        dateLong={dateLabel('long')} dateShort={dateLabel('short')}
-        onBook={() => navigate('/agent/submit')}
-      />
+      {hero}
 
       {isError && <LoadError what="your calls" onRetry={() => refetch()} className="ag-err" />}
 
@@ -173,28 +170,21 @@ export default function Overview() {
         </div>
       )}
 
-      {fit ? <TodayStrip /> : <TodayCards />}
+      <BookRow book={ov.book} onRetry={ov.refetch} />
 
-      <div className="ov-grid">
-        <div className="ag-trends grid grid-cols-2 gap-[14px] sm:gap-5" style={{ gridArea: 'trend', minWidth: 0 }}>
-          <TrendCard
-            label="Booked this week" icon={CalendarPlus} tone="a"
-            value={isLoading ? '—' : g.booked.value} diff={isLoading ? null : g.booked.diff}
-            week={g.booked.week} todayIdx={g.todayIdx} fit={fit}
-            onClick={() => navigate('/agent/clients?range=week&stage=all')}
-          />
-          <TrendCard
-            label="Cancelled this week" icon={Check} tone="b"
-            value={isLoading ? '—' : g.cancelled.value} diff={isLoading ? null : g.cancelled.diff}
-            week={g.cancelled.week} todayIdx={g.todayIdx} fit={fit}
-            onClick={() => navigate('/agent/clients?stage=cancelled')}
-          />
-        </div>
+      {hasLeads && (fit ? <TodayStrip /> : <TodayCards />)}
 
-        <AttentionWithTexts items={g.attention} loading={isLoading} upcoming={g.upcoming} now={now} onGo={navigate} fit={fit} />
+      <div className="ov-grid ov-grid--svc">
+        <AttentionWithTexts items={g.attention} loading={isLoading} upcoming={g.upcoming} now={now} onGo={navigate} fit={fit} slim={fit} />
 
         <div className="ag-chartw" style={{ gridArea: 'chart', display: 'flex', minWidth: 0 }}>
-          <LastWeekChart days={g.lastWeek} loading={isLoading} fit={fit} />
+          <StepsDoneChart days={ov.steps.doneByDay} status={ov.steps.doneStatus} savesKnown={ov.steps.savesKnown} onRetry={ov.refetch} fit={fit} />
+        </div>
+
+        <div className="ov-side" style={{ gridArea: 'side' }}>
+          <WeekSubmissions submissions={ov.submissions} tz={tz} onRetry={ov.refetch} />
+          <ComingUpSteps steps={ov.steps.dueSoon} status={ov.steps.dueSoonStatus} now={now} tz={tz} onRetry={ov.refetch} fit={fit} />
+          {getLeads && <GetLeadsCard />}
         </div>
       </div>
     </div>

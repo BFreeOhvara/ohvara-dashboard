@@ -106,6 +106,7 @@ svg{flex-shrink:0}
 .card-h h2{font-size:19px}
 .card-h .ov-ghost{margin-left:auto}
 .lab{font-size:13.5px;font-weight:700;color:var(--ov-mid)}
+label.lab{display:flex;flex-wrap:wrap;align-items:flex-end;gap:0 6px;min-height:44px;min-width:44px;padding-bottom:4px}
 .lab .sub{font-weight:500}
 
 /* ---------- hero ---------- */
@@ -438,7 +439,7 @@ a.job .sub{font-size:13px}
       <div class="ov-card empty" role="alert"><span class="tile"><svg width="20" height="20"><use href="#i-info"/></svg></span><h3>Your hold on this step ended</h3><p class="sub">The step is back in the queue. Notes that showed "Saved" are kept.</p><button class="ov-ghost">Back to queue</button></div></div>
     <div class="gp"><p class="cap-l">6 · Send to agent</p>
       <section class="ov-card"><div class="card-h"><h2>Send to agent</h2></div>
-        <label class="lab" for="q" style="display:block;margin-top:12px">What did the client ask?</label>
+        <label class="lab" for="q" style="margin-top:12px">What did the client ask?</label>
         <textarea class="field" id="q">Client asked if the death benefit changes if they move to another state.</textarea>
         <div class="o-foot" style="margin-top:12px"><button class="btn-primary">Send to Agent Placeholder A</button><p class="sub">Opens a needs-attention item for the agent. The step stays open until they answer.</p></div></section></div>
     <div class="gp"><p class="cap-l">7 · Cancel a step</p>
