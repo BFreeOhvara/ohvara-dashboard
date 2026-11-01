@@ -560,8 +560,8 @@ select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8195-0000000
 insert into ids select 'feed', public.p_sf_deal('FeedDeal');
 create temp table feed as
   select * from public.agent_activity_feed(now() - interval '1 day', now() + interval '1 day', 'aaaaaaaa-aaaa-4aaa-8195-00000000000e', 5000);
-select is((select count(*) from feed where (meta ->> 'policy_id')::uuid = (select id from ids where name = 'feed') and title = 'Call updated.'), 1::bigint,
-          'k1 a submitted deal shows exactly 1 Call updated row, its existing submitted event');
+select is((select count(*) from feed where (meta ->> 'policy_id')::uuid = (select id from ids where name = 'feed') and title = 'Submitted for servicing'), 1::bigint,
+          'k1 a submitted deal shows exactly 1 Submitted for servicing row, its existing submitted event');
 select is((select string_agg(title, ',' order by title) from feed where (meta ->> 'policy_id')::uuid = (select id from ids where name = 'feed') and title like 'Servicing task added%'),
           'Servicing task added: chargeback watch.,Servicing task added: packet check.,Servicing task added: review call.', 'k2 and exactly 3 Servicing task added rows');
 select is((select count(*) from feed where (meta ->> 'policy_id')::uuid = (select id from ids where name = 'feed')), 4::bigint, 'k3 and nothing else');
