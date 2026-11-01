@@ -6,7 +6,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { compose, confirmation, shortLink, timeText, inboundIntent, OPT_IN_REPLY, type Row } from './core.ts'
+import { compose, confirmation, sendDue, shortLink, timeText, inboundIntent, OPT_IN_REPLY, type Deps, type Row, type SendResult } from './core.ts'
 
 // The samples exactly as registered (Eagle, 2026-10-17).
 const SAMPLE = {
@@ -71,6 +71,88 @@ test('every body starts with the brand and ends with STOP', () => {
 
 test('an unknown sample throws instead of inventing a text', () => {
   assert.throws(() => compose(row({ sample: 'pm' as never }), APP))
+})
+
+// ── the words: every text Twilio took keeps them on its log row (198) ───────
+type LogRow = { policy_id: string; kind: string; ok: boolean; twilio_sid: string | null; error: string | null; body: string | null }
+
+// A fake database and Twilio: mark / logConfirm write rows the way the SQL
+// functions do (no body), keepWords adds it the way index.ts does.
+function fake(queues: Record<string, Row[]>, over: Partial<Deps> = {}, refuse: (body: string) => boolean = () => false) {
+  const sent: { to: string; body: string; sid?: string }[] = []
+  const log: LogRow[] = []
+  const write = (policy_id: string, kind: string, r: SendResult) =>
+    log.push({ policy_id, kind, ok: r.ok, twilio_sid: r.sid ?? null, error: r.error ?? null, body: null })
+  const deps: Deps = {
+    claim: async fn => queues[fn] ?? [],
+    mark: async (_fn, r, result) => { write(r.policy_id, r.kind, result) },
+    logConfirm: async (r, c) => { write(r.policy_id, 'confirm', c) },
+    send: async (to, body) => {
+      if (refuse(body)) { sent.push({ to, body }); return { ok: false, error: '400 30003' } }
+      const sid = `SM${sent.length + 1}`
+      sent.push({ to, body, sid })
+      return { ok: true, sid }
+    },
+    keepWords: async (policyId, kind, sid, body) => {
+      for (const l of log) if (l.policy_id === policyId && l.kind === kind && l.twilio_sid === sid) l.body = body
+    },
+    appUrl: APP,
+    ...over,
+  }
+  return { deps, sent, log }
+}
+
+test('no-answer and missed-by-us texts: each log row carries the exact words sent', async () => {
+  const f = fake({
+    recovery_claim_due: [row({ kind: 'text1', sample: 'missed' }), row({ policy_id: 'p2', kind: 'text2', sample: 'reminder' })],
+    missed_claim_due: [row({ policy_id: 'p3', kind: 'apology1', sample: 'sorry' })],
+  })
+  assert.deepEqual(await sendDue(f.deps), { configured: true, claimed: 3, sent: 3, failed: 0 })
+  assert.equal(f.sent.length, 3)
+  assert.equal(f.log.length, 3)
+  for (const l of f.log) {
+    const m = f.sent.find(s => s.sid === l.twilio_sid)
+    assert.ok(m)
+    assert.equal(l.body, m.body)
+  }
+  assert.equal(f.log[0].body, compose(row({ kind: 'text1', sample: 'missed' }), APP))
+  assert.equal(f.log[1].body, compose(row({ policy_id: 'p2', kind: 'text2', sample: 'reminder' }), APP))
+  assert.equal(f.log[2].body, compose(row({ policy_id: 'p3', kind: 'apology1', sample: 'sorry' }), APP))
+})
+
+test('the first-text confirmation keeps its words on its own row', async () => {
+  const r = row({ needs_confirm: true })
+  const f = fake({ recovery_claim_due: [r] })
+  assert.deepEqual(await sendDue(f.deps), { configured: true, claimed: 1, sent: 2, failed: 0 })
+  assert.deepEqual(f.log.map(l => [l.kind, l.body]), [['confirm', confirmation('State Farm')], ['text1', compose(r, APP)]])
+  assert.deepEqual(f.sent.map(s => s.body), f.log.map(l => l.body))
+})
+
+test('a refused text keeps no words; a refused confirmation stops its text', async () => {
+  let f = fake({ recovery_claim_due: [row({})] }, {}, () => true)
+  assert.deepEqual(await sendDue(f.deps), { configured: true, claimed: 1, sent: 0, failed: 1 })
+  assert.deepEqual(f.log.map(l => [l.kind, l.ok, l.body]), [['text1', false, null]])
+  f = fake({ recovery_claim_due: [row({ needs_confirm: true })] }, {}, () => true)
+  assert.deepEqual(await sendDue(f.deps), { configured: true, claimed: 1, sent: 0, failed: 1 })
+  assert.equal(f.sent.length, 1)
+  assert.deepEqual(f.log.map(l => [l.kind, l.ok, l.body]), [['confirm', false, null]])
+})
+
+test('a failed words write never holds up the next text or changes the counts', async () => {
+  const f = fake(
+    { recovery_claim_due: [row({}), row({ policy_id: 'p2' })] },
+    { keepWords: async () => { throw new Error('column not there yet') } },
+  )
+  assert.deepEqual(await sendDue(f.deps), { configured: true, claimed: 2, sent: 2, failed: 0 })
+  assert.equal(f.sent.length, 2)
+  assert.deepEqual(f.log.map(l => l.body), [null, null])
+})
+
+test('sms_live off: the claims hand back nothing, so nothing is sent or logged', async () => {
+  const f = fake({})
+  assert.deepEqual(await sendDue(f.deps), { configured: true, claimed: 0, sent: 0, failed: 0 })
+  assert.equal(f.sent.length, 0)
+  assert.equal(f.log.length, 0)
 })
 
 test('inbound keywords', () => {

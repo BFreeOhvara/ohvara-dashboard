@@ -50,6 +50,59 @@ export function compose(r: Row, appUrl: string): string {
   throw new Error(`No registered text for sample ${r.sample}`)
 }
 
+export type SendResult = { ok: boolean; sid?: string; error?: string }
+
+export type Deps = {
+  claim(fn: string): Promise<Row[]>                       // hands back nothing until sms_live is on
+  mark(fn: string, r: Row, result: SendResult): Promise<void>   // writes the recovery_sms_log row
+  logConfirm(r: Row, result: SendResult): Promise<void>         // same, kind 'confirm'
+  send(to: string, body: string): Promise<SendResult>
+  // recovery_sms_log.body (198) on the row mark / logConfirm just wrote.
+  keepWords(policyId: string, kind: string, sid: string, body: string): Promise<void>
+  appUrl: string
+}
+
+// P696 no-answer texts, then P771 missed-by-us apologies.
+const QUEUES = [['recovery_claim_due', 'recovery_mark_sent'], ['missed_claim_due', 'missed_mark_sent']]
+
+// One run: send what each queue hands back and report each result. The SQL
+// functions write the log rows and don't take the words, so they are added to
+// the row right after, found by its Twilio sid. Only a text Twilio took has
+// words kept, and a miss here never holds up the next text.
+export async function sendDue(deps: Deps) {
+  let claimed = 0, sent = 0, failed = 0
+  const keep = async (r: Row, kind: string, result: SendResult, body: string) => {
+    if (!result.ok || !result.sid) return
+    try {
+      await deps.keepWords(r.policy_id, kind, result.sid, body)
+    } catch (err) {
+      console.error('[recovery-sms] keepWords', err instanceof Error ? err.message : String(err))
+    }
+  }
+  for (const [claim, mark] of QUEUES) {
+    const rows = await deps.claim(claim)
+    claimed += rows.length
+    for (const r of rows) {
+      // The booking's first text: the registered confirmation goes first.
+      // If it fails, the text waits for the next run (the claim re-offers it
+      // in 15 minutes; after 3 failed confirmations SQL skips the texts).
+      if (r.needs_confirm) {
+        const words = confirmation(r.carrier)
+        const c = await deps.send(r.phone, words)
+        await deps.logConfirm(r, c)
+        await keep(r, 'confirm', c, words)
+        if (c.ok) sent++; else { failed++; continue }
+      }
+      const words = compose(r, deps.appUrl)
+      const result = await deps.send(r.phone, words)
+      await deps.mark(mark, r, result)
+      await keep(r, r.kind, result, words)
+      if (result.ok) sent++; else failed++
+    }
+  }
+  return { configured: true, claimed, sent, failed }
+}
+
 // Twilio's opt-out / opt-in / help keywords (the Messaging Service defaults).
 const STOP_WORDS = ['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT', 'REVOKE', 'OPTOUT']
 const START_WORDS = ['START', 'YES', 'UNSTOP']
