@@ -542,7 +542,9 @@ async function main() {
 
   // ── the door file ─────────────────────────────────────────────────────────
   section('door: qa/servicing-seed/door-dry-run.sql')
-  const door = readFileSync(DOOR, 'utf8')
+  const door = readFileSync(DOOR, 'utf8').replace(/
+/g, '
+') // git may check it out with CRLF
   const expected = python(['-c', `import sys; sys.path.insert(0, 'scripts'); import seed_agent_sample as s; sys.stdout.reconfigure(newline='\\n'); sys.stdout.write(s.build_door(s.PLACEHOLDER_FULFILLMENT_ID))`])
   check('o1', 'the file is exactly what the generator writes', door === expected, 'regenerate it with --door')
   const parts = door.split(/^-- ===== SECTION \d:.*$/m)

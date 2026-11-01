@@ -1,122 +1,17 @@
-test-seed-sample: 182 migrations replayed in PGlite, 0 failed. In memory; no network.
+file:///C:/Users/freem/.atlas/work/ohvara/atlas_f612e3ca-re-seed-test-agent-13-clients-pg/scripts/test-seed-sample.mjs:545
+  const door = readFileSync(DOOR, 'utf8').replace(/
+                                                  ^
 
-== fixtures ==
-PASS [fx1] R has a policy this month and leaderboard_rank1_notified_month is null
-PASS [fx2] O holds an is_sample row in every seeded table
+SyntaxError: Invalid regular expression: missing /
+    at compileSourceTextModule (node:internal/modules/esm/utils:318:16)
+    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:90:18)
+    at #translate (node:internal/modules/esm/loader:435:20)
+    at afterLoad (node:internal/modules/esm/loader:491:29)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:496:12)
+    at #getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:549:36)
+    at afterResolve (node:internal/modules/esm/loader:597:52)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:603:12)
+    at node:internal/modules/esm/loader:622:32
+    at TracingChannel.tracePromise (node:diagnostics_channel:362:14)
 
-== a. seed: agent_clients for the test agent, flagged rows only ==
-PASS [a1] 13 clients (got 13)
-PASS [a2] stages setting_up=2, protected=7, needs_attention=2, ongoing=1, ended=1
-PASS [a3] at least 2 clients with 2 policies (got 2)
-PASS [a4] 2 with open requests (got 2), both protected with 1 each
-PASS [a5] at least 3 clients from leads, client_policy_id linked (got 3)
-PASS [a6] at least 3 existing clients with no lead (got 10)
-PASS [a7] setting-up clients cover replaced_old_policy true and false
-PASS [a8] a protected client has its old policy cancelled as a done step (got 2)
-PASS [a9] one open lapse_save, one saved in the last 14 days, one ended with an outcome
-PASS [a10] tasks have requested_by, requests have matching policy_events, messages on the clients
-PASS [a11] every client that is not ended has a next date, with no scheduled_call_at
-
-== b. every seeded row is_sample and under the test agent ==
-PASS [b-policies] policies: 15 new row(s), all is_sample and under the test agent
-PASS [b-policy_events] policy_events: 24 new row(s), all is_sample and under the test agent
-PASS [b-policy_messages] policy_messages: 13 new row(s), all is_sample and under the test agent
-PASS [b-leads] leads: 9 new row(s), all is_sample and under the test agent
-PASS [b-lead_sms_replies] lead_sms_replies: 3 new row(s), all is_sample and under the test agent
-PASS [b-lead_followup_sms_log] lead_followup_sms_log: 7 new row(s), all is_sample and under the test agent
-PASS [b-inbound_events] inbound_events: 23 new row(s), all is_sample and under the test agent
-PASS [b-servicing_tasks] servicing_tasks: 28 new row(s), all is_sample and under the test agent
-PASS [b-help_calls] help_calls: 3 new row(s), all is_sample and under the test agent
-PASS [b-details] policy_fulfillment_details: 15 new row(s), all is_sample and under the test agent
-PASS [b-phones] every client and lead phone is +1555010xxxx
-PASS [b-consent] sms_consent false on every sample policy
-PASS [b-sqltext] the generated SQL holds no phone outside the range (37 checked) and no literal date
-PASS [b-p729] the seed did not mark or change the unflagged P729-shaped row
-
-== data rules: dates and sweeps ==
-PASS [r1] the SQL takes dates from date_trunc('week', now())
-PASS [r2] every policy's created_at is date_trunc('week', now()) minus at least 2 days
-PASS [r3] and old enough to stay out of the Monday summary of a seed run on Monday morning
-PASS [r4] no recovery_* or missed_* value on any sample policy
-PASS [r5] no scheduled_call_at, next_lapse_check_at or no_answer on any sample policy
-PASS [r6] all 3 rows with an old policy hold the test fulfillment account, so autoassign has nothing to pick
-PASS [r7] the 12 rows with no old policy hold no rep (187 refuses one and autoassign skips them)
-PASS [r8] no sample policy reached the real rep
-
-== d. after the seed and after every sweep ==
-PASS [d1] after the seed: 0 notifications, 0 emails and 0 pushes for anyone but the test accounts
-PASS [d2] after the seed: net.http_request_queue unchanged (0)
-PASS [d3] after the seed: 0 new rows in fulfillment_pay, fulfillment_cancels, fulfillment_payouts, the prepaid ledger and the other payout tables
-PASS [d4] after the seed: 0 new rows in the 7 billing tables (commission_payouts, commission_schedule, agent_billing_tiers, commissions, subscriptions, prepaid_topup_options, agent_lead_ledger)
-PASS [d5] after the seed: R's rank-1 and goal months still null
-  ran notify_call_times, notify_hourly, missed_sweep at 5 moments, recovery_sweep, and every plain-SQL cron: daily-batch-assign, eod-pipeline-sweep, missed-sweep, notify-call-times, notify-hourly, notify-job-failures, notify-lapse-checkins, process-lead-queues, recovery-sweep
-PASS [e1] after the sweeps: 0 notifications, 0 emails and 0 pushes for anyone but the test accounts
-PASS [e2] after the sweeps: net.http_request_queue unchanged (0)
-PASS [e3] after the sweeps: 0 new rows in fulfillment_pay, fulfillment_cancels, fulfillment_payouts, the prepaid ledger and the other payout tables
-PASS [e4] after the sweeps: 0 new rows in the 7 billing tables (commission_payouts, commission_schedule, agent_billing_tiers, commissions, subscriptions, prepaid_topup_options, agent_lead_ledger)
-PASS [e5] after the sweeps: R's rank-1 and goal months still null
-PASS [d6] the sweeps moved no sample policy
-PASS [d7] the sweeps put no strike on anyone
-PASS [d8] the test accounts got no bell either (0)
-PASS [d9] recovery-sms would claim 0 sample rows even with sms_live on (this clone only)
-PASS [d10] the admin's Monday summary reads the same with the samples ("Last week: 0 bookings, 0 cancels, $0 paid out")
-
-== e. triggers after commit ==
-PASS [e-enabled] policies_recompute_leaderboard, policies_check_goal_milestones, policy_messages_notify_trigger read tgenabled = 'O' after commit
-PASS [e-all] every trigger on every seeded table reads O after commit
-PASS [e-skip] skip_assign_notify does not outlive the transaction
-PASS [e-order] the SQL disables them after the wipe and before the first insert, and enables them before commit
-PASS [e-rollback] a failure mid-seed rolls back: triggers on, no sample rows, unflagged row kept
-
-== f. agent_weekly_usage ==
-PASS [f1] agent_weekly_usage(test agent).used unchanged by the seed (0 to 0)
-PASS [f-Pacific/Honolulu] used unchanged with the SQL and the agent on Pacific/Honolulu
-PASS [f-America/Chicago] used unchanged with the SQL and the agent on America/Chicago
-PASS [f-Asia/Tokyo] used unchanged with the SQL and the agent on Asia/Tokyo
-PASS [f-control] control: a real booking made now does move the meter, so f1 could fail
-
-== c. seed, wipe, seed, running the generated SQL each time ==
-PASS [c1] after seed 1: O, R and the unflagged row byte-identical
-PASS [c2] after the wipe: flagged rows back to O's alone in every table
-PASS [c3] after the wipe: O, R and the unflagged row byte-identical
-PASS [c4] after the wipe: servicing_tasks gone through the cascade (the SQL never deletes from it)
-PASS [c5] after the wipe: every table outside the seeded ones and the delete log byte-identical
-PASS [c6] the delete log keeps one permanent row per wiped policy, by design (15)
-PASS [c7] seed 2: same counts as seed 1 ({"policies":16,"policy_fulfillment_details":16,"policy_events":25,"policy_messages":14,"leads":10,"lead_sms_replies":4,"lead_followup_sms_log":8,"inbound_events":24,"servicing_tasks":29,"help_calls":4})
-PASS [c8] seed 2: O, R and the unflagged row byte-identical
-PASS [c9] seed 2: every table outside the seeded ones and the delete log byte-identical
-PASS [c10] seed 2: 13 clients, stages as before
-PASS [c11] a re-run with no wipe first does not double up
-
-== controls: remove a safety on a clone, and the tests must see it ==
-PASS [k1] with the triggers left on, R's rank-1 month gets set (2026-11), so d5 is a real test
-PASS [k2] with the triggers left on, the messages ring the test accounts (13 bells), so d8 is a real test
-PASS [k3] the wipe clears those message bells too, by their thread link
-PASS [k4] with the agent filter removed, the wipe takes O's rows, so c3 is a real test
-PASS [k5] a fulfillment id that does not exist stops the seed with a plain message and changes nothing
-PASS [k7] a policy only 3 days before this week would reach the admin's Monday summary ("Last week: 1 booking, 0 cancels, $0 paid out"), so d10 is a real test and 9 days is why it passes
-PASS [k6] with migration 193 missing, the seed stops with a plain message
-
-== audit: qa/servicing-seed/trigger-audit.md against pg_trigger in the replay ==
-PASS [t1] all 45 triggers on the 10 seeded tables and all 17 cron jobs are listed
-PASS [t2] nothing is listed that the replay does not have
-PASS [t3] every row says what it can send, why it cannot fire, and which assertion proves it
-PASS [t4] every assertion the audit cites ran in this test
-
-== door: qa/servicing-seed/door-dry-run.sql ==
-PASS [o1] the file is exactly what the generator writes
-PASS [o2] four sections in order: pre-check, trigger list, wipe and seed, post-check
-PASS [o3] section 3 is the seed exactly, test agent only, with the disable and enable lines
-PASS [o4] sections 1, 2 and 4 hold no write
-PASS [o5] the file names no agent but the test agent
-PASS [o6] section 1 runs read-only and names flagged and unflagged counts
-PASS [o7] section 1 lists the unflagged policy by id, and the fulfillment accounts to pick from
-PASS [o8] section 1 still runs on a database without 186 and 193, and says so
-PASS [o9] section 2 runs read-only: 45 triggers, 17 cron jobs, none outside the audit
-PASS [o10] a trigger that only live has shows as NOT IN THE AUDIT
-PASS [o11] with an unflagged row left, section 4 prints a plain failure: "FAILED: the pages read 3/7/2/1/1, not 2/7/2/1/1, because 1 unflagged policies survived the wipe. The samples alone read 2/7/2/1/1."
-PASS [o12] with no unflagged row, section 4 reads: "PASS: the pages read 2/7/2/1/1 (setting up/protected/needs attention/ongoing/ended)."
-PASS [o13] the whole file also runs top to bottom in one go
-PASS [o14] the seed leaves sms_live off
-
-Result: all passed. 96 checks in 43.7 s. Exit code 0.
+Node.js v24.16.0
