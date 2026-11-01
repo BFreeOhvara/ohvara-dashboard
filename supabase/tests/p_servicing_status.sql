@@ -443,7 +443,7 @@ select is((select done_at from public.servicing_tasks where id = (select id from
 select is((select updated_at from public.servicing_tasks where id = (select id from ids where name = 'keep')), now(), 'd4 updated_at is the trigger''s to set');
 
 -- ── e. Feed and writers ─────────────────────────────────────────────────────
--- Sold, on a lead with a policy. Since 207 Sold only records the outcome.
+-- Sold, on a lead with a policy. Since 210 Sold only records the outcome.
 select public.p_ss_policy('SoldPolicy', interval '10 days', null, 'aaaaaaaa-aaaa-4aaa-8193-00000000000a', 'In Effect', false);
 update public.leads set client_policy_id = (select id from public.policies where client_last_name = 'SoldPolicy')
  where id = 'dddddddd-dddd-4ddd-8193-00000000000a';

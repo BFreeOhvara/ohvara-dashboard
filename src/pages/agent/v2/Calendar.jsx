@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  ArrowRight, CalendarClock, CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, CircleAlert, Inbox, MessageSquare, Phone, X,
+  ArrowRight, CalendarCheck, CalendarClock, CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, CircleAlert, Inbox, MessageSquare, Phone, X,
 } from 'lucide-react'
 import { useAuth } from '../../../hooks/useAuth'
 import { useInbounds, useInboundEvents } from '../../../hooks/useInbounds'
 import { useAgentBookings } from '../../../hooks/useAgentBookings'
+import { useServicingTasks, useClientPolicies } from '../../../hooks/useServicingTasks'
 import { PortalV2Layout, Ico, Skel } from '../../../components/agent/PortalV2Nav'
+import AskTeamReschedule from '../../../components/agent/AskTeamReschedule'
 import {
   leadName, appointmentAt, timeText, dayKey, telHref, clockParts, dayLabel, phoneDisplay, stateName, stageOf as inboundStage,
 } from '../../../lib/inbounds'
@@ -15,13 +17,16 @@ import { placeOf, useNow, isLive, stageOf as bookingStage } from '../../../lib/a
 import { DEFAULT_TIMEZONE, zonedDateStr, inferTimezoneFromState, timezoneLabel } from '../../../lib/timezones'
 import './calendarExtra.css'
 
-// Calendar (/agent/calendar, v2 portal only): every appointment, whoever booked it. Two sources:
-// inbound appointments (the booked step in inbound_events, as Today reads it) and the agent's
-// cancellation calls (policies.scheduled_call_at, read through useAgentBookings like Clients).
+// Calendar (/agent/calendar, v2 portal only): every appointment, whoever booked it. Three sources:
+// inbound appointments (the booked step in inbound_events, as Today reads it), the agent's
+// cancellation calls (policies.scheduled_call_at, read through useAgentBookings like Clients) and annual
+// reviews our team schedules (servicing_tasks of kind annual_review with a due_at, as the Clients page reads them).
 // Desktop: Week (default) or Day (opened from a day header), a side panel for the picked appointment, and
 // a rail with the week's tally and what is next. Phones: an agenda grouped by day, each row a link to the
-// inbound or the client. Nothing here writes: the panel only links out (tel:, sms:, the inbound, the
-// client, Book a call's change mode). Reads migration 180 (agent_inbounds, inbound_events).
+// lead or the client. The one write here is "Ask the team to reschedule" (AskTeamReschedule): a single
+// in-app message on the agent's standing line through useSendDm, never SMS or email. Everything else only
+// links out (tel:, sms:, the lead, the client, Submit's change mode). Reads migration 180 (agent_inbounds,
+// inbound_events) and 206 (servicing_tasks).
 // Mockup: ohvara/mockups/update-the-existing-calendar-page-filled.html.
 //
 // Dev only: /agent/calendar?sample=1 swaps in made-up data from src/lib/calendarSample.js (&empty=1 for an
@@ -32,6 +37,7 @@ import './calendarExtra.css'
 const KIND = {
   i: { icon: Inbox, word: 'Lead', label: 'Lead appointment', open: 'Open lead' },
   c: { icon: Phone, word: 'Booked call', label: 'Cancellation call', open: 'Open booking' },
+  a: { icon: CalendarCheck, word: 'Annual review', label: 'Annual review', open: 'Open client' },
 }
 const KEYS = [
   { tone: 'up', label: 'Booked' },
@@ -79,7 +85,7 @@ function inboundItem(l, at, tz, nowMs) {
     id: `i-${l.lead_id}`, kind: 'i', at, ms: new Date(at).getTime(), name: leadName(l), tone, pill, label, short, mark, live: false, since: null,
     phone: l.phone, state: stateName(l.state) || null, place: null,
     clientTz: l.state ? inferTimezoneFromState(l.state) : null,
-    open: `/agent/inbounds/${l.lead_id}`, change: null, day: dayKey(at, tz),
+    open: `/agent/inbounds/${l.lead_id}`, change: null, day: dayKey(at, tz), policyId: null, word: KIND.i.word,
   }
 }
 
@@ -99,15 +105,43 @@ function bookingItem(p, tz, nowMs) {
     phone: p.client_phone, state: p.client_city ? place : stateName(p.state) || null, place: place || null,
     clientTz: p.client_timezone || (p.state ? inferTimezoneFromState(p.state) : null),
     open: `/agent/clients?open=${p.id}`, change: canChange ? `/agent/submit?change=${p.id}` : null, day: dayKey(p.scheduled_call_at, tz),
+    policyId: p.id, word: KIND.c.word,
   }
 }
+
+// An annual review our team scheduled: a servicing_tasks row (kind annual_review) with the time our VA set
+// (due_at). Scheduled and in progress are upcoming (a VA claim sets in_progress and scheduling keeps it);
+// done is done. There is no change link: the agent asks the team instead (AskTeamReschedule).
+function taskItem(t, p, tz) {
+  const done = t.status === 'done'
+  const ms = new Date(t.due_at).getTime()
+  return {
+    id: `a-${t.id}`, kind: 'a', at: t.due_at, ms, name: fullName(p), tone: done ? 'done' : 'up', pill: done ? 'sold' : 'booked',
+    label: done ? 'Done' : t.status === 'in_progress' ? 'In progress' : 'Scheduled', short: null, mark: false, live: false, since: null,
+    phone: p.client_phone, state: p.client_city ? placeOf(p) : stateName(p.state) || null, place: p.client_city ? placeOf(p) : null,
+    clientTz: p.client_timezone || (p.state ? inferTimezoneFromState(p.state) : null),
+    open: `/agent/clients/${t.policy_id}`, change: null, day: dayKey(t.due_at, tz), policyId: t.policy_id, word: KIND.a.word,
+  }
+}
+
+// Reviews that have a time. 'requested' has no VA-set time yet, so it stays off the calendar. A task with a null
+// policy_id is skipped too: migration 180 only needs a lead_id or a policy_id on a task, so a lead-only task has
+// no client page to open and no policy to route a message from.
+const reviewTasks = tasks => (tasks || []).filter(t => t.kind === 'annual_review' && ['scheduled', 'in_progress', 'done'].includes(t.status) && t.due_at && t.policy_id)
 
 function useAppointments(tz, nowMs) {
   const { profile } = useAuth()
   const inb = useInbounds()
   const evs = useInboundEvents()
   const bk = useAgentBookings(profile?.id, { enabled: !!profile?.id })
+  const tk = useServicingTasks()
   const flags = sampleFlags()
+  // The clients of those reviews; the sample branch below never waits on this read.
+  const pol = useClientPolicies(flags ? [] : reviewTasks(tk.data).map(t => t.policy_id))
+  // That read re-keys when a review is added (the tasks poll every minute); keep the last answer so the grid
+  // does not fall back to the skeleton while the new key loads.
+  const [polSeen, setPolSeen] = useState(null)
+  if (pol.data && pol.data !== polSeen) setPolSeen(pol.data)
   const [fx, setFx] = useState(null)
   const [recovered, setRecovered] = useState(false)
   const sampleOn = !!flags
@@ -123,8 +157,11 @@ function useAppointments(tz, nowMs) {
 
   // The fixture, when asked for, replaces what the hooks returned; the hooks and their keys are untouched.
   const src = sampleOn
-    ? { inbounds: flags.empty ? [] : fx?.inbounds, events: flags.empty ? new Map() : fx?.events, bookings: flags.empty ? [] : fx?.bookings }
-    : { inbounds: inb.data, events: evs.data, bookings: bk.data }
+    ? {
+      inbounds: flags.empty ? [] : fx?.inbounds, events: flags.empty ? new Map() : fx?.events, bookings: flags.empty ? [] : fx?.bookings,
+      tasks: flags.empty ? [] : fx?.tasks, policies: flags.empty ? new Map() : fx?.policies,
+    }
+    : { inbounds: inb.data, events: evs.data, bookings: bk.data, tasks: tk.data, policies: pol.data || polSeen }
 
   const list = useMemo(() => {
     const out = []
@@ -135,12 +172,17 @@ function useAppointments(tz, nowMs) {
     for (const p of src.bookings || []) {
       if (p.scheduled_call_at) out.push(bookingItem(p, tz, nowMs))
     }
+    for (const t of reviewTasks(src.tasks)) {
+      const p = src.policies?.get(t.policy_id)
+      if (p) out.push(taskItem(t, p, tz))
+    }
     return out.sort((a, b) => a.ms - b.ms)
-  }, [src.inbounds, src.events, src.bookings, tz, nowMs])
+  }, [src.inbounds, src.events, src.bookings, src.tasks, src.policies, tz, nowMs])
 
   if (sampleOn) {
     return {
       list,
+      sample: true,
       loading: !flags.empty && !fx,
       error: flags.fail && !recovered,
       retry: () => setRecovered(true),
@@ -148,9 +190,10 @@ function useAppointments(tz, nowMs) {
   }
   return {
     list,
-    loading: inb.isLoading || evs.isLoading || bk.isLoading,
-    error: inb.isError || evs.isError || bk.isError,
-    retry: () => { inb.refetch(); evs.refetch(); bk.refetch() },
+    sample: false,
+    loading: inb.isLoading || evs.isLoading || bk.isLoading || tk.isLoading || (pol.isLoading && !polSeen),
+    error: inb.isError || evs.isError || bk.isError || tk.isError || pol.isError,
+    retry: () => { inb.refetch(); evs.refetch(); bk.refetch(); tk.refetch(); if (pol.isError) pol.refetch() },
   }
 }
 
@@ -190,6 +233,7 @@ function Key() {
       <u className="kinds" />
       <span className="kinds"><Ico icon={Inbox} size={13} />Lead</span>
       <span className="kinds"><Ico icon={Phone} size={13} />Booked call</span>
+      <span className="kinds"><Ico icon={CalendarCheck} size={13} />Annual review</span>
     </div>
   )
 }
@@ -337,13 +381,15 @@ function DayGrid({ day, items, today, tz, nowMs, selId, onPick, children }) {
 }
 
 function Tally({ items }) {
+  // Annual reviews have their own row: a done one is not "Cancelled or sold".
   const n = f => items.filter(f).length
   const rows = [
-    ['up', 'Booked', n(a => a.tone === 'up' && !a.mark && !a.live)],
+    ['up', 'Booked', n(a => a.kind !== 'a' && a.tone === 'up' && !a.mark && !a.live)],
     ['live', 'Live now', n(a => a.live)],
     ['up', 'To mark the outcome', n(a => a.mark)],
-    ['done', 'Cancelled or sold', n(a => a.tone === 'done')],
+    ['done', 'Cancelled or sold', n(a => a.kind !== 'a' && a.tone === 'done')],
     ['na', 'No answer or not sold', n(a => a.tone === 'na')],
+    ['up', 'Annual reviews', n(a => a.kind === 'a')],
   ]
   return (
     <section className="ov-card cal-tally" aria-label="This week">
@@ -378,7 +424,7 @@ function whenWords(a, nowMs) {
   return m >= 0 ? `in ${dur(m)}` : `${dur(-m)} ago`
 }
 
-function Panel({ a, tz, nowMs, today, onClose }) {
+function Panel({ a, tz, nowMs, today, sample, onClose }) {
   const call = telHref(a.phone)
   const text = call ? call.replace(/^tel:/, 'sms:') : null
   const K = KIND[a.kind]
@@ -417,6 +463,7 @@ function Panel({ a, tz, nowMs, today, onClose }) {
             {a.change && <Link className="ov-ghost" to={a.change}><Ico icon={CalendarClock} size={15} />Reschedule</Link>}
           </div>
         )}
+        <AskTeamReschedule item={a} tz={tz} nowMs={nowMs} sample={sample} />
       </div>
       {a.mark && <p className="cal-note">After you meet, mark the outcome on the lead: Sold, Follow up or Not interested.</p>}
     </section>
@@ -441,6 +488,7 @@ function EmptyMessage({ title, text, full, keys = true }) {
         <div className="cal-keys">
           <div><Ico icon={Phone} size={16} /><span><b>Booked calls</b>Cancellation calls you book for your clients.</span></div>
           <div><Ico icon={Inbox} size={16} /><span><b>Leads</b>People our VA books at your first open time.</span></div>
+          <div><Ico icon={CalendarCheck} size={16} /><span><b>Annual reviews</b>A yearly check-in our team does with your client.</span></div>
         </div>
       )}
       <Link className="ov-solid cal-cta" to="/agent/submit" style={full ? { width: '100%' } : undefined}><Ico icon={CalendarPlus} size={17} />Submit</Link>
@@ -491,20 +539,24 @@ function Loading({ days, today }) {
 }
 
 // ── Phone: strip of days and an agenda, every row a link ─────────────────────
-function AgendaRow({ a, tz, nowMs }) {
+// The row is one Link; the ask-the-team button sits under it as a sibling, never inside the anchor.
+function AgendaRow({ a, tz, nowMs, sample }) {
   const [t, ampm] = clockParts(a.at, tz)
   const K = KIND[a.kind]
   return (
-    <Link className={`ov-card cal-agr cal-t-${a.tone}${a.ms < nowMs && !a.live ? ' past' : ''}`} to={a.open}>
-      <div className="t">{t}<small>{ampm}</small></div>
-      <i className="bar" />
-      <div className="who"><b>{a.name}</b><div className="info"><span><Ico icon={K.icon} size={13} />{K.word}</span><StagePill a={a} /></div></div>
-      <span className="go"><Ico icon={ChevronRight} size={18} /></span>
-    </Link>
+    <div className="cal-agw">
+      <Link className={`ov-card cal-agr cal-t-${a.tone}${a.ms < nowMs && !a.live ? ' past' : ''}`} to={a.open}>
+        <div className="t">{t}<small>{ampm}</small></div>
+        <i className="bar" />
+        <div className="who"><b>{a.name}</b><div className="info"><span><Ico icon={K.icon} size={13} />{K.word}</span><StagePill a={a} /></div></div>
+        <span className="go"><Ico icon={ChevronRight} size={18} /></span>
+      </Link>
+      <AskTeamReschedule item={a} tz={tz} nowMs={nowMs} sample={sample} />
+    </div>
   )
 }
 
-function Agenda({ days, items, from, today, tz, nowMs, onNext }) {
+function Agenda({ days, items, from, today, tz, nowMs, sample, onNext }) {
   return (
     <>
       {days.filter(d => d >= from).map(d => {
@@ -517,7 +569,7 @@ function Agenda({ days, items, from, today, tz, nowMs, onNext }) {
             {list.length ? list.map((a, i) => (
               <div key={a.id} className="cal-ph-flow">
                 {i === firstLater && <div className="cal-ag-now">Now · {timeText(new Date(nowMs).toISOString(), tz)}</div>}
-                <AgendaRow a={a} tz={tz} nowMs={nowMs} />
+                <AgendaRow a={a} tz={tz} nowMs={nowMs} sample={sample} />
               </div>
             )) : <p className="cal-ag-empty"><b>Nothing booked</b>Booked calls and leads that book for this day show up here.</p>}
           </div>
@@ -554,7 +606,7 @@ export default function Calendar() {
   const [view, setView] = useState('week')
   const [picked, setPicked] = useState(null)
   const [phFrom, setPhFrom] = useState(null)
-  const { list, loading, error, retry } = useAppointments(tz, nowMs)
+  const { list, sample, loading, error, retry } = useAppointments(tz, nowMs)
   const railRef = useRef(null)
 
   const monday = mondayOf(anchor)
@@ -594,7 +646,7 @@ export default function Calendar() {
 
   const rail = (
     <aside className="cal-rail" aria-label="Appointment" ref={railRef}>
-      {sel ? <Panel a={sel} tz={tz} nowMs={nowMs} today={today} onClose={() => setPicked(null)} /> : <Tally items={inWeek} />}
+      {sel ? <Panel key={sel.id} a={sel} tz={tz} nowMs={nowMs} today={today} sample={sample} onClose={() => setPicked(null)} /> : <Tally items={inWeek} />}
       <NextUp upcoming={upcoming} tz={tz} nowMs={nowMs} onPick={pickNext} hint={!sel} />
     </aside>
   )
@@ -649,7 +701,7 @@ export default function Calendar() {
           <Strip days={days} items={inWeek} from={from} today={today} onPick={setPhFrom} blank={weekEmpty} />
           {weekEmpty
             ? <EmptyMessage title="Nothing booked this week" text="Booked calls and leads that book on your calendar show up here." full />
-            : <Agenda days={days} items={inWeek} from={from} today={today} tz={tz} nowMs={nowMs} onNext={() => go(1)} />}
+            : <Agenda days={days} items={inWeek} from={from} today={today} tz={tz} nowMs={nowMs} sample={sample} onNext={() => go(1)} />}
         </div>
       </>
     )

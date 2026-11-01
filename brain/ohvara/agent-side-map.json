@@ -190,6 +190,17 @@
       "notes": "Four tiles from useOverviewBook().book, each a link to /agent/clients?stage=<key> (protected, setting_up, needs_attention, requests). Clients.jsx does not read these keys yet and falls back to the Booked tab: follow-up for the Clients goal is \"Clients should read these stage keys\". Until migration 193 is applied (agent_clients missing) every tile shows a dash and a plain note, never a zero. Loading shows dashes; a failed load shows LoadError with Try again."
     },
     {
+      "id": "overview.book-tiles-midwidth-fit",
+      "page": "Overview",
+      "title": "Your book boxes show their full words from 640 to 1439 wide",
+      "status": "checking",
+      "files": [
+        "src/index.css",
+        "scripts/overview-book-fit.mjs"
+      ],
+      "notes": "768-1023: boxes 2x2 in the phone tile layout (number over words). 1024-1279: 2x2, chip + words + number on a row. 1280-1439: still one row of four; the words wrap instead of cutting when a count has three digits. 1440 and 390 are pixel-identical to master (qa/overview-book-fit/). Known gap: at 1440 and wider a three-digit count in Needs attention still clips that label by 8px, because 1440 was left exactly as it was. Proof: node scripts/overview-book-fit.mjs."
+    },
+    {
       "id": "overview.this-week-submissions",
       "page": "Overview",
       "title": "This week: X of N submissions used, resets Monday",
@@ -371,15 +382,30 @@
       "status": "checking"
     },
     {
+      "id": "activity.lapse-events",
+      "page": "Activity",
+      "title": "A lapse shows as its own row: Policy lapsed",
+      "files": [
+        "src/lib/activityKinds.js",
+        "src/lib/activityKinds.test.js",
+        "src/lib/activityFilters.test.js",
+        "src/pages/agent/Activity.jsx",
+        "src/lib/clientPageLog.js",
+        "src/lib/clientPageLog.test.js"
+      ],
+      "notes": "UI: feed kind lapsed shows an amber Lapsed pill under the Clients filter, its drawer story ends on Policy lapsed marked done with no pending Old policy cancelled, and the client page log titles it Policy lapsed. Built against the agreed kind with fixtures; the feed rows come from the lapse migration, not applied yet.",
+      "status": "checking"
+    },
+    {
       "id": "leads.reminder-timing",
       "page": "Leads",
       "title": "A follow-up comes due for the agent at its date, in the app",
       "files": [
-        "supabase/migrations/207_lead_outcomes.sql",
+        "supabase/migrations/210_lead_outcomes.sql",
         "supabase/tests/p_lead_outcomes.sql",
         "src/lib/leadOutcomesMigration.test.js"
       ],
-      "notes": "migration 207 unapplied. agent_inbounds() returns follow_up_at and follow_up_due (outcome follow_up and follow_up_at <= now()). It is the agent's own reminder: nothing is texted to the lead. No page reads it until task leads-page-ui.",
+      "notes": "migration 210 unapplied. agent_inbounds() returns follow_up_at and follow_up_due (outcome follow_up and follow_up_at <= now()). It is the agent's own reminder: nothing is texted to the lead. No page reads it until task leads-page-ui.",
       "status": "checking"
     }
   ]

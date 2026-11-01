@@ -3802,7 +3802,7 @@ export function ComingUpCard({ upcoming, now, onGo, fit, slim }) {
         <div className="ag-caught-r">
           <div className="ag-caught-h"><span>Up next</span><span>{n === 0 ? 'No calls booked' : `${n} ${n === 1 ? 'call' : 'calls'}`}</span></div>
           {n === 0 ? (
-            <p className="ag-caught-none">Nothing on the books yet. Submit your next client when they say yes.</p>
+            <p className="ag-caught-none">Submit your next client when they say yes.</p>
           ) : (
             <div className="ag-list">
               {upcoming.map(p => (
@@ -3842,7 +3842,7 @@ export function ComingUpCard({ upcoming, now, onGo, fit, slim }) {
               <CalendarDays size={30} strokeWidth={1.8} />
             </span>
             <div style={{ marginTop: 18, fontFamily: DISPLAY, fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ov-hi)' }}>
-              Nothing on the books yet
+              No calls booked.
             </div>
             <div style={{ marginTop: 6, maxWidth: 250, fontSize: 14, lineHeight: 1.5, color: 'var(--ov-mute)' }}>
               Submit your next client when they say yes.

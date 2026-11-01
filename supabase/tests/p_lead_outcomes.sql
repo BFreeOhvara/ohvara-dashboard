@@ -1,4 +1,4 @@
--- p_lead_outcomes — pgTAP checks for 207_lead_outcomes.sql: Sold only records, Follow up
+-- p_lead_outcomes — pgTAP checks for 210_lead_outcomes.sql: Sold only records, Follow up
 -- takes a date, Not interested takes a reason, and agent_inbounds() says when a follow-up
 -- is due.
 --

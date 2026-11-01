@@ -1,4 +1,4 @@
--- 207 — Lead outcomes: Sold only records, Follow up takes a date, Not interested
+-- 210 — Lead outcomes: Sold only records, Follow up takes a date, Not interested
 -- takes a reason, and a follow-up comes due for the agent in the app.
 --
 -- NOT APPLIED. Written from a worktree; applying it is Brayden's apply step. It applies
@@ -61,7 +61,7 @@ do $$
 begin
   if to_regclass('public.agent_clients') is null
      or to_regprocedure('public.agent_inbounds()') is null then
-    raise exception '207 needs 180_agent_inbounds and 193_servicing_model applied first';
+    raise exception '210 needs 180_agent_inbounds and 193_servicing_model applied first';
   end if;
 end $$;
 
