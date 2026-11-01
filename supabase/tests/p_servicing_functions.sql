@@ -465,7 +465,7 @@ select is((select count(*) from public.servicing_task_notes where id = (select i
 reset role;
 select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8195-000000000001","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select is((select count(*) from public.servicing_task_notes where id = (select id from ids where name = 'note_1')), 1::bigint, 'h23 Fulfillment can');
+select is((select count(*) from public.servicing_task_notes where id = (select id from ids where name = 'note_1')), 0::bigint, 'h23 Fulfillment cannot read the note without a live claim');
 reset role;
 
 -- An inactive or locked agent is stopped, on their own task.
