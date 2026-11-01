@@ -155,6 +155,7 @@ export const dualTimeText = (iso, tz, clientTz) => {
 const EVENT_TITLE = {
   booked: 'Cancellation call booked', in_progress: 'Call started', no_answer: 'Call not answered',
   rescheduling: 'Needs another call', cancelled: 'Old policy cancelled', moved: 'Call time changed',
+  lapsed: 'Policy lapsed',
 }
 export function normalizeEvent(e) {
   const reason = typeof e.detail?.reason === 'string' ? e.detail.reason.trim() : ''

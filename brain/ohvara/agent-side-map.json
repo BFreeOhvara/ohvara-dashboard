@@ -380,6 +380,21 @@
       ],
       "notes": "Waiting on Brayden: the consent script stays exactly as registered with Twilio (SMS_CONSENT_VERSION v1, migration 157). The client page shows it unchanged and adds no new wording until he approves any change.",
       "status": "checking"
+    },
+    {
+      "id": "activity.lapse-events",
+      "page": "Activity",
+      "title": "A lapse shows as its own row: Policy lapsed",
+      "files": [
+        "src/lib/activityKinds.js",
+        "src/lib/activityKinds.test.js",
+        "src/lib/activityFilters.test.js",
+        "src/pages/agent/Activity.jsx",
+        "src/lib/clientPageLog.js",
+        "src/lib/clientPageLog.test.js"
+      ],
+      "notes": "UI: feed kind lapsed shows an amber Lapsed pill under the Clients filter, its drawer story ends on Policy lapsed marked done with no pending Old policy cancelled, and the client page log titles it Policy lapsed. Built against the agreed kind with fixtures; the feed rows come from the lapse migration, not applied yet.",
+      "status": "checking"
     }
   ]
 }

@@ -2,7 +2,8 @@
 //   node scripts/calendar-shots.mjs [outDir]
 // Opens /agent/calendar?sample=1 (and &empty=1, &fail=1) on the dev server at 1920x1080, 1440x900 and 390,
 // light and dark, on a fixed clock (Fri Oct 30, 12:10 PM Central). Writes PNGs and checks.json into outDir
-// and exits 1 on any failed check.
+// and exits 1 on any failed check. Also proves Ask the team to reschedule never writes in sample mode: every
+// POST to direct_messages or policy_messages is recorded and the count must stay zero.
 import process from 'node:process'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -62,14 +63,16 @@ async function open({ w, h, theme, query = 'sample=1', phone = false }) {
   }, [session, theme])
   const page = await ctx.newPage()
   const errors = []
+  const posts = []
   page.on('pageerror', e => errors.push(String(e)))
+  page.on('request', r => { if (r.method() === 'POST' && /\/rest\/v1\/(direct_messages|policy_messages)/.test(r.url())) posts.push(r.url()) })
   await page.clock.setFixedTime(BASE)
   await mock(page)
   await page.goto(`${base}/agent/calendar?${query}`, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.cal-page', { timeout: 60000 })
   await page.evaluate(() => document.fonts.ready)
   await page.waitForTimeout(900)
-  return { ctx, page, errors }
+  return { ctx, page, errors, posts }
 }
 
 const check = (name, ok, fail, extra) => { results.push({ name, pass: !!ok, ...(ok ? null : { fail }), ...extra }); if (!ok) console.error('FAIL', name, fail) }
@@ -81,7 +84,7 @@ try {
     for (const [w, h] of [[1920, 1080], [1440, 900]]) {
       const tag = `${w}x${h}-${theme}`
       // Week, filled
-      let { ctx, page, errors } = await open({ w, h, theme })
+      let { ctx, page, errors, posts } = await open({ w, h, theme })
       await page.waitForSelector('.cal-ev', { timeout: 30000 })
       const blocks = await page.$$eval('.cal-ev', els => els.map(e => e.style.gridColumn))
       check(`${tag} week: blocks`, blocks.length >= 6 && new Set(blocks).size >= 4, `${blocks.length} blocks over ${new Set(blocks).size} days`, { blocks: blocks.length, days: new Set(blocks).size })
@@ -111,11 +114,42 @@ try {
       // Panel: a booked call (Reschedule), and the live call
       await page.getByRole('button', { name: /Kevin Duarte/ }).first().click()
       const kev = await page.$eval('.cal-panel', el => [...el.querySelectorAll('a')].map(a => [a.textContent.trim(), a.getAttribute('href')]))
-      check(`${tag} panel: Reschedule links to the existing change flow`, kev.some(([t, href]) => t === 'Reschedule' && /^\/agent\/book\?change=sample-booking-/.test(href)), JSON.stringify(kev))
+      check(`${tag} panel: Reschedule links to the existing change flow`, kev.some(([t, href]) => t === 'Reschedule' && /^\/agent\/submit\?change=sample-booking-/.test(href)), JSON.stringify(kev))
       await page.getByRole('button', { name: /Helen Park/ }).first().click()
       const live = await page.$eval('.cal-panel', el => ({ badge: !!el.querySelector('.cal-live'), links: [...el.querySelectorAll('a')].map(a => a.textContent.trim()) }))
       check(`${tag} panel: live badge, no Reschedule`, live.badge && !live.links.includes('Reschedule'), JSON.stringify(live))
       await shot(page, `calendar-panel-live-${tag}`)
+      // Annual reviews: on the grid, then a panel with Ask the team to reschedule (sample mode: Sent, zero writes)
+      const rv = await page.$$eval('.cal-ev', els => els.filter(e => /Walter Briggs/.test(e.innerText)).map(e => ({ ln: e.querySelector('.ln')?.innerText, cls: e.className })))
+      check(`${tag} week: annual review block on the grid`, rv.length === 1 && /Annual review/.test(rv[0].ln || '') && /cal-t-up/.test(rv[0].cls), JSON.stringify(rv), { rv })
+      const hasAsk = () => page.evaluate(() => [...document.querySelectorAll('.cal-panel button')].some(b => /Ask the team to reschedule/.test(b.textContent)))
+      await page.getByRole('button', { name: /Kevin Duarte/ }).first().click()
+      check(`${tag} panel: a future cancellation call shows Reschedule only`, !(await hasAsk()), 'Ask the team shown beside Reschedule')
+      await page.getByRole('button', { name: /Ruth Okafor/ }).first().click()
+      const ruth = await page.$eval('.cal-panel', el => el.innerText)
+      check(`${tag} panel: a done annual review has no Ask the team`, /Annual review/.test(ruth) && /Done/.test(ruth) && !(await hasAsk()), ruth)
+      await page.getByRole('button', { name: /Walter Briggs/ }).first().click()
+      const wal = await page.$eval('.cal-panel', el => ({ text: el.innerText, open: el.querySelector('a.ov-solid')?.getAttribute('href') }))
+      check(`${tag} panel: an in-progress annual review shows with its client link and the button`, /In progress/.test(wal.text) && wal.open === '/agent/clients/sample-policy-next' && await hasAsk(), JSON.stringify(wal))
+      await page.getByRole('button', { name: /Carla Mendez/ }).first().click()
+      const ask = await page.$eval('.cal-panel', el => {
+        const b = [...el.querySelectorAll('button')].find(x => /Ask the team to reschedule/.test(x.textContent))
+        return { has: !!b, inAnchor: !!b?.closest('a'), text: el.innerText, h: b ? Math.round(b.getBoundingClientRect().height) : 0 }
+      })
+      check(`${tag} panel: annual review has the button, outside any link, 44px tall`, ask.has && !ask.inAnchor && ask.h >= 44 && /Annual review/.test(ask.text), JSON.stringify(ask), ask)
+      const fitA = await page.evaluate(() => ({ sh: document.documentElement.scrollHeight, ih: innerHeight, sw: document.documentElement.scrollWidth - innerWidth }))
+      check(`${tag} panel: annual review with the button still fits`, fitA.sh <= fitA.ih + 1 && fitA.sw <= 0, JSON.stringify(fitA), fitA)
+      await shot(page, `calendar-panel-review-${tag}`)
+      await page.getByRole('button', { name: 'Ask the team to reschedule' }).click()
+      const sent = await page.$eval('.cal-panel', el => ({ text: el.querySelector('.cal-ask-sent')?.innerText || '', link: el.querySelector('.cal-ask-sent a')?.getAttribute('href'), btn: !!el.querySelector('.cal-ask-btn') }))
+      check(`${tag} panel: Ask the team shows Sent with a Messages link and writes nothing in sample mode`,
+        /Sent to the team/.test(sent.text) && sent.link === '/messages' && !sent.btn && posts.length === 0, JSON.stringify({ sent, posts }), { sent, posts: posts.length })
+      const fitS = await page.evaluate(() => ({ sh: document.documentElement.scrollHeight, ih: innerHeight }))
+      check(`${tag} panel: Sent line still fits`, fitS.sh <= fitS.ih + 1, JSON.stringify(fitS))
+      await shot(page, `calendar-panel-review-sent-${tag}`)
+      await page.getByRole('button', { name: /Elena Marsh/ }).first().click()
+      await page.getByRole('button', { name: /Carla Mendez/ }).first().click()
+      check(`${tag} panel: picking another appointment resets Sent`, (await hasAsk()) && !(await page.$('.cal-panel .cal-ask-sent')), 'Sent carried over')
       // Day view from a day header; prev / next / today
       await page.locator('.cal-wk-dh.today').click()
       await page.waitForSelector('.cal-dg')
@@ -136,13 +170,14 @@ try {
       const pw = await page.evaluate(() => document.querySelector('.cal-range').innerText)
       check(`${tag} week: next and previous`, /Nov 2/.test(nw) && /Oct 26/.test(pw), `${nw} / ${pw}`)
       check(`${tag} page errors`, errors.length === 0, errors.join(' | '))
+      check(`${tag} no POST to direct_messages or policy_messages`, posts.length === 0, posts.join(' | '))
       await ctx.close()
       // Empty week
       ;({ ctx, page, errors } = await open({ w, h, theme, query: 'sample=1&empty=1' }))
       const emp = await page.evaluate(() => ({
         h3: document.querySelector('.cal-msg h3')?.innerText, cta: document.querySelector('.cal-msg a.cal-cta')?.getAttribute('href'), text: document.querySelector('.cal-msg p')?.innerText,
       }))
-      check(`${tag} empty: explains and links to Book a call`, emp.h3 === 'Nothing booked this week' && emp.cta === '/agent/book' && /Booked calls and leads that book on your calendar show up here\./.test(emp.text), JSON.stringify(emp), emp)
+      check(`${tag} empty: explains and links to Submit`, emp.h3 === 'Nothing booked this week' && emp.cta === '/agent/submit' && /Booked calls and leads that book on your calendar show up here\./.test(emp.text), JSON.stringify(emp), emp)
       await shot(page, `calendar-empty-${tag}`)
       await ctx.close()
       // Error
@@ -157,14 +192,31 @@ try {
     }
     // Phone
     const tag = `390-${theme}`
-    let { ctx, page, errors } = await open({ w: 390, h: 844, theme, phone: true })
+    let { ctx, page, errors, posts } = await open({ w: 390, h: 844, theme, phone: true })
     await page.waitForSelector('.cal-agr', { timeout: 30000 })
     const ph = await page.evaluate(() => ({
       rows: [...document.querySelectorAll('.cal-agr')].map(a => a.getAttribute('href')), desk: document.querySelectorAll('.cal-ev').length,
       panel: [...document.querySelectorAll('.cal-panel')].some(e => e.getClientRects().length), sw: document.documentElement.scrollWidth - innerWidth,
     }))
-    check(`${tag} agenda: rows link out, no panel, no sideways scroll`, ph.rows.length >= 4 && ph.rows.every(h => /^\/agent\/(inbounds\/|clients\?open=)/.test(h)) && !ph.panel && ph.sw <= 0, JSON.stringify(ph), ph)
+    check(`${tag} agenda: rows link out (annual reviews to the client page), no panel, no sideways scroll`,
+      ph.rows.length >= 4 && ph.rows.every(h => /^\/agent\/(inbounds\/|clients\?open=|clients\/)/.test(h)) && ph.rows.some(h => h.startsWith('/agent/clients/sample-policy-')) && !ph.panel && ph.sw <= 0, JSON.stringify(ph), ph)
     await shot(page, `calendar-agenda-${tag}`, true)
+    const agr = await page.evaluate(() => {
+      const rows = [...document.querySelectorAll('.cal-agr')].filter(r => /Annual review/.test(r.innerText))
+      return {
+        reviews: rows.length, buttonInAnchor: document.querySelector('a.cal-agr button') !== null,
+        below: rows.map(r => r.nextElementSibling?.querySelector('button')?.textContent.trim() || null),
+      }
+    })
+    check(`${tag} agenda: annual review rows, button below the row and outside the anchor`,
+      agr.reviews >= 1 && !agr.buttonInAnchor && agr.below.every(t => t === 'Ask the team to reschedule'), JSON.stringify(agr), agr)
+    const btn = page.locator('.cal-agw .cal-ask-btn').first()
+    const bh = await btn.evaluate(b => { const r = b.getBoundingClientRect(); return { h: Math.round(r.height), right: Math.round(r.right), iw: innerWidth } })
+    check(`${tag} agenda: the button is 44px tall and inside the screen`, bh.h >= 44 && bh.right <= bh.iw, JSON.stringify(bh), bh)
+    await btn.click()
+    const phSent = await page.evaluate(() => ({ sent: document.querySelectorAll('.cal-agw .cal-ask-sent').length, sw: document.documentElement.scrollWidth - innerWidth }))
+    check(`${tag} agenda: Sent shows, no sideways scroll, no POST in sample mode`, phSent.sent === 1 && phSent.sw <= 0 && posts.length === 0, JSON.stringify({ phSent, posts }), { phSent, posts: posts.length })
+    await shot(page, `calendar-agenda-sent-${tag}`, true)
     await page.locator('.cal-strip button').nth(2).click()
     await shot(page, `calendar-agenda-earlier-${tag}`, true)
     check(`${tag} page errors`, errors.length === 0, errors.join(' | '))
@@ -173,7 +225,7 @@ try {
       ;({ ctx, page, errors } = await open({ w: 390, h: 844, theme, phone: true, query: q }))
       const sw = await sideways(page)
       const shown = await page.evaluate(() => [...document.querySelectorAll('.cal-msg')].find(e => e.getClientRects().length)?.innerText || '')
-      check(`${tag} ${nm}: shows and no sideways scroll`, sw <= 0 && (nm === 'empty' ? /Nothing booked this week/.test(shown) && /Book a call/.test(shown) : /couldn’t load/.test(shown) && /Try again/.test(shown)), `${sw} ${shown}`)
+      check(`${tag} ${nm}: shows and no sideways scroll`, sw <= 0 && (nm === 'empty' ? /Nothing booked this week/.test(shown) && /Submit/.test(shown) && /Annual reviews/.test(shown) : /couldn’t load/.test(shown) && /Try again/.test(shown)), `${sw} ${shown}`)
       await shot(page, `calendar-${nm}-${tag}`, true)
       await ctx.close()
     }

@@ -88,7 +88,7 @@ test('every chip has its own empty sentence, plus one for All and one for severa
   assert.equal(new Set(FILTER_GROUPS.map(g => g.empty)).size, FILTER_GROUPS.length)
   assert.match(EMPTY_ALL, /^Nothing yet today\./)
   assert.match(EMPTY_MANY, /^Nothing for these filters on this day\./)
-  assert.equal(EVENT_KINDS.length, 18)
+  assert.equal(EVENT_KINDS.length, 19)
 })
 
 test('wording: no banned words in what the page says', () => {

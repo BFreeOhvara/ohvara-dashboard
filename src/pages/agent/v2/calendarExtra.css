@@ -210,3 +210,16 @@
   .cal-dg-t { font-size: 13px; }
   .cal-dg-o { font-size: 13px; }
 }
+
+/* annual reviews (third kind: the up and done tones above) and Ask the team to reschedule */
+.cal-keys div:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.cal-ask { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cal-ask-btn { height: 44px; width: 100%; padding: 0 16px; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border-radius: 999px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.cal-ask-btn:disabled { opacity: .6; cursor: default; }
+.cal-ask-err { font-size: 13px; line-height: 1.4; font-weight: 600; color: var(--danger); text-align: center; }
+.cal-ask-sent { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 13px; background: var(--ov-up-tint); border: 1px solid var(--ov-line); font-size: 13px; line-height: 1.45; color: var(--ov-hi); min-width: 0; }
+.cal-ask-sent > span:last-child { min-width: 0; }
+.cal-ask-sent a { display: block; margin-top: 2px; font-weight: 700; color: var(--ov-hi); text-decoration: underline; text-underline-offset: 2px; }
+.cal-ask-ok { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--ov-up); border: 1px solid var(--ov-up); }
+/* phone: the row card and the button under it are one unit */
+.cal-agw { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
