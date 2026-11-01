@@ -1,18 +1,18 @@
 import {
   CalendarCheck, PhoneCall, PhoneMissed, PhoneOutgoing, PhoneForwarded, CircleCheck, CalendarArrowUp, CalendarX, Undo2, Pencil,
-  UserPlus, UserCheck, Send, MessageCircleReply, ClipboardCheck, ShieldCheck, ArrowRightLeft, ReceiptText, TrendingUp, CirclePause,
+  UserPlus, UserCheck, Send, MessageCircleReply, ClipboardCheck, ShieldCheck, ArrowRightLeft, ReceiptText, TrendingUp, CirclePause, ShieldAlert,
 } from 'lucide-react'
 
 // Prompt 718 — the Activity page's kinds: label, pill text, colour tokens and icon.
 // Prompt 730: Edited shares Moved's violet. The type filter (every kind
 // agent_activity_feed() returns, migration 185) follows the approved Activity mockup:
 // "No-show" for no_answer, "Leads" not Inbounds, In progress moves from amber to the
-// Calls colour, and amber stays on No-show, the one row that needs the agent.
+// Calls colour, and amber stays on the rows that need the agent: No-show and Lapsed.
 // `base` is the colour token family (base, base-tint, base-edge); billing rows are
 // neutral, so they name their tint and edge.
 export const EVENT_KINDS = [
   'inbound', 'text_auto', 'text_reply', 'va_call', 'in_progress', 'transferred', 'booked', 'moved', 'no_answer', 'edited', 'reassigned',
-  'outcome', 'sold', 'servicing', 'cancelled',
+  'outcome', 'sold', 'servicing', 'cancelled', 'lapsed',
   'billing_subscription', 'billing_spend_change', 'billing_spend_pause',
 ]
 const NEUTRAL = { base: '--ov-mid', tint: '--ov-neutral-tint', edge: '--ov-neutral-edge' }
@@ -24,6 +24,7 @@ export const EVENT_KIND = {
   moved:       { label: 'Moved',             pill: 'Moved',       base: '--ov-kind-moved',   icon: CalendarArrowUp },
   edited:      { label: 'Edited',            pill: 'Edited',      base: '--ov-kind-moved',   icon: Pencil },
   reassigned:  { label: 'Reassigned',        pill: 'Reassigned',  base: '--ov-kind-moved',   icon: ArrowRightLeft },
+  lapsed:      { label: 'Policy lapsed',     pill: 'Lapsed',      base: '--ov-st-needs',     icon: ShieldAlert },
   inbound:     { label: 'Lead came in',      pill: 'New lead',    base: '--ov-kind-lead',    icon: UserPlus },
   text_auto:   { label: 'Text sent (auto)',  pill: 'Auto text',   base: '--ov-kind-text',    icon: Send },
   text_reply:  { label: 'Text reply',        pill: 'Text reply',  base: '--ov-kind-text',    icon: MessageCircleReply },
@@ -96,8 +97,8 @@ export const FILTER_GROUPS = [
     empty: 'No bookings on this day. Booked, moved and no-show appointments show here.' },
   { key: 'outcomes', label: 'Outcomes', base: '--ov-st-noanswer', kinds: ['outcome'],
     empty: 'No outcomes on this day. When you mark someone Sold, Follow up or Not interested, it shows here.' },
-  { key: 'clients', label: 'Clients', base: '--ov-kind-client', kinds: ['sold', 'servicing', 'cancelled'],
-    empty: 'No client updates on this day. New clients, servicing steps and old-policy cancellations show here.' },
+  { key: 'clients', label: 'Clients', base: '--ov-kind-client', kinds: ['sold', 'servicing', 'cancelled', 'lapsed'],
+    empty: 'No client updates on this day. New clients, servicing steps, lapses and old-policy cancellations show here.' },
   { key: 'billing', label: 'Billing', ...NEUTRAL, kinds: ['billing_subscription', 'billing_spend_change', 'billing_spend_pause'],
     empty: 'No billing changes on this day. Your weekly charges and any change to your lead spend show here.' },
 ]
