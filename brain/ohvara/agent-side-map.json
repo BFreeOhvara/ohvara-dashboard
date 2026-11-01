@@ -120,6 +120,21 @@
         "supabase/tests/p_service_requests.sql"
       ],
       "notes": "Migration 196 (not applied). Fulfillment schedules and finishes an agent request through fulfillment_schedule_request and fulfillment_finish_request, and the agent reads the result in agent_my_service_requests. Fulfillment's direct update (status) grant on servicing_tasks is left as it was in 196; closing it is the next step on the Fulfillment Build Order, Lane A item 2, once the queue functions are live."
+    },
+    {
+      "id": "clients.search-policy-number",
+      "page": "Clients",
+      "title": "Find a client by policy number",
+      "status": "checking",
+      "files": [
+        "src/lib/agentBookings.js",
+        "src/lib/agentBookings.test.js",
+        "src/components/agent/ClientsV2Parts.jsx",
+        "src/components/agent/phone/PhoneClients.jsx",
+        "src/components/agent/AgentUI.jsx",
+        "src/hooks/useServicingTasks.js"
+      ],
+      "notes": "3+ characters, ignores case, spaces and dashes, shared by the header, Clients card and phone search."
     }
   ]
 }
