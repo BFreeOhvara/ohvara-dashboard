@@ -7,7 +7,7 @@ import { useAuth } from './useAuth'
 //   useClientPolicies(ids) the policies a sold inbound points at (leads.client_policy_id) plus the
 //                         client's booked cancellations, with the fields the Policies card shows.
 const TASK_COLS = 'id, agent_id, lead_id, policy_id, kind, status, due_at, done_at, note, created_at'
-const POLICY_COLS = 'id, carrier_name, product_type, monthly_premium, effective_date, policy_sold_date, status, fulfillment_assigned, fulfillment_stage, created_at'
+const POLICY_COLS = 'id, policy_number, carrier_name, product_type, monthly_premium, effective_date, policy_sold_date, status, fulfillment_assigned, fulfillment_stage, created_at'
 
 export function useServicingTasks() {
   const { profile } = useAuth()
