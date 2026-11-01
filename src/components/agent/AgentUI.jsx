@@ -3802,7 +3802,7 @@ export function ComingUpCard({ upcoming, now, onGo, fit, slim }) {
         <div className="ag-caught-r">
           <div className="ag-caught-h"><span>Up next</span><span>{n === 0 ? 'No calls booked' : `${n} ${n === 1 ? 'call' : 'calls'}`}</span></div>
           {n === 0 ? (
-            <p className="ag-caught-none">No calls booked. Submit your next client when they say yes.</p>
+            <p className="ag-caught-none">Submit your next client when they say yes.</p>
           ) : (
             <div className="ag-list">
               {upcoming.map(p => (
