@@ -1,0 +1,106 @@
+[
+  {
+    "file": "copy-1440-light-slim.png",
+    "w": 1440,
+    "h": 900,
+    "theme": "light",
+    "kind": "slim",
+    "sbLine": {
+      "text": "2 of 16 submissions",
+      "scrollWidth": 195,
+      "clientWidth": 195
+    },
+    "sbCardText": "This week Resets Mon 2 of 16 submissions",
+    "slimNone": "No calls booked. Submit your next client when they say yes.",
+    "attnText": "You’re all caught up Nobody is waiting on you. Up next No calls booked No calls booked. Submit your next client when they say yes.",
+    "docScroll": 1425,
+    "docClient": 1440,
+    "asserts": [
+      "PASS .ov-sb-usage-line scrollWidth 195 <= clientWidth 195 (\"2 of 16 submissions\")"
+    ],
+    "failures": []
+  },
+  {
+    "file": "copy-1440-dark-slim.png",
+    "w": 1440,
+    "h": 900,
+    "theme": "dark",
+    "kind": "slim",
+    "sbLine": {
+      "text": "2 of 16 submissions",
+      "scrollWidth": 195,
+      "clientWidth": 195
+    },
+    "sbCardText": "This week Resets Mon 2 of 16 submissions",
+    "slimNone": "No calls booked. Submit your next client when they say yes.",
+    "attnText": "You’re all caught up Nobody is waiting on you. Up next No calls booked No calls booked. Submit your next client when they say yes.",
+    "docScroll": 1425,
+    "docClient": 1440,
+    "asserts": [
+      "PASS .ov-sb-usage-line scrollWidth 195 <= clientWidth 195 (\"2 of 16 submissions\")"
+    ],
+    "failures": []
+  },
+  {
+    "file": "copy-1100-light-wide.png",
+    "w": 1100,
+    "h": 900,
+    "theme": "light",
+    "kind": "wide",
+    "sbLine": {
+      "text": "2 of 16 submissions",
+      "scrollWidth": 195,
+      "clientWidth": 195
+    },
+    "sbCardText": "This week Resets Mon 2 of 16 submissions",
+    "slimNone": null,
+    "attnText": "You’re all caught up Nobody is waiting on you. No calls booked. Submit your next client when they say yes. Submit",
+    "docScroll": 1085,
+    "docClient": 1100,
+    "asserts": [
+      "PASS .ov-sb-usage-line scrollWidth 195 <= clientWidth 195 (\"2 of 16 submissions\")"
+    ],
+    "failures": []
+  },
+  {
+    "file": "copy-1100-dark-wide.png",
+    "w": 1100,
+    "h": 900,
+    "theme": "dark",
+    "kind": "wide",
+    "sbLine": {
+      "text": "2 of 16 submissions",
+      "scrollWidth": 195,
+      "clientWidth": 195
+    },
+    "sbCardText": "This week Resets Mon 2 of 16 submissions",
+    "slimNone": null,
+    "attnText": "You’re all caught up Nobody is waiting on you. No calls booked. Submit your next client when they say yes. Submit",
+    "docScroll": 1085,
+    "docClient": 1100,
+    "asserts": [
+      "PASS .ov-sb-usage-line scrollWidth 195 <= clientWidth 195 (\"2 of 16 submissions\")"
+    ],
+    "failures": []
+  },
+  {
+    "file": "copy-390-light-phone.png",
+    "w": 390,
+    "h": 844,
+    "theme": "light",
+    "kind": "phone",
+    "sbLine": null,
+    "sbCardText": null,
+    "slimNone": null,
+    "attnText": null,
+    "docScroll": 390,
+    "docClient": 390,
+    "asserts": [
+      "phone loads",
+      "document scrollWidth 390 <= clientWidth 390",
+      "no old \"Nothing on the books yet\"",
+      "no Sidebar card (so no \"bookings\" in one)"
+    ],
+    "failures": []
+  }
+]

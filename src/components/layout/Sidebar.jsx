@@ -6,7 +6,6 @@ import { useAuth } from '../../hooks/useAuth'
 import { usePortal } from '../../hooks/usePortalAccess'
 import { useUnreadMessageCount, useMessagesRealtime } from '../../hooks/usePolicyMessages'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
-import { useSubmitLive } from '../../hooks/useAppSettings'
 import { useWeeklyUsage } from '../../hooks/useBillingTiers'
 import { tabOf } from '../../lib/agentBookings'
 import { capState, formatReset } from '../../lib/billing'
@@ -32,7 +31,7 @@ import { useNewInboundCount } from '../../hooks/useInbounds'
 //   glowing bar on the rail's left edge.
 // - Badges: Messages unread; agents also get Clients' "needs attention" count
 //   (amber), from the same useAgentBookings rows Clients reads.
-// - Agents with a weekly cap get a "This week" bookings card.
+// - Agents with a weekly cap get a "This week" submissions card.
 // - The account card opens the animated AccountMenu (theme, phone app, invite
 //   an agent [agents only, P731], report a problem / bug reports, sign out) —
 //   the round bug and phone buttons and the slide-up Sign out panel are gone.
@@ -73,17 +72,16 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
   useMessagesRealtime(profile?.id)
   const unreadMessages = useUnreadMessageCount(!!profile?.id)
 
-  // Agents only: "needs attention" on Clients and this week's bookings card.
+  // Agents only: "needs attention" on Clients and this week's submissions card.
   // Same queries (and keys) Clients and Submit already use.
   const { data: bookings = [] } = useAgentBookings(isAgent ? profile.id : null, { enabled: isAgent })
-  // The weekly count says submissions once the Submit page is live, bookings until then.
-  const noun = useSubmitLive().live ? 'submissions' : 'bookings'
+  const noun = 'submissions'
   const needsYou = useMemo(() => (isAgent ? bookings.filter(p => tabOf(p) === 'needs').length : 0), [bookings, isAgent])
   const { data: usage } = useWeeklyUsage(isAgent ? profile.id : null)
   const cap = isAgent ? capState(usage) : null
 
   // A locked self-signup: rows dim with a lock (they still lead to the welcome) and
-  // the bookings card says why.
+  // the submissions card says why.
   const portal = usePortal()
   const selfLocked = portal.self && portal.locked && !portal.loading
   const dimmed = to => selfLocked && !OPEN_WHEN_LOCKED.includes(to)
