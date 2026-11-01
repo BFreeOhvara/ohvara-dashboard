@@ -6,7 +6,8 @@
 // case that used to say "bookings". The data comes from the mocked HTTP layer (not a pre-seeded query cache), so a
 // real fetch cannot overwrite it; each case waits for the sidebar card and the Up next card to render.
 // Cases:
-//   1440 light / dark  slim card: "No calls booked. Submit your next client when they say yes." and "N of 16 submissions"
+//   1440 light / dark  slim card: header "No calls booked", line under it "Submit your next client when they say yes." (the
+//                      phrase "No calls booked" shows once, not twice), and "N of 16 submissions"
 //   1100 light / dark  wider layout: heading "No calls booked." above "Submit your next client when they say yes."
 //   390 light          NO-CHANGE check: a phone gets PhoneShell/PhoneHome, which render neither the Sidebar nor
 //                      ComingUpCard, so the new text cannot appear; only loads, no sideways scroll, no old string.
@@ -94,7 +95,7 @@ const base = `http://localhost:${PORT}`
 const browser = await chromium.launch({ args: ['--hide-scrollbars'] })
 
 const OLD_EMPTY = 'Nothing on the books yet'
-const NEW_LINE = 'No calls booked. Submit your next client when they say yes.'
+const NEW_LINE = 'Submit your next client when they say yes.'
 const CASES = [
   { w: 1440, h: 900, theme: 'light', kind: 'slim' },
   { w: 1440, h: 900, theme: 'dark', kind: 'slim' },
@@ -170,7 +171,7 @@ for (const c of CASES) {
     if (c.kind === 'slim') {
       check(m.slimNone === NEW_LINE, `slim line reads "${m.slimNone}"`)
       check(m.slimHeader && m.slimHeader.includes('No calls booked'), `slim header reads "${m.slimHeader}"`)
-      check((m.attnText.match(/No calls booked/g) || []).length === 2, `"No calls booked" should appear twice on the slim card, found ${(m.attnText.match(/No calls booked/g) || []).length}`)
+      check((m.attnText.match(/No calls booked/g) || []).length === 1, `"No calls booked" should appear once on the slim card, found ${(m.attnText.match(/No calls booked/g) || []).length}`)
     } else {
       check(m.slimNone === null, 'the slim card showed at the wider layout')
       check(/No calls booked\. Submit your next client when they say yes\./.test(m.attnText), `wider card reads "${m.attnText}"`)

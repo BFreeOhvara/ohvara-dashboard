@@ -358,12 +358,12 @@
     {
       "id": "overview.up-next-empty-line",
       "page": "Overview",
-      "title": "Up next with no calls booked: \"No calls booked. Submit your next client when they say yes.\"",
+      "title": "Up next with no calls booked: \"Submit your next client when they say yes.\"",
       "files": [
         "src/components/agent/AgentUI.jsx"
       ],
-      "notes": "Copy only. The slim card (1280+ wide, 700+ tall) says the full line under an Up next header that already says No calls booked, so the phrase shows twice there on purpose. The wider layout shows the heading No calls booked. above Submit your next client when they say yes. A phone gets PhoneHome, which shows neither. Shots: qa/overview-copy-fix.",
-      "check": { "file": "src/components/agent/AgentUI.jsx", "pattern": "No calls booked. Submit your next client when they say yes." },
+      "notes": "Copy only. The slim card (1280+ wide, 700+ tall) says Submit your next client when they say yes. under an Up next header that already says No calls booked, so the phrase shows once there. The wider layout shows the heading No calls booked. above Submit your next client when they say yes. A phone gets PhoneHome, which shows neither. Shots: qa/overview-copy-fix.",
+      "check": { "file": "src/components/agent/AgentUI.jsx", "pattern": "Submit your next client when they say yes." },
       "status": "checking"
     }
   ]

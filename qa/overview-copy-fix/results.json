@@ -11,8 +11,8 @@
       "clientWidth": 195
     },
     "sbCardText": "This week Resets Mon 2 of 16 submissions",
-    "slimNone": "No calls booked. Submit your next client when they say yes.",
-    "attnText": "You’re all caught up Nobody is waiting on you. Up next No calls booked No calls booked. Submit your next client when they say yes.",
+    "slimNone": "Submit your next client when they say yes.",
+    "attnText": "You’re all caught up Nobody is waiting on you. Up next No calls booked Submit your next client when they say yes.",
     "docScroll": 1425,
     "docClient": 1440,
     "asserts": [
@@ -32,8 +32,8 @@
       "clientWidth": 195
     },
     "sbCardText": "This week Resets Mon 2 of 16 submissions",
-    "slimNone": "No calls booked. Submit your next client when they say yes.",
-    "attnText": "You’re all caught up Nobody is waiting on you. Up next No calls booked No calls booked. Submit your next client when they say yes.",
+    "slimNone": "Submit your next client when they say yes.",
+    "attnText": "You’re all caught up Nobody is waiting on you. Up next No calls booked Submit your next client when they say yes.",
     "docScroll": 1425,
     "docClient": 1440,
     "asserts": [
