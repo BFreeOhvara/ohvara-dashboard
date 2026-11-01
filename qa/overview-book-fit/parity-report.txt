@@ -1,0 +1,2 @@
+1440 and 390, light and dark, [data-ov=book] section: master (src/index.css from origin/master) vs this branch.
+sha256 of each PNG compared: book-1440-light, book-1440-dark, book-390-light, book-390-dark are all IDENTICAL (before/ and after/ parity-hashes.json).
