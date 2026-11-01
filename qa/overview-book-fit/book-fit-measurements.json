@@ -1,0 +1,2300 @@
+[
+  {
+    "w": 640,
+    "theme": "light",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 625,
+    "inner": 640,
+    "tiles": [
+      {
+        "left": 16,
+        "top": 401.1,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 318.5,
+        "top": 401.1,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 16,
+        "top": 473.8,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 318.5,
+        "top": 473.8,
+        "width": 290.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 640,
+    "theme": "light",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 625,
+    "inner": 640,
+    "tiles": [
+      {
+        "left": 16,
+        "top": 401.1,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 318.5,
+        "top": 401.1,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 16,
+        "top": 473.8,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 318.5,
+        "top": 473.8,
+        "width": 290.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 640,
+    "theme": "light",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 625,
+    "inner": 640,
+    "tiles": [
+      {
+        "left": 16,
+        "top": 401.1,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 318.5,
+        "top": 401.1,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 16,
+        "top": 473.8,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 318.5,
+        "top": 473.8,
+        "width": 290.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 768,
+    "theme": "light",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 753,
+    "inner": 768,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 580.6,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 510.5,
+        "top": 580.6,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 280,
+        "top": 749.3,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 510.5,
+        "top": 749.3,
+        "width": 218.5,
+        "height": 156.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 768,
+    "theme": "light",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 753,
+    "inner": 768,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 580.6,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 510.5,
+        "top": 580.6,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 280,
+        "top": 749.3,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 510.5,
+        "top": 749.3,
+        "width": 218.5,
+        "height": 156.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 768,
+    "theme": "light",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 753,
+    "inner": 768,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 580.6,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 510.5,
+        "top": 580.6,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 280,
+        "top": 749.3,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 510.5,
+        "top": 749.3,
+        "width": 218.5,
+        "height": 156.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1024,
+    "theme": "light",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1009,
+    "inner": 1024,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 418.6,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 638.5,
+        "top": 418.6,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 491.3,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 638.5,
+        "top": 491.3,
+        "width": 346.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1024,
+    "theme": "light",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1009,
+    "inner": 1024,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 418.6,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 638.5,
+        "top": 418.6,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 491.3,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 638.5,
+        "top": 491.3,
+        "width": 346.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1024,
+    "theme": "light",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1009,
+    "inner": 1024,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 418.6,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 638.5,
+        "top": 418.6,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 491.3,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 638.5,
+        "top": 491.3,
+        "width": 346.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1100,
+    "theme": "light",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1085,
+    "inner": 1100,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 370.3,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 676.5,
+        "top": 370.3,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 443,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 676.5,
+        "top": 443,
+        "width": 384.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1100,
+    "theme": "light",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1085,
+    "inner": 1100,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 370.3,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 676.5,
+        "top": 370.3,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 443,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 676.5,
+        "top": 443,
+        "width": 384.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1100,
+    "theme": "light",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1085,
+    "inner": 1100,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 370.3,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 676.5,
+        "top": 370.3,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 443,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 676.5,
+        "top": 443,
+        "width": 384.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1180,
+    "theme": "light",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1165,
+    "inner": 1180,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 370.3,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 716.5,
+        "top": 370.3,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 443,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 716.5,
+        "top": 443,
+        "width": 424.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1180,
+    "theme": "light",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1165,
+    "inner": 1180,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 370.3,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 716.5,
+        "top": 370.3,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 443,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 716.5,
+        "top": 443,
+        "width": 424.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1180,
+    "theme": "light",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1165,
+    "inner": 1180,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 370.3,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 716.5,
+        "top": 370.3,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 443,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 716.5,
+        "top": 443,
+        "width": 424.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1280,
+    "theme": "light",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1265,
+    "inner": 1280,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 60.8
+      },
+      {
+        "left": 523.3,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 60.8
+      },
+      {
+        "left": 766.5,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 60.8
+      },
+      {
+        "left": 1009.8,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1280,
+    "theme": "light",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1265,
+    "inner": 1280,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 60.8
+      },
+      {
+        "left": 523.3,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 60.8
+      },
+      {
+        "left": 766.5,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 60.8
+      },
+      {
+        "left": 1009.8,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1280,
+    "theme": "light",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 74,
+    "widest": "Payments on time",
+    "minSlack": 0,
+    "docScroll": 1265,
+    "inner": 1280,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 94.5
+      },
+      {
+        "left": 523.3,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 94.5
+      },
+      {
+        "left": 766.5,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 94.5
+      },
+      {
+        "left": 1009.8,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 94.5
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1366,
+    "theme": "light",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1351,
+    "inner": 1366,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 60.8
+      },
+      {
+        "left": 544.8,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 60.8
+      },
+      {
+        "left": 809.5,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 60.8
+      },
+      {
+        "left": 1074.3,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1366,
+    "theme": "light",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1351,
+    "inner": 1366,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 60.8
+      },
+      {
+        "left": 544.8,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 60.8
+      },
+      {
+        "left": 809.5,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 60.8
+      },
+      {
+        "left": 1074.3,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1366,
+    "theme": "light",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 100,
+    "widest": "See who and why",
+    "minSlack": 0,
+    "docScroll": 1351,
+    "inner": 1366,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 78.9
+      },
+      {
+        "left": 544.8,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 78.9
+      },
+      {
+        "left": 809.5,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 78.9
+      },
+      {
+        "left": 1074.3,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 78.9
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1439,
+    "theme": "light",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1424,
+    "inner": 1439,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 563,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 846,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 1129,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1439,
+    "theme": "light",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1424,
+    "inner": 1439,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 563,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 846,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 1129,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1439,
+    "theme": "light",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1424,
+    "inner": 1439,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 563,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 846,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 1129,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1440,
+    "theme": "light",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1425,
+    "inner": 1440,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 563.8,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 847.5,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 1131.3,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1440,
+    "theme": "light",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1425,
+    "inner": 1440,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 563.8,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 847.5,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 1131.3,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1440,
+    "theme": "light",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": -8,
+    "docScroll": 1425,
+    "inner": 1440,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 563.8,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 847.5,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 1131.3,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      }
+    ],
+    "ok": true,
+    "known": true
+  },
+  {
+    "w": "1280x700",
+    "theme": "light",
+    "books": "normal",
+    "texts": 4,
+    "maxScroll": 112,
+    "widest": "(labels only)",
+    "minSlack": 0,
+    "docScroll": 1265,
+    "inner": 1280,
+    "ok": true
+  },
+  {
+    "w": "1280x700",
+    "theme": "light",
+    "books": "big",
+    "texts": 4,
+    "maxScroll": 72,
+    "widest": "(labels only)",
+    "minSlack": 0,
+    "docScroll": 1265,
+    "inner": 1280,
+    "ok": true
+  },
+  {
+    "w": "1280x760",
+    "theme": "light",
+    "books": "normal",
+    "texts": 4,
+    "maxScroll": 112,
+    "widest": "(labels only)",
+    "minSlack": 0,
+    "docScroll": 1265,
+    "inner": 1280,
+    "ok": true
+  },
+  {
+    "w": "1280x760",
+    "theme": "light",
+    "books": "big",
+    "texts": 4,
+    "maxScroll": 72,
+    "widest": "(labels only)",
+    "minSlack": 0,
+    "docScroll": 1265,
+    "inner": 1280,
+    "ok": true
+  },
+  {
+    "w": "1366x780",
+    "theme": "light",
+    "books": "normal",
+    "texts": 4,
+    "maxScroll": 112,
+    "widest": "(labels only)",
+    "minSlack": 0,
+    "docScroll": 1351,
+    "inner": 1366,
+    "ok": true
+  },
+  {
+    "w": "1366x780",
+    "theme": "light",
+    "books": "big",
+    "texts": 4,
+    "maxScroll": 112,
+    "widest": "(labels only)",
+    "minSlack": 0,
+    "docScroll": 1351,
+    "inner": 1366,
+    "ok": true
+  },
+  {
+    "w": "1439x819",
+    "theme": "light",
+    "books": "normal",
+    "texts": 4,
+    "maxScroll": 112,
+    "widest": "(labels only)",
+    "minSlack": 0,
+    "docScroll": 1424,
+    "inner": 1439,
+    "ok": true
+  },
+  {
+    "w": "1439x819",
+    "theme": "light",
+    "books": "big",
+    "texts": 4,
+    "maxScroll": 112,
+    "widest": "(labels only)",
+    "minSlack": 0,
+    "docScroll": 1424,
+    "inner": 1439,
+    "ok": true
+  },
+  {
+    "w": 640,
+    "theme": "dark",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 625,
+    "inner": 640,
+    "tiles": [
+      {
+        "left": 16,
+        "top": 401.1,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 318.5,
+        "top": 401.1,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 16,
+        "top": 473.8,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 318.5,
+        "top": 473.8,
+        "width": 290.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 640,
+    "theme": "dark",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 625,
+    "inner": 640,
+    "tiles": [
+      {
+        "left": 16,
+        "top": 401.1,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 318.5,
+        "top": 401.1,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 16,
+        "top": 473.8,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 318.5,
+        "top": 473.8,
+        "width": 290.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 640,
+    "theme": "dark",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 625,
+    "inner": 640,
+    "tiles": [
+      {
+        "left": 16,
+        "top": 401.1,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 318.5,
+        "top": 401.1,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 16,
+        "top": 473.8,
+        "width": 290.5,
+        "height": 60.8
+      },
+      {
+        "left": 318.5,
+        "top": 473.8,
+        "width": 290.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 768,
+    "theme": "dark",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 753,
+    "inner": 768,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 580.6,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 510.5,
+        "top": 580.6,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 280,
+        "top": 749.3,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 510.5,
+        "top": 749.3,
+        "width": 218.5,
+        "height": 156.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 768,
+    "theme": "dark",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 753,
+    "inner": 768,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 580.6,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 510.5,
+        "top": 580.6,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 280,
+        "top": 749.3,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 510.5,
+        "top": 749.3,
+        "width": 218.5,
+        "height": 156.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 768,
+    "theme": "dark",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 753,
+    "inner": 768,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 580.6,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 510.5,
+        "top": 580.6,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 280,
+        "top": 749.3,
+        "width": 218.5,
+        "height": 156.8
+      },
+      {
+        "left": 510.5,
+        "top": 749.3,
+        "width": 218.5,
+        "height": 156.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1024,
+    "theme": "dark",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1009,
+    "inner": 1024,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 418.6,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 638.5,
+        "top": 418.6,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 491.3,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 638.5,
+        "top": 491.3,
+        "width": 346.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1024,
+    "theme": "dark",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1009,
+    "inner": 1024,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 418.6,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 638.5,
+        "top": 418.6,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 491.3,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 638.5,
+        "top": 491.3,
+        "width": 346.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1024,
+    "theme": "dark",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1009,
+    "inner": 1024,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 418.6,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 638.5,
+        "top": 418.6,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 491.3,
+        "width": 346.5,
+        "height": 60.8
+      },
+      {
+        "left": 638.5,
+        "top": 491.3,
+        "width": 346.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1100,
+    "theme": "dark",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1085,
+    "inner": 1100,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 370.3,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 676.5,
+        "top": 370.3,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 443,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 676.5,
+        "top": 443,
+        "width": 384.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1100,
+    "theme": "dark",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1085,
+    "inner": 1100,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 370.3,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 676.5,
+        "top": 370.3,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 443,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 676.5,
+        "top": 443,
+        "width": 384.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1100,
+    "theme": "dark",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1085,
+    "inner": 1100,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 370.3,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 676.5,
+        "top": 370.3,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 443,
+        "width": 384.5,
+        "height": 60.8
+      },
+      {
+        "left": 676.5,
+        "top": 443,
+        "width": 384.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1180,
+    "theme": "dark",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1165,
+    "inner": 1180,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 370.3,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 716.5,
+        "top": 370.3,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 443,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 716.5,
+        "top": 443,
+        "width": 424.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1180,
+    "theme": "dark",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1165,
+    "inner": 1180,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 370.3,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 716.5,
+        "top": 370.3,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 443,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 716.5,
+        "top": 443,
+        "width": 424.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1180,
+    "theme": "dark",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1165,
+    "inner": 1180,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 370.3,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 716.5,
+        "top": 370.3,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 280,
+        "top": 443,
+        "width": 424.5,
+        "height": 60.8
+      },
+      {
+        "left": 716.5,
+        "top": 443,
+        "width": 424.5,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1280,
+    "theme": "dark",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1265,
+    "inner": 1280,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 60.8
+      },
+      {
+        "left": 523.3,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 60.8
+      },
+      {
+        "left": 766.5,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 60.8
+      },
+      {
+        "left": 1009.8,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1280,
+    "theme": "dark",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1265,
+    "inner": 1280,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 60.8
+      },
+      {
+        "left": 523.3,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 60.8
+      },
+      {
+        "left": 766.5,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 60.8
+      },
+      {
+        "left": 1009.8,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1280,
+    "theme": "dark",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 74,
+    "widest": "Payments on time",
+    "minSlack": 0,
+    "docScroll": 1265,
+    "inner": 1280,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 94.5
+      },
+      {
+        "left": 523.3,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 94.5
+      },
+      {
+        "left": 766.5,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 94.5
+      },
+      {
+        "left": 1009.8,
+        "top": 253.7,
+        "width": 231.3,
+        "height": 94.5
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1366,
+    "theme": "dark",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1351,
+    "inner": 1366,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 60.8
+      },
+      {
+        "left": 544.8,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 60.8
+      },
+      {
+        "left": 809.5,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 60.8
+      },
+      {
+        "left": 1074.3,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1366,
+    "theme": "dark",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1351,
+    "inner": 1366,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 60.8
+      },
+      {
+        "left": 544.8,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 60.8
+      },
+      {
+        "left": 809.5,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 60.8
+      },
+      {
+        "left": 1074.3,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1366,
+    "theme": "dark",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 100,
+    "widest": "See who and why",
+    "minSlack": 0,
+    "docScroll": 1351,
+    "inner": 1366,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 78.9
+      },
+      {
+        "left": 544.8,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 78.9
+      },
+      {
+        "left": 809.5,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 78.9
+      },
+      {
+        "left": 1074.3,
+        "top": 253.7,
+        "width": 252.8,
+        "height": 78.9
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1439,
+    "theme": "dark",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1424,
+    "inner": 1439,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 563,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 846,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 1129,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1439,
+    "theme": "dark",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1424,
+    "inner": 1439,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 563,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 846,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 1129,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1439,
+    "theme": "dark",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1424,
+    "inner": 1439,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 563,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 846,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      },
+      {
+        "left": 1129,
+        "top": 253.7,
+        "width": 271,
+        "height": 60.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1440,
+    "theme": "dark",
+    "books": "normal",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1425,
+    "inner": 1440,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 563.8,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 847.5,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 1131.3,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1440,
+    "theme": "dark",
+    "books": "zero",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": 0,
+    "docScroll": 1425,
+    "inner": 1440,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 563.8,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 847.5,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 1131.3,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      }
+    ],
+    "ok": true,
+    "known": false
+  },
+  {
+    "w": 1440,
+    "theme": "dark",
+    "books": "big",
+    "texts": 8,
+    "maxScroll": 112,
+    "widest": "Needs attention",
+    "minSlack": -8,
+    "docScroll": 1425,
+    "inner": 1440,
+    "tiles": [
+      {
+        "left": 280,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 563.8,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 847.5,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      },
+      {
+        "left": 1131.3,
+        "top": 253.7,
+        "width": 269.8,
+        "height": 64.8
+      }
+    ],
+    "ok": true,
+    "known": true
+  },
+  {
+    "w": "1280x700",
+    "theme": "dark",
+    "books": "normal",
+    "texts": 4,
+    "maxScroll": 112,
+    "widest": "(labels only)",
+    "minSlack": 0,
+    "docScroll": 1265,
+    "inner": 1280,
+    "ok": true
+  },
+  {
+    "w": "1280x700",
+    "theme": "dark",
+    "books": "big",
+    "texts": 4,
+    "maxScroll": 72,
+    "widest": "(labels only)",
+    "minSlack": 0,
+    "docScroll": 1265,
+    "inner": 1280,
+    "ok": true
+  },
+  {
+    "w": "1280x760",
+    "theme": "dark",
+    "books": "normal",
+    "texts": 4,
+    "maxScroll": 112,
+    "widest": "(labels only)",
+    "minSlack": 0,
+    "docScroll": 1265,
+    "inner": 1280,
+    "ok": true
+  },
+  {
+    "w": "1280x760",
+    "theme": "dark",
+    "books": "big",
+    "texts": 4,
+    "maxScroll": 72,
+    "widest": "(labels only)",
+    "minSlack": 0,
+    "docScroll": 1265,
+    "inner": 1280,
+    "ok": true
+  },
+  {
+    "w": "1366x780",
+    "theme": "dark",
+    "books": "normal",
+    "texts": 4,
+    "maxScroll": 112,
+    "widest": "(labels only)",
+    "minSlack": 0,
+    "docScroll": 1351,
+    "inner": 1366,
+    "ok": true
+  },
+  {
+    "w": "1366x780",
+    "theme": "dark",
+    "books": "big",
+    "texts": 4,
+    "maxScroll": 112,
+    "widest": "(labels only)",
+    "minSlack": 0,
+    "docScroll": 1351,
+    "inner": 1366,
+    "ok": true
+  },
+  {
+    "w": "1439x819",
+    "theme": "dark",
+    "books": "normal",
+    "texts": 4,
+    "maxScroll": 112,
+    "widest": "(labels only)",
+    "minSlack": 0,
+    "docScroll": 1424,
+    "inner": 1439,
+    "ok": true
+  },
+  {
+    "w": "1439x819",
+    "theme": "dark",
+    "books": "big",
+    "texts": 4,
+    "maxScroll": 112,
+    "widest": "(labels only)",
+    "minSlack": 0,
+    "docScroll": 1424,
+    "inner": 1439,
+    "ok": true
+  }
+]
