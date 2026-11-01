@@ -343,6 +343,47 @@
       ],
       "notes": "formatDual(iso, agentTz, clientTz) gives 2:00 PM your time / 1:00 PM client; one time when the zones read the same or the client zone is unknown. Client zone: a booking's saved zone, else the state's zone (city lookup for split states).",
       "status": "checking"
+    },
+    {
+      "id": "client-page.recovery-texts",
+      "page": "Client page",
+      "title": "The exact words of every outgoing text are stored at send time",
+      "files": [
+        "supabase/migrations/198_text_words.sql",
+        "supabase/functions/lead-followup-sms/core.ts",
+        "supabase/functions/lead-workflow-sms/core.ts",
+        "supabase/functions/recovery-sms/core.ts",
+        "supabase/functions/recovery-sms/index.ts"
+      ],
+      "notes": "Check: recovery_sms_log.body is filled for a text Twilio took (no-answer, missed-by-us, first-text confirmation); failed and skipped rows stay null. Never 'live' while sms_live is off: no text goes out, so no words are stored yet, and the switch stays off. Needs migration 198 (not applied; apply before deploying lead-followup-sms). Also kept: lead_followup_sms_log.body and inbound_events.detail.body. Older rows stay null. Inbound replies already kept their body (lead_sms_replies).",
+      "status": "checking"
+    },
+    {
+      "id": "client-page.consent-wording",
+      "page": "Client page",
+      "title": "Text consent wording on the client page",
+      "files": [
+        "src/components/agent/TextConsent.jsx",
+        "src/lib/smsConsent.js",
+        "supabase/migrations/157_text_consent.sql"
+      ],
+      "notes": "Waiting on Brayden: the consent script stays exactly as registered with Twilio (SMS_CONSENT_VERSION v1, migration 157). The client page shows it unchanged and adds no new wording until he approves any change.",
+      "status": "checking"
+    },
+    {
+      "id": "activity.lapse-events",
+      "page": "Activity",
+      "title": "A lapse shows as its own row: Policy lapsed",
+      "files": [
+        "src/lib/activityKinds.js",
+        "src/lib/activityKinds.test.js",
+        "src/lib/activityFilters.test.js",
+        "src/pages/agent/Activity.jsx",
+        "src/lib/clientPageLog.js",
+        "src/lib/clientPageLog.test.js"
+      ],
+      "notes": "UI: feed kind lapsed shows an amber Lapsed pill under the Clients filter, its drawer story ends on Policy lapsed marked done with no pending Old policy cancelled, and the client page log titles it Policy lapsed. Built against the agreed kind with fixtures; the feed rows come from the lapse migration, not applied yet.",
+      "status": "checking"
     }
   ]
 }

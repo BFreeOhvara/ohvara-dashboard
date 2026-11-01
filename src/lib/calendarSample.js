@@ -3,8 +3,8 @@ import { zonedTimeToUtcIso, zonedDateStr, DEFAULT_TIMEZONE } from './timezones.j
 // SAMPLE-FIXTURE-CAL
 // Made-up calendar for /agent/calendar?sample=1 (dev server only). The page imports this file
 // dynamically from inside an import.meta.env.DEV branch, so a production build never contains it.
-// It returns the same shapes the three hooks return (agent_inbounds rows, inbound_events by lead,
-// policies rows), so the page maps them with the code real data goes through. Nothing here is
+// It returns the same shapes the hooks return (agent_inbounds rows, inbound_events by lead,
+// policies rows, servicing_tasks rows and a Map of the policies they point at), so the page maps them with the code real data goes through. Nothing here is
 // written to the query cache, and no query key is touched.
 // People and times follow the approved mockup (ohvara/mockups/update-the-existing-calendar-page-filled.html).
 // Numbers are 555; no emails. Times are the agent's wall clock, laid on the current Monday-to-Sunday week.
@@ -88,5 +88,30 @@ export function sampleCalendar({ tz = DEFAULT_TIMEZONE, nowMs = Date.now() } = {
     last_call_outcome: null, call_live_since: liveAt,
   })
 
-  return { inbounds, events, bookings }
+  // Annual reviews are placed from now, never on a fixed weekday: one still ahead today (or tomorrow late in the day),
+  // one in progress tomorrow, one done on Monday so the no-button case shows, and two rows that must not draw
+  // anything (a request with no time yet, a task with no policy).
+  const soon = nowHour + 2 <= 18
+  const aheadDay = soon ? today : addDays(today, 1)
+  const aheadAt = zonedTimeToUtcIso(wall(aheadDay, soon ? Math.max(9, nowHour + 2) : 11.5), tz)
+  const nextAt = zonedTimeToUtcIso(wall(addDays(today, 1), 10.5), tz)
+  const doneAt = zonedTimeToUtcIso(wall(monday, 11), tz)
+  const policies = new Map()
+  const policy = (id, first, last, tail, state) => {
+    policies.set(id, { id, client_first_name: first, client_last_name: last, client_phone: `555010${tail}`, state, client_city: null, client_timezone: null })
+    return id
+  }
+  const task = (id, policyId, status, dueAt) => ({
+    id, agent_id: 'sample-agent', lead_id: null, policy_id: policyId, kind: 'annual_review', status, due_at: dueAt, done_at: status === 'done' ? dueAt : null,
+    note: null, created_at: zonedTimeToUtcIso(wall(addDays(monday, -30), 9), tz),
+  })
+  const tasks = [
+    task('sample-task-ahead', policy('sample-policy-ahead', 'Carla', 'Mendez', '0181', 'TX'), 'scheduled', aheadAt),
+    task('sample-task-next', policy('sample-policy-next', 'Walter', 'Briggs', '0183', 'OH'), 'in_progress', nextAt),
+    task('sample-task-done', policy('sample-policy-done', 'Ruth', 'Okafor', '0185', 'GA'), 'done', doneAt),
+    task('sample-task-requested', 'sample-policy-ahead', 'requested', null),
+    task('sample-task-nopolicy', null, 'scheduled', aheadAt),
+  ]
+
+  return { inbounds, events, bookings, tasks, policies }
 }
