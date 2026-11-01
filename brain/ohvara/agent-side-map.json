@@ -13,6 +13,42 @@
       "notes": "Data layer only, read only. useOverviewBook() returns { book, submissions, steps: { dueSoon, doneByDay }, hasLeads, hasServicing, isLoading, isError, refetch }; the return shape is documented at the top of the hook. Book needs migration 193 (agent_clients); until it is applied book.available is false and the numbers are null. Saves need servicing_tasks.outcome (193) and read 0 until then. Spec: brain/ohvara/Agent Portal Servicing Spec.md, Overview."
     },
     {
+      "id": "client-page.contact-log-view",
+      "page": "Client page",
+      "title": "Every text and call to the client: when, words or call result, who",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/199_contact_log.sql",
+        "supabase/tests/contact_log_agent_scope.sql",
+        "supabase/tests/p_contact_log.sql"
+      ],
+      "notes": "contact_log is migration 199, written and not applied; tests pass in the local stand-in only. It returns label, text_status, has_recording and is_sample after the 16 original columns. Words on follow-up, recovery and workflow texts show once 198 lands and stay null until then, with no dependency on it. 177 isn't on Ohvara, so follow-up texts return no rows until it is applied."
+    },
+    {
+      "id": "client-page.fulfillment-call",
+      "page": "Client page",
+      "title": "Fulfillment and cancellation calls show on the client's contact log",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/199_contact_log.sql",
+        "supabase/tests/contact_log_agent_scope.sql",
+        "supabase/tests/p_contact_log.sql"
+      ],
+      "notes": "Never 'live' while voice_live is off. Covered in 199 by two client call sources: policy_events (no_answer, in_progress, cancelled) and fulfillment_voice_legs (party client). Written, not applied."
+    },
+    {
+      "id": "client-page.call-recording",
+      "page": "Client page",
+      "title": "A call on the client page says when a recording exists",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/199_contact_log.sql",
+        "supabase/tests/contact_log_agent_scope.sql",
+        "supabase/tests/p_contact_log.sql"
+      ],
+      "notes": "Never 'live' while recording_live is off. Covered in 199 by has_recording: true on a client leg whose conference (conference_sid, same policy) has a fulfillment_recordings row with status ready. An agent gets only the true/false, never the audio, sid or id, and no grant was added. Before recording_live goes on: fulfillment-voice's leg callback sets conference_sid to null when Twilio sends none, which would keep this false."
+    },
+    {
       "id": "activity.submitted-row",
       "page": "Activity",
       "title": "A submit shows as one row: Submitted for servicing",
