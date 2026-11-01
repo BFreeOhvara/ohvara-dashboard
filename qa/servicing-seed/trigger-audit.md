@@ -12,6 +12,7 @@ The seed runs with no `auth.uid()` (SQL editor, service role), inserts only, and
 
 - Row security lets any rep read every `fulfillment_assigned` policy and its thread, sample rows included. No page shows them: Fulfillment screens keep only `replaced_old_policy` not false and the rep's own rows (`useFulfillmentQueue`, `MyCalls`, `Pipeline`), and per-client threads left the UI in P721. `my_message_threads` would count a sample message on a row with no rep as unread, but the sidebar badge counts standing threads only.
 - `policy_messages` is in the `supabase_realtime` publication, so a page open at that moment can refresh. Nothing is sent.
+- The wipe's foreign keys reach past the seeded tables: deleting a flagged policy unlinks `fulfillment_cancels` and `fulfillment_missed_calls` rows and unflagged leads, and deletes `fulfillment_recordings`, `fulfillment_voice_legs` and `recovery_sms_log` rows. The seed's own rows have none. A flagged row from before this seed could, so section 1 row g of the door file lists them, read from `pg_constraint`, and whoever runs it stops there ([o18] [o19]).
 - The saved client reads needs attention for 14 days from its saved date, then protected. The seed dates it 3 days back, so the post-seed check reads 2/7/2/1/1 on the day it runs, and the counts drift to 2/8/1/1/1 after 11 days. Running the file again resets it.
 
 ## Triggers

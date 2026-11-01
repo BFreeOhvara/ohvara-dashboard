@@ -685,6 +685,20 @@ union all
 select 'f. flagged policy with no sample note: stop, it may be real', 'flagged', p.status, null, null, p.id,
        p.client_first_name || ' ' || p.client_last_name || ', created ' || p.created_at::date
   from p where p.flagged and coalesce(p.notes, '') !~* 'sample'
+union all
+select 'g. unflagged row tied to a flagged policy: stop, the wipe would change or delete it', 'unflagged', null, k.n, null, null,
+       t.relname || '.' || a.attname
+  from pg_constraint c
+  join pg_class t on t.oid = c.conrelid
+  join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
+  cross join lateral (
+    select substring(query_to_xml(format(
+             'select count(*) as n from %s x where x.%I = any (%L::uuid[]) and not coalesce((to_jsonb(x) ->> ''is_sample'')::boolean, false)',
+             c.conrelid::regclass, a.attname, (select coalesce(array_agg(id), '{{}}') from p where flagged)),
+           false, true, '')::text from '<n>(\\d+)</n>')::int as n
+  ) k
+ where c.contype = 'f' and c.confrelid = 'public.policies'::regclass and k.n > 0
+   and t.relname <> all (array[{', '.join(q(t) for t in SEEDED_TABLES if t != 'leads')}])
  order by 1, 2, 3, 7;"""
 
 
@@ -744,6 +758,7 @@ def build_door(fid):
         '--   section 1 row a shows any unflagged policy. Row c lists the ids. They survive the wipe and spoil the 13, so he decides on them;',
         '--   section 1 row d reads false for 186 or 193;',
         '--   section 1 row f lists anything. is_sample is writable by anyone who can write the row, so that policy may be real;',
+        '--   section 1 row g lists anything. The wipe would change or delete that row (a pay record, a strike, a recording, an unflagged lead);',
         '--   section 1 row e holds no account that is clearly the test fulfillment login. Never use a real rep;',
         '--   section 2 shows NOT IN THE AUDIT, or a trigger whose enabled column is not O. Section 3 would turn a disabled one back on.',
         '-- If section 4 does not start with PASS, stop and tell Brayden.',
