@@ -5,7 +5,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { transferWatch, myIncomingTransfer, alertText, POLL_MS, RING_MS } from './transferAlert.js'
+import { transferWatch, myIncomingTransfer, alertText, acceptTransfer, cantTakeTransfer, answerOnce, POLL_MS, RING_MS } from './transferAlert.js'
 
 const ROW = { help_call_id: 'c1', transfer_started_at: '2026-10-29T21:19:40Z', lead_id: 'l1', caller_label: 'Dana' }
 const src = p => readFileSync(new URL(p, import.meta.url), 'utf8')
@@ -162,6 +162,83 @@ test('reads one row from the rpc and words the alert without a number', async ()
   await assert.rejects(myIncomingTransfer({ rpc: async () => ({ data: null, error: { code: '500' } }) }))
   assert.equal(alertText(ROW), "Live call for you: Dana. We're calling your phone now. Pick up.")
   assert.equal(alertText({}), "Live call for you: New caller. We're calling your phone now. Pick up.")
+})
+
+// A database that records every call. No table writes exist on it, so a stray one throws.
+function fakeDb(error = null) {
+  const calls = []
+  return { calls, rpc: async (fn, args) => { calls.push([fn, args]); return { data: true, error } } }
+}
+
+test('accept only sends the acknowledgement and never marks the call connected', async () => {
+  const db = fakeDb()
+  await acceptTransfer(db, ROW)
+  assert.deepEqual(db.calls, [['agent_accept_transfer', { p_lead: 'l1' }]])
+
+  // Only the function touches the call: no table write here or in the alert, no connected status.
+  const lib = src('./transferAlert.js')
+  const alert = src('../components/agent/TransferAlert.jsx')
+  for (const s of [lib, alert]) {
+    assert.doesNotMatch(s, /\.from\(|\.update\(|\.insert\(/)
+    assert.doesNotMatch(s, /status:\s*'transferred'|outcome:\s*'transferred'|transferred_at:/)
+  }
+})
+
+test('a call with no lead yet still sends, with a null lead', async () => {
+  const db = fakeDb()
+  await cantTakeTransfer(db, { help_call_id: 'c9', lead_id: null })
+  assert.deepEqual(db.calls, [['agent_missed_transfer', { p_lead: null }]])
+})
+
+test("Can't take it is idempotent: two taps send once and close once", async () => {
+  const db = fakeDb()
+  let closes = 0
+  const answer = answerOnce({ close: () => { closes++ } })
+  const send = row => cantTakeTransfer(db, row)
+  await Promise.all([answer(send, ROW), answer(send, ROW)])
+  await answer(send, ROW)
+  assert.equal(db.calls.length, 1)
+  assert.equal(closes, 1)
+  // The next call is a new answer.
+  await answer(send, { ...ROW, help_call_id: 'c2' })
+  assert.equal(db.calls.length, 2)
+  assert.equal(closes, 2)
+})
+
+test('a missing function closes cleanly; any other failure closes too', async () => {
+  for (const send of [acceptTransfer, cantTakeTransfer]) {
+    const missing = fakeDb({ code: 'PGRST202', message: 'Could not find the function' })
+    await assert.doesNotReject(send(missing, ROW))
+    await assert.rejects(send(fakeDb({ code: '500' }), ROW))
+
+    let closes = 0
+    const answer = answerOnce({ close: () => { closes++ } })
+    await answer(row => send(missing, row), ROW)
+    await answer(row => send(fakeDb({ code: '500' }), row), { ...ROW, help_call_id: 'c2' })
+    assert.equal(closes, 2)
+  }
+})
+
+test('the ring cap is not a miss: nothing is sent when it runs out', async () => {
+  const db = fakeDb()
+  const t = setup()
+  t.w.setActive(true)
+  await t.timers.advance(RING_MS * 2)
+  assert.equal(t.ringing, false)
+  assert.deepEqual(db.calls, [])
+  t.w.stop()
+  const alert = src('../components/agent/TransferAlert.jsx')
+  assert.doesNotMatch(alert, /setTimeout|setInterval/, 'the alert has no timer of its own')
+  assert.doesNotMatch(src('./transferAlert.js'), /(setTimeout|setInterval)[^\n]*(cantTake|agent_missed)/)
+})
+
+test('the alert offers Accept and Can’t take it, wired to their functions', () => {
+  const alert = src('../components/agent/TransferAlert.jsx')
+  assert.match(alert, />Accept</)
+  assert.match(alert, /Can&rsquo;t take it/)
+  assert.ok(alert.includes('answer(r => acceptTransfer(supabase, r), row)'))
+  assert.ok(alert.includes('answer(r => cantTakeTransfer(supabase, r), row)'))
+  assert.doesNotMatch(alert, /Dismiss/)
 })
 
 test('alert is portaled to body', () => {

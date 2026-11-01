@@ -369,6 +369,37 @@
       ],
       "notes": "Waiting on Brayden: the consent script stays exactly as registered with Twilio (SMS_CONSENT_VERSION v1, migration 157). The client page shows it unchanged and adds no new wording until he approves any change.",
       "status": "checking"
+    },
+    {
+      "id": "leads.accept-missed-flow",
+      "page": "Leads",
+      "title": "Live transfer: Accept acknowledges only; a miss is logged on the server; Can't take it; VA books the next open slot",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/208_transfer_missed.sql",
+        "supabase/functions/help-voice/core.ts",
+        "supabase/functions/help-voice/index.ts",
+        "src/components/agent/TransferAlert.jsx",
+        "src/lib/transferAlert.js",
+        "src/pages/fulfillment/VaLeads.jsx",
+        "src/hooks/useVaDesk.js",
+        "supabase/tests/p_transfer_missed.sql"
+      ],
+      "notes": "migration 208 unapplied; help-voice deploy pending"
+    },
+    {
+      "id": "leads.working-hours-booking",
+      "page": "Leads",
+      "title": "VA bookings stay inside the agent's working hours",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/208_transfer_missed.sql",
+        "src/hooks/useVaDesk.js",
+        "src/components/fulfillment/VaDesk.jsx",
+        "supabase/tests/p_transfer_missed.sql",
+        "src/lib/transferMissedMigration.test.js"
+      ],
+      "notes": "migration 208 unapplied; help-voice deploy pending"
     }
   ]
 }

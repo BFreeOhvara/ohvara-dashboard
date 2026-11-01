@@ -5,10 +5,12 @@ import { useAgentBookings, useBookCall } from './useAgentBookings'
 import { stageOf } from '../lib/agentBookings'
 import { openBookingIsos } from '../lib/scheduling'
 import { splitName, startingChecklist } from '../lib/vaQueue'
+import { isDutyMissing } from '../lib/duty'
 
 // VA desk (/fulfillment/leads). Every read and write goes through the
 // migration-175 functions (va_queue, va_agent_roster, va_claim, va_release,
-// va_set_lead_outcome); nothing writes `leads` directly.
+// va_set_lead_outcome) and 208's (va_missed_leads, va_next_open_slot,
+// va_agent_in_hours); nothing writes `leads` directly.
 //
 // A booking is the same policies row Book a call writes (useBookCall, for the
 // agent the VA picked) and then va_set_lead_outcome('booked') ties it to the
@@ -27,6 +29,39 @@ export function useVaQueue() {
       const { data, error } = await supabase.rpc('va_queue')
       if (error) throw error
       return data || []
+    },
+  })
+}
+
+// Live transfers nobody answered, each with the agent it books onto. Until 208
+// is applied the function is missing: an empty list, so the desk looks as it did.
+export function useVaMissed() {
+  return useQuery({
+    queryKey: [...KEY, 'missed'],
+    refetchInterval: 30e3,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('va_missed_leads')
+      if (error) {
+        if (isDutyMissing(error)) return []
+        throw error
+      }
+      return data || []
+    },
+  })
+}
+
+// The first free slot in the next hour inside the lead's agent's hours, or null.
+export function useVaNextSlot(leadId) {
+  return useQuery({
+    queryKey: [...KEY, 'next-slot', leadId],
+    refetchInterval: 60e3,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('va_next_open_slot', { p_lead: leadId })
+      if (error) {
+        if (isDutyMissing(error)) return null
+        throw error
+      }
+      return data || null
     },
   })
 }
@@ -102,6 +137,7 @@ export function useVaDesk() {
   const qc = useQueryClient()
   const queue = useVaQueue()
   const roster = useVaRoster()
+  const missed = useVaMissed()
   const bookCall = useBookCall()
   const refresh = () => qc.invalidateQueries({ queryKey: KEY })
 
@@ -142,11 +178,21 @@ export function useVaDesk() {
 
   // Book on the picked agent's calendar, then record it on the lead. If the
   // booking lands but the record doesn't, the error carries `bookingId` so the
-  // retry only repeats the second step (no second booking).
+  // retry only repeats the second step (no second booking). The agent's hours
+  // are checked first: once the row is written it is on their calendar, and a
+  // VA can't take it back off.
   const book = useMutation({
     mutationFn: async ({ lead, agentId, scheduledAt, timezone, carrier, checklist, bookingId = null }) => {
       let id = bookingId
       if (!id) {
+        const { data: inHours, error: hoursErr } = await supabase.rpc('va_agent_in_hours', {
+          p_agent: agentId,
+          p_at: new Date(scheduledAt).toISOString(),
+        })
+        if (hoursErr && !isDutyMissing(hoursErr)) throw hoursErr
+        if (!hoursErr && !inHours) {
+          throw Object.assign(new Error("That's outside this agent's working hours. Pick another time."), { hint: 'working_hours' })
+        }
         const { first, last } = splitName(lead.contact_name)
         const policy = await bookCall.mutateAsync({
           agentId,
@@ -172,5 +218,5 @@ export function useVaDesk() {
     },
   })
 
-  return { queue, roster, claim, release, record, book }
+  return { queue, roster, missed, claim, release, record, book }
 }
