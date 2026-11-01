@@ -395,6 +395,32 @@
       ],
       "notes": "UI: feed kind lapsed shows an amber Lapsed pill under the Clients filter, its drawer story ends on Policy lapsed marked done with no pending Old policy cancelled, and the client page log titles it Policy lapsed. Built against the agreed kind with fixtures; the feed rows come from the lapse migration, not applied yet.",
       "status": "checking"
+    },
+    {
+      "id": "client-page.chargeback-watch",
+      "page": "Client page",
+      "title": "One chargeback watch step per policy, month n of 12",
+      "files": [
+        "src/lib/servicingWatch.js",
+        "src/lib/servicingWatch.test.js",
+        "src/hooks/useServicingTasks.js",
+        "src/pages/agent/ClientPage.jsx"
+      ],
+      "notes": "oneWatchPerPolicy(rows) runs on the result of useServicingTasks: among chargeback_watch rows it keeps the one with the latest due_at per policy_id (else lead_id, never the client, so a multi-policy client keeps one watch per policy). A null due_at counts as earliest; other kinds and the order are untouched. When the migration stores 12 monthly rows per policy, the kept row is month 12, so due_at is still the watch end and watchProgress (now in servicingWatch.js, re-exported from the hook) reads month n of 12. No new column in TASK_COLS; no visual change.",
+      "status": "checking"
+    },
+    {
+      "id": "client-page.servicing-card",
+      "page": "Client page",
+      "title": "Servicing card on /agent/clients: the Protected chip and steps read one watch row per policy",
+      "files": [
+        "src/components/agent/ClientsV2Parts.jsx",
+        "src/lib/servicingWatch.js",
+        "src/lib/servicingWatch.test.js",
+        "src/hooks/useServicingTasks.js"
+      ],
+      "notes": "ServicingCard and ClientPage take .find() on chargeback_watch and pass it to watchProgress; both now get a single row per policy from oneWatchPerPolicy in useServicingTasks, so the watch does not read over after about a month once the 12-monthly-row migration is applied. Those two files are not edited. Needs to be live before that migration.",
+      "status": "checking"
     }
   ]
 }
