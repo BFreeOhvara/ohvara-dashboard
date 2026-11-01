@@ -1,0 +1,22 @@
+Scratch run, not committed: supabase/migrations/193_servicing_model.sql with "with (security_invoker = true)" removed
+from both views, then restored. Command: npm run test:sql -- supabase/tests/p_servicing_status.sql
+Exit code 1. Run on the local in-memory PGlite stand-in; nothing touched Ohvara.
+
+== Migration replay ==
+  182 files: 182 applied, 0 failed (0 root cause(s), 0 knock-on(s)); exact errors at the end
+  replayed db (+ pgtap in extensions): relations 900, functions 4779, policies 159, triggers 639, rows 3191
+
+== Role/RLS self-check ==
+  PASS  under set role authenticated with request.jwt.claims {"sub":"11111111-1111-4111-8111-111111111111"}: current_user=authenticated, auth.uid()=11111111-1111-4111-8111-111111111111, auth.role()=authenticated; own row visible, other user's row blocked (saw 1 of 2 rows); insert as the other user refused 42501
+
+== Tests (1 file(s) from <worktree>\supabase\tests\p_servicing_status.sql) ==
+  FAIL  p_servicing_status.sql  120 check(s) run, 6 failed  [pgTAP]
+        not ok: c2 A sees 0 of B's policy_servicing_status
+        not ok: c3 A sees 0 of B's agent_clients
+        not ok: c11 U sees nothing of B
+        not ok: c15 policy_servicing_status is security_invoker
+        not ok: c16 agent_clients is security_invoker
+        not ok: c20 the control rolled back: the view is security_invoker again
+        isolation: fresh clone of the replayed db (fingerprint matches); no transaction open after the file
+
+Result: 0 of 1 test file(s) passed. Exit code 1. (7.9 s)

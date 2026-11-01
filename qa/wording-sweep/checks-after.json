@@ -1,0 +1,152 @@
+[
+  {
+    "page": "overview",
+    "width": 1440,
+    "inboundHits": [],
+    "sideways": -15,
+    "pageErrors": []
+  },
+  {
+    "page": "search (typed \"Nadia\")",
+    "width": 1440,
+    "inboundHits": [],
+    "sideways": 0,
+    "pageErrors": [],
+    "groups": [
+      "Leads"
+    ]
+  },
+  {
+    "page": "leads",
+    "width": 1440,
+    "inboundHits": [],
+    "sideways": -15,
+    "pageErrors": []
+  },
+  {
+    "page": "lead",
+    "width": 1440,
+    "inboundHits": [],
+    "sideways": -15,
+    "pageErrors": []
+  },
+  {
+    "page": "calendar",
+    "width": 1440,
+    "inboundHits": [],
+    "sideways": -15,
+    "pageErrors": []
+  },
+  {
+    "page": "clients",
+    "width": 1440,
+    "inboundHits": [],
+    "sideways": -15,
+    "pageErrors": []
+  },
+  {
+    "page": "activity",
+    "width": 1440,
+    "inboundHits": [],
+    "sideways": -15,
+    "pageErrors": []
+  },
+  {
+    "page": "more",
+    "width": 1440,
+    "inboundHits": [],
+    "sideways": -15,
+    "pageErrors": []
+  },
+  {
+    "page": "billing",
+    "width": 1440,
+    "inboundHits": [],
+    "sideways": -15,
+    "pageErrors": []
+  },
+  {
+    "page": "settings",
+    "width": 1440,
+    "inboundHits": [],
+    "sideways": -15,
+    "pageErrors": []
+  },
+  {
+    "page": "leads-empty",
+    "width": 1440,
+    "inboundHits": [],
+    "sideways": -15,
+    "pageErrors": []
+  },
+  {
+    "page": "overview",
+    "width": 390,
+    "inboundHits": [],
+    "sideways": 0,
+    "pageErrors": []
+  },
+  {
+    "page": "leads",
+    "width": 390,
+    "inboundHits": [],
+    "sideways": 0,
+    "pageErrors": []
+  },
+  {
+    "page": "lead",
+    "width": 390,
+    "inboundHits": [],
+    "sideways": 0,
+    "pageErrors": []
+  },
+  {
+    "page": "calendar",
+    "width": 390,
+    "inboundHits": [],
+    "sideways": 0,
+    "pageErrors": []
+  },
+  {
+    "page": "clients",
+    "width": 390,
+    "inboundHits": [],
+    "sideways": 0,
+    "pageErrors": []
+  },
+  {
+    "page": "activity",
+    "width": 390,
+    "inboundHits": [],
+    "sideways": 0,
+    "pageErrors": []
+  },
+  {
+    "page": "more",
+    "width": 390,
+    "inboundHits": [],
+    "sideways": 0,
+    "pageErrors": []
+  },
+  {
+    "page": "billing",
+    "width": 390,
+    "inboundHits": [],
+    "sideways": 0,
+    "pageErrors": []
+  },
+  {
+    "page": "settings",
+    "width": 390,
+    "inboundHits": [],
+    "sideways": 0,
+    "pageErrors": []
+  },
+  {
+    "page": "leads-empty",
+    "width": 390,
+    "inboundHits": [],
+    "sideways": 0,
+    "pageErrors": []
+  }
+]

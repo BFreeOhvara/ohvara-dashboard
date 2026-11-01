@@ -2,6 +2,11 @@
 import { spawnSync } from 'node:child_process'
 import { globSync } from 'node:fs'
 
+// The wording guard (agents see lead/leads, never inbound) runs first, so the quick check catches it before merge.
+// It is not in prebuild: a wording hit must not block a Vercel deploy.
+const wording = spawnSync(process.execPath, ['scripts/check-wording.mjs'], { stdio: 'inherit' })
+if (wording.status !== 0) process.exit(wording.status ?? 1)
+
 const filters = process.argv.slice(2)
 const files = globSync('src/**/*.test.js')
   .map(f => f.replaceAll('\\', '/'))

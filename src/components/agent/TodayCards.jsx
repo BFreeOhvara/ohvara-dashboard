@@ -128,13 +128,13 @@ function NextAppointment({ appts, now, tz, evMap, loading, failed, onRetry }) {
       <div className="tc-clock"><b>{clock}</b><span>{ampm}</span></div>
       <p className="tc-name">{leadName(l)}</p>
       <p className="tc-sub">
-        {PRODUCT_LABEL[l.inbound_product] || 'Inbound'}
+        {PRODUCT_LABEL[l.inbound_product] || 'Lead'}
         {bookedOn ? ` · Our VA booked this on ${dateText(bookedOn.at, tz)}.` : ''}
         {reminder ? ` Reminder text went out at ${timeText(reminder.at, tz)}.` : ''}
       </p>
       <div className="tc-acts">
         {call && num && <a className="ov-primary tc-btn" href={call}><Phone size={16} strokeWidth={2.1} aria-hidden="true" />Call {num}</a>}
-        <Link className="ov-ghost tc-btn" to={lead(l.lead_id)}>Open inbound<ChevronRight size={15} strokeWidth={2.1} aria-hidden="true" /></Link>
+        <Link className="ov-ghost tc-btn" to={lead(l.lead_id)}>Open lead<ChevronRight size={15} strokeWidth={2.1} aria-hidden="true" /></Link>
       </div>
       {later.length > 0 && (
         <div className="tc-later">
@@ -234,7 +234,7 @@ function ApptRow({ a, now, tz, evMap }) {
 
 function inboundLine(l, evs, tz, now) {
   const came = sameDay(cameInAt(l), now, tz) ? timeText(cameInAt(l), tz) : whenText(cameInAt(l), tz, now.getTime()).replace(/^./, c => c.toLowerCase())
-  const base = `${PRODUCT_SHORT[l.inbound_product] || 'Inbound'} · came in ${came}`
+  const base = `${PRODUCT_SHORT[l.inbound_product] || 'Lead'} · came in ${came}`
   if (l.inbound_product === 'live_call' && l.live_call_result) {
     const r = LIVE_RESULT[l.live_call_result]
     return l.live_call_result === 'transferred' && l.transferred_at
@@ -258,7 +258,7 @@ function TextsCard() {
   if (isLoading || rows.length === 0) return null
   return (
     <section className="ov-card tc-card tc-a-texts" aria-label="Texts waiting">
-      <Head icon={MessageSquare} title="Texts waiting" sub="Replies from your inbounds" right={<span className="tc-count">{rows.length}</span>} />
+      <Head icon={MessageSquare} title="Texts waiting" sub="Replies from your leads" right={<span className="tc-count">{rows.length}</span>} />
       <div className="tc-rows">
         {rows.slice(0, 5).map(t => (
           <Link key={t.id} className="tc-row tc-trow" to={t.to}>
@@ -330,7 +330,7 @@ export function TodayStrip() {
 
       <div className="tcs-links">
         <Link className="ov-ghost" to="/agent/calendar">Today’s appointments{!loading && !failed && <b>{todayCount}</b>}<ChevronRight size={14} strokeWidth={2.2} aria-hidden="true" /></Link>
-        <Link className="ov-ghost" to="/agent/activity">New inbounds{!loading && !failed && <b>{recentCount}</b>}<ChevronRight size={14} strokeWidth={2.2} aria-hidden="true" /></Link>
+        <Link className="ov-ghost" to="/agent/activity">New leads{!loading && !failed && <b>{recentCount}</b>}<ChevronRight size={14} strokeWidth={2.2} aria-hidden="true" /></Link>
       </div>
     </section>
   )
@@ -347,7 +347,7 @@ export function TodayCards({ showTexts = false }) {
   const retry = () => inb.refetch()
 
   return (
-    <section className={`tc-grid${showTexts ? ' tc-grid--texts' : ''}`} aria-label="Your inbounds today">
+    <section className={`tc-grid${showTexts ? ' tc-grid--texts' : ''}`} aria-label="Your leads today">
       <NextAppointment appts={appts} now={now} tz={tz} evMap={evMap} loading={loading} failed={failed} onRetry={retry} />
 
       <DutyCard tz={tz} />
@@ -363,10 +363,10 @@ export function TodayCards({ showTexts = false }) {
             ) : <Note icon={CalendarDays}>Nothing on your calendar today.</Note>}
       </section>
 
-      <section className="ov-card tc-card tc-a-inb" aria-label="New inbounds">
-        <Head title="New inbounds" sub={recent.length > 0 ? `${recent.length} since yesterday` : null} />
+      <section className="ov-card tc-card tc-a-inb" aria-label="New leads">
+        <Head title="New leads" sub={recent.length > 0 ? `${recent.length} since yesterday` : null} />
         {loading ? <Skel w="55%" h={46} style={{ marginTop: 14 }} />
-          : failed ? <LoadError what="your inbounds" onRetry={retry} style={{ marginTop: 14 }} />
+          : failed ? <LoadError what="your leads" onRetry={retry} style={{ marginTop: 14 }} />
             : recent.length ? (
               <>
                 <div className="tc-rows">
@@ -383,7 +383,7 @@ export function TodayCards({ showTexts = false }) {
                 </div>
                 <div className="tc-foot"><Link className="ov-ghost tc-btn" to="/agent/leads">See all leads<ArrowRight size={15} strokeWidth={2.2} aria-hidden="true" /></Link></div>
               </>
-            ) : <Note icon={Inbox}>No new inbounds yet. They show up here as soon as they come in. You don&rsquo;t need to refresh.</Note>}
+            ) : <Note icon={Inbox}>No new leads yet. They show up here as soon as they come in. You don&rsquo;t need to refresh.</Note>}
       </section>
 
       {showTexts && <TextsCard />}

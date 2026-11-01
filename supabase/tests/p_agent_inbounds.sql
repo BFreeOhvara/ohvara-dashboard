@@ -171,7 +171,7 @@ select is(
   'c2 a2 reads outcome sold, outcome_by A, stage sold, agent_status closed');
 select is(
   (select string_agg(kind || ':' || status || ':' || (agent_id = 'aaaaaaaa-aaaa-4aaa-8181-00000000000a')
-                     || ':' || (requested_by = 'aaaaaaaa-aaaa-4aaa-8181-00000000000a'), ',' order by kind)
+                     || ':' || (requested_by_id = 'aaaaaaaa-aaaa-4aaa-8181-00000000000a'), ',' order by kind)
      from public.servicing_tasks where lead_id = 'cccccccc-cccc-4ccc-8181-0000000000a2'),
   'chargeback_watch:scheduled:true:true,packet_check:scheduled:true:true,review_call:scheduled:true:true',
   'c3 sold seeded packet_check, review_call and chargeback_watch for A, scheduled');

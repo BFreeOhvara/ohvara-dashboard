@@ -22,7 +22,7 @@ const topupLabel = cents => {
   const d = cents / 100
   return `+$${d.toLocaleString('en-US', { minimumFractionDigits: Number.isInteger(d) ? 0 : 2, maximumFractionDigits: 2 })}`
 }
-const TYPE_LABEL = { mortgage_protection: 'Inbound form', policy_help: 'Inbound call' }
+const TYPE_LABEL = { mortgage_protection: 'Lead form', policy_help: 'Lead call' }
 const TYPE_SOURCE = { mortgage_protection: 'Form filled in by the client', policy_help: 'Call from the client' }
 const TYPE_ICON = { policy_help: Phone }
 const TypeIcon = ({ type, size = 17 }) => {

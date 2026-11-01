@@ -17,6 +17,20 @@ declare
   j   jsonb;
   fails integer := 0;
 begin
+  -- A database with nobody in it (the local replay): make the three people. Live
+  -- has them, and the final RAISE rolls these back with everything else.
+  if A is null or F is null or M is null then
+    A := coalesce(A, gen_random_uuid()); F := coalesce(F, gen_random_uuid()); M := coalesce(M, gen_random_uuid());
+    insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+    select '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authenticated', 'p767_' || u.id || '@example.invalid',
+           jsonb_build_object('provider', 'email', 'providers', jsonb_build_array('email'), 'role', 'agent'),
+           jsonb_build_object('full_name', 'P767 ' || u.r), now(), now()
+      from (values (A, 'agent'), (F, 'fulfillment'), (M, 'admin')) as u(id, r)
+     where not exists (select 1 from profiles p where p.id = u.id);
+    update profiles set role = 'fulfillment' where id = F;
+    update profiles set role = 'admin' where id = M;
+  end if;
+
   -- quiet emails out of the way: only count what this test makes
   delete from notification_emails;
 
@@ -172,17 +186,17 @@ begin
   perform public.notify_hourly(timestamptz '2026-10-15 08:10 America/Chicago');
   select count(*) into k from notification_emails where profile_id = M and type = 'daily_digest';
   r := r || format(E'\n%s 8 AM digest queued (crons failed in last 24h): %s', case when k = 1 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 1)::int;
-  -- Next Monday 8 AM (nothing failed in that future window, so no digest).
-  perform public.notify_hourly(timestamptz '2026-10-19 08:10 America/Chicago');
-  select count(*) into k from notification_emails where type = 'monday_summary';
+  -- A Monday 8 AM a year out (nothing failed in that future window, so no digest).
+  perform public.notify_hourly(timestamptz '2027-10-18 08:10 America/Chicago');
+  select count(*) into k from notification_emails where type = 'monday_summary' and profile_id in (A, M);
   r := r || format(E'\n%s Monday summaries (agent + admin): %s', case when k = 2 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 2)::int;
-  perform public.notify_hourly(timestamptz '2026-10-19 08:40 America/Chicago');
-  select count(*) into k from notification_emails where type in ('monday_summary', 'daily_digest');
+  perform public.notify_hourly(timestamptz '2027-10-18 08:40 America/Chicago');
+  select count(*) into k from notification_emails where type in ('monday_summary', 'daily_digest') and profile_id in (A, M);
   r := r || format(E'\n%s second run same hour → no dupes: %s', case when k = 3 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 3)::int;
   select count(*) into k from notifications where profile_id = A and type = 'needs_attention';
   r := r || format(E'\nINFO needs-attention items: %s', k);
-  perform public.notify_hourly(timestamptz '2026-10-19 13:10 America/Chicago');
-  select count(*) into k from notification_emails where type in ('monday_summary', 'daily_digest');
+  perform public.notify_hourly(timestamptz '2027-10-18 13:10 America/Chicago');
+  select count(*) into k from notification_emails where type in ('monday_summary', 'daily_digest') and profile_id in (A, M);
   r := r || format(E'\n%s not 8 AM → nothing: %s', case when k = 3 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 3)::int;
 
   raise exception 'P767 RESULTS (% failed):%', fails, r;

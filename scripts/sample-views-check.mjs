@@ -116,7 +116,7 @@ try {
       ;({ ctx, page, errors } = await open({ ...common, path: '/agent/leads', query: 'sample=1&empty=1' }))
       await page.waitForSelector('.inb-start', { timeout: 60000 }); await settle(page)
       const start = await page.$eval('.inb-start', el => ({ text: el.innerText, href: el.querySelector('a')?.getAttribute('href') }))
-      check(`${tag} inbounds empty: Start banner with a Start link`, /not getting inbounds yet/.test(start.text) && /Start/.test(start.text) && !!start.href, JSON.stringify(start), { start })
+      check(`${tag} inbounds empty: Start banner with a Start link`, /not getting leads yet/.test(start.text) && /Start/.test(start.text) && !!start.href, JSON.stringify(start), { start })
       check(`${tag} inbounds empty: no sideways scroll, no page errors`, (await sideways(page)) <= 0 && errors.length === 0, `${await sideways(page)} ${errors.join(' | ')}`)
       await shot(page, `inbounds-empty-${tag}`)
       await ctx.close()

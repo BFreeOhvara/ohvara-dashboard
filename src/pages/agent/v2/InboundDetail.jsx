@@ -178,7 +178,7 @@ export default function InboundDetail() {
   const events = ev.data || []
   const now = useMemo(() => new Date().getTime(), [ev.dataUpdatedAt]) // eslint-disable-line react-hooks/exhaustive-deps
   const back = <Link className="ov-ghost pv-btn pv-back" to="/agent/leads"><Ico icon={ArrowLeft} />Leads</Link>
-  const shell = children => <PortalV2Layout active="inbounds" crumb="Leads" title={l ? leadName(l) : 'Inbound'} icon={Inbox}>{back}{children}</PortalV2Layout>
+  const shell = children => <PortalV2Layout active="inbounds" crumb="Leads" title={l ? leadName(l) : 'Lead'} icon={Inbox}>{back}{children}</PortalV2Layout>
 
   if (inb.isLoading) {
     return shell(
@@ -188,12 +188,12 @@ export default function InboundDetail() {
       </section>,
     )
   }
-  if (inb.isError) return shell(<ErrorCard title="We couldn't load this inbound" text="Check your connection and try again." onRetry={() => inb.refetch()} />)
+  if (inb.isError) return shell(<ErrorCard title="We couldn't load this lead" text="Check your connection and try again." onRetry={() => inb.refetch()} />)
   if (!l) {
     return shell(
       <section className="ov-card pv-card pv-empty">
         <span className="pv-tile"><Ico icon={Inbox} size={20} /></span>
-        <h3>This inbound isn&rsquo;t here</h3>
+        <h3>This lead isn&rsquo;t here</h3>
         <p className="pv-sub">It may belong to another agent, or the link is old.</p>
         <Link className="ov-ghost pv-btn" to="/agent/leads"><Ico icon={ArrowLeft} size={14} />Back to leads</Link>
       </section>,
@@ -211,9 +211,9 @@ export default function InboundDetail() {
 
   return shell(
     <>
-      <section className="ov-card pv-card pv-d-card" aria-label="Inbound">
+      <section className="ov-card pv-card pv-d-card" aria-label="Lead">
         <div className="pv-d-chips">
-          <span className="pv-chip b">{PRODUCT_LABEL[l.inbound_product] || 'Inbound'}</span>
+          <span className="pv-chip b">{PRODUCT_LABEL[l.inbound_product] || 'Lead'}</span>
           <span className="pv-chip"><i className="pv-dot" />{stageText}</span>
         </div>
         <p className="pv-sub">{num ? place : `No phone number on file. Our VA is finding one.`}</p>

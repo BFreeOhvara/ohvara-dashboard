@@ -1,6 +1,6 @@
 -- p_submit_servicing — pgTAP checks for 187_submit_servicing.sql and 192_submit_no_weekly_cap.sql: Submit a deal,
 -- the has_servicing flag, No deals staying away from reps, no weekly cap (188), and
--- service requests.
+-- service requests, which live in servicing_tasks since 193.
 --
 -- RUN: at apply time, by Brayden's apply step, against the applied migration. No
 -- robot can run SQL against Ohvara, and none did. Everything runs in one
@@ -12,7 +12,8 @@
 --
 -- Case (b) differs from how it was first asked for: 188 made the weekly cap a
 -- no-op, so b checks that nothing refuses at the old 7 and 16, for the RPCs and
--- the direct insert alike, comped or not.
+-- the direct insert alike, comped or not. The limit itself still reads from the
+-- plan setting (b13 to b15), and a service request doesn't count against it (f2).
 --
 -- Cast: agent A (Standard, 7), agent B (A's competitor for (d)), agent C
 -- (has_servicing off), agent D (comped, Premium), agent E (comped, Standard),
@@ -21,7 +22,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(81);
+select plan(84);
 
 -- ── seed (as the table owner) ───────────────────────────────────────────────
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -113,10 +114,10 @@ select ok(p.prosecdef and exists (select 1 from unnest(p.proconfig) c where c = 
   from pg_proc p
  where p.pronamespace = 'public'::regnamespace and p.proname in ('agent_submit_deal', 'agent_submit_service_request')
  order by p.proname;
-select ok((select relrowsecurity from pg_class where oid = 'public.service_requests'::regclass),
-          's2 service_requests has RLS on');
-select is((select count(*) from pg_policies where schemaname = 'public' and tablename = 'service_requests' and cmd = 'INSERT'),
-          0::bigint, 's3 service_requests has no insert policy');
+select ok((select relrowsecurity from pg_class where oid = 'public.servicing_tasks'::regclass),
+          's2 servicing_tasks has RLS on');
+select is((select count(*) from pg_policies where schemaname = 'public' and tablename = 'servicing_tasks' and cmd = 'INSERT'),
+          0::bigint, 's3 servicing_tasks has no insert policy');
 select is((select count(*) from pg_attribute where attrelid = 'public.policies'::regclass and attname = 'policy_number' and not attisdropped),
           1::bigint, 's4 policy_number is the one column from 072');
 select is((select is_nullable from information_schema.columns
@@ -260,6 +261,23 @@ select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-0000000
        set_config('role', 'authenticated', true);
 select is(public.p_submit_many(8), 8, 'b12 a tier with no cap: the 8th goes through');
 reset role;
+
+-- 192 took out the refusal, not the limit: agent_weekly_usage still reads each
+-- agent's number from the plan setting, so a changed setting shows through.
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-00000000000a","role":"authenticated"}', true),
+       set_config('role', 'authenticated', true);
+select is((select weekly_cap from public.agent_weekly_usage()), 7, 'b13 Standard''s limit reads 7 from the plan setting');
+reset role;
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-00000000000d","role":"authenticated"}', true),
+       set_config('role', 'authenticated', true);
+select is((select weekly_cap from public.agent_weekly_usage()), 16, 'b14 Premium''s limit reads 16 from the plan setting');
+reset role;
+update public.agent_billing_tiers set weekly_cap = 9 where key = 'standard';
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-00000000000a","role":"authenticated"}', true),
+       set_config('role', 'authenticated', true);
+select is((select weekly_cap from public.agent_weekly_usage()), 9, 'b15 change the setting and the limit follows: nothing is hardcoded');
+reset role;
+update public.agent_billing_tiers set weekly_cap = 7 where key = 'standard';
 update public.app_settings set agent_billing_enforced = false where id = 1;
 
 -- ── c. No Servicing: both RPCs and the direct insert refuse ─────────────────
@@ -296,8 +314,8 @@ select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-0000000
 insert into ids select 'req', public.agent_submit_service_request((select id from ids where name = 'no'), 'beneficiary_change',
                                                                   '  ' || repeat('n', 1200) || '  ', 'afternoon');
 reset role;
-select is((select length(note) || ':' || left(note, 1) || ':' || status || ':' || best_time from public.service_requests where id = (select id from ids where name = 'req')),
-          '1000:n:open:afternoon', 'd0 the note is trimmed to 1000 characters and the request starts open');
+select is((select length(note) || ':' || left(note, 1) || ':' || status || ':' || best_time from public.servicing_tasks where id = (select id from ids where name = 'req')),
+          '1000:n:requested:afternoon', 'd0 the note is trimmed to 1000 characters and the request starts requested');
 select is((select count(*) from public.policy_events where policy_id = (select id from ids where name = 'no') and kind = 'service_request'
               and detail ->> 'request_id' = (select id::text from ids where name = 'req')),
           1::bigint, 'd1 the request wrote an event');
@@ -308,25 +326,25 @@ select throws_ok(format('select public.agent_submit_service_request(%L, ''carrie
                  '42501', 'Not your client', 'd2 agent B cannot request on agent A''s client');
 select throws_ok($$ select public.agent_submit_service_request('99999999-9999-4999-8999-999999999999', 'carrier_call', 'x', 'morning') $$,
                  '42501', 'Not your client', 'd3 an id that is nobody''s gets the same answer');
-select is((select count(*) from public.service_requests), 0::bigint, 'd4 agent B sees none of agent A''s requests');
-select throws_ok(format($$ insert into public.service_requests (agent_id, policy_id, kind) values ('aaaaaaaa-aaaa-4aaa-8aaa-00000000000b', %L, 'carrier_call') $$, (select id from ids where name = 'no')),
-                 '42501', 'permission denied for table service_requests', 'd5 no direct agent insert');
+select is((select count(*) from public.servicing_tasks), 0::bigint, 'd4 agent B sees none of agent A''s requests');
+select throws_ok(format($$ insert into public.servicing_tasks (agent_id, policy_id, kind) values ('aaaaaaaa-aaaa-4aaa-8aaa-00000000000b', %L, 'carrier_call') $$, (select id from ids where name = 'no')),
+                 '42501', 'permission denied for table servicing_tasks', 'd5 no direct agent insert');
 reset role;
 
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-00000000000a","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select is((select count(*) from public.service_requests), 1::bigint, 'd6 agent A sees their own request');
-select throws_ok(format($$ insert into public.service_requests (agent_id, policy_id, kind) values ('aaaaaaaa-aaaa-4aaa-8aaa-00000000000a', %L, 'carrier_call') $$, (select id from ids where name = 'no')),
-                 '42501', 'permission denied for table service_requests', 'd7 not even on their own client');
-update public.service_requests set status = 'done';
-select is((select status from public.service_requests), 'open', 'd8 an agent cannot change the status');
+select is((select count(*) from public.servicing_tasks), 1::bigint, 'd6 agent A sees their own request');
+select throws_ok(format($$ insert into public.servicing_tasks (agent_id, policy_id, kind) values ('aaaaaaaa-aaaa-4aaa-8aaa-00000000000a', %L, 'carrier_call') $$, (select id from ids where name = 'no')),
+                 '42501', 'permission denied for table servicing_tasks', 'd7 not even on their own client');
+update public.servicing_tasks set status = 'done';
+select is((select status from public.servicing_tasks), 'requested', 'd8 an agent cannot change the status');
 reset role;
 
 select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8bbb-000000000001","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select is((select count(*) from public.service_requests), 1::bigint, 'd9 Fulfillment sees the queue');
-select lives_ok($$ update public.service_requests set status = 'in_progress' $$, 'd10 Fulfillment can change the status');
-select throws_ok($$ update public.service_requests set note = 'changed' $$, '42501', 'permission denied for table service_requests',
+select is((select count(*) from public.servicing_tasks), 1::bigint, 'd9 Fulfillment sees the queue');
+select lives_ok($$ update public.servicing_tasks set status = 'in_progress' $$, 'd10 Fulfillment can change the status');
+select throws_ok($$ update public.servicing_tasks set note = 'changed' $$, '42501', 'permission denied for table servicing_tasks',
                  'd11 and nothing else');
 reset role;
 
@@ -345,7 +363,7 @@ select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-0000000
        set_config('role', 'authenticated', true);
 insert into ids select 'b_no', public.p_submit_no('Bee');
 select is((select used from public.agent_weekly_usage()), 2, 'f0 agent B has 2: the old-style row and this deal');
-select lives_ok(format('select public.agent_submit_service_request(%L, ''lapse_help'', null, null)', (select id from ids where name = 'b_no')),
+select lives_ok(format('select public.agent_submit_service_request(%L, ''lapse_save'', null, null)', (select id from ids where name = 'b_no')),
                 'f1 a request needs no note and no best time');
 select is((select used from public.agent_weekly_usage()), 2, 'f2 a service request does not change agent_weekly_usage');
 reset role;

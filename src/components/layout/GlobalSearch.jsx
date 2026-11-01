@@ -183,8 +183,8 @@ export function GlobalSearch() {
     // this box as a login form's username field (it offered saved logins).
     type: 'search', name: 'q', value: query, autoComplete: 'off', spellCheck: false,
     'data-lpignore': 'true', 'data-1p-ignore': 'true', 'data-form-type': 'other',
-    placeholder: isFulfill ? 'Search clients, carriers, pages' : role === 'agent' ? 'Search clients, inbounds, pages…' : 'Search clients, pages…',
-    'aria-label': isFulfill ? 'Search clients, carriers and pages' : role === 'agent' ? 'Search clients, inbounds and pages' : 'Search clients and pages',
+    placeholder: isFulfill ? 'Search clients, carriers, pages' : role === 'agent' ? 'Search clients, leads, pages…' : 'Search clients, pages…',
+    'aria-label': isFulfill ? 'Search clients, carriers and pages' : role === 'agent' ? 'Search clients, leads and pages' : 'Search clients and pages',
     role: 'combobox', 'aria-expanded': open, 'aria-controls': listId, 'aria-autocomplete': 'list',
     'aria-activedescendant': open && items[active] ? optId(active) : undefined,
     onChange, onKeyDown,
@@ -210,7 +210,7 @@ export function GlobalSearch() {
         )
       })}
       {clients.length > 0 && inbounds.length > 0 && <div className="ov-gs-sep" role="presentation" />}
-      {inbounds.length > 0 && <div className="ov-gs-head" role="presentation">Inbounds</div>}
+      {inbounds.length > 0 && <div className="ov-gs-head" role="presentation">Leads</div>}
       {inbounds.map((l, k) => {
         const i = clients.length + k
         const name = leadName(l)
@@ -243,10 +243,10 @@ export function GlobalSearch() {
           </div>
         )
       })}
-      {!items.length && <p className="ov-gs-empty">No {role === 'agent' ? 'clients, inbounds' : 'clients'} or pages match &ldquo;{query.trim()}&rdquo;</p>}
+      {!items.length && <p className="ov-gs-empty">No {role === 'agent' ? 'clients, leads' : 'clients'} or pages match &ldquo;{query.trim()}&rdquo;</p>}
       <div className="ov-gs-foot hidden lg:flex" aria-hidden="true">
         <span>↑ ↓ to move</span>
-        <span>{items[active]?.kind === 'page' ? 'Enter to go' : items[active]?.kind === 'inbound' ? 'Enter to open the inbound' : isFulfill ? 'Enter to open the call' : isAdmin ? 'Enter to open in Pipeline' : 'Enter to open in Clients'}</span>
+        <span>{items[active]?.kind === 'page' ? 'Enter to go' : items[active]?.kind === 'inbound' ? 'Enter to open the lead' : isFulfill ? 'Enter to open the call' : isAdmin ? 'Enter to open in Pipeline' : 'Enter to open in Clients'}</span>
         <span>Esc to close</span>
       </div>
     </div>
