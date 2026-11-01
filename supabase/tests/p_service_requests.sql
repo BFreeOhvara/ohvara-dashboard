@@ -1,6 +1,6 @@
 -- p_service_requests — pgTAP checks for 196_service_request_tracking.sql: the kinds on
 -- a request, 'other', the weekly limit staying out of it, the agent's list, and
--- Fulfillment scheduling and finishing a request.
+-- an admin scheduling and finishing a request (admin only since the VA servicing migration).
 --
 -- RUN: at apply time, by Brayden's apply step, against the applied migration. No
 -- robot can run SQL against Ohvara, and none did. Everything runs in one
@@ -11,12 +11,12 @@
 -- A pass there is not a pass on the real stack: it is a stand-in for Supabase.
 --
 -- Cast: agents A and B (no link), U (A's upline), D (the demo side), rep R and admin Z
--- (the live side), demo rep DR. A request's name in the ids table starts with its
+-- (the live side), demo admin DZ. A request's name in the ids table starts with its
 -- agent: a_, b_, d_. The weekly cap is read from agent_weekly_usage, never written here.
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(159);
+select plan(165);
 
 -- ── seed (as the table owner) ───────────────────────────────────────────────
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -30,12 +30,12 @@ select '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authentic
     ('aaaaaaaa-aaaa-4aaa-8196-00000000000c'::uuid, 'agent_u', 'agent'),
     ('aaaaaaaa-aaaa-4aaa-8196-00000000000d'::uuid, 'agent_d', 'agent'),
     ('bbbbbbbb-bbbb-4bbb-8196-000000000001'::uuid, 'rep_r',   'fulfillment'),
-    ('bbbbbbbb-bbbb-4bbb-8196-000000000002'::uuid, 'rep_dr',  'fulfillment'),
+    ('cccccccc-cccc-4ccc-8196-000000000002'::uuid, 'admin_dz', 'agent'),
     ('cccccccc-cccc-4ccc-8196-000000000001'::uuid, 'admin_z', 'agent')
   ) as u(id, n, role);
-update public.profiles set role = 'admin' where id = 'cccccccc-cccc-4ccc-8196-000000000001';
+update public.profiles set role = 'admin' where id in ('cccccccc-cccc-4ccc-8196-000000000001', 'cccccccc-cccc-4ccc-8196-000000000002');
 update public.profiles set upline_id = 'aaaaaaaa-aaaa-4aaa-8196-00000000000c' where id = 'aaaaaaaa-aaaa-4aaa-8196-00000000000a';
-update public.profiles set is_demo = true where id in ('aaaaaaaa-aaaa-4aaa-8196-00000000000d', 'bbbbbbbb-bbbb-4bbb-8196-000000000002');
+update public.profiles set is_demo = true where id in ('aaaaaaaa-aaaa-4aaa-8196-00000000000d', 'cccccccc-cccc-4ccc-8196-000000000002');
 update public.app_settings set submit_live = true, agent_billing_enforced = false where id = 1;
 
 create temp table ids (name text primary key, id uuid);
@@ -363,16 +363,20 @@ select public.p_sr_send('a_c_cancelled', 'ReqA', 'draft_date_change');
 select public.p_sr_send('a_c_open', 'ReqA', 'carrier_call');
 reset role;
 
-select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8196-000000000001","role":"authenticated"}', true),
+select set_config('request.jwt.claims', '{"sub":"cccccccc-cccc-4ccc-8196-000000000001","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select lives_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_c1'), now() + interval '2 days') $$, 'c1 R schedules a request');
+select lives_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_c1'), now() + interval '2 days') $$, 'c1 Z schedules a request');
 select is((select concat_ws('|', status, due_at = now() + interval '2 days') from public.servicing_tasks where id = public.p_sr_id('a_c1')),
           'scheduled|t', 'c2 status scheduled with the date in due_at');
-select lives_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_c1'), now() + interval '5 days') $$, 'c3 R reschedules it');
+select lives_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_c1'), now() + interval '5 days') $$, 'c3 Z reschedules it');
+reset role;
 update public.servicing_tasks set status = 'in_progress' where id = public.p_sr_id('a_c2');
+select set_config('role', 'authenticated', true);
 select lives_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_c2'), now() + interval '1 day') $$, 'c4 an in_progress request can be scheduled');
 select lives_ok($$ select public.fulfillment_finish_request(public.p_sr_id('a_c_done'), 'Draft date moved') $$, 'c5 fixture: one done request');
+reset role;
 update public.servicing_tasks set status = 'cancelled' where id = public.p_sr_id('a_c_cancelled');
+select set_config('role', 'authenticated', true);
 select public.p_sr_keep('a_c_open');
 select public.p_sr_keep('a_c_done');
 select public.p_sr_keep('a_c_cancelled');
@@ -391,7 +395,7 @@ reset role;
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8196-00000000000a","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
 select is(public.p_sr_seen('a_c1'), concat_ws('|', 'scheduled', (now() + interval '5 days')::text, '-', '-', 'f'), 'c16 the agent sees scheduled and the newest date');
-select is(public.p_sr_seen('a_c2'), concat_ws('|', 'scheduled', (now() + interval '1 day')::text, '-', '-', 'f'), 'c17 and the in_progress one, now scheduled');
+select is(public.p_sr_seen('a_c2'), concat_ws('|', 'in_progress', (now() + interval '1 day')::text, '-', '-', 'f'), 'c17 and the in_progress one keeps its status, with the new date');
 reset role;
 
 -- ── f. Finish ───────────────────────────────────────────────────────────────
@@ -406,12 +410,14 @@ select public.p_sr_send('a_f_open', 'ReqA', 'carrier_call');
 select public.p_sr_send('a_f_lapse', 'ReqA', 'lapse_save');
 reset role;
 
-select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8196-000000000001","role":"authenticated"}', true),
+select set_config('request.jwt.claims', '{"sub":"cccccccc-cccc-4ccc-8196-000000000001","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select lives_ok($$ select public.fulfillment_finish_request(public.p_sr_id('a_f1'), E' \n Address updated with the carrier\t\n') $$, 'f1 R finishes a request');
+select lives_ok($$ select public.fulfillment_finish_request(public.p_sr_id('a_f1'), E' \n Address updated with the carrier\t\n') $$, 'f1 Z finishes a request');
 select is((select concat_ws('|', status, done_at = now(), outcome_note, outcome is null) from public.servicing_tasks where id = public.p_sr_id('a_f1')),
           'done|t|Address updated with the carrier|t', 'f2 status done, done_at stamped, the note saved trimmed, no key');
+reset role;
 update public.servicing_tasks set status = 'in_progress' where id = public.p_sr_id('a_f2');
+select set_config('role', 'authenticated', true);
 select lives_ok($$ select public.fulfillment_finish_request(public.p_sr_id('a_f2'), 'Answered') $$, 'f3 an in_progress request can be finished');
 select lives_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_f_long'), now() + interval '1 day') $$, 'f4 a scheduled one can too');
 select lives_ok(format('select public.fulfillment_finish_request(public.p_sr_id(''a_f_long''), %L)', '  ' || repeat('n', 1000) || '  '), 'f5 1000 characters after trimming is allowed');
@@ -419,7 +425,9 @@ select is((select length(outcome_note) || ':' || (due_at = now() + interval '1 d
           '1000:true', 'f6 and saved whole, keeping its date');
 
 select lives_ok($$ select public.fulfillment_finish_request(public.p_sr_id('a_f_done'), 'First answer') $$, 'f7 fixture: one done request');
+reset role;
 update public.servicing_tasks set status = 'cancelled' where id = public.p_sr_id('a_f_cancelled');
+select set_config('role', 'authenticated', true);
 reset role;
 -- Backdated, so a second finish restamping it would show.
 update public.servicing_tasks set done_at = now() - interval '2 days' where id = public.p_sr_id('a_f_done');
@@ -428,7 +436,7 @@ select public.p_sr_keep('a_f_cancelled');
 select public.p_sr_keep('a_f_open');
 select public.p_sr_keep('a_f_lapse');
 
-select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8196-000000000001","role":"authenticated"}', true),
+select set_config('request.jwt.claims', '{"sub":"cccccccc-cccc-4ccc-8196-000000000001","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
 select throws_ok($$ select public.fulfillment_finish_request(public.p_sr_id('a_f_done'), 'Second answer') $$, '22023', 'This request is closed', 'f8 a done request is refused');
 select is(public.p_sr_row('a_f_done'), public.p_sr_kept('a_f_done'), 'f9 outcome_note, outcome and done_at unchanged');
@@ -459,7 +467,7 @@ select public.p_sr_send('a_t_lost', 'LapseLost', 'lapse_save');
 select public.p_sr_send('a_t_cancelled', 'LapseCancelled', 'lapse_save');
 reset role;
 select is((select stage from public.policy_servicing_status where client_last_name = 'LapseSaved'), 'needs_attention', 't1 an open lapse_save reads needs attention');
-select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8196-000000000001","role":"authenticated"}', true),
+select set_config('request.jwt.claims', '{"sub":"cccccccc-cccc-4ccc-8196-000000000001","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
 select public.fulfillment_finish_request(public.p_sr_id('a_t_saved'), 'Paid the back premium', 'saved');
 select public.fulfillment_finish_request(public.p_sr_id('a_t_lost'), 'Could not reach them', 'lapsed');
@@ -481,22 +489,22 @@ select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8196-0000000
        set_config('role', 'authenticated', true);
 select public.p_sr_send('a_w', 'ReqA', 'carrier_call');
 select public.p_sr_send('a_w_admin', 'ReqA', 'carrier_call');
-select throws_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_w'), now() + interval '1 day') $$, '42501', 'Only Fulfillment can do this', 'w1 the agent cannot schedule their own request');
-select throws_ok($$ select public.fulfillment_finish_request(public.p_sr_id('a_w'), 'Done') $$, '42501', 'Only Fulfillment can do this', 'w2 nor finish it');
-select throws_ok($$ select public.fulfillment_schedule_request('99999999-9999-4999-8999-999999999999', now() + interval '1 day') $$, '42501', 'Only Fulfillment can do this', 'w3 an id that is nobody''s gets the same answer, on schedule');
-select throws_ok($$ select public.fulfillment_finish_request('99999999-9999-4999-8999-999999999999', 'Done') $$, '42501', 'Only Fulfillment can do this', 'w4 and on finish');
-select throws_ok($$ select public.fulfillment_schedule_request(null, null) $$, '42501', 'Only Fulfillment can do this', 'w5 the role comes before the inputs, on schedule');
-select throws_ok($$ select public.fulfillment_finish_request(null, null, 'maybe') $$, '42501', 'Only Fulfillment can do this', 'w6 and on finish');
+select throws_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_w'), now() + interval '1 day') $$, '42501', 'Only an admin can do this', 'w1 the agent cannot schedule their own request');
+select throws_ok($$ select public.fulfillment_finish_request(public.p_sr_id('a_w'), 'Done') $$, '42501', 'Only an admin can do this', 'w2 nor finish it');
+select throws_ok($$ select public.fulfillment_schedule_request('99999999-9999-4999-8999-999999999999', now() + interval '1 day') $$, '42501', 'Only an admin can do this', 'w3 an id that is nobody''s gets the same answer, on schedule');
+select throws_ok($$ select public.fulfillment_finish_request('99999999-9999-4999-8999-999999999999', 'Done') $$, '42501', 'Only an admin can do this', 'w4 and on finish');
+select throws_ok($$ select public.fulfillment_schedule_request(null, null) $$, '42501', 'Only an admin can do this', 'w5 the role comes before the inputs, on schedule');
+select throws_ok($$ select public.fulfillment_finish_request(null, null, 'maybe') $$, '42501', 'Only an admin can do this', 'w6 and on finish');
 reset role;
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8196-00000000000c","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select throws_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_w'), now() + interval '1 day') $$, '42501', 'Only Fulfillment can do this', 'w7 the upline cannot schedule it');
-select throws_ok($$ select public.fulfillment_finish_request(public.p_sr_id('a_w'), 'Done') $$, '42501', 'Only Fulfillment can do this', 'w8 nor finish it');
+select throws_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_w'), now() + interval '1 day') $$, '42501', 'Only an admin can do this', 'w7 the upline cannot schedule it');
+select throws_ok($$ select public.fulfillment_finish_request(public.p_sr_id('a_w'), 'Done') $$, '42501', 'Only an admin can do this', 'w8 nor finish it');
 reset role;
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8196-00000000000b","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select throws_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_w'), now() + interval '1 day') $$, '42501', 'Only Fulfillment can do this', 'w9 another agent cannot schedule it');
-select throws_ok($$ select public.fulfillment_finish_request(public.p_sr_id('a_w'), 'Done') $$, '42501', 'Only Fulfillment can do this', 'w10 nor finish it');
+select throws_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_w'), now() + interval '1 day') $$, '42501', 'Only an admin can do this', 'w9 another agent cannot schedule it');
+select throws_ok($$ select public.fulfillment_finish_request(public.p_sr_id('a_w'), 'Done') $$, '42501', 'Only an admin can do this', 'w10 nor finish it');
 reset role;
 select set_config('request.jwt.claims', '', true);
 select is(public.p_sr_row('a_w'), 'requested|-|-|-|-', 'w11 the agents changed nothing');
@@ -505,14 +513,38 @@ select is(public.p_sr_row('a_w'), 'requested|-|-|-|-', 'w11 the agents changed n
 update public.profiles set is_active = false where id = 'bbbbbbbb-bbbb-4bbb-8196-000000000001';
 select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8196-000000000001","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select throws_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_w'), now() + interval '1 day') $$, '42501', 'Only Fulfillment can do this', 'w12 an inactive rep cannot schedule');
-select throws_ok($$ select public.fulfillment_finish_request(public.p_sr_id('a_w'), 'Done') $$, '42501', 'Only Fulfillment can do this', 'w13 nor finish');
+select throws_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_w'), now() + interval '1 day') $$, '42501', 'Only an admin can do this', 'w12 an inactive rep cannot schedule');
+select throws_ok($$ select public.fulfillment_finish_request(public.p_sr_id('a_w'), 'Done') $$, '42501', 'Only an admin can do this', 'w13 nor finish');
 reset role;
 select set_config('request.jwt.claims', '', true);
 update public.profiles set is_active = true where id = 'bbbbbbbb-bbbb-4bbb-8196-000000000001';
 
--- No such row, no task, and a system step.
+-- A rep with access on: VAs use only va_servicing_* now.
 select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8196-000000000001","role":"authenticated"}', true),
+       set_config('role', 'authenticated', true);
+select throws_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_w'), now() + interval '1 day') $$, '42501', 'Only an admin can do this', 'w13a an active rep cannot schedule');
+select throws_ok($$ select public.fulfillment_finish_request(public.p_sr_id('a_w'), 'Done') $$, '42501', 'Only an admin can do this', 'w13b nor finish');
+reset role;
+select set_config('request.jwt.claims', '', true);
+select is(public.p_sr_row('a_w'), 'requested|-|-|-|-', 'w13c the rep changed nothing');
+
+-- A task sent to the agent: admin can't answer around the agent.
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8196-00000000000a","role":"authenticated"}', true),
+       set_config('role', 'authenticated', true);
+select public.p_sr_send('a_w_sent', 'ReqA', 'carrier_call');
+reset role;
+select set_config('request.jwt.claims', '', true);
+update public.servicing_tasks set sent_to_agent_at = now() where id = public.p_sr_id('a_w_sent');
+select set_config('request.jwt.claims', '{"sub":"cccccccc-cccc-4ccc-8196-000000000001","role":"authenticated"}', true),
+       set_config('role', 'authenticated', true);
+select throws_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_w_sent'), now() + interval '1 day') $$, '22023', 'This request is with the agent', 'w13d admin cannot schedule a task sent to the agent');
+select throws_ok($$ select public.fulfillment_finish_request(public.p_sr_id('a_w_sent'), 'Done') $$, '22023', 'This request is with the agent', 'w13e nor finish it');
+select is(public.p_sr_row('a_w_sent'), 'requested|-|-|-|-', 'w13f it is unchanged');
+reset role;
+select set_config('request.jwt.claims', '', true);
+
+-- No such row, no task, and a system step.
+select set_config('request.jwt.claims', '{"sub":"cccccccc-cccc-4ccc-8196-000000000001","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
 select throws_ok($$ select public.fulfillment_schedule_request('99999999-9999-4999-8999-999999999999', now() + interval '1 day') $$, 'P0002', 'Request not found', 'w14 no such request, on schedule');
 select throws_ok($$ select public.fulfillment_finish_request('99999999-9999-4999-8999-999999999999', 'Done') $$, 'P0002', 'Request not found', 'w15 and on finish');
@@ -522,7 +554,7 @@ select throws_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('s
 select throws_ok($$ select public.fulfillment_finish_request(public.p_sr_id('sys_a'), 'Done') $$, '22023', 'This is not a service request', 'w19 nor finished');
 select is(public.p_sr_row('sys_a'), 'requested|-|-|-|-', 'w20 the step is unchanged');
 -- The demo wall, by hand: definer skips RLS.
-select throws_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('d_own'), now() + interval '1 day') $$, 'P0002', 'Request not found', 'w21 a live rep cannot schedule across the wall, same words');
+select throws_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('d_own'), now() + interval '1 day') $$, 'P0002', 'Request not found', 'w21 a live admin cannot schedule across the wall, same words');
 select throws_ok($$ select public.fulfillment_finish_request(public.p_sr_id('d_own'), 'Done') $$, 'P0002', 'Request not found', 'w22 nor finish');
 -- A client's request and a lead-only one are both requests.
 select lives_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_client'), now() + interval '1 day') $$, 'w23 a client''s request can be scheduled');
@@ -540,18 +572,18 @@ select throws_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('d
 select throws_ok($$ select public.fulfillment_finish_request(public.p_sr_id('d_own'), 'Done') $$, 'P0002', 'Request not found', 'w31 nor finish');
 reset role;
 
-select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8196-000000000002","role":"authenticated"}', true),
+select set_config('request.jwt.claims', '{"sub":"cccccccc-cccc-4ccc-8196-000000000002","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select throws_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_w'), now() + interval '1 day') $$, 'P0002', 'Request not found', 'w32 a demo rep cannot schedule a live request');
+select throws_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('a_w'), now() + interval '1 day') $$, 'P0002', 'Request not found', 'w32 a demo admin cannot schedule a live request');
 select throws_ok($$ select public.fulfillment_finish_request(public.p_sr_id('a_w'), 'Done') $$, 'P0002', 'Request not found', 'w33 nor finish one');
 reset role;
 select set_config('request.jwt.claims', '', true);
 select is(public.p_sr_row('a_w'), 'requested|-|-|-|-', 'w34 the live request is unchanged');
 select is(public.p_sr_row('d_own'), 'requested|-|-|-|-', 'w35 and so is the demo one');
 
-select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8196-000000000002","role":"authenticated"}', true),
+select set_config('request.jwt.claims', '{"sub":"cccccccc-cccc-4ccc-8196-000000000002","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select lives_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('d_own'), now() + interval '1 day') $$, 'w36 a demo rep can schedule a demo request');
+select lives_ok($$ select public.fulfillment_schedule_request(public.p_sr_id('d_own'), now() + interval '1 day') $$, 'w36 a demo admin can schedule a demo request');
 select lives_ok($$ select public.fulfillment_finish_request(public.p_sr_id('d_own2'), 'Done') $$, 'w37 and finish one');
 reset role;
 select is((select status from public.servicing_tasks where id = public.p_sr_id('d_own')) || ':' || (select status from public.servicing_tasks where id = public.p_sr_id('d_own2')),

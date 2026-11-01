@@ -11,7 +11,7 @@
 -- A pass there is not a pass on the real stack: it is a stand-in for Supabase.
 --
 -- Cases fire the real action and read the feed. Written directly, and named here: a
--- lapse_save's outcome in e (200 isn't live, so no app role can write it), the source
+-- lapse_save's outcome in e (206 isn't live, so no app role can write it), the source
 -- rows in f and g (the logs the edge functions write), and in i and b the leads from
 -- before this migration, seeded with the trigger off. now() doesn't move inside a
 -- transaction, so a case that needs a time to move backdates the column first.
@@ -352,13 +352,13 @@ select public.p_ae_as('A');
 insert into ids select 'd_req', public.agent_submit_service_request(public.p_ae_i('d_pol'), 'address_change', 'New address', 'morning');
 select is((select concat_ws('|', f.kind, f.title) from public.p_ae_feed() f where f.id = 'servicing_added:' || public.p_ae_i('d_req')),
           'servicing|Request opened: address change.', 'd1 an agent''s request reads opened');
-select public.p_ae_as('V');
+select public.p_ae_owner();
 update public.servicing_tasks set status = 'done' where id = public.p_ae_i('d_req');
 select public.p_ae_as('A');
 select is((select concat_ws('|', f.kind, f.title) from public.p_ae_feed() f where f.id = 'servicing_done:' || public.p_ae_i('d_req')),
           'servicing|Request done: address change.', 'd2 and done');
 select is((select count(*) from public.p_ae_feed() f where (f.meta ->> 'policy_id')::uuid = public.p_ae_i('d_pol')), 2::bigint, 'd3 and only those two: the service_request event stays skipped');
-select public.p_ae_as('V');
+select public.p_ae_owner();
 update public.servicing_tasks set status = 'done' where policy_id = public.p_ae_i('deal') and kind = 'packet_check';
 select public.p_ae_as('A');
 select is((select string_agg(f.title, ',') from public.p_ae_feed() f where (f.meta ->> 'policy_id')::uuid = public.p_ae_i('deal') and f.id like 'servicing_done:%'),
@@ -372,7 +372,7 @@ select public.p_ae_owner();
 
 -- ── e. Lapse ────────────────────────────────────────────────────────────────
 -- Opened by the agent through the RPC, so lapse wording has to beat request wording.
--- Outcome is set directly: 200 isn't live and no app role can write it yet.
+-- Outcome is set directly: 206 isn't live and no app role can write it yet.
 select public.p_ae_policy('e_saved'), public.p_ae_policy('e_lapsed'), public.p_ae_policy('e_cancelled'), public.p_ae_policy('e_none');
 select public.p_ae_as('A');
 insert into ids
