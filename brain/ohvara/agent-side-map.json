@@ -18,10 +18,10 @@
       "title": "agent_products: what each agent has and how much of this week's limit is used",
       "status": "checking",
       "files": [
-        "supabase/migrations/NNN_agent_products.sql",
+        "supabase/migrations/201_agent_products.sql",
         "supabase/tests/p_agent_products.sql"
       ],
-      "notes": "Not applied. Reads plan size and price from the agent_billing_tiers rows (test prices, price_is_test true) and the count from agent_weekly_usage. Checkout's price can differ until Billing goal fe2f2055 moves it. The file keeps the placeholder NNN until the runner reserves its number."
+      "notes": "Not applied. Reads plan size and price from the agent_billing_tiers rows (test prices, price_is_test true) and the count from agent_weekly_usage. Checkout's price can differ until Billing goal fe2f2055 moves it."
     },
     {
       "id": "submit.limit-reads-products",
@@ -29,7 +29,7 @@
       "title": "Submit's limit and the policies trigger read agent_products",
       "status": "checking",
       "files": [
-        "supabase/migrations/NNN_agent_products.sql",
+        "supabase/migrations/201_agent_products.sql",
         "supabase/tests/p_agent_products.sql",
         "supabase/tests/p_submit_servicing.sql",
         "supabase/tests/p_servicing_functions.sql"
