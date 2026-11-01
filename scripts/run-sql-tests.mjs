@@ -807,11 +807,23 @@ async function main() {
   return code
 }
 
-let exitCode = 1
-try {
-  exitCode = await main()
-} catch (e) {
-  console.error(`CRASH: ${e.stack ?? e}`)
-  exitCode = 1
+// For other local test scripts (test-seed-sample.mjs): a PGlite with the stand-in
+// and every migration replayed, in memory, the same way main() builds it.
+export async function replayedDb() {
+  const db = await PGlite.create({ extensions: EXTENSIONS })
+  const available = new Set((await db.query('select name from pg_available_extensions')).rows.map(r => r.name))
+  await db.exec(SUPABASE_STANDIN)
+  const { files, failures } = await replay(db, available)
+  return { db, files, failures }
 }
-process.exit(exitCode)
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  let exitCode = 1
+  try {
+    exitCode = await main()
+  } catch (e) {
+    console.error(`CRASH: ${e.stack ?? e}`)
+    exitCode = 1
+  }
+  process.exit(exitCode)
+}

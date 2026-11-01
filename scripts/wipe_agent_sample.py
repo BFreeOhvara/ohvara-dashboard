@@ -12,9 +12,11 @@ no dependencies. Running the SQL is a separate, checked step at the door
 Order inside the one transaction:
   1. collect the test agent's sample policy ids (is_sample and agent_id = TEST_AGENT);
   2. delete notification_emails queued for those policies' notifications,
-     then the notifications whose data->>'policy_id' is one of them. These
-     two are the ONLY deletes without an is_sample filter: the bell rows are
-     written by triggers and carry no flag, so they are keyed on the ids;
+     then the notifications whose data->>'policy_id' is one of them, or whose
+     link is one of their message threads (146's message rows carry no
+     policy_id). These two are the ONLY deletes without an is_sample filter:
+     the bell rows are written by triggers and carry no flag, so they are keyed
+     on the ids. notification_pushes goes by the cascade from notifications;
   3. delete from lead_sms_replies, help_calls, leads, policies where is_sample
      AND the row belongs to the test agent: leads.assigned_rep_id,
      policies.agent_id, help_calls.transfer_agent_id, and lead_sms_replies
@@ -85,10 +87,14 @@ begin
   if cardinality(v_ids) > 0 and to_regclass('public.notifications') is not null then
     if to_regclass('public.notification_emails') is not null then
       delete from public.notification_emails
-       where notification_id in (select id from public.notifications where data->>'policy_id' = any (v_ids));
+       where notification_id in (select id from public.notifications
+                                  where data->>'policy_id' = any (v_ids)
+                                     or link = any (select '/messages?thread=' || x from unnest(v_ids) x));
       get diagnostics n = row_count; raise notice 'wipe notification_emails: %', n;
     end if;
-    delete from public.notifications where data->>'policy_id' = any (v_ids);
+    delete from public.notifications
+     where data->>'policy_id' = any (v_ids)
+        or link = any (select '/messages?thread=' || x from unnest(v_ids) x);
     get diagnostics n = row_count; raise notice 'wipe notifications: %', n;
   end if;
 
@@ -188,6 +194,8 @@ def check_deletes(sql, errors):
         errors.append('a statement deletes from policy_events')
     if re.search(r'\b(truncate|drop\s+table)\b', body, re.I):
         errors.append('truncate or drop table found')
+    if 'servicing_tasks' not in CASCADED:
+        errors.append('servicing_tasks must go by the cascade from policies and leads')
 
 
 # Built from pieces so a plain grep of this file for keys or URLs stays empty.
@@ -250,6 +258,7 @@ def main():
             f.write(sql)
         print(f'wrote {args.out}', file=sys.stderr)
     else:
+        sys.stdout.reconfigure(newline='\n')
         sys.stdout.write(sql)
 
 
