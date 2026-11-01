@@ -18,11 +18,14 @@
 // consent on the booking, agent opt-in, not opted out, 8 AM–9 PM client time,
 // max 4 per call with the one-time confirmation first.
 //
+// Migration 198: the exact words of each text Twilio took are kept on its
+// recovery_sms_log row (body). The run itself lives in core.ts (sendDue).
+//
 // Twilio credentials: RECOVERY_TWILIO_* if set, else the Caller ID account's
 // CALLER_ID_TWILIO_ACCOUNT_SID / _AUTH_TOKEN.
 import { createClient } from 'npm:@supabase/supabase-js'
 import { isCron } from '../_shared/cronAuth.ts'
-import { compose, confirmation, type Row } from './core.ts'
+import { sendDue, type Deps, type Row } from './core.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,6 +54,35 @@ async function sendSms(to: string, body: string): Promise<{ ok: boolean; sid?: s
   // Status + Twilio's code only (21610 = the number replied STOP); the message can quote the number.
   if (!res.ok) return { ok: false, error: `${res.status} ${data?.code ?? ''}`.trim() }
   return { ok: true, sid: data.sid }
+}
+
+const deps: Deps = {
+  // Each claim function hands back nothing until recovery_config.sms_live is on.
+  async claim(fn) {
+    const { data: rows, error } = await supabase.rpc(fn, { p_limit: 25 })
+    if (error) throw error
+    return (rows ?? []) as Row[]
+  },
+  async mark(fn, r, result) {
+    const { error } = await supabase.rpc(fn, {
+      p_policy: r.policy_id, p_kind: r.kind, p_ok: result.ok,
+      p_sid: result.sid ?? null, p_error: result.error ?? null, p_phone: r.phone,
+    })
+    if (error) console.error(`[recovery-sms] ${fn}`, error.message)
+  },
+  async logConfirm(r, c) {
+    const { error } = await supabase.rpc('sms_log_confirm', {
+      p_policy: r.policy_id, p_ok: c.ok, p_sid: c.sid ?? null, p_error: c.error ?? null, p_phone: r.phone,
+    })
+    if (error) console.error('[recovery-sms] sms_log_confirm', error.message)
+  },
+  send: sendSms,
+  async keepWords(policyId, kind, sid, body) {
+    const { error } = await supabase.from('recovery_sms_log').update({ body })
+      .eq('policy_id', policyId).eq('kind', kind).eq('twilio_sid', sid)
+    if (error) console.error('[recovery-sms] keepWords', error.message)
+  },
+  appUrl: APP_URL,
 }
 
 // The Messaging Service and the numbers in its sender pool.
@@ -87,35 +119,7 @@ Deno.serve(async req => {
 
   try {
     if (!configured) return json({ configured: false, sent: 0 })
-    let claimed = 0, sent = 0, failed = 0
-    // P696 no-answer texts, then P771 missed-by-us apologies. Each claim
-    // function hands back nothing until recovery_config.sms_live is on.
-    for (const [claim, mark] of [['recovery_claim_due', 'recovery_mark_sent'], ['missed_claim_due', 'missed_mark_sent']]) {
-      const { data: rows, error } = await supabase.rpc(claim, { p_limit: 25 })
-      if (error) throw error
-      claimed += rows?.length ?? 0
-      for (const r of (rows ?? []) as Row[]) {
-        // The booking's first text: the registered confirmation goes first.
-        // If it fails, the text waits for the next run (the claim re-offers it
-        // in 15 minutes; after 3 failed confirmations SQL skips the texts).
-        if (r.needs_confirm) {
-          const c = await sendSms(r.phone, confirmation(r.carrier))
-          const { error: cErr } = await supabase.rpc('sms_log_confirm', {
-            p_policy: r.policy_id, p_ok: c.ok, p_sid: c.sid ?? null, p_error: c.error ?? null, p_phone: r.phone,
-          })
-          if (cErr) console.error('[recovery-sms] sms_log_confirm', cErr.message)
-          if (c.ok) sent++; else { failed++; continue }
-        }
-        const result = await sendSms(r.phone, compose(r, APP_URL))
-        const { error: markErr } = await supabase.rpc(mark, {
-          p_policy: r.policy_id, p_kind: r.kind, p_ok: result.ok,
-          p_sid: result.sid ?? null, p_error: result.error ?? null, p_phone: r.phone,
-        })
-        if (markErr) console.error(`[recovery-sms] ${mark}`, markErr.message)
-        if (result.ok) sent++; else failed++
-      }
-    }
-    return json({ configured: true, claimed, sent, failed })
+    return json(await sendDue(deps))
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[recovery-sms]', msg)

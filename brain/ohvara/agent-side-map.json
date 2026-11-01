@@ -343,6 +343,20 @@
       ],
       "notes": "formatDual(iso, agentTz, clientTz) gives 2:00 PM your time / 1:00 PM client; one time when the zones read the same or the client zone is unknown. Client zone: a booking's saved zone, else the state's zone (city lookup for split states).",
       "status": "checking"
+    },
+    {
+      "id": "client-page.recovery-texts",
+      "page": "Client page",
+      "title": "The exact words of every outgoing text are stored at send time",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/198_text_words.sql",
+        "supabase/functions/lead-followup-sms/core.ts",
+        "supabase/functions/lead-workflow-sms/core.ts",
+        "supabase/functions/recovery-sms/core.ts",
+        "supabase/functions/recovery-sms/index.ts"
+      ],
+      "notes": "Never 'live' while sms_live is off: no text goes out, so no words are stored yet. Needs migration 198 (not applied; apply before deploying lead-followup-sms). Words kept only for a text Twilio took: lead_followup_sms_log.body, recovery_sms_log.body, inbound_events.detail.body. Older rows stay null. Inbound replies already kept their body (lead_sms_replies)."
     }
   ]
 }
