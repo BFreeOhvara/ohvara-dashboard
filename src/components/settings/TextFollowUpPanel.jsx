@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { MessageSquareText, Clock } from 'lucide-react'
+import { MessageSquareText, Clock, Check } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useUpdateOwnProfile } from '../../hooks/useSettings'
 import { useRecoveryConfig, useUpdateRecoveryConfig } from '../../hooks/useRecoveryConfig'
 import { Switch } from '../ui/Switch'
 import { SettingsCard, SettingsChip } from '../agent/AgentUI'
+import { TextingNumberCard } from './TextingNumberCard'
 
 // Prompt 696 — Settings → Text follow-up. The agent's one-time consent for
 // the missed-call text flow (migration 122), plus, for an admin, the switch
@@ -27,17 +28,27 @@ export function TextFollowUpPanel({ profile }) {
   const { data: config } = useRecoveryConfig()
   const [confirming, setConfirming] = useState(false)
   const [agreed, setAgreed] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [failed, setFailed] = useState(false)
 
   const optedIn = !!profile.no_answer_sms_opt_in
   const live = !!config?.sms_live
 
   async function setOptIn(next) {
-    await update.mutateAsync({ profileId: profile.id, updates: { no_answer_sms_opt_in: next } })
-    await refreshProfile()
+    setSaved(false); setFailed(false)
+    try {
+      await update.mutateAsync({ profileId: profile.id, updates: { no_answer_sms_opt_in: next } })
+    } catch {
+      setFailed(true)
+      return
+    }
     setConfirming(false); setAgreed(false)
+    setSaved(true); setTimeout(() => setSaved(false), 2000)
+    try { await refreshProfile() } catch { /* saved; the profile refreshes on the next load */ }
   }
 
   function toggle(next) {
+    setSaved(false); setFailed(false)
     if (next) { setConfirming(true); return }
     if (confirming) { setConfirming(false); setAgreed(false); return }
     setOptIn(false)
@@ -66,7 +77,7 @@ export function TextFollowUpPanel({ profile }) {
 
         {confirming && !optedIn && (
           <div className="ov-box" style={{ padding: 16, borderRadius: 14 }}>
-            <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, color: 'var(--ov-hi)', lineHeight: 1.5 }}>
+            <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', minHeight: 44, fontSize: 14, color: 'var(--ov-hi)', lineHeight: 1.5 }}>
               <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} style={{ marginTop: 4 }} />
               I confirm my clients have agreed to receive text messages about their calls, and I'm turning this on for
               all my bookings.
@@ -85,12 +96,23 @@ export function TextFollowUpPanel({ profile }) {
           </div>
         )}
 
+        {failed && (
+          <p role="alert" style={{ margin: 0, fontSize: 13.5, color: 'var(--danger)' }}>Couldn’t save that. Try again.</p>
+        )}
+        {saved && (
+          <span role="status" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13.5, fontWeight: 600, color: 'var(--ov-st-cancelled)' }}>
+            <Check size={15} strokeWidth={2.4} /> Saved
+          </span>
+        )}
+
         {config && !live && (
           <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ov-mute)', lineHeight: 1.5 }}>
             Texting starts for everyone once our SMS number is approved with carriers. Your choice is saved until then.
           </p>
         )}
       </SettingsCard>
+
+      {profile.role === 'agent' && <TextingNumberCard />}
 
       {profile.role === 'admin' && <AdminControls config={config} />}
     </>

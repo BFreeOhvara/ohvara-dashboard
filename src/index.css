@@ -1771,6 +1771,17 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
 .ov-set-link:hover { color: var(--ov-hi); }
 .ov-set-link.is-blue { color: var(--ov-st-booked); }
 
+/* Working hours (Settings → Client contact): a day, its switch and a start / end pair on one row, down to
+   390px; Save stays beside the title on phones instead of stacking under it. */
+.ov-hours-row { display: grid; grid-template-columns: 38px 44px minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; column-gap: 10px; min-height: 60px; padding: 6px 0; }
+.ov-set-right:has(.ov-hours-save) { width: auto; }
+.ov-set-right:has(.ov-hours-save) > .ov-hours-save { flex: none; }
+@media (max-width: 479.98px) {
+  .ov-hours-row { grid-template-columns: 30px 44px minmax(0, 1fr) auto minmax(0, 1fr); column-gap: 6px; }
+  .ov-hours-row .ov-input { padding: 0 8px; gap: 4px; font-size: 14px; }
+  .ov-hours-row .ov-sel-chev { width: 14px; height: 14px; }
+}
+
 /* Two equal columns that stack on phones (password fields, profile fields). */
 .ov-set-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: end; }
 @media (max-width: 639.98px) { .ov-set-2 { grid-template-columns: minmax(0, 1fr); } }
