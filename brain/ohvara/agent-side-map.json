@@ -369,6 +369,18 @@
       ],
       "notes": "Waiting on Brayden: the consent script stays exactly as registered with Twilio (SMS_CONSENT_VERSION v1, migration 157). The client page shows it unchanged and adds no new wording until he approves any change.",
       "status": "checking"
+    },
+    {
+      "id": "leads.reminder-timing",
+      "page": "Leads",
+      "title": "A follow-up comes due for the agent at its date, in the app",
+      "files": [
+        "supabase/migrations/207_lead_outcomes.sql",
+        "supabase/tests/p_lead_outcomes.sql",
+        "src/lib/leadOutcomesMigration.test.js"
+      ],
+      "notes": "migration 207 unapplied. agent_inbounds() returns follow_up_at and follow_up_due (outcome follow_up and follow_up_at <= now()). It is the agent's own reminder: nothing is texted to the lead. No page reads it until task leads-page-ui.",
+      "status": "checking"
     }
   ]
 }
