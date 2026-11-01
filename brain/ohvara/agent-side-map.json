@@ -109,6 +109,17 @@
         "src/lib/activityEventsMigration.test.js"
       ],
       "notes": "Migration 202 (not applied). One log row gives one row: billing_spend_pause when the pause state changed (paused or resumed), else billing_spend_change. An upline gets zero, even passing p_agent; Fulfillment gets zero. billing_subscription stays pending and a plan change needs 201. PENDING_KINDS is unchanged, so the Billing chip stays hidden until that is flipped."
+    },
+    {
+      "id": "request.grant-handoff",
+      "page": "Clients",
+      "title": "A service request moves through functions, not Fulfillment's direct status grant",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/196_service_request_tracking.sql",
+        "supabase/tests/p_service_requests.sql"
+      ],
+      "notes": "Migration 196 (not applied). Fulfillment schedules and finishes an agent request through fulfillment_schedule_request and fulfillment_finish_request, and the agent reads the result in agent_my_service_requests. Fulfillment's direct update (status) grant on servicing_tasks is left as it was in 196; closing it is the next step on the Fulfillment Build Order, Lane A item 2, once the queue functions are live."
     }
   ]
 }
