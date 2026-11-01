@@ -177,6 +177,16 @@
         "src/hooks/useServicingTasks.js"
       ],
       "notes": "3+ characters, ignores case, spaces and dashes, shared by the header, Clients card and phone search."
+    },
+    {
+      "id": "clients.search-box",
+      "page": "Clients",
+      "title": "Phone client search placeholder",
+      "status": "live",
+      "files": [
+        "src/components/agent/phone/PhoneClients.jsx"
+      ],
+      "notes": "The phone placeholder reads \"Name, phone or policy no.\" and fits at 390 width without clipping."
     }
   ]
 }

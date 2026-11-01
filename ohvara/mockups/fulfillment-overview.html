@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>/fulfillment: Overview mockup</title>
+<script>
+(function(){var d=document.documentElement;if(!d.getAttribute('data-theme')){d.setAttribute('data-theme',matchMedia('(prefers-color-scheme: light)').matches?'light':'dark')}})();
+</script>
+<style>
+/* Token block: values copied from ohvara-dashboard/src/index.css (dark :root, light [data-theme="light"],
+   .ov-card/.ov-hero/.ov-attn) and the sibling mockup build-the-va-desk-queue-claim-4-item-che.html.
+   Snapshot; drifts if index.css changes. Every rule below the token block uses var(--...) only.
+   One theme renders per load: data-theme on <html> (set from the system setting unless a tool sets it). */
+:root,[data-theme="dark"]{
+  --ov-hi:#FFFFFF; --ov-mid:#C9D4E8; --ov-soft:#B4C3DE; --ov-mute:#8697B5; --ov-faint:#5E7195;
+  --ov-line:rgba(255,255,255,0.07); --ov-stub:rgba(255,255,255,0.10);
+  --ov-data-a:#7FA6F2; --ov-data-a-tint:rgba(75,121,206,0.18);
+  --ov-data-b:#34E0C4; --ov-data-b-bar:linear-gradient(180deg,#34E0C4,#00A892);
+  --ov-warn:#FBBF24; --ov-warn-tint:rgba(245,158,11,0.16);
+  --danger:#EF4444; --danger-tint:rgba(239,68,68,0.12); --danger-edge:rgba(239,68,68,0.45);
+  --ov-hero-soft:#B4C3DE; --ov-hero-dot:#34E0C4;
+  --ov-page:#07080D;
+  --ov-card-bg:radial-gradient(120% 70% at 0% 0%, rgba(255,255,255,0.045) 0%, transparent 60%), linear-gradient(180deg,#161922 0%,#10121A 100%);
+  --ov-card-edge:rgba(255,255,255,0.09);
+  --ov-card-shadow:inset 0 1px 0 rgba(255,255,255,0.10), 0 24px 48px -28px rgba(0,0,0,0.8);
+  --ov-attn-bg:radial-gradient(ellipse 90% 45% at 50% 0%, rgba(245,158,11,0.16) 0%, transparent 70%), linear-gradient(180deg,#171820 0%,#10121A 100%);
+  --ov-attn-edge:rgba(245,158,11,0.28);
+  --ov-attn-shadow:inset 0 1px 0 rgba(255,255,255,0.10), 0 24px 48px -28px rgba(0,0,0,0.8);
+  --ov-hero-bg:radial-gradient(ellipse 60% 120% at 100% 0%, rgba(75,121,206,0.55) 0%, transparent 65%), radial-gradient(ellipse 40% 90% at 62% 110%, rgba(0,191,166,0.22) 0%, transparent 70%), linear-gradient(135deg,#16294C 0%,#0D1730 60%,#0A1024 100%);
+  --ov-hero-edge:rgba(255,255,255,0.10);
+  --ov-hero-shadow:inset 0 1px 0 rgba(255,255,255,0.10), 0 30px 60px -30px rgba(0,0,0,0.8);
+  --ov-hero-chip:rgba(255,255,255,0.10); --ov-hero-chip-edge:rgba(255,255,255,0.16);
+  --ov-hero-btn-text:#0D1730;
+  --ov-ghost-bg:rgba(255,255,255,0.06); --ov-ghost-edge:rgba(255,255,255,0.14);
+  --ov-white:#FFFFFF;
+  --font-ui:'Manrope',system-ui,sans-serif; --font-display:'Space Grotesk',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+}
+[data-theme="light"]{
+  --ov-hi:#07332E; --ov-mid:#0B4A43; --ov-soft:#2C6159; --ov-mute:#4F7F78; --ov-faint:#7FA59F;
+  --ov-line:rgba(2,79,70,0.12); --ov-stub:rgba(2,79,70,0.14);
+  --ov-data-a:#0A1F44; --ov-data-a-tint:rgba(10,31,68,0.09);
+  --ov-data-b:#00897A; --ov-data-b-bar:linear-gradient(180deg,#19D3B8,#00A892);
+  --ov-warn:#9A4A0B; --ov-warn-tint:#FBE7D2;
+  --danger:#EF4444; --danger-tint:rgba(239,68,68,0.10); --danger-edge:rgba(239,68,68,0.45);
+  --ov-hero-soft:#D6F3EE; --ov-hero-dot:#FFFFFF;
+  --ov-page:#EEF2F3;
+  --ov-card-bg:radial-gradient(120% 70% at 0% 0%, #FFFFFF 0%, rgba(255,255,255,0) 60%), linear-gradient(180deg,#FFFFFF 0%,#F2F7F6 100%);
+  --ov-card-edge:rgba(2,79,70,0.13);
+  --ov-card-shadow:inset 0 1px 0 #FFFFFF, inset 0 -1px 0 rgba(2,79,70,0.05), 0 1px 2px rgba(7,51,46,0.06), 0 24px 48px -28px rgba(7,51,46,0.34);
+  --ov-attn-bg:radial-gradient(ellipse 90% 45% at 50% 0%, rgba(245,158,11,0.16) 0%, transparent 70%), linear-gradient(180deg,#FFFFFF 0%,#FBF6F1 100%);
+  --ov-attn-edge:rgba(154,74,11,0.30);
+  --ov-attn-shadow:inset 0 1px 0 #FFFFFF, 0 1px 2px rgba(7,51,46,0.06), 0 24px 48px -28px rgba(122,54,8,0.36);
+  --ov-hero-bg:radial-gradient(ellipse 60% 120% at 100% 0%, rgba(52,224,196,0.55) 0%, transparent 65%), radial-gradient(ellipse 40% 90% at 60% 110%, rgba(10,31,68,0.45) 0%, transparent 70%), linear-gradient(135deg,#00917D 0%,#026B5E 55%,#024F46 100%);
+  --ov-hero-edge:rgba(255,255,255,0.25);
+  --ov-hero-shadow:inset 0 1px 0 rgba(255,255,255,0.25), 0 30px 60px -30px rgba(2,79,70,0.6);
+  --ov-hero-chip:rgba(255,255,255,0.16); --ov-hero-chip-edge:rgba(255,255,255,0.28);
+  --ov-hero-btn-text:#024F46;
+  --ov-ghost-bg:#F3F8F7; --ov-ghost-edge:rgba(2,79,70,0.20);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{overflow-x:hidden}
+body{background:var(--ov-page);color:var(--ov-hi);font-family:var(--font-ui);font-size:15px;line-height:1.45}
+button{font:inherit;color:inherit}
+a{color:inherit}
+.tab{font-variant-numeric:tabular-nums}
+.money{font-family:var(--font-mono);font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
+h1,h2,h3,.disp{font-family:var(--font-display);font-weight:600}
+.sub{color:var(--ov-mute);font-size:13.5px}
+.grow{flex:1;min-width:0;overflow-wrap:anywhere}
+svg{flex-shrink:0}
+
+/* ---------- mockup furniture ---------- */
+.sec{padding-bottom:36px}
+.sec-label{max-width:1240px;margin:0 auto;padding:22px 24px 0;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;color:var(--ov-mute);font-size:13px}
+.sec-label b{color:var(--ov-hi);font-family:var(--font-display);font-size:15px}
+.apphead{max-width:1240px;margin:0 auto;padding:18px 24px 16px}
+.apphead h1{font-size:30px;letter-spacing:-0.02em}
+.page{max-width:1240px;margin:0 auto;padding:0 24px}
+.grid{display:grid;gap:20px;grid-template-columns:minmax(0,1fr)}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+@media (min-width:1100px){
+  .grid.split{grid-template-columns:400px minmax(0,1fr);align-items:start}
+  .grid.two-col{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);align-items:start}
+}
+
+/* ---------- surfaces ---------- */
+.ov-card{border-radius:20px;background:var(--ov-card-bg);border:1px solid var(--ov-card-edge);box-shadow:var(--ov-card-shadow);padding:20px;min-width:0}
+.ov-attn{border-radius:20px;background:var(--ov-attn-bg);border:1px solid var(--ov-attn-edge);box-shadow:var(--ov-attn-shadow);padding:20px;min-width:0}
+.ov-hero{border-radius:24px;background:var(--ov-hero-bg);border:1px solid var(--ov-hero-edge);box-shadow:var(--ov-hero-shadow);color:var(--ov-white);padding:24px;min-width:0}
+.ov-hero .sub{color:var(--ov-hero-soft)}
+.ov-ghost{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;min-width:44px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;border:1px solid var(--ov-ghost-edge);background:var(--ov-ghost-bg);color:var(--ov-hi)}
+.btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 22px;border-radius:999px;font-size:14.5px;font-weight:700;cursor:pointer;border:1px solid var(--ov-hero-edge);background:var(--ov-hero-bg);color:var(--ov-white);box-shadow:var(--ov-hero-shadow)}
+.btn-primary[disabled]{opacity:.45;cursor:not-allowed}
+.ov-skel{display:block;border-radius:8px;background:var(--ov-stub)}
+.tile{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--ov-data-a-tint);color:var(--ov-data-a);flex-shrink:0}
+.tile.err{background:var(--danger-tint);color:var(--danger)}
+.rule{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;border:1px solid var(--ov-line);background:var(--ov-ghost-bg);color:var(--ov-mid);font-size:13.5px;font-weight:600}
+.ov-hero .rule{border-color:var(--ov-hero-chip-edge);background:var(--ov-hero-chip);color:var(--ov-white)}
+.info{padding:12px 14px;border-radius:14px;border:1px solid var(--ov-line);background:var(--ov-ghost-bg);color:var(--ov-mid);font-size:13.5px;font-weight:600}
+.inline-err{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;padding:10px 12px;border-radius:14px;border:1px solid var(--danger-edge);background:var(--danger-tint);color:var(--danger);font-size:13.5px;font-weight:600}
+.inline-err span{flex:1 1 200px;min-width:0}
+.inline-err a{display:inline-flex;align-items:center;min-height:44px;font-weight:700;text-decoration:underline}
+.empty{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:26px 22px}
+.empty h3{font-size:19px}
+.card-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.card-h h2{font-size:19px}
+.card-h .ov-ghost{margin-left:auto}
+.lab{font-size:13.5px;font-weight:700;color:var(--ov-mid)}
+.lab .sub{font-weight:500}
+
+/* ---------- hero ---------- */
+.hero-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ph{display:inline-flex;align-items:center;gap:8px;color:var(--ov-hero-soft);font-size:13.5px;font-weight:600}
+.ph i{width:8px;height:8px;border-radius:50%;background:var(--ov-hero-dot)}
+.hero-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;background:var(--ov-hero-chip);border:1px solid var(--ov-hero-chip-edge);color:var(--ov-white);font-size:13.5px;font-weight:600;text-decoration:none;cursor:pointer}
+.hero-call{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 20px;border-radius:999px;background:var(--ov-white);border:0;color:var(--ov-hero-btn-text);font-size:14.5px;font-weight:700;text-decoration:none;cursor:pointer}
+.hero-name{margin-top:14px;font-size:30px;line-height:1.15;letter-spacing:-0.02em;overflow-wrap:anywhere}
+.hero-big{margin-top:14px;font-size:46px;line-height:1.05;letter-spacing:-0.035em}
+.hero-mid{display:flex;align-items:flex-end;justify-content:space-between;gap:14px 20px;flex-wrap:wrap;margin:16px 0}
+.clock{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.clock b{font-family:var(--font-display);font-size:52px;line-height:1;font-weight:600;letter-spacing:-0.035em}
+.clock span{font-family:var(--font-display);font-size:19px;font-weight:600}
+.hchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.hchip{display:inline-flex;align-items:center;min-height:28px;padding:0 12px;border-radius:999px;background:var(--ov-hero-chip);border:1px solid var(--ov-hero-chip-edge);font-size:13px;font-weight:600}
+.hero-acts{display:flex;flex-wrap:wrap;gap:10px}
+
+/* ---------- count tiles ---------- */
+.counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.counts.four{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.count{padding:14px 14px 12px;border-radius:18px}
+.count p{font-size:12.5px;font-weight:600;color:var(--ov-mute);overflow-wrap:anywhere}
+.count b{display:block;margin-top:4px;font-family:var(--font-display);font-size:34px;line-height:1;font-weight:600;letter-spacing:-0.035em}
+a.job{display:flex;flex-direction:column;gap:6px;min-height:104px;padding:16px 18px;text-decoration:none;color:inherit}
+a.job .top{display:flex;align-items:center;gap:10px}
+a.job .top h3{font-size:15px;color:var(--ov-mid);overflow-wrap:anywhere}
+a.job b{font-family:var(--font-display);font-size:40px;line-height:1;font-weight:600;letter-spacing:-0.035em}
+a.job .sub{font-size:13px}
+.ov-attn.job b{color:var(--ov-warn)}
+.ov-attn .qn{background:var(--ov-warn-tint);color:var(--ov-warn)}
+
+/* ---------- lists ---------- */
+.qsec{padding:16px 8px 8px}
+.qsec-h{display:flex;align-items:center;gap:10px;padding:0 10px 8px}
+.qsec-h h2{font-size:18px}
+.qn{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 8px;border-radius:999px;background:var(--ov-stub);color:var(--ov-mid);font-size:13px;font-weight:700}
+.qrow{display:flex;align-items:center;gap:12px;width:100%;min-height:64px;padding:10px;border:1px solid transparent;border-radius:14px;background:transparent;text-align:left;cursor:pointer;text-decoration:none;color:inherit}
+.qrow + .qrow{border-top-color:var(--ov-line);border-radius:0 0 14px 14px}
+.qrow .nm{display:block;font-size:15px;font-weight:700;color:var(--ov-hi);overflow-wrap:anywhere}
+.qrow .meta{display:block;margin-top:1px;font-size:13px;color:var(--ov-mute)}
+.qrow .due{display:block;margin-top:2px;font-size:13px;font-weight:700;color:var(--ov-warn)}
+.qrow .chev{color:var(--ov-faint)}
+.qrow.mine{background:var(--ov-data-a-tint);border-color:var(--ov-data-a);border-radius:14px}
+.qrow.mine + .qrow{border-top-color:transparent}
+.qrow.wait{opacity:.5;cursor:default}
+.kind{display:inline-flex;align-items:center;min-height:24px;padding:0 10px;border-radius:999px;background:var(--ov-stub);color:var(--ov-mid);font-size:12px;font-weight:700;white-space:nowrap}
+.kind.warn{background:var(--ov-warn-tint);color:var(--ov-warn)}
+.kind.blue{background:var(--ov-data-a-tint);color:var(--ov-data-a)}
+.yours{display:inline-flex;align-items:center;min-height:26px;padding:0 10px;border-radius:999px;background:var(--ov-data-a);color:var(--ov-page);font-size:12px;font-weight:700;white-space:nowrap}
+.qempty{padding:6px 10px 10px;font-size:13.5px;color:var(--ov-mute)}
+.qnote{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:14px;border:1px solid var(--ov-line);background:var(--ov-ghost-bg);color:var(--ov-mid);font-size:13.5px;font-weight:600}
+.qnote span{flex:1;min-width:0}
+.claiming{font-size:12.5px;font-weight:600;color:var(--ov-mute);white-space:nowrap}
+
+/* ---------- chips and tabs ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid var(--ov-ghost-edge);background:var(--ov-ghost-bg);color:var(--ov-hi);font-size:14px;font-weight:600;cursor:pointer}
+.chip .qn{height:22px;min-width:22px;font-size:12px}
+.chip.on{border-color:var(--ov-data-a);background:var(--ov-data-a-tint);color:var(--ov-data-a)}
+.seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:6px;border-radius:999px;border:1px solid var(--ov-card-edge);background:var(--ov-ghost-bg);max-width:460px}
+.seg button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid transparent;background:transparent;font-size:14.5px;font-weight:700;color:var(--ov-mute);cursor:pointer}
+.seg button.on{background:var(--ov-data-a-tint);border-color:var(--ov-data-a);color:var(--ov-data-a)}
+.seg .qn{height:22px;min-width:22px;font-size:12px}
+
+/* ---------- checklist, options, outcome ---------- */
+.prog{font-family:var(--font-display);font-size:19px;font-weight:600;color:var(--ov-mid)}
+.saved{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--ov-mute);white-space:nowrap}
+.saved.err{color:var(--danger)}
+.bar{height:8px;border-radius:999px;background:var(--ov-stub);overflow:hidden;margin:12px 0 4px}
+.bar i{display:block;height:100%;border-radius:999px;background:var(--ov-data-b-bar)}
+.q{margin-top:18px}
+.ql{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--ov-mid)}
+.tick{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--ov-faint);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.q.done .tick{background:var(--ov-data-b);border-color:var(--ov-data-b);color:var(--ov-page)}
+.opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.opt{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--ov-ghost-edge);background:var(--ov-ghost-bg);color:var(--ov-hi);font-size:14px;font-weight:600;cursor:pointer}
+.opt.on{border-color:var(--ov-data-a);background:var(--ov-data-a-tint);color:var(--ov-data-a)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.sel{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:48px;margin-top:10px;padding:0 14px;border-radius:14px;border:1px solid var(--ov-ghost-edge);background:var(--ov-ghost-bg);color:var(--ov-hi);font-size:15px;font-weight:600;text-align:left;cursor:pointer}
+.sel svg{color:var(--ov-mute)}
+.field{display:block;width:100%;min-height:96px;margin-top:10px;padding:12px 14px;border-radius:14px;border:1px solid var(--ov-ghost-edge);background:var(--ov-ghost-bg);color:var(--ov-hi);font:inherit;font-size:15px;resize:vertical}
+.door{margin-top:20px;border:1.5px dashed var(--ov-faint);background:var(--ov-stub);color:var(--ov-mute);border-radius:14px;padding:14px;text-align:center;font-size:13px}
+.door b{display:block;color:var(--ov-mid);font-size:14px;margin-bottom:2px}
+.picks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.pick{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-height:76px;padding:12px 14px;border-radius:16px;border:1px solid var(--ov-ghost-edge);background:var(--ov-ghost-bg);text-align:left;cursor:pointer}
+.pick b{font-size:15px;color:var(--ov-hi)}
+.pick span{font-size:12.5px;color:var(--ov-mute);line-height:1.35}
+.pick.on{border-color:var(--ov-data-a);background:var(--ov-data-a-tint)}
+.pick.on b{color:var(--ov-data-a)}
+.pick[disabled]{opacity:.45;cursor:not-allowed}
+.lock{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13.5px;font-weight:600;color:var(--ov-mute)}
+.panel-o{margin-top:18px;padding-top:18px;border-top:1px solid var(--ov-line);display:flex;flex-direction:column;gap:14px}
+.agents{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:8px;margin-top:8px}
+.agent{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 12px;border-radius:14px;border:1px solid var(--ov-line);background:var(--ov-ghost-bg);text-align:left;cursor:pointer;width:100%}
+.agent.on{border-color:var(--ov-data-a);background:var(--ov-data-a-tint)}
+.av{width:36px;height:36px;border-radius:50%;background:var(--ov-stub);color:var(--ov-mid);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:none}
+.agent.on .av{background:var(--ov-data-a);color:var(--ov-page)}
+.agent .nm{display:block;font-weight:700;font-size:14.5px;color:var(--ov-hi);overflow-wrap:anywhere}
+.agent .meta{display:block;font-size:12.5px;color:var(--ov-mute)}
+.days{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:8px}
+.day{min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:14px;border:1px solid var(--ov-line);background:var(--ov-ghost-bg);color:var(--ov-mid);font-size:12.5px;font-weight:600;cursor:pointer}
+.day b{font-family:var(--font-display);font-size:18px;color:var(--ov-hi)}
+.day.on{border-color:var(--ov-data-a);background:var(--ov-data-a-tint);color:var(--ov-data-a)}
+.day.on b{color:var(--ov-data-a)}
+.slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}
+.slot{min-height:44px;border-radius:12px;border:1px solid var(--ov-line);background:var(--ov-ghost-bg);color:var(--ov-hi);font-size:14px;font-weight:600;cursor:pointer}
+.slot.on{border-color:var(--ov-data-a);background:var(--ov-data-a-tint);color:var(--ov-data-a)}
+.slot.taken{color:var(--ov-faint);border-style:dashed;background:transparent;cursor:not-allowed}
+.o-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.o-foot .sub{flex:1 1 220px;min-width:0}
+.steps{list-style:none;margin-top:14px;display:flex;flex-direction:column}
+.steps li{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-top:1px solid var(--ov-line)}
+.steps li:first-child{border-top:0}
+.steps .tick{margin-top:1px}
+.steps li.done .tick{background:var(--ov-data-b);border-color:var(--ov-data-b);color:var(--ov-page)}
+.steps li.now .tick{border-color:var(--ov-data-a);background:var(--ov-data-a-tint)}
+.steps b{display:block;font-size:14.5px;color:var(--ov-hi)}
+.steps .sub{display:block}
+.done-o{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.done-o h3{font-size:19px}
+.pay-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--ov-line)}
+.pay-row:first-of-type{border-top:0}
+.pay-row .money{font-size:18px;font-weight:600}
+.big-money{display:block;margin-top:6px;font-size:40px;line-height:1;font-weight:600}
+.todo{display:flex;align-items:center;gap:12px;min-height:64px;padding:10px;border-radius:14px;text-decoration:none;color:inherit;border:1px solid transparent}
+.todo + .todo{border-top-color:var(--ov-line);border-radius:0 0 14px 14px}
+.todo .when{font-size:13px;font-weight:700;color:var(--ov-mid);white-space:nowrap}
+
+/* ---------- gallery ---------- */
+.gal-h{max-width:1240px;margin:8px auto 12px;padding:0 24px}
+.gal-h h2{font-size:22px;letter-spacing:-0.01em}
+.gallery{max-width:1240px;margin:0 auto;padding:0 24px;display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));align-items:start}
+.gp{display:flex;flex-direction:column;gap:10px;min-width:0}
+.gp>.cap-l{font-size:13px;font-weight:700;color:var(--ov-mute);padding-left:4px}
+.gp .picks{grid-template-columns:minmax(0,1fr)}
+.gp .slots{grid-template-columns:repeat(3,minmax(0,1fr))}
+.notes{max-width:1240px;margin:10px auto 0;padding:16px 24px 40px;border-top:1px solid var(--ov-line);color:var(--ov-mute);font-size:13px}
+.notes b{color:var(--ov-hi)}
+.notes li{margin:5px 0 5px 18px}
+.notes code{font-family:var(--font-mono);font-size:12px;color:var(--ov-mid)}
+
+@media (max-width:1099.98px){
+  .held .qcol{display:none}
+}
+@media (max-width:767.98px){
+  .apphead{padding:16px 14px 12px}
+  .apphead h1{font-size:24px}
+  .page,.gallery,.gal-h,.sec-label,.notes{padding-left:14px;padding-right:14px}
+  .grid,.col{gap:14px}
+  .ov-card,.ov-attn{border-radius:18px;padding:16px}
+  .ov-hero{border-radius:22px;padding:20px 18px}
+  .qsec{padding:14px 6px 6px}
+  .count{padding:12px 12px 10px}
+  .count b{font-size:30px}
+  .counts.four{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  a.job{padding:14px;min-height:96px}
+  a.job b{font-size:34px}
+  .hero-name{font-size:24px}
+  .hero-big{font-size:32px}
+  .clock b{font-size:40px}
+  .clock span{font-size:17px}
+  .card-h h2,.qsec-h h2,.empty h3,.done-o h3{font-size:18px}
+  .hero-acts{width:100%;display:grid;grid-template-columns:minmax(0,1fr)}
+  .hero-call{width:100%}
+  .two{grid-template-columns:minmax(0,1fr);gap:0}
+  .picks{grid-template-columns:minmax(0,1fr)}
+  .pick{min-height:64px}
+  .slots{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .day{min-height:56px}
+  .btn-primary{width:100%}
+  .big-money{font-size:34px}
+  .seg{max-width:none}
+}
+</style>
+</head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.01"/></g></symbol>
+  <symbol id="i-err" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></g></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></g></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/></g></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></g></symbol>
+  <symbol id="i-wave" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h2M8 8v8M12 5v14M16 8v8M20 12h-2"/></g></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4z"/></g></symbol>
+</svg>
+<section class="sec" data-mock-page="Overview">
+  <div class="sec-label"><b>Fulfillment Overview</b><span>/fulfillment · the four jobs, what to do next, My pay</span></div>
+  <header class="apphead"><h1>Overview</h1></header>
+  <div class="page"><div class="col" style="gap:20px">
+
+    <section class="ov-hero" aria-label="Today">
+      <div class="hero-top"><span class="ph"><i></i>Sunday, Nov 1 · 3:15 PM</span></div>
+      <h2 class="hero-big">Good afternoon, Alex</h2>
+      <div class="hero-mid">
+        <div><div class="clock"><b class="tab">12</b><span>things to do today</span></div><p class="sub" style="margin-top:6px">Next up: a callback for Riley Sample at 3:30 PM.</p></div>
+        <div class="hero-acts"><a class="hero-call" href="#next"><svg width="18" height="18"><use href="#i-phone"/></svg>Start the next one</a></div>
+      </div>
+      <p class="rule"><svg width="18" height="18"><use href="#i-info"/></svg>Logistics only. Any coverage question goes to a licensed agent.</p>
+    </section>
+
+    <div class="counts four" aria-label="The four jobs">
+      <a class="ov-card job" href="#live"><span class="top"><span class="tile"><svg width="20" height="20"><use href="#i-wave"/></svg></span><h3>Live calls waiting</h3></span><b class="tab">0</b><span class="sub">Live calls are switched off for now.</span></a>
+      <a class="ov-attn job" href="#callbacks"><span class="top"><span class="tile"><svg width="20" height="20"><use href="#i-phone"/></svg></span><h3>Callbacks due</h3></span><b class="tab">4</b><span class="sub">Oldest was due 2:45 PM.</span></a>
+      <a class="ov-card job" href="#noshows"><span class="top"><span class="tile"><svg width="20" height="20"><use href="#i-cal"/></svg></span><h3>No-shows to rebook</h3></span><b class="tab">2</b><span class="sub">Rebook inside the hour.</span></a>
+      <a class="ov-card job" href="#servicing"><span class="top"><span class="tile"><svg width="20" height="20"><use href="#i-clip"/></svg></span><h3>Servicing due</h3></span><b class="tab">6</b><span class="sub">3 due today, 3 coming up.</span></a>
+    </div>
+
+    <div class="grid two-col">
+      <section class="ov-card qsec" id="next" aria-label="What to do next">
+        <div class="qsec-h"><h2>What to do next</h2><span class="qn tab">12</span></div>
+        <a class="todo" href="#"><span class="kind warn">Callback</span><span class="grow"><span class="nm" style="font-weight:700">Riley Sample</span><span class="meta sub" style="display:block">Ohio · Policy help · asked for 3:30 PM</span></span><span class="when tab">3:30 PM</span><svg class="chev" width="18" height="18" style="color:var(--ov-faint)"><use href="#i-chev"/></svg></a>
+        <a class="todo" href="#"><span class="kind blue">Rebook</span><span class="grow"><span class="nm" style="font-weight:700">Casey Demo</span><span class="meta sub" style="display:block">Missed a 2:00 PM appointment · 1st rebook try</span></span><span class="when tab">By 3:00 PM</span><svg class="chev" width="18" height="18" style="color:var(--ov-faint)"><use href="#i-chev"/></svg></a>
+        <a class="todo" href="#"><span class="kind">Servicing</span><span class="grow"><span class="nm" style="font-weight:700">Packet check · Jordan Placeholder</span><span class="meta sub" style="display:block">Carrier Placeholder A · effective Nov 4</span></span><span class="when tab">Today</span><svg class="chev" width="18" height="18" style="color:var(--ov-faint)"><use href="#i-chev"/></svg></a>
+        <a class="todo" href="#"><span class="kind">Servicing</span><span class="grow"><span class="nm" style="font-weight:700">Payment check, month 3 of 12 · Maximiliana-Alexandrina Featherstonehaugh-Worthington</span><span class="meta sub" style="display:block">Carrier Placeholder B</span></span><span class="when tab">Today</span><svg class="chev" width="18" height="18" style="color:var(--ov-faint)"><use href="#i-chev"/></svg></a>
+        <a class="todo" href="#"><span class="kind warn">Lapse save</span><span class="grow"><span class="nm" style="font-weight:700">Sam Example</span><span class="meta sub" style="display:block">Missed October payment · due in 1 business day</span></span><span class="when tab">Mon</span><svg class="chev" width="18" height="18" style="color:var(--ov-faint)"><use href="#i-chev"/></svg></a>
+        <a class="todo" href="#"><span class="grow"><span class="nm" style="font-weight:700;color:var(--ov-data-a)">See the other 7</span></span><svg class="chev" width="18" height="18" style="color:var(--ov-faint)"><use href="#i-chev"/></svg></a>
+      </section>
+
+      <section class="ov-card" aria-label="My pay">
+        <div class="card-h"><h2>My pay</h2><a class="ov-ghost" href="#">Open My pay</a></div>
+        <span class="money big-money">$84.00</span>
+        <p class="sub" style="margin-top:6px">Verified this week · test values</p>
+        <div style="margin-top:12px">
+          <div class="pay-row"><span class="sub">Old policies confirmed cancelled</span><span class="money">$60.00</span></div>
+          <div class="pay-row"><span class="sub">Waiting on verification</span><span class="money">$24.00</span></div>
+          <div class="pay-row"><span class="sub">Paid out</span><span class="money">$0.00</span></div>
+        </div>
+        <p class="info" style="margin-top:12px">Payouts are off for now. Verified pay keeps adding up here.</p>
+      </section>
+    </div>
+  </div></div>
+</section>
+
+<section class="sec" data-mock-page="Overview states">
+  <div class="gal-h"><h2>Overview states</h2><p class="sub">Each panel is one piece of the page in that state.</p></div>
+  <div class="gallery">
+    <div class="gp"><p class="cap-l">1 · Loading</p>
+      <div class="ov-hero" aria-busy="true"><span class="ov-skel" style="width:140px;height:14px;opacity:.6"></span><span class="ov-skel" style="width:60%;height:34px;margin:16px 0 12px;opacity:.6"></span><span class="ov-skel" style="width:150px;height:44px;opacity:.6"></span></div>
+      <div class="counts" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="ov-card count"><span class="ov-skel" style="width:70%;height:14px"></span><span class="ov-skel" style="width:40px;height:30px;margin-top:10px"></span></div><div class="ov-card count"><span class="ov-skel" style="width:70%;height:14px"></span><span class="ov-skel" style="width:40px;height:30px;margin-top:10px"></span></div></div>
+    </div>
+    <div class="gp"><p class="cap-l">2 · All caught up</p>
+      <div class="ov-card empty"><span class="tile"><svg width="20" height="20"><use href="#i-check"/></svg></span><h3>You're all caught up</h3><p class="sub">No callbacks, rebooks or servicing steps are due. New ones show up here on their own.</p></div>
+      <div class="counts" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="ov-card count"><p>Callbacks due</p><b class="tab">0</b></div><div class="ov-card count"><p>Servicing due</p><b class="tab">0</b></div></div>
+    </div>
+    <div class="gp"><p class="cap-l">3 · Couldn't load</p>
+      <div class="ov-card empty" role="alert"><span class="tile err"><svg width="20" height="20"><use href="#i-err"/></svg></span><h3>We couldn't load your day</h3><p class="sub">Nothing was changed. Check your connection and try again.</p><button class="ov-ghost">Try again</button></div>
+    </div>
+    <div class="gp"><p class="cap-l">4 · Live calls on (voice_live) and a call waiting</p>
+      <a class="ov-attn job" style="display:flex" href="#live"><span class="top"><span class="tile"><svg width="20" height="20"><use href="#i-wave"/></svg></span><h3>Live calls waiting</h3></span><b class="tab">1</b><span class="sub">Rings on any page. Answer opens the call panel.</span></a>
+      <p class="sub" style="padding:0 4px">Mocked off, as live today. The switch is never flipped from this page.</p>
+    </div>
+    <div class="gp"><p class="cap-l">5 · My pay, nothing verified yet</p>
+      <section class="ov-card"><div class="card-h"><h2>My pay</h2></div><span class="money big-money">$0.00</span><p class="sub" style="margin-top:6px">Nothing verified this week yet. Confirmed cancels show up here.</p></section>
+    </div>
+  </div>
+</section>
+
+<div class="notes"><b>Design note for Finn (build from this)</b><ul>
+<li><b>Route:</b> <code>/fulfillment</code> (the existing Overview). Fulfillment role; admin gets the same page for the whole team (copy swaps "your" for "the team's"). Phone layout keeps the Today fold (<code>usePhoneLayout</code>).</li>
+<li><b>Layout:</b> v16. Hero (46px greeting, 32px on phones, count clock 52px / 40px), then four job tiles (4 across, 2 across on phones), then What to do next (left, 1.5fr) and My pay (right, 1fr) from 1100px; stacked below that. Max width 1240px.</li>
+<li><b>The four jobs:</b> Live calls waiting, Callbacks due, No-shows to rebook, Servicing due. One count function returns all four plus the next list (Fulfillment Build Order, Lane A item 7). Each tile links to its desk: Leads desk (Live calls tab), Leads desk (Callback), Leads desk (Appointments, no-show filter), Servicing. Live calls shows 0 and the line "Live calls are switched off for now" while <code>voice_live</code> is off; the tile never flips the switch.</li>
+<li><b>Colour:</b> tokens only. Amber (<code>.ov-attn</code>) only on a tile with something due and the "Callback" / "Lapse save" chips. Green only on the caught-up tick. Selected or link accent is <code>--ov-data-a</code>.</li>
+<li><b>My pay:</b> money in JetBrains Mono (<code>.money</code>), big figure 40px / 34px on phones. Test values only; rates are read from settings and are Brayden's. The "Payouts are off" line shows while <code>payouts_live</code> is off. No pay line for appointments, transfers or servicing until rates are set.</li>
+<li><b>What to do next:</b> top 5 by due time across the four jobs, then "See the other N". Rows are 64px+ links to the item on its desk. Long client names wrap.</li>
+<li><b>Nothing goes out:</b> no button here sends a text, email or call.</li>
+<li><b>Phones (390):</b> every control is 44px or taller, tiles in 2 columns, nothing scrolls sideways.</li>
+<li><b>Mockup only:</b> names, carriers and amounts are made-up samples. Fonts fall back to system fonts and the backdrop dot grid isn't drawn; the real app gets both from <code>DashboardLayout</code>. The phone and desktop layouts come from the same page: open it at 390 and at 1440 to see each.</li>
+</ul></div>
+
+</body></html>
