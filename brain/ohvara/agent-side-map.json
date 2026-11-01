@@ -13,6 +13,30 @@
       "notes": "Data layer only, read only. useOverviewBook() returns { book, submissions, steps: { dueSoon, doneByDay }, hasLeads, hasServicing, isLoading, isError, refetch }; the return shape is documented at the top of the hook. Book needs migration 193 (agent_clients); until it is applied book.available is false and the numbers are null. Saves need servicing_tasks.outcome (193) and read 0 until then. Spec: brain/ohvara/Agent Portal Servicing Spec.md, Overview."
     },
     {
+      "id": "billing.agent-products-fn",
+      "page": "Billing",
+      "title": "agent_products: what each agent has and how much of this week's limit is used",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/201_agent_products.sql",
+        "supabase/tests/p_agent_products.sql"
+      ],
+      "notes": "Not applied. Reads plan size and price from the agent_billing_tiers rows (test prices, price_is_test true) and the count from agent_weekly_usage. Checkout's price can differ until Billing goal fe2f2055 moves it."
+    },
+    {
+      "id": "submit.limit-reads-products",
+      "page": "Submit",
+      "title": "Submit's limit and the policies trigger read agent_products",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/201_agent_products.sql",
+        "supabase/tests/p_agent_products.sql",
+        "supabase/tests/p_submit_servicing.sql",
+        "supabase/tests/p_servicing_functions.sql"
+      ],
+      "notes": "Not applied. At the limit Submit and a direct insert raise usage_text, hint weekly_cap. Leads-only stays hint no_servicing. A VA booking is not refused and counts toward the agent's limit. SubmitDeal.jsx:170 adds its own reset sentence after the message, so the reset day repeats."
+    },
+    {
       "id": "client-page.contact-log-view",
       "page": "Client page",
       "title": "Every text and call to the client: when, words or call result, who",

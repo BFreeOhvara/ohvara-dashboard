@@ -15,7 +15,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(133);
+select plan(134);
 
 -- ── seed (as the table owner) ───────────────────────────────────────────────
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -270,6 +270,7 @@ select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8195-0000000
        set_config('role', 'authenticated', true);
 select is(public.p_sf_many(7), 7, 'c22 agent C uses all 7 of the week''s deals');
 select is(public.p_sf_hint($$ select public.p_sf_deal('Eighth') $$), 'weekly_cap', 'c23 the 8th is refused by the cap');
+select throws_ok($$ select public.p_sf_deal('Eighth') $$, 'P0001', '7 of 7 used this week, resets Monday', 'c23a in the words agent_products builds');
 reset role;
 select set_config('request.jwt.claims', '', true);
 update public.app_settings set agent_billing_enforced = false where id = 1;

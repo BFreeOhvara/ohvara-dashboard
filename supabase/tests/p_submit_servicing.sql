@@ -15,8 +15,8 @@
 -- (Prompt 725), and comped agents sit on Premium (16). So the 8th goes through for
 -- a comped agent on Premium and the 17th is refused, and a comped agent left on
 -- Standard is refused at the 8th. That is what the trigger does, and the RPC
--- mirrors the trigger. 188 later stopped the trigger refusing, so only the RPC's
--- own check still does (b3 to b7).
+-- mirrors the trigger. 188 stopped the trigger refusing; the agent_products migration
+-- restored it, so the RPC and a direct insert refuse in the same words (b3 to b7).
 --
 -- Cast: agent A (Standard, 7), agent B (A's competitor for (d)), agent C
 -- (has_servicing off), agent D (comped, Premium), agent E (comped, Standard),
@@ -237,14 +237,14 @@ select is(public.p_submit_many(6), 6, 'b1 deals 2 to 7 go through with the cap o
 select is((select used from public.agent_weekly_usage()), 7, 'b2 agent A is at 7');
 select is(public.p_submit_hint($$ select public.p_submit_no('Eighth') $$), 'weekly_cap', 'b3 the 8th is refused with hint weekly_cap');
 select throws_ok($$ select public.p_submit_no('Eighth') $$, 'P0001',
-                 'Weekly submission cap reached: 7 of 7 used this week on the Standard plan.', 'b4 errcode P0001 and the same words as the trigger');
+                 '7 of 7 used this week, resets Monday', 'b4 errcode P0001 and the same words as the trigger');
 select is(public.p_submit_hint($$ select public.p_submit_yes('Eighth', public.p_submit_slot(10)) $$), 'weekly_cap', 'b5 a Yes deal is refused too');
 select is(public.p_submit_hint($$ insert into public.policies (agent_id, client_first_name, client_last_name, fulfillment_assigned,
                                     carrier_id, carrier_name, client_timezone, scheduled_call_at)
                                   values ('aaaaaaaa-aaaa-4aaa-8aaa-00000000000a', 'Direct', 'Eighth', true,
                                     'dddddddd-dddd-4ddd-8ddd-000000000001', 'P Submit Leaving Life', 'America/Chicago', public.p_submit_slot(11)) $$),
-          'no error', 'b6 the direct insert is not capped: 188 stopped the trigger refusing');
-select is((select used from public.agent_weekly_usage()), 8, 'b7 the RPC''s refusals used nothing: 7 plus that direct insert');
+          'weekly_cap', 'b6 the direct insert is refused too: the trigger reads agent_products');
+select is((select used from public.agent_weekly_usage()), 7, 'b7 the refusals used nothing: still 7');
 reset role;
 
 update public.app_settings set agent_billing_enforced = false where id = 1;
