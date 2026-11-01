@@ -11,6 +11,36 @@
         "src/lib/overviewBook.test.js"
       ],
       "notes": "Data layer only, read only. useOverviewBook() returns { book, submissions, steps: { dueSoon, doneByDay }, hasLeads, hasServicing, isLoading, isError, refetch }; the return shape is documented at the top of the hook. Book needs migration 193 (agent_clients); until it is applied book.available is false and the numbers are null. Saves need servicing_tasks.outcome (193) and read 0 until then. Spec: brain/ohvara/Agent Portal Servicing Spec.md, Overview."
+    },
+    {
+      "id": "client-page.contact-log-view",
+      "page": "Client page",
+      "title": "Every text and call to the client: when, words or call result, who",
+      "status": "checking",
+      "files": [
+        "supabase/tests/contact_log_agent_scope.sql"
+      ],
+      "notes": "contact_log is not on master yet: it is NEXT_contact_log.sql on atlas/ab139968, with no number. No competing function written, so migration 199 is unused so far. Agent-scope test is written and passes against that branch's file in the local stand-in. Gaps still open after it lands: words from 198 (lead_followup_sms_log.body, recovery_sms_log.body, inbound_events.detail.body), label, text status, has_recording, is_sample."
+    },
+    {
+      "id": "client-page.fulfillment-call",
+      "page": "Client page",
+      "title": "Fulfillment and cancellation calls show on the client's contact log",
+      "status": "checking",
+      "files": [
+        "supabase/tests/contact_log_agent_scope.sql"
+      ],
+      "notes": "Never 'live' while voice_live is off. Covered by contact_log's two client call sources on atlas/ab139968 once it lands: policy_events (no_answer, in_progress, cancelled) and fulfillment_voice_legs (party client). Not on master yet."
+    },
+    {
+      "id": "client-page.call-recording",
+      "page": "Client page",
+      "title": "A call on the client page says when a recording exists",
+      "status": "checking",
+      "files": [
+        "supabase/tests/contact_log_agent_scope.sql"
+      ],
+      "notes": "Never 'live' while recording_live is off. Not covered yet: contact_log has no has_recording. Source is fulfillment_recordings (145), one row per call_sid with status ready. Admin only: its RLS and fulfillment-recording both refuse agents, so an agent gets at most the true/false, never the audio."
     }
   ]
 }
