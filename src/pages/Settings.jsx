@@ -31,6 +31,7 @@ import {
 import { ProfilePanel } from './Profile'
 import { TextFollowUpPanel } from '../components/settings/TextFollowUpPanel'
 import { DutyCard } from '../components/settings/DutyCard'
+import { AgentAvailabilityCards } from '../components/settings/AgentAvailabilityCards'
 import { FulfillmentPayAdminPanel } from '../components/fulfillment/GettingPaid'
 import Carriers from './admin/Carriers'
 
@@ -57,7 +58,7 @@ const SECTIONS = [
   { key: 'preferences', label: 'Preferences',        sub: 'Theme and time zone',          icon: SlidersHorizontal, lede: 'How the portal looks and keeps time for you.' },
   // Prompt 767 — the bell panel's "Notification settings".
   { key: 'notifications', label: 'Notifications',    sub: 'Email and phone alerts',       icon: Bell,              lede: 'Everything shows in the bell. Choose what also comes by email or to your phone.' },
-  { key: 'contact',     label: 'Client contact',     sub: 'Caller ID and text follow-up', icon: PhoneForwarded,    lede: 'How Fulfillment reaches your clients for you.', roles: ['agent', 'admin'] },
+  { key: 'contact',     label: 'Client contact',     sub: 'Hours, live-transfer phone, caller ID, texts', icon: PhoneForwarded,    lede: 'How Fulfillment reaches your clients for you.', roles: ['agent', 'admin'] },
   { key: 'team',        label: 'Team tools',         sub: 'Live Room, pay, App Review', icon: Wrench,           lede: 'Company-wide settings only admins can change.', roles: ['admin'] },
   // Prompt 758 — Carrier hours left the admin sidebar and lives here.
   { key: 'carriers',    label: 'Carrier hours',      sub: 'When each carrier takes calls', icon: Building2,        lede: 'Service hours set the bookable times in Submit.', roles: ['admin'] },
@@ -164,7 +165,7 @@ export default function Settings() {
         {open === 'security'    && <SecuritySection profile={profile} />}
         {open === 'preferences' && <PreferencesSection profile={profile} />}
         {open === 'notifications' && <NotificationsSection profile={profile} />}
-        {open === 'contact'     && <>{profile.role === 'agent' && <DutyCard />}<CallerIdPanel profile={profile} /><TextFollowUpPanel profile={profile} /></>}
+        {open === 'contact'     && <>{profile.role === 'agent' && <><DutyCard /><AgentAvailabilityCards /></>}<CallerIdPanel profile={profile} /><TextFollowUpPanel profile={profile} /></>}
         {open === 'team'        && <><LiveRoomCard /><SubmitLiveCard /><FulfillmentPayAdminPanel /><AppReviewLoginsCard /></>}
         {open === 'carriers'    && <Carriers />}
       </div>
