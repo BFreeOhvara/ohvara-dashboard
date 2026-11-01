@@ -1,4 +1,4 @@
--- p_va_servicing — pgTAP checks for 200_va_servicing.sql: the VA servicing queue,
+-- p_va_servicing — pgTAP checks for 206_va_servicing.sql: the VA servicing queue,
 -- claims, the no-skipping rule, the locked-down RLS, sending to the agent, the
 -- events and the demo wall.
 --

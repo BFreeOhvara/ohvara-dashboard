@@ -1,11 +1,13 @@
--- 200 — VA servicing queue: a VA picks up a client's step, works it, records what
+-- 206 — VA servicing queue: a VA picks up a client's step, works it, records what
 -- happened and passes coverage or advice questions to the agent.
 --
 -- NOT APPLIED. Written from a worktree; applying it is Brayden's apply step. It
 -- changes RLS, so the merge guard asks him. It applies only after
--- 193_servicing_model.sql and 195_servicing_functions.sql: its first statement stops
--- the whole file if either is missing, or 196, whose kind list and schedule function
--- this builds on. 196 and 202 are live, so this applies after them.
+-- 193_servicing_model.sql, 195_servicing_functions.sql, 196_service_request_tracking.sql
+-- and 202_activity_events.sql: its first statement stops the whole file if any is missing.
+-- It was written as 200 and moved here so that it sorts after 202, whose feed it carries:
+-- at 200 a fresh replay ends with 202's feed and loses this file's two lines. 202's header
+-- still calls this file 200; an old migration is never edited.
 -- agent_activity_feed is copied whole from 202, policy_servicing_status from 193 and
 -- fulfillment_schedule_request from 196, their newest versions, with only the lines
 -- named below changed. policy_events_kind_check keeps every value from 187 and adds one.
@@ -103,7 +105,9 @@
 -- for admin too. 193's servicing_tasks_demo_wall stays as it is, so agent and admin
 -- reads don't change. Two things follow, both only for sample rows on a non-demo agent:
 -- that agent can't clear a sent one (add_servicing_note's refusal), and a demo VA's
--- direct read can't see one on a policy, though the queue shows it.
+-- direct read can't see one on a policy, though the queue shows it. 196's two admin-only
+-- functions keep 196's own wall, not this rule, so a live admin can still act on a sample
+-- row of a live agent and on a demo agent's lead-only request.
 --
 -- EVENTS. schedule, outcome, done, cancel, send and clear each write one row, kind
 -- servicing, detail { label, action, task_id, task_kind, outcome }, label from a fixed
@@ -133,13 +137,16 @@
 do $$
 begin
   if to_regclass('public.policy_servicing_status') is null then
-    raise exception '200 needs 193_servicing_model applied first';
+    raise exception '206 needs 193_servicing_model applied first';
   end if;
   if to_regclass('public.servicing_task_notes') is null then
-    raise exception '200 needs 195_servicing_functions applied first';
+    raise exception '206 needs 195_servicing_functions applied first';
   end if;
   if to_regprocedure('public.fulfillment_schedule_request(uuid, timestamptz)') is null then
-    raise exception '200 needs 196_service_request_tracking applied first';
+    raise exception '206 needs 196_service_request_tracking applied first';
+  end if;
+  if to_regprocedure('public.log_lead_call_events()') is null then
+    raise exception '206 needs 202_activity_events applied first';
   end if;
 end $$;
 
@@ -175,7 +182,7 @@ alter table public.servicing_tasks add constraint servicing_tasks_outcome_check 
 comment on table public.servicing_tasks is
   'Every servicing step and every request on a client. Written only by set_inbound_outcome, agent_submit_service_request, agent_submit_deal, fulfillment_schedule_request, fulfillment_finish_request, the va_servicing_* functions, agent_servicing_clear_sent and the service role. A request doesn''t count against the weekly cap.';
 comment on column public.servicing_tasks.outcome is
-  'How the step ended, one closed list per kind (migration 200). A lapse_save: saved, lapsed or client_cancelled.';
+  'How the step ended, one closed list per kind (migration 206). A lapse_save: saved, lapsed or client_cancelled.';
 comment on column public.servicing_tasks.outcome_note is
   'An admin''s words on how a request ended, set only by fulfillment_finish_request. The agent reads outcome on a VA-worked request, and this only when an admin finished the request.';
 comment on column public.servicing_tasks.cancel_reason is 'Why it was cancelled. Never copied into an event.';

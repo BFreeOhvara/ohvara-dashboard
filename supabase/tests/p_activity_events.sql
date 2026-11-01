@@ -11,7 +11,7 @@
 -- A pass there is not a pass on the real stack: it is a stand-in for Supabase.
 --
 -- Cases fire the real action and read the feed. Written directly, and named here: a
--- lapse_save's outcome in e (200 isn't live, so no app role can write it), the source
+-- lapse_save's outcome in e (206 isn't live, so no app role can write it), the source
 -- rows in f and g (the logs the edge functions write), and in i and b the leads from
 -- before this migration, seeded with the trigger off. now() doesn't move inside a
 -- transaction, so a case that needs a time to move backdates the column first.
@@ -372,7 +372,7 @@ select public.p_ae_owner();
 
 -- ── e. Lapse ────────────────────────────────────────────────────────────────
 -- Opened by the agent through the RPC, so lapse wording has to beat request wording.
--- Outcome is set directly: 200 isn't live and no app role can write it yet.
+-- Outcome is set directly: 206 isn't live and no app role can write it yet.
 select public.p_ae_policy('e_saved'), public.p_ae_policy('e_lapsed'), public.p_ae_policy('e_cancelled'), public.p_ae_policy('e_none');
 select public.p_ae_as('A');
 insert into ids
