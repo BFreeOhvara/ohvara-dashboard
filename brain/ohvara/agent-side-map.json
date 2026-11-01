@@ -391,9 +391,12 @@
         "src/lib/activityFilters.test.js",
         "src/pages/agent/Activity.jsx",
         "src/lib/clientPageLog.js",
-        "src/lib/clientPageLog.test.js"
+        "src/lib/clientPageLog.test.js",
+        "supabase/migrations/209_activity_lapse_events.sql",
+        "supabase/tests/p_activity_lapse_events.sql",
+        "src/lib/activityLapseMigration.test.js"
       ],
-      "notes": "UI: feed kind lapsed shows an amber Lapsed pill under the Clients filter, its drawer story ends on Policy lapsed marked done with no pending Old policy cancelled, and the client page log titles it Policy lapsed. Built against the agreed kind with fixtures; the feed rows come from the lapse migration, not applied yet.",
+      "notes": "Migration 209 written, not applied: a trigger on policies writes policy_events kind lapsed when status really changes to Lapsed, and the feed shows it as kind lapsed, 'Policy lapsed. Payments stopped.'. Nothing signed in can set Lapsed yet (147 and 149 dropped direct updates, and no RPC does it), so the row won't show in normal use until one exists. UI: feed kind lapsed shows an amber Lapsed pill under the Clients filter, its drawer story ends on Policy lapsed marked done with no pending Old policy cancelled, and the client page log titles it Policy lapsed. Built against the agreed kind with fixtures; the feed rows come from the lapse migration, not applied yet.",
       "status": "checking"
     },
     {
