@@ -1652,7 +1652,7 @@ const ellipsis = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'elli
 // `recentMeta`, `recentSub(p)`, `recentEmpty`, and `recentPill` (the status pill).
 export function ClientSearch({
   rows, recentRows = rows, onOpen, hotkey = true,
-  tabFn = tabOf, phraseFn = searchPhrase, sub = 'Searches everyone you’ve booked, whatever their status.',
+  tabFn = tabOf, phraseFn = searchPhrase, sub = 'Searches everyone you’ve booked by name, phone, policy number or carrier, whatever their status.',
   recent: recentList, recentTitle = 'Recently booked', recentMeta = 'Click to open', recentSub, recentEmpty = 'Nobody booked yet', recentPill = true,
 }) {
   const input = useRef(null)
@@ -1702,7 +1702,7 @@ export function ClientSearch({
           <input
             ref={input} type="search" value={query} autoComplete="off" spellCheck={false}
             className="text-[15px]"
-            placeholder="Name, phone, city or carrier" aria-label="Find any client"
+            placeholder="Name, phone, policy number or carrier" aria-label="Find any client"
             role="combobox" aria-expanded={open} aria-controls="ov-search-results" aria-autocomplete="list"
             aria-activedescendant={open && shown[active] ? `ov-search-${shown[active].id}` : undefined}
             onChange={e => { setQuery(e.target.value); setHi(0) }}

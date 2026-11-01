@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fullName } from './policyFormat'
+import { fullName } from './policyFormat.js'
 
 // Agent portal (Prompt 665) — one place that decides where a booked client
 // stands, so Overview, My Clients and Performance can't disagree.
@@ -175,9 +175,17 @@ export function isBooking(p) {
 
 export const digits = s => String(s || '').replace(/\D/g, '')
 
+// A policy number matches when the query, 3+ characters, appears in it once case, spaces,
+// dashes and other punctuation are ignored ('ABC-123 45' is found by 'abc12345').
+const squash = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+export function policyNumberMatches(policyNumber, query) {
+  const q = squash(query)
+  return q.length >= 3 && squash(policyNumber).includes(q)
+}
+
 // Client search (Prompt 717, shared with the header search by Prompt 722):
 // name, carrier, city (Prompt 726) and agent name contain the query, or 3+ typed digits appear in
-// the phone number. Sorted by name, numeric-aware.
+// the phone number, or 3+ characters appear in the policy number. Sorted by name, numeric-aware.
 export function matchClients(rows, query) {
   const q = String(query || '').trim().toLowerCase()
   if (!q) return []
@@ -185,7 +193,7 @@ export function matchClients(rows, query) {
   return (rows || [])
     .filter(p => {
       const hay = [p.client_first_name, p.client_last_name, p.current_carrier, p.client_city, p.agent?.full_name].filter(Boolean).join(' ').toLowerCase()
-      return hay.includes(q) || (qd.length >= 3 && digits(p.client_phone).includes(qd))
+      return hay.includes(q) || (qd.length >= 3 && digits(p.client_phone).includes(qd)) || policyNumberMatches(p.policy_number, q)
     })
     .sort((a, b) => fullName(a).localeCompare(fullName(b), undefined, { numeric: true }))
 }
