@@ -49,6 +49,48 @@
       "notes": "Never 'live' while recording_live is off. Covered in 199 by has_recording: true on a client leg whose conference (conference_sid, same policy) has a fulfillment_recordings row with status ready. An agent gets only the true/false, never the audio, sid or id, and no grant was added. Before recording_live goes on: fulfillment-voice's leg callback sets conference_sid to null when Twilio sends none, which would keep this false."
     },
     {
+      "id": "client-page.contact-log-card",
+      "page": "Client page",
+      "title": "Texts and calls card: every text and call with the full words, both time zones, All / Texts / Calls",
+      "status": "checking",
+      "files": [
+        "src/hooks/useClientContactLog.js",
+        "src/components/agent/ClientPageLog.jsx",
+        "src/components/agent/clientPageLog.css",
+        "src/lib/clientPageLog.js",
+        "src/lib/clientPageLog.test.js"
+      ],
+      "notes": "ContactLogCard calls rpc contact_log (migration 199) with p_client_key / p_lead. Words show when stored, otherwise the row label. A missing function shows a quiet muted note, any other failure shows the error with Try again. Not mounted yet: the client-page task mounts it."
+    },
+    {
+      "id": "client-page.team-thread",
+      "page": "Client page",
+      "title": "Team thread card: the client thread with Fulfillment, switcher for several policies, composer",
+      "status": "checking",
+      "files": [
+        "src/hooks/useClientContactLog.js",
+        "src/components/agent/ClientPageLog.jsx",
+        "src/components/agent/clientPageLog.css",
+        "src/lib/clientPageLog.js",
+        "src/lib/clientPageLog.test.js"
+      ],
+      "notes": "TeamThreadCard reads useThreadMessages and sends through the existing useSendMessage (policy_messages). Opens on the newest policy. Not mounted yet: the client-page task mounts it."
+    },
+    {
+      "id": "client-page.client-activity",
+      "page": "Client page",
+      "title": "Activity card: calls booked, tried and finished on the client, newest first",
+      "status": "checking",
+      "files": [
+        "src/hooks/useClientContactLog.js",
+        "src/components/agent/ClientPageLog.jsx",
+        "src/components/agent/clientPageLog.css",
+        "src/lib/clientPageLog.js",
+        "src/lib/clientPageLog.test.js"
+      ],
+      "notes": "ClientActivityCard reads policy_events for the client policies, newest first, 50 at most. Not mounted yet: the client-page task mounts it."
+    },
+    {
       "id": "activity.submitted-row",
       "page": "Activity",
       "title": "A submit shows as one row: Submitted for servicing",
