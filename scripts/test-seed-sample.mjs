@@ -618,7 +618,7 @@ async function main() {
   const liveFlip = await fresh(base)
   await mustRun(liveFlip, seedSql, 'the seed')
   check('o16', 'the file holds the stop rules Brayden asked for, before section 1',
-    ['any unflagged policy', 'row d reads false', 'row f lists anything', 'row g lists anything', 'clearly the test fulfillment login', 'NOT IN THE AUDIT', 'does not start with PASS'].every(s => door.indexOf(s) > -1 && door.indexOf(s) < door.indexOf('-- ===== SECTION 1:')))
+    ['FOR EAGLE', 'in the approvals record', 'any unflagged policy', 'row d reads false', 'row f lists anything', 'row g lists anything', 'clearly the test fulfillment login', 'NOT IN THE AUDIT', 'does not start with PASS'].every(s => door.indexOf(s) > -1 && door.indexOf(s) < door.indexOf('-- ===== SECTION 1:')))
   const flags = await one(liveFlip, 'select sms_live from public.recovery_config')
   check('o14', 'the seed leaves sms_live off', flags.sms_live === false)
   await liveFlip.close()
