@@ -1,4 +1,4 @@
--- 198 — Keep the exact words of every outgoing text, so an agent can see what
+-- 207 — Keep the exact words of every outgoing text, so an agent can see what
 -- was said to their client. Until now the logs kept only stage or kind, status
 -- and sid; older rows cannot be rebuilt, so they stay null.
 --

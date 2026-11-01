@@ -73,7 +73,7 @@ test('an unknown sample throws instead of inventing a text', () => {
   assert.throws(() => compose(row({ sample: 'pm' as never }), APP))
 })
 
-// ── the words: every text Twilio took keeps them on its log row (198) ───────
+// ── the words: every text Twilio took keeps them on its log row (207) ───────
 type LogRow = { policy_id: string; kind: string; ok: boolean; twilio_sid: string | null; error: string | null; body: string | null }
 
 // A fake database and Twilio: mark / logConfirm write rows the way the SQL

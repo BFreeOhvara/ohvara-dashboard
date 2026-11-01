@@ -29,7 +29,7 @@ export type Sender = { from_number: string; messaging_service_sid: string | null
 export type LogRow = {
   lead_id: string; stage: Stage | null; status: Status
   to_phone?: string | null; from_number?: string | null; twilio_sid?: string | null; error?: string | null
-  body?: string | null           // the exact words sent; only on a 'sent' row (198)
+  body?: string | null           // the exact words sent; only on a 'sent' row (207)
 }
 
 export type Deps = {
