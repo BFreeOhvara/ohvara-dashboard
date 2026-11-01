@@ -51,7 +51,8 @@ function DealPage() {
 
 function RequestPage() {
   const navigate = useNavigate()
-  return <ServiceRequest onBack={toChooser(navigate)} />
+  const [params] = useSearchParams()
+  return <ServiceRequest onBack={toChooser(navigate)} policyId={params.get('policy')} />
 }
 
 const ellipsis = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }

@@ -25,6 +25,7 @@ import Messages from './pages/Messages'
 import AgentOverview from './pages/agent/Overview'
 import AgentSubmit from './pages/agent/Submit'
 import AgentClients from './pages/agent/Clients'
+import AgentClientPage from './pages/agent/ClientPage'
 import AgentActivity from './pages/agent/Activity'
 import AgentBilling from './pages/agent/Billing'
 import AgentMore from './pages/agent/More'
@@ -186,6 +187,13 @@ export default function App() {
             <Route path="/agent/clients" element={
               <ProtectedRoute allowedRoles={['agent', 'admin']}>
                 <AdminTo to="/admin/pipeline"><DashboardLayout><AgentClients /></DashboardLayout></AdminTo>
+              </ProtectedRoute>
+            } />
+            {/* One client: policies, servicing, every text and call, the team thread. :clientId is
+                a lead id or a booking id (the same id My Pipeline's ?client= takes). */}
+            <Route path="/agent/clients/:clientId" element={
+              <ProtectedRoute allowedRoles={['agent', 'admin']}>
+                <AdminTo to="/admin/pipeline"><DashboardLayout><AgentClientPage /></DashboardLayout></AdminTo>
               </ProtectedRoute>
             } />
             {/* Prompt 690 — Activity: chronological log (policy_events +

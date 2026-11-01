@@ -235,3 +235,13 @@ export async function resolveClientTimezone(city, stateCode, { signal, fetchImpl
     signal?.removeEventListener('abort', onAbort)
   }
 }
+
+// A time in the agent's zone with the client's beside it: '2:00 PM your time / 1:00 PM client'.
+// One time when the client's zone is unknown or reads the same clock ('2:00 PM your time').
+export function formatDual(iso, agentTz, clientTz) {
+  if (!iso || Number.isNaN(new Date(iso).getTime())) return ''
+  const clock = tz => new Date(iso).toLocaleTimeString('en-US', { timeZone: tz || DEFAULT_TIMEZONE, hour: 'numeric', minute: '2-digit' })
+  const mine = clock(agentTz)
+  const theirs = clientTz ? clock(clientTz) : ''
+  return theirs && theirs !== mine ? `${mine} your time / ${theirs} client` : `${mine} your time`
+}

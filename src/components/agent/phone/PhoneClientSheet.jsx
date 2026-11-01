@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Phone, MapPin, ShieldCheck, MessageSquare } from 'lucide-react'
 import { fullName } from '../../../lib/policyFormat'
 import { digits, tabOf, stageOf, isSubmittedOnly } from '../../../lib/agentBookings'
@@ -93,6 +94,8 @@ export function PhoneClientSheet({ p, now, steps, note, footer, picker, onMessag
               <span style={{ flex: 1, minWidth: 0 }}><span className="ph-info-k">{isSubmittedOnly(p) ? 'Old policy' : 'Carrier they’re leaving'}</span><span className="ph-info-v">{isSubmittedOnly(p) ? 'None to cancel' : carrier || 'Not noted'}</span></span>
             </div>
           </div>
+
+          <Link className="ov-ghost" to={`/agent/clients/${p.id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, marginTop: 14, borderRadius: 999, fontSize: 14, fontWeight: 600 }}>Open client page</Link>
 
           {note && <p style={{ margin: '14px 2px 0', fontSize: 13.5, lineHeight: 1.5, color: 'var(--ov-soft)' }}>{note}</p>}
 

@@ -187,6 +187,58 @@
         "src/components/agent/phone/PhoneClients.jsx"
       ],
       "notes": "The phone placeholder reads \"Name, phone or policy no.\" and fits at 390 width without clipping."
+    },
+    {
+      "id": "client-page.route",
+      "page": "Client page",
+      "title": "/agent/clients/:clientId: one page per client, with the Servicing plan gate",
+      "files": [
+        "src/pages/agent/ClientPage.jsx",
+        "src/App.jsx",
+        "src/lib/portalAccess.js",
+        "src/lib/portalAccess.test.js",
+        "src/components/layout/DashboardLayout.jsx",
+        "src/components/layout/PhoneShell.jsx"
+      ],
+      "notes": "Route beside /agent/clients (agent + admin, AdminTo /admin/pipeline). :clientId is a lead id or a booking id. Unknown id shows Client not found with a back link. gateView counts /agent/clients/<id> as a Servicing page. Drawer and phone sheet link to it. Shots and checks: qa/goal-check-134a9cda/shots.mjs.",
+      "status": "checking"
+    },
+    {
+      "id": "client-page.request-button",
+      "page": "Client page",
+      "title": "Request a service from the client page: opens the request form with this client picked",
+      "files": [
+        "src/components/agent/ClientsV2Parts.jsx",
+        "src/pages/agent/Submit.jsx",
+        "src/pages/agent/ServiceRequest.jsx",
+        "src/pages/agent/ClientPage.jsx"
+      ],
+      "notes": "Shown only when submit_live is on and the agent has Servicing. Link /agent/submit?kind=request&policy=<newest policy id>. ServiceRequest preselects it and looks up a lead client's new policy (useClientPolicies); an unknown id leaves the normal picker. A lead with no policy yet shows it disabled: Available once the policy is placed. The old Coming soon button is gone.",
+      "status": "checking"
+    },
+    {
+      "id": "client-page.policy-timeline",
+      "page": "Client page",
+      "title": "One card per policy: carrier, product, premium, dates and the servicing timeline",
+      "files": [
+        "src/pages/agent/ClientPage.jsx",
+        "src/components/agent/clientsV2Parts.css",
+        "src/hooks/useServicingTasks.js"
+      ],
+      "notes": "Each step shows its done date or scheduled time; chargeback watch is month n of 12. Open requests have their own card with status. Draft dates are not stored on policies, so only Effective, Placed and Replaced show. The Text consent card shows only for bookings with policies.sms_consent true, with the existing script and no new wording.",
+      "status": "checking"
+    },
+    {
+      "id": "client-page.both-time-zones",
+      "page": "Client page",
+      "title": "Times in the agent's zone with the client's beside it",
+      "files": [
+        "src/lib/timezones.js",
+        "src/lib/timezones.test.js",
+        "src/pages/agent/ClientPage.jsx"
+      ],
+      "notes": "formatDual(iso, agentTz, clientTz) gives 2:00 PM your time / 1:00 PM client; one time when the zones read the same or the client zone is unknown. Client zone: a booking's saved zone, else the state's zone (city lookup for split states).",
+      "status": "checking"
     }
   ]
 }

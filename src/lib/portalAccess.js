@@ -75,5 +75,5 @@ export function gateView(state, pathname) {
     if (state.self) return WELCOME_PASS.includes(pathname) ? 'open' : 'welcome'
     return PAUSED_PASS.includes(pathname) ? 'open' : 'paused'
   }
-  return state.needsServicing && SERVICING_PAGES.includes(pathname) ? 'servicing' : 'open'
+  return state.needsServicing && (SERVICING_PAGES.includes(pathname) || pathname.startsWith('/agent/clients/')) ? 'servicing' : 'open'
 }
