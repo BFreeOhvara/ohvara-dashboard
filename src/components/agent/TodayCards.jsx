@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
-import { Phone, ChevronRight, ArrowRight, Zap, CalendarDays, CalendarClock, Info, Inbox, MessageSquare } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Phone, ChevronRight, ArrowRight, Zap, CalendarDays, CalendarClock, Info, Inbox, MessageSquare, Check } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useInbounds, useInboundEvents, useMembershipTier, useWaitingTexts } from '../../hooks/useInbounds'
 import { useAgentDuty } from '../../hooks/useAgentDuty'
@@ -79,11 +79,44 @@ function useTextsWaiting() {
 
 // The Overview's side box with Today's Texts waiting folded in: amber while a client or a
 // text needs the agent, otherwise the calm "You're all caught up" box.
-export function AttentionWithTexts({ items, loading, upcoming, now, onGo, fit }) {
+export function AttentionWithTexts({ items, loading, upcoming, now, onGo, fit, slim }) {
   const { rows } = useTextsWaiting()
   return loading || items.length > 0 || rows.length > 0
-    ? <AttentionCard items={items} loading={loading} onGo={onGo} texts={loading ? [] : rows} fit={fit} />
-    : <ComingUpCard upcoming={upcoming} now={now} onGo={onGo} fit={fit} />
+    ? <AttentionCard items={items} loading={loading} onGo={onGo} texts={loading ? [] : rows} fit={fit} slim={slim} />
+    : <ComingUpCard upcoming={upcoming} now={now} onGo={onGo} fit={fit} slim={slim} />
+}
+
+// Appointments still ahead today, for the hero's line when an agent has Leads and no servicing.
+export function useAppointmentsLeftToday() {
+  const { tz, inb, now, appts } = useToday()
+  const count = appts.filter(a => a.l.inbound_stage === 'booked' && sameDay(a.at, now, tz) && new Date(a.at) >= now).length
+  return { count, loading: inb.isLoading, failed: inb.isError }
+}
+
+// The sixth card of the Leads-only Overview: the amber Texts waiting box, or a calm one when there are none.
+function TextsPanel({ fit }) {
+  const navigate = useNavigate()
+  const { rows, isLoading, isError, refetch } = useTextsWaiting()
+  if (isError) {
+    return (
+      <section className="ov-card tc-card tc-a-texts" aria-label="Texts waiting">
+        <Head icon={MessageSquare} title="Texts waiting" />
+        <LoadError what="your texts" onRetry={refetch} style={{ marginTop: 14 }} />
+      </section>
+    )
+  }
+  if (isLoading || rows.length > 0) {
+    return <div className="tc-a-texts tc-panel"><AttentionCard items={[]} loading={isLoading} onGo={navigate} texts={rows} fit={fit} /></div>
+  }
+  return (
+    <section className="ov-card tc-card tc-a-texts" aria-label="Texts waiting">
+      <div className="tc-head">
+        <span className="tc-calm"><Check size={18} strokeWidth={2} aria-hidden="true" /></span>
+        <div className="tc-grow"><h2 className="tc-title">You&rsquo;re all caught up</h2><p className="tc-sub">No texts waiting.</p></div>
+      </div>
+      <p className="tc-body">Replies from your leads show here as soon as they come in. You don&rsquo;t need to refresh.</p>
+    </section>
+  )
 }
 
 function NextAppointment({ appts, now, tz, evMap, loading, failed, onRetry }) {
@@ -298,7 +331,7 @@ export function TodayStrip() {
   const dutyLive = !dutyLoading && !soon && !dutyFailed
 
   return (
-    <section className="ov-card tcs" aria-label="Today">
+    <section className="ov-card tcs" data-ov="today-strip" aria-label="Today">
       <div className="tcs-seg tcs-next">
         <span className="tcs-tile"><CalendarClock size={16} strokeWidth={2} aria-hidden="true" /></span>
         <div className="tcs-t">
@@ -336,7 +369,7 @@ export function TodayStrip() {
   )
 }
 
-export function TodayCards({ showTexts = false }) {
+export function TodayCards({ showTexts = false, fitGrid = false }) {
   const { tz, inb, now, evMap, list, appts } = useToday()
   const today = appts.filter(a => sameDay(a.at, now, tz))
   const recent = list.filter(l => isRecent(l, tz, now.getTime()))
@@ -347,7 +380,7 @@ export function TodayCards({ showTexts = false }) {
   const retry = () => inb.refetch()
 
   return (
-    <section className={`tc-grid${showTexts ? ' tc-grid--texts' : ''}`} aria-label="Your leads today">
+    <section className={`tc-grid${showTexts || fitGrid ? ' tc-grid--texts' : ''}${fitGrid ? ' tc-grid--fit' : ''}`} data-ov="leads-grid" aria-label="Your leads today">
       <NextAppointment appts={appts} now={now} tz={tz} evMap={evMap} loading={loading} failed={failed} onRetry={retry} />
 
       <DutyCard tz={tz} />
@@ -386,7 +419,7 @@ export function TodayCards({ showTexts = false }) {
             ) : <Note icon={Inbox}>No new leads yet. They show up here as soon as they come in. You don&rsquo;t need to refresh.</Note>}
       </section>
 
-      {showTexts && <TextsCard />}
+      {fitGrid ? <TextsPanel fit /> : showTexts && <TextsCard />}
     </section>
   )
 }

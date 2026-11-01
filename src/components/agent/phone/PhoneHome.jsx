@@ -5,26 +5,26 @@ import { useWeeklyUsage } from '../../../hooks/useBillingTiers'
 import { capState, formatReset } from '../../../lib/billing'
 import { agentStageOf } from '../../../lib/agentBookings'
 import { fullName } from '../../../lib/policyFormat'
-import { timeText } from '../../../lib/fulfillmentDay'
 import { DEFAULT_TIMEZONE } from '../../../lib/timezones'
 import { NotificationBell } from '../../notifications/NotificationBell'
 import { Avatar } from '../../ui/Avatar'
 import { LiveDot } from '../../ui/LiveDot'
 import { LoadError } from '../AgentUI'
-import { dayTile, untilText } from './phoneBits'
+import { BookRow, ComingUpSteps, StepsDoneChart } from '../OverviewBlocks'
 
 // Prompt 772 — the agent's Home on a phone (mockup Main.dc.html): date chip,
-// bell (full screen) and avatar (to More); greeting; the bookings ring with
-// Book a call; Needs you (the desktop's Needs attention items); Up next as a
-// list with the next call highlighted; Booked / Cancelled this week. Every
-// number comes from the Overview's own data (`g`), so the two can't disagree.
+// bell (full screen) and avatar (to More); greeting; the submissions ring with
+// Submit; Needs your attention (the desktop's Needs attention items). Servicing
+// Overview: Your book, Coming up and Steps done follow, from the same
+// useOverviewBook() data (`ov`) as the desktop, so the two can't disagree. An agent
+// with Leads and no Servicing gets only the date chip, bell, avatar and greeting here;
+// the Overview puts the Leads panels under it.
 
 const NEED_LOOK = {
   confirmNumber: { icon: PhoneMissed, color: 'var(--ov-st-needs)', tint: 'var(--ov-st-needs-tint)', title: n => `${n} didn’t answer`, sub: 'Confirm the number so we can try again' },
   needsAttention: { icon: Phone, color: 'var(--nt-purple)', tint: 'var(--nt-purple-tint)', title: n => `Couldn’t reach ${n}`, sub: 'They’re yours to call and rebook' },
 }
 const NEEDS_SHOWN = 4
-const NEXT_SHOWN = 3
 
 function Ring({ used, cap }) {
   const r = 33
@@ -47,14 +47,14 @@ function Ring({ used, cap }) {
   )
 }
 
-export function PhoneHome({ g, greeting, sub, isLoading, isError, refetch, now, tz }) {
+export function PhoneHome({ g, ov, greeting, sub, isLoading, isError, refetch, now, tz }) {
+  const servicing = ov.hasServicing
   const { profile } = useAuth()
   const navigate = useNavigate()
   const { data: usage, isLoading: usageLoading } = useWeeklyUsage(profile?.id)
   const cap = capState(usage)
   const zone = tz || DEFAULT_TIMEZONE
   const chip = new Date(now).toLocaleDateString('en-US', { timeZone: zone, weekday: 'short', month: 'short', day: 'numeric' })
-  const open = p => navigate(`/agent/clients?open=${p.id}`)
 
   const ringLine = usageLoading || !cap ? '—'
     : cap.cap == null ? 'No weekly limit'
@@ -62,9 +62,6 @@ export function PhoneHome({ g, greeting, sub, isLoading, isError, refetch, now, 
   const ringSub = [usage?.tier_name, `resets ${formatReset(usage?.week_end, profile?.timezone)}`].filter(Boolean).join(' · ')
 
   const needs = g.attention
-  const next = g.upcoming.slice(0, NEXT_SHOWN)
-  const cancelledPct = !isLoading && g.booked.value > 0 ? `${Math.round((g.cancelled.value / g.booked.value) * 100)}% of booked` : null
-  const diffText = d => (d == null ? null : d > 0 ? `+${d} vs last week` : d < 0 ? `${d} vs last week` : 'Same as last week')
 
   return (
     <div className="ph-stack">
@@ -82,9 +79,9 @@ export function PhoneHome({ g, greeting, sub, isLoading, isError, refetch, now, 
         <p style={{ margin: '6px 0 0', fontSize: 15, color: 'var(--ov-soft)' }}>{sub}</p>
       </div>
 
-      {isError && <LoadError what="your calls" onRetry={() => refetch()} />}
+      {servicing && isError && <LoadError what="your calls" onRetry={() => refetch()} />}
 
-      {g.live.length > 0 && (
+      {servicing && g.live.length > 0 && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 16,
           background: 'var(--danger-dim)', border: 'var(--border-w) solid var(--danger-bd)', color: 'var(--danger)',
@@ -96,11 +93,11 @@ export function PhoneHome({ g, greeting, sub, isLoading, isError, refetch, now, 
         </div>
       )}
 
-      <section className="ov-hero ph-ringcard" style={{ position: 'relative', overflow: 'hidden' }}>
+      {servicing && <section data-ov="week" className="ov-hero ph-ringcard" style={{ position: 'relative', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <Ring used={usageLoading ? null : cap?.used ?? 0} cap={cap?.cap ?? null} />
           <span style={{ flex: 1, minWidth: 0, color: '#FFFFFF' }}>
-            <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--ov-hero-soft)' }}>Bookings this week</span>
+            <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--ov-hero-soft)' }}>Submissions this week</span>
             <span style={{ display: 'block', marginTop: 3, fontFamily: 'var(--font-display)', fontSize: 21, fontWeight: 600, letterSpacing: '-0.02em' }}>{ringLine}</span>
             {!usageLoading && <span style={{ display: 'block', marginTop: 2, fontSize: 12.5, color: 'var(--ov-hero-soft)' }}>{ringSub}</span>}
           </span>
@@ -108,12 +105,14 @@ export function PhoneHome({ g, greeting, sub, isLoading, isError, refetch, now, 
         <button type="button" className="ov-hero-btn ph-bookbtn" onClick={() => navigate('/agent/submit')}>
           <CalendarPlus size={18} strokeWidth={2.2} aria-hidden="true" />Submit
         </button>
-      </section>
+      </section>}
 
-      {(isLoading || needs.length > 0) && (
+      {servicing && <BookRow book={ov.book} onRetry={ov.refetch} />}
+
+      {servicing && (isLoading || needs.length > 0) && (
         <section aria-labelledby="ph-needs">
           <div className="ph-sechead">
-            <h2 id="ph-needs" className="ph-h2">Needs you</h2>
+            <h2 id="ph-needs" className="ph-h2">Needs your attention</h2>
             {!isLoading && <span className="ph-count">{needs.length}</span>}
             <span style={{ flex: 1 }} />
             <button type="button" className="ph-seclink" onClick={() => navigate('/agent/clients?stage=needs')}>See all</button>
@@ -138,50 +137,12 @@ export function PhoneHome({ g, greeting, sub, isLoading, isError, refetch, now, 
         </section>
       )}
 
-      <section aria-labelledby="ph-next">
-        <div className="ph-sechead">
-          <h2 id="ph-next" className="ph-h2">Up next</h2>
-          <span style={{ flex: 1 }} />
-          {!isLoading && <span className="ph-mute">{g.upcoming.length} booked</span>}
-        </div>
-        {isLoading ? <div className="ov-card ph-card ph-empty">Loading…</div>
-          : next.length === 0 ? (
-            <div className="ov-card ph-card ph-empty">Nothing booked yet. Tap + to submit.</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {next.map((p, i) => {
-                const ctz = p.client_timezone || zone
-                const t = dayTile(p.scheduled_call_at, now, ctz)
-                return (
-                  <button key={p.id} type="button" className={`ph-next${i === 0 ? ' is-first' : ' ov-card'}`} onClick={() => open(p)}>
-                    <span className="ph-daytile"><small>{t.dow}</small><b>{t.d}</b></span>
-                    <span style={{ flex: 1, minWidth: 0 }}>
-                      <span className="ph-row-title" style={{ fontSize: 15 }}>{fullName(p)}</span>
-                      <span className="ph-row-sub">{p.current_carrier || p.carrier_name || 'Carrier not noted'}</span>
-                    </span>
-                    <span style={{ textAlign: 'right', flex: 'none' }}>
-                      <span className="ph-next-time">{timeText(p.scheduled_call_at, ctz)}</span>
-                      <span className="ph-row-sub">{untilText(p.scheduled_call_at, now, ctz)}</span>
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          )}
-      </section>
-
-      <section className="ph-stats" aria-label="This week">
-        <button type="button" className="ov-card ph-stat" onClick={() => navigate('/agent/clients?range=week&stage=all')}>
-          <div className="ph-stat-label">Booked this week</div>
-          <div className="ph-stat-num">{isLoading ? '—' : g.booked.value}</div>
-          {!isLoading && <div className="ph-stat-sub" style={g.booked.diff > 0 ? { color: 'var(--ov-up)' } : undefined}>{diffText(g.booked.diff)}</div>}
-        </button>
-        <button type="button" className="ov-card ph-stat" onClick={() => navigate('/agent/clients?stage=cancelled')}>
-          <div className="ph-stat-label">Cancelled this week</div>
-          <div className="ph-stat-num" style={{ color: 'var(--ov-st-cancelled)' }}>{isLoading ? '—' : g.cancelled.value}</div>
-          {!isLoading && <div className="ph-stat-sub">{cancelledPct || diffText(g.cancelled.diff)}</div>}
-        </button>
-      </section>
+      {servicing && (
+        <>
+          <ComingUpSteps steps={ov.steps.dueSoon} status={ov.steps.dueSoonStatus} now={now} tz={zone} onRetry={ov.refetch} fit />
+          <StepsDoneChart days={ov.steps.doneByDay} status={ov.steps.doneStatus} savesKnown={ov.steps.savesKnown} onRetry={ov.refetch} />
+        </>
+      )}
     </div>
   )
 }

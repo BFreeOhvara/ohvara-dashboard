@@ -73,6 +73,86 @@
         "src/lib/activityEventsMigration.test.js"
       ],
       "notes": "Migration 202 (not applied). One log row gives one row: billing_spend_pause when the pause state changed (paused or resumed), else billing_spend_change. An upline gets zero, even passing p_agent; Fulfillment gets zero. billing_subscription stays pending and a plan change needs 201. PENDING_KINDS is unchanged, so the Billing chip stays hidden until that is flipped."
+    },
+    {
+      "id": "overview.your-book-row",
+      "page": "Overview",
+      "title": "Your book: Protected, Setting up, Needs attention, Requests open",
+      "status": "checking",
+      "files": [
+        "src/pages/agent/Overview.jsx",
+        "src/components/agent/OverviewBlocks.jsx",
+        "src/index.css",
+        "src/hooks/useOverviewBook.js"
+      ],
+      "notes": "Four tiles from useOverviewBook().book, each a link to /agent/clients?stage=<key> (protected, setting_up, needs_attention, requests). Clients.jsx does not read these keys yet and falls back to the Booked tab: follow-up for the Clients goal is \"Clients should read these stage keys\". Until migration 193 is applied (agent_clients missing) every tile shows a dash and a plain note, never a zero. Loading shows dashes; a failed load shows LoadError with Try again."
+    },
+    {
+      "id": "overview.this-week-submissions",
+      "page": "Overview",
+      "title": "This week: X of N submissions used, resets Monday",
+      "status": "checking",
+      "files": [
+        "src/pages/agent/Overview.jsx",
+        "src/components/agent/OverviewBlocks.jsx",
+        "src/index.css",
+        "src/components/agent/phone/PhoneHome.jsx"
+      ],
+      "notes": "From agent_weekly_usage (7 or 16 from the plan), opens /agent/submit. Limit reached shows in the needs token. Loading shows dashes; failed load shows LoadError. On the phone the submissions ring card is the same number."
+    },
+    {
+      "id": "overview.coming-up-steps",
+      "page": "Overview",
+      "title": "Coming up: next steps with a due date",
+      "status": "checking",
+      "files": [
+        "src/pages/agent/Overview.jsx",
+        "src/components/agent/OverviewBlocks.jsx",
+        "src/index.css",
+        "src/components/agent/phone/PhoneHome.jsx"
+      ],
+      "notes": "Open steps with a due_at (review calls, packet checks, annual reviews), soonest first, each linking to the client. The data hook leaves out chargeback_watch and requests; lapse_save is a request there, so it does not show here (the mockup lists lapse saves: open question for the hook). The caught-up box keeps its call list headed \"Up next\". Empty, loading and error states in plain words."
+    },
+    {
+      "id": "overview.steps-done-chart",
+      "page": "Overview",
+      "title": "Steps done: last Monday to Sunday in four kinds (replaces Booked / Cancelled)",
+      "status": "checking",
+      "files": [
+        "src/pages/agent/Overview.jsx",
+        "src/components/agent/OverviewBlocks.jsx",
+        "src/index.css",
+        "src/components/agent/AgentUI.jsx"
+      ],
+      "notes": "Stacked bar per day: packet checks, review calls, cancellations, saves, on the LastWeekChart classes. The Booked / Cancelled chart and trend cards are gone from the agent Overview (Fulfillment still uses LastWeekChart). With servicing_tasks.outcome missing the chart still renders and Saves shows a dash."
+    },
+    {
+      "id": "overview.leads-strip-conditional",
+      "page": "Overview",
+      "title": "The whole Today strip shows only for agents who have Leads",
+      "status": "checking",
+      "files": [
+        "src/pages/agent/Overview.jsx",
+        "src/components/agent/OverviewBlocks.jsx",
+        "src/components/agent/TodayCards.jsx",
+        "src/components/agent/phone/PhoneHome.jsx",
+        "src/index.css"
+      ],
+      "notes": "hasLeads (leads_weekly_cents > 0 or any inbound) shows TodayStrip / TodayCards; otherwise one small Get leads card opens /agent/leads. A paused Leads buyer (leads_weekly_cents 0 with inbounds) keeps today's appointments. On the phone Texts waiting stays for agents with Leads."
+    },
+    {
+      "id": "overview.leads-only-layout",
+      "page": "Overview",
+      "title": "Leads-only agents (has_servicing false): Leads panels fill the page",
+      "status": "checking",
+      "files": [
+        "src/pages/agent/Overview.jsx",
+        "src/components/agent/OverviewBlocks.jsx",
+        "src/components/agent/TodayCards.jsx",
+        "src/components/agent/todayCards.css",
+        "scripts/overview-fit-shots.mjs"
+      ],
+      "notes": "Hides Your book, This week, Coming up and Steps done; the five Today cards and the Texts waiting box sit in three columns and two rows with no hole. Same test as Submit.jsx:37. scripts/overview-fit-shots.mjs measures Servicing only, Leads only, Both and a paused buyer at 1920x1080, 1440x900 and 1280x700."
     }
   ]
 }

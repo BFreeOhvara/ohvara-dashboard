@@ -344,10 +344,10 @@ export function ScriptHint({ children }) {
 // Phone layouts (below 640px) are separate markup toggled with sm: classes,
 // since inline styles can't carry breakpoints.
 
-const OV_NUM = {
+export const OV_NUM = {
   fontFamily: DISPLAY, fontWeight: 600, lineHeight: 1, fontVariantNumeric: 'tabular-nums', color: 'var(--ov-hi)',
 }
-const OV_TITLE = {
+export const OV_TITLE = {
   margin: 0, fontFamily: DISPLAY, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ov-hi)',
 }
 
@@ -535,7 +535,7 @@ function Legend({ style, first = 'Booked' }) {
   )
 }
 
-const shortDate = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+export const shortDate = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
 // `days`: [{ date, booked, cancelled }], oldest first, today last. Plain divs,
 // no chart library. `compact` is the phone's 7-day version.
@@ -3608,7 +3608,7 @@ function untilLabel(iso, now) {
 }
 
 // "Today, 2:30 PM" / "Tomorrow, 2:30 PM" / "Mon, 10:00 AM" / "Oct 19, 10:00 AM".
-function comingWhen(iso, now, tz) {
+export function comingWhen(iso, now, tz) {
   const gap = dayGap(iso, now, tz)
   const d = new Date(iso)
   const z = tz ? { timeZone: tz } : null
@@ -3618,7 +3618,7 @@ function comingWhen(iso, now, tz) {
   return `${day}, ${fmtSlotTime(iso, tz)}`
 }
 
-function CallDateTile({ iso, booked, tz, className }) {
+export function CallDateTile({ iso, booked, tz, className }) {
   const d = new Date(iso)
   const z = tz ? { timeZone: tz } : null
   return (
@@ -3645,14 +3645,14 @@ function CallDateTile({ iso, booked, tz, className }) {
 // opens that inbound. Without texts the box is exactly the old one.
 // `fit` (the agent Overview on a 1280x700+ screen): no row cap; the rows scroll inside .ag-list and the
 // button stays pinned in .ag-foot. Without it (phones, other pages) the cap of 4 and the old layout stay.
-export function AttentionCard({ items, loading, onGo, texts = [], fit }) {
+export function AttentionCard({ items, loading, onGo, texts = [], fit, slim }) {
   const pad = 'p-[18px] sm:px-6 sm:pt-6 sm:pb-5'
   const area = { gridArea: 'attn', minWidth: 0 }
-  const title = <h2 style={{ ...OV_TITLE, flex: 1, minWidth: 0 }} className="text-[18px] sm:text-[19px]">Needs your attention</h2>
+  const title = <h2 style={{ ...OV_TITLE, flex: slim ? 'none' : 1, minWidth: 0 }} className="text-[18px] sm:text-[19px]">Needs your attention</h2>
 
   if (loading) {
     return (
-      <div className={`ov-card flex flex-col ${pad}${fit ? ' ag-box' : ''}`} style={area}>
+      <div data-ov="attn" className={`ov-card flex flex-col ${pad}${fit ? ' ag-box' : ''}`} style={area}>
         <div className={fit ? 'ag-bh' : undefined} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {title}
           <span style={{ fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, color: 'var(--ov-mute)' }}>—</span>
@@ -3674,9 +3674,11 @@ export function AttentionCard({ items, loading, onGo, texts = [], fit }) {
   const go = p => onGo(`/agent/clients?open=${p.id}&stage=needs`)
   const Rows = fit ? 'div' : Fragment
   const rowsProps = fit ? { className: 'ag-list' } : {}
+  // slim (the servicing Overview on one screen): the intro and the button sit in the header row, no foot.
+  const toClients = items.length > 0 || texts.length === 0
 
   return (
-    <div className={`ov-attn flex flex-col ${pad}${fit ? ' ag-box' : ''}`} style={area}>
+    <div data-ov="attn" className={`ov-attn flex flex-col ${pad}${fit ? ' ag-box' : ''}`} style={area}>
       <div className={fit ? 'ag-bh' : undefined} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <IconChip icon={TriangleAlert} color="var(--ov-warn)" tint="var(--ov-warn-tint)" className={fit ? 'ag-chip' : undefined} />
         {title}
@@ -3687,10 +3689,20 @@ export function AttentionCard({ items, loading, onGo, texts = [], fit }) {
         }}>
           {count}
         </span>
+        {slim && (
+          <>
+            <span className="ag-slim-i">{intro}</span>
+            <button type="button" className="ag-slim-go" onClick={() => onGo(toClients ? '/agent/clients?stage=needs' : '/agent/leads')}>
+              {toClients ? more(ATTN_ROWS) : 'Open Leads'} <ArrowRight size={14} strokeWidth={2.2} />
+            </button>
+          </>
+        )}
       </div>
-      <p className={fit ? 'ag-intro' : undefined} style={{ margin: '14px 0 6px', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-soft)' }}>
-        {intro}. Open one to see what to do.
-      </p>
+      {!slim && (
+        <p className={fit ? 'ag-intro' : undefined} style={{ margin: '14px 0 6px', fontSize: 14, lineHeight: 1.5, color: 'var(--ov-soft)' }}>
+          {intro}. Open one to see what to do.
+        </p>
+      )}
 
       <Rows {...rowsProps}>
       {shown.map((p, i) => {
@@ -3744,8 +3756,8 @@ export function AttentionCard({ items, loading, onGo, texts = [], fit }) {
       ))}
       </Rows>
 
-      <div className={fit ? 'ag-foot' : undefined} style={{ marginTop: 'auto', paddingTop: 14 }}>
-        {items.length > 0 || texts.length === 0 ? (
+      {!slim && <div className={fit ? 'ag-foot' : undefined} style={{ marginTop: 'auto', paddingTop: 14 }}>
+        {toClients ? (
           <button type="button" className="ov-primary" onClick={() => onGo('/agent/clients?stage=needs')}>
             <span className="sm:hidden">{more(3)}</span>
             <span className="hidden sm:inline">{more(ATTN_ROWS)}</span>
@@ -3756,7 +3768,7 @@ export function AttentionCard({ items, loading, onGo, texts = [], fit }) {
             Open Leads <ArrowRight size={15} strokeWidth={2.2} />
           </button>
         )}
-      </div>
+      </div>}
     </div>
   )
 }
@@ -3764,7 +3776,7 @@ export function AttentionCard({ items, loading, onGo, texts = [], fit }) {
 // The calm state: nobody needs the agent, so show what is coming up.
 // `upcoming`: booked rows with a future call, soonest first.
 // `fit`: as AttentionCard, every upcoming call is listed in a scrolling .ag-list with the button pinned.
-export function ComingUpCard({ upcoming, now, onGo, fit }) {
+export function ComingUpCard({ upcoming, now, onGo, fit, slim }) {
   const pad = 'p-[18px] sm:px-6 sm:pt-6 sm:pb-5'
   const area = { gridArea: 'attn', minWidth: 0 }
   const title = <h2 style={{ ...OV_TITLE, flex: 1, minWidth: 0 }} className="text-[18px] sm:text-[19px]">You&rsquo;re all caught up</h2>
@@ -3776,8 +3788,41 @@ export function ComingUpCard({ upcoming, now, onGo, fit }) {
   const Foot = fit ? 'div' : Fragment
   const footProps = fit ? { className: 'ag-foot' } : {}
 
+  // One screen (slim): the caught-up message on the left, "Up next" and its calls on the right.
+  if (slim) {
+    return (
+      <div data-ov="attn" className="ov-card ag-box ag-caught" style={area}>
+        <div className="ag-caught-l">
+          <IconChip icon={Check} color="var(--ov-up)" tint="var(--ov-up-tint)" iconSize={18} className="ag-chip" />
+          <div style={{ minWidth: 0 }}>
+            <h2 style={OV_TITLE} className="text-[18px] sm:text-[19px]">You&rsquo;re all caught up</h2>
+            <p>Nobody is waiting on you.</p>
+          </div>
+        </div>
+        <div className="ag-caught-r">
+          <div className="ag-caught-h"><span>Up next</span><span>{n === 0 ? 'No calls booked' : `${n} ${n === 1 ? 'call' : 'calls'}`}</span></div>
+          {n === 0 ? (
+            <p className="ag-caught-none">Nothing on the books yet. Submit your next client when they say yes.</p>
+          ) : (
+            <div className="ag-list">
+              {upcoming.map(p => (
+                <div key={p.id} className="ag-caught-row">
+                  <CallDateTile iso={p.scheduled_call_at} tz={p.client_timezone} />
+                  <span>
+                    <b>{fullName(p)}<em> · {p.current_carrier || 'Carrier not noted'}</em></b>
+                    <span>{comingWhen(p.scheduled_call_at, now, p.client_timezone)}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className={`ov-card flex flex-col ${pad}${fit ? ' ag-box' : ''}`} style={area}>
+    <div data-ov="attn" className={`ov-card flex flex-col ${pad}${fit ? ' ag-box' : ''}`} style={area}>
       <div className={fit ? 'ag-bh' : undefined} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <IconChip icon={Check} color="var(--ov-up)" tint="var(--ov-up-tint)" iconSize={18} className={fit ? 'ag-chip' : undefined} />
         {title}

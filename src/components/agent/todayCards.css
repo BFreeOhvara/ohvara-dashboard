@@ -150,3 +150,50 @@
   .tcs .tc-sw { min-height: 30px; }
   .tcs-links .ov-ghost { height: 30px; padding: 0 10px; font-size: 12.5px; }
 }
+
+/* Leads only on one screen (1280x700 and up): the five cards and the texts box in three columns and two rows, filling the
+   page under the hero (TodayCards with fitGrid). The lists inside the cards scroll; nothing leaves the screen. */
+.tc-panel { display: flex; min-width: 0; }
+.tc-panel > * { flex: 1 1 0; min-width: 0; min-height: 0; }
+.tc-calm { width: 36px; height: 36px; flex: none; border-radius: 11px; display: flex; align-items: center; justify-content: center; background: var(--ov-up-tint); color: var(--ov-up); }
+/* Phones and narrow screens: Texts waiting leads the Leads cards. */
+@media (max-width: 767.98px) {
+  .tc-grid--texts { display: flex; flex-direction: column; }
+  .tc-grid--texts .tc-a-texts { order: -1; }
+}
+@media (min-width: 1280px) and (min-height: 700px) {
+  .tc-grid--fit {
+    grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "next duty plan" "appts inb texts"; align-items: stretch; gap: 16px;
+  }
+  .tc-grid--fit > * { min-height: 0; }
+  .tc-grid--fit .tc-card { padding: 16px 20px 16px; }
+  .tc-grid--fit .tc-clock { margin: 12px 0 6px; }
+  .tc-grid--fit .tc-clock b { font-size: 44px; }
+  .tc-grid--fit .tc-acts { margin-top: auto; padding-top: 12px; }
+  .tc-grid--fit .tc-later { display: none; }
+  .tc-grid--fit .tc-meter-num { margin: 12px 0 10px; }
+  .tc-grid--fit .tc-a-plan .tc-meter-foot { margin-top: auto; }
+  .tc-grid--fit .tc-a-appts, .tc-grid--fit .tc-a-inb { overflow: hidden; }
+  .tc-grid--fit .tc-rows { flex: 1 1 0; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--ov-stub) transparent; }
+  .tc-grid--fit .tc-foot { flex: none; margin-top: 8px; padding-top: 10px; }
+  .tc-grid--fit .tc-panel .ag-box { padding: 16px 20px !important; }
+  .ov-fitag .ag-page > .tc-grid--fit { flex: 1 1 0 !important; min-height: 0; }
+}
+@media (min-width: 1280px) and (min-height: 700px) and (max-height: 819.98px) {
+  .tc-grid--fit { gap: 12px; }
+  .tc-grid--fit .tc-card { padding: 10px 16px; }
+  .tc-grid--fit .tc-clock { margin: 6px 0 4px; }
+  .tc-grid--fit .tc-clock b { font-size: 34px; }
+  .tc-grid--fit .tc-clock span { font-size: 14px; }
+  .tc-grid--fit .tc-name { font-size: 16px; }
+  .tc-grid--fit .tc-acts { padding-top: 6px; gap: 8px; }
+  .tc-grid--fit .tc-acts .tc-btn { min-height: 36px; font-size: 13px; }
+  .tc-grid--fit .tc-body { margin-top: 6px; font-size: 13px; line-height: 1.4; }
+  .tc-grid--fit .tc-meter-num { margin: 6px 0 6px; }
+  .tc-grid--fit .tc-meter-num b { font-size: 34px; }
+  .tc-grid--fit .tc-row { min-height: 50px; padding: 6px 8px; }
+  .tc-grid--fit .tc-ttile { width: 52px; min-height: 38px; }
+  .tc-grid--fit .tc-sub { font-size: 12.5px; }
+  .tc-grid--fit .tc-sw { min-height: 32px; }
+}
