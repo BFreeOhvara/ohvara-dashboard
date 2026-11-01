@@ -57,7 +57,7 @@ export type Deps = {
   mark(fn: string, r: Row, result: SendResult): Promise<void>   // writes the recovery_sms_log row
   logConfirm(r: Row, result: SendResult): Promise<void>         // same, kind 'confirm'
   send(to: string, body: string): Promise<SendResult>
-  // recovery_sms_log.body (207) on the row mark / logConfirm just wrote.
+  // recovery_sms_log.body (208) on the row mark / logConfirm just wrote.
   keepWords(policyId: string, kind: string, sid: string, body: string): Promise<void>
   appUrl: string
 }

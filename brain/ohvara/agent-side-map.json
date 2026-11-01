@@ -46,7 +46,7 @@
         "supabase/tests/contact_log_agent_scope.sql",
         "supabase/tests/p_contact_log.sql"
       ],
-      "notes": "contact_log is migration 199, written and not applied; tests pass in the local stand-in only. It returns label, text_status, has_recording and is_sample after the 16 original columns. Words on follow-up, recovery and workflow texts show once 207 lands and stay null until then, with no dependency on it. 177 isn't on Ohvara, so follow-up texts return no rows until it is applied."
+      "notes": "contact_log is migration 199, written and not applied; tests pass in the local stand-in only. It returns label, text_status, has_recording and is_sample after the 16 original columns. Words on follow-up, recovery and workflow texts show once 208 lands and stay null until then, with no dependency on it. 177 isn't on Ohvara, so follow-up texts return no rows until it is applied."
     },
     {
       "id": "client-page.fulfillment-call",
@@ -349,13 +349,13 @@
       "page": "Client page",
       "title": "The exact words of every outgoing text are stored at send time",
       "files": [
-        "supabase/migrations/207_text_words.sql",
+        "supabase/migrations/208_text_words.sql",
         "supabase/functions/lead-followup-sms/core.ts",
         "supabase/functions/lead-workflow-sms/core.ts",
         "supabase/functions/recovery-sms/core.ts",
         "supabase/functions/recovery-sms/index.ts"
       ],
-      "notes": "Check: recovery_sms_log.body is filled for a text Twilio took (no-answer, missed-by-us, first-text confirmation); failed and skipped rows stay null. Never 'live' while sms_live is off: no text goes out, so no words are stored yet, and the switch stays off. Needs migration 207 (not applied; apply before deploying lead-followup-sms). Also kept: lead_followup_sms_log.body and inbound_events.detail.body. Older rows stay null. Inbound replies already kept their body (lead_sms_replies).",
+      "notes": "Check: recovery_sms_log.body is filled for a text Twilio took (no-answer, missed-by-us, first-text confirmation); failed and skipped rows stay null. Never 'live' while sms_live is off: no text goes out, so no words are stored yet, and the switch stays off. Needs migration 208 (not applied; apply before deploying lead-followup-sms). Also kept: lead_followup_sms_log.body and inbound_events.detail.body. Older rows stay null. Inbound replies already kept their body (lead_sms_replies).",
       "status": "checking"
     },
     {
