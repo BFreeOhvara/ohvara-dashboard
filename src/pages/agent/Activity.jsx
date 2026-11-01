@@ -164,6 +164,7 @@ function storyStep(e, isAdmin) {
     case 'edited':    return { label: editedText(d), sub: when }
     case 'reassigned': return { label: `Call given to ${d.to_name || 'another rep'}`, sub: when }
     case 'cancelled': return { label: 'Old policy cancelled', sub: when }
+    case 'lapsed':    return { label: 'Policy lapsed', sub: `This policy stopped being paid and is now Lapsed. ${when}` }
     default:          return { label: e.kind, sub: when }
   }
 }
@@ -305,12 +306,14 @@ export default function Activity() {
   const history = story.data || []
   const latest = history[history.length - 1]
   const cancelledNow = row ? tabOf(row) === 'cancelled' : latest?.kind === 'cancelled'
+  // A lapsed policy is not waiting on a cancellation call: its story ends there, all done.
+  const lapsedNow = latest?.kind === 'lapsed'
   const steps = history.map((e, i) => ({
     ...storyStep(e, isAdmin),
     tone: kindTone(e.kind),
-    done: cancelledNow || i < history.length - 1,
+    done: cancelledNow || lapsedNow || i < history.length - 1,
   }))
-  if (history.length && !cancelledNow) steps.push({ label: 'Old policy cancelled', done: false })
+  if (history.length && !cancelledNow && !lapsedNow) steps.push({ label: 'Old policy cancelled', done: false })
   const openPipeline = () => navigate(row ? `/agent/clients?stage=${tabOf(row)}&open=${clientId}` : `/agent/clients?open=${clientId}`)
   const shown = clientId ? feed.find(i => i.policyId === clientId) : null
 
