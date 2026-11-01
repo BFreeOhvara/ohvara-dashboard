@@ -13,6 +13,84 @@
       "notes": "Data layer only, read only. useOverviewBook() returns { book, submissions, steps: { dueSoon, doneByDay }, hasLeads, hasServicing, isLoading, isError, refetch }; the return shape is documented at the top of the hook. Book needs migration 193 (agent_clients); until it is applied book.available is false and the numbers are null. Saves need servicing_tasks.outcome (193) and read 0 until then. Spec: brain/ohvara/Agent Portal Servicing Spec.md, Overview."
     },
     {
+      "id": "client-page.contact-log-view",
+      "page": "Client page",
+      "title": "Every text and call to the client: when, words or call result, who",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/199_contact_log.sql",
+        "supabase/tests/contact_log_agent_scope.sql",
+        "supabase/tests/p_contact_log.sql"
+      ],
+      "notes": "contact_log is migration 199, written and not applied; tests pass in the local stand-in only. It returns label, text_status, has_recording and is_sample after the 16 original columns. Words on follow-up, recovery and workflow texts show once 198 lands and stay null until then, with no dependency on it. 177 isn't on Ohvara, so follow-up texts return no rows until it is applied."
+    },
+    {
+      "id": "client-page.fulfillment-call",
+      "page": "Client page",
+      "title": "Fulfillment and cancellation calls show on the client's contact log",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/199_contact_log.sql",
+        "supabase/tests/contact_log_agent_scope.sql",
+        "supabase/tests/p_contact_log.sql"
+      ],
+      "notes": "Never 'live' while voice_live is off. Covered in 199 by two client call sources: policy_events (no_answer, in_progress, cancelled) and fulfillment_voice_legs (party client). Written, not applied."
+    },
+    {
+      "id": "client-page.call-recording",
+      "page": "Client page",
+      "title": "A call on the client page says when a recording exists",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/199_contact_log.sql",
+        "supabase/tests/contact_log_agent_scope.sql",
+        "supabase/tests/p_contact_log.sql"
+      ],
+      "notes": "Never 'live' while recording_live is off. Covered in 199 by has_recording: true on a client leg whose conference (conference_sid, same policy) has a fulfillment_recordings row with status ready. An agent gets only the true/false, never the audio, sid or id, and no grant was added. Before recording_live goes on: fulfillment-voice's leg callback sets conference_sid to null when Twilio sends none, which would keep this false."
+    },
+    {
+      "id": "client-page.contact-log-card",
+      "page": "Client page",
+      "title": "Texts and calls card: every text and call with the full words, both time zones, All / Texts / Calls",
+      "status": "checking",
+      "files": [
+        "src/hooks/useClientContactLog.js",
+        "src/components/agent/ClientPageLog.jsx",
+        "src/components/agent/clientPageLog.css",
+        "src/lib/clientPageLog.js",
+        "src/lib/clientPageLog.test.js"
+      ],
+      "notes": "ContactLogCard calls rpc contact_log (migration 199) with p_client_key / p_lead. Words show when stored, otherwise the row label. A missing function shows a quiet muted note, any other failure shows the error with Try again. Not mounted yet: the client-page task mounts it."
+    },
+    {
+      "id": "client-page.team-thread",
+      "page": "Client page",
+      "title": "Team thread card: the client thread with Fulfillment, switcher for several policies, composer",
+      "status": "checking",
+      "files": [
+        "src/hooks/useClientContactLog.js",
+        "src/components/agent/ClientPageLog.jsx",
+        "src/components/agent/clientPageLog.css",
+        "src/lib/clientPageLog.js",
+        "src/lib/clientPageLog.test.js"
+      ],
+      "notes": "TeamThreadCard reads useThreadMessages and sends through the existing useSendMessage (policy_messages). Opens on the newest policy. Not mounted yet: the client-page task mounts it."
+    },
+    {
+      "id": "client-page.client-activity",
+      "page": "Client page",
+      "title": "Activity card: calls booked, tried and finished on the client, newest first",
+      "status": "checking",
+      "files": [
+        "src/hooks/useClientContactLog.js",
+        "src/components/agent/ClientPageLog.jsx",
+        "src/components/agent/clientPageLog.css",
+        "src/lib/clientPageLog.js",
+        "src/lib/clientPageLog.test.js"
+      ],
+      "notes": "ClientActivityCard reads policy_events for the client policies, newest first, 50 at most. Not mounted yet: the client-page task mounts it."
+    },
+    {
       "id": "activity.submitted-row",
       "page": "Activity",
       "title": "A submit shows as one row: Submitted for servicing",
@@ -153,6 +231,42 @@
         "scripts/overview-fit-shots.mjs"
       ],
       "notes": "Hides Your book, This week, Coming up and Steps done; the five Today cards and the Texts waiting box sit in three columns and two rows with no hole. Same test as Submit.jsx:37. scripts/overview-fit-shots.mjs measures Servicing only, Leads only, Both and a paused buyer at 1920x1080, 1440x900 and 1280x700."
+    },
+    {
+      "id": "request.grant-handoff",
+      "page": "Clients",
+      "title": "A service request moves through functions, not Fulfillment's direct status grant",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/196_service_request_tracking.sql",
+        "supabase/tests/p_service_requests.sql"
+      ],
+      "notes": "Migration 196 (not applied). Fulfillment schedules and finishes an agent request through fulfillment_schedule_request and fulfillment_finish_request, and the agent reads the result in agent_my_service_requests. Fulfillment's direct update (status) grant on servicing_tasks is left as it was in 196; closing it is the next step on the Fulfillment Build Order, Lane A item 2, once the queue functions are live."
+    },
+    {
+      "id": "clients.search-policy-number",
+      "page": "Clients",
+      "title": "Find a client by policy number",
+      "status": "checking",
+      "files": [
+        "src/lib/agentBookings.js",
+        "src/lib/agentBookings.test.js",
+        "src/components/agent/ClientsV2Parts.jsx",
+        "src/components/agent/phone/PhoneClients.jsx",
+        "src/components/agent/AgentUI.jsx",
+        "src/hooks/useServicingTasks.js"
+      ],
+      "notes": "3+ characters, ignores case, spaces and dashes, shared by the header, Clients card and phone search."
+    },
+    {
+      "id": "clients.search-box",
+      "page": "Clients",
+      "title": "Phone client search placeholder",
+      "status": "live",
+      "files": [
+        "src/components/agent/phone/PhoneClients.jsx"
+      ],
+      "notes": "The phone placeholder reads \"Name, phone or policy no.\" and fits at 390 width without clipping."
     }
   ]
 }
