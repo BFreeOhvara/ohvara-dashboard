@@ -319,26 +319,27 @@ select throws_ok(format('select public.agent_submit_service_request(%L, ''carrie
                  '42501', 'Not your client', 'd2 agent B cannot request on agent A''s client');
 select throws_ok($$ select public.agent_submit_service_request('99999999-9999-4999-8999-999999999999', 'carrier_call', 'x', 'morning') $$,
                  '42501', 'Not your client', 'd3 an id that is nobody''s gets the same answer');
-select is((select count(*) from public.servicing_tasks), 0::bigint, 'd4 agent B sees none of agent A''s requests');
+select is((select count(*) from public.servicing_tasks where id = (select id from ids where name = 'req')), 0::bigint, 'd4 agent B sees none of agent A''s requests');
 select throws_ok(format($$ insert into public.servicing_tasks (agent_id, policy_id, kind) values ('aaaaaaaa-aaaa-4aaa-8aaa-00000000000b', %L, 'carrier_call') $$, (select id from ids where name = 'no')),
                  '42501', 'permission denied for table servicing_tasks', 'd5 no direct agent insert');
 reset role;
 
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-00000000000a","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select is((select count(*) from public.servicing_tasks), 1::bigint, 'd6 agent A sees their own request');
+select is((select count(*) from public.servicing_tasks where requested_by = 'agent'), 1::bigint, 'd6 agent A sees their own request');
 select throws_ok(format($$ insert into public.servicing_tasks (agent_id, policy_id, kind) values ('aaaaaaaa-aaaa-4aaa-8aaa-00000000000a', %L, 'carrier_call') $$, (select id from ids where name = 'no')),
                  '42501', 'permission denied for table servicing_tasks', 'd7 not even on their own client');
 update public.servicing_tasks set status = 'done';
-select is((select status from public.servicing_tasks), 'requested', 'd8 an agent cannot change the status');
+select is((select status from public.servicing_tasks where id = (select id from ids where name = 'req')), 'requested', 'd8 an agent cannot change the status');
 reset role;
 
 select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8bbb-000000000001","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select is((select count(*) from public.servicing_tasks), 1::bigint, 'd9 Fulfillment sees the queue');
-select lives_ok($$ update public.servicing_tasks set status = 'in_progress' $$, 'd10 Fulfillment can change the status');
-select throws_ok($$ update public.servicing_tasks set note = 'changed' $$, '42501', 'permission denied for table servicing_tasks',
-                 'd11 and nothing else');
+select is((select count(*) from public.servicing_tasks where requested_by = 'agent'), 1::bigint, 'd9 Fulfillment sees the queue');
+select lives_ok(format($$ update public.servicing_tasks set status = 'in_progress' where id = %L $$, (select id from ids where name = 'req')),
+                'd10 Fulfillment can change the status');
+select throws_ok(format($$ update public.servicing_tasks set note = 'changed' where id = %L $$, (select id from ids where name = 'req')),
+                 '42501', 'permission denied for table servicing_tasks', 'd11 and nothing else');
 reset role;
 
 -- ── e. submit_live off ──────────────────────────────────────────────────────
