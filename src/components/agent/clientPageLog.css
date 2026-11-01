@@ -1,0 +1,82 @@
+/* The client page's contact log, team thread and activity cards (ClientPageLog.jsx). Surface is the
+   existing .ov-card; this file only lays it out. Tokens only (--ov-*), light and dark, no sideways
+   scroll at 390px, 44px touch targets. Classes are .cpl-*. */
+
+.cpl-card { padding: 18px; min-width: 0; color: var(--ov-hi); }
+@media (min-width: 768px) { .cpl-card { padding: 20px; } }
+
+.cpl-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.cpl-tile { width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; display: grid; place-items: center; background: var(--ov-data-a-tint); color: var(--ov-data-a); }
+.cpl-tile.b { background: var(--ov-data-b-tint); color: var(--ov-data-b); }
+.cpl-grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.cpl-h3 { margin: 0; font-family: var(--font-display); font-size: 19px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; color: var(--ov-hi); }
+.cpl-sub { display: block; margin: 2px 0 0; font-size: 13.5px; line-height: 1.45; color: var(--ov-mute); }
+@media (max-width: 767.98px) { .cpl-h3 { font-size: 18px; } }
+
+/* Filter chips: a segmented control that fills the card on phones */
+.cpl-range.ov-range { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); width: 100%; box-sizing: border-box; margin-bottom: 8px; }
+.cpl-range.ov-range button { height: 44px; padding: 0 8px; font-size: 13px; }
+.cpl-range.ov-range button b { margin-left: 6px; font-weight: 600; opacity: 0.7; }
+@media (min-width: 768px) {
+  .cpl-range.ov-range { display: inline-grid; width: auto; }
+  .cpl-range.ov-range button { height: 36px; padding: 0 16px; }
+}
+
+/* Contact log rows */
+.cpl-list { display: flex; flex-direction: column; }
+.cpl-row { display: flex; align-items: flex-start; gap: 12px; padding: 14px 2px; border-top: 1px solid var(--ov-line); min-width: 0; }
+.cpl-row:first-child { border-top: 0; }
+.cpl-ic { width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: var(--ov-data-a-tint); color: var(--ov-data-a); }
+.cpl-ic.call { background: var(--ov-data-b-tint); color: var(--ov-data-b); }
+.cpl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.cpl-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.cpl-title { font-size: 15px; font-weight: 700; line-height: 1.3; color: var(--ov-hi); overflow-wrap: anywhere; }
+.cpl-dir { font-size: 13px; color: var(--ov-mute); }
+.cpl-when { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 6px; font-size: 13px; line-height: 1.45; color: var(--ov-mid); font-variant-numeric: tabular-nums; }
+.cpl-when span { white-space: nowrap; }
+.cpl-when .cpl-date { color: var(--ov-mute); }
+.cpl-when em { font-style: normal; color: var(--ov-mute); }
+.cpl-words {
+  margin: 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--ov-line); background: var(--ov-stub);
+  font: inherit; font-size: 14.5px; line-height: 1.5; color: var(--ov-hi); white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.cpl-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13px; color: var(--ov-mute); }
+.cpl-chip {
+  display: inline-flex; align-items: center; gap: 5px; min-height: 26px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--ov-line);
+  background: var(--ov-stub); color: var(--ov-mid); font-size: 12.5px; font-weight: 600; white-space: nowrap; flex-shrink: 0;
+}
+.cpl-chip.a { color: var(--ov-data-a); background: var(--ov-data-a-tint); border-color: transparent; }
+
+.cpl-more {
+  display: flex; align-items: center; justify-content: center; width: 100%; min-height: 44px; margin-top: 8px; padding: 0 18px;
+  border-radius: 999px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+
+/* Empty, quiet and loading states */
+.cpl-empty { margin: 0; padding: 14px 4px; font-size: 14.5px; color: var(--ov-mute); }
+.cpl-note {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 14px; border: 1px dashed var(--ov-line);
+  background: var(--ov-stub); color: var(--ov-mute); font-size: 14px; line-height: 1.45;
+}
+.cpl-note svg { flex-shrink: 0; margin-top: 2px; }
+.cpl-skel { display: flex; flex-direction: column; gap: 14px; padding: 6px 0; }
+
+/* Team thread */
+.cpl-pick { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.cpl-pick button {
+  min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--ov-line); background: transparent; color: var(--ov-mid);
+  font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; max-width: 100%; overflow-wrap: anywhere;
+}
+.cpl-pick button.is-on { background: var(--ov-data-a-tint); color: var(--ov-data-a); border-color: transparent; }
+.cpl-pick button:focus-visible, .cpl-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cpl-thread { display: flex; flex-direction: column; gap: 14px; max-height: 380px; overflow-y: auto; overflow-x: hidden; padding: 4px 2px 12px; scrollbar-width: thin; }
+.cpl-thread > * { min-width: 0; }
+.cpl-compose { margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--ov-line); }
+
+/* Activity */
+.cpl-events { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.cpl-event { display: flex; align-items: flex-start; gap: 12px; padding: 12px 2px; border-top: 1px solid var(--ov-line); min-width: 0; }
+.cpl-event:first-child { border-top: 0; }
+.cpl-dot { width: 10px; height: 10px; flex-shrink: 0; margin-top: 6px; border-radius: 50%; background: var(--ov-data-a); }
+.cpl-compose .ov-send { width: 44px; height: 44px; }
+@media (max-width: 479.98px) { .cpl-when { flex-direction: column; } .cpl-when .cpl-sep { display: none; } }
