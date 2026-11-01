@@ -11,6 +11,104 @@
         "src/lib/overviewBook.test.js"
       ],
       "notes": "Data layer only, read only. useOverviewBook() returns { book, submissions, steps: { dueSoon, doneByDay }, hasLeads, hasServicing, isLoading, isError, refetch }; the return shape is documented at the top of the hook. Book needs migration 193 (agent_clients); until it is applied book.available is false and the numbers are null. Saves need servicing_tasks.outcome (193) and read 0 until then. Spec: brain/ohvara/Agent Portal Servicing Spec.md, Overview."
+    },
+    {
+      "id": "client-page.contact-log-view",
+      "page": "Client page",
+      "title": "Every text and call to the client: when, words or call result, who",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/199_contact_log.sql",
+        "supabase/tests/contact_log_agent_scope.sql",
+        "supabase/tests/p_contact_log.sql"
+      ],
+      "notes": "contact_log is migration 199, written and not applied; tests pass in the local stand-in only. It returns label, text_status, has_recording and is_sample after the 16 original columns. Words on follow-up, recovery and workflow texts show once 198 lands and stay null until then, with no dependency on it. 177 isn't on Ohvara, so follow-up texts return no rows until it is applied."
+    },
+    {
+      "id": "client-page.fulfillment-call",
+      "page": "Client page",
+      "title": "Fulfillment and cancellation calls show on the client's contact log",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/199_contact_log.sql",
+        "supabase/tests/contact_log_agent_scope.sql",
+        "supabase/tests/p_contact_log.sql"
+      ],
+      "notes": "Never 'live' while voice_live is off. Covered in 199 by two client call sources: policy_events (no_answer, in_progress, cancelled) and fulfillment_voice_legs (party client). Written, not applied."
+    },
+    {
+      "id": "client-page.call-recording",
+      "page": "Client page",
+      "title": "A call on the client page says when a recording exists",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/199_contact_log.sql",
+        "supabase/tests/contact_log_agent_scope.sql",
+        "supabase/tests/p_contact_log.sql"
+      ],
+      "notes": "Never 'live' while recording_live is off. Covered in 199 by has_recording: true on a client leg whose conference (conference_sid, same policy) has a fulfillment_recordings row with status ready. An agent gets only the true/false, never the audio, sid or id, and no grant was added. Before recording_live goes on: fulfillment-voice's leg callback sets conference_sid to null when Twilio sends none, which would keep this false."
+    },
+    {
+      "id": "activity.submitted-row",
+      "page": "Activity",
+      "title": "A submit shows as one row: Submitted for servicing",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/202_activity_events.sql",
+        "supabase/tests/p_activity_events.sql",
+        "src/lib/activityEventsMigration.test.js",
+        "supabase/tests/p_servicing_functions.sql"
+      ],
+      "notes": "Migration 202 (not applied). policy_events kind submitted reads kind servicing, title Submitted for servicing; it never reads detail.label. The drawer still shows the raw word submitted (Activity.jsx storyStep has no case for it): page work, not in this row."
+    },
+    {
+      "id": "activity.request-lapse-wording",
+      "page": "Activity",
+      "title": "Requests and lapse work read in plain words",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/202_activity_events.sql",
+        "supabase/tests/p_activity_events.sql",
+        "src/lib/activityEventsMigration.test.js",
+        "supabase/tests/p_servicing_status.sql"
+      ],
+      "notes": "Migration 202 (not applied). lapse_save is checked first: Lapse risk flagged., then by outcome, with Lapse work done. for no outcome, which is what a done lapse_save reads until 200 lets a role write outcome. Agent or client requests read Request opened and Request done. System steps keep their words. The done row now passes outcome in reason."
+    },
+    {
+      "id": "activity.va-attempt-events",
+      "page": "Activity",
+      "title": "Every VA attempt and transfer change gets its own row",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/202_activity_events.sql",
+        "supabase/tests/p_activity_events.sql",
+        "src/lib/activityEventsMigration.test.js"
+      ],
+      "notes": "Migration 202 (not applied). Trigger log_lead_call_events on leads (insert or update of va_attempts, transfer_status, transferred_at) writes inbound_events va_call and transferred. The feed reads those and hides a column row only behind its own kind, with no date window. These rows also land on the lead timeline, and they raise the agent header count (DashboardLayout.jsx ActivityLine counts done inbound_events rows)."
+    },
+    {
+      "id": "activity.text-rows-all-sources",
+      "page": "Activity",
+      "title": "Text rows come from every source, confirmed sends only",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/202_activity_events.sql",
+        "supabase/tests/p_activity_events.sql",
+        "src/lib/activityEventsMigration.test.js"
+      ],
+      "notes": "Migration 202 (not applied). text_auto adds recovery_sms_log where ok and skipped is null, and inbound_events text_sent and reminder rows that are done and hold a Twilio id. The titles are per kind, but Activity.jsx rowText still says follow-up text for all but just_submitted: page work."
+    },
+    {
+      "id": "activity.spend-rows",
+      "page": "Activity",
+      "title": "Lead spend changes show, private from the upline",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/202_activity_events.sql",
+        "supabase/tests/p_activity_events.sql",
+        "src/lib/activityEventsMigration.test.js"
+      ],
+      "notes": "Migration 202 (not applied). One log row gives one row: billing_spend_pause when the pause state changed (paused or resumed), else billing_spend_change. An upline gets zero, even passing p_agent; Fulfillment gets zero. billing_subscription stays pending and a plan change needs 201. PENDING_KINDS is unchanged, so the Billing chip stays hidden until that is flipped."
     }
   ]
 }

@@ -473,7 +473,7 @@ select is((select count(*) from feed where id in (select 'servicing_added:' || t
              and meta ->> 'actor_name' = 'Test agent_a' and title = 'Servicing task added: packet check.'), 1::bigint,
           'e5 the Sold servicing row shows the requester''s name');
 select is((select count(*) from feed where id = 'servicing_added:' || (select id::text from ids where name = 'rpc')
-             and meta ->> 'actor_name' = 'Test agent_a' and title = 'Servicing task added: address change.'), 1::bigint,
+             and meta ->> 'actor_name' = 'Test agent_a' and title = 'Request opened: address change.'), 1::bigint,
           'e6 the request shows once as a servicing row, with the requester''s name');
 select is((select count(*) from feed where (meta ->> 'policy_id')::uuid = (select policy_id from public.policy_servicing_status where client_last_name = 'FeedRequest')
              and kind = 'servicing'), 1::bigint, 'e7 and that is the only servicing row for it');

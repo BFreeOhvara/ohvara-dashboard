@@ -20,10 +20,17 @@
 --   01 new, 3 days old        02 not reached      03 callback, due
 --   04 callback, not due      05 new, V2 holds it (live claim)
 --   06 new, V2's claim expired   07 already has an agent   08 cancellation
+--
+-- Sections j and k cover the two va_ functions from 183_lead_sms_replies.sql.
+-- Their leads (101 contact and business name, 102 no contact name, 103 blank
+-- contact name) are cancellations, so the queue never shows them. Replies (last
+-- two digits of the id), newest first:
+--   05 handled by V2 (hidden)    06 lead 101    01 lead 101    02 lead 102
+--   04 no lead, same time as 03  03 lead 103
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(90);
+select plan(117);
 
 -- ── seed (as the table owner) ───────────────────────────────────────────────
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -52,7 +59,19 @@ values
   ('cccccccc-cccc-4ccc-8ccc-000000000005', 'Lead 05', 'Lead 05', '+15125550105', 'TX', 'policy_help', 'google', null, null, 0, 'bbbbbbbb-bbbb-4bbb-8bbb-000000000002', now() + interval '10 minutes', null, now() - interval '5 days'),
   ('cccccccc-cccc-4ccc-8ccc-000000000006', 'Lead 06', 'Lead 06', '+15125550106', 'TX', 'policy_help', 'google', null, null, 0, 'bbbbbbbb-bbbb-4bbb-8bbb-000000000002', now() - interval '5 minutes', null, now() - interval '1 day'),
   ('cccccccc-cccc-4ccc-8ccc-000000000007', 'Lead 07', 'Lead 07', '+15125550107', 'TX', 'policy_help', 'google', null, null, 0, null, null, 'aaaaaaaa-aaaa-4aaa-8aaa-000000000001', now() - interval '6 days'),
-  ('cccccccc-cccc-4ccc-8ccc-000000000008', 'Lead 08', 'Lead 08', '+15125550108', 'TX', 'cancellation', null, null, null, 0, null, null, null, now() - interval '7 days');
+  ('cccccccc-cccc-4ccc-8ccc-000000000008', 'Lead 08', 'Lead 08', '+15125550108', 'TX', 'cancellation', null, null, null, 0, null, null, null, now() - interval '7 days'),
+  ('cccccccc-cccc-4ccc-8ccc-000000000101', 'Business 101', 'Contact 101', '+15125550111', 'TX', 'cancellation', null, null, null, 0, null, null, null, now() - interval '7 days'),
+  ('cccccccc-cccc-4ccc-8ccc-000000000102', 'Business 102', null, '+15125550112', 'TX', 'cancellation', null, null, null, 0, null, null, null, now() - interval '7 days'),
+  ('cccccccc-cccc-4ccc-8ccc-000000000103', 'Business 103', '   ', '+15125550113', 'TX', 'cancellation', null, null, null, 0, null, null, null, now() - interval '7 days');
+
+insert into public.lead_sms_replies (id, from_phone, body, twilio_sid, lead_id, received_at, handled_by, handled_at)
+values
+  ('dddddddd-dddd-4ddd-8ddd-000000000001', '(512) 555-0111', 'Reply 01', 'SM_p_va_desk_01', 'cccccccc-cccc-4ccc-8ccc-000000000101', now() - interval '1 hour', null, null),
+  ('dddddddd-dddd-4ddd-8ddd-000000000002', '+15125550112', 'Reply 02', 'SM_p_va_desk_02', 'cccccccc-cccc-4ccc-8ccc-000000000102', now() - interval '2 hours', null, null),
+  ('dddddddd-dddd-4ddd-8ddd-000000000003', '+15125550113', 'Reply 03', 'SM_p_va_desk_03', 'cccccccc-cccc-4ccc-8ccc-000000000103', now() - interval '3 hours', null, null),
+  ('dddddddd-dddd-4ddd-8ddd-000000000004', '+15125550114', 'Reply 04', 'SM_p_va_desk_04', null, now() - interval '3 hours', null, null),
+  ('dddddddd-dddd-4ddd-8ddd-000000000005', '+15125550111', 'Reply 05', 'SM_p_va_desk_05', 'cccccccc-cccc-4ccc-8ccc-000000000101', now() - interval '1 minute', 'bbbbbbbb-bbbb-4bbb-8bbb-000000000002', now() - interval '1 minute'),
+  ('dddddddd-dddd-4ddd-8ddd-000000000006', '+15125550111', 'Reply 06', 'SM_p_va_desk_06', 'cccccccc-cccc-4ccc-8ccc-000000000101', now() - interval '10 minutes', null, null);
 
 -- Row counts of every table that can hold an outbound message, before anything runs.
 create temp table va_before as
@@ -358,6 +377,145 @@ select ok(p.prosecdef and exists (select 1 from unnest(p.proconfig) c where c li
   from pg_proc p
  where p.pronamespace = 'public'::regnamespace and p.proname like 'va\_%'
  order by p.proname;
+
+-- ── j. Text replies: nobody reads the table, only Fulfillment sees the list ──
+select ok(not has_table_privilege('anon', 'public.lead_sms_replies', 'select,insert,update,delete,truncate,references,trigger'),
+          'j1 anon has no access to the lead_sms_replies table');
+select ok(not has_table_privilege('authenticated', 'public.lead_sms_replies', 'select,insert,update,delete,truncate,references,trigger'),
+          'j2 authenticated has no access to the lead_sms_replies table');
+select is(
+  (select c.relrowsecurity and not exists (select 1 from pg_policy pol where pol.polrelid = c.oid)
+     from pg_class c where c.oid = 'public.lead_sms_replies'::regclass),
+  true,
+  'j3 lead_sms_replies has RLS on and no policies');
+
+select set_config('request.jwt.claims', '', true), set_config('role', 'anon', true);
+select throws_ok($$ select * from public.va_lead_replies() $$, '42501', 'permission denied for function va_lead_replies',
+                 'j4 anon calling va_lead_replies is refused');
+reset role;
+
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-000000000001","role":"authenticated"}', true),
+       set_config('role', 'authenticated', true);
+select throws_ok($$ select * from public.va_lead_replies() $$, '42501', 'Only Fulfillment can see text replies',
+                 'j5 an agent cannot call va_lead_replies');
+reset role;
+
+select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8bbb-000000000003","role":"authenticated"}', true),
+       set_config('role', 'authenticated', true);
+select throws_ok($$ select * from public.va_lead_replies() $$, '42501', 'Only Fulfillment can see text replies',
+                 'j6 a Fulfillment login with access off cannot call va_lead_replies');
+reset role;
+
+select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8bbb-000000000001","role":"authenticated"}', true),
+       set_config('role', 'authenticated', true);
+select throws_ok($$ select * from public.lead_sms_replies $$, '42501', 'permission denied for table lead_sms_replies',
+                 'j7 a VA cannot read the table directly');
+select is(
+  (select array_agg(right(r.id::text, 2) order by r.id) from public.va_lead_replies() r
+    where r.id::text like 'dddddddd-%'),
+  array['01', '02', '03', '04', '06'],
+  'j8 va_lead_replies shows the unhandled replies and not the handled one');
+select is(
+  (select string_agg(right(x.id::text, 2), ',') from
+     (select r.id from public.va_lead_replies() r where r.id::text like 'dddddddd-%') x),
+  '06,01,02,04,03',
+  'j9 va_lead_replies is newest first, and 04 before 03 on the same time (id desc)');
+select is(
+  (select r.lead_id::text || ':' || r.from_phone || ':' || r.body from public.va_lead_replies() r
+    where r.id = 'dddddddd-dddd-4ddd-8ddd-000000000001'),
+  'cccccccc-cccc-4ccc-8ccc-000000000101:+15125550111:Reply 01',
+  'j10 va_lead_replies returns the lead, the number in E.164 and the text');
+select is(
+  (select r.lead_name from public.va_lead_replies() r where r.id = 'dddddddd-dddd-4ddd-8ddd-000000000001'),
+  'Contact 101',
+  'j11 va_lead_replies names the lead by contact_name when it has one');
+select is(
+  (select r.lead_name from public.va_lead_replies() r where r.id = 'dddddddd-dddd-4ddd-8ddd-000000000002'),
+  'Business 102',
+  'j12 va_lead_replies falls back to business_name when contact_name is null');
+select is(
+  (select r.lead_name from public.va_lead_replies() r where r.id = 'dddddddd-dddd-4ddd-8ddd-000000000003'),
+  'Business 103',
+  'j13 va_lead_replies falls back to business_name when contact_name is blank');
+select is(
+  (select count(*) from public.va_lead_replies() r
+    where r.id = 'dddddddd-dddd-4ddd-8ddd-000000000004' and r.lead_id is null and r.lead_name is null),
+  1::bigint,
+  'j14 a reply with no lead still shows in va_lead_replies, with a null name');
+reset role;
+
+-- ── k. Marking a reply handled: the first VA keeps the credit ───────────────
+select set_config('request.jwt.claims', '', true), set_config('role', 'anon', true);
+select throws_ok($$ select public.va_mark_reply_handled('dddddddd-dddd-4ddd-8ddd-000000000006') $$, '42501', 'permission denied for function va_mark_reply_handled',
+                 'k1 anon calling va_mark_reply_handled is refused');
+reset role;
+
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-000000000001","role":"authenticated"}', true),
+       set_config('role', 'authenticated', true);
+select throws_ok($$ select public.va_mark_reply_handled('dddddddd-dddd-4ddd-8ddd-000000000006') $$, '42501', 'Only Fulfillment can handle text replies',
+                 'k2 an agent cannot call va_mark_reply_handled');
+reset role;
+
+select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8bbb-000000000003","role":"authenticated"}', true),
+       set_config('role', 'authenticated', true);
+select throws_ok($$ select public.va_mark_reply_handled('dddddddd-dddd-4ddd-8ddd-000000000006') $$, '42501', 'Only Fulfillment can handle text replies',
+                 'k3 a Fulfillment login with access off cannot call va_mark_reply_handled');
+reset role;
+
+select is(
+  (select handled_by is null and handled_at is null from public.lead_sms_replies where id = 'dddddddd-dddd-4ddd-8ddd-000000000006'),
+  true,
+  'k4 the refused calls left the reply unhandled');
+
+select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8bbb-000000000001","role":"authenticated"}', true),
+       set_config('role', 'authenticated', true);
+select throws_ok($$ select public.va_mark_reply_handled(null) $$, '22004', 'Reply id is required',
+                 'k5 va_mark_reply_handled with no id is rejected');
+select throws_ok($$ select public.va_mark_reply_handled('dddddddd-dddd-4ddd-8ddd-000000000099') $$, 'P0002', 'Reply not found',
+                 'k6 va_mark_reply_handled with an unknown id is rejected');
+select lives_ok($$ select public.va_mark_reply_handled('dddddddd-dddd-4ddd-8ddd-000000000006') $$,
+                'k7 the first VA can mark a reply handled');
+reset role;
+select is(
+  (select handled_by::text || ':' || (handled_at = now()) from public.lead_sms_replies where id = 'dddddddd-dddd-4ddd-8ddd-000000000006'),
+  'bbbbbbbb-bbbb-4bbb-8bbb-000000000001:true',
+  'k8 the first call sets handled_by to the caller and handled_at to now');
+
+select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8bbb-000000000001","role":"authenticated"}', true),
+       set_config('role', 'authenticated', true);
+select is(
+  (select string_agg(right(x.id::text, 2), ',') from
+     (select r.id from public.va_lead_replies() r where r.id::text like 'dddddddd-%') x),
+  '01,02,04,03',
+  'k9 the handled reply is gone from va_lead_replies and the others stay');
+reset role;
+
+-- now() does not move inside this transaction, so push handled_at back: a second
+-- stamp would show.
+update public.lead_sms_replies set handled_at = now() - interval '1 hour'
+ where id = 'dddddddd-dddd-4ddd-8ddd-000000000006';
+select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-4bbb-8bbb-000000000002","role":"authenticated"}', true),
+       set_config('role', 'authenticated', true);
+select lives_ok($$ select public.va_mark_reply_handled('dddddddd-dddd-4ddd-8ddd-000000000006') $$,
+                'k10 a second VA marking the same reply gets no error');
+select is(
+  (select string_agg(right(x.id::text, 2), ',') from
+     (select r.id from public.va_lead_replies() r where r.id::text like 'dddddddd-%') x),
+  '01,02,04,03',
+  'k11 the handled reply stays gone from va_lead_replies for the second VA too');
+reset role;
+select is(
+  (select handled_by::text || ':' || (handled_at = now() - interval '1 hour') from public.lead_sms_replies where id = 'dddddddd-dddd-4ddd-8ddd-000000000006'),
+  'bbbbbbbb-bbbb-4bbb-8bbb-000000000001:true',
+  'k12 the second call kept the first VA''s handled_by and handled_at');
+
+select is(
+  (select ((select count(*) from public.notification_emails) - b.emails) || ',' ||
+          ((select count(*) from public.notification_pushes) - b.pushes) || ',' ||
+          ((select count(*) from public.recovery_sms_log) - b.sms)
+     from va_before b),
+  '0,0,0',
+  'k13 the reply calls wrote nothing to the email, push or SMS tables either');
 
 select * from finish();
 rollback;

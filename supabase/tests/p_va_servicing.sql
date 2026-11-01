@@ -16,7 +16,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(418);
+select plan(423);
 
 -- ── seed (as the table owner) ───────────────────────────────────────────────
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -439,7 +439,7 @@ select is((select concat_ws('|', status, length(cancel_reason), va_claimed_by is
 
 -- Every kind has a right and a wrong outcome: through the function, and at the table.
 select public.p_vs_task('oc_' || k, k) from unnest(array['lapse_save', 'packet_check', 'review_call', 'annual_review', 'conversion', 'chargeback_watch',
-  'beneficiary_change', 'address_change', 'payment_change', 'draft_date_change', 'claim_help', 'carrier_call']) k;
+  'beneficiary_change', 'address_change', 'payment_change', 'draft_date_change', 'claim_help', 'carrier_call', 'other']) k;
 select public.p_vs_as('z');
 select is(public.p_vs_try(format('select public.va_servicing_outcome(%L, %L)', public.p_vs_id('oc_' || v.k), v.right_one)), 'ok', 'e15 ' || v.k || ' takes ' || v.right_one),
        is(public.p_vs_try(format('select public.va_servicing_outcome(%L, %L)', public.p_vs_id('oc_' || v.k), v.wrong_one)), '22023', 'e16 ' || v.k || ' refuses ' || v.wrong_one)
@@ -447,14 +447,15 @@ select is(public.p_vs_try(format('select public.va_servicing_outcome(%L, %L)', p
     ('lapse_save', 'saved', 'completed'), ('packet_check', 'delivered', 'saved'), ('review_call', 'completed', 'delivered'),
     ('annual_review', 'not_reached', 'on_time'), ('conversion', 'completed', 'could_not_complete'), ('chargeback_watch', 'on_time', 'completed'),
     ('beneficiary_change', 'completed', 'not_reached'), ('address_change', 'could_not_complete', 'saved'), ('payment_change', 'completed', 'missed'),
-    ('draft_date_change', 'could_not_complete', 'delivered'), ('claim_help', 'completed', 'lapsed'), ('carrier_call', 'could_not_complete', 'not_reached')
+    ('draft_date_change', 'could_not_complete', 'delivered'), ('claim_help', 'completed', 'lapsed'), ('carrier_call', 'could_not_complete', 'not_reached'),
+    ('other', 'completed', 'saved')
   ) v(k, right_one, wrong_one);
 select public.p_vs_owner();
 select is(public.p_vs_try(format('update public.servicing_tasks set outcome = %L where id = %L', v.wrong_one, public.p_vs_id('oc_' || v.k))), '23514', 'e17 the table itself refuses ' || v.wrong_one || ' on ' || v.k)
   from (values
     ('lapse_save', 'completed'), ('packet_check', 'saved'), ('review_call', 'delivered'), ('annual_review', 'on_time'), ('conversion', 'could_not_complete'),
     ('chargeback_watch', 'completed'), ('beneficiary_change', 'not_reached'), ('address_change', 'saved'), ('payment_change', 'missed'),
-    ('draft_date_change', 'delivered'), ('claim_help', 'lapsed'), ('carrier_call', 'not_reached')
+    ('draft_date_change', 'delivered'), ('claim_help', 'lapsed'), ('carrier_call', 'not_reached'), ('other', 'on_time')
   ) v(k, wrong_one);
 select public.p_vs_as('z');
 select throws_ok(format('select public.va_servicing_outcome(%L, null)', public.p_vs_id('oc_carrier_call')), '22023', 'That outcome doesn''t fit this step', 'e18 a null outcome is refused');
@@ -466,13 +467,13 @@ select is((select outcome from public.servicing_tasks where id = public.p_vs_id(
 -- Done with no outcome is refused on every kind.
 select public.p_vs_task('nd_' || k, k, 'in_progress'), public.p_vs_hold('nd_' || k, 'v1')
   from unnest(array['lapse_save', 'packet_check', 'review_call', 'annual_review', 'conversion', 'chargeback_watch',
-                    'beneficiary_change', 'address_change', 'payment_change', 'draft_date_change', 'claim_help', 'carrier_call']) k;
+                    'beneficiary_change', 'address_change', 'payment_change', 'draft_date_change', 'claim_help', 'carrier_call', 'other']) k;
 select public.p_vs_as('v1');
 select throws_ok(format('select public.va_servicing_done(%L)', public.p_vs_id('nd_lapse_save')), '22023', 'Record the outcome first',
                  'e22 a lapse_save with no outcome can''t be done, or the client would silently leave needs_attention');
 select is(public.p_vs_try(format('select public.va_servicing_done(%L)', public.p_vs_id('nd_' || k))), '22023', 'e23 done with no outcome is refused on ' || k)
   from unnest(array['packet_check', 'review_call', 'annual_review', 'conversion', 'chargeback_watch',
-                    'beneficiary_change', 'address_change', 'payment_change', 'draft_date_change', 'claim_help', 'carrier_call']) k;
+                    'beneficiary_change', 'address_change', 'payment_change', 'draft_date_change', 'claim_help', 'carrier_call', 'other']) k;
 select public.p_vs_owner();
 select is(public.p_vs_stage('nd_lapse_save'), 'needs_attention|lapse_save', 'e24 so that client still needs attention');
 
@@ -583,6 +584,17 @@ select throws_ok(format('select public.va_servicing_schedule(%L, null)', public.
 select public.p_vs_owner();
 select is((select due_at from public.servicing_tasks where id = public.p_vs_id('sc_other')), now() + interval '1 day', 'g17 the refused calls left due_at alone');
 select is(public.p_vs_events('sc_free') || '/' || public.p_vs_events('sc_sch') || '/' || public.p_vs_events('sc_other'), 'scheduled/scheduled/', 'g18 each schedule writes one event, a refused one none');
+
+-- 196's schedule keeps working next to the trigger, and moves nothing back.
+select public.p_vs_task('sc_196_req');
+select public.p_vs_task('sc_196_prog', 'carrier_call', 'in_progress');
+select public.p_vs_as('v1');
+select public.fulfillment_schedule_request(public.p_vs_id(k), now() + interval '8 days') from unnest(array['sc_196_req', 'sc_196_prog']) k;
+select public.p_vs_owner();
+select is((select concat_ws('|', status, due_at = now() + interval '8 days') from public.servicing_tasks where id = public.p_vs_id('sc_196_req')),
+          'scheduled|t', 'g19 fulfillment_schedule_request moves requested to scheduled');
+select is((select concat_ws('|', status, due_at = now() + interval '8 days') from public.servicing_tasks where id = public.p_vs_id('sc_196_prog')),
+          'in_progress|t', 'g20 and on in_progress only changes due_at');
 
 -- ── h. Direct reads and writes ──────────────────────────────────────────────
 select public.p_vs_task('rd_free', 'carrier_call', 'requested', null, 'a', 'agent', 'free task note');

@@ -10,7 +10,7 @@ import { ClientDrawer, StatusNote, Journey, LoadError } from './AgentUI'
 import { CancellationFlow } from '../../pages/agent/Clients'
 import { leadName, stateName, dateText, timeText, telHref } from '../../lib/inbounds'
 import { fullName, money } from '../../lib/policyFormat'
-import { agentStageOf, STAGE, placeOf, digits, useNow } from '../../lib/agentBookings'
+import { agentStageOf, STAGE, placeOf, digits, policyNumberMatches, useNow } from '../../lib/agentBookings'
 import { DEFAULT_TIMEZONE } from '../../lib/timezones'
 import './clientsV2Parts.css'
 
@@ -94,8 +94,12 @@ function useV2Clients() {
   }
 }
 
-// Search (name, or 3+ digits of the phone) and the All / From leads / Existing filter.
-function useClientFilter(clients) {
+// The client's old policies' numbers plus the policy a sold lead became.
+const hasPolicyNumber = (c, policies, q) => [...c.bookings.map(p => p.policy_number), policies?.get(c.newPolicyId)?.policy_number]
+  .some(n => policyNumberMatches(n, q))
+
+// Search (name, 3+ digits of the phone, or 3+ characters of a policy number) and the All / From leads / Existing filter.
+function useClientFilter(clients, policies) {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
   const counts = {
@@ -106,7 +110,7 @@ function useClientFilter(clients) {
   const q = query.trim().toLowerCase()
   const qd = digits(q)
   const shown = clients.filter(c => (filter === 'all' || c.source === filter)
-    && (!q || c.name.toLowerCase().includes(q) || (qd.length >= 3 && digits(c.phone).includes(qd))))
+    && (!q || c.name.toLowerCase().includes(q) || (qd.length >= 3 && digits(c.phone).includes(qd)) || hasPolicyNumber(c, policies, q)))
   return { query, setQuery, filter, setFilter, counts, shown }
 }
 
@@ -136,8 +140,8 @@ export function ClientsV2Row({ c, on, tz, onOpen }) {
 // The "Your clients" box: title, search, filter and the merged list. Inside My Pipeline's right
 // column (.cv2-col) its list scrolls inside the box when the page fills the screen.
 export function ClientsV2Card({ data, activeId, onOpen, className = '' }) {
-  const { tz, clients, loading, error, refetch } = data
-  const f = useClientFilter(clients)
+  const { tz, clients, policies, loading, error, refetch } = data
+  const f = useClientFilter(clients, policies)
   let body
   if (error) body = <LoadError what="your clients" onRetry={refetch} />
   else if (loading) body = <p className="cv2-sub cv2-pad" role="status">Loading your clients…</p>
@@ -164,7 +168,7 @@ export function ClientsV2Card({ data, activeId, onOpen, className = '' }) {
         <div className="cv2-tools">
           <label className="ov-input cv2-search">
             <Search size={16} strokeWidth={2} style={{ flexShrink: 0 }} aria-hidden="true" />
-            <input type="search" value={f.query} onChange={e => f.setQuery(e.target.value)} placeholder="Find a client" aria-label="Find a client" />
+            <input type="search" value={f.query} onChange={e => f.setQuery(e.target.value)} placeholder="Name, phone or policy number" aria-label="Find a client" />
           </label>
           <div className="ov-range cv2-range" role="group" aria-label="Show">
             {CLIENT_FILTERS.map(x => (

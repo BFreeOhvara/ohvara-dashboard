@@ -4,10 +4,13 @@
 -- NOT APPLIED. Written from a worktree; applying it is Brayden's apply step. It
 -- changes RLS, so the merge guard asks him. It applies only after
 -- 193_servicing_model.sql and 195_servicing_functions.sql: its first statement stops
--- the whole file if either is missing. agent_activity_feed and policy_servicing_status
--- are copied whole from 193, their newest versions, with only the lines named below
--- changed. policy_events_kind_check keeps every value from 187 and adds one. No screen
--- reads this yet. No text, call, pay line or rate here, and every live switch stays off.
+-- the whole file if either is missing, or 196, whose kind list and schedule function
+-- this builds on. 196 and 202 are live, so this applies after them.
+-- agent_activity_feed is copied whole from 202, policy_servicing_status from 193 and
+-- fulfillment_schedule_request from 196, their newest versions, with only the lines
+-- named below changed. policy_events_kind_check keeps every value from 187 and adds one.
+-- No screen reads this yet. No text, call, pay line or rate here, and every live switch
+-- stays off.
 --
 -- Why: Fulfillment Build Order, Lane A item 2. Until now any VA could read every task
 -- and skip any status (193). A VA is unlicensed, so nothing here lets one record
@@ -28,7 +31,7 @@
 --       review_call, annual_review, conversion     completed, not_reached
 --       chargeback_watch                           on_time, missed
 --       beneficiary_change, address_change, payment_change, draft_date_change,
---       claim_help, carrier_call                   completed, could_not_complete
+--       claim_help, carrier_call, other            completed, could_not_complete
 --   rpc va_servicing_queue()
 --     task_id, policy_id, lead_id, kind, status, requested_by, due_at, best_time,
 --     outcome, client_name, client_state, carrier, agent_name, mine (boolean),
@@ -65,6 +68,8 @@
 --     from the view, so its stage would be wrong for them.
 --   agent_activity_feed: same signature and grants. kind servicing, title = the label.
 --     The done event is skipped, because the servicing_done row already shows it.
+--   rpc fulfillment_schedule_request (196): same signature and refusals. On in_progress
+--     it now moves only due_at, because a move back to scheduled is refused.
 --
 -- A VA'S DIRECT READ IS THEIR OWN LIVE CLAIM ONLY. That is narrower than the scope's
 -- "own + unclaimed", on purpose: the row holds the note and servicing_task_notes inherit
@@ -109,8 +114,9 @@
 -- marks that one notice read with needs_action off, found by the same key.
 --
 -- Who can write servicing_tasks: set_inbound_outcome, agent_submit_service_request,
--- agent_submit_deal, the va_servicing_* functions, agent_servicing_clear_sent and the
--- service role. If a row's outcome breaks the new list the constraint stops the whole
+-- agent_submit_deal, fulfillment_schedule_request, fulfillment_finish_request, the
+-- va_servicing_* functions, agent_servicing_clear_sent and the service role. 196's line
+-- that Fulfillment keeps its update (status) grant no longer holds. If a row's outcome breaks the new list the constraint stops the whole
 -- file; no writer could set one before this, except the service role.
 
 -- ── 1. Guard ────────────────────────────────────────────────────────────────
@@ -121,6 +127,9 @@ begin
   end if;
   if to_regclass('public.servicing_task_notes') is null then
     raise exception '200 needs 195_servicing_functions applied first';
+  end if;
+  if to_regprocedure('public.fulfillment_schedule_request(uuid, timestamptz)') is null then
+    raise exception '200 needs 196_service_request_tracking applied first';
   end if;
 end $$;
 
@@ -148,13 +157,13 @@ alter table public.servicing_tasks add constraint servicing_tasks_outcome_check 
     when kind in ('review_call', 'annual_review', 'conversion') then outcome in ('completed', 'not_reached')
     when kind = 'chargeback_watch' then outcome in ('on_time', 'missed')
     when kind in ('beneficiary_change', 'address_change', 'payment_change', 'draft_date_change',
-                  'claim_help', 'carrier_call') then outcome in ('completed', 'could_not_complete')
+                  'claim_help', 'carrier_call', 'other') then outcome in ('completed', 'could_not_complete')
     else false
   end
 );
 
 comment on table public.servicing_tasks is
-  'Every servicing step and every request on a client. Written only by set_inbound_outcome, agent_submit_service_request, agent_submit_deal, the va_servicing_* functions, agent_servicing_clear_sent and the service role. A request doesn''t count against the weekly cap.';
+  'Every servicing step and every request on a client. Written only by set_inbound_outcome, agent_submit_service_request, agent_submit_deal, fulfillment_schedule_request, fulfillment_finish_request, the va_servicing_* functions, agent_servicing_clear_sent and the service role. A request doesn''t count against the weekly cap.';
 comment on column public.servicing_tasks.outcome is
   'How the step ended, one closed list per kind (migration 200). A lapse_save: saved, lapsed or client_cancelled.';
 comment on column public.servicing_tasks.cancel_reason is 'Why it was cancelled. Never copied into an event.';
@@ -190,6 +199,52 @@ drop trigger if exists servicing_tasks_status_order on public.servicing_tasks;
 create trigger servicing_tasks_status_order
   before update on public.servicing_tasks
   for each row execute function public.servicing_tasks_status_order();
+
+-- 196, with one line changed: the trigger above refuses in_progress back to scheduled,
+-- which is what this function did. It moves requested to scheduled and otherwise only
+-- changes due_at. Everything else is 196's.
+create or replace function public.fulfillment_schedule_request(p_task uuid, p_at timestamptz)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_task record;
+begin
+  if not (public.is_admin() or public.is_fulfillment()) then
+    raise exception 'Only Fulfillment can do this' using errcode = '42501';
+  end if;
+  if p_task is null then
+    raise exception 'Pick a request' using errcode = '22023';
+  end if;
+  if p_at is null or p_at <= now() then
+    raise exception 'Pick a time in the future' using errcode = '22023';
+  end if;
+
+  select id, policy_id, requested_by, status into v_task
+    from servicing_tasks where id = p_task
+    for update;
+  if not found
+     or (v_task.policy_id is not null
+         and public.policy_is_demo(v_task.policy_id) is distinct from public.my_is_demo()) then
+    raise exception 'Request not found' using errcode = 'P0002';
+  end if;
+  if v_task.requested_by not in ('agent', 'client') then
+    raise exception 'This is not a service request' using errcode = '22023';
+  end if;
+  if v_task.status not in ('requested', 'scheduled', 'in_progress') then
+    raise exception 'This request is closed' using errcode = '22023';
+  end if;
+
+  update servicing_tasks
+     set status = case when status = 'requested' then 'scheduled' else status end, due_at = p_at
+   where id = p_task;
+end;
+$$;
+
+revoke all on function public.fulfillment_schedule_request(uuid, timestamptz) from public, anon;
+grant execute on function public.fulfillment_schedule_request(uuid, timestamptz) to authenticated;
 
 -- ── 4. The side rule ────────────────────────────────────────────────────────
 -- Never policy_is_demo(null): it returns the caller's own side, so it walls nothing.
@@ -718,9 +773,9 @@ alter table public.policy_events add constraint policy_events_kind_check
                            'submitted', 'service_request', 'servicing']));
 
 -- ── 14. agent_activity_feed ─────────────────────────────────────────────────
--- 193, with two lines added: the title of a servicing event is its label, and its done
--- event is skipped, because the servicing_done row already shows it. The feed returns
--- kind servicing for these. The kinds, the words and the grants are otherwise 193's.
+-- 202, its newest version and live, with two lines added: the title of a servicing event
+-- is its label, and its done event is skipped, because the servicing_done row already
+-- shows it. The feed returns kind servicing for these. All else is 202's.
 create or replace function public.agent_activity_feed(
   p_from timestamptz,
   p_to timestamptz,
@@ -780,7 +835,7 @@ begin
     -- policy_events: booked, moved, no_answer, in_progress, edited, reassigned,
     -- cancelled, and a corrected result as outcome.
     select 'policy_event:' || pe.id::text as id,
-           case when pe.detail ->> 'correction' = 'true' then 'outcome' else pe.kind end as kind,
+           case when pe.detail ->> 'correction' = 'true' then 'outcome' when pe.kind = 'submitted' then 'servicing' else pe.kind end as kind,
            pe.at as at,
            pl.lead_id as lead_id,
            p.agent_id as agent_id,
@@ -796,6 +851,7 @@ begin
              when pe.kind = 'edited' then 'Booking details changed.'
              when pe.kind = 'reassigned' then 'Call given to another Fulfillment rep.'
              when pe.kind = 'cancelled' then 'Old policy confirmed cancelled.'
+             when pe.kind = 'submitted' then 'Submitted for servicing'
              when pe.kind = 'servicing' then pe.detail ->> 'label'
              else 'Call updated.'
            end as title,
@@ -859,6 +915,46 @@ begin
        and s.created_at >= p_from and s.created_at < p_to
 
     union all
+    -- text_auto: the booked-call texts. Confirmed sends only: ok with nothing skipped.
+    select 'recovery_sms:' || rs.id::text, 'text_auto', rs.created_at,
+           pl.lead_id, p.agent_id, null::uuid,
+           case rs.kind when 'text1' then 'Automatic text sent after a missed call.'
+                        when 'text2' then 'Automatic reminder text sent about the next call.'
+                        when 'am' then 'Automatic text sent after a missed call.'
+                        when 'pm' then 'Automatic text sent after a missed call.'
+                        when 'apology1' then 'Automatic apology text sent for a missed call.'
+                        when 'apology2' then 'Automatic reminder text sent about the next call.'
+                        when 'confirm' then 'Automatic confirmation text sent.'
+                        else 'Automatic text sent.' end,
+           p.id, p.client_first_name, p.client_last_name, p.state,
+           null, 'system', null, rs.kind, null, null, null, '{}'::jsonb
+      from recovery_sms_log rs
+      join policies p on p.id = rs.policy_id
+      left join policy_lead pl on pl.policy_id = p.id
+     where rs.ok and rs.skipped is null
+       and rs.created_at >= p_from and rs.created_at < p_to
+
+    union all
+    -- text_auto: lead-workflow-sms steps. It marks a row done before it sends, so
+    -- only a row holding Twilio's answer is known to have gone out.
+    select 'inbound_event:' || ev.id::text, 'text_auto', ev.at,
+           lr.lead_id, coalesce(ev.agent_id, lr.lead_agent), null::uuid,
+           case when ev.detail ->> 'step' = 'instant' then 'Welcome text sent automatically.'
+                when ev.detail ->> 'step' like 'not_reached%' then 'Automatic follow-up text sent.'
+                when ev.detail ->> 'step' = 'confirm' then 'Automatic confirmation text sent.'
+                when ev.detail ->> 'step' like 'reminder%' then 'Automatic reminder text sent.'
+                when ev.detail ->> 'step' = 'no_show_rebook' then 'Automatic rebook text sent.'
+                else 'Automatic text sent.' end,
+           lr.policy_id, lr.first_name, lr.last_name, lr.state,
+           null, 'system', null, ev.detail ->> 'step', null, null, null, '{}'::jsonb
+      from inbound_events ev
+      join lead_rows lr on lr.lead_id = ev.lead_id
+     where ev.kind in ('text_sent', 'reminder')
+       and ev.state = 'done'
+       and nullif(ev.detail ->> 'twilio_sid', '') is not null
+       and ev.at >= p_from and ev.at < p_to
+
+    union all
     -- text_reply: a client's text to a lead
     select 'sms_reply:' || r.id::text, 'text_reply', r.received_at,
            lr.lead_id, lr.lead_agent, null::uuid,
@@ -897,6 +993,25 @@ begin
       left join profiles va on va.id = lr.va_last_worked_by
      where lr.va_outcome in ('not_reached', 'callback', 'not_interested')
        and lr.va_last_worked_at >= p_from and lr.va_last_worked_at < p_to
+       and not exists (select 1 from inbound_events x
+                        where x.lead_id = lr.lead_id and x.kind = 'va_call' and x.state = 'done')
+
+    union all
+    -- va_call: one row per attempt, from log_lead_call_events
+    select 'inbound_event:' || ev.id::text, 'va_call', ev.at,
+           lr.lead_id, coalesce(ev.agent_id, lr.lead_agent), null::uuid,
+           case ev.detail ->> 'outcome' when 'not_reached' then 'A VA called and did not reach the client.'
+                                        when 'callback' then 'A VA called and set a callback.'
+                                        when 'not_interested' then 'A VA called and the client is not interested.'
+                                        else 'A VA called.' end,
+           lr.policy_id, lr.first_name, lr.last_name, lr.state,
+           ev.actor_name, ev.actor_role, ev.detail -> 'attempt', ev.detail ->> 'outcome',
+           null, ev.detail ->> 'callback_at', null, '{}'::jsonb
+      from inbound_events ev
+      join lead_rows lr on lr.lead_id = ev.lead_id
+     where ev.kind = 'va_call'
+       and ev.state = 'done'
+       and ev.at >= p_from and ev.at < p_to
 
     union all
     -- booked: a VA's booking with no policy row to log it
@@ -923,6 +1038,23 @@ begin
       from lead_rows lr
       left join profiles va on va.id = lr.va_last_worked_by
      where lr.transferred_at >= p_from and lr.transferred_at < p_to
+       and not exists (select 1 from inbound_events x
+                        where x.lead_id = lr.lead_id and x.kind = 'transferred' and x.state = 'done')
+
+    union all
+    -- transferred: one row per change, from log_lead_call_events
+    select 'inbound_event:' || ev.id::text, 'transferred', ev.at,
+           lr.lead_id, coalesce(ev.agent_id, lr.transfer_agent), null::uuid,
+           case ev.detail ->> 'status' when 'connected' then 'A live transfer connected.'
+                                       when 'dropped' then 'A live transfer dropped.'
+                                       else 'A live transfer was requested.' end,
+           lr.policy_id, lr.first_name, lr.last_name, lr.state,
+           ev.actor_name, ev.actor_role, null, ev.detail ->> 'status', null, null, null, '{}'::jsonb
+      from inbound_events ev
+      join lead_rows lr on lr.lead_id = ev.lead_id
+     where ev.kind = 'transferred'
+       and ev.state = 'done'
+       and ev.at >= p_from and ev.at < p_to
 
     union all
     -- outcome and sold: the agent's Sold / Follow up / Not interested
@@ -945,7 +1077,9 @@ begin
     -- servicing: the task was added
     select 'servicing_added:' || t.id::text, 'servicing', t.created_at,
            t.lead_id, t.agent_id, null::uuid,
-           'Servicing task added: ' || replace(t.kind, '_', ' ') || '.',
+           case when t.kind = 'lapse_save' then 'Lapse risk flagged.'
+                when t.requested_by in ('agent', 'client') then 'Request opened: ' || replace(t.kind, '_', ' ') || '.'
+                else 'Servicing task added: ' || replace(t.kind, '_', ' ') || '.' end,
            coalesce(t.policy_id, lr.policy_id),
            coalesce(lr.first_name, p.client_first_name), coalesce(lr.last_name, p.client_last_name), coalesce(lr.state, p.state),
            rb.full_name, rb.role::text, null, t.kind, null, to_jsonb(t.due_at) #>> '{}', t.note, '{}'::jsonb
@@ -959,14 +1093,40 @@ begin
     -- servicing: the task was done
     select 'servicing_done:' || t.id::text, 'servicing', t.done_at,
            t.lead_id, t.agent_id, null::uuid,
-           'Servicing task done: ' || replace(t.kind, '_', ' ') || '.',
+           case when t.kind = 'lapse_save' then
+                  case t.outcome when 'saved' then 'Policy saved from lapse.'
+                                 when 'lapsed' then 'Policy lapsed.'
+                                 when 'client_cancelled' then 'The client cancelled the policy.'
+                                 else 'Lapse work done.' end
+                when t.requested_by in ('agent', 'client') then 'Request done: ' || replace(t.kind, '_', ' ') || '.'
+                else 'Servicing task done: ' || replace(t.kind, '_', ' ') || '.' end,
            coalesce(t.policy_id, lr.policy_id),
            coalesce(lr.first_name, p.client_first_name), coalesce(lr.last_name, p.client_last_name), coalesce(lr.state, p.state),
-           null, null, null, t.kind, null, null, null, '{}'::jsonb
+           null, null, null, t.outcome, null, null, null, '{}'::jsonb
       from servicing_tasks t
       left join lead_rows lr on lr.lead_id = t.lead_id
       left join policies p on p.id = t.policy_id
      where t.done_at >= p_from and t.done_at < p_to
+
+    union all
+    -- billing_spend_*: one log row is one feed row, and a row that changed nothing is none.
+    select 'spend_log:' || sl.id::text,
+           case when sl.old_paused is distinct from sl.new_paused then 'billing_spend_pause' else 'billing_spend_change' end,
+           sl.created_at, null, sl.agent_id, null::uuid,
+           case when sl.old_paused is not distinct from sl.new_paused then 'Weekly lead spend changed.'
+                when sl.new_paused then 'Lead spend paused.'
+                else 'Lead spend resumed.' end,
+           null, null, null, null, null, null, null,
+           case when sl.old_paused is not distinct from sl.new_paused then null
+                when sl.new_paused then 'paused'
+                else 'resumed' end,
+           null, null, null,
+           jsonb_build_object('inbound_type', sl.inbound_type)
+             || case when sl.old_paused is distinct from sl.new_paused and sl.old_cents = sl.new_cents then '{}'::jsonb
+                     else jsonb_build_object('amount_cents', sl.new_cents) end
+      from agent_inbound_spend_log sl
+     where sl.created_at >= p_from and sl.created_at < p_to
+       and (sl.old_paused is distinct from sl.new_paused or sl.old_cents is distinct from sl.new_cents)
   )
   select e.id, e.kind, e.at, e.lead_id, e.agent_id, e.title,
          jsonb_strip_nulls(jsonb_build_object(
@@ -986,6 +1146,7 @@ begin
    where (v_role = 'admin'
           or (v_role = 'agent' and e.agent_id = any (v_agents))
           or (v_role = 'fulfillment' and e.pool_rep = v_uid))
+     and (e.kind not in ('billing_spend_change', 'billing_spend_pause') or v_role = 'admin' or e.agent_id = v_uid)
      and (p_agent is null or e.agent_id = p_agent)
    order by e.at desc, e.id desc
    limit greatest(least(coalesce(p_limit, 1000), 5000), 0);
