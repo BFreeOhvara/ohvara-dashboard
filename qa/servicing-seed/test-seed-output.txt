@@ -112,11 +112,13 @@ PASS [o5] the file names no agent but the test agent
 PASS [o6] section 1 runs read-only and names flagged and unflagged counts
 PASS [o7] section 1 lists the unflagged policy by id, and the fulfillment accounts to pick from
 PASS [o8] section 1 still runs on a database without 186 and 193, and says so
+PASS [o15] section 1 row f lists a flagged policy with no sample note, and not a flagged P729 row
 PASS [o9] section 2 runs read-only: 45 triggers, 17 cron jobs, none outside the audit
 PASS [o10] a trigger that only live has shows as NOT IN THE AUDIT
 PASS [o11] with an unflagged row left, section 4 prints a plain failure: "FAILED: the pages read 3/7/2/1/1, not 2/7/2/1/1, because 1 unflagged policies survived the wipe. The samples alone read 2/7/2/1/1."
 PASS [o12] with no unflagged row, section 4 reads: "PASS: the pages read 2/7/2/1/1 (setting up/protected/needs attention/ongoing/ended)."
 PASS [o13] the whole file also runs top to bottom in one go
+PASS [o16] the file holds the stop rules Brayden asked for, before section 1
 PASS [o14] the seed leaves sms_live off
 
-Result: all passed. 96 checks in 68.1 s. Exit code 0.
+Result: all passed. 98 checks in 51.3 s. Exit code 0.

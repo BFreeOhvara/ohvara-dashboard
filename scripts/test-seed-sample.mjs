@@ -574,7 +574,15 @@ async function main() {
   const preOld = await asReadOnly(preNoFlag, sec1.replace(/--[^\n]*/g, '').trim())
   check('o8', 'section 1 still runs on a database without 186 and 193, and says so', preOld.some(r => /186 is_sample: false, 193 agent_clients: false/.test(r.detail ?? '')), JSON.stringify(preOld.filter(r => r.what.startsWith('d.'))))
   await preNoFlag.close()
-  const list = await asReadOnly(d1, sec2.replace(/--[^\n]*/g, '').trim())
+  const odd = await fresh(base)
+  const ODD = 'dddddddd-dddd-4ddd-8194-000000000004'
+  await odd.exec(`insert into public.policies (id, agent_id, client_first_name, client_last_name, status, is_sample)
+                  values ('${ODD}', '${A}', 'Looks', 'Real', 'Submitted', true);
+                  update public.policies set is_sample = true where id = '${UNFLAGGED}';`)
+  const oddF = (await asReadOnly(odd, sec1.replace(/--[^\n]*/g, '').trim())).filter(r => r.what.startsWith('f.')).map(r => r.id)
+  check('o15', 'section 1 row f lists a flagged policy with no sample note, and not a flagged P729 row', oddF.length === 1 && oddF[0] === ODD, JSON.stringify(oddF))
+  await odd.close()
+  const list =await asReadOnly(d1, sec2.replace(/--[^\n]*/g, '').trim())
   check('o9', `section 2 runs read-only: ${list.filter(r => r.kind === 'trigger').length} triggers, ${list.filter(r => r.kind === 'cron').length} cron jobs, none outside the audit`, list.length === live.length + crons.length && list.every(r => r.audit === 'in the audit'))
   const drift = await fresh(base)
   await drift.exec(`create function public.drift_fn() returns trigger language plpgsql as $f$ begin return new; end $f$;
@@ -595,6 +603,8 @@ async function main() {
   await d2.close()
   const liveFlip = await fresh(base)
   await mustRun(liveFlip, seedSql, 'the seed')
+  check('o16', 'the file holds the stop rules Brayden asked for, before section 1',
+    ['any unflagged policy', 'row d reads false', 'row f lists anything', 'clearly the test fulfillment login', 'NOT IN THE AUDIT', 'does not start with PASS'].every(s => door.indexOf(s) > -1 && door.indexOf(s) < door.indexOf('-- ===== SECTION 1:')))
   const flags = await one(liveFlip, 'select sms_live from public.recovery_config')
   check('o14', 'the seed leaves sms_live off', flags.sms_live === false)
   await liveFlip.close()
