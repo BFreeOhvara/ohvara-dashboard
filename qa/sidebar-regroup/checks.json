@@ -1,0 +1,277 @@
+[
+  {
+    "name": "agent sidebar groups, 1440 dark",
+    "ok": true,
+    "detail": [
+      {
+        "group": "Today",
+        "items": [
+          "Overview",
+          "Activity"
+        ]
+      },
+      {
+        "group": "Leads",
+        "items": [
+          "Leads",
+          "Calendar"
+        ]
+      },
+      {
+        "group": "Servicing",
+        "items": [
+          "Clients",
+          "Submit"
+        ]
+      },
+      {
+        "group": "Communications",
+        "items": [
+          "Messages"
+        ]
+      },
+      {
+        "group": "Account",
+        "items": [
+          "Billing",
+          "Settings"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "search Go-to lists Leads, Clients, Submit (dark)",
+    "ok": true,
+    "detail": [
+      "Overview",
+      "Activity",
+      "Leads",
+      "Calendar",
+      "Clients",
+      "Submit",
+      "Messages",
+      "Billing · manage plan",
+      "Settings"
+    ]
+  },
+  {
+    "name": "/agent/leads opens the Leads page, not Overview (no VITE_LEADS_PAGE)",
+    "ok": true,
+    "detail": {
+      "path": "/agent/leads",
+      "h1": "Leads"
+    }
+  },
+  {
+    "name": "/agent/inbounds?tab=live lands on /agent/leads?tab=live",
+    "ok": true,
+    "detail": "/agent/leads?tab=live"
+  },
+  {
+    "name": "no sideways scroll /agent 390 dark",
+    "ok": true,
+    "detail": {
+      "sw": 390,
+      "cw": 390
+    }
+  },
+  {
+    "name": "phone tab bar reads Clients and Submit (dark)",
+    "ok": true,
+    "detail": [
+      "Home",
+      "Clients",
+      "Submit",
+      "Messages",
+      "More"
+    ]
+  },
+  {
+    "name": "no sideways scroll /agent/more 390 dark",
+    "ok": true,
+    "detail": {
+      "sw": 390,
+      "cw": 390
+    }
+  },
+  {
+    "name": "More list has Leads and Calendar, no Inbounds (dark)",
+    "ok": true,
+    "detail": [
+      "Leads",
+      "Calendar",
+      "Activity",
+      "Invite an agent",
+      "Notifications",
+      "Theme",
+      "Settings",
+      "Report a problem",
+      "Get the phone app",
+      "Delete my account"
+    ]
+  },
+  {
+    "name": "agent sidebar groups, 1440 light",
+    "ok": true,
+    "detail": [
+      {
+        "group": "Today",
+        "items": [
+          "Overview",
+          "Activity"
+        ]
+      },
+      {
+        "group": "Leads",
+        "items": [
+          "Leads",
+          "Calendar"
+        ]
+      },
+      {
+        "group": "Servicing",
+        "items": [
+          "Clients",
+          "Submit"
+        ]
+      },
+      {
+        "group": "Communications",
+        "items": [
+          "Messages"
+        ]
+      },
+      {
+        "group": "Account",
+        "items": [
+          "Billing",
+          "Settings"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "search Go-to lists Leads, Clients, Submit (light)",
+    "ok": true,
+    "detail": [
+      "Overview",
+      "Activity",
+      "Leads",
+      "Calendar",
+      "Clients",
+      "Submit",
+      "Messages",
+      "Billing · manage plan",
+      "Settings"
+    ]
+  },
+  {
+    "name": "no sideways scroll /agent 390 light",
+    "ok": true,
+    "detail": {
+      "sw": 390,
+      "cw": 390
+    }
+  },
+  {
+    "name": "phone tab bar reads Clients and Submit (light)",
+    "ok": true,
+    "detail": [
+      "Home",
+      "Clients",
+      "Submit",
+      "Messages",
+      "More"
+    ]
+  },
+  {
+    "name": "no sideways scroll /agent/more 390 light",
+    "ok": true,
+    "detail": {
+      "sw": 390,
+      "cw": 390
+    }
+  },
+  {
+    "name": "More list has Leads and Calendar, no Inbounds (light)",
+    "ok": true,
+    "detail": [
+      "Leads",
+      "Calendar",
+      "Activity",
+      "Invite an agent",
+      "Notifications",
+      "Theme",
+      "Settings",
+      "Report a problem",
+      "Get the phone app",
+      "Delete my account"
+    ]
+  },
+  {
+    "name": "admin sidebar unchanged",
+    "ok": true,
+    "detail": [
+      {
+        "group": "Today",
+        "items": [
+          "Overview"
+        ]
+      },
+      {
+        "group": "Work",
+        "items": [
+          "Pipeline",
+          "Fulfillment",
+          "Payouts"
+        ]
+      },
+      {
+        "group": "Communications",
+        "items": [
+          "Messages"
+        ]
+      },
+      {
+        "group": "Account",
+        "items": [
+          "Users",
+          "Settings"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "fulfillment sidebar unchanged",
+    "ok": true,
+    "detail": [
+      {
+        "group": "Today",
+        "items": [
+          "Overview"
+        ]
+      },
+      {
+        "group": "Work",
+        "items": [
+          "My calls",
+          "Leads",
+          "Pipeline",
+          "My pay"
+        ]
+      },
+      {
+        "group": "Communications",
+        "items": [
+          "Messages"
+        ]
+      },
+      {
+        "group": "Account",
+        "items": [
+          "Settings"
+        ]
+      }
+    ]
+  }
+]
