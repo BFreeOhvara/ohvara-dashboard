@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
   isNotReadyError, normalizeContactRow, normalizeContactLog, filterContactRows, contactCounts, dualTime, dualTimeText,
-  callResultText, fetchContactLog, normalizeEvents, policyChoice, groupThread, rowLabel,
+  callResultText, fetchContactLog, normalizeEvent, normalizeEvents, policyChoice, groupThread, rowLabel,
 } from './clientPageLog.js'
 
 const row = o => ({
@@ -140,4 +140,10 @@ test('switcher labels and thread runs', () => {
     { id: 'm4', sender_id: 'b', created_at: '2026-11-03T18:00:00Z' },
   ], 'America/Chicago')
   assert.deepEqual(runs.map(g => g.type === 'day' ? 'day' : g.msgs.length), ['day', 2, 1, 'day', 1])
+})
+
+test('activity events: a lapse reads Policy lapsed, not Update', () => {
+  const [ev] = normalizeEvents([{ id: '9', kind: 'lapsed', at: '2026-11-01T10:00:00Z', actor_name: null, detail: {} }])
+  assert.equal(ev.title, 'Policy lapsed')
+  assert.equal(normalizeEvent({ id: '9', kind: 'lapsed', at: '2026-11-01T10:00:00Z', detail: {} }).title, 'Policy lapsed')
 })

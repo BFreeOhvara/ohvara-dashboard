@@ -343,6 +343,21 @@
       ],
       "notes": "formatDual(iso, agentTz, clientTz) gives 2:00 PM your time / 1:00 PM client; one time when the zones read the same or the client zone is unknown. Client zone: a booking's saved zone, else the state's zone (city lookup for split states).",
       "status": "checking"
+    },
+    {
+      "id": "activity.lapse-events",
+      "page": "Activity",
+      "title": "A lapse shows as its own row: Policy lapsed",
+      "files": [
+        "src/lib/activityKinds.js",
+        "src/lib/activityKinds.test.js",
+        "src/lib/activityFilters.test.js",
+        "src/pages/agent/Activity.jsx",
+        "src/lib/clientPageLog.js",
+        "src/lib/clientPageLog.test.js"
+      ],
+      "notes": "UI: feed kind lapsed shows an amber Lapsed pill under the Clients filter, its drawer story ends on Policy lapsed marked done with no pending Old policy cancelled, and the client page log titles it Policy lapsed. Built against the agreed kind with fixtures; the feed rows come from the lapse migration, not applied yet.",
+      "status": "checking"
     }
   ]
 }

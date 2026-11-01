@@ -5,7 +5,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
-  EVENT_KINDS, EVENT_KIND, FILTER_GROUPS, PENDING_KINDS, kindMeta, itemMeta, itemTone, kindTone, groupOf, activityRow, rowMeta,
+  EVENT_KINDS, EVENT_KIND, FILTER_GROUPS, PENDING_KINDS, kindMeta, itemMeta, itemTone, kindTone, groupOf, activityRow, rowMeta, filterItems, visibleGroups, EVENT_ICON,
 } from './activityKinds.js'
 
 // The kinds migration 185 documents, read from the file so a rename there fails here.
@@ -26,10 +26,12 @@ const LIVE_KINDS = [
   'inbound', 'text_auto', 'text_reply', 'va_call', 'booked', 'moved', 'no_answer', 'in_progress', 'edited', 'reassigned',
   'transferred', 'outcome', 'sold', 'cancelled', 'servicing',
 ]
+// Written by the lapse migration after 185, so 185 never mentions it.
+const LATER_KINDS = ['lapsed']
 const PENDING = ['billing_subscription', 'billing_spend_change', 'billing_spend_pause']
 
 test('EVENT_KINDS lists every live and pending kind', () => {
-  assert.deepEqual([...EVENT_KINDS].sort(), [...LIVE_KINDS, ...PENDING].sort())
+  assert.deepEqual([...EVENT_KINDS].sort(), [...LIVE_KINDS, ...LATER_KINDS, ...PENDING].sort())
   assert.deepEqual([...PENDING_KINDS].sort(), [...PENDING].sort())
 })
 
@@ -104,4 +106,19 @@ test('activityRow still maps moved, edited and reassigned to the current status'
   assert.equal(activityRow('in_progress', 'booked'), 'in_progress')
   assert.equal(activityRow('cancelled', null), 'cancelled')
   assert.equal(rowMeta('in_progress').label, 'Calls')
+})
+
+test('lapsed: amber Policy lapsed row, counted under Clients, shown in the Clients chip', () => {
+  assert.ok(kindMeta('lapsed'))
+  assert.notEqual(kindMeta('lapsed'), EVENT_KIND.moved)
+  assert.equal(kindMeta('lapsed').label, 'Policy lapsed')
+  assert.equal(kindMeta('lapsed').pill, 'Lapsed')
+  assert.equal(kindTone('lapsed').fg, 'var(--ov-st-needs)')
+  assert.equal(groupOf('lapsed'), 'clients')
+  assert.equal(filterItems([{ kind: 'lapsed' }, { kind: 'booked' }], ['clients']).length, 1)
+  assert.equal(visibleGroups().length, FILTER_GROUPS.length - 1)
+  assert.ok(EVENT_ICON.lapsed)
+  assert.ok(!PENDING_KINDS.includes('lapsed'))
+  assert.match(FILTER_GROUPS.find(g => g.key === 'clients').empty, /lapses/)
+  assert.equal(activityRow('lapsed', null), 'booked')
 })
