@@ -52,7 +52,7 @@ export function PhoneClients({ rows, loading, error, filter, onFilter, side, onS
 
       <label className="ov-input ph-search">
         <Search size={18} strokeWidth={2} style={{ flexShrink: 0 }} aria-hidden="true" />
-        <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Name, phone, city or carrier" aria-label="Search clients" />
+        <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Name, phone, policy number or carrier" aria-label="Search clients" />
       </label>
 
       {!q && (
