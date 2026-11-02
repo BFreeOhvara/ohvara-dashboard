@@ -1,0 +1,1886 @@
+[
+  {
+    "name": "agent-clients-1440-light-side-to-clients: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 4,
+        "right": 330.5
+      },
+      "at200": {
+        "left": 276.587,
+        "right": 640.326
+      },
+      "from": {
+        "left": 4,
+        "right": 330.5
+      },
+      "to": {
+        "left": 334.5,
+        "right": 661
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-side-to-clients: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 276.587,
+        "right": 640.326
+      },
+      "from": {
+        "left": 4,
+        "right": 330.5
+      },
+      "to": {
+        "left": 334.5,
+        "right": 661
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-side-to-clients: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-side-to-clients: layout shift 0",
+    "pass": true,
+    "info": {
+      "cls": []
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-side-to-clients: buttons did not move on selection (max 0.5px)",
+    "pass": true,
+    "info": {
+      "moved": 0,
+      "before": [
+        [
+          722,
+          118,
+          326.5,
+          44
+        ],
+        [
+          1052.5,
+          118,
+          326.5,
+          44
+        ]
+      ],
+      "after": [
+        [
+          722,
+          118,
+          326.5,
+          44
+        ],
+        [
+          1052.5,
+          118,
+          326.5,
+          44
+        ]
+      ]
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-side-to-progress: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 334.5,
+        "right": 661
+      },
+      "at200": {
+        "left": 24.6736,
+        "right": 388.413
+      },
+      "from": {
+        "left": 334.5,
+        "right": 661
+      },
+      "to": {
+        "left": 4,
+        "right": 330.5
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-side-to-progress: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 24.6736,
+        "right": 388.413
+      },
+      "from": {
+        "left": 334.5,
+        "right": 661
+      },
+      "to": {
+        "left": 4,
+        "right": 330.5
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-side-to-progress: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-side-to-progress: layout shift 0",
+    "pass": true,
+    "info": {
+      "cls": []
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-side-to-progress: buttons did not move on selection (max 0.5px)",
+    "pass": true,
+    "info": {
+      "moved": 0,
+      "before": [
+        [
+          722,
+          118,
+          326.5,
+          44
+        ],
+        [
+          1052.5,
+          118,
+          326.5,
+          44
+        ]
+      ],
+      "after": [
+        [
+          722,
+          118,
+          326.5,
+          44
+        ],
+        [
+          1052.5,
+          118,
+          326.5,
+          44
+        ]
+      ]
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-tab-to-3: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 16,
+        "right": 231.656
+      },
+      "at200": {
+        "left": 388.242,
+        "right": 654.767
+      },
+      "from": {
+        "left": 16,
+        "right": 231.7
+      },
+      "to": {
+        "left": 467.3,
+        "right": 683
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-tab-to-3: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 388.242,
+        "right": 654.767
+      },
+      "from": {
+        "left": 16,
+        "right": 231.7
+      },
+      "to": {
+        "left": 467.3,
+        "right": 683
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-tab-to-3: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-tab-to-3: layout shift 0",
+    "pass": true,
+    "info": {
+      "cls": []
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-tab-to-3: buttons did not move on selection (max 0.5px)",
+    "pass": true,
+    "info": {
+      "moved": 0,
+      "before": [
+        [
+          717,
+          179,
+          215.66,
+          61.44
+        ],
+        [
+          942.66,
+          179,
+          215.67,
+          61.44
+        ],
+        [
+          1168.33,
+          179,
+          215.67,
+          61.44
+        ]
+      ],
+      "after": [
+        [
+          717,
+          179,
+          215.66,
+          61.44
+        ],
+        [
+          942.66,
+          179,
+          215.67,
+          61.44
+        ],
+        [
+          1168.33,
+          179,
+          215.67,
+          61.44
+        ]
+      ]
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-tab-to-2: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 467.328,
+        "right": 683
+      },
+      "at200": {
+        "left": 255.772,
+        "right": 496.872
+      },
+      "from": {
+        "left": 467.3,
+        "right": 683
+      },
+      "to": {
+        "left": 241.7,
+        "right": 457.3
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-tab-to-2: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 255.772,
+        "right": 496.872
+      },
+      "from": {
+        "left": 467.3,
+        "right": 683
+      },
+      "to": {
+        "left": 241.7,
+        "right": 457.3
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-tab-to-2: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-tab-to-2: layout shift 0",
+    "pass": true,
+    "info": {
+      "cls": []
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-tab-to-1: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 241.656,
+        "right": 457.328
+      },
+      "at200": {
+        "left": 30.1152,
+        "right": 271.2
+      },
+      "from": {
+        "left": 241.7,
+        "right": 457.3
+      },
+      "to": {
+        "left": 16,
+        "right": 231.7
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-tab-to-1: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 30.1152,
+        "right": 271.2
+      },
+      "from": {
+        "left": 241.7,
+        "right": 457.3
+      },
+      "to": {
+        "left": 16,
+        "right": 231.7
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-tab-to-1: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-tab-to-1: layout shift 0",
+    "pass": true,
+    "info": {
+      "cls": []
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-range: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 238.656,
+        "right": 352
+      },
+      "at200": {
+        "left": 18.6779,
+        "right": 158.449
+      },
+      "from": {
+        "left": 238.7,
+        "right": 352
+      },
+      "to": {
+        "left": 4,
+        "right": 117.3
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-range: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 18.6779,
+        "right": 158.449
+      },
+      "from": {
+        "left": 238.7,
+        "right": 352
+      },
+      "to": {
+        "left": 4,
+        "right": 117.3
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-range: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-range: layout shift equals the no-pill baseline 0.00010581063059949418 (page content, same on master)",
+    "pass": true,
+    "info": {
+      "cls": [
+        0.00010581063059949418
+      ]
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-range: buttons did not move on selection (max 0.5px)",
+    "pass": true,
+    "info": {
+      "moved": 0,
+      "before": [
+        [
+          306,
+          582.3,
+          113.33,
+          30
+        ],
+        [
+          423.33,
+          582.3,
+          113.33,
+          30
+        ],
+        [
+          540.66,
+          582.3,
+          113.34,
+          30
+        ]
+      ],
+      "after": [
+        [
+          306,
+          582.3,
+          113.33,
+          30
+        ],
+        [
+          423.33,
+          582.3,
+          113.33,
+          30
+        ],
+        [
+          540.66,
+          582.3,
+          113.34,
+          30
+        ]
+      ]
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-range-back: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 4,
+        "right": 117.328
+      },
+      "at200": {
+        "left": 197.538,
+        "right": 337.321
+      },
+      "from": {
+        "left": 4,
+        "right": 117.3
+      },
+      "to": {
+        "left": 238.7,
+        "right": 352
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-range-back: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 197.538,
+        "right": 337.321
+      },
+      "from": {
+        "left": 4,
+        "right": 117.3
+      },
+      "to": {
+        "left": 238.7,
+        "right": 352
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-range-back: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-range-back: layout shift equals the no-pill baseline 0.00010581063059949418 (page content, same on master)",
+    "pass": true,
+    "info": {
+      "cls": [
+        0.00010581063059949418
+      ]
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-keyboard ArrowRight moves selection and focus, ring shows",
+    "pass": true,
+    "info": {
+      "activeIsTab": true,
+      "index": 1,
+      "selected": [
+        "false",
+        "true",
+        "false"
+      ],
+      "tabIndex": [
+        -1,
+        0,
+        -1
+      ],
+      "focusVisible": true,
+      "outline": "solid 2px",
+      "role": "tab"
+    }
+  },
+  {
+    "name": "agent-clients-1440-light-keyboard ArrowLeft goes back",
+    "pass": true
+  },
+  {
+    "name": "agent-clients-1440-light-no page errors",
+    "pass": true,
+    "info": []
+  },
+  {
+    "name": "agent-clients-390-light-side switch buttons are 44px or taller",
+    "pass": true,
+    "info": [
+      44,
+      44
+    ]
+  },
+  {
+    "name": "agent-clients-390-light-side: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 4,
+        "right": 176
+      },
+      "at200": {
+        "left": 149.16,
+        "right": 340.991
+      },
+      "from": {
+        "left": 4,
+        "right": 176
+      },
+      "to": {
+        "left": 180,
+        "right": 352
+      }
+    }
+  },
+  {
+    "name": "agent-clients-390-light-side: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 149.16,
+        "right": 340.991
+      },
+      "from": {
+        "left": 4,
+        "right": 176
+      },
+      "to": {
+        "left": 180,
+        "right": 352
+      }
+    }
+  },
+  {
+    "name": "agent-clients-390-light-side: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-clients-390-light-side: layout shift equals the no-pill baseline 0.0859060892612475 (page content, same on master)",
+    "pass": true,
+    "info": {
+      "cls": [
+        0.0859060892612475
+      ]
+    }
+  },
+  {
+    "name": "agent-clients-390-light-side: buttons did not move on selection (max 0.5px)",
+    "pass": true,
+    "info": {
+      "moved": 0,
+      "before": [
+        [
+          21,
+          127.8,
+          172,
+          44
+        ],
+        [
+          197,
+          127.8,
+          172,
+          44
+        ]
+      ],
+      "after": [
+        [
+          21,
+          127.8,
+          172,
+          44
+        ],
+        [
+          197,
+          127.8,
+          172,
+          44
+        ]
+      ]
+    }
+  },
+  {
+    "name": "agent-clients-390-light-buttons still 44px or taller after",
+    "pass": true,
+    "info": [
+      44,
+      44
+    ]
+  },
+  {
+    "name": "agent-clients-390-light-no sideways scroll",
+    "pass": true,
+    "info": [
+      390,
+      390
+    ]
+  },
+  {
+    "name": "agent-clients-390-light-a real tap switches the side",
+    "pass": true
+  },
+  {
+    "name": "agent-clients-390-light-no page errors",
+    "pass": true,
+    "info": []
+  },
+  {
+    "name": "agent-submit-1440-light-book: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 134.125,
+        "right": 295.875
+      },
+      "at200": {
+        "left": 12.1394,
+        "right": 159.169
+      },
+      "from": {
+        "left": 134.1,
+        "right": 295.9
+      },
+      "to": {
+        "left": 4,
+        "right": 130.1
+      }
+    }
+  },
+  {
+    "name": "agent-submit-1440-light-book: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 12.1394,
+        "right": 159.169
+      },
+      "from": {
+        "left": 134.1,
+        "right": 295.9
+      },
+      "to": {
+        "left": 4,
+        "right": 130.1
+      }
+    }
+  },
+  {
+    "name": "agent-submit-1440-light-book: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-submit-1440-light-book: layout shift 0",
+    "pass": true,
+    "info": {
+      "cls": []
+    }
+  },
+  {
+    "name": "agent-submit-1440-light-book-back: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 4,
+        "right": 130.125
+      },
+      "at200": {
+        "left": 111.323,
+        "right": 285.507
+      },
+      "from": {
+        "left": 4,
+        "right": 130.1
+      },
+      "to": {
+        "left": 134.1,
+        "right": 295.9
+      }
+    }
+  },
+  {
+    "name": "agent-submit-1440-light-book-back: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 111.323,
+        "right": 285.507
+      },
+      "from": {
+        "left": 4,
+        "right": 130.1
+      },
+      "to": {
+        "left": 134.1,
+        "right": 295.9
+      }
+    }
+  },
+  {
+    "name": "agent-submit-1440-light-book-back: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-submit-1440-light-book-back: layout shift 0",
+    "pass": true,
+    "info": {
+      "cls": []
+    }
+  },
+  {
+    "name": "agent-submit-1440-light-no page errors",
+    "pass": true,
+    "info": []
+  },
+  {
+    "name": "fulfillment-pipeline-1440-light-tab 0 click: no pill, no sp- class",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "fulfillment-pipeline-1440-light-tab 1 click: no pill, no sp- class",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "fulfillment-pipeline-1440-light-tab 2 click: no pill, no sp- class",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "fulfillment-pipeline-1440-light-range button 0 click: no pill",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "fulfillment-pipeline-1440-light-range button 1 click: no pill",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "fulfillment-pipeline-1440-light-range button 2 click: no pill",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "fulfillment-pipeline-1440-light-document.querySelectorAll(\".sp-row, .sp-pill\").length is 0",
+    "pass": true,
+    "info": {
+      "total": 0,
+      "nTabs": 3,
+      "ranges": 3
+    }
+  },
+  {
+    "name": "fulfillment-pipeline-1440-light-no page errors",
+    "pass": true,
+    "info": []
+  },
+  {
+    "name": "admin-pipeline-1440-light-tab 0 click: no pill, no sp- class",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "admin-pipeline-1440-light-tab 1 click: no pill, no sp- class",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "admin-pipeline-1440-light-tab 2 click: no pill, no sp- class",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "admin-pipeline-1440-light-tab 3 click: no pill, no sp- class",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "admin-pipeline-1440-light-range button 0 click: no pill",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "admin-pipeline-1440-light-range button 1 click: no pill",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "admin-pipeline-1440-light-range button 2 click: no pill",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "admin-pipeline-1440-light-document.querySelectorAll(\".sp-row, .sp-pill\").length is 0",
+    "pass": true,
+    "info": {
+      "total": 0,
+      "nTabs": 4,
+      "ranges": 3
+    }
+  },
+  {
+    "name": "admin-pipeline-1440-light-no page errors",
+    "pass": true,
+    "info": []
+  },
+  {
+    "name": "agent-clients-1440-dark-side-to-clients: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 4,
+        "right": 330.5
+      },
+      "at200": {
+        "left": 276.587,
+        "right": 640.326
+      },
+      "from": {
+        "left": 4,
+        "right": 330.5
+      },
+      "to": {
+        "left": 334.5,
+        "right": 661
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-side-to-clients: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 276.587,
+        "right": 640.326
+      },
+      "from": {
+        "left": 4,
+        "right": 330.5
+      },
+      "to": {
+        "left": 334.5,
+        "right": 661
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-side-to-clients: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-side-to-clients: layout shift 0",
+    "pass": true,
+    "info": {
+      "cls": []
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-side-to-clients: buttons did not move on selection (max 0.5px)",
+    "pass": true,
+    "info": {
+      "moved": 0,
+      "before": [
+        [
+          722,
+          118,
+          326.5,
+          44
+        ],
+        [
+          1052.5,
+          118,
+          326.5,
+          44
+        ]
+      ],
+      "after": [
+        [
+          722,
+          118,
+          326.5,
+          44
+        ],
+        [
+          1052.5,
+          118,
+          326.5,
+          44
+        ]
+      ]
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-side-to-progress: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 334.5,
+        "right": 661
+      },
+      "at200": {
+        "left": 24.6736,
+        "right": 388.413
+      },
+      "from": {
+        "left": 334.5,
+        "right": 661
+      },
+      "to": {
+        "left": 4,
+        "right": 330.5
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-side-to-progress: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 24.6736,
+        "right": 388.413
+      },
+      "from": {
+        "left": 334.5,
+        "right": 661
+      },
+      "to": {
+        "left": 4,
+        "right": 330.5
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-side-to-progress: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-side-to-progress: layout shift 0",
+    "pass": true,
+    "info": {
+      "cls": []
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-side-to-progress: buttons did not move on selection (max 0.5px)",
+    "pass": true,
+    "info": {
+      "moved": 0,
+      "before": [
+        [
+          722,
+          118,
+          326.5,
+          44
+        ],
+        [
+          1052.5,
+          118,
+          326.5,
+          44
+        ]
+      ],
+      "after": [
+        [
+          722,
+          118,
+          326.5,
+          44
+        ],
+        [
+          1052.5,
+          118,
+          326.5,
+          44
+        ]
+      ]
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-tab-to-3: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 16,
+        "right": 231.656
+      },
+      "at200": {
+        "left": 388.242,
+        "right": 654.767
+      },
+      "from": {
+        "left": 16,
+        "right": 231.7
+      },
+      "to": {
+        "left": 467.3,
+        "right": 683
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-tab-to-3: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 388.242,
+        "right": 654.767
+      },
+      "from": {
+        "left": 16,
+        "right": 231.7
+      },
+      "to": {
+        "left": 467.3,
+        "right": 683
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-tab-to-3: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-tab-to-3: layout shift 0",
+    "pass": true,
+    "info": {
+      "cls": []
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-tab-to-3: buttons did not move on selection (max 0.5px)",
+    "pass": true,
+    "info": {
+      "moved": 0,
+      "before": [
+        [
+          717,
+          179,
+          215.66,
+          61.44
+        ],
+        [
+          942.66,
+          179,
+          215.67,
+          61.44
+        ],
+        [
+          1168.33,
+          179,
+          215.67,
+          61.44
+        ]
+      ],
+      "after": [
+        [
+          717,
+          179,
+          215.66,
+          61.44
+        ],
+        [
+          942.66,
+          179,
+          215.67,
+          61.44
+        ],
+        [
+          1168.33,
+          179,
+          215.67,
+          61.44
+        ]
+      ]
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-tab-to-2: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 467.328,
+        "right": 683
+      },
+      "at200": {
+        "left": 255.772,
+        "right": 496.872
+      },
+      "from": {
+        "left": 467.3,
+        "right": 683
+      },
+      "to": {
+        "left": 241.7,
+        "right": 457.3
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-tab-to-2: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 255.772,
+        "right": 496.872
+      },
+      "from": {
+        "left": 467.3,
+        "right": 683
+      },
+      "to": {
+        "left": 241.7,
+        "right": 457.3
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-tab-to-2: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-tab-to-2: layout shift 0",
+    "pass": true,
+    "info": {
+      "cls": []
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-tab-to-1: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 241.656,
+        "right": 457.328
+      },
+      "at200": {
+        "left": 30.1152,
+        "right": 271.2
+      },
+      "from": {
+        "left": 241.7,
+        "right": 457.3
+      },
+      "to": {
+        "left": 16,
+        "right": 231.7
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-tab-to-1: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 30.1152,
+        "right": 271.2
+      },
+      "from": {
+        "left": 241.7,
+        "right": 457.3
+      },
+      "to": {
+        "left": 16,
+        "right": 231.7
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-tab-to-1: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-tab-to-1: layout shift 0",
+    "pass": true,
+    "info": {
+      "cls": []
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-range: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 238.656,
+        "right": 352
+      },
+      "at200": {
+        "left": 18.6779,
+        "right": 158.449
+      },
+      "from": {
+        "left": 238.7,
+        "right": 352
+      },
+      "to": {
+        "left": 4,
+        "right": 117.3
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-range: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 18.6779,
+        "right": 158.449
+      },
+      "from": {
+        "left": 238.7,
+        "right": 352
+      },
+      "to": {
+        "left": 4,
+        "right": 117.3
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-range: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-range: layout shift equals the no-pill baseline 0.00010581063059949418 (page content, same on master)",
+    "pass": true,
+    "info": {
+      "cls": [
+        0.00010581063059949418
+      ]
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-range: buttons did not move on selection (max 0.5px)",
+    "pass": true,
+    "info": {
+      "moved": 0,
+      "before": [
+        [
+          306,
+          582.3,
+          113.33,
+          30
+        ],
+        [
+          423.33,
+          582.3,
+          113.33,
+          30
+        ],
+        [
+          540.66,
+          582.3,
+          113.34,
+          30
+        ]
+      ],
+      "after": [
+        [
+          306,
+          582.3,
+          113.33,
+          30
+        ],
+        [
+          423.33,
+          582.3,
+          113.33,
+          30
+        ],
+        [
+          540.66,
+          582.3,
+          113.34,
+          30
+        ]
+      ]
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-range-back: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 4,
+        "right": 117.328
+      },
+      "at200": {
+        "left": 197.538,
+        "right": 337.321
+      },
+      "from": {
+        "left": 4,
+        "right": 117.3
+      },
+      "to": {
+        "left": 238.7,
+        "right": 352
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-range-back: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 197.538,
+        "right": 337.321
+      },
+      "from": {
+        "left": 4,
+        "right": 117.3
+      },
+      "to": {
+        "left": 238.7,
+        "right": 352
+      }
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-range-back: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-range-back: layout shift equals the no-pill baseline 0.00010581063059949418 (page content, same on master)",
+    "pass": true,
+    "info": {
+      "cls": [
+        0.00010581063059949418
+      ]
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-keyboard ArrowRight moves selection and focus, ring shows",
+    "pass": true,
+    "info": {
+      "activeIsTab": true,
+      "index": 1,
+      "selected": [
+        "false",
+        "true",
+        "false"
+      ],
+      "tabIndex": [
+        -1,
+        0,
+        -1
+      ],
+      "focusVisible": true,
+      "outline": "solid 2px",
+      "role": "tab"
+    }
+  },
+  {
+    "name": "agent-clients-1440-dark-keyboard ArrowLeft goes back",
+    "pass": true
+  },
+  {
+    "name": "agent-clients-1440-dark-no page errors",
+    "pass": true,
+    "info": []
+  },
+  {
+    "name": "agent-clients-390-dark-side switch buttons are 44px or taller",
+    "pass": true,
+    "info": [
+      44,
+      44
+    ]
+  },
+  {
+    "name": "agent-clients-390-dark-side: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 4,
+        "right": 176
+      },
+      "at200": {
+        "left": 149.16,
+        "right": 340.991
+      },
+      "from": {
+        "left": 4,
+        "right": 176
+      },
+      "to": {
+        "left": 180,
+        "right": 352
+      }
+    }
+  },
+  {
+    "name": "agent-clients-390-dark-side: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 149.16,
+        "right": 340.991
+      },
+      "from": {
+        "left": 4,
+        "right": 176
+      },
+      "to": {
+        "left": 180,
+        "right": 352
+      }
+    }
+  },
+  {
+    "name": "agent-clients-390-dark-side: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-clients-390-dark-side: layout shift equals the no-pill baseline 0.0859060892612475 (page content, same on master)",
+    "pass": true,
+    "info": {
+      "cls": [
+        0.0859060892612475
+      ]
+    }
+  },
+  {
+    "name": "agent-clients-390-dark-side: buttons did not move on selection (max 0.5px)",
+    "pass": true,
+    "info": {
+      "moved": 0,
+      "before": [
+        [
+          21,
+          127.8,
+          172,
+          44
+        ],
+        [
+          197,
+          127.8,
+          172,
+          44
+        ]
+      ],
+      "after": [
+        [
+          21,
+          127.8,
+          172,
+          44
+        ],
+        [
+          197,
+          127.8,
+          172,
+          44
+        ]
+      ]
+    }
+  },
+  {
+    "name": "agent-clients-390-dark-buttons still 44px or taller after",
+    "pass": true,
+    "info": [
+      44,
+      44
+    ]
+  },
+  {
+    "name": "agent-clients-390-dark-no sideways scroll",
+    "pass": true,
+    "info": [
+      390,
+      390
+    ]
+  },
+  {
+    "name": "agent-clients-390-dark-a real tap switches the side",
+    "pass": true
+  },
+  {
+    "name": "agent-clients-390-dark-no page errors",
+    "pass": true,
+    "info": []
+  },
+  {
+    "name": "agent-submit-1440-dark-book: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 134.125,
+        "right": 295.875
+      },
+      "at200": {
+        "left": 12.1394,
+        "right": 159.169
+      },
+      "from": {
+        "left": 134.1,
+        "right": 295.9
+      },
+      "to": {
+        "left": 4,
+        "right": 130.1
+      }
+    }
+  },
+  {
+    "name": "agent-submit-1440-dark-book: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 12.1394,
+        "right": 159.169
+      },
+      "from": {
+        "left": 134.1,
+        "right": 295.9
+      },
+      "to": {
+        "left": 4,
+        "right": 130.1
+      }
+    }
+  },
+  {
+    "name": "agent-submit-1440-dark-book: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-submit-1440-dark-book: layout shift 0",
+    "pass": true,
+    "info": {
+      "cls": []
+    }
+  },
+  {
+    "name": "agent-submit-1440-dark-book-back: pill flies (mid frame has one)",
+    "pass": true,
+    "info": {
+      "pills": 1,
+      "at0": {
+        "left": 4,
+        "right": 130.125
+      },
+      "at200": {
+        "left": 111.323,
+        "right": 285.507
+      },
+      "from": {
+        "left": 4,
+        "right": 130.1
+      },
+      "to": {
+        "left": 134.1,
+        "right": 295.9
+      }
+    }
+  },
+  {
+    "name": "agent-submit-1440-dark-book-back: edges are apart mid-flight (pill is on neither the old nor the new button)",
+    "pass": true,
+    "info": {
+      "at200": {
+        "left": 111.323,
+        "right": 285.507
+      },
+      "from": {
+        "left": 4,
+        "right": 130.1
+      },
+      "to": {
+        "left": 134.1,
+        "right": 295.9
+      }
+    }
+  },
+  {
+    "name": "agent-submit-1440-dark-book-back: overlay and sp- classes gone at the end",
+    "pass": true,
+    "info": {
+      "left": 0
+    }
+  },
+  {
+    "name": "agent-submit-1440-dark-book-back: layout shift 0",
+    "pass": true,
+    "info": {
+      "cls": []
+    }
+  },
+  {
+    "name": "agent-submit-1440-dark-no page errors",
+    "pass": true,
+    "info": []
+  },
+  {
+    "name": "fulfillment-pipeline-1440-dark-tab 0 click: no pill, no sp- class",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "fulfillment-pipeline-1440-dark-tab 1 click: no pill, no sp- class",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "fulfillment-pipeline-1440-dark-tab 2 click: no pill, no sp- class",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "fulfillment-pipeline-1440-dark-range button 0 click: no pill",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "fulfillment-pipeline-1440-dark-range button 1 click: no pill",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "fulfillment-pipeline-1440-dark-range button 2 click: no pill",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "fulfillment-pipeline-1440-dark-document.querySelectorAll(\".sp-row, .sp-pill\").length is 0",
+    "pass": true,
+    "info": {
+      "total": 0,
+      "nTabs": 3,
+      "ranges": 3
+    }
+  },
+  {
+    "name": "fulfillment-pipeline-1440-dark-no page errors",
+    "pass": true,
+    "info": []
+  },
+  {
+    "name": "admin-pipeline-1440-dark-tab 0 click: no pill, no sp- class",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "admin-pipeline-1440-dark-tab 1 click: no pill, no sp- class",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "admin-pipeline-1440-dark-tab 2 click: no pill, no sp- class",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "admin-pipeline-1440-dark-tab 3 click: no pill, no sp- class",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "admin-pipeline-1440-dark-range button 0 click: no pill",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "admin-pipeline-1440-dark-range button 1 click: no pill",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "admin-pipeline-1440-dark-range button 2 click: no pill",
+    "pass": true,
+    "info": {
+      "mid": 0
+    }
+  },
+  {
+    "name": "admin-pipeline-1440-dark-document.querySelectorAll(\".sp-row, .sp-pill\").length is 0",
+    "pass": true,
+    "info": {
+      "total": 0,
+      "nTabs": 4,
+      "ranges": 3
+    }
+  },
+  {
+    "name": "admin-pipeline-1440-dark-no page errors",
+    "pass": true,
+    "info": []
+  }
+]

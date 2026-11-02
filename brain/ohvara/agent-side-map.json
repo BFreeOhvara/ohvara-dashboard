@@ -541,9 +541,12 @@
         "src/lib/stretchPill.test.js",
         "src/hooks/useStretchPill.js",
         "src/components/ui/stretchPill.css",
-        "src/pages/agent/v2/Calendar.jsx"
+        "src/pages/agent/v2/Calendar.jsx",
+        "src/components/agent/AgentUI.jsx",
+        "src/pages/agent/Clients.jsx",
+        "qa/stretch-pill-rows/shots.mjs"
       ],
-      "notes": "Shared hook, proved on Calendar's Week / Day switch and phone day strip; other rows come in later tasks. The pill exists only in flight, so the resting look is each button's own CSS. Reduced motion, a hidden row, no target or a move to another wrapped line all switch instantly. Web Animations only, no new packages. Pattern taken from the Solvik demo, none of its code or colours."
+      "notes": "Shared hook, proved on Calendar's Week / Day switch and phone day strip, and now on the agent My Pipeline rows: BookSwitch (Submit, persistKey book-switch: it remounts between New booking and Change a booking), SideSwitch (In progress | Clients, persistKey pl-seg: it is the head of two lists, so it remounts; also the phone one in PhoneClients), the stage tabs .pl-tabs (PipelineList pill prop, passed only from pages/agent/Clients.jsx; selector .is-sel) and the range switch (RangeSwitch pill prop, passed only from SidePipelineSummary). Fulfillment and Admin Pipeline never get a pill: the ref is not attached, so the hook does nothing. Exempt: .ov-chips (the phone chips; agent phones return early to PhoneClients), ActivityFilter (multi-select), .ph-seg tiles in PhoneClients, the shared PipelineSummary range. BookSwitch reserves each label's bold width (hidden zero-height copy) so the row no longer shifts about 1.9 px on selection. The hook now resolves a see-through color-mix fill through the browser so a bordered tab flies as a soft tint, not a solid block. The pill exists only in flight, so the resting look is each button's own CSS. Reduced motion, a hidden row, no target or a move to another wrapped line all switch instantly. Web Animations only, no new packages. Pattern taken from the Solvik demo, none of its code or colours."
     },
     {
       "id": "leads.follow-up-date-reason",

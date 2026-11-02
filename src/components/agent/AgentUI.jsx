@@ -13,6 +13,7 @@ import { Avatar } from '../ui/Avatar'
 import { fullName } from '../../lib/policyFormat'
 import { useAuth } from '../../hooks/useAuth'
 import { fmtCents } from '../../lib/payPeriod'
+import { useStretchPill } from '../../hooks/useStretchPill'
 import { EVENT_ICON, itemMeta, itemTone, groupTone } from '../../lib/activityKinds'
 
 // Shared pieces for the agent portal pages (Prompt 665).
@@ -1005,12 +1006,17 @@ export function ChangedMark({ was }) {
 // Prompt 730 — Book a call's "New booking | Change a booking" switch.
 export function BookSwitch({ value, onChange }) {
   const opts = [{ value: 'new', label: 'New booking' }, { value: 'change', label: 'Change a booking' }]
+  // BookCall renders this under ChangeBooking or NewBooking, so it remounts on each switch: persistKey lets the new row fly on from the old.
+  const rowRef = useRef(null)
+  useStretchPill(rowRef, { activeKey: value, selector: '.is-on', persistKey: 'book-switch' })
   return (
-    <div className="ov-range ov-book-switch" role="group" aria-label="Submit">
+    <div ref={rowRef} className="ov-range ov-book-switch" role="group" aria-label="Submit">
       {opts.map(o => (
         <button key={o.value} type="button" aria-pressed={value === o.value} onClick={() => value !== o.value && onChange(o.value)}
           className={value === o.value ? 'is-on' : ''} style={{ height: 40, padding: '0 18px', fontSize: 14.5 }}>
           {o.label}
+          {/* The selected button is bolder, so each button reserves its bold width and the row stays put on selection. */}
+          <span aria-hidden="true" style={{ display: 'block', height: 0, overflow: 'hidden', visibility: 'hidden', fontWeight: 700 }}>{o.label}</span>
         </button>
       ))}
     </div>
@@ -1789,9 +1795,12 @@ export function ClientSearch({
   )
 }
 
-function RangeSwitch({ ranges, value, onChange, small, full }) {
+// `pill` is off by default: the Admin and Fulfillment summaries share this row. With no ref on the row the hook does nothing.
+function RangeSwitch({ ranges, value, onChange, small, full, pill = false }) {
+  const rowRef = useRef(null)
+  useStretchPill(rowRef, { activeKey: value, selector: '.is-on' })
   return (
-    <div className="ov-range" role="group" aria-label="Booked in" style={full ? { display: 'grid', gridTemplateColumns: `repeat(${ranges.length}, 1fr)` } : undefined}>
+    <div ref={pill ? rowRef : undefined} className="ov-range" role="group" aria-label="Booked in" style={full ? { display: 'grid', gridTemplateColumns: `repeat(${ranges.length}, 1fr)` } : undefined}>
       {ranges.map(r => (
         <button key={r.value} type="button" aria-pressed={value === r.value} onClick={() => onChange(r.value)}
           className={value === r.value ? 'is-on' : ''}
@@ -1908,10 +1917,13 @@ function NextCall({ next, onOpenNext, onBook, nextLabel, nextEmpty, tz }) {
 //
 // Prompt 749 — the Fulfillment Pipeline passes `tabs` + `tabFn` (three tabs) and
 // `meanings` (the line under each tab's name); the rest goes to StatusList.
-export function PipelineList({ rows, tab, onTab, list, tabs = PIPELINE_TABS, tabFn = tabOf, meanings, head, ...status }) {
+export function PipelineList({ rows, tab, onTab, list, tabs = PIPELINE_TABS, tabFn = tabOf, meanings, head, pill = false, ...status }) {
   const split = useMemo(() => tabCounts(rows, tabFn, tabs), [rows, tabFn, tabs])
   const { counts } = split
   const tabRefs = useRef({})
+  // `pill` is off by default (Admin and Fulfillment share this list); with no ref on the row the hook does nothing.
+  const tabsRowRef = useRef(null)
+  useStretchPill(tabsRowRef, { activeKey: tab, selector: '.is-sel' })
   const chipRefs = useRef({})
   // Phones: keep the selected chip inside the scrolling row.
   useEffect(() => {
@@ -1936,7 +1948,7 @@ export function PipelineList({ rows, tab, onTab, list, tabs = PIPELINE_TABS, tab
   return (
     <section className="ov-card pl-list">
       {head}
-      <div role="tablist" aria-label="Pipeline status" className={`pl-tabs hidden sm:grid ${tabs.length === 3 ? 'grid-cols-3' : 'grid-cols-2 lg:grid-cols-4'}`} onKeyDown={e => onKeyDown(e, tabRefs)}>
+      <div ref={pill ? tabsRowRef : undefined} role="tablist" aria-label="Pipeline status" className={`pl-tabs hidden sm:grid ${tabs.length === 3 ? 'grid-cols-3' : 'grid-cols-2 lg:grid-cols-4'}`} onKeyDown={e => onKeyDown(e, tabRefs)}>
         {tabs.map(t => {
           const on = t === tab
           return (
@@ -1993,6 +2005,9 @@ export function PipelineList({ rows, tab, onTab, list, tabs = PIPELINE_TABS, tab
 // `progress` / `clients` are the side counts, `attention` the Needs attention count (an amber badge
 // on In progress, hidden at 0). `short` is the phone's number-only badge.
 export function SideSwitch({ side, onSide, progress, clients, attention = 0, loading, short, className = '' }) {
+  // The switch remounts on each side change (it is the `head` of two different lists), so persistKey lets the new row fly on from the old.
+  const rowRef = useRef(null)
+  useStretchPill(rowRef, { activeKey: side, selector: '.is-on', persistKey: 'pl-seg' })
   const one = (key, label, n, badge) => (
     <button type="button" aria-pressed={side === key} className={side === key ? 'is-on' : ''} onClick={() => side !== key && onSide(key)}>
       {label}<b>{loading ? '—' : n}</b>{badge}
@@ -2000,7 +2015,7 @@ export function SideSwitch({ side, onSide, progress, clients, attention = 0, loa
   )
   return (
     <div className={className}>
-      <div className="ov-range pl-seg" role="group" aria-label="Pipeline side">
+      <div ref={rowRef} className="ov-range pl-seg" role="group" aria-label="Pipeline side">
         {one('progress', 'In progress', progress, !loading && attention > 0 && (
           <span className="pl-seg-att" aria-label={`${attention} need attention`}>{short ? attention : `${attention} need attention`}</span>
         ))}
@@ -2032,7 +2047,7 @@ export function SidePipelineSummary({
         <b>{rows.length}</b>total · {prog} in progress · {clients} {clients === 1 ? 'client' : 'clients'}
       </div>
       {agentFilter && <div style={{ marginTop: 12 }}>{agentFilter}</div>}
-      <div style={{ marginTop: 12 }}><RangeSwitch ranges={ranges} value={range} onChange={onRange} full /></div>
+      <div style={{ marginTop: 12 }}><RangeSwitch ranges={ranges} value={range} onChange={onRange} full pill /></div>
       <div style={{ marginTop: 14 }}>
         {side === 'progress'
           ? <PipelineBar counts={counts} tab={tab} height={6} tabs={PROGRESS_TABS} />

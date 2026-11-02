@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react'
 import {
-  FLIGHT_MS, CROSSFADE_MS, clipOf, edgesAt, stretchKeyframes, shrinkEdges, planMove, coverTrack, inkAt, stackedFills, rememberedEdges,
+  FLIGHT_MS, CROSSFADE_MS, clipOf, edgesAt, stretchKeyframes, shrinkEdges, planMove, coverTrack, inkAt, stackedFills, rememberedEdges, parseColor,
 } from '../lib/stretchPill'
 import '../components/ui/stretchPill.css'
 
@@ -33,6 +33,18 @@ function edgesOf(el, row) {
   return { top: r.top + y, right: r.right + x, bottom: r.bottom + y, left: r.left + x }
 }
 
+// A fill the maths cannot read (a color-mix, a var) is resolved by the browser, in the button's own context, so a
+// see-through fill keeps its see-through layers. Anything that still cannot be read stays as it was.
+function readable(text, target) {
+  if (parseColor(text)) return text
+  const probe = document.createElement('i')
+  probe.style.color = text
+  target.append(probe)
+  const out = getComputedStyle(probe).color
+  probe.remove()
+  return parseColor(out) ? out : text
+}
+
 // The selected button's look, read from its own computed style.
 function lookOf(target) {
   const cs = getComputedStyle(target)
@@ -44,7 +56,7 @@ function lookOf(target) {
   const custom = cs.getPropertyValue('--sp-fill').trim()
   const gradient = cs.backgroundImage !== 'none'
   const c = cs.getPropertyValue('--c').trim()
-  const fill = custom || (!gradient ? cs.backgroundColor : c ? `color-mix(in srgb, ${c} ${FILL_MIX}%, transparent)` : 'var(--ov-data-a-tint)')
+  const fill = readable(custom || (!gradient ? cs.backgroundColor : c ? `color-mix(in srgb, ${c} ${FILL_MIX}%, transparent)` : 'var(--ov-data-a-tint)'), target)
   return { fill, radius, width, bordered, border: cs.borderTopColor, plain: !bordered && !custom && !gradient && cs.boxShadow === 'none', styles: cs }
 }
 

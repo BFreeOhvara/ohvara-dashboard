@@ -209,7 +209,7 @@ export default function Clients() {
     <ClientsSide head={sideSwitch} list={list} count={clientCount} soon={soon} {...shared} />
   ) : (
     <PipelineList
-      head={sideSwitch} rows={progressRows} tabs={PROGRESS_TABS} tab={tab} onTab={t => setParam('stage', t, 'booked')} list={list}
+      head={sideSwitch} pill rows={progressRows} tabs={PROGRESS_TABS} tab={tab} onTab={t => setParam('stage', t, 'booked')} list={list}
       onRebook={startRebook} onConfirm={openOnly} onBook={onBook} {...shared}
     />
   )
