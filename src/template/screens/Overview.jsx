@@ -1,0 +1,130 @@
+import { Link, useNavigate } from 'react-router-dom'
+import { ShieldCheck, Clock3, TriangleAlert, ArrowRight, Check, Inbox } from 'lucide-react'
+import { useSampleOverview, useSampleActions } from '../data'
+import { Avatar, Chip, useNote } from '../kit'
+
+const SERIES = [['packet', 'Packet checks', 's-packet'], ['review', 'Review calls', 's-review'], ['cancel', 'Cancellations', 's-cancel'], ['save', 'Saves', 's-save']]
+
+function Chart({ days }) {
+  const max = Math.max(4, ...days.map(d => d.packet + d.review + d.cancel + d.save))
+  return (
+    <>
+      <div className="tp-bars" role="img" aria-label="Steps done last week, per day">
+        {days.map(d => {
+          const sum = d.packet + d.review + d.cancel + d.save
+          return (
+            <div key={d.day}>
+              <b>{sum || ''}</b>
+              {sum === 0 ? <span className="stack stub" /> : (
+                <span className="stack" style={{ height: `${(sum / max) * 100}px` }}>
+                  {SERIES.map(([k,, cls]) => d[k] > 0 && <i key={k} className={cls} style={{ flex: d[k] }} />)}
+                </span>
+              )}
+              <span>{d.day}</span>
+            </div>
+          )
+        })}
+      </div>
+      <div className="tp-legend">{SERIES.map(([k, label, cls]) => <span key={k}><i className={cls} />{label} <b className="tp-money">{days.reduce((n, d) => n + d[k], 0)}</b></span>)}</div>
+    </>
+  )
+}
+
+export default function Overview() {
+  const { data: o } = useSampleOverview()
+  const { doneTask } = useSampleActions()
+  const note = useNote()
+  const go = useNavigate()
+  const stepsDone = o.doneByDay.reduce((n, d) => n + d.packet + d.review + d.cancel + d.save, 0)
+  const book = [
+    ['Protected', o.book.protected, 'protected', 'var(--ov-st-cancelled)', 'Policies in force'],
+    ['Setting up', o.book.settingUp, 'setting_up', 'var(--ov-data-a)', 'A step with a date'],
+    ['Needs attention', o.book.needsAttention, 'needs_attention', 'var(--ov-warn)', 'Waiting on you'],
+    ['Requests', o.book.requestsOpen, 'requests', 'var(--nt-purple)', 'Open changes'],
+  ]
+  return (
+    <div className="tp-page">
+      <section className="ov-hero tp-hero">
+        <div>
+          <span className="ov-hero-chip"><i />{o.duty ? 'On duty' : 'Off duty'}</span>
+          <h2>Good afternoon, {o.name}</h2>
+          <p>{o.attention.length} {o.attention.length === 1 ? 'client needs' : 'clients need'} you, and {o.stepsOpen} steps are due this week.</p>
+        </div>
+        <div className="tp-hero-r">
+          <div className="tp-clock">2:14<small>PM</small></div>
+          <Link to="/submit" className="tp-white">Submit a sale<ArrowRight size={18} /></Link>
+        </div>
+      </section>
+
+      <section aria-label="Your book">
+        <div className="tp-sec"><h2 className="tp-h2">Your book</h2><span className="tp-sub tp-grow">Where your clients stand</span><span className="tp-sub">Sample info</span></div>
+        <div className="tp-g4">
+          {book.map(([label, n, stage, color, sub]) => (
+            <Link key={stage} to={`/clients?stage=${stage}`} className="ov-card ov-link tp-stat">
+              <span className="tp-ic" style={{ color, background: `color-mix(in srgb, ${color} 16%, transparent)` }}><ShieldCheck size={18} /></span>
+              <span className="tp-grow"><b>{label}</b><small>{sub}</small></span>
+              <span className="tp-num">{n}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <div className="tp-split">
+        <div className="tp-stack">
+          {o.attention.length > 0 ? (
+            <section className="ov-attn tp-card" aria-label="Needs your attention">
+              <div className="tp-row"><span className="tp-ic warn"><TriangleAlert size={16} /></span><h2 className="tp-h2 tp-grow">Needs your attention</h2><span className="tp-tb">{o.attention.length}</span></div>
+              <ul className="tp-list">
+                {o.attention.map(c => (
+                  <li key={c.id} className="tp-li">
+                    <Avatar name={`${c.client_first_name} ${c.client_last_name}`} tone="warn" />
+                    <span className="tp-grow"><b>{c.client_first_name} {c.client_last_name}</b><small>{c.note}</small></span>
+                    <button type="button" className="tp-btn ov-ghost" onClick={() => go(`/clients/${c.id}`)}>Open</button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : (
+            <section className="ov-card tp-card"><div className="tp-row"><Check size={20} /><div><h2 className="tp-h2">You are all caught up</h2><p className="tp-sub">Nothing needs you right now.</p></div></div></section>
+          )}
+
+          <section className="ov-card tp-card" aria-label="Steps done">
+            <div className="tp-row tp-between"><div><h2 className="tp-h2">Steps done</h2><p className="tp-sub">Last Monday to Sunday</p></div><span className="tp-num" style={{ fontSize: 30 }}>{stepsDone}</span></div>
+            <div style={{ height: 14 }} />
+            <Chart days={o.doneByDay} />
+          </section>
+        </div>
+
+        <div className="tp-stack">
+          <section className="ov-card tp-card" aria-label="This week">
+            <div className="tp-row"><span className="tp-num" style={{ fontSize: 26 }}>{o.submissions.used}</span><span className="tp-mid">of {o.submissions.cap} submissions</span><b className="tp-grow" style={{ textAlign: 'right' }}>{o.submissions.cap - o.submissions.used} left</b></div>
+            <div className="tp-meter">{Array.from({ length: o.submissions.cap }, (_, i) => <i key={i} className={i < o.submissions.used ? 'on' : ''} />)}</div>
+            <div className="tp-row tp-between" style={{ marginTop: 8 }}><span className="tp-sub">Resets {o.submissions.resetsAt}</span><Link to="/billing" className="tp-link">Plan<ArrowRight size={14} /></Link></div>
+          </section>
+
+          <section className="ov-card tp-card" aria-label="Coming up">
+            <div className="tp-row tp-between"><h2 className="tp-h2">Coming up</h2><span className="tp-sub">{o.dueSoon.filter(s => !s.done).length} steps</span></div>
+            <ul className="tp-list">
+              {o.dueSoon.map((s, i) => (
+                <li key={s.id} className="tp-li">
+                  <span className={`tp-tilecal${i === 0 ? ' first' : ''}`}><small>{s.day}</small><b>{s.date}</b></span>
+                  <Link to={`/clients/${s.clientId}`} className="tp-grow"><b>{s.clientName}</b><small>{s.label}, {s.dueAt}</small></Link>
+                  <button type="button" className="tp-btn ov-ghost" disabled={s.done} onClick={() => { doneTask(s.id); note(`${s.label} for ${s.clientName} marked done`) }}>{s.done ? 'Done' : 'Mark done'}</button>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="ov-card tp-card" aria-label="Up next">
+            <div className="tp-row tp-between"><h2 className="tp-h2">Up next</h2><span className="tp-sub">{o.upNext.length} calls</span></div>
+            <ul className="tp-list">
+              {o.upNext.map(a => <li key={a.id} className="tp-li"><Clock3 size={18} aria-hidden="true" /><span className="tp-grow"><b>{a.who}</b><small>{a.day}, {a.time}, {a.label}</small></span></li>)}
+            </ul>
+            <Link to="/leads" className="tp-link"><Inbox size={14} />Open Leads</Link>
+          </section>
+          <Chip tone="teal">{o.leadsToday} leads in your list</Chip>
+        </div>
+      </div>
+    </div>
+  )
+}
