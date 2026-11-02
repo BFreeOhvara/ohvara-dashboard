@@ -14,7 +14,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(121);
+select plan(130);
 
 -- ── seed (as the table owner) ───────────────────────────────────────────────
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -443,7 +443,7 @@ select is((select done_at from public.servicing_tasks where id = (select id from
 select is((select updated_at from public.servicing_tasks where id = (select id from ids where name = 'keep')), now(), 'd4 updated_at is the trigger''s to set');
 
 -- ── e. Feed and writers ─────────────────────────────────────────────────────
--- Sold, on a lead with a policy. Since 210 Sold only records the outcome.
+-- Sold, on a lead with a policy. Since 215 Sold only records the outcome.
 select public.p_ss_policy('SoldPolicy', interval '10 days', null, 'aaaaaaaa-aaaa-4aaa-8193-00000000000a', 'In Effect', false);
 update public.leads set client_policy_id = (select id from public.policies where client_last_name = 'SoldPolicy')
  where id = 'dddddddd-dddd-4ddd-8193-00000000000a';
@@ -539,13 +539,53 @@ select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8193-0000000
 create temp table used_week as select used from public.agent_weekly_usage('aaaaaaaa-aaaa-4aaa-8193-00000000000a');
 reset role;
 select set_config('request.jwt.claims', '', true);
+-- 10 days, not 3: late Sunday on Chicago's clock is already next week in UTC, so 3 days back
+-- from this week's Monday could still be inside Chicago's week.
 insert into public.policies (agent_id, client_first_name, client_last_name, status, fulfillment_assigned, fulfillment_stage, replaced_old_policy, is_sample, created_at)
-values ('aaaaaaaa-aaaa-4aaa-8193-00000000000a', 'Sample', 'Backdated', 'In Effect', true, 'Pending', false, true, date_trunc('week', now()) - interval '3 days');
+values ('aaaaaaaa-aaaa-4aaa-8193-00000000000a', 'Sample', 'Backdated', 'In Effect', true, 'Pending', false, true, date_trunc('week', now()) - interval '10 days');
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8193-00000000000a","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
 select is((select used from public.agent_weekly_usage('aaaaaaaa-aaaa-4aaa-8193-00000000000a')), (select used from used_week),
           'g1 an is_sample policy created before this Monday does not raise used');
 reset role;
+
+-- ── h. The monthly rows (212) ───────────────────────────────────────────────
+-- The view is not replaced. Month 4 by the calendar, with the seed's 12 rows on the policy.
+select set_config('request.jwt.claims', '', true);
+select public.p_ss_person('aaaaaaaa-aaaa-4aaa-8193-00000000000a', 'Monthly', 'Rows', '5550100310', interval '3 months 10 days');
+select public.servicing_seed_steps('aaaaaaaa-aaaa-4aaa-8193-00000000000a', (select id from public.policies where client_last_name = 'Rows'), null, null, null);
+select is((select count(*) from public.servicing_tasks t join public.policies p on p.id = t.policy_id
+            where p.client_last_name = 'Rows' and t.kind = 'chargeback_watch'), 12::bigint, 'h1 the policy holds 12 monthly rows');
+select is((select count(*) from public.policy_servicing_status where client_last_name = 'Rows'), 1::bigint, 'h2 the view still gives one row per policy');
+select is((select watch_month from public.policy_servicing_status where client_last_name = 'Rows'), 4, 'h3 watch_month comes from the anchor: month 4');
+update public.servicing_tasks set status = 'done'
+ where kind in ('packet_check', 'review_call') and policy_id = (select id from public.policies where client_last_name = 'Rows');
+create function public.p_ss_month(p_name text, p_month int) returns timestamptz language sql as $f$
+  select t.due_at from public.servicing_tasks t join public.policies p on p.id = t.policy_id
+   where p.client_last_name = p_name and t.watch_month = p_month
+$f$;
+select is(public.p_ss_row('Rows'), public.p_ss_expect('protected', 'chargeback_watch', public.p_ss_month('Rows', 1)),
+          'h4 a protected client''s next_date is the soonest open payment check, overdue first');
+update public.servicing_tasks set status = 'done'
+ where watch_month in (1, 2, 3) and policy_id = (select id from public.policies where client_last_name = 'Rows');
+select is(public.p_ss_row('Rows'), public.p_ss_expect('protected', 'chargeback_watch', public.p_ss_month('Rows', 4)),
+          'h5 with months 1 to 3 done it is month 4');
+select isnt((select next_date from public.policy_servicing_status where client_last_name = 'Rows'),
+            public.p_ss_watch_end(interval '3 months 10 days'), 'h6 not the watch end');
+select is(public.p_ss_month('Rows', 12), public.p_ss_watch_end(interval '3 months 10 days'), 'h7 month 12 is the view''s watch end');
+-- A second policy for the same client, on a later anchor: the client takes the sooner date.
+select public.p_ss_person('aaaaaaaa-aaaa-4aaa-8193-00000000000a', 'Monthly', 'Rows', '5550100310', interval '1 month 25 days');
+select public.servicing_seed_steps('aaaaaaaa-aaaa-4aaa-8193-00000000000a', p.id, null, null, null)
+  from public.policies p where p.client_last_name = 'Rows' and not exists (select 1 from public.servicing_tasks t where t.policy_id = p.id);
+update public.servicing_tasks set status = 'done'
+ where kind in ('packet_check', 'review_call') and policy_id in (select id from public.policies where client_last_name = 'Rows');
+select is((select next_date from public.agent_clients where client_last_name = 'Rows'),
+          (select min(s.next_date) from public.policy_servicing_status s where s.client_last_name = 'Rows'),
+          'h8 agent_clients next_date is that same min across the client''s policies');
+select is((select next_date from public.agent_clients where client_last_name = 'Rows'),
+          (select min(t.due_at) from public.servicing_tasks t join public.policies p on p.id = t.policy_id
+            where p.client_last_name = 'Rows' and t.kind = 'chargeback_watch' and t.status = 'scheduled'),
+          'h9 which is the soonest open payment check of either policy');
 
 select * from finish();
 rollback;

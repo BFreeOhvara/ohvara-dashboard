@@ -1,4 +1,4 @@
--- p_lead_outcomes — pgTAP checks for 210_lead_outcomes.sql: Sold only records, Follow up
+-- p_lead_outcomes — pgTAP checks for 215_lead_outcomes.sql: Sold only records, Follow up
 -- takes a date, Not interested takes a reason, and agent_inbounds() says when a follow-up
 -- is due.
 --
@@ -19,7 +19,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(79);
+select plan(80);
 
 -- ── seed (as the table owner) ───────────────────────────────────────────────
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -92,6 +92,9 @@ select throws_ok($$ update public.leads set outcome_reason = repeat('x', 501) wh
 select is(to_regclass('public.lead_text_templates'), null, 'a8 no template table: this file texts nobody');
 select is((select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname = 'agent_send_lead_text'), 0::bigint,
           'a9 no send function');
+select ok(obj_description('public.servicing_tasks'::regclass) not like '%set_inbound_outcome%'
+          and obj_description('public.servicing_tasks'::regclass) like '%servicing_seed_steps%',
+          'a10 the servicing_tasks comment no longer names set_inbound_outcome as a writer');
 
 -- ── b. Sold only records ────────────────────────────────────────────────────
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8207-00000000000a","role":"authenticated"}', true),

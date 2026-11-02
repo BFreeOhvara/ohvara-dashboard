@@ -1,9 +1,11 @@
--- 210 — Lead outcomes: Sold only records, Follow up takes a date, Not interested
+-- 215 — Lead outcomes: Sold only records, Follow up takes a date, Not interested
 -- takes a reason, and a follow-up comes due for the agent in the app.
 --
 -- NOT APPLIED. Written from a worktree; applying it is Brayden's apply step. It applies
--- only after 193_servicing_model.sql: its first statement stops the whole file if 193
--- isn't there. Additive to data: one new nullable column. Two functions are dropped and
+-- only after 212_servicing_steps_on_submit.sql: its first statement stops the whole file
+-- if 193 or 212 isn't there. It was written as 207, then 210, and moved here to sort after
+-- 212, whose first statement stops if this file's five arguments are already there. 212's
+-- header still calls this file 210; an old migration is never edited. Additive to data: one new nullable column. Two functions are dropped and
 -- created again, and nothing in the database depends on either.
 --
 -- APPLY WITH THE NEW LEADS PAGE. The page that ships today (InboundDetail.jsx, through
@@ -12,11 +14,14 @@
 -- working, but its words still say Sold starts servicing. The leads-page-ui task changes
 -- both.
 --
--- Why: spec section 5 and R3. Sold only records the outcome. 193's Sold also seeded three
--- servicing steps and wrote a "became a client" event. Servicing starts from Submit
--- (195), not from here. Rows those old calls already wrote stay as they are.
+-- Why: spec section 5 and R3. Sold only records the outcome. 212's Sold seeded 14 servicing
+-- steps, gave the policy a servicing VA and wrote a "became a client" event. 212's header
+-- says this file and it disagree about Sold and that whichever merges second must settle
+-- it. This one is second, and R3 settles it: Sold makes no client. Servicing and the VA
+-- start from Submit, and agent_submit_deal still makes both. Rows those old calls already
+-- wrote stay as they are, and a policy keeps the VA it was given.
 --
--- set_inbound_outcome is copied from 193, its newest version, with only these changes:
+-- set_inbound_outcome is copied from 212, its newest version, with only these changes:
 --   two trailing arguments            p_follow_up_at, p_reason, both default null. The
 --                                     old call with three arguments resolves through the
 --                                     defaults. Dropped first, so there is no overload.
@@ -30,8 +35,8 @@
 --   the one outcome event             detail gets follow_up_at or reason. There's still
 --                                     one event per call, kind 'outcome'; the feed reads
 --                                     that kind and doesn't read these two keys.
---   Sold's seeds and its second event removed. client_policy_id isn't read any more.
--- 193 has no demo branch to keep, and this file doesn't add one: a demo agent's lead and
+--   Sold's seed call and its second event removed. client_policy_id isn't read any more.
+-- 212 has no demo branch to keep, and this file doesn't add one: a demo agent's lead and
 -- a lead with is_sample take an outcome like any other, as they did.
 --
 -- leads.follow_up_at is not new. It has been there since 017, for the cancellation
@@ -61,7 +66,10 @@ do $$
 begin
   if to_regclass('public.agent_clients') is null
      or to_regprocedure('public.agent_inbounds()') is null then
-    raise exception '210 needs 180_agent_inbounds and 193_servicing_model applied first';
+    raise exception '215 needs 180_agent_inbounds and 193_servicing_model applied first';
+  end if;
+  if to_regproc('public.servicing_seed_steps') is null then
+    raise exception '215 needs 212_servicing_steps_on_submit applied first';
   end if;
 end $$;
 
@@ -213,3 +221,9 @@ $$;
 
 revoke all on function public.agent_inbounds() from public, anon;
 grant execute on function public.agent_inbounds() to authenticated;
+
+-- ── 4. Who writes the table ─────────────────────────────────────────────────
+-- 214's words, without the function that stops writing here. They name the seed again, as
+-- 212's did before 214 replaced them.
+comment on table public.servicing_tasks is
+  'Every servicing step and every request on a client. Written only by servicing_seed_steps, agent_submit_service_request, agent_submit_deal, fulfillment_schedule_request, fulfillment_finish_request, the va_servicing_* functions, agent_servicing_clear_sent, servicing_month12_sweep and the service role. A request doesn''t count against the weekly cap.';

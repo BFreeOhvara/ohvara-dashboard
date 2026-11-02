@@ -27,8 +27,10 @@ const inbounds = code.slice(inboundsAt)
 const inboundsHead = inbounds.slice(0, inbounds.indexOf('$$'))
 const inboundsBody = inbounds.slice(inbounds.indexOf('$$') + 2, inbounds.lastIndexOf('$$'))
 
-test('there is one lead outcomes migration, and no later file replaces its function', () => {
+test('there is one lead outcomes migration, after 212, and no later file replaces its function', () => {
   assert.equal(files.length, 1)
+  assert.ok(files[0] > '212_', '212 stops if the five arguments are already there')
+  assert.match(code, /to_regproc\('public\.servicing_seed_steps'\) is null/)
   const later = readdirSync(MIGRATIONS).filter(f => f > files[0])
   for (const f of later) {
     assert.doesNotMatch(readFileSync(`${MIGRATIONS}${f}`, 'utf8'), /function public\.set_inbound_outcome\(/, f)
@@ -72,6 +74,7 @@ test('the write is security definer with its search_path pinned, and checks the 
 test('Sold only records: no servicing task and no became_client in the body', () => {
   assert.doesNotMatch(fnBody, /servicing_tasks/i)
   assert.doesNotMatch(fnBody, /became_client/i)
+  assert.doesNotMatch(fnBody, /servicing_seed_steps/, '212 moved the seed into this call')
   assert.doesNotMatch(fnBody, /client_policy_id/)
   assert.equal((fnBody.match(/insert into /g) || []).length, 1, 'the one insert is the outcome event')
   assert.match(fnBody, /insert into inbound_events[^;]*'outcome',/)

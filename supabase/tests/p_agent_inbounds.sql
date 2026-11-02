@@ -2,11 +2,11 @@
 -- outcome and notes: agent_inbounds(), inbound_events RLS, set_inbound_outcome
 -- and add_inbound_note (180_agent_inbounds.sql, with the caller check fixed by
 -- 181_fix_inbound_agent_checks.sql and the outcome rules changed by
--- 210_lead_outcomes.sql; p_lead_outcomes.sql checks those rules in full).
+-- 215_lead_outcomes.sql; p_lead_outcomes.sql checks those rules in full).
 --
 -- RUN: on a LOCAL database only (`supabase test db` on a local stack, or a
 -- local PGlite with pgTAP). Everything runs in one transaction that is rolled
--- back. Never run it against Ohvara's live database. Needs 180, 181 AND 210
+-- back. Never run it against Ohvara's live database. Needs 180, 181 AND 215
 -- applied (180 needs 166, 173, 174 and 175 first).
 --
 -- What it covers:
