@@ -5,6 +5,8 @@ import {
   Bell, CheckCheck, X, ChevronRight, SlidersHorizontal, Headphones, PhoneMissed, Phone, Wallet,
   MessageSquare, UserPlus, CircleCheck, Calendar, Clock, Users, Flag, Zap, Gauge, Video, PartyPopper,
 } from 'lucide-react'
+import { useAuth } from '../../hooks/useAuth'
+import { useStretchPill } from '../../hooks/useStretchPill'
 import { useNotificationFeed, useMoneyBanner, useMarkRead } from '../../hooks/useNotifications'
 import { usePushSettings } from '../../hooks/useAccount'
 import { isNativeApp } from '../../lib/native'
@@ -57,6 +59,7 @@ function useAnchor(open, btnRef) {
 // (no pointer, no dim), with a close button in its title bar.
 export function NotificationBell({ profileId, full = false }) {
   const navigate = useNavigate()
+  const { profile } = useAuth()
   const [open, setOpen] = useState(false)
   const btnRef = useRef(null)
   const panelRef = useRef(null)
@@ -102,7 +105,7 @@ export function NotificationBell({ profileId, full = false }) {
           {!full && <div className="nt-arrow" style={{ top: pos.top - 6, left: pos.arrowLeft }} aria-hidden="true" />}
           <div ref={panelRef} role="dialog" aria-label="Notifications" className={`nt-wrap${full ? ' is-full' : ''}`}
             style={full ? { top: 0, left: 0, width: '100vw', height: '100dvh' } : { top: pos.top, left: pos.left, width: pos.width, height: pos.maxH }}>
-            <NotificationPanel rows={rows} failed={feedFailed} onRetry={() => refetchFeed()} banner={banner} unread={unread}
+            <NotificationPanel pill={profile?.role === 'agent'} rows={rows} failed={feedFailed} onRetry={() => refetchFeed()} banner={banner} unread={unread}
               onClose={full ? () => { setOpen(false); btnRef.current?.focus() } : undefined}
               onOpen={n => { if (!n.read) markRead.mutate([n.id]); go(n.link) }}
               onMarkAll={() => markRead.mutate(null)}
@@ -120,11 +123,14 @@ export function NotificationBell({ profileId, full = false }) {
 }
 
 // The panel itself, without placement (the harness renders it on its own).
-export function NotificationPanel({ rows, failed = false, onRetry, banner, unread, onOpen, onMarkAll, onBanner, onSettings, onClose, initialTab = 'all', now, phoneOn = false, onPhone }) {
+export function NotificationPanel({ pill = false, rows, failed = false, onRetry, banner, unread, onOpen, onMarkAll, onBanner, onSettings, onClose, initialTab = 'all', now, phoneOn = false, onPhone }) {
   const [tab, setTab] = useState(initialTab)
   const needs = rows.filter(needsYou).length
   const groups = groupByDay(shownFor(rows, tab), now)
   const tabs = [['needs', 'Needs you', needs], ['all', 'Everything', 0]]
+  // The tab row is shared with admin and fulfillment; only the agent side flies the pill.
+  const tabsRef = useRef(null)
+  useStretchPill(tabsRef, { activeKey: tab, selector: 'button.is-on', enabled: pill })
 
   return (
     <div className="nt-panel">
@@ -142,7 +148,7 @@ export function NotificationPanel({ rows, failed = false, onRetry, banner, unrea
             </button>
           )}
         </div>
-        <div className="nt-tabs" role="tablist" aria-label="Show">
+        <div ref={tabsRef} className="nt-tabs" role="tablist" aria-label="Show">
           {tabs.map(([key, label, n]) => (
             <button key={key} type="button" role="tab" aria-selected={tab === key}
               className={`nt-tab${tab === key ? ' is-on' : ''}`} onClick={() => setTab(key)}>

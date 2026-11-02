@@ -1,0 +1,2860 @@
+[
+ {
+  "name": "bell-agent-light-1440 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 3,
+    "right": 221.531,
+    "bottom": 35,
+    "left": 14.7909
+   },
+   "t": {
+    "top": 3,
+    "left": 3,
+    "right": 188.5,
+    "bottom": 35
+   },
+   "docOver": -15
+  }
+ },
+ {
+  "name": "bell-agent-light-1440 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "nt-tabs"
+  }
+ },
+ {
+  "name": "bell-agent-light-1440 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     382,
+     40
+    ],
+    "items": [
+     [
+      4,
+      4,
+      185.5,
+      32
+     ],
+     [
+      192.5,
+      4,
+      185.5,
+      32
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     382,
+     40
+    ],
+    "items": [
+     [
+      4,
+      4,
+      185.5,
+      32
+     ],
+     [
+      192.5,
+      4,
+      185.5,
+      32
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "bell-agent-light-1440 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "bell-agent-light-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "invite-agent-light-1440 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 4,
+    "right": 391.364,
+    "bottom": 42,
+    "left": 170.604
+   },
+   "t": {
+    "top": 4,
+    "left": 206,
+    "right": 404,
+    "bottom": 42
+   },
+   "docOver": -15
+  }
+ },
+ {
+  "name": "invite-agent-light-1440 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "ov-range ov-invite-seg"
+  }
+ },
+ {
+  "name": "invite-agent-light-1440 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     410,
+     48
+    ],
+    "items": [
+     [
+      5,
+      5,
+      198,
+      38
+     ],
+     [
+      207,
+      5,
+      198,
+      38
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     410,
+     48
+    ],
+    "items": [
+     [
+      5,
+      5,
+      198,
+      38
+     ],
+     [
+      207,
+      5,
+      198,
+      38
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "invite-agent-light-1440 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "invite-agent-light-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "bell-admin-light-1440 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "nt-tabs",
+   "anims": 0
+  }
+ },
+ {
+  "name": "bell-admin-light-1440 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "nt-tabs",
+   "anims": 0
+  }
+ },
+ {
+  "name": "bell-admin-light-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "bell-fulfillment-light-1440 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "nt-tabs",
+   "anims": 0
+  }
+ },
+ {
+  "name": "bell-fulfillment-light-1440 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "nt-tabs",
+   "anims": 0
+  }
+ },
+ {
+  "name": "bell-fulfillment-light-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "bell-agent-light-390 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 3,
+    "right": 203.902,
+    "bottom": 35,
+    "left": 13.8527
+   },
+   "t": {
+    "top": 3,
+    "left": 3,
+    "right": 173.5,
+    "bottom": 35
+   },
+   "docOver": 0
+  }
+ },
+ {
+  "name": "bell-agent-light-390 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "nt-tabs"
+  }
+ },
+ {
+  "name": "bell-agent-light-390 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     352,
+     40
+    ],
+    "items": [
+     [
+      4,
+      4,
+      170.5,
+      32
+     ],
+     [
+      177.5,
+      4,
+      170.5,
+      32
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     352,
+     40
+    ],
+    "items": [
+     [
+      4,
+      4,
+      170.5,
+      32
+     ],
+     [
+      177.5,
+      4,
+      170.5,
+      32
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "bell-agent-light-390 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "bell-agent-light-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "invite-agent-light-390 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 4,
+    "right": 300.305,
+    "bottom": 42,
+    "left": 131.839
+   },
+   "t": {
+    "top": 4,
+    "left": 159,
+    "right": 310,
+    "bottom": 42
+   },
+   "docOver": 0
+  }
+ },
+ {
+  "name": "invite-agent-light-390 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "ov-range ov-invite-seg"
+  }
+ },
+ {
+  "name": "invite-agent-light-390 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     316,
+     48
+    ],
+    "items": [
+     [
+      5,
+      5,
+      151,
+      38
+     ],
+     [
+      160,
+      5,
+      151,
+      38
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     316,
+     48
+    ],
+    "items": [
+     [
+      5,
+      5,
+      151,
+      38
+     ],
+     [
+      160,
+      5,
+      151,
+      38
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "invite-agent-light-390 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "invite-agent-light-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "bell-admin-light-390 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "nt-tabs",
+   "anims": 0
+  }
+ },
+ {
+  "name": "bell-admin-light-390 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "nt-tabs",
+   "anims": 0
+  }
+ },
+ {
+  "name": "bell-admin-light-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "bell-fulfillment-light-390 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "nt-tabs",
+   "anims": 0
+  }
+ },
+ {
+  "name": "bell-fulfillment-light-390 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "nt-tabs",
+   "anims": 0
+  }
+ },
+ {
+  "name": "bell-fulfillment-light-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "bell-agent-dark-1440 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 3,
+    "right": 221.531,
+    "bottom": 35,
+    "left": 14.7909
+   },
+   "t": {
+    "top": 3,
+    "left": 3,
+    "right": 188.5,
+    "bottom": 35
+   },
+   "docOver": -15
+  }
+ },
+ {
+  "name": "bell-agent-dark-1440 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "nt-tabs"
+  }
+ },
+ {
+  "name": "bell-agent-dark-1440 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     382,
+     40
+    ],
+    "items": [
+     [
+      4,
+      4,
+      185.5,
+      32
+     ],
+     [
+      192.5,
+      4,
+      185.5,
+      32
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     382,
+     40
+    ],
+    "items": [
+     [
+      4,
+      4,
+      185.5,
+      32
+     ],
+     [
+      192.5,
+      4,
+      185.5,
+      32
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "bell-agent-dark-1440 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "bell-agent-dark-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "invite-agent-dark-1440 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 4,
+    "right": 391.364,
+    "bottom": 42,
+    "left": 170.604
+   },
+   "t": {
+    "top": 4,
+    "left": 206,
+    "right": 404,
+    "bottom": 42
+   },
+   "docOver": -15
+  }
+ },
+ {
+  "name": "invite-agent-dark-1440 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "ov-range ov-invite-seg"
+  }
+ },
+ {
+  "name": "invite-agent-dark-1440 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     410,
+     48
+    ],
+    "items": [
+     [
+      5,
+      5,
+      198,
+      38
+     ],
+     [
+      207,
+      5,
+      198,
+      38
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     410,
+     48
+    ],
+    "items": [
+     [
+      5,
+      5,
+      198,
+      38
+     ],
+     [
+      207,
+      5,
+      198,
+      38
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "invite-agent-dark-1440 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "invite-agent-dark-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "bell-admin-dark-1440 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "nt-tabs",
+   "anims": 0
+  }
+ },
+ {
+  "name": "bell-admin-dark-1440 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "nt-tabs",
+   "anims": 0
+  }
+ },
+ {
+  "name": "bell-admin-dark-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "bell-fulfillment-dark-1440 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "nt-tabs",
+   "anims": 0
+  }
+ },
+ {
+  "name": "bell-fulfillment-dark-1440 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "nt-tabs",
+   "anims": 0
+  }
+ },
+ {
+  "name": "bell-fulfillment-dark-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "bell-agent-dark-390 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 3,
+    "right": 203.902,
+    "bottom": 35,
+    "left": 13.8527
+   },
+   "t": {
+    "top": 3,
+    "left": 3,
+    "right": 173.5,
+    "bottom": 35
+   },
+   "docOver": 0
+  }
+ },
+ {
+  "name": "bell-agent-dark-390 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "nt-tabs"
+  }
+ },
+ {
+  "name": "bell-agent-dark-390 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     352,
+     40
+    ],
+    "items": [
+     [
+      4,
+      4,
+      170.5,
+      32
+     ],
+     [
+      177.5,
+      4,
+      170.5,
+      32
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     352,
+     40
+    ],
+    "items": [
+     [
+      4,
+      4,
+      170.5,
+      32
+     ],
+     [
+      177.5,
+      4,
+      170.5,
+      32
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "bell-agent-dark-390 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "bell-agent-dark-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "invite-agent-dark-390 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 4,
+    "right": 300.305,
+    "bottom": 42,
+    "left": 131.839
+   },
+   "t": {
+    "top": 4,
+    "left": 159,
+    "right": 310,
+    "bottom": 42
+   },
+   "docOver": 0
+  }
+ },
+ {
+  "name": "invite-agent-dark-390 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "ov-range ov-invite-seg"
+  }
+ },
+ {
+  "name": "invite-agent-dark-390 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     316,
+     48
+    ],
+    "items": [
+     [
+      5,
+      5,
+      151,
+      38
+     ],
+     [
+      160,
+      5,
+      151,
+      38
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     316,
+     48
+    ],
+    "items": [
+     [
+      5,
+      5,
+      151,
+      38
+     ],
+     [
+      160,
+      5,
+      151,
+      38
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "invite-agent-dark-390 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "invite-agent-dark-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "bell-admin-dark-390 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "nt-tabs",
+   "anims": 0
+  }
+ },
+ {
+  "name": "bell-admin-dark-390 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "nt-tabs",
+   "anims": 0
+  }
+ },
+ {
+  "name": "bell-admin-dark-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "bell-fulfillment-dark-390 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "nt-tabs",
+   "anims": 0
+  }
+ },
+ {
+  "name": "bell-fulfillment-dark-390 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "nt-tabs",
+   "anims": 0
+  }
+ },
+ {
+  "name": "bell-fulfillment-dark-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "leads-fchip-light-1440 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 0,
+    "right": 183.762,
+    "bottom": 44,
+    "left": 58.0691
+   },
+   "t": {
+    "top": 0,
+    "left": 70.40625,
+    "right": 191.859375,
+    "bottom": 44
+   },
+   "docOver": -15
+  }
+ },
+ {
+  "name": "leads-fchip-light-1440 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "pv-filters"
+  }
+ },
+ {
+  "name": "leads-fchip-light-1440 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     1121,
+     44
+    ],
+    "items": [
+     [
+      0,
+      0,
+      62.41,
+      44
+     ],
+     [
+      70.41,
+      0,
+      121.45,
+      44
+     ],
+     [
+      199.86,
+      0,
+      94.48,
+      44
+     ],
+     [
+      302.34,
+      0,
+      92.17,
+      44
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     1121,
+     44
+    ],
+    "items": [
+     [
+      0,
+      0,
+      62.41,
+      44
+     ],
+     [
+      70.41,
+      0,
+      121.45,
+      44
+     ],
+     [
+      199.86,
+      0,
+      94.48,
+      44
+     ],
+     [
+      302.34,
+      0,
+      92.17,
+      44
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "leads-fchip-light-1440 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "leads-fchip-light-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "leads-tabs-light-1440 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 0,
+    "right": 744.573,
+    "bottom": 70.5,
+    "left": 322.073
+   },
+   "t": {
+    "top": 0,
+    "left": 390.5,
+    "right": 769,
+    "bottom": 70.5
+   },
+   "docOver": -15
+  }
+ },
+ {
+  "name": "leads-tabs-light-1440 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "inb-tabs"
+  }
+ },
+ {
+  "name": "leads-tabs-light-1440 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     769,
+     70.5
+    ],
+    "items": [
+     [
+      0,
+      0,
+      378.5,
+      70.5
+     ],
+     [
+      390.5,
+      0,
+      378.5,
+      70.5
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     769,
+     70.5
+    ],
+    "items": [
+     [
+      0,
+      0,
+      378.5,
+      70.5
+     ],
+     [
+      390.5,
+      0,
+      378.5,
+      70.5
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "leads-tabs-light-1440 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "leads-tabs-light-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "clients-range-light-1440 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 4,
+    "right": 220.718,
+    "bottom": 38,
+    "left": 97.9592
+   },
+   "t": {
+    "top": 4,
+    "left": 117.921875,
+    "right": 227.84375,
+    "bottom": 38
+   },
+   "docOver": -15
+  }
+ },
+ {
+  "name": "clients-range-light-1440 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "ov-range cv2-range"
+  }
+ },
+ {
+  "name": "clients-range-light-1440 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": true,
+   "pre": {
+    "row": [
+     344.39,
+     44
+    ],
+    "items": [
+     [
+      5,
+      5,
+      108.8,
+      34
+     ],
+     [
+      117.8,
+      5,
+      108.8,
+      34
+     ],
+     [
+      230.59,
+      5,
+      108.8,
+      34
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     347.77,
+     44
+    ],
+    "items": [
+     [
+      5,
+      5,
+      109.92,
+      34
+     ],
+     [
+      118.92,
+      5,
+      109.92,
+      34
+     ],
+     [
+      232.84,
+      5,
+      109.92,
+      34
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "clients-range-light-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "client-log-range-light-1440 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 4,
+    "right": 162.201,
+    "bottom": 40,
+    "left": 73.0487
+   },
+   "t": {
+    "top": 4,
+    "left": 87.71875,
+    "right": 167.4375,
+    "bottom": 40
+   },
+   "docOver": -15
+  }
+ },
+ {
+  "name": "client-log-range-light-1440 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "ov-range cpl-range"
+  }
+ },
+ {
+  "name": "client-log-range-light-1440 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": true,
+   "pre": {
+    "row": [
+     255.89,
+     46
+    ],
+    "items": [
+     [
+      5,
+      5,
+      79.3,
+      36
+     ],
+     [
+      88.3,
+      5,
+      79.3,
+      36
+     ],
+     [
+      171.59,
+      5,
+      79.3,
+      36
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     257.16,
+     46
+    ],
+    "items": [
+     [
+      5,
+      5,
+      79.72,
+      36
+     ],
+     [
+      88.72,
+      5,
+      79.72,
+      36
+     ],
+     [
+      172.44,
+      5,
+      79.72,
+      36
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "client-log-range-light-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "client-pick-light-1440 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "cpl-pick",
+   "anims": 0
+  }
+ },
+ {
+  "name": "client-pick-light-1440 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 52,
+    "right": 293.098,
+    "bottom": 96,
+    "left": 151.629
+   },
+   "t": {
+    "top": 52,
+    "left": 183.84375,
+    "right": 300.921875,
+    "bottom": 96
+   },
+   "docOver": -15
+  }
+ },
+ {
+  "name": "client-pick-light-1440 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "cpl-pick"
+  }
+ },
+ {
+  "name": "client-pick-light-1440 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     318.34,
+     96
+    ],
+    "items": [
+     [
+      0,
+      0,
+      188.58,
+      44
+     ],
+     [
+      0,
+      52,
+      175.84,
+      44
+     ],
+     [
+      183.84,
+      52,
+      117.08,
+      44
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     318.34,
+     96
+    ],
+    "items": [
+     [
+      0,
+      0,
+      188.58,
+      44
+     ],
+     [
+      0,
+      52,
+      175.84,
+      44
+     ],
+     [
+      183.84,
+      52,
+      117.08,
+      44
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "client-pick-light-1440 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "client-pick-light-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "leads-fchip-light-390 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "pv-filters",
+   "anims": 0
+  }
+ },
+ {
+  "name": "leads-fchip-light-390 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 0,
+    "right": 183.762,
+    "bottom": 44,
+    "left": 58.0691
+   },
+   "t": {
+    "top": 0,
+    "left": 70.40625,
+    "right": 191.859375,
+    "bottom": 44
+   },
+   "docOver": 0
+  }
+ },
+ {
+  "name": "leads-fchip-light-390 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "pv-filters"
+  }
+ },
+ {
+  "name": "leads-fchip-light-390 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     358,
+     96
+    ],
+    "items": [
+     [
+      0,
+      0,
+      62.41,
+      44
+     ],
+     [
+      70.41,
+      0,
+      121.45,
+      44
+     ],
+     [
+      199.86,
+      0,
+      94.48,
+      44
+     ],
+     [
+      0,
+      52,
+      92.17,
+      44
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     358,
+     96
+    ],
+    "items": [
+     [
+      0,
+      0,
+      62.41,
+      44
+     ],
+     [
+      70.41,
+      0,
+      121.45,
+      44
+     ],
+     [
+      199.86,
+      0,
+      94.48,
+      44
+     ],
+     [
+      0,
+      52,
+      92.17,
+      44
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "leads-fchip-light-390 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "leads-fchip-light-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "leads-tabs-light-390 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 0,
+    "right": 346.553,
+    "bottom": 81.391,
+    "left": 150.933
+   },
+   "t": {
+    "top": 0,
+    "left": 183,
+    "right": 358,
+    "bottom": 81.390625
+   },
+   "docOver": 0
+  }
+ },
+ {
+  "name": "leads-tabs-light-390 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "inb-tabs"
+  }
+ },
+ {
+  "name": "leads-tabs-light-390 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     358,
+     81.39
+    ],
+    "items": [
+     [
+      0,
+      0,
+      175,
+      81.39
+     ],
+     [
+      183,
+      0,
+      175,
+      81.39
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     358,
+     81.39
+    ],
+    "items": [
+     [
+      0,
+      0,
+      175,
+      81.39
+     ],
+     [
+      183,
+      0,
+      175,
+      81.39
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "leads-tabs-light-390 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "leads-tabs-light-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "clients-range-light-390 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 4,
+    "right": 202.781,
+    "bottom": 48,
+    "left": 90.3174
+   },
+   "t": {
+    "top": 4,
+    "left": 108.65625,
+    "right": 209.328125,
+    "bottom": 48
+   },
+   "docOver": 0
+  }
+ },
+ {
+  "name": "clients-range-light-390 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "ov-range cv2-range"
+  }
+ },
+ {
+  "name": "clients-range-light-390 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     320,
+     54
+    ],
+    "items": [
+     [
+      5,
+      5,
+      100.66,
+      44
+     ],
+     [
+      109.66,
+      5,
+      100.67,
+      44
+     ],
+     [
+      214.33,
+      5,
+      100.66,
+      44
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     320,
+     54
+    ],
+    "items": [
+     [
+      5,
+      5,
+      100.66,
+      44
+     ],
+     [
+      109.66,
+      5,
+      100.67,
+      44
+     ],
+     [
+      214.33,
+      5,
+      100.66,
+      44
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "clients-range-light-390 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "clients-range-light-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "client-log-range-light-390 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 4,
+    "right": 202.781,
+    "bottom": 48,
+    "left": 90.3174
+   },
+   "t": {
+    "top": 4,
+    "left": 108.65625,
+    "right": 209.328125,
+    "bottom": 48
+   },
+   "docOver": 0
+  }
+ },
+ {
+  "name": "client-log-range-light-390 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "ov-range cpl-range"
+  }
+ },
+ {
+  "name": "client-log-range-light-390 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     320,
+     54
+    ],
+    "items": [
+     [
+      5,
+      5,
+      100.66,
+      44
+     ],
+     [
+      109.66,
+      5,
+      100.67,
+      44
+     ],
+     [
+      214.33,
+      5,
+      100.66,
+      44
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     320,
+     54
+    ],
+    "items": [
+     [
+      5,
+      5,
+      100.66,
+      44
+     ],
+     [
+      109.66,
+      5,
+      100.67,
+      44
+     ],
+     [
+      214.33,
+      5,
+      100.66,
+      44
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "client-log-range-light-390 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "client-log-range-light-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "client-pick-light-390 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "cpl-pick",
+   "anims": 0
+  }
+ },
+ {
+  "name": "client-pick-light-390 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 52,
+    "right": 293.098,
+    "bottom": 96,
+    "left": 151.629
+   },
+   "t": {
+    "top": 52,
+    "left": 183.84375,
+    "right": 300.921875,
+    "bottom": 96
+   },
+   "docOver": 0
+  }
+ },
+ {
+  "name": "client-pick-light-390 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "cpl-pick"
+  }
+ },
+ {
+  "name": "client-pick-light-390 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     320,
+     96
+    ],
+    "items": [
+     [
+      0,
+      0,
+      188.58,
+      44
+     ],
+     [
+      0,
+      52,
+      175.84,
+      44
+     ],
+     [
+      183.84,
+      52,
+      117.08,
+      44
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     320,
+     96
+    ],
+    "items": [
+     [
+      0,
+      0,
+      188.58,
+      44
+     ],
+     [
+      0,
+      52,
+      175.84,
+      44
+     ],
+     [
+      183.84,
+      52,
+      117.08,
+      44
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "client-pick-light-390 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "client-pick-light-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "leads-fchip-dark-1440 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 0,
+    "right": 183.762,
+    "bottom": 44,
+    "left": 58.0691
+   },
+   "t": {
+    "top": 0,
+    "left": 70.40625,
+    "right": 191.859375,
+    "bottom": 44
+   },
+   "docOver": -15
+  }
+ },
+ {
+  "name": "leads-fchip-dark-1440 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "pv-filters"
+  }
+ },
+ {
+  "name": "leads-fchip-dark-1440 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     1121,
+     44
+    ],
+    "items": [
+     [
+      0,
+      0,
+      62.41,
+      44
+     ],
+     [
+      70.41,
+      0,
+      121.45,
+      44
+     ],
+     [
+      199.86,
+      0,
+      94.48,
+      44
+     ],
+     [
+      302.34,
+      0,
+      92.17,
+      44
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     1121,
+     44
+    ],
+    "items": [
+     [
+      0,
+      0,
+      62.41,
+      44
+     ],
+     [
+      70.41,
+      0,
+      121.45,
+      44
+     ],
+     [
+      199.86,
+      0,
+      94.48,
+      44
+     ],
+     [
+      302.34,
+      0,
+      92.17,
+      44
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "leads-fchip-dark-1440 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "leads-fchip-dark-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "leads-tabs-dark-1440 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 0,
+    "right": 744.573,
+    "bottom": 70.5,
+    "left": 322.073
+   },
+   "t": {
+    "top": 0,
+    "left": 390.5,
+    "right": 769,
+    "bottom": 70.5
+   },
+   "docOver": -15
+  }
+ },
+ {
+  "name": "leads-tabs-dark-1440 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "inb-tabs"
+  }
+ },
+ {
+  "name": "leads-tabs-dark-1440 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     769,
+     70.5
+    ],
+    "items": [
+     [
+      0,
+      0,
+      378.5,
+      70.5
+     ],
+     [
+      390.5,
+      0,
+      378.5,
+      70.5
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     769,
+     70.5
+    ],
+    "items": [
+     [
+      0,
+      0,
+      378.5,
+      70.5
+     ],
+     [
+      390.5,
+      0,
+      378.5,
+      70.5
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "leads-tabs-dark-1440 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "leads-tabs-dark-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "clients-range-dark-1440 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 4,
+    "right": 220.718,
+    "bottom": 38,
+    "left": 97.9592
+   },
+   "t": {
+    "top": 4,
+    "left": 117.921875,
+    "right": 227.84375,
+    "bottom": 38
+   },
+   "docOver": -15
+  }
+ },
+ {
+  "name": "clients-range-dark-1440 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "ov-range cv2-range"
+  }
+ },
+ {
+  "name": "clients-range-dark-1440 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": true,
+   "pre": {
+    "row": [
+     344.39,
+     44
+    ],
+    "items": [
+     [
+      5,
+      5,
+      108.8,
+      34
+     ],
+     [
+      117.8,
+      5,
+      108.8,
+      34
+     ],
+     [
+      230.59,
+      5,
+      108.8,
+      34
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     347.77,
+     44
+    ],
+    "items": [
+     [
+      5,
+      5,
+      109.92,
+      34
+     ],
+     [
+      118.92,
+      5,
+      109.92,
+      34
+     ],
+     [
+      232.84,
+      5,
+      109.92,
+      34
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "clients-range-dark-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "client-log-range-dark-1440 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 4,
+    "right": 162.201,
+    "bottom": 40,
+    "left": 73.0487
+   },
+   "t": {
+    "top": 4,
+    "left": 87.71875,
+    "right": 167.4375,
+    "bottom": 40
+   },
+   "docOver": -15
+  }
+ },
+ {
+  "name": "client-log-range-dark-1440 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "ov-range cpl-range"
+  }
+ },
+ {
+  "name": "client-log-range-dark-1440 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": true,
+   "pre": {
+    "row": [
+     255.89,
+     46
+    ],
+    "items": [
+     [
+      5,
+      5,
+      79.3,
+      36
+     ],
+     [
+      88.3,
+      5,
+      79.3,
+      36
+     ],
+     [
+      171.59,
+      5,
+      79.3,
+      36
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     257.16,
+     46
+    ],
+    "items": [
+     [
+      5,
+      5,
+      79.72,
+      36
+     ],
+     [
+      88.72,
+      5,
+      79.72,
+      36
+     ],
+     [
+      172.44,
+      5,
+      79.72,
+      36
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "client-log-range-dark-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "client-pick-dark-1440 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "cpl-pick",
+   "anims": 0
+  }
+ },
+ {
+  "name": "client-pick-dark-1440 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 52,
+    "right": 293.098,
+    "bottom": 96,
+    "left": 151.629
+   },
+   "t": {
+    "top": 52,
+    "left": 183.84375,
+    "right": 300.921875,
+    "bottom": 96
+   },
+   "docOver": -15
+  }
+ },
+ {
+  "name": "client-pick-dark-1440 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "cpl-pick"
+  }
+ },
+ {
+  "name": "client-pick-dark-1440 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     318.34,
+     96
+    ],
+    "items": [
+     [
+      0,
+      0,
+      188.58,
+      44
+     ],
+     [
+      0,
+      52,
+      175.84,
+      44
+     ],
+     [
+      183.84,
+      52,
+      117.08,
+      44
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     318.34,
+     96
+    ],
+    "items": [
+     [
+      0,
+      0,
+      188.58,
+      44
+     ],
+     [
+      0,
+      52,
+      175.84,
+      44
+     ],
+     [
+      183.84,
+      52,
+      117.08,
+      44
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "client-pick-dark-1440 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "client-pick-dark-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "leads-fchip-dark-390 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "pv-filters",
+   "anims": 0
+  }
+ },
+ {
+  "name": "leads-fchip-dark-390 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 0,
+    "right": 183.762,
+    "bottom": 44,
+    "left": 58.0691
+   },
+   "t": {
+    "top": 0,
+    "left": 70.40625,
+    "right": 191.859375,
+    "bottom": 44
+   },
+   "docOver": 0
+  }
+ },
+ {
+  "name": "leads-fchip-dark-390 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "pv-filters"
+  }
+ },
+ {
+  "name": "leads-fchip-dark-390 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     358,
+     96
+    ],
+    "items": [
+     [
+      0,
+      0,
+      62.41,
+      44
+     ],
+     [
+      70.41,
+      0,
+      121.45,
+      44
+     ],
+     [
+      199.86,
+      0,
+      94.48,
+      44
+     ],
+     [
+      0,
+      52,
+      92.17,
+      44
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     358,
+     96
+    ],
+    "items": [
+     [
+      0,
+      0,
+      62.41,
+      44
+     ],
+     [
+      70.41,
+      0,
+      121.45,
+      44
+     ],
+     [
+      199.86,
+      0,
+      94.48,
+      44
+     ],
+     [
+      0,
+      52,
+      92.17,
+      44
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "leads-fchip-dark-390 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "leads-fchip-dark-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "leads-tabs-dark-390 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 0,
+    "right": 346.553,
+    "bottom": 81.391,
+    "left": 150.933
+   },
+   "t": {
+    "top": 0,
+    "left": 183,
+    "right": 358,
+    "bottom": 81.390625
+   },
+   "docOver": 0
+  }
+ },
+ {
+  "name": "leads-tabs-dark-390 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "inb-tabs"
+  }
+ },
+ {
+  "name": "leads-tabs-dark-390 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     358,
+     81.39
+    ],
+    "items": [
+     [
+      0,
+      0,
+      175,
+      81.39
+     ],
+     [
+      183,
+      0,
+      175,
+      81.39
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     358,
+     81.39
+    ],
+    "items": [
+     [
+      0,
+      0,
+      175,
+      81.39
+     ],
+     [
+      183,
+      0,
+      175,
+      81.39
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "leads-tabs-dark-390 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "leads-tabs-dark-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "clients-range-dark-390 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 4,
+    "right": 202.781,
+    "bottom": 48,
+    "left": 90.3174
+   },
+   "t": {
+    "top": 4,
+    "left": 108.65625,
+    "right": 209.328125,
+    "bottom": 48
+   },
+   "docOver": 0
+  }
+ },
+ {
+  "name": "clients-range-dark-390 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "ov-range cv2-range"
+  }
+ },
+ {
+  "name": "clients-range-dark-390 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     320,
+     54
+    ],
+    "items": [
+     [
+      5,
+      5,
+      100.66,
+      44
+     ],
+     [
+      109.66,
+      5,
+      100.67,
+      44
+     ],
+     [
+      214.33,
+      5,
+      100.66,
+      44
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     320,
+     54
+    ],
+    "items": [
+     [
+      5,
+      5,
+      100.66,
+      44
+     ],
+     [
+      109.66,
+      5,
+      100.67,
+      44
+     ],
+     [
+      214.33,
+      5,
+      100.66,
+      44
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "clients-range-dark-390 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "clients-range-dark-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "client-log-range-dark-390 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 4,
+    "right": 202.781,
+    "bottom": 48,
+    "left": 90.3174
+   },
+   "t": {
+    "top": 4,
+    "left": 108.65625,
+    "right": 209.328125,
+    "bottom": 48
+   },
+   "docOver": 0
+  }
+ },
+ {
+  "name": "client-log-range-dark-390 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "ov-range cpl-range"
+  }
+ },
+ {
+  "name": "client-log-range-dark-390 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     320,
+     54
+    ],
+    "items": [
+     [
+      5,
+      5,
+      100.66,
+      44
+     ],
+     [
+      109.66,
+      5,
+      100.67,
+      44
+     ],
+     [
+      214.33,
+      5,
+      100.66,
+      44
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     320,
+     54
+    ],
+    "items": [
+     [
+      5,
+      5,
+      100.66,
+      44
+     ],
+     [
+      109.66,
+      5,
+      100.67,
+      44
+     ],
+     [
+      214.33,
+      5,
+      100.66,
+      44
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "client-log-range-dark-390 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "client-log-range-dark-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "client-pick-dark-390 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "cpl-pick",
+   "anims": 0
+  }
+ },
+ {
+  "name": "client-pick-dark-390 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 52,
+    "right": 293.098,
+    "bottom": 96,
+    "left": 151.629
+   },
+   "t": {
+    "top": 52,
+    "left": 183.84375,
+    "right": 300.921875,
+    "bottom": 96
+   },
+   "docOver": 0
+  }
+ },
+ {
+  "name": "client-pick-dark-390 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "cpl-pick"
+  }
+ },
+ {
+  "name": "client-pick-dark-390 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     320,
+     96
+    ],
+    "items": [
+     [
+      0,
+      0,
+      188.58,
+      44
+     ],
+     [
+      0,
+      52,
+      175.84,
+      44
+     ],
+     [
+      183.84,
+      52,
+      117.08,
+      44
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     320,
+     96
+    ],
+    "items": [
+     [
+      0,
+      0,
+      188.58,
+      44
+     ],
+     [
+      0,
+      52,
+      175.84,
+      44
+     ],
+     [
+      183.84,
+      52,
+      117.08,
+      44
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "client-pick-dark-390 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "client-pick-dark-390 no page errors",
+  "pass": true,
+  "info": []
+ }
+]
