@@ -75,7 +75,8 @@ async function open(w, h, theme, url, rowSel, { role = 'agent', reduced = false,
   await page.evaluate(() => {
     const box = n => { const r = n.getBoundingClientRect(); return [+r.left.toFixed(2), +r.top.toFixed(2), +r.width.toFixed(2), +r.height.toFixed(2)] }
     window.__items = row => [...row.children].filter(c => !c.classList.contains('sp-pill'))
-    window.__rects = sel => { const row = document.querySelector(sel); return { row: box(row), items: window.__items(row).map(box) } }
+    // Relative to the row (size, then each button from the row corner), so a page that settles a few px apart cannot fail it.
+    window.__rects = sel => { const row = document.querySelector(sel); const o = row.getBoundingClientRect(); const rel = n => { const r = n.getBoundingClientRect(); return [+(r.left - o.left).toFixed(2), +(r.top - o.top).toFixed(2), +r.width.toFixed(2), +r.height.toFixed(2)] }; return { row: [+o.width.toFixed(2), +o.height.toFixed(2)], items: window.__items(row).map(rel) } }
     window.__edges = sel => {
       const l = document.querySelector(`${sel} .sp-pill .sp-layer`); if (!l) return null
       const m = /inset\(([\d.-]+)px calc\(100% - ([\d.-]+)px\) calc\(100% - ([\d.-]+)px\) ([\d.-]+)px/.exec(getComputedStyle(l).clipPath)
