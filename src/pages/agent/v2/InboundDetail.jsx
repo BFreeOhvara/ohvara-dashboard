@@ -10,9 +10,9 @@ import {
   stageOf, leadName, firstName, phoneDisplay, telHref, stateName, appointmentAt, apptText, timeText, dateText, dayLabel, dayKey,
   upcomingWords, buildTimeline, eventTitle, eventSub, cameInAt, PRODUCT_LABEL, OUTCOME_LABEL,
 } from '../../../lib/inbounds'
-import { DEFAULT_TIMEZONE, utcIsoToZonedDatetimeLocal } from '../../../lib/timezones'
+import { DEFAULT_TIMEZONE } from '../../../lib/timezones'
 import {
-  REASON_MAX, checkFollowUp, checkReason, savedLine, isOutcomeMissing, outcomeErrorText, isFollowUpDue, canSubmitForServicing, submitForServicingPath,
+  REASON_MAX, checkFollowUp, earliestFollowUp, checkReason, savedLine, isOutcomeMissing, outcomeErrorText, isFollowUpDue, canSubmitForServicing, submitForServicingPath,
 } from '../../../lib/leadOutcomes'
 
 // Inbound detail (/agent/inbounds/:id): who they are, a timeline of what we did and what happens next,
@@ -84,6 +84,7 @@ function Outcome({ l, tz, due }) {
   const [when, setWhen] = useState('')
   const [reason, setReason] = useState('')
   const [formErr, setFormErr] = useState('')
+  const [minWhen, setMinWhen] = useState('') // earliest time the picker offers: a minute from when Follow up was opened
   const input = (outcome, extra = {}) => ({ outcome, ...extra })
   const run = (inp, done) => {
     setAsked(inp.outcome)
@@ -93,6 +94,7 @@ function Outcome({ l, tz, due }) {
     set.reset()
     setFormErr('')
     if (o === 'sold') { setOpen(null); run(input('sold'), {}); return }
+    if (o === 'follow_up') setMinWhen(earliestFollowUp(tz))
     setOpen(open === o ? null : o)
   }
   const save = () => {
@@ -118,7 +120,7 @@ function Outcome({ l, tz, due }) {
     at: last?.at ?? l.outcome_at, followUpAt: last?.followUpAt ?? l.follow_up_at, reason: last?.reason ?? l.outcome_reason,
   }, tz)
   const missing = set.isError && isOutcomeMissing(set.error)
-  const minWhen = useMemo(() => (open === 'follow_up' ? utcIsoToZonedDatetimeLocal(new Date(Date.now() + 60e3).toISOString(), tz) : ''), [open, tz])
+
   const name = firstName(leadName(l))
   return (
     <section className={`${due ? 'ov-attn' : 'ov-card'} pv-card a-out`} aria-label="Outcome">

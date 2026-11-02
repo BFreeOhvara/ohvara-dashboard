@@ -1,4 +1,4 @@
-import { zonedTimeToUtcIso, DEFAULT_TIMEZONE } from './timezones.js'
+import { zonedTimeToUtcIso, utcIsoToZonedDatetimeLocal, DEFAULT_TIMEZONE } from './timezones.js'
 import { hasServicingOf } from './overviewBook.js'
 import { dateText, timeText, firstName, phoneDisplay } from './inbounds.js'
 
@@ -41,6 +41,9 @@ export function checkFollowUp(local, tz, nowMs = Date.now()) {
   if (new Date(iso).getTime() <= nowMs) return { error: 'Pick a follow up time in the future.' }
   return { iso }
 }
+
+// The picker's earliest choice: a minute from now, as the datetime-local string in the agent's zone.
+export const earliestFollowUp = (tz, nowMs = Date.now()) => utcIsoToZonedDatetimeLocal(new Date(nowMs + 60e3).toISOString(), tz || DEFAULT_TIMEZONE)
 
 // "Follow up Nov 4 at 2:00 PM"
 export const followUpLine = (iso, tz) => (iso ? `Follow up ${dateText(iso, tz)} at ${timeText(iso, tz)}` : '')
