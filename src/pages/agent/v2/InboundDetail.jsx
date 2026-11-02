@@ -307,6 +307,7 @@ export default function InboundDetail() {
           <span className="pv-chip"><i className="pv-dot" />{stageText}</span>
           {isFollowUpDue(l) && <span className="pv-chip sch">Follow up due</span>}
         </div>
+        <h2 className="pv-d-name">{leadName(l)}</h2>
         <p className="pv-sub">{num ? place : `No phone number on file. Our VA is finding one.`}</p>
         {num && call && (
           <div className="pv-d-num"><b className="tab">{num}</b>

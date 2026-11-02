@@ -1,0 +1,62 @@
+[
+  {
+    "name": "sample 1440 light",
+    "ok": true,
+    "extra": "name=true sections={\"Lead\":1,\"Timeline\":1,\"Outcome\":1,\"Texts\":1,\"Notes\":1} sw=1425/1440 outcomeBtns=Sold:true,Follow up:true,Not interested:true saveNoteDisabled=true/true sampleRequests=0 pageErrors=[] consoleErrors=[] requests=15"
+  },
+  {
+    "name": "sample 1440 dark",
+    "ok": true,
+    "extra": "name=true sections={\"Lead\":1,\"Timeline\":1,\"Outcome\":1,\"Texts\":1,\"Notes\":1} sw=1425/1440 outcomeBtns=Sold:true,Follow up:true,Not interested:true saveNoteDisabled=true/true sampleRequests=0 pageErrors=[] consoleErrors=[] requests=15"
+  },
+  {
+    "name": "sample 390 light",
+    "ok": true,
+    "extra": "name=true sections={\"Lead\":1,\"Timeline\":1,\"Outcome\":1,\"Texts\":1,\"Notes\":1} sw=390/390 outcomeBtns=Sold:true,Follow up:true,Not interested:true saveNoteDisabled=true/true sampleRequests=0 pageErrors=[] consoleErrors=[] requests=10"
+  },
+  {
+    "name": "sample 390 dark",
+    "ok": true,
+    "extra": "name=true sections={\"Lead\":1,\"Timeline\":1,\"Outcome\":1,\"Texts\":1,\"Notes\":1} sw=390/390 outcomeBtns=Sold:true,Follow up:true,Not interested:true saveNoteDisabled=true/true sampleRequests=0 pageErrors=[] consoleErrors=[] requests=10"
+  },
+  {
+    "name": "not-real-sample 1440 light",
+    "ok": true,
+    "extra": "sw=1425/1440 pageErrors=[] consoleErrors=[]"
+  },
+  {
+    "name": "not-real-sample 1440 dark",
+    "ok": true,
+    "extra": "sw=1425/1440 pageErrors=[] consoleErrors=[]"
+  },
+  {
+    "name": "not-real-sample 390 light",
+    "ok": true,
+    "extra": "sw=390/390 pageErrors=[] consoleErrors=[]"
+  },
+  {
+    "name": "not-real-sample 390 dark",
+    "ok": true,
+    "extra": "sw=390/390 pageErrors=[] consoleErrors=[]"
+  },
+  {
+    "name": "sample-id-no-flag 1440 light",
+    "ok": true,
+    "extra": "sw=1425/1440 pageErrors=[] consoleErrors=[]"
+  },
+  {
+    "name": "sample-id-no-flag 1440 dark",
+    "ok": true,
+    "extra": "sw=1425/1440 pageErrors=[] consoleErrors=[]"
+  },
+  {
+    "name": "sample-id-no-flag 390 light",
+    "ok": true,
+    "extra": "sw=390/390 pageErrors=[] consoleErrors=[]"
+  },
+  {
+    "name": "sample-id-no-flag 390 dark",
+    "ok": true,
+    "extra": "sw=390/390 pageErrors=[] consoleErrors=[]"
+  }
+]

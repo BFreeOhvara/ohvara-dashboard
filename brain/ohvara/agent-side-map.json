@@ -544,9 +544,14 @@
         "src/pages/agent/v2/Calendar.jsx",
         "src/components/agent/AgentUI.jsx",
         "src/pages/agent/Clients.jsx",
-        "qa/stretch-pill-rows/shots.mjs"
+        "qa/stretch-pill-rows/shots.mjs",
+        "src/pages/agent/v2/Inbounds.jsx",
+        "src/components/agent/ClientsV2Parts.jsx",
+        "src/components/agent/ClientPageLog.jsx",
+        "src/components/notifications/NotificationBell.jsx",
+        "src/components/shared/InviteAgentModal.jsx"
       ],
-      "notes": "Shared hook, proved on Calendar's Week / Day switch and phone day strip, and now on the agent My Pipeline rows: BookSwitch (Submit, persistKey book-switch: it remounts between New booking and Change a booking), SideSwitch (In progress | Clients, persistKey pl-seg: it is the head of two lists, so it remounts; also the phone one in PhoneClients), the stage tabs .pl-tabs (PipelineList pill prop, passed only from pages/agent/Clients.jsx; selector .is-sel) and the range switch (RangeSwitch pill prop, passed only from SidePipelineSummary). Fulfillment and Admin Pipeline never get a pill: the ref is not attached, so the hook does nothing. Exempt: .ov-chips (the phone chips; agent phones return early to PhoneClients), ActivityFilter (multi-select), .ph-seg tiles in PhoneClients, the shared PipelineSummary range. BookSwitch reserves each label's bold width (hidden zero-height copy) so the row no longer shifts about 1.9 px on selection. The hook now resolves a see-through color-mix fill through the browser so a bordered tab flies as a soft tint, not a solid block. The pill exists only in flight, so the resting look is each button's own CSS. Reduced motion, a hidden row, no target or a move to another wrapped line all switch instantly. Web Animations only, no new packages. Pattern taken from the Solvik demo, none of its code or colours."
+      "notes": "Shared hook, proved on Calendar's Week / Day switch and phone day strip, and now on Leads (.pv-filters chips, .inb-tabs cards), Clients (.cv2-range), the client page (.cpl-range, .cpl-pick), the notification bell's tabs (.nt-tabs, agent only), the invite modal's Text message / Email switch (.ov-invite-seg) and the agent My Pipeline rows: BookSwitch (Submit, persistKey book-switch: it remounts between New booking and Change a booking), SideSwitch (In progress | Clients, persistKey pl-seg: it is the head of two lists, so it remounts; also the phone one in PhoneClients), the stage tabs .pl-tabs (PipelineList pill prop, passed only from pages/agent/Clients.jsx; selector .is-sel) and the range switch (RangeSwitch pill prop, passed only from SidePipelineSummary). Fulfillment and Admin Pipeline never get a pill: the ref is not attached, so the hook does nothing. Exempt: .ov-chips (the phone chips; agent phones return early to PhoneClients), ActivityFilter (multi-select), .ph-seg tiles in PhoneClients, the shared PipelineSummary range. BookSwitch reserves each label's bold width (hidden zero-height copy) so the row no longer shifts about 1.9 px on selection. Wrapped rows (.pv-filters, .cpl-pick) fly on the same line and switch instantly between lines. The pill exists only in flight, so the resting look is each button's own CSS. Reduced motion, a hidden row, no target or a move to another wrapped line all switch instantly. Web Animations only, no new packages. Pattern taken from the Solvik demo, none of its code or colours."
     },
     {
       "id": "leads.follow-up-date-reason",
@@ -564,7 +569,7 @@
         "src/pages/agent/v2/portalV2.css",
         "src/pages/agent/v2/inboundsExtra.css"
       ],
-      "notes": "Needs migration 210 (not applied): set_inbound_outcome(p_lead, p_outcome, p_note, p_follow_up_at, p_reason) and agent_inbounds() follow_up_at, outcome_reason, follow_up_due. Until then Follow up and Not interested save with a plain note (\"isn't ready yet, nothing changed\") and no chip shows; Sold keeps working because it sends only the old arguments. Stubbed tests prove the page logic only, never live."
+      "notes": "Needs migration 210 (not applied): set_inbound_outcome(p_lead, p_outcome, p_note, p_follow_up_at, p_reason) and agent_inbounds() follow_up_at, outcome_reason, follow_up_due. Until then Follow up and Not interested save with a plain note (\"isn't ready yet, nothing changed\") and no chip shows; Sold keeps working because it sends only the old arguments. Stubbed tests prove the page logic only, never live. Selected Not interested button (.pv-outs button.on.lost in portalV2.css) now reads as active: --ov-hi text, --ov-st-noanswer-tint fill, --ov-st-noanswer border plus 1px inset ring, neutral, no amber or red; before it was faded grey (--ov-faint on --ov-stub)."
     },
     {
       "id": "leads.sold-submit-prefill",

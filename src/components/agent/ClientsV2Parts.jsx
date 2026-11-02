@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Search, ShieldCheck, ListChecks, Trash2, Phone, MessageSquareText, Users, ChevronLeft, Plus, MessageSquare } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useIsPhone } from '../../hooks/usePhoneLayout'
 import { useInbounds } from '../../hooks/useInbounds'
 import { useAgentBookings } from '../../hooks/useAgentBookings'
+import { useStretchPill } from '../../hooks/useStretchPill'
 import { useSubmitLive } from '../../hooks/useAppSettings'
 import { useServicingTasks, useClientPolicies, TASK_LABEL, TASK_STATUS, watchProgress } from '../../hooks/useServicingTasks'
 import { ClientDrawer, StatusNote, Journey, LoadError } from './AgentUI'
@@ -145,6 +146,8 @@ export function ClientsV2Row({ c, on, tz, onOpen }) {
 export function ClientsV2Card({ data, activeId, onOpen, className = '' }) {
   const { tz, clients, policies, loading, error, refetch } = data
   const f = useClientFilter(clients, policies)
+  const rangeRef = useRef(null)
+  useStretchPill(rangeRef, { activeKey: f.filter, selector: 'button.is-on', enabled: !loading && !error && clients.length > 0 })
   let body
   if (error) body = <LoadError what="your clients" onRetry={refetch} />
   else if (loading) body = <p className="cv2-sub cv2-pad" role="status">Loading your clients…</p>
@@ -173,7 +176,7 @@ export function ClientsV2Card({ data, activeId, onOpen, className = '' }) {
             <Search size={16} strokeWidth={2} style={{ flexShrink: 0 }} aria-hidden="true" />
             <input type="search" value={f.query} onChange={e => f.setQuery(e.target.value)} placeholder="Name, phone or policy number" aria-label="Find a client" />
           </label>
-          <div className="ov-range cv2-range" role="group" aria-label="Show">
+          <div ref={rangeRef} className="ov-range cv2-range" role="group" aria-label="Show">
             {CLIENT_FILTERS.map(x => (
               <button key={x.key} type="button" className={f.filter === x.key ? 'is-on' : ''} aria-pressed={f.filter === x.key} onClick={() => f.setFilter(x.key)}>
                 {x.label}<b>{f.counts[x.key]}</b>
