@@ -34,6 +34,8 @@ import AgentMore from './pages/agent/More'
 const V2InboundDetail = lazy(() => import('./pages/agent/v2/InboundDetail'))
 const V2Calendar = lazy(() => import('./pages/agent/v2/Calendar'))
 const V2Inbounds = lazy(() => import('./pages/agent/v2/Inbounds'))
+// The clickable template (sample info only). Lazy, and chosen below before any provider mounts.
+const TemplateApp = lazy(() => import('./template/TemplateApp'))
 import MyCalls from './pages/fulfillment/MyCalls'
 import VaLeads from './pages/fulfillment/VaLeads'
 import FulfillmentOverview from './pages/fulfillment/Overview'
@@ -104,6 +106,11 @@ function RoleRedirect() {
 }
 
 export default function App() {
+  // /template has no backend: it returns above the providers, so the page makes no Supabase requests.
+  const path = window.location.pathname
+  if (path === '/template' || path.startsWith('/template/')) {
+    return <ErrorBoundary><Suspense fallback={null}><TemplateApp /></Suspense></ErrorBoundary>
+  }
   return (
     // Prompt 746 — outermost boundary: even a crash in the layout or a
     // provider shows a message instead of a blank page.
