@@ -146,6 +146,10 @@ select public.p_m12_as('aaaaaaaa-aaaa-4aaa-8214-00000000000a');
 select is(public.set_inbound_outcome('dddddddd-dddd-4ddd-8214-000000000001', 'sold'), 'sold', 'sold1 A marks the unlinked lead sold');
 select is(public.set_inbound_outcome('dddddddd-dddd-4ddd-8214-000000000002', 'sold'), 'sold', 'sold2 A marks the lead that stays unlinked sold');
 select public.p_m12_owner();
+-- Since 215 Sold seeds nothing. Leads sold under 212 keep their seeds, and this job still has
+-- to read them, so these two get what 212's Sold wrote.
+select public.servicing_seed_steps('aaaaaaaa-aaaa-4aaa-8214-00000000000a', null, 'dddddddd-dddd-4ddd-8214-000000000001', null, 'aaaaaaaa-aaaa-4aaa-8214-00000000000a');
+select public.servicing_seed_steps('aaaaaaaa-aaaa-4aaa-8214-00000000000a', null, 'dddddddd-dddd-4ddd-8214-000000000002', null, 'aaaaaaaa-aaaa-4aaa-8214-00000000000a');
 select is((select count(*) from public.servicing_tasks where lead_id = 'dddddddd-dddd-4ddd-8214-000000000001' and policy_id is null), 14::bigint,
           'sold3 its 14 seeds (packet_check, review_call, 12 chargeback_watch) have a null policy_id');
 

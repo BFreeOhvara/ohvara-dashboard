@@ -260,6 +260,57 @@ test('no duplicate steps', async () => {
   for (const [k, c] of anyState) assert.equal(c, 1, `${k}: one row in any state`)
 })
 
+// ── (5b) the VA desk's rows (213) are not text steps ────────────────────────
+test('VA rows are left alone, with sms on and off', async () => {
+  for (const smsLive of [true, false]) {
+    const f = make({ live: smsLive, templates: CLEAN })
+    const past = iso(NOON.getTime() - 48 * HOUR)
+    const va = (id: string, detail: Record<string, unknown>) => ({
+      id, lead_id: LEAD, agent_id: AGENT, kind: 'follow_up', state: 'scheduled', at: past, label: 'VA calls again',
+      detail: { summary: 'Our VA will try them again.', ...detail }, actor_name: 'Ohvara', actor_role: 'system', created_at: past,
+    }) as Row
+    f.rows.push(
+      va('va1', { va_step: 'retry_d0', va_cycle: 1, va_seq: 1 }),
+      va('va2', { va_step: 'retry_d1', va_cycle: 1, va_seq: 1 }),
+      va('va3', { va_step: 'retry_monthly', va_cycle: 1, va_seq: 1 }),
+      va('va4', { va_step: 'rebook', va_seq: 1, no_auto_time: true }),
+    )
+    const vaRows = () => JSON.stringify(f.rows.filter(r => r.detail?.va_step))
+    const before = vaRows()
+
+    // With only VA rows, the scan finds nothing to do.
+    assert.deepEqual(await f.deps.leadsWithScheduled(), [])
+    await f.tick()
+    assert.equal(f.sent.length, 0)
+    assert.equal(vaRows(), before)
+
+    // Plan still schedules the full cadence: past-due VA rows don't read as booked or a reply.
+    const r = await f.plan()
+    assert.equal(r.status, 200)
+    assert.equal(r.body.stopped, 0)
+    assert.equal(f.of(STOP_STEP).length, 0)
+    assert.deepEqual(r.body.planned, ['instant', ...CADENCE].map(s => `${s}:1`))
+    assert.equal(vaRows(), before)
+
+    // Every text step comes due; each text sent matches a text row, none a VA row.
+    await f.tick()
+    for (const step of CADENCE) {
+      f.s.now = f.at(step)
+      await f.tick()
+      await f.plan()
+    }
+    assert.equal(vaRows(), before)
+    const texts = f.rows.filter(x => x.detail?.step)
+    assert.equal(f.sent.length, texts.filter(x => x.state === 'done').length)
+    assert.equal(f.sent.length, smsLive ? 6 : 0)
+    if (!smsLive) assert.equal(texts.filter(x => x.state === 'skipped' && x.detail.reason === 'sms_off').length, 6)
+    for (const row of f.rows.filter(x => x.detail?.va_step)) {
+      assert.equal(row.detail.twilio_sid, undefined)
+      assert.equal(row.state, 'scheduled')
+    }
+  }
+})
+
 // ── (6) no-show ─────────────────────────────────────────────────────────────
 test('no-show at most twice', async () => {
   const f = make({ live: true, templates: CLEAN })

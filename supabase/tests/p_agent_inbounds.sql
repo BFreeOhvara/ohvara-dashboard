@@ -1,11 +1,12 @@
 -- p_agent_inbounds — pgTAP checks for who can see and change an inbound's
 -- outcome and notes: agent_inbounds(), inbound_events RLS, set_inbound_outcome
 -- and add_inbound_note (180_agent_inbounds.sql, with the caller check fixed by
--- 181_fix_inbound_agent_checks.sql).
+-- 181_fix_inbound_agent_checks.sql and the outcome rules changed by
+-- 215_lead_outcomes.sql; p_lead_outcomes.sql checks those rules in full).
 --
 -- RUN: on a LOCAL database only (`supabase test db` on a local stack, or a
 -- local PGlite with pgTAP). Everything runs in one transaction that is rolled
--- back. Never run it against Ohvara's live database. Needs 180 AND 181
+-- back. Never run it against Ohvara's live database. Needs 180, 181 AND 215
 -- applied (180 needs 166, 173, 174 and 175 first).
 --
 -- What it covers:
@@ -13,8 +14,8 @@
 --      leads (not B's, the inactive agent's, or the unassigned one)
 --   b. A sets follow_up, then not_interested, and adds a note on A's own lead;
 --      the lead and the events read as 180 writes them
---   c. A marks A's other lead sold: fourteen servicing tasks and one
---      became_client event, once, even when sold is pressed twice
+--   c. A marks A's other lead sold: the outcome is recorded, with no servicing
+--      task and no became_client event, even when sold is pressed twice
 --   d. refusals (42501): A on B's lead; A on the unassigned lead (follow_up,
 --      not_interested, sold, note); inactive C on C's own lead; C on the
 --      unassigned lead. None of them changes a lead or writes an event.
@@ -43,7 +44,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(42);
+select plan(41);
 
 -- ── seed (as the table owner) ───────────────────────────────────────────────
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -119,7 +120,7 @@ reset role;
 -- ── b. A on A's own lead ────────────────────────────────────────────────────
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8181-00000000000a","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select is(public.set_inbound_outcome('cccccccc-cccc-4ccc-8181-0000000000a1', 'follow_up', 'Call back Friday'), 'follow_up',
+select is(public.set_inbound_outcome('cccccccc-cccc-4ccc-8181-0000000000a1', 'follow_up', 'Call back Friday', now() + interval '2 days'), 'follow_up',
           'b1 A sets follow_up on a1 and gets stage follow_up back');
 reset role;
 select is(
@@ -130,7 +131,7 @@ select is(
 
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8181-00000000000a","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select is(public.set_inbound_outcome('cccccccc-cccc-4ccc-8181-0000000000a1', 'not_interested'), 'lost',
+select is(public.set_inbound_outcome('cccccccc-cccc-4ccc-8181-0000000000a1', 'not_interested', null, null, 'Has a policy elsewhere'), 'lost',
           'b3 A then sets not_interested on a1 and gets stage lost back');
 reset role;
 select is(
@@ -158,7 +159,7 @@ select is(
   '3/3',
   'b7 each of those events has agent_id A, actor_role agent and A''s name');
 
--- ── c. Sold on A's live call starts servicing, once ─────────────────────────
+-- ── c. Sold on A's live call only records the outcome ───────────────────────
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8181-00000000000a","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
 select is(public.set_inbound_outcome('cccccccc-cccc-4ccc-8181-0000000000a2', 'sold'), 'sold',
@@ -170,37 +171,25 @@ select is(
   'sold:a:sold:closed',
   'c2 a2 reads outcome sold, outcome_by A, stage sold, agent_status closed');
 select is(
-  (select string_agg(s.line || ':' || s.n, ',' order by s.line)
-     from (select kind || ':' || status || ':' || (agent_id = 'aaaaaaaa-aaaa-4aaa-8181-00000000000a')
-                  || ':' || (requested_by_id = 'aaaaaaaa-aaaa-4aaa-8181-00000000000a') as line, count(*) as n
-             from public.servicing_tasks where lead_id = 'cccccccc-cccc-4ccc-8181-0000000000a2' group by 1) s),
-  'chargeback_watch:scheduled:true:true:12,packet_check:scheduled:true:true:1,review_call:scheduled:true:true:1',
-  'c3 sold seeded 14 rows for A, scheduled: packet_check, review_call and 12 chargeback_watch');
-select ok(
-  (select bool_and(case t.kind
-                     when 'packet_check'     then t.due_at = ((current_date + s.servicing_packet_check_days) + time '12:00') at time zone 'UTC'
-                     when 'review_call'      then t.due_at = ((current_date + s.servicing_review_call_days) + time '12:00') at time zone 'UTC'
-                     when 'chargeback_watch' then t.due_at = ((current_date + make_interval(months => t.watch_month))::date + time '12:00') at time zone 'UTC'
-                   end) and count(*) = 14 and count(distinct t.watch_month) = 12
-     from public.servicing_tasks t, public.app_settings s
-    where t.lead_id = 'cccccccc-cccc-4ccc-8181-0000000000a2' and s.id = 1),
-  'c4 the tasks are due on the settings dates at noon UTC, counted from today: this lead has no policy');
+  (select count(*) from public.servicing_tasks where lead_id = 'cccccccc-cccc-4ccc-8181-0000000000a2'),
+  0::bigint,
+  'c3 sold seeded no servicing task');
 select is(
   (select string_agg(kind || ':' || (agent_id = 'aaaaaaaa-aaaa-4aaa-8181-00000000000a') || ':' || actor_role, ',' order by kind)
      from public.inbound_events where lead_id = 'cccccccc-cccc-4ccc-8181-0000000000a2'),
-  'became_client:true:agent,outcome:true:agent',
-  'c5 sold logged one outcome event and one became_client event, agent_id A, actor_role agent');
+  'outcome:true:agent',
+  'c4 sold logged one outcome event and no became_client event, agent_id A, actor_role agent');
 
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8181-00000000000a","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
 select is(public.set_inbound_outcome('cccccccc-cccc-4ccc-8181-0000000000a2', 'sold'), 'sold',
-          'c6 pressing sold on a2 a second time still works');
+          'c5 pressing sold on a2 a second time still works');
 reset role;
 select is(
   (select (select count(*) from public.servicing_tasks where lead_id = 'cccccccc-cccc-4ccc-8181-0000000000a2') || '/' ||
           (select count(*) from public.inbound_events where lead_id = 'cccccccc-cccc-4ccc-8181-0000000000a2' and kind = 'became_client')),
-  '14/1',
-  'c7 still fourteen servicing tasks and one became_client event on a2');
+  '0/0',
+  'c6 still no servicing task and no became_client event on a2');
 
 -- ── d. Refusals ─────────────────────────────────────────────────────────────
 -- What the refused calls must not touch.
@@ -281,15 +270,15 @@ select is(
 -- ── e. The admin passes on every lead ───────────────────────────────────────
 select set_config('request.jwt.claims', '{"sub":"dddddddd-dddd-4ddd-8181-000000000001","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
-select is(public.set_inbound_outcome('cccccccc-cccc-4ccc-8181-0000000000a1', 'follow_up'), 'follow_up',
+select is(public.set_inbound_outcome('cccccccc-cccc-4ccc-8181-0000000000a1', 'follow_up', null, now() + interval '2 days'), 'follow_up',
           'e1 admin sets an outcome on A''s lead');
 select ok(public.add_inbound_note('cccccccc-cccc-4ccc-8181-0000000000a1', 'admin note a1') is not null,
           'e2 admin adds a note to A''s lead');
-select is(public.set_inbound_outcome('cccccccc-cccc-4ccc-8181-0000000000b1', 'not_interested'), 'lost',
+select is(public.set_inbound_outcome('cccccccc-cccc-4ccc-8181-0000000000b1', 'not_interested', null, null, 'Admin closed it'), 'lost',
           'e3 admin sets an outcome on B''s lead');
 select ok(public.add_inbound_note('cccccccc-cccc-4ccc-8181-0000000000b1', 'admin note b1') is not null,
           'e4 admin adds a note to B''s lead');
-select is(public.set_inbound_outcome('cccccccc-cccc-4ccc-8181-0000000000ee', 'follow_up'), 'follow_up',
+select is(public.set_inbound_outcome('cccccccc-cccc-4ccc-8181-0000000000ee', 'follow_up', null, now() + interval '2 days'), 'follow_up',
           'e5 admin sets an outcome on the unassigned lead');
 select ok(public.add_inbound_note('cccccccc-cccc-4ccc-8181-0000000000ee', 'admin note ee') is not null,
           'e6 admin adds a note to the unassigned lead');
