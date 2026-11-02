@@ -5,7 +5,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { transferWatch, myIncomingTransfer, alertText, POLL_MS, RING_MS } from './transferAlert.js'
+import { transferWatch, myIncomingTransfer, alertText, acceptTransfer, cantTakeTransfer, answerOnce, POLL_MS, RING_MS } from './transferAlert.js'
 
 const ROW = { help_call_id: 'c1', transfer_started_at: '2026-10-29T21:19:40Z', lead_id: 'l1', caller_label: 'Dana' }
 const src = p => readFileSync(new URL(p, import.meta.url), 'utf8')
@@ -164,6 +164,83 @@ test('reads one row from the rpc and words the alert without a number', async ()
   assert.equal(alertText({}), "Live call for you: New caller. We're calling your phone now. Pick up.")
 })
 
+// A database that records every call. No table writes exist on it, so a stray one throws.
+function fakeDb(error = null) {
+  const calls = []
+  return { calls, rpc: async (fn, args) => { calls.push([fn, args]); return { data: true, error } } }
+}
+
+test('accept only sends the acknowledgement and never marks the call connected', async () => {
+  const db = fakeDb()
+  await acceptTransfer(db, ROW)
+  assert.deepEqual(db.calls, [['agent_accept_transfer', { p_lead: 'l1' }]])
+
+  // Only the function touches the call: no table write here or in the alert, no connected status.
+  const lib = src('./transferAlert.js')
+  const alert = src('../components/agent/TransferAlert.jsx')
+  for (const s of [lib, alert]) {
+    assert.doesNotMatch(s, /\.from\(|\.update\(|\.insert\(/)
+    assert.doesNotMatch(s, /status:\s*'transferred'|outcome:\s*'transferred'|transferred_at:/)
+  }
+})
+
+test('a call with no lead yet still sends, with a null lead', async () => {
+  const db = fakeDb()
+  await cantTakeTransfer(db, { help_call_id: 'c9', lead_id: null })
+  assert.deepEqual(db.calls, [['agent_missed_transfer', { p_lead: null }]])
+})
+
+test("Can't take it is idempotent: two taps send once and close once", async () => {
+  const db = fakeDb()
+  let closes = 0
+  const answer = answerOnce({ close: () => { closes++ } })
+  const send = row => cantTakeTransfer(db, row)
+  await Promise.all([answer(send, ROW), answer(send, ROW)])
+  await answer(send, ROW)
+  assert.equal(db.calls.length, 1)
+  assert.equal(closes, 1)
+  // The next call is a new answer.
+  await answer(send, { ...ROW, help_call_id: 'c2' })
+  assert.equal(db.calls.length, 2)
+  assert.equal(closes, 2)
+})
+
+test('a missing function closes cleanly; any other failure closes too', async () => {
+  for (const send of [acceptTransfer, cantTakeTransfer]) {
+    const missing = fakeDb({ code: 'PGRST202', message: 'Could not find the function' })
+    await assert.doesNotReject(send(missing, ROW))
+    await assert.rejects(send(fakeDb({ code: '500' }), ROW))
+
+    let closes = 0
+    const answer = answerOnce({ close: () => { closes++ } })
+    await answer(row => send(missing, row), ROW)
+    await answer(row => send(fakeDb({ code: '500' }), row), { ...ROW, help_call_id: 'c2' })
+    assert.equal(closes, 2)
+  }
+})
+
+test('the ring cap is not a miss: nothing is sent when it runs out', async () => {
+  const db = fakeDb()
+  const t = setup()
+  t.w.setActive(true)
+  await t.timers.advance(RING_MS * 2)
+  assert.equal(t.ringing, false)
+  assert.deepEqual(db.calls, [])
+  t.w.stop()
+  const alert = src('../components/agent/TransferAlert.jsx')
+  assert.doesNotMatch(alert, /setTimeout|setInterval/, 'the alert has no timer of its own')
+  assert.doesNotMatch(src('./transferAlert.js'), /(setTimeout|setInterval)[^\n]*(cantTake|agent_missed)/)
+})
+
+test('the alert offers Accept and Can’t take it, wired to their functions', () => {
+  const alert = src('../components/agent/TransferAlert.jsx')
+  assert.match(alert, />Accept</)
+  assert.match(alert, /Can&rsquo;t take it/)
+  assert.ok(alert.includes('answer(r => acceptTransfer(supabase, r), row)'))
+  assert.ok(alert.includes('answer(r => cantTakeTransfer(supabase, r), row)'))
+  assert.doesNotMatch(alert, /Dismiss/)
+})
+
 test('alert is portaled to body', () => {
   const alert = src('../components/agent/TransferAlert.jsx')
   assert.match(alert, /import \{ createPortal \} from 'react-dom'/)
@@ -181,4 +258,73 @@ test('alert is portaled to body', () => {
   const layout = src('../components/layout/DashboardLayout.jsx')
   assert.ok(layout.indexOf('<TransferAlert />') > layout.indexOf('<PhoneShell>'), 'desktop mount sits after the phone early return')
   assert.doesNotMatch(src('../components/agent/PortalV2Nav.jsx'), /<TransferAlert \/>/)
+})
+
+// ── live-transfer-call ──────────────────────────────────────────────────────────────────────────
+// The browser half of the transfer, against a simulated help_calls row. Nothing dials; no real database.
+
+test('live-transfer-call: the row TransferAlert polls appears while the agent leg rings and goes when it is answered or missed', async () => {
+  // A stand-in for my_incoming_transfer (182): the caller's own row, only while status is 'transferring'.
+  const call = { help_call_id: 'c1', lead_id: 'l1', caller_label: 'Dana', transfer_started_at: '2026-11-01T18:00:00Z', status: 'transferring' }
+  const rpcs = []
+  const db = { rpc: async fn => { rpcs.push(fn); return { data: call.status === 'transferring' ? [call] : [], error: null } } }
+  const timers = fakeTimers()
+  const seen = []
+  let ringing = false
+  const w = transferWatch({
+    fetchRow: () => myIncomingTransfer(db),
+    ring: () => { ringing = true; return () => { ringing = false } },
+    onChange: r => seen.push(r?.help_call_id ?? null),
+    doc: fakeDoc(), timers,
+  })
+  w.setActive(true)
+  await timers.advance(0)
+  assert.deepEqual(seen, ['c1'], 'the alert appears')
+  assert.equal(ringing, true)
+
+  // help-voice's callback moves the row on (answered -> transferred, or a miss -> no_answer): the next poll closes it.
+  for (const next of ['transferred', 'no_answer']) {
+    call.status = next
+    await timers.advance(POLL_MS)
+    assert.equal(seen.at(-1), null, `closed once the row is ${next}`)
+    assert.equal(ringing, false)
+    call.status = 'transferring'
+    call.help_call_id = `c-${next}`
+    await timers.advance(POLL_MS)
+    assert.equal(seen.at(-1), `c-${next}`, 'a new attempt shows again')
+  }
+  assert.ok(rpcs.length >= 5 && rpcs.every(fn => fn === 'my_incoming_transfer'), 'the only call is the read-only function')
+  w.stop()
+})
+
+test('live-transfer-call: the polled function returns a row only while the call is transferring, for the signed-in agent', () => {
+  const sql = readFileSync(new URL('../../supabase/migrations/182_my_incoming_transfer.sql', import.meta.url), 'utf8')
+    .replaceAll('\r\n', '\n').replace(/--.*$/gm, '')
+  assert.match(sql, /h\.status = 'transferring'/)
+  assert.match(sql, /h\.transfer_agent_id = auth\.uid\(\)/)
+  assert.doesNotMatch(sql, /\b(update|insert|delete)\b/i, 'a read only')
+})
+
+test('live-transfer-call: Accept sends the acknowledgement alone and no browser code writes the call row', async () => {
+  // A database that refuses everything except the one function Accept may call.
+  const calls = []
+  const db = {
+    rpc: async (fn, args) => {
+      calls.push([fn, args])
+      if (fn !== 'agent_accept_transfer') throw new Error(`Accept called ${fn}`)
+      return { data: true, error: null }
+    },
+    from: () => { throw new Error('Accept wrote a table') },
+  }
+  await acceptTransfer(db, ROW)
+  assert.deepEqual(calls, [['agent_accept_transfer', { p_lead: 'l1' }]])
+  // Through answerOnce, as the alert does it: still one acknowledgement, and the alert closes.
+  let closes = 0
+  await answerOnce({ close: () => { closes++ } })(row => acceptTransfer(db, row), ROW)
+  assert.equal(calls.length, 2)
+  assert.equal(closes, 1)
+  // help_calls.status is written by the Deno functions only (service role), never by anything under src/.
+  const alert = src('../components/agent/TransferAlert.jsx')
+  assert.doesNotMatch(alert, /help_calls|transferred|connected/)
+  assert.doesNotMatch(src('./transferAlert.js'), /\.rpc\('(?!my_incoming_transfer|agent_accept_transfer|agent_missed_transfer)/)
 })

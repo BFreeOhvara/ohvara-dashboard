@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
+import { oneWatchPerPolicy, watchProgress } from '../lib/servicingWatch'
 
 // The v2 Clients page's server reads (migrations 180, 193). Read only: nothing here writes.
 //   useServicingTasks()   every servicing_tasks row on this agent's clients, steps and requests alike.
@@ -19,7 +20,7 @@ export function useServicingTasks() {
       const { data, error } = await supabase.from('servicing_tasks').select(TASK_COLS)
         .eq('agent_id', profile.id).neq('status', 'cancelled').order('due_at', { ascending: true, nullsFirst: false })
       if (error) throw error
-      return data || []
+      return oneWatchPerPolicy(data || [])
     },
   })
 }
@@ -51,11 +52,5 @@ export const TASK_STATUS = {
   done: { label: 'Done', chip: 'done' },
 }
 
-// The chargeback watch runs 12 months from when it was seeded; due_at is its end.
-export function watchProgress(task, nowMs = Date.now()) {
-  const start = new Date(task.created_at).getTime()
-  const end = task.due_at ? new Date(task.due_at).getTime() : start + 365 * 864e5
-  const months = 12
-  const month = Math.min(months, Math.max(1, Math.ceil(((nowMs - start) / (end - start || 1)) * months)))
-  return { month, months, end: task.due_at, done: task.status === 'done' || nowMs >= end }
-}
+// watchProgress lives in src/lib/servicingWatch.js (testable without the supabase client); pages keep importing it from here.
+export { watchProgress }

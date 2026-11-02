@@ -382,6 +382,68 @@
       "status": "checking"
     },
     {
+      "id": "leads.accept-missed-flow",
+      "page": "Leads",
+      "title": "Live transfer: Accept acknowledges only; a miss is logged on the server; Can't take it; VA books the next open slot",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/211_transfer_missed.sql",
+        "supabase/functions/help-voice/core.ts",
+        "supabase/functions/help-voice/index.ts",
+        "src/components/agent/TransferAlert.jsx",
+        "src/lib/transferAlert.js",
+        "src/pages/fulfillment/VaLeads.jsx",
+        "src/hooks/useVaDesk.js",
+        "supabase/tests/p_transfer_missed.sql"
+      ],
+      "notes": "migration 211 unapplied; help-voice deploy pending"
+    },
+    {
+      "id": "leads.working-hours-booking",
+      "page": "Leads",
+      "title": "VA bookings stay inside the agent's working hours",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/211_transfer_missed.sql",
+        "src/hooks/useVaDesk.js",
+        "src/components/fulfillment/VaDesk.jsx",
+        "supabase/tests/p_transfer_missed.sql",
+        "src/lib/transferMissedMigration.test.js"
+      ],
+      "notes": "migration 211 unapplied; help-voice deploy pending"
+    },
+    {
+      "id": "leads.live-transfer-call",
+      "page": "Leads",
+      "title": "Live transfer: ring the on-duty agent, human answer = transferred, a miss goes back to no_answer and is logged once",
+      "status": "checking",
+      "files": [
+        "supabase/functions/help-transfer/core.ts",
+        "supabase/functions/help-voice/core.ts",
+        "supabase/functions/help-transfer/core.test.ts",
+        "supabase/functions/help-voice/core.test.ts",
+        "src/lib/transferAlert.js",
+        "src/lib/transferAlert.test.js",
+        "src/lib/transferMissedMigration.test.js",
+        "supabase/migrations/182_my_incoming_transfer.sql",
+        "supabase/migrations/211_transfer_missed.sql"
+      ],
+      "notes": "Tests with Twilio stubbed (no call placed), in supabase/functions/help-transfer/core.test.ts, supabase/functions/help-voice/core.test.ts and src/lib/transferAlert.test.js: the agent leg has the 25 s timeout; the row TransferAlert polls appears while it rings and closes when answered or missed; only a human answer sets transferred; machine, fax, busy or no answer returns to no_answer and logs the miss once; the VA drop is refused unless status is transferred; Accept only acknowledges and never sets connected. Stubbed tests prove the logic only, never 'live'. Goes live only after migration 211 is applied and the voice_live test call."
+    },
+    {
+      "id": "leads.help-line-call",
+      "page": "Leads",
+      "title": "Help line: a call rings the VA browsers; nobody on duty gives no_answer (no_agent); book is refused after a transfer",
+      "status": "checking",
+      "files": [
+        "supabase/functions/help-voice/core.ts",
+        "supabase/functions/help-transfer/core.ts",
+        "supabase/functions/help-voice/core.test.ts",
+        "supabase/functions/help-transfer/core.test.ts"
+      ],
+      "notes": "Tests with Twilio stubbed (no call placed), in supabase/functions/help-voice/core.test.ts and supabase/functions/help-transfer/core.test.ts: the help line rings only the VA browser legs and voice_live off reaches nobody; nobody on duty gives no_answer with code no_agent and rings no one; book is refused once the call went to an agent (ringing, answered or finished). create-lead-call is retired (404) and has nothing to test. Stubbed tests prove the logic only, never 'live'. Goes live only after migration 211 is applied and the voice_live test call."
+    },
+    {
       "id": "activity.lapse-events",
       "page": "Activity",
       "title": "A lapse shows as its own row: Policy lapsed",
@@ -397,6 +459,32 @@
         "src/lib/activityLapseMigration.test.js"
       ],
       "notes": "Migration 209 written, not applied: a trigger on policies writes policy_events kind lapsed when status really changes to Lapsed, and the feed shows it as kind lapsed, 'Policy lapsed. Payments stopped.'. Nothing signed in can set Lapsed yet (147 and 149 dropped direct updates, and no RPC does it), so the row won't show in normal use until one exists. UI: feed kind lapsed shows an amber Lapsed pill under the Clients filter, its drawer story ends on Policy lapsed marked done with no pending Old policy cancelled, and the client page log titles it Policy lapsed. Built against the agreed kind with fixtures; the feed rows come from the lapse migration, not applied yet.",
+      "status": "checking"
+    },
+    {
+      "id": "client-page.chargeback-watch",
+      "page": "Client page",
+      "title": "One chargeback watch step per policy, month n of 12",
+      "files": [
+        "src/lib/servicingWatch.js",
+        "src/lib/servicingWatch.test.js",
+        "src/hooks/useServicingTasks.js",
+        "src/pages/agent/ClientPage.jsx"
+      ],
+      "notes": "oneWatchPerPolicy(rows) runs on the result of useServicingTasks: among chargeback_watch rows it keeps the one with the latest due_at per policy_id (else lead_id, never the client, so a multi-policy client keeps one watch per policy). A null due_at counts as earliest; other kinds and the order are untouched. When the migration stores 12 monthly rows per policy, the kept row is month 12, so due_at is still the watch end and watchProgress (now in servicingWatch.js, re-exported from the hook) reads month n of 12. No new column in TASK_COLS; no visual change.",
+      "status": "checking"
+    },
+    {
+      "id": "client-page.servicing-card",
+      "page": "Client page",
+      "title": "Servicing card on /agent/clients: the Protected chip and steps read one watch row per policy",
+      "files": [
+        "src/components/agent/ClientsV2Parts.jsx",
+        "src/lib/servicingWatch.js",
+        "src/lib/servicingWatch.test.js",
+        "src/hooks/useServicingTasks.js"
+      ],
+      "notes": "ServicingCard and ClientPage take .find() on chargeback_watch and pass it to watchProgress; both now get a single row per policy from oneWatchPerPolicy in useServicingTasks, so the watch does not read over after about a month once the 12-monthly-row migration is applied. Those two files are not edited. Needs to be live before that migration.",
       "status": "checking"
     },
     {
