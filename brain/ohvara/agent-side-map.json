@@ -541,9 +541,14 @@
         "src/lib/stretchPill.test.js",
         "src/hooks/useStretchPill.js",
         "src/components/ui/stretchPill.css",
-        "src/pages/agent/v2/Calendar.jsx"
+        "src/pages/agent/v2/Calendar.jsx",
+        "src/pages/agent/v2/Inbounds.jsx",
+        "src/components/agent/ClientsV2Parts.jsx",
+        "src/components/agent/ClientPageLog.jsx",
+        "src/components/notifications/NotificationBell.jsx",
+        "src/components/shared/InviteAgentModal.jsx"
       ],
-      "notes": "Shared hook, proved on Calendar's Week / Day switch and phone day strip; other rows come in later tasks. The pill exists only in flight, so the resting look is each button's own CSS. Reduced motion, a hidden row, no target or a move to another wrapped line all switch instantly. Web Animations only, no new packages. Pattern taken from the Solvik demo, none of its code or colours."
+      "notes": "Shared hook, proved on Calendar's Week / Day switch and phone day strip, and now on Leads (.pv-filters chips, .inb-tabs cards), Clients (.cv2-range), the client page (.cpl-range, .cpl-pick), the notification bell's tabs (.nt-tabs, agent only) and the invite modal's Text message / Email switch (.ov-invite-seg); the other rows come in later tasks. Wrapped rows (.pv-filters, .cpl-pick) fly on the same line and switch instantly between lines. The pill exists only in flight, so the resting look is each button's own CSS. Reduced motion, a hidden row, no target or a move to another wrapped line all switch instantly. Web Animations only, no new packages. Pattern taken from the Solvik demo, none of its code or colours."
     },
     {
       "id": "leads.follow-up-date-reason",

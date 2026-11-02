@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { MessageSquareText, Phone, PhoneIncoming, PhoneOutgoing, Users, History, Mic, Info } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import { useStretchPill } from '../../hooks/useStretchPill'
 import { useClientContactLog, useClientEvents } from '../../hooks/useClientContactLog'
 import { useThreadMessages, useSendMessage } from '../../hooks/usePolicyMessages'
 import { LoadError, DayDivider, ChatBubbleGroup, Composer } from './AgentUI'
@@ -76,6 +77,8 @@ export function ContactLogCard({ policyIds, leadId, clientKey, tz, clientTz }) {
   const log = useClientContactLog({ policyIds, leadId, clientKey })
   const [filter, setFilter] = useState('all')
   const [shown, setShown] = useState(PAGE)
+  const rangeRef = useRef(null)
+  useStretchPill(rangeRef, { activeKey: filter, selector: 'button.is-on', enabled: !log.isLoading && !log.notReady && !log.isError && log.rows.length > 0 })
   const counts = contactCounts(log.rows)
   const rows = filterContactRows(log.rows, filter)
   const head = <CardHead icon={Phone} tone="b" title="Texts and calls" sub="Every text and call, with the full words" />
@@ -89,7 +92,7 @@ export function ContactLogCard({ policyIds, leadId, clientKey, tz, clientTz }) {
   else {
     body = (
       <>
-        <div className="ov-range cpl-range" role="group" aria-label="Show">
+        <div ref={rangeRef} className="ov-range cpl-range" role="group" aria-label="Show">
           {CONTACT_FILTERS.map(f => (
             <button key={f.key} type="button" className={filter === f.key ? 'is-on' : ''} aria-pressed={filter === f.key}
               onClick={() => { setFilter(f.key); setShown(PAGE) }}>
@@ -172,6 +175,8 @@ export function TeamThreadCard({ policies, tz }) {
   const list = (policies || []).filter(p => p?.id)
   const [pick, setPick] = useState(null)
   const active = list.find(p => p.id === pick) || list[0]
+  const pickRef = useRef(null)
+  useStretchPill(pickRef, { activeKey: active?.id, selector: 'button.is-on', enabled: list.length > 1 })
   const head = <CardHead icon={Users} title="Team thread" sub="Talk to Fulfillment about this client" />
   return (
     <section className="ov-card cpl-card" aria-label="Team thread">
@@ -181,7 +186,7 @@ export function TeamThreadCard({ policies, tz }) {
       ) : (
         <>
           {list.length > 1 && (
-            <div className="cpl-pick" role="group" aria-label="Policy">
+            <div ref={pickRef} className="cpl-pick" role="group" aria-label="Policy">
               {list.map((p, i) => (
                 <button key={p.id} type="button" className={p.id === active.id ? 'is-on' : ''} aria-pressed={p.id === active.id} onClick={() => setPick(p.id)}>
                   {policyChoice(p, i)}

@@ -33,6 +33,16 @@ function edgesOf(el, row) {
   return { top: r.top + y, right: r.right + x, bottom: r.bottom + y, left: r.left + x }
 }
 
+// A color-mix() fill as the plain colour the browser computes for it, so a bordered pill can lay its layers under it.
+function plainColour(target, css) {
+  const probe = document.createElement('span')
+  probe.style.color = css
+  target.append(probe)
+  const colour = getComputedStyle(probe).color
+  probe.remove()
+  return colour
+}
+
 // The selected button's look, read from its own computed style.
 function lookOf(target) {
   const cs = getComputedStyle(target)
@@ -44,7 +54,7 @@ function lookOf(target) {
   const custom = cs.getPropertyValue('--sp-fill').trim()
   const gradient = cs.backgroundImage !== 'none'
   const c = cs.getPropertyValue('--c').trim()
-  const fill = custom || (!gradient ? cs.backgroundColor : c ? `color-mix(in srgb, ${c} ${FILL_MIX}%, transparent)` : 'var(--ov-data-a-tint)')
+  const fill = custom || (!gradient ? cs.backgroundColor : c ? plainColour(target, `color-mix(in srgb, ${c} ${FILL_MIX}%, transparent)`) : 'var(--ov-data-a-tint)')
   return { fill, radius, width, bordered, border: cs.borderTopColor, plain: !bordered && !custom && !gradient && cs.boxShadow === 'none', styles: cs }
 }
 

@@ -1,10 +1,11 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Inbox, Info, ChevronRight, ChevronDown, Check, Clock, Phone, PenLine, Zap, CalendarDays, ArrowRight } from 'lucide-react'
 import { Switch } from '../../../components/ui/Switch'
 import { useAuth } from '../../../hooks/useAuth'
 import { useInbounds, useInboundEvents } from '../../../hooks/useInbounds'
 import { useAgentDuty } from '../../../hooks/useAgentDuty'
+import { useStretchPill } from '../../../hooks/useStretchPill'
 import { dutySince } from '../../../lib/duty'
 import { isFollowUpDue } from '../../../lib/leadOutcomes'
 import { PortalV2Layout, Ico, Pill, Skel, ErrorCard } from '../../../components/agent/PortalV2Nav'
@@ -192,6 +193,8 @@ function outcomeOf(l) {
 
 function LiveLog({ list, evMap, tz }) {
   const [filter, setFilter] = useState('all')
+  const filtersRef = useRef(null)
+  useStretchPill(filtersRef, { activeKey: filter, selector: 'button.on', enabled: list.length > 0 })
   const n = k => (k === 'all' ? list.length : list.filter(l => l.live_call_result === k).length)
   const shown = filter === 'all' ? list : list.filter(l => l.live_call_result === filter)
   if (!list.length) {
@@ -210,7 +213,7 @@ function LiveLog({ list, evMap, tz }) {
   }
   return (
     <>
-      <div className="pv-filters" role="group" aria-label="Show">
+      <div ref={filtersRef} className="pv-filters" role="group" aria-label="Show">
         {FILTERS.map(([k, label]) => (
           <button key={k} type="button" className={`pv-fchip${filter === k ? ' on' : ''}`} aria-pressed={filter === k} onClick={() => setFilter(k)}>
             {label} <b className="tab">{n(k)}</b>
@@ -320,6 +323,8 @@ export default function Inbounds() {
   const tz = profile?.timezone || DEFAULT_TIMEZONE
   const [params] = useSearchParams()
   const tab = params.get('tab') === 'live' ? 'live' : 'booked'
+  const tabsRef = useRef(null)
+  useStretchPill(tabsRef, { activeKey: tab, selector: 'a.on' })
   const inb = useInbounds()
   const ev = useInboundEvents()
 
@@ -362,7 +367,7 @@ export default function Inbounds() {
         {isEmpty && <StartHero />}
 
         <div className="inb-top">
-          <nav className="inb-tabs" aria-label="Lead type">
+          <nav ref={tabsRef} className="inb-tabs" aria-label="Lead type">
             <InbTab to={tabTo('booked', params)} on={tab === 'booked'} icon={CalendarDays} name="Booked appointments" n={nA} line={lineA} />
             <InbTab to={tabTo('live', params)} on={tab === 'live'} live icon={Phone} name="Live calls" n={nB} line={lineB} />
           </nav>
