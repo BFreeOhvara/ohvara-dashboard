@@ -5,8 +5,9 @@
 //   booked        confirmation now, a reminder the day before and 1 hour before
 //   no-show       a rebook text right away, for the first NO_SHOW_MAX no-shows
 // Every step is ONE row in inbound_events (180): planned as 'scheduled', then
-// updated in place to 'done' (detail.twilio_sid) or 'skipped' (detail.reason),
-// so the agent's timeline shows it. All texts go from the one central Ohvara
+// updated in place to 'done' (detail.twilio_sid, detail.body: the exact words
+// sent) or 'skipped' (detail.reason), so the agent's timeline shows it. All
+// texts go from the one central Ohvara
 // number (recovery_config.sms_from_number). Pure: index.ts wires the database
 // and Twilio; tests pass fakes. No Deno APIs, so node --test can load it.
 import { stateWindow, zonesForState } from '../_shared/smsWindow.ts'
@@ -372,7 +373,7 @@ export async function tick(deps: Deps): Promise<Result> {
         counts.failed++
         continue
       }
-      await cx.patch(e, { detail: { ...e.detail, twilio_sid: r.sid ?? null } }, 'done')
+      await cx.patch(e, { detail: { ...e.detail, twilio_sid: r.sid ?? null, body } }, 'done')
       counts.sent++
       if (step === 'not_reached_monthly' && seq < MONTHLY_MAX) {
         const at = new Date(now.getTime() + MONTHLY_GAP_MS)
