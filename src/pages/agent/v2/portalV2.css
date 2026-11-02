@@ -255,6 +255,7 @@
 .pv-back { gap: 8px; padding: 0 16px 0 12px; align-self: flex-start; }
 .pv-d-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .pv-d-chips .pv-dot { background: var(--ov-data-b); }
+.pv-d-name { margin: 0 0 4px; font-family: var(--font-display); font-size: 24px; font-weight: 600; letter-spacing: -0.035em; color: var(--ov-hi); overflow-wrap: anywhere; } /* phones only: the page header shows the name from md up */
 .pv-d-num { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 14px; }
 .pv-d-num b { font-family: var(--font-display); font-size: 26px; font-weight: 600; letter-spacing: -0.035em; }
 .pv-d-num .ov-primary { width: auto; flex: 1 1 100%; padding: 0 22px; }
@@ -323,6 +324,7 @@
 .pv-nitem { padding: 12px 14px; border-radius: 14px; background: var(--ov-surface-tint); border: 1px solid var(--ov-line); font-size: 14px; color: var(--ov-mid); overflow-wrap: anywhere; }
 .pv-nitem .pv-cap { display: block; margin-bottom: 4px; }
 @media (min-width: 768px) {
+  .pv-d-name { display: none; }
   .pv-d-num b { font-size: 34px; }
   .pv-d-num .ov-primary { flex: 0 1 auto; }
   .pv-detail { gap: 20px; }
