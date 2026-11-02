@@ -598,6 +598,31 @@
         "src/hooks/useAgentDuty.js"
       ],
       "notes": "Compact card beside the Booked / Live tabs; writes only the agent's own agent_duty row. Says Coming soon with the switch off while agent_duty (migration 174) is missing. The lead page has no duty control. No live switch is touched."
+    },
+    {
+      "id": "template.route",
+      "page": "Template",
+      "title": "Clickable agent-side template at /template, no backend",
+      "status": "checking",
+      "files": [
+        "src/App.jsx",
+        "src/template/TemplateApp.jsx",
+        "src/template/TemplateFrame.jsx",
+        "src/template/template.css",
+        "src/templateScan.test.js",
+        "scripts/template-clickthrough.mjs"
+      ],
+      "notes": "Adds a page, no payment or sign-in code. App.jsx returns TemplateApp for /template before any provider mounts, so the page makes no Supabase requests. Own BrowserRouter with basename /template, noindex tag, 15 routes (Signup and Welcome outside the frame). Billing and Signup are sample-only screens. Legal, terms and consent wording stays a visible placeholder."
+    },
+    {
+      "id": "template.sample-layer",
+      "page": "Template",
+      "title": "Sample data layer for the template: one entry, read hooks shaped like react-query",
+      "status": "checking",
+      "files": [
+        "src/template/data/index.js"
+      ],
+      "notes": "Screens read only through useSampleOverview, useSampleLeads, useSampleLead, useSampleAppointments, useSampleClients, useSampleClient, useSampleThreads, useSampleActivity, useSampleBilling, useSampleSettings and useSampleSignup; changes go through useSampleActions into an in-memory store that resets on reload. Each read returns { data, isLoading: false, error: null }. One invented cast (Gloria Santos and others, 555-01xx phones, example.com emails); every price is marked as a sample. The backend swaps in by replacing this file only."
     }
   ]
 }
