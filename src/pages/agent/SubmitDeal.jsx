@@ -53,7 +53,7 @@ const MSG = {
   not_live: 'Submit is not open yet.',
 }
 
-export default function SubmitDeal({ onBack }) {
+export default function SubmitDeal({ onBack, prefill }) {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const phone = usePhoneLayout()
@@ -71,7 +71,7 @@ export default function SubmitDeal({ onBack }) {
   const upgrade = cap ? nextTier(tiers, usage.tier) : null
   const resets = formatReset(usage?.week_end, profile?.timezone)
 
-  const [form, setForm] = useState(BLANK)
+  const [form, setForm] = useState(() => ({ ...BLANK, ...(prefill || {}) })) // prefill: a lead's client fields (Submit.jsx), still editable
   const [newId, setNewId] = useState(null) // the picked carriers row for the new policy
   const [oldId, setOldId] = useState(null) // the picked carriers row being left
   const [replaced, setReplaced] = useState(null) // true | false | null = not answered

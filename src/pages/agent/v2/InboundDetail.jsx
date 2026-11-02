@@ -11,6 +11,9 @@ import {
   upcomingWords, buildTimeline, eventTitle, eventSub, cameInAt, PRODUCT_LABEL, OUTCOME_LABEL,
 } from '../../../lib/inbounds'
 import { DEFAULT_TIMEZONE } from '../../../lib/timezones'
+import {
+  REASON_MAX, checkFollowUp, earliestFollowUp, checkReason, savedLine, isOutcomeMissing, outcomeErrorText, isFollowUpDue, canSubmitForServicing, submitForServicingPath,
+} from '../../../lib/leadOutcomes'
 
 // Inbound detail (/agent/inbounds/:id): who they are, a timeline of what we did and what happens next,
 // the outcome buttons, the text thread (read only) and notes. Mockup:
@@ -69,20 +72,60 @@ function Timeline({ events, tz, now }) {
   )
 }
 
+// Sold saves at once and only records the outcome. Follow up opens a date and time (future only) and
+// Not interested a required reason (500 at most); both save with their own Save button. The two new
+// arguments need migration 210: until it is applied the save says so in a plain note.
 function Outcome({ l, tz, due }) {
+  const { profile } = useAuth()
   const set = useSetOutcome(l.lead_id)
-  const [last, setLast] = useState(null) // { outcome, at } of the last save
+  const [last, setLast] = useState(null) // { outcome, at, followUpAt, reason } of the last save
   const [asked, setAsked] = useState(null)
-  const pick = o => {
-    setAsked(o)
-    set.mutate({ outcome: o }, { onSuccess: () => setLast({ outcome: o, at: new Date().toISOString() }) })
+  const [open, setOpen] = useState(null) // the outcome whose form is showing
+  const [when, setWhen] = useState('')
+  const [reason, setReason] = useState('')
+  const [formErr, setFormErr] = useState('')
+  const [minWhen, setMinWhen] = useState('') // earliest time the picker offers: a minute from when Follow up was opened
+  const input = (outcome, extra = {}) => ({ outcome, ...extra })
+  const run = (inp, done) => {
+    setAsked(inp.outcome)
+    set.mutate(inp, { onSuccess: () => { setLast({ ...done, outcome: inp.outcome, at: new Date().toISOString() }); setOpen(null); setFormErr('') } })
   }
-  const current = set.isPending ? asked : l.outcome
+  const pick = o => {
+    set.reset()
+    setFormErr('')
+    if (o === 'sold') { setOpen(null); run(input('sold'), {}); return }
+    if (o === 'follow_up') setMinWhen(earliestFollowUp(tz))
+    setOpen(open === o ? null : o)
+  }
+  const save = () => {
+    if (open === 'follow_up') {
+      const r = checkFollowUp(when, tz)
+      if (r.error) { setFormErr(r.error); return }
+      setFormErr('')
+      run(input('follow_up', { followUpAt: r.iso }), { followUpAt: r.iso })
+    } else if (open === 'not_interested') {
+      const r = checkReason(reason)
+      if (r.error) { setFormErr(r.error); return }
+      setFormErr('')
+      run(input('not_interested', { reason: r.reason }), { reason: r.reason })
+    }
+  }
+  const retry = () => {
+    if (asked === 'sold') run(input('sold'), {})
+    else save()
+  }
+  const current = set.isPending ? asked : open || l.outcome
+  const shown = last?.outcome || l.outcome
+  const line = savedLine(shown, {
+    at: last?.at ?? l.outcome_at, followUpAt: last?.followUpAt ?? l.follow_up_at, reason: last?.reason ?? l.outcome_reason,
+  }, tz)
+  const missing = set.isError && isOutcomeMissing(set.error)
+
   const name = firstName(leadName(l))
   return (
     <section className={`${due ? 'ov-attn' : 'ov-card'} pv-card a-out`} aria-label="Outcome">
       <div className="pv-card-head">
-        <div className="pv-grow"><h3>How did it go?</h3><p className="pv-sub">Mark this after you meet {name}. Sold makes them your client and servicing starts.</p></div>
+        <div className="pv-grow"><h3>How did it go?</h3><p className="pv-sub">Mark this after you meet {name}. Sold records the outcome. Submit it for servicing when you are ready.</p></div>
       </div>
       <div className={`pv-outs${set.isPending ? ' busy' : ''}`} role="group" aria-label="Outcome" aria-busy={set.isPending}>
         {OUTS.map(([v, label, cls]) => (
@@ -90,14 +133,49 @@ function Outcome({ l, tz, due }) {
             disabled={set.isPending} onClick={() => pick(v)}>{label}</button>
         ))}
       </div>
-      {set.isPending && <p className="pv-saved">Saving&hellip;</p>}
-      {!set.isPending && !set.isError && last && (
-        <p className="pv-saved">{'✓'} Marked {OUTCOME_LABEL[last.outcome]} at {timeText(last.at, tz)}.{last.outcome === 'sold' ? ` ${name} is now your client.` : ''}</p>
+
+      {open === 'follow_up' && (
+        <div className="pv-ofield">
+          <label htmlFor="out-when">Follow up on</label>
+          <input id="out-when" className="pv-oinput" type="datetime-local" value={when} min={minWhen}
+            onChange={e => { setWhen(e.target.value); setFormErr('') }} aria-invalid={!!formErr} />
+          <p className="pv-cap">In your time zone. It shows as due at that time.</p>
+        </div>
       )}
-      {set.isError && (
+      {open === 'not_interested' && (
+        <div className="pv-ofield">
+          <label htmlFor="out-reason">Why are they not interested?</label>
+          <textarea id="out-reason" className="pv-notebox" rows={3} maxLength={REASON_MAX} value={reason} required
+            placeholder="For example: already covered" onChange={e => { setReason(e.target.value); setFormErr('') }} aria-invalid={!!formErr} />
+          <p className="pv-cap"><span className="tab">{reason.length}</span> of {REASON_MAX}</p>
+        </div>
+      )}
+      {open && (
+        <>
+          {formErr && <p className="pv-inline-err" role="alert"><span>{formErr}</span></p>}
+          <div className="pv-foot" style={{ borderTop: 0, paddingTop: 0, marginTop: 12 }}>
+            <button type="button" className="ov-ghost pv-btn" disabled={set.isPending} onClick={save}>{set.isPending ? 'Saving…' : `Save ${OUTCOME_LABEL[open]}`}</button>
+          </div>
+        </>
+      )}
+
+      {set.isPending && !open && <p className="pv-saved">Saving&hellip;</p>}
+      {!set.isPending && !set.isError && !open && line && <p className="pv-saved">{'✓'} {line}</p>}
+      {!set.isPending && !set.isError && !open && shown === 'sold' && canSubmitForServicing(profile) && (
+        <div className="pv-submit">
+          <Link className="ov-primary pv-btn" to={submitForServicingPath(l.lead_id)}>Submit for servicing</Link>
+          <p className="pv-cap">Counts toward this week.</p>
+        </div>
+      )}
+      {missing && (
+        <p className="pv-note" role="status">
+          <Ico icon={Info} size={14} /><span>Saving {OUTCOME_LABEL[asked]} isn&rsquo;t ready yet. Nothing changed. It will work once our update is live.</span>
+        </p>
+      )}
+      {set.isError && !missing && (
         <p className="pv-inline-err" role="alert">
-          <span>Couldn&rsquo;t save {OUTCOME_LABEL[asked]}. Nothing changed.</span>
-          <button type="button" onClick={() => pick(asked)}>Try again</button>
+          <span>{outcomeErrorText(set.error) || `Couldn’t save ${OUTCOME_LABEL[asked]}. Nothing changed.`}</span>
+          <button type="button" onClick={retry}>Try again</button>
         </p>
       )}
     </section>
@@ -215,6 +293,7 @@ export default function InboundDetail() {
         <div className="pv-d-chips">
           <span className="pv-chip b">{PRODUCT_LABEL[l.inbound_product] || 'Lead'}</span>
           <span className="pv-chip"><i className="pv-dot" />{stageText}</span>
+          {isFollowUpDue(l) && <span className="pv-chip sch">Follow up due</span>}
         </div>
         <p className="pv-sub">{num ? place : `No phone number on file. Our VA is finding one.`}</p>
         {num && call && (
@@ -232,7 +311,7 @@ export default function InboundDetail() {
             ? <p className="pv-inline-err" role="alert"><span>We couldn&rsquo;t load the timeline.</span><button type="button" onClick={() => ev.refetch()}>Try again</button></p>
             : <Timeline events={events} tz={tz} now={now} />}
         </section>
-        <Outcome key={l.lead_id} l={l} tz={tz} due={!l.outcome && !!appt && new Date(appt).getTime() < now} />
+        <Outcome key={l.lead_id} l={l} tz={tz} due={isFollowUpDue(l) || (!l.outcome && !!appt && new Date(appt).getTime() < now)} />
         <Texts l={l} tz={tz} />
         <Notes l={l} events={events} tz={tz} />
       </div>

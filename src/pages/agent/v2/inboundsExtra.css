@@ -1,6 +1,9 @@
 /* Inbounds page only (imported by Inbounds.jsx). Built on the .pv-* rules in portalV2.css and the
    tokens in index.css; nothing here is a new colour. Mockup: ohvara/mockups/update-the-existing-inbounds-page-get-in.html */
 
+/* tabs and the duty switch share a row from tablet width up; stacked on a phone */
+.inb-top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+
 /* status tabs */
 .inb-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .inb-tab { --c: var(--ov-data-a); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 8px; padding: 12px; min-height: 64px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--c) 30%, transparent); background: linear-gradient(90deg, color-mix(in srgb, var(--c) 13%, transparent), var(--ov-surface-tint)); }
@@ -12,6 +15,15 @@
 .inb-tab.on { border-color: var(--c); background: linear-gradient(90deg, color-mix(in srgb, var(--c) 30%, transparent), color-mix(in srgb, var(--c) 6%, transparent)); box-shadow: 0 0 0 1px var(--c), 0 12px 28px -14px var(--c); }
 .inb-tab.on .n { color: var(--ov-hi); }
 .inb-tab.on .ln { color: var(--ov-mid); }
+
+/* duty switch: a slim card, 64px tall so the board still fits the screen */
+.inb-duty { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 64px; padding: 8px 14px; border-radius: 16px; }
+.inb-duty .pv-tile { display: none; }
+.inb-duty h3 { font-size: 15px; line-height: 1.2; letter-spacing: -0.01em; }
+.inb-duty .pv-sub { margin-top: 2px; font-size: 12.5px; line-height: 1.3; }
+.inb-duty-err { flex: 1 0 100%; margin-top: 4px; }
+.inb-due { margin-top: 8px; align-self: flex-start; }
+.inb-log .who .inb-due { margin-top: 4px; }
 
 /* explainer: 64px when collapsed so the board keeps the screen */
 .inb-explain { padding: 0; }
@@ -58,6 +70,8 @@
 .inb-key div { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px 14px; border-radius: 14px; background: var(--ov-surface-tint); border: 1px solid var(--ov-line); font-size: 13.5px; color: var(--ov-mid); min-width: 0; }
 
 @media (min-width: 768px) {
+  .inb-top { grid-template-columns: minmax(0, 1fr) minmax(0, 340px); gap: 12px; align-items: stretch; }
+  .inb-duty .pv-tile { display: grid; }
   .inb-tabs { gap: 12px; }
   .inb-tab { grid-template-columns: 22px minmax(0, 1fr) auto; gap: 2px 12px; padding: 11px 16px; }
   .inb-tab > svg { display: block; }

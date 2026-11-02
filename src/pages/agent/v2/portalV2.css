@@ -306,7 +306,17 @@
 .pv-inline-err { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; margin-top: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--danger-bd); background: var(--danger-dim); color: var(--danger); font-size: 13.5px; font-weight: 600; }
 .pv-inline-err span { flex: 1 1 200px; min-width: 0; }
 .pv-inline-err button { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; margin: -12px 0; background: none; border: 0; color: inherit; font: inherit; text-decoration: underline; font-weight: 700; cursor: pointer; }
-.pv-saved { margin-top: 10px; font-size: 13.5px; font-weight: 600; color: var(--ov-mid); }
+.pv-saved { margin-top: 10px; font-size: 13.5px; font-weight: 600; color: var(--ov-mid); overflow-wrap: anywhere; }
+/* Follow up date, Not interested reason, and Submit for servicing under the outcome buttons */
+.pv-ofield { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; min-width: 0; }
+.pv-ofield label { font-size: 13.5px; font-weight: 600; color: var(--ov-mid); }
+.pv-oinput { display: block; width: 100%; min-height: 48px; padding: 0 14px; border-radius: 14px; background: var(--ov-surface-tint); border: 1px solid var(--ov-ghost-edge); color: var(--ov-hi); font: inherit; font-size: 16px; box-sizing: border-box; color-scheme: dark; }
+[data-theme="light"] .pv-oinput { color-scheme: light; }
+.pv-oinput:focus-visible, .pv-ofield .pv-notebox:focus-visible { outline: 2px solid var(--ov-data-a); outline-offset: 2px; }
+.pv-ofield [aria-invalid="true"] { border-color: var(--danger-bd); }
+.pv-submit { display: flex; flex-direction: column; align-items: stretch; gap: 8px; margin-top: 12px; }
+.pv-submit .ov-primary { width: 100%; }
+.pv-submit .pv-cap { text-align: center; }
 .pv-notebox { display: block; width: 100%; min-height: 96px; padding: 12px 14px; border-radius: 14px; background: var(--ov-surface-tint); border: 1px solid var(--ov-ghost-edge); color: var(--ov-hi); font: inherit; font-size: 16px; resize: none; box-sizing: border-box; }
 .pv-notebox::placeholder { color: var(--ov-faint); }
 .pv-nlist { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
