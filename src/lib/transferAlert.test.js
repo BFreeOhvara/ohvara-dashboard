@@ -259,3 +259,72 @@ test('alert is portaled to body', () => {
   assert.ok(layout.indexOf('<TransferAlert />') > layout.indexOf('<PhoneShell>'), 'desktop mount sits after the phone early return')
   assert.doesNotMatch(src('../components/agent/PortalV2Nav.jsx'), /<TransferAlert \/>/)
 })
+
+// ── live-transfer-call ──────────────────────────────────────────────────────────────────────────
+// The browser half of the transfer, against a simulated help_calls row. Nothing dials; no real database.
+
+test('live-transfer-call: the row TransferAlert polls appears while the agent leg rings and goes when it is answered or missed', async () => {
+  // A stand-in for my_incoming_transfer (182): the caller's own row, only while status is 'transferring'.
+  const call = { help_call_id: 'c1', lead_id: 'l1', caller_label: 'Dana', transfer_started_at: '2026-11-01T18:00:00Z', status: 'transferring' }
+  const rpcs = []
+  const db = { rpc: async fn => { rpcs.push(fn); return { data: call.status === 'transferring' ? [call] : [], error: null } } }
+  const timers = fakeTimers()
+  const seen = []
+  let ringing = false
+  const w = transferWatch({
+    fetchRow: () => myIncomingTransfer(db),
+    ring: () => { ringing = true; return () => { ringing = false } },
+    onChange: r => seen.push(r?.help_call_id ?? null),
+    doc: fakeDoc(), timers,
+  })
+  w.setActive(true)
+  await timers.advance(0)
+  assert.deepEqual(seen, ['c1'], 'the alert appears')
+  assert.equal(ringing, true)
+
+  // help-voice's callback moves the row on (answered -> transferred, or a miss -> no_answer): the next poll closes it.
+  for (const next of ['transferred', 'no_answer']) {
+    call.status = next
+    await timers.advance(POLL_MS)
+    assert.equal(seen.at(-1), null, `closed once the row is ${next}`)
+    assert.equal(ringing, false)
+    call.status = 'transferring'
+    call.help_call_id = `c-${next}`
+    await timers.advance(POLL_MS)
+    assert.equal(seen.at(-1), `c-${next}`, 'a new attempt shows again')
+  }
+  assert.ok(rpcs.length >= 5 && rpcs.every(fn => fn === 'my_incoming_transfer'), 'the only call is the read-only function')
+  w.stop()
+})
+
+test('live-transfer-call: the polled function returns a row only while the call is transferring, for the signed-in agent', () => {
+  const sql = readFileSync(new URL('../../supabase/migrations/182_my_incoming_transfer.sql', import.meta.url), 'utf8')
+    .replaceAll('\r\n', '\n').replace(/--.*$/gm, '')
+  assert.match(sql, /h\.status = 'transferring'/)
+  assert.match(sql, /h\.transfer_agent_id = auth\.uid\(\)/)
+  assert.doesNotMatch(sql, /\b(update|insert|delete)\b/i, 'a read only')
+})
+
+test('live-transfer-call: Accept sends the acknowledgement alone and no browser code writes the call row', async () => {
+  // A database that refuses everything except the one function Accept may call.
+  const calls = []
+  const db = {
+    rpc: async (fn, args) => {
+      calls.push([fn, args])
+      if (fn !== 'agent_accept_transfer') throw new Error(`Accept called ${fn}`)
+      return { data: true, error: null }
+    },
+    from: () => { throw new Error('Accept wrote a table') },
+  }
+  await acceptTransfer(db, ROW)
+  assert.deepEqual(calls, [['agent_accept_transfer', { p_lead: 'l1' }]])
+  // Through answerOnce, as the alert does it: still one acknowledgement, and the alert closes.
+  let closes = 0
+  await answerOnce({ close: () => { closes++ } })(row => acceptTransfer(db, row), ROW)
+  assert.equal(calls.length, 2)
+  assert.equal(closes, 1)
+  // help_calls.status is written by the Deno functions only (service role), never by anything under src/.
+  const alert = src('../components/agent/TransferAlert.jsx')
+  assert.doesNotMatch(alert, /help_calls|transferred|connected/)
+  assert.doesNotMatch(src('./transferAlert.js'), /\.rpc\('(?!my_incoming_transfer|agent_accept_transfer|agent_missed_transfer)/)
+})

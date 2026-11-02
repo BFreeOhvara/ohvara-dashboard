@@ -7,7 +7,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { act, handle, type OnDutyAgent, type Store, type Twilio } from './core.ts'
-import type { HelpCall } from '../help-voice/core.ts'
+import { handle as voiceHandle, twilioSignature, type HelpCall, type Store as VoiceStoreT } from '../help-voice/core.ts'
 
 const VA = '11111111-1111-4111-8111-111111111111'
 const OTHER_VA = '22222222-2222-4222-8222-222222222222'
@@ -200,4 +200,147 @@ test('bad input: unknown action or call_sid is 400; Twilio not set up is 503', a
   assert.equal((await handle(req({ action: 'transfer', call_sid: 'CA123' }, 'good'), w.store, w.twilio, { ...ENV, from: null })).status, 503)
   assert.equal(w.calls.length, 0)
   assert.equal(w.writes.length, 0)
+})
+
+// ── live-transfer-call and help-line-call (stubbed Twilio, no real calls) ──────────────────────
+// Whole-flow tests: help-transfer's act() and help-voice's agent_leg callback share one in-memory
+// row, the way they share help_calls. Twilio is a spy; nothing is dialed. voice_live is a stub value.
+
+const VOICE_URL = ENV.voiceUrl
+const TOKEN = 'secret-token'
+const VOICE_ENV = { authToken: TOKEN, publicUrl: VOICE_URL, trackingNumber: ENV.from }
+
+// A transfer world whose store also satisfies help-voice's Store, plus the miss log.
+function flow(over: Parameters<typeof world>[0] = {}) {
+  const w = world(over)
+  const missed: string[] = []
+  const leads: Record<string, string> = {}
+  const voiceStore: VoiceStoreT = {
+    ...w.store,
+    async activeVas() { return [VA] },
+    async insertHelpCall() { return true },
+    async claimHelpCall() { return null },
+    async setLeadTransferStatus(id, status) { leads[id] = status },
+    async logMissedTransfer(sid) { if (!missed.includes(sid)) missed.push(sid) },
+  }
+  // Twilio's agent_leg status callback for the leg help-transfer dialed (CAag1).
+  const callback = async (form: Record<string, string>, amd = true) => {
+    const q = `?event=agent_leg&call=CA123${amd ? '&amd=1' : ''}`
+    const sig = await twilioSignature(TOKEN, VOICE_URL + q, form)
+    return voiceHandle(new Request(`http://internal/help-voice${q}`, {
+      method: 'POST',
+      headers: { 'X-Twilio-Signature': sig, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(form),
+    }), voiceStore, w.twilio, VOICE_ENV)
+  }
+  return { ...w, missed, leads, callback }
+}
+const ACT = { action: 'transfer', call_sid: 'CA123' }
+
+test('live-transfer-call: ringing the on-duty agent builds one leg with the 25 s timeout, then waits as transferring', async () => {
+  const w = flow({ row: live({ lead_id: 'lead-1' }) })
+  await act(w.store, w.twilio, ENV, VA, ACT)
+  const legs = posts(w.calls)
+  assert.equal(legs.length, 1)
+  assert.equal(legs[0].params.Timeout, '25')
+  assert.equal(legs[0].params.To, '+15125550142')
+  assert.equal(legs[0].params.EndConferenceOnExit, 'false')
+  // The row TransferAlert polls (my_incoming_transfer: status transferring, started just now, this agent).
+  const r = w.rows[0]
+  assert.deepEqual([r.status, r.transfer_agent_id, r.agent_call_sid, r.outcome], ['transferring', AGENT, 'CAag1', null])
+  assert.ok(r.transfer_started_at && Date.now() - Date.parse(r.transfer_started_at) < 5000)
+  // Ringing alone never connects it: transferred_at stays empty and the VA cannot leave yet.
+  assert.equal(r.transferred_at, null)
+  await assert.rejects(act(w.store, w.twilio, ENV, VA, { action: 'drop', call_sid: 'CA123' }), /Wait for the agent/)
+})
+
+test('live-transfer-call: a human answer is the only thing that sets transferred', async () => {
+  // Not answered by a person: every one of these leaves the row at no_answer, never transferred.
+  const misses: [string, Record<string, string>][] = [
+    ['voicemail', { CallSid: 'CAag1', CallStatus: 'in-progress', AnsweredBy: 'machine_end_beep' }],
+    ['machine_start', { CallSid: 'CAag1', CallStatus: 'in-progress', AnsweredBy: 'machine_start' }],
+    ['fax', { CallSid: 'CAag1', CallStatus: 'in-progress', AnsweredBy: 'fax' }],
+    ['no-answer after 25 s', { CallSid: 'CAag1', CallStatus: 'no-answer' }],
+    ['busy', { CallSid: 'CAag1', CallStatus: 'busy' }],
+  ]
+  for (const [name, form] of misses) {
+    const w = flow({ row: live({ lead_id: 'lead-1' }) })
+    await act(w.store, w.twilio, ENV, VA, ACT)
+    assert.equal((await w.callback(form)).status, 200, name)
+    assert.equal(w.rows[0].status, 'no_answer', name)
+    assert.equal(w.rows[0].transferred_at, null, name)
+    assert.notEqual(w.rows[0].outcome, 'transferred', name)
+    assert.deepEqual(w.missed, ['CA123'], `${name}: the miss is logged once`)
+    assert.equal(w.leads['lead-1'], 'dropped', name)
+    // A repeated callback logs nothing more.
+    await w.callback(form)
+    assert.deepEqual(w.missed, ['CA123'], `${name}: not logged twice`)
+  }
+  // A person answers: transferred, no miss, and now (only now) the VA may drop.
+  const w = flow({ row: live({ lead_id: 'lead-1' }) })
+  await act(w.store, w.twilio, ENV, VA, ACT)
+  await w.callback({ CallSid: 'CAag1', CallStatus: 'in-progress', AnsweredBy: 'human' })
+  assert.deepEqual([w.rows[0].status, w.rows[0].outcome], ['transferred', 'transferred'])
+  assert.ok(w.rows[0].transferred_at)
+  assert.deepEqual(w.missed, [])
+  assert.equal(w.leads['lead-1'], 'connected')
+  w.calls.length = 0
+  assert.deepEqual(await act(w.store, w.twilio, ENV, VA, { action: 'drop', call_sid: 'CA123' }), { ok: true })
+  assert.deepEqual(w.calls, [{ method: 'POST', path: '/Calls/CAva1.json', params: { Status: 'completed' } }])
+})
+
+test('live-transfer-call: after a miss the call is back to no_answer, so the VA can retry or book', async () => {
+  const w = flow({ row: live() })
+  await act(w.store, w.twilio, ENV, VA, ACT)
+  await w.callback({ CallSid: 'CAag1', CallStatus: 'no-answer' })
+  assert.deepEqual([w.rows[0].status, w.rows[0].agent_call_sid, w.rows[0].end_reason], ['no_answer', null, 'no-answer'])
+  assert.deepEqual(await act(w.store, w.twilio, ENV, VA, { action: 'book', call_sid: 'CA123' }), { ok: true })
+  assert.deepEqual([w.rows[0].outcome, w.rows[0].status], ['booked', 'ended'])
+})
+
+test('live-transfer-call: the VA drop is refused at every status except transferred', async () => {
+  for (const status of ['ringing', 'live', 'transferring', 'no_answer', 'ended'] as const) {
+    const w = world({ row: live({ status }) })
+    const res = await handle(req({ action: 'drop', call_sid: 'CA123' }, 'good'), w.store, w.twilio, ENV)
+    assert.equal(res.status, 409, status)
+    assert.equal((await res.json()).code, 'not_transferred', status)
+    assert.equal(w.calls.length, 0, `${status}: no Twilio call`)
+    assert.equal(w.writes.length, 0, `${status}: no write`)
+  }
+  // transferred, but the VA's own leg is unknown: still no Twilio call, never the conference.
+  const w = world({ row: live({ status: 'transferred', va_call_sid: null }) })
+  await assert.rejects(act(w.store, w.twilio, ENV, VA, { action: 'drop', call_sid: 'CA123' }), /connected/)
+  assert.equal(w.calls.length, 0)
+})
+
+test('help-line-call: nobody on duty is no_answer with code no_agent, from live and from a retry, and rings no one', async () => {
+  for (const status of ['live', 'no_answer'] as const) {
+    const w = world({ agent: null, row: live({ status }) })
+    const res = await handle(req(ACT, 'good'), w.store, w.twilio, ENV)
+    assert.equal(res.status, 200, status)
+    assert.deepEqual(await res.json(), { ok: false, code: 'no_agent' }, status)
+    assert.deepEqual([w.rows[0].status, w.rows[0].agent_call_sid, w.rows[0].transfer_agent_id], ['no_answer', null, null], status)
+    assert.equal(w.calls.length, 0, `${status}: no conference lookup, no leg`)
+  }
+  // The desk then offers Book instead, and book works from there.
+  const w = world({ agent: null })
+  await act(w.store, w.twilio, ENV, VA, ACT)
+  assert.deepEqual(await act(w.store, w.twilio, ENV, VA, { action: 'book', call_sid: 'CA123' }), { ok: true })
+  assert.equal(w.rows[0].outcome, 'booked')
+})
+
+test('help-line-call: book is refused once the call went to an agent, whether ringing, answered or finished', async () => {
+  const w = flow({ row: live() })
+  await act(w.store, w.twilio, ENV, VA, ACT)
+  await assert.rejects(act(w.store, w.twilio, ENV, VA, { action: 'book', call_sid: 'CA123' }), /already handed/)
+  assert.equal(w.rows[0].status, 'transferring')
+  await w.callback({ CallSid: 'CAag1', CallStatus: 'in-progress', AnsweredBy: 'human' })
+  const res = await handle(req({ action: 'book', call_sid: 'CA123' }, 'good'), w.store, w.twilio, ENV)
+  assert.equal(res.status, 409)
+  assert.equal((await res.json()).code, 'not_bookable')
+  assert.deepEqual([w.rows[0].status, w.rows[0].outcome], ['transferred', 'transferred'])
+  // The caller hangs up later: the row ends as a transfer, not a booking.
+  const e = world({ row: live({ status: 'ended', outcome: 'transferred' }) })
+  await assert.rejects(act(e.store, e.twilio, ENV, VA, { action: 'book', call_sid: 'CA123' }), /already handed/)
+  assert.equal(e.writes.length, 0)
 })
