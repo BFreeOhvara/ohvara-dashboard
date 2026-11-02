@@ -1,5 +1,5 @@
 import { useState, useEffect, Fragment } from 'react'
-import { useLocation, Link } from 'react-router-dom'
+import { useLocation, useSearchParams, Link } from 'react-router-dom'
 import { Menu, ChevronRight, Home, Inbox } from 'lucide-react'
 import { Sidebar, COLLAPSE_KEY, SIDEBAR_W, SIDEBAR_W_COLLAPSED } from './Sidebar'
 import { GlobalSearch } from './GlobalSearch'
@@ -221,11 +221,21 @@ const AGENT_LINES = {
 }
 
 // One inbound: "Leads / <their name>", from the list the page already loads (same query key).
+// Dev only: with ?sample=1 the name comes from the sample lead the page shows (src/lib/inboundsSample.js).
 function InboundTitle() {
   const { pathname } = useLocation()
+  const [params] = useSearchParams()
   const { data } = useInbounds()
   const id = pathname.split('/').pop()
-  const l = (data || []).find(x => x.lead_id === id)
+  const sampleOn = import.meta.env.DEV && params.get('sample') === '1'
+  const [sampleRow, setSampleName] = useState(null)
+  useEffect(() => {
+    if (!sampleOn) return undefined
+    let live = true
+    import('../../lib/inboundsSample').then(m => { if (live) setSampleName(m.sampleLead(m.buildSample(), id).lead) })
+    return () => { live = false }
+  }, [sampleOn, id])
+  const l = sampleOn ? sampleRow : (data || []).find(x => x.lead_id === id)
   return <h1 className="ov-hname">{l ? leadName(l) : 'Lead'}</h1>
 }
 

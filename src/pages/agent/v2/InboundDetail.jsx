@@ -1,5 +1,5 @@
-import { Fragment, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   Inbox, ArrowLeft, Phone, MessageSquare, CalendarDays, Zap, Check, Clock, PenLine, LogIn, Send, Info,
 } from 'lucide-react'
@@ -75,7 +75,7 @@ function Timeline({ events, tz, now }) {
 // Sold saves at once and only records the outcome. Follow up opens a date and time (future only) and
 // Not interested a required reason (500 at most); both save with their own Save button. The two new
 // arguments need migration 210: until it is applied the save says so in a plain note.
-function Outcome({ l, tz, due }) {
+function Outcome({ l, tz, due, sample }) {
   const { profile } = useAuth()
   const set = useSetOutcome(l.lead_id)
   const [last, setLast] = useState(null) // { outcome, at, followUpAt, reason } of the last save
@@ -130,7 +130,7 @@ function Outcome({ l, tz, due }) {
       <div className={`pv-outs${set.isPending ? ' busy' : ''}`} role="group" aria-label="Outcome" aria-busy={set.isPending}>
         {OUTS.map(([v, label, cls]) => (
           <button key={v} type="button" className={`${cls}${current === v ? ' on' : ''}`} aria-pressed={current === v}
-            disabled={set.isPending} onClick={() => pick(v)}>{label}</button>
+            disabled={set.isPending || sample} onClick={() => pick(v)}>{label}</button>
         ))}
       </div>
 
@@ -182,8 +182,8 @@ function Outcome({ l, tz, due }) {
   )
 }
 
-function Texts({ l, tz }) {
-  const { data = [], isLoading } = useLeadTexts(l.lead_id)
+function Texts({ l, tz, sample }) {
+  const { data = [], isLoading } = useLeadTexts(sample ? undefined : l.lead_id)
   const num = phoneDisplay(l.phone)
   const rows = data.map((t, i) => ({ ...t, head: i === 0 || dayKey(t.at, tz) !== dayKey(data[i - 1].at, tz) ? dayLabel(t.at, tz) : null }))
   return (
@@ -215,7 +215,7 @@ function Texts({ l, tz }) {
   )
 }
 
-function Notes({ l, events, tz }) {
+function Notes({ l, events, tz, sample }) {
   const add = useAddNote(l.lead_id)
   const [text, setText] = useState('')
   const notes = events.filter(e => e.kind === 'note').sort((a, b) => new Date(a.at) - new Date(b.at))
@@ -240,7 +240,7 @@ function Notes({ l, events, tz }) {
         onChange={e => setText(e.target.value)} maxLength={2000} />
       {add.isError && <p className="pv-inline-err" role="alert"><span>Couldn&rsquo;t save the note. Nothing changed.</span></p>}
       <div className="pv-foot" style={{ borderTop: 0, paddingTop: 0, marginTop: 12 }}>
-        <button type="button" className="ov-ghost pv-btn" disabled={!text.trim() || add.isPending} onClick={save}>{add.isPending ? 'Saving…' : 'Save note'}</button>
+        <button type="button" className="ov-ghost pv-btn" disabled={sample || !text.trim() || add.isPending} onClick={save}>{add.isPending ? 'Saving…' : 'Save note'}</button>
       </div>
     </section>
   )
@@ -250,15 +250,27 @@ export default function InboundDetail() {
   const { id } = useParams()
   const { profile } = useAuth()
   const tz = profile?.timezone || DEFAULT_TIMEZONE
-  const inb = useInbounds()
-  const ev = useLeadEvents(id)
-  const l = (inb.data || []).find(x => x.lead_id === id)
-  const events = ev.data || []
+  // Dev only: ?sample=1 shows a made-up lead from src/lib/inboundsSample.js (dynamic import, so a production
+  // build never contains it). No live query runs with a sample id, and the Outcome and Save note buttons are off.
+  const [params] = useSearchParams()
+  const sampleOn = import.meta.env.DEV && params.get('sample') === '1'
+  const [fx, setFx] = useState(null)
+  useEffect(() => {
+    if (!sampleOn) return undefined
+    let live = true
+    import('../../../lib/inboundsSample').then(m => { if (live) setFx({ id, ...m.sampleLead(m.buildSample(), id) }) })
+    return () => { live = false }
+  }, [sampleOn, id])
+  const sampleReady = sampleOn && fx?.id === id
+  const inb = useInbounds({ enabled: !sampleOn })
+  const ev = useLeadEvents(sampleOn ? undefined : id)
+  const l = sampleOn ? (sampleReady ? fx.lead : null) : (inb.data || []).find(x => x.lead_id === id)
+  const events = sampleOn ? (sampleReady ? fx.events : []) : ev.data || []
   const now = useMemo(() => new Date().getTime(), [ev.dataUpdatedAt]) // eslint-disable-line react-hooks/exhaustive-deps
   const back = <Link className="ov-ghost pv-btn pv-back" to="/agent/leads"><Ico icon={ArrowLeft} />Leads</Link>
   const shell = children => <PortalV2Layout active="inbounds" crumb="Leads" title={l ? leadName(l) : 'Lead'} icon={Inbox}>{back}{children}</PortalV2Layout>
 
-  if (inb.isLoading) {
+  if (inb.isLoading || (sampleOn && !sampleReady)) {
     return shell(
       <section className="ov-card pv-card" aria-busy="true">
         <Skel w={160} h={26} style={{ borderRadius: 999 }} /><Skel w="45%" h={14} style={{ marginTop: 14 }} />
@@ -311,9 +323,9 @@ export default function InboundDetail() {
             ? <p className="pv-inline-err" role="alert"><span>We couldn&rsquo;t load the timeline.</span><button type="button" onClick={() => ev.refetch()}>Try again</button></p>
             : <Timeline events={events} tz={tz} now={now} />}
         </section>
-        <Outcome key={l.lead_id} l={l} tz={tz} due={isFollowUpDue(l) || (!l.outcome && !!appt && new Date(appt).getTime() < now)} />
-        <Texts l={l} tz={tz} />
-        <Notes l={l} events={events} tz={tz} />
+        <Outcome key={l.lead_id} l={l} tz={tz} due={isFollowUpDue(l) || (!l.outcome && !!appt && new Date(appt).getTime() < now)} sample={sampleOn} />
+        <Texts l={l} tz={tz} sample={sampleOn} />
+        <Notes l={l} events={events} tz={tz} sample={sampleOn} />
       </div>
     </>,
   )
