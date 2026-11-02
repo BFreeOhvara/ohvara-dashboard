@@ -4,7 +4,8 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
 // The clickable template must stay a sample-only page: no backend words, no hex colors, no brand names in visible text.
-// It sits outside src/template so its own patterns are not scanned. The noindex tag code is the one allowed hit.
+// It sits outside src/template so its own patterns are not scanned. The noindex tag code is one allowed hit; the other is
+// the real route /agent/inbounds/:id, which only paths.js and its test may name.
 const ROOT = new URL('./template', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
 
 const walk = dir => readdirSync(dir).flatMap(n => {
@@ -32,7 +33,8 @@ test('src/template holds only sample-only code', () => {
     readFileSync(f, 'utf8').split('\n').forEach((line, i) => {
       for (const [why, re] of RULES) {
         if (!re.test(line)) continue
-        const allowed = why.startsWith('a brand') && /TemplateApp\.jsx$/.test(f) && /createElement\('meta'\)/.test(line)
+        const allowed = (why.startsWith('a brand') && /TemplateApp\.jsx$/.test(f) && /createElement\('meta'\)/.test(line))
+          || (why === 'the word inbound' && /paths(\.test)?\.js$/.test(f))
         if (!allowed) hits.push(`${f.slice(ROOT.length)}:${i + 1} ${why}: ${line.trim().slice(0, 80)}`)
       }
     })

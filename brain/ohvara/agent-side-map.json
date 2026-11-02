@@ -623,6 +623,19 @@
         "src/template/data/index.js"
       ],
       "notes": "Screens read only through useSampleOverview, useSampleLeads, useSampleLead, useSampleAppointments, useSampleClients, useSampleClient, useSampleThreads, useSampleActivity, useSampleBilling, useSampleSettings and useSampleSignup; changes go through useSampleActions into an in-memory store that resets on reload. Each read returns { data, isLoading: false, error: null }. One invented cast (Gloria Santos and others, 555-01xx phones, example.com emails); every price is marked as a sample. The backend swaps in by replacing this file only."
+    },
+    {
+      "id": "shell.path-map",
+      "page": "Shell",
+      "title": "Shell links work at /template and at the real agent URLs",
+      "status": "checking",
+      "files": [
+        "src/template/paths.js",
+        "src/template/paths.test.js",
+        "src/template/TemplateFrame.jsx",
+        "src/templateScan.test.js"
+      ],
+      "notes": "paths.x() gives the plain shell path at /template and the real agent path elsewhere (lead is /agent/inbounds/:id; messages and settings stay /messages and /settings). tabOf, titleOf, SHELL_ROUTES (13 patterns), isShellPath and showShell (agent, shell path, not native) live in paths.js; nothing mounts them yet and App.jsx is unchanged, so the real agent URLs behave as before. paths.test.js holds the one link check: any quote followed by / in src/template (except paths.js, its test and TemplateApp.jsx) fails with file:line. Wording is neutral at both addresses; the footer keeps \"Sample info. Changes reset when you reload.\" Signup and Welcome preview links show only at /template. Evidence: npm test 377 pass, npm run build exit 0, node scripts/template-clickthrough.mjs passes (see report)."
     }
   ]
 }

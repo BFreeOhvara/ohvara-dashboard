@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Inbox, Phone, MessageSquare, Users, ArrowRightLeft } from 'lucide-react'
 import { useSampleActivity, useSampleClients } from '../data'
 import { Seg, Empty } from '../kit'
+import { paths } from '../paths'
 
 const ICONS = { lead: Inbox, call: Phone, text: MessageSquare, client: Users, moved: ArrowRightLeft }
 
@@ -22,7 +23,7 @@ export default function Activity() {
         <ul className="tp-list">
           {rows.map(a => {
             const Icon = ICONS[a.kind]
-            const to = idOf(a.who) ? `/clients/${idOf(a.who)}` : null
+            const to = idOf(a.who) ? paths.client(idOf(a.who)) : null
             const body = <><span className="tp-ic"><Icon size={16} /></span><span className="tp-grow"><b>{a.who}</b><small>{a.text}</small></span><small>{a.at}</small></>
             return <li key={a.id}>{to ? <Link to={to} className="tp-li">{body}</Link> : <div className="tp-li">{body}</div>}</li>
           })}

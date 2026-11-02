@@ -40,7 +40,7 @@ export default function Settings() {
         <Field label="Name"><input value={name} onChange={e => setName(e.target.value)} /></Field>
         <Field label="Phone"><input defaultValue={profile.phone} /></Field>
       </Drawer>
-      <Drawer open={panel === 'password'} onClose={() => setPanel(null)} title="Change password" footer={<button type="button" className="ov-hero tp-primary" onClick={() => { note('Password change is not part of the template'); setPanel(null) }}>Continue</button>}>
+      <Drawer open={panel === 'password'} onClose={() => setPanel(null)} title="Change password" footer={<button type="button" className="ov-hero tp-primary" onClick={() => { note('Password changes are not open yet'); setPanel(null) }}>Continue</button>}>
         <Field label="Current password"><input type="password" /></Field>
         <Field label="New password"><input type="password" /></Field>
         <button type="button" className="tp-link" onClick={() => note('A reset link would be sent here')}>Forgot password?</button>

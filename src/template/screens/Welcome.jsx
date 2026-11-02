@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Check, Lock } from 'lucide-react'
 import { useSampleSignup } from '../data'
 import { Money, SampleTag, useNote } from '../kit'
+import { paths } from '../paths'
 
 // First run: the locked welcome a new agent sees until a plan is chosen. Sample only; no payment happens here.
 export default function Welcome() {
@@ -35,10 +36,10 @@ export default function Welcome() {
             <p className="tp-sub">What Servicing covers</p>
             <ul className="tp-list">{data.covers.map(c => <li key={c} className="tp-row tp-sub" style={{ minHeight: 28 }}><Check size={14} />{c}</li>)}</ul>
             <button type="button" className="ov-hero tp-primary" onClick={() => { setSteps({ ...steps, plan: true }); note('Sample only. No payment was taken') }}>Subscribe</button>
-            <Link to="/" className="tp-btn ov-ghost" style={{ height: 44 }}>Open my portal</Link>
+            <Link to={paths.home()} className="tp-btn ov-ghost" style={{ height: 44 }}>Open my portal</Link>
           </section>
         </div>
-        <p className="tp-sub" style={{ textAlign: 'center' }}><Link to="/signup" className="tp-link">Back to sign-up</Link></p>
+        <p className="tp-sub" style={{ textAlign: 'center' }}><Link to={paths.signup()} className="tp-link">Back to sign-up</Link></p>
       </div>
     </div>
   )

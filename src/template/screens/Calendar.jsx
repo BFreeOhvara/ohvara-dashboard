@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Phone, MapPin } from 'lucide-react'
 import { useSampleAppointments, useSampleLeads, useSampleClients } from '../data'
 import { Seg, Drawer, useNote } from '../kit'
+import { paths } from '../paths'
 
 const DAYS = [['Mon', 2], ['Tue', 3], ['Wed', 4], ['Thu', 5], ['Fri', 6]]
 
@@ -37,7 +38,7 @@ export default function Calendar() {
         ))}
       </div>
       <Drawer open={!!open} onClose={() => setOpen(null)} title={open?.who || ''} sub={open && `${open.day}, Nov ${open.date}, ${open.time} your time`}
-        footer={<><Link to={open?.kind === 'lead' ? `/leads/${open.ref}` : `/clients/${open?.ref}`} className="ov-hero tp-primary" onClick={() => setOpen(null)}>{open?.kind === 'lead' ? 'Open lead' : 'Open client'}</Link>
+        footer={<><Link to={open?.kind === 'lead' ? paths.lead(open.ref) : paths.client(open?.ref)} className="ov-hero tp-primary" onClick={() => setOpen(null)}>{open?.kind === 'lead' ? 'Open lead' : 'Open client'}</Link>
           <button type="button" className="tp-btn ov-ghost" onClick={() => { note('Asked the team to reschedule. They will tell the client'); setOpen(null) }}>Ask the team to reschedule</button>
           <button type="button" className="tp-btn ov-ghost" onClick={() => { note('Asked the team to cancel. They will tell the client'); setOpen(null) }}>Ask the team to cancel</button></>}>
         {open && <>

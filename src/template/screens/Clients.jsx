@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Search, Plus } from 'lucide-react'
 import { useSampleClients } from '../data'
 import { Avatar, Chip, Money, SampleTag, Seg, Empty } from '../kit'
+import { paths } from '../paths'
 
 export const stageLabel = { protected: ['green', 'Protected'], setting_up: ['blue', 'Setting up'], needs_attention: ['warn', 'Needs attention'], requests: ['teal', 'Request open'] }
 
@@ -18,7 +19,7 @@ export default function Clients() {
     <div className="tp-page">
       <section className="ov-hero tp-hero" style={{ padding: '24px 28px' }}>
         <div><h2 style={{ fontSize: 30, margin: 0 }}>{clients.length} clients, {clients.length + 2} policies</h2><p>Search any status, or filter below.</p></div>
-        <Link to="/submit" className="tp-white"><Plus size={18} />Submit a sale</Link>
+        <Link to={paths.submit()} className="tp-white"><Plus size={18} />Submit a sale</Link>
       </section>
       <label className="ov-card tp-row tp-card" style={{ padding: '0 16px', minHeight: 52 }}>
         <Search size={18} aria-hidden="true" />
@@ -30,7 +31,7 @@ export default function Clients() {
         {rows.map(c => {
           const [tone, label] = stageLabel[c.stage]
           return (
-            <Link key={c.id} to={`/clients/${c.id}`} className="tp-trow tp-cols-clients">
+            <Link key={c.id} to={paths.client(c.id)} className="tp-trow tp-cols-clients">
               <span className="tp-row"><Avatar name={`${c.client_first_name} ${c.client_last_name}`} tone={c.stage === 'needs_attention' ? 'warn' : ''} /><span><b>{c.client_first_name} {c.client_last_name}</b><small>{c.client_phone} · {c.policy_number}</small></span></span>
               <span className="hide-sm">{c.carrier_name}<small>{c.product_name}</small></span>
               <span className="hide-sm">{c.next_step || 'Nothing needed from you'}</span>

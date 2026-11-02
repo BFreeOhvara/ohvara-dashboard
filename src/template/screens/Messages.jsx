@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useSampleThreads, useSampleActions } from '../data'
 import { Avatar } from '../kit'
+import { paths } from '../paths'
 
 export default function Messages() {
   const { data: threads } = useSampleThreads()
@@ -22,7 +23,7 @@ export default function Messages() {
         ))}
       </div>
       <div className="tp-conv">
-        <div className="tp-row tp-between" style={{ padding: '12px 16px', borderBottom: '1px solid var(--ov-line)' }}><b>{t.name}</b><Link to={`/clients/${t.client_id}`} className="tp-link">Open client</Link></div>
+        <div className="tp-row tp-between" style={{ padding: '12px 16px', borderBottom: '1px solid var(--ov-line)' }}><b>{t.name}</b><Link to={paths.client(t.client_id)} className="tp-link">Open client</Link></div>
         <div className="tp-conv-b">
           {t.messages.map(m => <div key={m.id} className={`tp-bub${m.from === 'me' ? ' me' : ''}`}>{m.text}<small>{m.from === 'me' ? 'You' : 'Fulfillment'} · {m.at}</small></div>)}
         </div>

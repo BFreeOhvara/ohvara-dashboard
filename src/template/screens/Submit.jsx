@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { FilePlus2, Wrench, Check, TriangleAlert } from 'lucide-react'
 import { useSampleBilling, useSampleActions } from '../data'
 import { Field, Pending, useNote, SampleTag } from '../kit'
+import { paths } from '../paths'
 
 const EMPTY = { name: '', phone: '', city: '', state: '', email: '', best: 'Evenings', carrier: '', product: 'Mortgage protection' }
 
@@ -32,7 +33,7 @@ export default function Submit() {
       <div className="tp-page"><section className="ov-card tp-card" style={{ maxWidth: 560 }}>
         <div className="tp-row"><span className="tp-ic teal"><Check size={18} /></span><h2 className="tp-h2">Submitted</h2></div>
         <p className="tp-mid" style={{ margin: '10px 0' }}>{done} is on your books. The team sets the review call and keeps you posted in Activity.</p>
-        <div className="tp-row tp-wrap"><Link to="/clients" className="ov-hero tp-primary">See your clients</Link><button type="button" className="tp-btn ov-ghost" onClick={() => { setDone(null); setF(EMPTY); setTried(false); setMode('choose') }}>Submit another</button></div>
+        <div className="tp-row tp-wrap"><Link to={paths.clients()} className="ov-hero tp-primary">See your clients</Link><button type="button" className="tp-btn ov-ghost" onClick={() => { setDone(null); setF(EMPTY); setTried(false); setMode('choose') }}>Submit another</button></div>
       </section></div>
     )
   }
@@ -46,7 +47,7 @@ export default function Submit() {
             <button type="button" className="ov-hero tp-primary" onClick={() => setMode('sale')}>Start</button></section>
           <section className="ov-card tp-card"><span className="tp-ic teal"><Wrench size={18} /></span><h2 className="tp-h2" style={{ marginTop: 10 }}>Request a service</h2><p className="tp-sub">Something needs doing on a client you already have.</p>
             <p className="tp-sub" style={{ margin: '8px 0 12px' }}>Does not use a submission</p>
-            <Link to="/request-service" className="tp-btn ov-ghost" style={{ height: 44 }}>Request</Link></section>
+            <Link to={paths.requestService()} className="tp-btn ov-ghost" style={{ height: 44 }}>Request</Link></section>
         </div>
         <section className="ov-card tp-card"><div className="tp-row"><b className="tp-grow">Submissions this week</b><span className="tp-money">{used} / {cap}</span></div>
           <div className="tp-meter">{Array.from({ length: cap }, (_, i) => <i key={i} className={i < used ? 'on' : ''} />)}</div></section>

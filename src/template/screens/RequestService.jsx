@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Check } from 'lucide-react'
 import { useSampleClients, useSampleActions } from '../data'
 import { Avatar, Field, Seg, useNote } from '../kit'
+import { paths } from '../paths'
 
 const KINDS = ['Change address', 'Update phone', 'Change beneficiary', 'Change billing date', 'Reinstate policy', 'Cancel policy', 'Policy question', 'Other']
 
@@ -20,7 +21,7 @@ export default function RequestService() {
   if (sent) {
     return <div className="tp-page"><section className="ov-card tp-card" style={{ maxWidth: 560 }}><div className="tp-row"><span className="tp-ic teal"><Check size={18} /></span><h2 className="tp-h2">Request sent</h2></div>
       <p className="tp-mid" style={{ margin: '10px 0' }}>The team has your request for {pick.client_first_name} {pick.client_last_name}. You will see the update in Activity.</p>
-      <Link to="/activity" className="ov-hero tp-primary">Open Activity</Link></section></div>
+      <Link to={paths.activity()} className="ov-hero tp-primary">Open Activity</Link></section></div>
   }
   return (
     <div className="tp-page">

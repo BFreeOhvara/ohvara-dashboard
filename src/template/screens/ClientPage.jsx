@@ -4,6 +4,7 @@ import { ArrowLeft, Phone, TriangleAlert } from 'lucide-react'
 import { useSampleClient, useSampleThreads, useSampleActions } from '../data'
 import { Avatar, Chip, Drawer, Money, SampleTag, useNote } from '../kit'
 import { stageLabel } from './Clients'
+import { paths } from '../paths'
 
 export default function ClientPage() {
   const { id } = useParams()
@@ -20,7 +21,7 @@ export default function ClientPage() {
   const send = () => { sendMessage(thread.id, msg.trim()); setMsg(''); note('Message sent to the team') }
   return (
     <div className="tp-page">
-      <Link to="/clients" className="tp-link"><ArrowLeft size={14} />Clients</Link>
+      <Link to={paths.clients()} className="tp-link"><ArrowLeft size={14} />Clients</Link>
       <section className="ov-card tp-card">
         <div className="tp-row tp-wrap">
           <Avatar name={name} tone={c.attention ? 'warn' : ''} />
@@ -60,7 +61,7 @@ export default function ClientPage() {
         <section className="ov-card tp-card"><h2 className="tp-h2">Message Fulfillment</h2><p className="tp-sub">The team on this client</p>
           <ul className="tp-list">{thread.messages.slice(-3).map(m => <li key={m.id} className="tp-li" style={{ alignItems: 'flex-start' }}><span className="tp-grow"><b>{m.from === 'me' ? 'You' : 'Fulfillment'}</b><small>{m.text}</small></span></li>)}</ul>
           <textarea className="tp-input" style={{ minHeight: 76, padding: 12 }} aria-label="Message the team" placeholder="Write a message" value={msg} onChange={e => setMsg(e.target.value)} />
-          <div className="tp-row tp-wrap" style={{ marginTop: 8 }}><button type="button" className="ov-hero tp-primary sm" disabled={!msg.trim()} onClick={send}>Send</button><Link to="/messages" className="tp-link">Open in Messages</Link></div>
+          <div className="tp-row tp-wrap" style={{ marginTop: 8 }}><button type="button" className="ov-hero tp-primary sm" disabled={!msg.trim()} onClick={send}>Send</button><Link to={paths.messages()} className="tp-link">Open in Messages</Link></div>
         </section>
       </div>
 

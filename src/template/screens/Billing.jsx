@@ -32,7 +32,7 @@ export default function Billing() {
       </div>
       <section className="ov-card tp-card"><div className="tp-row tp-between"><h2 className="tp-h2">Next charge</h2><SampleTag /></div>
         <p className="tp-mid" style={{ margin: '8px 0' }}>{b.next_charge}</p>
-        <button type="button" className="tp-btn ov-ghost" onClick={() => note('Payment method is not part of the template')}>Update payment method</button></section>
+        <button type="button" className="tp-btn ov-ghost" onClick={() => note('Payment method changes are not open yet')}>Update payment method</button></section>
       <section className="ov-card tp-card"><h2 className="tp-h2">History</h2>
         <ul className="tp-list">{b.history.map(h => <li key={h.id} className="tp-li"><span className="tp-grow"><b>{h.label}</b><small>{h.at}</small></span><Money v={h.amount} /></li>)}</ul>
         <p className="tp-sub">Sample amounts. Pricing is not final.</p></section>

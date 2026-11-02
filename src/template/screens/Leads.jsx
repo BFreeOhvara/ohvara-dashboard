@@ -4,6 +4,7 @@ import { PhoneIncoming, CalendarDays, Wallet, Phone } from 'lucide-react'
 import { useSampleLeads, useSampleBilling, useSampleSettings, useSampleActions } from '../data'
 import { Avatar, Chip, Money, SampleTag, Seg, Switch, Drawer, useNote } from '../kit'
 import { stageChip, OutcomeDrawer } from '../LeadOutcome'
+import { paths } from '../paths'
 
 function LeadRow({ l, onOutcome, onAccept }) {
   const [tone, label] = stageChip(l.stage)
@@ -12,12 +13,12 @@ function LeadRow({ l, onOutcome, onAccept }) {
     <li className="tp-li" style={{ alignItems: 'flex-start' }}>
       <Avatar name={`${l.first_name} ${l.last_name}`} tone="blue" />
       <div className="tp-grow">
-        <div className="tp-row tp-wrap"><Link to={`/leads/${l.id}`}><b>{l.first_name} {l.last_name}</b></Link><Chip tone={tone}>{label}</Chip></div>
+        <div className="tp-row tp-wrap"><Link to={paths.lead(l.id)}><b>{l.first_name} {l.last_name}</b></Link><Chip tone={tone}>{label}</Chip></div>
         <small>{l.city}, {l.state} · {l.age_band} · {l.appt || (l.stage === 'ringing' ? 'Ringing now, 0:14' : 'No time set')}</small>
         <div className="tp-row tp-wrap" style={{ marginTop: 8, gap: 6 }}>
           {l.stage === 'ringing' && <button type="button" className="ov-hero tp-primary sm" onClick={() => onAccept(l)}><Phone size={14} />Accept</button>}
           {waiting && ['sold', 'follow_up', 'not_interested'].map(k => <button key={k} type="button" className="tp-btn ov-ghost" onClick={() => onOutcome(l, k)}>{stageChip(k)[1]}</button>)}
-          {l.stage === 'sold' && <Link to="/submit" className="tp-btn ov-ghost">Submit for servicing</Link>}
+          {l.stage === 'sold' && <Link to={paths.submit()} className="tp-btn ov-ghost">Submit for servicing</Link>}
           {l.stage === 'follow_up' && <Chip tone="outline">{l.follow}</Chip>}
         </div>
       </div>

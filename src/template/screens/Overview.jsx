@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ShieldCheck, ListChecks, Clock3, TriangleAlert, ArrowRight, Check, Inbox, Wrench } from 'lucide-react'
 import { useSampleOverview, useSampleActions } from '../data'
 import { Avatar, Chip, useNote } from '../kit'
+import { paths } from '../paths'
 
 const SERIES = [['packet', 'Packet checks', 's-packet'], ['review', 'Review calls', 's-review'], ['cancel', 'Cancellations', 's-cancel'], ['save', 'Saves', 's-save']]
 
@@ -48,7 +49,7 @@ export default function Overview() {
         <h2 className="tp-h1"><span>Good afternoon, {o.name}</span><span className="dim">{o.stepsOpen} steps due this week</span></h2>
         <div className="tp-chips">
           {book.map(([label, n, stage, color, sub, Icon]) => (
-            <Link key={stage} to={`/clients?stage=${stage}`} className="ov-card ov-link tp-chipcard" style={{ '--c': color }}>
+            <Link key={stage} to={paths.clients(stage)} className="ov-card ov-link tp-chipcard" style={{ '--c': color }}>
               <span className="tp-row"><span className="tp-chip-ic"><Icon size={16} /></span><b className="tp-grow">{label}</b></span>
               <span className="tp-row"><span className="tp-num" style={{ fontSize: 40 }}>{n}</span><span className="tp-badge">{sub}</span></span>
             </Link>
@@ -60,13 +61,13 @@ export default function Overview() {
         <div className="tp-stack">
           {o.attention.length > 0 ? (
             <section className="ov-attn tp-card" aria-label="Needs your attention">
-              <div className="tp-row"><span className="tp-ic warn"><TriangleAlert size={16} /></span><h2 className="tp-h2 tp-grow">Needs your attention</h2><Link to="/clients?stage=needs_attention" className="tp-link">See all in Clients<ArrowRight size={14} /></Link><span className="tp-tb">{o.attention.length}</span></div>
+              <div className="tp-row"><span className="tp-ic warn"><TriangleAlert size={16} /></span><h2 className="tp-h2 tp-grow">Needs your attention</h2><Link to={paths.clients('needs_attention')} className="tp-link">See all in Clients<ArrowRight size={14} /></Link><span className="tp-tb">{o.attention.length}</span></div>
               <ul className="tp-list">
                 {o.attention.map(c => (
                   <li key={c.id} className="tp-li">
                     <Avatar name={`${c.client_first_name} ${c.client_last_name}`} tone="warn" />
                     <span className="tp-grow"><b>{c.client_first_name} {c.client_last_name}</b><small>{c.note}</small></span>
-                    <button type="button" className="tp-btn ov-ghost" onClick={() => go(`/clients/${c.id}`)}>Open</button>
+                    <button type="button" className="tp-btn ov-ghost" onClick={() => go(paths.client(c.id))}>Open</button>
                   </li>
                 ))}
               </ul>
@@ -86,7 +87,7 @@ export default function Overview() {
           <section className="ov-card tp-card" aria-label="This week">
             <div className="tp-row"><span className="tp-num" style={{ fontSize: 26 }}>{o.submissions.used}</span><span className="tp-mid">of {o.submissions.cap} submissions</span><b className="tp-grow" style={{ textAlign: 'right' }}>{o.submissions.cap - o.submissions.used} left</b></div>
             <div className="tp-meter">{Array.from({ length: o.submissions.cap }, (_, i) => <i key={i} className={i < o.submissions.used ? 'on' : ''} />)}</div>
-            <div className="tp-row tp-between" style={{ marginTop: 8 }}><span className="tp-sub">Resets {o.submissions.resetsAt}</span><Link to="/billing" className="tp-link">Plan<ArrowRight size={14} /></Link></div>
+            <div className="tp-row tp-between" style={{ marginTop: 8 }}><span className="tp-sub">Resets {o.submissions.resetsAt}</span><Link to={paths.billing()} className="tp-link">Plan<ArrowRight size={14} /></Link></div>
           </section>
 
           <section className="ov-card tp-card" aria-label="Coming up">
@@ -95,7 +96,7 @@ export default function Overview() {
               {o.dueSoon.map((s, i) => (
                 <li key={s.id} className="tp-li">
                   <span className={`tp-tilecal${i === 0 ? ' first' : ''}`}><small>{s.day}</small><b>{s.date}</b></span>
-                  <Link to={`/clients/${s.clientId}`} className="tp-grow"><b>{s.clientName}</b><small>{s.label}, {s.dueAt}</small></Link>
+                  <Link to={paths.client(s.clientId)} className="tp-grow"><b>{s.clientName}</b><small>{s.label}, {s.dueAt}</small></Link>
                   <button type="button" className="tp-btn ov-ghost" disabled={s.done} onClick={() => { doneTask(s.id); note(`${s.label} for ${s.clientName} marked done`) }}>{s.done ? 'Done' : 'Mark done'}</button>
                 </li>
               ))}
@@ -107,7 +108,7 @@ export default function Overview() {
             <ul className="tp-list">
               {o.upNext.map(a => <li key={a.id} className="tp-li"><Clock3 size={18} aria-hidden="true" /><span className="tp-grow"><b>{a.who}</b><small>{a.day}, {a.time}, {a.label}</small></span></li>)}
             </ul>
-            <Link to="/leads" className="tp-link"><Inbox size={14} />Open Leads</Link>
+            <Link to={paths.leads()} className="tp-link"><Inbox size={14} />Open Leads</Link>
           </section>
           <Chip tone="teal">{o.leadsToday} leads in your list</Chip>
         </div>

@@ -4,6 +4,7 @@ import { ArrowLeft, Phone, MessageSquare } from 'lucide-react'
 import { useSampleLead, useSampleActions } from '../data'
 import { Avatar, Chip, Pending, useNote } from '../kit'
 import { stageChip, OutcomeDrawer } from '../LeadOutcome'
+import { paths } from '../paths'
 
 const TEXTS = [
   ['Automatic', 'Tue, Oct 27, 6:12 PM', 'Hi {n}, thanks for your request about mortgage protection. Your agent will call you in a few minutes.'],
@@ -25,7 +26,7 @@ export default function LeadPage() {
   const asks = [['Mortgage balance', lead.mortgage_balance_band], ['Age', lead.age_band], ['Homeowner', lead.homeowner ? 'Yes' : 'No'], ['Smoker', lead.smoker ? 'Yes' : 'No'], ['Best time', lead.best_time]]
   return (
     <div className="tp-page">
-      <Link to="/leads" className="tp-link"><ArrowLeft size={14} />Leads</Link>
+      <Link to={paths.leads()} className="tp-link"><ArrowLeft size={14} />Leads</Link>
       <section className="ov-card tp-card">
         <div className="tp-row tp-wrap">
           <Avatar name={name} tone="blue" />
@@ -58,7 +59,7 @@ export default function LeadPage() {
             <div className="tp-row tp-wrap" style={{ marginTop: 10 }}>
               {['sold', 'follow_up', 'not_interested'].map(k => <button key={k} type="button" className="tp-btn ov-ghost" onClick={() => setOutcome(k)}>{stageChip(k)[1]}</button>)}
             </div>
-            {lead.stage === 'sold' && <Link to="/submit" className="ov-hero tp-primary" style={{ marginTop: 12 }}>Submit for servicing</Link>}
+            {lead.stage === 'sold' && <Link to={paths.submit()} className="ov-hero tp-primary" style={{ marginTop: 12 }}>Submit for servicing</Link>}
           </section>
           <section className="ov-card tp-card"><h2 className="tp-h2">Notes</h2><p className="tp-sub">Only you and our team see these</p>
             {lead.note && <p className="tp-mid" style={{ whiteSpace: 'pre-line', margin: '10px 0' }}>{lead.note}</p>}

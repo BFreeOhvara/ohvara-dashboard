@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Check } from 'lucide-react'
 import { useSampleSignup } from '../data'
 import { Field, Money, Pending, SampleTag, useNote } from '../kit'
+import { paths } from '../paths'
 
 // Sample-only sign-up. No account is created, nothing is sent, and no terms wording is written.
 export default function Signup() {
@@ -20,7 +21,7 @@ export default function Signup() {
     setTried(true)
     if (!f.name.trim() || !f.email.trim() || f.password.length < 1 || !agree) return
     note('Account preview created. Nothing was saved')
-    go('/welcome')
+    go(paths.welcome())
   }
   return (
     <div className="tp tp-solo">
@@ -46,7 +47,7 @@ export default function Signup() {
           <button type="submit" className="ov-hero tp-primary">Create account</button>
           <p className="tp-sub">Already have an account? <button type="button" className="tp-link" onClick={() => note('Sign in is not part of the template')}>Sign in</button></p>
         </section>
-        <p className="tp-sub" style={{ textAlign: 'center' }}><Link to="/" className="tp-link">Back to the template</Link> · Privacy, Terms, Help (wording pending)</p>
+        <p className="tp-sub" style={{ textAlign: 'center' }}><Link to={paths.home()} className="tp-link">Back to the template</Link> · Privacy, Terms, Help (wording pending)</p>
       </form>
     </div>
   )

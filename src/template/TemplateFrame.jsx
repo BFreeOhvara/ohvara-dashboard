@@ -8,54 +8,33 @@ import { useTheme } from '../hooks/useTheme'
 import { useStretchPill } from '../hooks/useStretchPill'
 import { useSampleActivity, useSampleClients, useSampleLeads, useSampleThreads, useSampleBilling } from './data'
 import { Drawer, Avatar } from './kit'
+import { paths, tabOf, titleOf, isTemplateAddress } from './paths'
 
 // The one layout: floating top pill bar with 7 tabs, a slim left rail, the header, and on phones the bottom bar.
 const TABS = [
-  { to: '/', key: 'overview', label: 'Overview', icon: Home },
-  { to: '/leads', key: 'leads', label: 'Leads', icon: Inbox },
-  { to: '/calendar', key: 'calendar', label: 'Calendar', icon: CalendarDays },
-  { to: '/clients', key: 'clients', label: 'Clients', icon: Users },
-  { to: '/submit', key: 'submit', label: 'Submit', icon: CalendarPlus },
-  { to: '/messages', key: 'messages', label: 'Messages', icon: MessageSquare },
-  { to: '/activity', key: 'activity', label: 'Activity', icon: History },
+  { to: paths.home, key: 'overview', label: 'Overview', icon: Home },
+  { to: paths.leads, key: 'leads', label: 'Leads', icon: Inbox },
+  { to: paths.calendar, key: 'calendar', label: 'Calendar', icon: CalendarDays },
+  { to: paths.clients, key: 'clients', label: 'Clients', icon: Users },
+  { to: paths.submit, key: 'submit', label: 'Submit', icon: CalendarPlus },
+  { to: paths.messages, key: 'messages', label: 'Messages', icon: MessageSquare },
+  { to: paths.activity, key: 'activity', label: 'Activity', icon: History },
 ]
 const BAR = [
-  { to: '/', key: 'overview', label: 'Home', icon: Home },
-  { to: '/clients', key: 'clients', label: 'Clients', icon: Users },
-  { to: '/submit', key: 'submit', label: 'Submit', icon: Plus, plus: true },
-  { to: '/messages', key: 'messages', label: 'Messages', icon: MessageSquare },
-  { to: '/more', key: 'more', label: 'More', icon: Menu },
+  { to: paths.home, key: 'overview', label: 'Home', icon: Home },
+  { to: paths.clients, key: 'clients', label: 'Clients', icon: Users },
+  { to: paths.submit, key: 'submit', label: 'Submit', icon: Plus, plus: true },
+  { to: paths.messages, key: 'messages', label: 'Messages', icon: MessageSquare },
+  { to: paths.more, key: 'more', label: 'More', icon: Menu },
 ]
-const TITLES = {
-  '/': ['Today', 'Overview'], '/leads': ['Leads', 'Leads'], '/calendar': ['Leads', 'Calendar'], '/clients': ['Servicing', 'Clients'],
-  '/submit': ['Servicing', 'Submit'], '/request-service': ['Servicing', 'Request a service'], '/messages': ['Communications', 'Messages'],
-  '/activity': ['Today', 'Activity'], '/billing': ['Account', 'Billing'], '/settings': ['Account', 'Settings'], '/more': ['Account', 'More'],
-}
-
-function tabOf(path) {
-  if (path === '/') return 'overview'
-  if (path.startsWith('/leads')) return 'leads'
-  if (path.startsWith('/clients')) return 'clients'
-  if (path === '/request-service') return 'submit'
-  if (path === '/more' || path === '/billing' || path === '/settings') return path === '/more' ? 'more' : null
-  return path.slice(1)
-}
-
-function titleOf(path) {
-  if (TITLES[path]) return TITLES[path]
-  if (path.startsWith('/leads/')) return ['Leads', 'Lead']
-  if (path.startsWith('/clients/')) return ['Servicing', 'Client']
-  return ['Today', 'Overview']
-}
-
 function SearchDrawer({ open, onClose }) {
   const [q, setQ] = useState('')
   const { data: clients } = useSampleClients()
   const { data: leads } = useSampleLeads()
   const rows = useMemo(() => {
     const all = [
-      ...clients.map(c => ({ to: `/clients/${c.id}`, name: `${c.client_first_name} ${c.client_last_name}`, sub: `Client, ${c.client_phone}` })),
-      ...leads.map(l => ({ to: `/leads/${l.id}`, name: `${l.first_name} ${l.last_name}`, sub: `Lead, ${l.phone}` })),
+      ...clients.map(c => ({ to: () => paths.client(c.id), name: `${c.client_first_name} ${c.client_last_name}`, sub: `Client, ${c.client_phone}` })),
+      ...leads.map(l => ({ to: () => paths.lead(l.id), name: `${l.first_name} ${l.last_name}`, sub: `Lead, ${l.phone}` })),
       ...TABS.map(t => ({ to: t.to, name: t.label, sub: 'Page' })),
     ]
     const n = q.trim().toLowerCase()
@@ -66,7 +45,7 @@ function SearchDrawer({ open, onClose }) {
       <input className="tp-input" autoFocus placeholder="Search clients, leads, pages…" aria-label="Search" value={q} onChange={e => setQ(e.target.value)} />
       <ul className="tp-list">
         {rows.map(r => (
-          <li key={r.to + r.name}><Link className="tp-li" to={r.to} onClick={onClose}><Avatar name={r.name} /><span className="tp-grow"><b>{r.name}</b><small>{r.sub}</small></span><ChevronRight size={16} aria-hidden="true" /></Link></li>
+          <li key={r.name + r.sub}><Link className="tp-li" to={r.to()} onClick={onClose}><Avatar name={r.name} /><span className="tp-grow"><b>{r.name}</b><small>{r.sub}</small></span><ChevronRight size={16} aria-hidden="true" /></Link></li>
         ))}
         {rows.length === 0 && <li className="tp-li"><span className="tp-sub">No match. Check the spelling, or search by phone number.</span></li>}
       </ul>
@@ -77,7 +56,7 @@ function SearchDrawer({ open, onClose }) {
 function BellDrawer({ open, onClose }) {
   const { data: items } = useSampleActivity()
   return (
-    <Drawer open={open} onClose={onClose} title="Notifications" sub="What happened lately" footer={<Link to="/activity" className="tp-btn ov-ghost" onClick={onClose}>See all activity</Link>}>
+    <Drawer open={open} onClose={onClose} title="Notifications" sub="What happened lately" footer={<Link to={paths.activity()} className="tp-btn ov-ghost" onClick={onClose}>See all activity</Link>}>
       <ul className="tp-list">
         {items.slice(0, 5).map(a => <li key={a.id} className="tp-li"><Avatar name={a.who} /><span className="tp-grow"><b>{a.who}</b><small>{a.text}</small></span><small>{a.at}</small></li>)}
       </ul>
@@ -86,11 +65,12 @@ function BellDrawer({ open, onClose }) {
 }
 
 function MenuDrawer({ open, onClose, theme, setTheme }) {
-  const links = [['/billing', 'Billing', CreditCard], ['/settings', 'Settings', Settings], ['/more', 'More', Ellipsis], ['/request-service', 'Request a service', CalendarPlus], ['/signup', 'Sign-up preview', ShieldCheck], ['/welcome', 'Welcome preview', Home]]
+  const links = [[paths.billing, 'Billing', CreditCard], [paths.settings, 'Settings', Settings], [paths.more, 'More', Ellipsis], [paths.requestService, 'Request a service', CalendarPlus]]
+  if (isTemplateAddress()) links.push([paths.signup, 'Sign-up preview', ShieldCheck], [paths.welcome, 'Welcome preview', Home])
   return (
-    <Drawer open={open} onClose={onClose} title="Menu" sub="Template with sample info">
+    <Drawer open={open} onClose={onClose} title="Menu" sub="Your pages and account">
       <ul className="tp-list">
-        {links.map(([to, label, Icon]) => <li key={to}><Link className="tp-li" to={to} onClick={onClose}><Icon size={18} aria-hidden="true" /><b className="tp-grow">{label}</b><ChevronRight size={16} aria-hidden="true" /></Link></li>)}
+        {links.map(([to, label, Icon]) => <li key={label}><Link className="tp-li" to={to()} onClick={onClose}><Icon size={18} aria-hidden="true" /><b className="tp-grow">{label}</b><ChevronRight size={16} aria-hidden="true" /></Link></li>)}
         <li><button type="button" className="tp-li" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}<b className="tp-grow">{theme === 'dark' ? 'Switch to light' : 'Switch to dark'}</b></button></li>
       </ul>
     </Drawer>
@@ -117,25 +97,25 @@ export default function TemplateFrame() {
   return (
     <div className="tp tp-app">
       <div className="tp-rail" role="complementary" aria-label="Account">
-        <Link to="/" className="tp-logo" aria-label="Ohvara home">O</Link>
-        <NavLink to="/billing" className="tp-ri"><CreditCard size={20} aria-hidden="true" />Billing</NavLink>
-        <NavLink to="/settings" className="tp-ri"><Settings size={20} aria-hidden="true" />Settings</NavLink>
+        <Link to={paths.home()} className="tp-logo" aria-label="Ohvara home">O</Link>
+        <NavLink to={paths.billing()} className="tp-ri"><CreditCard size={20} aria-hidden="true" />Billing</NavLink>
+        <NavLink to={paths.settings()} className="tp-ri"><Settings size={20} aria-hidden="true" />Settings</NavLink>
         <i className="tp-hair" />
         <button type="button" className="tp-ri" onClick={() => setPanel('search')}><Search size={20} aria-hidden="true" />Search</button>
-        <Link to="/submit" className="tp-plus" aria-label="Submit a sale"><Plus size={22} /></Link>
-        <Link to="/billing" className="tp-week" aria-label={`This week ${used} of ${cap} submissions`}>
+        <Link to={paths.submit()} className="tp-plus" aria-label="Submit a sale"><Plus size={22} /></Link>
+        <Link to={paths.billing()} className="tp-week" aria-label={`This week ${used} of ${cap} submissions`}>
           <small>This week</small><b>{used}</b><span>of {cap}</span>
           <em>{Array.from({ length: 5 }, (_, i) => <i key={i} className={i < Math.round((used / cap) * 5) ? 'on' : ''} />)}</em>
           <small>Resets Mon</small>
         </Link>
-        <Link to="/settings" className="tp-me" aria-label="Your profile">DW</Link>
+        <Link to={paths.settings()} className="tp-me" aria-label="Your profile">DW</Link>
       </div>
 
       <div className="tp-col">
         <div className="tp-top">
           <div className="tp-tabs ov-card" ref={tabsRef} role="navigation" aria-label="Pages">
             {TABS.map(t => (
-              <Link key={t.key} to={t.to} className={`tp-tab${active === t.key ? ' is-on' : ''}`} aria-current={active === t.key ? 'page' : undefined}>
+              <Link key={t.key} to={t.to()} className={`tp-tab${active === t.key ? ' is-on' : ''}`} aria-current={active === t.key ? 'page' : undefined}>
                 <t.icon size={16} strokeWidth={2} aria-hidden="true" />{t.label}
                 {t.key === 'leads' && needs > 0 && <span className="tp-tb">{needs}</span>}
                 {t.key === 'messages' && unread > 0 && <span className="tp-tb is-msg">{unread}</span>}
@@ -144,7 +124,7 @@ export default function TemplateFrame() {
           </div>
           <button type="button" className="tp-search ov-card" onClick={() => setPanel('search')}><Search size={18} aria-hidden="true" /><span>Search clients, leads, pages…</span><kbd>Ctrl K</kbd></button>
           <button type="button" className="tp-ub ov-card" aria-label="Notifications" onClick={() => setPanel('bell')}><Bell size={20} /><span className="tp-count">3</span></button>
-          <Link to="/messages" className="tp-ub ov-card" aria-label="Messages"><MessageSquare size={20} />{unread > 0 && <span className="tp-count">{unread}</span>}</Link>
+          <Link to={paths.messages()} className="tp-ub ov-card" aria-label="Messages"><MessageSquare size={20} />{unread > 0 && <span className="tp-count">{unread}</span>}</Link>
           <button type="button" className="tp-ub ov-card" aria-label="Menu" onClick={() => setPanel('menu')}><Menu size={20} /></button>
         </div>
 
@@ -166,13 +146,13 @@ export default function TemplateFrame() {
 
         <main className="tp-main page-enter" key={pathname}>
           <Outlet />
-          <p className="tp-foot">Template with sample info. Changes reset when you reload.</p>
+          <p className="tp-foot">Sample info. Changes reset when you reload.</p>
         </main>
       </div>
 
       <nav className="tp-bar" aria-label="Pages">
         {BAR.map(b => (
-          <Link key={b.key} to={b.to} className={`tp-btab${active === b.key ? ' is-on' : ''}${b.plus ? ' is-plus' : ''}`} aria-current={active === b.key ? 'page' : undefined}>
+          <Link key={b.key} to={b.to()} className={`tp-btab${active === b.key ? ' is-on' : ''}${b.plus ? ' is-plus' : ''}`} aria-current={active === b.key ? 'page' : undefined}>
             <span className={b.plus ? 'tp-bplus' : 'tp-bicon'}><b.icon size={b.plus ? 24 : 22} aria-hidden="true" />{b.key === 'messages' && unread > 0 && <span className="tp-tb is-msg">{unread}</span>}</span>
             {b.label}
           </Link>
