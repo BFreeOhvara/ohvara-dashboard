@@ -443,7 +443,7 @@ select is((select done_at from public.servicing_tasks where id = (select id from
 select is((select updated_at from public.servicing_tasks where id = (select id from ids where name = 'keep')), now(), 'd4 updated_at is the trigger''s to set');
 
 -- ── e. Feed and writers ─────────────────────────────────────────────────────
--- Sold, on a lead with a policy.
+-- Sold, on a lead with a policy. Since 215 Sold only records the outcome.
 select public.p_ss_policy('SoldPolicy', interval '10 days', null, 'aaaaaaaa-aaaa-4aaa-8193-00000000000a', 'In Effect', false);
 update public.leads set client_policy_id = (select id from public.policies where client_last_name = 'SoldPolicy')
  where id = 'dddddddd-dddd-4ddd-8193-00000000000a';
@@ -468,10 +468,8 @@ select throws_ok(format($$ select public.agent_submit_service_request(%L, %L, nu
 select lives_ok($$ create temp table feed as
                    select * from public.agent_activity_feed(now() - interval '1 day', now() + interval '1 day', 'aaaaaaaa-aaaa-4aaa-8193-00000000000a', 5000) $$,
                 'e4 agent_activity_feed runs as A');
-select is((select count(*) from feed where id in (select 'servicing_added:' || t.id::text from public.servicing_tasks t
-                                                    where t.lead_id = 'dddddddd-dddd-4ddd-8193-00000000000a' and t.kind = 'packet_check')
-             and meta ->> 'actor_name' = 'Test agent_a' and title = 'Servicing task added: packet check.'), 1::bigint,
-          'e5 the Sold servicing row shows the requester''s name');
+select is((select string_agg(title, ',') from feed where id like 'servicing_added:%' and lead_id = 'dddddddd-dddd-4ddd-8193-00000000000a'),
+          'Servicing task added: carrier call.', 'e5 Sold adds no servicing row to the feed: the lead''s only one is its earlier task');
 select is((select count(*) from feed where id = 'servicing_added:' || (select id::text from ids where name = 'rpc')
              and meta ->> 'actor_name' = 'Test agent_a' and title = 'Request opened: address change.'), 1::bigint,
           'e6 the request shows once as a servicing row, with the requester''s name');
@@ -485,12 +483,10 @@ select is((select count(*) from public.policy_events where kind = 'service_reque
 select is((select concat_ws('|', requested_by, requested_by_id, status, kind, note, best_time) from public.servicing_tasks where id = (select id from ids where name = 'rpc')),
           'agent|aaaaaaaa-aaaa-4aaa-8193-00000000000a|requested|address_change|New address|morning',
           'e10 the RPC writes requested_by agent and requested_by_id A');
-select is((select string_agg(distinct kind || ':' || requested_by || ':' || requested_by_id || ':' || status, ',')
-             from public.servicing_tasks where lead_id = 'dddddddd-dddd-4ddd-8193-00000000000a' and policy_id is not null),
-          'chargeback_watch:system:aaaaaaaa-aaaa-4aaa-8193-00000000000a:scheduled,packet_check:system:aaaaaaaa-aaaa-4aaa-8193-00000000000a:scheduled,review_call:system:aaaaaaaa-aaaa-4aaa-8193-00000000000a:scheduled',
-          'e11 Sold writes requested_by system and its seeds');
-select is(public.p_ss_row('SoldPolicy'), public.p_ss_expect('setting_up', 'packet_check', ((current_date - 10 + 3) + time '12:00') at time zone 'UTC'),
-          'e12 a sold lead''s policy reads setting up from its seeds, counted from the policy''s anchor');
+select is((select string_agg(kind, ',') from public.servicing_tasks where lead_id = 'dddddddd-dddd-4ddd-8193-00000000000a'), 'carrier_call',
+          'e11 Sold writes no servicing task: the lead still has only its earlier one');
+select is(public.p_ss_row('SoldPolicy'), null,
+          'e12 a sold lead''s policy that never went to Fulfillment has no servicing status: no task points at it');
 
 -- ── f. Grouping ─────────────────────────────────────────────────────────────
 -- No signed-in user here: the booking trigger resets created_at on an agent's own insert.

@@ -497,7 +497,7 @@ update public.policies set call_live_since = now(), call_attempts = 1 where id =
 update public.policies set call_live_since = null, last_call_outcome = 'no_answer' where id = public.p_ae_i('h_call');
 update public.policies set fulfillment_stage = 'Complete' where id = public.p_ae_i('h_call');
 select public.p_ae_as('A');
-select public.set_inbound_outcome(public.p_ae_i('b_mine'), 'follow_up');
+select public.set_inbound_outcome(public.p_ae_i('b_mine'), 'follow_up', null, now() + interval '2 days');
 select public.p_ae_as('Z');
 create temp table section8 as select * from public.p_ae_feed();
 select ok(exists (select 1 from section8 s where s.kind = t.kind and s.title like t.pattern), 'h ' || t.name)

@@ -189,8 +189,8 @@ select is((select count(*) from pg_proc where pronamespace = 'public'::regnamesp
           2::bigint, 'a8 one agent_submit_deal and one set_inbound_outcome, no overload');
 select ok(has_function_privilege('authenticated', 'public.agent_submit_deal(text, text, text, text, text, text, uuid, text, boolean, uuid, timestamptz, text, boolean, date)', 'execute')
           and not has_function_privilege('anon', 'public.agent_submit_deal(text, text, text, text, text, text, uuid, text, boolean, uuid, timestamptz, text, boolean, date)', 'execute')
-          and has_function_privilege('authenticated', 'public.set_inbound_outcome(uuid, text, text)', 'execute')
-          and not has_function_privilege('anon', 'public.set_inbound_outcome(uuid, text, text)', 'execute'),
+          and has_function_privilege('authenticated', 'public.set_inbound_outcome(uuid, text, text, timestamptz, text)', 'execute')
+          and not has_function_privilege('anon', 'public.set_inbound_outcome(uuid, text, text, timestamptz, text)', 'execute'),
           'a9 same grants on both');
 select ok(obj_description('public.servicing_tasks'::regclass) like '%servicing_seed_steps%', 'a10 the table comment names the seed');
 select ok(col_description('public.policies'::regclass,
@@ -425,13 +425,22 @@ select is(public.p_st_hint($$ select public.p_st_no('AtCap', 'CAP-1') $$), 'not_
 select public.p_st_owner();
 update public.app_settings set submit_live = true where id = 1;
 
--- ── f. Sold ─────────────────────────────────────────────────────────────────
+-- ── f. The seed on a lead ───────────────────────────────────────────────────
+-- Since 215 Sold seeds nothing (p_lead_outcomes.sql proves it). Leads sold under 212 keep
+-- their rows, so these cases call the seed with the arguments 212's Sold passed.
+create function public.p_st_lead_seed(p_lead uuid) returns text language plpgsql security definer set search_path = public as $f$
+begin
+  perform public.servicing_seed_steps(l.assigned_rep_id, l.client_policy_id, l.id, null, auth.uid()) from public.leads l where l.id = p_lead;
+  return 'sold';
+end
+$f$;
+grant execute on function public.p_st_lead_seed(uuid) to authenticated;
 insert into ids select 'sold_lead', public.p_st_lead('SoldNoPolicy');
 insert into ids select 'sold_policy', public.p_st_policy('SoldPolicy', 'aaaaaaaa-aaaa-4aaa-8212-00000000000a', '2026-06-15');
 insert into ids select 'sold_lead_p', public.p_st_lead('SoldWithPolicy', public.p_st_i('sold_policy'));
 select public.p_st_as('aaaaaaaa-aaaa-4aaa-8212-00000000000a');
-select is(public.set_inbound_outcome(public.p_st_i('sold_lead'), 'sold'), 'sold', 'f1 Sold on a lead with no policy');
-select is(public.set_inbound_outcome(public.p_st_i('sold_lead_p'), 'sold'), 'sold', 'f2 Sold on a lead with a policy');
+select is(public.p_st_lead_seed(public.p_st_i('sold_lead')), 'sold', 'f1 the seed on a lead with no policy');
+select is(public.p_st_lead_seed(public.p_st_i('sold_lead_p')), 'sold', 'f2 the seed on a lead with a policy');
 select public.p_st_owner();
 
 select is(public.p_st_lead_steps(public.p_st_i('sold_lead')), 'chargeback_watch:12,packet_check:1,review_call:1', 'f3 with no policy: 14 rows, 12 watch and not 1');
@@ -447,38 +456,38 @@ select is(public.p_st_due(public.p_st_i('sold_policy'), 'chargeback_watch', 12::
 create temp table sold_owner as
   select servicing_va_id, servicing_va_assigned_at from public.policies where id = public.p_st_i('sold_policy');
 grant select on sold_owner to authenticated;
-select isnt((select servicing_va_id from sold_owner), null, 'f10 a Sold lead''s policy with no owner gets one');
+select isnt((select servicing_va_id from sold_owner), null, 'f10 a lead''s policy with no owner gets one');
 select is((select count(*) from public.policy_events where policy_id = public.p_st_i('sold_policy')), 0::bigint, 'f11 with no event');
 select is((select count(*) from public.notifications where (data ->> 'policy_id')::uuid = public.p_st_i('sold_policy')), 0::bigint, 'f12 and no notice');
 
 select public.p_st_as('aaaaaaaa-aaaa-4aaa-8212-00000000000a');
-select is(public.set_inbound_outcome(public.p_st_i('sold_lead'), 'sold'), 'sold', 'f13 Sold pressed again');
-select is(public.set_inbound_outcome(public.p_st_i('sold_lead_p'), 'sold'), 'sold', 'f14 and again');
+select is(public.p_st_lead_seed(public.p_st_i('sold_lead')), 'sold', 'f13 the seed run again');
+select is(public.p_st_lead_seed(public.p_st_i('sold_lead_p')), 'sold', 'f14 and again');
 select public.p_st_owner();
-select is(public.p_st_lead_steps(public.p_st_i('sold_lead')), 'chargeback_watch:12,packet_check:1,review_call:1', 'f15 pressing Sold twice adds none, packet and review included');
+select is(public.p_st_lead_steps(public.p_st_i('sold_lead')), 'chargeback_watch:12,packet_check:1,review_call:1', 'f15 running it twice adds none, packet and review included');
 select is(public.p_st_steps(public.p_st_i('sold_policy')), 'chargeback_watch:12,packet_check:1,review_call:1', 'f16 and none on the policy');
 select is((select concat_ws('|', p.servicing_va_id = o.servicing_va_id, p.servicing_va_assigned_at = o.servicing_va_assigned_at)
              from public.policies p, sold_owner o where p.id = public.p_st_i('sold_policy')), 't|t', 'f17 a re-run keeps the same owner and time');
 
--- A second lead on the same policy, and a Sold on a deal that was submitted.
+-- A second lead on the same policy, and a lead on a deal that was submitted.
 insert into ids select 'sold_lead_2', public.p_st_lead('SoldSecond', public.p_st_i('sold_policy'));
 insert into ids select 'sold_lead_deal', public.p_st_lead('SoldDeal', public.p_st_i('jan31'));
 select public.p_st_as('aaaaaaaa-aaaa-4aaa-8212-00000000000a');
-select public.set_inbound_outcome(public.p_st_i('sold_lead_2'), 'sold');
-select public.set_inbound_outcome(public.p_st_i('sold_lead_deal'), 'sold');
+select public.p_st_lead_seed(public.p_st_i('sold_lead_2'));
+select public.p_st_lead_seed(public.p_st_i('sold_lead_deal'));
 select public.p_st_owner();
-select is(public.p_st_steps(public.p_st_i('sold_policy')), 'chargeback_watch:12,packet_check:1,review_call:1', 'f18 a second sold lead on one policy adds none');
-select is(public.p_st_steps(public.p_st_i('jan31')), 'chargeback_watch:12,packet_check:1,review_call:1', 'f19 nor does a Sold on a submitted deal');
+select is(public.p_st_steps(public.p_st_i('sold_policy')), 'chargeback_watch:12,packet_check:1,review_call:1', 'f18 a second lead on one policy adds none');
+select is(public.p_st_steps(public.p_st_i('jan31')), 'chargeback_watch:12,packet_check:1,review_call:1', 'f19 nor does a lead on a submitted deal');
 
 -- A lead with no policy changed nobody's owner.
 select is((select count(*) from public.servicing_tasks where lead_id = public.p_st_i('sold_lead') and policy_id is not null), 0::bigint, 'f20 a lead with no policy has no policy, so no owner');
 
--- No active VA on Sold.
+-- No active VA.
 update public.profiles set is_active = false where role = 'fulfillment';
 insert into ids select 'sold_no_va_p', public.p_st_policy('SoldNoVA');
 insert into ids select 'sold_no_va', public.p_st_lead('SoldNoVALead', public.p_st_i('sold_no_va_p'));
 select public.p_st_as('aaaaaaaa-aaaa-4aaa-8212-00000000000a');
-select is(public.set_inbound_outcome(public.p_st_i('sold_no_va'), 'sold'), 'sold', 'f21 Sold succeeds with no active VA');
+select is(public.p_st_lead_seed(public.p_st_i('sold_no_va')), 'sold', 'f21 the seed succeeds with no active VA');
 select public.p_st_owner();
 select is(public.p_st_va(public.p_st_i('sold_no_va_p')), 'null', 'f22 and the owner stays null');
 update public.profiles set is_active = true where id in ('bbbbbbbb-bbbb-4bbb-8212-000000000002', 'bbbbbbbb-bbbb-4bbb-8212-000000000011',
@@ -522,10 +531,10 @@ insert into public.servicing_tasks (agent_id, policy_id, kind, status, requested
 values ('aaaaaaaa-aaaa-4aaa-8212-00000000000a', public.p_st_i('old_done'), 'chargeback_watch', 'done', 'system');
 
 select public.p_st_as('aaaaaaaa-aaaa-4aaa-8212-00000000000a');
-select public.set_inbound_outcome(public.p_st_i('old_lead'), 'sold');
-select public.set_inbound_outcome(public.p_st_i('old_lead'), 'sold');
+select public.p_st_lead_seed(public.p_st_i('old_lead'));
+select public.p_st_lead_seed(public.p_st_i('old_lead'));
 select public.p_st_owner();
-select is(public.p_st_lead_steps(public.p_st_i('old_lead')), 'chargeback_watch:1,packet_check:1,review_call:1', 'g1 an old lead pressed Sold: the watch count stays 1, not 13');
+select is(public.p_st_lead_steps(public.p_st_i('old_lead')), 'chargeback_watch:1,packet_check:1,review_call:1', 'g1 an old lead seeded again: the watch count stays 1, not 13');
 select public.servicing_seed_steps('aaaaaaaa-aaaa-4aaa-8212-00000000000a', public.p_st_i('old_policy'), null, null, null);
 select public.servicing_seed_steps('aaaaaaaa-aaaa-4aaa-8212-00000000000a', public.p_st_i('old_policy'), null, null, null);
 select is(public.p_st_steps(public.p_st_i('old_policy')), 'chargeback_watch:1,packet_check:1,review_call:1', 'g2 an old policy seeded again: the watch count stays 1');
@@ -593,7 +602,7 @@ select is((select string_agg(title, ',' order by title) from feed
             where id like 'servicing_added:%' and (meta ->> 'policy_id')::uuid = public.p_st_i('feed')),
           'Servicing task added: chargeback watch.,Servicing task added: packet check.,Servicing task added: review call.',
           'i1 the feed gives 3 servicing_added rows per deal, not 14');
-select is((select count(*) from feed where id like 'servicing_added:%' and lead_id = public.p_st_i('sold_lead')), 3::bigint, 'i2 and 3 for a Sold lead');
+select is((select count(*) from feed where id like 'servicing_added:%' and lead_id = public.p_st_i('sold_lead')), 3::bigint, 'i2 and 3 for a lead seeded under 212');
 select public.p_st_owner();
 update public.servicing_tasks set status = 'done' where policy_id = public.p_st_i('feed') and watch_month = 5;
 select public.p_st_as('aaaaaaaa-aaaa-4aaa-8212-00000000000a');

@@ -492,8 +492,8 @@ select lives_ok($$ select public.p_arr_work('stop_booked', 'booked', 'A') $$, 'e
 select lives_ok($$ select public.p_arr_work('stop_transfer', 'transferred', 'A') $$, 'e2 a VA transfers a lead with steps');
 select public.p_arr_as('A');
 select is(public.set_inbound_outcome(public.p_arr_lead('stop_sold'), 'sold'), 'sold', 'e3 the signed-in agent marks a lead sold');
-select is(public.set_inbound_outcome(public.p_arr_lead('stop_not_interested'), 'not_interested'), 'lost', 'e4 the signed-in agent marks a lead not interested');
-select is(public.set_inbound_outcome(public.p_arr_lead('stop_follow_up'), 'follow_up'), 'follow_up', 'e5 the signed-in agent marks a lead follow up');
+select is(public.set_inbound_outcome(public.p_arr_lead('stop_not_interested'), 'not_interested', null, null, 'Has a policy elsewhere'), 'lost', 'e4 the signed-in agent marks a lead not interested');
+select is(public.set_inbound_outcome(public.p_arr_lead('stop_follow_up'), 'follow_up', null, now() + interval '2 days'), 'follow_up', 'e5 the signed-in agent marks a lead follow up');
 select public.p_arr_as('owner');
 
 select is(public.p_arr_steps('stop_booked'), null, 'e6 booked leaves no scheduled step');

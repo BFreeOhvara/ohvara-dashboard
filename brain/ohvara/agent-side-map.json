@@ -488,6 +488,18 @@
       "status": "checking"
     },
     {
+      "id": "leads.reminder-timing",
+      "page": "Leads",
+      "title": "A follow-up comes due for the agent at its date, in the app",
+      "files": [
+        "supabase/migrations/215_lead_outcomes.sql",
+        "supabase/tests/p_lead_outcomes.sql",
+        "src/lib/leadOutcomesMigration.test.js"
+      ],
+      "notes": "migration 215 unapplied. agent_inbounds() returns follow_up_at and follow_up_due (outcome follow_up and follow_up_at <= now()). It is the agent's own reminder: nothing is texted to the lead. No page reads it until task leads-page-ui. It also takes the seed back out of Sold, so the Sold half of submit.servicing-steps-seed stops being true once 215 is applied.",
+      "status": "checking"
+    },
+    {
       "id": "submit.servicing-steps-seed",
       "page": "Submit",
       "title": "A submitted deal and a Sold lead make the same 14 servicing steps from settings",
