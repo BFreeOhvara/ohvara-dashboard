@@ -1,4 +1,4 @@
-// Shots + checks for the regrouped agent sidebar against the PRODUCTION build (dist/), no VITE_LEADS_PAGE.
+// Shots + checks for the regrouped agent sidebar against the PRODUCTION build (dist/).
 // Every Supabase call is mocked, so no real project, account or credentials are touched.
 //   VITE_SUPABASE_URL=https://mock.supabase.co VITE_SUPABASE_ANON_KEY=mock-anon-key npm run build
 //   node qa/sidebar-regroup/shots.mjs
@@ -108,17 +108,24 @@ try {
       await page.screenshot({ path: join(OUT, `search-goto-1440-${theme}.png`) })
       const goto = await page.$$eval('.ov-gs-page-icon ~ .ov-gs-name', e => e.map(x => x.textContent.trim()))
       check(`search Go-to lists Leads, Clients, Submit (${theme})`, ['Leads', 'Clients', 'Submit'].every(n => goto.includes(n)) && !goto.some(n => /Inbounds|My Pipeline|Book a call/.test(n)), goto)
-      if (theme === 'dark') {
-        await page.goto(base + '/agent/leads', { waitUntil: 'domcontentloaded' })
-        await page.waitForSelector('.ov-sb-nav'); await page.waitForTimeout(1500)
+      // Page titles (h1.ov-hname) and the live line under them (.ov-hline) on the three renamed pages
+      for (const [route, want] of [['/agent/leads', 'Leads'], ['/agent/clients', 'Clients'], ['/agent/submit', 'Submit']]) {
+        await page.goto(base + route, { waitUntil: 'domcontentloaded' })
+        await page.waitForSelector('h1.ov-hname', { timeout: 30000 }); await page.waitForTimeout(1500)
         const h = (await page.locator('h1.ov-hname').first().textContent()).trim()
-        check('/agent/leads opens the Leads page, not Overview (no VITE_LEADS_PAGE)', new URL(page.url()).pathname === '/agent/leads' && h === 'Leads', { path: new URL(page.url()).pathname, h1: h })
-        await page.screenshot({ path: join(OUT, 'leads-route-1440-dark.png') })
-        await page.goto(base + '/agent/inbounds?tab=live', { waitUntil: 'domcontentloaded' })
-        await page.waitForTimeout(1500)
-        const u = new URL(page.url())
-        check('/agent/inbounds?tab=live lands on /agent/leads?tab=live', u.pathname === '/agent/leads' && u.search === '?tab=live', u.pathname + u.search)
+        const lines = await page.$$eval('.ov-hline', e => e.map(x => x.textContent.trim()))
+        check(`${route} title reads ${want}, 1440 ${theme}`, new URL(page.url()).pathname === route && h === want, { path: new URL(page.url()).pathname, h1: h })
+        check(`${route} live line has no Inbounds / My Pipeline / Book a call, 1440 ${theme}`, lines.length > 0 && !lines.some(l => /Inbounds|My Pipeline|Book a call/i.test(l)), lines)
+        if (route === '/agent/leads' && theme === 'dark') await page.screenshot({ path: join(OUT, 'leads-route-1440-dark.png') })
       }
+      await page.goto(base + '/agent/inbounds?tab=live', { waitUntil: 'domcontentloaded' })
+      await page.waitForTimeout(1500)
+      const u = new URL(page.url())
+      check(`/agent/inbounds?tab=live lands on /agent/leads?tab=live (${theme})`, u.pathname === '/agent/leads' && u.search === '?tab=live', u.pathname + u.search)
+      await page.goto(base + '/agent/book?change=x', { waitUntil: 'domcontentloaded' })
+      await page.waitForTimeout(1500)
+      const b = new URL(page.url())
+      check(`/agent/book?change=x lands on /agent/submit?change=x (${theme})`, b.pathname === '/agent/submit' && b.search === '?change=x', b.pathname + b.search)
       await ctx.close()
     }
     // Phone 390
@@ -139,6 +146,14 @@ try {
           check(`More list has Leads and Calendar, no Inbounds (${theme})`, rows.includes('Leads') && rows.includes('Calendar') && !rows.includes('Inbounds'), rows)
         }
       }
+      // Phone title: at 390 DashboardLayout hands agent pages to PhoneShell, which draws no .ov-hphone-title (that span is in the
+      // desktop/tablet header). Leads is a More sub-page, so its title is the PhoneSubHead's h1 (.ph-subhead h1).
+      await page.goto(base + '/agent/leads', { waitUntil: 'domcontentloaded' })
+      await page.waitForSelector('.ph-subhead h1', { timeout: 30000 }); await page.waitForTimeout(1200)
+      const pt = (await page.locator('.ph-subhead h1').first().textContent()).trim()
+      const stale = await page.locator('.ov-hphone-title').count()
+      check(`phone title (.ph-subhead h1) reads Leads on /agent/leads, 390 ${theme}`, pt === 'Leads' && new URL(page.url()).pathname === '/agent/leads', { h1: pt, ovHphoneTitleCount: stale })
+      await page.screenshot({ path: join(OUT, `phone-leads-390-${theme}.png`) })
       await ctx.close()
     }
   }
