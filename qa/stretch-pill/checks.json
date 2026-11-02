@@ -1,0 +1,364 @@
+[
+ {
+  "name": "light 1440 at 0 ms the pill sits on Week",
+  "pass": true,
+  "info": {
+   "right": 68.375,
+   "left": 3
+  }
+ },
+ {
+  "name": "light 1440 at 200 ms the pill spans part of both buttons",
+  "pass": true,
+  "info": {
+   "e200": {
+    "right": 131.184,
+    "left": 59.3941
+   },
+   "week": {
+    "left": 3,
+    "right": 68.375
+   },
+   "day": {
+    "left": 71.375,
+    "right": 135.375
+   }
+  }
+ },
+ {
+  "name": "light 1440 at 360 ms the right edge has arrived and the left has not",
+  "pass": true,
+  "info": {
+   "right": 135.375,
+   "left": 69.172
+  }
+ },
+ {
+  "name": "light 1440 the left edge arrives by 550 ms",
+  "pass": true,
+  "info": {
+   "right": 135.375,
+   "left": 71.3741
+  }
+ },
+ {
+  "name": "light 1440 overlay count 0 after the flight",
+  "pass": true
+ },
+ {
+  "name": "light 1440 row and button rects match pre-click",
+  "pass": true,
+  "info": {
+   "row": [
+    1260.625,
+    96,
+    140.375,
+    40
+   ],
+   "btn": [
+    [
+     1264.625,
+     100,
+     65.375,
+     32
+    ],
+    [
+     1333,
+     100,
+     64,
+     32
+    ]
+   ]
+  }
+ },
+ {
+  "name": "light 1440 quick clicks round 0: each flight starts where the last one was, every frame on the curve",
+  "pass": true,
+  "info": {
+   "frames": 42,
+   "most": 1,
+   "offCurve": 0.54,
+   "handoffs": [
+    0.54,
+    0.14
+   ],
+   "left": 0
+  }
+ },
+ {
+  "name": "light 1440 quick clicks round 1: each flight starts where the last one was, every frame on the curve",
+  "pass": true,
+  "info": {
+   "frames": 45,
+   "most": 1,
+   "offCurve": 0.64,
+   "handoffs": [
+    0.54,
+    0.14
+   ],
+   "left": 0
+  }
+ },
+ {
+  "name": "light 1440 quick clicks round 2: each flight starts where the last one was, every frame on the curve",
+  "pass": true,
+  "info": {
+   "frames": 45,
+   "most": 1,
+   "offCurve": 0.64,
+   "handoffs": [
+    0.54,
+    0.14
+   ],
+   "left": 0
+  }
+ },
+ {
+  "name": "light 1440 quick clicks round 3: each flight starts where the last one was, every frame on the curve",
+  "pass": true,
+  "info": {
+   "frames": 47,
+   "most": 1,
+   "offCurve": 0.64,
+   "handoffs": [
+    0.54,
+    0.14
+   ],
+   "left": 0
+  }
+ },
+ {
+  "name": "light 1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "light 390 overlay count 0 after a flight, rects match pre-tap",
+  "pass": true
+ },
+ {
+  "name": "light 390 tap moves the pill, no sideways scroll in flight",
+  "pass": true,
+  "info": {
+   "e": {
+    "right": 137.49,
+    "left": 67.79
+   },
+   "pills": 1,
+   "rowOver": 0,
+   "docOver": 0
+  }
+ },
+ {
+  "name": "light 390 no sideways scroll at rest",
+  "pass": true
+ },
+ {
+  "name": "light 390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "light 1440 reduced motion: no overlay, instant switch",
+  "pass": true,
+  "info": {
+   "on": true,
+   "bg": "rgba(10, 31, 68, 0.09)",
+   "anims": 0,
+   "seen": 0,
+   "cls": "cal-seg"
+  }
+ },
+ {
+  "name": "light 390 reduced motion: no overlay, instant switch",
+  "pass": true,
+  "info": {
+   "on": true,
+   "bg": "rgb(7, 51, 46)",
+   "anims": 0,
+   "seen": 0,
+   "cls": "ov-card cal-strip"
+  }
+ },
+ {
+  "name": "dark 1440 at 0 ms the pill sits on Week",
+  "pass": true,
+  "info": {
+   "right": 68.375,
+   "left": 3
+  }
+ },
+ {
+  "name": "dark 1440 at 200 ms the pill spans part of both buttons",
+  "pass": true,
+  "info": {
+   "e200": {
+    "right": 131.184,
+    "left": 59.3941
+   },
+   "week": {
+    "left": 3,
+    "right": 68.375
+   },
+   "day": {
+    "left": 71.375,
+    "right": 135.375
+   }
+  }
+ },
+ {
+  "name": "dark 1440 at 360 ms the right edge has arrived and the left has not",
+  "pass": true,
+  "info": {
+   "right": 135.375,
+   "left": 69.172
+  }
+ },
+ {
+  "name": "dark 1440 the left edge arrives by 550 ms",
+  "pass": true,
+  "info": {
+   "right": 135.375,
+   "left": 71.3741
+  }
+ },
+ {
+  "name": "dark 1440 overlay count 0 after the flight",
+  "pass": true
+ },
+ {
+  "name": "dark 1440 row and button rects match pre-click",
+  "pass": true,
+  "info": {
+   "row": [
+    1260.625,
+    96,
+    140.375,
+    40
+   ],
+   "btn": [
+    [
+     1264.625,
+     100,
+     65.375,
+     32
+    ],
+    [
+     1333,
+     100,
+     64,
+     32
+    ]
+   ]
+  }
+ },
+ {
+  "name": "dark 1440 quick clicks round 0: each flight starts where the last one was, every frame on the curve",
+  "pass": true,
+  "info": {
+   "frames": 44,
+   "most": 1,
+   "offCurve": 0.64,
+   "handoffs": [
+    0.54,
+    0.14
+   ],
+   "left": 0
+  }
+ },
+ {
+  "name": "dark 1440 quick clicks round 1: each flight starts where the last one was, every frame on the curve",
+  "pass": true,
+  "info": {
+   "frames": 45,
+   "most": 1,
+   "offCurve": 0.64,
+   "handoffs": [
+    0.54,
+    0.14
+   ],
+   "left": 0
+  }
+ },
+ {
+  "name": "dark 1440 quick clicks round 2: each flight starts where the last one was, every frame on the curve",
+  "pass": true,
+  "info": {
+   "frames": 45,
+   "most": 1,
+   "offCurve": 0.64,
+   "handoffs": [
+    0.54,
+    0.14
+   ],
+   "left": 0
+  }
+ },
+ {
+  "name": "dark 1440 quick clicks round 3: each flight starts where the last one was, every frame on the curve",
+  "pass": true,
+  "info": {
+   "frames": 43,
+   "most": 1,
+   "offCurve": 0.64,
+   "handoffs": [
+    0.54,
+    0.14
+   ],
+   "left": 0
+  }
+ },
+ {
+  "name": "dark 1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "dark 390 overlay count 0 after a flight, rects match pre-tap",
+  "pass": true
+ },
+ {
+  "name": "dark 390 tap moves the pill, no sideways scroll in flight",
+  "pass": true,
+  "info": {
+   "e": {
+    "right": 137.49,
+    "left": 67.79
+   },
+   "pills": 1,
+   "rowOver": 0,
+   "docOver": 0
+  }
+ },
+ {
+  "name": "dark 390 no sideways scroll at rest",
+  "pass": true
+ },
+ {
+  "name": "dark 390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "dark 1440 reduced motion: no overlay, instant switch",
+  "pass": true,
+  "info": {
+   "on": true,
+   "bg": "rgba(75, 121, 206, 0.18)",
+   "anims": 0,
+   "seen": 0,
+   "cls": "cal-seg"
+  }
+ },
+ {
+  "name": "dark 390 reduced motion: no overlay, instant switch",
+  "pass": true,
+  "info": {
+   "on": true,
+   "bg": "rgb(255, 255, 255)",
+   "anims": 0,
+   "seen": 0,
+   "cls": "ov-card cal-strip"
+  }
+ }
+]

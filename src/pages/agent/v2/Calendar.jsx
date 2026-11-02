@@ -7,6 +7,7 @@ import { useAuth } from '../../../hooks/useAuth'
 import { useInbounds, useInboundEvents } from '../../../hooks/useInbounds'
 import { useAgentBookings } from '../../../hooks/useAgentBookings'
 import { useServicingTasks, useClientPolicies } from '../../../hooks/useServicingTasks'
+import { useStretchPill } from '../../../hooks/useStretchPill'
 import { PortalV2Layout, Ico, Skel } from '../../../components/agent/PortalV2Nav'
 import AskTeamReschedule from '../../../components/agent/AskTeamReschedule'
 import {
@@ -248,6 +249,8 @@ function StagePill({ a }) {
 
 function Bar({ view, label, isToday, showKey, onPrev, onNext, onToday, onView }) {
   const unit = view === 'day' ? 'day' : 'week'
+  const segRef = useRef(null)
+  useStretchPill(segRef, { activeKey: view, selector: 'button.on' })
   return (
     <div className="cal-bar pv-only-desk">
       <button type="button" className="ov-ghost sq" aria-label={`Previous ${unit}`} onClick={onPrev}><Ico icon={ChevronLeft} /></button>
@@ -255,7 +258,7 @@ function Bar({ view, label, isToday, showKey, onPrev, onNext, onToday, onView })
       <button type="button" className="ov-ghost sq" aria-label={`Next ${unit}`} onClick={onNext}><Ico icon={ChevronRight} /></button>
       <span className="cal-range">{label}{isToday && <span className="pv-pill pv-p-booked">Today</span>}</span>
       {showKey ? <Key /> : <span className="cal-gap" />}
-      <div className="cal-seg" role="group" aria-label="View">
+      <div ref={segRef} className="cal-seg" role="group" aria-label="View">
         {['week', 'day'].map(v => (
           <button key={v} type="button" className={view === v ? 'on' : undefined} aria-pressed={view === v} onClick={() => onView(v)}>{v === 'day' ? 'Day' : 'Week'}</button>
         ))}
@@ -581,8 +584,10 @@ function Agenda({ days, items, from, today, tz, nowMs, sample, onNext }) {
 }
 
 function Strip({ days, items, from, today, onPick, blank }) {
+  const stripRef = useRef(null)
+  useStretchPill(stripRef, { activeKey: from, selector: 'button.on' })
   return (
-    <nav className="ov-card cal-strip" aria-label="Pick a day">
+    <nav ref={stripRef} className="ov-card cal-strip" aria-label="Pick a day">
       {days.map(d => {
         const c = blank ? 0 : Math.min(3, items.filter(a => a.day === d).length)
         return (
