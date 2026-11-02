@@ -160,6 +160,7 @@ export default function TemplateFrame() {
           <span className="tp-tile"><NameIcon size={18} aria-hidden="true" /></span>
           <span className="tp-cg">{group}</span>
           <h1 className="tp-cn">{name}</h1>
+          <span className="tp-date"><i />Monday, November 2 · 2:14 PM</span>
           <button type="button" className="tp-theme" aria-label="Switch theme" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}</button>
         </div>
 

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { ShieldCheck, Clock3, TriangleAlert, ArrowRight, Check, Inbox } from 'lucide-react'
+import { ShieldCheck, ListChecks, Clock3, TriangleAlert, ArrowRight, Check, Inbox, Wrench } from 'lucide-react'
 import { useSampleOverview, useSampleActions } from '../data'
 import { Avatar, Chip, useNote } from '../kit'
 
@@ -16,7 +16,7 @@ function Chart({ days }) {
             <div key={d.day}>
               <b>{sum || ''}</b>
               {sum === 0 ? <span className="stack stub" /> : (
-                <span className="stack" style={{ height: `${(sum / max) * 100}px` }}>
+                <span className="stack" style={{ height: `${(sum / max) * 150}px` }}>
                   {SERIES.map(([k,, cls]) => d[k] > 0 && <i key={k} className={cls} style={{ flex: d[k] }} />)}
                 </span>
               )}
@@ -37,33 +37,20 @@ export default function Overview() {
   const go = useNavigate()
   const stepsDone = o.doneByDay.reduce((n, d) => n + d.packet + d.review + d.cancel + d.save, 0)
   const book = [
-    ['Protected', o.book.protected, 'protected', 'var(--ov-st-cancelled)', 'Policies in force'],
-    ['Setting up', o.book.settingUp, 'setting_up', 'var(--ov-data-a)', 'A step with a date'],
-    ['Needs attention', o.book.needsAttention, 'needs_attention', 'var(--ov-warn)', 'Waiting on you'],
-    ['Requests', o.book.requestsOpen, 'requests', 'var(--nt-purple)', 'Open changes'],
+    ['Protected', o.book.protected, 'protected', 'var(--ov-st-cancelled)', 'In force', ShieldCheck],
+    ['Setting up', o.book.settingUp, 'setting_up', 'var(--ov-data-a)', 'First 30 days', ListChecks],
+    ['Needs attention', o.book.needsAttention, 'needs_attention', 'var(--ov-warn)', 'See who and why', TriangleAlert],
+    ['Requests open', o.book.requestsOpen, 'requests', 'var(--nt-purple)', 'In progress', Wrench],
   ]
   return (
     <div className="tp-page">
-      <section className="ov-hero tp-hero">
-        <div>
-          <span className="ov-hero-chip"><i />{o.duty ? 'On duty' : 'Off duty'}</span>
-          <h2>Good afternoon, {o.name}</h2>
-          <p>{o.attention.length} {o.attention.length === 1 ? 'client needs' : 'clients need'} you, and {o.stepsOpen} steps are due this week.</p>
-        </div>
-        <div className="tp-hero-r">
-          <div className="tp-clock">2:14<small>PM</small></div>
-          <Link to="/submit" className="tp-white">Submit a sale<ArrowRight size={18} /></Link>
-        </div>
-      </section>
-
-      <section aria-label="Your book">
-        <div className="tp-sec"><h2 className="tp-h2">Your book</h2><span className="tp-sub tp-grow">Where your clients stand</span><span className="tp-sub">Sample info</span></div>
-        <div className="tp-g4">
-          {book.map(([label, n, stage, color, sub]) => (
-            <Link key={stage} to={`/clients?stage=${stage}`} className="ov-card ov-link tp-stat">
-              <span className="tp-ic" style={{ color, background: `color-mix(in srgb, ${color} 16%, transparent)` }}><ShieldCheck size={18} /></span>
-              <span className="tp-grow"><b>{label}</b><small>{sub}</small></span>
-              <span className="tp-num">{n}</span>
+      <section className="tp-head" aria-label="Your book">
+        <h2 className="tp-h1"><span>Good afternoon, {o.name}</span><span className="dim">{o.stepsOpen} steps due this week</span></h2>
+        <div className="tp-chips">
+          {book.map(([label, n, stage, color, sub, Icon]) => (
+            <Link key={stage} to={`/clients?stage=${stage}`} className="ov-card ov-link tp-chipcard" style={{ '--c': color }}>
+              <span className="tp-row"><span className="tp-chip-ic"><Icon size={16} /></span><b className="tp-grow">{label}</b></span>
+              <span className="tp-row"><span className="tp-num" style={{ fontSize: 40 }}>{n}</span><span className="tp-badge">{sub}</span></span>
             </Link>
           ))}
         </div>
@@ -73,7 +60,7 @@ export default function Overview() {
         <div className="tp-stack">
           {o.attention.length > 0 ? (
             <section className="ov-attn tp-card" aria-label="Needs your attention">
-              <div className="tp-row"><span className="tp-ic warn"><TriangleAlert size={16} /></span><h2 className="tp-h2 tp-grow">Needs your attention</h2><span className="tp-tb">{o.attention.length}</span></div>
+              <div className="tp-row"><span className="tp-ic warn"><TriangleAlert size={16} /></span><h2 className="tp-h2 tp-grow">Needs your attention</h2><Link to="/clients?stage=needs_attention" className="tp-link">See all in Clients<ArrowRight size={14} /></Link><span className="tp-tb">{o.attention.length}</span></div>
               <ul className="tp-list">
                 {o.attention.map(c => (
                   <li key={c.id} className="tp-li">
