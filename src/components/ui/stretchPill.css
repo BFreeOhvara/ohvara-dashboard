@@ -1,0 +1,11 @@
+/* The stretchy pill (useStretchPill). Every class here exists only during a flight: at rest the selected button
+   draws its own look from its own CSS, and a row carries none of these. */
+.sp-row { position: relative; isolation: isolate; }
+.sp-flying, .sp-flying * { transition: none !important; }
+.sp-flying > :not(.sp-pill) { position: relative; z-index: 1; }
+/* The important flags are needed to beat each row's own selected rule; the border width stays, so sizes do not move. */
+.sp-flying .sp-target { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+
+.sp-pill { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.sp-layer { position: absolute; inset: 0; }
+.sp-land { position: absolute; box-sizing: border-box; opacity: 0; }

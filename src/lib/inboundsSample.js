@@ -77,3 +77,10 @@ export function buildSample(now = Date.now()) {
   leads.sort((a, b) => new Date(b.delivered_at) - new Date(a.delivered_at))
   return { leads, events }
 }
+
+// One sample lead and its timeline rows for the detail page, from buildSample()'s result. An id that is
+// not in the sample gives { lead: null, events: [] }.
+export function sampleLead(sample, id) {
+  const lead = sample?.leads?.find(x => x.lead_id === id) || null
+  return { lead, events: (lead && sample.events.get(id)) || [] }
+}
