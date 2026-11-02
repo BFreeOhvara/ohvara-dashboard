@@ -42,7 +42,10 @@
 -- is never recreated, because the index covers every status. An agent's own annual_review
 -- or conversion request (requested_by agent) isn't covered and stays allowed.
 --
--- Who can write servicing_tasks: the writers named in 206, plus servicing_month12_sweep.
+-- Who can write servicing_tasks: servicing_seed_steps (called by agent_submit_deal and
+-- set_inbound_outcome), agent_submit_service_request, fulfillment_schedule_request,
+-- fulfillment_finish_request, the va_servicing_* functions, agent_servicing_clear_sent,
+-- servicing_month12_sweep and the service role.
 
 -- ── 1. Guard ────────────────────────────────────────────────────────────────
 do $$
@@ -140,7 +143,7 @@ revoke all on function public.servicing_month12_sweep() from public, anon, authe
 
 -- ── 5. Who writes the table ─────────────────────────────────────────────────
 comment on table public.servicing_tasks is
-  'Every servicing step and every request on a client. Written only by set_inbound_outcome, agent_submit_service_request, agent_submit_deal, fulfillment_schedule_request, fulfillment_finish_request, the va_servicing_* functions, agent_servicing_clear_sent, servicing_month12_sweep and the service role. A request doesn''t count against the weekly cap.';
+  'Every servicing step and every request on a client. Written only by servicing_seed_steps (called by agent_submit_deal and set_inbound_outcome), agent_submit_service_request, fulfillment_schedule_request, fulfillment_finish_request, the va_servicing_* functions, agent_servicing_clear_sent, servicing_month12_sweep and the service role. A request doesn''t count against the weekly cap.';
 
 -- ── 6. Cron ─────────────────────────────────────────────────────────────────
 select cron.unschedule(jobid) from cron.job where jobname = 'servicing-month12-sweep';
