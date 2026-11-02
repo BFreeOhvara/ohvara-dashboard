@@ -147,7 +147,7 @@ select is(public.set_inbound_outcome('dddddddd-dddd-4ddd-8214-000000000001', 'so
 select is(public.set_inbound_outcome('dddddddd-dddd-4ddd-8214-000000000002', 'sold'), 'sold', 'sold2 A marks the lead that stays unlinked sold');
 select public.p_m12_owner();
 select is((select count(*) from public.servicing_tasks where lead_id = 'dddddddd-dddd-4ddd-8214-000000000001' and policy_id is null), 14::bigint,
-          'sold3 its 14 seeds (packet check, review call, 12 chargeback watches since 212) have a null policy_id');
+          'sold3 its 14 seeds (packet_check, review_call, 12 chargeback_watch) have a null policy_id');
 
 select public.p_m12_policy('SoldLinked', (current_date - interval '13 months')::date);
 update public.leads set client_policy_id = (select id from public.policies where client_last_name = 'SoldLinked')
