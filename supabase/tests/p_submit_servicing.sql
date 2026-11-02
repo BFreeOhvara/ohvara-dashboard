@@ -71,11 +71,12 @@ exception when others then
 end
 $f$;
 
+-- Only the first deal has a number: since 212 the same number again is a retry.
 create function public.p_submit_no(p_who text) returns uuid language sql as $f$
   select public.agent_submit_deal(
     p_first => 'No', p_last => p_who, p_phone => '5125550100', p_city => 'Austin', p_state => 'TX',
     p_timezone => 'America/Chicago', p_new_carrier => 'dddddddd-dddd-4ddd-8ddd-000000000002',
-    p_policy_number => 'NEW-1', p_replaced => false, p_best_time => 'morning', p_sms_consent => true)
+    p_policy_number => case when p_who = 'Deal' then 'NEW-1' end, p_replaced => false, p_best_time => 'morning', p_sms_consent => true)
 $f$;
 
 -- A slot n half hours after noon tomorrow on the client's clock.
