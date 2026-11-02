@@ -2,19 +2,20 @@
 --
 -- NOT APPLIED. Written from a worktree; applying it is a separate, checked step.
 -- Additive: one app_settings column, two indexes, one trigger, five new functions, and
--- va_queue, va_claim and va_set_lead_outcome replaced, each copied whole from 175 (their
--- newest version) with its grants re-stated. No table is added. It is all data: nothing
--- here sends a text, email or call, and no switch moves. No screen and no edge function
--- changes. Live Calls (policy_help) and other lead types behave exactly as today: every
--- new behaviour needs lead_type = 'mortgage_protection'.
+-- three functions replaced, each copied whole from its newest version with its grants
+-- re-stated: va_queue from 175, va_claim and va_set_lead_outcome from 211. No table is
+-- added. It is all data: nothing here sends a text, email or call, and no switch moves. No
+-- screen and no edge function changes. Live Calls (policy_help) and other lead types behave
+-- exactly as today: every new behaviour needs lead_type = 'mortgage_protection'.
 --
 -- Why: an appointment lead nobody reached comes back to the VA desk on a set schedule
 -- (day 0, 1, 3, 7, then monthly), and a no-show gets a rebook in the agent's hours, twice
 -- at most. Before this, 175's va_queue showed a not_reached lead at once with no schedule
 -- and nothing wrote a no-show.
 --
--- APPLY ORDER: after 175, 180, 184, 186 and 197. The check below stops the whole file if
--- any of them is missing.
+-- APPLY ORDER: after 175, 180, 184, 186, 197 and 211. The check below stops the whole file
+-- if any of them is missing. 211 counts because its va_claim and va_set_lead_outcome are
+-- the versions copied here, and they call its functions.
 --
 -- ── How VA steps stay apart from lead-workflow-sms ──────────────────────────
 -- Both write scheduled rows to inbound_events. These rows stay out of its way:
@@ -95,6 +96,10 @@ begin
   if to_regclass('public.agent_working_hours') is null
      or to_regprocedure('public.agent_in_working_hours(uuid, timestamptz)') is null then
     raise exception '213 needs 197_agent_settings applied first';
+  end if;
+  if to_regprocedure('public.lead_transfer_missed(uuid)') is null
+     or to_regprocedure('public.agents_slots_in_hours(uuid, timestamp with time zone[])') is null then
+    raise exception '213 needs 211_transfer_missed applied first';
   end if;
 end $$;
 
@@ -531,8 +536,8 @@ revoke execute on function public.va_queue() from public, anon;
 grant execute on function public.va_queue() to authenticated;
 
 -- ── 8. Claim ────────────────────────────────────────────────────────────────
--- 175, copied whole. Changed: the same agent and bucket test as va_queue, so whatever the
--- queue shows can be claimed. The claim test stays.
+-- 211, copied whole. Changed: the same agent and bucket test as va_queue, so whatever the
+-- queue shows can be claimed. 211's missed-lead line and the claim test stay.
 -- One update with the claim test in its WHERE, so two VAs can't both win: the
 -- second waits on the row lock, re-checks the WHERE against the first VA's
 -- claim and updates nothing. Claiming your own lead again renews it (the desk
@@ -559,18 +564,19 @@ begin
          va_claim_expires_at = now() + interval '15 minutes'
    where l.id = p_lead
      and l.lead_type <> 'cancellation'
-     and case when l.lead_type = 'mortgage_protection'
-               and l.va_outcome is distinct from 'callback'
-               and exists (select 1 from public.inbound_events e
-                            where e.lead_id = l.id and e.state = 'scheduled' and e.detail ? 'va_step')
-              then exists (select 1 from public.inbound_events e
-                            where e.lead_id = l.id and e.state = 'scheduled' and e.detail ? 'va_step'
-                              and e.at <= now())
-              else l.assigned_rep_id is null
-                   and (l.va_outcome is null
-                        or l.va_outcome = 'not_reached'
-                        or (l.va_outcome = 'callback' and l.va_callback_at <= now()))
-         end
+     and (case when l.lead_type = 'mortgage_protection'
+                and l.va_outcome is distinct from 'callback'
+                and exists (select 1 from public.inbound_events e
+                             where e.lead_id = l.id and e.state = 'scheduled' and e.detail ? 'va_step')
+               then exists (select 1 from public.inbound_events e
+                             where e.lead_id = l.id and e.state = 'scheduled' and e.detail ? 'va_step'
+                               and e.at <= now())
+               else l.assigned_rep_id is null
+                    and (l.va_outcome is null
+                         or l.va_outcome = 'not_reached'
+                         or (l.va_outcome = 'callback' and l.va_callback_at <= now()))
+          end
+          or public.lead_transfer_missed(l.id))
      and (l.va_claimed_by is null
           or l.va_claimed_by = v_uid
           or l.va_claim_expires_at is null
@@ -594,15 +600,9 @@ revoke execute on function public.va_claim(uuid) from public, anon;
 grant execute on function public.va_claim(uuid) to authenticated;
 
 -- ── 9. Record the result ────────────────────────────────────────────────────
--- 175, copied whole. Changed: two declared variables and one block after the update.
--- Needs the caller's live claim (admin needs none) and ends it. p_outcome:
---   not_reached     back in the queue as not reached
---   callback        back in the queue when p_callback_at comes (within 90 days)
---   booked          p_agent required; p_booking_id is the policies row the
---                   booking made for that agent (optional)
---   transferred     p_agent required; transfer_status 'requested'
---   not_interested  off the queue
--- p_outcome defaults to 'booked' so 170's call (p_lead, p_agent) still works.
+-- 211, copied whole. Changed: two declared variables and one block after the update.
+-- The time is the booking row's: this function has no time argument, and a booked
+-- outcome with no booking row has no time to check.
 create or replace function public.va_set_lead_outcome(
   p_lead uuid, p_agent uuid default null, p_outcome text default 'booked',
   p_callback_at timestamptz default null, p_booking_id uuid default null,
@@ -614,6 +614,7 @@ set search_path to 'public'
 as $$
 declare
   v_uid uuid := auth.uid();
+  v_at  timestamptz;
   v_monthly_seq int;
   v_monthly_cycle int;
 begin
@@ -642,6 +643,17 @@ begin
     select 1 from public.policies where id = p_booking_id and agent_id = p_agent
   )) then
     raise exception 'That booking is not on the agent''s calendar' using errcode = '22023';
+  end if;
+  if p_booking_id is not null then
+    select scheduled_call_at into v_at from public.policies where id = p_booking_id;
+    if v_at is not null and not exists (select 1 from public.agents_slots_in_hours(p_agent, array[v_at])) then
+      if not exists (select 1 from public.agent_working_hours where agent_id = p_agent) then
+        raise exception 'This agent hasn''t set working hours yet, so nothing can be booked with them.'
+          using errcode = '22023', hint = 'working_hours';
+      end if;
+      raise exception 'That''s outside this agent''s working hours. Pick another time.'
+        using errcode = '22023', hint = 'working_hours';
+    end if;
   end if;
   if p_checklist is not null and jsonb_typeof(p_checklist) <> 'object' then
     raise exception 'Checklist answers must be an object' using errcode = '22023';
