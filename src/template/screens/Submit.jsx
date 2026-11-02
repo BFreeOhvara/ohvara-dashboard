@@ -76,7 +76,7 @@ export default function Submit() {
           <datalist id="tp-carriers"><option value="Northfield Mutual" /><option value="Harborline Life" /><option value="Pinecrest Assurance" /></datalist>
           <Pending>Texting consent wording pending</Pending>
         </section>
-        <aside className="ov-card tp-card tp-stack">
+        <div className="ov-card tp-card tp-stack">
           <h2 className="tp-h2">Booking summary</h2>
           <p className="tp-mid">{f.name || 'New client'}<br /><span className="tp-sub">{f.name ? f.phone || 'Add their number' : 'Add their name and number'}</span></p>
           <p className="tp-sub">The team sets the review call. <SampleTag>Sample plan</SampleTag></p>
@@ -84,7 +84,7 @@ export default function Submit() {
           <button type="button" className="ov-hero tp-primary" disabled={capped} onClick={send}>Submit sale</button>
           <button type="button" className="tp-btn ov-ghost" onClick={() => setMode('choose')}>Back</button>
           <p className="tp-sub">{used} of {cap} used this week</p>
-        </aside>
+        </div>
       </div>
     </div>
   )

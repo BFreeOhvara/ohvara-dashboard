@@ -32,11 +32,12 @@ export default function Signup() {
           <Field label="Email"><input className={bad('email') ? 'tp-danger' : ''} type="email" value={f.email} onChange={set('email')} autoComplete="email" placeholder="you@example.com" /></Field>
           <Field label="Password"><input className={bad('password') ? 'tp-danger' : ''} type="password" value={f.password} onChange={set('password')} autoComplete="new-password" /></Field>
           <div className="tp-stack" role="radiogroup" aria-label="Plan">
-            {data.plans.map(p => (
-              <button key={p.key} type="button" role="radio" aria-checked={plan === p.key} className={`tp-plan${plan === p.key ? ' on' : ''}`} onClick={() => setPlan(p.key)}>
-                <span className="tp-grow"><b>{p.label}</b><p className="tp-sub">{p.sub}</p></span><span><Money v={p.weekly} cents={false} /><small className="tp-sub"> / week</small></span><SampleTag />
-              </button>
-            ))}
+            {data.plans.map(p => {
+              const body = <><span className="tp-grow"><b>{p.label}</b><p className="tp-sub">{p.sub}</p></span><span><Money v={p.weekly} cents={false} /><small className="tp-sub"> / week</small></span><SampleTag /></>
+              return plan === p.key
+                ? <div key={p.key} role="radio" aria-checked="true" className="tp-plan on">{body}</div>
+                : <button key={p.key} type="button" role="radio" aria-checked="false" className="tp-plan" onClick={() => setPlan(p.key)}>{body}</button>
+            })}
           </div>
           <ul className="tp-list">{data.covers.map(c => <li key={c} className="tp-row tp-sub" style={{ minHeight: 26 }}><Check size={14} />{c}</li>)}</ul>
           <label className="tp-check"><input type="checkbox" checked={agree} onChange={e => setAgree(e.target.checked)} /><span>Agreement checkbox, wording pending</span></label>

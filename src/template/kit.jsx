@@ -61,11 +61,13 @@ export const Pending = ({ children = 'Consent wording pending' }) => <p classNam
 export function Seg({ options, value, onChange, label }) {
   return (
     <div className="tp-seg" role="tablist" aria-label={label}>
-      {options.map(o => (
-        <button type="button" role="tab" key={o.key} aria-selected={value === o.key} className={value === o.key ? 'on' : ''} onClick={() => onChange(o.key)}>
+      {options.map(o => (value === o.key ? (
+        <span role="tab" key={o.key} aria-selected="true" className="on">{o.label}{o.count != null && <b>{o.count}</b>}</span>
+      ) : (
+        <button type="button" role="tab" key={o.key} aria-selected="false" onClick={() => onChange(o.key)}>
           {o.label}{o.count != null && <b>{o.count}</b>}
         </button>
-      ))}
+      )))}
     </div>
   )
 }

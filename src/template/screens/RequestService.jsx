@@ -12,7 +12,7 @@ export default function RequestService() {
   const note = useNote()
   const [q, setQ] = useState('')
   const [pick, setPick] = useState(null)
-  const [kind, setKind] = useState(KINDS[0])
+  const [kind, setKind] = useState(null)
   const [text, setText] = useState('')
   const [best, setBest] = useState('Mornings')
   const [sent, setSent] = useState(false)
@@ -41,12 +41,12 @@ export default function RequestService() {
           <Field label="Note for the team"><textarea value={text} onChange={e => setText(e.target.value)} placeholder="What needs doing" /></Field>
           <div><p className="tp-sub" style={{ marginBottom: 6 }}>Best time to reach them. Client's local time.</p><Seg label="Best time" value={best} onChange={setBest} options={['Mornings', 'Afternoons', 'Evenings'].map(x => ({ key: x, label: x }))} /></div>
         </section>
-        <aside className="ov-card tp-card tp-stack">
+        <div className="ov-card tp-card tp-stack">
           <h2 className="tp-h2">Request summary</h2>
-          <p className="tp-mid">{pick ? `${pick.client_first_name} ${pick.client_last_name}` : 'No client picked yet'}<br /><span className="tp-sub">{kind}</span></p>
-          <button type="button" className="ov-hero tp-primary" disabled={!pick} onClick={() => { submitRequest({ name: `${pick.client_first_name} ${pick.client_last_name}`, kind }); setSent(true); note('Request sent to the team') }}>Send request</button>
+          <p className="tp-mid">{pick ? `${pick.client_first_name} ${pick.client_last_name}` : 'No client picked yet'}<br /><span className="tp-sub">{kind || 'Pick what needs doing'}</span></p>
+          <button type="button" className="ov-hero tp-primary" disabled={!pick || !kind} onClick={() => { submitRequest({ name: `${pick.client_first_name} ${pick.client_last_name}`, kind }); setSent(true); note('Request sent to the team') }}>Send request</button>
           <p className="tp-sub">Does not use a submission.</p>
-        </aside>
+        </div>
       </div>
     </div>
   )

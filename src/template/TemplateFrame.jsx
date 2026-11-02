@@ -116,7 +116,7 @@ export default function TemplateFrame() {
 
   return (
     <div className="tp tp-app">
-      <aside className="tp-rail" aria-label="Account">
+      <div className="tp-rail" role="complementary" aria-label="Account">
         <Link to="/" className="tp-logo" aria-label="Ohvara home">O</Link>
         <NavLink to="/billing" className="tp-ri"><CreditCard size={20} aria-hidden="true" />Billing</NavLink>
         <NavLink to="/settings" className="tp-ri"><Settings size={20} aria-hidden="true" />Settings</NavLink>
@@ -129,7 +129,7 @@ export default function TemplateFrame() {
           <small>Resets Mon</small>
         </Link>
         <Link to="/settings" className="tp-me" aria-label="Your profile">DW</Link>
-      </aside>
+      </div>
 
       <div className="tp-col">
         <div className="tp-top">
