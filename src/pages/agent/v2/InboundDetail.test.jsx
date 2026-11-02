@@ -60,6 +60,13 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 
+describe('lead card', () => {
+  it('shows the lead name in the page itself, since the phone header has no name', async () => {
+    mount()
+    expect((await screen.findByRole('heading', { name: 'Denise Walker' })).tagName).toBe('H2')
+  })
+})
+
 describe('outcome card', () => {
   it('Sold saves at once with only the old arguments, then offers Submit for servicing with the id-only link', async () => {
     mount()
