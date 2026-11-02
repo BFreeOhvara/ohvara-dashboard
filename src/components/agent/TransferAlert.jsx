@@ -3,17 +3,22 @@ import { createPortal } from 'react-dom'
 import { PhoneIncoming } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAgentDuty } from '../../hooks/useAgentDuty'
-import { transferWatch, myIncomingTransfer, playRing, audioContext } from '../../lib/transferAlert'
+import { transferWatch, myIncomingTransfer, playRing, audioContext, acceptTransfer, cantTakeTransfer, answerOnce } from '../../lib/transferAlert'
 
 // Live-transfer alert, mounted once per screen (DashboardLayout on desktop, PhoneShell on a phone). While the agent is Active and the tab
 // is visible it asks my_incoming_transfer() every 4s; a row rings the portal and shows this
 // over the page while help-transfer calls their phone. Portaled to <body> because .page-enter
 // keeps a transform that would trap position: fixed (Gotchas). Inactive: no polls, no ring.
+// Accept only records that the agent saw it; the call itself is answered on the phone, and a
+// leg nobody answers is logged as missed on the server (help-voice), with or without this screen.
 export function TransferAlert() {
   const { on } = useAgentDuty()
   const [row, setRow] = useState(null)
   const watch = useRef(null)
   const btn = useRef(null)
+  const answerRef = useRef(null)
+  if (!answerRef.current) answerRef.current = answerOnce({ close: () => watch.current?.dismiss() })
+  const answer = answerRef.current
 
   useEffect(() => {
     const w = transferWatch({ fetchRow: () => myIncomingTransfer(supabase), ring: playRing, onChange: setRow, doc: document })
@@ -43,7 +48,10 @@ export function TransferAlert() {
         </div>
         <h2 id="pv-ta-title">Live call for you: {row.caller_label || 'New caller'}.</h2>
         <p id="pv-ta-text">We&rsquo;re calling your phone now. Pick up.</p>
-        <button ref={btn} type="button" className="ov-hero-btn pv-ta-btn" onClick={() => watch.current?.dismiss()}>Dismiss</button>
+        <div className="pv-ta-btns">
+          <button ref={btn} type="button" className="ov-hero-btn pv-ta-btn" onClick={() => answer(r => acceptTransfer(supabase, r), row)}>Accept</button>
+          <button type="button" className="pv-ta-btn pv-ta-decline" onClick={() => answer(r => cantTakeTransfer(supabase, r), row)}>Can&rsquo;t take it</button>
+        </div>
       </section>
     </>,
     document.body,

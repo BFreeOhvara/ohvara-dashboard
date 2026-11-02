@@ -59,6 +59,10 @@ const store: Store = {
     const { error } = await admin.from('leads').update({ transfer_status: status }).eq('id', leadId)
     if (error) throw error
   },
+  async logMissedTransfer(callSid) {
+    const { error } = await admin.rpc('log_missed_transfer', { p_call_sid: callSid })
+    if (error) throw error
+  },
 }
 
 Deno.serve(req => handle(req, store, SID && TOKEN ? twilioClient(SID, TOKEN) : null, {
