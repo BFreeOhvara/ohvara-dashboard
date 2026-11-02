@@ -1,8 +1,12 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Inbox, Info, ChevronRight, ChevronDown, Check, Clock, Phone, PenLine, Zap, CalendarDays, ArrowRight } from 'lucide-react'
+import { Switch } from '../../../components/ui/Switch'
 import { useAuth } from '../../../hooks/useAuth'
 import { useInbounds, useInboundEvents } from '../../../hooks/useInbounds'
+import { useAgentDuty } from '../../../hooks/useAgentDuty'
+import { dutySince } from '../../../lib/duty'
+import { isFollowUpDue } from '../../../lib/leadOutcomes'
 import { PortalV2Layout, Ico, Pill, Skel, ErrorCard } from '../../../components/agent/PortalV2Nav'
 import GetInboundsSlot from '../../../components/agent/GetInboundsSlot'
 import {
@@ -81,6 +85,7 @@ function Card({ l, appt, evs, tz }) {
     <Link className="pv-icard inb-card" to={`/agent/inbounds/${l.lead_id}`}>
       <h4>{leadName(l)}</h4>
       <p className="pv-sub">{cardSub(l, appt, tz)}</p>
+      {isFollowUpDue(l) && <span className="pv-chip sch inb-due">Follow up due</span>}
       {!done && <p className={`pv-next${nx.up ? ' up' : ''}`}><Ico icon={NIcon} size={14} />{nx.text}</p>}
       {l.inbound_stage === 'follow_up' && nx.kind === 'clock' && nx.text !== 'Follow up' && <p className="pv-next up"><Ico icon={Clock} size={14} />{nx.text}</p>}
     </Link>
@@ -223,7 +228,7 @@ function LiveLog({ list, evMap, tz }) {
             return (
               <Link key={l.lead_id} className="pv-log-row" to={`/agent/inbounds/${l.lead_id}`}>
                 <span className="when">{when}</span>
-                <div className="who"><h4>{leadName(l)}</h4>{phoneDisplay(l.phone) && <p className="pv-sub">{phoneDisplay(l.phone)}</p>}</div>
+                <div className="who"><h4>{leadName(l)}</h4>{phoneDisplay(l.phone) && <p className="pv-sub">{phoneDisplay(l.phone)}</p>}{isFollowUpDue(l) && <span className="pv-chip sch inb-due">Follow up due</span>}</div>
                 <div className="what">{r && <Pill tone={r.pill}>{r.label}</Pill>}<span>{what(l, appointmentAt(evMap.get(l.lead_id)), tz)}</span></div>
                 <span className="out"><Pill tone={otone}>{otext}</Pill></span>
                 <span className="rsub">{when}</span>
@@ -261,6 +266,27 @@ function InbTab({ to, on, live, icon, name, n, line }) {
     <Link to={to} className={`inb-tab${live ? ' live' : ''}${on ? ' on' : ''}`} aria-current={on ? 'page' : undefined}>
       <Ico icon={icon} size={20} /><span className="nm">{name}</span><span className="n tab">{n}</span><span className="ln">{line}</span>
     </Link>
+  )
+}
+
+// The agent's Active switch for live transfers (agent_duty, migration 174), the same hook as Today and Settings, so all
+// agree. Compact, with its own loading, failed, coming-soon and save-failed words.
+function DutySwitch({ tz }) {
+  const { on, since, soon, loading, failed, saveFailed, saving, toggle } = useAgentDuty()
+  const live = !loading && !soon && !failed
+  const sub = loading ? 'Checking…' : soon ? 'Coming soon. Until then, live calls are booked for you.'
+    : failed ? 'Couldn’t check right now. Refresh to try again.'
+      : on ? (since ? `Active since ${dutySince(since, new Date(), tz)}. Calls can come to you.` : 'You’re active. Calls can come to you.')
+        : 'Not active. Calls are booked on your calendar.'
+  return (
+    <section className="ov-card inb-duty" aria-label="Live call transfers" aria-busy={loading}>
+      <span className="pv-tile"><Ico icon={Zap} size={20} /></span>
+      <div className="pv-grow"><h3>Active for live calls</h3><p className="pv-sub">{sub}</p></div>
+      {loading ? <Skel w={44} h={24} style={{ borderRadius: 12 }} /> : (
+        <Switch checked={on} disabled={!live || saving} onChange={next => toggle(next)} label={soon ? 'Active for live call transfers (coming soon)' : 'Active for live call transfers'} />
+      )}
+      {saveFailed && <p className="pv-inline-err inb-duty-err" role="alert"><span>Couldn’t save that. Try again.</span></p>}
+    </section>
   )
 }
 
@@ -335,15 +361,18 @@ export default function Inbounds() {
 
         {isEmpty && <StartHero />}
 
-        <nav className="inb-tabs" aria-label="Lead type">
-          <InbTab to={tabTo('booked', params)} on={tab === 'booked'} icon={CalendarDays} name="Booked appointments" n={nA} line={lineA} />
-          <InbTab to={tabTo('live', params)} on={tab === 'live'} live icon={Phone} name="Live calls" n={nB} line={lineB} />
-        </nav>
+        <div className="inb-top">
+          <nav className="inb-tabs" aria-label="Lead type">
+            <InbTab to={tabTo('booked', params)} on={tab === 'booked'} icon={CalendarDays} name="Booked appointments" n={nA} line={lineA} />
+            <InbTab to={tabTo('live', params)} on={tab === 'live'} live icon={Phone} name="Live calls" n={nB} line={lineB} />
+          </nav>
+          <DutySwitch tz={tz} />
+        </div>
 
         {tab === 'booked' ? (
           <Explainer key={`booked-${isEmpty}`} id="booked" title="How booked appointments work" sub="6 steps, from the form to your calendar"
             steps={BOOKED_STEPS} cols="six" forceOpen={isEmpty}
-            part="show up to the appointment, then mark it Sold, Follow up or Not interested. Sold makes them your client and servicing starts." />
+            part="show up to the appointment, then mark it Sold, Follow up or Not interested. Sold records the outcome; submit it for servicing when you are ready." />
         ) : (
           <Explainer key={`live-${isEmpty}`} id="live" title="How live calls work" sub="4 steps, from the call to you"
             steps={LIVE_STEPS} cols="four" forceOpen={isEmpty}

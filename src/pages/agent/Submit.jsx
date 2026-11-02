@@ -2,6 +2,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight, Check, CalendarClock, ChevronRight, CreditCard, FileUp, LifeBuoy, TriangleAlert } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useSubmitLive } from '../../hooks/useAppSettings'
+import { useInbounds } from '../../hooks/useInbounds'
+import { leadById, dealPrefill } from '../../lib/leadOutcomes'
 import { useBillingTiers, useWeeklyUsage } from '../../hooks/useBillingTiers'
 import { capState, nextTier, formatReset, formatWeekly } from '../../lib/billing'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
@@ -44,9 +46,31 @@ export default function Submit() {
 
 const toChooser = navigate => () => navigate('/agent/submit')
 
+// ?lead=<id> (from a Sold lead's Submit for servicing button) fills the client fields from that lead. The lead is
+// read by id from the agent's own list (the database returns only their leads), so another agent's or an unknown id
+// fills nothing. The URL never carries a name, phone or state.
 function DealPage() {
   const navigate = useNavigate()
-  return <SubmitDeal onBack={toChooser(navigate)} />
+  const [params] = useSearchParams()
+  const leadId = params.get('lead')
+  const inb = useInbounds({ enabled: !!leadId })
+  if (leadId && inb.isLoading) {
+    return (
+      <div className="ov-card" aria-busy="true" aria-label="Loading the lead" style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '20px 22px' }}>
+        <span className="ov-skel" style={{ display: 'block', width: '50%', height: 20 }} />
+        <span className="ov-skel" style={{ display: 'block', width: '100%', height: 44, borderRadius: 12 }} />
+      </div>
+    )
+  }
+  const prefill = leadId ? dealPrefill(leadById(inb.data, leadId)) : null
+  return (
+    <>
+      {leadId && inb.isError && (
+        <p role="status" style={{ margin: '0 0 12px', fontSize: 13.5, color: 'var(--ov-mute)' }}>We couldn’t load that lead, so the details are blank. Fill them in below.</p>
+      )}
+      <SubmitDeal onBack={toChooser(navigate)} prefill={prefill} />
+    </>
+  )
 }
 
 function RequestPage() {

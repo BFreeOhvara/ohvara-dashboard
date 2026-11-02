@@ -518,6 +518,52 @@
         "supabase/tests/p_agent_inbounds.sql"
       ],
       "notes": "Migration 212, not applied. policies.servicing_va_id and servicing_va_assigned_at, set by servicing_seed_steps through servicing_va_pick: same side, active, fewest live clients, longest since their last new client, then id. Every submitted deal, Yes and No, and a Sold lead whose policy has no owner. A re-run keeps the owner, no active VA leaves it null and the sale still succeeds, and an agent or VA cannot write it. Separate from assigned_fulfillment_id. No screen reads it yet."
+    },
+    {
+      "id": "leads.follow-up-date-reason",
+      "page": "Leads",
+      "title": "Lead page: Follow up takes a date (future only), Not interested takes a reason; a due follow up shows a chip in the list and on the page",
+      "status": "checking",
+      "files": [
+        "src/lib/leadOutcomes.js",
+        "src/lib/leadOutcomes.test.js",
+        "src/pages/agent/v2/InboundDetail.jsx",
+        "src/pages/agent/v2/InboundDetail.test.jsx",
+        "src/hooks/useInbounds.js",
+        "src/pages/agent/v2/Inbounds.jsx",
+        "src/pages/agent/v2/Inbounds.test.jsx",
+        "src/pages/agent/v2/portalV2.css",
+        "src/pages/agent/v2/inboundsExtra.css"
+      ],
+      "notes": "Needs migration 210 (not applied): set_inbound_outcome(p_lead, p_outcome, p_note, p_follow_up_at, p_reason) and agent_inbounds() follow_up_at, outcome_reason, follow_up_due. Until then Follow up and Not interested save with a plain note (\"isn't ready yet, nothing changed\") and no chip shows; Sold keeps working because it sends only the old arguments. Stubbed tests prove the page logic only, never live."
+    },
+    {
+      "id": "leads.sold-submit-prefill",
+      "page": "Leads",
+      "title": "Sold only records; Submit for servicing opens the deal form prefilled from the lead, by id",
+      "status": "checking",
+      "files": [
+        "src/pages/agent/v2/InboundDetail.jsx",
+        "src/pages/agent/Submit.jsx",
+        "src/pages/agent/SubmitDeal.jsx",
+        "src/lib/leadOutcomes.js",
+        "src/lib/leadOutcomes.test.js",
+        "src/pages/agent/v2/InboundDetail.test.jsx"
+      ],
+      "notes": "Button goes to /agent/submit?kind=deal&lead=<lead id>, no name, phone or state in the URL; hidden without a Servicing plan (has_servicing false and not comped). Submit reads the lead from the agent's own agent_inbounds() list; an unknown or another agent's id prefills nothing. Copy that said Sold makes them a client is gone. The deal form still needs submit_live on (Submit shows Book a call while it is off). Migration 210 unapplied."
+    },
+    {
+      "id": "leads.duty-on-page",
+      "page": "Leads",
+      "title": "Active switch for live transfers on the Leads page (same hook as Today and Settings)",
+      "status": "checking",
+      "files": [
+        "src/pages/agent/v2/Inbounds.jsx",
+        "src/pages/agent/v2/inboundsExtra.css",
+        "src/pages/agent/v2/Inbounds.test.jsx",
+        "src/hooks/useAgentDuty.js"
+      ],
+      "notes": "Compact card beside the Booked / Live tabs; writes only the agent's own agent_duty row. Says Coming soon with the switch off while agent_duty (migration 174) is missing. The lead page has no duty control. No live switch is touched."
     }
   ]
 }

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 import { byLead, isRecent, inboundActivityItems } from '../lib/inbounds'
+import { outcomeArgs } from '../lib/leadOutcomes'
 
 // Data for the v2 agent portal (migration 180). Reads go through agent_inbounds() and
 // RLS-limited selects; the agent's only writes are the two RPCs at the bottom. The lists
@@ -171,12 +172,14 @@ function refresh(qc, leadId) {
   if (leadId) qc.invalidateQueries({ queryKey: ['inbound-events', 'lead', leadId] })
 }
 
-// Sold / Follow up / Not interested. Resolves to the new inbound_stage.
+// Sold / Follow up / Not interested. Resolves to the new inbound_stage. Follow up passes followUpAt (an ISO
+// time) and Not interested passes reason (migration 210); Sold sends only the old arguments, so it works
+// before and after that migration is applied.
 export function useSetOutcome(leadId) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ outcome, note }) => {
-      const { data, error } = await supabase.rpc('set_inbound_outcome', { p_lead: leadId, p_outcome: outcome, p_note: note ?? null })
+    mutationFn: async input => {
+      const { data, error } = await supabase.rpc('set_inbound_outcome', outcomeArgs(leadId, input))
       if (error) throw error
       return data
     },

@@ -186,7 +186,7 @@ export function nextLine(l, evs, tz, nowMs = Date.now()) {
       if (step) return { kind: 'clock', text: step, up: true }
       return lastReminder ? { kind: 'check', text: `Reminder sent ${timeText(lastReminder.at, tz)}` } : { kind: 'check', text: 'On your calendar' }
     case 'met': return { kind: 'note', text: 'Mark the outcome', up: true }
-    case 'sold': return { kind: 'check', text: 'Now your client' }
+    case 'sold': return { kind: 'check', text: 'Sold' }
     case 'follow_up': return ns ? { kind: 'clock', text: `Call back ${upcomingWords(ns.at, tz, nowMs)}`, up: true } : { kind: 'clock', text: 'Follow up', up: true }
     case 'lost': return { kind: 'check', text: 'Not interested' }
     default: return step ? { kind: 'clock', text: step, up: true } : { kind: 'clock', text: 'Our VA calls within minutes', up: true }
@@ -198,7 +198,7 @@ export function cardSub(l, appt, tz, nowMs = Date.now()) {
   switch (l.inbound_stage) {
     case 'booked': return appt ? apptText(appt, tz, nowMs) : `Came in ${whenText(cameInAt(l), tz, nowMs)}`
     case 'met': return appt ? `Met ${whenText(appt, tz, nowMs)}` : 'Met'
-    case 'sold': return `${l.outcome_at ? dateText(l.outcome_at, tz) : 'Sold'} · now your client`
+    case 'sold': return l.outcome_at ? `${dateText(l.outcome_at, tz)} · sold` : 'Sold'
     case 'follow_up': return l.outcome_at ? `Marked ${dateText(l.outcome_at, tz)}` : 'Follow up'
     case 'lost': return `${l.outcome_at ? dateText(l.outcome_at, tz) : 'Closed'} · not interested`
     default: return `Came in ${whenText(cameInAt(l), tz, nowMs)}`
