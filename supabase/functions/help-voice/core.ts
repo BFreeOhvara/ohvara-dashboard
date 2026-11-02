@@ -60,6 +60,8 @@ export interface Store {
   // leads.transfer_status (175) on the call's lead: 'connected' once a person
   // answers the agent leg, 'dropped' when nobody does or the call ends alone.
   setLeadTransferStatus(leadId: string, status: 'connected' | 'dropped'): Promise<void>
+  // log_missed_transfer (211): one inbound_events 'missed' row per help call.
+  logMissedTransfer(callSid: string): Promise<void>
 }
 
 // trackingNumber: HELP_TRACKING_NUMBER (read-only config), the VA legs' From.
@@ -210,6 +212,14 @@ async function markLead(store: Store, row: HelpCall, status: 'connected' | 'drop
   }
 }
 
+// The agent's leg went unanswered. A failed write (211 not applied yet) is logged
+// and never breaks the call itself, the same as markLead.
+async function logMissed(store: Store, callSid: string) {
+  try { await store.logMissedTransfer(callSid) } catch (e) {
+    console.error('log missed transfer failed:', callSid, (e as Error).message)
+  }
+}
+
 // Who picked up the agent's phone leg (help-transfer turns machine detection
 // on there): the callback's AnsweredBy, else the call's answered_by.
 async function answeredBy(twilio: Twilio | null, sid: string, form: Record<string, string>) {
@@ -254,7 +264,7 @@ async function endIfAlone(store: Store, twilio: Twilio, row: HelpCall, confSid: 
 // _other, fax and unknown are voicemail or nobody, and so is no answer within
 // the leg's Timeout. Not answered: the leg is hung up and the row goes back to
 // no_answer (end_reason voicemail or no-answer), so the desk offers another
-// try or Book instead (Goal 9's fallback). Only while the row is
+// try or Book instead (Goal 9's fallback), and the miss is logged. Only while the row is
 // transferring, and only for the leg on the row (one from an earlier attempt
 // changes nothing).
 async function agentLeg(store: Store, twilio: Twilio | null, callSid: string, form: Record<string, string>, amd: boolean) {
@@ -283,6 +293,7 @@ async function agentLeg(store: Store, twilio: Twilio | null, callSid: string, fo
     if (!res || res.status >= 400) console.error('hang up agent leg failed:', leg, res?.status, res?.data?.message)
   }
   await markLead(store, back, 'dropped')
+  await logMissed(store, callSid)
   // The VA is already gone too: the caller would sit alone, so end the call.
   if (twilio) await endIfAlone(store, twilio, back, row.conference_sid, SID.test(leg) ? [leg] : [])
   return twiml()

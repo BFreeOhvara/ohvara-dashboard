@@ -20,10 +20,33 @@ export async function myIncomingTransfer(db) {
 // The alert's line. caller_label is a first name or 'New caller', never a number.
 export const alertText = row => `Live call for you: ${row?.caller_label || 'New caller'}. We're calling your phone now. Pick up.`
 
+// The agent's answer (migration 211). Accept only records that they saw it: the call
+// continues on their phone, and only Twilio's answered callback in help-voice marks it
+// connected. Can't take it logs the miss now; Twilio's no-answer finds it already logged.
+// A function that isn't in the database yet is the same as nothing to record.
+async function sendAnswer(db, fn, row) {
+  const { error } = await db.rpc(fn, { p_lead: row?.lead_id ?? null })
+  if (error && !isDutyMissing(error)) throw error
+}
+export const acceptTransfer = (db, row) => sendAnswer(db, 'agent_accept_transfer', row)
+export const cantTakeTransfer = (db, row) => sendAnswer(db, 'agent_missed_transfer', row)
+
+// One answer per call, however many taps; the alert always closes. A failed send is
+// dropped: Accept is only a record, and the server logs an unanswered leg by itself.
+export function answerOnce({ close }) {
+  const answered = new Set()
+  return async (send, row) => {
+    if (!row || answered.has(row.help_call_id)) return
+    answered.add(row.help_call_id)
+    try { await send(row) } catch { /* see above */ } finally { close() }
+  }
+}
+
 // Polls fetchRow every `every` ms, only while active and while the tab is visible. A row
 // shows the alert and starts ring() (which returns a stop function); the ring stops when the
 // row is gone, on dismiss, when the agent goes inactive, or after `ringFor` ms. A missing
-// function stops polling for good, silently. onChange(row | null) drives the view.
+// function stops polling for good, silently. onChange(row | null) drives the view. No timer
+// here marks a miss: `ringFor` only quiets the ring, and a hidden tab doesn't poll at all.
 export function transferWatch({ fetchRow, ring, onChange, doc, timers = globalThis, every = POLL_MS, ringFor = RING_MS }) {
   let active = false
   let missing = false

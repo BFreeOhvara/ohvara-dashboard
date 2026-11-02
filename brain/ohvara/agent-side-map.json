@@ -382,6 +382,68 @@
       "status": "checking"
     },
     {
+      "id": "leads.accept-missed-flow",
+      "page": "Leads",
+      "title": "Live transfer: Accept acknowledges only; a miss is logged on the server; Can't take it; VA books the next open slot",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/211_transfer_missed.sql",
+        "supabase/functions/help-voice/core.ts",
+        "supabase/functions/help-voice/index.ts",
+        "src/components/agent/TransferAlert.jsx",
+        "src/lib/transferAlert.js",
+        "src/pages/fulfillment/VaLeads.jsx",
+        "src/hooks/useVaDesk.js",
+        "supabase/tests/p_transfer_missed.sql"
+      ],
+      "notes": "migration 211 unapplied; help-voice deploy pending"
+    },
+    {
+      "id": "leads.working-hours-booking",
+      "page": "Leads",
+      "title": "VA bookings stay inside the agent's working hours",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/211_transfer_missed.sql",
+        "src/hooks/useVaDesk.js",
+        "src/components/fulfillment/VaDesk.jsx",
+        "supabase/tests/p_transfer_missed.sql",
+        "src/lib/transferMissedMigration.test.js"
+      ],
+      "notes": "migration 211 unapplied; help-voice deploy pending"
+    },
+    {
+      "id": "leads.live-transfer-call",
+      "page": "Leads",
+      "title": "Live transfer: ring the on-duty agent, human answer = transferred, a miss goes back to no_answer and is logged once",
+      "status": "checking",
+      "files": [
+        "supabase/functions/help-transfer/core.ts",
+        "supabase/functions/help-voice/core.ts",
+        "supabase/functions/help-transfer/core.test.ts",
+        "supabase/functions/help-voice/core.test.ts",
+        "src/lib/transferAlert.js",
+        "src/lib/transferAlert.test.js",
+        "src/lib/transferMissedMigration.test.js",
+        "supabase/migrations/182_my_incoming_transfer.sql",
+        "supabase/migrations/211_transfer_missed.sql"
+      ],
+      "notes": "Tests with Twilio stubbed (no call placed), in supabase/functions/help-transfer/core.test.ts, supabase/functions/help-voice/core.test.ts and src/lib/transferAlert.test.js: the agent leg has the 25 s timeout; the row TransferAlert polls appears while it rings and closes when answered or missed; only a human answer sets transferred; machine, fax, busy or no answer returns to no_answer and logs the miss once; the VA drop is refused unless status is transferred; Accept only acknowledges and never sets connected. Stubbed tests prove the logic only, never 'live'. Goes live only after migration 211 is applied and the voice_live test call."
+    },
+    {
+      "id": "leads.help-line-call",
+      "page": "Leads",
+      "title": "Help line: a call rings the VA browsers; nobody on duty gives no_answer (no_agent); book is refused after a transfer",
+      "status": "checking",
+      "files": [
+        "supabase/functions/help-voice/core.ts",
+        "supabase/functions/help-transfer/core.ts",
+        "supabase/functions/help-voice/core.test.ts",
+        "supabase/functions/help-transfer/core.test.ts"
+      ],
+      "notes": "Tests with Twilio stubbed (no call placed), in supabase/functions/help-voice/core.test.ts and supabase/functions/help-transfer/core.test.ts: the help line rings only the VA browser legs and voice_live off reaches nobody; nobody on duty gives no_answer with code no_agent and rings no one; book is refused once the call went to an agent (ringing, answered or finished). create-lead-call is retired (404) and has nothing to test. Stubbed tests prove the logic only, never 'live'. Goes live only after migration 211 is applied and the voice_live test call."
+    },
+    {
       "id": "activity.lapse-events",
       "page": "Activity",
       "title": "A lapse shows as its own row: Policy lapsed",

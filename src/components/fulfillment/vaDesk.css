@@ -192,3 +192,10 @@
   .va .va-btn { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .va-bar i { transition: none; } }
+
+/* Missed transfers, above the queue */
+.va-missed { padding: 10px; border-top: 1px solid var(--ov-line); display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.va-missed .nm { font-weight: 600; color: var(--ov-hi); overflow-wrap: anywhere; }
+.va-missed-slot { font-size: 14.5px; color: var(--ov-hi); }
+.va-missed-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.va-missed-btns .va-btn { flex: 1 1 120px; }

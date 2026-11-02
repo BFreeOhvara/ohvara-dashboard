@@ -343,5 +343,30 @@
       "Get the phone app",
       "Delete my account"
     ]
+  },
+  {
+    "name": "live-transfer-call tests, Twilio stubbed (help-transfer + help-voice, deno test): 43 passed, 0 failed",
+    "ok": true,
+    "detail": [
+      "supabase/functions/help-transfer/core.test.ts (16)",
+      "supabase/functions/help-voice/core.test.ts (27)",
+      "no real call placed; voice_live and sms_live untouched"
+    ]
+  },
+  {
+    "name": "live-transfer-call tests (npm test): TransferAlert poll, Accept acknowledge-only: 314 passed, 0 failed, 0 skipped",
+    "ok": true,
+    "detail": [
+      "src/lib/transferAlert.test.js (15)",
+      "map status stays checking: stubbed tests never justify live"
+    ]
+  },
+  {
+    "name": "help-line-call tests, Twilio stubbed: routes to VA browsers, no_agent, book refused after a transfer",
+    "ok": true,
+    "detail": [
+      "supabase/functions/help-voice/core.test.ts",
+      "supabase/functions/help-transfer/core.test.ts"
+    ]
   }
 ]

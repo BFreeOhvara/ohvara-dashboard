@@ -27,6 +27,7 @@ function world(over: {
   live?: boolean; vas?: string[]; rows?: HelpCall[]; legStatus?: Record<string, string>
   // conference SID -> who Twilio says is in it; answered_by per call SID.
   participants?: Record<string, Participant[]>; answeredBy?: Record<string, string>
+  logFails?: boolean
 } = {}) {
   const rows: HelpCall[] = over.rows ?? []
   const writes: any[] = []
@@ -34,6 +35,7 @@ function world(over: {
   const legStatus: Record<string, string> = over.legStatus ?? {}
   const participants: Record<string, Participant[]> = over.participants ?? {}
   const leads: Record<string, string> = {}
+  const missed: string[] = []
   let n = 0
   const row = (sid: string) => rows.find(r => r.call_sid === sid) ?? null
   const store: Store = {
@@ -64,6 +66,10 @@ function world(over: {
       writes.push(['lead', id, status])
       leads[id] = status
     },
+    async logMissedTransfer(sid) {
+      if (over.logFails) throw new Error('function not found')
+      missed.push(sid)
+    },
   }
   const twilio: Twilio = async (method, path, params) => {
     calls.push({ method, path, params })
@@ -81,7 +87,7 @@ function world(over: {
     }
     return { status: 200, data: {} }
   }
-  return { store, twilio, rows, writes, calls, participants, leads }
+  return { store, twilio, rows, writes, calls, participants, leads, missed }
 }
 
 async function signed(query: string, form: Record<string, string>, sig?: string) {
@@ -308,6 +314,66 @@ Deno.test('10. agent_leg: no-answer and busy go back to no_answer (agent_call_si
   const ended = world({ rows: [transferring({ status: 'ended', outcome: 'booked' })] })
   await handle(await signed('?event=agent_leg&call=CA123', { CallSid: 'CAag1', CallStatus: 'in-progress' }), ended.store, ended.twilio, ENV)
   assert.deepEqual([ended.rows[0].status, ended.rows[0].outcome], ['ended', 'booked'])
+})
+
+Deno.test('11. the miss: a no-answer leg logs once, a repeat or an earlier attempt logs nothing, a failed log keeps the call', async () => {
+  const noAnswer = (w: ReturnType<typeof world>, leg = 'CAag1') =>
+    signed('?event=agent_leg&call=CA123', { CallSid: leg, CallStatus: 'no-answer' }).then(r => handle(r, w.store, w.twilio, ENV))
+
+  const w = world({ rows: [transferring({ lead_id: 'lead-1' })] })
+  await noAnswer(w)
+  assert.deepEqual(w.missed, ['CA123'])
+  assert.deepEqual([w.rows[0].status, w.leads['lead-1']], ['no_answer', 'dropped'])
+  // Twilio retries the callback: the row already moved, so nothing more.
+  await noAnswer(w)
+  assert.deepEqual(w.missed, ['CA123'])
+
+  // A leg from an earlier attempt changes nothing and logs nothing.
+  const old = world({ rows: [transferring({ agent_call_sid: 'CAag2' })] })
+  await noAnswer(old)
+  assert.deepEqual(old.missed, [])
+  assert.equal(old.rows[0].status, 'transferring')
+
+  // No lead on the row yet: log_missed_transfer still gets the call, and finds the lead itself.
+  const unlinked = world({ rows: [transferring({ lead_id: null })] })
+  await noAnswer(unlinked)
+  assert.deepEqual(unlinked.missed, ['CA123'])
+
+  // Migration 211 not applied yet: the log fails, the call carries on.
+  const off = world({ rows: [transferring()], logFails: true })
+  const res = await noAnswer(off)
+  assert.equal(res.status, 200)
+  assert.equal(off.rows[0].status, 'no_answer')
+  noRealFetch()
+})
+
+Deno.test('12. answered logs no miss and sets transferred as today; a voicemail counts as a miss', async () => {
+  const w = world({ rows: [transferring({ lead_id: 'lead-1' })] })
+  await handle(await signed('?event=agent_leg&call=CA123', { CallSid: 'CAag1', CallStatus: 'in-progress' }), w.store, w.twilio, ENV)
+  assert.deepEqual(w.missed, [])
+  assert.deepEqual([w.rows[0].status, w.rows[0].outcome, w.leads['lead-1']], ['transferred', 'transferred', 'connected'])
+  assert.ok(w.rows[0].transferred_at)
+
+  const v = world({ rows: [transferring()] })
+  await handle(await signed('?event=agent_leg&call=CA123&amd=1', { CallSid: 'CAag1', CallStatus: 'in-progress', AnsweredBy: 'machine_start' }), v.store, v.twilio, ENV)
+  assert.deepEqual(v.missed, ['CA123'])
+  noRealFetch()
+})
+
+Deno.test('13. the other dropped paths log no miss: the caller leaves, or the VA leaves the caller alone', async () => {
+  const caller = world({ rows: [transferring({ lead_id: 'lead-1', conference_sid: 'CF9' })] })
+  await handle(await signed('?event=conf&call=CA123', { StatusCallbackEvent: 'participant-leave', CallSid: 'CA123', ConferenceSid: 'CF9' }), caller.store, caller.twilio, ENV)
+  assert.equal(caller.leads['lead-1'], 'dropped')
+  assert.deepEqual(caller.missed, [])
+
+  const va = world({
+    rows: [transferring({ lead_id: 'lead-1', conference_sid: 'CF9' })],
+    participants: { CF9: [{ call_sid: 'CA123', status: 'connected' }, { call_sid: 'CAva1', status: 'complete' }] },
+  })
+  await handle(await signed('?event=conf&call=CA123', { StatusCallbackEvent: 'participant-leave', CallSid: 'CAva1', ConferenceSid: 'CF9' }), va.store, va.twilio, ENV)
+  assert.equal(va.leads['lead-1'], 'dropped')
+  assert.deepEqual(va.missed, [])
+  noRealFetch()
 })
 
 Deno.test('8. nothing is ever recorded: helpConference and every response', async () => {
@@ -557,4 +623,74 @@ Deno.test('repeated participant-leave is a no-op', async () => {
   await leave(stray, 'CAva2')
   assert.equal(stray.calls.length, 0)
   noRealFetch()
+})
+
+// ── help-line-call and live-transfer-call (stubbed Twilio, no real calls) ──────────────────────
+
+Deno.test('help-line-call: a call to the help line rings only the VAs\' browsers, never a phone number or an agent', async () => {
+  const w = world({ vas: [VA1, VA2, 'not-a-uuid'] })
+  const xml = await (await handle(await signed('', CALLER), w.store, w.twilio, ENV)).text()
+  const rings = posts(w.calls)
+  // One browser leg per active VA (the malformed id is skipped); nothing else is dialed.
+  assert.deepEqual(rings.map(c => c.path), ['/Calls.json', '/Calls.json'])
+  assert.deepEqual(rings.map(c => String(c.params.To).split('?')[0]), [`client:${VA1}`, `client:${VA2}`])
+  for (const c of rings) {
+    assert.match(c.params.To, /^client:/)
+    assert.doesNotMatch(c.params.To, /^\+?\d/)
+    assert.equal(c.params.MachineDetection, undefined, 'a browser leg gets no answering machine detection')
+    assert.match(c.params.Url, /event=va_join/)
+  }
+  // The caller waits in help-<CallSid> and the row starts ringing with no agent attached.
+  assert.match(xml, /<Conference [^>]*>help-CA123<\/Conference>/)
+  assert.deepEqual([w.rows[0].status, w.rows[0].transfer_agent_id, w.rows[0].agent_call_sid, w.rows[0].outcome], ['ringing', undefined, undefined, null])
+  // The first VA to answer is the one on the row; the call is live, not transferred.
+  await handle(await signed(`?event=va_join&call=CA123&va=${VA1}`, { CallSid: 'CAva1' }), w.store, w.twilio, ENV)
+  assert.deepEqual([w.rows[0].status, w.rows[0].va_id], ['live', VA1])
+  noRealFetch()
+})
+
+Deno.test('help-line-call: voice_live off never reaches a VA or an agent', async () => {
+  const w = world({ live: false })
+  for (const q of ['', '?event=agent_leg&call=CA123&amd=1']) {
+    await handle(await signed(q, { ...CALLER, CallStatus: 'in-progress', AnsweredBy: 'human' }), w.store, w.twilio, ENV)
+  }
+  assert.equal(w.calls.length, 0)
+  assert.equal(w.rows.length, 0)
+  noRealFetch()
+})
+
+Deno.test('live-transfer-call: only a human answer on the agent leg ever sets transferred; no other event can', async () => {
+  const events: [string, Record<string, string>][] = [
+    ['?event=va_leg&call=CA123', { CallSid: 'CAva1', CallStatus: 'completed' }],
+    ['?event=conf&call=CA123', { StatusCallbackEvent: 'conference-start', ConferenceSid: 'CF9' }],
+    ['?event=conf&call=CA123', { StatusCallbackEvent: 'participant-join', CallSid: 'CAag1', ConferenceSid: 'CF9' }],
+    ['?event=agent_leg&call=CA123', { CallSid: 'CAag1', CallStatus: 'initiated' }],
+    ['?event=agent_leg&call=CA123', { CallSid: 'CAag1', CallStatus: 'ringing' }],
+    ['?event=agent_leg&call=CA123&amd=1', { CallSid: 'CAag1', CallStatus: 'in-progress', AnsweredBy: 'machine_start' }],
+    ['?event=agent_leg&call=CA123&amd=1', { CallSid: 'CAag1', CallStatus: 'in-progress', AnsweredBy: 'unknown' }],
+    ['?event=agent_leg&call=CA123', { CallSid: 'CAag1', CallStatus: 'no-answer' }],
+    ['?event=va_join&call=CA123&va=' + VA2, { CallSid: 'CAva2' }],
+    ['?event=bogus&call=CA123', { CallSid: 'CAag1', CallStatus: 'in-progress' }],
+  ]
+  for (const [q, form] of events) {
+    const w = world({ rows: [transferring({ conference_sid: 'CF9' })], participants: { CF9: [{ call_sid: 'CA123', status: 'connected' }, { call_sid: 'CAva1', status: 'connected' }] } })
+    await handle(await signed(q, form), w.store, w.twilio, ENV)
+    const r = w.rows[0]
+    assert.notEqual(r.status, 'transferred', `${q} ${JSON.stringify(form)}`)
+    assert.notEqual(r.outcome, 'transferred', `${q} ${JSON.stringify(form)}`)
+    assert.equal(r.transferred_at, null, `${q} ${JSON.stringify(form)}`)
+  }
+  // The one path that does: a person on the agent leg.
+  const w = world({ rows: [transferring()] })
+  await handle(await signed('?event=agent_leg&call=CA123&amd=1', { CallSid: 'CAag1', CallStatus: 'in-progress', AnsweredBy: 'human' }), w.store, w.twilio, ENV)
+  assert.deepEqual([w.rows[0].status, w.rows[0].outcome], ['transferred', 'transferred'])
+  noRealFetch()
+})
+
+Deno.test('live-transfer-call: the agent leg is built with the 25 s timeout and its callback comes back to help-voice agent_leg', () => {
+  const p = agentLegParams({ from: '+15125550199', voiceUrl: URL_, configured: true }, '+15125550142', 'CA123')
+  assert.equal(p.Timeout, '25')
+  assert.equal(p.EndConferenceOnExit, 'false')
+  assert.equal(p.StatusCallback, `${URL_}?event=agent_leg&call=CA123&amd=1`)
+  assert.equal(p.MachineDetection, 'Enable')
 })

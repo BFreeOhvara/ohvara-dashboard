@@ -287,6 +287,7 @@ function BookPanel({ desk, row, checklist, roster, onDone, now }) {
           if (e?.bookingId) { setBookingId(e.bookingId) }
           if (holdGone(e) && e?.bookingId) { setErr({ text: "Booked on the calendar, but your hold on this lead ended before it saved to the lead. Take the lead again to finish.", retry: false }); return }
           if (e?.hint === 'weekly_cap') { setFullIds(s => new Set(s).add(agent.id)); setErr(null); return }
+          if (e?.hint === 'working_hours' && !e?.bookingId) { setErr({ text: e.message, retry: false }); return }
           if (e?.bookingId) { setErr({ text: `Booked on the calendar, but it didn't save to the lead: ${errText(e)}`, retry: true }); return }
           setErr({ text: "Couldn't book. Nothing was saved.", retry: true })
         },
