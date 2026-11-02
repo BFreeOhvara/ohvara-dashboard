@@ -55,7 +55,7 @@
     ]
   },
   {
-    "name": "/agent/leads opens the Leads page, not Overview (no VITE_LEADS_PAGE)",
+    "name": "/agent/leads title reads Leads, 1440 dark",
     "ok": true,
     "detail": {
       "path": "/agent/leads",
@@ -63,9 +63,51 @@
     }
   },
   {
-    "name": "/agent/inbounds?tab=live lands on /agent/leads?tab=live",
+    "name": "/agent/leads live line has no Inbounds / My Pipeline / Book a call, 1440 dark",
+    "ok": true,
+    "detail": [
+      "Everyone who came in for you, and what we’re doing with each one"
+    ]
+  },
+  {
+    "name": "/agent/clients title reads Clients, 1440 dark",
+    "ok": true,
+    "detail": {
+      "path": "/agent/clients",
+      "h1": "Clients"
+    }
+  },
+  {
+    "name": "/agent/clients live line has no Inbounds / My Pipeline / Book a call, 1440 dark",
+    "ok": true,
+    "detail": [
+      "2 in progress0 clients1 needs attention1 booked"
+    ]
+  },
+  {
+    "name": "/agent/submit title reads Submit, 1440 dark",
+    "ok": true,
+    "detail": {
+      "path": "/agent/submit",
+      "h1": "Submit"
+    }
+  },
+  {
+    "name": "/agent/submit live line has no Inbounds / My Pipeline / Book a call, 1440 dark",
+    "ok": true,
+    "detail": [
+      "3 of 7 bookings used this weekResets Saturday"
+    ]
+  },
+  {
+    "name": "/agent/inbounds?tab=live lands on /agent/leads?tab=live (dark)",
     "ok": true,
     "detail": "/agent/leads?tab=live"
+  },
+  {
+    "name": "/agent/book?change=x lands on /agent/submit?change=x (dark)",
+    "ok": true,
+    "detail": "/agent/submit?change=x"
   },
   {
     "name": "no sideways scroll /agent 390 dark",
@@ -109,6 +151,14 @@
       "Get the phone app",
       "Delete my account"
     ]
+  },
+  {
+    "name": "phone title (.ph-subhead h1) reads Leads on /agent/leads, 390 dark",
+    "ok": true,
+    "detail": {
+      "h1": "Leads",
+      "ovHphoneTitleCount": 0
+    }
   },
   {
     "name": "agent sidebar groups, 1440 light",
@@ -166,6 +216,61 @@
     ]
   },
   {
+    "name": "/agent/leads title reads Leads, 1440 light",
+    "ok": true,
+    "detail": {
+      "path": "/agent/leads",
+      "h1": "Leads"
+    }
+  },
+  {
+    "name": "/agent/leads live line has no Inbounds / My Pipeline / Book a call, 1440 light",
+    "ok": true,
+    "detail": [
+      "Everyone who came in for you, and what we’re doing with each one"
+    ]
+  },
+  {
+    "name": "/agent/clients title reads Clients, 1440 light",
+    "ok": true,
+    "detail": {
+      "path": "/agent/clients",
+      "h1": "Clients"
+    }
+  },
+  {
+    "name": "/agent/clients live line has no Inbounds / My Pipeline / Book a call, 1440 light",
+    "ok": true,
+    "detail": [
+      "2 in progress0 clients1 needs attention1 booked"
+    ]
+  },
+  {
+    "name": "/agent/submit title reads Submit, 1440 light",
+    "ok": true,
+    "detail": {
+      "path": "/agent/submit",
+      "h1": "Submit"
+    }
+  },
+  {
+    "name": "/agent/submit live line has no Inbounds / My Pipeline / Book a call, 1440 light",
+    "ok": true,
+    "detail": [
+      "3 of 7 bookings used this weekResets Saturday"
+    ]
+  },
+  {
+    "name": "/agent/inbounds?tab=live lands on /agent/leads?tab=live (light)",
+    "ok": true,
+    "detail": "/agent/leads?tab=live"
+  },
+  {
+    "name": "/agent/book?change=x lands on /agent/submit?change=x (light)",
+    "ok": true,
+    "detail": "/agent/submit?change=x"
+  },
+  {
     "name": "no sideways scroll /agent 390 light",
     "ok": true,
     "detail": {
@@ -207,6 +312,14 @@
       "Get the phone app",
       "Delete my account"
     ]
+  },
+  {
+    "name": "phone title (.ph-subhead h1) reads Leads on /agent/leads, 390 light",
+    "ok": true,
+    "detail": {
+      "h1": "Leads",
+      "ovHphoneTitleCount": 0
+    }
   },
   {
     "name": "admin sidebar unchanged",
