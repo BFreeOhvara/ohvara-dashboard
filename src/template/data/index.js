@@ -133,6 +133,12 @@ export function useSampleSignup() {
     covers: ['Weekly submissions', 'A team that follows up with every client', 'Updates in your bell and by text'],
   }), [])
 }
+// The sample clock is fixed at Monday, November 2, 2:14 PM, like the frame.
+const NOW = { label: 'Monday, November 2', time: '2:14', ampm: 'PM', min: 14 * 60 + 14, date: 2 }
+const minutesOf = t => { const m = /(\d+):(\d+)\s*(AM|PM)/.exec(t); return ((Number(m[1]) % 12) + (m[3] === 'PM' ? 12 : 0)) * 60 + Number(m[2]) }
+const untilText = t => { const d = minutesOf(t) - NOW.min; return d <= 0 ? 'now' : `in ${d >= 60 ? `${Math.floor(d / 60)} h ` : ''}${d % 60} min` }
+const LEAD_NEW = ['booked', 'ringing', 'missed']
+
 export function useSampleOverview() {
   const s = useStore()
   const open = Object.values(s.tasks).filter(v => !v).length
@@ -147,12 +153,19 @@ export function useSampleOverview() {
       { id: 't3', label: 'Check-in call', clientName: 'Luis Ortega', clientId: 'sample-client-2', dueAt: 'Fri, Nov 6, 2:00 PM', day: 'Fri', date: 6, done: s.tasks.t3 },
     ],
     doneByDay: [
-      { day: 'Mon', packet: 2, review: 1, cancel: 0, save: 0 }, { day: 'Tue', packet: 1, review: 2, cancel: 1, save: 0 },
-      { day: 'Wed', packet: 3, review: 1, cancel: 0, save: 1 }, { day: 'Thu', packet: 0, review: 2, cancel: 0, save: 0 },
-      { day: 'Fri', packet: 2, review: 0, cancel: 1, save: 1 }, { day: 'Sat', packet: 0, review: 0, cancel: 0, save: 0 }, { day: 'Sun', packet: 0, review: 0, cancel: 0, save: 0 },
+      { day: 'Mon', date: 'Oct 26', packet: 2, review: 1, cancel: 0, save: 0 }, { day: 'Tue', date: 'Oct 27', packet: 1, review: 2, cancel: 1, save: 0 },
+      { day: 'Wed', date: 'Oct 28', packet: 3, review: 1, cancel: 0, save: 1 }, { day: 'Thu', date: 'Oct 29', packet: 0, review: 2, cancel: 0, save: 0 },
+      { day: 'Fri', date: 'Oct 30', packet: 2, review: 0, cancel: 1, save: 1 }, { day: 'Sat', date: 'Oct 31', packet: 0, review: 0, cancel: 0, save: 0 }, { day: 'Sun', date: 'Nov 1', packet: 0, review: 0, cancel: 0, save: 0 },
     ],
     upNext: s.appointments.slice(0, 3),
     leadsToday: s.leads.length,
+    today: NOW.label, clock: { time: NOW.time, ampm: NOW.ampm },
+    doneRange: 'Oct 26 to Nov 1',
+    dutySince: '9:02 AM',
+    nextAppt: (() => { const a = s.appointments.find(x => x.date === NOW.date && minutesOf(x.time) > NOW.min); return a ? { ...a, inText: untilText(a.time) } : null })(),
+    apptsLeft: { left: 8, cap: 12, resets: 'Dec 1' },
+    todayAppts: s.appointments.filter(a => a.date === NOW.date).map(a => ({ ...a, inText: untilText(a.time) })),
+    newLeads: s.leads.filter(l => LEAD_NEW.includes(l.stage)).map(l => ({ id: l.id, name: `${l.first_name} ${l.last_name}`, kind: l.kind, stage: l.stage, appt: l.appt })),
   })
 }
 

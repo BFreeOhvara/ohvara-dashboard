@@ -636,6 +636,18 @@
         "src/templateScan.test.js"
       ],
       "notes": "paths.x() gives the plain shell path at /template and the real agent path elsewhere (lead is /agent/inbounds/:id; messages and settings stay /messages and /settings). tabOf, titleOf, SHELL_ROUTES (13 patterns), isShellPath and showShell (agent, shell path, not native) live in paths.js; nothing mounts them yet and App.jsx is unchanged, so the real agent URLs behave as before. paths.test.js holds the one link check: any quote followed by / in src/template (except paths.js, its test and TemplateApp.jsx) fails with file:line. Wording is neutral at both addresses; the footer keeps \"Sample info. Changes reset when you reload.\" Signup and Welcome preview links show only at /template. Evidence: npm test 377 pass, npm run build exit 0, node scripts/template-clickthrough.mjs passes (see report)."
+    },
+    {
+      "id": "template.overview-approved-port",
+      "page": "Template",
+      "title": "Overview: the approved page, ported into the shell frame",
+      "status": "checking",
+      "files": [
+        "src/template/screens/Overview.jsx",
+        "src/template/template.css",
+        "src/template/data/index.js"
+      ],
+      "notes": "Ports ohvara/mockups/overview-book-stages-this-week-coming-up.html (Both state, Servicing 16 plus Leads) into the top-bar frame, on Falcon's Nov 2 send-back. Desktop: hero (date chip, 'Good afternoon, Dana', clock 2:14 PM, Submit), Your book (4 cards), Today strip (next appointment, live call switch on sample duty, appointments left, two links), Needs your attention then Steps done, This week then Coming up. Empty attention shows the caught-up box with the Up next list (confirm Gloria's number to see it). Phone: greeting, ring card, book 2x2, attention, Coming up, Steps done, then 'Your leads today' cards. Data blocks: your-book, today-strip, attention, steps-done, this-week, coming-up. .tp-ovhero hides the frame's title date at desktop and the whole title row on phone. Short tier (min-width 1000, max-height 819.98): one-row hero 80, book cards 56, strip 48, rail 320; the page scrolls at 1280x700 (762 tall) and 1440x900 (986 tall). Reverses 7e20633 (greeting and book chips in the head; .tp-h1, .tp-chips, .tp-chipcard, .tp-head removed). Mark done button is gone (rows open the client); doneTask stays in the data layer. Sample fields added: today, clock, doneRange, dutySince, nextAppt, apptsLeft, todayAppts, newLeads, doneByDay dates."
     }
   ]
 }
