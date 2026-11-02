@@ -518,6 +518,20 @@
         "supabase/tests/p_agent_inbounds.sql"
       ],
       "notes": "Migration 212, not applied. policies.servicing_va_id and servicing_va_assigned_at, set by servicing_seed_steps through servicing_va_pick: same side, active, fewest live clients, longest since their last new client, then id. Every submitted deal, Yes and No, and a Sold lead whose policy has no owner. A re-run keeps the owner, no active VA leaves it null and the sale still succeeds, and an agent or VA cannot write it. Separate from assigned_fulfillment_id. No screen reads it yet."
+    },
+    {
+      "id": "motion.stretch-pill",
+      "page": "Calendar",
+      "title": "The selected tab stretches to its new spot: the leading edge arrives first and the other catches up",
+      "status": "checking",
+      "files": [
+        "src/lib/stretchPill.js",
+        "src/lib/stretchPill.test.js",
+        "src/hooks/useStretchPill.js",
+        "src/components/ui/stretchPill.css",
+        "src/pages/agent/v2/Calendar.jsx"
+      ],
+      "notes": "Shared hook, proved on Calendar's Week / Day switch and phone day strip; other rows come in later tasks. The pill exists only in flight, so the resting look is each button's own CSS. Reduced motion, a hidden row, no target or a move to another wrapped line all switch instantly. Web Animations only, no new packages. Pattern taken from the Solvik demo, none of its code or colours."
     }
   ]
 }
