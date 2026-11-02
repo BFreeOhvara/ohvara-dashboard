@@ -547,7 +547,7 @@
         "src/pages/agent/v2/portalV2.css",
         "src/pages/agent/v2/inboundsExtra.css"
       ],
-      "notes": "Needs migration 210 (not applied): set_inbound_outcome(p_lead, p_outcome, p_note, p_follow_up_at, p_reason) and agent_inbounds() follow_up_at, outcome_reason, follow_up_due. Until then Follow up and Not interested save with a plain note (\"isn't ready yet, nothing changed\") and no chip shows; Sold keeps working because it sends only the old arguments. Stubbed tests prove the page logic only, never live."
+      "notes": "Needs migration 210 (not applied): set_inbound_outcome(p_lead, p_outcome, p_note, p_follow_up_at, p_reason) and agent_inbounds() follow_up_at, outcome_reason, follow_up_due. Until then Follow up and Not interested save with a plain note (\"isn't ready yet, nothing changed\") and no chip shows; Sold keeps working because it sends only the old arguments. Stubbed tests prove the page logic only, never live. Selected Not interested button (.pv-outs button.on.lost in portalV2.css) now reads as active: --ov-hi text, --ov-st-noanswer-tint fill, --ov-st-noanswer border plus 1px inset ring, neutral, no amber or red; before it was faded grey (--ov-faint on --ov-stub)."
     },
     {
       "id": "leads.sold-submit-prefill",
