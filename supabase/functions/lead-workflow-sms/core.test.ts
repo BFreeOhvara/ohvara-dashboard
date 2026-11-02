@@ -380,6 +380,46 @@ test('rows match inbound_events checks', async () => {
   assert.ok(mine.some(r => r.kind === 'text_sent') && mine.some(r => r.kind === 'reminder') && mine.some(r => r.kind === 'follow_up'))
 })
 
+// ── (9) the words: every step's row keeps exactly what went to Twilio ───────
+for (const step of STEPS_ALL) {
+  test(`${step}: the done row carries the exact words sent`, async () => {
+    const f = make({ live: true, templates: CLEAN })
+    await setup(f, step)
+    f.s.now = f.at(step)
+    await f.tick()
+    const [row] = f.of(step)
+    assert.equal(row.state, 'done')
+    assert.match(String(row.detail.twilio_sid), /^SM\d+$/)
+    // The fake numbers its sids in send order, so this is this row's own text.
+    const mine = f.sent[Number(String(row.detail.twilio_sid).slice(2)) - 1]
+    assert.equal(row.detail.body, mine.body)
+    assert.ok(mine.body.length > 0)
+  })
+}
+
+test('no words on a row that did not go: send failure and every skip', async () => {
+  const f = make({ live: true, templates: CLEAN })
+  f.deps.send = async () => ({ ok: false, error: '400 21610' })
+  await f.plan()
+  await f.tick()
+  assert.equal(f.of('instant')[0].state, 'skipped')
+  assert.equal(f.of('instant')[0].detail.reason, 'send_failed')
+  assert.equal('body' in f.of('instant')[0].detail, false)
+  // sms_live off and the draft placeholder, the two that hold everything today.
+  const off = make({ live: false, templates: CLEAN })
+  await off.plan()
+  await off.tick()
+  assert.equal(off.of('instant')[0].detail.reason, 'sms_off')
+  assert.equal('body' in off.of('instant')[0].detail, false)
+  const draft = make({ live: true })
+  await draft.plan()
+  await draft.tick()
+  assert.equal(draft.of('instant')[0].detail.reason, 'draft_copy')
+  assert.equal('body' in draft.of('instant')[0].detail, false)
+  // A row still waiting has no words yet.
+  assert.equal('body' in f.of('not_reached_d0')[0].detail, false)
+})
+
 // ── the rest of the gates ───────────────────────────────────────────────────
 test('monthly texts stop at MONTHLY_MAX', async () => {
   const f = make({ live: true, templates: CLEAN })

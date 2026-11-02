@@ -252,8 +252,29 @@ for (const stage of SENDABLE) {
     assert.ok(s.body.endsWith('Reply STOP to opt out.'))
     assert.ok(s.body.length <= 160, `${stage} is ${s.body.length} chars`)
     assert.deepEqual(t.logs.map(l => [l.stage, l.status, l.from_number, l.twilio_sid]), [[stage, 'sent', '+13125550100', 'SMstub']])
+    assert.equal(t.logs[0].body, s.body, 'the logged row carries the exact words sent')
   })
 }
+
+test('a filled-in link is logged exactly as sent', async () => {
+  const withLink = { ...TEMPLATES, not_reached: { body: 'Hi [Lead first name], [Agent first name] here. Pick a time: [Booking link]. Reply STOP to opt out.', needsLink: true } }
+  const t = make('not_reached', { templates: withLink, bookingLink: 'https://example.test/book' })
+  await t.run()
+  assert.equal(t.sent.length, 1)
+  assert.equal(t.logs[0].body, t.sent[0].body)
+  assert.ok(t.logs[0].body?.includes('https://example.test/book'))
+})
+
+test('words are only kept for a text that went: failed and skipped rows have none', async () => {
+  let t = make('just_submitted', { send: async () => ({ ok: false, error: '400 21610' }) })
+  await t.run()
+  assert.equal(t.logs[0].status, 'failed')
+  assert.equal(t.logs[0].body, null)
+  t = make('just_submitted', { smsLive: async () => false })
+  await t.run()
+  assert.equal(t.logs[0].status, 'skipped_gate')
+  assert.equal(t.logs[0].body ?? null, null)
+})
 
 test('no lead first name → "Hi, …"', async () => {
   const t = make('just_submitted', {}, { contact_name: null })

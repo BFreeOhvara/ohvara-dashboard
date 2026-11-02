@@ -29,6 +29,7 @@ export type Sender = { from_number: string; messaging_service_sid: string | null
 export type LogRow = {
   lead_id: string; stage: Stage | null; status: Status
   to_phone?: string | null; from_number?: string | null; twilio_sid?: string | null; error?: string | null
+  body?: string | null           // the exact words sent; only on a 'sent' row (219)
 }
 
 export type Deps = {
@@ -108,7 +109,7 @@ export async function handle(deps: Deps, body: Record<string, unknown>): Promise
   const status: Status = r.ok ? 'sent' : 'failed'
   await deps.log({
     lead_id: leadId, stage, status, to_phone: phone, from_number: sender.from_number,
-    twilio_sid: r.sid ?? null, error: r.error ?? null,
+    twilio_sid: r.sid ?? null, error: r.error ?? null, body: r.ok ? text : null,
   })
   return { status: 200, body: { status, stage } }
 }
