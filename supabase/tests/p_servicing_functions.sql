@@ -59,12 +59,13 @@ exception when others then
 end
 $f$;
 
--- A No deal. The last name is the case's name.
+-- A No deal. The last name is the case's name, and the policy number follows it: since 212
+-- the same number again is a retry.
 create function public.p_sf_deal(p_name text, p_effective date default null, p_best text default 'morning') returns uuid language sql as $f$
   select public.agent_submit_deal(
     p_first => 'Deal', p_last => p_name, p_phone => '5125550100', p_city => 'Austin', p_state => 'TX',
     p_timezone => 'America/Chicago', p_new_carrier => 'dddddddd-dddd-4ddd-8195-000000000002',
-    p_policy_number => 'NEW-1', p_replaced => false, p_best_time => p_best, p_sms_consent => true,
+    p_policy_number => 'NEW-' || p_name, p_replaced => false, p_best_time => p_best, p_sms_consent => true,
     p_effective_date => p_effective)
 $f$;
 
@@ -85,9 +86,16 @@ create function public.p_sf_noon(p_day date) returns timestamptz language sql as
   select (p_day + time '12:00') at time zone 'UTC'
 $f$;
 
--- A seed's due_at, by deal and kind.
+-- A seed's due_at, by deal and kind. For the watch that is month 12, the watch end.
 create function public.p_sf_due(p_policy uuid, p_kind text) returns timestamptz language sql as $f$
   select due_at from public.servicing_tasks where policy_id = p_policy and kind = p_kind
+   order by watch_month desc nulls last limit 1
+$f$;
+
+-- What a deal holds, as kind:count.
+create function public.p_sf_steps(p_policy uuid) returns text language sql as $f$
+  select string_agg(s.kind || ':' || s.n, ',' order by s.kind)
+    from (select kind, count(*) as n from public.servicing_tasks where policy_id = p_policy group by kind) s
 $f$;
 
 -- A policy in an agent's book, written directly so it seeds nothing.
@@ -193,25 +201,25 @@ select set_config('request.jwt.claims', '', true);
 
 select is((select effective_date from public.policies where id = (select id from ids where name = 'dated')), (current_date + 5)::date,
           'c1 p_effective_date is saved to policies.effective_date');
-select is((select string_agg(kind, ',' order by kind) from public.servicing_tasks where policy_id = (select id from ids where name = 'dated')),
-          'chargeback_watch,packet_check,review_call', 'c2 a dated deal has exactly the 3 tasks');
+select is(public.p_sf_steps((select id from ids where name = 'dated')),
+          'chargeback_watch:12,packet_check:1,review_call:1', 'c2 a dated deal has exactly the 14 tasks');
 select is(public.p_sf_due((select id from ids where name = 'dated'), 'packet_check'), public.p_sf_noon((current_date + 5 + 3)::date),
           'c3 packet_check is due at noon UTC on effective + 3 days');
 select is(public.p_sf_due((select id from ids where name = 'dated'), 'review_call'), public.p_sf_noon((current_date + 5 + 10)::date),
           'c4 review_call is due at noon UTC on effective + 10 days');
 select is(public.p_sf_due((select id from ids where name = 'dated'), 'chargeback_watch'), public.p_sf_noon(((current_date + 5) + interval '12 months')::date),
-          'c5 chargeback_watch is due at noon UTC on effective + 12 months');
+          'c5 month 12 of the chargeback_watch is due at noon UTC on effective + 12 months');
 
 select is((select effective_date from public.policies where id = (select id from ids where name = 'undated')), null::date,
           'c6 with no date policies.effective_date stays null');
-select is((select string_agg(kind, ',' order by kind) from public.servicing_tasks where policy_id = (select id from ids where name = 'undated')),
-          'chargeback_watch,packet_check,review_call', 'c7 and it still has exactly the 3 tasks');
+select is(public.p_sf_steps((select id from ids where name = 'undated')),
+          'chargeback_watch:12,packet_check:1,review_call:1', 'c7 and it still has exactly the 14 tasks');
 select is(public.p_sf_due((select id from ids where name = 'undated'), 'packet_check'), public.p_sf_noon((current_date + 3)::date),
           'c8 packet_check counts from today');
 select is(public.p_sf_due((select id from ids where name = 'undated'), 'review_call'), public.p_sf_noon((current_date + 10)::date),
           'c9 review_call counts from today');
 select is(public.p_sf_due((select id from ids where name = 'undated'), 'chargeback_watch'), public.p_sf_noon((current_date + interval '12 months')::date),
-          'c10 chargeback_watch counts from today');
+          'c10 month 12 of the chargeback_watch counts from today');
 
 -- The exact values, written out, on the date interval arithmetic is hardest on.
 select is(public.p_sf_due((select id from ids where name = 'leap'), 'packet_check'), '2024-03-03 12:00:00+00'::timestamptz, 'c11 Feb 29 + 3 days is Mar 3, noon UTC');
@@ -221,16 +229,16 @@ select is(public.p_sf_due((select id from ids where name = 'leap'), 'chargeback_
 select is((select concat_ws('|', stage, next_step, next_date = public.p_sf_noon((current_date + 5 + 3)::date))
              from public.policy_servicing_status where policy_id = (select id from ids where name = 'dated')),
           'setting_up|packet_check|t', 'c14 a submitted deal reads setting up, packet_check next at its due_at');
-select is((select string_agg(kind || ':' || coalesce(best_time, 'null'), ',' order by kind)
+select is((select string_agg(distinct kind || ':' || coalesce(best_time, 'null'), ',')
              from public.servicing_tasks where policy_id = (select id from ids where name = 'dated')),
           'chargeback_watch:null,packet_check:null,review_call:afternoon', 'c15 only review_call carries the deal''s best time');
 select is((select count(*) from public.servicing_tasks
             where policy_id in (select id from ids where name in ('dated', 'undated', 'leap', 'app'))
               and requested_by = 'system' and requested_by_id = 'aaaaaaaa-aaaa-4aaa-8195-00000000000e'
               and agent_id = 'aaaaaaaa-aaaa-4aaa-8195-00000000000e' and status = 'scheduled' and lead_id is null),
-          12::bigint, 'c16 all seeds are system, requested_by_id the agent, scheduled, no lead');
-select is((select string_agg(kind, ',' order by kind) from public.servicing_tasks where policy_id = (select id from ids where name = 'app')),
-          'chargeback_watch,packet_check,review_call', 'c17 the call with the app''s argument names works and seeds the 3');
+          56::bigint, 'c16 all seeds are system, requested_by_id the agent, scheduled, no lead');
+select is(public.p_sf_steps((select id from ids where name = 'app')),
+          'chargeback_watch:12,packet_check:1,review_call:1', 'c17 the call with the app''s argument names works and seeds the 14');
 
 -- A Yes deal's old-policy cancellation stays in today's machinery, not a task.
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-aaaa-4aaa-8195-00000000000e","role":"authenticated"}', true),
@@ -243,26 +251,26 @@ insert into ids select 'yes', public.agent_submit_deal(
   p_best_time => 'evening');
 reset role;
 select set_config('request.jwt.claims', '', true);
-select is((select string_agg(kind || ':' || coalesce(best_time, 'null'), ',' order by kind) from public.servicing_tasks where policy_id = (select id from ids where name = 'yes')),
-          'chargeback_watch:null,packet_check:null,review_call:evening', 'c18 a Yes deal seeds the same 3 and no old-policy task');
+select is((select string_agg(distinct kind || ':' || coalesce(best_time, 'null'), ',') from public.servicing_tasks where policy_id = (select id from ids where name = 'yes')),
+          'chargeback_watch:null,packet_check:null,review_call:evening', 'c18 a Yes deal seeds the same 14 and no old-policy task');
 
--- The watch's due_at against the view. With the setup steps done the task gives the
--- date; with the task gone the view works out its own. They must be one instant.
+-- The watch's due_at against the view. With the setup steps done the next open month gives
+-- the date (212); with every month gone the view works out its own, which must be month 12.
 update public.servicing_tasks set status = 'done'
  where policy_id in (select id from ids where name in ('dated', 'undated')) and kind in ('packet_check', 'review_call');
-select is((select concat_ws('|', stage, next_step, next_date = public.p_sf_due((select id from ids where name = 'dated'), 'chargeback_watch'))
+select is((select concat_ws('|', stage, next_step, next_date = public.p_sf_noon(((current_date + 5) + interval '1 month')::date))
              from public.policy_servicing_status where policy_id = (select id from ids where name = 'dated')),
-          'protected|chargeback_watch|t', 'c19 protected, a dated deal: next_date is the seed''s due_at');
-select is((select concat_ws('|', stage, next_step, next_date = public.p_sf_due((select id from ids where name = 'undated'), 'chargeback_watch'))
+          'protected|chargeback_watch|t', 'c19 protected, a dated deal: next_date is month 1''s due_at');
+select is((select concat_ws('|', stage, next_step, next_date = public.p_sf_noon((current_date + interval '1 month')::date))
              from public.policy_servicing_status where policy_id = (select id from ids where name = 'undated')),
-          'protected|chargeback_watch|t', 'c20 protected, an undated deal: next_date is the seed''s due_at');
+          'protected|chargeback_watch|t', 'c20 protected, an undated deal: next_date is month 1''s due_at');
 create temp table watch as
   select policy_id, due_at from public.servicing_tasks
-   where policy_id in (select id from ids where name in ('dated', 'undated')) and kind = 'chargeback_watch';
+   where policy_id in (select id from ids where name in ('dated', 'undated')) and kind = 'chargeback_watch' and watch_month = 12;
 update public.servicing_tasks set status = 'cancelled' where policy_id in (select policy_id from watch) and kind = 'chargeback_watch';
 select is((select count(*) from public.policy_servicing_status s join watch w using (policy_id)
             where s.stage = 'protected' and s.next_step = 'chargeback_watch' and s.next_date = w.due_at),
-          2::bigint, 'c21 the view''s own watch end, with no task to read, equals both seeds'' due_at');
+          2::bigint, 'c21 the view''s own watch end, with no task to read, equals both seeds'' month 12 due_at');
 
 -- A deal the weekly cap refuses.
 update public.app_settings set agent_billing_enforced = true where id = 1;
@@ -274,8 +282,8 @@ select throws_ok($$ select public.p_sf_deal('Eighth') $$, 'P0001', '7 of 7 used 
 reset role;
 select set_config('request.jwt.claims', '', true);
 update public.app_settings set agent_billing_enforced = false where id = 1;
-select is((select count(*) from public.servicing_tasks where agent_id = 'aaaaaaaa-aaaa-4aaa-8195-00000000000f'), 21::bigint,
-          'c24 the cap-blocked deal wrote no tasks: 7 deals, 21 steps');
+select is((select count(*) from public.servicing_tasks where agent_id = 'aaaaaaaa-aaaa-4aaa-8195-00000000000f'), 98::bigint,
+          'c24 the cap-blocked deal wrote no tasks: 7 deals, 98 steps');
 select is((select count(*) from public.policies where client_last_name = 'Eighth'), 0::bigint, 'c25 and no policy');
 
 -- ── d. Fixtures for list, note and read ─────────────────────────────────────
