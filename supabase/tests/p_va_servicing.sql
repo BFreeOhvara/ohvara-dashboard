@@ -16,7 +16,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(429);
+select plan(434);
 
 -- ── seed (as the table owner) ───────────────────────────────────────────────
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -988,6 +988,23 @@ create or replace function public.servicing_task_is_demo_side(p_task uuid) retur
 select public.p_vs_as('v1');
 select is(public.p_vs_queue_has('w_ctl'), true, 'n25 control: with the side rule gutted they would, so n3 and n24 are real checks');
 rollback to savepoint side_control;
+select public.p_vs_owner();
+
+-- ── o. Monthly rows (212) ───────────────────────────────────────────────────
+-- p_servicing_steps.sql has the whole of it, on real seeds. Here: q_watch above is an
+-- unnumbered row 300 days out, and it stays listed. The same row with a month doesn't.
+select public.p_vs_task('wm_far', 'chargeback_watch', 'scheduled', now() + interval '300 days', 'a', 'system');
+select public.p_vs_task('wm_near', 'chargeback_watch', 'scheduled', now() + interval '2 days', 'a', 'system');
+select public.p_vs_task('wm_late', 'chargeback_watch', 'scheduled', now() - interval '20 days', 'a', 'system');
+update public.servicing_tasks set watch_month = 6 where id = public.p_vs_id('wm_far');
+update public.servicing_tasks set watch_month = 2 where id = public.p_vs_id('wm_near');
+update public.servicing_tasks set watch_month = 1 where id = public.p_vs_id('wm_late');
+select public.p_vs_as('v1');
+select is(public.p_vs_queue_has('wm_far'), false, 'o1 a numbered month past the window is hidden');
+select is(public.p_vs_queue_has('wm_near'), true, 'o2 one inside the window lists');
+select is(public.p_vs_queue_has('wm_late'), true, 'o3 an overdue one stays');
+select throws_ok(format('select public.va_servicing_claim(%L)', public.p_vs_id('wm_far')), '22023', 'This step is not in the queue', 'o4 the far one can''t be claimed');
+select lives_ok(format('select public.va_servicing_claim(%L)', public.p_vs_id('wm_near')), 'o5 the near one can');
 select public.p_vs_owner();
 
 select * from finish();

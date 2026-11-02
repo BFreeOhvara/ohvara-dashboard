@@ -13,7 +13,7 @@
 --      leads (not B's, the inactive agent's, or the unassigned one)
 --   b. A sets follow_up, then not_interested, and adds a note on A's own lead;
 --      the lead and the events read as 180 writes them
---   c. A marks A's other lead sold: three servicing tasks and one
+--   c. A marks A's other lead sold: fourteen servicing tasks and one
 --      became_client event, once, even when sold is pressed twice
 --   d. refusals (42501): A on B's lead; A on the unassigned lead (follow_up,
 --      not_interested, sold, note); inactive C on C's own lead; C on the
@@ -170,19 +170,21 @@ select is(
   'sold:a:sold:closed',
   'c2 a2 reads outcome sold, outcome_by A, stage sold, agent_status closed');
 select is(
-  (select string_agg(kind || ':' || status || ':' || (agent_id = 'aaaaaaaa-aaaa-4aaa-8181-00000000000a')
-                     || ':' || (requested_by_id = 'aaaaaaaa-aaaa-4aaa-8181-00000000000a'), ',' order by kind)
-     from public.servicing_tasks where lead_id = 'cccccccc-cccc-4ccc-8181-0000000000a2'),
-  'chargeback_watch:scheduled:true:true,packet_check:scheduled:true:true,review_call:scheduled:true:true',
-  'c3 sold seeded packet_check, review_call and chargeback_watch for A, scheduled');
+  (select string_agg(s.line || ':' || s.n, ',' order by s.line)
+     from (select kind || ':' || status || ':' || (agent_id = 'aaaaaaaa-aaaa-4aaa-8181-00000000000a')
+                  || ':' || (requested_by_id = 'aaaaaaaa-aaaa-4aaa-8181-00000000000a') as line, count(*) as n
+             from public.servicing_tasks where lead_id = 'cccccccc-cccc-4ccc-8181-0000000000a2' group by 1) s),
+  'chargeback_watch:scheduled:true:true:12,packet_check:scheduled:true:true:1,review_call:scheduled:true:true:1',
+  'c3 sold seeded 14 rows for A, scheduled: packet_check, review_call and 12 chargeback_watch');
 select ok(
-  (select bool_and(case kind
-                     when 'packet_check'     then due_at = now() + interval '7 days'
-                     when 'review_call'      then due_at = now() + interval '30 days'
-                     when 'chargeback_watch' then due_at = now() + interval '12 months'
-                   end) and count(*) = 3
-     from public.servicing_tasks where lead_id = 'cccccccc-cccc-4ccc-8181-0000000000a2'),
-  'c4 the tasks are due in 7 days, 30 days and 12 months');
+  (select bool_and(case t.kind
+                     when 'packet_check'     then t.due_at = ((current_date + s.servicing_packet_check_days) + time '12:00') at time zone 'UTC'
+                     when 'review_call'      then t.due_at = ((current_date + s.servicing_review_call_days) + time '12:00') at time zone 'UTC'
+                     when 'chargeback_watch' then t.due_at = ((current_date + make_interval(months => t.watch_month))::date + time '12:00') at time zone 'UTC'
+                   end) and count(*) = 14 and count(distinct t.watch_month) = 12
+     from public.servicing_tasks t, public.app_settings s
+    where t.lead_id = 'cccccccc-cccc-4ccc-8181-0000000000a2' and s.id = 1),
+  'c4 the tasks are due on the settings dates at noon UTC, counted from today: this lead has no policy');
 select is(
   (select string_agg(kind || ':' || (agent_id = 'aaaaaaaa-aaaa-4aaa-8181-00000000000a') || ':' || actor_role, ',' order by kind)
      from public.inbound_events where lead_id = 'cccccccc-cccc-4ccc-8181-0000000000a2'),
@@ -197,8 +199,8 @@ reset role;
 select is(
   (select (select count(*) from public.servicing_tasks where lead_id = 'cccccccc-cccc-4ccc-8181-0000000000a2') || '/' ||
           (select count(*) from public.inbound_events where lead_id = 'cccccccc-cccc-4ccc-8181-0000000000a2' and kind = 'became_client')),
-  '3/1',
-  'c7 still three servicing tasks and one became_client event on a2');
+  '14/1',
+  'c7 still fourteen servicing tasks and one became_client event on a2');
 
 -- ── d. Refusals ─────────────────────────────────────────────────────────────
 -- What the refused calls must not touch.

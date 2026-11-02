@@ -486,6 +486,38 @@
       ],
       "notes": "ServicingCard and ClientPage take .find() on chargeback_watch and pass it to watchProgress; both now get a single row per policy from oneWatchPerPolicy in useServicingTasks, so the watch does not read over after about a month once the 12-monthly-row migration is applied. Those two files are not edited. Needs to be live before that migration.",
       "status": "checking"
+    },
+    {
+      "id": "submit.servicing-steps-seed",
+      "page": "Submit",
+      "title": "A submitted deal and a Sold lead make the same 14 servicing steps from settings",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/212_servicing_steps_on_submit.sql",
+        "supabase/tests/p_servicing_steps.sql",
+        "supabase/tests/p_submit_servicing.sql",
+        "supabase/tests/p_servicing_functions.sql",
+        "supabase/tests/p_servicing_status.sql",
+        "supabase/tests/p_va_servicing.sql",
+        "supabase/tests/p_agent_inbounds.sql"
+      ],
+      "notes": "Migration 212, not applied. servicing_seed_steps replaces both old seeds: packet_check, review_call and chargeback_watch months 1 to 12, from the policy anchor (no policy: today), noon UTC. Day counts are in app_settings. An old client with any system watch gets no monthly rows. Resubmitting the same policy number and carrier returns the existing policy, before the cap refusal. The VA queue hides a future month past the window, and Activity still shows 3 added rows per deal. Hook fix live first: the one-watch-row task must be merged and deployed before this is applied."
+    },
+    {
+      "id": "submit.servicing-va-owner",
+      "page": "Submit",
+      "title": "Each new client gets a servicing VA who owns the client thread",
+      "status": "checking",
+      "files": [
+        "supabase/migrations/212_servicing_steps_on_submit.sql",
+        "supabase/tests/p_servicing_steps.sql",
+        "supabase/tests/p_submit_servicing.sql",
+        "supabase/tests/p_servicing_functions.sql",
+        "supabase/tests/p_servicing_status.sql",
+        "supabase/tests/p_va_servicing.sql",
+        "supabase/tests/p_agent_inbounds.sql"
+      ],
+      "notes": "Migration 212, not applied. policies.servicing_va_id and servicing_va_assigned_at, set by servicing_seed_steps through servicing_va_pick: same side, active, fewest live clients, longest since their last new client, then id. Every submitted deal, Yes and No, and a Sold lead whose policy has no owner. A re-run keeps the owner, no active VA leaves it null and the sale still succeeds, and an agent or VA cannot write it. Separate from assigned_fulfillment_id. No screen reads it yet."
     }
   ]
 }
