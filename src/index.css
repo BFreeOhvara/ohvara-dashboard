@@ -788,10 +788,24 @@ aside { --bg-surface:#192C4F; --bg-elevated:#153761; --bg-muted:#1E4475; --accen
   box-shadow: 0 10px 30px -10px var(--ov-hero-btn-glow);
 }
 
-/* Trend cards are buttons: border one step brighter on hover, no lift. */
+/* Trend cards are buttons: border one step brighter on hover (the agent pages' cards lift too, below). */
 .ov-link { transition: border-color 120ms ease; text-align: left; font: inherit; color: inherit; cursor: pointer; }
 .ov-link:hover { border-color: rgba(255,255,255,0.14); }
 [data-theme="light"] .ov-link:hover { border-color: rgba(2,79,70,0.22); }
+/* Agent pages (.agent-motion on the layout's page wrapper): a card lifts 1px on hover with a slightly longer
+   shadow. box-shadow replaces the whole list, so the card's inset highlights are restated. Surfaces that float,
+   fill a fit page or hold a floating surface stay put: a transform would also trap anything fixed inside. */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .agent-motion { --ov-lift-shadow: inset 0 1px 0 color-mix(in srgb, var(--ov-hi) 10%, transparent), 0 28px 52px -28px color-mix(in srgb, var(--bg-base) 90%, transparent); }
+  [data-theme="light"] .agent-motion { --ov-lift-shadow: inset 0 1px 0 var(--bg-surface), inset 0 -1px 0 color-mix(in srgb, var(--accent) 5%, transparent), 0 1px 2px color-mix(in srgb, var(--ov-hi) 6%, transparent), 0 28px 52px -28px color-mix(in srgb, var(--ov-hi) 42%, transparent); }
+  .agent-motion .ov-card:not(.ov-modal, .ov-menu, .ov-pop, .ov-suggest, .ov-gs-pop, .ov-sel-list, .ov-invite, .ov-auth, .is-pick, .pl-list, .pl-empty, .lk-pl.is-on, [role=dialog], [aria-modal=true]):not(:has([role=dialog], [aria-modal=true], .ov-menu, .ov-pop, .ov-suggest, .ov-sel-list)) {
+    transition: transform 160ms ease-out, box-shadow 160ms ease-out, border-color 120ms ease;
+  }
+  .agent-motion .ov-card:not(.ov-modal, .ov-menu, .ov-pop, .ov-suggest, .ov-gs-pop, .ov-sel-list, .ov-invite, .ov-auth, .is-pick, .pl-list, .pl-empty, .lk-pl.is-on, [role=dialog], [aria-modal=true]):not(:has([role=dialog], [aria-modal=true], .ov-menu, .ov-pop, .ov-suggest, .ov-sel-list)):hover {
+    transform: translateY(-1px);
+    box-shadow: var(--ov-lift-shadow);
+  }
+}
 /* Portal preview list: the small "Preview v2" / "Back to old pages" text link under agent pages. */
 .ov-preview { display: flex; justify-content: center; margin: 8px 0 0; }
 .ov-preview-link {

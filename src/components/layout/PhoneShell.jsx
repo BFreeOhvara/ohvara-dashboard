@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { House, Users, Plus, MessageSquare, Menu, ChevronLeft, Phone, Wallet } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useUnreadMessageCount, useMessagesRealtime } from '../../hooks/usePolicyMessages'
 import { PhoneLayoutContext } from '../../hooks/usePhoneLayout'
+import { usePageEase } from '../../hooks/usePageEase'
 import { usePortalPhone } from '../../contexts/portalPhone'
 import { usePortal } from '../../hooks/usePortalAccess'
 import { BillingGate } from './BillingGate'
@@ -174,12 +175,16 @@ export function PhoneShell({ children }) {
   const selfLocked = portal.self && portal.locked && !portal.loading
   const sub = SUB_PAGES[role][pathname]
   const cls = ['ph-app', tabs && 'has-tabs', pathname === '/messages' && 'is-bleed', sub && 'has-sub'].filter(Boolean).join(' ')
+  // The same scope as DashboardLayout: agent pages ease in, everyone else keeps fadeUp.
+  const agentMotion = profile?.role === 'agent' || pathname.startsWith('/agent')
+  const pageRef = useRef(null)
+  usePageEase(pageRef, pathname, agentMotion)
   return (
     <PhoneLayoutContext.Provider value>
       <div className={cls}>
         {sub && <PhoneSubHead title={sub} onBack={() => navigate(MORE[role])} />}
         <main className="ph-main">
-          <div key={pathname} style={{ animation: 'fadeUp 160ms ease-out' }}>
+          <div key={pathname} ref={pageRef} className={agentMotion ? 'agent-motion' : undefined} style={agentMotion ? undefined : { animation: 'fadeUp 160ms ease-out' }}>
             <ConfirmEmailBanner />
             <ErrorBoundary resetKey={pathname}>
               {/* Prompt 775 — pull down to refresh Home / Today in the phone app. */}

@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { useLocation, Link } from 'react-router-dom'
 import { Menu, ChevronRight, Home, Inbox } from 'lucide-react'
 import { Sidebar, COLLAPSE_KEY, SIDEBAR_W, SIDEBAR_W_COLLAPSED } from './Sidebar'
@@ -22,6 +22,7 @@ import { ErrorBoundary } from '../shared/ErrorBoundary'
 import { PhoneShell } from './PhoneShell'
 import { ConfirmEmailBanner } from './ConfirmEmailBanner'
 import { useIsPhone } from '../../hooks/usePhoneLayout'
+import { usePageEase } from '../../hooks/usePageEase'
 import { TransferAlert } from '../agent/TransferAlert'
 // The transfer alert's styles (.pv-ta) live with the v2 pages.
 import '../../pages/agent/v2/portalV2.css'
@@ -306,6 +307,12 @@ export function DashboardLayout({ children }) {
   const { profile } = useAuth()
   const [title] = TITLES[pathname] || ['']
 
+  // Agent pages ease in (usePageEase) and their cards lift on hover (.agent-motion in index.css).
+  // /agent/clients also admits admin, and that is still an agent page. Everyone else keeps fadeUp.
+  const agentMotion = profile?.role === 'agent' || pathname.startsWith('/agent')
+  const pageRef = useRef(null)
+  usePageEase(pageRef, pathname, agentMotion)
+
   // Prompt 772 — an agent on a phone gets the app-style shell instead.
   // Prompt 773 — a Fulfillment rep too. Prompt 774 — and Admin.
   const phone = useIsPhone()
@@ -353,8 +360,9 @@ export function DashboardLayout({ children }) {
           >
             <div
               key={pathname}
-              className={isFullWidth ? 'flex-1 overflow-hidden flex flex-col' : ''}
-              style={isFullWidth ? undefined : { animation: 'fadeUp 160ms ease-out' }}
+              ref={pageRef}
+              className={`${isFullWidth ? 'flex-1 overflow-hidden flex flex-col' : ''}${agentMotion ? ' agent-motion' : ''}`}
+              style={isFullWidth || agentMotion ? undefined : { animation: 'fadeUp 160ms ease-out' }}
             >
               {/* Prompt 746 — a crashing page shows a message here; the sidebar and
                   header stay, and a new route clears it. */}

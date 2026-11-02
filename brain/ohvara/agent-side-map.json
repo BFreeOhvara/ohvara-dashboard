@@ -518,6 +518,30 @@
         "supabase/tests/p_agent_inbounds.sql"
       ],
       "notes": "Migration 212, not applied. policies.servicing_va_id and servicing_va_assigned_at, set by servicing_seed_steps through servicing_va_pick: same side, active, fewest live clients, longest since their last new client, then id. Every submitted deal, Yes and No, and a Sold lead whose policy has no owner. A re-run keeps the owner, no active VA leaves it null and the sale still succeeds, and an agent or VA cannot write it. Separate from assigned_fulfillment_id. No screen reads it yet."
+    },
+    {
+      "id": "motion.page-ease",
+      "page": "All agent pages",
+      "title": "Agent pages ease in on a route change and are complete at rest",
+      "status": "checking",
+      "files": [
+        "src/hooks/usePageEase.js",
+        "src/components/layout/DashboardLayout.jsx",
+        "src/components/layout/PhoneShell.jsx",
+        "scripts/page-ease-check.mjs"
+      ],
+      "notes": "Web Animations, id page-ease: up to 8 top blocks, opacity 0.5 to 1, translateY(8px) to 0, 250 ms, power3-out, 40 ms apart, fill backwards only. A lazy page eases when its content lands, up to 1500 ms. Blocks holding a dialog or any fixed node are left out. A press, a key or a new dialog cancels it. Reduced motion: nothing. Fulfillment and admin keep fadeUp 160ms. Proof: node scripts/page-ease-check.mjs."
+    },
+    {
+      "id": "motion.card-lift",
+      "page": "All agent pages",
+      "title": "Agent cards lift 1px on hover with a slightly longer shadow",
+      "status": "checking",
+      "files": [
+        "src/index.css",
+        "scripts/page-ease-check.mjs"
+      ],
+      "notes": "Under .agent-motion, mouse only, no reduced motion. Floating surfaces, .pl-list, .pl-empty, a picked plan and any card holding a dialog or popover stay put. The shadow is color-mix on existing tokens and restates the insets (dark 2 layers, light 4). DESIGN.md v16 still says no hover lifts; that line needs updating."
     }
   ]
 }

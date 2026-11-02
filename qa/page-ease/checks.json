@@ -1,0 +1,1089 @@
+[
+ {
+  "name": "1440-light first /agent/clients",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 83,
+  "waitFrames": 0,
+  "targets": [
+   "div.pl-rail",
+   "section.ov-card.pl-list"
+  ]
+ },
+ {
+  "name": "1440-light first /agent/calendar",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 482,
+  "waitFrames": 25,
+  "targets": [
+   "div.cal-bar.pv-only-desk",
+   "div.cal-main.pv-only-desk"
+  ]
+ },
+ {
+  "name": "1440-light first /agent/leads",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 479,
+  "waitFrames": 25,
+  "targets": [
+   "section.ov-hero.inb-start",
+   "nav.inb-tabs",
+   "details.ov-card.pv-explain"
+  ]
+ },
+ {
+  "name": "1440-light first /agent/activity",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 62,
+  "waitFrames": 0,
+  "targets": [
+   "section.ov-hero.flex",
+   "div.ov-card.p-4",
+   "section.ov-card.px-3"
+  ]
+ },
+ {
+  "name": "1440-light first /agent/billing",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 67,
+  "waitFrames": 0,
+  "targets": [
+   "div.ov-bill.ov-bill-cq",
+   "div.pl2"
+  ]
+ },
+ {
+  "name": "1440-light first /settings",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 57,
+  "waitFrames": 0,
+  "targets": [
+   "aside.ov-set-side",
+   "div.ov-set-main"
+  ]
+ },
+ {
+  "name": "1440-light first /agent",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 58,
+  "waitFrames": 0,
+  "targets": [
+   "section.ov-hero",
+   "section.ov-bk",
+   "div.ov-grid.ov-grid--svc"
+  ]
+ },
+ {
+  "name": "1440-light repeat /agent/clients",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 71,
+  "waitFrames": 0,
+  "targets": [
+   "div.pl-rail",
+   "section.ov-card.pl-list"
+  ]
+ },
+ {
+  "name": "1440-light repeat /agent/calendar",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 57,
+  "waitFrames": 0,
+  "targets": [
+   "div.cal-bar.pv-only-desk",
+   "div.cal-main.pv-only-desk"
+  ]
+ },
+ {
+  "name": "1440-light repeat /agent/leads",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 67,
+  "waitFrames": 0,
+  "targets": [
+   "section.ov-hero.inb-start",
+   "nav.inb-tabs",
+   "details.ov-card.pv-explain"
+  ]
+ },
+ {
+  "name": "1440-light repeat /agent/activity",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 61,
+  "waitFrames": 0,
+  "targets": [
+   "section.ov-hero.flex",
+   "div.ov-card.p-4",
+   "section.ov-card.px-3"
+  ]
+ },
+ {
+  "name": "1440-light repeat /agent/billing",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 61,
+  "waitFrames": 0,
+  "targets": [
+   "div.ov-bill.ov-bill-cq",
+   "div.pl2"
+  ]
+ },
+ {
+  "name": "1440-light repeat /settings",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 71,
+  "waitFrames": 0,
+  "targets": [
+   "aside.ov-set-side",
+   "div.ov-set-main"
+  ]
+ },
+ {
+  "name": "1440-light repeat /agent",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 59,
+  "waitFrames": 0,
+  "targets": [
+   "section.ov-hero",
+   "section.ov-bk",
+   "div.ov-grid.ov-grid--svc"
+  ]
+ },
+ {
+  "name": "1440-light no page errors",
+  "pass": true
+ },
+ {
+  "name": "1440-dark first /agent/clients",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 69,
+  "waitFrames": 0,
+  "targets": [
+   "div.pl-rail",
+   "section.ov-card.pl-list"
+  ]
+ },
+ {
+  "name": "1440-dark first /agent/calendar",
+  "pass": true,
+  "eases": 2,
+  "frames": 91,
+  "minOpacity": 0.5,
+  "firstAt": 485,
+  "waitFrames": 25,
+  "targets": [
+   "div.cal-bar.pv-only-desk",
+   "div.cal-main.pv-only-desk"
+  ]
+ },
+ {
+  "name": "1440-dark first /agent/leads",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 468,
+  "waitFrames": 24,
+  "targets": [
+   "section.ov-hero.inb-start",
+   "nav.inb-tabs",
+   "details.ov-card.pv-explain"
+  ]
+ },
+ {
+  "name": "1440-dark first /agent/activity",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 55,
+  "waitFrames": 0,
+  "targets": [
+   "section.ov-hero.flex",
+   "div.ov-card.p-4",
+   "section.ov-card.px-3"
+  ]
+ },
+ {
+  "name": "1440-dark first /agent/billing",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 73,
+  "waitFrames": 0,
+  "targets": [
+   "div.ov-bill.ov-bill-cq",
+   "div.pl2"
+  ]
+ },
+ {
+  "name": "1440-dark first /settings",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 66,
+  "waitFrames": 0,
+  "targets": [
+   "aside.ov-set-side",
+   "div.ov-set-main"
+  ]
+ },
+ {
+  "name": "1440-dark first /agent",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 55,
+  "waitFrames": 0,
+  "targets": [
+   "section.ov-hero",
+   "section.ov-bk",
+   "div.ov-grid.ov-grid--svc"
+  ]
+ },
+ {
+  "name": "1440-dark repeat /agent/clients",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 63,
+  "waitFrames": 0,
+  "targets": [
+   "div.pl-rail",
+   "section.ov-card.pl-list"
+  ]
+ },
+ {
+  "name": "1440-dark repeat /agent/calendar",
+  "pass": true,
+  "eases": 2,
+  "frames": 91,
+  "minOpacity": 0.5,
+  "firstAt": 68,
+  "waitFrames": 0,
+  "targets": [
+   "div.cal-bar.pv-only-desk",
+   "div.cal-main.pv-only-desk"
+  ]
+ },
+ {
+  "name": "1440-dark repeat /agent/leads",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 67,
+  "waitFrames": 0,
+  "targets": [
+   "section.ov-hero.inb-start",
+   "nav.inb-tabs",
+   "details.ov-card.pv-explain"
+  ]
+ },
+ {
+  "name": "1440-dark repeat /agent/activity",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 59,
+  "waitFrames": 0,
+  "targets": [
+   "section.ov-hero.flex",
+   "div.ov-card.p-4",
+   "section.ov-card.px-3"
+  ]
+ },
+ {
+  "name": "1440-dark repeat /agent/billing",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 60,
+  "waitFrames": 0,
+  "targets": [
+   "div.ov-bill.ov-bill-cq",
+   "div.pl2"
+  ]
+ },
+ {
+  "name": "1440-dark repeat /settings",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 59,
+  "waitFrames": 0,
+  "targets": [
+   "aside.ov-set-side",
+   "div.ov-set-main"
+  ]
+ },
+ {
+  "name": "1440-dark repeat /agent",
+  "pass": true,
+  "eases": 3,
+  "frames": 91,
+  "minOpacity": 0.5,
+  "firstAt": 69,
+  "waitFrames": 0,
+  "targets": [
+   "section.ov-hero",
+   "section.ov-bk",
+   "div.ov-grid.ov-grid--svc"
+  ]
+ },
+ {
+  "name": "1440-dark no page errors",
+  "pass": true
+ },
+ {
+  "name": "390-light first /agent/clients",
+  "pass": true,
+  "eases": 5,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 78,
+  "waitFrames": 0,
+  "targets": [
+   "div.",
+   "label.ov-input.ph-search",
+   "div.ph-side",
+   "div.ov-card.ph-seg",
+   "div."
+  ]
+ },
+ {
+  "name": "390-light first /agent/calendar",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 496,
+  "waitFrames": 25,
+  "targets": [
+   "div.cal-phbar.pv-only-phone",
+   "div.cal-ph-flow.pv-only-phone"
+  ]
+ },
+ {
+  "name": "390-light first /agent/leads",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 502,
+  "waitFrames": 25,
+  "targets": [
+   "section.ov-hero.inb-start",
+   "nav.inb-tabs",
+   "details.ov-card.pv-explain"
+  ]
+ },
+ {
+  "name": "390-light first /agent/activity",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 73,
+  "waitFrames": 0,
+  "targets": [
+   "section.ov-hero.flex",
+   "div.ov-card.p-4",
+   "section.ov-card.px-3"
+  ]
+ },
+ {
+  "name": "390-light first /agent/billing",
+  "pass": true,
+  "eases": 1,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 86,
+  "waitFrames": 0,
+  "targets": [
+   "div."
+  ]
+ },
+ {
+  "name": "390-light first /settings",
+  "pass": true,
+  "eases": 3,
+  "frames": 91,
+  "minOpacity": 0.5,
+  "firstAt": 85,
+  "waitFrames": 0,
+  "targets": [
+   "div.ov-hero",
+   "nav.ov-card.ov-set-nav",
+   "button.ov-ghost.ov-set-btn"
+  ]
+ },
+ {
+  "name": "390-light first /agent",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 85,
+  "waitFrames": 0,
+  "targets": [
+   "div.ph-stack",
+   "a.ov-card.ov-link"
+  ]
+ },
+ {
+  "name": "390-light repeat /agent/clients",
+  "pass": true,
+  "eases": 5,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 80,
+  "waitFrames": 0,
+  "targets": [
+   "div.",
+   "label.ov-input.ph-search",
+   "div.ph-side",
+   "div.ov-card.ph-seg",
+   "div."
+  ]
+ },
+ {
+  "name": "390-light repeat /agent/calendar",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 72,
+  "waitFrames": 0,
+  "targets": [
+   "div.cal-phbar.pv-only-phone",
+   "div.cal-ph-flow.pv-only-phone"
+  ]
+ },
+ {
+  "name": "390-light repeat /agent/leads",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 76,
+  "waitFrames": 0,
+  "targets": [
+   "section.ov-hero.inb-start",
+   "nav.inb-tabs",
+   "details.ov-card.pv-explain"
+  ]
+ },
+ {
+  "name": "390-light repeat /agent/activity",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 78,
+  "waitFrames": 0,
+  "targets": [
+   "section.ov-hero.flex",
+   "div.ov-card.p-4",
+   "section.ov-card.px-3"
+  ]
+ },
+ {
+  "name": "390-light repeat /agent/billing",
+  "pass": true,
+  "eases": 1,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 75,
+  "waitFrames": 0,
+  "targets": [
+   "div."
+  ]
+ },
+ {
+  "name": "390-light repeat /settings",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 76,
+  "waitFrames": 0,
+  "targets": [
+   "div.ov-hero",
+   "nav.ov-card.ov-set-nav",
+   "button.ov-ghost.ov-set-btn"
+  ]
+ },
+ {
+  "name": "390-light repeat /agent",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 78,
+  "waitFrames": 0,
+  "targets": [
+   "div.ph-stack",
+   "a.ov-card.ov-link"
+  ]
+ },
+ {
+  "name": "390-light no page errors",
+  "pass": true
+ },
+ {
+  "name": "390-dark first /agent/clients",
+  "pass": true,
+  "eases": 5,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 89,
+  "waitFrames": 0,
+  "targets": [
+   "div.",
+   "label.ov-input.ph-search",
+   "div.ph-side",
+   "div.ov-card.ph-seg",
+   "div."
+  ]
+ },
+ {
+  "name": "390-dark first /agent/calendar",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 490,
+  "waitFrames": 25,
+  "targets": [
+   "div.cal-phbar.pv-only-phone",
+   "div.cal-ph-flow.pv-only-phone"
+  ]
+ },
+ {
+  "name": "390-dark first /agent/leads",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 492,
+  "waitFrames": 25,
+  "targets": [
+   "section.ov-hero.inb-start",
+   "nav.inb-tabs",
+   "details.ov-card.pv-explain"
+  ]
+ },
+ {
+  "name": "390-dark first /agent/activity",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 73,
+  "waitFrames": 0,
+  "targets": [
+   "section.ov-hero.flex",
+   "div.ov-card.p-4",
+   "section.ov-card.px-3"
+  ]
+ },
+ {
+  "name": "390-dark first /agent/billing",
+  "pass": true,
+  "eases": 1,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 79,
+  "waitFrames": 0,
+  "targets": [
+   "div."
+  ]
+ },
+ {
+  "name": "390-dark first /settings",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 87,
+  "waitFrames": 0,
+  "targets": [
+   "div.ov-hero",
+   "nav.ov-card.ov-set-nav",
+   "button.ov-ghost.ov-set-btn"
+  ]
+ },
+ {
+  "name": "390-dark first /agent",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 81,
+  "waitFrames": 0,
+  "targets": [
+   "div.ph-stack",
+   "a.ov-card.ov-link"
+  ]
+ },
+ {
+  "name": "390-dark repeat /agent/clients",
+  "pass": true,
+  "eases": 5,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 78,
+  "waitFrames": 0,
+  "targets": [
+   "div.",
+   "label.ov-input.ph-search",
+   "div.ph-side",
+   "div.ov-card.ph-seg",
+   "div."
+  ]
+ },
+ {
+  "name": "390-dark repeat /agent/calendar",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 88,
+  "waitFrames": 0,
+  "targets": [
+   "div.cal-phbar.pv-only-phone",
+   "div.cal-ph-flow.pv-only-phone"
+  ]
+ },
+ {
+  "name": "390-dark repeat /agent/leads",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 87,
+  "waitFrames": 0,
+  "targets": [
+   "section.ov-hero.inb-start",
+   "nav.inb-tabs",
+   "details.ov-card.pv-explain"
+  ]
+ },
+ {
+  "name": "390-dark repeat /agent/activity",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 77,
+  "waitFrames": 0,
+  "targets": [
+   "section.ov-hero.flex",
+   "div.ov-card.p-4",
+   "section.ov-card.px-3"
+  ]
+ },
+ {
+  "name": "390-dark repeat /agent/billing",
+  "pass": true,
+  "eases": 1,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 80,
+  "waitFrames": 0,
+  "targets": [
+   "div."
+  ]
+ },
+ {
+  "name": "390-dark repeat /settings",
+  "pass": true,
+  "eases": 3,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 74,
+  "waitFrames": 0,
+  "targets": [
+   "div.ov-hero",
+   "nav.ov-card.ov-set-nav",
+   "button.ov-ghost.ov-set-btn"
+  ]
+ },
+ {
+  "name": "390-dark repeat /agent",
+  "pass": true,
+  "eases": 2,
+  "frames": 92,
+  "minOpacity": 0.5,
+  "firstAt": 77,
+  "waitFrames": 0,
+  "targets": [
+   "div.ph-stack",
+   "a.ov-card.ov-link"
+  ]
+ },
+ {
+  "name": "390-dark no page errors",
+  "pass": true
+ },
+ {
+  "name": "1440 extra /messages",
+  "pass": true,
+  "eases": 2,
+  "targets": [
+   "div.ov-msg-inbox.flex",
+   "div.ov-msg-pane.hidden"
+  ]
+ },
+ {
+  "name": "1440 extra /agent/submit",
+  "pass": true,
+  "eases": 2,
+  "targets": [
+   "div.ov-range.ov-book-switch",
+   "div.ov-book"
+  ]
+ },
+ {
+  "name": "390 extra /messages",
+  "pass": true,
+  "eases": 3,
+  "targets": [
+   "section.ov-hero.ov-msg-hero",
+   "label.ov-input.ov-msg-search",
+   "div.ov-msg-list.scrollbar-thin"
+  ]
+ },
+ {
+  "name": "390 extra /agent/submit",
+  "pass": true,
+  "eases": 2,
+  "targets": [
+   "div.",
+   "div."
+  ]
+ },
+ {
+  "name": "stagger: every fill is backwards",
+  "pass": true,
+  "s": {
+   "n": 3,
+   "fills": [
+    "backwards",
+    "backwards",
+    "backwards"
+   ],
+   "delays": [
+    0,
+    40,
+    80
+   ],
+   "durations": [
+    250,
+    250,
+    250
+   ],
+   "opacity": "0.5",
+   "transform": "matrix(1, 0, 0, 1, 0, 8)"
+  }
+ },
+ {
+  "name": "stagger: 40 ms apart, 250 ms each",
+  "pass": true
+ },
+ {
+  "name": "stagger: last target paused at 0 reads 0.5 and 8px",
+  "pass": true
+ },
+ {
+  "name": "1440-dark /agent/activity: 50 ms frame has the resting text",
+  "pass": true
+ },
+ {
+  "name": "1440-dark /agent/activity: 50 ms frame is at 0.5 or more",
+  "pass": true
+ },
+ {
+  "name": "1440-light /agent/calendar: 50 ms frame has the resting text",
+  "pass": true
+ },
+ {
+  "name": "1440-light /agent/calendar: 50 ms frame is at 0.5 or more",
+  "pass": true
+ },
+ {
+  "name": "390-dark /agent/calendar: 50 ms frame has the resting text",
+  "pass": true
+ },
+ {
+  "name": "390-dark /agent/calendar: 50 ms frame is at 0.5 or more",
+  "pass": true
+ },
+ {
+  "name": "1440 client drawer: real click at 69 ms matches after 2 s",
+  "pass": true
+ },
+ {
+  "name": "1440 client drawer: scripted click at 30 ms matches after 2 s",
+  "pass": true
+ },
+ {
+  "name": "390 client drawer: real click at 85 ms matches after 2 s",
+  "pass": true
+ },
+ {
+  "name": "390 client drawer: scripted click at 31 ms matches after 2 s",
+  "pass": true
+ },
+ {
+  "name": "1440 billing modal: at 48 ms matches after 2 s",
+  "pass": true
+ },
+ {
+  "name": "dialog in a block mid-ease cancels the ease first",
+  "pass": true
+ },
+ {
+  "name": "a key press cancels the ease",
+  "pass": true
+ },
+ {
+  "name": "confirm banner + first lazy visit: the page eases, the banner does not",
+  "pass": true
+ },
+ {
+  "name": "confirm banner: no page errors",
+  "pass": true
+ },
+ {
+  "name": "lazy chunk past 1500 ms: no ease, complete at 1",
+  "pass": true
+ },
+ {
+  "name": "1440 reduced motion /agent/clients: no ease",
+  "pass": true
+ },
+ {
+  "name": "1440 reduced motion /agent/calendar: no ease",
+  "pass": true
+ },
+ {
+  "name": "1440 reduced motion /agent: no ease",
+  "pass": true
+ },
+ {
+  "name": "reduced motion: a card does not move on hover",
+  "pass": true
+ },
+ {
+  "name": "390 reduced motion /agent/clients: no ease",
+  "pass": true
+ },
+ {
+  "name": "390 reduced motion /agent/calendar: no ease",
+  "pass": true
+ },
+ {
+  "name": "390 reduced motion /agent: no ease",
+  "pass": true
+ },
+ {
+  "name": "light /agent: hovered cards rise 1 to 2 px",
+  "pass": true,
+  "cards": 9,
+  "moved": 9,
+  "moves": [
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1
+  ],
+  "nested": 0
+ },
+ {
+  "name": "light: lift keeps the shadow layers (4 total, 2 inset)",
+  "pass": true
+ },
+ {
+  "name": "light: lift adds no sideways scroll",
+  "pass": true
+ },
+ {
+  "name": "light .pl-list does not move",
+  "pass": true
+ },
+ {
+  "name": "dark /agent: hovered cards rise 1 to 2 px",
+  "pass": true,
+  "cards": 9,
+  "moved": 9,
+  "moves": [
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1
+  ],
+  "nested": 0
+ },
+ {
+  "name": "dark: lift keeps the shadow layers (2 total, 1 inset)",
+  "pass": true
+ },
+ {
+  "name": "dark: lift adds no sideways scroll",
+  "pass": true
+ },
+ {
+  "name": "dark .pl-list does not move",
+  "pass": true
+ },
+ {
+  "name": "a modal does not move on hover",
+  "pass": true
+ },
+ {
+  "name": "info: pointer on the bottom pixel",
+  "pass": true,
+  "turns": 0,
+  "frames": 92
+ },
+ {
+  "name": "390 touch: no lift",
+  "pass": true
+ },
+ {
+  "name": "fulfillment 1440 /fulfillment: fadeUp 160ms kept, no agent motion",
+  "pass": true
+ },
+ {
+  "name": "fulfillment /fulfillment: a card does not move on hover",
+  "pass": true
+ },
+ {
+  "name": "fulfillment 1440 /fulfillment/pipeline: fadeUp 160ms kept, no agent motion",
+  "pass": true
+ },
+ {
+  "name": "fulfillment /fulfillment/pipeline: a card does not move on hover",
+  "pass": true
+ },
+ {
+  "name": "fulfillment 1440 /settings: fadeUp 160ms kept, no agent motion",
+  "pass": true
+ },
+ {
+  "name": "fulfillment /settings: a card does not move on hover",
+  "pass": true
+ },
+ {
+  "name": "fulfillment 390 /fulfillment: fadeUp 160ms kept, no agent motion",
+  "pass": true
+ },
+ {
+  "name": "fulfillment 390 /fulfillment/pipeline: fadeUp 160ms kept, no agent motion",
+  "pass": true
+ },
+ {
+  "name": "fulfillment 390 /settings: fadeUp 160ms kept, no agent motion",
+  "pass": true
+ },
+ {
+  "name": "admin 1440 /admin: fadeUp 160ms kept, no agent motion",
+  "pass": true
+ },
+ {
+  "name": "admin /admin: a card does not move on hover",
+  "pass": true
+ },
+ {
+  "name": "admin 1440 /admin/pipeline: fadeUp 160ms kept, no agent motion",
+  "pass": true
+ },
+ {
+  "name": "admin /admin/pipeline: a card does not move on hover",
+  "pass": true
+ },
+ {
+  "name": "admin 1440 /settings: fadeUp 160ms kept, no agent motion",
+  "pass": true
+ },
+ {
+  "name": "admin /settings: a card does not move on hover",
+  "pass": true
+ },
+ {
+  "name": "admin 390 /admin: fadeUp 160ms kept, no agent motion",
+  "pass": true
+ },
+ {
+  "name": "admin 390 /admin/pipeline: fadeUp 160ms kept, no agent motion",
+  "pass": true
+ },
+ {
+  "name": "admin 390 /settings: fadeUp 160ms kept, no agent motion",
+  "pass": true
+ },
+ {
+  "name": "admin on /agent/activity: agent motion, no fadeUp",
+  "pass": true
+ }
+]
