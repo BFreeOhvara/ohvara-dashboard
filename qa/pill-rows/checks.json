@@ -1,0 +1,446 @@
+[
+ {
+  "name": "client-pick-light-1440 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "cpl-pick",
+   "anims": 0
+  }
+ },
+ {
+  "name": "client-pick-light-1440 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 52,
+    "right": 293.098,
+    "bottom": 96,
+    "left": 151.629
+   },
+   "t": {
+    "top": 52,
+    "left": 183.84375,
+    "right": 300.921875,
+    "bottom": 96
+   },
+   "docOver": -15
+  }
+ },
+ {
+  "name": "client-pick-light-1440 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "cpl-pick"
+  }
+ },
+ {
+  "name": "client-pick-light-1440 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     1061.66,
+     308.16,
+     318.34,
+     96
+    ],
+    "items": [
+     [
+      1061.66,
+      308.16,
+      188.58,
+      44
+     ],
+     [
+      1061.66,
+      360.16,
+      175.84,
+      44
+     ],
+     [
+      1245.5,
+      360.16,
+      117.08,
+      44
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     1061.66,
+     308.16,
+     318.34,
+     96
+    ],
+    "items": [
+     [
+      1061.66,
+      308.16,
+      188.58,
+      44
+     ],
+     [
+      1061.66,
+      360.16,
+      175.84,
+      44
+     ],
+     [
+      1245.5,
+      360.16,
+      117.08,
+      44
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "client-pick-light-1440 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "client-pick-light-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "client-pick-light-390 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "cpl-pick",
+   "anims": 0
+  }
+ },
+ {
+  "name": "client-pick-light-390 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 52,
+    "right": 293.098,
+    "bottom": 96,
+    "left": 151.629
+   },
+   "t": {
+    "top": 52,
+    "left": 183.84375,
+    "right": 300.921875,
+    "bottom": 96
+   },
+   "docOver": 0
+  }
+ },
+ {
+  "name": "client-pick-light-390 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "cpl-pick"
+  }
+ },
+ {
+  "name": "client-pick-light-390 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     35,
+     389.86,
+     320,
+     96
+    ],
+    "items": [
+     [
+      35,
+      389.86,
+      188.58,
+      44
+     ],
+     [
+      35,
+      441.86,
+      175.84,
+      44
+     ],
+     [
+      218.84,
+      441.86,
+      117.08,
+      44
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     35,
+     389.86,
+     320,
+     96
+    ],
+    "items": [
+     [
+      35,
+      389.86,
+      188.58,
+      44
+     ],
+     [
+      35,
+      441.86,
+      175.84,
+      44
+     ],
+     [
+      218.84,
+      441.86,
+      117.08,
+      44
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "client-pick-light-390 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "client-pick-light-390 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "client-pick-dark-1440 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "cpl-pick",
+   "anims": 0
+  }
+ },
+ {
+  "name": "client-pick-dark-1440 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 52,
+    "right": 293.098,
+    "bottom": 96,
+    "left": 151.629
+   },
+   "t": {
+    "top": 52,
+    "left": 183.84375,
+    "right": 300.921875,
+    "bottom": 96
+   },
+   "docOver": -15
+  }
+ },
+ {
+  "name": "client-pick-dark-1440 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "cpl-pick"
+  }
+ },
+ {
+  "name": "client-pick-dark-1440 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     1061.66,
+     308.16,
+     318.34,
+     96
+    ],
+    "items": [
+     [
+      1061.66,
+      308.16,
+      188.58,
+      44
+     ],
+     [
+      1061.66,
+      360.16,
+      175.84,
+      44
+     ],
+     [
+      1245.5,
+      360.16,
+      117.08,
+      44
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     1061.66,
+     308.16,
+     318.34,
+     96
+    ],
+    "items": [
+     [
+      1061.66,
+      308.16,
+      188.58,
+      44
+     ],
+     [
+      1061.66,
+      360.16,
+      175.84,
+      44
+     ],
+     [
+      1245.5,
+      360.16,
+      117.08,
+      44
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "client-pick-dark-1440 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "client-pick-dark-1440 no page errors",
+  "pass": true,
+  "info": []
+ },
+ {
+  "name": "client-pick-dark-390 switches instantly, no .sp-pill",
+  "pass": true,
+  "info": {
+   "seen": 0,
+   "on": true,
+   "live": 0,
+   "cls": "cpl-pick",
+   "anims": 0
+  }
+ },
+ {
+  "name": "client-pick-dark-390 pill is mid-flight at 200 ms, edges apart from the target",
+  "pass": true,
+  "info": {
+   "e": {
+    "top": 52,
+    "right": 293.098,
+    "bottom": 96,
+    "left": 151.629
+   },
+   "t": {
+    "top": 52,
+    "left": 183.84375,
+    "right": 300.921875,
+    "bottom": 96
+   },
+   "docOver": 0
+  }
+ },
+ {
+  "name": "client-pick-dark-390 overlay gone after the flight, row not remounted, no sp- classes left",
+  "pass": true,
+  "info": {
+   "pills": 0,
+   "kept": true,
+   "cls": "cpl-pick"
+  }
+ },
+ {
+  "name": "client-pick-dark-390 rects before and after the selection match the no-pill run (master's)",
+  "pass": true,
+  "info": {
+   "shiftsOnMaster": false,
+   "pre": {
+    "row": [
+     35,
+     389.86,
+     320,
+     96
+    ],
+    "items": [
+     [
+      35,
+      389.86,
+      188.58,
+      44
+     ],
+     [
+      35,
+      441.86,
+      175.84,
+      44
+     ],
+     [
+      218.84,
+      441.86,
+      117.08,
+      44
+     ]
+    ]
+   },
+   "post": {
+    "row": [
+     35,
+     389.86,
+     320,
+     96
+    ],
+    "items": [
+     [
+      35,
+      389.86,
+      188.58,
+      44
+     ],
+     [
+      35,
+      441.86,
+      175.84,
+      44
+     ],
+     [
+      218.84,
+      441.86,
+      117.08,
+      44
+     ]
+    ]
+   }
+  }
+ },
+ {
+  "name": "client-pick-dark-390 rects before and after the selection are identical",
+  "pass": true
+ },
+ {
+  "name": "client-pick-dark-390 no page errors",
+  "pass": true,
+  "info": []
+ }
+]

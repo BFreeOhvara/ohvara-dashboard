@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, MessageCircle, Mail, Phone, Lock, UserPlus, CheckCircle2 } from 'lucide-react'
+import { useStretchPill } from '../../hooks/useStretchPill'
 import { useInviteStatus, useSendAgentInvite } from '../../hooks/useProfiles'
 import { formatPhoneInput } from '../../lib/policyFormat'
 
@@ -27,6 +28,8 @@ export function InviteAgentModal({ onClose }) {
   const [value, setValue] = useState('')
   const [sentTo, setSentTo] = useState(null)
   const field = useRef(null)
+  const segRef = useRef(null)
+  useStretchPill(segRef, { activeKey: channel, selector: 'button.is-on' })
   const status = useInviteStatus()
   const send = useSendAgentInvite()
 
@@ -115,7 +118,7 @@ export function InviteAgentModal({ onClose }) {
             </>
           ) : (
             <>
-              <div className="ov-range ov-invite-seg" role="tablist" aria-label="Send by">
+              <div ref={segRef} className="ov-range ov-invite-seg" role="tablist" aria-label="Send by">
                 {tabs.map(({ key, label, Icon }) => {
                   const off = status.isFetched && status.data?.[key] !== true
                   return (
