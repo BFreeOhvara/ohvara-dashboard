@@ -30,8 +30,8 @@ function fn(name) {
 const grantees = (grants, name) =>
   [...grants.matchAll(new RegExp(`grant execute on function public\\.${name}\\([^)]*\\) to ([^;]+);`, 'g'))].map(m => m[1].trim())
 
-test('there is one migration, 208, and its header says it is not applied', () => {
-  assert.deepEqual(files, ['208_transfer_missed.sql'])
+test('there is one migration, 211, and its header says it is not applied', () => {
+  assert.deepEqual(files, ['211_transfer_missed.sql'])
   assert.match(header, /NOT APPLIED/)
   assert.match(header, /help-voice must be deployed/)
 })

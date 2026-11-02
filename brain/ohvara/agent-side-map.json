@@ -387,7 +387,7 @@
       "title": "Live transfer: Accept acknowledges only; a miss is logged on the server; Can't take it; VA books the next open slot",
       "status": "checking",
       "files": [
-        "supabase/migrations/208_transfer_missed.sql",
+        "supabase/migrations/211_transfer_missed.sql",
         "supabase/functions/help-voice/core.ts",
         "supabase/functions/help-voice/index.ts",
         "src/components/agent/TransferAlert.jsx",
@@ -396,7 +396,7 @@
         "src/hooks/useVaDesk.js",
         "supabase/tests/p_transfer_missed.sql"
       ],
-      "notes": "migration 208 unapplied; help-voice deploy pending"
+      "notes": "migration 211 unapplied; help-voice deploy pending"
     },
     {
       "id": "leads.working-hours-booking",
@@ -404,13 +404,13 @@
       "title": "VA bookings stay inside the agent's working hours",
       "status": "checking",
       "files": [
-        "supabase/migrations/208_transfer_missed.sql",
+        "supabase/migrations/211_transfer_missed.sql",
         "src/hooks/useVaDesk.js",
         "src/components/fulfillment/VaDesk.jsx",
         "supabase/tests/p_transfer_missed.sql",
         "src/lib/transferMissedMigration.test.js"
       ],
-      "notes": "migration 208 unapplied; help-voice deploy pending"
+      "notes": "migration 211 unapplied; help-voice deploy pending"
     },
     {
       "id": "activity.lapse-events",

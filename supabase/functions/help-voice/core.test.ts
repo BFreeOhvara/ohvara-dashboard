@@ -339,7 +339,7 @@ Deno.test('11. the miss: a no-answer leg logs once, a repeat or an earlier attem
   await noAnswer(unlinked)
   assert.deepEqual(unlinked.missed, ['CA123'])
 
-  // Migration 208 not applied yet: the log fails, the call carries on.
+  // Migration 211 not applied yet: the log fails, the call carries on.
   const off = world({ rows: [transferring()], logFails: true })
   const res = await noAnswer(off)
   assert.equal(res.status, 200)

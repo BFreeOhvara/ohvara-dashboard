@@ -60,7 +60,7 @@ export interface Store {
   // leads.transfer_status (175) on the call's lead: 'connected' once a person
   // answers the agent leg, 'dropped' when nobody does or the call ends alone.
   setLeadTransferStatus(leadId: string, status: 'connected' | 'dropped'): Promise<void>
-  // log_missed_transfer (208): one inbound_events 'missed' row per help call.
+  // log_missed_transfer (211): one inbound_events 'missed' row per help call.
   logMissedTransfer(callSid: string): Promise<void>
 }
 
@@ -212,7 +212,7 @@ async function markLead(store: Store, row: HelpCall, status: 'connected' | 'drop
   }
 }
 
-// The agent's leg went unanswered. A failed write (208 not applied yet) is logged
+// The agent's leg went unanswered. A failed write (211 not applied yet) is logged
 // and never breaks the call itself, the same as markLead.
 async function logMissed(store: Store, callSid: string) {
   try { await store.logMissedTransfer(callSid) } catch (e) {

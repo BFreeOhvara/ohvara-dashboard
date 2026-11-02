@@ -86,7 +86,7 @@ select is(
   array['va_agent_in_hours', 'va_agent_roster', 'va_claim', 'va_lead_replies', 'va_mark_reply_handled', 'va_missed_leads', 'va_next_open_slot', 'va_queue', 'va_release', 'va_save_policy_help_lead',
         'va_servicing_cancel', 'va_servicing_claim', 'va_servicing_done', 'va_servicing_outcome', 'va_servicing_queue', 'va_servicing_release',
         'va_servicing_schedule', 'va_servicing_send_to_agent', 'va_set_lead_outcome'],
-  'a0 the va_* functions are exactly these nineteen (a new one needs new cases; the va_servicing_* ones are in p_va_servicing, the three from 208 in p_transfer_missed)');
+  'a0 the va_* functions are exactly these nineteen (a new one needs new cases; the va_servicing_* ones are in p_va_servicing, the three from 211 in p_transfer_missed)');
 
 select ok(not has_function_privilege('anon', p.oid, 'execute'),
           format('a1 anon has no execute on %s', p.proname))

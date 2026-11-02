@@ -20,7 +20,7 @@ export async function myIncomingTransfer(db) {
 // The alert's line. caller_label is a first name or 'New caller', never a number.
 export const alertText = row => `Live call for you: ${row?.caller_label || 'New caller'}. We're calling your phone now. Pick up.`
 
-// The agent's answer (migration 208). Accept only records that they saw it: the call
+// The agent's answer (migration 211). Accept only records that they saw it: the call
 // continues on their phone, and only Twilio's answered callback in help-voice marks it
 // connected. Can't take it logs the miss now; Twilio's no-answer finds it already logged.
 // A function that isn't in the database yet is the same as nothing to record.

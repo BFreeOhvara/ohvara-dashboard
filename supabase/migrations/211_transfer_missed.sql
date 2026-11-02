@@ -1,4 +1,4 @@
--- 208 — Live transfer: the miss logged on the server, an acknowledge-only Accept,
+-- 211 — Live transfer: the miss logged on the server, an acknowledge-only Accept,
 -- the VA's next open slot, and working hours on bookings (Agent Portal Servicing
 -- Spec, Live calls: "ring -> accept / missed -> VA books the next open slot within
 -- the hour"; Settings: working hours are "the only hours VAs may book leads onto").
@@ -57,17 +57,17 @@
 do $$
 begin
   if to_regclass('public.help_calls') is null then
-    raise exception '208 needs 179_help_calls applied first';
+    raise exception '211 needs 179_help_calls applied first';
   end if;
   if to_regclass('public.inbound_events') is null then
-    raise exception '208 needs 180_agent_inbounds applied first';
+    raise exception '211 needs 180_agent_inbounds applied first';
   end if;
   if not exists (select 1 from information_schema.columns
                   where table_schema = 'public' and table_name = 'inbound_events' and column_name = 'is_sample') then
-    raise exception '208 needs 186_is_sample_flag applied first';
+    raise exception '211 needs 186_is_sample_flag applied first';
   end if;
   if to_regclass('public.agent_working_hours') is null then
-    raise exception '208 needs 197_agent_settings applied first';
+    raise exception '211 needs 197_agent_settings applied first';
   end if;
 end $$;
 

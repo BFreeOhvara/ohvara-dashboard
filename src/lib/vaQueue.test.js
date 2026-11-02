@@ -261,7 +261,7 @@ test('nothing on the VA screen texts, emails or calls anyone', () => {
   for (const rel of VA_SOURCES) assert.equal(code(rel).match(/\bsend(s|ing)?\b/i), null, rel)
 })
 
-test('the VA screen reads and writes only through the migration-175 and 208 functions', () => {
+test('the VA screen reads and writes only through the migration-175 and 211 functions', () => {
   const allowed = new Set(['va_queue', 'va_agent_roster', 'va_claim', 'va_release', 'va_set_lead_outcome', 'va_missed_leads', 'va_next_open_slot', 'va_agent_in_hours'])
   const calls = []
   for (const rel of VA_SOURCES) {
