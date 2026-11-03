@@ -1,13 +1,16 @@
-import { useState } from 'react'
+import { useContext, useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import { useSampleSettings, useSampleActions } from '../data'
 import { useTheme } from '../../hooks/useTheme'
 import { Drawer, Field, Seg, Switch, Chip, useNote } from '../kit'
+import { ShellAccount } from '../account'
 
 export default function Settings() {
   const { data: s } = useSampleSettings()
   const { setNotification, setDuty } = useSampleActions()
   const [theme, setTheme] = useTheme()
   const note = useNote()
+  const account = useContext(ShellAccount)
   const [panel, setPanel] = useState(null)
   const [name, setName] = useState(s.profile.name)
   const [profile, setProfile] = useState(s.profile)
@@ -35,6 +38,8 @@ export default function Settings() {
         <ul className="tp-list">{s.notifications.map(n => <li key={n.key} className="tp-li"><b className="tp-grow">{n.label}</b>
           <Switch on={n.push} label={`${n.label} push`} onChange={v => setNotification(n.key, 'push', v)} /><Switch on={n.email} label={`${n.label} email`} onChange={v => setNotification(n.key, 'email', v)} /></li>)}</ul></section>
       <section className="ov-card tp-card"><div className="tp-row"><div className="tp-grow"><b>A number of your own for texts</b><p className="tp-sub">Coming later</p></div><Chip tone="mute">Not available yet</Chip></div></section>
+      {account && <section className="ov-card tp-card"><div className="tp-row tp-wrap"><p className="tp-sub tp-grow" style={{ flexBasis: 260 }}>Deletes your login and personal details for good. Records the law makes us keep stay, without your name.</p><button type="button" className="tp-btn ov-ghost" style={{ color: 'var(--ov-live)' }} onClick={() => setPanel('delete')}><Trash2 size={16} aria-hidden="true" />Delete my account</button></div></section>}
+      {account && panel === 'delete' && <account.DeleteDialog onClose={() => setPanel(null)} />}
 
       <Drawer open={panel === 'profile'} onClose={() => setPanel(null)} title="Edit profile" footer={<button type="button" className="ov-hero tp-primary" onClick={() => { setProfile({ ...profile, name }); note('Profile saved'); setPanel(null) }}>Save</button>}>
         <Field label="Name"><input value={name} onChange={e => setName(e.target.value)} /></Field>

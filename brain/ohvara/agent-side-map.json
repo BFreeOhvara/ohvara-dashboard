@@ -648,6 +648,42 @@
         "src/template/data/index.js"
       ],
       "notes": "Ports ohvara/mockups/overview-book-stages-this-week-coming-up.html (Both state, Servicing 16 plus Leads) into the top-bar frame, on Falcon's Nov 2 send-back. Desktop: hero (date chip, 'Good afternoon, Dana', clock 2:14 PM, Submit), Your book (4 cards), Today strip (next appointment, live call switch on sample duty, appointments left, two links), Needs your attention then Steps done, This week then Coming up. Empty attention shows the caught-up box with the Up next list (confirm Gloria's number to see it). Phone: greeting, ring card, book 2x2, attention, Coming up, Steps done, then 'Your leads today' cards. Data blocks: your-book, today-strip, attention, steps-done, this-week, coming-up. .tp-ovhero hides the frame's title date at desktop and the whole title row on phone. Short tier (min-width 1000, max-height 819.98): one-row hero 80, book cards 56, strip 48, rail 320; the page scrolls at 1280x700 (762 tall) and 1440x900 (986 tall). Reverses 7e20633 (greeting and book chips in the head; .tp-h1, .tp-chips, .tp-chipcard, .tp-head removed). Mark done button is gone (rows open the client); doneTask stays in the data layer. Sample fields added: today, clock, doneRange, dutySince, nextAppt, apptsLeft, todayAppts, newLeads, doneByDay dates."
+    },
+    {
+      "id": "shell.agent-swap",
+      "page": "Shell",
+      "title": "An agent at the normal portal gets the shell; everyone else keeps today's pages",
+      "status": "checking",
+      "files": [
+        "src/template/ShellSwap.jsx",
+        "src/template/AgentShell.jsx",
+        "src/template/screens/ClientPage.jsx",
+        "src/App.jsx"
+      ],
+      "notes": "ShellSwap wraps App's Routes (one import, one wrapper; revert it to undo the swap). showShell gets role, pathname and native: isNativeApp(); when true it renders ProtectedRoute, Suspense, lazy AgentShell, a descendant Routes on SHELL_ROUTES with no second Router. One addition to the brief: while auth is loading on a shell path ShellSwap shows ProtectedRoute's spinner, because a reload of /agent/request-service otherwise hit today's catch-all before the role was known and landed on /agent. ClientPage reads id ?? clientId; useSampleClient and useSampleLead still fall back to the first sample row on master. The shell has no equivalent of the old locked self-signup gate yet (sign-up is closed). Evidence: node scripts/template-clickthrough.mjs --logged-in passes admin, Fulfillment, logged-out, two-step, phone-app (Android bridge stub, no .tp and no AgentShell download on all 13 pages), redirects and fake ids."
+    },
+    {
+      "id": "shell.account-actions",
+      "page": "Shell",
+      "title": "Sign out and Delete my account work from the shell",
+      "status": "checking",
+      "files": [
+        "src/template/account.js",
+        "src/template/AgentShell.jsx",
+        "src/template/screens/More.jsx",
+        "src/template/screens/Settings.jsx"
+      ],
+      "notes": "AgentShell provides ShellAccount { signOut, DeleteDialog }; screens read the context and it is null at /template, which keeps the sample note and hides the delete row and card. DeleteAccountDialog is unchanged. The Settings card reuses the old Settings page's sentence word for word; no new legal text. Evidence: --logged-in clicks Sign out on /agent/more at 1440 and 390, light and dark: POST /auth/v1/logout once per click, session cleared, /login pixel-equal to a fresh /login. The dialog opens on /settings and /agent/more at both sizes, is closed with Keep my account, never typed in; delete-account calls 0 across the run."
+    },
+    {
+      "id": "shell.logged-in-check",
+      "page": "Shell",
+      "title": "Logged-in click-through on a faked backend",
+      "status": "checking",
+      "files": [
+        "scripts/template-clickthrough.mjs"
+      ],
+      "notes": "node scripts/template-clickthrough.mjs --logged-in fakes mock.supabase.co, blocks other hosts, refuses --base-url and never uses a real login. Without the flag the script runs the same /template pass as before. Agent: 13 pages at 1440 and 390, light and dark, plus the link pass (23 links, 'sent on' check kept) and the button pass (268 clicks). Proved the 'sent on' check by pointing paths.calendar at /agent/plan: the run failed with '/agent/plan was sent on to /agent/billing', then undone. Write list on shell pages: only get_my_profile and the sign-out call; PATCH profiles last_login_at was not seen (0). /login itself sends a sign-up status read (POST /functions/v1/self-signup, action status); it is not a shell page, so the script counts it apart and fails on any other body. Evidence is fake-backend only: no live login was used."
     }
   ]
 }

@@ -7,8 +7,8 @@ import { stageLabel } from './Clients'
 import { paths } from '../paths'
 
 export default function ClientPage() {
-  const { id } = useParams()
-  const { data: c } = useSampleClient(id)
+  const { id, clientId } = useParams()
+  const { data: c } = useSampleClient(id ?? clientId)
   const { data: threads } = useSampleThreads()
   const { clientAction, sendMessage } = useSampleActions()
   const note = useNote()

@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 import { ErrorBoundary } from './components/shared/ErrorBoundary'
 import { NativeBridge } from './components/native/NativeBridge'
+import ShellSwap from './template/ShellSwap'
 // Side-effect import — attaches the beforeinstallprompt listener at app
 // boot (Prompt 286) so it's never missed while the user is still on Login.
 import './lib/installPrompt'
@@ -123,6 +124,7 @@ export default function App() {
           <PortalPhoneProvider>
           {/* Prompt 775 — phone app only: push, offline screen. */}
           <NativeBridge />
+          <ShellSwap>
           <Routes>
             <Route path="/login" element={<Login />} />
             {/* Prompt 781 — /join?t=<token>; texts use the short /j/<token>. */}
@@ -314,6 +316,7 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </ShellSwap>
           </PortalPhoneProvider>
         </BrowserRouter>
         </SecretsProvider>

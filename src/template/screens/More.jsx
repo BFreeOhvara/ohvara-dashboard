@@ -1,8 +1,10 @@
+import { useContext, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Inbox, CalendarDays, History, CreditCard, Settings, Sun, Moon, ChevronRight, ShieldCheck, Home, LogOut } from 'lucide-react'
+import { Inbox, CalendarDays, History, CreditCard, Settings, Sun, Moon, ChevronRight, ShieldCheck, Home, LogOut, Trash2 } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { useSampleBilling } from '../data'
 import { Avatar, Money, SampleTag, useNote } from '../kit'
+import { ShellAccount } from '../account'
 import { paths, isTemplateAddress } from '../paths'
 
 // The phone's fifth tab: profile, a Billing card, then the pages that have no tab of their own.
@@ -10,6 +12,8 @@ export default function More() {
   const [theme, setTheme] = useTheme()
   const { data: b } = useSampleBilling()
   const note = useNote()
+  const account = useContext(ShellAccount)
+  const [deleting, setDeleting] = useState(false)
   const rows = [[paths.leads, 'Leads', Inbox, '3 new'], [paths.calendar, 'Calendar', CalendarDays], [paths.activity, 'Activity', History], [paths.settings, 'Settings', Settings]]
   if (isTemplateAddress()) rows.push([paths.signup, 'Sign-up preview', ShieldCheck], [paths.welcome, 'Welcome preview', Home])
   return (
@@ -23,8 +27,10 @@ export default function More() {
       <section className="ov-card tp-card"><ul className="tp-list">
         {rows.map(([to, label, Icon, badge]) => <li key={label}><Link to={to()} className="tp-li"><Icon size={18} aria-hidden="true" /><b className="tp-grow">{label}</b>{badge && <span className="tp-tb">{badge.split(' ')[0]}</span>}<ChevronRight size={16} aria-hidden="true" /></Link></li>)}
         <li><button type="button" className="tp-li" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}<b className="tp-grow">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</b></button></li>
-        <li><button type="button" className="tp-li" onClick={() => note('Sign out is not part of the template')}><LogOut size={18} /><b className="tp-grow">Sign out</b></button></li>
+        <li><button type="button" className="tp-li" onClick={() => (account ? account.signOut() : note('Sign out is not part of the template'))}><LogOut size={18} /><b className="tp-grow">Sign out</b></button></li>
+        {account && <li><button type="button" className="tp-li" onClick={() => setDeleting(true)}><Trash2 size={18} style={{ color: 'var(--ov-live)' }} aria-hidden="true" /><b className="tp-grow" style={{ color: 'var(--ov-live)' }}>Delete my account</b></button></li>}
       </ul></section>
+      {deleting && <account.DeleteDialog onClose={() => setDeleting(false)} />}
     </div>
   )
 }
