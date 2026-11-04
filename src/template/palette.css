@@ -25,7 +25,7 @@ html .tp {
   --ov-table-head: color-mix(in srgb, var(--sh-ink) 3%, transparent);
   --ov-page: var(--sh-base);
   --ov-scrim: var(--sh-scrim);
-  --ov-on-kind: var(--sh-on-accent);
+  --ov-on-kind: var(--sh-fi-sky);
   --bg-base: var(--sh-deep);
   --bg-surface: var(--sh-surface);
   --bg-sidebar: color-mix(in srgb, var(--sh-mint) 20%, var(--sh-base));
@@ -45,8 +45,8 @@ html .tp {
   --ov-up-tint: color-mix(in srgb, var(--sh-sage) var(--sh-tint), transparent);
   --ov-warn: var(--sh-apricot);
   --ov-warn-tint: color-mix(in srgb, var(--sh-apricot) var(--sh-tint), transparent);
-  --ov-badge-bg: var(--sh-apricot);
-  --ov-badge-fg: var(--sh-on-accent);
+  --ov-badge-bg: var(--sh-f-apricot);
+  --ov-badge-fg: var(--sh-fi-apricot);
   --ov-hero-soft: var(--sh-ink-2);
   --ov-hero-dot: var(--sh-mint);
   --ov-hero-btn-text: var(--sh-on-accent);

@@ -31,7 +31,7 @@ export const wig = { onClick: wiggle, onPointerMove: pull, onPointerLeave: relea
 // A number that counts up from 0 when it first shows (and eases to a new value when it changes).
 // format: n => string. Under reduced motion it renders the final value straight away.
 const ease = t => 1 - (1 - t) ** 3
-export function CountUp({ value, format = n => Math.round(n).toLocaleString('en-US'), ms = 900, className }) {
+export function CountUp({ value, format = n => Math.round(n).toLocaleString('en-US'), ms = 800, className }) {
   const target = Number(value) || 0
   const reduce = still()
   const [n, setN] = useState(0)
@@ -77,7 +77,7 @@ export function usePageSwap(pageKey, element) {
   if (!leaving) last.current = element
   useEffect(() => {
     if (!leaving) return undefined
-    const t = setTimeout(() => setShownKey(pageKey), still() ? 0 : 190)
+    const t = setTimeout(() => setShownKey(pageKey), still() ? 0 : 200)
     return () => clearTimeout(t)
   }, [leaving, pageKey])
   // eslint-disable-next-line react-hooks/refs

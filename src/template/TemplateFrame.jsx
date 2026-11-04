@@ -13,6 +13,7 @@ import { Drawer, Avatar, Field, useAccount, useNote, initials } from './kit'
 import { wig, CountUp, RollTitle, usePageSwap, usd } from './motion'
 import { paths, tabOf, titleOfLayout, layoutOf, isTemplateAddress } from './paths'
 import Palette from './Palette'
+import { OhvaraMark } from '../components/ui/OhvaraMark'
 import { isSearchKey } from '../lib/searchKey'
 import './glass.css'
 import './flow.css'
@@ -119,6 +120,7 @@ function useHeadStats(page) {
   const { data: threads } = useSampleThreads()
   const { data: events } = useSampleAppointments()
   const { data: activity } = useSampleActivity()
+  const { data: settings } = useSampleSettings()
   const spend = billing.leadTypes.filter(t => t.on).reduce((n, t) => n + t.weekly, 0)
   const { used, cap } = billing.submissions
   const needs = leads.filter(l => NEEDS.includes(l.stage)).length
@@ -133,6 +135,7 @@ function useHeadStats(page) {
     activity: [S(History, activity.filter(a => a.at.startsWith('Today')).length, 'today'), S(CalendarDays, activity.length, 'this week'), S(MessageSquare, activity.filter(a => a.kind === 'text').length, 'texts sent for you')],
     billing: [S(CreditCard, billing.plan.weekly + spend, 'a week in all', { fmt: money, chip: ['Sample', 'blue'] }), S(ShieldCheck, billing.plan.weekly, 'servicing', { fmt: money }), S(Wallet, spend, 'leads spend', { fmt: money })],
     submit: [S(FileUp, used, 'submitted this week', { tail: ` / ${cap}` }), S(Send, cap - used, 'left this week', { chip: ['Resets Mon', 'blue'] })],
+    settings: [S(Bell, settings.notifications.filter(n => n.push).length, 'alerts switched on'), S(CalendarDays, settings.hours.days.length, 'working days'), S(Users, clients.length, 'clients in your book')],
     messages: [S(MessageSquare, threads.reduce((n, t) => n + t.unread, 0), 'unread'), S(Users, threads.length, 'threads')],
   }[page] || []
 }
@@ -176,7 +179,7 @@ export default function TemplateFrame() {
       <div className="tp-sky" aria-hidden="true"><i /><i /><i /></div>
 
       <header className="tp-phone-top fx-ptop">
-        <Link to={paths.home()} className="fx-brand" aria-label="Ohvara home"><span className="fx-logo">O</span></Link>
+        <Link to={paths.home()} className="fx-brand" aria-label="Ohvara home"><OhvaraMark height={28} back="var(--ov-hi)" front="var(--accent)" className="fx-mark" /></Link>
         <span className="tp-grow" />
         <Link to={paths.messages()} className="fx-ib tp-wig" aria-label="Messages" {...wig}><MessageSquare size={18} />{unread > 0 && <span className="fx-badge">{unread}</span>}</Link>
         <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} /><span className="fx-badge">3</span></button>
@@ -184,7 +187,7 @@ export default function TemplateFrame() {
       </header>
 
       <header className="tp-top fx-top">
-        <Link to={paths.home()} className="fx-brand" aria-label="Ohvara home"><span className="fx-logo">O</span><b>ohvara</b></Link>
+        <Link to={paths.home()} className="fx-brand" aria-label="Ohvara home"><OhvaraMark height={30} back="var(--ov-hi)" front="var(--accent)" className="fx-mark" /><b>ohvara</b></Link>
         <nav className="tp-tabs fx-tabs" ref={tabsRef} aria-label="Pages">
           {TABS.map(t => (
             <Link key={t.key} to={t.to()} className={`tp-tab fx-tab${active === t.key ? ' is-on' : ''}`} aria-current={active === t.key ? 'page' : undefined}>
@@ -201,14 +204,16 @@ export default function TemplateFrame() {
       </header>
 
       <aside className="tp-rail fx-rail" aria-label="Actions">
-        <button type="button" className="tp-ri fx-ri tp-wig" aria-label="Search (Ctrl K)" data-tip="Search  Ctrl K" {...wig} onClick={open('search')}><Search size={19} /></button>
-        <Link to={paths.submit()} className="fx-ri fx-plus tp-wig" aria-label="Submit a policy" data-tip="Submit a policy" {...wig}><Plus size={20} /></Link>
-        <button type="button" className="tp-ri fx-ri tp-wig" aria-label="Book a call" data-tip="Book a call" {...wig} onClick={open('book')}><PhoneCall size={18} /></button>
-        <NavLink to={paths.requestService()} className="fx-ri tp-wig" aria-label="Request a service" data-tip="Request a service" {...wig}><LifeBuoy size={18} /></NavLink>
-        <button type="button" role="switch" aria-checked={duty} className={`fx-ri fx-duty tp-wig${duty ? ' on' : ''}`} aria-label="Active for live calls" data-tip={duty ? 'Active: calls ring you' : 'Off: we book callers'} {...wig} onClick={flipDuty}><Radio size={18} /><i aria-hidden="true" /></button>
+        <button type="button" className="tp-ri fx-ri tp-wig" aria-label="Search (Ctrl K)" data-tip="Search  Ctrl K" {...wig} onClick={open('search')}><Search size={20} /></button>
         <i className="fx-hair" />
-        <NavLink to={paths.settings()} className="fx-ri tp-wig" aria-label="Settings" data-tip="Settings" {...wig}><Settings size={18} /></NavLink>
-        <button type="button" className="fx-ri tp-wig" aria-label="Switch theme" data-tip={theme === 'dark' ? 'Light mode' : 'Dark mode'} {...wig} onClick={flipTheme}>{theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
+        <Link to={paths.submit()} className="fx-ri fx-plus tp-wig" aria-label="Submit a policy" data-tip="Submit a policy" {...wig}><Plus size={21} /></Link>
+        <button type="button" className="tp-ri fx-ri tp-wig" aria-label="Book a call" data-tip="Book a call" {...wig} onClick={open('book')}><PhoneCall size={20} /></button>
+        <NavLink to={paths.requestService()} className="fx-ri tp-wig" aria-label="Request a service" data-tip="Request a service" {...wig}><LifeBuoy size={20} /></NavLink>
+        <i className="fx-hair" />
+        <button type="button" role="switch" aria-checked={duty} className={`fx-ri fx-duty tp-wig${duty ? ' on' : ''}`} aria-label="Active for live calls" data-tip={duty ? 'Active: calls ring you' : 'Off: we book callers'} {...wig} onClick={flipDuty}><Radio size={20} /><i aria-hidden="true" /></button>
+        <i className="fx-hair" />
+        <NavLink to={paths.settings()} className="fx-ri tp-wig" aria-label="Settings" data-tip="Settings" {...wig}><Settings size={20} /></NavLink>
+        <button type="button" className="fx-ri tp-wig" aria-label="Switch theme" data-tip={theme === 'dark' ? 'Light mode' : 'Dark mode'} {...wig} onClick={flipTheme}>{theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}</button>
       </aside>
 
 

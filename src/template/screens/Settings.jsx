@@ -1,88 +1,189 @@
-import { useEffect, useRef, useState } from 'react'
-import { User, SlidersHorizontal, Bell, MessageSquareText, LogOut, Trash2 } from 'lucide-react'
-import { useSampleSettings, useSampleActions } from '../data'
+import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { User, Bell, Radio, CreditCard, SunMoon, Mail, LogOut, Trash2, ChevronRight, KeyRound } from 'lucide-react'
+import { useSampleSettings, useSampleActions, useSampleBilling, useSampleClients, useSampleLeads, useSampleOverview } from '../data'
 import { useTheme } from '../../hooks/useTheme'
-import { Drawer, Field, Seg, Switch, Chip, useNote, useAccount } from '../kit'
+import { useStretchPill } from '../../hooks/useStretchPill'
+import { Drawer, Field, Seg, Switch, Chip, useNote, useAccount, initials } from '../kit'
+import { CountUp, usd } from '../motion'
+import { paths } from '../paths'
 
-const SECTIONS = [['account', 'Your account', User], ['setup', 'Your setup', SlidersHorizontal], ['alerts', 'Notifications', Bell], ['texts', 'Texting number', MessageSquareText], ['leave', 'Sign out', LogOut]]
+const TABS = [['profile', 'Profile', User], ['alerts', 'Notifications', Bell], ['calls', 'Active and calls', Radio], ['billing', 'Billing', CreditCard], ['look', 'Appearance', SunMoon]]
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const TIMES = ['7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM']
+const NEEDS = ['ringing', 'missed', 'no_show']
 
-// Settings: the sections down the left, the page on the right. On a desktop the page holds still and the right
-// pane scrolls; on a phone the sections become a strip of chips and the page scrolls.
+// Discard / Save under every section. Save is off until something changed.
+function FormFoot({ dirty, onDiscard, onSave, saveLabel = 'Save changes' }) {
+  return (
+    <footer className="fx-form-f">
+      <button type="button" className="tp-btn ov-ghost" disabled={!dirty} onClick={onDiscard}>Discard</button>
+      <button type="button" className="tp-primary fx-accent" disabled={!dirty} onClick={onSave}>{saveLabel}</button>
+    </footer>
+  )
+}
+
+function Head({ title, sub }) {
+  return <header className="fx-form-h"><h2>{title}</h2><p>{sub}</p></header>
+}
+
+// Left: who you are, how much of your plan you've used this week, three numbers, what's next.
+function ProfileCard({ profile, duty }) {
+  const { data: billing } = useSampleBilling()
+  const { data: clients } = useSampleClients()
+  const { data: leads } = useSampleLeads()
+  const { data: ov } = useSampleOverview()
+  const { used, cap } = billing.submissions
+  const share = Math.round((used / cap) * 100)
+  const next = ov.nextAppt || ov.upNext[0]
+  const stats = [[clients.length, 'Clients'], [leads.filter(l => NEEDS.includes(l.stage)).length, 'Need you'], [leads.filter(l => l.stage === 'booked').length, 'Booked']]
+  return (
+    <aside className="fx-tile fx-prof" aria-label="Your profile">
+      <div className="fx-prof-av" aria-hidden="true">{initials(profile.name).toUpperCase()}<i className={duty ? 'on' : ''} /></div>
+      <h2>{profile.name}</h2>
+      <p>Agent · {duty ? 'Active for live calls' : 'Off for live calls'}</p>
+      <span className="fx-prof-mail"><Mail size={13} aria-hidden="true" />{profile.email}</span>
+      <div className="fx-usage is-teal">
+        <div className="tp-row tp-between"><b>{billing.plan.name} {billing.plan.size}</b><b className="fx-usage-n"><CountUp value={share} />%</b></div>
+        <span className="fx-meter" role="img" aria-label={`${used} of ${cap} submitted this week`}><i style={{ '--w': share / 100 }} /></span>
+        <small><b>{used}</b> of {cap} submitted this week · resets {billing.resets}</small>
+      </div>
+      <ul className="fx-pstats">{stats.map(([n, label]) => <li key={label}><small>{label}</small><b className="tp-num"><CountUp value={n} /></b></li>)}</ul>
+      {next && (
+        <Link to={paths.calendar()} className="fx-pnext">
+          <i aria-hidden="true" />
+          <span className="tp-grow"><small>Next up</small><b>{next.label} with {next.who}</b><small>{next.day} · {next.time}</small></span>
+          <ChevronRight size={16} aria-hidden="true" />
+        </Link>
+      )}
+    </aside>
+  )
+}
+
+// Settings, Solvik-style: the profile card on the left, one panel on the right whose pill tabs switch sections.
+// Each section is a short form with Discard / Save. Sign out and delete keep their real code.
 export default function Settings() {
   const { data: s } = useSampleSettings()
+  const { data: billing } = useSampleBilling()
   const { setNotification, setDuty } = useSampleActions()
   const [theme, setTheme] = useTheme()
   const note = useNote()
   const account = useAccount()
-  const pane = useRef(null)
-  const [at, setAt] = useState('account')
+  const tabsRef = useRef(null)
+  const [tab, setTab] = useState('profile')
   const [panel, setPanel] = useState(null)
-  const [name, setName] = useState(s.profile.name)
+  useStretchPill(tabsRef, { activeKey: tab, selector: '.is-on' })
+
+  // Saved values and the drafts the forms edit
   const [profile, setProfile] = useState(s.profile)
-  const [days, setDays] = useState(s.hours.days)
-  const all = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-  const go = key => {
-    setAt(key)
-    pane.current?.querySelector(`#set-${key}`)?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
-  }
-  // The section in view lights up in the nav (the pane scrolls on a desktop, the page on a phone).
-  useEffect(() => {
-    const els = SECTIONS.map(([key]) => pane.current?.querySelector(`#set-${key}`)).filter(Boolean)
-    if (!els.length || typeof IntersectionObserver === 'undefined') return undefined
-    const io = new IntersectionObserver(hits => {
-      const hit = hits.filter(h => h.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
-      if (hit) setAt(hit.target.id.slice(4))
-    }, { rootMargin: '-25% 0px -60% 0px' })
-    els.forEach(el => io.observe(el))
-    return () => io.disconnect()
-  }, [])
+  const [pDraft, setPDraft] = useState(s.profile)
+  const [alerts, setAlerts] = useState(s.notifications)
+  const [hours, setHours] = useState(s.hours)
+  const [cDraft, setCDraft] = useState({ duty: s.duty, ...s.hours })
+  const [bill, setBill] = useState({ email: s.profile.email, receipts: true })
+  const [bDraft, setBDraft] = useState(bill)
+  const [look, setLook] = useState(theme)
+
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+  const alertsDirty = !same(alerts, s.notifications)
+  const callsSaved = { duty: s.duty, ...hours }
   const signOut = () => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))
   const DeleteDialog = account.DeleteDialog
-  return (
-    <div className="tp-page tp-setpage">
-      <nav className="tp-setnav ov-card" aria-label="Settings sections">
-        {SECTIONS.map(([key, label, Icon]) => (at === key
-          ? <span key={key} className="on" aria-current="true"><Icon size={17} aria-hidden="true" />{label}</span>
-          : <button key={key} type="button" onClick={() => go(key)}><Icon size={17} aria-hidden="true" />{label}</button>))}
-      </nav>
-      <div className="tp-setpane" ref={pane} tabIndex={0} aria-label="Settings">
-        <section id="set-account" className="ov-card tp-card tp-stack" aria-label="Your account">
-          <div className="tp-row tp-between"><h2 className="tp-h2">Your account</h2><button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('profile')}>Edit</button></div>
-          <dl className="tp-facts">{[['Name', profile.name], ['Email', profile.email], ['Phone', profile.phone], ['Plan', profile.plan]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
-          <button type="button" className="tp-btn ov-ghost" style={{ alignSelf: 'flex-start' }} onClick={() => setPanel('password')}>Change password</button>
-        </section>
-        <section id="set-setup" className="ov-card tp-card tp-stack" aria-label="Your setup">
-          <h2 className="tp-h2">Your setup</h2>
-          <div className="tp-row"><div className="tp-grow"><b>Theme</b><p className="tp-sub">Light or dark</p></div><Seg label="Theme" value={theme} onChange={setTheme} options={[{ key: 'light', label: 'Light' }, { key: 'dark', label: 'Dark' }]} /></div>
-          <div className="tp-row"><div className="tp-grow"><b>On duty</b><p className="tp-sub">Live calls ring your phone</p></div><Switch on={s.duty} label="On duty" onChange={v => { setDuty(v); note(v ? 'You are on duty' : 'You are off duty') }} /></div>
-          <div className="tp-row"><div className="tp-grow"><b>Working hours</b><p className="tp-sub">{s.hours.start} to {s.hours.end}, {days.join(', ')}</p></div><button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('hours')}>Edit</button></div>
-        </section>
-        <section id="set-alerts" className="ov-card tp-card" aria-label="Notifications"><h2 className="tp-h2">Notifications</h2><p className="tp-sub">Everything shows in the bell. Choose what also comes to your phone or email.</p>
-          <div className="tp-row tp-sub" style={{ justifyContent: 'flex-end', gap: 28, paddingRight: 2 }}><span>Push</span><span>Email</span></div>
-          <ul className="tp-list">{s.notifications.map(n => <li key={n.key} className="tp-li"><b className="tp-grow">{n.label}</b>
-            <Switch on={n.push} label={`${n.label} push`} onChange={v => setNotification(n.key, 'push', v)} /><Switch on={n.email} label={`${n.label} email`} onChange={v => setNotification(n.key, 'email', v)} /></li>)}</ul></section>
-        <section id="set-texts" className="ov-card tp-card"><div className="tp-row"><div className="tp-grow"><b>A number of your own for texts</b><p className="tp-sub">Coming later</p></div><Chip tone="mute">Not available yet</Chip></div></section>
-        <section id="set-leave" className="ov-card tp-card tp-stack" aria-label="Sign out">
-          <h2 className="tp-h2">Sign out</h2>
-          <div className="tp-row tp-wrap">
-            <button type="button" className="tp-btn ov-ghost" onClick={signOut}><LogOut size={15} />Sign out</button>
-            <button type="button" className="tp-btn ov-ghost tp-danger" onClick={() => (DeleteDialog ? setPanel('delete') : note('Delete my account works once you sign in for real'))}><Trash2 size={15} />Delete my account</button>
-          </div>
-        </section>
-      </div>
+  const flip = (key, field, v) => setAlerts(alerts.map(n => (n.key === key ? { ...n, [field]: v } : n)))
+  const toggleDay = d => setCDraft(c => ({ ...c, days: c.days.includes(d) ? c.days.filter(x => x !== d) : DAYS.filter(x => x === d || c.days.includes(x)) }))
+  const money = usd()
 
-      <Drawer open={panel === 'profile'} onClose={() => setPanel(null)} title="Edit profile" footer={<button type="button" className="tp-primary fx-accent" onClick={() => { setProfile({ ...profile, name }); note('Profile saved'); setPanel(null) }}>Save</button>}>
-        <Field label="Name"><input value={name} onChange={e => setName(e.target.value)} /></Field>
-        <Field label="Phone"><input defaultValue={profile.phone} /></Field>
-      </Drawer>
+  return (
+    <div className="tp-page fx-set">
+      <ProfileCard profile={profile} duty={s.duty} />
+
+      <section className="fx-tile fx-panel" aria-label="Settings">
+        <div className="fx-ptabs" ref={tabsRef} role="tablist" aria-label="Settings sections">
+          {TABS.map(([key, label, Icon]) => (tab === key
+            ? <span key={key} role="tab" aria-selected="true" className="fx-ptab is-on"><Icon size={15} aria-hidden="true" />{label}</span>
+            : <button key={key} type="button" role="tab" aria-selected="false" className="fx-ptab" onClick={() => setTab(key)}><Icon size={15} aria-hidden="true" />{label}</button>))}
+        </div>
+
+        <div className="fx-form" key={tab} role="tabpanel" aria-label={TABS.find(t => t[0] === tab)[1]}>
+          {tab === 'profile' && <>
+            <Head title="Profile" sub="How you show up to the team and on everything we send for you." />
+            <div className="fx-form-grid">
+              <Field label="Full name"><input value={pDraft.name} onChange={e => setPDraft({ ...pDraft, name: e.target.value })} /></Field>
+              <Field label="Email"><input type="email" value={pDraft.email} onChange={e => setPDraft({ ...pDraft, email: e.target.value })} /></Field>
+              <Field label="Phone"><input value={pDraft.phone} onChange={e => setPDraft({ ...pDraft, phone: e.target.value })} /></Field>
+              <Field label="Plan" hint="Change it on the Billing tab"><input value={pDraft.plan} readOnly /></Field>
+            </div>
+            <div className="fx-form-row">
+              <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('password')}><KeyRound size={15} />Change password</button>
+              <span className="tp-grow" />
+              <button type="button" className="tp-btn ov-ghost" onClick={signOut}><LogOut size={15} />Sign out</button>
+              <button type="button" className="tp-btn ov-ghost tp-danger" onClick={() => (DeleteDialog ? setPanel('delete') : note('Delete my account works once you sign in for real'))}><Trash2 size={15} />Delete my account</button>
+            </div>
+            <FormFoot dirty={!same(pDraft, profile)} onDiscard={() => setPDraft(profile)} onSave={() => { setProfile(pDraft); note('Profile saved') }} />
+          </>}
+
+          {tab === 'alerts' && <>
+            <Head title="Notifications" sub="Everything shows in the bell. Choose what also comes to your phone or email." />
+            <div className="fx-alerts">
+              <div className="fx-alerts-h"><span className="tp-grow" /><span>Push</span><span>Email</span></div>
+              <ul className="tp-list">{alerts.map(n => (
+                <li key={n.key} className="tp-li"><b className="tp-grow">{n.label}</b>
+                  <Switch on={n.push} label={`${n.label} push`} onChange={v => flip(n.key, 'push', v)} />
+                  <Switch on={n.email} label={`${n.label} email`} onChange={v => flip(n.key, 'email', v)} />
+                </li>
+              ))}</ul>
+            </div>
+            <FormFoot dirty={alertsDirty} onDiscard={() => setAlerts(s.notifications)} onSave={() => {
+              alerts.forEach(n => { const was = s.notifications.find(x => x.key === n.key); if (was.push !== n.push) setNotification(n.key, 'push', n.push); if (was.email !== n.email) setNotification(n.key, 'email', n.email) })
+              note('Notifications saved')
+            }} />
+          </>}
+
+          {tab === 'calls' && <>
+            <Head title="Active and calls" sub="When you're active, live calls ring your phone. When you're off, we book callers on your calendar." />
+            <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Active for live calls</b><p className="tp-sub">{cDraft.duty ? 'Calls ring your phone' : 'Off. We book callers instead'}</p></div><Switch on={cDraft.duty} label="Active for live calls" onChange={v => setCDraft({ ...cDraft, duty: v })} /></div>
+            <div className="tp-field"><span>Working days</span>
+              <div className="fx-days" role="group" aria-label="Working days">{DAYS.map(d => <button key={d} type="button" aria-pressed={cDraft.days.includes(d)} className={`fx-day${cDraft.days.includes(d) ? ' is-on' : ''}`} onClick={() => toggleDay(d)}>{d}</button>)}</div>
+            </div>
+            <div className="fx-form-grid">
+              <Field label="Start"><select value={cDraft.start} onChange={e => setCDraft({ ...cDraft, start: e.target.value })}>{TIMES.map(t => <option key={t}>{t}</option>)}</select></Field>
+              <Field label="End"><select value={cDraft.end} onChange={e => setCDraft({ ...cDraft, end: e.target.value })}>{TIMES.map(t => <option key={t}>{t}</option>)}</select></Field>
+            </div>
+            <div className="fx-form-row"><div className="tp-grow"><b>A number of your own for texts</b><p className="tp-sub">Coming later</p></div><Chip tone="mute">Not available yet</Chip></div>
+            <FormFoot dirty={!same(cDraft, callsSaved)} onDiscard={() => setCDraft(callsSaved)} onSave={() => {
+              if (cDraft.duty !== s.duty) setDuty(cDraft.duty)
+              setHours({ start: cDraft.start, end: cDraft.end, days: cDraft.days })
+              note('Active and calls saved')
+            }} />
+          </>}
+
+          {tab === 'billing' && <>
+            <Head title="Billing" sub="Your plan and where receipts go. Charges and lead spend live on the Billing page." />
+            <div className="fx-billsum">
+              <div><small>Plan</small><b>{billing.plan.name} {billing.plan.size}</b></div>
+              <div><small>A week</small><b className="tp-money">{money(billing.plan.weekly)}</b></div>
+              <div><small>Next charge</small><b>{billing.next_charge}</b></div>
+            </div>
+            <div className="fx-form-grid">
+              <Field label="Receipts go to"><input type="email" value={bDraft.email} onChange={e => setBDraft({ ...bDraft, email: e.target.value })} /></Field>
+            </div>
+            <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Email me each receipt</b><p className="tp-sub">Sent the day you're charged</p></div><Switch on={bDraft.receipts} label="Email me each receipt" onChange={v => setBDraft({ ...bDraft, receipts: v })} /></div>
+            <Link to={paths.billing()} className="tp-btn ov-ghost fx-self"><CreditCard size={15} />Open Billing</Link>
+            <FormFoot dirty={!same(bDraft, bill)} onDiscard={() => setBDraft(bill)} onSave={() => { setBill(bDraft); note('Billing settings saved') }} />
+          </>}
+
+          {tab === 'look' && <>
+            <Head title="Appearance" sub="Light or dark. It follows you on this device." />
+            <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Theme</b><p className="tp-sub">{look === 'dark' ? 'Dark' : 'Light'}</p></div><Seg label="Theme" value={look} onChange={setLook} options={[{ key: 'light', label: 'Light' }, { key: 'dark', label: 'Dark' }]} /></div>
+            <FormFoot dirty={look !== theme} onDiscard={() => setLook(theme)} onSave={() => { setTheme(look); note(`${look === 'dark' ? 'Dark' : 'Light'} mode on`) }} />
+          </>}
+        </div>
+      </section>
+
       <Drawer open={panel === 'password'} onClose={() => setPanel(null)} title="Change password" footer={<button type="button" className="tp-primary fx-accent" onClick={() => { note('Password changes are not open yet'); setPanel(null) }}>Continue</button>}>
         <Field label="Current password"><input type="password" /></Field>
         <Field label="New password"><input type="password" /></Field>
         <button type="button" className="tp-link" onClick={() => note('A reset link would be sent here')}>Forgot password?</button>
-      </Drawer>
-      <Drawer open={panel === 'hours'} onClose={() => setPanel(null)} title="Working hours" sub={`${s.hours.start} to ${s.hours.end}`} footer={<button type="button" className="tp-primary fx-accent" onClick={() => { note('Working hours saved'); setPanel(null) }}>Save</button>}>
-        <div className="tp-row tp-wrap">{all.map(d => <button key={d} type="button" aria-pressed={days.includes(d)} className="tp-btn ov-ghost" style={days.includes(d) ? { borderColor: 'var(--ov-data-a)', background: 'var(--ov-data-a-tint)' } : undefined} onClick={() => setDays(days.includes(d) ? days.filter(x => x !== d) : all.filter(x => x === d || days.includes(x)))}>{d}</button>)}</div>
-        <p className="tp-sub">Off, no bookings this day</p>
       </Drawer>
       {panel === 'delete' && DeleteDialog && <DeleteDialog onClose={() => setPanel(null)} />}
     </div>

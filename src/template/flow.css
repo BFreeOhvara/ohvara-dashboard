@@ -504,15 +504,197 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
   .fx-tile:hover, .fx-card:hover, a.fx-row:hover, a.fx-feed-r:hover { transform: none !important; }
 }
 
-/* P830: the dim, warm backdrop. Soft blurred glow from the shell pastels (palette.css), no dot grid; cards are
-   see-through over it. Strength is --sh-glow per theme. */
-.tp-sky i:nth-child(1) { background: var(--sh-p-mint); opacity: var(--sh-glow); }
-.tp-sky i:nth-child(2) { background: var(--sh-p-sky); opacity: calc(var(--sh-glow) * .8); }
-.tp-sky i:nth-child(3) { background: var(--sh-p-apricot); opacity: calc(var(--sh-glow) * .55); }
-[data-theme="light"] .tp-sky i:nth-child(1) { opacity: var(--sh-glow); }
-[data-theme="light"] .tp-sky i:nth-child(2) { opacity: calc(var(--sh-glow) * .8); }
-[data-theme="light"] .tp-sky i:nth-child(3) { opacity: calc(var(--sh-glow) * .55); }
-.tp-sky::after { background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--ov-page) 55%, transparent) 100%); }
 .tp .ov-ghost, [data-theme="light"] .tp .ov-ghost { color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 5%, transparent); border: 1px solid var(--sh-edge); }
 .tp .ov-ghost:hover, [data-theme="light"] .tp .ov-ghost:hover { border-color: color-mix(in srgb, var(--ov-hi) 24%, transparent); }
 .tp .tp-av { font-weight: 600; }
+
+/* P831 ----------------------------------------------------------------------------------------------------------
+   Bolder chrome, real colour, a dark soft-focus backdrop, dark glass cards, a roomier rail, slower richer motion.
+   Every colour is a palette token (src/index.css "Prompt 831"); fills carry the dark ink of their own hue. */
+
+/* Tones: --c is the hue as a mark/text colour, --cf the fill, --ci the dark ink that sits on the fill */
+.tp .is-blue { --cf: var(--sh-f-sky); --ci: var(--sh-fi-sky); }
+.tp .is-warn { --cf: var(--sh-f-apricot); --ci: var(--sh-fi-apricot); }
+.tp .is-teal { --cf: var(--sh-f-mint); --ci: var(--sh-fi-mint); }
+.tp .is-green, .tp .is-up { --cf: var(--sh-f-sage); --ci: var(--sh-fi-sage); }
+.tp .is-mute { --cf: var(--sh-f-stone); --ci: var(--sh-fi-stone); }
+.tp .is-violet { --cf: var(--sh-f-lilac); --ci: var(--sh-fi-lilac); }
+
+/* Backdrop: a dark, neutral soft-focus scene (generated image, scripts/make-shell-backdrop.py), no hue glows */
+.tp-sky { background: linear-gradient(var(--sh-bd-dim), var(--sh-bd-dim)), var(--sh-bd-image) center / cover no-repeat, var(--ov-page); }
+.tp-sky i { display: none; }
+.tp-sky::after { background: linear-gradient(180deg, transparent 55%, color-mix(in srgb, var(--ov-page) 35%, transparent) 100%); }
+
+/* Dark glass cards over it: low fill, soft light edge, inner top highlight, nothing glows */
+.fx { --fx-glass: color-mix(in srgb, var(--sh-surface) 58%, transparent); --fx-shadow: 0 24px 48px -30px rgba(0, 0, 0, .55); }
+[data-theme="light"] .fx { --fx-glass: color-mix(in srgb, var(--sh-surface) 62%, transparent); --fx-shadow: 0 24px 48px -34px rgba(0, 0, 0, .25); }
+.fx-tile.is-hero { background: var(--fx-fill); border-color: color-mix(in srgb, var(--accent) 34%, var(--sh-edge)); }
+.fx .fx-top::before { background: linear-gradient(180deg, color-mix(in srgb, var(--ov-page) 55%, transparent) 20%, transparent); }
+
+/* Top bar: bold labels with room between them, the real mark at top left */
+.fx-brand { gap: 10px; }
+.fx-brand b { font-size: 19px; font-weight: 600; }
+.fx-mark { display: block; }
+.fx-top .fx-tabs { padding: 6px; gap: 6px; }
+.fx .fx-tab { height: 38px; padding: 0 18px; font-size: 13.5px; font-weight: 600; color: var(--ov-mid); gap: 8px; }
+.fx .fx-tab.is-on, [data-theme="light"] .fx .fx-tab.is-on { --sp-fill: var(--sh-acc); color: var(--sh-on-accent); background: var(--sh-acc); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28); }
+.fx-tr { gap: 12px; }
+.fx-ib, .fx .fx-me { width: 40px; height: 40px; }
+.fx-ib { color: var(--ov-hi); }
+.fx .fx-me { font-weight: 600; color: var(--sh-on-accent); background: var(--sh-acc); }
+.fx-badge, .fx-tb { background: var(--sh-f-apricot); color: var(--sh-fi-apricot); }
+
+/* Accent surfaces: the accent fill with its own dark ink */
+.fx .fx-accent, .fx-layer .fx-accent, .tp-layer .fx-accent, .fx .fx-plus, .fx .fx-plus:hover, .fx-chip.is-on, .fx-step.is-on, .fx-pal-r.is-at .fx-pal-ic, .fx-bplus {
+  color: var(--sh-on-accent); background: var(--sh-acc);
+}
+.fx .fx-accent, .fx-layer .fx-accent, .tp-layer .fx-accent { font-weight: 600; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 10px 22px -16px var(--sh-acc); }
+.fx-chip.is-on b { color: var(--sh-on-accent); }
+.fx-check.is-on { color: var(--sh-fi-sage); background: var(--sh-f-sage); border-color: var(--sh-f-sage); }
+
+/* The rail: roomier, grouped */
+.fx .fx-rail { gap: 9px; padding: 9px; }
+.fx .fx-ri { width: 46px; height: 46px; color: var(--ov-hi); }
+.fx .fx-ri svg { width: 20px; height: 20px; }
+.fx-hair { width: 28px; margin: 2px 0; background: var(--sh-edge); }
+.fx-duty > i { top: 10px; right: 10px; }
+.fx .fx-col { margin-left: 82px; }
+
+/* Real colour: filled cards, events, record heroes and chips carry the fill and the dark ink of its hue */
+.fx-card, .fx-week .tp-ev, .fx-hero-card {
+  --ov-hi: var(--ci); --ov-mid: var(--ci); --ov-soft: var(--ci); --ov-mute: color-mix(in srgb, var(--ci) 92%, var(--cf)); --ov-faint: color-mix(in srgb, var(--ci) 86%, var(--cf));
+  --ov-line: color-mix(in srgb, var(--ci) 18%, transparent); --ov-stub: color-mix(in srgb, var(--ci) 14%, transparent); --tp-white: var(--ci);
+  color: var(--ci); background: var(--cf); border-color: color-mix(in srgb, var(--ci) 16%, transparent);
+}
+.fx-card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 18px 30px -24px rgba(0, 0, 0, .6); }
+.fx-week .tp-ev { --cf: var(--sh-f-sky); --ci: var(--sh-fi-sky); }
+.fx-week .tp-ev.client { --cf: var(--sh-f-mint); --ci: var(--sh-fi-mint); }
+.fx-layer .fx-hero-card, [data-theme="light"] .fx-layer .fx-hero-card { background: var(--cf); }
+.fx-tag, .fx-card .fx-tag { color: var(--ci); background: color-mix(in srgb, var(--ci) 14%, transparent); font-weight: 600; }
+.fx-card .tp-av, .fx-hero-card .tp-av { color: var(--ci); background: color-mix(in srgb, var(--ci) 14%, transparent); }
+.fx-ccard-mid, [data-theme="light"] .fx-ccard-mid { background: color-mix(in srgb, var(--ci) 9%, transparent); }
+.fx-ccard .fx-meter { background: color-mix(in srgb, var(--ci) 16%, transparent); }
+.fx-ccard .fx-meter i { background: var(--ci); }
+.fx-mini { color: var(--ci); background: color-mix(in srgb, var(--ci) 13%, transparent); }
+@media (hover: hover) and (pointer: fine) {
+  .fx-card:hover { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 24px 34px -22px rgba(0, 0, 0, .7); border-color: color-mix(in srgb, var(--ci) 30%, transparent); }
+}
+.tp .tp-chip:is(.is-blue, .is-teal, .is-warn, .is-green, .is-mute, .is-violet) { color: var(--ci); background: var(--cf); }
+.fx-delta { color: var(--ci, var(--ov-hi)); background: var(--cf, var(--ov-stub)); font-weight: 600; }
+.fx-row { background: color-mix(in srgb, var(--c, var(--ov-hi)) 12%, transparent); border-color: color-mix(in srgb, var(--c, var(--ov-hi)) 22%, transparent); }
+.fx-row-ic, .fx-feed-ic { color: var(--ci, var(--ov-hi)); background: var(--cf, var(--ov-stub)); }
+.fx-date { color: var(--sh-fi-sky); background: var(--sh-f-sky); }
+.fx-huge small { opacity: 1; color: var(--ov-mid); }
+
+/* Motion: the old page fades and lifts out (~200ms); the new one builds in over ~0.6-0.9s. Tiles rise 14px one
+   after another (~75ms apart, a soft blur clearing), rows inside follow at ~35ms, numbers count, meters grow. */
+.fx .fx-main { animation: fx-fade .3s var(--fx-ease) both; }
+.fx .fx-main.is-leaving, .fx .fx-head.is-leaving { animation: fx-out .2s var(--fx-ease) forwards; }
+.fx .fx-main > :not(.tp-foot) { animation: fx-fade .45s var(--fx-ease) both; animation-delay: calc(var(--k, 0) * 75ms); }
+.fx .fx-main > :nth-child(2) { --k: 1; } .fx .fx-main > :nth-child(3) { --k: 2; } .fx .fx-main > :nth-child(4) { --k: 3; }
+.fx-grid > *, .fx-cgrid > *, .fx-hist > * { --i: 0; }
+.fx-grid > :nth-child(2), .fx-cgrid > :nth-child(2), .fx-hist > :nth-child(2) { --i: 1; }
+.fx-grid > :nth-child(3), .fx-cgrid > :nth-child(3), .fx-hist > :nth-child(3) { --i: 2; }
+.fx-grid > :nth-child(4), .fx-cgrid > :nth-child(4), .fx-hist > :nth-child(4) { --i: 3; }
+.fx-grid > :nth-child(5), .fx-cgrid > :nth-child(5), .fx-hist > :nth-child(5) { --i: 4; }
+.fx-grid > :nth-child(6), .fx-cgrid > :nth-child(6), .fx-hist > :nth-child(6) { --i: 5; }
+.fx-grid > :nth-child(7), .fx-cgrid > :nth-child(7), .fx-hist > :nth-child(7) { --i: 6; }
+.fx-grid > :nth-child(n+8), .fx-cgrid > :nth-child(n+8), .fx-hist > :nth-child(n+8) { --i: 7; }
+.fx-tile, .fx-ccard, .fx-hist > * { animation: fx-rise-soft .8s var(--fx-ease) both; animation-delay: calc(70ms + var(--i, 0) * 80ms); }
+.fx-card:not(.fx-ccard) { animation: fx-rise .6s var(--fx-ease) both; animation-delay: calc(220ms + var(--i, 0) * 40ms); }
+.fx-lane { animation: fx-rise-soft .75s var(--fx-ease) both; animation-delay: calc(50ms + var(--i, 0) * 75ms); }
+:is(.fx-rows, .tp-list, .fx-legend, .fx-kind-l, .fx-later, .fx-xs, tbody) > * { --r: 0; animation: fx-row .5s var(--fx-ease) both; animation-delay: calc(300ms + var(--i, 0) * 80ms + var(--r) * 35ms); }
+:is(.fx-rows, .tp-list, .fx-legend, .fx-kind-l, .fx-later, .fx-xs, tbody) > :nth-child(2) { --r: 1; }
+:is(.fx-rows, .tp-list, .fx-legend, .fx-kind-l, .fx-later, .fx-xs, tbody) > :nth-child(3) { --r: 2; }
+:is(.fx-rows, .tp-list, .fx-legend, .fx-kind-l, .fx-later, .fx-xs, tbody) > :nth-child(4) { --r: 3; }
+:is(.fx-rows, .tp-list, .fx-legend, .fx-kind-l, .fx-later, .fx-xs, tbody) > :nth-child(5) { --r: 4; }
+:is(.fx-rows, .tp-list, .fx-legend, .fx-kind-l, .fx-later, .fx-xs, tbody) > :nth-child(6) { --r: 5; }
+:is(.fx-rows, .tp-list, .fx-legend, .fx-kind-l, .fx-later, .fx-xs, tbody) > :nth-child(7) { --r: 6; }
+:is(.fx-rows, .tp-list, .fx-legend, .fx-kind-l, .fx-later, .fx-xs, tbody) > :nth-child(n+8) { --r: 7; }
+.tp-layer .tp-list > *, .fx-layer .tp-list > * { animation-delay: calc(120ms + var(--r) * 35ms); }
+.fx-feed-l li { animation: fx-row .45s var(--fx-ease) both; animation-delay: calc(200ms + var(--i) * 35ms); }
+.fx-meter i { animation-duration: .9s; animation-delay: calc(.4s + var(--d, var(--i, 0)) * 60ms); }
+.fx-stack i { animation-delay: calc(.35s + var(--d, 0) * 80ms); }
+@keyframes fx-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes fx-rise-soft { from { opacity: 0; transform: translateY(14px) scale(.99); filter: blur(6px); } 75% { filter: blur(0); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes fx-row { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes fx-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-8px); } }
+
+@media (max-width: 999.98px) {
+  .fx .fx-tab { height: 36px; padding: 0 14px; }
+  .fx .fx-col { margin: 0; }
+  .fx .fx-ptop .fx-me, .fx .fx-ptop .fx-ib { width: 38px; height: 38px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-tile, .fx-ccard, .fx-hist > *, .fx-card, .fx-lane { filter: none !important; }
+}
+
+/* P831 Settings: the profile card on the left, one panel with switching pill tabs on the right ------------------ */
+.fx-set { display: grid; grid-template-columns: minmax(260px, 300px) minmax(0, 1fr); gap: 14px; align-items: start; min-width: 0; }
+.fx-prof { align-items: center; text-align: center; gap: 10px; padding: 22px 18px 18px; }
+.fx-prof-av { position: relative; width: 96px; height: 96px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 32px; font-weight: 600; color: var(--sh-fi-sky); background: var(--sh-f-sky); }
+.fx-prof-av i { position: absolute; right: 4px; bottom: 4px; width: 18px; height: 18px; border-radius: 50%; background: var(--sh-f-stone); box-shadow: 0 0 0 3px var(--sh-surface); }
+.fx-prof-av i.on { background: var(--sh-f-sage); }
+.fx-prof h2 { font-family: var(--font-display); font-size: 20px; font-weight: 600; letter-spacing: -0.015em; margin-top: 4px; }
+.fx-prof > p { margin-top: -6px; font-size: 13px; color: var(--ov-mid); }
+.fx-prof-mail { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; height: 30px; padding: 0 12px; border-radius: 999px; font-size: 12.5px; font-weight: 500; color: var(--ov-hi); border: 1px solid var(--sh-edge); background: color-mix(in srgb, var(--ov-hi) 5%, transparent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fx-usage { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-top: 6px; padding: 14px; border-radius: 18px; text-align: left; color: var(--ci); background: var(--cf); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3); }
+.fx-usage b { font-size: 14px; font-weight: 600; }
+.fx-usage .fx-usage-n { font-family: var(--font-display); font-size: 24px; letter-spacing: -0.02em; }
+.fx-usage .fx-meter { height: 7px; background: color-mix(in srgb, var(--ci) 16%, transparent); }
+.fx-usage .fx-meter i { background: var(--ci); }
+.fx-usage small { font-size: 12px; font-weight: 500; } .fx-usage small b { font-size: 12px; }
+.fx-pstats { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); padding: 4px 0; }
+.fx-pstats li { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.fx-pstats li + li { border-left: 1px solid var(--ov-line); }
+.fx-pstats small { font-size: 12px; font-weight: 500; color: var(--ov-mid); }
+.fx-pstats b { font-family: var(--font-display); font-size: 21px; font-weight: 600; color: var(--ov-hi); }
+.fx-pnext { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; text-align: left; color: var(--ov-hi); border: 1px solid var(--sh-edge); background: color-mix(in srgb, var(--ov-hi) 5%, transparent); transition: background-color .2s, transform .25s var(--fx-ease); }
+.fx-pnext:hover { background: color-mix(in srgb, var(--ov-hi) 9%, transparent); transform: translateY(-2px); }
+.fx-pnext > i { width: 6px; align-self: stretch; border-radius: 999px; background: var(--sh-f-sky); }
+.fx-pnext small { display: block; font-size: 12px; color: var(--ov-mid); } .fx-pnext b { display: block; font-size: 13.5px; margin: 2px 0; }
+
+.fx-panel { gap: 18px; padding: 18px 22px 20px; min-height: 0; }
+.fx-ptabs { position: relative; display: flex; gap: 4px; align-self: flex-start; max-width: 100%; padding: 5px; border-radius: 999px; overflow-x: auto; scrollbar-width: none; background: color-mix(in srgb, var(--ov-hi) 6%, transparent); border: 1px solid var(--sh-edge); }
+.fx-ptab { position: relative; display: inline-flex; align-items: center; gap: 8px; flex: none; height: 36px; padding: 0 16px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--ov-mid); transition: color .2s; }
+.fx-ptab:hover { color: var(--ov-hi); }
+.fx-ptab.is-on { color: var(--sh-on-accent); background: var(--sh-acc); }
+.fx-form { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.fx-form > * { animation: fx-row .45s var(--fx-ease) both; }
+.fx-form > :nth-child(2) { animation-delay: 40ms; } .fx-form > :nth-child(3) { animation-delay: 80ms; } .fx-form > :nth-child(4) { animation-delay: 120ms; } .fx-form > :nth-child(n+5) { animation-delay: 160ms; }
+.fx-form-h h2 { font-family: var(--font-display); font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.fx-form-h p { margin-top: 3px; font-size: 13px; color: var(--ov-mid); }
+.fx-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+.fx-form .tp-field > span { font-size: 12.5px; font-weight: 600; color: var(--ov-mid); }
+.fx-form .tp-field > small { font-size: 12px; color: var(--ov-mid); }
+.fx-form .tp-field input, .fx-form .tp-field select { min-height: 44px; background: color-mix(in srgb, var(--ov-hi) 6%, transparent); border-color: var(--sh-edge); font-weight: 500; }
+.fx-form .tp-field input[readonly] { color: var(--ov-mid); }
+.fx-form-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.fx-form-row b { font-size: 13.5px; } .fx-form-row .tp-sub { font-size: 12.5px; color: var(--ov-mid); }
+.fx-form-sw { padding: 12px 14px; border-radius: 16px; border: 1px solid var(--ov-line); }
+.fx-form-f { display: flex; justify-content: flex-end; gap: 10px; padding-top: 16px; margin-top: 4px; border-top: 1px solid var(--ov-line); }
+.fx-form-f .tp-primary { height: 40px; padding: 0 20px; font-size: 13.5px; }
+.fx-form-f .tp-btn { height: 40px; padding: 0 18px; }
+.fx-form-f button:disabled { opacity: .45; cursor: default; filter: none; }
+.fx-alerts-h { display: flex; gap: 22px; padding: 0 6px 6px; font-size: 12px; font-weight: 600; color: var(--ov-mid); }
+.fx-alerts .tp-li { gap: 22px; }
+.fx-days { display: flex; flex-wrap: wrap; gap: 6px; }
+.fx-day { height: 36px; min-width: 52px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--ov-mid); border: 1px solid var(--sh-edge); background: color-mix(in srgb, var(--ov-hi) 5%, transparent); transition: background-color .2s, color .2s, transform .2s var(--fx-spring); }
+.fx-day:active { transform: scale(.95); }
+.fx-day.is-on { color: var(--sh-fi-sky); background: var(--sh-f-sky); border-color: transparent; }
+.fx-billsum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.fx-billsum > div { padding: 12px 14px; border-radius: 16px; border: 1px solid var(--ov-line); }
+.fx-billsum small { display: block; font-size: 12px; color: var(--ov-mid); } .fx-billsum b { display: block; margin-top: 4px; font-size: 15px; font-weight: 600; }
+
+@media (min-width: 1000px) and (min-height: 620px) {
+  .fx.tp-app.is-settings .fx-main > .fx-set { height: 100%; }
+  .fx-set .fx-panel { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+}
+@media (max-width: 999.98px) {
+  .fx-set { grid-template-columns: minmax(0, 1fr); }
+  .fx-prof-av { width: 80px; height: 80px; font-size: 27px; }
+  .fx-panel { padding: 14px 14px 16px; }
+  .fx-form-grid, .fx-billsum { grid-template-columns: minmax(0, 1fr); }
+  .fx-form-f { position: sticky; bottom: 84px; }
+  .fx-form-f > * { flex: 1; }
+}

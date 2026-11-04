@@ -5202,3 +5202,78 @@ html.is-native a, html.is-native img { -webkit-touch-callout: none; }
   --sh-glow: .32;
   --sh-glass-hi: #FDFDFB; /* text never uses it in light */
 }
+
+/* ── Prompt 831 — shell palette, firmer (DESIGN.md v17 "Shell palette", P831 update). Overrides the P830 values:
+   readable inks (no faint grey), confident fills with a dark ink of the same hue, a dark neutral soft-focus
+   backdrop instead of hue glows, and darker glass cards. Agent shell only. */
+:root {
+  /* Accents, dark theme: saturation ~.5-.65, mid-light so they read as text on dark and as fills */
+  --sh-p-mint: #69D3BC;
+  --sh-p-sky: #7CA9DE;
+  --sh-p-apricot: #E1AA70;
+  --sh-p-sage: #93CD70;
+  --sh-p-coral: #DF8677;
+  --sh-p-lilac: #AC98E1;
+  --sh-p-stone: #A5A99E;
+  /* Fills (cards, chips, active pills) and the dark ink of the same hue that sits on them */
+  --sh-f-mint: #3DC2A5;    --sh-fi-mint: #09251F;
+  --sh-f-sky: #5C8ECC;     --sh-fi-sky: #091625;
+  --sh-f-apricot: #D0914E; --sh-fi-apricot: #251709;
+  --sh-f-sage: #66A841;    --sh-fi-sage: #142509;
+  --sh-f-coral: #CF6B59;   --sh-fi-coral: #250D09;
+  --sh-f-lilac: #907ACD;   --sh-fi-lilac: #110925;
+  --sh-f-stone: #8F9385;   --sh-fi-stone: #181915;
+
+  --sh-ink: #F2F3EE;
+  --sh-ink-2: #D9DCD5;      /* secondary text, 14:1 on the base */
+  --sh-ink-3: #CED1CA;
+  --sh-ink-4: #BCC0B8;      /* muted labels, 10:1 */
+  --sh-ink-5: #A3A79F;      /* the faintest text allowed, 7.9:1 */
+  --sh-base: #0D0E0D;
+  --sh-deep: #080908;
+  --sh-surface: #181A18;
+  --sh-card: rgba(15, 16, 15, 0.5);   /* dark glass over the backdrop */
+  --sh-edge: rgba(242, 243, 238, 0.13);
+  --sh-hl: rgba(255, 255, 255, 0.08);
+  --sh-line: rgba(242, 243, 238, 0.1);
+  --sh-on-accent: #0C3129;
+  --sh-acc: #69D3BC;        /* the accent as a surface: active tab, primary buttons */
+  --sh-tint: 20%;
+  /* The soft-focus backdrop (P831): neutral, dark, light and shadow only */
+  --sh-bd-image: url('/shell/backdrop-dark.jpg');
+  --sh-bd-dim: rgba(8, 9, 8, 0);
+}
+[data-theme="light"] {
+  --sh-mint: #1E6A5A;
+  --sh-sky: #2E609E;
+  --sh-apricot: #774E22;
+  --sh-sage: #3B6A1E;
+  --sh-coral: #9E3F2E;
+  --sh-lilac: #533D8F;
+  --sh-stone: #575B53;
+  --sh-f-mint: #88DDCA;    --sh-fi-mint: #104137;
+  --sh-f-sky: #95B9E4;     --sh-fi-sky: #102641;
+  --sh-f-apricot: #E4B481; --sh-fi-apricot: #412A10;
+  --sh-f-sage: #AAD78E;    --sh-fi-sage: #234110;
+  --sh-f-coral: #E29183;   --sh-fi-coral: #411810;
+  --sh-f-lilac: #AD9CDE;   --sh-fi-lilac: #1D1041;
+  --sh-f-stone: #B4B7AE;   --sh-fi-stone: #2D3027;
+
+  --sh-ink: #1F221F;
+  --sh-ink-2: #343833;
+  --sh-ink-3: #3F433E;
+  --sh-ink-4: #4C504A;
+  --sh-ink-5: #5A5E58;
+  --sh-base: #D9DAD4;
+  --sh-deep: #CFD0CA;
+  --sh-surface: #F1F1ED;
+  --sh-card: rgba(244, 244, 240, 0.55);
+  --sh-edge: rgba(31, 34, 31, 0.1);
+  --sh-hl: rgba(255, 255, 255, 0.55);
+  --sh-line: rgba(31, 34, 31, 0.1);
+  --sh-on-accent: #104137;
+  --sh-acc: #88DDCA;
+  --sh-tint: 16%;
+  --sh-bd-image: url('/shell/backdrop-light.jpg');
+  --sh-bd-dim: rgba(240, 240, 236, 0.1);
+}
