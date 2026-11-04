@@ -5277,3 +5277,66 @@ html.is-native a, html.is-native img { -webkit-touch-callout: none; }
   --sh-bd-image: url('/shell/backdrop-light.jpg');
   --sh-bd-dim: rgba(240, 240, 236, 0.1);
 }
+
+/* ── Prompt 834 — shell palette, Solvik-matched states (DESIGN.md v17 "Shell palette", P834 update). Overrides P831:
+   a NEUTRAL selected state (no mint/blue highlight), a dimmed light mode (nothing near white), stage-card fills per
+   theme (dark: muted tint ~.66 with off-white ink and a faint light edge; light: firmer tint ~.75, dark ink, no
+   outline), selected status buttons in their own hue, and one deep contrast panel. Agent shell only. */
+:root {
+  /* Selected (active tab pill, rail active, segmented controls, selected rows). Solvik dark: rgba(88,94,93,.74) */
+  --sh-sel: rgba(88, 94, 93, 0.74);
+  --sh-on-sel: #F2F4F0;
+  --sh-sel-edge: rgba(255, 255, 255, 0.14);
+  /* Card fills per tone, dark: muted mid-dark tints at ~.66 (Solvik Qualification is rgba(75,102,129,.665)) */
+  --sh-cf-sky: rgba(70, 102, 138, 0.66);
+  --sh-cf-mint: rgba(46, 114, 99, 0.66);
+  --sh-cf-sage: rgba(86, 116, 54, 0.66);
+  --sh-cf-apricot: rgba(146, 102, 58, 0.66);
+  --sh-cf-coral: rgba(140, 78, 66, 0.66);
+  --sh-cf-lilac: rgba(98, 84, 146, 0.66);
+  --sh-cf-stone: rgba(96, 100, 94, 0.66);
+  --sh-ci: #F2F4F0;          /* ink on a dark-mode card: off-white */
+  --sh-card-edge: rgba(242, 244, 240, 0.12);
+  --sh-card-hl: rgba(255, 255, 255, 0.18);
+  /* Selected status button: the hue's solid fill with its own dark ink (dark) / the deep hue with off-white (light) */
+  --sh-cs-sky: var(--sh-f-sky);       --sh-csi-sky: var(--sh-fi-sky);
+  --sh-cs-mint: var(--sh-f-mint);     --sh-csi-mint: var(--sh-fi-mint);
+  --sh-cs-sage: var(--sh-f-sage);     --sh-csi-sage: var(--sh-fi-sage);
+  --sh-cs-apricot: var(--sh-f-apricot); --sh-csi-apricot: var(--sh-fi-apricot);
+  --sh-cs-stone: var(--sh-f-stone);   --sh-csi-stone: var(--sh-fi-stone);
+  /* The one deep panel per page (Overview: Needs you) */
+  --sh-deep-panel: rgba(5, 6, 5, 0.62);
+  --sh-deep-ink: #F2F4F0;
+}
+[data-theme="light"] {
+  --sh-sel: #13171A;         /* Solvik light: rgb(19,23,26) with off-white text */
+  --sh-on-sel: #F2F4F0;
+  --sh-sel-edge: rgba(255, 255, 255, 0.1);
+  /* Dimmed light: soft warm-grey off-white base, no surface near white (Solvik base rgb(233,236,231)) */
+  --sh-base: #E6E8E3;
+  --sh-deep: #DCDED8;
+  --sh-surface: #E9EBE6;
+  --sh-card: rgba(233, 235, 230, 0.5);
+  --sh-edge: rgba(31, 34, 31, 0.08);
+  --sh-hl: rgba(255, 255, 255, 0.32);
+  --sh-glass-hi: #EEF0EB;
+  --sh-bd-dim: rgba(40, 44, 40, 0.04);
+  /* Card fills, light: the same pastel fills, firmer (~.75), dark ink of the hue, no outline */
+  --sh-cf-sky: color-mix(in srgb, var(--sh-f-sky) 75%, transparent);
+  --sh-cf-mint: color-mix(in srgb, var(--sh-f-mint) 75%, transparent);
+  --sh-cf-sage: color-mix(in srgb, var(--sh-f-sage) 75%, transparent);
+  --sh-cf-apricot: color-mix(in srgb, var(--sh-f-apricot) 75%, transparent);
+  --sh-cf-coral: color-mix(in srgb, var(--sh-f-coral) 75%, transparent);
+  --sh-cf-lilac: color-mix(in srgb, var(--sh-f-lilac) 75%, transparent);
+  --sh-cf-stone: color-mix(in srgb, var(--sh-f-stone) 75%, transparent);
+  --sh-ci: #13171A;
+  --sh-card-edge: transparent;
+  --sh-card-hl: rgba(255, 255, 255, 0.2);
+  --sh-cs-sky: var(--sh-sky);         --sh-csi-sky: var(--sh-on-sel);
+  --sh-cs-mint: var(--sh-mint);       --sh-csi-mint: var(--sh-on-sel);
+  --sh-cs-sage: var(--sh-sage);       --sh-csi-sage: var(--sh-on-sel);
+  --sh-cs-apricot: var(--sh-apricot); --sh-csi-apricot: var(--sh-on-sel);
+  --sh-cs-stone: var(--sh-stone);     --sh-csi-stone: var(--sh-on-sel);
+  --sh-deep-panel: rgba(28, 32, 31, 0.9);
+  --sh-deep-ink: #F2F4F0;
+}

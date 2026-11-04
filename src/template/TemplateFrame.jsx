@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useOutlet } from 'react-router-dom'
 import {
   Home, PhoneIncoming, CalendarDays, Users, History, CreditCard, Settings, Search, Bell, Plus, Sun, Moon, MessageSquare,
   PhoneCall, LifeBuoy, Radio, ChevronRight, LogOut, ShieldCheck, Ellipsis, FileUp, TriangleAlert, Wallet, CalendarCheck, Clock3, Send,
+  Smartphone, CircleHelp, StickyNote, PhoneOutgoing, Mail, Keyboard,
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
 import { useStretchPill } from '../hooks/useStretchPill'
@@ -15,6 +16,10 @@ import { paths, tabOf, titleOfLayout, layoutOf, isTemplateAddress } from './path
 import Palette from './Palette'
 import { OhvaraMark } from '../components/ui/OhvaraMark'
 import { isSearchKey } from '../lib/searchKey'
+import { appLink, loadAppConfig } from '../lib/appConfig'
+import { openExternal } from '../lib/native'
+import { STORES, STORES_SOON, appQr } from '../lib/appStores'
+import { SUPPORT_EMAIL } from '../components/auth/authUtils'
 import './glass.css'
 import './flow.css'
 import './palette.css'
@@ -78,6 +83,137 @@ function BookCall({ open, onClose }) {
       </div>
       <Field label="Time"><select value={time} onChange={e => setTime(e.target.value)}>{TIMES.map(t => <option key={t}>{t}</option>)}</select></Field>
     </Drawer>
+  )
+}
+
+// Everyone an agent can call or write about: clients and open leads.
+function usePeople() {
+  const { data: clients } = useSampleClients()
+  const { data: leads } = useSampleLeads()
+  return useMemo(() => [
+    ...clients.map(c => ({ ref: c.id, kind: 'client', who: `${c.client_first_name} ${c.client_last_name}` })),
+    ...leads.filter(l => !['sold', 'not_interested'].includes(l.stage)).map(l => ({ ref: l.id, kind: 'lead', who: `${l.first_name} ${l.last_name}` })),
+  ], [clients, leads])
+}
+
+// Add a note to a client: it shows on the client's page (sample only).
+function AddNote({ open, onClose }) {
+  const { data: clients } = useSampleClients()
+  const { clientAction } = useSampleActions()
+  const note = useNote()
+  const [ref, setRef] = useState('')
+  const [text, setText] = useState('')
+  if (!open) return null
+  const c = clients.find(x => x.id === ref) || clients[0]
+  const save = () => { clientAction(c.id, `Note: ${text.trim()}`); note(`Note added to ${c.client_first_name} ${c.client_last_name}`); setText(''); onClose() }
+  return (
+    <Drawer open center onClose={onClose} title="Add a note to a client" sub="Only you and the team see it."
+      footer={<><button type="button" className="tp-primary fx-accent" disabled={!text.trim()} onClick={save}><StickyNote size={16} />Save note</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
+      <Field label="Client"><select value={c?.id} onChange={e => setRef(e.target.value)}>{clients.map(x => <option key={x.id} value={x.id}>{x.client_first_name} {x.client_last_name}</option>)}</select></Field>
+      <Field label="Note"><textarea className="tp-input fx-ta" rows={4} placeholder="What should the team know?" value={text} onChange={e => setText(e.target.value)} /></Field>
+    </Drawer>
+  )
+}
+
+// Log a call you made yourself, so the record stays whole (sample only).
+const RESULTS = ['Reached them', 'Left a voicemail', 'No answer', 'Set a follow-up']
+function LogCall({ open, onClose }) {
+  const people = usePeople()
+  const { clientAction, addLeadNote } = useSampleActions()
+  const note = useNote()
+  const [ref, setRef] = useState('')
+  const [result, setResult] = useState(RESULTS[0])
+  const [text, setText] = useState('')
+  if (!open) return null
+  const who = people.find(p => p.ref === ref) || people[0]
+  const save = () => {
+    const line = `Call logged: ${result}${text.trim() ? `. ${text.trim()}` : ''}`
+    if (who.kind === 'client') clientAction(who.ref, line)
+    else addLeadNote(who.ref, line)
+    note(`Call with ${who.who} logged`)
+    setText('')
+    onClose()
+  }
+  return (
+    <Drawer open center onClose={onClose} title="Log a call" sub="A call you made outside Ohvara."
+      footer={<><button type="button" className="tp-primary fx-accent" onClick={save}><PhoneOutgoing size={16} />Log it</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
+      <Field label="Who"><select value={who.ref} onChange={e => setRef(e.target.value)}>{people.map(p => <option key={p.ref} value={p.ref}>{p.who} · {p.kind === 'lead' ? 'Lead' : 'Client'}</option>)}</select></Field>
+      <div className="tp-field"><span>How it went</span>
+        <div className="fx-chips" role="radiogroup" aria-label="How it went">{RESULTS.map(r => <button key={r} type="button" role="radio" aria-checked={result === r} className={`fx-chip${result === r ? ' is-on' : ''}`} onClick={() => setResult(r)}><b>{r}</b></button>)}</div>
+      </div>
+      <Field label="Notes (optional)"><textarea className="tp-input fx-ta" rows={3} value={text} onChange={e => setText(e.target.value)} /></Field>
+    </Drawer>
+  )
+}
+
+// Get the phone app: the one /app link as a QR, plus the store buttons (live once the store links are set).
+function GetApp({ open, onClose }) {
+  const [cfg, setCfg] = useState(null)
+  const [qr, setQr] = useState(null)
+  const link = appLink()
+  useEffect(() => {
+    if (!open) return undefined
+    let on = true
+    loadAppConfig().then(c => { if (on) setCfg(c) })
+    appQr(link).then(u => { if (on) setQr(u) }).catch(() => {})
+    return () => { on = false }
+  }, [open, link])
+  if (!open) return null
+  const live = !!(cfg?.ios || cfg?.android)
+  const store = ({ key, label, sub }) => (
+    <button key={key} type="button" className="fx-app-store" disabled={!cfg?.[key]} onClick={() => openExternal(cfg[key])}>
+      <Smartphone size={16} aria-hidden="true" /><span>{label}<small>{cfg?.[key] ? sub : 'Coming soon'}</small></span>
+    </button>
+  )
+  return (
+    <Drawer open center onClose={onClose} title="Get the phone app" sub={live ? 'Your portal on your phone, with alerts.' : STORES_SOON}>
+      <div className="fx-app">
+        <span className="fx-app-qr">{qr ? <img src={qr} alt={`QR code for ${link}`} width={176} height={176} /> : null}</span>
+        <p className="tp-sub">{live ? 'Point your phone camera at the code to get the app.' : 'Scan to open Ohvara on your phone.'}</p>
+        <div className="fx-app-stores">{STORES.map(store)}</div>
+      </div>
+    </Drawer>
+  )
+}
+
+// Help and support: where to ask, and the one shortcut worth knowing.
+function Help({ open, onClose }) {
+  if (!open) return null
+  return (
+    <Drawer open center onClose={onClose} title="Help and support" sub="Ask the team anything about a client or your account.">
+      <ul className="tp-list">
+        <li><Link to={paths.messages()} className="fx-mrow" onClick={onClose}><MessageSquare size={17} aria-hidden="true" /><span className="tp-grow"><b>Message the team</b><small>Fastest for anything about a client</small></span><ChevronRight size={15} aria-hidden="true" /></Link></li>
+        <li><Link to={paths.requestService()} className="fx-mrow" onClick={onClose}><LifeBuoy size={17} aria-hidden="true" /><span className="tp-grow"><b>Request a service</b><small>Changes, cancellations, documents</small></span><ChevronRight size={15} aria-hidden="true" /></Link></li>
+        <li><a href={`mailto:${SUPPORT_EMAIL}`} className="fx-mrow"><Mail size={17} aria-hidden="true" /><span className="tp-grow"><b>Email support</b><small>{SUPPORT_EMAIL}</small></span><ChevronRight size={15} aria-hidden="true" /></a></li>
+        <li className="fx-mrow"><Keyboard size={17} aria-hidden="true" /><span className="tp-grow"><b>Search anything</b><small>Press Ctrl K (Cmd K on a Mac)</small></span></li>
+      </ul>
+    </Drawer>
+  )
+}
+
+// The + menu: everything an agent can start, in one place. On a desktop it opens beside the rail.
+function CreateMenu({ open, onClose, at, pick }) {
+  useEffect(() => {
+    if (!open) return undefined
+    const onKey = e => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+  if (!open) return null
+  const row = (Icon, label, sub) => <><Icon size={17} aria-hidden="true" /><span className="tp-grow"><b>{label}</b><small>{sub}</small></span></>
+  return (
+    <div className="tp fx-layer fx-menu-layer" role="presentation">
+      <button type="button" className="fx-scrim is-clear tp-bare" aria-label="Close menu" tabIndex={-1} onClick={onClose} />
+      <section className="fx-menu fx-cmenu" role="menu" aria-label="Create" style={at || undefined}>
+        <p className="fx-cmenu-h">Create</p>
+        <Link to={paths.submit()} role="menuitem" className="fx-mrow" onClick={onClose}>{row(FileUp, 'Submit a policy', 'A sale for servicing')}</Link>
+        <button type="button" role="menuitem" className="fx-mrow" onClick={() => pick('book')}>{row(PhoneCall, 'Book a call', 'Puts it on your calendar')}</button>
+        <Link to={paths.requestService()} role="menuitem" className="fx-mrow" onClick={onClose}>{row(LifeBuoy, 'Request a service', 'Changes, cancellations, documents')}</Link>
+        <i className="fx-mline" />
+        <button type="button" role="menuitem" className="fx-mrow" onClick={() => pick('note')}>{row(StickyNote, 'Add a note to a client', 'Shows on their page')}</button>
+        <button type="button" role="menuitem" className="fx-mrow" onClick={() => pick('log')}>{row(PhoneOutgoing, 'Log a call', 'A call you made yourself')}</button>
+      </section>
+    </div>
   )
 }
 
@@ -166,6 +302,26 @@ export default function TemplateFrame() {
   const flipTheme = e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }
   const duty = settings.duty
   const flipDuty = e => { wig.onClick(e); setDuty(!duty); note(duty ? 'Off for live calls. We book callers on your calendar' : 'Active. Live calls ring your phone') }
+  // The + menu opens beside the rail button on a desktop (a bottom sheet on a phone).
+  const [menuAt, setMenuAt] = useState(null)
+  const openCreate = e => {
+    wig.onClick(e)
+    const r = e.currentTarget.getBoundingClientRect()
+    setMenuAt(window.innerWidth >= 1000 ? { left: `${Math.round(r.right + 14)}px`, top: `${Math.round(Math.max(12, Math.min(r.top - 8, window.innerHeight - 340)))}px` } : null)
+    setPanel('create')
+  }
+
+  // Entrance motion only once the page is really painting: the first animation frame adds .is-anim (a background
+  // tab never runs one, so its content sits at its final look), and hiding the tab drops it again.
+  const appRef = useRef(null)
+  useLayoutEffect(() => {
+    const el = appRef.current
+    if (!el) return undefined
+    const raf = requestAnimationFrame(() => el.classList.add('is-anim'))
+    const onVis = () => { if (document.hidden) el.classList.remove('is-anim') }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { cancelAnimationFrame(raf); document.removeEventListener('visibilitychange', onVis) }
+  }, [layout])
 
   // Ctrl/⌘K opens search from anywhere.
   useEffect(() => {
@@ -175,7 +331,7 @@ export default function TemplateFrame() {
   }, [])
 
   return (
-    <div className={`tp tp-app fx is-${layout}`}>
+    <div className={`tp tp-app fx is-${layout}`} ref={appRef}>
       <div className="tp-sky" aria-hidden="true"><i /><i /><i /></div>
 
       <header className="tp-phone-top fx-ptop">
@@ -206,14 +362,20 @@ export default function TemplateFrame() {
       <aside className="tp-rail fx-rail" aria-label="Actions">
         <button type="button" className="tp-ri fx-ri tp-wig" aria-label="Search (Ctrl K)" data-tip="Search  Ctrl K" {...wig} onClick={open('search')}><Search size={20} /></button>
         <i className="fx-hair" />
-        <Link to={paths.submit()} className="fx-ri fx-plus tp-wig" aria-label="Submit a policy" data-tip="Submit a policy" {...wig}><Plus size={21} /></Link>
-        <button type="button" className="tp-ri fx-ri tp-wig" aria-label="Book a call" data-tip="Book a call" {...wig} onClick={open('book')}><PhoneCall size={20} /></button>
-        <NavLink to={paths.requestService()} className="fx-ri tp-wig" aria-label="Request a service" data-tip="Request a service" {...wig}><LifeBuoy size={20} /></NavLink>
+        <button type="button" className="fx-ri fx-plus tp-wig" aria-label="Create" aria-haspopup="menu" aria-expanded={panel === 'create'} data-tip="Create" {...wig} onClick={openCreate}><Plus size={20} /></button>
+        <button type="button" className="tp-ri fx-ri tp-wig" aria-label="Book a call" data-tip="Book a call" {...wig} onClick={open('book')}><PhoneCall size={18} /></button>
+        <NavLink to={paths.requestService()} className="fx-ri tp-wig" aria-label="Request a service" data-tip="Request a service" {...wig}><LifeBuoy size={18} /></NavLink>
         <i className="fx-hair" />
-        <button type="button" role="switch" aria-checked={duty} className={`fx-ri fx-duty tp-wig${duty ? ' on' : ''}`} aria-label="Active for live calls" data-tip={duty ? 'Active: calls ring you' : 'Off: we book callers'} {...wig} onClick={flipDuty}><Radio size={20} /><i aria-hidden="true" /></button>
+        <NavLink to={paths.messages()} className="fx-ri tp-wig" aria-label="Messages" data-tip="Messages" {...wig}><MessageSquare size={18} />{unread > 0 && <span className="fx-badge">{unread}</span>}</NavLink>
+        <NavLink to={paths.calendar()} className="fx-ri tp-wig" aria-label="Calendar" data-tip="Calendar" {...wig}><CalendarDays size={18} /></NavLink>
         <i className="fx-hair" />
-        <NavLink to={paths.settings()} className="fx-ri tp-wig" aria-label="Settings" data-tip="Settings" {...wig}><Settings size={20} /></NavLink>
-        <button type="button" className="fx-ri tp-wig" aria-label="Switch theme" data-tip={theme === 'dark' ? 'Light mode' : 'Dark mode'} {...wig} onClick={flipTheme}>{theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}</button>
+        <button type="button" role="switch" aria-checked={duty} className={`fx-ri fx-duty tp-wig${duty ? ' on' : ''}`} aria-label="Active for live calls" data-tip={duty ? 'Active: calls ring you' : 'Off: we book callers'} {...wig} onClick={flipDuty}><Radio size={18} /><i aria-hidden="true" /></button>
+        <i className="fx-hair" />
+        <button type="button" className="fx-ri tp-wig" aria-label="Get the phone app" aria-expanded={panel === 'app'} data-tip="Get the phone app" {...wig} onClick={open('app')}><Smartphone size={18} /></button>
+        <button type="button" className="fx-ri tp-wig" aria-label="Help and support" aria-expanded={panel === 'help'} data-tip="Help and support" {...wig} onClick={open('help')}><CircleHelp size={18} /></button>
+        <i className="fx-hair" />
+        <NavLink to={paths.settings()} className="fx-ri tp-wig" aria-label="Settings" data-tip="Settings" {...wig}><Settings size={18} /></NavLink>
+        <button type="button" className="fx-ri tp-wig" aria-label="Switch theme" data-tip={theme === 'dark' ? 'Light mode' : 'Dark mode'} {...wig} onClick={flipTheme}>{theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
       </aside>
 
 
@@ -244,7 +406,7 @@ export default function TemplateFrame() {
       <nav className="tp-bar fx-bar" aria-label="Actions">
         <button type="button" className="fx-btab" aria-label="Search" onClick={open('search')}><Search size={21} aria-hidden="true" />Search</button>
         <button type="button" className="fx-btab" onClick={open('book')}><PhoneCall size={20} aria-hidden="true" />Book</button>
-        <Link to={paths.submit()} className="fx-btab is-plus" aria-label="Submit a policy"><span className="fx-bplus"><Plus size={24} aria-hidden="true" /></span>Submit</Link>
+        <button type="button" className="fx-btab is-plus" aria-label="Create" aria-haspopup="menu" aria-expanded={panel === 'create'} onClick={openCreate}><span className="fx-bplus"><Plus size={24} aria-hidden="true" /></span>Create</button>
         <Link to={paths.requestService()} className="fx-btab"><LifeBuoy size={20} aria-hidden="true" />Request</Link>
         <Link to={paths.settings()} className="fx-btab"><Settings size={20} aria-hidden="true" />Settings</Link>
       </nav>
@@ -252,6 +414,11 @@ export default function TemplateFrame() {
       {panel === 'search' && <Palette onClose={close} pages={PAGES} />}
       <BellDrawer open={panel === 'bell'} onClose={close} />
       <BookCall open={panel === 'book'} onClose={close} />
+      <CreateMenu open={panel === 'create'} onClose={close} at={menuAt} pick={setPanel} />
+      <AddNote open={panel === 'note'} onClose={close} />
+      <LogCall open={panel === 'log'} onClose={close} />
+      <GetApp open={panel === 'app'} onClose={close} />
+      <Help open={panel === 'help'} onClose={close} />
       <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} duty={duty} setDuty={setDuty} />
     </div>
   )

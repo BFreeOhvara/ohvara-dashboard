@@ -118,7 +118,7 @@ export default function Overview() {
         <StepsChart days={o.doneByDay} />
       </Tile>
 
-      <Tile className="fx-s6" i={4} title="Needs you" sub={needs.length ? `${needs.length} waiting on you` : 'All caught up'} to={paths.leads()} label="Open Leads">
+      <Tile className="fx-s6 is-deep" i={4} title="Needs you" sub={needs.length ? `${needs.length} waiting on you` : 'All caught up'} to={paths.leads()} label="Open Leads">
         <ul className="fx-rows">
           {needs.map(r => <li key={r.id}><Link to={r.to} className={`fx-row is-${r.tone}`}><span className="fx-row-ic"><r.Icon size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{r.name}</b><small>{r.what}</small></span><ArrowUpRight size={15} aria-hidden="true" /></Link></li>)}
           {needs.length === 0 && <li className="fx-calm"><Check size={16} aria-hidden="true" />No one is waiting on you.</li>}

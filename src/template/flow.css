@@ -698,3 +698,107 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
   .fx-form-f { position: sticky; bottom: 84px; }
   .fx-form-f > * { flex: 1; }
 }
+
+/* P834 ----------------------------------------------------------------------------------------------------------
+   Solvik-matched states. Selected = neutral (near-black pill in light, grey glass pill in dark); our colour is for
+   stage/status meaning and the single primary action only. Stage cards fill per theme; one deep panel per page;
+   slimmer, longer bars with 18px icons; the + opens a create menu. Tokens: src/index.css "Prompt 834". */
+
+/* Tones: --cf card fill per theme, --ci its ink, --cs/--csi a status button's selected fill and ink */
+.tp .is-blue { --cf: var(--sh-cf-sky); --ci: var(--sh-ci); --cs: var(--sh-cs-sky); --csi: var(--sh-csi-sky); }
+.tp .is-warn { --cf: var(--sh-cf-apricot); --ci: var(--sh-ci); --cs: var(--sh-cs-apricot); --csi: var(--sh-csi-apricot); }
+.tp .is-teal { --cf: var(--sh-cf-mint); --ci: var(--sh-ci); --cs: var(--sh-cs-mint); --csi: var(--sh-csi-mint); }
+.tp .is-green, .tp .is-up { --cf: var(--sh-cf-sage); --ci: var(--sh-ci); --cs: var(--sh-cs-sage); --csi: var(--sh-csi-sage); }
+.tp .is-mute { --cf: var(--sh-cf-stone); --ci: var(--sh-ci); --cs: var(--sh-cs-stone); --csi: var(--sh-csi-stone); }
+.tp .is-violet { --cf: var(--sh-cf-lilac); --ci: var(--sh-ci); }
+.fx-week .tp-ev { --cf: var(--sh-cf-sky); --ci: var(--sh-ci); }
+.fx-week .tp-ev.client { --cf: var(--sh-cf-mint); --ci: var(--sh-ci); }
+
+/* Stage cards and chips. Dark: muted tint, off-white ink, faint light edge + inner top highlight.
+   Light: firmer tint, dark ink, no outline. */
+.fx-card, .fx-week .tp-ev, .fx-hero-card {
+  --ov-mute: color-mix(in srgb, var(--ci) 86%, transparent); --ov-faint: color-mix(in srgb, var(--ci) 80%, transparent);
+  border-color: var(--sh-card-edge);
+}
+.fx-card { box-shadow: inset 0 1px 0 var(--sh-card-hl), 0 18px 30px -24px rgba(0, 0, 0, .6); }
+[data-theme="light"] .fx-card { box-shadow: inset 0 1px 0 var(--sh-card-hl), 0 16px 28px -24px rgba(0, 0, 0, .28); }
+@media (hover: hover) and (pointer: fine) {
+  .fx-card:hover { border-color: color-mix(in srgb, var(--ci) 22%, transparent); }
+  [data-theme="light"] .fx-card:hover { border-color: transparent; box-shadow: inset 0 1px 0 var(--sh-card-hl), 0 22px 32px -22px rgba(0, 0, 0, .34); }
+}
+.tp .tp-chip:is(.is-blue, .is-teal, .is-warn, .is-green, .is-mute, .is-violet), .fx-delta { box-shadow: inset 0 0 0 1px var(--sh-card-edge); }
+
+/* Neutral selected state */
+.fx .fx-tab.is-on, [data-theme="light"] .fx .fx-tab.is-on { --sp-fill: var(--sh-sel); color: var(--sh-on-sel); background: var(--sh-sel); box-shadow: inset 0 1px 0 var(--sh-sel-edge); }
+.fx .fx-tab.is-on .fx-tb { box-shadow: 0 0 0 2px var(--sh-sel); }
+.fx .fx-ri.active, .fx .fx-ri[aria-expanded="true"]:not(.fx-plus) { color: var(--sh-on-sel); background: var(--sh-sel); box-shadow: inset 0 1px 0 var(--sh-sel-edge); }
+.fx .tp-seg > .on, .fx-filter.is-on, [data-theme="light"] .fx-filter.is-on, .fx-ptab.is-on, .fx-chip.is-on, .fx-step.is-on, .fx-day.is-on, .fx-kind.is-on {
+  --sp-fill: var(--sh-sel); color: var(--sh-on-sel); background: var(--sh-sel); border-color: transparent;
+}
+.fx .tp-seg > .on b, .fx-filter.is-on b { color: var(--sh-on-sel); background: color-mix(in srgb, var(--sh-on-sel) 18%, transparent); }
+.fx-chip.is-on b, .fx-chip.is-on small { color: var(--sh-on-sel); }
+.fx-kind.is-on * { color: inherit; }
+.fx-step.is-done { color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 10%, transparent); }
+.fx-pal-r.is-at { color: var(--sh-on-sel); background: var(--sh-sel); --ov-hi: var(--sh-on-sel); --ov-mid: color-mix(in srgb, var(--sh-on-sel) 82%, transparent); --ov-mute: color-mix(in srgb, var(--sh-on-sel) 76%, transparent); }
+.fx-pal-r.is-at .fx-pal-ic { color: var(--sh-on-sel); background: color-mix(in srgb, var(--sh-on-sel) 16%, transparent); }
+.fx-pal mark { background: color-mix(in srgb, var(--ov-hi) 18%, transparent); }
+.fx .fx-me { color: var(--sh-on-sel); background: var(--sh-sel); box-shadow: inset 0 1px 0 var(--sh-sel-edge); }
+.fx-tile.is-hero { border-color: var(--fx-edge); }
+
+/* Clients status buttons: each status in its own hue; selected = that hue, solid */
+.fx-filter.is-tone { color: var(--ov-hi); background: color-mix(in srgb, var(--cf) 60%, transparent); border-color: color-mix(in srgb, var(--cs) 38%, transparent); }
+.fx-filter.is-tone::before { content: ''; width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--cs); }
+.fx-filter.is-tone b { color: var(--ov-hi); background: color-mix(in srgb, var(--cs) 24%, transparent); }
+.fx-filter.is-tone:hover { border-color: color-mix(in srgb, var(--cs) 70%, transparent); }
+.fx-filter.is-tone.is-on, [data-theme="light"] .fx-filter.is-tone.is-on { color: var(--csi); background: var(--cs); border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22); }
+.fx-filter.is-tone.is-on::before { background: var(--csi); }
+.fx-filter.is-tone.is-on b { color: var(--csi); background: color-mix(in srgb, var(--csi) 18%, transparent); }
+
+/* One deep panel (Overview: Needs you) so the page has depth instead of one bright field */
+.fx-tile.is-deep {
+  --ov-hi: var(--sh-deep-ink); --ov-mid: color-mix(in srgb, var(--sh-deep-ink) 84%, transparent); --ov-soft: var(--ov-mid);
+  --ov-mute: color-mix(in srgb, var(--sh-deep-ink) 76%, transparent); --ov-faint: color-mix(in srgb, var(--sh-deep-ink) 70%, transparent);
+  --ov-line: color-mix(in srgb, var(--sh-deep-ink) 12%, transparent); --fx-edge: color-mix(in srgb, var(--sh-deep-ink) 12%, transparent);
+  color: var(--ov-hi); background: var(--sh-deep-panel); border-color: var(--fx-edge);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--sh-deep-ink) 10%, transparent), 0 30px 50px -30px rgba(0, 0, 0, .6);
+}
+.fx-tile.is-deep .fx-row { background: color-mix(in srgb, var(--cf) 42%, transparent); border-color: color-mix(in srgb, var(--cs, var(--cf)) 40%, transparent); }
+.fx-tile.is-deep .fx-open:hover { background: color-mix(in srgb, var(--sh-deep-ink) 10%, transparent); }
+
+/* Slimmer, longer bars: top bar 44px tall with wider tabs; rail 56px wide with 40px buttons and 18px icons */
+.fx-top .fx-tabs { padding: 4px; gap: 4px; }
+.fx .fx-tab { height: 34px; padding: 0 26px; font-size: 13px; }
+.fx-ib, .fx .fx-me { width: 36px; height: 36px; }
+.fx-ib svg { width: 17px; height: 17px; }
+.fx .fx-rail { gap: 7px; padding: 8px 7px; }
+.fx .fx-ri { width: 40px; height: 40px; }
+.fx .fx-ri svg { width: 18px; height: 18px; }
+.fx-hair { width: 24px; margin: 1px 0; }
+.fx-duty > i { top: 8px; right: 8px; }
+.fx .fx-col { margin-left: 74px; }
+@media (min-width: 1000px) and (max-height: 760px) {
+  .fx .fx-rail { gap: 3px; padding: 6px; }
+  .fx .fx-ri { width: 34px; height: 34px; }
+  .fx .fx-ri svg { width: 17px; height: 17px; }
+}
+
+/* The create menu (the + on the rail and on the phone bar) */
+.fx-cmenu { position: fixed; right: auto; bottom: auto; z-index: 120; width: 280px; padding: 8px; border-radius: 22px; display: flex; flex-direction: column; gap: 2px; transform-origin: top left; animation: fx-pop-in .22s var(--fx-ease) both; }
+@media (max-width: 999.98px) { .fx-cmenu { top: auto; left: 10px; right: 10px; bottom: 92px; width: auto; transform-origin: bottom center; } }
+.fx-cmenu-h { padding: 8px 10px 6px; font-size: 12px; font-weight: 600; color: var(--ov-mid); }
+.fx-cmenu .fx-mrow small { display: block; font-size: 11.5px; font-weight: 500; color: var(--ov-mid); }
+.fx-cmenu .fx-mrow > svg:first-child { flex: none; }
+@keyframes fx-pop-in { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
+
+/* Get the phone app */
+.fx-app { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+.fx-app-qr { width: 196px; height: 196px; padding: 10px; border-radius: 20px; background: var(--sh-on-sel); box-shadow: inset 0 0 0 1px var(--sh-edge); }
+.fx-app-qr img { display: block; width: 100%; height: 100%; }
+.fx-app-stores { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+.fx-app-store { display: flex; align-items: center; justify-content: center; gap: 8px; height: 46px; border-radius: 14px; font-size: 13.5px; font-weight: 600; color: var(--sh-on-sel); background: var(--sh-sel); }
+.fx-app-store:disabled { cursor: default; opacity: .62; }
+.fx-app-store small { display: block; font-size: 10.5px; font-weight: 500; opacity: .85; }
+
+/* Visible resting state: entrance motion only runs once the page is really painting (.is-anim, added on the first
+   animation frame and dropped when the tab hides). In a background tab everything sits at its final look. */
+.fx.tp-app:not(.is-anim) :is(.fx-main, .fx-head) *, .fx.tp-app:not(.is-anim) :is(.fx-main, .fx-head) { animation: none !important; }

@@ -114,14 +114,16 @@ export default function Clients() {
   const counts = useMemo(() => Object.fromEntries(Object.keys(stageLabel).map(s => [s, clients.filter(c => c.stage === s).length])), [clients])
   const rows = clients.filter(c => (stage === 'all' || c.stage === stage) && `${c.client_first_name} ${c.client_last_name} ${c.policy_number} ${c.client_phone}`.toLowerCase().includes(q.trim().toLowerCase()))
   const options = [{ key: 'all', label: 'All', count: clients.length }, { key: 'needs_attention', label: 'Needs attention', count: counts.needs_attention }, { key: 'setting_up', label: 'Setting up', count: counts.setting_up }, { key: 'protected', label: 'Protected', count: counts.protected }, { key: 'requests', label: 'Requests', count: counts.requests }]
+  // Each status button carries its stage colour (flow.css P834 .fx-filter.is-tone); All stays neutral.
+  const toneOf = key => (stageLabel[key] ? ` is-tone is-${stageLabel[key][0]}` : '')
   return (
     <div className="tp-page fx-page">
       <div className="fx-tools">
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a client" placeholder="Find a client, phone or policy" value={q} onChange={e => setQ(e.target.value)} /></label>
         <div className="fx-filters" role="tablist" aria-label="Status">
           {options.map(o => (stage === o.key
-            ? <span key={o.key} role="tab" aria-selected="true" className="fx-filter is-on">{o.label}<b>{o.count}</b></span>
-            : <button key={o.key} type="button" role="tab" aria-selected="false" className="fx-filter" onClick={() => setParams(o.key === 'all' ? {} : { stage: o.key })}>{o.label}<b>{o.count}</b></button>))}
+            ? <span key={o.key} role="tab" aria-selected="true" className={`fx-filter is-on${toneOf(o.key)}`}>{o.label}<b>{o.count}</b></span>
+            : <button key={o.key} type="button" role="tab" aria-selected="false" className={`fx-filter${toneOf(o.key)}`} onClick={() => setParams(o.key === 'all' ? {} : { stage: o.key })}>{o.label}<b>{o.count}</b></button>))}
         </div>
         <span className="tp-grow" />
         <Link to={paths.submit()} className="tp-primary fx-accent"><Plus size={16} />Submit a policy</Link>

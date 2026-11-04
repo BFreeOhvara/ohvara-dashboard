@@ -49,7 +49,9 @@ export function CountUp({ value, format = n => Math.round(n).toLocaleString('en-
       if (t < 1) raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
+    // A background tab runs no animation frames: land on the real number anyway, so it never sits at 0.
+    const land = setTimeout(() => { from.current = target; setN(target) }, ms + 100)
+    return () => { cancelAnimationFrame(raf); clearTimeout(land) }
   }, [target, ms, reduce])
   return createElement('span', { className, 'aria-label': format(target) }, createElement('span', { 'aria-hidden': 'true' }, format(reduce ? target : n)))
 }
