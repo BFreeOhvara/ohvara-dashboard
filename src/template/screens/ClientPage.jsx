@@ -20,15 +20,16 @@ export default function ClientPage() {
   const thread = threads.find(t => t.client_id === c.id) || threads[0]
   const send = () => { sendMessage(thread.id, msg.trim()); setMsg(''); note('Message sent to the team') }
   return (
-    <div className="tp-page">
-      <Link to={paths.clients()} className="tp-link"><ArrowLeft size={14} />Clients</Link>
-      <section className="ov-card tp-card">
-        <div className="tp-row tp-wrap">
-          <Avatar name={name} tone={c.attention ? 'warn' : ''} />
-          <div className="tp-grow"><h2 className="tp-h2">{name}</h2><p className="tp-sub">Lives in {c.city}, {c.state} · submitted {c.submitted}</p></div>
-          <Chip tone={tone}>{label}</Chip>
-          <button type="button" className="ov-hero tp-primary" onClick={() => note(`Calling ${c.client_phone}`)}><Phone size={16} />{c.client_phone}</button>
-        </div>
+    <div className="tp-page tp-clientpage">
+      <aside className="tp-cside">
+      <section className="ov-card tp-card tp-cprof" aria-label={name}>
+        <Link to={paths.clients()} className="tp-link"><ArrowLeft size={14} />Clients</Link>
+        <Avatar name={name} tone={c.attention ? 'warn' : 'blue'} />
+        <h2 className="tp-h2">{name}</h2>
+        <p className="tp-sub">Lives in {c.city}, {c.state} · submitted {c.submitted}</p>
+        <Chip tone={tone}>{label}</Chip>
+        <button type="button" className="ov-hero tp-primary" onClick={() => note(`Calling ${c.client_phone}`)}><Phone size={16} />{c.client_phone}</button>
+        <dl className="tp-facts">{[['Carrier', c.carrier_name], ['Policy', c.policy_number], ['Next step', c.next_step || 'Nothing needed']].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       </section>
 
       {c.attention && (
@@ -41,6 +42,7 @@ export default function ClientPage() {
           </div>
         </section>
       )}
+      </aside>
 
       <div className="tp-split">
         <div className="tp-stack">

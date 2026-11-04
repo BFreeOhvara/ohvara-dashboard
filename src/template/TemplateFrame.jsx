@@ -6,9 +6,11 @@ import {
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
 import { useStretchPill } from '../hooks/useStretchPill'
-import { useSampleActivity, useSampleClients, useSampleLeads, useSampleThreads, useSampleBilling } from './data'
-import { Drawer, Avatar } from './kit'
-import { paths, tabOf, titleOf, isTemplateAddress } from './paths'
+import { useSampleActivity, useSampleClients, useSampleLeads, useSampleThreads, useSampleBilling, useSampleAppointments } from './data'
+import { Drawer, Avatar, useAccount, initials } from './kit'
+import { wig } from './motion'
+import { paths, tabOf, titleOf, layoutOf, isTemplateAddress } from './paths'
+import './glass.css'
 
 // The one layout: floating top pill bar with 7 tabs, a slim left rail, the header, and on phones the bottom bar.
 const TABS = [
@@ -77,38 +79,64 @@ function MenuDrawer({ open, onClose, theme, setTheme }) {
   )
 }
 
+// Per-page numbers beside the title: the two or three counts an agent checks first on that page.
+function useHeadStats(page) {
+  const { data: leads } = useSampleLeads()
+  const { data: clients } = useSampleClients()
+  const { data: billing } = useSampleBilling()
+  const { data: threads } = useSampleThreads()
+  const { data: events } = useSampleAppointments()
+  const { data: activity } = useSampleActivity()
+  const usd = n => `$${n.toLocaleString('en-US')}`
+  const spend = billing.leadTypes.filter(t => t.on).reduce((n, t) => n + t.weekly, 0)
+  return {
+    leads: [[leads.filter(l => ['ringing', 'missed', 'no_show'].includes(l.stage)).length, 'need you now'], [leads.filter(l => l.stage === 'booked').length, 'booked'], [usd(spend), 'a week on leads', true]],
+    calendar: [[events.length, 'this week'], [events.filter(e => e.date === 2).length, 'today']],
+    clients: [[clients.length, 'clients'], [clients.filter(c => c.stage === 'needs_attention').length, 'need attention'], [clients.filter(c => c.stage === 'protected').length, 'protected']],
+    submit: [[`${billing.submissions.used} of ${billing.submissions.cap}`, 'submitted this week']],
+    messages: [[threads.reduce((n, t) => n + t.unread, 0), 'unread'], [threads.length, 'threads']],
+    activity: [[activity.filter(a => a.at.startsWith('Today')).length, 'today'], [activity.length, 'this week']],
+    billing: [[usd(billing.plan.weekly + spend), 'a week in all', true]],
+  }[page] || []
+}
+
 export default function TemplateFrame() {
   const { pathname } = useLocation()
   const [theme, setTheme] = useTheme()
   const [panel, setPanel] = useState(null)
   const tabsRef = useRef(null)
+  const account = useAccount()
   const active = tabOf(pathname)
+  const layout = layoutOf(pathname)
   const [group, name] = titleOf(pathname)
   const { data: threads } = useSampleThreads()
   const { data: leads } = useSampleLeads()
   const { data: billing } = useSampleBilling()
+  const stats = useHeadStats(layout)
   const unread = threads.reduce((n, t) => n + t.unread, 0)
   const needs = leads.filter(l => ['ringing', 'missed', 'no_show'].includes(l.stage)).length
   const close = () => setPanel(null)
   useStretchPill(tabsRef, { activeKey: active, selector: 'a.is-on', persistKey: 'tpl-tabs' })
   const { used, cap } = billing.submissions
-  const NameIcon = (TABS.find(t => t.key === active) || { icon: Home }).icon
+  const NameIcon = { billing: CreditCard, settings: Settings, more: Ellipsis, lead: Inbox, client: Users, 'request-service': CalendarPlus }[layout] || (TABS.find(t => t.key === active) || { icon: Home }).icon
+  const open = which => e => { wig.onClick(e); setPanel(which) }
 
   return (
-    <div className="tp tp-app">
+    <div className={`tp tp-app is-${layout}`}>
+      <div className="tp-sky" aria-hidden="true"><i /><i /><i /></div>
       <div className="tp-rail" role="complementary" aria-label="Account">
-        <Link to={paths.home()} className="tp-logo" aria-label="Ohvara home">O</Link>
-        <NavLink to={paths.billing()} className="tp-ri"><CreditCard size={20} aria-hidden="true" />Billing</NavLink>
-        <NavLink to={paths.settings()} className="tp-ri"><Settings size={20} aria-hidden="true" />Settings</NavLink>
+        <Link to={paths.home()} className="tp-logo tp-wig" aria-label="Ohvara home" {...wig}>O</Link>
+        <NavLink to={paths.billing()} className="tp-ri tp-wig" {...wig}><CreditCard size={20} aria-hidden="true" />Billing</NavLink>
+        <NavLink to={paths.settings()} className="tp-ri tp-wig" {...wig}><Settings size={20} aria-hidden="true" />Settings</NavLink>
         <i className="tp-hair" />
-        <button type="button" className="tp-ri" onClick={() => setPanel('search')}><Search size={20} aria-hidden="true" />Search</button>
-        <Link to={paths.submit()} className="tp-plus" aria-label="Submit a sale"><Plus size={22} /></Link>
+        <button type="button" className="tp-ri tp-wig" {...wig} onClick={open('search')}><Search size={20} aria-hidden="true" />Search</button>
+        <Link to={paths.submit()} className="tp-plus tp-wig" aria-label="Submit a sale" {...wig}><Plus size={22} /></Link>
         <Link to={paths.billing()} className="tp-week" aria-label={`This week ${used} of ${cap} submissions`}>
           <small>This week</small><b>{used}</b><span>of {cap}</span>
           <em>{Array.from({ length: 5 }, (_, i) => <i key={i} className={i < Math.round((used / cap) * 5) ? 'on' : ''} />)}</em>
           <small>Resets Mon</small>
         </Link>
-        <Link to={paths.settings()} className="tp-me" aria-label="Your profile">DW</Link>
+        <Link to={paths.settings()} className="tp-me tp-wig" aria-label={`Your profile, ${account.name}`} {...wig}>{initials(account.name).toUpperCase()}</Link>
       </div>
 
       <div className="tp-col">
@@ -123,25 +151,30 @@ export default function TemplateFrame() {
             ))}
           </div>
           <button type="button" className="tp-search ov-card" onClick={() => setPanel('search')}><Search size={18} aria-hidden="true" /><span>Search clients, leads, pages…</span><kbd>Ctrl K</kbd></button>
-          <button type="button" className="tp-ub ov-card" aria-label="Notifications" onClick={() => setPanel('bell')}><Bell size={20} /><span className="tp-count">3</span></button>
-          <Link to={paths.messages()} className="tp-ub ov-card" aria-label="Messages"><MessageSquare size={20} />{unread > 0 && <span className="tp-count">{unread}</span>}</Link>
-          <button type="button" className="tp-ub ov-card" aria-label="Menu" onClick={() => setPanel('menu')}><Menu size={20} /></button>
+          <button type="button" className="tp-ub ov-card tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={20} /><span className="tp-count">3</span></button>
+          <Link to={paths.messages()} className="tp-ub ov-card tp-wig" aria-label="Messages" {...wig}><MessageSquare size={20} />{unread > 0 && <span className="tp-count">{unread}</span>}</Link>
+          <button type="button" className="tp-ub ov-card tp-wig" aria-label="Menu" {...wig} onClick={open('menu')}><Menu size={20} /></button>
         </div>
 
         <header className="tp-phone-top">
           <span className="tp-date"><i />Mon, Nov 2</span>
           <span className="tp-grow" />
-          <button type="button" className="tp-icbtn" aria-label="Search" onClick={() => setPanel('search')}><Search size={20} /></button>
-          <button type="button" className="tp-icbtn" aria-label="Notifications" onClick={() => setPanel('bell')}><Bell size={20} /><span className="tp-count">3</span></button>
-          <button type="button" className="tp-icbtn" aria-label="Menu" onClick={() => setPanel('menu')}><Menu size={20} /></button>
+          <button type="button" className="tp-icbtn tp-wig" aria-label="Search" {...wig} onClick={open('search')}><Search size={20} /></button>
+          <button type="button" className="tp-icbtn tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={20} /><span className="tp-count">3</span></button>
+          <button type="button" className="tp-icbtn tp-wig" aria-label="Menu" {...wig} onClick={open('menu')}><Menu size={20} /></button>
         </header>
 
-        <div className="tp-title">
-          <span className="tp-tile"><NameIcon size={18} aria-hidden="true" /></span>
-          <span className="tp-cg">{group}</span>
-          <h1 className="tp-cn">{name}</h1>
-          <span className="tp-date"><i />Monday, November 2 · 2:14 PM</span>
-          <button type="button" className="tp-theme" aria-label="Switch theme" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}</button>
+        <div className="tp-head">
+          <div className="tp-head-l">
+            <span className="tp-kick"><span className="tp-tile"><NameIcon size={15} aria-hidden="true" /></span>{group}<i aria-hidden="true" /><span className="tp-when">Monday, November 2 · 2:14 PM</span></span>
+            <h1 className="tp-cn">{name}</h1>
+          </div>
+          {stats.length > 0 && (
+            <ul className="tp-head-stats" aria-label={`${name} at a glance`}>
+              {stats.map(([n, label, money]) => <li key={label}><b className={money ? 'tp-money' : 'tp-num'}>{n}</b><span>{label}</span></li>)}
+            </ul>
+          )}
+          <button type="button" className="tp-theme tp-wig" aria-label="Switch theme" {...wig} onClick={e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }}>{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}</button>
         </div>
 
         <main className="tp-main page-enter" key={pathname}>

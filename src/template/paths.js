@@ -84,6 +84,16 @@ export function tabOf(pathname) {
   return p.slice(1)
 }
 
+// Which page layout a location gets (glass.css .tp-app.is-<layout>): 'lead' for one lead, 'client' for one client,
+// otherwise the tab's own name. Leads, one lead, Messages and Settings hold still on a desktop and scroll inside panes.
+export function layoutOf(pathname) {
+  const p = plain(pathname)
+  if (p.startsWith('/leads/')) return 'lead'
+  if (p.startsWith('/clients/')) return 'client'
+  if (p === '/') return 'overview'
+  return p.slice(1)
+}
+
 export function titleOf(pathname) {
   const p = plain(pathname)
   if (TITLES[p]) return TITLES[p]
