@@ -1,0 +1,78 @@
+/* P830: the shell palette (DESIGN.md v17 "Shell palette"). The one place the agent shell's colours and fonts are
+   mapped; the raw values (the only hex) sit in src/index.css "Prompt 830 — shell palette". Every global token the
+   shell reads is remapped here at .tp (the portaled drawer, palette, menu and toasts carry .tp too), so components
+   keep reading tokens and hold no hex.
+   Dark: warm off-white text on a dim warm base, see-through cards, pastel accents of equal lightness.
+   Light: warm off-white surfaces, soft greys, the same accents as deeper inks so text stays AA.
+   Loaded after flow.css; `html` lifts it over template.css's own .tp tokens whatever the chunk order. */
+
+html .tp {
+  /* Fonts: narrow geometric sans, 500 base */
+  --font-ui: 'Urbanist', system-ui, sans-serif;
+  --font-display: 'Urbanist', system-ui, sans-serif;
+
+  /* The global tokens the shell reads, mapped onto the palette */
+  --tp-white: var(--sh-glass-hi);
+  --ov-hi: var(--sh-ink);
+  --ov-mid: var(--sh-ink-2);
+  --ov-soft: var(--sh-ink-3);
+  --ov-mute: var(--sh-ink-4);
+  --ov-faint: var(--sh-ink-5);
+  --ov-line: var(--sh-line);
+  --ov-stub: color-mix(in srgb, var(--sh-ink) 10%, transparent);
+  --ov-grid: color-mix(in srgb, var(--sh-ink) 6%, transparent);
+  --ov-hover: color-mix(in srgb, var(--sh-ink) 3%, transparent);
+  --ov-table-head: color-mix(in srgb, var(--sh-ink) 3%, transparent);
+  --ov-page: var(--sh-base);
+  --ov-scrim: var(--sh-scrim);
+  --ov-on-kind: var(--sh-on-accent);
+  --bg-base: var(--sh-deep);
+  --bg-surface: var(--sh-surface);
+  --bg-sidebar: color-mix(in srgb, var(--sh-mint) 20%, var(--sh-base));
+  --accent: var(--sh-mint);
+  --danger: var(--sh-coral);
+  --ov-live: var(--sh-coral);
+
+  --ov-data-a: var(--sh-sky);
+  --ov-data-a-tint: color-mix(in srgb, var(--sh-sky) var(--sh-tint), transparent);
+  --ov-data-a-bar: linear-gradient(180deg, var(--sh-sky), color-mix(in srgb, var(--sh-sky) 70%, var(--sh-base)));
+  --ov-data-a-key: var(--sh-sky);
+  --ov-data-b: var(--sh-mint);
+  --ov-data-b-tint: color-mix(in srgb, var(--sh-mint) var(--sh-tint), transparent);
+  --ov-data-b-bar: linear-gradient(180deg, var(--sh-mint), color-mix(in srgb, var(--sh-mint) 70%, var(--sh-base)));
+  --ov-data-b-key: var(--sh-mint);
+  --ov-up: var(--sh-sage);
+  --ov-up-tint: color-mix(in srgb, var(--sh-sage) var(--sh-tint), transparent);
+  --ov-warn: var(--sh-apricot);
+  --ov-warn-tint: color-mix(in srgb, var(--sh-apricot) var(--sh-tint), transparent);
+  --ov-badge-bg: var(--sh-apricot);
+  --ov-badge-fg: var(--sh-on-accent);
+  --ov-hero-soft: var(--sh-ink-2);
+  --ov-hero-dot: var(--sh-mint);
+  --ov-hero-btn-text: var(--sh-on-accent);
+  --ov-hero-btn-glow: color-mix(in srgb, var(--sh-mint) 50%, transparent);
+  --nt-purple: var(--sh-lilac);
+  --nt-purple-tint: color-mix(in srgb, var(--sh-lilac) var(--sh-tint), transparent);
+
+  --ov-st-booked: var(--sh-sky);
+  --ov-st-booked-tint: color-mix(in srgb, var(--sh-sky) var(--sh-tint), transparent);
+  --ov-st-booked-edge: color-mix(in srgb, var(--sh-sky) 45%, transparent);
+  --ov-st-noanswer: var(--sh-stone);
+  --ov-st-noanswer-tint: color-mix(in srgb, var(--sh-stone) var(--sh-tint), transparent);
+  --ov-st-noanswer-edge: color-mix(in srgb, var(--sh-stone) 40%, transparent);
+  --ov-st-needs: var(--sh-apricot);
+  --ov-st-needs-tint: color-mix(in srgb, var(--sh-apricot) var(--sh-tint), transparent);
+  --ov-st-needs-edge: color-mix(in srgb, var(--sh-apricot) 45%, transparent);
+  --ov-st-cancelled: var(--sh-sage);
+  --ov-st-cancelled-tint: color-mix(in srgb, var(--sh-sage) var(--sh-tint), transparent);
+  --ov-st-cancelled-edge: color-mix(in srgb, var(--sh-sage) 45%, transparent);
+
+  font-weight: 500;
+  font-size: 13px;
+}
+
+/* UA bold is 700; the shell tops out at 600 except tiny badges, which set their own weight */
+:where(.tp) :is(b, strong, th) { font-weight: 600; }
+
+/* The rail is an <aside>; the old sidebar re-points surface/accent inside every aside (index.css). Pin them back. */
+html .tp aside { --bg-surface: var(--sh-surface); --accent: var(--sh-mint); --danger: var(--sh-coral); }

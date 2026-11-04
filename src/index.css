@@ -5136,3 +5136,69 @@ html.is-native a, html.is-native img { -webkit-touch-callout: none; }
 @media (min-width: 1680px) and (min-height: 700px) {
   .ov-fitag .ov-sd-bar { width: min(56px, 70%); }
 }
+
+/* ── Prompt 830 — shell palette (DESIGN.md v17). Raw values for the agent shell only; src/template/palette.css
+   maps the shell's tokens onto these at .tp. Nothing outside the shell reads --sh-*. */
+:root {
+  /* Pastels, the same in both themes: the backdrop glow is made from these */
+  --sh-p-mint: #8CD9C7;
+  --sh-p-sky: #98BAE1;
+  --sh-p-apricot: #E0BE9E;
+  --sh-p-sage: #B2D897;
+  --sh-p-coral: #E0AB9E;
+  --sh-p-lilac: #BDAEE0;
+  --sh-p-stone: #AEB2AB;
+
+  /* Dark theme */
+  --sh-ink: #F2F3EE;        /* primary text: warm off-white, never pure white */
+  --sh-ink-2: #C8CBC4;      /* secondary text, about L200 */
+  --sh-ink-3: #BABDB6;
+  --sh-ink-4: #A0A49D;      /* muted labels */
+  --sh-ink-5: #71756E;      /* faint marks */
+  --sh-base: #121311;       /* page */
+  --sh-deep: #0B0C0A;
+  --sh-surface: #1A1D1B;    /* solid surface under drawers and menus */
+  --sh-card: rgba(24, 27, 26, 0.46);
+  --sh-edge: rgba(242, 243, 238, 0.15);
+  --sh-hl: rgba(242, 243, 238, 0.07);   /* the faint inner top highlight */
+  --sh-line: rgba(242, 243, 238, 0.08);
+  --sh-on-accent: #10201C;  /* ink on a pastel fill */
+  --sh-scrim: rgba(8, 9, 8, 0.6);
+  --sh-mint: var(--sh-p-mint);
+  --sh-sky: var(--sh-p-sky);
+  --sh-apricot: var(--sh-p-apricot);
+  --sh-sage: var(--sh-p-sage);
+  --sh-coral: var(--sh-p-coral);
+  --sh-lilac: var(--sh-p-lilac);
+  --sh-stone: var(--sh-p-stone);
+  --sh-tint: 15%;           /* how strong a tone's tint is */
+  --sh-glow: .3;            /* backdrop glow strength */
+  --sh-glass-hi: var(--sh-ink); /* glass edges and switch knobs */
+}
+[data-theme="light"] {
+  --sh-ink: #222522;
+  --sh-ink-2: #474B45;
+  --sh-ink-3: #565A54;
+  --sh-ink-4: #62665F;
+  --sh-ink-5: #9A9E96;
+  --sh-base: #ECECE7;
+  --sh-deep: #E1E2DC;
+  --sh-surface: #FAFAF7;
+  --sh-card: rgba(252, 252, 249, 0.55);
+  --sh-edge: rgba(34, 37, 34, 0.09);
+  --sh-hl: rgba(255, 255, 255, 0.7);
+  --sh-line: rgba(34, 37, 34, 0.09);
+  --sh-on-accent: #F7F8F4;
+  --sh-scrim: rgba(60, 62, 56, 0.28);
+  /* the same pastel family, as inks deep enough to read on off-white */
+  --sh-mint: #2A7866;
+  --sh-sky: #336399;
+  --sh-apricot: #975E2C;
+  --sh-sage: #4C7231;
+  --sh-coral: #B24934;
+  --sh-lilac: #6145A1;
+  --sh-stone: #626660;
+  --sh-tint: 12%;
+  --sh-glow: .32;
+  --sh-glass-hi: #FDFDFB; /* text never uses it in light */
+}

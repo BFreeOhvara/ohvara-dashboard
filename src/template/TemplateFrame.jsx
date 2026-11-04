@@ -16,6 +16,10 @@ import Palette from './Palette'
 import { isSearchKey } from '../lib/searchKey'
 import './glass.css'
 import './flow.css'
+import './palette.css'
+import '@fontsource/urbanist/500.css'
+import '@fontsource/urbanist/600.css'
+import '@fontsource/urbanist/700.css'
 
 // The shell: glass pill tabs for the pages up top, a floating rail of actions on the left, the big rolling title
 // with three headline numbers, and the page. On a phone the rail is a bottom bar. Sample info only.
