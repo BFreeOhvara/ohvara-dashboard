@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Phone, MapPin, ChevronRight } from 'lucide-react'
+import { Phone, MapPin, ChevronRight, Clock } from 'lucide-react'
+import { CountUp } from '../motion'
 import { useSampleAppointments, useSampleLeads, useSampleClients } from '../data'
 import { Seg, Drawer, Empty, useNote } from '../kit'
 import { paths } from '../paths'
@@ -37,19 +38,20 @@ export default function Calendar() {
     </button>
   )
   return (
-    <div className="tp-page">
-      <div className="tp-row tp-wrap tp-between">
+    <div className="tp-page fx-page">
+      <div className="fx-tools">
         <Seg label="View" value={view} onChange={setView} options={[{ key: 'week', label: 'Week' }, { key: 'day', label: 'Day' }]} />
-        <div className="tp-daychips" role="tablist" aria-label="Day">
+        <div className="fx-chips" role="tablist" aria-label="Day">
           {DAYS.map(([d, n]) => (day === n
-            ? <span key={d} role="tab" aria-selected="true" className="tp-daychip on"><small>{d}</small><b>{n}</b></span>
-            : <button key={d} type="button" role="tab" aria-selected="false" className="tp-daychip" onClick={() => setDay(n)}><small>{d}</small><b>{n}</b>{ofDay(n).length > 0 && <i aria-hidden="true" />}</button>))}
+            ? <span key={d} role="tab" aria-selected="true" className="fx-chip is-on"><small>{d}</small><b>{n}</b></span>
+            : <button key={d} type="button" role="tab" aria-selected="false" className="fx-chip" onClick={() => setDay(n)}><small>{d}</small><b>{n}</b>{ofDay(n).length > 0 && <i aria-hidden="true" />}</button>))}
         </div>
-        <p className="tp-sub">Working hours 9:00 AM to 6:00 PM · Only what you attend</p>
+        <span className="tp-grow" />
+        <p className="tp-sub">Working hours 9:00 AM to 6:00 PM · only what you attend</p>
       </div>
 
-      <div className="tp-cal">
-        <section className="ov-card tp-tgrid" aria-label="This week" style={{ '--days': shown.length }}>
+      <div className="fx-grid">
+        <section className="fx-tile fx-s8 fx-week" style={{ '--i': 0, '--days': shown.length }} aria-label="This week">
           <div className="tp-tgrid-h"><span />{shown.map(([d, n]) => <b key={d} className={n === 2 ? 'today' : ''}>{d} <span>{n}</span>{n === 2 && <small>Today</small>}</b>)}</div>
           <div className="tp-tgrid-b">
             <div className="tp-hours">{HOURS.map(h => <span key={h}>{label12(h)}</span>)}</div>
@@ -62,22 +64,22 @@ export default function Calendar() {
           </div>
         </section>
 
-        <aside className="ov-card tp-card tp-agenda" aria-label="Agenda">
-          <h2 className="tp-h2">{DAYS.find(([, n]) => n === day)[0]}, Nov {day}</h2>
-          <p className="tp-sub">{ofDay(day).length ? `${ofDay(day).length} on your calendar` : 'Nothing booked'}</p>
-          <ul className="tp-list">
-            {ofDay(day).map(e => <li key={e.id}><button type="button" className="tp-li" onClick={() => setOpen(e)}><span className={`tp-dot ${e.kind}`} /><span className="tp-grow"><b>{e.who}</b><small>{e.time} · {e.label}</small></span><ChevronRight size={16} aria-hidden="true" /></button></li>)}
+        <aside className="fx-tile fx-s4 fx-agenda" style={{ '--i': 1 }} aria-label="Agenda">
+          <header className="fx-tile-h"><span className="tp-grow"><h2>{DAYS.find(([, n]) => n === day)[0]}, Nov {day}</h2><p>{ofDay(day).length ? `${ofDay(day).length} on your calendar` : 'Nothing booked'}</p></span></header>
+          <b className="tp-num fx-huge2"><CountUp value={ofDay(day).length} /><small> {ofDay(day).length === 1 ? 'call' : 'calls'}</small></b>
+          <ul className="fx-rows">
+            {ofDay(day).map(e => <li key={e.id}><button type="button" className={`fx-row is-${e.kind === 'lead' ? 'blue' : 'teal'}`} onClick={() => setOpen(e)}><span className="fx-row-ic"><Clock size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{e.who}</b><small>{e.time} · {e.label}</small></span><ChevronRight size={16} aria-hidden="true" /></button></li>)}
           </ul>
           {ofDay(day).length === 0 && <Empty title="A free day" sub="The team books new appointments inside your hours." />}
-          <h3 className="tp-h3" style={{ marginTop: 14 }}>Rest of the week</h3>
-          <ul className="tp-list">
-            {events.filter(e => e.date > day).slice(0, 4).map(e => <li key={e.id}><button type="button" className="tp-li" onClick={() => setOpen(e)}><span className={`tp-dot ${e.kind}`} /><span className="tp-grow"><b>{e.who}</b><small>{e.day} {e.time} · {e.label}</small></span></button></li>)}
+          <h3 className="fx-h3">Rest of the week</h3>
+          <ul className="fx-rows">
+            {events.filter(e => e.date > day).slice(0, 4).map(e => <li key={e.id}><button type="button" className="fx-row" onClick={() => setOpen(e)}><span className={`tp-dot ${e.kind}`} /><span className="tp-grow"><b>{e.who}</b><small>{e.day} {e.time} · {e.label}</small></span></button></li>)}
           </ul>
         </aside>
       </div>
 
       <Drawer open={!!open} onClose={() => setOpen(null)} title={open?.who || ''} sub={open && `${open.day}, Nov ${open.date}, ${open.time} your time`}
-        footer={<><Link to={open?.kind === 'lead' ? paths.lead(open.ref) : paths.client(open?.ref)} className="ov-hero tp-primary" onClick={() => setOpen(null)}>{open?.kind === 'lead' ? 'Open lead' : 'Open client'}</Link>
+        footer={<><Link to={open?.kind === 'lead' ? paths.lead(open.ref) : paths.client(open?.ref)} className="tp-primary fx-accent" onClick={() => setOpen(null)}>{open?.kind === 'lead' ? 'Open lead' : 'Open client'}</Link>
           <button type="button" className="tp-btn ov-ghost" onClick={() => { note('Asked the team to reschedule. They will tell the client'); setOpen(null) }}>Ask the team to reschedule</button>
           <button type="button" className="tp-btn ov-ghost" onClick={() => { note('Asked the team to cancel. They will tell the client'); setOpen(null) }}>Ask the team to cancel</button></>}>
         {open && <>

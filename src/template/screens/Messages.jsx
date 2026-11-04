@@ -38,7 +38,7 @@ export default function Messages() {
         </div>
         <form className="tp-conv-f" onSubmit={send}>
           <input className="tp-input" aria-label="Write a message" placeholder="Write a message" value={text} onChange={e => setText(e.target.value)} />
-          <button type="submit" className="ov-hero tp-primary" disabled={!text.trim()}>Send</button>
+          <button type="submit" className="tp-primary fx-accent" disabled={!text.trim()}>Send</button>
         </form>
       </div>
     </section>

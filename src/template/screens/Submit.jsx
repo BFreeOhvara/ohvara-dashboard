@@ -33,7 +33,7 @@ export default function Submit() {
       <div className="tp-page"><section className="ov-card tp-card" style={{ maxWidth: 560 }}>
         <div className="tp-row"><span className="tp-ic teal"><Check size={18} /></span><h2 className="tp-h2">Submitted</h2></div>
         <p className="tp-mid" style={{ margin: '10px 0' }}>{done} is on your books. The team sets the review call and keeps you posted in Activity.</p>
-        <div className="tp-row tp-wrap"><Link to={paths.clients()} className="ov-hero tp-primary">See your clients</Link><button type="button" className="tp-btn ov-ghost" onClick={() => { setDone(null); setF(EMPTY); setTried(false); setMode('choose') }}>Submit another</button></div>
+        <div className="tp-row tp-wrap"><Link to={paths.clients()} className="tp-primary fx-accent">See your clients</Link><button type="button" className="tp-btn ov-ghost" onClick={() => { setDone(null); setF(EMPTY); setTried(false); setMode('choose') }}>Submit another</button></div>
       </section></div>
     )
   }
@@ -44,7 +44,7 @@ export default function Submit() {
         <div className="tp-g2">
           <section className="ov-card tp-card"><span className="tp-ic"><FilePlus2 size={18} /></span><h2 className="tp-h2" style={{ marginTop: 10 }}>Submit a new sale</h2><p className="tp-sub">You closed it. We keep it on the books.</p>
             <p className="tp-sub" style={{ margin: '8px 0 12px' }}>{used} of {cap} submissions used this week</p>
-            <button type="button" className="ov-hero tp-primary" onClick={() => setMode('sale')}>Start</button></section>
+            <button type="button" className="tp-primary fx-accent" onClick={() => setMode('sale')}>Start</button></section>
           <section className="ov-card tp-card"><span className="tp-ic teal"><Wrench size={18} /></span><h2 className="tp-h2" style={{ marginTop: 10 }}>Request a service</h2><p className="tp-sub">Something needs doing on a client you already have.</p>
             <p className="tp-sub" style={{ margin: '8px 0 12px' }}>Does not use a submission</p>
             <Link to={paths.requestService()} className="tp-btn ov-ghost" style={{ height: 44 }}>Request</Link></section>
@@ -82,7 +82,7 @@ export default function Submit() {
           <p className="tp-mid">{f.name || 'New client'}<br /><span className="tp-sub">{f.name ? f.phone || 'Add their number' : 'Add their name and number'}</span></p>
           <p className="tp-sub">The team sets the review call. <SampleTag>Sample plan</SampleTag></p>
           {tried && missing.length > 0 && <p className="tp-sub" style={{ color: 'var(--danger)' }}>Fill in the name, number and carrier first.</p>}
-          <button type="button" className="ov-hero tp-primary" disabled={capped} onClick={send}>Submit sale</button>
+          <button type="button" className="tp-primary fx-accent" disabled={capped} onClick={send}>Submit sale</button>
           <button type="button" className="tp-btn ov-ghost" onClick={() => setMode('choose')}>Back</button>
           <p className="tp-sub">{used} of {cap} used this week</p>
         </div>

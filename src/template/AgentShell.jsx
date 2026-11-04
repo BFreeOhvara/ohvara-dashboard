@@ -4,10 +4,8 @@ import { NoteProvider, AccountProvider } from './kit'
 import TemplateFrame from './TemplateFrame'
 import Overview from './screens/Overview'
 import Leads from './screens/Leads'
-import LeadPage from './screens/LeadPage'
 import Calendar from './screens/Calendar'
 import Clients from './screens/Clients'
-import ClientPage from './screens/ClientPage'
 import Submit from './screens/Submit'
 import RequestService from './screens/RequestService'
 import Messages from './screens/Messages'
@@ -20,7 +18,7 @@ import { SHELL_ROUTES } from './paths'
 // The template's screens at the real agent URLs (SHELL_ROUTES), inside the app's own router. ShellSwap decides
 // who gets here; sample info only until the real data is wired.
 const SCREENS = {
-  overview: Overview, leads: Leads, lead: LeadPage, calendar: Calendar, clients: Clients, client: ClientPage, submit: Submit,
+  overview: Overview, leads: Leads, lead: Leads, calendar: Calendar, clients: Clients, client: Clients, submit: Submit,
   requestService: RequestService, activity: Activity, billing: Billing, more: More, settings: Settings, messages: Messages,
 }
 

@@ -35,7 +35,7 @@ export default function Welcome() {
             <div className="tp-row"><Money v={plan.weekly} size="lg" cents={false} /><span className="tp-sub">/ week</span></div>
             <p className="tp-sub">What Servicing covers</p>
             <ul className="tp-list">{data.covers.map(c => <li key={c} className="tp-row tp-sub" style={{ minHeight: 28 }}><Check size={14} />{c}</li>)}</ul>
-            <button type="button" className="ov-hero tp-primary" onClick={() => { setSteps({ ...steps, plan: true }); note('Sample only. No payment was taken') }}>Subscribe</button>
+            <button type="button" className="tp-primary fx-accent" onClick={() => { setSteps({ ...steps, plan: true }); note('Sample only. No payment was taken') }}>Subscribe</button>
             <Link to={paths.home()} className="tp-btn ov-ghost" style={{ height: 44 }}>Open my portal</Link>
           </section>
         </div>

@@ -71,16 +71,16 @@ export default function Settings() {
         </section>
       </div>
 
-      <Drawer open={panel === 'profile'} onClose={() => setPanel(null)} title="Edit profile" footer={<button type="button" className="ov-hero tp-primary" onClick={() => { setProfile({ ...profile, name }); note('Profile saved'); setPanel(null) }}>Save</button>}>
+      <Drawer open={panel === 'profile'} onClose={() => setPanel(null)} title="Edit profile" footer={<button type="button" className="tp-primary fx-accent" onClick={() => { setProfile({ ...profile, name }); note('Profile saved'); setPanel(null) }}>Save</button>}>
         <Field label="Name"><input value={name} onChange={e => setName(e.target.value)} /></Field>
         <Field label="Phone"><input defaultValue={profile.phone} /></Field>
       </Drawer>
-      <Drawer open={panel === 'password'} onClose={() => setPanel(null)} title="Change password" footer={<button type="button" className="ov-hero tp-primary" onClick={() => { note('Password changes are not open yet'); setPanel(null) }}>Continue</button>}>
+      <Drawer open={panel === 'password'} onClose={() => setPanel(null)} title="Change password" footer={<button type="button" className="tp-primary fx-accent" onClick={() => { note('Password changes are not open yet'); setPanel(null) }}>Continue</button>}>
         <Field label="Current password"><input type="password" /></Field>
         <Field label="New password"><input type="password" /></Field>
         <button type="button" className="tp-link" onClick={() => note('A reset link would be sent here')}>Forgot password?</button>
       </Drawer>
-      <Drawer open={panel === 'hours'} onClose={() => setPanel(null)} title="Working hours" sub={`${s.hours.start} to ${s.hours.end}`} footer={<button type="button" className="ov-hero tp-primary" onClick={() => { note('Working hours saved'); setPanel(null) }}>Save</button>}>
+      <Drawer open={panel === 'hours'} onClose={() => setPanel(null)} title="Working hours" sub={`${s.hours.start} to ${s.hours.end}`} footer={<button type="button" className="tp-primary fx-accent" onClick={() => { note('Working hours saved'); setPanel(null) }}>Save</button>}>
         <div className="tp-row tp-wrap">{all.map(d => <button key={d} type="button" aria-pressed={days.includes(d)} className="tp-btn ov-ghost" style={days.includes(d) ? { borderColor: 'var(--ov-data-a)', background: 'var(--ov-data-a-tint)' } : undefined} onClick={() => setDays(days.includes(d) ? days.filter(x => x !== d) : all.filter(x => x === d || days.includes(x)))}>{d}</button>)}</div>
         <p className="tp-sub">Off, no bookings this day</p>
       </Drawer>

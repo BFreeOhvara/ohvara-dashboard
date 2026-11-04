@@ -194,6 +194,7 @@ export function useSampleActions() {
     setNotification: (key, field, on) => set(s => ({ ...s, settings: { ...s.settings, notifications: s.settings.notifications.map(n => (n.key === key ? { ...n, [field]: on } : n)) } })),
     setLeadType: (key, on) => set(s => ({ ...s, billing: { ...s.billing, leadTypes: s.billing.leadTypes.map(t => (t.key === key ? { ...t, on } : t)) } })),
     setPaused: paused => set(s => ({ ...s, billing: { ...s.billing, paused } })),
+    bookCall: ({ ref, kind, who, day, date, time, label }) => set(s => ({ ...s, appointments: [...s.appointments, { id: `ap${s.appointments.length + 1}-${time.length}`, day, date, time, who, label, kind, ref }], activity: log(s, who, `${label} booked for ${day}, Nov ${date}, ${time}.`, kind === 'lead' ? 'lead' : 'client') })),
     setPlanSize: size => set(s => ({ ...s, billing: { ...s.billing, plan: { ...s.billing.plan, size, weekly: size === 7 ? 275 : 575 } }, submissions: { ...s.submissions, cap: size } })),
   }), [])
 }

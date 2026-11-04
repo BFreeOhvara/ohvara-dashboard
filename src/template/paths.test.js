@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { globSync, readFileSync } from 'node:fs'
-import { paths, isTemplateAddress, tabOf, titleOf, isShellPath, showShell, SHELL_ROUTES } from './paths.js'
+import { paths, isTemplateAddress, tabOf, titleOf, layoutOf, isShellPath, showShell, SHELL_ROUTES } from './paths.js'
 
 const at = pathname => { globalThis.window = { location: { pathname } } }
 test.afterEach(() => { delete globalThis.window })
@@ -81,23 +81,24 @@ test('paths work with no window at all', () => {
 test('tabOf and titleOf accept a location from either address', () => {
   const cases = [
     ['/', '/agent', 'overview', ['Today', 'Overview']],
-    ['/leads', '/agent/leads', 'leads', ['Leads', 'Leads']],
-    ['/leads/abc', '/agent/inbounds/abc', 'leads', ['Leads', 'Lead']],
-    ['/calendar', '/agent/calendar', 'calendar', ['Leads', 'Calendar']],
-    ['/clients', '/agent/clients', 'clients', ['Servicing', 'Clients']],
-    ['/clients/c1', '/agent/clients/c1', 'clients', ['Servicing', 'Client']],
-    ['/submit', '/agent/submit', 'submit', ['Servicing', 'Submit']],
-    ['/request-service', '/agent/request-service', 'submit', ['Servicing', 'Request a service']],
-    ['/messages', '/messages', 'messages', ['Communications', 'Messages']],
-    ['/activity', '/agent/activity', 'activity', ['Today', 'Activity']],
-    ['/billing', '/agent/billing', null, ['Account', 'Billing']],
+    ['/leads', '/agent/leads', 'leads', ['Your', 'Leads']],
+    ['/leads/abc', '/agent/inbounds/abc', 'leads', ['Your', 'Leads']],
+    ['/calendar', '/agent/calendar', 'calendar', ['This week', 'Calendar']],
+    ['/clients', '/agent/clients', 'clients', ['Your book', 'Clients']],
+    ['/clients/c1', '/agent/clients/c1', 'clients', ['Your book', 'Clients']],
+    ['/submit', '/agent/submit', null, ['New sale', 'Submit']],
+    ['/request-service', '/agent/request-service', null, ['Servicing', 'Request a service']],
+    ['/messages', '/messages', null, ['Team', 'Messages']],
+    ['/activity', '/agent/activity', 'activity', ['What happened', 'Activity']],
+    ['/billing', '/agent/billing', 'billing', ['Your plan', 'Billing']],
     ['/settings', '/settings', null, ['Account', 'Settings']],
-    ['/more', '/agent/more', 'more', ['Account', 'More']],
+    ['/more', '/agent/more', null, ['Account', 'More']],
   ]
   for (const [tpl, real, tab, title] of cases) {
     for (const p of [tpl, real]) {
       assert.equal(tabOf(p), tab, `tabOf ${p}`)
       assert.deepEqual(titleOf(p), title, `titleOf ${p}`)
+      assert.equal(layoutOf(p), tpl === '/' ? 'overview' : tpl.split('/')[1], `layoutOf ${p}`)
     }
   }
   assert.deepEqual(titleOf('/nope'), ['Today', 'Overview'])

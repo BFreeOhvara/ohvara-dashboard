@@ -5,10 +5,8 @@ import { NoteProvider } from './kit'
 import TemplateFrame from './TemplateFrame'
 import Overview from './screens/Overview'
 import Leads from './screens/Leads'
-import LeadPage from './screens/LeadPage'
 import Calendar from './screens/Calendar'
 import Clients from './screens/Clients'
-import ClientPage from './screens/ClientPage'
 import Submit from './screens/Submit'
 import RequestService from './screens/RequestService'
 import Messages from './screens/Messages'
@@ -38,10 +36,10 @@ export default function TemplateApp() {
           <Route element={<TemplateFrame />}>
             <Route index element={<Overview />} />
             <Route path="leads" element={<Leads />} />
-            <Route path="leads/:id" element={<LeadPage />} />
+            <Route path="leads/:id" element={<Leads />} />
             <Route path="calendar" element={<Calendar />} />
             <Route path="clients" element={<Clients />} />
-            <Route path="clients/:id" element={<ClientPage />} />
+            <Route path="clients/:id" element={<Clients />} />
             <Route path="submit" element={<Submit />} />
             <Route path="request-service" element={<RequestService />} />
             <Route path="messages" element={<Messages />} />

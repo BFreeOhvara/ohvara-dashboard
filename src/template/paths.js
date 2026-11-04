@@ -68,36 +68,40 @@ function plain(pathname) {
   return p.replace(/^\/inbounds(?=\/|$)/, '/leads')
 }
 
+// Page titles, two lines (the frame rolls them in letter by letter). A record drawer keeps its list's title.
 const TITLES = {
-  '/': ['Today', 'Overview'], '/leads': ['Leads', 'Leads'], '/calendar': ['Leads', 'Calendar'], '/clients': ['Servicing', 'Clients'],
-  '/submit': ['Servicing', 'Submit'], '/request-service': ['Servicing', 'Request a service'], '/messages': ['Communications', 'Messages'],
-  '/activity': ['Today', 'Activity'], '/billing': ['Account', 'Billing'], '/settings': ['Account', 'Settings'], '/more': ['Account', 'More'],
+  '/': ['Today', 'Overview'], '/leads': ['Your', 'Leads'], '/calendar': ['This week', 'Calendar'], '/clients': ['Your book', 'Clients'],
+  '/submit': ['New sale', 'Submit'], '/request-service': ['Servicing', 'Request a service'], '/messages': ['Team', 'Messages'],
+  '/activity': ['What happened', 'Activity'], '/billing': ['Your plan', 'Billing'], '/settings': ['Account', 'Settings'], '/more': ['Account', 'More'],
 }
 
+// Which top tab is lit. Pages reached from the rail or the account menu light none.
+const TAB_PAGES = ['/calendar', '/activity', '/billing']
 export function tabOf(pathname) {
   const p = plain(pathname)
   if (p === '/') return 'overview'
-  if (p.startsWith('/leads')) return 'leads'
-  if (p.startsWith('/clients')) return 'clients'
-  if (p === '/request-service') return 'submit'
-  if (p === '/more' || p === '/billing' || p === '/settings') return p === '/more' ? 'more' : null
-  return p.slice(1)
+  if (p === '/leads' || p.startsWith('/leads/')) return 'leads'
+  if (p === '/clients' || p.startsWith('/clients/')) return 'clients'
+  return TAB_PAGES.includes(p) ? p.slice(1) : null
 }
 
-// Which page layout a location gets (glass.css .tp-app.is-<layout>): 'lead' for one lead, 'client' for one client,
-// otherwise the tab's own name. Leads, one lead, Messages and Settings hold still on a desktop and scroll inside panes.
+// Which page a location shows (flow.css .tp-app.is-<layout>). One lead opens as a drawer over Inbounds and one
+// client over Clients, so they share the list's layout (and the page does not change under the drawer).
 export function layoutOf(pathname) {
   const p = plain(pathname)
-  if (p.startsWith('/leads/')) return 'lead'
-  if (p.startsWith('/clients/')) return 'client'
+  if (p.startsWith('/leads/')) return 'leads'
+  if (p.startsWith('/clients/')) return 'clients'
   if (p === '/') return 'overview'
   return p.slice(1)
 }
+
+// The title for a page key from layoutOf ('overview', 'leads', ...).
+export const titleOfLayout = layout => titleOf(layout === 'overview' ? '/' : `/${layout}`)
 
 export function titleOf(pathname) {
   const p = plain(pathname)
   if (TITLES[p]) return TITLES[p]
-  if (p.startsWith('/leads/')) return ['Leads', 'Lead']
-  if (p.startsWith('/clients/')) return ['Servicing', 'Client']
+  if (p.startsWith('/leads/')) return TITLES['/leads']
+  if (p.startsWith('/clients/')) return TITLES['/clients']
   return ['Today', 'Overview']
 }

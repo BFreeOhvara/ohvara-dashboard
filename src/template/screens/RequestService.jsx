@@ -21,7 +21,7 @@ export default function RequestService() {
   if (sent) {
     return <div className="tp-page"><section className="ov-card tp-card" style={{ maxWidth: 560 }}><div className="tp-row"><span className="tp-ic teal"><Check size={18} /></span><h2 className="tp-h2">Request sent</h2></div>
       <p className="tp-mid" style={{ margin: '10px 0' }}>The team has your request for {pick.client_first_name} {pick.client_last_name}. You will see the update in Activity.</p>
-      <Link to={paths.activity()} className="ov-hero tp-primary">Open Activity</Link></section></div>
+      <Link to={paths.activity()} className="tp-primary fx-accent">Open Activity</Link></section></div>
   }
   return (
     <div className="tp-page">
@@ -45,7 +45,7 @@ export default function RequestService() {
         <div className="ov-card tp-card tp-stack">
           <h2 className="tp-h2">Request summary</h2>
           <p className="tp-mid">{pick ? `${pick.client_first_name} ${pick.client_last_name}` : 'No client picked yet'}<br /><span className="tp-sub">{kind || 'Pick what needs doing'}</span></p>
-          <button type="button" className="ov-hero tp-primary" disabled={!pick || !kind} onClick={() => { submitRequest({ name: `${pick.client_first_name} ${pick.client_last_name}`, kind }); setSent(true); note('Request sent to the team') }}>Send request</button>
+          <button type="button" className="tp-primary fx-accent" disabled={!pick || !kind} onClick={() => { submitRequest({ name: `${pick.client_first_name} ${pick.client_last_name}`, kind }); setSent(true); note('Request sent to the team') }}>Send request</button>
           <p className="tp-sub">Does not use a submission.</p>
         </div>
       </div>

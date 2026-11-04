@@ -144,9 +144,10 @@ for (const view of VIEWS) {
 }
 
 // Pass 3: click each visible button on a fresh load; it must change the DOM or the URL.
+// Buttons behind an open drawer (inert) can't be clicked by anyone, so they're skipped.
 const VISIBLE = `(() => [...document.querySelectorAll('button, [role="button"]')].filter(b => {
   const r = b.getBoundingClientRect(); const cs = getComputedStyle(b)
-  return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none' && !b.disabled && b.getAttribute('aria-hidden') !== 'true'
+  return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none' && !b.disabled && b.getAttribute('aria-hidden') !== 'true' && !b.closest('[inert]')
 }))()`
 let clicked = 0
 for (const view of VIEWS) {

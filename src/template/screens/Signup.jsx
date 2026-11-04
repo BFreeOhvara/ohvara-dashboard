@@ -44,7 +44,7 @@ export default function Signup() {
           <label className="tp-check"><input type="checkbox" checked={agree} onChange={e => setAgree(e.target.checked)} /><span>Agreement checkbox, wording pending</span></label>
           <Pending>Terms and privacy wording pending</Pending>
           {tried && !agree && <p className="tp-sub" style={{ color: 'var(--danger)' }}>Tick the box to go on.</p>}
-          <button type="submit" className="ov-hero tp-primary">Create account</button>
+          <button type="submit" className="tp-primary fx-accent">Create account</button>
           <p className="tp-sub">Already have an account? <button type="button" className="tp-link" onClick={() => note('Sign in is not part of the template')}>Sign in</button></p>
         </section>
         <p className="tp-sub" style={{ textAlign: 'center' }}><Link to={paths.home()} className="tp-link">Back to the template</Link> · Privacy, Terms, Help (wording pending)</p>

@@ -1,6 +1,6 @@
-// P828 proof: the agent shell at the real agent URLs, signed in as the test accounts in ~/.atlas/test-logins.json.
+// P828 proof (P829: new layout selectors, record drawers, --out): the agent shell at the real agent URLs, signed in as the test accounts in ~/.atlas/test-logins.json.
 //   node scripts/shell-live-check.mjs --base-url <url>      a running site (local `vite preview` of a real build, or production)
-//   add --no-shots to skip the 78 screenshots (production re-check)
+//   add --no-shots to skip the 78 screenshots (production re-check); --out <dir> picks the shot folder (default qa/shell-live)
 // Agent: 13 URLs x 1920/1440/390 x light/dark. Each page: rail (desktop), search, account, title, Messages reachable
 // (top bar on desktop, bottom bar on a phone), no console errors, no sideways scroll. Shots to qa/shell-live/.
 // Admin + Fulfillment: their pages show no shell. Logged out: /agent lands on /login.
@@ -17,7 +17,7 @@ const BASE = (flag('--base-url') || '').replace(/\/$/, '')
 const SHOTS = !args.includes('--no-shots')
 if (!BASE) { console.error('--base-url is required'); process.exit(2) }
 const logins = JSON.parse(readFileSync(join(homedir(), '.atlas', 'test-logins.json'), 'utf8'))
-const OUT = 'qa/shell-live'
+const OUT = flag('--out') || 'qa/shell-live'
 mkdirSync(OUT, { recursive: true })
 
 const URLS = ['/agent', '/agent/leads', '/agent/inbounds/sample-lead-1', '/agent/calendar', '/agent/clients', '/agent/clients/sample-client-1', '/agent/submit',
@@ -60,7 +60,7 @@ for (const theme of ['light', 'dark']) {
       errors.length = 0
       await page.goto(`${BASE}${url}`, { waitUntil: 'networkidle' })
       await page.waitForSelector('.tp-app', { timeout: 15000 }).catch(() => fail(where, 'no shell (.tp-app) on the page'))
-      await page.waitForTimeout(500)
+      await page.waitForTimeout(SHOTS ? 1500 : 500) // let the page's entrance motion settle before measuring
       const m = await page.evaluate(desk => {
         const vis = el => !!el && el.getBoundingClientRect().width > 0 && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden'
         const q = s => document.querySelector(s)
@@ -69,10 +69,11 @@ for (const theme of ['light', 'dark']) {
           sideways: document.documentElement.scrollWidth - document.documentElement.clientWidth,
           rail: vis(q('.tp-rail')),
           oldSidebar: !!q('aside.sidebar, aside nav .nav-item'),
-          search: desk ? vis(q('.tp-search')) && vis(q('.tp-rail .tp-ri')) : vis(q('.tp-phone-top [aria-label="Search"]')),
+          search: desk ? vis(q('.tp-rail [aria-label^="Search"]')) : vis(q('.tp-bar [aria-label="Search"]')),
           account: desk ? vis(q('.tp-me')) : vis(q('.tp-phone-top [aria-label="Menu"]')),
           title: (q('.tp-head .tp-cn')?.textContent || '').trim(),
-          messages: desk ? vis(q('.tp-top a[aria-label="Messages"]')) : [...document.querySelectorAll('.tp-bar a')].some(a => vis(a) && a.textContent.includes('Messages')),
+          messages: desk ? vis(q('.tp-top a[aria-label="Messages"]')) : vis(q('.tp-phone-top a[aria-label="Messages"]')),
+          drawer: vis(q('.fx-rec')),
           sample: (q('.tp-foot')?.textContent || '').includes('Sample info'),
         }
       }, view.w >= 1000)
@@ -86,8 +87,9 @@ for (const theme of ['light', 'dark']) {
       if (!m.account) fail(where, 'account missing')
       if (!m.title) fail(where, 'no title')
       if (!m.messages) fail(where, 'Messages not reachable')
+      if (/\/(inbounds|clients)\/./.test(url) !== m.drawer) fail(where, m.drawer ? 'record drawer open on a list page' : 'record drawer missing')
       if (errors.length) fail(where, `console: ${errors[0]}`)
-      rows.push(`${view.w} ${theme.padEnd(5)} ${url.padEnd(32)} ${m.title.padEnd(18)} rail=${m.rail ? 'y' : 'n'} sx=${m.sideways} err=${errors.length}`)
+      rows.push(`${view.w} ${theme.padEnd(5)} ${url.padEnd(32)} ${m.title.padEnd(18)} rail=${m.rail ? 'y' : 'n'} drawer=${m.drawer ? 'y' : 'n'} sx=${m.sideways} err=${errors.length}`)
     }
     await ctx.close()
   }
