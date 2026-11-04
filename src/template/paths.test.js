@@ -129,3 +129,17 @@ test('showShell', () => {
   }
   assert.equal(s(null, '/agent'), false)
 })
+
+test('showShell: every shell URL for an agent on the web, trailing slash and ids included', () => {
+  const s = (role, pathname, native = false) => showShell({ role, pathname, native })
+  for (const p of ['/agent/', '/agent/leads', '/agent/inbounds/abc-123', '/agent/calendar', '/agent/clients', '/agent/clients/b-9', '/agent/submit',
+    '/agent/request-service', '/agent/activity', '/agent/billing', '/agent/more', '/messages', '/settings/']) assert.equal(s('agent', p), true, p)
+  // Not a shell URL, or not an agent on the web: today's pages.
+  for (const p of ['/agent/clients/a/b', '/agent/team', '/admin', '/fulfillment', '/login', '/protect']) assert.equal(s('agent', p), false, p)
+  for (const role of ['admin', 'fulfillment', 'va', undefined, '']) assert.equal(s(role, '/agent/leads'), false, String(role))
+  assert.equal(s('agent', '/messages', true), false)
+})
+
+test('every SHELL_ROUTES path is a shell path', () => {
+  for (const p of Object.values(SHELL_ROUTES)) assert.equal(isShellPath(p.replace(/:[A-Za-z]+/, 'x1')), true, p)
+})

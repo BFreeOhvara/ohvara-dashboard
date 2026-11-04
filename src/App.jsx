@@ -6,6 +6,7 @@ import { SecretsProvider } from './contexts/SecretsContext'
 import { PortalPhoneProvider } from './contexts/PortalPhoneContext'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
+import { ShellSwap } from './components/layout/ShellSwap'
 import { ErrorBoundary } from './components/shared/ErrorBoundary'
 import { NativeBridge } from './components/native/NativeBridge'
 // Side-effect import — attaches the beforeinstallprompt listener at app
@@ -123,6 +124,8 @@ export default function App() {
           <PortalPhoneProvider>
           {/* Prompt 775 — phone app only: push, offline screen. */}
           <NativeBridge />
+          {/* Prompt 828 — agents at the shell URLs get the template's screens; everyone else these routes. */}
+          <ShellSwap>
           <Routes>
             <Route path="/login" element={<Login />} />
             {/* Prompt 781 — /join?t=<token>; texts use the short /j/<token>. */}
@@ -314,6 +317,7 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </ShellSwap>
           </PortalPhoneProvider>
         </BrowserRouter>
         </SecretsProvider>
