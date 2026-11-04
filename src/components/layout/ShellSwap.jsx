@@ -18,8 +18,10 @@ const Spinner = () => (
 // The agent portal swap: an agent at one of the shell URLs (paths.js SHELL_ROUTES) gets the template's screens.
 // Everyone else (admin, Fulfillment, VA, logged out, the phone app) gets `children`, today's routes, untouched.
 export function ShellSwap({ children }) {
-  const { profile } = useAuth()
+  const { profile, loading } = useAuth()
   const { pathname } = useLocation()
+  // Until we know the role, hold a shell URL: today's catch-all would send /agent/request-service (shell-only) home.
+  if (loading && showShell({ role: 'agent', pathname, native: isNativeApp() })) return <Spinner />
   if (!showShell({ role: profile?.role, pathname, native: isNativeApp() })) return children
   return <ProtectedRoute allowedRoles={['agent']}><OpenOnly old={children} /></ProtectedRoute>
 }
