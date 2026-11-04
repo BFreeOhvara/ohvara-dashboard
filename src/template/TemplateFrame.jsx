@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Link, NavLink, useLocation, useOutlet } from 'react-router-dom'
 import {
   Home, PhoneIncoming, CalendarDays, Users, History, CreditCard, Settings, Search, Bell, Plus, Sun, Moon, MessageSquare,
-  PhoneCall, LifeBuoy, Radio, ChevronRight, LogOut, ShieldCheck, Ellipsis, FileUp, TriangleAlert, Wallet, CalendarCheck, Clock3, Send,
+  PhoneCall, LifeBuoy, Radio, ChevronRight, LogOut, ShieldCheck, Ellipsis, FileUp, TriangleAlert, Wallet, CalendarCheck, Clock3,
   Smartphone, CircleHelp, StickyNote, PhoneOutgoing, Mail, Keyboard,
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
@@ -19,6 +19,7 @@ import { isSearchKey } from '../lib/searchKey'
 import { appLink, loadAppConfig } from '../lib/appConfig'
 import { openExternal } from '../lib/native'
 import { STORES, STORES_SOON, appQr } from '../lib/appStores'
+import { PLAN, planRange, rangeText } from '../lib/planPricing'
 import { SUPPORT_EMAIL } from '../components/auth/authUtils'
 import './glass.css'
 import './flow.css'
@@ -257,20 +258,21 @@ function useHeadStats(page) {
   const { data: events } = useSampleAppointments()
   const { data: activity } = useSampleActivity()
   const { data: settings } = useSampleSettings()
-  const spend = billing.leadTypes.filter(t => t.on).reduce((n, t) => n + t.weekly, 0)
-  const { used, cap } = billing.submissions
+  const weekly = billing.budget.weekly
+  const wk = planRange(weekly, billing.budget.mode).week
+  const booked = S0 => S0(CalendarCheck, billing.booked, 'booked this week', { chip: [`range ${rangeText(wk)}`, 'blue'] })
   const needs = leads.filter(l => NEEDS.includes(l.stage)).length
   const by = st => clients.filter(c => c.stage === st).length
   const money = usd()
   const S = (icon, n, label, extra = {}) => ({ icon, n, label, ...extra })
   return {
-    overview: [S(Users, clients.length, 'clients in your book', { chip: [`${by('protected')} protected`, 'up'] }), S(PhoneIncoming, needs, 'leads need you', { chip: needs ? ['Act now', 'warn'] : null }), S(FileUp, used, 'submitted this week', { tail: ` / ${cap}`, chip: [`${cap - used} left`, 'blue'] })],
-    leads: [S(TriangleAlert, needs, 'need you now', { chip: needs ? ['Act now', 'warn'] : null }), S(CalendarCheck, leads.filter(l => l.stage === 'booked').length, 'booked'), S(Wallet, spend, 'a week on leads', { fmt: money })],
+    overview: [S(Users, clients.length, 'clients in your book', { chip: [`${by('protected')} protected`, 'up'] }), S(PhoneIncoming, needs, 'leads need you', { chip: needs ? ['Act now', 'warn'] : null }), booked(S)],
+    leads: [S(TriangleAlert, needs, 'need you now', { chip: needs ? ['Act now', 'warn'] : null }), S(CalendarCheck, leads.filter(l => l.stage === 'booked').length, 'booked'), S(Wallet, weekly, 'weekly budget', { fmt: money })],
     clients: [S(Users, clients.length, 'clients'), S(TriangleAlert, by('needs_attention'), 'need attention', { chip: by('needs_attention') ? ['See who', 'warn'] : null }), S(ShieldCheck, by('protected'), 'protected', { chip: ['On time', 'up'] })],
     calendar: [S(CalendarDays, events.length, 'this week'), S(Clock3, events.filter(e => e.date === 2).length, 'today'), S(PhoneCall, events.filter(e => /call/i.test(e.label)).length, 'client calls')],
     activity: [S(History, activity.filter(a => a.at.startsWith('Today')).length, 'today'), S(CalendarDays, activity.length, 'this week'), S(MessageSquare, activity.filter(a => a.kind === 'text').length, 'texts sent for you')],
-    billing: [S(CreditCard, billing.plan.weekly + spend, 'a week in all', { fmt: money, chip: ['Sample', 'blue'] }), S(ShieldCheck, billing.plan.weekly, 'servicing', { fmt: money }), S(Wallet, spend, 'leads spend', { fmt: money })],
-    submit: [S(FileUp, used, 'submitted this week', { tail: ` / ${cap}` }), S(Send, cap - used, 'left this week', { chip: ['Resets Mon', 'blue'] })],
+    billing: [S(Wallet, weekly, 'weekly budget', { fmt: money, chip: ['Draft', 'blue'] }), S(ShieldCheck, PLAN.servicingMonthly, 'servicing a month', { fmt: money }), booked(S)],
+    submit: [S(FileUp, billing.submitted, 'submitted this week'), S(ShieldCheck, clients.length, 'clients in servicing', { chip: ['No weekly limit', 'blue'] })],
     settings: [S(Bell, settings.notifications.filter(n => n.push).length, 'alerts switched on'), S(CalendarDays, settings.hours.days.length, 'working days'), S(Users, clients.length, 'clients in your book')],
     messages: [S(MessageSquare, threads.reduce((n, t) => n + t.unread, 0), 'unread'), S(Users, threads.length, 'threads')],
   }[page] || []

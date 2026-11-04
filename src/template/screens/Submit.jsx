@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FilePlus2, Wrench, Check, TriangleAlert } from 'lucide-react'
+import { FilePlus2, Wrench, Check } from 'lucide-react'
 import { useSampleBilling, useSampleActions } from '../data'
 import { Field, Pending, useNote, SampleTag } from '../kit'
 import { paths } from '../paths'
@@ -15,8 +15,7 @@ export default function Submit() {
   const [f, setF] = useState(EMPTY)
   const [tried, setTried] = useState(false)
   const [done, setDone] = useState(null)
-  const { used, cap } = billing.submissions
-  const capped = used >= cap
+  const used = billing.submitted
   const set = k => e => setF({ ...f, [k]: e.target.value })
   const missing = ['name', 'phone', 'carrier'].filter(k => !f[k].trim())
   const bad = k => tried && missing.includes(k)
@@ -43,21 +42,20 @@ export default function Submit() {
       <div className="tp-page">
         <div className="tp-g2">
           <section className="ov-card tp-card"><span className="tp-ic"><FilePlus2 size={18} /></span><h2 className="tp-h2" style={{ marginTop: 10 }}>Submit a new sale</h2><p className="tp-sub">You closed it. We keep it on the books.</p>
-            <p className="tp-sub" style={{ margin: '8px 0 12px' }}>{used} of {cap} submissions used this week</p>
+            <p className="tp-sub" style={{ margin: '8px 0 12px' }}>Included in policy servicing · {used} submitted this week</p>
             <button type="button" className="tp-primary fx-accent" onClick={() => setMode('sale')}>Start</button></section>
           <section className="ov-card tp-card"><span className="tp-ic teal"><Wrench size={18} /></span><h2 className="tp-h2" style={{ marginTop: 10 }}>Request a service</h2><p className="tp-sub">Something needs doing on a client you already have.</p>
-            <p className="tp-sub" style={{ margin: '8px 0 12px' }}>Does not use a submission</p>
+            <p className="tp-sub" style={{ margin: '8px 0 12px' }}>Included in policy servicing</p>
             <Link to={paths.requestService()} className="tp-btn ov-ghost" style={{ height: 44 }}>Request</Link></section>
         </div>
-        <section className="ov-card tp-card"><div className="tp-row"><b className="tp-grow">Submissions this week</b><span className="tp-money">{used} / {cap}</span></div>
-          <div className="tp-meter">{Array.from({ length: cap }, (_, i) => <i key={i} className={i < used ? 'on' : ''} />)}</div></section>
+        <section className="ov-card tp-card"><div className="tp-row"><b className="tp-grow">Submitted this week</b><span className="tp-num">{used}</span></div>
+          <p className="tp-sub">No weekly limit. Policy servicing is billed monthly and covers every sale you submit.</p></section>
       </div>
     )
   }
 
   return (
     <div className="tp-page">
-      {capped && <section className="ov-attn tp-card"><div className="tp-row"><TriangleAlert size={18} /><div><b>Weekly limit reached</b><p className="tp-sub">Only a new sale stops. Change your plan on Billing.</p></div></div></section>}
       <div className="tp-split">
         <section className="ov-card tp-card tp-stack">
           <div><h2 className="tp-h2">Who is the client</h2><p className="tp-sub">Name, number and where they live</p></div>
@@ -82,9 +80,9 @@ export default function Submit() {
           <p className="tp-mid">{f.name || 'New client'}<br /><span className="tp-sub">{f.name ? f.phone || 'Add their number' : 'Add their name and number'}</span></p>
           <p className="tp-sub">The team sets the review call. <SampleTag>Sample plan</SampleTag></p>
           {tried && missing.length > 0 && <p className="tp-sub" style={{ color: 'var(--danger)' }}>Fill in the name, number and carrier first.</p>}
-          <button type="button" className="tp-primary fx-accent" disabled={capped} onClick={send}>Submit sale</button>
+          <button type="button" className="tp-primary fx-accent" onClick={send}>Submit sale</button>
           <button type="button" className="tp-btn ov-ghost" onClick={() => setMode('choose')}>Back</button>
-          <p className="tp-sub">{used} of {cap} used this week</p>
+          <p className="tp-sub">{used} submitted this week · no weekly limit</p>
         </div>
       </div>
     </div>

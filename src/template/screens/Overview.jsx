@@ -1,13 +1,15 @@
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, Clock, FileUp, PhoneIncoming, TriangleAlert, CalendarDays } from 'lucide-react'
-import { useSampleOverview, useSampleClients, useSampleActions } from '../data'
-import { Avatar } from '../kit'
-import { CountUp } from '../motion'
+import { PLAN, modeOf, planRange, rangeText } from '../../lib/planPricing'
+import { useSampleOverview, useSampleClients, useSampleActions, useSampleBilling } from '../data'
+import { Avatar, Chip, Money } from '../kit'
+import { CountUp, usd } from '../motion'
+import { BookedMeter } from '../PlanBuilder'
 import { stageChip } from '../LeadOutcome'
 import { laneOf } from '../stages'
 import { paths } from '../paths'
 
-// Today at a glance in six big tiles: what is next, the week's submissions, your book, last week's work,
+// Today at a glance in six big tiles: what is next, this week's budget and bookings, your book, last week's work,
 // who needs you, and what is due. Each tile is one idea. Sample data only.
 const apptTo = a => (a.kind === 'client' ? paths.client(a.ref) : paths.lead(a.ref))
 const SERIES = [['packet', 'Packet checks'], ['review', 'Review calls'], ['cancel', 'Cancellations'], ['save', 'Saves']]
@@ -58,9 +60,10 @@ export default function Overview() {
   const { data: o } = useSampleOverview()
   const { data: clients } = useSampleClients()
   const { doneTask } = useSampleActions()
-  const { used, cap } = o.submissions
+  const { data: bill } = useSampleBilling()
+  const m = modeOf(bill.budget.mode)
+  const wk = planRange(bill.budget.weekly, bill.budget.mode).week
   const next = o.nextAppt
-  const ring = 2 * Math.PI * 70
   const total = o.doneByDay.reduce((n, d) => n + SERIES.reduce((m, [k]) => m + d[k], 0), 0)
   const bookN = BOOK.map(([k]) => clients.filter(c => c.stage === k).length)
   const bookAll = bookN.reduce((a, b) => a + b, 0) || 1
@@ -87,20 +90,14 @@ export default function Overview() {
         </ul>
       </section>
 
-      <Tile className="fx-s5" i={1} title="Submissions" sub="This week · resets Monday" to={paths.billing()} label="Open Billing">
-        <div className="fx-ringrow">
-          <span className="fx-ring">
-            <svg viewBox="0 0 160 160" aria-hidden="true">
-              <circle cx="80" cy="80" r="70" className="fx-ring-track" />
-              <circle cx="80" cy="80" r="70" className="fx-ring-arc" style={{ '--len': ring, '--to': ring * (1 - Math.min(1, used / cap)) }} strokeDasharray={ring} transform="rotate(-90 80 80)" />
-            </svg>
-            <span className="fx-ring-mid"><b className="tp-num"><CountUp value={used} /></b><small>of {cap}</small></span>
-          </span>
-          <span className="fx-ringside">
-            <b className="tp-num fx-big2"><CountUp value={cap - used} /></b><span>left this week</span>
-            <Link to={paths.submit()} className="tp-primary fx-accent"><FileUp size={16} />Submit a policy</Link>
-          </span>
+      <Tile className="fx-s5" i={1} title="This week's budget" sub={`${m.label} · next charge ${bill.next_charge}`} to={paths.billing()} label="Open Billing">
+        <div className="tp-row tp-wrap"><b className="tp-money fx-huge2"><CountUp value={bill.budget.weekly} format={usd()} /></b><span className="tp-sub">a week</span></div>
+        <div className="pb-booked">
+          <span className="tp-row tp-between"><span><small>Booked this week</small><b className="tp-num"><CountUp value={bill.booked} /></b></span><small>range {rangeText(wk)}</small></span>
+          <BookedMeter booked={bill.booked} weekly={bill.budget.weekly} mode={bill.budget.mode} />
         </div>
+        <div className="tp-row tp-wrap pb-svcline"><Chip tone={bill.servicing.status === 'active' ? 'green' : 'mute'}>Servicing {bill.servicing.status === 'active' ? 'active' : 'paused'}</Chip><small><Money v={PLAN.servicingMonthly} cents={false} /> a month · next {bill.servicing.next}</small></div>
+        <Link to={paths.submit()} className="tp-primary fx-accent fx-self"><FileUp size={16} />Submit a policy</Link>
       </Tile>
 
       <Tile className="fx-s5" i={2} title="Your book" sub="Where every client stands" to={paths.clients()} label="Open Clients">

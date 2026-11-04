@@ -7,6 +7,8 @@ import { useStretchPill } from '../../hooks/useStretchPill'
 import { Drawer, Field, Seg, Switch, Chip, useNote, useAccount, initials } from '../kit'
 import { CountUp, usd } from '../motion'
 import { paths } from '../paths'
+import { PLAN, planRange, rangeText } from '../../lib/planPricing'
+import { BookedMeter } from '../PlanBuilder'
 
 const TABS = [['profile', 'Profile', User], ['alerts', 'Notifications', Bell], ['calls', 'Active and calls', Radio], ['billing', 'Billing', CreditCard], ['look', 'Appearance', SunMoon]]
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -27,14 +29,14 @@ function Head({ title, sub }) {
   return <header className="fx-form-h"><h2>{title}</h2><p>{sub}</p></header>
 }
 
-// Left: who you are, how much of your plan you've used this week, three numbers, what's next.
+// Left: who you are, this week's budget and how many it has booked, three numbers, what's next.
 function ProfileCard({ profile, duty }) {
   const { data: billing } = useSampleBilling()
   const { data: clients } = useSampleClients()
   const { data: leads } = useSampleLeads()
   const { data: ov } = useSampleOverview()
-  const { used, cap } = billing.submissions
-  const share = Math.round((used / cap) * 100)
+  const wk = planRange(billing.budget.weekly, billing.budget.mode).week
+  const money = usd()
   const next = ov.nextAppt || ov.upNext[0]
   const stats = [[clients.length, 'Clients'], [leads.filter(l => NEEDS.includes(l.stage)).length, 'Need you'], [leads.filter(l => l.stage === 'booked').length, 'Booked']]
   return (
@@ -44,9 +46,9 @@ function ProfileCard({ profile, duty }) {
       <p>Agent · {duty ? 'Active for live calls' : 'Off for live calls'}</p>
       <span className="fx-prof-mail"><Mail size={13} aria-hidden="true" />{profile.email}</span>
       <div className="fx-usage is-teal">
-        <div className="tp-row tp-between"><b>{billing.plan.name} {billing.plan.size}</b><b className="fx-usage-n"><CountUp value={share} />%</b></div>
-        <span className="fx-meter" role="img" aria-label={`${used} of ${cap} submitted this week`}><i style={{ '--w': share / 100 }} /></span>
-        <small><b>{used}</b> of {cap} submitted this week · resets {billing.resets}</small>
+        <div className="tp-row tp-between"><b>Budget {money(billing.budget.weekly)} a week</b><b className="fx-usage-n"><CountUp value={billing.booked} /></b></div>
+        <BookedMeter booked={billing.booked} weekly={billing.budget.weekly} mode={billing.budget.mode} />
+        <small><b>{billing.booked}</b> booked this week · range {rangeText(wk)} · servicing {billing.servicing.status}</small>
       </div>
       <ul className="fx-pstats">{stats.map(([n, label]) => <li key={label}><small>{label}</small><b className="tp-num"><CountUp value={n} /></b></li>)}</ul>
       {next && (
@@ -111,7 +113,7 @@ export default function Settings() {
               <Field label="Full name"><input value={pDraft.name} onChange={e => setPDraft({ ...pDraft, name: e.target.value })} /></Field>
               <Field label="Email"><input type="email" value={pDraft.email} onChange={e => setPDraft({ ...pDraft, email: e.target.value })} /></Field>
               <Field label="Phone"><input value={pDraft.phone} onChange={e => setPDraft({ ...pDraft, phone: e.target.value })} /></Field>
-              <Field label="Plan" hint="Change it on the Billing tab"><input value={pDraft.plan} readOnly /></Field>
+              <Field label="Plan" hint="Change your budget on the Billing page"><input value={pDraft.plan} readOnly /></Field>
             </div>
             <div className="fx-form-row">
               <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('password')}><KeyRound size={15} />Change password</button>
@@ -158,10 +160,10 @@ export default function Settings() {
           </>}
 
           {tab === 'billing' && <>
-            <Head title="Billing" sub="Your plan and where receipts go. Charges and lead spend live on the Billing page." />
+            <Head title="Billing" sub="Your plan and where receipts go. Change your weekly budget on the Billing page." />
             <div className="fx-billsum">
-              <div><small>Plan</small><b>{billing.plan.name} {billing.plan.size}</b></div>
-              <div><small>A week</small><b className="tp-money">{money(billing.plan.weekly)}</b></div>
+              <div><small>Weekly budget</small><b className="tp-money">{money(billing.budget.weekly)}</b></div>
+              <div><small>Servicing a month</small><b className="tp-money">{money(PLAN.servicingMonthly)}</b></div>
               <div><small>Next charge</small><b>{billing.next_charge}</b></div>
             </div>
             <div className="fx-form-grid">

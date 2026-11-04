@@ -93,7 +93,7 @@ const seed = {
   leads: seedLeads, clients: seedClients, threads: seedThreads, activity: seedActivity, appointments: seedAppointments,
   duty: true, tasks: { t1: false, t2: false, t3: false },
   settings: {
-    profile: { name: 'Dana Whitfield', email: 'dana.whitfield@example.com', phone: '(214) 555-0100', plan: 'Servicing 16' },
+    profile: { name: 'Dana Whitfield', email: 'dana.whitfield@example.com', phone: '(214) 555-0100', plan: 'Weekly budget and servicing' },
     hours: { start: '9:00 AM', end: '6:00 PM', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] },
     notifications: [
       { key: 'lead', label: 'New lead', push: true, email: true },
@@ -102,12 +102,14 @@ const seed = {
       { key: 'client', label: 'Client needs you', push: true, email: true },
     ],
   },
+  // Prompt 835: a weekly budget (slider), monthly servicing, a one-time setup fee. Prices live in lib/planPricing.
+  // cancellations: the old cancellation plan, shown only for an agent already on one (this sample agent is not).
   billing: {
-    plan: { name: 'Servicing', size: 16, weekly: 575, sample: true }, used: 11, resets: 'Mon, Nov 9', next_charge: 'Mon, Nov 9', paused: false,
-    leadTypes: [{ key: 'appointments', label: 'Appointments', sub: 'On your calendar', weekly: 500, on: true }, { key: 'live', label: 'Live calls', sub: 'Ring your phone', weekly: 300, on: true }],
-    history: [{ id: 'inv1', at: 'Mon, Nov 2', label: 'Servicing, 16 a week', amount: 575 }, { id: 'inv2', at: 'Mon, Oct 26', label: 'Servicing, 16 a week', amount: 575 }, { id: 'inv3', at: 'Mon, Oct 26', label: 'Leads spend', amount: 800 }],
+    budget: { weekly: 1000, mode: 'appts' }, booked: 4, paused: false, next_charge: 'Mon, Nov 9',
+    servicing: { status: 'active', next: 'Tue, Dec 1' }, setup: { paid: true, at: 'Mon, Oct 12' }, cancellations: null,
+    history: [{ id: 'inv1', at: 'Mon, Nov 2', label: 'Weekly budget, booked appointments', amount: 1000 }, { id: 'inv2', at: 'Sun, Nov 1', label: 'Policy servicing, November', amount: 299 }, { id: 'inv3', at: 'Mon, Oct 26', label: 'Weekly budget, booked appointments', amount: 1000 }, { id: 'inv4', at: 'Mon, Oct 12', label: 'One-time setup', amount: 1997 }],
   },
-  submissions: { used: 11, cap: 16 },
+  submitted: 11,
 }
 
 let state = seed
@@ -125,12 +127,11 @@ export function useSampleClient(id) { const s = useStore(); return ok(s.clients.
 export function useSampleAppointments() { const s = useStore(); return ok(s.appointments) }
 export function useSampleThreads() { const s = useStore(); return ok(s.threads) }
 export function useSampleActivity() { const s = useStore(); return ok(s.activity) }
-export function useSampleBilling() { const s = useStore(); return ok({ ...s.billing, submissions: s.submissions }) }
+export function useSampleBilling() { const s = useStore(); return ok({ ...s.billing, submitted: s.submitted }) }
 export function useSampleSettings() { const s = useStore(); return ok({ ...s.settings, duty: s.duty }) }
 export function useSampleSignup() {
   return useMemo(() => ok({
-    plans: [{ key: 'servicing', label: 'Servicing', sub: 'Submit sales and we keep them on the books', weekly: 199, sample: true }, { key: 'leads', label: 'Servicing and Leads', sub: 'Plus leads booked on your calendar', weekly: 399, sample: true }],
-    covers: ['Weekly submissions', 'A team that follows up with every client', 'Updates in your bell and by text'],
+    covers: ['Booked appointments or live calls, your pick', 'A team that follows up with every client', 'Updates in your bell and by text'],
   }), [])
 }
 // The sample clock is fixed at Monday, November 2, 2:14 PM, like the frame.
@@ -145,7 +146,7 @@ export function useSampleOverview() {
   const by = st => s.clients.filter(c => c.stage === st).length
   return ok({
     name: 'Dana', book: { protected: by('protected'), settingUp: by('setting_up'), needsAttention: by('needs_attention'), requestsOpen: by('requests') },
-    submissions: { ...s.submissions, resetsAt: 'Mon, Nov 9' }, duty: s.duty, stepsOpen: open,
+    duty: s.duty, stepsOpen: open,
     attention: s.clients.filter(c => c.stage === 'needs_attention'),
     dueSoon: [
       { id: 't1', label: 'Review call', clientName: 'Robert Chen', clientId: 'sample-client-3', dueAt: 'Thu, Nov 5, 3:00 PM', day: 'Thu', date: 5, done: s.tasks.t1 },
@@ -163,7 +164,6 @@ export function useSampleOverview() {
     doneRange: 'Oct 26 to Nov 1',
     dutySince: '9:02 AM',
     nextAppt: (() => { const a = s.appointments.find(x => x.date === NOW.date && minutesOf(x.time) > NOW.min); return a ? { ...a, inText: untilText(a.time) } : null })(),
-    apptsLeft: { left: 8, cap: 12, resets: 'Dec 1' },
     todayAppts: s.appointments.filter(a => a.date === NOW.date).map(a => ({ ...a, inText: untilText(a.time) })),
     newLeads: s.leads.filter(l => LEAD_NEW.includes(l.stage)).map(l => ({ id: l.id, name: `${l.first_name} ${l.last_name}`, kind: l.kind, stage: l.stage, appt: l.appt })),
   })
@@ -189,12 +189,11 @@ export function useSampleActions() {
     }),
     sendMessage: (threadId, text) => set(s => ({ ...s, threads: s.threads.map(t => (t.id === threadId ? { ...t, unread: 0, messages: [...t.messages, { id: `m${t.messages.length + 10}-${text.length}`, from: 'me', text, at: stamp }] } : t)) })),
     readThread: threadId => set(s => ({ ...s, threads: s.threads.map(t => (t.id === threadId ? { ...t, unread: 0 } : t)) })),
-    submitSale: form => set(s => ({ ...s, submissions: { ...s.submissions, used: Math.min(s.submissions.cap, s.submissions.used + 1) }, activity: log(s, form.name || 'New client', 'Sale submitted for servicing.', 'client') })),
+    submitSale: form => set(s => ({ ...s, submitted: s.submitted + 1, activity: log(s, form.name || 'New client', 'Sale submitted for servicing.', 'client') })),
     submitRequest: form => set(s => ({ ...s, activity: log(s, form.name || 'Client', `Service request sent: ${form.kind}.`, 'client') })),
     setNotification: (key, field, on) => set(s => ({ ...s, settings: { ...s.settings, notifications: s.settings.notifications.map(n => (n.key === key ? { ...n, [field]: on } : n)) } })),
-    setLeadType: (key, on) => set(s => ({ ...s, billing: { ...s.billing, leadTypes: s.billing.leadTypes.map(t => (t.key === key ? { ...t, on } : t)) } })),
     setPaused: paused => set(s => ({ ...s, billing: { ...s.billing, paused } })),
     bookCall: ({ ref, kind, who, day, date, time, label }) => set(s => ({ ...s, appointments: [...s.appointments, { id: `ap${s.appointments.length + 1}-${time.length}`, day, date, time, who, label, kind, ref }], activity: log(s, who, `${label} booked for ${day}, Nov ${date}, ${time}.`, kind === 'lead' ? 'lead' : 'client') })),
-    setPlanSize: size => set(s => ({ ...s, billing: { ...s.billing, plan: { ...s.billing.plan, size, weekly: size === 7 ? 275 : 575 } }, submissions: { ...s.submissions, cap: size } })),
+    setBudget: (weekly, mode) => set(s => ({ ...s, billing: { ...s.billing, budget: { weekly, mode } } })),
   }), [])
 }

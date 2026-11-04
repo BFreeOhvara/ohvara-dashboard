@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PhoneIncoming, CalendarDays, Phone, Search, Wallet, Clock, MessageSquare, MapPin, Check, X } from 'lucide-react'
 import { useSampleLeads, useSampleLead, useSampleBilling, useSampleActions } from '../data'
-import { Avatar, Chip, Money, Seg, Switch, Drawer, Empty, Pending, useNote } from '../kit'
+import { Avatar, Chip, Money, Seg, Drawer, Empty, Pending, useNote } from '../kit'
 import { stageChip, OutcomeDrawer } from '../LeadOutcome'
 import { RecordDrawer, Stepper, Block } from '../Record'
+import { BudgetSlider } from '../PlanBuilder'
 import { LANES, LEAD_STEPS, laneOf } from '../stages'
 import { paths } from '../paths'
 
@@ -103,7 +104,6 @@ export default function Leads() {
   const n = q.trim().toLowerCase()
   const shown = leads.filter(l => (kind === 'all' || (kind === 'live' ? l.kind === 'live_call' : l.kind === 'appointment'))
     && (!n || `${l.first_name} ${l.last_name} ${l.city} ${l.phone}`.toLowerCase().includes(n)))
-  const total = billing.leadTypes.filter(t => t.on).reduce((s, t) => s + t.weekly, 0)
   const accept = l => { moveLead(l.id, 'booked'); note(`You took the call with ${l.first_name}. The team dropped off`) }
   let card = 0
   return (
@@ -112,7 +112,7 @@ export default function Leads() {
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a lead" placeholder="Find by name, city or phone" value={q} onChange={e => setQ(e.target.value)} /></label>
         <Seg label="Lead type" value={kind} onChange={setKind} options={[{ key: 'all', label: 'All', count: leads.length }, { key: 'appointments', label: 'Appointments', count: leads.filter(l => l.kind === 'appointment').length }, { key: 'live', label: 'Live calls', count: leads.filter(l => l.kind === 'live_call').length }]} />
         <span className="tp-grow" />
-        <button type="button" className="fx-pillbtn" onClick={() => setSpend(true)}><Wallet size={15} aria-hidden="true" /><Money v={total} cents={false} /><small>a week</small></button>
+        <button type="button" className="fx-pillbtn" aria-label="Change your weekly budget" onClick={() => setSpend(true)}><Wallet size={15} aria-hidden="true" /><Money v={billing.budget.weekly} cents={false} /><small>a week</small></button>
       </div>
 
       <div className="fx-board" role="region" aria-label="Leads by stage">
@@ -136,13 +136,17 @@ export default function Leads() {
   )
 }
 
+// The weekly budget, from the Leads page: same slider as Billing. Sample only, nothing is charged.
 function SpendDrawer({ open, onClose }) {
   const { data: billing } = useSampleBilling()
-  const { setLeadType } = useSampleActions()
+  const { setBudget } = useSampleActions()
   const note = useNote()
+  const [weekly, setWeekly] = useState(billing.budget.weekly)
+  const [mode, setMode] = useState(billing.budget.mode)
   return (
-    <Drawer open={open} onClose={onClose} title="Change spend" sub={`Sample prices, not final · next charge ${billing.next_charge}`} footer={<button type="button" className="tp-primary fx-accent" onClick={() => { note('Spend updated'); onClose() }}>Done</button>}>
-      {billing.leadTypes.map(t => <div key={t.key} className="tp-row"><span className="tp-ic teal">{t.key === 'live' ? <PhoneIncoming size={16} /> : <CalendarDays size={16} />}</span><div className="tp-grow"><b>{t.label}</b><p className="tp-sub">{t.sub}</p></div><Money v={t.weekly} cents={false} /><Switch on={t.on} label={t.label} onChange={v => setLeadType(t.key, v)} /></div>)}
+    <Drawer open={open} onClose={onClose} title="Weekly budget" sub={`Draft prices · starts with the charge on ${billing.next_charge}`}
+      footer={<button type="button" className="tp-primary fx-accent" onClick={() => { setBudget(weekly, mode); note('Budget saved. Sample only, nothing was charged'); onClose() }}>Save budget</button>}>
+      <BudgetSlider weekly={weekly} mode={mode} onWeekly={setWeekly} onMode={setMode} id="leads-budget" />
     </Drawer>
   )
 }

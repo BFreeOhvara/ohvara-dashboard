@@ -802,3 +802,64 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 /* Visible resting state: entrance motion only runs once the page is really painting (.is-anim, added on the first
    animation frame and dropped when the tab hides). In a background tab everything sits at its final look. */
 .fx.tp-app:not(.is-anim) :is(.fx-main, .fx-head) *, .fx.tp-app:not(.is-anim) :is(.fx-main, .fx-head) { animation: none !important; }
+
+/* P835 ----------------------------------------------------------------------------------------------------------
+   The plan builder (PlanBuilder.jsx): weekly budget slider, the range it buys, monthly servicing, the plan summary,
+   and the booked-this-week meter. Neutral like the P834 selected state: the slider is ink on a faint track. */
+.pb { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.pb-step { margin: 4px 0 0; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ov-mid); }
+.pb-amt { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.pb-amt label { font-size: 14px; font-weight: 500; color: var(--ov-mid); }
+.pb-amt b { font-family: var(--font-display); font-size: 34px; font-weight: 600; letter-spacing: -0.02em; color: var(--ov-hi); font-variant-numeric: tabular-nums; }
+.pb-amt b small, .pb-svc .tp-money small { font-family: var(--font-body, inherit); font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--ov-mid); }
+.pb-range { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; margin: 0; background: transparent; cursor: pointer; --pb-fill: var(--ov-hi); --pb-track: color-mix(in srgb, var(--ov-hi) 14%, transparent); }
+.pb-range::-webkit-slider-runnable-track { height: 8px; border-radius: 999px; background: linear-gradient(to right, var(--pb-fill) calc(var(--w, 0) * 100%), var(--pb-track) 0); }
+.pb-range::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; margin-top: -8px; border-radius: 50%; background: var(--ov-hi); box-shadow: 0 1px 4px rgba(0, 0, 0, .3), 0 0 0 6px color-mix(in srgb, var(--ov-hi) 14%, transparent); transition: box-shadow .2s var(--fx-ease); }
+.pb-range::-moz-range-track { height: 8px; border-radius: 999px; background: var(--pb-track); }
+.pb-range::-moz-range-progress { height: 8px; border-radius: 999px; background: var(--pb-fill); }
+.pb-range::-moz-range-thumb { width: 24px; height: 24px; border: 0; border-radius: 50%; background: var(--ov-hi); box-shadow: 0 1px 4px rgba(0, 0, 0, .3), 0 0 0 6px color-mix(in srgb, var(--ov-hi) 14%, transparent); }
+.pb-range:hover::-webkit-slider-thumb, .pb-range:active::-webkit-slider-thumb { box-shadow: 0 1px 4px rgba(0, 0, 0, .3), 0 0 0 9px color-mix(in srgb, var(--ov-hi) 18%, transparent); }
+.pb-range:focus-visible { outline: none; }
+.pb-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--ov-hi), 0 0 0 7px color-mix(in srgb, var(--ov-hi) 24%, transparent); }
+.pb-range:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(--ov-hi), 0 0 0 7px color-mix(in srgb, var(--ov-hi) 24%, transparent); }
+.pb-ticks { position: relative; height: 16px; margin-top: -8px; font-size: 12px; font-weight: 500; color: var(--ov-mid); font-variant-numeric: tabular-nums; }
+.pb-ticks span { position: absolute; top: 0; left: calc(12px + var(--at) * (100% - 24px)); transform: translateX(-50%); white-space: nowrap; }
+.pb-ticks span:first-child { left: 0; transform: none; } .pb-ticks span:last-child { left: auto; right: 0; transform: none; }
+.pb-outs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.pb-outs > div { padding: 14px 16px; border-radius: 16px; background: color-mix(in srgb, var(--ov-hi) 6%, transparent); border: 1px solid var(--ov-line); }
+.pb-outs small { display: block; font-size: 13px; font-weight: 500; color: var(--ov-mid); }
+.pb-outs b { display: block; margin-top: 2px; font-family: var(--font-display); font-size: 24px; font-weight: 600; letter-spacing: -0.01em; color: var(--ov-hi); }
+.pb-foot, .pb-note { margin: 0; font-size: 12.5px; font-weight: 500; color: var(--ov-mid); }
+.pb-note { margin-top: 4px; }
+.pb-svc { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 16px; border-radius: 16px; border: 1px solid var(--ov-line); background: color-mix(in srgb, var(--ov-hi) 4%, transparent); }
+.pb-svc b { font-size: 16px; font-weight: 600; color: var(--ov-hi); }
+.pb-svc .tp-grow small { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--ov-mid); max-width: 52ch; }
+.pb-svc .tp-money { font-family: var(--font-display); font-size: 26px; letter-spacing: -0.01em; white-space: nowrap; }
+.pb-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); gap: 20px; align-items: start; }
+.pb-steps { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.pb-sum { display: flex; flex-direction: column; gap: 0; padding: 20px; border-radius: 20px; background: color-mix(in srgb, var(--ov-hi) 7%, transparent); border: 1px solid var(--ov-line); }
+.pb-sum-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.pb-sum-h h3 { margin: 0; font-size: 16px; font-weight: 600; color: var(--ov-hi); }
+.pb-row { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; font-size: 14px; font-weight: 500; color: var(--ov-soft, var(--ov-mid)); font-variant-numeric: tabular-nums; }
+.pb-row + .pb-row { border-top: 1px solid var(--ov-line); }
+.pb-row b { color: var(--ov-hi); font-weight: 600; white-space: nowrap; }
+.pb-sum > .tp-primary, .pb-sum > .tp-btn { width: 100%; margin-top: 10px; justify-content: center; }
+.pb-sum > .pb-note { margin-top: 8px; }
+.pb-meter { position: relative; display: block; height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--ov-hi) 10%, transparent); overflow: hidden; }
+.pb-meter em { position: absolute; top: 0; bottom: 0; left: calc(var(--l) * 100%); width: calc((var(--r) - var(--l)) * 100%); background: color-mix(in srgb, var(--c, var(--ov-data-a)) 30%, transparent); }
+.pb-meter i { position: relative; display: block; height: 100%; width: calc(var(--w, 0) * 100%); border-radius: inherit; background: var(--c, var(--ov-data-a)); transform-origin: 0 50%; animation: fx-grow 1s var(--fx-ease) both; animation-delay: .35s; }
+.fx-usage .pb-meter { --c: var(--ci); background: color-mix(in srgb, var(--ci) 16%, transparent); }
+.pb-booked { display: flex; flex-direction: column; gap: 8px; }
+.pb-booked small { display: block; font-size: 12.5px; font-weight: 500; color: var(--ov-mid); }
+.pb-booked b { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--ov-hi); }
+.pb-booked .tp-between { align-items: flex-end; }
+.pb-svcline { gap: 10px; align-items: center; } .pb-svcline small { font-size: 12.5px; color: var(--ov-mid); }
+.pb-hero > span { font-size: 14px; color: var(--ov-hero-soft); }
+.tp-seg.pb-mode { border-radius: 999px; } .tp-seg.pb-mode > * { border-radius: 999px; min-height: 36px; }
+@media (max-width: 900px) { .pb-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 560px) { .pb-outs { grid-template-columns: minmax(0, 1fr); } .pb-amt b { font-size: 30px; } .tp-seg.pb-mode > * { padding: 0 12px; font-size: 13px; } }
+/* Sign-up and Welcome sit outside the shell, so their main button had no fill (white ink on the light page). */
+.tp-solo .tp-primary { color: var(--sh-on-accent); background: var(--sh-acc); border: 0; font-weight: 600; }
+.pb-svc .tp-grow { flex: 1 1 220px; }
+@media (max-width: 560px) { .pb-row { font-size: 13.5px; } .pb-sum { padding: 16px; } }
+.tp-solo .tp-seg > .on { background: var(--sh-sel); color: var(--sh-on-sel); }

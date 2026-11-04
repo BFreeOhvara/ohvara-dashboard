@@ -46,7 +46,7 @@ export default function RequestService() {
           <h2 className="tp-h2">Request summary</h2>
           <p className="tp-mid">{pick ? `${pick.client_first_name} ${pick.client_last_name}` : 'No client picked yet'}<br /><span className="tp-sub">{kind || 'Pick what needs doing'}</span></p>
           <button type="button" className="tp-primary fx-accent" disabled={!pick || !kind} onClick={() => { submitRequest({ name: `${pick.client_first_name} ${pick.client_last_name}`, kind }); setSent(true); note('Request sent to the team') }}>Send request</button>
-          <p className="tp-sub">Does not use a submission.</p>
+          <p className="tp-sub">Included in policy servicing.</p>
         </div>
       </div>
     </div>

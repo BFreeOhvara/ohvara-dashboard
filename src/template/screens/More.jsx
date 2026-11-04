@@ -5,6 +5,7 @@ import { useTheme } from '../../hooks/useTheme'
 import { useSampleBilling } from '../data'
 import { Avatar, Money, SampleTag, useNote, useAccount } from '../kit'
 import { paths, isTemplateAddress } from '../paths'
+import { PLAN, planRange, rangeText } from '../../lib/planPricing'
 
 // The phone's fifth tab: profile, a Billing card, then the pages that have no tab of their own.
 export default function More() {
@@ -18,10 +19,11 @@ export default function More() {
   if (isTemplateAddress()) rows.push([paths.signup, 'Sign-up preview', ShieldCheck], [paths.welcome, 'Welcome preview', Home])
   return (
     <div className="tp-page">
-      <section className="ov-card tp-card"><div className="tp-row"><Avatar name={account.name} tone="blue" /><div className="tp-grow"><b>{account.name}</b><p className="tp-sub">Agent · Servicing {b.plan.size}</p></div></div></section>
+      <section className="ov-card tp-card"><div className="tp-row"><Avatar name={account.name} tone="blue" /><div className="tp-grow"><b>{account.name}</b><p className="tp-sub">Agent · weekly budget and servicing</p></div></div></section>
       <Link to={paths.billing()} className="ov-card ov-link tp-card tp-stack">
         <div className="tp-row"><CreditCard size={18} /><b className="tp-grow">Billing</b><SampleTag /></div>
-        <div className="tp-row tp-between"><span><Money v={b.plan.weekly} size="lg" /> <span className="tp-sub">/ week</span></span><span className="tp-sub">{b.submissions.used} of {b.submissions.cap} used</span></div>
+        <div className="tp-row tp-between"><span><Money v={b.budget.weekly} size="lg" cents={false} /> <span className="tp-sub">/ week</span></span><span className="tp-sub">{b.booked} booked · range {rangeText(planRange(b.budget.weekly, b.budget.mode).week)}</span></div>
+        <span className="tp-sub">Policy servicing <Money v={PLAN.servicingMonthly} cents={false} /> / month</span>
         <span className="tp-sub">Next charge {b.next_charge}</span>
       </Link>
       <section className="ov-card tp-card"><ul className="tp-list">
