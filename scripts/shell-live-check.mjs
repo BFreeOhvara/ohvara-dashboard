@@ -95,13 +95,13 @@ for (const theme of ['light', 'dark']) {
   }
 }
 
-// Admin and Fulfillment: today's screens, no shell anywhere.
+// Admin and Fulfillment: never the AGENT shell. P837: Fulfillment gets its own shell (.fs, scripts/ful-shell-837.mjs).
 for (const [role, urls] of [['admin', ['/admin', '/settings', '/messages', '/agent/leads']], ['fulfill', ['/fulfillment', '/settings', '/messages', '/agent']]]) {
   const { ctx, page, errors } = await signIn(role)
   for (const url of urls) {
     await page.goto(`${BASE}${url}`, { waitUntil: 'networkidle' })
     await page.waitForTimeout(800)
-    const shell = await page.evaluate(() => !!document.querySelector('.tp-app'))
+    const shell = await page.evaluate(() => !!document.querySelector('.tp-app:not(.fs)'))
     const path = await page.evaluate(() => location.pathname)
     if (SHOTS) await page.screenshot({ path: join(OUT, `role-${role}${url.replace(/\//g, '-')}-1440-dark.png`) })
     if (shell) fail(`${role} ${url}`, 'shows the agent shell')

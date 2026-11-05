@@ -1,0 +1,129 @@
+/* P837 — the Fulfillment shell (.fs on the .fx frame). Shell tokens only: every shade is a color-mix over a token.
+   New pieces (Today, Servicing) plus the few rules today's Fulfillment pages need to sit in the new frame. */
+
+.fs .fs-phone-only { display: none; }
+@media (max-width: 767.98px) { .fs-phone-only, .fx-menu .fs-phone-only { display: flex; } }
+@media (min-width: 768px) { .fx-menu .fs-phone-only { display: none; } }
+
+/* Coral = live / danger only */
+.tp .is-coral { --cf: var(--sh-cf-coral, var(--sh-f-coral)); --ci: var(--sh-ci); --cb: var(--sh-f-coral); --cbi: var(--sh-fi-coral); }
+
+.fs-link { padding: 0; border: 0; background: none; color: var(--ov-hi); font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.fs-note-line { display: flex; align-items: center; gap: 6px; font-size: 12px; line-height: 1.45; color: var(--ov-mute); }
+.fs-err { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 12px; font-size: 13px; font-weight: 500; color: var(--sh-fi-coral); background: var(--sh-f-coral); }
+.fs-danger { color: var(--ov-hi); }
+.fs-danger:hover { background: color-mix(in srgb, var(--sh-coral) 22%, transparent); }
+
+/* ── Today ─────────────────────────────────────────────────────────────────────────────────────────────── */
+.fs-today { grid-template-rows: auto auto; }
+.fs-today .fx-ovl-next { min-height: 248px; }
+.fs-count { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.fs-today .fx-ovl-next .fx-huge { font-size: 56px; display: inline-flex; align-items: baseline; gap: 2px; }
+.fs-today .fx-ovl-next .fx-huge svg { align-self: center; margin-right: 6px; }
+.fs-today .fx-ovl-next .fx-delta { height: 24px; padding: 0 10px; font-size: 12.5px; }
+.fs-today .fx-ovl-next .fx-next-who { display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border-radius: 999px; }
+.fs-today .fx-ovl-next .fx-next-who b { display: block; font-size: 14px; }
+.fs-today .fx-ovl-next .fx-next-who small { display: block; font-size: 12px; }
+
+.fs-rows { display: flex; flex-direction: column; gap: 2px; margin: -4px -8px 0; }
+.fs-row { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 12px; color: var(--ov-hi); }
+.fs-row:hover { background: color-mix(in srgb, var(--ov-hi) 7%, transparent); }
+.fs-row b { display: block; font-size: 13.5px; font-weight: 600; }
+.fs-row small { display: block; font-size: 12px; color: var(--ov-mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fs-row .tp-grow { min-width: 0; }
+.fs-row-t { width: 64px; flex: none; font-family: var(--font-display); font-size: 15px; font-weight: 600; }
+.fs-row-t small { display: inline; margin-left: 3px; font-family: var(--font-ui); font-size: 11px; font-weight: 500; }
+.fs-row.is-done { color: var(--ov-mid); }
+.fs-row.is-done b { color: var(--ov-mid); }
+.fs-row.is-done > svg { color: var(--sh-sage); }
+.fs-more { justify-content: center; font-size: 12.5px; font-weight: 600; color: var(--ov-mid); }
+
+.fs-qstats, .fs-sstats { margin-top: 0; }
+.fs-sstats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.fs-queue .fs-note-line { color: var(--ov-mid); }
+.fs-queue .fx-next-acts { margin-top: auto; }
+
+.fs-strip { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 14px; }
+.fs-paywrap { display: flex; flex-direction: column; gap: 12px; }
+.fs-paybits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.fs-paybits li { display: flex; flex-direction: column; gap: 1px; }
+.fs-paybits b { font-family: var(--font-display); font-size: 19px; font-weight: 600; }
+.fs-paybits small { font-size: 12px; color: var(--ov-mid); }
+
+/* Notifications in the bell drawer */
+.fs-note { width: 100%; text-align: left; }
+.fs-note small { display: block; }
+.fs-note.is-new b::after { content: ''; display: inline-block; width: 7px; height: 7px; margin-left: 7px; border-radius: 50%; background: var(--sh-acc); vertical-align: middle; }
+.fs-shift { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 14px; background: color-mix(in srgb, var(--ov-hi) 6%, transparent); }
+.fs-shift b { display: block; font-size: 14.5px; }
+.fs-shift small { display: block; font-size: 12px; color: var(--ov-mute); }
+
+/* ── Servicing ─────────────────────────────────────────────────────────────────────────────────────────── */
+.fs-serv-page { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.fs-deskcol { position: sticky; top: 92px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.fs-sgroup { display: flex; flex-direction: column; gap: 6px; }
+.fs-sgroup .fx-h3 { display: flex; align-items: center; gap: 8px; margin: 0; }
+.fs-slist { display: flex; flex-direction: column; gap: 6px; }
+.fs-empty { font-size: 12.5px; color: var(--ov-mute); padding: 2px 0 4px; }
+.fs-srow { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--fx-edge); background: color-mix(in srgb, var(--ov-hi) 3%, transparent); }
+.fs-srow b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ov-hi); }
+.fs-srow small { display: block; font-size: 12px; color: var(--ov-mute); }
+.fs-srow .tp-grow { min-width: 0; }
+.fs-srow .tp-grow small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fs-srow-dot { width: 9px; height: 9px; flex: none; border-radius: 50%; background: var(--cb, var(--ov-mute)); }
+.fs-srow-r { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; text-align: right; }
+.fs-srow-r .is-late { color: var(--ov-hi); font-weight: 600; }
+.fx-pillbtn.sm { height: 28px; padding: 0 12px; font-size: 12px; }
+.fx-pillbtn:disabled, .tp-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+.fs-pick { align-items: flex-start; }
+.fs-desk .fx-tile-h { align-items: center; }
+.fs-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 14px; padding: 12px; border-radius: 14px; background: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
+.fs-facts dt { font-size: 11.5px; font-weight: 500; color: var(--ov-mute); }
+.fs-facts dd { margin: 2px 0 0; font-size: 13.5px; font-weight: 600; color: var(--ov-hi); overflow-wrap: anywhere; }
+.fs-facts a { color: var(--ov-hi); text-decoration: underline; text-underline-offset: 3px; }
+.fs-quote { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; font-size: 13px; line-height: 1.45; color: var(--ov-mid); border: 1px solid var(--fx-edge); }
+.fs-quote svg { flex: none; margin-top: 2px; }
+.fs-quote.is-reply { color: var(--ov-hi); background: color-mix(in srgb, var(--sh-sky) 12%, transparent); }
+.fs-sub { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 14px; border: 1px solid var(--fx-edge); }
+.fs-acts { gap: 8px; }
+
+@media (max-width: 999.98px) {
+  .fs-strip { grid-template-columns: minmax(0, 1fr); }
+  .fs-serv-page { grid-template-columns: minmax(0, 1fr); }
+  .fs-serv-page.is-held .fs-deskcol { order: -1; }
+  .fs-deskcol { position: static; }
+}
+@media (max-width: 760px) {
+  .fs-today .fs-strip { order: 4; }
+  .fs-today .fx-ovl-next .fx-huge { font-size: 46px; }
+  .fs-sstats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fs-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ── Today's pages inside the frame ───────────────────────────────────────────────────────────────────── */
+.fs .fs-main { min-width: 0; }
+.fs .fs-main > * { min-width: 0; }
+
+/* Today's hero panels (Calls day header, Pay, Clients search, the Settings profile card) were drawn for a dark
+   panel and keep light ink. In the shell's light mode they become the deep panel (the agent Overview's light Needs
+   you), so that ink reads; dark mode keeps the shell's hero surface. */
+[data-theme="light"] .fs .ov-hero {
+  --tp-white: var(--sh-deep-ink); --ov-hi: var(--sh-deep-ink); --ov-mid: color-mix(in srgb, var(--sh-deep-ink) 84%, transparent);
+  --ov-soft: var(--ov-mid); --ov-mute: color-mix(in srgb, var(--sh-deep-ink) 72%, transparent);
+  --ov-hero-soft: color-mix(in srgb, var(--sh-deep-ink) 76%, transparent);
+  color: var(--sh-deep-ink); background: var(--sh-deep-panel); border-color: color-mix(in srgb, var(--sh-deep-ink) 12%, transparent);
+}
+
+/* Phone: the old phone pages' own top row (chip, bell, avatar) and page headings repeat the shell's header and title */
+.fs .ph-top { display: none; }
+.fs .ph-h1:not([style]) { display: none; }
+
+/* Clients (today's Pipeline page): its fit mode assumed the old layout's fixed-height wrapper (.ov-fit). In the shell
+   the page scrolls like every other page, so its boxes take their own height and the list keeps a minimum. */
+@media (min-width: 1280px) and (min-height: 900px) {
+  .fs .pl-page { flex: none; grid-template-rows: auto; align-items: start; }
+  .fs .pl-rail { grid-template-rows: auto; grid-auto-rows: auto; }
+  .fs .pl-list { min-height: 420px; }
+  .fs .pl-body { max-height: calc(100vh - 320px); }
+}

@@ -18,7 +18,9 @@ function Mark({ text, q }) {
   return <>{text.slice(0, i)}<mark>{text.slice(i, i + q.length)}</mark>{text.slice(i + q.length)}</>
 }
 
-export default function Palette({ onClose, pages }) {
+// `rows` (optional): { clients, leads, policies } already shaped as palette rows, for a shell with real data
+// (the Fulfillment shell, src/fulshell). Without it the sample clients and leads are searched.
+export default function Palette({ onClose, pages, rows: given = null, placeholder = 'Search clients, leads, policies, pages' }) {
   const [q, setQ] = useState('')
   const [at, setAt] = useState(0)
   const navigate = useNavigate()
@@ -29,7 +31,7 @@ export default function Palette({ onClose, pages }) {
 
   const n = q.trim().toLowerCase()
   const groups = useMemo(() => {
-    const all = {
+    const all = given ? { clients: [], leads: [], policies: [], ...given, pages: pages.map(p => ({ id: `g-${p.label}`, name: p.label, sub: 'Page', hay: p.label, go: p.to })) } : {
       clients: clients.map(c => ({ id: `c-${c.id}`, name: `${c.client_first_name} ${c.client_last_name}`, sub: `${stageLabel[c.stage][1]} · ${c.client_phone}`, hay: `${c.client_first_name} ${c.client_last_name} ${c.client_phone} ${c.city}`, go: () => paths.client(c.id) })),
       leads: leads.map(l => ({ id: `l-${l.id}`, name: `${l.first_name} ${l.last_name}`, sub: `${stageChip(l.stage)[1]} · ${l.city}, ${l.state}`, hay: `${l.first_name} ${l.last_name} ${l.phone} ${l.city}`, go: () => paths.lead(l.id) })),
       policies: clients.map(c => ({ id: `p-${c.id}`, name: c.policy_number, sub: `${c.carrier_name} · ${c.client_first_name} ${c.client_last_name}`, hay: `${c.policy_number} ${c.carrier_name} ${c.client_last_name}`, go: () => paths.client(c.id) })),
@@ -42,7 +44,7 @@ export default function Palette({ onClose, pages }) {
       const start = out.reduce((c, x) => c + x.rows.length, 0)
       return [...out, { ...g, rows: g.rows.map((r, i) => ({ ...r, n: start + i })) }]
     }, [])
-  }, [clients, leads, pages, n])
+  }, [clients, leads, pages, n, given])
   const flat = groups.flatMap(g => g.rows)
 
   useEffect(() => { input.current?.focus() }, [])
@@ -61,7 +63,7 @@ export default function Palette({ onClose, pages }) {
       <section className="fx-pal" role="dialog" aria-modal="true" aria-label="Search">
         <label className="fx-pal-in">
           <Search size={18} aria-hidden="true" />
-          <input ref={input} value={q} onChange={e => { setQ(e.target.value); setAt(0) }} placeholder="Search clients, leads, policies, pages" aria-label="Search" role="combobox" aria-expanded="true" aria-controls="fx-pal-list" aria-activedescendant={flat[at] ? `fx-r-${flat[at].id}` : undefined} />
+          <input ref={input} value={q} onChange={e => { setQ(e.target.value); setAt(0) }} placeholder={placeholder} aria-label="Search" role="combobox" aria-expanded="true" aria-controls="fx-pal-list" aria-activedescendant={flat[at] ? `fx-r-${flat[at].id}` : undefined} />
           <button type="button" className="fx-kbd" onClick={onClose}>esc</button>
         </label>
         <div className="fx-pal-list" id="fx-pal-list" role="listbox" ref={list}>
