@@ -514,8 +514,8 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 
 /* Tones: --c is the hue as a mark/text colour, --cf the fill, --ci the dark ink that sits on the fill */
 .tp .is-blue { --cf: var(--sh-f-sky); --ci: var(--sh-fi-sky); }
-.tp .is-warn { --cf: var(--sh-f-apricot); --ci: var(--sh-fi-apricot); }
-.tp .is-teal { --cf: var(--sh-f-mint); --ci: var(--sh-fi-mint); }
+.tp .is-warn { --cf: var(--sh-f-rose); --ci: var(--sh-fi-rose); }
+.tp .is-teal { --cf: var(--sh-f-lilac); --ci: var(--sh-fi-lilac); }
 .tp .is-green, .tp .is-up { --cf: var(--sh-f-sage); --ci: var(--sh-fi-sage); }
 .tp .is-mute { --cf: var(--sh-f-stone); --ci: var(--sh-fi-stone); }
 .tp .is-violet { --cf: var(--sh-f-lilac); --ci: var(--sh-fi-lilac); }
@@ -542,7 +542,7 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 .fx-ib, .fx .fx-me { width: 40px; height: 40px; }
 .fx-ib { color: var(--ov-hi); }
 .fx .fx-me { font-weight: 600; color: var(--sh-on-accent); background: var(--sh-acc); }
-.fx-badge, .fx-tb { background: var(--sh-f-apricot); color: var(--sh-fi-apricot); }
+.fx-badge, .fx-tb { background: var(--sh-f-rose); color: var(--sh-fi-rose); }
 
 /* Accent surfaces: the accent fill with its own dark ink */
 .fx .fx-accent, .fx-layer .fx-accent, .tp-layer .fx-accent, .fx .fx-plus, .fx .fx-plus:hover, .fx-chip.is-on, .fx-step.is-on, .fx-pal-r.is-at .fx-pal-ic, .fx-bplus {
@@ -568,7 +568,7 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 }
 .fx-card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 18px 30px -24px rgba(0, 0, 0, .6); }
 .fx-week .tp-ev { --cf: var(--sh-f-sky); --ci: var(--sh-fi-sky); }
-.fx-week .tp-ev.client { --cf: var(--sh-f-mint); --ci: var(--sh-fi-mint); }
+.fx-week .tp-ev.client { --cf: var(--sh-f-lilac); --ci: var(--sh-fi-lilac); }
 .fx-layer .fx-hero-card, [data-theme="light"] .fx-layer .fx-hero-card { background: var(--cf); }
 .fx-tag, .fx-card .fx-tag { color: var(--ci); background: color-mix(in srgb, var(--ci) 14%, transparent); font-weight: 600; }
 .fx-card .tp-av, .fx-hero-card .tp-av { color: var(--ci); background: color-mix(in srgb, var(--ci) 14%, transparent); }
@@ -706,13 +706,13 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 
 /* Tones: --cf card fill per theme, --ci its ink, --cs/--csi a status button's selected fill and ink */
 .tp .is-blue { --cf: var(--sh-cf-sky); --ci: var(--sh-ci); --cs: var(--sh-cs-sky); --csi: var(--sh-csi-sky); }
-.tp .is-warn { --cf: var(--sh-cf-apricot); --ci: var(--sh-ci); --cs: var(--sh-cs-apricot); --csi: var(--sh-csi-apricot); }
-.tp .is-teal { --cf: var(--sh-cf-mint); --ci: var(--sh-ci); --cs: var(--sh-cs-mint); --csi: var(--sh-csi-mint); }
+.tp .is-warn { --cf: var(--sh-cf-rose); --ci: var(--sh-ci); --cs: var(--sh-cs-rose); --csi: var(--sh-csi-rose); }
+.tp .is-teal { --cf: var(--sh-cf-lilac); --ci: var(--sh-ci); --cs: var(--sh-cs-lilac); --csi: var(--sh-csi-lilac); }
 .tp .is-green, .tp .is-up { --cf: var(--sh-cf-sage); --ci: var(--sh-ci); --cs: var(--sh-cs-sage); --csi: var(--sh-csi-sage); }
 .tp .is-mute { --cf: var(--sh-cf-stone); --ci: var(--sh-ci); --cs: var(--sh-cs-stone); --csi: var(--sh-csi-stone); }
 .tp .is-violet { --cf: var(--sh-cf-lilac); --ci: var(--sh-ci); }
 .fx-week .tp-ev { --cf: var(--sh-cf-sky); --ci: var(--sh-ci); }
-.fx-week .tp-ev.client { --cf: var(--sh-cf-mint); --ci: var(--sh-ci); }
+.fx-week .tp-ev.client { --cf: var(--sh-cf-lilac); --ci: var(--sh-ci); }
 
 /* Stage cards and chips. Dark: muted tint, off-white ink, faint light edge + inner top highlight.
    Light: firmer tint, dark ink, no outline. */
@@ -863,3 +863,62 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 .pb-svc .tp-grow { flex: 1 1 220px; }
 @media (max-width: 560px) { .pb-row { font-size: 13.5px; } .pb-sum { padding: 16px; } }
 .tp-solo .tp-seg > .on { background: var(--sh-sel); color: var(--sh-on-sel); }
+
+/* P836 ----------------------------------------------------------------------------------------------------------
+   One accent: warm apricot (src/index.css "Prompt 836"). It marks the active top-bar tab, the primary action, the
+   + buttons, Accept, focus rings, switches, sliders and progress, and nothing else: "needs you" is rose now and the
+   old mint stage is lilac. Overview gets Solvik's colour: the budget tile washed with the accent, solid status
+   chips and delta, chunky stage blocks in the same fills the Leads cards use. Selected rows/segments stay neutral. */
+
+/* Every accent fill: apricot with near-black ink; darker on hover */
+.fx .fx-tab.is-on, [data-theme="light"] .fx .fx-tab.is-on { --sp-fill: var(--sh-acc); color: var(--sh-on-accent); background: var(--sh-acc); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .32), 0 8px 18px -12px var(--sh-acc); }
+.fx .fx-tab.is-on .fx-tb { box-shadow: 0 0 0 2px var(--sh-acc); }
+.fx .fx-accent, .fx-layer .fx-accent, .tp-layer .fx-accent, .fx .fx-plus, .fx-bplus, .tp .tp-plus, .tp .tp-bplus, .tp .fx-logo, .tp-solo .tp-primary {
+  color: var(--sh-on-accent); background: var(--sh-acc); border-color: transparent;
+}
+.fx .fx-plus, .fx-bplus { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .32), 0 8px 18px -12px var(--sh-acc); }
+@media (hover: hover) and (pointer: fine) {
+  .fx .fx-accent:hover, .fx-layer .fx-accent:hover, .tp-layer .fx-accent:hover, .fx .fx-plus:hover, .fx-bplus:hover, .tp-solo .tp-primary:hover { background: var(--sh-acc-hover); filter: none; }
+}
+
+/* Focus rings, switches, sliders, progress */
+.tp :focus-visible { outline-color: var(--sh-acc-line); }
+.tp .tp-switch.on { background: var(--sh-acc); }
+.tp .tp-switch.on span { box-shadow: 0 1px 3px rgba(0, 0, 0, .3); }
+.pb-range { --pb-fill: var(--sh-acc-line); }
+.pb-range::-webkit-slider-thumb { background: var(--sh-acc); box-shadow: 0 1px 4px rgba(0, 0, 0, .3), 0 0 0 6px color-mix(in srgb, var(--sh-acc) 24%, transparent); }
+.pb-range::-moz-range-thumb { background: var(--sh-acc); box-shadow: 0 1px 4px rgba(0, 0, 0, .3), 0 0 0 6px color-mix(in srgb, var(--sh-acc) 24%, transparent); }
+.pb-range:hover::-webkit-slider-thumb, .pb-range:active::-webkit-slider-thumb { box-shadow: 0 1px 4px rgba(0, 0, 0, .3), 0 0 0 9px color-mix(in srgb, var(--sh-acc) 30%, transparent); }
+.pb-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--sh-acc-line), 0 0 0 7px color-mix(in srgb, var(--sh-acc) 30%, transparent); }
+.pb-range:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(--sh-acc-line), 0 0 0 7px color-mix(in srgb, var(--sh-acc) 30%, transparent); }
+.pb-meter { --c: var(--sh-acc-line); }
+.fx-ring-arc { stroke: var(--sh-acc-line); }
+
+/* Tones: lilac has a selected state now; --cb is a stage's confident fill (the colour of its cards on Leads) */
+.tp .is-violet { --cs: var(--sh-cs-lilac); --csi: var(--sh-csi-lilac); }
+.tp .is-blue { --cb: var(--sh-f-sky); } .tp .is-warn { --cb: var(--sh-f-rose); } .tp :is(.is-teal, .is-violet) { --cb: var(--sh-f-lilac); }
+.tp :is(.is-green, .is-up) { --cb: var(--sh-f-sage); } .tp .is-mute { --cb: var(--sh-f-stone); }
+
+/* Overview colour: the budget tile washed with the accent, solid chips and delta, chunky stage blocks */
+.fx-tile.is-acc { background: linear-gradient(var(--sh-acc-wash), var(--sh-acc-wash)), var(--fx-fill); border-color: color-mix(in srgb, var(--sh-acc) 32%, transparent); }
+.fx-tile.is-acc .fx-accent { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .32), 0 0 0 1px color-mix(in srgb, var(--sh-acc-line) 40%, transparent), 0 10px 22px -14px var(--sh-acc-hover); }
+.fx-tile.is-acc .pb-meter { background: color-mix(in srgb, var(--ov-hi) 12%, transparent); }
+.fx.is-overview .tp-chip:is(.is-blue, .is-teal, .is-warn, .is-green, .is-mute, .is-violet), .fx.is-overview .fx-delta:is(.is-up, .is-blue, .is-warn, .is-teal) {
+  color: var(--csi); background: var(--cs); box-shadow: none;
+}
+.fx-ov .fx-stack { height: 22px; gap: 6px; }
+.fx-ov .fx-stack i { min-width: 10px; border-radius: 8px; background: var(--cb); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22); }
+.fx-ov .fx-legend i { width: 10px; height: 10px; background: var(--cb); }
+
+/* The mark top left: larger, with the wordmark centred on it (same text size) */
+.fx-top .fx-brand { align-items: center; gap: 11px; }
+.fx-top .fx-brand b { line-height: 1; position: relative; top: -1px; }
+
+/* The Welcome / Sign-up hero (the old global navy+teal .ov-hero): the shell surface washed with the accent */
+.tp .ov-hero, [data-theme="light"] .tp .ov-hero {
+  --tp-white: var(--ov-hi); --ov-hero-soft: var(--ov-mid); color: var(--ov-hi);
+  background: linear-gradient(var(--sh-acc-wash), var(--sh-acc-wash)), var(--sh-surface);
+  border: 1px solid color-mix(in srgb, var(--sh-acc) 32%, transparent);
+  box-shadow: inset 0 1px 0 var(--sh-hl), 0 24px 48px -30px rgba(0, 0, 0, .45);
+}
+[data-theme="light"] .tp .ov-card { border-color: var(--sh-edge); box-shadow: inset 0 1px 0 var(--sh-hl), 0 1px 2px rgba(0, 0, 0, .05), 0 24px 48px -28px rgba(0, 0, 0, .22); }

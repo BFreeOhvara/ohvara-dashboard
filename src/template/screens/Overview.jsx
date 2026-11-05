@@ -90,7 +90,7 @@ export default function Overview() {
         </ul>
       </section>
 
-      <Tile className="fx-s5" i={1} title="This week's budget" sub={`${m.label} · next charge ${bill.next_charge}`} to={paths.billing()} label="Open Billing">
+      <Tile className="fx-s5 is-acc" i={1} title="This week's budget" sub={`${m.label} · next charge ${bill.next_charge}`} to={paths.billing()} label="Open Billing">
         <div className="tp-row tp-wrap"><b className="tp-money fx-huge2"><CountUp value={bill.budget.weekly} format={usd()} /></b><span className="tp-sub">a week</span></div>
         <div className="pb-booked">
           <span className="tp-row tp-between"><span><small>Booked this week</small><b className="tp-num"><CountUp value={bill.booked} /></b></span><small>range {rangeText(wk)}</small></span>

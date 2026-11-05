@@ -1,0 +1,366 @@
+{
+ "mint": [],
+ "apricot": {
+  "dark/1920/overview": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "fx-tile fx-s5 is-acc:borderTopColor",
+   "fx-tile fx-s5 is-acc:backgroundImage",
+   "EM:backgroundColor",
+   "I:backgroundColor",
+   "tp-primary fx-accent fx-self:backgroundColor",
+   "tp-primary fx-accent fx-self:boxShadow"
+  ],
+  "dark/1920/leads": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-tb:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "tp-primary sm fx-accent fx-over:backgroundColor",
+   "tp-primary sm fx-accent fx-over:boxShadow"
+  ],
+  "dark/1920/billing": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "EM:backgroundColor",
+   "I:backgroundColor",
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow"
+  ],
+  "dark/1440/overview": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "fx-tile fx-s5 is-acc:borderTopColor",
+   "fx-tile fx-s5 is-acc:backgroundImage",
+   "EM:backgroundColor",
+   "I:backgroundColor",
+   "tp-primary fx-accent fx-self:backgroundColor",
+   "tp-primary fx-accent fx-self:boxShadow"
+  ],
+  "dark/1440/leads": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-tb:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "tp-primary sm fx-accent fx-over:backgroundColor",
+   "tp-primary sm fx-accent fx-over:boxShadow"
+  ],
+  "dark/1440/clients": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow"
+  ],
+  "dark/1440/calendar": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow"
+  ],
+  "dark/1440/activity": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow"
+  ],
+  "dark/1440/billing": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "EM:backgroundColor",
+   "I:backgroundColor",
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow"
+  ],
+  "dark/1440/settings": [
+   "path:fill",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow"
+  ],
+  "dark/1440/messages": [
+   "path:fill",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow"
+  ],
+  "dark/1440/submit": [
+   "path:fill",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow"
+  ],
+  "dark/1440/more": [
+   "path:fill",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow"
+  ],
+  "dark/1440/welcome": [
+   "ov-hero tp-hero:borderTopColor",
+   "ov-hero tp-hero:backgroundImage",
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow"
+  ],
+  "dark/1440/signup": [
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow"
+  ],
+  "dark/390/overview": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-tile fx-s5 is-acc:borderTopColor",
+   "fx-tile fx-s5 is-acc:backgroundImage",
+   "EM:backgroundColor",
+   "I:backgroundColor",
+   "tp-primary fx-accent fx-self:backgroundColor",
+   "tp-primary fx-accent fx-self:boxShadow",
+   "fx-bplus:backgroundColor",
+   "fx-bplus:boxShadow"
+  ],
+  "dark/390/leads": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-tb:boxShadow",
+   "tp-primary sm fx-accent fx-over:backgroundColor",
+   "tp-primary sm fx-accent fx-over:boxShadow",
+   "fx-bplus:backgroundColor",
+   "fx-bplus:boxShadow"
+  ],
+  "dark/390/billing": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "EM:backgroundColor",
+   "I:backgroundColor",
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow",
+   "fx-bplus:backgroundColor",
+   "fx-bplus:boxShadow"
+  ],
+  "light/1920/overview": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "fx-tile fx-s5 is-acc:borderTopColor",
+   "fx-tile fx-s5 is-acc:backgroundImage",
+   "EM:backgroundColor",
+   "I:backgroundColor",
+   "tp-primary fx-accent fx-self:backgroundColor",
+   "tp-primary fx-accent fx-self:boxShadow"
+  ],
+  "light/1920/leads": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-tb:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "tp-primary sm fx-accent fx-over:backgroundColor",
+   "tp-primary sm fx-accent fx-over:boxShadow"
+  ],
+  "light/1920/billing": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "EM:backgroundColor",
+   "I:backgroundColor",
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow"
+  ],
+  "light/1440/overview": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "fx-tile fx-s5 is-acc:borderTopColor",
+   "fx-tile fx-s5 is-acc:backgroundImage",
+   "EM:backgroundColor",
+   "I:backgroundColor",
+   "tp-primary fx-accent fx-self:backgroundColor",
+   "tp-primary fx-accent fx-self:boxShadow"
+  ],
+  "light/1440/leads": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-tb:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "tp-primary sm fx-accent fx-over:backgroundColor",
+   "tp-primary sm fx-accent fx-over:boxShadow"
+  ],
+  "light/1440/clients": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow"
+  ],
+  "light/1440/calendar": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow"
+  ],
+  "light/1440/activity": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow"
+  ],
+  "light/1440/billing": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "EM:backgroundColor",
+   "I:backgroundColor",
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow"
+  ],
+  "light/1440/settings": [
+   "path:fill",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow"
+  ],
+  "light/1440/messages": [
+   "path:fill",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow"
+  ],
+  "light/1440/submit": [
+   "path:fill",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow",
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow"
+  ],
+  "light/1440/more": [
+   "path:fill",
+   "fx-ri fx-plus tp-wig:backgroundColor",
+   "fx-ri fx-plus tp-wig:boxShadow"
+  ],
+  "light/1440/welcome": [
+   "ov-hero tp-hero:borderTopColor",
+   "ov-hero tp-hero:backgroundImage",
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow"
+  ],
+  "light/1440/signup": [
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow"
+  ],
+  "light/390/overview": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-tile fx-s5 is-acc:borderTopColor",
+   "fx-tile fx-s5 is-acc:backgroundImage",
+   "EM:backgroundColor",
+   "I:backgroundColor",
+   "tp-primary fx-accent fx-self:backgroundColor",
+   "tp-primary fx-accent fx-self:boxShadow",
+   "fx-bplus:backgroundColor",
+   "fx-bplus:boxShadow"
+  ],
+  "light/390/leads": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "fx-tb:boxShadow",
+   "tp-primary sm fx-accent fx-over:backgroundColor",
+   "tp-primary sm fx-accent fx-over:boxShadow",
+   "fx-bplus:backgroundColor",
+   "fx-bplus:boxShadow"
+  ],
+  "light/390/billing": [
+   "path:fill",
+   "tp-tab fx-tab is-on:backgroundColor",
+   "tp-tab fx-tab is-on:boxShadow",
+   "EM:backgroundColor",
+   "I:backgroundColor",
+   "tp-primary fx-accent:backgroundColor",
+   "tp-primary fx-accent:boxShadow",
+   "fx-bplus:backgroundColor",
+   "fx-bplus:boxShadow"
+  ]
+ },
+ "errs": [],
+ "overflow": {
+  "dark/1920/overview": -15,
+  "dark/1920/leads": -15,
+  "dark/1920/billing": -15,
+  "dark/1440/overview": -15,
+  "dark/1440/leads": -15,
+  "dark/1440/clients": -15,
+  "dark/1440/calendar": -15,
+  "dark/1440/activity": -15,
+  "dark/1440/billing": -15,
+  "dark/1440/settings": -15,
+  "dark/1440/messages": -15,
+  "dark/1440/submit": -15,
+  "dark/1440/more": -15,
+  "dark/1440/welcome": -15,
+  "dark/1440/signup": -15,
+  "dark/390/overview": -15,
+  "dark/390/leads": -15,
+  "dark/390/billing": -15,
+  "light/1920/overview": -15,
+  "light/1920/leads": -15,
+  "light/1920/billing": -15,
+  "light/1440/overview": -15,
+  "light/1440/leads": -15,
+  "light/1440/clients": -15,
+  "light/1440/calendar": -15,
+  "light/1440/activity": -15,
+  "light/1440/billing": -15,
+  "light/1440/settings": -15,
+  "light/1440/messages": -15,
+  "light/1440/submit": -15,
+  "light/1440/more": -15,
+  "light/1440/welcome": -15,
+  "light/1440/signup": -15,
+  "light/390/overview": -15,
+  "light/390/leads": -15,
+  "light/390/billing": -15
+ }
+}

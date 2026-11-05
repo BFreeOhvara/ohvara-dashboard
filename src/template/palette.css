@@ -28,8 +28,8 @@ html .tp {
   --ov-on-kind: var(--sh-fi-sky);
   --bg-base: var(--sh-deep);
   --bg-surface: var(--sh-surface);
-  --bg-sidebar: color-mix(in srgb, var(--sh-mint) 20%, var(--sh-base));
-  --accent: var(--sh-mint);
+  --bg-sidebar: var(--sh-acc-hover);
+  --accent: var(--sh-acc-line);
   --danger: var(--sh-coral);
   --ov-live: var(--sh-coral);
 
@@ -37,20 +37,20 @@ html .tp {
   --ov-data-a-tint: color-mix(in srgb, var(--sh-sky) var(--sh-tint), transparent);
   --ov-data-a-bar: linear-gradient(180deg, var(--sh-sky), color-mix(in srgb, var(--sh-sky) 70%, var(--sh-base)));
   --ov-data-a-key: var(--sh-sky);
-  --ov-data-b: var(--sh-mint);
-  --ov-data-b-tint: color-mix(in srgb, var(--sh-mint) var(--sh-tint), transparent);
-  --ov-data-b-bar: linear-gradient(180deg, var(--sh-mint), color-mix(in srgb, var(--sh-mint) 70%, var(--sh-base)));
-  --ov-data-b-key: var(--sh-mint);
+  --ov-data-b: var(--sh-lilac);
+  --ov-data-b-tint: color-mix(in srgb, var(--sh-lilac) var(--sh-tint), transparent);
+  --ov-data-b-bar: linear-gradient(180deg, var(--sh-lilac), color-mix(in srgb, var(--sh-lilac) 70%, var(--sh-base)));
+  --ov-data-b-key: var(--sh-lilac);
   --ov-up: var(--sh-sage);
   --ov-up-tint: color-mix(in srgb, var(--sh-sage) var(--sh-tint), transparent);
-  --ov-warn: var(--sh-apricot);
-  --ov-warn-tint: color-mix(in srgb, var(--sh-apricot) var(--sh-tint), transparent);
-  --ov-badge-bg: var(--sh-f-apricot);
-  --ov-badge-fg: var(--sh-fi-apricot);
+  --ov-warn: var(--sh-rose);
+  --ov-warn-tint: color-mix(in srgb, var(--sh-rose) var(--sh-tint), transparent);
+  --ov-badge-bg: var(--sh-f-rose);
+  --ov-badge-fg: var(--sh-fi-rose);
   --ov-hero-soft: var(--sh-ink-2);
-  --ov-hero-dot: var(--sh-mint);
+  --ov-hero-dot: var(--sh-lilac);
   --ov-hero-btn-text: var(--sh-on-accent);
-  --ov-hero-btn-glow: color-mix(in srgb, var(--sh-mint) 50%, transparent);
+  --ov-hero-btn-glow: color-mix(in srgb, var(--sh-acc) 50%, transparent);
   --nt-purple: var(--sh-lilac);
   --nt-purple-tint: color-mix(in srgb, var(--sh-lilac) var(--sh-tint), transparent);
 
@@ -60,9 +60,9 @@ html .tp {
   --ov-st-noanswer: var(--sh-stone);
   --ov-st-noanswer-tint: color-mix(in srgb, var(--sh-stone) var(--sh-tint), transparent);
   --ov-st-noanswer-edge: color-mix(in srgb, var(--sh-stone) 40%, transparent);
-  --ov-st-needs: var(--sh-apricot);
-  --ov-st-needs-tint: color-mix(in srgb, var(--sh-apricot) var(--sh-tint), transparent);
-  --ov-st-needs-edge: color-mix(in srgb, var(--sh-apricot) 45%, transparent);
+  --ov-st-needs: var(--sh-rose);
+  --ov-st-needs-tint: color-mix(in srgb, var(--sh-rose) var(--sh-tint), transparent);
+  --ov-st-needs-edge: color-mix(in srgb, var(--sh-rose) 45%, transparent);
   --ov-st-cancelled: var(--sh-sage);
   --ov-st-cancelled-tint: color-mix(in srgb, var(--sh-sage) var(--sh-tint), transparent);
   --ov-st-cancelled-edge: color-mix(in srgb, var(--sh-sage) 45%, transparent);
@@ -75,4 +75,4 @@ html .tp {
 :where(.tp) :is(b, strong, th) { font-weight: 600; }
 
 /* The rail is an <aside>; the old sidebar re-points surface/accent inside every aside (index.css). Pin them back. */
-html .tp aside { --bg-surface: var(--sh-surface); --accent: var(--sh-mint); --danger: var(--sh-coral); }
+html .tp aside { --bg-surface: var(--sh-surface); --accent: var(--sh-acc-line); --danger: var(--sh-coral); }

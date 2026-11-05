@@ -337,7 +337,7 @@ export default function TemplateFrame() {
       <div className="tp-sky" aria-hidden="true"><i /><i /><i /></div>
 
       <header className="tp-phone-top fx-ptop">
-        <Link to={paths.home()} className="fx-brand" aria-label="Ohvara home"><OhvaraMark height={28} back="var(--ov-hi)" front="var(--accent)" className="fx-mark" /></Link>
+        <Link to={paths.home()} className="fx-brand" aria-label="Ohvara home"><OhvaraMark height={34} back="var(--ov-hi)" front="var(--accent)" className="fx-mark" /></Link>
         <span className="tp-grow" />
         <Link to={paths.messages()} className="fx-ib tp-wig" aria-label="Messages" {...wig}><MessageSquare size={18} />{unread > 0 && <span className="fx-badge">{unread}</span>}</Link>
         <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} /><span className="fx-badge">3</span></button>
@@ -345,7 +345,7 @@ export default function TemplateFrame() {
       </header>
 
       <header className="tp-top fx-top">
-        <Link to={paths.home()} className="fx-brand" aria-label="Ohvara home"><OhvaraMark height={30} back="var(--ov-hi)" front="var(--accent)" className="fx-mark" /><b>ohvara</b></Link>
+        <Link to={paths.home()} className="fx-brand" aria-label="Ohvara home"><OhvaraMark height={40} back="var(--ov-hi)" front="var(--accent)" className="fx-mark" /><b>ohvara</b></Link>
         <nav className="tp-tabs fx-tabs" ref={tabsRef} aria-label="Pages">
           {TABS.map(t => (
             <Link key={t.key} to={t.to()} className={`tp-tab fx-tab${active === t.key ? ' is-on' : ''}`} aria-current={active === t.key ? 'page' : undefined}>
