@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { X, Check } from 'lucide-react'
 import { useStretchPill } from '../hooks/useStretchPill'
-import { avatarHue } from './avatarHue'
+import { hueFor } from './avatarHue'
+import { useExit } from './motion'
 
 // Small pieces every template screen shares. Drawers, modals and the note are portaled to document.body: the
 // page ease-in wrapper keeps a transform, which would pin position: fixed to the wrapper instead of the window.
@@ -36,21 +37,28 @@ export function NoteProvider({ children }) {
   )
 }
 
-export function Drawer({ open, onClose, title, sub, children, footer, center = false }) {
+export function Drawer({ open, onClose, center = false, title: t, sub: s, children: c, footer: f }) {
+  const [shown, leaving] = useExit(open)
+  // While it plays out it keeps showing what it showed while open (callers often clear that state on close). Kept
+  // with React's "adjust state during render" pattern: it re-renders at once with the same props, so it settles.
+  const [held, setHeld] = useState({ t, s, c, f })
+  if (open && (held.t !== t || held.s !== s || held.c !== c || held.f !== f)) setHeld({ t, s, c, f })
+  const { t: title, s: sub, c: children, f: footer } = open ? { t, s, c, f } : held
   useEffect(() => {
     if (!open) return undefined
     const onKey = e => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
-  if (!open) return null
+  if (!shown) return null
   return createPortal(
-    <div className="tp tp-layer" role="presentation">
-      <button type="button" className="tp-scrim tp-bare" aria-label="Close" onClick={onClose} />
+    <div className={`tp tp-layer${leaving ? ' is-leaving' : ''}`} role="presentation">
+      <button type="button" className="tp-scrim tp-bare" aria-label="Close" tabIndex={leaving ? -1 : undefined} onClick={onClose} />
       <section className={`tp-sheet ov-card${center ? ' is-center' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
         <header className="tp-sheet-h">
           <div className="tp-grow"><h2 className="tp-h2">{title}</h2>{sub && <p className="tp-sub">{sub}</p>}</div>
-          <button type="button" className="tp-icbtn" aria-label="Close" onClick={onClose}><X size={18} /></button>
+          {/* The record drawer's round X: turns a quarter on hover (flow.css .fx-x) */}
+          <button type="button" className="fx-x" aria-label="Close" onClick={onClose}><X size={18} /></button>
         </header>
         <div className="tp-sheet-b">{children}</div>
         {footer && <footer className="tp-sheet-f">{footer}</footer>}
@@ -61,7 +69,8 @@ export function Drawer({ open, onClose, title, sub, children, footer, center = f
 }
 
 export const initials = name => name.split(' ').map(w => w[0]).slice(0, 2).join('')
-export const Avatar = ({ name }) => <span className={`tp-av av-${avatarHue(name)}`} aria-hidden="true">{initials(name)}</span>
+// tone: a lead's or client's current stage tone (P843); without it the person's stable palette colour (P842).
+export const Avatar = ({ name, tone }) => <span className={`tp-av av-${hueFor(name, tone)}${tone ? ' is-status' : ''}`} aria-hidden="true">{initials(name)}</span>
 export const Chip = ({ tone = 'blue', children }) => <span className={`tp-chip is-${tone}`}><i />{children}</span>
 export const SampleTag = ({ children = 'Sample price' }) => <span className="tp-tag">{children}</span>
 export const Money = ({ v, cents = true, size = '' }) => (
@@ -91,15 +100,18 @@ export function PillTabs({ items, value, onChange, label, className = '', itemCl
   const radio = role === 'radiogroup'
   return (
     <div className={className} ref={ref} role={role} aria-label={label}>
-      {/* The selected item is not a button (nothing to do on it), as before P842 */}
-      {items.map(o => (value === o.key ? (
-        <span key={o.key} role={radio ? 'radio' : 'tab'} title={o.title} {...(radio ? { 'aria-checked': true } : { 'aria-selected': true })} className={cls(o)}>{inner(o)}</span>
-      ) : (
-        <button key={o.key} type="button" role={radio ? 'radio' : 'tab'} title={o.title}
-          {...(radio ? { 'aria-checked': false } : { 'aria-selected': false })} className={cls(o)} onClick={() => onChange(o.key)}>
-          {inner(o)}
-        </button>
-      )))}
+      {/* P843: every item stays a <button>, selected or not. Swapping the selected one to a <span> (P842) made React
+          replace the element on every click, so the hook lost the old pill's position and nothing flew. The selected
+          one is disabled: there is nothing to do on it, as with the old span. */}
+      {items.map(o => {
+        const on = value === o.key
+        return (
+          <button key={o.key} type="button" role={radio ? 'radio' : 'tab'} title={o.title}
+            {...(radio ? { 'aria-checked': on } : { 'aria-selected': on })} className={cls(o)} disabled={on} onClick={on ? undefined : () => onChange(o.key)}>
+            {inner(o)}
+          </button>
+        )
+      })}
     </div>
   )
 }

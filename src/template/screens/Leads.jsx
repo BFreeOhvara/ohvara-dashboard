@@ -27,7 +27,7 @@ function LeadCard({ l, i, onAccept }) {
         <span className="fx-big">{shortWhen(l)}</span>
         {l.stage === 'ringing'
           ? <button type="button" className="tp-primary sm fx-accent fx-over" onClick={() => onAccept(l)}><Phone size={14} />Accept</button>
-          : <Avatar name={`${l.first_name} ${l.last_name}`} />}
+          : <Avatar name={`${l.first_name} ${l.last_name}`} tone={tone} />}
       </div>
     </article>
   )
@@ -57,7 +57,7 @@ function LeadDrawer({ id, onClose }) {
         <div className="fx-hero-top"><span className="fx-when"><Clock size={13} aria-hidden="true" />{whenOf(lead)}</span><Chip tone={stageChip(lead.stage)[0]}>{stageChip(lead.stage)[1]}</Chip></div>
         <h2>{name}</h2>
         <p><MapPin size={13} aria-hidden="true" />{lead.city}, {lead.state} · {lead.kind === 'live_call' ? 'Live call' : 'Appointment'}</p>
-        <div className="fx-hero-bot"><b className="fx-hero-big">{lead.mortgage_balance_band.replace(' to ', '–')}</b><Avatar name={name} /></div>
+        <div className="fx-hero-bot"><b className="fx-hero-big">{lead.mortgage_balance_band.replace(' to ', '–')}</b><Avatar name={name} tone={lane.tone} /></div>
       </>}
       stepper={<Stepper label="Move this lead" steps={LEAD_STEPS} current={current} onPick={pick} />}
       actions={<>

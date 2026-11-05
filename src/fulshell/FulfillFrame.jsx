@@ -10,7 +10,7 @@ import { useStretchPill } from '../hooks/useStretchPill'
 import { useNotificationFeed, useMarkRead } from '../hooks/useNotifications'
 import { usePortalPhone } from '../contexts/portalPhone'
 import { Drawer, Avatar, useAccount, useNote, initials } from '../template/kit'
-import { wig, CountUp, RollTitle, usePageSwap, usd } from '../template/motion'
+import { wig, CountUp, RollTitle, usePageSwap, usd, useExit } from '../template/motion'
 import Palette from '../template/Palette'
 import { OhvaraMark } from '../components/ui/OhvaraMark'
 import { isSearchKey } from '../lib/searchKey'
@@ -146,11 +146,12 @@ function AccountMenu({ open, onClose, theme, setTheme, onShift }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
-  if (!open) return null
+  const [shown, leaving] = useExit(open, 200) // P843: plays its way out
+  if (!shown) return null
   // On a phone the bottom bar holds Today, Queue, Call and Servicing; Calls, Clients and More are here (fs-phone-only).
   const links = [[FUL.calls, 'Calls', PhoneCall, true], [FUL.clients, 'Clients', Users, true], [FUL.pay, 'Pay', Wallet], [FUL.messages, 'Messages', MessageSquare], [FUL.settings, 'Settings', Settings], [FUL.more, 'More', Ellipsis, true]]
   return (
-    <div className="tp fx-layer fx-menu-layer" role="presentation">
+    <div className={`tp fx-layer fx-menu-layer${leaving ? ' is-leaving' : ''}`} role="presentation">
       <button type="button" className="fx-scrim is-clear tp-bare" aria-label="Close menu" tabIndex={-1} onClick={onClose} />
       <section className="fx-menu" role="dialog" aria-label="Your account">
         <header className="fx-menu-h"><span className="fx-av">{initials(account.name).toUpperCase()}</span><span className="tp-grow"><b>{account.name}</b><small>Fulfillment</small></span></header>
@@ -159,7 +160,7 @@ function AccountMenu({ open, onClose, theme, setTheme, onShift }) {
         <i className="fx-mline" />
         {links.map(([to, label, Icon, phoneOnly]) => <Link key={label} to={to} className={`fx-mrow${phoneOnly ? ' fs-phone-only' : ''}`} onClick={onClose}><Icon size={17} aria-hidden="true" /><b className="tp-grow">{label}</b><ChevronRight size={15} aria-hidden="true" /></Link>)}
         <i className="fx-mline" />
-        <button type="button" className="fx-mrow" onClick={() => account.signOut?.()}><LogOut size={17} aria-hidden="true" /><b className="tp-grow">Sign out</b></button>
+        <button type="button" className="fx-mrow is-danger" onClick={() => account.signOut?.()}><LogOut size={17} aria-hidden="true" /><b className="tp-grow">Sign out</b></button>
       </section>
     </div>
   )

@@ -1148,3 +1148,149 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 .fx-badge { color: var(--sh-on-accent); background: var(--sh-acc); }
 /* ...neutral only where they sit on colour: an active (highlighted) rail item */
 .fx .fx-ri:is(.active, [aria-expanded="true"]) .fx-badge { color: var(--sh-count-ink); background: var(--sh-count); }
+
+/* P843 ----------------------------------------------------------------------------------------------------------
+   Glass panels over a backdrop that shows in both themes, the booked number as the hero, status-coloured avatars,
+   6 clients a row, a full-height search field, Settings sign-out box, exit animations, Submit a policy.
+   Tokens: src/index.css "Prompt 843". */
+
+/* Panels: frosted glass. Dark = a low-alpha light grey over the backdrop (not a dark slab), light = a white frost.
+   Stage-coloured tiles (.is-fill) and cards keep their own fills. */
+.fx { --fx-fill: var(--sh-glass-panel); --fx-edge: var(--sh-glass-edge); }
+.fx .fx-tile.fx-tile:not(.is-fill), .fx .ov-card.ov-card, .fx .ov-attn.ov-attn {
+  background-color: var(--sh-glass-panel); border-color: var(--sh-glass-edge);
+  -webkit-backdrop-filter: var(--sh-glass-blur); backdrop-filter: var(--sh-glass-blur);
+}
+.fx .fx-tile.fx-tile:not(.is-fill) { box-shadow: inset 0 1px 0 var(--sh-glass-hl), var(--fx-shadow); }
+.fx .fx-tile.fx-ovl-hero { background: var(--sh-glass-panel); }
+/* The one deep panel: a stronger frost in dark; in light it stays the dark contrast panel, now see-through */
+.fx .fx-tile.fx-tile.is-deep { background: var(--sh-glass-panel-deep); border-color: color-mix(in srgb, var(--sh-deep-ink) 14%, transparent); }
+/* The timeline icons had a solid ring the colour of the old panel; on glass it showed as a disc */
+.fx .fx-feed-ic { box-shadow: none; }
+/* The selected tab is a disabled button (kit.jsx PillTabs): it keeps its full look */
+.fx-pt:disabled { opacity: 1; cursor: default; }
+
+/* Overview "Booked this week": the number is the hero, the words sit small beside it */
+.fx-bk-head { align-items: center; gap: 18px; margin: 2px 0 4px; }
+.fx .fx-bk-num { font-family: var(--font-display); font-size: 92px; font-weight: 600; line-height: .82; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; color: var(--ov-hi); }
+.fx-bk-side { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.fx-bk-side > b { font-size: 15px; font-weight: 600; color: var(--ov-hi); }
+.fx-bk-side > small { font-size: 12.5px; color: var(--ov-mid); }
+@media (max-width: 999.98px) { .fx .fx-bk-num { font-size: 72px; } }
+
+/* Avatars by status: stone for closed-out leads; on a stage card the avatar gets a thin ring of the card's ink so
+   the same hue still reads as its own shape */
+.tp .av-stone { --av: var(--sh-f-stone); --avi: var(--sh-fi-stone); }
+.tp .tp-av.tp-av.tp-av.is-status { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 0 0 1.5px color-mix(in srgb, var(--ci, var(--ov-hi)) 30%, transparent); }
+
+/* Clients: 6 cards a row on a desktop (a 7th wraps), fewer as the window narrows */
+.fx .fx-cgrid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+@media (max-width: 1359.98px) { .fx .fx-cgrid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@media (max-width: 1199.98px) { .fx .fx-cgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 999.98px) { .fx .fx-cgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 759.98px) { .fx .fx-cgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 459.98px) { .fx .fx-cgrid { grid-template-columns: minmax(0, 1fr); } }
+/* At six a row the premium and the next step stack, so the next step reads as a line, not a word per line */
+.fx .fx-cgrid .fx-ccard-mid { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.fx .fx-cgrid .fx-ccard-mid > span { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.fx .fx-cgrid .fx-ccard-mid > span > b, .fx .fx-cgrid .fx-ccard-mid > span > .tp-money { margin-top: 0; text-align: right; }
+.fx .fx-cgrid .fx-ccard-mid > span > small { flex: none; white-space: nowrap; }
+
+/* Search: the field keeps its full height (the list below was squeezing it) */
+.fx-pal-in { flex: none; height: 60px; min-height: 60px; padding: 0 14px 0 20px; }
+.fx-pal-in input { height: 100%; padding: 0 4px; font-size: 16px; line-height: 1.4; }
+
+/* Settings: the profile card and a separate small Sign out box under it */
+.fx-set-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.fx .fx-signout { flex-direction: row; align-items: center; justify-content: center; gap: 8px; padding: 14px 18px; border-radius: 18px; font-size: 14px; font-weight: 600; color: var(--danger); cursor: pointer; animation-delay: 140ms; transition: background-color .2s, transform .2s var(--fx-spring); }
+.fx .fx-signout:hover { background-color: color-mix(in srgb, var(--danger) 10%, var(--sh-glass-panel)); }
+.fx .fx-signout:active { transform: scale(.98); }
+/* Sign out in the avatar menus is red too */
+.fx-mrow.is-danger, .fx-mrow.is-danger b, .fx-mrow.is-danger svg { color: var(--danger); }
+.fx-mrow.is-danger:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); }
+
+/* Closing: drawers slide back out the way they came in, the avatar menu shrinks away */
+.tp-layer.is-leaving { pointer-events: none; }
+.tp-layer.is-leaving .tp-sheet { animation: fx-drawer-out .22s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; } /* the layer is portaled outside .fx: no --fx-ease there */
+.tp-layer.is-leaving .tp-sheet.is-center { animation-name: fx-pal-out; }
+.tp-layer.is-leaving .tp-scrim { animation: fx-fade-out .22s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+.fx-menu-layer.is-leaving { pointer-events: none; }
+.fx-menu-layer.is-leaving .fx-menu { animation: fx-menu-out .2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+.tp-sheet-h .fx-x { flex: none; }
+@media (max-width: 999.98px) {
+  .tp-layer.is-leaving .tp-sheet { animation-name: fx-sheet-out; }
+  .fx-menu-layer.is-leaving .fx-menu { animation-name: fx-sheet-out; }
+}
+@keyframes fx-pal-out { to { transform: translateY(-8px) scale(.97); opacity: 0; } }
+@keyframes fx-menu-out { to { transform: scale(.94); opacity: 0; } }
+
+/* Submit a policy */
+.fx-sub { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); gap: 14px; align-items: start; }
+.fx-sub.is-done { grid-template-columns: minmax(0, 640px); justify-content: center; }
+.fx .fx-sub-form { gap: 18px; padding: 22px 24px; }
+.fx-sub-h { display: flex; align-items: center; gap: 14px; }
+.fx-sub-h small { display: block; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ov-mute); }
+.fx-sub-h h2 { font-family: var(--font-display); font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: var(--ov-hi); }
+.fx-sub-ic, .fx-sub-nic { width: 40px; height: 40px; flex: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--sh-fi-sky); background: var(--sh-f-sky); }
+.fx-sub-nic { width: 32px; height: 32px; color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 9%, transparent); }
+.fx-sub-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.fx-sub-steps > li > * { display: flex; align-items: center; gap: 10px; width: 100%; height: 100%; padding: 10px 12px; border-radius: 16px; text-align: left; border: 1px solid var(--sh-glass-edge); background: color-mix(in srgb, var(--ov-hi) 4%, transparent); transition: background-color .25s, border-color .25s; }
+.fx-sub-steps > li > button:hover { background: color-mix(in srgb, var(--ov-hi) 9%, transparent); }
+.fx-sub-steps b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ov-hi); }
+.fx-sub-steps small { display: block; font-size: 12px; color: var(--ov-mute); }
+.fx-sub-dot { width: 28px; height: 28px; flex: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--ov-mid); border: 1px solid var(--sh-glass-edge); }
+.fx-sub-steps .is-on > * { border-color: color-mix(in srgb, var(--sh-acc) 55%, transparent); background: color-mix(in srgb, var(--sh-acc) 14%, transparent); }
+.fx-sub-steps .is-on .fx-sub-dot { color: var(--sh-on-accent); background: var(--sh-acc); border-color: transparent; }
+.fx-sub-steps .is-done .fx-sub-dot { color: var(--sh-fi-sage); background: var(--sh-f-sage); border-color: transparent; }
+.fx-sub-body { display: flex; flex-direction: column; gap: 16px; animation: fx-in .32s var(--fx-ease) both; }
+.fx-sub-field { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.fx-sub-field > b { font-size: 13px; font-weight: 600; color: var(--ov-hi); }
+.fx-sub-field > small { font-size: 12px; color: var(--ov-mute); margin-bottom: 4px; }
+.fx-sub-field > .tp-seg { margin-top: 4px; max-width: 100%; }
+.fx-sub-quick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: -4px; }
+.fx-sub-review { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.fx-sub-rblk { padding: 14px 16px; border-radius: 18px; border: 1px solid var(--sh-glass-edge); background: color-mix(in srgb, var(--ov-hi) 4%, transparent); }
+.fx-sub-rblk header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.fx-sub-rblk h3 { font-size: 14px; font-weight: 600; color: var(--ov-hi); }
+.fx-sub-rblk .fx-pillbtn { height: 30px; padding: 0 12px; }
+.fx-sub-rblk dl, .fx-sub-mini { display: flex; flex-direction: column; gap: 8px; }
+.fx-sub-rblk dl > div, .fx-sub-mini > div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+.fx-sub-rblk dt, .fx-sub-mini dt { color: var(--ov-mute); }
+.fx-sub-rblk dd, .fx-sub-mini dd { font-weight: 600; color: var(--ov-hi); text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.fx-sub-err { font-size: 13px; font-weight: 600; color: var(--danger); }
+.fx-sub-f { display: flex; align-items: center; gap: 10px; padding-top: 14px; border-top: 1px solid var(--ov-line); }
+.fx-sub-f .tp-primary { min-width: 150px; justify-content: center; }
+.fx-sub-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.fx .fx-sub-sum, .fx .fx-sub-after { gap: 14px; }
+.fx-sub-who { display: flex; align-items: center; gap: 12px; }
+.fx-sub-who .tp-av { width: 44px; height: 44px; font-size: 15px; }
+.fx-sub-who b { display: block; font-size: 15px; font-weight: 600; color: var(--ov-hi); overflow-wrap: anywhere; }
+.fx-sub-who small { display: block; font-size: 12.5px; color: var(--ov-mid); }
+.fx-sub-mini { padding-top: 12px; border-top: 1px solid var(--ov-line); }
+.fx-sub-check { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--ov-line); font-size: 13px; color: var(--ov-mid); }
+.fx-sub-check li { display: flex; align-items: center; gap: 10px; }
+.fx-sub-check li > span { width: 20px; height: 20px; flex: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--sh-glass-edge); }
+.fx-sub-check li.is-ok { color: var(--ov-hi); }
+.fx-sub-check li.is-ok > span { color: var(--sh-fi-sage); background: var(--sh-f-sage); border-color: transparent; }
+.fx-sub-after h3 { font-size: 14px; font-weight: 600; color: var(--ov-hi); }
+.fx-sub-next { display: flex; flex-direction: column; gap: 12px; }
+.fx-sub-next li { display: flex; align-items: flex-start; gap: 12px; }
+.fx-sub-next b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ov-hi); }
+.fx-sub-next small { display: block; font-size: 12.5px; color: var(--ov-mid); }
+.fx .fx-sub-req { flex-direction: row; align-items: center; gap: 12px; padding: 14px 16px; color: var(--ov-mid); }
+.fx-sub-req b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ov-hi); }
+.fx-sub-req small { display: block; font-size: 12px; color: var(--ov-mute); }
+.fx .fx-sub-ok { align-items: center; text-align: center; gap: 14px; padding: 32px 28px; }
+.fx-sub-okic { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--sh-fi-sage); background: var(--sh-f-sage); animation: fx-pop .5s var(--fx-spring) both; }
+.fx-sub-ok h2 { font-family: var(--font-display); font-size: 26px; font-weight: 600; letter-spacing: -0.02em; color: var(--ov-hi); }
+.fx-sub-ok > p { max-width: 440px; font-size: 14px; color: var(--ov-mid); }
+.fx-sub-ok .fx-sub-next { width: 100%; max-width: 440px; text-align: left; margin: 6px 0; }
+.fx-sub-okacts { justify-content: center; }
+@media (max-width: 1099.98px) { .fx-sub { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 999.98px) {
+  .fx .fx-sub-form { padding: 18px 16px; }
+  .fx-sub-steps small { display: none; }
+  .fx-sub-steps > li > * { flex-direction: column; justify-content: center; gap: 6px; padding: 10px 6px; text-align: center; }
+  .fx-sub-review { grid-template-columns: minmax(0, 1fr); }
+  .fx-sub-field > .tp-seg { width: 100%; overflow-x: auto; }
+}

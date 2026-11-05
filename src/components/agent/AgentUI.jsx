@@ -1869,7 +1869,7 @@ export function PipelineSummary({
         <b>{total}</b>client{total === 1 ? '' : 's'} · <em>{counts.cancelled} cancelled</em>
       </div>
       {agentFilter && <div style={{ marginTop: 12 }}>{agentFilter}</div>}
-      <div style={{ marginTop: 12 }}><RangeSwitch ranges={ranges} value={range} onChange={onRange} full /></div>
+      <div style={{ marginTop: 12 }}><RangeSwitch ranges={ranges} value={range} onChange={onRange} full pill={!foot} /></div>
       <div style={{ marginTop: 14 }}><PipelineBar counts={counts} tab={tab} height={6} tabs={tabs} /></div>
       <div className="pl-rows">
         {tabs.map(t => (

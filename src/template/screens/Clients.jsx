@@ -20,7 +20,7 @@ function ClientCard({ c, i }) {
   return (
     <article className={`fx-card fx-ccard is-${tone}`} style={{ '--i': i }}>
       <Link to={paths.client(c.id)} className="fx-cover" aria-label={`Open ${name}`} />
-      <div className="fx-ccard-top"><Avatar name={name} /><span className="fx-tag">{label}</span></div>
+      <div className="fx-ccard-top"><Avatar name={name} tone={tone} /><span className="fx-tag">{label}</span></div>
       <h3>{name}</h3>
       <p>{c.carrier_name} · {c.city}, {c.state}</p>
       <div className="fx-ccard-mid">
@@ -56,7 +56,7 @@ function ClientDrawer({ id, onClose }) {
         <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{c.next_step || 'Nothing needed from you'}</span><Chip tone={tone}>{label}</Chip></div>
         <h2>{name}</h2>
         <p><MapPin size={13} aria-hidden="true" />{c.carrier_name} · {c.city}, {c.state}</p>
-        <div className="fx-hero-bot"><span><Money v={c.monthly_premium} size="fx-hero-big" /><small> / month · sample</small></span><Avatar name={name} /></div>
+        <div className="fx-hero-bot"><span><Money v={c.monthly_premium} size="fx-hero-big" /><small> / month · sample</small></span><Avatar name={name} tone={tone} /></div>
       </>}
       stepper={<Stepper label="Servicing stage" steps={CLIENT_STEPS} current={c.stage} onPick={pick} />}
       actions={<>

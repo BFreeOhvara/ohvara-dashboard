@@ -5,7 +5,7 @@ import { useSampleOverview, useSampleClients, useSampleBilling, useSampleLeads, 
 import { Avatar } from '../kit'
 import { CountUp } from '../motion'
 import { stageChip } from '../LeadOutcome'
-import { laneOf, LANES } from '../stages'
+import { laneOf, LANES, stageLabel } from '../stages'
 import { paths } from '../paths'
 
 // P841: a little more page. Next up is the second colour-filled tile (the Booked blue); under the pair, a This week
@@ -82,7 +82,7 @@ function NeedCard({ r, i }) {
       <span className="fx-ncard-k"><r.Icon size={13} aria-hidden="true" />{r.kind}</span>
       <h3>{r.name}</h3>
       <p>{r.what}</p>
-      <div className="fx-ncard-bot"><span className="fx-when">{r.when}</span><Avatar name={r.name} /></div>
+      <div className="fx-ncard-bot"><span className="fx-when">{r.when}</span><Avatar name={r.name} tone={r.tone} /></div>
     </article>
   )
 }
@@ -129,6 +129,8 @@ export default function Overview() {
   const { data: appts } = useSampleAppointments()
   const wk = planRange(bill.budget.weekly, bill.budget.mode).week
   const next = o.nextAppt
+  // P843: the person's avatar takes their current stage colour (a client's stage, or a lead's lane).
+  const toneOfAppt = a => (a.kind === 'client' ? stageLabel[clients.find(c => c.id === a.ref)?.stage]?.[0] : laneOf(leads.find(l => l.id === a.ref)?.stage).tone)
   const later = o.todayAppts.filter(a => a.id !== next?.id)
   const soon = o.upNext.filter(a => a.date > o.todayAppts[0]?.date).slice(0, 2)
   const nBy = k => clients.filter(c => c.stage === k).length
@@ -145,10 +147,10 @@ export default function Overview() {
     <div className="tp-page fx-page fx-ovl">
       <div className="fx-ovl-main">
         <Tile className="fx-ovl-hero" i={0} title="Booked this week" sub={`Your weekly budget books ${rangeText(wk)}`} to={paths.calendar()} label="Open Calendar">
-          <div className="fx-chart-head">
-            <b className="tp-num fx-huge"><CountUp value={bill.booked} /></b>
-            <span className="fx-hero-sub">booked · range <b>{rangeText(wk)}</b> · {prev} last week</span>
-            <i className={`fx-delta is-${status[1]}`}>{status[0]}</i>
+          {/* P843: the number is the hero; the range already sits in the subtitle, so the side line only says what it is */}
+          <div className="fx-chart-head fx-bk-head">
+            <b className="tp-num fx-bk-num"><CountUp value={bill.booked} /></b>
+            <span className="fx-bk-side"><b>booked</b><small>{prev} last week</small><i className={`fx-delta is-${status[1]}`}>{status[0]}</i></span>
           </div>
           <div className="fx-key"><span><i className="is-line" />Booked per week</span><span><i className="is-dash" />Budget range</span></div>
           <WeeksChart weeks={weeks} lo={wk.low} hi={wk.high} />
@@ -166,7 +168,7 @@ export default function Overview() {
             {next ? (
               <>
                 <b className="fx-huge">{next.time.replace(/ (AM|PM)/, '')}<small>{next.time.slice(-2)}</small></b>
-                <span className="fx-next-who"><Avatar name={next.who} /><span><b>{next.who}</b><small>{next.label} · today</small></span></span>
+                <span className="fx-next-who"><Avatar name={next.who} tone={toneOfAppt(next)} /><span><b>{next.who}</b><small>{next.label} · today</small></span></span>
                 <div className="tp-row tp-wrap fx-next-acts">
                   <Link to={apptTo(next)} className="tp-primary sm fx-accent"><Phone size={14} />Call {next.who.split(' ')[0]}</Link>
                   <Link to={paths.calendar()} className="fx-pillbtn"><CalendarDays size={14} />Calendar</Link>

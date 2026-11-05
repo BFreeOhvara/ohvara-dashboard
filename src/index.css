@@ -5388,3 +5388,22 @@ html.is-native a, html.is-native img { -webkit-touch-callout: none; }
    than P841; light mode is the same image under a light wash. Agent shell only. */
 :root { --sh-bd-image: url('/shell/backdrop-842.jpg'); --sh-bd-dim: rgba(6, 7, 9, 0.28); }
 [data-theme="light"] { --sh-bd-image: url('/shell/backdrop-842.jpg'); --sh-bd-dim: rgba(238, 240, 236, 0.80); }
+
+/* ── Prompt 843 — glass panels and a visible light backdrop (DESIGN.md v17 "Shell palette", P843 update). Dark mode
+   keeps backdrop-842; light mode gets its own light version of the same scene (scripts/make-shell-backdrop-843.py)
+   under a thin wash, so the glows stay visible. Neutral panels are frosted glass: in dark a low-alpha light grey over
+   the backdrop with blur and a soft light edge (Solvik's dark boxes), in light a lighter white frost. */
+:root {
+  --sh-glass-panel: rgba(206, 210, 206, 0.10);
+  --sh-glass-panel-deep: rgba(206, 210, 206, 0.15);
+  --sh-glass-edge: rgba(255, 255, 255, 0.13);
+  --sh-glass-hl: rgba(255, 255, 255, 0.12);
+  --sh-glass-blur: blur(26px) saturate(1.35);
+}
+[data-theme="light"] {
+  --sh-bd-image: url('/shell/backdrop-843-light.jpg'); --sh-bd-dim: rgba(240, 241, 238, 0.10);
+  --sh-glass-panel: rgba(255, 255, 255, 0.42);
+  --sh-glass-panel-deep: rgba(28, 32, 31, 0.82);
+  --sh-glass-edge: rgba(255, 255, 255, 0.62);
+  --sh-glass-hl: rgba(255, 255, 255, 0.7);
+}

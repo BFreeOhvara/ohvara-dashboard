@@ -11,7 +11,7 @@ import {
 } from './data'
 import { Drawer, Avatar, Field, PillTabs, useAccount, useNote, initials } from './kit'
 import { avatarHue } from './avatarHue'
-import { wig, CountUp, RollTitle, usePageSwap, usd } from './motion'
+import { wig, CountUp, RollTitle, usePageSwap, usd, useExit } from './motion'
 import { paths, tabOf, titleOfLayout, layoutOf, isTemplateAddress } from './paths'
 import Palette from './Palette'
 import { OhvaraMark } from '../components/ui/OhvaraMark'
@@ -228,11 +228,13 @@ function AccountMenu({ open, onClose, theme, setTheme, duty, setDuty }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
-  if (!open) return null
+  // P843: the menu plays its way out (fx-menu-out) instead of vanishing
+  const [shown, leaving] = useExit(open, 200)
+  if (!shown) return null
   const links = [[paths.billing, 'Billing', CreditCard], [paths.settings, 'Settings', Settings], [paths.requestService, 'Request a service', LifeBuoy], [paths.more, 'More', Ellipsis]]
   if (isTemplateAddress()) links.push([paths.signup, 'Sign-up preview', ShieldCheck], [paths.welcome, 'Welcome preview', Home])
   return (
-    <div className="tp fx-layer fx-menu-layer" role="presentation">
+    <div className={`tp fx-layer fx-menu-layer${leaving ? ' is-leaving' : ''}`} role="presentation">
       <button type="button" className="fx-scrim is-clear tp-bare" aria-label="Close menu" tabIndex={-1} onClick={onClose} />
       <section className="fx-menu" role="dialog" aria-label="Your account">
         <header className="fx-menu-h"><span className="fx-av">{initials(account.name).toUpperCase()}</span><span className="tp-grow"><b>{account.name}</b><small>Agent</small></span></header>
@@ -243,7 +245,7 @@ function AccountMenu({ open, onClose, theme, setTheme, duty, setDuty }) {
         <i className="fx-mline" />
         {links.map(([to, label, Icon]) => <Link key={label} to={to()} className="fx-mrow" onClick={onClose}><Icon size={17} aria-hidden="true" /><b className="tp-grow">{label}</b><ChevronRight size={15} aria-hidden="true" /></Link>)}
         <i className="fx-mline" />
-        <button type="button" className="fx-mrow" onClick={() => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))}><LogOut size={17} aria-hidden="true" /><b className="tp-grow">Sign out</b></button>
+        <button type="button" className="fx-mrow is-danger" onClick={() => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))}><LogOut size={17} aria-hidden="true" /><b className="tp-grow">Sign out</b></button>
       </section>
     </div>
   )
@@ -272,7 +274,8 @@ function useHeadStats(page) {
     calendar: [S(CalendarDays, events.length, 'this week'), S(Clock3, events.filter(e => e.date === 2).length, 'today'), S(PhoneCall, events.filter(e => /call/i.test(e.label)).length, 'client calls')],
     activity: [S(History, activity.filter(a => a.at.startsWith('Today')).length, 'today'), S(CalendarDays, activity.length, 'this week'), S(MessageSquare, activity.filter(a => a.kind === 'text').length, 'texts sent for you')],
     billing: [S(Wallet, weekly, 'weekly budget', { fmt: money, chip: ['Draft', 'blue'] }), S(ShieldCheck, PLAN.servicingMonthly, 'servicing a month', { fmt: money }), booked(S)],
-    submit: [S(FileUp, billing.submitted, 'submitted this week'), S(ShieldCheck, clients.length, 'clients in servicing', { chip: ['No weekly limit', 'blue'] })],
+    // P843: no weekly submit count or 'no weekly limit' (old plan language): what is in servicing now
+    submit: [S(ShieldCheck, clients.length, 'clients in servicing'), S(FileUp, by('setting_up'), 'setting up', { chip: by('setting_up') ? ['Team on it', 'blue'] : null }), S(Users, by('protected'), 'protected', { chip: ['On time', 'up'] })],
     settings: [S(Bell, settings.notifications.filter(n => n.push).length, 'alerts switched on'), S(CalendarDays, settings.hours.days.length, 'working days'), S(Users, clients.length, 'clients in your book')],
     messages: [S(MessageSquare, threads.reduce((n, t) => n + t.unread, 0), 'unread'), S(Users, threads.length, 'threads')],
   }[page] || []

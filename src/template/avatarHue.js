@@ -8,3 +8,8 @@ export function avatarHue(seed) {
   for (let i = 0; i < key.length; i++) { h ^= key.charCodeAt(i); h = Math.imul(h, 16777619) }
   return AVATAR_HUES[(h >>> 0) % AVATAR_HUES.length]
 }
+
+// P843: a lead or a client takes the colour of its CURRENT status, the same hue as its stage card (flow.css .is-<tone>
+// --cf), so the avatar changes when the stage does. Everyone else (VAs, the agent) keeps avatarHue above.
+export const TONE_HUE = { blue: 'sky', warn: 'apricot', teal: 'butter', violet: 'butter', green: 'sage', mute: 'stone' }
+export const hueFor = (name, tone) => (tone && TONE_HUE[tone]) || avatarHue(name)

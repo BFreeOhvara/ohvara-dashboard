@@ -34,7 +34,7 @@ function NeedCard({ r, i }) {
       <span className="fx-ncard-k"><r.Icon size={13} aria-hidden="true" />{r.kind}</span>
       <h3>{r.name}</h3>
       <p>{r.what}</p>
-      <div className="fx-ncard-bot"><span className="fx-when">{r.when}</span><Avatar name={r.name} /></div>
+      <div className="fx-ncard-bot"><span className="fx-when">{r.when}</span><Avatar name={r.name} tone={r.tone} /></div>
     </article>
   )
 }

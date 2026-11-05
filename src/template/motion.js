@@ -85,3 +85,17 @@ export function usePageSwap(pageKey, element) {
   // eslint-disable-next-line react-hooks/refs
   return { el: leaving ? last.current : element, leaving, key: shownKey }
 }
+
+// P843: a panel that plays its way out. [shown, leaving]: shown stays true while the exit animation runs after open
+// went false; leaving drives the is-leaving class. Reduced motion: no exit, it goes at once.
+export function useExit(open, ms = 220) {
+  const [prev, setPrev] = useState(open)
+  const [leaving, setLeaving] = useState(false)
+  if (open !== prev) { setPrev(open); setLeaving(!open && !still()) }
+  useEffect(() => {
+    if (!leaving) return undefined
+    const t = setTimeout(() => setLeaving(false), ms)
+    return () => clearTimeout(t)
+  }, [leaving, ms])
+  return [open || leaving, leaving && !open]
+}

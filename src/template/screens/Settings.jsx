@@ -94,7 +94,11 @@ export default function Settings() {
 
   return (
     <div className="tp-page fx-set">
-      <ProfileCard profile={profile} duty={s.duty} />
+      {/* P843: Sign out is its own small box under the profile card (same real sign-out as before) */}
+      <div className="fx-set-side">
+        <ProfileCard profile={profile} duty={s.duty} />
+        <button type="button" className="fx-tile fx-signout" onClick={signOut}><LogOut size={16} aria-hidden="true" />Sign out</button>
+      </div>
 
       <section className="fx-tile fx-panel" aria-label="Settings">
         <PillTabs label="Settings sections" className="fx-ptabs" itemClass="fx-ptab" value={tab} onChange={setTab} items={TABS.map(([key, label, icon]) => ({ key, label, icon }))} />
@@ -111,7 +115,6 @@ export default function Settings() {
             <div className="fx-form-row">
               <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('password')}><KeyRound size={15} />Change password</button>
               <span className="tp-grow" />
-              <button type="button" className="tp-btn ov-ghost" onClick={signOut}><LogOut size={15} />Sign out</button>
               <button type="button" className="tp-btn ov-ghost tp-danger" onClick={() => (DeleteDialog ? setPanel('delete') : note('Delete my account works once you sign in for real'))}><Trash2 size={15} />Delete my account</button>
             </div>
             <FormFoot dirty={!same(pDraft, profile)} onDiscard={() => setPDraft(profile)} onSave={() => { setProfile(pDraft); note('Profile saved') }} />

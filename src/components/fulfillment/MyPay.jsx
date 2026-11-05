@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { CalendarDays, Landmark, Settings as Gear, TriangleAlert, CreditCard } from 'lucide-react'
 import { fmtCents, fmtPeriod } from '../../lib/payPeriod'
+import { useStretchPill } from '../../hooks/useStretchPill'
 import {
   payDayOf, destination, requirementText, payoutRow, paidThisMonth, cancelTotals, cancelsByDay, cancelView,
   dayLabel, timeLabel, initials,
@@ -26,6 +27,9 @@ function Money({ cents }) {
 }
 
 function Hero({ which, onWhich, period, now, cancels, rate, minCents, account }) {
+  // P843: the week switch flies the same stretch pill as every other tab group
+  const segRef = useRef(null)
+  useStretchPill(segRef, { activeKey: which, selector: '.is-on' })
   const t = cancelTotals(cancels)
   const days = cancelsByDay(cancels, period, now)
   const max = Math.max(5, ...days.map(d => d.n))
@@ -37,7 +41,7 @@ function Hero({ which, onWhich, period, now, cancels, rate, minCents, account })
       <div className="mp-hero-main">
         <div className="mp-hero-top">
           <span className="ov-hero-chip"><span className="mp-dot" />{which === 'this' ? 'This week' : 'Last week'} · {fmtPeriod(period)}</span>
-          <span className="mp-seg" role="group" aria-label="Pay week">
+          <span ref={segRef} className="mp-seg" role="group" aria-label="Pay week">
             {PERIODS.map(p => (
               <button key={p.value} type="button" aria-pressed={which === p.value} className={which === p.value ? 'is-on' : ''} onClick={() => onWhich(p.value)}>{p.label}</button>
             ))}
@@ -92,6 +96,8 @@ function Hero({ which, onWhich, period, now, cancels, rate, minCents, account })
 
 function Cancels({ cancels, now, recording = true }) {
   const [tab, setTab] = useState('all')
+  const tabsRef = useRef(null)
+  useStretchPill(tabsRef, { activeKey: tab, selector: '.is-on' })
   const rows = cancels.map(c => ({ c, v: cancelView(c) }))
   const count = k => (k === 'all' ? rows.filter(r => r.v.kind !== 'off').length : rows.filter(r => r.v.kind === k).length)
   const shown = rows.filter(r => (tab === 'all' ? true : r.v.kind === tab))
@@ -99,7 +105,7 @@ function Cancels({ cancels, now, recording = true }) {
     <section className="ov-card mp-card mp-cancels" aria-label="Your cancels">
       <div className="mp-cancels-head">
         <h2>Your cancels</h2>
-        <span className="mp-tabs" role="tablist" aria-label="Show">
+        <span ref={tabsRef} className="mp-tabs" role="tablist" aria-label="Show">
           {TABS.map(t => (
             <button key={t.value} type="button" role="tab" aria-selected={tab === t.value} className={tab === t.value ? 'is-on' : ''} onClick={() => setTab(t.value)}>
               {t.label}<span className="mp-mono">{count(t.value)}</span>

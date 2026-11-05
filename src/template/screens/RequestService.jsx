@@ -4,6 +4,7 @@ import { Check } from 'lucide-react'
 import { useSampleClients, useSampleActions } from '../data'
 import { Avatar, Field, Seg, useNote } from '../kit'
 import { paths } from '../paths'
+import { stageLabel } from '../stages'
 
 const KINDS = ['Change address', 'Update phone', 'Change beneficiary', 'Change billing date', 'Reinstate policy', 'Cancel policy', 'Policy question', 'Other']
 
@@ -32,7 +33,7 @@ export default function RequestService() {
           <ul className="tp-list">
             {rows.map(c => (
               <li key={c.id}><button type="button" className="tp-li" aria-pressed={pick?.id === c.id} onClick={() => setPick(c)}>
-                <Avatar name={`${c.client_first_name} ${c.client_last_name}`} /><span className="tp-grow"><b>{c.client_first_name} {c.client_last_name}</b><small>{c.policy_number}</small></span>
+                <Avatar name={`${c.client_first_name} ${c.client_last_name}`} tone={stageLabel[c.stage]?.[0]} /><span className="tp-grow"><b>{c.client_first_name} {c.client_last_name}</b><small>{c.policy_number}</small></span>
                 <span className="tp-chip is-blue" style={{ opacity: pick?.id === c.id ? 1 : 0 }}>Picked</span></button></li>
             ))}
             {rows.length === 0 && <li className="tp-li"><span className="tp-sub">No client matches. Check the spelling, or search by phone number.</span></li>}
