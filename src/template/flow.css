@@ -1294,3 +1294,13 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
   .fx-sub-review { grid-template-columns: minmax(0, 1fr); }
   .fx-sub-field > .tp-seg { width: 100%; overflow-x: auto; }
 }
+
+/* P844 ----------------------------------------------------------------------------------------------------------
+   Messages has no big title or count line (the screen reader title stays), the selected Calendar day is the plain
+   highlight pill with no grey box on its number, and the Booked chart has a day-by-day (new agent) form. */
+.fx .fx-head.is-quiet { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.tp .fx-chip.fx-pt.is-on.is-on > b { background: transparent; }
+.fx-key .fx-key-range { margin-left: auto; color: var(--ov-mute); font-weight: 600; }
+.fx-wchart .fx-bar { fill: var(--ov-data-a); }
+.fx-wchart .fx-bar.is-later, .fx-wchart .fx-bar.is-zero { fill: color-mix(in srgb, var(--ov-mute) 28%, transparent); }
+.fx-wchart.is-days .fx-xs span:not(:first-child):not(:last-child):not(:nth-child(4)):not(:nth-child(7)) { display: block; }

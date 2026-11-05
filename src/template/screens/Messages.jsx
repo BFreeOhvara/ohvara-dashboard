@@ -5,7 +5,7 @@ import { useSampleThreads, useSampleActions } from '../data'
 import { Avatar, Empty } from '../kit'
 import { paths } from '../paths'
 
-// Messages with the team, one thread per client. On a desktop the page holds still: the thread list and the
+// Messages between the agent and Ohvara fulfillment, one thread per client (the client never sees them). On a desktop the page holds still: the thread list and the
 // conversation each scroll inside their own pane, and the box to write in stays put at the bottom.
 export default function Messages() {
   const { data: threads } = useSampleThreads()
@@ -24,7 +24,7 @@ export default function Messages() {
         <div className="tp-threads-b">
           {list.map(x => (
             <button key={x.id} type="button" className={`tp-thread${x.id === sel ? ' on' : ''}`} onClick={() => pick(x.id)}>
-              <Avatar name={x.name} /><span className="tp-grow"><b>{x.name}</b><small>{x.messages[x.messages.length - 1].text}</small></span>
+              <Avatar name={x.name} /><span className="tp-grow"><b>About {x.name}</b><small>{x.messages[x.messages.length - 1].text}</small></span>
               {x.unread > 0 && <span className="tp-tb is-msg">{x.unread}</span>}
             </button>
           ))}
@@ -32,12 +32,12 @@ export default function Messages() {
         </div>
       </div>
       <div className="tp-conv">
-        <div className="tp-conv-h"><Avatar name={t.name} /><span className="tp-grow"><b>{t.name}</b><small>Fulfillment team on this client</small></span><Link to={paths.client(t.client_id)} className="tp-link">Open client<ArrowUpRight size={14} /></Link></div>
+        <div className="tp-conv-h"><Avatar name={t.name} /><span className="tp-grow"><b>Ohvara fulfillment · about {t.name}</b><small>Your Ohvara team. The client doesn't see this.</small></span><Link to={paths.client(t.client_id)} className="tp-link">Open client<ArrowUpRight size={14} /></Link></div>
         <div className="tp-conv-b">
           {t.messages.map(m => <div key={m.id} className={`tp-bub${m.from === 'me' ? ' me' : ''}`}>{m.text}<small>{m.from === 'me' ? 'You' : 'Fulfillment'} · {m.at}</small></div>)}
         </div>
         <form className="tp-conv-f" onSubmit={send}>
-          <input className="tp-input" aria-label="Write a message" placeholder="Write a message" value={text} onChange={e => setText(e.target.value)} />
+          <input className="tp-input" aria-label={`Message fulfillment about ${t.name.split(' ')[0]}`} placeholder={`Message fulfillment about ${t.name.split(' ')[0]}…`} value={text} onChange={e => setText(e.target.value)} />
           <button type="submit" className="tp-primary fx-accent" disabled={!text.trim()}>Send</button>
         </form>
       </div>

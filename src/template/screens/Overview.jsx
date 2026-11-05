@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, Clock, CalendarDays, Phone, PhoneIncoming, TriangleAlert } from 'lucide-react'
 import { planRange, rangeText } from '../../lib/planPricing'
 import { useSampleOverview, useSampleClients, useSampleBilling, useSampleLeads, useSampleAppointments } from '../data'
-import { Avatar } from '../kit'
+import { Avatar, Empty } from '../kit'
 import { CountUp } from '../motion'
 import { stageChip } from '../LeadOutcome'
 import { laneOf, LANES, stageLabel } from '../stages'
@@ -30,14 +30,17 @@ function Tile({ className = '', i, title, sub, to, label, children }) {
   )
 }
 
-// Booked per week as a smooth line that draws itself in, over the budget range band (dashed edges).
-function WeeksChart({ weeks, lo, hi }) {
-  const top = Math.max(hi + 2, ...weeks.map(w => w[1]))
+// P844: the chart follows how long the agent has been on Ohvara (see data/index.js bookedChart). Weeks: a smooth line
+// that draws itself in, over the budget range band (dashed edges). Days (first 2 weeks): one column per day this week.
+function BookedChart({ chart, lo, hi }) {
+  const { points, mode } = chart
+  const days = mode === 'days'
+  const top = Math.max(days ? 4 : hi + 2, ...points.map(w => w[1]))
   const W = 640
   const H = 210
-  const x = i => (i / (weeks.length - 1)) * W
+  const x = i => (i / (points.length - 1)) * W
   const y = v => H - (v / top) * (H - 12) - 2
-  const pts = weeks.map(([, v], i) => [x(i), y(v)])
+  const pts = points.map(([, v], i) => [x(i), y(v)])
   const line = pts.reduce((d, [px, py], i) => {
     if (i === 0) return `M${px},${py}`
     const [qx, qy] = pts[i - 1]
@@ -45,19 +48,29 @@ function WeeksChart({ weeks, lo, hi }) {
     return `${d} C${cx},${qy} ${cx},${py} ${px},${py}`
   }, '')
   const last = pts[pts.length - 1]
+  const ticks = days ? [top, Math.round(top / 2), 0] : [top, hi, lo, 0]
+  const lastIdx = days ? points.findIndex(p => p[2]) - 1 : points.length - 1
+  const colW = W / points.length
   return (
-    <div className="fx-chart fx-wchart">
-      <div className="fx-wchart-y" aria-hidden="true">{[top, hi, lo, 0].map(v => <span key={v} style={{ top: `${(y(v) / H) * 100}%` }}>{v}</span>)}</div>
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`Booked per week: ${weeks.map(([w, v]) => `${w} ${v}`).join(', ')}. Budget range ${lo} to ${hi}.`}>
-        <defs><linearGradient id="fx-warea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style={{ stopColor: 'var(--ov-data-a)', stopOpacity: 0.34 }} /><stop offset="1" style={{ stopColor: 'var(--ov-data-a)', stopOpacity: 0 }} /></linearGradient></defs>
-        <rect x="0" width={W} y={y(hi)} height={y(lo) - y(hi)} className="fx-band" />
-        <line x1="0" x2={W} y1={y(hi)} y2={y(hi)} className="fx-target" />
-        <line x1="0" x2={W} y1={y(lo)} y2={y(lo)} className="fx-target" />
-        <path d={`${line} L${W},${H} L0,${H} Z`} fill="url(#fx-warea)" className="fx-area" />
-        <path d={line} pathLength="1" className="fx-line-draw" />
-        <circle cx={last[0]} cy={last[1]} r="5" className="fx-pt is-now" style={{ '--i': 3 }} />
+    <div className={`fx-chart fx-wchart${days ? ' is-days' : ''}`}>
+      <div className="fx-wchart-y" aria-hidden="true">{ticks.map(v => <span key={v} style={{ top: `${(y(v) / H) * 100}%` }}>{v}</span>)}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`Booked per ${days ? 'day' : 'week'}: ${points.filter(p => !p[2]).map(([w, v]) => `${w} ${v}`).join(', ')}.${days ? '' : ` Budget range ${lo} to ${hi}.`}`}>
+        {days ? (
+          <g>{points.map(([d, v, later], i) => {
+            const h = Math.max(v ? (v / top) * (H - 12) : 0, 3)
+            return <rect key={d} x={i * colW + colW * 0.2} width={colW * 0.6} y={H - h} height={h} rx="6" className={`fx-bar${later ? ' is-later' : ''}${v === 0 ? ' is-zero' : ''}`} style={{ '--i': i }} />
+          })}</g>
+        ) : (<>
+          <defs><linearGradient id="fx-warea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style={{ stopColor: 'var(--ov-data-a)', stopOpacity: 0.34 }} /><stop offset="1" style={{ stopColor: 'var(--ov-data-a)', stopOpacity: 0 }} /></linearGradient></defs>
+          <rect x="0" width={W} y={y(hi)} height={y(lo) - y(hi)} className="fx-band" />
+          <line x1="0" x2={W} y1={y(hi)} y2={y(hi)} className="fx-target" />
+          <line x1="0" x2={W} y1={y(lo)} y2={y(lo)} className="fx-target" />
+          <path d={`${line} L${W},${H} L0,${H} Z`} fill="url(#fx-warea)" className="fx-area" />
+          <path d={line} pathLength="1" className="fx-line-draw" />
+          <circle cx={last[0]} cy={last[1]} r="5" className="fx-pt is-now" style={{ '--i': 3 }} />
+        </>)}
       </svg>
-      <div className="fx-xs">{weeks.map(([w], i) => <span key={w} className={i === weeks.length - 1 ? 'is-now' : ''}>{i === weeks.length - 1 ? 'This week' : w}</span>)}</div>
+      <div className="fx-xs">{points.map(([w], i) => <span key={w} className={i === (days ? lastIdx : points.length - 1) ? 'is-now' : ''}>{!days && i === points.length - 1 ? 'This week' : days && i === lastIdx ? 'Today' : w}</span>)}</div>
     </div>
   )
 }
@@ -135,8 +148,8 @@ export default function Overview() {
   const soon = o.upNext.filter(a => a.date > o.todayAppts[0]?.date).slice(0, 2)
   const nBy = k => clients.filter(c => c.stage === k).length
   const prot = nBy('protected')
-  const weeks = o.bookedByWeek
-  const prev = weeks[weeks.length - 2][1]
+  const chart = o.bookedChart
+  const prev = chart.prev
   const status = bill.booked < wk.low ? ['Below range so far', 'mute'] : bill.booked > wk.high ? ['Above range', 'up'] : ['In range', 'up']
   const needs = [
     ...o.newLeads.filter(l => l.stage !== 'booked').map(l => ({ id: l.id, to: paths.lead(l.id), name: l.name, what: stageChip(l.stage)[1], tone: laneOf(l.stage).tone, Icon: PhoneIncoming, kind: l.kind === 'live_call' ? 'Live call' : 'Lead', when: l.stage === 'ringing' ? 'Now' : 'Today' })),
@@ -150,10 +163,16 @@ export default function Overview() {
           {/* P843: the number is the hero; the range already sits in the subtitle, so the side line only says what it is */}
           <div className="fx-chart-head fx-bk-head">
             <b className="tp-num fx-bk-num"><CountUp value={bill.booked} /></b>
-            <span className="fx-bk-side"><b>booked</b><small>{prev} last week</small><i className={`fx-delta is-${status[1]}`}>{status[0]}</i></span>
+            <span className="fx-bk-side"><b>booked</b>{prev != null && <small>{prev} last week</small>}<i className={`fx-delta is-${status[1]}`}>{status[0]}</i></span>
           </div>
-          <div className="fx-key"><span><i className="is-line" />Booked per week</span><span><i className="is-dash" />Budget range</span></div>
-          <WeeksChart weeks={weeks} lo={wk.low} hi={wk.high} />
+          <div className="fx-key">
+            <span><i className="is-line" />{chart.mode === 'days' ? 'Booked per day' : 'Booked per week'}</span>
+            {chart.mode === 'weeks' && <span><i className="is-dash" />Budget range</span>}
+            <span className="fx-key-range">{chart.range}</span>
+          </div>
+          {chart.empty
+            ? <Empty title="Nothing booked yet" sub="Your first appointments show up here as soon as the team books them." />
+            : <BookedChart chart={chart} lo={wk.low} hi={wk.high} />}
         </Tile>
 
         <div className="fx-ovl-pair">

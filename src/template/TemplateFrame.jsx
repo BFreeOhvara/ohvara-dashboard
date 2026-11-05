@@ -379,9 +379,9 @@ export default function TemplateFrame() {
 
 
       <div className="tp-col fx-col">
-        <div className={`tp-head fx-head${page.leaving ? ' is-leaving' : ''}`} key={`h-${page.key}`}>
+        <div className={`tp-head fx-head${page.leaving ? ' is-leaving' : ''}${layout === 'messages' ? ' is-quiet' : ''}`} key={`h-${page.key}`}>
           <RollTitle lines={title} />
-          {stats.length > 0 && (
+          {stats.length > 0 && layout !== 'messages' && (
             <ul className="fx-kpis" aria-label={`${title[1]} at a glance`}>
               {stats.map(s => (
                 <li key={s.label}>

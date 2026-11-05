@@ -89,6 +89,19 @@ const seedAppointments = [
   { id: 'ap7', day: 'Fri', date: 6, time: '4:15 PM', who: 'Gloria Santos', label: 'Review call', kind: 'client', ref: 'sample-client-1' },
 ]
 
+// P844: sample agents of different ages, so every range of the chart shows. Pick one with ?agent=new | first | empty in
+// the address (default: an established agent, 14 weeks in). The sample clock is Monday, Nov 2. Real data swaps in here.
+const WEEKS_BEFORE = [['Aug 3', 3], ['Aug 10', 4], ['Aug 17', 3], ['Aug 24', 5], ['Aug 31', 4], ['Sep 7', 3], ['Sep 14', 5], ['Sep 21', 4], ['Sep 28', 6], ['Oct 5', 5], ['Oct 12', 4], ['Oct 19', 6], ['Oct 26', 5]]
+const SAMPLE_AGENTS = {
+  established: { days: 98, weeks: WEEKS_BEFORE },
+  new: { days: 21, weeks: [['Oct 12', 3], ['Oct 19', 4], ['Oct 26', 5]] },
+  first: { days: 5, weeks: [] },
+  empty: { days: 0, weeks: [], none: true },
+}
+const sampleAgent = () => {
+  const k = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('agent') : null
+  return SAMPLE_AGENTS[k] || SAMPLE_AGENTS.established
+}
 const seed = {
   leads: seedLeads, clients: seedClients, threads: seedThreads, activity: seedActivity, appointments: seedAppointments,
   duty: true, tasks: { t1: false, t2: false, t3: false },
@@ -105,7 +118,7 @@ const seed = {
   // Prompt 835: a weekly budget (slider), monthly servicing, a one-time setup fee. Prices live in lib/planPricing.
   // cancellations: the old cancellation plan, shown only for an agent already on one (this sample agent is not).
   billing: {
-    budget: { weekly: 1000, mode: 'appts' }, booked: 4, paused: false, next_charge: 'Mon, Nov 9',
+    budget: { weekly: 1000, mode: 'appts' }, booked: sampleAgent().none ? 0 : 4, paused: false, next_charge: 'Mon, Nov 9',
     servicing: { status: 'active', next: 'Tue, Dec 1' }, setup: { paid: true, at: 'Mon, Oct 12' }, cancellations: null,
     history: [{ id: 'inv1', at: 'Mon, Nov 2', label: 'Weekly budget, booked appointments', amount: 1000 }, { id: 'inv2', at: 'Sun, Nov 1', label: 'Policy servicing, November', amount: 299 }, { id: 'inv3', at: 'Mon, Oct 26', label: 'Weekly budget, booked appointments', amount: 1000 }, { id: 'inv4', at: 'Mon, Oct 12', label: 'One-time setup', amount: 1997 }],
   },
@@ -140,6 +153,21 @@ const minutesOf = t => { const m = /(\d+):(\d+)\s*(AM|PM)/.exec(t); return ((Num
 const untilText = t => { const d = minutesOf(t) - NOW.min; return d <= 0 ? 'now' : `in ${d >= 60 ? `${Math.floor(d / 60)} h ` : ''}${d % 60} min` }
 const LEAD_NEW = ['booked', 'ringing', 'missed']
 
+// First 2 weeks: day by day this week. 2 to 8 weeks: week by week since joining. 8+ weeks: the last 8 weeks.
+// points: [label, value, upcoming]. prev: last week's total, or null when there was no last week.
+function bookedChart(thisWeek) {
+  const a = sampleAgent()
+  const booked = a.none ? 0 : thisWeek
+  if (a.days < 14) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    return { mode: 'days', range: 'This week, day by day', empty: booked === 0, prev: null,
+      points: days.map((d, i) => [d, i === 0 ? booked : 0, i > 0]) }
+  }
+  const all = [...a.weeks, ['Nov 2', booked]]
+  const weeks = a.days < 56 ? all : all.slice(-8)
+  return { mode: 'weeks', range: a.days < 56 ? 'Since you joined' : 'Last 8 weeks', empty: false, prev: a.weeks.length ? a.weeks[a.weeks.length - 1][1] : null, points: weeks }
+}
+
 export function useSampleOverview() {
   const s = useStore()
   const open = Object.values(s.tasks).filter(v => !v).length
@@ -158,8 +186,8 @@ export function useSampleOverview() {
       { day: 'Wed', date: 'Oct 28', packet: 3, review: 1, cancel: 0, save: 1 }, { day: 'Thu', date: 'Oct 29', packet: 0, review: 2, cancel: 0, save: 0 },
       { day: 'Fri', date: 'Oct 30', packet: 2, review: 0, cancel: 1, save: 1 }, { day: 'Sat', date: 'Oct 31', packet: 0, review: 0, cancel: 0, save: 0 }, { day: 'Sun', date: 'Nov 1', packet: 0, review: 0, cancel: 0, save: 0 },
     ],
-    // Booked appointments per week, oldest first; this week (the last) is read live from billing.booked
-    bookedByWeek: [['Aug 31', 4], ['Sep 7', 3], ['Sep 14', 5], ['Sep 21', 4], ['Sep 28', 6], ['Oct 5', 5], ['Oct 12', 4], ['Oct 19', 6], ['Oct 26', 5], ['Nov 2', s.billing.booked]],
+    // P844: the "Booked this week" chart picks its range from how long the agent has been on Ohvara
+    bookedChart: bookedChart(s.billing.booked),
     upNext: s.appointments.slice(0, 3),
     leadsToday: s.leads.length,
     today: NOW.label, clock: { time: NOW.time, ampm: NOW.ampm },

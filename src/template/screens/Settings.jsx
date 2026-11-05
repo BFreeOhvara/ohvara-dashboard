@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { User, Bell, Radio, CreditCard, SunMoon, Mail, LogOut, Trash2, ChevronRight, KeyRound } from 'lucide-react'
 import { useSampleSettings, useSampleActions, useSampleBilling, useSampleClients, useSampleLeads, useSampleOverview } from '../data'
-import { useTheme } from '../../hooks/useTheme'
+import { useThemePref, previewTheme } from '../../hooks/useTheme'
 import { Drawer, Field, Seg, Switch, Chip, PillTabs, useNote, useAccount, initials } from '../kit'
 import { CountUp, usd } from '../motion'
 import { paths } from '../paths'
@@ -13,6 +13,7 @@ const TABS = [['profile', 'Profile', User], ['alerts', 'Notifications', Bell], [
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const TIMES = ['7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM']
 const NEEDS = ['ringing', 'missed', 'no_show']
+const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 
 // Discard / Save under every section. Save is off until something changed.
 function FormFoot({ dirty, onDiscard, onSave, saveLabel = 'Save changes' }) {
@@ -67,7 +68,7 @@ export default function Settings() {
   const { data: s } = useSampleSettings()
   const { data: billing } = useSampleBilling()
   const { setNotification, setDuty } = useSampleActions()
-  const [theme, setTheme] = useTheme()
+  const [saved, saveTheme] = useThemePref()
   const note = useNote()
   const account = useAccount()
   const [tab, setTab] = useState('profile')
@@ -81,7 +82,14 @@ export default function Settings() {
   const [cDraft, setCDraft] = useState({ duty: s.duty, ...s.hours })
   const [bill, setBill] = useState({ email: s.profile.email, receipts: true })
   const [bDraft, setBDraft] = useState(bill)
-  const [look, setLook] = useState(theme)
+  const [look, setLook] = useState(saved)
+  // P844: a theme choice shows at once as a preview; Save keeps it, Discard, another tab or leaving puts the saved one back.
+  const savedRef = useRef(saved)
+  useEffect(() => { savedRef.current = saved }, [saved])
+  const pickLook = v => { setLook(v); previewTheme(v) }
+  const backToSaved = () => { setLook(savedRef.current); previewTheme(savedRef.current) }
+  useEffect(() => { if (tab !== 'look') backToSaved() }, [tab])
+  useEffect(() => () => previewTheme(savedRef.current), [])
 
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
   const alertsDirty = !same(alerts, s.notifications)
@@ -171,9 +179,9 @@ export default function Settings() {
           </>}
 
           {tab === 'look' && <>
-            <Head title="Appearance" sub="Light or dark. It follows you on this device." />
-            <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Theme</b><p className="tp-sub">{look === 'dark' ? 'Dark' : 'Light'}</p></div><Seg label="Theme" value={look} onChange={setLook} options={[{ key: 'light', label: 'Light' }, { key: 'dark', label: 'Dark' }]} /></div>
-            <FormFoot dirty={look !== theme} onDiscard={() => setLook(theme)} onSave={() => { setTheme(look); note(`${look === 'dark' ? 'Dark' : 'Light'} mode on`) }} />
+            <Head title="Appearance" sub="Light, dark, or match your device. Try one and it shows right away. Save keeps it." />
+            <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Theme</b><p className="tp-sub">{THEME_NAME[look]}</p></div><Seg label="Theme" value={look} onChange={pickLook} options={[{ key: 'light', label: 'Light' }, { key: 'dark', label: 'Dark' }, { key: 'system', label: 'System' }]} /></div>
+            <FormFoot dirty={look !== saved} onDiscard={backToSaved} onSave={() => { saveTheme(look); note(look === 'system' ? 'Theme follows your device' : `${THEME_NAME[look]} mode on`) }} />
           </>}
         </div>
       </section>
