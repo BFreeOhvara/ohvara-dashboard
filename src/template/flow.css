@@ -514,7 +514,7 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 
 /* Tones: --c is the hue as a mark/text colour, --cf the fill, --ci the dark ink that sits on the fill */
 .tp .is-blue { --cf: var(--sh-f-sky); --ci: var(--sh-fi-sky); }
-.tp .is-warn { --cf: var(--sh-f-rose); --ci: var(--sh-fi-rose); }
+.tp .is-warn { --cf: var(--sh-f-apricot); --ci: var(--sh-fi-apricot); }
 .tp .is-teal { --cf: var(--sh-f-lilac); --ci: var(--sh-fi-lilac); }
 .tp .is-green, .tp .is-up { --cf: var(--sh-f-sage); --ci: var(--sh-fi-sage); }
 .tp .is-mute { --cf: var(--sh-f-stone); --ci: var(--sh-fi-stone); }
@@ -542,7 +542,7 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 .fx-ib, .fx .fx-me { width: 40px; height: 40px; }
 .fx-ib { color: var(--ov-hi); }
 .fx .fx-me { font-weight: 600; color: var(--sh-on-accent); background: var(--sh-acc); }
-.fx-badge, .fx-tb { background: var(--sh-f-rose); color: var(--sh-fi-rose); }
+.fx-badge, .fx-tb { background: var(--sh-f-apricot); color: var(--sh-fi-apricot); }
 
 /* Accent surfaces: the accent fill with its own dark ink */
 .fx .fx-accent, .fx-layer .fx-accent, .tp-layer .fx-accent, .fx .fx-plus, .fx .fx-plus:hover, .fx-chip.is-on, .fx-step.is-on, .fx-pal-r.is-at .fx-pal-ic, .fx-bplus {
@@ -706,7 +706,7 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 
 /* Tones: --cf card fill per theme, --ci its ink, --cs/--csi a status button's selected fill and ink */
 .tp .is-blue { --cf: var(--sh-cf-sky); --ci: var(--sh-ci); --cs: var(--sh-cs-sky); --csi: var(--sh-csi-sky); }
-.tp .is-warn { --cf: var(--sh-cf-rose); --ci: var(--sh-ci); --cs: var(--sh-cs-rose); --csi: var(--sh-csi-rose); }
+.tp .is-warn { --cf: var(--sh-cf-apricot); --ci: var(--sh-ci); --cs: var(--sh-cs-apricot); --csi: var(--sh-csi-apricot); }
 .tp .is-teal { --cf: var(--sh-cf-lilac); --ci: var(--sh-ci); --cs: var(--sh-cs-lilac); --csi: var(--sh-csi-lilac); }
 .tp .is-green, .tp .is-up { --cf: var(--sh-cf-sage); --ci: var(--sh-ci); --cs: var(--sh-cs-sage); --csi: var(--sh-csi-sage); }
 .tp .is-mute { --cf: var(--sh-cf-stone); --ci: var(--sh-ci); --cs: var(--sh-cs-stone); --csi: var(--sh-csi-stone); }
@@ -864,61 +864,147 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 @media (max-width: 560px) { .pb-row { font-size: 13.5px; } .pb-sum { padding: 16px; } }
 .tp-solo .tp-seg > .on { background: var(--sh-sel); color: var(--sh-on-sel); }
 
-/* P836 ----------------------------------------------------------------------------------------------------------
-   One accent: warm apricot (src/index.css "Prompt 836"). It marks the active top-bar tab, the primary action, the
-   + buttons, Accept, focus rings, switches, sliders and progress, and nothing else: "needs you" is rose now and the
-   old mint stage is lilac. Overview gets Solvik's colour: the budget tile washed with the accent, solid status
-   chips and delta, chunky stage blocks in the same fills the Leads cards use. Selected rows/segments stay neutral. */
+/* P840 ----------------------------------------------------------------------------------------------------------
+   Small palette, one highlight (src/index.css "Prompt 840"). The highlight is the Booked blue with dark navy ink:
+   active top tab (stretch kept), rail active, Submit a policy, Accept and the other primary buttons. The rail + is a
+   plain rail icon. Apricot is Needs you only. Every chip and delta is a SOLID fill of its hue (--cb) with that hue's
+   dark ink (--cbi), so a colour looks the same on every page and over every surface. */
 
-/* Every accent fill: apricot with near-black ink; darker on hover */
-.fx .fx-tab.is-on, [data-theme="light"] .fx .fx-tab.is-on { --sp-fill: var(--sh-acc); color: var(--sh-on-accent); background: var(--sh-acc); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .32), 0 8px 18px -12px var(--sh-acc); }
+/* Tones: --cb solid fill, --cbi its ink. Five hues: sky, apricot, sage, lilac (+ stone neutral) */
+.tp .is-blue { --cb: var(--sh-f-sky); --cbi: var(--sh-fi-sky); }
+.tp .is-warn { --cb: var(--sh-f-apricot); --cbi: var(--sh-fi-apricot); }
+.tp :is(.is-teal, .is-violet) { --cb: var(--sh-f-lilac); --cbi: var(--sh-fi-lilac); --cs: var(--sh-cs-lilac); --csi: var(--sh-csi-lilac); }
+.tp :is(.is-green, .is-up) { --cb: var(--sh-f-sage); --cbi: var(--sh-fi-sage); }
+.tp .is-mute { --cb: var(--sh-f-stone); --cbi: var(--sh-fi-stone); }
+.tp .tp-chip:is(.is-blue, .is-teal, .is-warn, .is-green, .is-up, .is-mute, .is-violet),
+.tp .fx-delta:is(.is-blue, .is-teal, .is-warn, .is-green, .is-up, .is-mute, .is-violet) { color: var(--cbi); background: var(--cb); box-shadow: none; font-weight: 600; }
+
+/* The highlight: active top tab, rail active, primary buttons */
+.fx .fx-tab.is-on, [data-theme="light"] .fx .fx-tab.is-on { --sp-fill: var(--sh-acc); color: var(--sh-on-accent); background: var(--sh-acc); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 8px 18px -14px var(--sh-acc); }
 .fx .fx-tab.is-on .fx-tb { box-shadow: 0 0 0 2px var(--sh-acc); }
-.fx .fx-accent, .fx-layer .fx-accent, .tp-layer .fx-accent, .fx .fx-plus, .fx-bplus, .tp .tp-plus, .tp .tp-bplus, .tp .fx-logo, .tp-solo .tp-primary {
-  color: var(--sh-on-accent); background: var(--sh-acc); border-color: transparent;
-}
-.fx .fx-plus, .fx-bplus { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .32), 0 8px 18px -12px var(--sh-acc); }
+.fx .fx-ri.active, .fx .fx-ri[aria-expanded="true"] { color: var(--sh-on-accent); background: var(--sh-acc); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3); }
+.fx .fx-accent, .fx-layer .fx-accent, .tp-layer .fx-accent, .fx-bplus, .tp-solo .tp-primary { color: var(--sh-on-accent); background: var(--sh-acc); border-color: transparent; }
 @media (hover: hover) and (pointer: fine) {
-  .fx .fx-accent:hover, .fx-layer .fx-accent:hover, .tp-layer .fx-accent:hover, .fx .fx-plus:hover, .fx-bplus:hover, .tp-solo .tp-primary:hover { background: var(--sh-acc-hover); filter: none; }
+  .fx .fx-accent:hover, .fx-layer .fx-accent:hover, .tp-layer .fx-accent:hover, .tp-solo .tp-primary:hover { background: var(--sh-acc-hover); filter: none; }
 }
+.fx .fx-me { color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 12%, transparent); }
 
-/* Focus rings, switches, sliders, progress */
+/* Lines and marks in the highlight: focus rings, switches, slider, booked meter */
 .tp :focus-visible { outline-color: var(--sh-acc-line); }
 .tp .tp-switch.on { background: var(--sh-acc); }
-.tp .tp-switch.on span { box-shadow: 0 1px 3px rgba(0, 0, 0, .3); }
-.pb-range { --pb-fill: var(--sh-acc-line); }
-.pb-range::-webkit-slider-thumb { background: var(--sh-acc); box-shadow: 0 1px 4px rgba(0, 0, 0, .3), 0 0 0 6px color-mix(in srgb, var(--sh-acc) 24%, transparent); }
-.pb-range::-moz-range-thumb { background: var(--sh-acc); box-shadow: 0 1px 4px rgba(0, 0, 0, .3), 0 0 0 6px color-mix(in srgb, var(--sh-acc) 24%, transparent); }
-.pb-range:hover::-webkit-slider-thumb, .pb-range:active::-webkit-slider-thumb { box-shadow: 0 1px 4px rgba(0, 0, 0, .3), 0 0 0 9px color-mix(in srgb, var(--sh-acc) 30%, transparent); }
-.pb-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--sh-acc-line), 0 0 0 7px color-mix(in srgb, var(--sh-acc) 30%, transparent); }
-.pb-range:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(--sh-acc-line), 0 0 0 7px color-mix(in srgb, var(--sh-acc) 30%, transparent); }
 .pb-meter { --c: var(--sh-acc-line); }
-.fx-ring-arc { stroke: var(--sh-acc-line); }
 
-/* Tones: lilac has a selected state now; --cb is a stage's confident fill (the colour of its cards on Leads) */
-.tp .is-violet { --cs: var(--sh-cs-lilac); --csi: var(--sh-csi-lilac); }
-.tp .is-blue { --cb: var(--sh-f-sky); } .tp .is-warn { --cb: var(--sh-f-rose); } .tp :is(.is-teal, .is-violet) { --cb: var(--sh-f-lilac); }
-.tp :is(.is-green, .is-up) { --cb: var(--sh-f-sage); } .tp .is-mute { --cb: var(--sh-f-stone); }
+/* Unread badges (messages, bell) in the highlight; the Leads tab count stays apricot (it counts Needs you) */
+.fx-badge { color: var(--sh-on-accent); background: var(--sh-acc); }
+.tp .tp-now, .tp .tp-now::before { background: var(--sh-acc-line); }
 
-/* Overview colour: the budget tile washed with the accent, solid chips and delta, chunky stage blocks */
-.fx-tile.is-acc { background: linear-gradient(var(--sh-acc-wash), var(--sh-acc-wash)), var(--fx-fill); border-color: color-mix(in srgb, var(--sh-acc) 32%, transparent); }
-.fx-tile.is-acc .fx-accent { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .32), 0 0 0 1px color-mix(in srgb, var(--sh-acc-line) 40%, transparent), 0 10px 22px -14px var(--sh-acc-hover); }
-.fx-tile.is-acc .pb-meter { background: color-mix(in srgb, var(--ov-hi) 12%, transparent); }
-.fx.is-overview .tp-chip:is(.is-blue, .is-teal, .is-warn, .is-green, .is-mute, .is-violet), .fx.is-overview .fx-delta:is(.is-up, .is-blue, .is-warn, .is-teal) {
-  color: var(--csi); background: var(--cs); box-shadow: none;
-}
-.fx-ov .fx-stack { height: 22px; gap: 6px; }
-.fx-ov .fx-stack i { min-width: 10px; border-radius: 8px; background: var(--cb); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22); }
-.fx-ov .fx-legend i { width: 10px; height: 10px; background: var(--cb); }
-
-/* The mark top left: larger, with the wordmark centred on it (same text size) */
-.fx-top .fx-brand { align-items: center; gap: 11px; }
-.fx-top .fx-brand b { line-height: 1; position: relative; top: -1px; }
-
-/* The Welcome / Sign-up hero (the old global navy+teal .ov-hero): the shell surface washed with the accent */
+/* The Welcome / Sign-up hero (the old global navy+teal .ov-hero) and the old teal card edges: the shell surface,
+   washed with the highlight */
 .tp .ov-hero, [data-theme="light"] .tp .ov-hero {
   --tp-white: var(--ov-hi); --ov-hero-soft: var(--ov-mid); color: var(--ov-hi);
-  background: linear-gradient(var(--sh-acc-wash), var(--sh-acc-wash)), var(--sh-surface);
-  border: 1px solid color-mix(in srgb, var(--sh-acc) 32%, transparent);
+  background: linear-gradient(color-mix(in srgb, var(--sh-acc) 22%, transparent), color-mix(in srgb, var(--sh-acc) 22%, transparent)), var(--sh-surface);
+  border: 1px solid color-mix(in srgb, var(--sh-acc) 34%, transparent);
   box-shadow: inset 0 1px 0 var(--sh-hl), 0 24px 48px -30px rgba(0, 0, 0, .45);
 }
-[data-theme="light"] .tp .ov-card { border-color: var(--sh-edge); box-shadow: inset 0 1px 0 var(--sh-hl), 0 1px 2px rgba(0, 0, 0, .05), 0 24px 48px -28px rgba(0, 0, 0, .22); }
+.tp-solo .ov-card, [data-theme="light"] .tp-solo .ov-card { border-color: var(--sh-edge); }
+
+/* Overview on Solvik's shape: main (2/3) = the dominant bookings tile over a pair of tiles; right (1/3) = Needs you,
+   full height, its cards 2-up and scrolling inside the column. The column adds no height of its own: its inside is
+   absolutely placed, so the row is as tall as the main side. */
+.fx-ovl { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 14px; min-width: 0; }
+.fx-ovl-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.fx-ovl-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+.fx-ovl-needs { position: relative; padding: 0; min-height: 420px; }
+.fx-ovl-needs-in { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 14px; padding: 18px; min-height: 0; }
+.fx-ncards { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(168px, auto); gap: 10px; align-content: start; margin: 0 -6px -6px; padding: 0 6px 6px; scrollbar-width: thin; }
+
+/* The dominant tile: big number, the range, a large smooth chart with the budget band */
+.fx-ovl-hero .fx-chart-head { align-items: center; gap: 14px; }
+.fx-ovl-hero .fx-huge { font-size: 52px; }
+.fx-hero-sub { font-size: 13px; font-weight: 500; color: var(--ov-mid); }
+.fx-hero-sub b { color: var(--ov-hi); }
+.fx-key { display: flex; gap: 18px; font-size: 12px; font-weight: 500; color: var(--ov-mid); }
+.fx-key span { display: inline-flex; align-items: center; gap: 7px; }
+.fx-key i { width: 9px; height: 9px; border-radius: 50%; background: var(--ov-data-a); }
+.fx-key i.is-dash { width: 14px; height: 0; border-radius: 0; background: none; border-top: 2px dashed var(--ov-mute); }
+.fx-wchart { position: relative; padding-left: 26px; }
+.fx-wchart svg { height: 168px; }
+.fx-wchart-y { position: absolute; left: 0; top: 0; bottom: 26px; width: 20px; }
+.fx-wchart-y span { position: absolute; left: 0; transform: translateY(-50%); font-size: 11px; font-weight: 500; color: var(--ov-mute); font-variant-numeric: tabular-nums; }
+.fx-band { fill: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
+.fx-target { stroke: var(--ov-mute); stroke-width: 1.5; stroke-dasharray: 6 6; vector-effect: non-scaling-stroke; opacity: .8; }
+.fx-wchart .fx-line-draw { stroke-width: 2.75; }
+.fx-pt.is-now { fill: var(--ov-data-a); stroke: var(--sh-base); stroke-width: 3; }
+.fx-wchart .fx-xs { display: flex; justify-content: space-between; margin-top: 8px; }
+.fx-wchart .fx-xs span { flex: 1 1 0; min-width: 0; text-align: center; white-space: nowrap; }
+.fx-wchart .fx-xs span:first-child { text-align: left; } .fx-wchart .fx-xs span:last-child { text-align: right; }
+.fx-wchart .fx-xs .is-now { color: var(--ov-hi); font-weight: 600; }
+
+/* Your book: the one colour-filled tile on the page, a ring and three counts */
+.fx-tile.is-fill { --ov-hi: var(--sh-ci); --ov-mid: color-mix(in srgb, var(--sh-ci) 84%, transparent); --ov-mute: color-mix(in srgb, var(--sh-ci) 76%, transparent);
+  color: var(--ov-hi); background: var(--cf); border-color: var(--sh-card-edge); box-shadow: inset 0 1px 0 var(--sh-card-hl), var(--fx-shadow); }
+.fx-tile.is-fill .fx-open { color: var(--ov-hi); border-color: color-mix(in srgb, var(--ov-hi) 26%, transparent); }
+.fx-ovl-book { align-items: stretch; }
+.fx-ovl-book .fx-ring { align-self: center; width: 148px; height: 148px; }
+.fx-ovl-book .fx-ring-track { stroke: color-mix(in srgb, var(--ov-hi) 16%, transparent); }
+.fx-ovl-book .fx-ring-arc { stroke: var(--sh-sage); }
+[data-theme="light"] .fx-ovl-book .fx-ring-arc { stroke: var(--sh-fi-sage); }
+.fx-ovl-book .fx-ring-mid b { font-size: 34px; font-weight: 600; }
+.fx-ovl-book .fx-ring-mid small { color: var(--ov-mid); }
+.fx-ringstats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: auto; }
+.fx-ringstats a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border-radius: 12px; }
+.fx-ringstats a:hover { background: color-mix(in srgb, var(--ov-hi) 10%, transparent); }
+.fx-ringstats small { font-size: 12px; font-weight: 500; color: var(--ov-mid); white-space: nowrap; }
+.fx-ringstats b { font-family: var(--font-display); font-size: 20px; font-weight: 600; }
+
+/* Next up: the time, who, and the call */
+.fx-ovl-next .fx-huge small { margin-left: 6px; }
+.fx-ovl-next .fx-next-who { align-self: flex-start; background: color-mix(in srgb, var(--ov-hi) 8%, transparent); }
+.fx-ovl-next .fx-next-who .tp-av { color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 14%, transparent); }
+.fx-ovl-next .fx-next-who small { color: var(--ov-mid); }
+.fx-next-acts { gap: 8px; }
+.fx-ovl-next .fx-later { margin-top: auto; }
+.fx-ovl-next .fx-later a { color: var(--ov-mid); border-color: var(--fx-edge); }
+.fx-ovl-next .fx-later a b { color: var(--ov-hi); }
+
+/* Needs you cards: stage-coloured, the stage's own ink, on the deep column */
+.fx-ncard { --ov-hi: var(--ci); --ov-mid: color-mix(in srgb, var(--ci) 86%, transparent); color: var(--ci); background: var(--cf); justify-content: space-between; padding: 14px; border-radius: 16px; }
+.fx-ncard h3 { font-size: 15px; line-height: 1.2; }
+.fx-ncard > p { color: var(--ov-mid); font-weight: 500; }
+.fx-ncard-k { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--ov-mid); }
+.fx-ncard-bot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 10px; }
+.fx-ncard-bot .fx-when { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--ci); }
+.fx-ncard .tp-av { width: 28px; height: 28px; font-size: 11px; color: var(--ci); background: color-mix(in srgb, var(--ci) 14%, transparent); }
+
+@media (max-width: 999.98px) {
+  .fx-ovl { grid-template-columns: minmax(0, 1fr); }
+  .fx-ovl-needs { min-height: 0; }
+  .fx-ovl-needs-in { position: static; }
+  .fx-ncards { overflow: visible; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+}
+@media (max-width: 760px) {
+  /* Phone: head stats, the dominant tile, Needs you, then the two small tiles */
+  .fx-ovl { display: flex; flex-direction: column; gap: 12px; }
+  .fx-ovl-main { display: contents; }
+  .fx-ovl-hero { order: 1; } .fx-ovl-needs { order: 2; } .fx-ovl-pair { order: 3; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .fx-ovl-hero .fx-huge { font-size: 44px; }
+  .fx-wchart svg { height: 150px; }
+  .fx-wchart .fx-xs span:not(:first-child):not(:last-child):not(:nth-child(4)):not(:nth-child(7)) { display: none; }
+  .fx-ovl-needs-in { padding: 16px; }
+  .fx-ncards { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(150px, auto); }
+}
+
+/* Colour balance per page: Activity's event types are solid in their hue; Billing's plan tile is its one colour-filled
+   tile (the Booked blue) */
+.tp .fx-feed-ic:is(.is-blue, .is-teal, .is-warn, .is-green, .is-mute, .is-violet) { color: var(--cbi); background: var(--cb); }
+.pb-plan .fx-split span { color: var(--ov-mid); }
+.pb-plan .fx-split b { color: var(--ov-hi); }
+.pb-plan .fx-split i { background: var(--ov-hi) !important; }
+.pb-plan .tp-sub, .pb-plan .pb-hero > span { color: var(--ov-mid); }
+.pb-plan .tp-tag, .pb-plan .pb-sample { color: var(--ov-hi); border-color: color-mix(in srgb, var(--ov-hi) 45%, transparent); }
+
+/* The logo: the default Ohvara mark in its own brand colours (white + teal dark, navy + white light), P835 size; the
+   wordmark sits on the lower half of the mark */
+.fx-top .fx-brand { align-items: flex-end; }
+.fx-top .fx-brand b { line-height: 1; padding-bottom: 2px; }
+.tp span.tp-money { font-weight: 600; }

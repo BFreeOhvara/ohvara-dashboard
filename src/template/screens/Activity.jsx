@@ -6,7 +6,7 @@ import { Seg, Empty } from '../kit'
 import { CountUp } from '../motion'
 import { paths } from '../paths'
 
-const KINDS = { lead: ['Leads', Inbox, 'blue'], call: ['Calls', Phone, 'warn'], text: ['Texts', MessageSquare, 'teal'], client: ['Clients', Users, 'violet'], moved: ['Moves', ArrowRightLeft, 'mute'] }
+const KINDS = { lead: ['Leads', Inbox, 'blue'], call: ['Calls', Phone, 'blue'], text: ['Texts', MessageSquare, 'teal'], client: ['Clients', Users, 'green'], moved: ['Moves', ArrowRightLeft, 'mute'] }
 const dayOf = at => (at.startsWith('Today') ? 'Today' : at.startsWith('Yesterday') ? 'Yesterday' : 'Earlier this week')
 
 // What happened, newest first, down one line grouped by day. The side tile counts it by kind with meters;

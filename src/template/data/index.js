@@ -158,6 +158,8 @@ export function useSampleOverview() {
       { day: 'Wed', date: 'Oct 28', packet: 3, review: 1, cancel: 0, save: 1 }, { day: 'Thu', date: 'Oct 29', packet: 0, review: 2, cancel: 0, save: 0 },
       { day: 'Fri', date: 'Oct 30', packet: 2, review: 0, cancel: 1, save: 1 }, { day: 'Sat', date: 'Oct 31', packet: 0, review: 0, cancel: 0, save: 0 }, { day: 'Sun', date: 'Nov 1', packet: 0, review: 0, cancel: 0, save: 0 },
     ],
+    // Booked appointments per week, oldest first; this week (the last) is read live from billing.booked
+    bookedByWeek: [['Aug 31', 4], ['Sep 7', 3], ['Sep 14', 5], ['Sep 21', 4], ['Sep 28', 6], ['Oct 5', 5], ['Oct 12', 4], ['Oct 19', 6], ['Oct 26', 5], ['Nov 2', s.billing.booked]],
     upNext: s.appointments.slice(0, 3),
     leadsToday: s.leads.length,
     today: NOW.label, clock: { time: NOW.time, ampm: NOW.ampm },

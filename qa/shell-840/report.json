@@ -1,0 +1,169 @@
+{
+ "mint": [
+  "dark/1440/overview path fill rgb(0,191,166)",
+  "dark/1440/leads path fill rgb(0,191,166)",
+  "dark/1440/clients path fill rgb(0,191,166)",
+  "dark/1440/calendar path fill rgb(0,191,166)",
+  "dark/1440/activity path fill rgb(0,191,166)",
+  "dark/1440/billing path fill rgb(0,191,166)",
+  "dark/1440/settings path fill rgb(0,191,166)",
+  "dark/1440/messages path fill rgb(0,191,166)",
+  "dark/1440/submit path fill rgb(0,191,166)",
+  "dark/1440/more path fill rgb(0,191,166)",
+  "dark/390/overview path fill rgb(0,191,166)",
+  "dark/390/leads path fill rgb(0,191,166)",
+  "dark/390/activity path fill rgb(0,191,166)",
+  "dark/390/billing path fill rgb(0,191,166)"
+ ],
+ "apricot": {
+  "dark/1440/overview": [
+   "fx-tb",
+   "fx-card fx-ncard is-warn"
+  ],
+  "dark/1440/leads": [
+   "fx-tb",
+   "fx-delta is-warn",
+   "I",
+   "fx-card fx-lcard is-warn"
+  ],
+  "dark/1440/clients": [
+   "fx-tb",
+   "fx-delta is-warn",
+   "fx-filter is-tone is-warn",
+   "B",
+   "fx-card fx-ccard is-warn"
+  ],
+  "dark/1440/calendar": [
+   "fx-tb"
+  ],
+  "dark/1440/activity": [
+   "fx-tb"
+  ],
+  "dark/1440/billing": [
+   "fx-tb"
+  ],
+  "dark/1440/settings": [
+   "fx-tb"
+  ],
+  "dark/1440/messages": [
+   "fx-tb"
+  ],
+  "dark/1440/submit": [
+   "fx-tb"
+  ],
+  "dark/1440/more": [
+   "fx-tb",
+   "tp-tb"
+  ],
+  "dark/1440/welcome": [],
+  "dark/1440/signup": [],
+  "dark/390/overview": [
+   "fx-tb",
+   "fx-card fx-ncard is-warn"
+  ],
+  "dark/390/leads": [
+   "fx-tb",
+   "fx-delta is-warn",
+   "I",
+   "fx-card fx-lcard is-warn"
+  ],
+  "dark/390/activity": [
+   "fx-tb"
+  ],
+  "dark/390/billing": [
+   "fx-tb"
+  ],
+  "light/1440/overview": [
+   "fx-tb",
+   "fx-card fx-ncard is-warn"
+  ],
+  "light/1440/leads": [
+   "fx-tb",
+   "fx-delta is-warn",
+   "I",
+   "fx-card fx-lcard is-warn"
+  ],
+  "light/1440/clients": [
+   "fx-tb",
+   "fx-delta is-warn",
+   "fx-filter is-tone is-warn",
+   "B",
+   "fx-card fx-ccard is-warn"
+  ],
+  "light/1440/calendar": [
+   "fx-tb"
+  ],
+  "light/1440/activity": [
+   "fx-tb"
+  ],
+  "light/1440/billing": [
+   "fx-tb"
+  ],
+  "light/1440/settings": [
+   "fx-tb"
+  ],
+  "light/1440/messages": [
+   "fx-tb"
+  ],
+  "light/1440/submit": [
+   "fx-tb"
+  ],
+  "light/1440/more": [
+   "fx-tb",
+   "tp-tb"
+  ],
+  "light/1440/welcome": [],
+  "light/1440/signup": [],
+  "light/390/overview": [
+   "fx-tb",
+   "fx-card fx-ncard is-warn"
+  ],
+  "light/390/leads": [
+   "fx-tb",
+   "fx-delta is-warn",
+   "I",
+   "fx-card fx-lcard is-warn"
+  ],
+  "light/390/activity": [
+   "fx-tb"
+  ],
+  "light/390/billing": [
+   "fx-tb"
+  ]
+ },
+ "errs": [],
+ "overflow": {
+  "dark/1440/overview": -15,
+  "dark/1440/leads": -15,
+  "dark/1440/clients": -15,
+  "dark/1440/calendar": -15,
+  "dark/1440/activity": -15,
+  "dark/1440/billing": -15,
+  "dark/1440/settings": -15,
+  "dark/1440/messages": -15,
+  "dark/1440/submit": -15,
+  "dark/1440/more": -15,
+  "dark/1440/welcome": -15,
+  "dark/1440/signup": -15,
+  "dark/390/overview": -15,
+  "dark/390/leads": -15,
+  "dark/390/activity": -15,
+  "dark/390/billing": -15,
+  "light/1440/overview": -15,
+  "light/1440/leads": -15,
+  "light/1440/clients": -15,
+  "light/1440/calendar": -15,
+  "light/1440/activity": -15,
+  "light/1440/billing": -15,
+  "light/1440/settings": -15,
+  "light/1440/messages": -15,
+  "light/1440/submit": -15,
+  "light/1440/more": -15,
+  "light/1440/welcome": -15,
+  "light/1440/signup": -15,
+  "light/390/overview": -15,
+  "light/390/leads": -15,
+  "light/390/activity": -15,
+  "light/390/billing": -15
+ }
+}

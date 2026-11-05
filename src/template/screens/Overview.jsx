@@ -1,19 +1,19 @@
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Check, Clock, FileUp, PhoneIncoming, TriangleAlert, CalendarDays } from 'lucide-react'
-import { PLAN, modeOf, planRange, rangeText } from '../../lib/planPricing'
-import { useSampleOverview, useSampleClients, useSampleActions, useSampleBilling } from '../data'
-import { Avatar, Chip, Money } from '../kit'
-import { CountUp, usd } from '../motion'
-import { BookedMeter } from '../PlanBuilder'
+import { ArrowUpRight, Check, Clock, CalendarDays, Phone, PhoneIncoming, TriangleAlert } from 'lucide-react'
+import { planRange, rangeText } from '../../lib/planPricing'
+import { useSampleOverview, useSampleClients, useSampleBilling } from '../data'
+import { Avatar } from '../kit'
+import { CountUp } from '../motion'
 import { stageChip } from '../LeadOutcome'
 import { laneOf } from '../stages'
 import { paths } from '../paths'
 
-// Today at a glance in six big tiles: what is next, this week's budget and bookings, your book, last week's work,
-// who needs you, and what is due. Each tile is one idea. Sample data only.
+// P840: Solvik's Overview shape. Left two thirds: one dominant tile (this week's bookings against the budget
+// range, with the weekly chart), under it Your book (the one colour-filled tile) and Next up. Right third: a
+// full-height Needs you column of stage-coloured cards, 2-up, scrolling inside itself. The page head carries
+// clients, booked this week and the weekly budget. Sample data only.
 const apptTo = a => (a.kind === 'client' ? paths.client(a.ref) : paths.lead(a.ref))
-const SERIES = [['packet', 'Packet checks'], ['review', 'Review calls'], ['cancel', 'Cancellations'], ['save', 'Saves']]
-const BOOK = [['protected', 'Protected', 'green'], ['setting_up', 'Setting up', 'blue'], ['needs_attention', 'Needs attention', 'warn'], ['requests', 'Requests open', 'teal']]
+const BOOK = [['setting_up', 'Setting up'], ['needs_attention', 'Needs you'], ['requests', 'Requests']]
 
 function Tile({ className = '', i, title, sub, to, label, children }) {
   return (
@@ -27,112 +27,132 @@ function Tile({ className = '', i, title, sub, to, label, children }) {
   )
 }
 
-// Steps done per day as an area that draws itself in.
-function StepsChart({ days }) {
-  const sums = days.map(d => SERIES.reduce((n, [k]) => n + d[k], 0))
-  const top = Math.max(4, ...sums)
-  const W = 600
-  const H = 170
-  const x = i => (i / (days.length - 1)) * W
-  const y = v => H - (v / top) * (H - 16) - 4
-  const pts = sums.map((v, i) => [x(i), y(v)])
+// Booked per week as a smooth line that draws itself in, over the budget range band (dashed edges).
+function WeeksChart({ weeks, lo, hi }) {
+  const top = Math.max(hi + 2, ...weeks.map(w => w[1]))
+  const W = 640
+  const H = 210
+  const x = i => (i / (weeks.length - 1)) * W
+  const y = v => H - (v / top) * (H - 12) - 2
+  const pts = weeks.map(([, v], i) => [x(i), y(v)])
   const line = pts.reduce((d, [px, py], i) => {
     if (i === 0) return `M${px},${py}`
     const [qx, qy] = pts[i - 1]
     const cx = (qx + px) / 2
     return `${d} C${cx},${qy} ${cx},${py} ${px},${py}`
   }, '')
+  const last = pts[pts.length - 1]
   return (
-    <div className="fx-chart">
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`Steps done per day: ${sums.join(', ')}`}>
-        <defs><linearGradient id="fx-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style={{ stopColor: 'var(--ov-data-a)', stopOpacity: 0.38 }} /><stop offset="1" style={{ stopColor: 'var(--ov-data-a)', stopOpacity: 0 }} /></linearGradient></defs>
-        {[0.25, 0.5, 0.75].map(f => <line key={f} x1="0" x2={W} y1={H * f} y2={H * f} className="fx-grid" />)}
-        <path d={`${line} L${W},${H} L0,${H} Z`} fill="url(#fx-area)" className="fx-area" />
+    <div className="fx-chart fx-wchart">
+      <div className="fx-wchart-y" aria-hidden="true">{[top, hi, lo, 0].map(v => <span key={v} style={{ top: `${(y(v) / H) * 100}%` }}>{v}</span>)}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`Booked per week: ${weeks.map(([w, v]) => `${w} ${v}`).join(', ')}. Budget range ${lo} to ${hi}.`}>
+        <defs><linearGradient id="fx-warea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style={{ stopColor: 'var(--ov-data-a)', stopOpacity: 0.34 }} /><stop offset="1" style={{ stopColor: 'var(--ov-data-a)', stopOpacity: 0 }} /></linearGradient></defs>
+        <rect x="0" width={W} y={y(hi)} height={y(lo) - y(hi)} className="fx-band" />
+        <line x1="0" x2={W} y1={y(hi)} y2={y(hi)} className="fx-target" />
+        <line x1="0" x2={W} y1={y(lo)} y2={y(lo)} className="fx-target" />
+        <path d={`${line} L${W},${H} L0,${H} Z`} fill="url(#fx-warea)" className="fx-area" />
         <path d={line} pathLength="1" className="fx-line-draw" />
-        {pts.map(([px, py], i) => <circle key={days[i].day} cx={px} cy={py} r="4" className="fx-pt" style={{ '--i': i }} />)}
+        <circle cx={last[0]} cy={last[1]} r="5" className="fx-pt is-now" style={{ '--i': 3 }} />
       </svg>
-      <div className="fx-xs">{days.map((d, i) => <span key={d.day}><b>{sums[i]}</b>{d.day}</span>)}</div>
+      <div className="fx-xs">{weeks.map(([w], i) => <span key={w} className={i === weeks.length - 1 ? 'is-now' : ''}>{i === weeks.length - 1 ? 'This week' : w}</span>)}</div>
     </div>
+  )
+}
+
+// The protected share of the book as a ring.
+function Ring({ value, of }) {
+  const r = 52
+  const len = 2 * Math.PI * r
+  const pct = of ? value / of : 0
+  return (
+    <div className="fx-ring" role="img" aria-label={`${value} of ${of} clients protected`}>
+      <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r={r} className="fx-ring-track" /><circle cx="60" cy="60" r={r} className="fx-ring-arc" transform="rotate(-90 60 60)" style={{ strokeDasharray: len, '--len': len, '--to': len * (1 - pct) }} /></svg>
+      <span className="fx-ring-mid"><b className="tp-num">{Math.round(pct * 100)}%</b><small>protected</small></span>
+    </div>
+  )
+}
+
+function NeedCard({ r, i }) {
+  return (
+    <article className={`fx-card fx-ncard is-${r.tone}`} style={{ '--i': i }}>
+      <Link to={r.to} className="fx-cover" aria-label={`Open ${r.name}`} />
+      <span className="fx-ncard-k"><r.Icon size={13} aria-hidden="true" />{r.kind}</span>
+      <h3>{r.name}</h3>
+      <p>{r.what}</p>
+      <div className="fx-ncard-bot"><span className="fx-when">{r.when}</span><Avatar name={r.name} /></div>
+    </article>
   )
 }
 
 export default function Overview() {
   const { data: o } = useSampleOverview()
   const { data: clients } = useSampleClients()
-  const { doneTask } = useSampleActions()
   const { data: bill } = useSampleBilling()
-  const m = modeOf(bill.budget.mode)
   const wk = planRange(bill.budget.weekly, bill.budget.mode).week
   const next = o.nextAppt
-  const total = o.doneByDay.reduce((n, d) => n + SERIES.reduce((m, [k]) => m + d[k], 0), 0)
-  const bookN = BOOK.map(([k]) => clients.filter(c => c.stage === k).length)
-  const bookAll = bookN.reduce((a, b) => a + b, 0) || 1
-  const needs = [
-    ...o.attention.map(c => ({ id: c.id, to: paths.client(c.id), name: `${c.client_first_name} ${c.client_last_name}`, what: c.attention, tone: 'warn', Icon: TriangleAlert })),
-    ...o.newLeads.filter(l => l.stage !== 'booked').map(l => ({ id: l.id, to: paths.lead(l.id), name: l.name, what: stageChip(l.stage)[1], tone: laneOf(l.stage).tone, Icon: PhoneIncoming })),
-  ]
   const later = o.todayAppts.filter(a => a.id !== next?.id)
+  const soon = o.upNext.filter(a => a.date > o.todayAppts[0]?.date).slice(0, 2)
+  const nBy = k => clients.filter(c => c.stage === k).length
+  const prot = nBy('protected')
+  const weeks = o.bookedByWeek
+  const prev = weeks[weeks.length - 2][1]
+  const status = bill.booked < wk.low ? ['Below range so far', 'mute'] : bill.booked > wk.high ? ['Above range', 'up'] : ['In range', 'up']
+  const needs = [
+    ...o.newLeads.filter(l => l.stage !== 'booked').map(l => ({ id: l.id, to: paths.lead(l.id), name: l.name, what: stageChip(l.stage)[1], tone: laneOf(l.stage).tone, Icon: PhoneIncoming, kind: l.kind === 'live_call' ? 'Live call' : 'Lead', when: l.stage === 'ringing' ? 'Now' : 'Today' })),
+    ...o.attention.map(c => ({ id: c.id, to: paths.client(c.id), name: `${c.client_first_name} ${c.client_last_name}`, what: c.attention, tone: 'warn', Icon: TriangleAlert, kind: 'Client', when: 'Today' })),
+  ]
 
   return (
-    <div className="tp-page fx-page fx-grid fx-ov">
-      <section className="fx-tile is-hero fx-s7" style={{ '--i': 0 }} aria-label="Next up">
-        <header className="fx-tile-h"><span className="tp-grow"><h2>Next up</h2><p>{next ? `${next.label}, ${next.inText}` : 'Nothing else on today'}</p></span>
-          {next && <Link to={apptTo(next)} className="fx-open" aria-label={`Open ${next.who}`}><ArrowUpRight size={16} /></Link>}</header>
-        {next ? (
-          <div className="fx-next">
-            <b className="fx-huge">{next.time.replace(/ (AM|PM)/, '')}<small>{next.time.slice(-2)}</small></b>
-            <span className="fx-next-who"><Avatar name={next.who} /><span><b>{next.who}</b><small>{next.label} · today</small></span></span>
+    <div className="tp-page fx-page fx-ovl">
+      <div className="fx-ovl-main">
+        <Tile className="fx-ovl-hero" i={0} title="Booked this week" sub={`Your weekly budget books ${rangeText(wk)}`} to={paths.calendar()} label="Open Calendar">
+          <div className="fx-chart-head">
+            <b className="tp-num fx-huge"><CountUp value={bill.booked} /></b>
+            <span className="fx-hero-sub">booked · range <b>{rangeText(wk)}</b> · {prev} last week</span>
+            <i className={`fx-delta is-${status[1]}`}>{status[0]}</i>
           </div>
-        ) : <p className="fx-calm">The team books new appointments inside your hours.</p>}
-        <ul className="fx-later">
-          {later.map(a => <li key={a.id}><Link to={apptTo(a)}><Clock size={13} aria-hidden="true" />{a.time}<b>{a.who}</b></Link></li>)}
-          {o.upNext.filter(a => a.date > o.todayAppts[0]?.date).slice(0, 2).map(a => <li key={a.id}><Link to={apptTo(a)}><CalendarDays size={13} aria-hidden="true" />{a.day} {a.time}<b>{a.who}</b></Link></li>)}
-        </ul>
+          <div className="fx-key"><span><i className="is-line" />Booked per week</span><span><i className="is-dash" />Budget range</span></div>
+          <WeeksChart weeks={weeks} lo={wk.low} hi={wk.high} />
+        </Tile>
+
+        <div className="fx-ovl-pair">
+          <Tile className="fx-ovl-book is-fill is-green" i={1} title="Your book" sub={`${clients.length} clients`} to={paths.clients()} label="Open Clients">
+            <Ring value={prot} of={clients.length} />
+            <ul className="fx-ringstats">
+              {BOOK.map(([k, label]) => <li key={k}><Link to={paths.clients(k)}><small>{label}</small><b className="tp-num">{nBy(k)}</b></Link></li>)}
+            </ul>
+          </Tile>
+
+          <Tile className="fx-ovl-next" i={2} title="Next up" sub={next ? `${next.label}, ${next.inText}` : 'Nothing else on today'} to={next ? apptTo(next) : paths.calendar()} label={next ? `Open ${next.who}` : 'Open Calendar'}>
+            {next ? (
+              <>
+                <b className="fx-huge">{next.time.replace(/ (AM|PM)/, '')}<small>{next.time.slice(-2)}</small></b>
+                <span className="fx-next-who"><Avatar name={next.who} /><span><b>{next.who}</b><small>{next.label} · today</small></span></span>
+                <div className="tp-row tp-wrap fx-next-acts">
+                  <Link to={apptTo(next)} className="tp-primary sm fx-accent"><Phone size={14} />Call {next.who.split(' ')[0]}</Link>
+                  <Link to={paths.calendar()} className="fx-pillbtn"><CalendarDays size={14} />Calendar</Link>
+                </div>
+              </>
+            ) : <p className="fx-calm">The team books new appointments inside your hours.</p>}
+            <ul className="fx-later">
+              {later.map(a => <li key={a.id}><Link to={apptTo(a)}><Clock size={13} aria-hidden="true" />{a.time}<b>{a.who}</b></Link></li>)}
+              {soon.map(a => <li key={a.id}><Link to={apptTo(a)}><CalendarDays size={13} aria-hidden="true" />{a.day} {a.time}<b>{a.who}</b></Link></li>)}
+            </ul>
+          </Tile>
+        </div>
+      </div>
+
+      <section className="fx-tile is-deep fx-ovl-needs" style={{ '--i': 3 }} aria-label="Needs you">
+        <div className="fx-ovl-needs-in">
+          <header className="fx-tile-h">
+            <span className="tp-grow"><h2>Needs you</h2><p>{needs.length ? `${needs.length} waiting on you` : 'All caught up'}</p></span>
+            <Link to={paths.leads()} className="fx-open" aria-label="Open Leads"><ArrowUpRight size={16} /></Link>
+          </header>
+          {needs.length > 0
+            ? <div className="fx-ncards">{needs.map((r, i) => <NeedCard key={r.id} r={r} i={i} />)}</div>
+            : <p className="fx-calm"><Check size={16} aria-hidden="true" />No one is waiting on you.</p>}
+        </div>
       </section>
-
-      <Tile className="fx-s5 is-acc" i={1} title="This week's budget" sub={`${m.label} · next charge ${bill.next_charge}`} to={paths.billing()} label="Open Billing">
-        <div className="tp-row tp-wrap"><b className="tp-money fx-huge2"><CountUp value={bill.budget.weekly} format={usd()} /></b><span className="tp-sub">a week</span></div>
-        <div className="pb-booked">
-          <span className="tp-row tp-between"><span><small>Booked this week</small><b className="tp-num"><CountUp value={bill.booked} /></b></span><small>range {rangeText(wk)}</small></span>
-          <BookedMeter booked={bill.booked} weekly={bill.budget.weekly} mode={bill.budget.mode} />
-        </div>
-        <div className="tp-row tp-wrap pb-svcline"><Chip tone={bill.servicing.status === 'active' ? 'green' : 'mute'}>Servicing {bill.servicing.status === 'active' ? 'active' : 'paused'}</Chip><small><Money v={PLAN.servicingMonthly} cents={false} /> a month · next {bill.servicing.next}</small></div>
-        <Link to={paths.submit()} className="tp-primary fx-accent fx-self"><FileUp size={16} />Submit a policy</Link>
-      </Tile>
-
-      <Tile className="fx-s5" i={2} title="Your book" sub="Where every client stands" to={paths.clients()} label="Open Clients">
-        <b className="tp-num fx-huge2"><CountUp value={clients.length} /><small> clients</small></b>
-        <div className="fx-stack" role="img" aria-label={BOOK.map(([, l], i) => `${bookN[i]} ${l}`).join(', ')}>
-          {BOOK.map(([k, , tone], i) => bookN[i] > 0 && <i key={k} className={`is-${tone}`} style={{ flexGrow: bookN[i], '--d': i }} />)}
-        </div>
-        <ul className="fx-legend">
-          {BOOK.map(([k, label, tone], i) => <li key={k}><Link to={paths.clients(k)}><i className={`is-${tone}`} />{label}<b>{bookN[i]}</b><span>{Math.round((bookN[i] / bookAll) * 100)}%</span></Link></li>)}
-        </ul>
-      </Tile>
-
-      <Tile className="fx-s7" i={3} title="Steps done" sub={`Last week, ${o.doneRange}`} to={paths.activity()} label="Open Activity">
-        <div className="fx-chart-head"><b className="tp-num fx-huge2"><CountUp value={total} /></b><span className="fx-delta is-up">+3 on the week before</span></div>
-        <StepsChart days={o.doneByDay} />
-      </Tile>
-
-      <Tile className="fx-s6 is-deep" i={4} title="Needs you" sub={needs.length ? `${needs.length} waiting on you` : 'All caught up'} to={paths.leads()} label="Open Leads">
-        <ul className="fx-rows">
-          {needs.map(r => <li key={r.id}><Link to={r.to} className={`fx-row is-${r.tone}`}><span className="fx-row-ic"><r.Icon size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{r.name}</b><small>{r.what}</small></span><ArrowUpRight size={15} aria-hidden="true" /></Link></li>)}
-          {needs.length === 0 && <li className="fx-calm"><Check size={16} aria-hidden="true" />No one is waiting on you.</li>}
-        </ul>
-      </Tile>
-
-      <Tile className="fx-s6" i={5} title="Coming up" sub={o.stepsOpen ? `${o.stepsOpen} steps due this week` : 'No steps due this week'} to={paths.calendar()} label="Open Calendar">
-        <ul className="fx-rows">
-          {o.dueSoon.map(t => (
-            <li key={t.id} className={`fx-task${t.done ? ' is-done' : ''}`}>
-              <span className="fx-date"><small>{t.day}</small><b>{t.date}</b></span>
-              <Link to={paths.client(t.clientId)} className="tp-grow"><b>{t.label}</b><small>{t.clientName} · {t.dueAt.split(', ').pop()}</small></Link>
-              {t.done ? <span className="fx-check is-on" aria-label="Done"><Check size={15} /></span> : <button type="button" className="fx-check" aria-label={`Mark ${t.label} for ${t.clientName} done`} onClick={() => doneTask(t.id)}><Check size={15} /></button>}
-            </li>
-          ))}
-        </ul>
-      </Tile>
     </div>
   )
 }

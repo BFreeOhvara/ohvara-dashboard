@@ -266,7 +266,7 @@ function useHeadStats(page) {
   const money = usd()
   const S = (icon, n, label, extra = {}) => ({ icon, n, label, ...extra })
   return {
-    overview: [S(Users, clients.length, 'clients in your book', { chip: [`${by('protected')} protected`, 'up'] }), S(PhoneIncoming, needs, 'leads need you', { chip: needs ? ['Act now', 'warn'] : null }), booked(S)],
+    overview: [S(Users, clients.length, 'clients in your book', { chip: [`${by('protected')} protected`, 'up'] }), booked(S), S(Wallet, weekly, 'budget this week', { fmt: money })],
     leads: [S(TriangleAlert, needs, 'need you now', { chip: needs ? ['Act now', 'warn'] : null }), S(CalendarCheck, leads.filter(l => l.stage === 'booked').length, 'booked'), S(Wallet, weekly, 'weekly budget', { fmt: money })],
     clients: [S(Users, clients.length, 'clients'), S(TriangleAlert, by('needs_attention'), 'need attention', { chip: by('needs_attention') ? ['See who', 'warn'] : null }), S(ShieldCheck, by('protected'), 'protected', { chip: ['On time', 'up'] })],
     calendar: [S(CalendarDays, events.length, 'this week'), S(Clock3, events.filter(e => e.date === 2).length, 'today'), S(PhoneCall, events.filter(e => /call/i.test(e.label)).length, 'client calls')],
@@ -337,7 +337,7 @@ export default function TemplateFrame() {
       <div className="tp-sky" aria-hidden="true"><i /><i /><i /></div>
 
       <header className="tp-phone-top fx-ptop">
-        <Link to={paths.home()} className="fx-brand" aria-label="Ohvara home"><OhvaraMark height={34} back="var(--ov-hi)" front="var(--accent)" className="fx-mark" /></Link>
+        <Link to={paths.home()} className="fx-brand" aria-label="Ohvara home"><OhvaraMark height={28} back="var(--ov-mark-back)" front="var(--ov-mark-front)" className="fx-mark" /></Link>
         <span className="tp-grow" />
         <Link to={paths.messages()} className="fx-ib tp-wig" aria-label="Messages" {...wig}><MessageSquare size={18} />{unread > 0 && <span className="fx-badge">{unread}</span>}</Link>
         <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} /><span className="fx-badge">3</span></button>
@@ -345,7 +345,7 @@ export default function TemplateFrame() {
       </header>
 
       <header className="tp-top fx-top">
-        <Link to={paths.home()} className="fx-brand" aria-label="Ohvara home"><OhvaraMark height={40} back="var(--ov-hi)" front="var(--accent)" className="fx-mark" /><b>ohvara</b></Link>
+        <Link to={paths.home()} className="fx-brand" aria-label="Ohvara home"><OhvaraMark height={30} back="var(--ov-mark-back)" front="var(--ov-mark-front)" className="fx-mark" /><b>ohvara</b></Link>
         <nav className="tp-tabs fx-tabs" ref={tabsRef} aria-label="Pages">
           {TABS.map(t => (
             <Link key={t.key} to={t.to()} className={`tp-tab fx-tab${active === t.key ? ' is-on' : ''}`} aria-current={active === t.key ? 'page' : undefined}>
@@ -364,7 +364,7 @@ export default function TemplateFrame() {
       <aside className="tp-rail fx-rail" aria-label="Actions">
         <button type="button" className="tp-ri fx-ri tp-wig" aria-label="Search (Ctrl K)" data-tip="Search  Ctrl K" {...wig} onClick={open('search')}><Search size={20} /></button>
         <i className="fx-hair" />
-        <button type="button" className="fx-ri fx-plus tp-wig" aria-label="Create" aria-haspopup="menu" aria-expanded={panel === 'create'} data-tip="Create" {...wig} onClick={openCreate}><Plus size={20} /></button>
+        <button type="button" className="fx-ri fx-rplus tp-wig" aria-label="Create" aria-haspopup="menu" aria-expanded={panel === 'create'} data-tip="Create" {...wig} onClick={openCreate}><Plus size={20} /></button>
         <button type="button" className="tp-ri fx-ri tp-wig" aria-label="Book a call" data-tip="Book a call" {...wig} onClick={open('book')}><PhoneCall size={18} /></button>
         <NavLink to={paths.requestService()} className="fx-ri tp-wig" aria-label="Request a service" data-tip="Request a service" {...wig}><LifeBuoy size={18} /></NavLink>
         <i className="fx-hair" />

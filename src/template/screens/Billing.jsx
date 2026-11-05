@@ -20,7 +20,7 @@ export default function Billing() {
   const m = modeOf(b.budget.mode)
   return (
     <div className="tp-page fx-page fx-grid">
-      <section className="fx-tile is-hero fx-s7" style={{ '--i': 0 }} aria-label="Your plan">
+      <section className="fx-tile is-fill is-blue fx-s7 pb-plan" style={{ '--i': 0 }} aria-label="Your plan">
         <header className="fx-tile-h"><span className="tp-grow"><h2>Your plan</h2><p>Next weekly charge {b.next_charge} · servicing {b.servicing.next}</p></span><SampleTag /></header>
         <div className="tp-row tp-wrap pb-hero"><b className="tp-money fx-huge"><CountUp value={b.budget.weekly} format={usd()} /></b><span>a week</span></div>
         <div className="fx-split">
