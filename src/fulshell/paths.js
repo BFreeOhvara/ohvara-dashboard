@@ -1,4 +1,4 @@
-// P837 — the Fulfillment (VA) shell's addresses. The agent shell's look (src/template), at today's
+// P837 — the Fulfillment (VA) shell's addresses (P845: the gate ShellSwap uses; the pages live in src/template/ful). The agent shell's look (src/template), at today's
 // Fulfillment URLs, on real data. Lives outside src/template because it reads the backend.
 // No imports on purpose: it stays tiny and runs under node --test.
 
@@ -17,8 +17,11 @@ export const FUL = {
 const noSlash = p => (p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p)
 const PATHS = Object.values(FUL)
 
+// P845: one record's drawer has its own address under Queue, Calls, Clients and Servicing.
+const RECORD = /^\/fulfillment\/(leads|desk|pipeline|servicing)\/[^/]+$/
 export function isFulShellPath(pathname) {
-  return PATHS.includes(noSlash(String(pathname || '')))
+  const p = noSlash(String(pathname || ''))
+  return PATHS.includes(p) || RECORD.test(p)
 }
 
 // A Fulfillment rep on the web gets the shell. Admin keeps today's pages (they redirect to /admin),

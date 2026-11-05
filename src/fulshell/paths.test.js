@@ -16,6 +16,14 @@ test('nobody else, and not in the phone app', () => {
   assert.equal(isFulShellPath('/agent'), false)
 })
 
+test('P845: a record drawer address stays in the shell', () => {
+  for (const p of ['/fulfillment/leads/vq-1', '/fulfillment/desk/cl-8', '/fulfillment/pipeline/fc-gloria', '/fulfillment/servicing/st-1']) {
+    assert.ok(showFulShell({ role: 'fulfillment', pathname: p, native: false }), p)
+  }
+  assert.equal(isFulShellPath('/fulfillment/pay/x'), false)
+  assert.equal(isFulShellPath('/fulfillment/leads/a/b'), false)
+})
+
 test('page keys and titles', () => {
   assert.equal(fulPageOf('/fulfillment/desk'), 'calls')
   assert.equal(fulPageOf('/settings'), 'settings')

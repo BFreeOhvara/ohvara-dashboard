@@ -1,0 +1,121 @@
+/* P845 — the Fulfillment (VA) side's own pieces. Everything else comes from the agent shell (glass.css, flow.css):
+   tiles, cards, lanes, drawers, tabs, colours. Tokens only; tone variables (--cf fill, --ci ink, --cs solid) come from
+   flow.css .is-<tone>. Scoped under .fs (the frame) or to portaled drawers via .tp. */
+
+/* Overview: the next call (countdown + the day's calls side by side) */
+.fs-ov-hero { gap: 14px; }
+.fs-next { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 22px; align-items: start; }
+.fs-next-l { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.fs-count { font-size: 64px; color: var(--ov-hi); }
+.fs-next-at { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ov-mid); }
+.fs-next-l .fx-next-who { align-self: flex-start; background: color-mix(in srgb, var(--ov-hi) 7%, transparent); }
+.fs-next-l .fx-next-who small { color: var(--ov-mid); }
+.fs-dayline { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.fs-dayline a { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 14px; border: 1px solid var(--fx-edge);
+  background: color-mix(in srgb, var(--cf) 46%, transparent); transition: transform .25s var(--fx-spring), background-color .2s; }
+.fs-dayline a:hover { transform: translateX(3px); background: var(--cf); }
+.fs-dayline a > small { width: 64px; flex: none; font-size: 12.5px; font-weight: 600; color: var(--ov-hi); }
+.fs-dayline b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ov-hi); }
+.fs-dayline .tp-grow small { display: block; font-size: 11.5px; color: var(--ov-mid); }
+.fs-dayline li.is-next a { background: var(--cf); border-color: color-mix(in srgb, var(--cs, var(--ov-hi)) 60%, transparent); }
+.fs-st { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap;
+  color: var(--ci, var(--ov-hi)); background: color-mix(in srgb, var(--cs, var(--ov-hi)) 22%, transparent); }
+
+/* Overview: the small filled tiles */
+.fs-ov-serv .fx-huge small, .fs-ov-pay .fx-huge small { color: var(--ov-mid); }
+.fs-ov-serv .fx-later { margin-top: auto; }
+.fs-minibars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; align-items: end; height: 84px; margin-top: auto; }
+.fs-minibars span { display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; justify-content: flex-end; }
+.fs-minibars i { position: relative; display: flex; align-items: flex-end; width: 100%; max-width: 30px; height: calc(var(--h) * 62px + 4px); border-radius: 8px;
+  background: color-mix(in srgb, var(--ov-hi) 18%, transparent); overflow: hidden; transform-origin: 50% 100%; animation: fx-grow-y .8s var(--fx-ease) both; }
+.fs-minibars em { display: block; width: 100%; height: calc(var(--h) * 100%); background: color-mix(in srgb, var(--ov-hi) 58%, transparent); border-radius: inherit; }
+.fs-minibars small { font-size: 11px; color: var(--ov-mid); }
+.fs-minibars .is-later i { background: none; border: 1px dashed color-mix(in srgb, var(--ov-hi) 26%, transparent); }
+.fs-paynote { font-size: 12px; color: var(--ov-mid); }
+@keyframes fx-grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+/* Agents list (Overview strip, Settings, Servicing done list) */
+.fs-agents { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.fs-agents li { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--fx-edge); background: color-mix(in srgb, var(--ov-hi) 4%, transparent); flex-wrap: wrap; }
+.fs-agents b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ov-hi); }
+.fs-agents small { display: block; font-size: 11.5px; color: var(--ov-mid); }
+.fs-agents .tp-grow { min-width: 0; }
+.fs-agent-n { text-align: right; } .fs-agent-n b { font-size: 20px; font-family: var(--font-display); }
+.fs-agents.is-tight { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.fs-agents.is-tight li { padding: 8px 10px; }
+.fs-donelist .fs-agents { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* Boards: 3 lanes on the Queue, 4 on Servicing (the agent's Leads has 5) */
+.fs .fs-board3 { grid-template-columns: repeat(3, minmax(220px, 1fr)); }
+.fs .fs-board4 { grid-template-columns: repeat(4, minmax(210px, 1fr)); }
+.fs-donelist { margin-top: 14px; }
+
+/* Calls */
+.fs-cgrid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.fs-time { font-family: var(--font-display); font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: var(--ci, var(--ov-hi)); }
+.fs-swap { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--ov-mid); }
+.fs-swap span { min-width: 0; } .fs-swap small { display: block; font-size: 10.5px; color: var(--ov-mute); }
+.fs-swap b { display: block; font-size: 13px; font-weight: 600; color: var(--ov-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fs-swap.is-hero b { font-size: 15px; }
+.fs-legend { display: flex; flex-wrap: wrap; gap: 14px; margin: -2px 0 12px; padding: 0; list-style: none; font-size: 12px; color: var(--ov-mid); }
+.fs-legend li { display: inline-flex; align-items: center; gap: 7px; }
+.fs-legend i { width: 9px; height: 9px; border-radius: 50%; background: var(--cs, var(--ov-hi)); }
+.fs-today { position: absolute; top: 5px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--ov-data-a); }
+.fs-wrap { flex-wrap: wrap; }
+.tp .fs-wrap .fx-chip { width: auto; min-width: 46px; padding: 0 12px; }
+
+/* Drawer blocks */
+.tp .fs-hold { border-color: color-mix(in srgb, var(--sh-ci, var(--ov-hi)) 20%, transparent); background: var(--sh-cf-sky, var(--fx-fill)); }
+.tp .fs-done { background: var(--sh-cf-sage, var(--fx-fill)); }
+.tp .fs-off { padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--ov-hi) 6%, transparent); color: var(--ov-mid); }
+.tp .fs-outs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.tp .fs-outs li { height: 28px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--ov-mid); border: 1px solid var(--fx-edge); }
+.tp .fs-outs li.is-on { color: var(--sh-ci, var(--ov-hi)); background: var(--sh-cf-sage, var(--fx-fill)); border-color: transparent; }
+.tp .fs-agent { width: auto; height: 52px; padding: 0 12px 0 8px; flex-direction: row; gap: 8px; }
+.tp .fs-agent .tp-av { width: 30px; height: 30px; font-size: 11px; }
+
+/* Tab rows never give up their height to a long form (Settings Profile is taller than the agent's) */
+.fs .fx-ptabs { flex: none; }
+
+/* Pay */
+.fs-pay-hero { gap: 14px; }
+.fs-bars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; align-items: end; height: 220px; padding-top: 8px; }
+.fs-bars span { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 7px; height: 100%; }
+.fs-bars b { font-size: 12px; font-weight: 600; color: var(--ov-mid); min-height: 15px; }
+.fs-bars i { position: relative; display: flex; align-items: flex-end; width: 100%; max-width: 76px; height: calc(var(--h) * 150px + 6px); border-radius: 14px;
+  background: color-mix(in srgb, var(--ov-data-a) 30%, transparent); overflow: hidden; transform-origin: 50% 100%; animation: fx-grow-y .9s var(--fx-ease) both; animation-delay: calc(var(--i) * 70ms); }
+.fs-bars em { display: block; width: 100%; height: calc(var(--h) * 100%); border-radius: inherit; background: var(--ov-data-a); }
+.fs-bars small { font-size: 12px; color: var(--ov-mid); }
+.fs-bars .is-later i { background: none; border: 1px dashed var(--ov-line); }
+.fs-pay-list { gap: 12px; }
+.fs-rows .fx-mrow { gap: 12px; }
+.fs-rows .tp-money { min-width: 64px; text-align: right; font-size: 14px; color: var(--ov-hi); }
+.fs-ok { color: var(--sh-fi-sage, var(--ov-hi)); }
+.fs-pay-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.fs-payout { gap: 12px; }
+.fs-payout .fx-huge { font-size: 56px; }
+.fs-payout > small { font-size: 12.5px; color: var(--ov-mid); }
+.fs-payout .fx-next-who { align-self: flex-start; background: color-mix(in srgb, var(--ov-hi) 10%, transparent); }
+.fs-payout .fx-next-who small { color: var(--ov-mid); }
+.fs-sum { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.fs-sum li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--cf); color: var(--ov-hi); font-size: 13px; font-weight: 500; }
+.fs-sum i { width: 9px; height: 9px; border-radius: 50%; background: var(--cs, var(--ov-hi)); }
+.fs-sum b { font-size: 18px; font-family: var(--font-display); }
+
+@media (max-width: 1180px) {
+  .fs-next { grid-template-columns: minmax(0, 1fr); }
+  .fs-agents { grid-template-columns: minmax(0, 1fr); }
+  .fs-donelist .fs-agents { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 767px) {
+  .fs-count { font-size: 48px; }
+  .fs .fs-board3, .fs .fs-board4 { grid-template-columns: repeat(var(--lanes, 3), minmax(250px, 82vw)); }
+  .fs .fs-board4 { --lanes: 4; }
+  .fs-bars { height: 170px; gap: 8px; }
+  .fs-bars i { height: calc(var(--h) * 110px + 6px); }
+  .fs-payout .fx-huge { font-size: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fs-minibars i, .fs-bars i { animation: none; }
+  .fs-dayline a { transition: none; }
+}
