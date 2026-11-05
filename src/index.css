@@ -5350,3 +5350,34 @@ html.is-native a, html.is-native img { -webkit-touch-callout: none; }
    were soft over the photo. One step firmer in both themes. */
 :root { --sh-ink-2: #DEE1DA; --sh-ink-3: #D3D6CF; --sh-ink-4: #C6CAC2; --sh-ink-5: #B0B4AC; }
 [data-theme="light"] { --sh-ink-2: #2E322D; --sh-ink-3: #383C37; --sh-ink-4: #42463F; --sh-ink-5: #50544D; }
+
+/* ── Prompt 841 — soft yellow for Clients/requests, neutral counts, original logo colours (DESIGN.md v17 "Shell
+   palette", P841 update). Overrides P840: the lilac hue is gone; its place (Requests, Follow up, the second data
+   series) is a soft yellow ("butter"), so the shell stays at five hues: sky, apricot, sage, butter, coral + stone.
+   Counts (top-bar badges, the Leads tab count, rail badges) are neutral greys, never a hue. Agent shell only. */
+:root {
+  --sh-p-butter: #E3C766;                              /* text / marks on dark */
+  --sh-f-butter: #D4B44E;  --sh-fi-butter: #231B04;    /* solid fill + its dark ink */
+  --sh-cf-butter: rgba(154, 130, 54, 0.66);            /* stage card fill, dark */
+  --sh-butter: var(--sh-p-butter);
+  --sh-cs-butter: var(--sh-f-butter); --sh-csi-butter: var(--sh-fi-butter);
+  /* Neutral counts: light grey with a dark number on dark */
+  --sh-count: #C9CCC5; --sh-count-ink: #16181A;
+  /* Neutral button on an already coloured surface (dark: the grey glass highlight) */
+  --sh-on-color: var(--sh-sel); --sh-on-color-ink: var(--sh-on-sel);
+  /* The bird in its original colours: small piece white, large piece the original turquoise */
+  --sh-mark-back: #FFFFFF; --sh-mark-front: #00BFA6;
+}
+[data-theme="light"] {
+  --sh-butter: #6A5310;                                /* ink deep enough to read on the light page (6:1) */
+  --sh-f-butter: #ECD27C;  --sh-fi-butter: #3A2C05;
+  --sh-cf-butter: color-mix(in srgb, var(--sh-f-butter) 75%, transparent);
+  --sh-cs-butter: var(--sh-butter); --sh-csi-butter: var(--sh-on-sel);
+  /* Neutral counts: dark grey with an off-white number on light */
+  --sh-count: #4A4E48; --sh-count-ink: #F2F4F0;
+  --sh-on-color: var(--sh-sel); --sh-on-color-ink: var(--sh-on-sel);
+  /* The bird on light: the large piece in the original dark navy, the small piece in the original turquoise */
+  --sh-mark-back: #00BFA6; --sh-mark-front: #0A1F44;
+}
+/* P841 backdrop: warm, no blue (scripts/make-shell-backdrop-841.py, option A "warm hills"), same overlays as P840 */
+:root, [data-theme="light"] { --sh-bd-image: url('/shell/backdrop-warm.jpg'); }

@@ -515,10 +515,10 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 /* Tones: --c is the hue as a mark/text colour, --cf the fill, --ci the dark ink that sits on the fill */
 .tp .is-blue { --cf: var(--sh-f-sky); --ci: var(--sh-fi-sky); }
 .tp .is-warn { --cf: var(--sh-f-apricot); --ci: var(--sh-fi-apricot); }
-.tp .is-teal { --cf: var(--sh-f-lilac); --ci: var(--sh-fi-lilac); }
+.tp .is-teal { --cf: var(--sh-f-butter); --ci: var(--sh-fi-butter); }
 .tp .is-green, .tp .is-up { --cf: var(--sh-f-sage); --ci: var(--sh-fi-sage); }
 .tp .is-mute { --cf: var(--sh-f-stone); --ci: var(--sh-fi-stone); }
-.tp .is-violet { --cf: var(--sh-f-lilac); --ci: var(--sh-fi-lilac); }
+.tp .is-violet { --cf: var(--sh-f-butter); --ci: var(--sh-fi-butter); }
 
 /* Backdrop: a dark, neutral soft-focus scene (generated image, scripts/make-shell-backdrop.py), no hue glows */
 .tp-sky { background: linear-gradient(var(--sh-bd-dim), var(--sh-bd-dim)), var(--sh-bd-image) center / cover no-repeat, var(--ov-page); }
@@ -568,7 +568,7 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 }
 .fx-card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 18px 30px -24px rgba(0, 0, 0, .6); }
 .fx-week .tp-ev { --cf: var(--sh-f-sky); --ci: var(--sh-fi-sky); }
-.fx-week .tp-ev.client { --cf: var(--sh-f-lilac); --ci: var(--sh-fi-lilac); }
+.fx-week .tp-ev.client { --cf: var(--sh-f-butter); --ci: var(--sh-fi-butter); }
 .fx-layer .fx-hero-card, [data-theme="light"] .fx-layer .fx-hero-card { background: var(--cf); }
 .fx-tag, .fx-card .fx-tag { color: var(--ci); background: color-mix(in srgb, var(--ci) 14%, transparent); font-weight: 600; }
 .fx-card .tp-av, .fx-hero-card .tp-av { color: var(--ci); background: color-mix(in srgb, var(--ci) 14%, transparent); }
@@ -707,12 +707,12 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 /* Tones: --cf card fill per theme, --ci its ink, --cs/--csi a status button's selected fill and ink */
 .tp .is-blue { --cf: var(--sh-cf-sky); --ci: var(--sh-ci); --cs: var(--sh-cs-sky); --csi: var(--sh-csi-sky); }
 .tp .is-warn { --cf: var(--sh-cf-apricot); --ci: var(--sh-ci); --cs: var(--sh-cs-apricot); --csi: var(--sh-csi-apricot); }
-.tp .is-teal { --cf: var(--sh-cf-lilac); --ci: var(--sh-ci); --cs: var(--sh-cs-lilac); --csi: var(--sh-csi-lilac); }
+.tp .is-teal { --cf: var(--sh-cf-butter); --ci: var(--sh-ci); --cs: var(--sh-cs-butter); --csi: var(--sh-csi-butter); }
 .tp .is-green, .tp .is-up { --cf: var(--sh-cf-sage); --ci: var(--sh-ci); --cs: var(--sh-cs-sage); --csi: var(--sh-csi-sage); }
 .tp .is-mute { --cf: var(--sh-cf-stone); --ci: var(--sh-ci); --cs: var(--sh-cs-stone); --csi: var(--sh-csi-stone); }
-.tp .is-violet { --cf: var(--sh-cf-lilac); --ci: var(--sh-ci); }
+.tp .is-violet { --cf: var(--sh-cf-butter); --ci: var(--sh-ci); }
 .fx-week .tp-ev { --cf: var(--sh-cf-sky); --ci: var(--sh-ci); }
-.fx-week .tp-ev.client { --cf: var(--sh-cf-lilac); --ci: var(--sh-ci); }
+.fx-week .tp-ev.client { --cf: var(--sh-cf-butter); --ci: var(--sh-ci); }
 
 /* Stage cards and chips. Dark: muted tint, off-white ink, faint light edge + inner top highlight.
    Light: firmer tint, dark ink, no outline. */
@@ -870,10 +870,10 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
    plain rail icon. Apricot is Needs you only. Every chip and delta is a SOLID fill of its hue (--cb) with that hue's
    dark ink (--cbi), so a colour looks the same on every page and over every surface. */
 
-/* Tones: --cb solid fill, --cbi its ink. Five hues: sky, apricot, sage, lilac (+ stone neutral) */
+/* Tones: --cb solid fill, --cbi its ink. Five hues: sky, apricot, sage, butter (+ stone neutral) */
 .tp .is-blue { --cb: var(--sh-f-sky); --cbi: var(--sh-fi-sky); }
 .tp .is-warn { --cb: var(--sh-f-apricot); --cbi: var(--sh-fi-apricot); }
-.tp :is(.is-teal, .is-violet) { --cb: var(--sh-f-lilac); --cbi: var(--sh-fi-lilac); --cs: var(--sh-cs-lilac); --csi: var(--sh-csi-lilac); }
+.tp :is(.is-teal, .is-violet) { --cb: var(--sh-f-butter); --cbi: var(--sh-fi-butter); --cs: var(--sh-cs-butter); --csi: var(--sh-csi-butter); }
 .tp :is(.is-green, .is-up) { --cb: var(--sh-f-sage); --cbi: var(--sh-fi-sage); }
 .tp .is-mute { --cb: var(--sh-f-stone); --cbi: var(--sh-fi-stone); }
 .tp .tp-chip:is(.is-blue, .is-teal, .is-warn, .is-green, .is-up, .is-mute, .is-violet),
@@ -1008,3 +1008,110 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 .fx-top .fx-brand { align-items: flex-end; }
 .fx-top .fx-brand b { line-height: 1; padding-bottom: 2px; }
 .tp span.tp-money { font-weight: 600; }
+
+/* P841 ----------------------------------------------------------------------------------------------------------
+   Show more per screen (tighter tiles and cards, same type sizes), neutral counts, no colour on colour, the logo
+   scrolls with the page, a fuller Overview (src/index.css "Prompt 841"). */
+
+/* Counts are neutral greys: top-bar and rail badges, the Leads tab count */
+.fx-badge, .fx-tb, .fx .fx-tab.is-on .fx-tb { color: var(--sh-count-ink); background: var(--sh-count); }
+.fx .fx-tab.is-on .fx-tb { box-shadow: none; }
+
+/* No colour on colour: a primary button on a coloured card, filled tile, or attention block is the neutral highlight */
+.tp :is(.fx-card, .fx-tile.is-fill, .fx-attn, .fx-rec-hero) .fx-accent,
+.tp :is(.fx-card, .fx-tile.is-fill, .fx-attn, .fx-rec-hero) .fx-accent:hover {
+  color: var(--sh-on-color-ink); background: var(--sh-on-color); box-shadow: inset 0 1px 0 var(--sh-sel-edge);
+}
+.fx-tile.is-fill .fx-pillbtn, .fx-tile.is-fill .fx-later a { color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 10%, transparent); border-color: color-mix(in srgb, var(--ov-hi) 22%, transparent); }
+.fx-tile.is-fill .fx-later a b { color: var(--ov-hi); }
+
+/* The logo lives in the page at the header's height; the sticky header keeps an empty first column for it */
+.fx.tp-app { position: relative; }
+.fx-top-gap { justify-self: start; }
+.fx .fx-brand-page { position: absolute; z-index: 30; top: 25px; left: 24px; align-items: flex-end; }
+.fx .fx-brand-page b { line-height: 1; padding-bottom: 2px; }
+@media (max-width: 999.98px) { .fx .fx-brand-page { display: none; } }
+
+/* Density: tiles and grids a step tighter */
+.fx-grid, .fx-ovl, .fx-ovl-main, .fx-ovl-pair, .fx-cgrid { gap: 12px; }
+.fx-tile { padding: 16px; gap: 12px; }
+.fx .fx-head { margin-bottom: 16px; }
+.fx .fx-top { margin-bottom: 14px; }
+
+/* Leads: lane cards a step tighter */
+.fx-lane-b { gap: 6px; }
+.fx-lcard { padding: 12px; gap: 4px; }
+.fx-lcard h3 { margin-top: 2px; }
+.fx-lcard-bot { margin-top: 4px; }
+
+/* Clients: smaller cards, five across at 1440 */
+.fx-cgrid { grid-template-columns: repeat(auto-fill, minmax(214px, 1fr)); }
+.fx-ccard { padding: 14px; gap: 5px; border-radius: 20px; }
+.fx-ccard .tp-av { width: 32px; height: 32px; font-size: 11.5px; }
+.fx-ccard h3 { margin-top: 2px; }
+.fx-ccard-mid { gap: 8px; margin: 4px 0 2px; padding: 8px 10px; border-radius: 12px; }
+.fx-ccard-bot { margin-top: 2px; }
+
+/* Overview: chart a little shorter so the page shows more */
+.fx-wchart svg { height: 132px; }
+.fx-ovl-hero .fx-huge { font-size: 46px; }
+
+/* Right column: Needs you over Lead mix. The column adds no height of its own (as P840): its inside is placed
+   absolutely so the row is as tall as the main side; Needs you takes the room left and scrolls. */
+.fx-ovl-side { position: relative; min-width: 0; }
+.fx-ovl-side > * { min-width: 0; }
+@media (min-width: 1000px) {
+  .fx-ovl-side { display: flex; flex-direction: column; gap: 12px; }
+  .fx-ovl-side .fx-ovl-needs { flex: 1; min-height: 300px; }
+  .fx-ovl-mix { flex: none; }
+}
+.fx-ncards { grid-auto-rows: minmax(140px, auto); }
+
+/* Next up as the second filled tile: the Booked blue */
+.fx-ovl-next.is-fill .fx-next-who { background: color-mix(in srgb, var(--ov-hi) 10%, transparent); }
+
+/* This week: five day columns of calls; leads blue, clients yellow (as on Calendar) */
+.fx-wk { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.fx-wk > li { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 10px; border-radius: 14px; background: color-mix(in srgb, var(--ov-hi) 4%, transparent); border: 1px solid var(--fx-edge); }
+.fx-wk > li.is-today { border-color: color-mix(in srgb, var(--ov-hi) 34%, transparent); background: color-mix(in srgb, var(--ov-hi) 8%, transparent); }
+.fx-wk > li.is-past { opacity: .62; }
+.fx-wk-d { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
+.fx-wk-d b { font-weight: 600; color: var(--ov-hi); }
+.fx-wk-d small { color: var(--ov-mute); font-size: 11.5px; }
+.fx-wk-d i { margin-left: auto; font-style: normal; font-size: 11.5px; font-weight: 600; color: var(--ov-mid); }
+.fx-wk-ev { display: flex; flex-direction: column; gap: 1px; padding: 6px 8px; border-radius: 10px; color: var(--cbi); background: var(--cb); min-width: 0; }
+.fx-wk-ev small { font-size: 11px; font-weight: 600; opacity: .82; white-space: nowrap; }
+.fx-wk-ev b { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fx-wk-ev:hover { filter: brightness(1.05); }
+
+/* Lead mix: one bar split by lane, then a key with counts */
+.fx-mix { display: flex; gap: 4px; height: 14px; }
+.fx-mix i { flex-basis: 0; min-width: 10px; border-radius: 999px; background: var(--cb); }
+.fx-mix-key { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 10px; }
+.fx-mix-key a { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 10px; font-size: 12.5px; color: var(--ov-mid); }
+.fx-mix-key a:hover { background: var(--ov-hover); color: var(--ov-hi); }
+.fx-mix-key i { width: 9px; height: 9px; flex: none; border-radius: 50%; background: var(--cb); }
+.fx-mix-key span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fx-mix-key b { color: var(--ov-hi); }
+
+@media (max-width: 999.98px) {
+  .fx-ovl-side { display: contents; }
+  .fx-ovl-needs-in { position: static; }
+}
+@media (max-width: 760px) {
+  .fx-ovl-week { order: 4; } .fx-ovl-mix { order: 3; } .fx-ovl-pair { order: 5; }
+  .fx-wchart svg { height: 116px; }
+  .fx-ovl-hero .fx-huge { font-size: 40px; }
+  .fx-wk { grid-template-columns: repeat(5, minmax(96px, 1fr)); overflow-x: auto; margin: 0 -16px; padding: 0 16px 2px; scrollbar-width: none; }
+  .fx-ncards { grid-auto-rows: minmax(128px, auto); }
+  /* Clients two across on a phone; the premium / next step block stacks */
+  .fx-cgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .fx-ccard { padding: 12px; border-radius: 18px; }
+  .fx-ccard h3 { font-size: 15px; }
+  .fx-ccard-mid { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .fx-ccard-top .fx-tag { max-width: calc(100% - 38px); overflow: hidden; text-overflow: ellipsis; }
+}
+/* This week runs the full width under both columns */
+.fx-ovl-week { grid-column: 1 / -1; }
+/* Phone: the rail's 74px gutter (P834, above) never applies without the rail; the page uses the full width */
+@media (max-width: 999.98px) { .fx .fx-col { margin: 0; } }

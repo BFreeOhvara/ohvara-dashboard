@@ -344,8 +344,10 @@ export default function TemplateFrame() {
         <button type="button" className="fx-me tp-wig" aria-label="Menu" {...wig} onClick={open('menu')}>{initials(account.name).toUpperCase()}</button>
       </header>
 
+      {/* P841: the desktop logo sits in the page, not in the sticky header, so it scrolls away with the page */}
+      <Link to={paths.home()} className="fx-brand fx-brand-page" aria-label="Ohvara home"><OhvaraMark height={30} back="var(--ov-mark-back)" front="var(--ov-mark-front)" className="fx-mark" /><b>ohvara</b></Link>
       <header className="tp-top fx-top">
-        <Link to={paths.home()} className="fx-brand" aria-label="Ohvara home"><OhvaraMark height={30} back="var(--ov-mark-back)" front="var(--ov-mark-front)" className="fx-mark" /><b>ohvara</b></Link>
+        <span className="fx-top-gap" aria-hidden="true" />
         <nav className="tp-tabs fx-tabs" ref={tabsRef} aria-label="Pages">
           {TABS.map(t => (
             <Link key={t.key} to={t.to()} className={`tp-tab fx-tab${active === t.key ? ' is-on' : ''}`} aria-current={active === t.key ? 'page' : undefined}>

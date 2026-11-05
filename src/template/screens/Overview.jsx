@@ -1,13 +1,16 @@
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, Clock, CalendarDays, Phone, PhoneIncoming, TriangleAlert } from 'lucide-react'
 import { planRange, rangeText } from '../../lib/planPricing'
-import { useSampleOverview, useSampleClients, useSampleBilling } from '../data'
+import { useSampleOverview, useSampleClients, useSampleBilling, useSampleLeads, useSampleAppointments } from '../data'
 import { Avatar } from '../kit'
 import { CountUp } from '../motion'
 import { stageChip } from '../LeadOutcome'
-import { laneOf } from '../stages'
+import { laneOf, LANES } from '../stages'
 import { paths } from '../paths'
 
+// P841: a little more page. Next up is the second colour-filled tile (the Booked blue); under the pair, a This week
+// strip of the working week's calls (leads blue, clients yellow, as on Calendar); under Needs you, a Lead mix tile
+// (one bar split by lane, Solvik's stage mix).
 // P840: Solvik's Overview shape. Left two thirds: one dominant tile (this week's bookings against the budget
 // range, with the weekly chart), under it Your book (the one colour-filled tile) and Next up. Right third: a
 // full-height Needs you column of stage-coloured cards, 2-up, scrolling inside itself. The page head carries
@@ -84,10 +87,46 @@ function NeedCard({ r, i }) {
   )
 }
 
+// The working week, Mon to Fri, one column per day with its calls; today is marked.
+function WeekStrip({ appts, today }) {
+  const days = [...new Map(appts.map(a => [a.date, a.day])).entries()].sort((a, b) => a[0] - b[0])
+  return (
+    <ol className="fx-wk" aria-label="Calls this week">
+      {days.map(([date, day]) => {
+        const list = appts.filter(a => a.date === date)
+        return (
+          <li key={date} className={date === today ? 'is-today' : date < today ? 'is-past' : ''}>
+            <span className="fx-wk-d"><b>{day}</b><small>Nov {date}</small><i className="tp-num">{list.length}</i></span>
+            {list.map(a => <Link key={a.id} to={apptTo(a)} className={`fx-wk-ev is-${a.kind === 'client' ? 'teal' : 'blue'}`}><small>{a.time}</small><b>{a.who.split(' ')[0]}</b></Link>)}
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+// Every lead in one bar, split by lane, with a count per lane.
+function LeadMix({ leads }) {
+  const rows = LANES.map(l => ({ ...l, n: leads.filter(x => l.stages.includes(x.stage)).length }))
+  const total = rows.reduce((t, r) => t + r.n, 0) || 1
+  return (
+    <>
+      <div className="fx-mix" role="img" aria-label={rows.map(r => `${r.label} ${r.n}`).join(', ')}>
+        {rows.filter(r => r.n).map(r => <i key={r.key} className={`is-${r.tone}`} style={{ flexGrow: r.n / total }} />)}
+      </div>
+      <ul className="fx-mix-key">
+        {rows.map(r => <li key={r.key} className={`is-${r.tone}`}><Link to={paths.leads()}><i aria-hidden="true" /><span>{r.label}</span><b className="tp-num">{r.n}</b></Link></li>)}
+      </ul>
+    </>
+  )
+}
+
 export default function Overview() {
   const { data: o } = useSampleOverview()
   const { data: clients } = useSampleClients()
   const { data: bill } = useSampleBilling()
+  const { data: leads } = useSampleLeads()
+  const { data: appts } = useSampleAppointments()
   const wk = planRange(bill.budget.weekly, bill.budget.mode).week
   const next = o.nextAppt
   const later = o.todayAppts.filter(a => a.id !== next?.id)
@@ -123,7 +162,7 @@ export default function Overview() {
             </ul>
           </Tile>
 
-          <Tile className="fx-ovl-next" i={2} title="Next up" sub={next ? `${next.label}, ${next.inText}` : 'Nothing else on today'} to={next ? apptTo(next) : paths.calendar()} label={next ? `Open ${next.who}` : 'Open Calendar'}>
+          <Tile className="fx-ovl-next is-fill is-blue" i={2} title="Next up" sub={next ? `${next.label}, ${next.inText}` : 'Nothing else on today'} to={next ? apptTo(next) : paths.calendar()} label={next ? `Open ${next.who}` : 'Open Calendar'}>
             {next ? (
               <>
                 <b className="fx-huge">{next.time.replace(/ (AM|PM)/, '')}<small>{next.time.slice(-2)}</small></b>
@@ -142,17 +181,27 @@ export default function Overview() {
         </div>
       </div>
 
-      <section className="fx-tile is-deep fx-ovl-needs" style={{ '--i': 3 }} aria-label="Needs you">
-        <div className="fx-ovl-needs-in">
-          <header className="fx-tile-h">
-            <span className="tp-grow"><h2>Needs you</h2><p>{needs.length ? `${needs.length} waiting on you` : 'All caught up'}</p></span>
-            <Link to={paths.leads()} className="fx-open" aria-label="Open Leads"><ArrowUpRight size={16} /></Link>
-          </header>
-          {needs.length > 0
-            ? <div className="fx-ncards">{needs.map((r, i) => <NeedCard key={r.id} r={r} i={i} />)}</div>
-            : <p className="fx-calm"><Check size={16} aria-hidden="true" />No one is waiting on you.</p>}
-        </div>
-      </section>
+      <div className="fx-ovl-side">
+        <section className="fx-tile is-deep fx-ovl-needs" style={{ '--i': 4 }} aria-label="Needs you">
+          <div className="fx-ovl-needs-in">
+            <header className="fx-tile-h">
+              <span className="tp-grow"><h2>Needs you</h2><p>{needs.length ? `${needs.length} waiting on you` : 'All caught up'}</p></span>
+              <Link to={paths.leads()} className="fx-open" aria-label="Open Leads"><ArrowUpRight size={16} /></Link>
+            </header>
+            {needs.length > 0
+              ? <div className="fx-ncards">{needs.map((r, i) => <NeedCard key={r.id} r={r} i={i} />)}</div>
+              : <p className="fx-calm"><Check size={16} aria-hidden="true" />No one is waiting on you.</p>}
+          </div>
+        </section>
+
+        <Tile className="fx-ovl-mix" i={5} title="Lead mix" sub={`${leads.length} leads by stage`} to={paths.leads()} label="Open Leads">
+          <LeadMix leads={leads} />
+        </Tile>
+      </div>
+
+      <Tile className="fx-ovl-week" i={6} title="This week" sub={`${appts.length} calls, Mon to Fri`} to={paths.calendar()} label="Open Calendar">
+        <WeekStrip appts={appts} today={o.todayAppts[0]?.date ?? appts[0]?.date} />
+      </Tile>
     </div>
   )
 }

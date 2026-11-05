@@ -37,22 +37,24 @@ html .tp {
   --ov-data-a-tint: color-mix(in srgb, var(--sh-sky) var(--sh-tint), transparent);
   --ov-data-a-bar: linear-gradient(180deg, var(--sh-sky), color-mix(in srgb, var(--sh-sky) 70%, var(--sh-base)));
   --ov-data-a-key: var(--sh-sky);
-  --ov-data-b: var(--sh-lilac);
-  --ov-data-b-tint: color-mix(in srgb, var(--sh-lilac) var(--sh-tint), transparent);
-  --ov-data-b-bar: linear-gradient(180deg, var(--sh-lilac), color-mix(in srgb, var(--sh-lilac) 70%, var(--sh-base)));
-  --ov-data-b-key: var(--sh-lilac);
+  --ov-data-b: var(--sh-butter);
+  --ov-data-b-tint: color-mix(in srgb, var(--sh-butter) var(--sh-tint), transparent);
+  --ov-data-b-bar: linear-gradient(180deg, var(--sh-butter), color-mix(in srgb, var(--sh-butter) 70%, var(--sh-base)));
+  --ov-data-b-key: var(--sh-butter);
   --ov-up: var(--sh-sage);
   --ov-up-tint: color-mix(in srgb, var(--sh-sage) var(--sh-tint), transparent);
   --ov-warn: var(--sh-apricot);
   --ov-warn-tint: color-mix(in srgb, var(--sh-apricot) var(--sh-tint), transparent);
-  --ov-badge-bg: var(--sh-f-apricot);
-  --ov-badge-fg: var(--sh-fi-apricot);
+  --ov-badge-bg: var(--sh-count);      /* P841: counts are neutral */
+  --ov-badge-fg: var(--sh-count-ink);
+  --ov-mark-back: var(--sh-mark-back); /* P841: the bird in its original colours per theme */
+  --ov-mark-front: var(--sh-mark-front);
   --ov-hero-soft: var(--sh-ink-2);
-  --ov-hero-dot: var(--sh-lilac);
+  --ov-hero-dot: var(--sh-butter);
   --ov-hero-btn-text: var(--sh-on-accent);
   --ov-hero-btn-glow: color-mix(in srgb, var(--sh-acc) 50%, transparent);
-  --nt-purple: var(--sh-lilac);
-  --nt-purple-tint: color-mix(in srgb, var(--sh-lilac) var(--sh-tint), transparent);
+  --nt-purple: var(--sh-butter);
+  --nt-purple-tint: color-mix(in srgb, var(--sh-butter) var(--sh-tint), transparent);
 
   --ov-st-booked: var(--sh-sky);
   --ov-st-booked-tint: color-mix(in srgb, var(--sh-sky) var(--sh-tint), transparent);
