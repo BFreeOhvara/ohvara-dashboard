@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Search, Plus, Phone, MessageSquare, TriangleAlert, CalendarClock, MapPin } from 'lucide-react'
 import { useSampleClients, useSampleClient, useSampleThreads, useSampleActions } from '../data'
-import { Avatar, Chip, Drawer, Money, SampleTag, Empty, useNote } from '../kit'
+import { Avatar, Chip, Drawer, Money, SampleTag, Empty, PillTabs, useNote } from '../kit'
 import { RecordDrawer, Stepper, Block } from '../Record'
 import { stageLabel, CLIENT_STEPS } from '../stages'
 import { paths } from '../paths'
@@ -120,11 +120,8 @@ export default function Clients() {
     <div className="tp-page fx-page">
       <div className="fx-tools">
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a client" placeholder="Find a client, phone or policy" value={q} onChange={e => setQ(e.target.value)} /></label>
-        <div className="fx-filters" role="tablist" aria-label="Status">
-          {options.map(o => (stage === o.key
-            ? <span key={o.key} role="tab" aria-selected="true" className={`fx-filter is-on${toneOf(o.key)}`}>{o.label}<b>{o.count}</b></span>
-            : <button key={o.key} type="button" role="tab" aria-selected="false" className={`fx-filter${toneOf(o.key)}`} onClick={() => setParams(o.key === 'all' ? {} : { stage: o.key })}>{o.label}<b>{o.count}</b></button>))}
-        </div>
+        <PillTabs label="Status" className="fx-filters" itemClass="fx-filter" value={stage} onChange={k => setParams(k === 'all' ? {} : { stage: k })}
+          items={options.map(o => ({ ...o, className: toneOf(o.key).trim() }))} />
         <span className="tp-grow" />
         <Link to={paths.submit()} className="tp-primary fx-accent"><Plus size={16} />Submit a policy</Link>
       </div>

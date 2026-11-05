@@ -6,11 +6,11 @@ import {
   Smartphone, CircleHelp, StickyNote, PhoneOutgoing, Mail, Keyboard,
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
-import { useStretchPill } from '../hooks/useStretchPill'
 import {
   useSampleActivity, useSampleClients, useSampleLeads, useSampleThreads, useSampleBilling, useSampleAppointments, useSampleSettings, useSampleActions,
 } from './data'
-import { Drawer, Avatar, Field, useAccount, useNote, initials } from './kit'
+import { Drawer, Avatar, Field, PillTabs, useAccount, useNote, initials } from './kit'
+import { avatarHue } from './avatarHue'
 import { wig, CountUp, RollTitle, usePageSwap, usd } from './motion'
 import { paths, tabOf, titleOfLayout, layoutOf, isTemplateAddress } from './paths'
 import Palette from './Palette'
@@ -80,7 +80,7 @@ function BookCall({ open, onClose }) {
       footer={<><button type="button" className="tp-primary fx-accent" onClick={save}><CalendarCheck size={16} />Book it</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
       <Field label="Who"><select value={who.ref} onChange={e => setRef(e.target.value)}>{people.map(p => <option key={p.ref} value={p.ref}>{p.who} · {p.kind === 'lead' ? 'Lead' : 'Client'}</option>)}</select></Field>
       <div className="tp-field"><span>Day</span>
-        <div className="fx-chips" role="radiogroup" aria-label="Day">{DAYS.map(([d, n]) => <button key={d} type="button" role="radio" aria-checked={date === n} className={`fx-chip${date === n ? ' is-on' : ''}`} onClick={() => setDate(n)}><small>{d}</small><b>{n}</b></button>)}</div>
+        <PillTabs role="radiogroup" label="Day" className="fx-chips" itemClass="fx-chip" value={date} onChange={setDate} items={DAYS.map(([d, n]) => ({ key: n, label: <><small>{d}</small><b>{n}</b></> }))} />
       </div>
       <Field label="Time"><select value={time} onChange={e => setTime(e.target.value)}>{TIMES.map(t => <option key={t}>{t}</option>)}</select></Field>
     </Drawer>
@@ -140,7 +140,7 @@ function LogCall({ open, onClose }) {
       footer={<><button type="button" className="tp-primary fx-accent" onClick={save}><PhoneOutgoing size={16} />Log it</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
       <Field label="Who"><select value={who.ref} onChange={e => setRef(e.target.value)}>{people.map(p => <option key={p.ref} value={p.ref}>{p.who} · {p.kind === 'lead' ? 'Lead' : 'Client'}</option>)}</select></Field>
       <div className="tp-field"><span>How it went</span>
-        <div className="fx-chips" role="radiogroup" aria-label="How it went">{RESULTS.map(r => <button key={r} type="button" role="radio" aria-checked={result === r} className={`fx-chip${result === r ? ' is-on' : ''}`} onClick={() => setResult(r)}><b>{r}</b></button>)}</div>
+        <PillTabs role="radiogroup" label="How it went" className="fx-chips" itemClass="fx-chip" value={result} onChange={setResult} items={RESULTS.map(r => ({ key: r, label: <b>{r}</b> }))} />
       </div>
       <Field label="Notes (optional)"><textarea className="tp-input fx-ta" rows={3} value={text} onChange={e => setText(e.target.value)} /></Field>
     </Drawer>
@@ -283,7 +283,6 @@ export default function TemplateFrame() {
   const outlet = useOutlet()
   const [theme, setTheme] = useTheme()
   const [panel, setPanel] = useState(null)
-  const tabsRef = useRef(null)
   const account = useAccount()
   const note = useNote()
   const active = tabOf(pathname)
@@ -299,7 +298,6 @@ export default function TemplateFrame() {
   const unread = threads.reduce((n, t) => n + t.unread, 0)
   const needs = leads.filter(l => NEEDS.includes(l.stage)).length
   const close = useCallback(() => setPanel(null), [])
-  useStretchPill(tabsRef, { activeKey: active, selector: 'a.is-on', persistKey: 'tpl-tabs' })
   const open = which => e => { wig.onClick(e); setPanel(which) }
   const flipTheme = e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }
   const duty = settings.duty
@@ -341,25 +339,19 @@ export default function TemplateFrame() {
         <span className="tp-grow" />
         <Link to={paths.messages()} className="fx-ib tp-wig" aria-label="Messages" {...wig}><MessageSquare size={18} />{unread > 0 && <span className="fx-badge">{unread}</span>}</Link>
         <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} /><span className="fx-badge">3</span></button>
-        <button type="button" className="fx-me tp-wig" aria-label="Menu" {...wig} onClick={open('menu')}>{initials(account.name).toUpperCase()}</button>
+        <button type="button" className={`fx-me tp-wig av-${avatarHue(account.name)}`} aria-label="Menu" {...wig} onClick={open('menu')}>{initials(account.name).toUpperCase()}</button>
       </header>
 
       {/* P841: the desktop logo sits in the page, not in the sticky header, so it scrolls away with the page */}
       <Link to={paths.home()} className="fx-brand fx-brand-page" aria-label="Ohvara home"><OhvaraMark height={30} back="var(--ov-mark-back)" front="var(--ov-mark-front)" className="fx-mark" /><b>ohvara</b></Link>
       <header className="tp-top fx-top">
         <span className="fx-top-gap" aria-hidden="true" />
-        <nav className="tp-tabs fx-tabs" ref={tabsRef} aria-label="Pages">
-          {TABS.map(t => (
-            <Link key={t.key} to={t.to()} className={`tp-tab fx-tab${active === t.key ? ' is-on' : ''}`} aria-current={active === t.key ? 'page' : undefined}>
-              {t.label}
-              {t.key === 'leads' && needs > 0 && <span className="fx-tb">{needs}</span>}
-            </Link>
-          ))}
-        </nav>
+        <PillTabs as="nav" label="Pages" className="tp-tabs fx-tabs" itemClass="tp-tab fx-tab" value={active} persistKey="tpl-tabs"
+          items={TABS.map(t => ({ key: t.key, to: t.to(), label: t.label, extra: t.key === 'leads' && needs > 0 ? <span className="fx-tb">{needs}</span> : null }))} />
         <div className="fx-tr">
           <Link to={paths.messages()} className="fx-ib tp-wig" aria-label="Messages" {...wig}><MessageSquare size={18} />{unread > 0 && <span className="fx-badge">{unread}</span>}</Link>
           <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} /><span className="fx-badge">3</span></button>
-          <button type="button" className="tp-me fx-me tp-wig" aria-label={`Your account, ${account.name}`} aria-expanded={panel === 'menu'} {...wig} onClick={open('menu')}>{initials(account.name).toUpperCase()}</button>
+          <button type="button" className={`tp-me fx-me tp-wig av-${avatarHue(account.name)}`} aria-label={`Your account, ${account.name}`} aria-expanded={panel === 'menu'} {...wig} onClick={open('menu')}>{initials(account.name).toUpperCase()}</button>
         </div>
       </header>
 

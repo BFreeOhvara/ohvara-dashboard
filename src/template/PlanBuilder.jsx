@@ -1,5 +1,5 @@
 import { PLAN, MODES, modeOf, planRange, rangeText, budgetShare } from '../lib/planPricing'
-import { SampleTag } from './kit'
+import { SampleTag, Seg } from './kit'
 import { usd } from './motion'
 
 // Prompt 835 — the plan builder: a weekly budget slider, booked appointments or live calls, and the range it
@@ -8,13 +8,7 @@ import { usd } from './motion'
 const money = usd()
 
 export function ModePick({ mode, onMode, label = 'What you get' }) {
-  return (
-    <div className="tp-seg pb-mode" role="radiogroup" aria-label={label}>
-      {MODES.map(m => (m.key === mode
-        ? <span key={m.key} role="radio" aria-checked="true" className="on">{m.label}</span>
-        : <button key={m.key} type="button" role="radio" aria-checked="false" onClick={() => onMode(m.key)}>{m.label}</button>))}
-    </div>
-  )
+  return <Seg role="radiogroup" label={label} className="pb-mode" value={mode} onChange={onMode} options={MODES.map(m => ({ key: m.key, label: m.label }))} />
 }
 
 export function BudgetSlider({ weekly, mode, onWeekly, onMode, id = 'pb-budget' }) {

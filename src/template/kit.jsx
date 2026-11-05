@@ -1,6 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Link } from 'react-router-dom'
 import { X, Check } from 'lucide-react'
+import { useStretchPill } from '../hooks/useStretchPill'
+import { avatarHue } from './avatarHue'
 
 // Small pieces every template screen shares. Drawers, modals and the note are portaled to document.body: the
 // page ease-in wrapper keeps a transform, which would pin position: fixed to the wrapper instead of the window.
@@ -58,7 +61,7 @@ export function Drawer({ open, onClose, title, sub, children, footer, center = f
 }
 
 export const initials = name => name.split(' ').map(w => w[0]).slice(0, 2).join('')
-export const Avatar = ({ name, tone = '' }) => <span className={`tp-av ${tone}`} aria-hidden="true">{initials(name)}</span>
+export const Avatar = ({ name }) => <span className={`tp-av av-${avatarHue(name)}`} aria-hidden="true">{initials(name)}</span>
 export const Chip = ({ tone = 'blue', children }) => <span className={`tp-chip is-${tone}`}><i />{children}</span>
 export const SampleTag = ({ children = 'Sample price' }) => <span className="tp-tag">{children}</span>
 export const Money = ({ v, cents = true, size = '' }) => (
@@ -67,18 +70,42 @@ export const Money = ({ v, cents = true, size = '' }) => (
 // Legal, terms, privacy and consent wording is never written here: it stays a visible placeholder.
 export const Pending = ({ children = 'Consent wording pending' }) => <p className="tp-pending">{children}</p>
 
-export function Seg({ options, value, onChange, label }) {
+// P842: the one tab / segmented control. Every tab group in the shell renders through it (top bar, Leads, Activity,
+// Calendar, Settings, Billing and plan toggles, Clients status, the day and result pickers), so they all share the
+// same stretch (useStretchPill) and the same selected colour (flow.css P842 .fx-pt.is-on).
+//   items: [{ key, label, count?, to?, icon?, className?, extra?, title? }]
+//   as: 'nav' renders router links (aria-current); otherwise buttons with role tab (or radio when role="radiogroup").
+export function PillTabs({ items, value, onChange, label, className = '', itemClass = '', role = 'tablist', as, persistKey, innerRef }) {
+  const ownRef = useRef(null)
+  const ref = innerRef || ownRef
+  useStretchPill(ref, { activeKey: value, selector: '.is-on', persistKey })
+  const cls = o => `fx-pt ${itemClass} ${o.className || ''}${value === o.key ? ' is-on on' : ''}`.replace(/\s+/g, ' ').trim()
+  const inner = o => <>{o.icon && <o.icon size={15} aria-hidden="true" />}{o.label}{o.count != null && <b>{o.count}</b>}{o.extra}</>
+  if (as === 'nav') {
+    return (
+      <nav className={className} ref={ref} aria-label={label}>
+        {items.map(o => <Link key={o.key} to={o.to} className={cls(o)} aria-current={value === o.key ? 'page' : undefined}>{inner(o)}</Link>)}
+      </nav>
+    )
+  }
+  const radio = role === 'radiogroup'
   return (
-    <div className="tp-seg" role="tablist" aria-label={label}>
-      {options.map(o => (value === o.key ? (
-        <span role="tab" key={o.key} aria-selected="true" className="on">{o.label}{o.count != null && <b>{o.count}</b>}</span>
+    <div className={className} ref={ref} role={role} aria-label={label}>
+      {/* The selected item is not a button (nothing to do on it), as before P842 */}
+      {items.map(o => (value === o.key ? (
+        <span key={o.key} role={radio ? 'radio' : 'tab'} title={o.title} {...(radio ? { 'aria-checked': true } : { 'aria-selected': true })} className={cls(o)}>{inner(o)}</span>
       ) : (
-        <button type="button" role="tab" key={o.key} aria-selected="false" onClick={() => onChange(o.key)}>
-          {o.label}{o.count != null && <b>{o.count}</b>}
+        <button key={o.key} type="button" role={radio ? 'radio' : 'tab'} title={o.title}
+          {...(radio ? { 'aria-checked': false } : { 'aria-selected': false })} className={cls(o)} onClick={() => onChange(o.key)}>
+          {inner(o)}
         </button>
       )))}
     </div>
   )
+}
+
+export function Seg({ options, value, onChange, label, className = '', role }) {
+  return <PillTabs items={options} value={value} onChange={onChange} label={label} role={role} className={`tp-seg ${className}`.trim()} />
 }
 
 export function Switch({ on, onChange, label }) {

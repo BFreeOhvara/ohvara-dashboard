@@ -1,0 +1,629 @@
+{
+ "stretch": {
+  "topbar-overview-to-billing": [
+   {
+    "t": 2,
+    "left": 4,
+    "right": 116.567
+   },
+   {
+    "t": 35,
+    "left": 4,
+    "right": 258.005
+   },
+   {
+    "t": 68,
+    "left": 4,
+    "right": 424.469
+   },
+   {
+    "t": 100,
+    "left": 4.00333,
+    "right": 525.13
+   },
+   {
+    "t": 132,
+    "left": 5.36608,
+    "right": 579.46
+   },
+   {
+    "t": 163,
+    "left": 14.0383,
+    "right": 606.413
+   },
+   {
+    "t": 197,
+    "left": 39.4038,
+    "right": 619.459
+   },
+   {
+    "t": 232,
+    "left": 93.6548,
+    "right": 623.953
+   },
+   {
+    "t": 265,
+    "left": 179.749,
+    "right": 623.953
+   },
+   {
+    "t": 300,
+    "left": 310.877,
+    "right": 623.953
+   },
+   {
+    "t": 330,
+    "left": 406.528,
+    "right": 623.953
+   },
+   {
+    "t": 365,
+    "left": 478.042,
+    "right": 623.953
+   },
+   {
+    "t": 395,
+    "left": 513.535,
+    "right": 623.953
+   },
+   {
+    "t": 427,
+    "left": 531.68,
+    "right": 623.953
+   },
+   {
+    "t": 462,
+    "left": 537.6,
+    "right": 623.953
+   }
+  ],
+  "leads-all-to-live": [
+   {
+    "t": 7,
+    "left": 4,
+    "right": 147.275
+   },
+   {
+    "t": 42,
+    "left": 4,
+    "right": 236.768
+   },
+   {
+    "t": 73,
+    "left": 4,
+    "right": 317.474
+   },
+   {
+    "t": 108,
+    "left": 4.03808,
+    "right": 370.348
+   },
+   {
+    "t": 143,
+    "left": 5.77897,
+    "right": 396.329
+   },
+   {
+    "t": 177,
+    "left": 13.234,
+    "right": 407.815
+   },
+   {
+    "t": 207,
+    "left": 28.6397,
+    "right": 412.564
+   },
+   {
+    "t": 238,
+    "left": 57.4016,
+    "right": 413.813
+   },
+   {
+    "t": 273,
+    "left": 109.117,
+    "right": 413.813
+   },
+   {
+    "t": 307,
+    "left": 174.537,
+    "right": 413.813
+   },
+   {
+    "t": 340,
+    "left": 224.24,
+    "right": 413.813
+   },
+   {
+    "t": 377,
+    "left": 257.543,
+    "right": 413.813
+   },
+   {
+    "t": 410,
+    "left": 272.765,
+    "right": 413.813
+   },
+   {
+    "t": 443,
+    "left": 278.757,
+    "right": 413.813
+   },
+   {
+    "t": 478,
+    "left": 279.867,
+    "right": 413.813
+   }
+  ]
+ },
+ "colours": {
+  "dark/overview": {
+   "avatars": 4,
+   "avatarHues": [
+    "av-butter",
+    "av-apricot"
+   ],
+   "noHue": 0,
+   "me": [
+    [
+     "av-apricot",
+     "rgb(208, 145, 78)"
+    ]
+   ],
+   "badges": [
+    [
+     "Messages",
+     "rgb(92, 142, 204)"
+    ],
+    [
+     "Notifications",
+     "rgb(92, 142, 204)"
+    ],
+    [
+     "Messages",
+     "rgb(92, 142, 204)"
+    ]
+   ],
+   "selected": [
+    [
+     "Overview",
+     true,
+     "rgb(92, 142, 204)"
+    ]
+   ],
+   "tabItemsNotShared": 0
+  },
+  "dark/leads": {
+   "avatars": 5,
+   "avatarHues": [
+    "av-apricot",
+    "av-sky",
+    "av-butter"
+   ],
+   "noHue": 0,
+   "me": [
+    [
+     "av-apricot",
+     "rgb(208, 145, 78)"
+    ]
+   ],
+   "badges": [
+    [
+     "Messages",
+     "rgb(92, 142, 204)"
+    ],
+    [
+     "Notifications",
+     "rgb(92, 142, 204)"
+    ],
+    [
+     "Messages",
+     "rgb(92, 142, 204)"
+    ]
+   ],
+   "selected": [
+    [
+     "Leads3",
+     true,
+     "rgb(92, 142, 204)"
+    ],
+    [
+     "All6",
+     true,
+     "rgb(92, 142, 204)"
+    ]
+   ],
+   "tabItemsNotShared": 0
+  },
+  "dark/clients": {
+   "avatars": 6,
+   "avatarHues": [
+    "av-butter",
+    "av-sky",
+    "av-apricot"
+   ],
+   "noHue": 0,
+   "me": [
+    [
+     "av-apricot",
+     "rgb(208, 145, 78)"
+    ]
+   ],
+   "badges": [
+    [
+     "Messages",
+     "rgb(92, 142, 204)"
+    ],
+    [
+     "Notifications",
+     "rgb(92, 142, 204)"
+    ],
+    [
+     "Messages",
+     "rgb(92, 142, 204)"
+    ]
+   ],
+   "selected": [
+    [
+     "Clients",
+     true,
+     "rgb(92, 142, 204)"
+    ],
+    [
+     "All6",
+     true,
+     "rgb(92, 142, 204)"
+    ]
+   ],
+   "tabItemsNotShared": 0
+  },
+  "dark/activity": {
+   "avatars": 0,
+   "avatarHues": [],
+   "noHue": 0,
+   "me": [
+    [
+     "av-apricot",
+     "rgb(208, 145, 78)"
+    ]
+   ],
+   "badges": [
+    [
+     "Messages",
+     "rgb(92, 142, 204)"
+    ],
+    [
+     "Notifications",
+     "rgb(92, 142, 204)"
+    ],
+    [
+     "Messages",
+     "rgb(92, 142, 204)"
+    ]
+   ],
+   "selected": [
+    [
+     "Activity",
+     true,
+     "rgb(92, 142, 204)"
+    ],
+    [
+     "This week",
+     true,
+     "rgb(92, 142, 204)"
+    ]
+   ],
+   "tabItemsNotShared": 0
+  },
+  "dark/settings": {
+   "avatars": 0,
+   "avatarHues": [],
+   "noHue": 0,
+   "me": [
+    [
+     "av-apricot",
+     "rgb(208, 145, 78)"
+    ]
+   ],
+   "badges": [
+    [
+     "Messages",
+     "rgb(92, 142, 204)"
+    ],
+    [
+     "Notifications",
+     "rgb(92, 142, 204)"
+    ],
+    [
+     "Messages",
+     "rgb(92, 142, 204)"
+    ]
+   ],
+   "selected": [
+    [
+     "Profile",
+     true,
+     "rgb(92, 142, 204)"
+    ]
+   ],
+   "tabItemsNotShared": 0
+  },
+  "dark/billing": {
+   "avatars": 0,
+   "avatarHues": [],
+   "noHue": 0,
+   "me": [
+    [
+     "av-apricot",
+     "rgb(208, 145, 78)"
+    ]
+   ],
+   "badges": [
+    [
+     "Messages",
+     "rgb(92, 142, 204)"
+    ],
+    [
+     "Notifications",
+     "rgb(92, 142, 204)"
+    ],
+    [
+     "Messages",
+     "rgb(92, 142, 204)"
+    ]
+   ],
+   "selected": [
+    [
+     "Billing",
+     true,
+     "rgb(92, 142, 204)"
+    ],
+    [
+     "Booked appointment",
+     true,
+     "rgb(92, 142, 204)"
+    ]
+   ],
+   "tabItemsNotShared": 0
+  },
+  "light/overview": {
+   "avatars": 4,
+   "avatarHues": [
+    "av-butter",
+    "av-apricot"
+   ],
+   "noHue": 0,
+   "me": [
+    [
+     "av-apricot",
+     "rgb(228, 180, 129)"
+    ]
+   ],
+   "badges": [
+    [
+     "Messages",
+     "rgb(134, 174, 222)"
+    ],
+    [
+     "Notifications",
+     "rgb(134, 174, 222)"
+    ],
+    [
+     "Messages",
+     "rgb(134, 174, 222)"
+    ]
+   ],
+   "selected": [
+    [
+     "Overview",
+     true,
+     "rgb(134, 174, 222)"
+    ]
+   ],
+   "tabItemsNotShared": 0
+  },
+  "light/leads": {
+   "avatars": 5,
+   "avatarHues": [
+    "av-apricot",
+    "av-sky",
+    "av-butter"
+   ],
+   "noHue": 0,
+   "me": [
+    [
+     "av-apricot",
+     "rgb(228, 180, 129)"
+    ]
+   ],
+   "badges": [
+    [
+     "Messages",
+     "rgb(134, 174, 222)"
+    ],
+    [
+     "Notifications",
+     "rgb(134, 174, 222)"
+    ],
+    [
+     "Messages",
+     "rgb(134, 174, 222)"
+    ]
+   ],
+   "selected": [
+    [
+     "Leads3",
+     true,
+     "rgb(134, 174, 222)"
+    ],
+    [
+     "All6",
+     true,
+     "rgb(134, 174, 222)"
+    ]
+   ],
+   "tabItemsNotShared": 0
+  },
+  "light/clients": {
+   "avatars": 6,
+   "avatarHues": [
+    "av-butter",
+    "av-sky",
+    "av-apricot"
+   ],
+   "noHue": 0,
+   "me": [
+    [
+     "av-apricot",
+     "rgb(228, 180, 129)"
+    ]
+   ],
+   "badges": [
+    [
+     "Messages",
+     "rgb(134, 174, 222)"
+    ],
+    [
+     "Notifications",
+     "rgb(134, 174, 222)"
+    ],
+    [
+     "Messages",
+     "rgb(134, 174, 222)"
+    ]
+   ],
+   "selected": [
+    [
+     "Clients",
+     true,
+     "rgb(134, 174, 222)"
+    ],
+    [
+     "All6",
+     true,
+     "rgb(134, 174, 222)"
+    ]
+   ],
+   "tabItemsNotShared": 0
+  },
+  "light/activity": {
+   "avatars": 0,
+   "avatarHues": [],
+   "noHue": 0,
+   "me": [
+    [
+     "av-apricot",
+     "rgb(228, 180, 129)"
+    ]
+   ],
+   "badges": [
+    [
+     "Messages",
+     "rgb(134, 174, 222)"
+    ],
+    [
+     "Notifications",
+     "rgb(134, 174, 222)"
+    ],
+    [
+     "Messages",
+     "rgb(134, 174, 222)"
+    ]
+   ],
+   "selected": [
+    [
+     "Activity",
+     true,
+     "rgb(134, 174, 222)"
+    ],
+    [
+     "This week",
+     true,
+     "rgb(134, 174, 222)"
+    ]
+   ],
+   "tabItemsNotShared": 0
+  },
+  "light/settings": {
+   "avatars": 0,
+   "avatarHues": [],
+   "noHue": 0,
+   "me": [
+    [
+     "av-apricot",
+     "rgb(228, 180, 129)"
+    ]
+   ],
+   "badges": [
+    [
+     "Messages",
+     "rgb(134, 174, 222)"
+    ],
+    [
+     "Notifications",
+     "rgb(134, 174, 222)"
+    ],
+    [
+     "Messages",
+     "rgb(134, 174, 222)"
+    ]
+   ],
+   "selected": [
+    [
+     "Profile",
+     true,
+     "rgb(134, 174, 222)"
+    ]
+   ],
+   "tabItemsNotShared": 0
+  },
+  "light/billing": {
+   "avatars": 0,
+   "avatarHues": [],
+   "noHue": 0,
+   "me": [
+    [
+     "av-apricot",
+     "rgb(228, 180, 129)"
+    ]
+   ],
+   "badges": [
+    [
+     "Messages",
+     "rgb(134, 174, 222)"
+    ],
+    [
+     "Notifications",
+     "rgb(134, 174, 222)"
+    ],
+    [
+     "Messages",
+     "rgb(134, 174, 222)"
+    ]
+   ],
+   "selected": [
+    [
+     "Billing",
+     true,
+     "rgb(134, 174, 222)"
+    ],
+    [
+     "Booked appointment",
+     true,
+     "rgb(134, 174, 222)"
+    ]
+   ],
+   "tabItemsNotShared": 0
+  }
+ },
+ "errs": [],
+ "overflow": {
+  "dark/1440/overview": -15,
+  "dark/1440/clients": -15,
+  "dark/390/overview": -15,
+  "dark/390/clients": -15,
+  "light/1440/overview": -15,
+  "light/1440/clients": -15,
+  "light/390/overview": -15,
+  "light/390/clients": -15
+ }
+}

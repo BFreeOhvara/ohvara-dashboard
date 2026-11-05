@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react'
 import {
-  FLIGHT_MS, CROSSFADE_MS, clipOf, edgesAt, stretchKeyframes, shrinkEdges, planMove, coverTrack, inkAt, stackedFills, rememberedEdges,
+  FLIGHT_MS, CROSSFADE_MS, clipOf, edgesAt, stretchKeyframes, shrinkEdges, planMove, coverTrack, inkAt, stackedFills, rememberedEdges, parseColor,
 } from '../lib/stretchPill'
 import '../components/ui/stretchPill.css'
 
@@ -96,6 +96,8 @@ function fadeLabels(s, row, target, from, to) {
     const track = coverTrack(from, to, labelOf(item, row))
     if (item !== target && track.every(f => f.cover === 0)) continue
     for (const el of partsOf(item)) {
+      // A badge the landing button has no twin of (the Leads count) keeps its own look under the pill (P842).
+      if (el !== item && !onPaint.has(el.tagName) && paintOf(el).bg !== CLEAR) continue
       const on = el === item ? self : onPaint.get(el.tagName) || { color: first, bg: first }
       const twin = el === item ? others[0] : others.map(o => o.querySelector(el.tagName)).find(Boolean)
       const off = item !== target ? paintOf(el) : s.off.get(el) || (twin && s.off.get(twin)) || on
@@ -145,7 +147,10 @@ function launch(s, row, target, from, to) {
     overlay.append(land)
     const start = 1 - CROSSFADE_MS / FLIGHT_MS
     anims.push(land.animate([{ offset: 0, opacity: 0 }, { offset: start, opacity: 0 }, { offset: 1, opacity: 1 }], { duration: FLIGHT_MS }))
-    for (const { layer } of layers) anims.push(layer.animate([{ offset: 0, opacity: 1 }, { offset: start, opacity: 1 }, { offset: 1, opacity: 0 }], { duration: FLIGHT_MS }))
+    // A solid fill stays put under the landing look (fading both would dip the colour mid-swap, P842); only a
+    // see-through fill fades out, so the two never stack into a stronger tint.
+    const solid = parseColor(plainColour(target, look.fill))?.a === 1 && !look.bordered
+    if (!solid) for (const { layer } of layers) anims.push(layer.animate([{ offset: 0, opacity: 1 }, { offset: start, opacity: 1 }, { offset: 1, opacity: 0 }], { duration: FLIGHT_MS }))
   }
   anims.push(...fadeLabels(s, row, target, from, to))
 
@@ -210,7 +215,12 @@ export function useStretchPill(rowRef, { activeKey, selector, enabled = true, pe
     try {
       const visible = row.clientWidth > 0
       if (visible) noteOffColours(s, row, target)
-      if (enabled && visible && target && typeof target.animate === 'function' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      // Reduced motion: no stretch, the new selection fades in quickly (P842).
+      if (reduce && enabled && visible && !mounting && target && source !== target && typeof target.animate === 'function') {
+        target.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: 140, easing: 'ease-out' })
+      }
+      if (enabled && visible && target && typeof target.animate === 'function' && !reduce) {
         const to = edgesOf(target, row)
         const from = midFlight
           || (source && source !== target && row.contains(source) ? edgesOf(source, row) : null)

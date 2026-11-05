@@ -1115,3 +1115,36 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 .fx-ovl-week { grid-column: 1 / -1; }
 /* Phone: the rail's 74px gutter (P834, above) never applies without the rail; the page uses the full width */
 @media (max-width: 999.98px) { .fx .fx-col { margin: 0; } }
+
+/* P842 ----------------------------------------------------------------------------------------------------------
+   Colour back wherever it is not on colour, palette avatars, one tab control everywhere, a softer multi-hue
+   backdrop (src/index.css "Prompt 842"). */
+
+/* One tab control (kit.jsx PillTabs): top bar, Leads, Activity, Calendar, Settings, Billing / plan toggles, Clients
+   status, the day and result pickers. Every selected item is the highlight, so the stretch is one colour everywhere. */
+.tp .fx-pt.fx-pt.is-on.is-on, [data-theme="light"] .tp .fx-pt.fx-pt.is-on.is-on {
+  --sp-fill: var(--sh-acc); color: var(--sh-on-accent); background: var(--sh-acc); border-color: transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3);
+}
+.tp .fx-pt.fx-pt.is-on.is-on :is(b, small, svg) { color: var(--sh-on-accent); }
+.tp .fx-pt.fx-pt.is-on.is-on > b { background: color-mix(in srgb, var(--sh-on-accent) 16%, transparent); }
+.tp .fx-pt.fx-pt.is-on.is-on::before { background: var(--sh-on-accent); }
+/* ...except on an already coloured surface, where it is the neutral highlight (P841 rule) */
+.tp :is(.fx-card, .fx-tile.is-fill, .fx-attn, .fx-rec-hero) .fx-pt.fx-pt.is-on.is-on { --sp-fill: var(--sh-on-color); color: var(--sh-on-color-ink); background: var(--sh-on-color); }
+.tp :is(.fx-card, .fx-tile.is-fill, .fx-attn, .fx-rec-hero) .fx-pt.fx-pt.is-on.is-on :is(b, small, svg) { color: var(--sh-on-color-ink); }
+
+/* Avatars: one of the four palette colours per person (src/template/avatarHue.js), solid fill + its dark ink. The
+   agent's own avatar top right is its colour at rest and when open. */
+.tp .av-sky, .fx .fx-me.av-sky { --av: var(--sh-f-sky); --avi: var(--sh-fi-sky); }
+.tp .av-apricot, .fx .fx-me.av-apricot { --av: var(--sh-f-apricot); --avi: var(--sh-fi-apricot); }
+.tp .av-sage, .fx .fx-me.av-sage { --av: var(--sh-f-sage); --avi: var(--sh-fi-sage); }
+.tp .av-butter, .fx .fx-me.av-butter { --av: var(--sh-f-butter); --avi: var(--sh-fi-butter); }
+.tp .tp-av.tp-av.tp-av[class*="av-"], .tp .fx-me.fx-me.fx-me[class*="av-"], .tp .fx-me.fx-me.fx-me[class*="av-"][aria-expanded="true"] {
+  color: var(--avi); background: var(--av); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22);
+}
+.tp .fx-me.fx-me.fx-me[class*="av-"][aria-expanded="true"] { box-shadow: 0 0 0 2px var(--ov-page), 0 0 0 4px var(--av); }
+
+/* Unread badges back in colour (top-right Messages and Notifications, the rail Messages badge) ... */
+.fx-badge { color: var(--sh-on-accent); background: var(--sh-acc); }
+/* ...neutral only where they sit on colour: an active (highlighted) rail item */
+.fx .fx-ri:is(.active, [aria-expanded="true"]) .fx-badge { color: var(--sh-count-ink); background: var(--sh-count); }

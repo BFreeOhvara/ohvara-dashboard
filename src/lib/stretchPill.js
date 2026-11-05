@@ -1,11 +1,14 @@
-// The stretchy pill's maths, no DOM: the edge in the direction of travel gets there first and the other catches
-// up. Edges are { top, right, bottom, left } in px from the row's top-left corner. useStretchPill draws them.
+// The stretchy pill's maths, no DOM: the edge in the direction of travel springs to the far side of the new button
+// first, so on a long jump the pill spans the whole distance; then the trailing edge follows and it settles.
+// Edges are { top, right, bottom, left } in px from the row's top-left corner. useStretchPill draws them.
 
-export const FLIGHT_MS = 550
-export const LEAD_MS = 360
+// Prompt 842 timing: leading edge a ~220 ms spring; trailing edge waits ~100 ms, then eases in and out to land.
+export const FLIGHT_MS = 480
+export const LEAD_MS = 220
+export const TRAIL_DELAY_MS = 100
 export const CROSSFADE_MS = 80
 export const REMEMBER_MS = 300
-const SAMPLES = 24
+const SAMPLES = 32
 
 // cubic-bezier(0.165, 0.84, 0.44, 1): find the curve's s for this time, then return its progress.
 const curve = (a, b, s) => 3 * a * s * (1 - s) ** 2 + 3 * b * s * s * (1 - s) + s ** 3
@@ -21,14 +24,23 @@ export function ease(t) {
   return curve(0.84, 1, (lo + hi) / 2)
 }
 
+// The leading edge: a critically damped spring (no overshoot, so it never passes the far side), scaled to land
+// exactly at t = 1.
+const STIFF = 6.6
+const springRaw = x => 1 - (1 + STIFF * x) * Math.exp(-STIFF * x)
+export const spring = t => (t <= 0 ? 0 : t >= 1 ? 1 : springRaw(t) / springRaw(1))
+
+// The trailing edge: slow to leave, so the pill stretches across first, then it catches up and settles.
+export const easeInOut = t => (t <= 0 ? 0 : t >= 1 ? 1 : t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2)
+
 const lerp = (a, b, p) => a + (b - a) * p
 const centre = e => (e.left + e.right) / 2
 const round = n => Math.round(n * 1000) / 1000
 
 // Where the four edges are, this many ms into a flight. Moving right the right edge leads, moving left the left edge.
 export function edgesAt(from, to, ms) {
-  const lead = ease(ms / LEAD_MS)
-  const trail = ease(ms / FLIGHT_MS)
+  const lead = spring(ms / LEAD_MS)
+  const trail = easeInOut((ms - TRAIL_DELAY_MS) / (FLIGHT_MS - TRAIL_DELAY_MS))
   const right = centre(to) >= centre(from)
   return {
     top: lerp(from.top, to.top, trail),

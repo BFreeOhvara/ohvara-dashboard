@@ -1,10 +1,9 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { User, Bell, Radio, CreditCard, SunMoon, Mail, LogOut, Trash2, ChevronRight, KeyRound } from 'lucide-react'
 import { useSampleSettings, useSampleActions, useSampleBilling, useSampleClients, useSampleLeads, useSampleOverview } from '../data'
 import { useTheme } from '../../hooks/useTheme'
-import { useStretchPill } from '../../hooks/useStretchPill'
-import { Drawer, Field, Seg, Switch, Chip, useNote, useAccount, initials } from '../kit'
+import { Drawer, Field, Seg, Switch, Chip, PillTabs, useNote, useAccount, initials } from '../kit'
 import { CountUp, usd } from '../motion'
 import { paths } from '../paths'
 import { PLAN, planRange, rangeText } from '../../lib/planPricing'
@@ -71,10 +70,8 @@ export default function Settings() {
   const [theme, setTheme] = useTheme()
   const note = useNote()
   const account = useAccount()
-  const tabsRef = useRef(null)
   const [tab, setTab] = useState('profile')
   const [panel, setPanel] = useState(null)
-  useStretchPill(tabsRef, { activeKey: tab, selector: '.is-on' })
 
   // Saved values and the drafts the forms edit
   const [profile, setProfile] = useState(s.profile)
@@ -100,11 +97,7 @@ export default function Settings() {
       <ProfileCard profile={profile} duty={s.duty} />
 
       <section className="fx-tile fx-panel" aria-label="Settings">
-        <div className="fx-ptabs" ref={tabsRef} role="tablist" aria-label="Settings sections">
-          {TABS.map(([key, label, Icon]) => (tab === key
-            ? <span key={key} role="tab" aria-selected="true" className="fx-ptab is-on"><Icon size={15} aria-hidden="true" />{label}</span>
-            : <button key={key} type="button" role="tab" aria-selected="false" className="fx-ptab" onClick={() => setTab(key)}><Icon size={15} aria-hidden="true" />{label}</button>))}
-        </div>
+        <PillTabs label="Settings sections" className="fx-ptabs" itemClass="fx-ptab" value={tab} onChange={setTab} items={TABS.map(([key, label, icon]) => ({ key, label, icon }))} />
 
         <div className="fx-form" key={tab} role="tabpanel" aria-label={TABS.find(t => t[0] === tab)[1]}>
           {tab === 'profile' && <>

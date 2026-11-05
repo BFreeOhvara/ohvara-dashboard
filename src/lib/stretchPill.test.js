@@ -3,7 +3,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  FLIGHT_MS, LEAD_MS, ease, edgesAt, clipOf, flightOffsets, stretchKeyframes, shrinkEdges, sameLine, planMove,
+  FLIGHT_MS, LEAD_MS, TRAIL_DELAY_MS, ease, spring, easeInOut, edgesAt, clipOf, flightOffsets, stretchKeyframes, shrinkEdges, sameLine, planMove,
   coverOf, coverTrack, inkAt, parseColor, stackedFills, rememberedEdges,
 } from './stretchPill.js'
 
@@ -20,20 +20,39 @@ test('the curve starts at 0, ends at 1 and only goes up', () => {
   assert.ok(ease(0.33) > 0.7)
 })
 
-test('moving right: the right edge reaches its target at 360 ms and the left edge at 550 ms', () => {
-  close(edgesAt(A, B, LEAD_MS).right, B.right, 'right at 360')
-  assert.ok(edgesAt(A, B, LEAD_MS - 40).right < B.right, 'right not there before 360')
-  assert.ok(edgesAt(A, B, LEAD_MS).left < B.left - 1, 'left still travelling at 360')
-  close(edgesAt(A, B, FLIGHT_MS).left, B.left, 'left at 550')
-  assert.ok(edgesAt(A, B, FLIGHT_MS - 40).left < B.left, 'left not there before 550')
+test('the spring and the in-out curve start at 0, end at 1 and only go up', () => {
+  for (const f of [spring, easeInOut]) {
+    assert.equal(f(0), 0)
+    assert.equal(f(1), 1)
+    let last = 0
+    for (let t = 0.02; t < 1; t += 0.02) { const p = f(t); assert.ok(p > last && p < 1); last = p }
+  }
+  assert.ok(spring(0.5) > 0.8, 'the leading edge is most of the way there by half its time')
+  assert.ok(easeInOut(0.25) < 0.1, 'the trailing edge is slow to leave')
 })
 
-test('moving left mirrors it: the left edge at 360 ms, the right edge at 550 ms', () => {
-  close(edgesAt(B, A, LEAD_MS).left, A.left, 'left at 360')
-  assert.ok(edgesAt(B, A, LEAD_MS - 40).left > A.left, 'left not there before 360')
-  assert.ok(edgesAt(B, A, LEAD_MS).right > A.right + 1, 'right still travelling at 360')
-  close(edgesAt(B, A, FLIGHT_MS).right, A.right, 'right at 550')
-  assert.ok(edgesAt(B, A, FLIGHT_MS - 40).right > A.right, 'right not there before 550')
+test('moving right: the right edge reaches its target at 220 ms and the left edge at 480 ms', () => {
+  close(edgesAt(A, B, LEAD_MS).right, B.right, 'right at 220')
+  assert.ok(edgesAt(A, B, LEAD_MS - 40).right < B.right, 'right not there before 220')
+  assert.ok(edgesAt(A, B, LEAD_MS).left < B.left - 1, 'left still travelling at 220')
+  close(edgesAt(A, B, FLIGHT_MS).left, B.left, 'left at 480')
+  assert.ok(edgesAt(A, B, FLIGHT_MS - 40).left < B.left, 'left not there before 480')
+})
+
+test('moving left mirrors it: the left edge at 220 ms, the right edge at 480 ms', () => {
+  close(edgesAt(B, A, LEAD_MS).left, A.left, 'left at 220')
+  assert.ok(edgesAt(B, A, LEAD_MS - 40).left > A.left, 'left not there before 220')
+  assert.ok(edgesAt(B, A, LEAD_MS).right > A.right + 1, 'right still travelling at 220')
+  close(edgesAt(B, A, FLIGHT_MS).right, A.right, 'right at 480')
+  assert.ok(edgesAt(B, A, FLIGHT_MS - 40).right > A.right, 'right not there before 480')
+})
+
+test('the trailing edge waits ~100 ms, so a long jump spans nearly the whole distance when the lead lands', () => {
+  const far = { top: 3, right: 620, bottom: 35, left: 540 }
+  assert.deepEqual(edgesAt(A, far, TRAIL_DELAY_MS).left, A.left)
+  const at = edgesAt(A, far, LEAD_MS)
+  close(at.right, far.right)
+  assert.ok(at.left - A.left < (far.left - A.left) * 0.2, `trailing edge has moved under a fifth of the way (${at.left})`)
 })
 
 test('the pill stretches: mid-flight it is wider than either end and spans part of both buttons', () => {
@@ -47,9 +66,9 @@ test('edges stay put before the start and after the end', () => {
   assert.deepEqual(edgesAt(A, B, FLIGHT_MS + 100), B)
 })
 
-test('keyframes: about 24 samples, linear offsets from 0 to 1, one exactly on the landing, ending on the target', () => {
+test('keyframes: about 32 samples, linear offsets from 0 to 1, one exactly on the landing, ending on the target', () => {
   const frames = stretchKeyframes(A, B, 16)
-  assert.ok(frames.length >= 24 && frames.length <= 26)
+  assert.ok(frames.length >= 32 && frames.length <= 34)
   assert.equal(frames[0].offset, 0)
   assert.equal(frames.at(-1).offset, 1)
   frames.reduce((a, b) => { assert.ok(b.offset > a.offset); return b })

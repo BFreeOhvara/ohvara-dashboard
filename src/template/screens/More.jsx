@@ -19,7 +19,7 @@ export default function More() {
   if (isTemplateAddress()) rows.push([paths.signup, 'Sign-up preview', ShieldCheck], [paths.welcome, 'Welcome preview', Home])
   return (
     <div className="tp-page">
-      <section className="ov-card tp-card"><div className="tp-row"><Avatar name={account.name} tone="blue" /><div className="tp-grow"><b>{account.name}</b><p className="tp-sub">Agent · weekly budget and servicing</p></div></div></section>
+      <section className="ov-card tp-card"><div className="tp-row"><Avatar name={account.name} /><div className="tp-grow"><b>{account.name}</b><p className="tp-sub">Agent · weekly budget and servicing</p></div></div></section>
       <Link to={paths.billing()} className="ov-card ov-link tp-card tp-stack">
         <div className="tp-row"><CreditCard size={18} /><b className="tp-grow">Billing</b><SampleTag /></div>
         <div className="tp-row tp-between"><span><Money v={b.budget.weekly} size="lg" cents={false} /> <span className="tp-sub">/ week</span></span><span className="tp-sub">{b.booked} booked · range {rangeText(planRange(b.budget.weekly, b.budget.mode).week)}</span></div>

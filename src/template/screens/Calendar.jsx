@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Phone, MapPin, ChevronRight, Clock } from 'lucide-react'
 import { CountUp } from '../motion'
 import { useSampleAppointments, useSampleLeads, useSampleClients } from '../data'
-import { Seg, Drawer, Empty, useNote } from '../kit'
+import { Seg, Drawer, Empty, PillTabs, useNote } from '../kit'
 import { paths } from '../paths'
 
 const DAYS = [['Mon', 2], ['Tue', 3], ['Wed', 4], ['Thu', 5], ['Fri', 6]]
@@ -41,11 +41,8 @@ export default function Calendar() {
     <div className="tp-page fx-page">
       <div className="fx-tools">
         <Seg label="View" value={view} onChange={setView} options={[{ key: 'week', label: 'Week' }, { key: 'day', label: 'Day' }]} />
-        <div className="fx-chips" role="tablist" aria-label="Day">
-          {DAYS.map(([d, n]) => (day === n
-            ? <span key={d} role="tab" aria-selected="true" className="fx-chip is-on"><small>{d}</small><b>{n}</b></span>
-            : <button key={d} type="button" role="tab" aria-selected="false" className="fx-chip" onClick={() => setDay(n)}><small>{d}</small><b>{n}</b>{ofDay(n).length > 0 && <i aria-hidden="true" />}</button>))}
-        </div>
+        <PillTabs label="Day" className="fx-chips" itemClass="fx-chip" value={day} onChange={setDay}
+          items={DAYS.map(([d, n]) => ({ key: n, label: <><small>{d}</small><b>{n}</b></>, extra: day !== n && ofDay(n).length > 0 ? <i aria-hidden="true" /> : null }))} />
         <span className="tp-grow" />
         <p className="tp-sub">Working hours 9:00 AM to 6:00 PM · only what you attend</p>
       </div>
