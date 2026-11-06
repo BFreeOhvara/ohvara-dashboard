@@ -1308,3 +1308,10 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 .fx-wchart .fx-bar { fill: var(--ov-data-a); }
 .fx-wchart .fx-bar.is-later, .fx-wchart .fx-bar.is-zero { fill: color-mix(in srgb, var(--ov-mute) 28%, transparent); }
 .fx-wchart.is-days .fx-xs span:not(:first-child):not(:last-child):not(:nth-child(4)):not(:nth-child(7)) { display: block; }
+
+/* P867 — a count badge on a tab never takes the selected look: in every tab group (kit.jsx PillTabs / Seg, so the
+   three portals) and the top tabs (.fx-tb), selected or not, on colour or not, it is the neutral count (P841). */
+.tp .fx-pt.fx-pt > b.fx-pt-n.fx-pt-n.fx-pt-n, .tp .fx-pt.fx-pt.is-on.is-on > b.fx-pt-n.fx-pt-n.fx-pt-n,
+.tp .fx-pt.fx-pt .fx-tb.fx-tb.fx-tb, .tp .fx-pt.fx-pt.is-on.is-on .fx-tb.fx-tb.fx-tb {
+  color: var(--sh-count-ink); background: var(--sh-count); box-shadow: none;
+}

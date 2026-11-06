@@ -16,7 +16,6 @@ export const WEEK = [2, 3, 4, 5, 6, 7, 8]
 export const NEXT_WEEK = [9, 10, 11, 12, 13, 14, 15]
 
 export const ME = { name: 'Sam Ellis', email: 'sam@ohvara.com', phone: '(512) 555-0100', role: 'Admin' }
-export const PARTNER = { id: 'pt-jordan', name: 'Jordan Hale', email: 'jordan@example.com', role: 'Partner' }
 
 // Sample weekly plan prices (not decided: the real ones come from settings).
 export const PLANS = {
@@ -252,10 +251,6 @@ const seedThreads = [
   { id: 'th-andre', who: 'va-andre', unread: 1, messages: [
     { id: 'm1', from: 'them', text: "I asked for Friday off for my kid's school thing. Omar said he can cover.", at: 'Wed, 6:20 PM' },
   ] },
-  { id: 'th-jordan', who: PARTNER.id, unread: 0, messages: [
-    { id: 'm1', from: 'them', text: 'GoHighLevel workflows are ready. I will drop the key in Connect once the bridge is live.', at: 'Tue, 2:15 PM' },
-    { id: 'm2', from: 'me', text: 'Perfect. Location ID and the three workflows can go in now; they save and wait.', at: 'Tue, 2:31 PM' },
-  ] },
   { id: 'th-keisha', who: 'va-keisha', unread: 0, messages: [
     { id: 'm1', from: 'me', text: 'Nice work on the morning calls. Carla Jones at 12:15 is still open, can you get to it?', at: 'Today, 12:40 PM' },
   ] },
@@ -371,7 +366,7 @@ export const TRACKING = [
 let state = {
   agents: seedAgents, vas: seedVas, invites: seedInvites, leads: seedLeads, clients: seedClients, steps: seedSteps, calls: seedCalls,
   rota: seedRota, dayOff: seedDayOff, cancels: seedCancels, runs: seedRuns, revenue: seedRevenue, threads: seedThreads, feed: seedFeed,
-  settings: seedSettings, carriers: seedCarriers, bugs: seedBugs, audit: seedAudit, connect: seedConnect, viewAs: 'admin', setupFees: seedSetupFees, draws: seedDraws,
+  settings: seedSettings, carriers: seedCarriers, bugs: seedBugs, audit: seedAudit, connect: seedConnect, setupFees: seedSetupFees, draws: seedDraws,
   onboard: seedOnboard, setupLog: seedSetupLog,
 }
 const listeners = new Set()
@@ -382,7 +377,7 @@ const ok = data => ({ data, isLoading: false, error: null })
 // The sample store as it is now (tests read Money's numbers from it without React).
 export const admSnapshot = () => state
 
-const nameOf = (s, id) => s.agents.find(a => a.id === id)?.name || s.vas.find(v => v.id === id)?.name || (id === PARTNER.id ? PARTNER.name : '')
+const nameOf = (s, id) => s.agents.find(a => a.id === id)?.name || s.vas.find(v => v.id === id)?.name || ''
 export const RATE = () => state.settings.payRules.perCancel
 const stamp = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 // Every admin action is written to the audit log, newest first. Append-only: nothing edits or removes a row.
@@ -452,7 +447,7 @@ export function useAdmThreads() {
   const s = useStore()
   return ok(s.threads.map(t => {
     const agent = s.agents.find(a => a.id === t.who)
-    const role = agent ? 'Agent' : t.who === PARTNER.id ? 'Partner' : 'Fulfillment'
+    const role = agent ? 'Agent' : 'Fulfillment'
     return { ...t, name: nameOf(s, t.who), role }
   }))
 }
@@ -468,7 +463,6 @@ export function pipelineOf(s) {
   return [...invited, ...s.onboard].map(c => ({ ...c, ...setupOf(c), log: s.setupLog[c.id] || [] }))
 }
 export function useAdmSetup() { const s = useStore(); return ok(pipelineOf(s)) }
-export function useAdmViewAs() { const s = useStore(); return ok(s.viewAs) }
 
 // Money: this week's revenue (plans + leads charged), the weeks before, agent bills, failed payments, the VA pay run.
 export function useAdmMoney() {
@@ -555,7 +549,7 @@ export function useAdmDay() {
 }
 
 // P866: one audit line on a client's setup history, newest first.
-const setupLogAdd = (s, id, what) => ({ setupLog: { ...s.setupLog, [id]: [{ at: `Today, ${stamp()}`, who: s.viewAs === 'partner' ? PARTNER.name : ME.name, what }, ...(s.setupLog[id] || [])] } })
+const setupLogAdd = (s, id, what) => ({ setupLog: { ...s.setupLog, [id]: [{ at: `Today, ${stamp()}`, who: ME.name, what }, ...(s.setupLog[id] || [])] } })
 const feedAdd = (s, who, text, kind) => ({ feed: [{ id: `f${Date.now()}`, who, text, at: stamp(), kind }, ...s.feed] })
 const patchById = (list, id, patch) => list.map(x => (x.id === id ? { ...x, ...(typeof patch === 'function' ? patch(x) : patch) } : x))
 
@@ -668,8 +662,7 @@ export function useAdmActions() {
     // Connect (Jordan). A key is kept only as "saved" plus its last four; the value itself is dropped here.
     saveConnect: (part, patch, what) => set(s => {
       const next = Array.isArray(s.connect[part]) ? patch : { ...s.connect[part], ...patch }
-      return { connect: { ...s.connect, [part]: next }, ...audit(s, what || 'Saved a Connect setting', 'Waits for the bridge (P850)'), ...feedAdd(s, s.viewAs === 'partner' ? PARTNER.name : ME.name, what || 'Saved a Connect setting', 'connect') }
+      return { connect: { ...s.connect, [part]: next }, ...audit(s, what || 'Saved a Connect setting', 'Waits for the bridge (P850)'), ...feedAdd(s, ME.name, what || 'Saved a Connect setting', 'connect') }
     }),
-    setViewAs: viewAs => set(() => ({ viewAs })),
   }
 }

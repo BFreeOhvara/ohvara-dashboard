@@ -113,21 +113,22 @@ export default function Clients() {
   const toneOf = key => (stageLabel[key] ? `is-tone is-${stageLabel[key][0]}` : '')
   const back = () => navigate({ pathname: fp('clients'), search: params.toString() ? `?${params}` : '' })
   return (
-    <div className="tp-page fx-page">
+    <div className="tp-page fx-page fs-clients">
+      {/* P867: one tools row (find, agent, status) so the cards start higher; the sample tag sits under the cards on a
+          desktop (the second row it had cost a card row at 1366x768) and stays up top on a phone. */}
       <div className="fx-tools">
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a client" placeholder="Find a client, phone, policy or agent" value={q} onChange={e => setQ(e.target.value)} /></label>
         <PillTabs label="Agent" className="fx-filters" itemClass="fx-filter" value={agent} onChange={k => setP('agent', k)}
           items={[{ key: 'all', label: 'Every agent' }, ...agents.map(a => ({ key: a.id, label: a.name.split(' ')[0], count: a.clients }))]} />
-      </div>
-      <div className="fx-tools">
         <PillTabs label="Status" className="fx-filters" itemClass="fx-filter" value={stage} onChange={k => setP('stage', k)} items={options.map(o => ({ ...o, className: toneOf(o.key) }))} />
-        <SampleTag>Sample clients</SampleTag>
+        <span className="fs-cl-tag is-top"><SampleTag>Sample clients</SampleTag></span>
       </div>
 
       <div className="fx-cgrid" aria-label="Clients">
         {rows.map((c, i) => <ClientCard key={c.id} c={c} i={i} open={openFor[c.id] || 0} />)}
         {rows.length === 0 && <section className="fx-tile"><Empty title="No clients match" sub="Check the spelling, or show every status and agent." /></section>}
       </div>
+      <span className="fs-cl-tag is-end"><SampleTag>Sample clients</SampleTag></span>
 
       {id && <ClientDrawer id={id} onClose={back} />}
     </div>

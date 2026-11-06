@@ -162,12 +162,14 @@ function MoneyTop({ period, setPeriod }) {
   const span = PERIODS.find(x => x[0] === period)
   const margin = p.inTotal ? Math.round((p.profit / p.inTotal) * 100) : 0
   return (
-    <section className="adm-money" aria-label="Revenue for the period">
+    // P867: the four totals (Brought in, Costs, Profit, the split) are one band that fills the window (data-fold), so
+    // the details below (By week, Agent billing, Payouts) clearly peek; before, the split sat alone at the fold.
+    <section className="adm-money" aria-label="Revenue for the period" data-fold data-fold-next=".adm-tabpane .fx-tile">
       <div className="adm-money-bar">
         <Seg label="Period" value={period} onChange={setPeriod} options={PERIODS.map(([k, label]) => ({ key: k, label }))} />
         <small className="tp-sub">{span[2]} · sample numbers</small>
       </div>
-      <div className="adm-money-grid">
+      <div className="adm-money-grid has-split">
         <Tile className="adm-total is-in" i={0} title="Brought in" sub="Everything agents paid">
           <b className="fx-huge tp-money"><CountUp value={p.inTotal} format={money} /></b>
           <ul className="adm-sum">
@@ -189,8 +191,8 @@ function MoneyTop({ period, setPeriod }) {
           <b className="fx-huge tp-money"><CountUp value={p.profit} format={money} /></b>
           <Waterfall p={p} />
         </Tile>
+        <Split p={p} key={p.split[0].pct} />
       </div>
-      <Split p={p} key={p.split[0].pct} />
     </section>
   )
 }

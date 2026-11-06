@@ -1,0 +1,452 @@
+[
+ {
+  "portal": "agent",
+  "page": "overview",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.3198757763975155,
+  "ok": true,
+  "why": "32% of \"Your book\""
+ },
+ {
+  "portal": "agent",
+  "page": "overview",
+  "size": "1440x900",
+  "scrolls": true,
+  "share": 0.3188854489164087,
+  "ok": true,
+  "why": "32% of \"Your book\""
+ },
+ {
+  "portal": "agent",
+  "page": "overview",
+  "size": "1536x864",
+  "scrolls": true,
+  "share": 0.3202614379084967,
+  "ok": true,
+  "why": "32% of \"Your book\""
+ },
+ {
+  "portal": "agent",
+  "page": "overview",
+  "size": "1920x1080",
+  "scrolls": true,
+  "share": 0.32131147540983607,
+  "ok": true,
+  "why": "32% of \"Your book\""
+ },
+ {
+  "portal": "agent",
+  "page": "overview",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.2766990291262136,
+  "ok": true,
+  "why": "28% of \"Lead mix\""
+ },
+ {
+  "portal": "agent",
+  "page": "leads",
+  "size": "1366x768",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "leads",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "leads",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "leads",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "leads",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.5942307692307692,
+  "ok": true,
+  "why": "59% of \"Needs you now\""
+ },
+ {
+  "portal": "agent",
+  "page": "calendar",
+  "size": "1366x768",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "calendar",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "calendar",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "calendar",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "calendar",
+  "size": "390x844",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "clients",
+  "size": "1366x768",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "clients",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "clients",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "clients",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "clients",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.2838427947598253,
+  "ok": true,
+  "why": "28% of \"LO\""
+ },
+ {
+  "portal": "agent",
+  "page": "submit",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.475,
+  "ok": true,
+  "why": "48% of \"Request a service\""
+ },
+ {
+  "portal": "agent",
+  "page": "submit",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "submit",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "submit",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "submit",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.5234822451317297,
+  "ok": true,
+  "why": "52% of \"Step\""
+ },
+ {
+  "portal": "agent",
+  "page": "request-service",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.3181818181818182,
+  "ok": true,
+  "why": "32% of \"When should fulfillment call?\""
+ },
+ {
+  "portal": "agent",
+  "page": "request-service",
+  "size": "1440x900",
+  "scrolls": true,
+  "share": 0.3181818181818182,
+  "ok": true,
+  "why": "32% of \"When should fulfillment call?\""
+ },
+ {
+  "portal": "agent",
+  "page": "request-service",
+  "size": "1536x864",
+  "scrolls": true,
+  "share": 0.3181818181818182,
+  "ok": true,
+  "why": "32% of \"When should fulfillment call?\""
+ },
+ {
+  "portal": "agent",
+  "page": "request-service",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "request-service",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.2965779467680608,
+  "ok": true,
+  "why": "30% of \"A change on the policy\""
+ },
+ {
+  "portal": "agent",
+  "page": "activity",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.4226190476190476,
+  "ok": true,
+  "why": "42% of \"Earlier this week\""
+ },
+ {
+  "portal": "agent",
+  "page": "activity",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "activity",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "activity",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "activity",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.41916167664670656,
+  "ok": true,
+  "why": "42% of \"Yesterday\""
+ },
+ {
+  "portal": "agent",
+  "page": "billing",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.32035398230088497,
+  "ok": true,
+  "why": "32% of \"Build your plan\""
+ },
+ {
+  "portal": "agent",
+  "page": "billing",
+  "size": "1440x900",
+  "scrolls": true,
+  "share": 0.32035398230088497,
+  "ok": true,
+  "why": "32% of \"Build your plan\""
+ },
+ {
+  "portal": "agent",
+  "page": "billing",
+  "size": "1536x864",
+  "scrolls": true,
+  "share": 0.3197879858657244,
+  "ok": true,
+  "why": "32% of \"Build your plan\""
+ },
+ {
+  "portal": "agent",
+  "page": "billing",
+  "size": "1920x1080",
+  "scrolls": true,
+  "share": 0.32035398230088497,
+  "ok": true,
+  "why": "32% of \"Build your plan\""
+ },
+ {
+  "portal": "agent",
+  "page": "billing",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.5012594458438288,
+  "ok": true,
+  "why": "50% of \"History\""
+ },
+ {
+  "portal": "agent",
+  "page": "messages",
+  "size": "1366x768",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "messages",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "messages",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "messages",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "messages",
+  "size": "390x844",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "settings",
+  "size": "1366x768",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "settings",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "settings",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "settings",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "settings",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.583941605839416,
+  "ok": true,
+  "why": "58% of \"Profile\""
+ }
+]

@@ -206,8 +206,8 @@ export default function Setup() {
   let card = 0
   return (
     <div className="tp-page fx-page adm-setup">
-      <Readiness row={row} peek={peek} setPeek={setPeek} />
-
+      {/* P867: the new-clients board first (it fills the window, data-fold) so System readiness peeks below it */}
+      <div className="adm-setup-top" data-fold>
       <div className="adm-setup-tools">
         <span className="adm-setup-h"><h2 className="adm-sec-h">New clients</h2><small className="tp-sub">{list.filter(c => c.stage !== 'live').length} getting set up · {list.filter(c => c.stage === 'live').length} live this week</small></span>
         <button type="button" className="tp-primary fx-accent" onClick={() => setAdding(true)}><UserPlus size={16} />Add a new client</button>
@@ -226,6 +226,9 @@ export default function Setup() {
           )
         })}
       </div>
+      </div>
+
+      <Readiness row={row} peek={peek} setPeek={setPeek} />
 
       {(on || peek) && <GhlDetails row={row} sample={!on} />}
 

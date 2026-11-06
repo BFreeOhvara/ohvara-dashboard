@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { ADM, ADM_OLD, ap, admPageOf, admTitleOf, admRoutes, showAdminShell, isAdminShellPath, isAdminPreviewPath, classicFrom, PARTNER_PAGES, ADM_TABS } from './paths.js'
+import { ADM, ADM_OLD, ap, admPageOf, admTitleOf, admRoutes, showAdminShell, isAdminShellPath, isAdminPreviewPath, classicFrom, ADM_TABS } from './paths.js'
 
 test('an admin on the web gets the shell at every admin address, old ones included', () => {
   for (const p of [...Object.values(ADM), ...Object.values(ADM_OLD)]) assert.ok(showAdminShell({ role: 'admin', pathname: p, native: false }), p)
@@ -58,6 +58,5 @@ test('routes cover every page, drawers included, in both mounts', () => {
   for (const p of Object.values(ADM)) assert.ok(real.includes(p), p)
   assert.ok(real.includes('/admin/agents/:id'))
   assert.ok(pre.includes('/preview/admin/inbounds/:id'))
-  for (const k of PARTNER_PAGES) assert.ok(k in ADM, k)
   for (const [k] of ADM_TABS) assert.ok(k in ADM, k)
 })

@@ -1,0 +1,41 @@
+/* P867 — obvious scroll, all three portals (MoreBelow.jsx, fold.js). Tokens only. */
+
+/* The page scrollbar: always there, slim, on-theme in light and dark (never hidden). */
+html:has(.tp-app.fx) { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--ov-hi) 42%, transparent) color-mix(in srgb, var(--ov-hi) 6%, transparent); }
+
+/* A page's first screen fills the window so the next section peeks (fold.js applyFold sets --fold-min). */
+.fx [data-fold] { min-height: var(--fold-min, 0); }
+
+/* The cue: a soft fade along the bottom and a small "More below" pill. Gone after the first scroll. */
+.fx-morecue { position: fixed; left: 0; right: 0; bottom: 0; z-index: 35; height: 0; pointer-events: none; }
+.fx-morecue-fade { position: absolute; left: 0; right: 0; bottom: 0; height: 110px; pointer-events: none;
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--ov-page) 72%, transparent));
+  animation: fx-morecue-in .5s var(--fx-ease, ease) both; }
+.fx-morecue-pill { position: absolute; left: 50%; bottom: 22px; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px 0 16px;
+  border-radius: 999px; pointer-events: auto; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ov-hi);
+  background: var(--fx-glass); border: 1px solid var(--fx-glass-edge); box-shadow: var(--fx-shadow);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2); backdrop-filter: blur(16px) saturate(1.2);
+  transform: translateX(-50%); animation: fx-morecue-pill .5s var(--fx-ease, ease) .15s both, fx-morecue-bob 2.4s ease-in-out 1.2s 3; }
+.fx-morecue-pill:hover { background: color-mix(in srgb, var(--ov-hi) 10%, var(--fx-glass)); }
+.fx-morecue-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fx-morecue-pill svg { flex: none; }
+@keyframes fx-morecue-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fx-morecue-pill { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translateX(-50%); } }
+@keyframes fx-morecue-bob { 0%, 100% { transform: translateX(-50%); } 50% { transform: translate(-50%, 4px); } }
+
+/* Phone: above the bottom tab bar (64px tall, 10px off the edge). */
+@media (max-width: 999.98px) {
+  .fx-morecue-fade { bottom: 0; height: 150px; }
+  .fx-morecue-pill { bottom: 86px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-morecue-fade, .fx-morecue-pill { animation: none; }
+}
+.fx [data-fold-fit] { height: var(--fold-h, auto); }
+/* A week calendar sized to the window (data-fold-fit, P867): the hour grid takes the height the fold pass gives it. */
+@media (min-width: 1000px) {
+  .fx [data-fold-fit] { align-items: stretch; }
+  .fx [data-fold-fit] > .fx-week.is-week { display: flex; flex-direction: column; }
+  .fx [data-fold-fit] > .fx-week.is-week .tp-tgrid-b { flex: 1 1 auto; height: auto; min-height: 0; }
+}
+.fx [data-fold-fit]:has(.fx-week.is-day) { height: auto; }

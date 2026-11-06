@@ -1,0 +1,362 @@
+[
+ {
+  "portal": "va",
+  "page": "today",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.375,
+  "ok": true,
+  "why": "38% of \"New\""
+ },
+ {
+  "portal": "va",
+  "page": "today",
+  "size": "1440x900",
+  "scrolls": true,
+  "share": 0.5314685314685315,
+  "ok": true,
+  "why": "53% of \"Servicing due today\""
+ },
+ {
+  "portal": "va",
+  "page": "today",
+  "size": "1536x864",
+  "scrolls": true,
+  "share": 0.3881118881118881,
+  "ok": true,
+  "why": "39% of \"Servicing due today\""
+ },
+ {
+  "portal": "va",
+  "page": "today",
+  "size": "1920x1080",
+  "scrolls": true,
+  "share": 0.3618421052631579,
+  "ok": true,
+  "why": "36% of \"Your agents\""
+ },
+ {
+  "portal": "va",
+  "page": "today",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.3649025069637883,
+  "ok": true,
+  "why": "36% of \"Next call\""
+ },
+ {
+  "portal": "va",
+  "page": "queue",
+  "size": "1366x768",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "queue",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "queue",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "queue",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "queue",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.5322338830584707,
+  "ok": true,
+  "why": "53% of \"Callback due\""
+ },
+ {
+  "portal": "va",
+  "page": "schedule",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.3148148148148148,
+  "ok": true,
+  "why": "31% of \"Who's on shift\""
+ },
+ {
+  "portal": "va",
+  "page": "schedule",
+  "size": "1440x900",
+  "scrolls": true,
+  "share": 0.3201058201058201,
+  "ok": true,
+  "why": "32% of \"Who's on shift\""
+ },
+ {
+  "portal": "va",
+  "page": "schedule",
+  "size": "1536x864",
+  "scrolls": true,
+  "share": 0.3201058201058201,
+  "ok": true,
+  "why": "32% of \"Who's on shift\""
+ },
+ {
+  "portal": "va",
+  "page": "schedule",
+  "size": "1920x1080",
+  "scrolls": true,
+  "share": 0.3201058201058201,
+  "ok": true,
+  "why": "32% of \"Who's on shift\""
+ },
+ {
+  "portal": "va",
+  "page": "schedule",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.5333333333333333,
+  "ok": true,
+  "why": "53% of \"Fri\""
+ },
+ {
+  "portal": "va",
+  "page": "clients",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.31718061674008813,
+  "ok": true,
+  "why": "32% of \"IB\""
+ },
+ {
+  "portal": "va",
+  "page": "clients",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "clients",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "clients",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "clients",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.2785388127853881,
+  "ok": true,
+  "why": "28% of \"RC\""
+ },
+ {
+  "portal": "va",
+  "page": "servicing",
+  "size": "1366x768",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "servicing",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "servicing",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "servicing",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "servicing",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.5308823529411765,
+  "ok": true,
+  "why": "53% of \"Overdue\""
+ },
+ {
+  "portal": "va",
+  "page": "pay",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.31871345029239767,
+  "ok": true,
+  "why": "32% of \"This week\""
+ },
+ {
+  "portal": "va",
+  "page": "pay",
+  "size": "1440x900",
+  "scrolls": true,
+  "share": 0.31871345029239767,
+  "ok": true,
+  "why": "32% of \"This week\""
+ },
+ {
+  "portal": "va",
+  "page": "pay",
+  "size": "1536x864",
+  "scrolls": true,
+  "share": 0.31871345029239767,
+  "ok": true,
+  "why": "32% of \"This week\""
+ },
+ {
+  "portal": "va",
+  "page": "pay",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "pay",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.37530864197530867,
+  "ok": true,
+  "why": "38% of \"This week\""
+ },
+ {
+  "portal": "va",
+  "page": "messages",
+  "size": "1366x768",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "messages",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "messages",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "messages",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "messages",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.39285714285714285,
+  "ok": true,
+  "why": "39% of \"Yes. Her call is at 2:00 PM. I'll ask Gl\""
+ },
+ {
+  "portal": "va",
+  "page": "settings",
+  "size": "1366x768",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "settings",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "settings",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "settings",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "va",
+  "page": "settings",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.4588910133843212,
+  "ok": true,
+  "why": "46% of \"Profile\""
+ }
+]

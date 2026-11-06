@@ -275,7 +275,7 @@ export default function Schedule() {
 
       <WeekList days={days} today={TODAY} onOpen={open} name={dayName} itemsOf={ofDay} line={e => `${e.time} ${e.name}`} />
 
-      <div className="fx-grid">
+      <div className="fx-grid" data-fold data-fold-fit="360">
         <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week`} style={{ '--i': 0, '--days': cols.length, '--rows': ROWS }} aria-label={view != null ? `${dayName(view)}, Nov ${view}` : WEEK_LABEL[week]}>
           <div className="tp-tgrid-h"><span />{cols.map(d => (
             <b key={d} role="button" tabIndex={0} aria-pressed={d === view} title={d === view ? 'Back to the week' : `Open ${dayName(d)} ${d}`} className={`${d === TODAY ? 'today' : ''}${d === view ? ' is-on' : ''}`} onClick={() => open(d)} onKeyDown={headKey(d)}>

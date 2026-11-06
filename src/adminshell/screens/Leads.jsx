@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import { Search, PhoneIncoming, CalendarCheck, PhoneForwarded, MapPin, Clock, Shuffle, Check } from 'lucide-react'
-import { useAdmLeads, useAdmAgents, useAdmActions, useAdmViewAs } from '../data'
+import { useAdmLeads, useAdmAgents, useAdmActions } from '../data'
 import { Avatar, Chip, Empty, Seg, useNote } from '../../template/kit'
 import { RecordDrawer, Block, Stepper } from '../../template/Record'
 import { Dropdown, DField } from '../kit'
@@ -29,7 +29,7 @@ function LeadCard({ l, i }) {
   )
 }
 
-function LeadDrawer({ id, onClose, readOnly }) {
+function LeadDrawer({ id, onClose }) {
   const { data: leads } = useAdmLeads()
   const { data: agents } = useAdmAgents()
   const { assignLead, setLeadStage } = useAdmActions()
@@ -52,16 +52,14 @@ function LeadDrawer({ id, onClose, readOnly }) {
         <p><MapPin size={13} aria-hidden="true" />{l.city}, {l.state} · {l.product}</p>
         <div className="fx-hero-bot"><b className="fx-hero-big tp-num">{l.phone}</b><Avatar name={l.name} tone={tone} /></div>
       </>}
-      stepper={readOnly || ['unassigned', 'missed'].includes(l.stage) ? null : <Stepper label="Stage" steps={steps} current={l.stage} onPick={s => { setLeadStage(l.id, s); note(`${l.name}: ${STAGE_WORD[s]}`) }} />}
-      actions={readOnly ? null : <>
+      stepper={['unassigned', 'missed'].includes(l.stage) ? null : <Stepper label="Stage" steps={steps} current={l.stage} onPick={s => { setLeadStage(l.id, s); note(`${l.name}: ${STAGE_WORD[s]}`) }} />}
+      actions={<>
         <button type="button" className="tp-primary fx-accent" onClick={route} disabled={!to || to === l.agent_id}><Shuffle size={16} />{l.agent_id ? 'Move to this agent' : 'Route to this agent'}</button>
         {l.agent_id && <Link to={`${ap('messages')}?to=${l.agent_id}`} className="tp-btn ov-ghost">Message {l.agent.split(' ')[0]}</Link>}
       </>}>
-      {!readOnly && (
-        <Block title={l.agent ? `With ${l.agent}` : 'Route it'} sub={lane.key === 'route' ? (l.stage === 'missed' ? 'The transfer rang and nobody picked up. Give it to someone on duty.' : 'No agent yet. Agents licensed in this state are listed first.') : 'Move it to another agent if needed.'}>
-          <DField label="Agent"><Dropdown label="Agent" value={to} options={options} onChange={setPick} /></DField>
-        </Block>
-      )}
+      <Block title={l.agent ? `With ${l.agent}` : 'Route it'} sub={lane.key === 'route' ? (l.stage === 'missed' ? 'The transfer rang and nobody picked up. Give it to someone on duty.' : 'No agent yet. Agents licensed in this state are listed first.') : 'Move it to another agent if needed.'}>
+        <DField label="Agent"><Dropdown label="Agent" value={to} options={options} onChange={setPick} /></DField>
+      </Block>
       <Block title="What we know">
         <dl className="fx-facts">{[['Phone', l.phone], ['Came in', l.came], ['Type', KIND_WORD[l.kind]], ['From', l.source], ['Looking for', l.product], ['Agent', l.agent || 'No agent yet']].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
         {l.note && <p className="tp-sub">{l.note}</p>}
@@ -77,7 +75,6 @@ export default function Leads() {
   const [sp, setSp] = useSearchParams()
   const { data: leads } = useAdmLeads()
   const { data: agents } = useAdmAgents()
-  const { data: viewAs } = useAdmViewAs()
   const [q, setQ] = useState('')
   const [kind, setKind] = useState('all')
   const [when, setWhen] = useState('week')
@@ -110,7 +107,7 @@ export default function Leads() {
           )
         })}
       </div>
-      {id && <LeadDrawer id={id} readOnly={viewAs === 'partner'} onClose={() => navigate(ap('leads'))} />}
+      {id && <LeadDrawer id={id} onClose={() => navigate(ap('leads'))} />}
       <p className="tp-sub adm-hint"><PhoneIncoming size={13} aria-hidden="true" /> Live calls ring agents who are active and on duty; the rest are booked onto an agent's calendar.</p>
     </div>
   )

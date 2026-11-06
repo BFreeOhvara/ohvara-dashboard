@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { KeyRound, MapPin, Workflow, MessageSquareText, Megaphone, Globe, Plus, Check, CircleDashed, Plug, ShieldCheck, Eye, EyeOff, Info, ArrowRight } from 'lucide-react'
-import { useAdmConnect, useAdmActions, useAdmViewAs, GHL_WORKFLOWS, plugged } from '../data'
+import { useAdmConnect, useAdmActions, GHL_WORKFLOWS, plugged } from '../data'
 import { Chip, Field, Switch, useNote, useAccount } from '../../template/kit'
 import { GHL_EVENTS } from '../../lib/ghlStatus'
 import { formFromSettings, checkForm, sameForm, testConnection, connectStatus, ghlPlugged } from '../../lib/ghlConnect'
@@ -13,7 +13,7 @@ import { ap } from '../paths'
 
 // P866 — Connect is only the rail page where Jordan connects GoHighLevel: the connection form and its status. What it
 // set up, and every client's way to live, moved to the Setup top tab (./Setup.jsx). P864 put Connect on the rail.
-// P849 — Connect: where Jordan (the partner login) plugs in what Ohvara doesn't have: GoHighLevel (API key, location,
+// P849 — Connect: where Jordan (a full admin, P867) plugs in what Ohvara doesn't have: GoHighLevel (API key, location,
 // which workflow runs for a new lead, a reminder, a no-show), the texting number and its campaign status, the ad
 // account and weekly budget for each lead type, and the lead sources (his mortgage-protection domain and forms).
 // UI only: saving keeps it in the page and says it connects when the bridge is live (P850). A key field is
@@ -66,15 +66,17 @@ function GhlLiveTile({ ghl }) {
   return (
     <Tile className="adm-con" i={0} title="GoHighLevel" sub={loading ? 'Loading…' : status.line || 'Not set up yet'} aside={<Chip tone={status.tone}>{status.label}</Chip>}>
       {unavailable && <p className="adm-note">Saving is off until then.</p>}
-      <div className="tp-field"><span>API key</span>
-        {keySaved && !key && <p className="adm-saved"><ShieldCheck size={14} aria-hidden="true" />A key is saved. It is never shown again. Type a new one to replace it.</p>}
-        <div className="adm-keyrow">
-          <input type={peek ? 'text' : 'password'} autoComplete="off" spellCheck={false} aria-label="API key" placeholder={keySaved ? 'Paste a new key to replace it' : 'Paste the location API key'} value={key} disabled={unavailable || busy} onChange={e => setKey(e.target.value)} />
-          <button type="button" className="fx-ib" aria-label={peek ? 'Hide what you typed' : 'Show what you typed'} disabled={!key} onClick={() => setPeek(x => !x)}>{peek ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+      <div className="adm-conpair">
+        <div className="tp-field"><span>API key</span>
+          {keySaved && !key && <p className="adm-saved"><ShieldCheck size={14} aria-hidden="true" />A key is saved. It is never shown again. Type a new one to replace it.</p>}
+          <div className="adm-keyrow">
+            <input type={peek ? 'text' : 'password'} autoComplete="off" spellCheck={false} aria-label="API key" placeholder={keySaved ? 'Paste a new key to replace it' : 'Paste the location API key'} value={key} disabled={unavailable || busy} onChange={e => setKey(e.target.value)} />
+            <button type="button" className="fx-ib" aria-label={peek ? 'Hide what you typed' : 'Show what you typed'} disabled={!key} onClick={() => setPeek(x => !x)}>{peek ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+          </div>
+          <small>Write-only: it goes to the secret store and is never shown back.</small>
         </div>
-        <small>Write-only: it goes to the secret store and is never shown back.</small>
+        <Field label="Location ID" hint={form && errors.locationId ? errors.locationId : undefined}><input value={cur.locationId} disabled={unavailable || busy} spellCheck={false} onChange={e => put({ locationId: e.target.value })} placeholder="Paste the location ID" /></Field>
       </div>
-      <Field label="Location ID" hint={form && errors.locationId ? errors.locationId : undefined}><input value={cur.locationId} disabled={unavailable || busy} spellCheck={false} onChange={e => put({ locationId: e.target.value })} placeholder="Paste the location ID" /></Field>
       <div className="adm-wfs" role="group" aria-label="Workflows">
         {GHL_EVENTS.map(e => (
           <div key={e.key}>
@@ -114,15 +116,17 @@ function GhlTile() {
   const opts = [NONE, ...GHL_WORKFLOWS.map(w => ({ value: w, label: w }))]
   return (
     <Tile className="adm-con" i={0} title="GoHighLevel" sub={c.ghl.saved ? `Last saved ${c.ghl.saved}` : 'Not set up yet'} aside={<Chip tone="blue">Waits for the bridge</Chip>}>
-      <div className="tp-field"><span>API key</span>
-        {c.ghl.keySaved && !key && <p className="adm-saved"><ShieldCheck size={14} aria-hidden="true" />A key is saved, ending in {c.ghl.keyEnd}. It is never shown again. Type a new one to replace it.</p>}
-        <div className="adm-keyrow">
-          <input type={peek ? 'text' : 'password'} autoComplete="off" spellCheck={false} aria-label="API key" placeholder={c.ghl.keySaved ? 'Paste a new key to replace it' : 'Paste the location API key'} value={key} onChange={e => setKey(e.target.value)} />
-          <button type="button" className="fx-ib" aria-label={peek ? 'Hide what you typed' : 'Show what you typed'} disabled={!key} onClick={() => setPeek(x => !x)}>{peek ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+      <div className="adm-conpair">
+        <div className="tp-field"><span>API key</span>
+          {c.ghl.keySaved && !key && <p className="adm-saved"><ShieldCheck size={14} aria-hidden="true" />A key is saved, ending in {c.ghl.keyEnd}. It is never shown again. Type a new one to replace it.</p>}
+          <div className="adm-keyrow">
+            <input type={peek ? 'text' : 'password'} autoComplete="off" spellCheck={false} aria-label="API key" placeholder={c.ghl.keySaved ? 'Paste a new key to replace it' : 'Paste the location API key'} value={key} onChange={e => setKey(e.target.value)} />
+            <button type="button" className="fx-ib" aria-label={peek ? 'Hide what you typed' : 'Show what you typed'} disabled={!key} onClick={() => setPeek(x => !x)}>{peek ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+          </div>
+          <small>Write-only: after Save only the last four are kept here.</small>
         </div>
-        <small>Write-only: after Save only the last four are kept here.</small>
+        <Field label="Location ID"><input value={loc} onChange={e => setLoc(e.target.value)} placeholder="loc_..." /></Field>
       </div>
-      <Field label="Location ID"><input value={loc} onChange={e => setLoc(e.target.value)} placeholder="loc_..." /></Field>
       <div className="adm-wfs" role="group" aria-label="Workflows">
         <DField label="New lead"><Dropdown label="Workflow for a new lead" value={wf.newLead} options={opts} onChange={v => setWf({ ...wf, newLead: v })} /></DField>
         <DField label="Reminder"><Dropdown label="Workflow for a reminder" value={wf.reminder} options={opts} onChange={v => setWf({ ...wf, reminder: v })} /></DField>
@@ -143,8 +147,10 @@ function TextTile() {
   const dirty = JSON.stringify(d) !== JSON.stringify(c.texting)
   return (
     <Tile className="adm-con" i={1} title="Texting" sub="The number clients get texts from">
-      <Field label="Texting number"><input className="tp-num" value={d.number} onChange={e => setD({ ...d, number: e.target.value })} /></Field>
-      <Field label="Sender name" hint="Shown in the first text"><input value={d.sender} onChange={e => setD({ ...d, sender: e.target.value })} /></Field>
+      <div className="adm-conpair">
+        <Field label="Texting number"><input className="tp-num" value={d.number} onChange={e => setD({ ...d, number: e.target.value })} /></Field>
+        <Field label="Sender name" hint="Shown in the first text"><input value={d.sender} onChange={e => setD({ ...d, sender: e.target.value })} /></Field>
+      </div>
       <ul className="adm-sum">
         <li><ShieldCheck size={14} aria-hidden="true" /><span className="tp-grow">Brand<small>Who is sending</small></span><Chip tone={bt}>{bw}</Chip></li>
         <li><MessageSquareText size={14} aria-hidden="true" /><span className="tp-grow">Campaign<small>The texts the carrier approved</small></span><Chip tone={ct}>{cw}</Chip></li>
@@ -208,7 +214,6 @@ function SourcesTile() {
 
 export default function Connect() {
   const { data: c } = useAdmConnect()
-  const { data: viewAs } = useAdmViewAs()
   const { live } = useAccount() || {}
   // P855: when the settings table can't be read (its database step is not applied), ask once and keep that answer:
   // no 60-second re-read, no error, the tile just says it is not connected yet.
@@ -230,9 +235,12 @@ export default function Connect() {
     <div className="tp-page fx-page adm-connect">
     <div className="fx-ovl">
       <div className="fx-ovl-main">
-        <div className="adm-congrid">
+        {/* P867: the first row fills the window on desktop (data-fold) so Ad accounts and Lead sources peek below */}
+        <div className="adm-congrid adm-conrow" data-fold>
           {live ? <GhlLiveTile ghl={ghl} /> : <GhlTile />}
           <TextTile />
+        </div>
+        <div className="adm-congrid">
           <AdsTile />
           <SourcesTile />
         </div>
@@ -247,7 +255,6 @@ export default function Connect() {
           <p className="tp-mid"><Info size={14} aria-hidden="true" /> {live
             ? 'The GoHighLevel settings and key save for real. Nothing is sent to GoHighLevel until the bridge is deployed and switched on. Texting, ads and lead sources still save in this page only.'
             : 'Everything here saves now and waits. Nothing talks to GoHighLevel, the ad accounts or the texting service until the bridge is built and switched on.'}</p>
-          <p className="tp-sub">{viewAs === 'partner' ? 'You see Setup, Connect, Leads and Messages.' : "Jordan's login sees Setup, Connect, Leads and Messages. A partner login needs its own role (a database change)."}</p>
         </Tile>
       </div>
     </div>

@@ -23,6 +23,28 @@ function Need({ to, tone, icon: Icon, kicker, title, sub, i }) {
   )
 }
 
+// This week's leads by day, with its key. In the hero on wide screens; its own tile on a phone (P867), so the phone's
+// first block is just the funnel and Needs you peeks below it.
+function DayBars({ day, top }) {
+  return (
+    <>
+    <div className="adm-daybars" role="img" aria-label={day.byDay.map(d => `${d.name}: ${d.in} in, ${d.sold} sold`).join('. ')}>
+      {day.byDay.map((d, i) => (
+        <span key={d.day} className={d.later ? 'is-later' : ''} style={{ '--i': i }}>
+          <b className="tp-num">{d.later ? '' : d.in}</b>
+          <i style={{ '--h': d.in / top }}>
+            <em className="is-sold" style={{ '--h': d.in ? d.sold / d.in : 0 }} />
+            <em className="is-mid" style={{ '--h': d.in ? (d.booked + d.transferred - d.sold) / d.in : 0 }} />
+          </i>
+          <small>{d.name}</small>
+        </span>
+      ))}
+    </div>
+    <div className="fx-key"><span><i className="adm-k is-sold" />Sold</span><span><i className="adm-k is-mid" />Booked or transferred</span><span><i className="adm-k is-in" />Came in</span></div>
+    </>
+  )
+}
+
 export default function Overview() {
   const { data: day } = useAdmDay()
   const { data: m } = useAdmMoney()
@@ -44,9 +66,11 @@ export default function Overview() {
   const todayCalls = desk.length
   const done = desk.filter(c => ['cancelled', 'no_answer'].includes(c.status)).length
 
+  // P867: three bands so the page clearly scrolls. The first screen (this week's leads + Needs you) fills the window
+  // (data-fold, src/template/fold.js) and the next band, On shift + Revenue, peeks about a third; Agents runs last.
   return (
-    <div className="tp-page fx-page fx-ovl adm-ov">
-      <div className="fx-ovl-main">
+    <div className="tp-page fx-page adm-ov">
+      <div className="adm-ov-top" data-fold>
         <Tile className="adm-ov-hero" i={0} title="Leads this week" sub={`Mon, Nov 2 to today · ${money(w.premium)} a month in new premium`} to={ap('leads')} label="Open Leads">
           <ol className="adm-funnel" aria-label="This week's leads">
             {steps.map(([k, label, n], i) => (
@@ -57,22 +81,24 @@ export default function Overview() {
               </li>
             ))}
           </ol>
-          <div className="adm-daybars" role="img" aria-label={day.byDay.map(d => `${d.name}: ${d.in} in, ${d.sold} sold`).join('. ')}>
-            {day.byDay.map((d, i) => (
-              <span key={d.day} className={d.later ? 'is-later' : ''} style={{ '--i': i }}>
-                <b className="tp-num">{d.later ? '' : d.in}</b>
-                <i style={{ '--h': d.in / top }}>
-                  <em className="is-sold" style={{ '--h': d.in ? d.sold / d.in : 0 }} />
-                  <em className="is-mid" style={{ '--h': d.in ? (d.booked + d.transferred - d.sold) / d.in : 0 }} />
-                </i>
-                <small>{d.name}</small>
-              </span>
-            ))}
-          </div>
-          <div className="fx-key"><span><i className="adm-k is-sold" />Sold</span><span><i className="adm-k is-mid" />Booked or transferred</span><span><i className="adm-k is-in" />Came in</span></div>
+          <DayBars day={day} top={top} />
         </Tile>
 
-        <div className="fx-ovl-pair">
+        <div className="fx-ovl-side">
+          <section className="fx-tile is-deep fx-ovl-needs" style={{ '--i': 4 }} aria-label="Needs you">
+            <div className="fx-ovl-needs-in">
+              <header className="fx-tile-h">
+                <span className="tp-grow"><h2>Needs you</h2><p>{needs.length ? `${needs.length} things, oldest money first` : 'Nothing waiting'}</p></span>
+              </header>
+              {needs.length > 0
+                ? <div className="fx-ncards adm-needs">{needs.map((n, i) => <Need key={`${n.kicker}-${n.id}`} {...n} i={i} />)}</div>
+                : <p className="fx-calm"><Check size={16} aria-hidden="true" />Nothing needs an admin right now.</p>}
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div className="adm-ov-pair">
           <Tile className="is-fill is-teal adm-ov-shift" i={1} title="On shift today" sub={`${done} of ${todayCalls} calls done · ${day.late.length} past their time`} to={ap('team')} label="Open Fulfillment team">
             <b className="fx-huge tp-num"><CountUp value={onShift.length} /><small>VAs</small></b>
             <ul className="adm-shift">
@@ -98,23 +124,13 @@ export default function Overview() {
             </div>
             <small className="adm-note">{money(m.lastWeek)} last week · sample prices</small>
           </Tile>
-        </div>
       </div>
 
-      <div className="fx-ovl-side">
-        <section className="fx-tile is-deep fx-ovl-needs" style={{ '--i': 4 }} aria-label="Needs you">
-          <div className="fx-ovl-needs-in">
-            <header className="fx-tile-h">
-              <span className="tp-grow"><h2>Needs you</h2><p>{needs.length ? `${needs.length} things, oldest money first` : 'Nothing waiting'}</p></span>
-            </header>
-            {needs.length > 0
-              ? <div className="fx-ncards adm-needs">{needs.map((n, i) => <Need key={`${n.kicker}-${n.id}`} {...n} i={i} />)}</div>
-              : <p className="fx-calm"><Check size={16} aria-hidden="true" />Nothing needs an admin right now.</p>}
-          </div>
-        </section>
-      </div>
+      <Tile className="adm-ov-days" i={5} title="Leads by day" sub="This week, Monday to today">
+        <DayBars day={day} top={top} />
+      </Tile>
 
-      <Tile className="fx-ovl-week adm-ov-agents" i={6} title="Agents" sub={`${day.onDuty.length} taking live transfers now · ${agents.length} in all`} to={ap('agents')} label="Open Agents">
+      <Tile className="adm-ov-agents" i={6} title="Agents" sub={`${day.onDuty.length} taking live transfers now · ${agents.length} in all`} to={ap('agents')} label="Open Agents">
         <ul className="adm-agents">
           {agents.slice().sort((a, b) => b.week.sold - a.week.sold || b.week.in - a.week.in).map(a => (
             <li key={a.id}>

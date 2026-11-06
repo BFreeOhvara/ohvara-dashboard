@@ -21,7 +21,8 @@ export default function Pay() {
   return (
     <div className="tp-page fx-page fx-ovl fs-pay">
       <div className="fx-ovl-main">
-        <section className="fx-tile fs-pay-hero" style={{ '--i': 0 }} aria-label="This week">
+        {/* P867: the hero fills the window (data-fold) so the pay detail below peeks about a third; its bars stretch. */}
+        <section className="fx-tile fs-pay-hero" style={{ '--i': 0 }} aria-label="This week" data-fold>
           <header className="fx-tile-h">
             <span className="tp-grow"><h2>This week</h2><p>Nov 2 to 8 · {money(pay.rate)} for each cancellation the carrier confirms</p></span>
             <button type="button" className="fx-open" aria-label="How pay works" onClick={() => setHow(true)}><Info size={16} /></button>

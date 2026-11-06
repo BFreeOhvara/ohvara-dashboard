@@ -50,7 +50,8 @@ export default function RequestService() {
         <section className="ov-card tp-card tp-stack">
           <div><h2 className="tp-h2">Find a client</h2><p className="tp-sub">Showing {rows.length} of {clients.length}. Search to find the rest.</p></div>
           <input className="tp-input" aria-label="Search clients" placeholder="Search by name" value={q} onChange={e => setQ(e.target.value)} />
-          <ul className="tp-list">
+          {/* P867: on desktop the list is sized to the window (data-fold-fit) so When should fulfillment call? peeks a third */}
+          <ul className="tp-list tp-rs-list" data-fold data-fold-fit="112" data-fold-next=".fx-calltime">
             {rows.map(c => (
               <li key={c.id}><button type="button" className="tp-li" aria-pressed={pick?.id === c.id} onClick={() => setPick(c)}>
                 <Avatar name={`${c.client_first_name} ${c.client_last_name}`} tone={stageLabel[c.stage]?.[0]} /><span className="tp-grow"><b>{c.client_first_name} {c.client_last_name}</b><small>{c.policy_number}</small></span>
@@ -59,7 +60,7 @@ export default function RequestService() {
             {rows.length === 0 && <li className="tp-li"><span className="tp-sub">No client matches. Check the spelling, or search by phone number.</span></li>}
           </ul>
           <div><h2 className="tp-h2">A change on the policy</h2></div>
-          <div className="tp-row tp-wrap" role="group" aria-label="Kind of request">{KINDS.map(k => <button key={k} type="button" className={`tp-btn ov-ghost${kind === k ? ' tp-on' : ''}`} aria-pressed={kind === k} onClick={() => setKind(k)} style={kind === k ? { borderColor: 'var(--ov-data-a)', background: 'var(--ov-data-a-tint)' } : undefined}>{k}</button>)}</div>
+          <div className="tp-row tp-wrap tp-rs-kinds" role="group" aria-label="Kind of request">{KINDS.map(k => <button key={k} type="button" className={`tp-btn ov-ghost${kind === k ? ' tp-on' : ''}`} aria-pressed={kind === k} onClick={() => setKind(k)} style={kind === k ? { borderColor: 'var(--ov-data-a)', background: 'var(--ov-data-a-tint)' } : undefined}>{k}</button>)}</div>
           <Field label="Note for the team"><textarea value={text} onChange={e => setText(e.target.value)} placeholder="What needs doing" /></Field>
           <CallTime kind={callKind} value={ct} onChange={setCt} state={pick?.state} city={pick?.city} oldCarrier={pick?.carrier_name} viewerTz={settings.timeZone} />
         </section>

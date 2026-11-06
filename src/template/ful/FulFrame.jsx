@@ -30,6 +30,7 @@ import '../glass.css'
 import '../flow.css'
 import '../palette.css'
 import './ful.css'
+import MoreBelow from '../MoreBelow'
 import '@fontsource/urbanist/500.css'
 import '@fontsource/urbanist/600.css'
 import '@fontsource/urbanist/700.css'
@@ -436,6 +437,7 @@ export default function FulFrame() {
       <GetApp open={panel === 'app'} onClose={close} />
       <FulPhone open={panel === 'phone'} onClose={closePhone} at={phoneAt} ringId={ringId} onRingEnd={endRing} onState={setLine} live={live} onLive={startFor} startReq={startReq} />
       <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} onAsk={() => setPanel('dayoff')} onApp={() => setPanel('app')} />
+      <MoreBelow page={layout} />
     </div>
   )
 }

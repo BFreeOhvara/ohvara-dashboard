@@ -18,7 +18,8 @@ export default function Messages() {
   const pick = id => { setSel(id); readThread(id) }
   const send = e => { e.preventDefault(); if (!text.trim()) return; sendMessage(t.id, text.trim()); setText('') }
   return (
-    <section className="ov-card tp-msgs" aria-label="Messages">
+    // P867: on a phone the card is sized to the window too (data-fold-fit), so the page holds still there as well
+    <section className="ov-card tp-msgs" aria-label="Messages" data-fold data-fold-fit="440" data-fold-phone>
       <div className="tp-threads">
         <label className="tp-find tp-threads-find"><Search size={15} aria-hidden="true" /><input aria-label="Find a thread" placeholder="Find a client" value={q} onChange={e => setQ(e.target.value)} /></label>
         <div className="tp-threads-b">

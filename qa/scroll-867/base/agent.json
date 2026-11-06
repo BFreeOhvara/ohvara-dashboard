@@ -1,0 +1,452 @@
+[
+ {
+  "portal": "agent",
+  "page": "overview",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.28780487804878047,
+  "ok": true,
+  "why": "29% of \"Lead mix\""
+ },
+ {
+  "portal": "agent",
+  "page": "overview",
+  "size": "1440x900",
+  "scrolls": true,
+  "share": 0.06302521008403361,
+  "ok": false,
+  "why": "6% of \"This week\" (heading below the fold)"
+ },
+ {
+  "portal": "agent",
+  "page": "overview",
+  "size": "1536x864",
+  "scrolls": true,
+  "share": null,
+  "ok": false,
+  "why": "fold in a gap (next block \"This week\" starts 9px below)"
+ },
+ {
+  "portal": "agent",
+  "page": "overview",
+  "size": "1920x1080",
+  "scrolls": true,
+  "share": 0.8571428571428571,
+  "ok": false,
+  "why": "86% of \"This week\""
+ },
+ {
+  "portal": "agent",
+  "page": "overview",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.08944954128440367,
+  "ok": false,
+  "why": "9% of \"Needs you\" (heading below the fold)"
+ },
+ {
+  "portal": "agent",
+  "page": "leads",
+  "size": "1366x768",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "leads",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "leads",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "leads",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "leads",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.5942307692307692,
+  "ok": true,
+  "why": "59% of \"Needs you now\""
+ },
+ {
+  "portal": "agent",
+  "page": "calendar",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.8340248962655602,
+  "ok": false,
+  "why": "83% of \"Mon\n2\nTue\n3\nWed\n4\nThu\n5\nFri\n6\n\nWorking h\""
+ },
+ {
+  "portal": "agent",
+  "page": "calendar",
+  "size": "1440x900",
+  "scrolls": true,
+  "share": null,
+  "ok": false,
+  "why": "no block at the fold"
+ },
+ {
+  "portal": "agent",
+  "page": "calendar",
+  "size": "1536x864",
+  "scrolls": true,
+  "share": 0.9543568464730291,
+  "ok": false,
+  "why": "95% of \"Mon\n2\nTue\n3\nWed\n4\nThu\n5\nFri\n6\n\nWorking h\""
+ },
+ {
+  "portal": "agent",
+  "page": "calendar",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "calendar",
+  "size": "390x844",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "clients",
+  "size": "1366x768",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "clients",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "clients",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "clients",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "clients",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.2838427947598253,
+  "ok": true,
+  "why": "28% of \"LO\""
+ },
+ {
+  "portal": "agent",
+  "page": "submit",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.3488372093023256,
+  "ok": false,
+  "why": "35% of \"Request a service\" (heading below the fold)"
+ },
+ {
+  "portal": "agent",
+  "page": "submit",
+  "size": "1440x900",
+  "scrolls": true,
+  "share": null,
+  "ok": false,
+  "why": "no block at the fold"
+ },
+ {
+  "portal": "agent",
+  "page": "submit",
+  "size": "1536x864",
+  "scrolls": true,
+  "share": null,
+  "ok": false,
+  "why": "no block at the fold"
+ },
+ {
+  "portal": "agent",
+  "page": "submit",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "submit",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.5234822451317297,
+  "ok": true,
+  "why": "52% of \"Step\""
+ },
+ {
+  "portal": "agent",
+  "page": "request-service",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": null,
+  "ok": false,
+  "why": "fold in a gap (next block \"Note for the team\" starts 7px below)"
+ },
+ {
+  "portal": "agent",
+  "page": "request-service",
+  "size": "1440x900",
+  "scrolls": true,
+  "share": null,
+  "ok": false,
+  "why": "fold in a gap (next block \"When should fulfillment call?\" starts 9px below)"
+ },
+ {
+  "portal": "agent",
+  "page": "request-service",
+  "size": "1536x864",
+  "scrolls": true,
+  "share": 0.6779661016949152,
+  "ok": false,
+  "why": "68% of \"Note for the team\""
+ },
+ {
+  "portal": "agent",
+  "page": "request-service",
+  "size": "1920x1080",
+  "scrolls": true,
+  "share": null,
+  "ok": false,
+  "why": "no block at the fold"
+ },
+ {
+  "portal": "agent",
+  "page": "request-service",
+  "size": "390x844",
+  "scrolls": true,
+  "share": null,
+  "ok": false,
+  "why": "fold in a gap (next block \"Note for the team\" starts 203px below)"
+ },
+ {
+  "portal": "agent",
+  "page": "activity",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.9630281690140845,
+  "ok": false,
+  "why": "96% of \"By kind\""
+ },
+ {
+  "portal": "agent",
+  "page": "activity",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "activity",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "activity",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "activity",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.7007299270072993,
+  "ok": false,
+  "why": "70% of \"Today\nThis week\nAll\n\nMon, Nov 2 to Thu, \""
+ },
+ {
+  "portal": "agent",
+  "page": "billing",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.7367491166077739,
+  "ok": false,
+  "why": "74% of \"Build your plan\""
+ },
+ {
+  "portal": "agent",
+  "page": "billing",
+  "size": "1440x900",
+  "scrolls": true,
+  "share": 0.9628975265017667,
+  "ok": false,
+  "why": "96% of \"Build your plan\""
+ },
+ {
+  "portal": "agent",
+  "page": "billing",
+  "size": "1536x864",
+  "scrolls": true,
+  "share": 0.8904593639575972,
+  "ok": false,
+  "why": "89% of \"Build your plan\""
+ },
+ {
+  "portal": "agent",
+  "page": "billing",
+  "size": "1920x1080",
+  "scrolls": true,
+  "share": 0.8363636363636363,
+  "ok": false,
+  "why": "84% of \"History\""
+ },
+ {
+  "portal": "agent",
+  "page": "billing",
+  "size": "390x844",
+  "scrolls": true,
+  "share": null,
+  "ok": false,
+  "why": "fold in a gap (next block \"$300\n$1,000\n$2,000\n$3,000\" starts 262px below)"
+ },
+ {
+  "portal": "agent",
+  "page": "messages",
+  "size": "1366x768",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "messages",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "messages",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "messages",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "messages",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.82171581769437,
+  "ok": false,
+  "why": "82% of \"GS\""
+ },
+ {
+  "portal": "agent",
+  "page": "settings",
+  "size": "1366x768",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "settings",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "settings",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "settings",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "agent",
+  "page": "settings",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.8938547486033519,
+  "ok": false,
+  "why": "89% of \"DW\""
+ }
+]

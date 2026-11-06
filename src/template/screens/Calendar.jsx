@@ -61,7 +61,7 @@ export default function Calendar() {
 
       <WeekList days={NUMS} today={TODAY} onOpen={openDay} name={nameOf} itemsOf={ofDay} line={e => `${e.time} ${e.who}`} />
 
-      <div className="fx-grid">
+      <div className="fx-grid" data-fold data-fold-fit="360">
         <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week`} style={{ '--i': 0, '--days': shown.length }} aria-label={view != null ? `${nameOf(view)}, Nov ${view}` : 'This week'}>
           <div className="tp-tgrid-h"><span />{shown.map(([d, n]) => (
             <b key={d} role="button" tabIndex={0} aria-pressed={n === view} title={n === view ? 'Back to the week' : `Open ${d} ${n}`} className={`${n === TODAY ? 'today' : ''}${n === view ? ' is-on' : ''}`} onClick={() => openDay(n)} onKeyDown={headKey(n)}>

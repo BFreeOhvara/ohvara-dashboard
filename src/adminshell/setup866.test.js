@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { admSnapshot, pipelineOf } from './data.js'
-import { ADM, ADM_TABS, ADM_LABELS, PARTNER_PAGES, admPageOf, admTitleOf } from './paths.js'
+import { ADM, ADM_TABS, ADM_LABELS, admPageOf, admTitleOf } from './paths.js'
 import { SETUP_STAGES, SETUP_STEPS, setupOf, stepsFor, readiness } from './setup.js'
 import { sampleGhlRow, syncFailed, engineState } from './engine.js'
 
@@ -17,7 +17,6 @@ test('the top tabs: Overview · Agents · Setup · Fulfillment · Leads · Clien
   assert.equal(admPageOf('/preview/admin/setup/inv-1'), 'setup')
   assert.equal(admTitleOf('setup')[1], 'Setup')
   assert.equal(ADM_LABELS.billing, 'Revenue')
-  assert.ok(PARTNER_PAGES.includes('setup'), "Jordan's login reaches Setup for his launch steps")
   assert.match(src('./routes.jsx'), /setup: Setup/)
 })
 

@@ -89,7 +89,7 @@ export function PillTabs({ items, value, onChange, label, className = '', itemCl
   const ref = innerRef || ownRef
   useStretchPill(ref, { activeKey: value, selector: '.is-on', persistKey })
   const cls = o => `fx-pt ${itemClass} ${o.className || ''}${value === o.key ? ' is-on on' : ''}`.replace(/\s+/g, ' ').trim()
-  const inner = o => <>{o.icon && <o.icon size={15} aria-hidden="true" />}{o.label}{o.count != null && <b>{o.count}</b>}{o.extra}</>
+  const inner = o => <>{o.icon && <o.icon size={15} aria-hidden="true" />}{o.label}{o.count != null && <b className="fx-pt-n">{o.count}</b>}{o.extra}</>
   if (as === 'nav') {
     return (
       <nav className={className} ref={ref} aria-label={label}>

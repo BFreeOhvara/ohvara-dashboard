@@ -88,8 +88,6 @@ export const ADM_TABS = [
 ]
 // Every page's short name (tabs, the phone bar, search), including the rail-only pages.
 export const ADM_LABELS = { ...Object.fromEntries(ADM_TABS), messages: 'Messages', settings: 'Settings', connect: 'Connect' }
-// What Jordan's partner login sees (sample until a partner role exists: a migration, door item). P866: Setup too (his launch steps).
-export const PARTNER_PAGES = ['setup', 'connect', 'leads', 'messages']
 
 const TITLES = {
   overview: ['The business', 'Overview'], agents: ['Who sells', 'Agents'], setup: ['New clients to live', 'Setup'], team: ['Who serves', 'Fulfillment team'],

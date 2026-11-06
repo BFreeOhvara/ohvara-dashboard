@@ -20,7 +20,9 @@ export default function Billing() {
   const m = modeOf(b.budget.mode)
   return (
     <div className="tp-page fx-page fx-grid">
-      <section className="fx-tile is-fill is-blue fx-s7 pb-plan" style={{ '--i': 0 }} aria-label="Your plan">
+      {/* P867: the plan + booked row fills the window (data-fold) so the next tile below peeks a third. History sits
+          above the plan builder (on a phone, above Booked this week) so the fold cuts a tile, not a gap. */}
+      <section className="fx-tile is-fill is-blue fx-s7 pb-plan" style={{ '--i': 0 }} aria-label="Your plan" data-fold>
         <header className="fx-tile-h"><span className="tp-grow"><h2>Your plan</h2><p>Next weekly charge {b.next_charge} · servicing {b.servicing.next}</p></span><SampleTag /></header>
         <div className="tp-row tp-wrap pb-hero"><b className="tp-money fx-huge"><CountUp value={b.budget.weekly} format={usd()} /></b><span>a week</span></div>
         <div className="fx-split">
@@ -30,14 +32,19 @@ export default function Billing() {
         </div>
       </section>
 
-      <section className="fx-tile fx-s5" style={{ '--i': 1 }} aria-label="Booked this week">
+      <section className="fx-tile fx-s5 pb-booked" style={{ '--i': 1 }} aria-label="Booked this week">
         <header className="fx-tile-h"><span className="tp-grow"><h2>Booked this week</h2><p>{m.label} · resets Monday</p></span><Chip tone={b.paused ? 'mute' : 'green'}>{b.paused ? 'Paused' : 'Running'}</Chip></header>
         <div className="tp-row tp-wrap"><b className="tp-num fx-huge2"><CountUp value={b.booked} /></b><span className="tp-sub">booked so far</span></div>
         <BookedMeter booked={b.booked} weekly={b.budget.weekly} mode={b.budget.mode} />
         <p className="pb-note">Range {rangeText(r.week)} a week · {rangeText(r.month)} a month</p>
       </section>
 
-      <section className="fx-tile fx-s12 pb-tile" style={{ '--i': 2 }} aria-label="Build your plan">
+      <section className="fx-tile fx-s12 pb-hist" style={{ '--i': 2 }} aria-label="History">
+        <header className="fx-tile-h"><span className="tp-grow"><h2>History</h2><p>Sample amounts. Pricing is not final.</p></span><button type="button" className="tp-btn ov-ghost" onClick={() => note('Payment method changes are not open yet')}><CreditCard size={14} />Payment method</button></header>
+        <ul className="fx-rows fx-hist">{b.history.map(h => <li key={h.id} className="fx-row is-flat"><span className="fx-row-ic"><Layers size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{h.label}</b><small>{h.at}</small></span><Money v={h.amount} /></li>)}</ul>
+      </section>
+
+      <section className="fx-tile fx-s12 pb-tile" style={{ '--i': 3 }} aria-label="Build your plan">
         <header className="fx-tile-h"><span className="tp-grow"><h2>Build your plan</h2><p>Your budget runs the ads and our team books them for you. Servicing is billed monthly.</p></span></header>
         <div className="pb-grid">
           <div className="pb-steps">
@@ -55,16 +62,12 @@ export default function Billing() {
       </section>
 
       {b.cancellations && (
-        <section className="fx-tile fx-s12" style={{ '--i': 3 }} aria-label="Cancellation plan">
+        <section className="fx-tile fx-s12 pb-cancel" style={{ '--i': 4 }} aria-label="Cancellation plan">
           <header className="fx-tile-h"><span className="tp-grow"><h2>Cancellation plan</h2><p>You are on this plan from before. It keeps going as it is.</p></span><Chip tone="blue">Current</Chip></header>
           <div className="tp-row tp-wrap"><b className="tp-money fx-huge2"><Money v={b.cancellations.weekly} cents={false} /></b><span className="tp-sub">a week · {b.cancellations.label}</span></div>
         </section>
       )}
 
-      <section className="fx-tile fx-s12" style={{ '--i': 4 }} aria-label="History">
-        <header className="fx-tile-h"><span className="tp-grow"><h2>History</h2><p>Sample amounts. Pricing is not final.</p></span><button type="button" className="tp-btn ov-ghost" onClick={() => note('Payment method changes are not open yet')}><CreditCard size={14} />Payment method</button></header>
-        <ul className="fx-rows fx-hist">{b.history.map(h => <li key={h.id} className="fx-row is-flat"><span className="fx-row-ic"><Layers size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{h.label}</b><small>{h.at}</small></span><Money v={h.amount} /></li>)}</ul>
-      </section>
     </div>
   )
 }

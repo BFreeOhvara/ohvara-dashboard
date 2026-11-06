@@ -120,58 +120,11 @@
 .adm-bills .adm-tr { grid-template-columns: minmax(200px, 1.5fr) minmax(140px, 1fr) minmax(110px, .7fr) minmax(110px, .7fr) minmax(150px, 1fr); }
 .adm-invites { margin-top: 14px; }
 
-/* The desk timeline */
-.adm-desk { gap: 12px; }
-.adm-legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 0; padding: 0; list-style: none; font-size: 12px; color: var(--ov-mid); }
-.adm-legend li { display: inline-flex; align-items: center; gap: 7px; }
-.adm-legend i { width: 9px; height: 9px; border-radius: 50%; background: var(--cf); box-shadow: inset 0 0 0 1.5px var(--ci); }
-.adm-legend b { color: var(--ov-hi); }
-.adm-tl { display: flex; flex-direction: column; gap: 6px; }
-.adm-tl-axis { position: relative; height: 16px; margin-left: 150px; margin-right: 52px; font-size: 10.5px; color: var(--ov-mute); }
-.adm-tl-axis span { position: absolute; transform: translateX(-50%); }
-.adm-tl-row { display: grid; grid-template-columns: 140px minmax(0, 1fr) 42px; gap: 10px; align-items: center; animation: fx-up .45s var(--fx-ease) both; animation-delay: calc(var(--i) * 50ms); }
-.adm-tl-who { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--ov-hi); }
-.adm-tl-who b { display: block; font-size: 13px; font-weight: 600; } .adm-tl-who small { display: block; font-size: 10.5px; color: var(--ov-mid); white-space: nowrap; }
-.adm-tl-track { position: relative; height: 38px; border-radius: 12px; background: color-mix(in srgb, var(--ov-hi) 5%, transparent); border: 1px solid var(--fx-edge); }
-.adm-tl-now { position: absolute; top: -4px; bottom: -4px; width: 2px; border-radius: 2px; background: var(--sh-acc); }
-.adm-tl-dot { position: absolute; top: 50%; width: 18px; height: 18px; border-radius: 50%; transform: translate(-50%, -50%); background: var(--cf); box-shadow: inset 0 0 0 2px var(--ci), 0 4px 10px -6px rgba(0, 0, 0, .5);
-  transition: transform .25s var(--fx-spring); }
-.adm-tl-dot:hover, .adm-tl-dot:focus-visible { transform: translate(-50%, -50%) scale(1.25); z-index: 2; }
-.adm-tl-dot.is-live { animation: adm-ping 1.6s ease-out infinite; }
-@keyframes adm-ping { 0% { box-shadow: inset 0 0 0 2px var(--ci), 0 0 0 0 color-mix(in srgb, var(--ci) 40%, transparent); } 100% { box-shadow: inset 0 0 0 2px var(--ci), 0 0 0 10px transparent; } }
-.adm-tl-n { font-size: 12px; color: var(--ov-mid); text-align: right; } .adm-tl-n b { color: var(--ov-hi); font-size: 14px; }
 
 /* The rota builder */
 .adm-rota { gap: 14px; }
-.adm-rota-pool { display: flex; flex-wrap: wrap; gap: 8px; }
-.adm-chip { display: inline-flex; align-items: center; gap: 7px; height: 42px; padding: 0 12px 0 6px; border-radius: 999px; color: var(--ov-hi); cursor: grab;
-  border: 1px solid var(--sh-edge); background: color-mix(in srgb, var(--ov-hi) 6%, transparent); transition: transform .25s var(--fx-spring), background-color .2s, border-color .2s; }
-.adm-chip:hover { transform: translateY(-2px); }
-.adm-chip:active { cursor: grabbing; transform: scale(.97); }
-.adm-chip.is-on { background: var(--sh-acc); color: var(--sh-on-accent); border-color: transparent; }
-.adm-chip svg { opacity: .6; } .adm-chip b { font-size: 13px; font-weight: 600; } .adm-chip small { font-size: 11px; opacity: .75; }
-.adm-chip .tp-av { width: 28px; height: 28px; font-size: 10.5px; }
-.adm-rota-grid { display: grid; grid-template-columns: repeat(7, minmax(120px, 1fr)); gap: 10px; overflow-x: auto; scrollbar-width: none; }
-.adm-day { display: flex; flex-direction: column; gap: 8px; min-height: 210px; padding: 10px; border-radius: 18px; border: 1px dashed var(--ov-line);
-  background: color-mix(in srgb, var(--ov-hi) 3%, transparent); transition: background-color .2s, border-color .2s, transform .25s var(--fx-spring);
-  animation: fx-up .45s var(--fx-ease) both; animation-delay: calc(var(--i) * 45ms); }
-.adm-day header { display: flex; align-items: baseline; gap: 6px; }
-.adm-day header b { font-size: 14px; font-weight: 600; color: var(--ov-hi); } .adm-day header small { font-size: 11.5px; color: var(--ov-mid); }
 .adm-count { margin-left: auto; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 600; line-height: 20px; color: var(--sh-fi-sage); background: var(--sh-f-sage); }
 .adm-count.is-bad { color: var(--sh-fi-apricot); background: var(--sh-f-apricot); }
-.adm-day.is-today { border-style: solid; border-color: color-mix(in srgb, var(--sh-acc) 60%, transparent); }
-.adm-day.is-past { opacity: .72; }
-.adm-day.is-over { background: color-mix(in srgb, var(--sh-acc) 14%, transparent); border-color: var(--sh-acc); transform: scale(1.02); }
-.adm-day ul { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.adm-shiftchip { display: flex; align-items: center; gap: 7px; padding: 5px 5px 5px 6px; border-radius: 12px; cursor: grab; color: var(--sh-fi-sky); background: var(--sh-f-sky);
-  animation: adm-pop .3s cubic-bezier(0.34, 1.32, 0.64, 1) both; }
-.adm-shiftchip b { flex: 1; font-size: 12.5px; font-weight: 600; min-width: 0; }
-.adm-shiftchip .tp-av { width: 24px; height: 24px; font-size: 9.5px; color: var(--sh-fi-sky); background: color-mix(in srgb, var(--sh-fi-sky) 14%, transparent); }
-.adm-x { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: inherit; opacity: .7; transition: opacity .2s, background-color .2s, transform .25s var(--fx-spring); }
-.adm-x:hover { opacity: 1; background: color-mix(in srgb, currentColor 14%, transparent); transform: rotate(90deg); }
-.adm-offchip { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 10px; font-size: 11.5px; color: var(--ov-mid); border: 1px dashed var(--ov-line); }
-.adm-place { display: inline-flex; align-items: center; justify-content: center; gap: 5px; margin-top: auto; height: 32px; border-radius: 10px; font-size: 12px; font-weight: 600;
-  color: var(--sh-acc); border: 1px dashed color-mix(in srgb, var(--sh-acc) 60%, transparent); animation: adm-pop .25s ease both; }
 .adm-req { display: flex; align-items: center; gap: 10px; padding: 10px 0; flex-wrap: wrap; }
 .adm-req + .adm-req { border-top: 1px solid var(--ov-line); }
 .adm-req .tp-grow { min-width: 180px; } .adm-req b { display: block; font-size: 13.5px; font-weight: 600; } .adm-req small { display: block; font-size: 12px; color: var(--ov-mid); }
@@ -256,9 +209,6 @@
 .adm-checks li.is-done > svg:first-child { opacity: 1; }
 .adm-checks li > svg:last-child { opacity: .5; }
 
-/* Partner (Jordan's login) */
-.adm.is-partner .fx-tabs { --sp-fill: var(--sh-acc); }
-
 @media (max-width: 1279.98px) {
   .adm-agents { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .adm-tr, .adm-bills .adm-tr { grid-template-columns: minmax(180px, 1.4fr) minmax(130px, 1fr) minmax(120px, .8fr) minmax(170px, 1fr); }
@@ -276,9 +226,6 @@
   .adm-tr > .adm-cell:nth-child(2), .adm-tr > .adm-cell:nth-child(4) { display: none; }
   .adm-bills .adm-tr > .adm-cell:nth-child(2), .adm-bills .adm-tr > .adm-cell:nth-child(5) { display: none; }
   .adm-bills .adm-tr > .adm-cell:nth-child(4) { display: flex; }
-  .adm-tl-axis { margin-left: 104px; margin-right: 40px; }
-  .adm-tl-row { grid-template-columns: 94px minmax(0, 1fr) 30px; gap: 8px; }
-  .adm-tl-who .tp-av { display: none; }
 }
 @media (max-width: 767px) {
   .adm-funnel .fx-huge { font-size: 36px; }
@@ -286,8 +233,6 @@
   .adm-daybars { height: 150px; gap: 6px; }
   .adm-daybars i { height: calc(var(--h) * 96px + 6px); }
   .adm-agents { grid-template-columns: minmax(0, 1fr); }
-  .adm-rota-grid { grid-template-columns: repeat(7, minmax(138px, 70vw)); margin: 0 -16px; padding: 0 16px 6px; scroll-snap-type: x proximity; }
-  .adm-day { scroll-snap-align: start; }
   .adm-revbars { height: 190px; gap: 6px; }
   .adm-revbars b { font-size: 10px; }
   .adm-revbars i { height: calc(var(--h) * 120px + 6px); }
@@ -296,7 +241,6 @@
   .adm-step .tp-field { min-width: 0; width: 100%; }
   .adm-audit li { flex-wrap: wrap; gap: 4px 12px; }
   .adm-audit li > small:first-child { width: auto; }
-  .adm-tl-axis span:nth-child(even) { display: none; }
 }
 /* P864 — Money: the period switch, the three totals (Brought in, Costs, Profit), the waterfall and the owners' split. */
 .adm-money { display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
@@ -350,9 +294,8 @@
   .adm-split-edit .fx-form-f { margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .adm-dd-pop, .adm-dd-pop.is-leaving, .adm-daybars i, .adm-minibars i, .adm-revbars i, .adm-funnel li, .adm-tr, .adm-tl-row, .adm-day, .adm-shiftchip, .adm-place, .adm-audit li, .adm-tabpane, .adm-fall i { animation: none; }
-  .adm-tl-dot.is-live { animation: none; }
-  .adm-chip, .adm-agent, .adm-day, .adm-x, .adm-tl-dot { transition: none; }
+  .adm-dd-pop, .adm-dd-pop.is-leaving, .adm-daybars i, .adm-minibars i, .adm-revbars i, .adm-funnel li, .adm-tr, .adm-audit li, .adm-tabpane, .adm-fall i { animation: none; }
+  .adm-agent { transition: none; }
 }
 
 /* P859 — content never waits on motion. If the entrance animations have not really started SETTLE_MS after the first
@@ -423,4 +366,237 @@
   .adm-ready-list { grid-template-columns: minmax(0, 1fr); }
   .adm-setup-tools { flex-wrap: wrap; }
   .adm-setup-tools .tp-primary { width: 100%; justify-content: center; }
+}
+
+/* P867 — Overview in three bands: the first screen (this week's leads + Needs you) fills the window (data-fold,
+   src/template/fold.js), On shift + Revenue peek a third below it, Agents last. The day bars grow with the tile. */
+.adm-ov { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.adm-ov-top { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px; min-width: 0; }
+.adm-ov-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; min-width: 0; }
+.adm-ov-hero .adm-daybars { flex: 1 1 auto; height: auto; min-height: 190px; container-type: size; }
+.adm-ov-hero .adm-daybars i { height: calc(var(--h) * (100cqh - 46px) + 6px); }
+.adm-ov-hero .adm-daybars .is-later i { height: 30px; }
+@media (max-width: 999.98px) {
+  .adm-ov-top, .adm-ov-pair { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 767px) {
+  .adm-ov-hero .adm-daybars { min-height: 150px; }
+}
+/* Phone: the hero is the funnel only (its day bars get their own tile further down) and Needs you is a fixed-height
+   list that scrolls inside, so it peeks under the funnel instead of running a screen and a half. */
+.adm-ov-days { display: none; }
+@media (max-width: 767px) {
+  .adm-ov-hero :is(.adm-daybars, .fx-key) { display: none; }
+  .adm-ov-days { display: flex; order: 4; }
+  .adm-ov-agents { order: 5; }
+  .adm-ov .adm-needs { max-height: 318px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+}
+
+/* P867 — Revenue: the split is the fourth total, its owners stacked; the band fills the window (data-fold). */
+.adm-money-grid.has-split { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.adm-money-grid.has-split > .fx-tile { min-width: 0; }
+.adm-money-grid.has-split .adm-split .adm-owners { grid-template-columns: minmax(0, 1fr); }
+.adm-money-grid.has-split .adm-split .fx-tile-h { flex-wrap: wrap; row-gap: 8px; }
+.adm-money-grid.has-split .adm-split .adm-split-edit .tp-field { width: 100%; }
+.adm-total.is-profit .adm-fall { flex: 1 1 auto; }
+[data-theme="dark"] .adm-total.is-profit:not(.is-loss) .fx-huge, :root:not([data-theme="light"]) .adm-total.is-profit:not(.is-loss) .fx-huge { color: var(--sh-sage, var(--sh-fi-sage)); }
+@media (max-width: 1279.98px) {
+  .adm-money-grid.has-split { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .adm-money-grid.has-split .is-profit { grid-column: auto; }
+}
+@media (max-width: 767px) {
+  .adm-money-grid.has-split { grid-template-columns: minmax(0, 1fr); }
+}
+/* Short desktop windows (768-820px tall): trim the band's oversized spacing so the details tabs and their first tile
+   peek below it. Text sizes stay. */
+@media (min-width: 1000px) and (max-height: 820px) {
+  .adm-money { gap: 10px; margin-bottom: 10px; }
+  .adm-money-grid.has-split > .fx-tile { padding: 14px 16px; gap: 10px; }
+  .adm-money-grid.has-split .adm-total .fx-huge { margin: 0 0 4px; }
+  .adm-money-grid.has-split .adm-sum { gap: 6px; }
+  .adm-money-grid.has-split .adm-sum li { padding: 8px 12px; }
+  .adm-money-grid.has-split .adm-fall { height: 170px; }
+  .adm-billing .adm-pagetabs { margin-bottom: 10px; }
+}
+/* Phone: Profit first (its waterfall already shows in, costs and profit), the date line moves under the totals,
+   and Brought in peeks below the first screen. */
+@media (max-width: 767px) {
+  .adm-money-bar { display: contents; }
+  .adm-money-bar > .tp-sub { order: 3; }
+  .adm-money-grid.has-split > .is-profit { order: -1; }
+  .adm-money-grid.has-split .adm-fall { height: 130px; }
+  .adm-money-grid.has-split .adm-fall i { bottom: calc(24px + var(--b) * 82px); height: calc(var(--h) * 82px); }
+}
+[data-theme="dark"] .adm-fall-profit i { background: var(--sh-sage, var(--sh-fi-sage)); }
+
+
+/* P867 — Fulfillment Today as a week calendar (the P854 look): every VA in their own colour, shift bars down the left
+   edge of each day, calls as blocks. The VA chips above are the legend and the filter. */
+.adm-cal-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 10px; }
+.adm-cal-vas { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; flex: 1 1 420px; }
+.adm-vachip { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: var(--ov-mid);
+  border: 1px solid var(--fx-edge); background: color-mix(in srgb, var(--ov-hi) 4%, transparent); transition: background-color .2s var(--fx-ease), color .2s var(--fx-ease); }
+.adm-vachip:hover { color: var(--ov-hi); }
+.adm-vachip i { width: 10px; height: 10px; border-radius: 50%; background: var(--vf); }
+.adm-vachip.is-on { color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 11%, transparent); border-color: color-mix(in srgb, var(--ov-hi) 26%, transparent); }
+.adm-cal-key { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; white-space: nowrap; font-size: 11.5px; color: var(--ov-mute); }
+.adm-cal-key i { display: inline-block; }
+.adm-cal-key-shift { width: 4px; height: 14px; border-radius: 2px; background: var(--ov-mid); }
+.adm-cal-key-call { width: 16px; height: 11px; margin-left: 8px; border-radius: 4px; border: 1px solid var(--ov-mid); }
+.adm-cal { margin-bottom: 12px; }
+.adm-week .tp-tgrid-b { height: 600px; }
+.adm-week .tp-hours { grid-template-rows: repeat(var(--rows, 12), 1fr); }
+.adm-week .tp-tcol { --lane-x: calc(var(--shifts, 0) * 6px + 4px); background-size: 100% calc(100% / var(--rows, 12)); }
+.adm-week .tp-tgrid-h small.adm-cal-n { color: var(--ov-mute); font-weight: 500; }
+.adm-shiftbar { position: absolute; left: calc(3px + var(--k) * 6px); width: 4px; border-radius: 2px; background: var(--vf); opacity: .9; }
+.fx-week .tp-tcol .adm-ev { min-height: 0; padding: 3px 7px; border-radius: 8px; z-index: 1; }
+.fx-week .adm-ev b, .fx-week .adm-ev span { font-size: 11px; line-height: 1.25; }
+.fx-week .adm-ev b em { font-style: normal; font-weight: 500; opacity: .8; }
+.fx-week .adm-ev.is-done { opacity: .55; }
+.fx-week .adm-ev.is-late { box-shadow: inset 0 0 0 2px var(--sh-f-apricot); }
+.fx-week.is-day .adm-ev { min-height: 0; }
+.adm-vrow { width: 100%; text-align: left; }
+.adm-vrow::before { content: ""; flex: none; align-self: stretch; width: 4px; margin-right: 4px; border-radius: 2px; background: var(--vf); }
+.adm-cal .is-sky, .adm-cal-vas .is-sky { --vf: var(--sh-f-sky); } .fx-week .adm-ev.is-sky { --cf: var(--sh-cf-sky); --ci: var(--sh-ci); }
+.adm-cal .is-apricot, .adm-cal-vas .is-apricot { --vf: var(--sh-f-apricot); } .fx-week .adm-ev.is-apricot { --cf: var(--sh-cf-apricot); --ci: var(--sh-ci); }
+.adm-cal .is-sage, .adm-cal-vas .is-sage { --vf: var(--sh-f-sage); } .fx-week .adm-ev.is-sage { --cf: var(--sh-cf-sage); --ci: var(--sh-ci); }
+.adm-cal .is-butter, .adm-cal-vas .is-butter { --vf: var(--sh-f-butter); } .fx-week .adm-ev.is-butter { --cf: var(--sh-cf-butter); --ci: var(--sh-ci); }
+.adm-cal .is-lilac, .adm-cal-vas .is-lilac { --vf: var(--sh-f-lilac); } .fx-week .adm-ev.is-lilac { --cf: var(--sh-cf-lilac); --ci: var(--sh-ci); }
+
+/* P867 — the rota as a grid like the VA side: names down, days across, a mark where the VA works */
+.adm-rt-sc { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
+.adm-rt { width: 100%; min-width: 640px; border-collapse: separate; border-spacing: 0 6px; }
+.adm-rt th, .adm-rt td { padding: 6px 6px; text-align: center; font-size: 12.5px; font-weight: 600; color: var(--ov-mid); }
+.adm-rt thead th b { font-family: var(--font-display); font-size: 15px; color: var(--ov-hi); margin-left: 3px; }
+.adm-rt thead th.is-today, .adm-rt thead th.is-today b { color: var(--sh-acc-line); }
+.adm-rt thead th.is-past { opacity: .7; }
+.adm-rt tbody th { display: flex; align-items: center; gap: 10px; padding-left: 10px; text-align: left; font-size: 13.5px; color: var(--ov-hi); white-space: nowrap; }
+.adm-rt tbody th .tp-av { width: 30px; height: 30px; font-size: 11px; }
+.adm-rt tbody tr > * { background: color-mix(in srgb, var(--ov-hi) 4%, transparent); }
+.adm-rt tbody tr > :first-child { border-radius: 14px 0 0 14px; } .adm-rt tbody tr > :last-child { border-radius: 0 14px 14px 0; }
+.adm-rt tbody td.is-today { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sh-acc-line) 40%, transparent); }
+.adm-rt tfoot th { text-align: left; padding-left: 12px; font-size: 12px; }
+.adm-rt-cell { position: relative; }
+.adm-rt-b { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 64px; min-height: 44px; padding: 3px 6px; border-radius: 12px;
+  color: var(--ov-mute); transition: background-color .2s var(--fx-ease), transform .2s var(--fx-ease); }
+.adm-rt-b:hover { background: color-mix(in srgb, var(--ov-hi) 7%, transparent); }
+.adm-rt-b:focus-visible { outline: 2px solid var(--sh-acc-line); outline-offset: 1px; }
+.adm-rt-add { opacity: .45; } .adm-rt-b:hover .adm-rt-add { opacity: 1; }
+.adm-rt-cell.is-past .adm-rt-b { opacity: .7; }
+.adm-rt-mark { display: inline-flex; align-items: center; height: 24px; padding: 0 11px; border-radius: 999px; font-size: 11.5px; font-weight: 600; color: var(--sh-ci); background: var(--sh-cf-sage); white-space: nowrap; }
+.adm-rt-b.is-requested .adm-rt-mark, .adm-rt-mark.is-requested { background: transparent; color: var(--ov-hi); box-shadow: inset 0 0 0 1.5px var(--sh-f-lilac); }
+.adm-rt-b.is-off .adm-rt-mark, .adm-rt-mark.is-off { background: var(--sh-cf-stone); }
+.adm-rt-hrs { font-size: 10.5px; font-weight: 500; color: var(--ov-mute); white-space: nowrap; }
+.adm-rt-menu { position: absolute; z-index: 20; top: calc(100% - 2px); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  min-width: 190px; padding: 12px; border-radius: 14px; text-align: left; color: var(--ov-hi); background: var(--sh-glass-hi, var(--bg-surface)); border: 1px solid var(--fx-edge);
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, .55); animation: fx-pop .2s var(--fx-spring) both; }
+.adm-rt-menu b { font-size: 13px; } .adm-rt-menu small { font-size: 11.5px; font-weight: 500; color: var(--ov-mid); }
+.adm-rt-menu .tp-btn { margin-top: 6px; }
+.adm-warn-t { display: inline-flex; align-items: center; gap: 5px; }
+.adm-rt-key { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 4px 0 0; padding: 0; list-style: none; font-size: 12px; color: var(--ov-mid); }
+.adm-rt-key li { display: inline-flex; align-items: center; gap: 8px; }
+.adm-rt .adm-count { margin: 0; display: inline-block; }
+@media (max-width: 760px) {
+  .adm-rt { min-width: 0; border-spacing: 0 5px; }
+  .adm-rt th, .adm-rt td { padding: 4px 1px; font-size: 11px; }
+  .adm-rt thead th b { display: block; margin: 0; }
+  .adm-rt tbody th { gap: 6px; padding-left: 8px; font-size: 12px; }
+  .adm-rt tbody th span:not(.tp-av) { max-width: 46px; overflow: hidden; text-overflow: ellipsis; }
+  .adm-rt tbody th .tp-av { display: none; }
+  .adm-rt-b { min-width: 0; width: 100%; min-height: 40px; padding: 2px; }
+  .adm-rt-mark { height: 22px; padding: 0 5px; font-size: 10.5px; }
+  .adm-rt-hrs { display: none; }
+  .adm-rt-menu { left: auto; right: 0; transform: none; }
+  .adm-rt .adm-count { font-size: 10px; padding: 0 4px; }
+  .adm-cal-key { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .adm-rt-menu { animation: none; } .adm-rt-b, .adm-vachip { transition: none; } }
+.fx-week.is-week .adm-ev { display: flex; align-items: center; gap: 5px; }
+.fx-week.is-week .adm-ev b { flex: none; } .fx-week.is-week .adm-ev b em { display: none; }
+.fx-week.is-week .adm-ev span { min-width: 0; opacity: .85; }
+.adm-rt .tp-sr, .adm .tp-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* P867: the week grid fills the window (the fold pass grows .adm-cal) so Need a hand / Who is free peek below */
+@media (min-width: 1000px) {
+  .adm-cal[data-fold] { align-items: stretch; }
+  .adm-cal[data-fold] > .adm-week.is-week { display: flex; flex-direction: column; }
+  .adm-cal[data-fold] > .adm-week.is-week .tp-tgrid-b { flex: 1 1 auto; height: auto; min-height: 0; }
+}
+.fx .adm-cal:has(.fx-week.is-day) { height: auto; }
+
+/* P867 scroll fits: agents. Desktop: the table fills the window (data-fold) and its rows share the extra height, so
+   Invites out peeks below; short windows tighten the rows first. Phone: each row shows its week (In/Booked/...) and
+   the table keeps its two column labels, so the table is cut about halfway with its heading on screen. */
+@media (min-width: 1000px) {
+  .adm-agents-page .adm-table[data-fold] > .adm-tr:not(.adm-th) { flex: 1 1 auto; }
+}
+@media (min-width: 1000px) and (max-height: 820px) {
+  .adm-agents-page .adm-table .adm-tr:not(.adm-th) { padding-block: 6px; }
+}
+@media (max-width: 999.98px) {
+  .adm-agents-page .adm-th { display: grid; padding-block: 6px; }
+  .adm-agents-page .adm-th > :nth-child(2), .adm-agents-page .adm-th > :nth-child(4), .adm-agents-page .adm-th > :nth-child(5) { display: none; }
+  .adm-agents-page .adm-tr > .adm-cell:nth-child(4) { display: flex; grid-column: 1 / -1; }
+  .adm-agents-page .adm-tr:not(.adm-th) { padding-block: 7px; row-gap: 5px; }
+}
+
+/* P867 scroll fits: setup. Desktop: the new-clients board comes first and fills the window (data-fold; the lanes
+   stretch), so System readiness peeks below it; short windows tighten the lanes first. Phone: the New clients line
+   and its Add button lead, then System readiness (cut about halfway), then the board. */
+.adm-setup-top { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.adm-setup-top > .adm-board7 { flex: 1 1 auto; }
+@media (min-width: 1000px) and (max-height: 820px) {
+  .adm-setup-top { gap: 12px; }
+  .adm-setup-top .fx-lane-h { padding: 8px 10px 6px; }
+  .adm-setup-top .fx-lane-b { gap: 6px; }
+  .adm-setup-top .adm-scard { gap: 2px; padding: 9px 11px; }
+}
+@media (max-width: 999.98px) {
+  .adm-setup-top { display: contents; }
+  .adm-setup-top > .adm-setup-tools { order: -2; }
+  .adm-setup > .adm-ready { order: -1; }
+}
+
+/* P867 scroll fits: clients. Phone: the count and premium line sits above the cards (a summary first), which lands
+   the fold about a third into the second card. */
+@media (max-width: 999.98px) {
+  .adm-clients .adm-tabpane > .adm-hint { order: 1; margin-top: 0; }
+  .adm-clients .adm-tabpane > .fx-cgrid { order: 2; }
+}
+
+/* P867 scroll fits: messages. Phone: the inbox holds still like it does on desktop. The card is sized to the window
+   above the tab bar (data-fold-fit + data-fold-phone), the thread list shows two and a half people and scrolls, and
+   the conversation scrolls inside with the reply box always on screen. Desktop keeps its own full-height layout. */
+@media (min-width: 1000px) {
+  .fx .adm-msgs[data-fold-fit] { height: 100%; }
+}
+@media (max-width: 999.98px) {
+  .fx .adm-msgs[data-fold-fit] { grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+  .adm-msgs .tp-threads-b { max-height: 162px; }
+  .adm-msgs .tp-conv { min-height: 0; }
+  .adm-msgs .tp-conv-b { max-height: none; min-height: 0; }
+}
+
+/* P867 scroll fits: settings. Phone: the settings panel leads (as on the VA side) and the profile card follows; the
+   eight section tabs sit in two columns so every one shows at once (no sideways scroll hiding five of them). */
+@media (max-width: 999.98px) {
+  .adm-settings > .fx-panel { order: -1; }
+  .adm-settings .adm-settabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-self: stretch; padding: 0; border-radius: 0; overflow: visible; background: none; border: 0; box-shadow: none; -webkit-mask-image: none; mask-image: none; }
+  .adm-settings .adm-settabs > .fx-ptab { min-width: 0; padding: 0 12px; white-space: nowrap; }
+  .adm-settings .adm-settabs > .fx-ptab:not(.is-on) { background: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
+}
+
+/* P867 scroll fits: connect. Desktop: GoHighLevel and Texting are the first row and fill the window (data-fold; their
+   Save rows sit at the foot of the stretched tiles) so Ad accounts and Lead sources peek below. Short windows put
+   each tile's two short fields side by side first. Phone: What is plugged in and The bridge lead (the summary
+   first), then the four forms. */
+.adm-conpair { display: contents; }
+@media (min-width: 1000px) {
+  .adm-conrow { align-items: stretch; }
+  .adm-conrow > .adm-con > .fx-form-f { margin-top: auto; }
+}
+@media (min-width: 1000px) and (max-height: 820px) {
+  .adm-conpair { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+}
+@media (max-width: 999.98px) {
+  .adm-connect .fx-ovl-side { order: -1; }
 }

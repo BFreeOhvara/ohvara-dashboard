@@ -35,6 +35,8 @@ import { SUPPORT_EMAIL } from '../components/auth/authUtils'
 import './glass.css'
 import './flow.css'
 import './palette.css'
+import './fit867.css'
+import MoreBelow from './MoreBelow'
 import '@fontsource/urbanist/500.css'
 import '@fontsource/urbanist/600.css'
 import '@fontsource/urbanist/700.css'
@@ -478,6 +480,7 @@ export default function TemplateFrame() {
       <GetApp open={panel === 'app'} onClose={close} />
       <Help open={panel === 'help'} onClose={close} />
       <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} duty={duty} setDuty={setDuty} />
+      <MoreBelow page={layout} />
     </div>
   )
 }

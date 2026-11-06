@@ -1,0 +1,452 @@
+[
+ {
+  "portal": "admin",
+  "page": "overview",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.3881578947368421,
+  "ok": true,
+  "why": "39% of \"On shift today\""
+ },
+ {
+  "portal": "admin",
+  "page": "overview",
+  "size": "1440x900",
+  "scrolls": true,
+  "share": 0.9572368421052632,
+  "ok": false,
+  "why": "96% of \"On shift today\""
+ },
+ {
+  "portal": "admin",
+  "page": "overview",
+  "size": "1536x864",
+  "scrolls": true,
+  "share": 0.8223684210526315,
+  "ok": false,
+  "why": "82% of \"On shift today\""
+ },
+ {
+  "portal": "admin",
+  "page": "overview",
+  "size": "1920x1080",
+  "scrolls": true,
+  "share": 0.5289855072463768,
+  "ok": true,
+  "why": "53% of \"Agents\""
+ },
+ {
+  "portal": "admin",
+  "page": "overview",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.865424430641822,
+  "ok": false,
+  "why": "87% of \"Leads this week\""
+ },
+ {
+  "portal": "admin",
+  "page": "agents",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.047619047619047616,
+  "ok": false,
+  "why": "5% of \"Invites out\" (heading below the fold)"
+ },
+ {
+  "portal": "admin",
+  "page": "agents",
+  "size": "1440x900",
+  "scrolls": true,
+  "share": 0.7248677248677249,
+  "ok": false,
+  "why": "72% of \"Invites out\""
+ },
+ {
+  "portal": "admin",
+  "page": "agents",
+  "size": "1536x864",
+  "scrolls": true,
+  "share": 0.5052631578947369,
+  "ok": true,
+  "why": "51% of \"Invites out\""
+ },
+ {
+  "portal": "admin",
+  "page": "agents",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "agents",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.7090069284064665,
+  "ok": false,
+  "why": "71% of \"\" (heading below the fold)"
+ },
+ {
+  "portal": "admin",
+  "page": "setup",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.5491606714628298,
+  "ok": true,
+  "why": "55% of \"Profile\""
+ },
+ {
+  "portal": "admin",
+  "page": "setup",
+  "size": "1440x900",
+  "scrolls": true,
+  "share": 0.8561151079136691,
+  "ok": false,
+  "why": "86% of \"Profile\""
+ },
+ {
+  "portal": "admin",
+  "page": "setup",
+  "size": "1536x864",
+  "scrolls": true,
+  "share": 0.7577937649880095,
+  "ok": false,
+  "why": "76% of \"Profile\""
+ },
+ {
+  "portal": "admin",
+  "page": "setup",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "setup",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.6661807580174927,
+  "ok": false,
+  "why": "67% of \"System readiness\""
+ },
+ {
+  "portal": "admin",
+  "page": "fulfillment",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": null,
+  "ok": false,
+  "why": "no block at the fold"
+ },
+ {
+  "portal": "admin",
+  "page": "fulfillment",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "fulfillment",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "fulfillment",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "fulfillment",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.2765957446808511,
+  "ok": true,
+  "why": "28% of \"Need a hand\""
+ },
+ {
+  "portal": "admin",
+  "page": "leads",
+  "size": "1366x768",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "leads",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "leads",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "leads",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "leads",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.42758620689655175,
+  "ok": true,
+  "why": "43% of \"Live call\""
+ },
+ {
+  "portal": "admin",
+  "page": "clients",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": null,
+  "ok": false,
+  "why": "no block at the fold"
+ },
+ {
+  "portal": "admin",
+  "page": "clients",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "clients",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "clients",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "clients",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.6058394160583942,
+  "ok": false,
+  "why": "61% of \"Needs attention\""
+ },
+ {
+  "portal": "admin",
+  "page": "revenue",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.5362318840579711,
+  "ok": true,
+  "why": "54% of \"Profit split\""
+ },
+ {
+  "portal": "admin",
+  "page": "revenue",
+  "size": "1440x900",
+  "scrolls": true,
+  "share": null,
+  "ok": false,
+  "why": "fold in a gap (next block \"Revenue by week\" starts 80px below)"
+ },
+ {
+  "portal": "admin",
+  "page": "revenue",
+  "size": "1536x864",
+  "scrolls": true,
+  "share": 0.9519230769230769,
+  "ok": false,
+  "why": "95% of \"Profit split\""
+ },
+ {
+  "portal": "admin",
+  "page": "revenue",
+  "size": "1920x1080",
+  "scrolls": true,
+  "share": 0.52,
+  "ok": true,
+  "why": "52% of \"Ad spend this week\""
+ },
+ {
+  "portal": "admin",
+  "page": "revenue",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.023752969121140142,
+  "ok": false,
+  "why": "2% of \"Costs\" (heading below the fold)"
+ },
+ {
+  "portal": "admin",
+  "page": "messages",
+  "size": "1366x768",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "messages",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "messages",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "messages",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "messages",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.8732193732193733,
+  "ok": false,
+  "why": "87% of \"All\""
+ },
+ {
+  "portal": "admin",
+  "page": "settings",
+  "size": "1366x768",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "settings",
+  "size": "1440x900",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "settings",
+  "size": "1536x864",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "settings",
+  "size": "1920x1080",
+  "scrolls": false,
+  "share": null,
+  "ok": true,
+  "why": "fits"
+ },
+ {
+  "portal": "admin",
+  "page": "settings",
+  "size": "390x844",
+  "scrolls": true,
+  "share": null,
+  "ok": false,
+  "why": "fold in a gap (next block \"Profile\" starts 9px below)"
+ },
+ {
+  "portal": "admin",
+  "page": "connect",
+  "size": "1366x768",
+  "scrolls": true,
+  "share": 0.12083333333333333,
+  "ok": false,
+  "why": "12% of \"Lead sources\""
+ },
+ {
+  "portal": "admin",
+  "page": "connect",
+  "size": "1440x900",
+  "scrolls": true,
+  "share": 0.35294117647058826,
+  "ok": true,
+  "why": "35% of \"Ad accounts\""
+ },
+ {
+  "portal": "admin",
+  "page": "connect",
+  "size": "1536x864",
+  "scrolls": true,
+  "share": 0.3092979127134725,
+  "ok": true,
+  "why": "31% of \"Ad accounts\""
+ },
+ {
+  "portal": "admin",
+  "page": "connect",
+  "size": "1920x1080",
+  "scrolls": true,
+  "share": 0.7115749525616698,
+  "ok": false,
+  "why": "71% of \"Ad accounts\""
+ },
+ {
+  "portal": "admin",
+  "page": "connect",
+  "size": "390x844",
+  "scrolls": true,
+  "share": 0.9411764705882353,
+  "ok": false,
+  "why": "94% of \"GoHighLevel\""
+ }
+]

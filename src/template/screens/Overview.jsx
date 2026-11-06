@@ -18,9 +18,9 @@ import { paths } from '../paths'
 const apptTo = a => (a.kind === 'client' ? paths.client(a.ref) : paths.lead(a.ref))
 const BOOK = [['setting_up', 'Setting up'], ['needs_attention', 'Needs you'], ['requests', 'Requests']]
 
-function Tile({ className = '', i, title, sub, to, label, children }) {
+function Tile({ className = '', i, title, sub, to, label, children, ...rest }) {
   return (
-    <section className={`fx-tile ${className}`} style={{ '--i': i }} aria-label={title}>
+    <section className={`fx-tile ${className}`} style={{ '--i': i }} aria-label={title} {...rest}>
       <header className="fx-tile-h">
         <span className="tp-grow"><h2>{title}</h2>{sub && <p>{sub}</p>}</span>
         {to && <Link to={to} className="fx-open" aria-label={label || `Open ${title}`}><ArrowUpRight size={16} /></Link>}
@@ -159,7 +159,8 @@ export default function Overview() {
   return (
     <div className="tp-page fx-page fx-ovl">
       <div className="fx-ovl-main">
-        <Tile className="fx-ovl-hero" i={0} title="Booked this week" sub={`Your weekly budget books ${rangeText(wk)}`} to={paths.calendar()} label="Open Calendar">
+        {/* P867: the hero fills the window (data-fold) so the Your book / Next up / Lead mix row peeks a third */}
+        <Tile className="fx-ovl-hero" i={0} data-fold data-fold-next=".fx-ovl-book" title="Booked this week" sub={`Your weekly budget books ${rangeText(wk)}`} to={paths.calendar()} label="Open Calendar">
           {/* P843: the number is the hero; the range already sits in the subtitle, so the side line only says what it is */}
           <div className="fx-chart-head fx-bk-head">
             <b className="tp-num fx-bk-num"><CountUp value={bill.booked} /></b>

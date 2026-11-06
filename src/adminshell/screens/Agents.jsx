@@ -116,7 +116,7 @@ export default function Agents() {
         <Dropdown className="adm-dd-sm" label="Sort" value={sort} options={SORTS} onChange={setSort} />
       </div>
 
-      <section className="fx-tile adm-table" style={{ '--i': 0 }} aria-label="Agents">
+      <section className="fx-tile adm-table" style={{ '--i': 0 }} aria-label="Agents" data-fold>
         <div className="adm-tr adm-th" aria-hidden="true"><span>Agent</span><span>Plan and budget</span><span>Transfers</span><span>This week</span><span>Billing</span></div>
         {list.map((a, i) => {
           const [word, tone] = BILL_WORD[a.billing.status]
