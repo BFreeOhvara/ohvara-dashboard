@@ -6,6 +6,7 @@ import { isNativeApp } from '../../lib/native'
 import { showShell } from '../../template/paths'
 import { showFulShell } from '../../fulshell/paths'
 import { showAdminShell, isAdminPreviewPath, classicFrom } from '../../adminshell/paths'
+import { AdminBoundary } from '../../adminshell/AdminBoundary'
 import { ProtectedRoute } from './ProtectedRoute'
 import { DeleteAccountDialog } from '../shared/DeleteAccount'
 
@@ -74,7 +75,8 @@ function AdminOnly() {
     signOut: async () => { await signOut(); navigate('/login') },
     DeleteDialog: DeleteAccountDialog,
   }), [profile?.full_name, profile?.email, signOut, navigate])
-  return <Suspense fallback={<Spinner />}><AdminShell account={account} /></Suspense>
+  // P855: if the shell's code can't load (a tab left open across a deploy) or the shell itself throws, show the crash panel.
+  return <AdminBoundary><Suspense fallback={<Spinner />}><AdminShell account={account} /></Suspense></AdminBoundary>
 }
 
 // A locked, paused or welcome-step agent keeps today's gate (BillingGate on the old pages): the shell only

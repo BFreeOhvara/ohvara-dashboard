@@ -1,6 +1,7 @@
 import { useContext } from 'react'
 import { QueryClient, QueryClientContext, useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { askAgainUnlessMissing } from './useVaShiftsPolicy'
 import {
   shiftKeys, companyDay, weekStart, toShiftView,
   readShiftsToday, readShiftWeek, readDayOffRequests, readVaTeam,
@@ -26,7 +27,7 @@ export function useVaShiftsToday(day = null) {
   return useQuery({
     enabled: on,
     queryKey: shiftKeys.today(day),
-    refetchInterval: 5 * 60e3,
+    ...askAgainUnlessMissing(5 * 60e3),
     queryFn: () => readShiftsToday(supabase, day),
   }, client)
 }
@@ -36,6 +37,7 @@ export function useVaShiftWeek({ from = null, days = 7, va = null, enabled = tru
   const [client, on] = useClient()
   return useQuery({
     enabled: on && enabled,
+    ...askAgainUnlessMissing(),
     queryKey: shiftKeys.week(from, days, va),
     queryFn: () => readShiftWeek(supabase, { from, days, va }),
   }, client)
@@ -49,9 +51,8 @@ export function useVaShiftView({ weeks = 2 } = {}) {
   const [client, on] = useClient()
   return useQuery({
     enabled: on,
-    retry: false,
+    ...askAgainUnlessMissing(5 * 60e3),
     queryKey: [...shiftKeys.week(from, weeks * 7, null), 'view'],
-    refetchInterval: 5 * 60e3,
     queryFn: async () => {
       const rows = await readShiftWeek(supabase, { from, days: weeks * 7 })
       return rows === null ? null : toShiftView(rows, { today, from, weeks })
@@ -64,6 +65,7 @@ export function useDayOffRequests({ enabled = true } = {}) {
   const [client, on] = useClient()
   return useQuery({
     enabled: on && enabled,
+    ...askAgainUnlessMissing(),
     queryKey: shiftKeys.requests(),
     queryFn: () => readDayOffRequests(supabase, companyDay()),
   }, client)
@@ -74,6 +76,7 @@ export function useVaTeam({ enabled = true } = {}) {
   const [client, on] = useClient()
   return useQuery({
     enabled: on && enabled,
+    ...askAgainUnlessMissing(),
     queryKey: [...shiftKeys.all, 'team'],
     queryFn: () => readVaTeam(supabase),
   }, client)

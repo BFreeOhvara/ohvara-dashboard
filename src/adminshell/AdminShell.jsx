@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import '../template/template.css'
 import { NoteProvider, AccountProvider } from '../template/kit'
-import { ErrorBoundary } from '../components/shared/ErrorBoundary'
+import { AdminBoundary } from './AdminBoundary'
 import { ConfirmEmailBanner } from '../components/layout/ConfirmEmailBanner'
 import AdminFrame from './AdminFrame'
 import { admRouteEls } from './routes'
@@ -18,10 +18,10 @@ const SAMPLE = { live: false, name: ME.name, signOut: null, DeleteDialog: null }
 function Page({ children, preview }) {
   const { pathname } = useLocation()
   return (
-    <ErrorBoundary resetKey={pathname}>
+    <AdminBoundary resetKey={pathname}>
       {!preview && <ConfirmEmailBanner />}
       {children}
-    </ErrorBoundary>
+    </AdminBoundary>
   )
 }
 
@@ -34,14 +34,17 @@ export default function AdminShell({ account, preview = false }) {
     document.head.appendChild(tag)
     return () => tag.remove()
   }, [preview])
+  // P855: the outer boundary catches a throw in the frame itself (a page's own boundary keeps the tabs alive).
   return (
-    <AccountProvider value={preview ? SAMPLE : account}>
-      <NoteProvider>
-        <Routes>
-          <Route element={<AdminFrame preview={preview} />}>{admRouteEls({ preview, wrap: el => <Page preview={preview}>{el}</Page> })}</Route>
-          <Route path="*" element={<Navigate to={ap('overview', null, preview)} replace />} />
-        </Routes>
-      </NoteProvider>
-    </AccountProvider>
+    <AdminBoundary>
+      <AccountProvider value={preview ? SAMPLE : account}>
+        <NoteProvider>
+          <Routes>
+            <Route element={<AdminFrame preview={preview} />}>{admRouteEls({ preview, wrap: el => <Page preview={preview}>{el}</Page> })}</Route>
+            <Route path="*" element={<Navigate to={ap('overview', null, preview)} replace />} />
+          </Routes>
+        </NoteProvider>
+      </AccountProvider>
+    </AdminBoundary>
   )
 }

@@ -35,7 +35,7 @@ function GhlLiveTile({ ghl }) {
   const errors = checkForm(cur)
   const idsChanged = !sameForm(cur, base)
   const dirty = idsChanged || !!key.trim()
-  const status = loading ? { label: 'Checking…', tone: 'mute', line: '' } : unavailable ? { label: 'Not connected', tone: 'mute', line: '' } : connectStatus(row)
+  const status = loading ? { label: 'Checking…', tone: 'mute', line: '' } : unavailable ? { label: 'Not connected yet', tone: 'mute', line: 'Goes live with the GHL switch-on' } : connectStatus(row)
   const test = testConnection(row, kq.data)
   const keySaved = kq.data === true
   const put = patch => setForm({ ...cur, ...patch })
@@ -61,7 +61,7 @@ function GhlLiveTile({ ghl }) {
   }
   return (
     <Tile className="ad-con" i={0} title="GoHighLevel" sub={loading ? 'Loading…' : status.line || 'Not set up yet'} aside={<Chip tone={status.tone}>{status.label}</Chip>}>
-      {unavailable && <p className="ad-note">The settings can't be read yet: the bridge's database step is not applied, or this login is not an admin. Saving is off until then.</p>}
+      {unavailable && <p className="ad-note">Saving is off until then.</p>}
       <div className="tp-field"><span>API key</span>
         {keySaved && !key && <p className="ad-saved"><ShieldCheck size={14} aria-hidden="true" />A key is saved. It is never shown again. Type a new one to replace it.</p>}
         <div className="ad-keyrow">
@@ -206,7 +206,12 @@ export default function Connect() {
   const { data: c } = useAdmConnect()
   const { data: viewAs } = useAdmViewAs()
   const { live } = useAccount() || {}
-  const ghl = useGhlConnect({ enabled: !!live })
+  // P855: when the settings table can't be read (its database step is not applied), ask once and keep that answer:
+  // no 60-second re-read, no error, the tile just says it is not connected yet.
+  const [gaveUp, setGaveUp] = useState(false)
+  const ghl = useGhlConnect({ enabled: !!live && !gaveUp })
+  const unread = !!live && ghl.settings.data === null
+  if (unread && !gaveUp) setGaveUp(true)
   const done = plugged(c)
   if (live && ghl.settings.data !== undefined) {
     const [key, loc] = ghlPlugged(ghl.settings.data, ghl.keySaved.data)
