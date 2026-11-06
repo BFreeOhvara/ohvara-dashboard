@@ -1,0 +1,235 @@
+// ghl-webhook logic (Prompt 850), with the database and keys passed in so
+// tests run without Supabase or the network. No Deno APIs, so node --test
+// loads it. BUILT, NOT DEPLOYED.
+//
+// Who may call it (checked on the raw body, before anything is parsed):
+//   1. A HighLevel app webhook signed with X-GHL-Signature: Ed25519, base64,
+//      over the raw body, checked with GHL's published public key
+//      (https://marketplace.gohighlevel.com/docs/webhook/WebhookIntegrationGuide;
+//      the RSA X-WH-Signature header was retired 2026-09-01, so it is not accepted).
+//   2. A GHL workflow "Custom Webhook" action carrying the header
+//      x-ohvara-ghl-secret = the Supabase secret GHL_WEBHOOK_SECRET.
+//   Anything else -> 401, nothing read or written.
+//
+// What it handles (payload shapes: fixtures/*.json, from GHL's webhook docs):
+//   InboundMessage  (SMS)  STOP/START words -> sms_set_opt(source 'GHL');
+//                          any other text -> lead_sms_replies (183), saved once
+//                          per GHL message ID (twilio_sid = 'ghl:<messageId>'),
+//                          so the VA queue, contact log (199) and activity feed
+//                          (202) show it like a Twilio reply.
+//   OutboundMessage (SMS)  a text GHL sent -> inbound_events text_sent via
+//                          ghl_log_text (once per message ID; a later webhook
+//                          for the same message only updates its status).
+//   ContactDndUpdate       SMS DND turned on -> sms_set_opt(opted out, 'GHL').
+//                          Turning DND off does NOT opt back in: only a START
+//                          text does (consent is never restored silently).
+//   Workflow webhook       { ohvara_event: 'reply' | 'opt_out', ... } in the
+//                          action's custom data (see the README for the fields).
+// The switch: while ghl_settings.enabled is off, only opt-outs are recorded
+// (a STOP is always honoured); everything else is answered 200 and dropped.
+// A webhook for another location is ignored. Database errors answer 500 so
+// GHL retries (it retries non-2xx up to 12 times). Logs carry error text only,
+// never a phone, name or message body.
+import { inboundIntent } from '../recovery-sms/core.ts'
+
+// GHL's Ed25519 webhook public key (SPKI, from the integration guide above).
+export const GHL_ED25519_PUBLIC_KEY =
+  'MCowBQYDK2VwAyEAi2HR1srL4o18O8BRa7gVJY7G7bupbN3H9AwJrHCDiOg='
+export const SECRET_HEADER = 'x-ohvara-ghl-secret'
+export const MAX_BODY = 1600
+export const MAX_REQUEST = 64 * 1024
+
+type DbError = { message: string; code?: string } | null
+
+export type ReplyRow = { twilio_sid: string; from_phone: string; body: string; lead_id: string | null }
+
+export type Settings = { enabled: boolean; location_id: string | null }
+
+export type LeadMatch = { lead_id: string; agent_id: string | null; is_sample: boolean }
+
+export type Deps = {
+  sharedSecret: string | undefined
+  publicKey: string                     // base64 SPKI of the Ed25519 key
+  settings(): PromiseLike<{ data: Settings | null; error: DbError }>
+  rpc(fn: string, args: Record<string, unknown>): PromiseLike<{ data: unknown; error: DbError }>
+  insertReply(row: ReplyRow): PromiseLike<{ error: DbError }>
+  log(msg: string): void
+}
+
+// ── auth ────────────────────────────────────────────────────────────────────
+const b64 = (s: string) => Uint8Array.from(atob(s), c => c.charCodeAt(0))
+
+export async function verifyGhlSignature(raw: string, signature: string | null, publicKeyB64: string) {
+  if (!signature || signature === 'N/A') return false
+  try {
+    const key = await crypto.subtle.importKey('spki', b64(publicKeyB64), { name: 'Ed25519' }, false, ['verify'])
+    return await crypto.subtle.verify({ name: 'Ed25519' }, key, b64(signature.trim()), new TextEncoder().encode(raw))
+  } catch {
+    return false
+  }
+}
+
+// Constant-time compare of two strings via SHA-256 digests (equal length).
+export async function sameSecret(a: string | null, b: string | undefined) {
+  if (!a || !b) return false
+  const enc = new TextEncoder()
+  const [x, y] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(a)),
+    crypto.subtle.digest('SHA-256', enc.encode(b)),
+  ])
+  const u = new Uint8Array(x), v = new Uint8Array(y)
+  let diff = 0
+  for (let i = 0; i < u.length; i++) diff |= u[i] ^ v[i]
+  return diff === 0
+}
+
+export async function authorised(req: Request, raw: string, deps: Pick<Deps, 'sharedSecret' | 'publicKey'>) {
+  const sig = req.headers.get('x-ghl-signature')
+  if (sig) return verifyGhlSignature(raw, sig, deps.publicKey)
+  return sameSecret(req.headers.get(SECRET_HEADER), deps.sharedSecret)
+}
+
+// ── what the payload means ──────────────────────────────────────────────────
+export type Action =
+  | { kind: 'opt'; phone: string; optedOut: boolean; locationId: string | null }
+  | { kind: 'reply'; messageId: string; phone: string; contactId: string | null; body: string; locationId: string | null }
+  | { kind: 'sent'; messageId: string; phone: string | null; contactId: string | null; body: string; status: string | null; at: string | null; locationId: string | null }
+  | { kind: 'ignore'; why: string }
+
+const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null)
+const isSms = (p: any) => {
+  const t = String(p?.messageType ?? p?.messageTypeString ?? '').toUpperCase()
+  return t === 'SMS' || t === 'TYPE_SMS'
+}
+
+async function sha256Hex(s: string) {
+  const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))
+  return Array.from(d, b => b.toString(16).padStart(2, '0')).join('')
+}
+
+// deno-lint-ignore no-explicit-any
+export async function classify(p: any, raw: string): Promise<Action> {
+  if (!p || typeof p !== 'object') return { kind: 'ignore', why: 'not json' }
+  const locationId = str(p.locationId) ?? str(p.location?.id) ?? str(p.location_id)
+
+  // HighLevel app webhooks carry a `type` naming the event.
+  if (typeof p.type === 'string') {
+    if (p.type === 'InboundMessage' || p.type === 'OutboundMessage') {
+      if (!isSms(p)) return { kind: 'ignore', why: 'not sms' }
+      const messageId = str(p.messageId)
+      const body = String(p.body ?? '').slice(0, MAX_BODY)
+      if (p.type === 'InboundMessage') {
+        const phone = str(p.from) ?? str(p.phone)
+        if (!phone) return { kind: 'ignore', why: 'no sender' }
+        const intent = inboundIntent(body)
+        if (intent === 'stop' || intent === 'start') return { kind: 'opt', phone, optedOut: intent === 'stop', locationId }
+        if (!messageId) return { kind: 'ignore', why: 'no message id' }
+        return { kind: 'reply', messageId, phone, contactId: str(p.contactId), body, locationId }
+      }
+      if (!messageId) return { kind: 'ignore', why: 'no message id' }
+      return {
+        kind: 'sent', messageId, phone: str(p.to) ?? str(p.phone), contactId: str(p.contactId), body,
+        status: str(p.status), at: str(p.dateAdded), locationId,
+      }
+    }
+    if (p.type === 'ContactDndUpdate') {
+      const phone = str(p.phone)
+      const smsDnd = p.dndSettings?.SMS?.status === 'active' || (p.dnd === true && !p.dndSettings)
+      if (!phone || !smsDnd) return { kind: 'ignore', why: 'not an sms opt-out' }
+      return { kind: 'opt', phone, optedOut: true, locationId }
+    }
+    return { kind: 'ignore', why: `event ${p.type}` }
+  }
+
+  // A workflow Custom Webhook: Jordan's action sends the contact's standard
+  // fields plus custom data { ohvara_event, message_id?, body? }.
+  const cd = p.customData ?? p.custom_data ?? {}
+  const event = str(cd.ohvara_event) ?? str(p.ohvara_event)
+  const phone = str(p.phone) ?? str(p.contact?.phone)
+  const contactId = str(p.contact_id) ?? str(p.contactId) ?? str(p.contact?.id)
+  if (event === 'opt_out') {
+    if (!phone) return { kind: 'ignore', why: 'no phone' }
+    return { kind: 'opt', phone, optedOut: true, locationId }
+  }
+  if (event === 'reply') {
+    if (!phone) return { kind: 'ignore', why: 'no phone' }
+    const body = String(cd.body ?? p.message?.body ?? '').slice(0, MAX_BODY)
+    const intent = inboundIntent(body)
+    if (intent === 'stop' || intent === 'start') return { kind: 'opt', phone, optedOut: intent === 'stop', locationId }
+    // No message ID from a workflow: the raw body's hash, so a GHL retry of
+    // the same delivery saves nothing twice.
+    const messageId = str(cd.message_id) ?? `wf-${(await sha256Hex(raw)).slice(0, 32)}`
+    return { kind: 'reply', messageId, phone, contactId, body, locationId }
+  }
+  return { kind: 'ignore', why: 'unknown payload' }
+}
+
+// ── handler ─────────────────────────────────────────────────────────────────
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+const retry = () => json({ error: 'retry' }, 500)
+
+export async function handle(req: Request, deps: Deps): Promise<Response> {
+  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
+  const raw = await req.text()
+  if (raw.length > MAX_REQUEST) return new Response('Too large', { status: 413 })
+  if (!(await authorised(req, raw, deps))) return new Response('Unauthorized', { status: 401 })
+
+  let payload: unknown = null
+  try { payload = JSON.parse(raw) } catch { payload = null }
+  const action = await classify(payload, raw)
+  if (action.kind === 'ignore') return json({ ignored: action.why })
+
+  const { data: s, error } = await deps.settings()
+  if (error) {
+    deps.log(`[ghl-webhook] settings ${error.message}`)
+    return retry()
+  }
+  if (action.locationId && s?.location_id && action.locationId !== s.location_id) {
+    return json({ ignored: 'other location' })
+  }
+
+  if (action.kind === 'opt') {
+    // Opt-outs count even with the switch off; an opt-in only while it is on.
+    if (!action.optedOut && !s?.enabled) return json({ skipped: 'off' })
+    const r = await deps.rpc('sms_set_opt', { p_phone: action.phone, p_opted_out: action.optedOut, p_source: 'GHL' })
+    if (r.error) {
+      deps.log(`[ghl-webhook] sms_set_opt ${r.error.message}`)
+      return retry()
+    }
+    return json({ ok: action.optedOut ? 'opted_out' : 'opted_in' })
+  }
+
+  if (!s?.enabled) return json({ skipped: 'off' })
+
+  const match = await deps.rpc('ghl_lead_for_contact', { p_contact_id: action.contactId, p_phone: action.phone })
+  if (match.error) {
+    deps.log(`[ghl-webhook] ghl_lead_for_contact ${match.error.message}`)
+    return retry()
+  }
+  const lead = (Array.isArray(match.data) ? match.data[0] : match.data) as LeadMatch | undefined
+
+  if (action.kind === 'reply') {
+    const { error: e } = await deps.insertReply({
+      twilio_sid: `ghl:${action.messageId}`, from_phone: action.phone, body: action.body, lead_id: lead?.lead_id ?? null,
+    })
+    // 23505: this message is already saved (a GHL retry), so it's done.
+    if (e && e.code !== '23505') {
+      deps.log(`[ghl-webhook] save reply ${e.message}`)
+      return retry()
+    }
+    return json({ ok: e ? 'duplicate' : 'reply_saved', matched: !!lead })
+  }
+
+  // sent
+  if (!lead) return json({ ignored: 'no lead' })
+  const r = await deps.rpc('ghl_log_text', {
+    p_lead: lead.lead_id, p_agent: lead.agent_id, p_message_id: action.messageId, p_body: action.body,
+    p_status: action.status, p_at: action.at, p_is_sample: lead.is_sample,
+  })
+  if (r.error) {
+    deps.log(`[ghl-webhook] ghl_log_text ${r.error.message}`)
+    return retry()
+  }
+  return json({ ok: r.data })
+}
