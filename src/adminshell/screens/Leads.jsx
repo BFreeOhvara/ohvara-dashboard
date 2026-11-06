@@ -24,7 +24,7 @@ function LeadCard({ l, i }) {
       <div className="fx-lcard-top"><span className="fx-kind"><Icon size={13} aria-hidden="true" />{KIND_WORD[l.kind]}</span>{l.stage === 'missed' && <span className="fx-tag">Missed</span>}</div>
       <h3>{l.name}</h3>
       <p>{l.product} · {l.city}, {l.state}</p>
-      <div className="fx-lcard-bot"><span className="fx-big">{l.agent ? l.agent.split(' ')[0] : 'No agent'}</span><small className="ad-came">{l.came.replace('Today, ', '')}</small></div>
+      <div className="fx-lcard-bot"><span className="fx-big">{l.agent ? l.agent.split(' ')[0] : 'No agent'}</span><small className="adm-came">{l.came.replace('Today, ', '')}</small></div>
     </article>
   )
 }
@@ -88,15 +88,15 @@ export default function Leads() {
     && (!n || `${l.name} ${l.city} ${l.phone} ${l.agent || ''}`.toLowerCase().includes(n)))
   let card = 0
   return (
-    <div className="tp-page fx-page fx-leads ad-leads">
+    <div className="tp-page fx-page fx-leads adm-leads">
       <div className="fx-tools">
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a lead" placeholder="Find by name, city, phone or agent" value={q} onChange={e => setQ(e.target.value)} /></label>
         <Seg label="Type" value={kind} onChange={setKind} options={[{ key: 'all', label: 'All', count: leads.length }, { key: 'appointment', label: 'Appointments', count: leads.filter(l => l.kind === 'appointment').length }, { key: 'live', label: 'Live calls', count: leads.filter(l => l.kind === 'live').length }]} />
         <Seg label="When" value={when} onChange={setWhen} options={[{ key: 'week', label: 'This week' }, { key: 'today', label: 'Today' }]} />
         <span className="tp-grow" />
-        <Dropdown className="ad-dd-sm" label="Agent" value={agent} onChange={setAgent} options={[{ value: 'all', label: 'Every agent' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
+        <Dropdown className="adm-dd-sm" label="Agent" value={agent} onChange={setAgent} options={[{ value: 'all', label: 'Every agent' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
       </div>
-      <div className="fx-board ad-board5" role="region" aria-label="Leads by stage">
+      <div className="fx-board adm-board5" role="region" aria-label="Leads by stage">
         {LEAD_LANES.map((b, li) => {
           const rows = shown.filter(l => b.stages.includes(l.stage)).slice().reverse()
           return (
@@ -111,7 +111,7 @@ export default function Leads() {
         })}
       </div>
       {id && <LeadDrawer id={id} readOnly={viewAs === 'partner'} onClose={() => navigate(ap('leads'))} />}
-      <p className="tp-sub ad-hint"><PhoneIncoming size={13} aria-hidden="true" /> Live calls ring agents who are active and on duty; the rest are booked onto an agent's calendar.</p>
+      <p className="tp-sub adm-hint"><PhoneIncoming size={13} aria-hidden="true" /> Live calls ring agents who are active and on duty; the rest are booked onto an agent's calendar.</p>
     </div>
   )
 }

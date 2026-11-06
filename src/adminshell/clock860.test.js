@@ -41,8 +41,8 @@ test('all three frames show it in the page head, not the top bar; admin lost its
   }
   const bar = admin.slice(admin.indexOf('<header className="tp-top'), admin.indexOf('</header>', admin.indexOf('<header className="tp-top')))
   assert.ok(bar.length > 100 && !bar.includes('LiveClock'))
-  assert.doesNotMatch(src('./kit.jsx'), /ad-clock|ZONES/)
-  assert.doesNotMatch(src('./admin.css'), /\.ad-clock/)
+  assert.doesNotMatch(src('./kit.jsx'), /adm-clock|ZONES/)
+  assert.doesNotMatch(src('./admin.css'), /\.adm-clock/)
 })
 
 test('both VA frames arm the P859 watchdog with the fx-settled root class', () => {

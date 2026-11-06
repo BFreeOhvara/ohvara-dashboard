@@ -249,7 +249,7 @@ export default function AdminFrame({ preview = false }) {
     return () => { cancelAnimationFrame(raf); stop(); document.removeEventListener('visibilitychange', onVis) }
   }, [layout])
 
-  useEffect(() => () => document.documentElement.classList.remove('ad-settled'), [])
+  useEffect(() => () => document.documentElement.classList.remove('adm-settled'), [])
 
   useEffect(() => {
     const onKey = e => { if (isSearchKey(e)) { e.preventDefault(); setPanel(p => (p === 'search' ? null : 'search')) } }
@@ -269,7 +269,7 @@ export default function AdminFrame({ preview = false }) {
   const me = partner ? PARTNER.name : account.name
 
   return (
-    <div className={`tp tp-app fx ad is-${layout}${partner ? ' is-partner' : ''}`} ref={appRef}>
+    <div className={`tp tp-app fx adm is-${layout}${partner ? ' is-partner' : ''}`} ref={appRef}>
       <div className="tp-sky" aria-hidden="true"><i /><i /><i /></div>
 
       <header className="tp-phone-top fx-ptop">
@@ -282,7 +282,7 @@ export default function AdminFrame({ preview = false }) {
       <Link to={ap(partner ? 'connect' : 'overview')} className="fx-brand fx-brand-page" aria-label="Ohvara home"><OhvaraMark height={30} back="var(--ov-mark-back)" front="var(--ov-mark-front)" className="fx-mark" /><b>ohvara</b></Link>
       <header className="tp-top fx-top">
         <span className="fx-top-gap" aria-hidden="true" />
-        <PillTabs as="nav" label="Pages" className="tp-tabs fx-tabs ad-tabs" itemClass="tp-tab fx-tab" value={tabs.some(([k]) => k === active) ? active : null} persistKey="adm-tabs"
+        <PillTabs as="nav" label="Pages" className="tp-tabs fx-tabs adm-tabs" itemClass="tp-tab fx-tab" value={tabs.some(([k]) => k === active) ? active : null} persistKey="adm-tabs"
           items={tabs.map(([k, label]) => ({ key: k, to: ap(k), label, extra: !partner && tabCount[k] > 0 ? <span className="fx-tb">{tabCount[k]}</span> : null }))} />
         <div className="fx-tr">
           {tops}
@@ -327,7 +327,7 @@ export default function AdminFrame({ preview = false }) {
           {layout !== 'messages' && <LiveClock tz={settings.tz} />}
         </div>
 
-        <main className={`tp-main fx-main ad-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>
+        <main className={`tp-main fx-main adm-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>
           {page.el}
           <p className="tp-foot">Sample info. Changes reset when you reload.</p>
         </main>

@@ -31,10 +31,10 @@ export default function Messages() {
   const first = t.name.split(' ')[0]
   const otherSide = partner ? 'the Ohvara team' : first
   return (
-    <section className="ov-card tp-msgs ad-msgs" aria-label="Messages">
+    <section className="ov-card tp-msgs adm-msgs" aria-label="Messages">
       <div className="tp-threads">
         <label className="tp-find tp-threads-find"><Search size={15} aria-hidden="true" /><input aria-label="Find a person" placeholder="Find someone" value={q} onChange={e => setQ(e.target.value)} /></label>
-        {!partner && <Seg label="Who" className="ad-who-seg" value={who} onChange={setWho} options={[{ key: 'all', label: 'All' }, { key: 'Agent', label: 'Agents' }, { key: 'Fulfillment', label: 'VAs' }, { key: 'Partner', label: 'Partner' }]} />}
+        {!partner && <Seg label="Who" className="adm-who-seg" value={who} onChange={setWho} options={[{ key: 'all', label: 'All' }, { key: 'Agent', label: 'Agents' }, { key: 'Fulfillment', label: 'VAs' }, { key: 'Partner', label: 'Partner' }]} />}
         <div className="tp-threads-b">
           {list.map(x => (
             <button key={x.id} type="button" className={`tp-thread${x.id === t.id ? ' on' : ''}`} onClick={() => pick(x.id)}>

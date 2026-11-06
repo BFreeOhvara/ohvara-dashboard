@@ -32,7 +32,7 @@ function ClientDrawer({ id, onClose }) {
         <Link to={`${ap('messages')}?to=${c.agent_id}`} className="tp-primary fx-accent"><MessageSquare size={16} />Message {c.agent.split(' ')[0]}</Link>
         <Link to={ap('agents', c.agent_id)} className="tp-btn ov-ghost">Open the agent</Link>
       </>}>
-      {c.attention && <p className="ad-warn">{c.attention}</p>}
+      {c.attention && <p className="adm-warn">{c.attention}</p>}
       <Block title="Policy">
         <dl className="fx-facts">{[['Phone', c.phone], ['State', c.state], ['Carrier', c.carrier], ['Policy', c.policy], ['Agent', c.agent], ['Servicing by', c.va]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       </Block>
@@ -52,13 +52,13 @@ function Servicing() {
   const [by, setBy] = useState('all')
   const list = steps.filter(s => by === 'all' || (by === 'late' ? s.late : s.va_id === by))
   return (
-    <section className="fx-tile ad-steps" style={{ '--i': 0 }} aria-label="Servicing steps">
+    <section className="fx-tile adm-steps" style={{ '--i': 0 }} aria-label="Servicing steps">
       <header className="fx-tile-h">
         <span className="tp-grow"><h2>Servicing steps open</h2><p>{steps.length} across the team · {steps.filter(s => s.late).length} late</p></span>
-        <Dropdown className="ad-dd-sm" label="Show" value={by} onChange={setBy} options={[{ value: 'all', label: 'Everyone' }, { value: 'late', label: 'Late only' }, ...vas.map(v => ({ value: v.id, label: v.name }))]} />
+        <Dropdown className="adm-dd-sm" label="Show" value={by} onChange={setBy} options={[{ value: 'all', label: 'Everyone' }, { value: 'late', label: 'Late only' }, ...vas.map(v => ({ value: v.id, label: v.name }))]} />
       </header>
-      <ul className="tp-list ad-rows">{list.map(s => (
-        <li key={s.id} className="ad-step">
+      <ul className="tp-list adm-rows">{list.map(s => (
+        <li key={s.id} className="adm-step">
           <Avatar name={s.client} tone={s.late ? 'warn' : 'blue'} />
           <span className="tp-grow"><b>{s.kind} · {s.client}</b><small>{s.agent}'s client · {s.due}</small></span>
           {s.late && <Chip tone="warn">Late</Chip>}
@@ -86,18 +86,18 @@ export default function Clients() {
     .sort((a, b) => STAGE_ORDER.indexOf(a.stage) - STAGE_ORDER.indexOf(b.stage))
   const total = shown.reduce((t, c) => t + c.premium, 0)
   return (
-    <div className="tp-page fx-page ad-clients">
-      <PillTabs label="Clients and servicing" className="fx-ptabs ad-pagetabs" itemClass="fx-ptab" value={tab} onChange={v => put('tab', v)}
+    <div className="tp-page fx-page adm-clients">
+      <PillTabs label="Clients and servicing" className="fx-ptabs adm-pagetabs" itemClass="fx-ptab" value={tab} onChange={v => put('tab', v)}
         items={[{ key: 'clients', label: 'Clients', count: clients.length }, { key: 'servicing', label: 'Servicing' }]} />
-      <div className="ad-tabpane" key={tab} role="tabpanel">
+      <div className="adm-tabpane" key={tab} role="tabpanel">
         {tab === 'servicing' ? <Servicing /> : <>
           <div className="fx-tools">
             <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a client" placeholder="Find by name, phone, agent, carrier or policy" value={q} onChange={e => setQ(e.target.value)} /></label>
             <Seg label="Stage" value={stage} onChange={setStage} options={[{ key: 'all', label: 'All', count: clients.length }, ...STAGE_ORDER.map(k => ({ key: k, label: CLIENT_STAGE[k][1], count: clients.filter(c => c.stage === k).length }))]} />
             <span className="tp-grow" />
-            <Dropdown className="ad-dd-sm" label="Agent" value={agent} onChange={v => put('agent', v)} options={[{ value: 'all', label: 'Every agent' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
+            <Dropdown className="adm-dd-sm" label="Agent" value={agent} onChange={v => put('agent', v)} options={[{ value: 'all', label: 'Every agent' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
           </div>
-          <div className="fx-cgrid ad-cgrid">
+          <div className="fx-cgrid adm-cgrid">
             {shown.map((c, i) => {
               const [tone, word] = CLIENT_STAGE[c.stage]
               return (
@@ -106,13 +106,13 @@ export default function Clients() {
                   <div className="fx-lcard-top"><span className="fx-kind">{word}</span><span className="fx-tag">{c.agent.split(' ')[0]}</span></div>
                   <h3>{c.name}</h3>
                   <p>{c.carrier} · {c.policy}</p>
-                  <div className="fx-ccard-bot"><span className="tp-money">{money(c.premium)}/mo</span><span className="ad-came"><Phone size={12} aria-hidden="true" />{c.phone}</span></div>
+                  <div className="fx-ccard-bot"><span className="tp-money">{money(c.premium)}/mo</span><span className="adm-came"><Phone size={12} aria-hidden="true" />{c.phone}</span></div>
                 </article>
               )
             })}
             {shown.length === 0 && <Empty title="No client" sub="No client matches that." />}
           </div>
-          <p className="tp-sub ad-hint">{shown.length} clients · {money(total)} a month in premium · view only</p>
+          <p className="tp-sub adm-hint">{shown.length} clients · {money(total)} a month in premium · view only</p>
         </>}
       </div>
       {id && <ClientDrawer id={id} onClose={() => navigate(ap('clients'))} />}

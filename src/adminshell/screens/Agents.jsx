@@ -18,7 +18,7 @@ const SORTS = [{ value: 'sold', label: 'Most sold' }, { value: 'in', label: 'Mos
 
 function Funnel({ w }) {
   return (
-    <ul className="ad-mf" aria-label={`${w.in} in, ${w.booked} booked, ${w.transferred} transferred, ${w.sold} sold`}>
+    <ul className="adm-mf" aria-label={`${w.in} in, ${w.booked} booked, ${w.transferred} transferred, ${w.sold} sold`}>
       {[['In', w.in], ['Booked', w.booked], ['Transf.', w.transferred], ['Sold', w.sold]].map(([k, n]) => <li key={k}><b className="tp-num">{n}</b><small>{k}</small></li>)}
     </ul>
   )
@@ -58,7 +58,7 @@ function AgentDrawer({ id, onClose }) {
         <DField label="Weekly lead budget" hint="Ads spend up to this each week on this agent's leads.">
           <Dropdown label="Weekly lead budget" value={a.spend} options={BUDGETS} onChange={v => { setAgentSpend(a.id, v); note(`Budget set to ${money(v)} a week`) }} />
         </DField>
-        {a.billing.failed && <p className="ad-warn">{a.billing.failed.what} {money(a.billing.failed.amount)} failed {a.billing.failed.when}: {a.billing.failed.why}.</p>}
+        {a.billing.failed && <p className="adm-warn">{a.billing.failed.what} {money(a.billing.failed.amount)} failed {a.billing.failed.when}: {a.billing.failed.why}.</p>}
         <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Comped</b><p className="tp-sub">Comped agents use the portal without a plan charge.</p></div><Switch on={a.comped} label="Comped" onChange={v => { setComped(a.id, v); note(v ? 'Account comped' : 'Comp ended') }} /></div>
       </Block>
       <Block title="This week"><Funnel w={a.week} /></Block>
@@ -105,7 +105,7 @@ export default function Agents() {
     .sort((x, y) => (sort === 'name' ? x.name.localeCompare(y.name) : sort === 'spend' ? y.spend - x.spend : (y.week[sort] - x.week[sort]) || x.name.localeCompare(y.name)))
   const out = invites.filter(i => i.role === 'agent')
   return (
-    <div className="tp-page fx-page ad-agents-page">
+    <div className="tp-page fx-page adm-agents-page">
       <div className="fx-tools">
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find an agent" placeholder="Find by name, email, phone or city" value={q} onChange={e => setQ(e.target.value)} /></label>
         <Seg label="Show" value={show} onChange={setShow} options={[
@@ -113,20 +113,20 @@ export default function Agents() {
           { key: 'booking', label: 'Booking only', count: agents.filter(a => !a.active).length }, { key: 'due', label: 'Past due', count: agents.filter(a => a.billing.status === 'past_due').length },
         ]} />
         <span className="tp-grow" />
-        <Dropdown className="ad-dd-sm" label="Sort" value={sort} options={SORTS} onChange={setSort} />
+        <Dropdown className="adm-dd-sm" label="Sort" value={sort} options={SORTS} onChange={setSort} />
       </div>
 
-      <section className="fx-tile ad-table" style={{ '--i': 0 }} aria-label="Agents">
-        <div className="ad-tr ad-th" aria-hidden="true"><span>Agent</span><span>Plan and budget</span><span>Transfers</span><span>This week</span><span>Billing</span></div>
+      <section className="fx-tile adm-table" style={{ '--i': 0 }} aria-label="Agents">
+        <div className="adm-tr adm-th" aria-hidden="true"><span>Agent</span><span>Plan and budget</span><span>Transfers</span><span>This week</span><span>Billing</span></div>
         {list.map((a, i) => {
           const [word, tone] = BILL_WORD[a.billing.status]
           return (
-            <div key={a.id} className="ad-tr" style={{ '--i': i }}>
-              <Link to={ap('agents', a.id)} className="ad-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.city}, {a.state} · {a.access ? `on ${a.lastOn}` : 'access off'}</small></span></Link>
-              <span className="ad-cell"><b>{PLANS[a.plan].label}</b><small>{money(a.spend)} a week on leads</small></span>
-              <span className="ad-cell ad-sw"><Switch on={a.active} label={`${a.name} takes live transfers`} onChange={v => { setAgentActive(a.id, v); note(v ? `${a.name} takes live transfers` : `${a.name} is booking only`) }} /><small>{a.active ? (a.onDuty ? 'On duty' : 'Off duty') : 'Booking only'}</small></span>
-              <span className="ad-cell"><Funnel w={a.week} /></span>
-              <span className="ad-cell"><Chip tone={tone}>{word}</Chip><small>{a.billing.next}</small></span>
+            <div key={a.id} className="adm-tr" style={{ '--i': i }}>
+              <Link to={ap('agents', a.id)} className="adm-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.city}, {a.state} · {a.access ? `on ${a.lastOn}` : 'access off'}</small></span></Link>
+              <span className="adm-cell"><b>{PLANS[a.plan].label}</b><small>{money(a.spend)} a week on leads</small></span>
+              <span className="adm-cell adm-sw"><Switch on={a.active} label={`${a.name} takes live transfers`} onChange={v => { setAgentActive(a.id, v); note(v ? `${a.name} takes live transfers` : `${a.name} is booking only`) }} /><small>{a.active ? (a.onDuty ? 'On duty' : 'Off duty') : 'Booking only'}</small></span>
+              <span className="adm-cell"><Funnel w={a.week} /></span>
+              <span className="adm-cell"><Chip tone={tone}>{word}</Chip><small>{a.billing.next}</small></span>
             </div>
           )
         })}
@@ -134,7 +134,7 @@ export default function Agents() {
       </section>
 
       {out.length > 0 && (
-        <section className="fx-tile ad-invites" style={{ '--i': 1 }} aria-label="Invites out">
+        <section className="fx-tile adm-invites" style={{ '--i': 1 }} aria-label="Invites out">
           <header className="fx-tile-h"><span className="tp-grow"><h2>Invites out</h2><p>Not signed up yet</p></span></header>
           <ul className="tp-list">{out.map(v => (
             <li key={v.id} className="fx-mrow">{v.via === 'text' ? <Smartphone size={17} aria-hidden="true" /> : <Mail size={17} aria-hidden="true" />}

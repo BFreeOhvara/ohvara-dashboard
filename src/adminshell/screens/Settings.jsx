@@ -66,12 +66,12 @@ function People() {
     <>
       <Head title="People & access" sub="Everyone with a login. Open someone for their role, access and the rest." />
       <div className="fx-form-row">
-        <label className="fx-find ad-find-sm"><Search size={15} aria-hidden="true" /><input aria-label="Find someone" placeholder="Name, email or phone" value={q} onChange={e => setQ(e.target.value)} /></label>
+        <label className="fx-find adm-find-sm"><Search size={15} aria-hidden="true" /><input aria-label="Find someone" placeholder="Name, email or phone" value={q} onChange={e => setQ(e.target.value)} /></label>
         <span className="tp-grow" />
         <button type="button" className="tp-primary sm fx-accent" onClick={() => setAdding(true)}><UserPlus size={14} />Add someone</button>
       </div>
       <Seg label="Who" value={who} onChange={setWho} options={[{ key: 'agent', label: 'Agents', count: agents.length }, { key: 'fulfillment', label: 'Fulfillment', count: vas.length }, { key: 'admin', label: 'Admins', count: 1 }, { key: 'invites', label: 'Invites', count: invites.length }]} />
-      <ul className="tp-list ad-people">
+      <ul className="tp-list adm-people">
         {who === 'admin' && <li className="fx-mrow"><Avatar name={ME.name} /><span className="tp-grow"><b>{ME.name}</b><small>Admin · {ME.email}</small></span><Chip tone="teal">Owner</Chip><Lock size={14} aria-hidden="true" /></li>}
         {rows.map(p => (
           <li key={p.id} className="fx-mrow">
@@ -104,9 +104,9 @@ function Switches({ live }) {
   return (
     <>
       <Head title="Switches" sub="Company-wide on and off. Each says what it does." />
-      <p className="ad-warn">Sample only: flipping these changes nothing real.{live && <> The real switches are on the <a href="/settings" className="tp-link">current Settings page</a> until the backend step.</>}</p>
+      <p className="adm-warn">Sample only: flipping these changes nothing real.{live && <> The real switches are on the <a href="/settings" className="tp-link">current Settings page</a> until the backend step.</>}</p>
       {groups.map(g => (
-        <div key={g} className="ad-swgroup">
+        <div key={g} className="adm-swgroup">
           <h3 className="fx-h3">{g}</h3>
           <ul className="tp-list">{SWITCHES.filter(x => x.group === g).map(x => (
             <li key={x.key} className="fx-form-row fx-form-sw"><div className="tp-grow"><b>{x.label}</b><p className="tp-sub">{x.sub}</p></div>
@@ -150,7 +150,7 @@ function Carriers() {
   return (
     <>
       <Head title="Carriers" sub="Service phone and hours VAs call during. A lookup fills these; an admin marks them verified." />
-      <div className="fx-form-row"><label className="fx-find ad-find-sm"><Search size={15} aria-hidden="true" /><input aria-label="Find a carrier" placeholder="Find a carrier" value={q} onChange={e => setQ(e.target.value)} /></label></div>
+      <div className="fx-form-row"><label className="fx-find adm-find-sm"><Search size={15} aria-hidden="true" /><input aria-label="Find a carrier" placeholder="Find a carrier" value={q} onChange={e => setQ(e.target.value)} /></label></div>
       <Seg label="Show" value={show} onChange={setShow} options={[{ key: 'all', label: 'All', count: carriers.length }, ...Object.entries(CARRIER_WORD).map(([k, [w]]) => ({ key: k, label: w, count: carriers.filter(c => c.status === k).length }))]} />
       <ul className="tp-list">{list.map(c => {
         const [w, t] = CARRIER_WORD[c.status]
@@ -181,8 +181,8 @@ function Audit() {
   return (
     <>
       <Head title="Audit log" sub="Every admin action, newest first. Append-only: nobody can change or remove a row." />
-      <div className="fx-form-row"><label className="fx-find ad-find-sm"><Search size={15} aria-hidden="true" /><input aria-label="Search the log" placeholder="Search actions or people" value={q} onChange={e => setQ(e.target.value)} /></label><span className="tp-grow" /><Chip tone="mute">{rows.length} rows</Chip></div>
-      <ol className="ad-audit">{list.map(r => <li key={r.id}><small className="tp-num">{r.at}</small><span className="tp-grow"><b>{r.what}</b><small>{r.target}</small></span><small>{r.who}</small></li>)}</ol>
+      <div className="fx-form-row"><label className="fx-find adm-find-sm"><Search size={15} aria-hidden="true" /><input aria-label="Search the log" placeholder="Search actions or people" value={q} onChange={e => setQ(e.target.value)} /></label><span className="tp-grow" /><Chip tone="mute">{rows.length} rows</Chip></div>
+      <ol className="adm-audit">{list.map(r => <li key={r.id}><small className="tp-num">{r.at}</small><span className="tp-grow"><b>{r.what}</b><small>{r.target}</small></span><small>{r.who}</small></li>)}</ol>
     </>
   )
 }
@@ -251,13 +251,13 @@ export default function Settings() {
   const [panel, setPanel] = useState(null)
   const DeleteDialog = account.DeleteDialog
   return (
-    <div className="tp-page fx-set ad-settings">
+    <div className="tp-page fx-set adm-settings">
       <div className="fx-set-side">
         <ProfileCard name={name} email={s.profile.email} />
         <button type="button" className="fx-tile fx-signout" onClick={signOut}><LogOut size={16} aria-hidden="true" />Sign out</button>
       </div>
       <section className="fx-tile fx-panel" aria-label="Settings">
-        <PillTabs label="Settings sections" className="fx-ptabs ad-settabs" itemClass="fx-ptab" value={tab} onChange={setTab} items={TABS.map(([key, label, icon]) => ({ key, label, icon }))} />
+        <PillTabs label="Settings sections" className="fx-ptabs adm-settabs" itemClass="fx-ptab" value={tab} onChange={setTab} items={TABS.map(([key, label, icon]) => ({ key, label, icon }))} />
         <div className="fx-form" key={tab} role="tabpanel" aria-label={TABS.find(t => t[0] === tab)[1]}>
           {tab === 'profile' && <>
             <Head title="Profile" sub="How agents, VAs and Jordan see you on messages." />

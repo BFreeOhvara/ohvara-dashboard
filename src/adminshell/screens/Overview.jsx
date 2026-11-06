@@ -45,19 +45,19 @@ export default function Overview() {
   const done = desk.filter(c => ['cancelled', 'no_answer'].includes(c.status)).length
 
   return (
-    <div className="tp-page fx-page fx-ovl ad-ov">
+    <div className="tp-page fx-page fx-ovl adm-ov">
       <div className="fx-ovl-main">
-        <Tile className="ad-ov-hero" i={0} title="Leads this week" sub={`Mon, Nov 2 to today · ${money(w.premium)} a month in new premium`} to={ap('leads')} label="Open Leads">
-          <ol className="ad-funnel" aria-label="This week's leads">
+        <Tile className="adm-ov-hero" i={0} title="Leads this week" sub={`Mon, Nov 2 to today · ${money(w.premium)} a month in new premium`} to={ap('leads')} label="Open Leads">
+          <ol className="adm-funnel" aria-label="This week's leads">
             {steps.map(([k, label, n], i) => (
               <li key={k} className={`is-${k}`} style={{ '--i': i }}>
                 <small>{label}</small>
                 <b className="fx-huge tp-num"><CountUp value={n} /></b>
-                {i > 0 && <span className="ad-rate">{steps[i - 1][2] ? Math.round((n / (k === 'booked' || k === 'transferred' ? w.in : w.booked + w.transferred)) * 100) : 0}%</span>}
+                {i > 0 && <span className="adm-rate">{steps[i - 1][2] ? Math.round((n / (k === 'booked' || k === 'transferred' ? w.in : w.booked + w.transferred)) * 100) : 0}%</span>}
               </li>
             ))}
           </ol>
-          <div className="ad-daybars" role="img" aria-label={day.byDay.map(d => `${d.name}: ${d.in} in, ${d.sold} sold`).join('. ')}>
+          <div className="adm-daybars" role="img" aria-label={day.byDay.map(d => `${d.name}: ${d.in} in, ${d.sold} sold`).join('. ')}>
             {day.byDay.map((d, i) => (
               <span key={d.day} className={d.later ? 'is-later' : ''} style={{ '--i': i }}>
                 <b className="tp-num">{d.later ? '' : d.in}</b>
@@ -69,26 +69,26 @@ export default function Overview() {
               </span>
             ))}
           </div>
-          <div className="fx-key"><span><i className="ad-k is-sold" />Sold</span><span><i className="ad-k is-mid" />Booked or transferred</span><span><i className="ad-k is-in" />Came in</span></div>
+          <div className="fx-key"><span><i className="adm-k is-sold" />Sold</span><span><i className="adm-k is-mid" />Booked or transferred</span><span><i className="adm-k is-in" />Came in</span></div>
         </Tile>
 
         <div className="fx-ovl-pair">
-          <Tile className="is-fill is-teal ad-ov-shift" i={1} title="On shift today" sub={`${done} of ${todayCalls} calls done · ${day.late.length} past their time`} to={ap('team')} label="Open Fulfillment team">
+          <Tile className="is-fill is-teal adm-ov-shift" i={1} title="On shift today" sub={`${done} of ${todayCalls} calls done · ${day.late.length} past their time`} to={ap('team')} label="Open Fulfillment team">
             <b className="fx-huge tp-num"><CountUp value={onShift.length} /><small>VAs</small></b>
-            <ul className="ad-shift">
+            <ul className="adm-shift">
               {onShift.map(v => (
                 <li key={v.id}>
                   <Avatar name={v.name} />
                   <span className="tp-grow"><b>{v.name}</b><small>{v.hours}</small></span>
-                  <span className={`ad-dot${v.onCall ? ' is-live' : ''}`}>{v.onCall ? <><PhoneCall size={12} aria-hidden="true" />On a call</> : `${v.calls.filter(c => c.status === 'booked').length} to call`}</span>
+                  <span className={`adm-dot${v.onCall ? ' is-live' : ''}`}>{v.onCall ? <><PhoneCall size={12} aria-hidden="true" />On a call</> : `${v.calls.filter(c => c.status === 'booked').length} to call`}</span>
                 </li>
               ))}
             </ul>
           </Tile>
 
-          <Tile className="is-fill is-green ad-ov-rev" i={2} title="Revenue this week" sub={`Plans ${money(m.plans)} · leads ${money(m.leadsCharged)}`} to={ap('billing')} label="Open Billing & revenue">
+          <Tile className="is-fill is-green adm-ov-rev" i={2} title="Revenue this week" sub={`Plans ${money(m.plans)} · leads ${money(m.leadsCharged)}`} to={ap('billing')} label="Open Billing & revenue">
             <b className="fx-huge tp-money"><CountUp value={m.total} format={money} /></b>
-            <div className="ad-minibars" role="img" aria-label={m.weeks.map(x => `Week of ${x.wk}: ${money(x.plans + x.leads)}`).join(', ')}>
+            <div className="adm-minibars" role="img" aria-label={m.weeks.map(x => `Week of ${x.wk}: ${money(x.plans + x.leads)}`).join(', ')}>
               {m.weeks.map(x => (
                 <span key={x.wk} className={x.now ? 'is-now' : ''}>
                   <i style={{ '--h': (x.plans + x.leads) / revTop }}><em style={{ '--h': x.plans / (x.plans + x.leads) }} /></i>
@@ -96,7 +96,7 @@ export default function Overview() {
                 </span>
               ))}
             </div>
-            <small className="ad-note">{money(m.lastWeek)} last week · sample prices</small>
+            <small className="adm-note">{money(m.lastWeek)} last week · sample prices</small>
           </Tile>
         </div>
       </div>
@@ -108,20 +108,20 @@ export default function Overview() {
               <span className="tp-grow"><h2>Needs you</h2><p>{needs.length ? `${needs.length} things, oldest money first` : 'Nothing waiting'}</p></span>
             </header>
             {needs.length > 0
-              ? <div className="fx-ncards ad-needs">{needs.map((n, i) => <Need key={`${n.kicker}-${n.id}`} {...n} i={i} />)}</div>
+              ? <div className="fx-ncards adm-needs">{needs.map((n, i) => <Need key={`${n.kicker}-${n.id}`} {...n} i={i} />)}</div>
               : <p className="fx-calm"><Check size={16} aria-hidden="true" />Nothing needs an admin right now.</p>}
           </div>
         </section>
       </div>
 
-      <Tile className="fx-ovl-week ad-ov-agents" i={6} title="Agents" sub={`${day.onDuty.length} taking live transfers now · ${agents.length} in all`} to={ap('agents')} label="Open Agents">
-        <ul className="ad-agents">
+      <Tile className="fx-ovl-week adm-ov-agents" i={6} title="Agents" sub={`${day.onDuty.length} taking live transfers now · ${agents.length} in all`} to={ap('agents')} label="Open Agents">
+        <ul className="adm-agents">
           {agents.slice().sort((a, b) => b.week.sold - a.week.sold || b.week.in - a.week.in).map(a => (
             <li key={a.id}>
-              <Link to={ap('agents', a.id)} className="ad-agent">
+              <Link to={ap('agents', a.id)} className="adm-agent">
                 <Avatar name={a.name} />
                 <span className="tp-grow"><b>{a.name}</b><small>{a.planInfo.label} · {a.city}, {a.state}</small></span>
-                <span className="ad-agent-n"><b className="tp-num">{a.week.sold}</b><small>sold</small></span>
+                <span className="adm-agent-n"><b className="tp-num">{a.week.sold}</b><small>sold</small></span>
                 <span className={`fx-delta is-${a.active && a.onDuty ? 'up' : a.billing.status === 'past_due' ? 'warn' : 'mute'}`}>
                   {a.active && a.onDuty ? <><Radio size={11} aria-hidden="true" />On duty</> : a.billing.status === 'past_due' ? 'Past due' : a.active ? 'Off duty' : 'Booking only'}
                 </span>

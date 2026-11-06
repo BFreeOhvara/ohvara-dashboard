@@ -87,7 +87,7 @@ export function Dropdown({ value, options, onChange, label, placeholder = 'Pick 
 
   return (
     <>
-      <button ref={btn} type="button" id={id} className={`ad-dd${open ? ' is-open' : ''}${cur ? '' : ' is-empty'} ${className}`.trim()} disabled={disabled}
+      <button ref={btn} type="button" id={id} className={`adm-dd${open ? ' is-open' : ''}${cur ? '' : ' is-empty'} ${className}`.trim()} disabled={disabled}
         aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? lid : undefined} aria-label={label ? `${label}: ${cur ? cur.label : placeholder}` : undefined}
         aria-activedescendant={open ? `${lid}-${at}` : undefined}
         onClick={e => { e.preventDefault(); if (open) close(); else show() }} onKeyDown={onKey}>
@@ -95,7 +95,7 @@ export function Dropdown({ value, options, onChange, label, placeholder = 'Pick 
         <ChevronDown size={16} aria-hidden="true" />
       </button>
       {shown && pos && createPortal(
-        <ul ref={list} id={lid} role="listbox" aria-label={label} className={`tp ad-dd-pop${leaving ? ' is-leaving' : ''}${pos.up ? ' is-up' : ''}`}
+        <ul ref={list} id={lid} role="listbox" aria-label={label} className={`tp adm-dd-pop${leaving ? ' is-leaving' : ''}${pos.up ? ' is-up' : ''}`}
           style={{ left: pos.left, width: pos.width, top: pos.top ?? undefined, bottom: pos.bottom ?? undefined }}>
           {opts.map((o, i) => (
             <li key={String(o.value)} id={`${lid}-${i}`} data-i={i} role="option" aria-selected={o.value === value}

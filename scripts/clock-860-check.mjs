@@ -38,7 +38,7 @@ const probe = () => {
     titleRight: tr?.right, titleBottom: tr?.bottom, titleLeft: tr?.left, headRight: head?.right,
     fs: parseFloat(cs.fontSize), fw: cs.fontWeight, tnum: cs.fontVariantNumeric,
     inBars: !!c.closest('.fx-ptop, .fx-top, .fx-tr'),
-    zoneChip: !!document.querySelector('.fx-clock select, .fx-clock button, .ad-clock'),
+    zoneChip: !!document.querySelector('.fx-clock select, .fx-clock button, .adm-clock'),
     kpisTop: document.querySelector('.fx-head .fx-kpis')?.getBoundingClientRect().top,
     scrollW: document.documentElement.scrollWidth, innerW: window.innerWidth,
   }

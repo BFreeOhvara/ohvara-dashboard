@@ -22,7 +22,7 @@ test('frozen animations (stuck at their first moment) settle the page at SETTLE_
   assert.equal(r.classes.size, 0, 'nothing happens before the wait is over')
   r.fire(SETTLE_MS)
   assert.ok(r.classes.has('is-settled'))
-  assert.ok(r.root.has('ad-settled'), 'the drawers and panels (outside the page) are released too')
+  assert.ok(r.root.has('adm-settled'), 'the drawers and panels (outside the page) are released too')
 })
 
 test('animations that are really running keep their motion', () => {
@@ -73,7 +73,7 @@ test('the frame arms it on the first painted frame, and the CSS drops every anim
   assert.match(frame, /import \{ armEntrance \} from '\.\/entrance'/)
   assert.match(frame, /classList\.add\('is-anim'\); stop = armEntrance\(el, \{ still: still\(\) \}\)/)
   const css = src('./admin.css')
-  assert.match(css, /\.ad\.is-settled, \.ad\.is-settled \*, \.ad-settled \.fx-layer, \.ad-settled \.fx-layer \* \{ animation: none !important; \}/)
+  assert.match(css, /\.adm\.is-settled, \.adm\.is-settled \*, \.adm-settled \.fx-layer, \.adm-settled \.fx-layer \* \{ animation: none !important; \}/)
   // the kit's own rest-first rule is still there: not painting means no entrance motion
   assert.match(src('../template/flow.css'), /\.fx\.tp-app:not\(\.is-anim\) :is\(\.fx-main, \.fx-head\) \*/)
 })
@@ -83,7 +83,7 @@ test('nothing on the Overview hides its content behind a read: it only reads the
   assert.doesNotMatch(overview, /supabase|useQuery|isLoading|return null/)
   // no page-level rule starts the body hidden outside a keyframe
   const css = src('./admin.css').replace(/@keyframes[^{]+\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '')
-  assert.doesNotMatch(css, /\.ad-(ov|main|tabpane)[^{]*\{[^}]*(opacity:\s*0[;\s}]|visibility:\s*hidden)/)
+  assert.doesNotMatch(css, /\.adm-(ov|main|tabpane)[^{]*\{[^}]*(opacity:\s*0[;\s}]|visibility:\s*hidden)/)
 })
 
 test('the agent frame arms the same watchdog, with its own <html> class, and flow.css drops every animation once settled', () => {

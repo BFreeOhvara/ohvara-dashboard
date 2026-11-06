@@ -50,7 +50,7 @@ function CallDrawer({ id, onClose }) {
     <Drawer open onClose={onClose} title={`${c.client} · ${c.time}`} sub={`Cancellation call · ${c.agent}'s client · closing ${c.old_carrier}`}
       footer={c.status === 'booked' || c.status === 'late' ? <button type="button" className="tp-primary fx-accent" onClick={() => setGiving(g => !g)}><Hand size={16} />Give to someone</button> : null}>
       <div className="fx-form-row"><Avatar name={c.va} /><span className="tp-grow"><b>{c.va}</b><small className="tp-sub">Has this call</small></span><Chip tone={tone}>{CALL_WORD[c.status]}</Chip></div>
-      {c.status === 'late' && <p className="ad-warn">Past its time and not started. Give it to someone free so the client isn't left waiting.</p>}
+      {c.status === 'late' && <p className="adm-warn">Past its time and not started. Give it to someone free so the client isn't left waiting.</p>}
       {giving && <GivePicker call={c} vas={vas} onPick={v => { giveCall(c.id, v.id); note(`${c.client} given to ${v.name}`); setGiving(false); onClose() }} />}
     </Drawer>
   )
@@ -68,31 +68,31 @@ function Desk({ openCall }) {
   const freeSoonest = vas.filter(v => v.onShift && !v.onCall).sort((a, b) => (a.today.total - a.today.done) - (b.today.total - b.today.done))[0]
   return (
     <>
-      <section className="fx-tile ad-desk" style={{ '--i': 0 }} aria-label="Today's desk">
+      <section className="fx-tile adm-desk" style={{ '--i': 0 }} aria-label="Today's desk">
         <header className="fx-tile-h"><span className="tp-grow"><h2>Today's desk</h2><p>{dateText(TODAY)} · {desk.length} calls · the line is now (sample)</p></span></header>
-        <ul className="ad-legend">{counts.map(([k, n]) => <li key={k} className={`is-${CALL_TONE[k]}`}><i aria-hidden="true" />{CALL_WORD[k]} <b className="tp-num">{n}</b></li>)}</ul>
-        <div className="ad-tl" role="table" aria-label="Calls by person">
-          <div className="ad-tl-axis" aria-hidden="true">{[8, 10, 12, 14, 16, 18, 20].map(h => <span key={h} style={{ left: pct(h * 60) }}>{h > 12 ? h - 12 : h}{h >= 12 ? 'p' : 'a'}</span>)}</div>
+        <ul className="adm-legend">{counts.map(([k, n]) => <li key={k} className={`is-${CALL_TONE[k]}`}><i aria-hidden="true" />{CALL_WORD[k]} <b className="tp-num">{n}</b></li>)}</ul>
+        <div className="adm-tl" role="table" aria-label="Calls by person">
+          <div className="adm-tl-axis" aria-hidden="true">{[8, 10, 12, 14, 16, 18, 20].map(h => <span key={h} style={{ left: pct(h * 60) }}>{h > 12 ? h - 12 : h}{h >= 12 ? 'p' : 'a'}</span>)}</div>
           {rows.map((v, i) => {
             const mine = desk.filter(c => c.va_id === v.id)
             return (
-              <div key={v.id} className="ad-tl-row" role="row" style={{ '--i': i }}>
-                <Link to={ap('team', v.id)} className="ad-tl-who" role="rowheader"><Avatar name={v.name} /><span><b>{v.name.split(' ')[0]}</b><small>{v.onCall ? 'On a call' : v.onShift ? v.hours.replace(' to ', '–') : 'Off today'}</small></span></Link>
-                <div className="ad-tl-track" role="cell">
-                  <i className="ad-tl-now" style={{ left: pct(NOW) }} aria-hidden="true" />
+              <div key={v.id} className="adm-tl-row" role="row" style={{ '--i': i }}>
+                <Link to={ap('team', v.id)} className="adm-tl-who" role="rowheader"><Avatar name={v.name} /><span><b>{v.name.split(' ')[0]}</b><small>{v.onCall ? 'On a call' : v.onShift ? v.hours.replace(' to ', '–') : 'Off today'}</small></span></Link>
+                <div className="adm-tl-track" role="cell">
+                  <i className="adm-tl-now" style={{ left: pct(NOW) }} aria-hidden="true" />
                   {mine.map(c => (
-                    <button key={c.id} type="button" className={`ad-tl-dot is-${CALL_TONE[c.status]}${c.status === 'live' ? ' is-live' : ''}`} style={{ left: pct(mins(c.time)) }}
+                    <button key={c.id} type="button" className={`adm-tl-dot is-${CALL_TONE[c.status]}${c.status === 'live' ? ' is-live' : ''}`} style={{ left: pct(mins(c.time)) }}
                       aria-label={`${c.time} ${c.client}: ${CALL_WORD[c.status]}`} data-tip={`${c.time} · ${c.client}`} onClick={() => openCall(c.id)} />
                   ))}
                 </div>
-                <span className="ad-tl-n" role="cell"><b className="tp-num">{v.today.done}</b>/{v.today.total}</span>
+                <span className="adm-tl-n" role="cell"><b className="tp-num">{v.today.done}</b>/{v.today.total}</span>
               </div>
             )
           })}
         </div>
       </section>
 
-      <div className="ad-two">
+      <div className="adm-two">
         <Tile className={late.length ? 'is-fill is-warn' : ''} i={1} title="Need a hand" sub={late.length ? `${late.length} calls past their time, not started` : 'Nothing is past its time'}>
           {late.length > 0 ? <>
             <ul className="tp-list">{late.map(c => (
@@ -143,38 +143,38 @@ function Rota() {
   const drag = (vaId, from = null) => e => { e.dataTransfer.setData('text/plain', JSON.stringify({ vaId, from })); e.dataTransfer.effectAllowed = 'move' }
   const short = days.filter(d => (data.rota[d] || []).length < SHIFT_MIN)
   return (
-    <section className="fx-tile ad-rota" style={{ '--i': 0 }} aria-label="Rota">
+    <section className="fx-tile adm-rota" style={{ '--i': 0 }} aria-label="Rota">
       <header className="fx-tile-h">
         <span className="tp-grow"><h2>Weekly rota</h2><p>{SHIFT_MIN} or {SHIFT_MAX} on shift every day. Drag someone onto a day, or tap them and then a day.</p></span>
         <Seg label="Week" value={week} onChange={setWeek} options={[{ key: 'this', label: data.weekLabels[0] }, { key: 'next', label: data.weekLabels[1] }]} />
       </header>
-      <div className="ad-rota-pool" role="group" aria-label="The team">
+      <div className="adm-rota-pool" role="group" aria-label="The team">
         {vas.map(v => (
           <button key={v.id} type="button" draggable onDragStart={drag(v.id)} aria-pressed={picked === v.id}
-            className={`ad-chip${picked === v.id ? ' is-on' : ''}`} onClick={() => setPicked(p => (p === v.id ? null : v.id))}>
+            className={`adm-chip${picked === v.id ? ' is-on' : ''}`} onClick={() => setPicked(p => (p === v.id ? null : v.id))}>
             <GripVertical size={13} aria-hidden="true" /><Avatar name={v.name} /><b>{v.name.split(' ')[0]}</b><small>{days.filter(d => (data.rota[d] || []).includes(v.id)).length} days</small>
           </button>
         ))}
       </div>
-      {short.length > 0 && <p className="ad-warn"><TriangleAlert size={14} aria-hidden="true" />{short.map(dayName).join(', ')} {short.length === 1 ? 'has' : 'have'} fewer than {SHIFT_MIN} on shift.</p>}
-      <div className="ad-rota-grid">
+      {short.length > 0 && <p className="adm-warn"><TriangleAlert size={14} aria-hidden="true" />{short.map(dayName).join(', ')} {short.length === 1 ? 'has' : 'have'} fewer than {SHIFT_MIN} on shift.</p>}
+      <div className="adm-rota-grid">
         {days.map((d, i) => {
           const on = data.rota[d] || []
           const bad = on.length < SHIFT_MIN || on.length > SHIFT_MAX
           return (
-            <div key={d} className={`ad-day${d === TODAY ? ' is-today' : ''}${d < TODAY ? ' is-past' : ''}${over === d ? ' is-over' : ''}${bad ? ' is-short' : ''}`} style={{ '--i': i }}
+            <div key={d} className={`adm-day${d === TODAY ? ' is-today' : ''}${d < TODAY ? ' is-past' : ''}${over === d ? ' is-over' : ''}${bad ? ' is-short' : ''}`} style={{ '--i': i }}
               onDragOver={e => { e.preventDefault(); setOver(d) }} onDragLeave={() => setOver(o => (o === d ? null : o))} onDrop={drop(d)}>
-              <header><b>{dayName(d)}</b><small>{data.short(d)}</small><span className={`ad-count${bad ? ' is-bad' : ''}`}>{on.length}/{SHIFT_MAX}</span></header>
+              <header><b>{dayName(d)}</b><small>{data.short(d)}</small><span className={`adm-count${bad ? ' is-bad' : ''}`}>{on.length}/{SHIFT_MAX}</span></header>
               <ul>
                 {on.map(id => (
-                  <li key={id} draggable onDragStart={drag(id, d)} className="ad-shiftchip">
+                  <li key={id} draggable onDragStart={drag(id, d)} className="adm-shiftchip">
                     <Avatar name={nameOf(id)} /><b>{nameOf(id).split(' ')[0]}</b>
-                    <button type="button" className="ad-x" aria-label={`Take ${nameOf(id)} off ${dateText(d)}`} onClick={() => run(removeShift(d, id), `${nameOf(id).split(' ')[0]} off ${dateText(d)}`)}><X size={13} /></button>
+                    <button type="button" className="adm-x" aria-label={`Take ${nameOf(id)} off ${dateText(d)}`} onClick={() => run(removeShift(d, id), `${nameOf(id).split(' ')[0]} off ${dateText(d)}`)}><X size={13} /></button>
                   </li>
                 ))}
-                {offOn(d).map(x => <li key={x.id} className="ad-offchip"><CalendarOff size={12} aria-hidden="true" />{x.va.split(' ')[0]} off</li>)}
+                {offOn(d).map(x => <li key={x.id} className="adm-offchip"><CalendarOff size={12} aria-hidden="true" />{x.va.split(' ')[0]} off</li>)}
               </ul>
-              {picked && !on.includes(picked) && on.length < SHIFT_MAX && <button type="button" className="ad-place" onClick={() => place(d, picked)}><Plus size={13} />Put {nameOf(picked).split(' ')[0]} here</button>}
+              {picked && !on.includes(picked) && on.length < SHIFT_MAX && <button type="button" className="adm-place" onClick={() => place(d, picked)}><Plus size={13} />Put {nameOf(picked).split(' ')[0]} here</button>}
             </div>
           )
         })}
@@ -191,16 +191,16 @@ function Requests() {
   const pending = data.dayOff.filter(d => d.status === 'pending')
   const done = data.dayOff.filter(d => d.status !== 'pending')
   return (
-    <div className="ad-two">
+    <div className="adm-two">
       <Tile i={0} title="Day-off requests" sub={pending.length ? `${pending.length} to answer` : 'Nothing to answer'}>
         <ul className="tp-list">{pending.map(r => {
           const left = (data.rota[r.date] || []).filter(x => x !== r.va_id).length
           const onShift = (data.rota[r.date] || []).includes(r.va_id)
           return (
-            <li key={r.id} className="ad-req">
+            <li key={r.id} className="adm-req">
               <Avatar name={r.va} />
               <span className="tp-grow"><b>{r.va} · {dateText(r.date)}</b><small>{r.reason} · asked {r.asked}</small>
-                {onShift && left < SHIFT_MIN && <small className="ad-warn-t"><TriangleAlert size={12} aria-hidden="true" />Leaves {left} on shift. Add someone on the rota.</small>}</span>
+                {onShift && left < SHIFT_MIN && <small className="adm-warn-t"><TriangleAlert size={12} aria-hidden="true" />Leaves {left} on shift. Add someone on the rota.</small>}</span>
               <button type="button" className="tp-primary sm fx-accent" onClick={() => run(decideDayOff(r.id, true), `${r.va.split(' ')[0]} has ${dateText(r.date)} off`)}><Check size={14} />Approve</button>
               <button type="button" className="tp-btn sm ov-ghost" onClick={() => run(decideDayOff(r.id, false), 'Request declined')}>Decline</button>
             </li>
@@ -219,10 +219,10 @@ function Pay() {
   const { data: m } = useAdmMoney()
   const total = vas.reduce((t, v) => t + v.week.verified + v.week.checking, 0)
   return (
-    <div className="ad-two">
+    <div className="adm-two">
       <Tile i={0} title="This week's pay" sub={`Nov 2 to 8 · ${money(m.rate)} a confirmed cancellation · paid ${m.payday}`} to={`${ap('billing')}?tab=payouts`} label="Open payouts">
         <b className="fx-huge tp-money"><CountUp value={total} format={money} /></b>
-        <ul className="tp-list ad-rows">{vas.map(v => {
+        <ul className="tp-list adm-rows">{vas.map(v => {
           const [bw, bt] = BANK_WORD[v.bank]
           return (
             <li key={v.id} className="fx-mrow"><Avatar name={v.name} /><span className="tp-grow"><b>{v.name}</b><small>{v.week.cancels} cancellations{v.week.listen ? ` · ${v.week.listen} ${PAY_WORD.needs_listen[0].toLowerCase()}` : ''}</small></span><Chip tone={bt}>{bw}</Chip><b className="tp-money">{money(v.week.verified + v.week.checking)}</b></li>
@@ -265,10 +265,10 @@ function VaDrawer({ id, onClose }) {
       </>}>
       <Block title="This week">
         <dl className="fx-facts">{[['On shift', `${v.days} of 7 days`], ['Cancellations', String(v.week.cancels)], ['Missed calls', String(v.missed)], ['Servicing steps', String(v.steps)]].map(([k, x]) => <div key={k}><dt>{k}</dt><dd>{x}</dd></div>)}</dl>
-        <div className="ad-weekdots" aria-label="Days on shift">{WEEK.map(d => <span key={d} className={(data.rota[d] || []).includes(v.id) ? 'is-on' : ''}><small>{dayName(d)}</small></span>)}</div>
+        <div className="adm-weekdots" aria-label="Days on shift">{WEEK.map(d => <span key={d} className={(data.rota[d] || []).includes(v.id) ? 'is-on' : ''}><small>{dayName(d)}</small></span>)}</div>
       </Block>
       <Block title="Today's calls">
-        <ul className="tp-list">{mine.map(c => <li key={c.id} className="fx-mrow"><small className="tp-num ad-time">{c.time}</small><span className="tp-grow"><b>{c.client}</b><small>{c.old_carrier} · {c.agent}</small></span><Chip tone={CALL_TONE[c.status]}>{CALL_WORD[c.status]}</Chip></li>)}
+        <ul className="tp-list">{mine.map(c => <li key={c.id} className="fx-mrow"><small className="tp-num adm-time">{c.time}</small><span className="tp-grow"><b>{c.client}</b><small>{c.old_carrier} · {c.agent}</small></span><Chip tone={CALL_TONE[c.status]}>{CALL_WORD[c.status]}</Chip></li>)}
           {mine.length === 0 && <li className="tp-sub">No calls today.</li>}</ul>
       </Block>
       <Block title="Access">
@@ -302,10 +302,10 @@ export default function Team() {
   const pending = rota.dayOff.filter(d => d.status === 'pending').length
   const setTab = t => setSp(t === 'today' ? {} : { tab: t }, { replace: true })
   return (
-    <div className="tp-page fx-page ad-team">
-      <PillTabs label="Fulfillment team" className="fx-ptabs ad-pagetabs" itemClass="fx-ptab" value={tab} onChange={setTab}
+    <div className="tp-page fx-page adm-team">
+      <PillTabs label="Fulfillment team" className="fx-ptabs adm-pagetabs" itemClass="fx-ptab" value={tab} onChange={setTab}
         items={TABS.map(([k, label]) => ({ key: k, label, count: k === 'requests' && pending ? pending : undefined }))} />
-      <div className="ad-tabpane" key={tab} role="tabpanel">
+      <div className="adm-tabpane" key={tab} role="tabpanel">
         {tab === 'today' && <Desk openCall={c => setSp({ call: c }, { replace: true })} />}
         {tab === 'rota' && <Rota />}
         {tab === 'requests' && <Requests />}

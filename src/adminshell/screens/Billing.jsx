@@ -26,9 +26,9 @@ function Player({ at }) {
   }, [on])
   const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
   return (
-    <div className="ad-player">
+    <div className="adm-player">
       <button type="button" className="fx-ib" aria-label={on ? 'Pause' : 'Play the call'} onClick={() => setOn(o => !o)}>{on ? <Pause size={16} /> : <Play size={16} />}</button>
-      <div className="ad-wave" role="slider" aria-label="Position" aria-valuemin={0} aria-valuemax={len} aria-valuenow={t} tabIndex={0}
+      <div className="adm-wave" role="slider" aria-label="Position" aria-valuemin={0} aria-valuemax={len} aria-valuenow={t} tabIndex={0}
         onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setT(Math.round(((e.clientX - r.left) / r.width) * len)) }}
         onKeyDown={e => { if (e.key === 'ArrowRight') setT(x => Math.min(len, x + 15)); if (e.key === 'ArrowLeft') setT(x => Math.max(0, x - 15)) }}>
         <i style={{ '--w': t / len }} /><em style={{ left: `${mark * 100}%` }} aria-hidden="true" />
@@ -44,7 +44,7 @@ function Listen({ c, i }) {
   const note = useNote()
   const [text, setText] = useState('')
   return (
-    <article className="fx-tile ad-listen" style={{ '--i': i }}>
+    <article className="fx-tile adm-listen" style={{ '--i': i }}>
       <header className="fx-tile-h"><span className="tp-grow"><h2>{c.client} · {c.carrier}</h2><p>{c.va} · {c.why}</p></span><b className="tp-money">{money(c.amount)}</b></header>
       <Player at={c.at} />
       <label className="tp-field"><span>Note</span><input value={text} onChange={e => setText(e.target.value)} placeholder="What you heard (needed for Don't pay)" /></label>
@@ -64,13 +64,13 @@ function Revenue() {
   return (
     <div className="fx-ovl">
       <div className="fx-ovl-main">
-        <Tile className="ad-rev-hero" i={0} title="Revenue by week" sub="Plans plus leads charged · sample prices">
+        <Tile className="adm-rev-hero" i={0} title="Revenue by week" sub="Plans plus leads charged · sample prices">
           <div className="fx-chart-head fx-bk-head">
             <b className="tp-money fx-bk-num"><CountUp value={m.total} format={money} /></b>
             <span className="fx-bk-side"><b>this week so far</b><small>{money(m.lastWeek)} last week</small><i className={`fx-delta is-${m.total >= m.lastWeek ? 'up' : 'warn'}`}>{m.total >= m.lastWeek ? 'Up' : 'Behind'} {Math.abs(Math.round(((m.total - m.lastWeek) / m.lastWeek) * 100))}%</i></span>
           </div>
-          <div className="fx-key"><span><i className="ad-k is-sold" />Plans</span><span><i className="ad-k is-mid" />Leads</span><SampleTag>Sample prices</SampleTag></div>
-          <div className="ad-revbars" role="img" aria-label={m.weeks.map(w => `${w.wk}: ${money(w.plans + w.leads)}`).join('. ')}>
+          <div className="fx-key"><span><i className="adm-k is-sold" />Plans</span><span><i className="adm-k is-mid" />Leads</span><SampleTag>Sample prices</SampleTag></div>
+          <div className="adm-revbars" role="img" aria-label={m.weeks.map(w => `${w.wk}: ${money(w.plans + w.leads)}`).join('. ')}>
             {m.weeks.map((w, i) => (
               <span key={w.wk} className={w.now ? 'is-now' : ''} style={{ '--i': i }}>
                 <b className="tp-num">{money(w.plans + w.leads)}</b>
@@ -81,14 +81,14 @@ function Revenue() {
           </div>
         </Tile>
       </div>
-      <div className="fx-ovl-side ad-side">
+      <div className="fx-ovl-side adm-side">
         <Tile className="is-fill is-teal" i={1} title="Ad spend this week" sub={`Budget ${money(m.adBudget)} across both ad accounts`} to={ap('connect')} label="Open Connect">
           <b className="fx-huge tp-money"><CountUp value={m.adSpend} format={money} /></b>
           <div className="fx-meter" role="img" aria-label="Spent of budget"><i style={{ '--w': m.adBudget ? m.adSpend / m.adBudget : 0 }} /></div>
           <small>{money(m.leadsCharged)} charged to agents for leads</small>
         </Tile>
         <Tile i={2} title="By plan" sub="Paying agents">
-          <ul className="ad-sum">{byPlan.map(p => <li key={p.k}><Megaphone size={14} aria-hidden="true" /><span className="tp-grow">{p.label}<small>{p.price ? `${money(p.price)} a week` : 'Leads only'}</small></span><b className="tp-num">{p.n}</b></li>)}</ul>
+          <ul className="adm-sum">{byPlan.map(p => <li key={p.k}><Megaphone size={14} aria-hidden="true" /><span className="tp-grow">{p.label}<small>{p.price ? `${money(p.price)} a week` : 'Leads only'}</small></span><b className="tp-num">{p.n}</b></li>)}</ul>
         </Tile>
       </div>
     </div>
@@ -100,7 +100,7 @@ function AgentBills() {
   const { data: m } = useAdmMoney()
   const note = useNote()
   return (
-    <div className="ad-stack">
+    <div className="adm-stack">
       {m.failed.length > 0 && (
         <Tile className="is-fill is-warn" i={0} title="Failed payments" sub={`${m.failed.length} to follow up`}>
           <ul className="tp-list">{m.failed.map(f => (
@@ -111,17 +111,17 @@ function AgentBills() {
           ))}</ul>
         </Tile>
       )}
-      <section className="fx-tile ad-table ad-bills" style={{ '--i': 1 }} aria-label="Agent bills">
-        <div className="ad-tr ad-th" aria-hidden="true"><span>Agent</span><span>Plan</span><span>Lead budget</span><span>Status</span><span>Next</span></div>
+      <section className="fx-tile adm-table adm-bills" style={{ '--i': 1 }} aria-label="Agent bills">
+        <div className="adm-tr adm-th" aria-hidden="true"><span>Agent</span><span>Plan</span><span>Lead budget</span><span>Status</span><span>Next</span></div>
         {agents.map((a, i) => {
           const [word, tone] = BILL_WORD[a.billing.status]
           return (
-            <div key={a.id} className="ad-tr" style={{ '--i': i }}>
-              <Link to={ap('agents', a.id)} className="ad-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.billing.method}</small></span></Link>
-              <span className="ad-cell"><b>{PLANS[a.plan].label}</b><small>{PLANS[a.plan].price ? `${money(PLANS[a.plan].price)} a week` : 'No plan fee'}</small></span>
-              <span className="ad-cell"><b className="tp-money">{money(a.spend)}</b><small>a week</small></span>
-              <span className="ad-cell"><Chip tone={tone}>{word}</Chip></span>
-              <span className="ad-cell"><small>{a.billing.next}</small></span>
+            <div key={a.id} className="adm-tr" style={{ '--i': i }}>
+              <Link to={ap('agents', a.id)} className="adm-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.billing.method}</small></span></Link>
+              <span className="adm-cell"><b>{PLANS[a.plan].label}</b><small>{PLANS[a.plan].price ? `${money(PLANS[a.plan].price)} a week` : 'No plan fee'}</small></span>
+              <span className="adm-cell"><b className="tp-money">{money(a.spend)}</b><small>a week</small></span>
+              <span className="adm-cell"><Chip tone={tone}>{word}</Chip></span>
+              <span className="adm-cell"><small>{a.billing.next}</small></span>
             </div>
           )
         })}
@@ -137,18 +137,18 @@ function Payouts() {
   return (
     <div className="fx-ovl">
       <div className="fx-ovl-main">
-        {m.listen.length > 0 && <div className="ad-listens">{m.listen.map((c, i) => <Listen key={c.id} c={c} i={i} />)}</div>}
+        {m.listen.length > 0 && <div className="adm-listens">{m.listen.map((c, i) => <Listen key={c.id} c={c} i={i} />)}</div>}
         <Tile i={2} title="Who is in Monday's run" sub={`${m.payday} · ${money(m.rate)} a confirmed cancellation`}>
-          <ul className="tp-list ad-rows">{m.run.map(r => {
+          <ul className="tp-list adm-rows">{m.run.map(r => {
             const [bw, bt] = BANK_WORD[r.bank]
             return <li key={r.va_id} className="fx-mrow"><Avatar name={r.name} /><span className="tp-grow"><b>{r.name}</b><small>{r.count} verified cancellations</small></span><Chip tone={bt}>{bw}</Chip><b className="tp-money">{r.bank === 'ready' ? money(r.amount) : '–'}</b></li>
           })}</ul>
         </Tile>
         <Tile i={3} title="Past pay runs" sub={`${money(m.runs.reduce((t, r) => t + r.amount, 0))} paid since the first run`}>
-          <ul className="tp-list ad-rows">{m.runs.map(r => <li key={r.id} className="fx-mrow"><CircleCheck size={17} aria-hidden="true" className="ad-ok" /><span className="tp-grow"><b>{r.week}</b><small>{r.people} people · paid {r.paid}</small></span><Chip tone="green">Paid</Chip><b className="tp-money">{money(r.amount)}</b></li>)}</ul>
+          <ul className="tp-list adm-rows">{m.runs.map(r => <li key={r.id} className="fx-mrow"><CircleCheck size={17} aria-hidden="true" className="adm-ok" /><span className="tp-grow"><b>{r.week}</b><small>{r.people} people · paid {r.paid}</small></span><Chip tone="green">Paid</Chip><b className="tp-money">{money(r.amount)}</b></li>)}</ul>
         </Tile>
       </div>
-      <div className="fx-ovl-side ad-side">
+      <div className="fx-ovl-side adm-side">
         <Tile className="is-fill is-green" i={0} title="Next pay run" sub={`${m.payday}, ${m.paused ? 'paused' : 'automatically'}`}>
           <b className="fx-huge tp-money"><CountUp value={m.runTotal} format={money} /></b>
           <small>{m.live ? 'Sends real money' : 'Not live yet: payouts send no money until the switch is on in Settings'}</small>
@@ -156,7 +156,7 @@ function Payouts() {
             <Switch on={!m.paused} label="Automatic payouts" onChange={v => { setPaused(!v); note(v ? 'Payouts resumed' : 'Payouts paused') }} /></div>
         </Tile>
         <Tile i={1} title="Stripe" sub="Where pay comes from">
-          <ul className="ad-sum">
+          <ul className="adm-sum">
             <li><Wallet size={14} aria-hidden="true" /><span className="tp-grow">Balance<small>{m.stripeBalance >= m.runTotal ? "Covers Monday's run" : "Short for Monday's run"}</small></span><b className="tp-money">{money(m.stripeBalance)}</b></li>
             <li><Landmark size={14} aria-hidden="true" /><span className="tp-grow">Your bank<small>Chase •••• 7781</small></span><button type="button" className="fx-pillbtn" onClick={() => note("Opens Stripe's form once you sign in for real")}>Change</button></li>
             <li><CircleCheck size={14} aria-hidden="true" /><span className="tp-grow">Pay per cancellation<small>Weekly cap and minimum too</small></span><Link to={`${ap('settings')}?tab=pay`} className="fx-pillbtn">{money(m.rate)}<ArrowUpRight size={13} /></Link></li>
@@ -174,10 +174,10 @@ export default function Billing() {
   const raw = sp.get('tab')
   const tab = TABS.some(t => t[0] === raw) ? raw : 'revenue'
   return (
-    <div className="tp-page fx-page ad-billing">
-      <PillTabs label="Billing and revenue" className="fx-ptabs ad-pagetabs" itemClass="fx-ptab" value={tab} onChange={t => setSp(t === 'revenue' ? {} : { tab: t }, { replace: true })}
+    <div className="tp-page fx-page adm-billing">
+      <PillTabs label="Billing and revenue" className="fx-ptabs adm-pagetabs" itemClass="fx-ptab" value={tab} onChange={t => setSp(t === 'revenue' ? {} : { tab: t }, { replace: true })}
         items={TABS.map(([k, label]) => ({ key: k, label, count: k === 'agents' && m.failed.length ? m.failed.length : k === 'payouts' && m.listen.length ? m.listen.length : undefined }))} />
-      <div className="ad-tabpane" key={tab} role="tabpanel">
+      <div className="adm-tabpane" key={tab} role="tabpanel">
         {tab === 'revenue' && <Revenue />}
         {tab === 'agents' && <AgentBills />}
         {tab === 'payouts' && <Payouts />}
