@@ -1,6 +1,7 @@
 import { Route, Navigate } from 'react-router-dom'
 import Overview from './screens/Overview'
 import Agents from './screens/Agents'
+import Setup from './screens/Setup'
 import Team from './screens/Team'
 import Leads from './screens/Leads'
 import Clients from './screens/Clients'
@@ -13,7 +14,7 @@ import { ADM_OLD, PREVIEW_BASE, admRoutes, ap } from './paths'
 // P849 — the admin pages as <Route> elements, for both mounts (the real admin URLs and /preview/admin). Put them
 // inside a <Route element={<AdminFrame />}>. `wrap` lets the real mount add its error boundary around each page.
 // Old addresses land on their new home: Users is a Settings section, Payouts a Billing tab, More is Settings.
-const SCREENS = { overview: Overview, agents: Agents, team: Team, leads: Leads, clients: Clients, billing: Billing, messages: Messages, settings: Settings, connect: Connect }
+const SCREENS = { overview: Overview, agents: Agents, setup: Setup, team: Team, leads: Leads, clients: Clients, billing: Billing, messages: Messages, settings: Settings, connect: Connect }
 
 export function admRouteEls({ preview, wrap = el => el }) {
   const b = preview ? PREVIEW_BASE : ''

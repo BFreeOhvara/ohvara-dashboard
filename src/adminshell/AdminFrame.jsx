@@ -3,7 +3,7 @@ import { Link, NavLink, Navigate, useLocation, useNavigate, useOutlet } from 're
 import {
   Home, Users, Headset, PhoneIncoming, BookUser, Landmark, Plug, Settings, Search, Bell, Sun, Moon, MessageSquare, ChevronRight, LogOut,
   Ellipsis, CircleHelp, Mail, Keyboard, UserPlus, Shuffle, Hand, Bug, Eye, History, TriangleAlert, Wallet, CalendarDays, CalendarOff,
-  ShieldCheck, PhoneForwarded, CircleDollarSign, CheckCircle2, Radio, Link2, Copy, Plus, Undo2,
+  ShieldCheck, PhoneForwarded, CircleDollarSign, CheckCircle2, Radio, Link2, Copy, Plus, Undo2, Rocket, BadgeCheck, Hourglass,
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
 import { Drawer, Avatar, Field, Seg, PillTabs, useAccount, useNote, initials } from '../template/kit'
@@ -16,8 +16,10 @@ import { isSearchKey } from '../lib/searchKey'
 import { SUPPORT_EMAIL } from '../components/auth/authUtils'
 import {
   useAdmDay, useAdmAgents, useAdmVas, useAdmLeads, useAdmClients, useAdmFeed, useAdmSettings, useAdmMoney, useAdmActions, useAdmViewAs,
-  useAdmInvites, useAdmConnect, useAdmPeriod, PARTNER, plugged,
+  useAdmInvites, useAdmConnect, useAdmPeriod, useAdmSetup, PARTNER, plugged,
 } from './data'
+import { useGhlRow } from './useGhlRow'
+import { syncFailed } from './engine'
 import { LiveClock } from '../template/Clock'
 import { ap, ADM_TABS, ADM_LABELS, PARTNER_PAGES, admPageOf, admTitleOf } from './paths'
 import { STAGE_WORD } from './words'
@@ -34,7 +36,7 @@ import '@fontsource/urbanist/700.css'
 // backdrop, light and dark. Same pieces (template kit, motion, Palette, flow.css), imported and never edited; admin
 // content. Sample info only (./data), at /preview/admin and the real admin URLs. A partner login (Jordan) sees only
 // Connect, Leads and Messages (sample: a real partner role needs a migration).
-const ICONS = { overview: Home, agents: Users, team: Headset, leads: PhoneIncoming, clients: BookUser, billing: Landmark, connect: Plug }
+const ICONS = { overview: Home, agents: Users, setup: Rocket, team: Headset, leads: PhoneIncoming, clients: BookUser, billing: Landmark, connect: Plug }
 const money = usd()
 
 function BellDrawer({ open, onClose }) {
@@ -146,14 +148,14 @@ function AccountMenu({ open, onClose, theme, setTheme, partner, flipPartner, pre
   const name = partner ? PARTNER.name : account.name
   const links = partner
     ? [['connect', 'Connect', Plug], ['messages', 'Messages', MessageSquare]]
-    : [['settings', 'Settings', Settings], ['messages', 'Messages', MessageSquare], ['billing', 'Money', Landmark]]
+    : [['settings', 'Settings', Settings], ['messages', 'Messages', MessageSquare], ['billing', 'Revenue', Landmark]]
   return (
     <div className={`tp fx-layer fx-menu-layer${leaving ? ' is-leaving' : ''}`} role="presentation">
       <button type="button" className="fx-scrim is-clear tp-bare" aria-label="Close menu" tabIndex={-1} onClick={onClose} />
       <section className="fx-menu" role="dialog" aria-label="Your account">
         <header className="fx-menu-h"><span className={`fx-av av-${avatarHue(name)}`}>{initials(name).toUpperCase()}</span><span className="tp-grow"><b>{name}</b><small>{partner ? 'Partner' : 'Admin · owner'}</small></span></header>
         <button type="button" className="fx-mrow" role="switch" aria-checked={partner} onClick={flipPartner}>
-          <Eye size={17} aria-hidden="true" /><span className="tp-grow"><b>See Jordan's login</b><small>{partner ? 'Showing what a partner sees' : 'Connect, Leads and Messages only'}</small></span><i className={`fx-sw${partner ? ' on' : ''}`} aria-hidden="true" />
+          <Eye size={17} aria-hidden="true" /><span className="tp-grow"><b>See Jordan's login</b><small>{partner ? 'Showing what a partner sees' : 'Setup, Connect, Leads and Messages only'}</small></span><i className={`fx-sw${partner ? ' on' : ''}`} aria-hidden="true" />
         </button>
         <button type="button" className="fx-mrow" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}<b className="tp-grow">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</b></button>
         <i className="fx-mline" />
@@ -178,13 +180,15 @@ function useHeadStats(page) {
   const { data: invites } = useAdmInvites()
   const { data: connect } = useAdmConnect()
   const { data: wk } = useAdmPeriod('week')
+  const { data: pipe } = useAdmSetup()
   const S = (icon, n, label, extra = {}) => ({ icon, n, label, ...extra })
   const route = day.unassigned.length + day.missed.length
   const att = clients.filter(c => c.stage === 'needs_attention').length
   const linked = plugged(connect).filter(Boolean).length
   return {
     overview: [S(ShieldCheck, day.payingAgents, 'paying agents', { chip: [`${day.onDuty.length} on duty`, 'up'] }), S(Headset, day.onShift.length, 'VAs on shift today'), S(CircleDollarSign, m.total, 'revenue this week', { fmt: money, chip: [`${money(m.lastWeek)} last week`, 'blue'] })],
-    agents: [S(Users, agents.length, 'agents', { chip: invites.some(i => i.role === 'agent') ? ['1 invite out', 'blue'] : null }), S(Radio, agents.filter(a => a.active).length, 'taking transfers'), S(TriangleAlert, agents.filter(a => a.billing.status === 'past_due').length, 'past due', { chip: agents.some(a => a.billing.status === 'past_due') ? ['See who', 'warn'] : null })],
+    agents: [S(Users, agents.length, 'agents', { chip: invites.some(i => i.role === 'agent') ? [`${invites.filter(i => i.role === 'agent').length} invites out`.replace(/^1 invites/, '1 invite'), 'blue'] : null }), S(Radio, agents.filter(a => a.active).length, 'taking transfers'), S(TriangleAlert, agents.filter(a => a.billing.status === 'past_due').length, 'past due', { chip: agents.some(a => a.billing.status === 'past_due') ? ['See who', 'warn'] : null })],
+    setup: [S(Rocket, pipe.filter(c => c.stage !== 'live').length, 'getting set up'), S(Hourglass, pipe.filter(c => c.owner === 'jordan').length, 'waiting on Jordan', { chip: pipe.some(c => c.owner === 'jordan') ? ['Launch', 'blue'] : null }), S(BadgeCheck, pipe.filter(c => c.stage === 'live').length, 'live this week')],
     team: [S(Headset, day.onShift.length, 'on shift today'), S(CalendarOff, day.requests.length, 'day-off requests', { chip: day.requests.length ? ['To answer', 'warn'] : null }), S(Wallet, vas.reduce((t, v) => t + v.week.verified + v.week.checking, 0), 'VA pay this week', { fmt: money })],
     leads: [S(PhoneIncoming, day.week.in, 'leads this week'), S(Shuffle, route, 'need routing', { chip: route ? ['Route now', 'warn'] : null }), S(CheckCircle2, day.week.sold, 'sold this week')],
     clients: [S(BookUser, clients.length, 'clients'), S(TriangleAlert, att, 'need attention', { chip: att ? ['See who', 'warn'] : null }), S(CalendarDays, clients.reduce((n, c) => n + c.steps.length, 0), 'servicing steps open')],
@@ -216,12 +220,13 @@ export default function AdminFrame({ preview = false }) {
   const { data: viewAs } = useAdmViewAs()
   const { setViewAs } = useAdmActions()
   const partner = viewAs === 'partner'
+  const ghlRow = useGhlRow()
   const close = useCallback(() => setPanel(null), [])
   const open = which => e => { wig.onClick(e); setPanel(which) }
   const flipTheme = e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }
   const flipPartner = () => {
     setViewAs(partner ? 'admin' : 'partner')
-    note(partner ? 'Back to the admin view' : "Showing Jordan's login: Connect, Leads and Messages")
+    note(partner ? 'Back to the admin view' : "Showing Jordan's login: Setup, Connect, Leads and Messages")
     if (!partner) navigate(ap('connect'))
   }
   const tabs = partner ? ADM_TABS.filter(([k]) => PARTNER_PAGES.includes(k)) : ADM_TABS
@@ -301,7 +306,7 @@ export default function AdminFrame({ preview = false }) {
           <i className="fx-hair" />
         </>}
         <NavLink to={ap('messages')} className="fx-ri tp-wig" aria-label="Messages" data-tip="Messages" {...wig}><MessageSquare size={18} />{day.unread > 0 && <span className="fx-badge">{day.unread}</span>}</NavLink>
-        <NavLink to={ap('connect')} className="fx-ri tp-wig" aria-label="Connect" data-tip="Connect" {...wig}><Plug size={18} /></NavLink>
+        <NavLink to={ap('connect')} className="fx-ri tp-wig" aria-label="Connect" data-tip={syncFailed(ghlRow) ? 'Connect · the last sync failed' : 'Connect'} {...wig}><Plug size={18} />{syncFailed(ghlRow) && <span className="adm-warndot" aria-label="The last sync failed" />}</NavLink>
         <i className="fx-hair" />
         <button type="button" className="fx-ri tp-wig" aria-label="Help and support" aria-expanded={panel === 'help'} data-tip="Help and support" {...wig} onClick={open('help')}><CircleHelp size={18} /></button>
         {!partner && <NavLink to={ap('settings')} className="fx-ri tp-wig" aria-label="Settings" data-tip="Settings" {...wig}><Settings size={18} /></NavLink>}

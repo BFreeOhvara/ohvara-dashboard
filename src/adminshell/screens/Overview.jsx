@@ -86,7 +86,7 @@ export default function Overview() {
             </ul>
           </Tile>
 
-          <Tile className="is-fill is-green adm-ov-rev" i={2} title="Revenue this week" sub={`Plans ${money(m.plans)} · leads ${money(m.leadsCharged)}`} to={ap('billing')} label="Open Money">
+          <Tile className="is-fill is-green adm-ov-rev" i={2} title="Revenue this week" sub={`Plans ${money(m.plans)} · leads ${money(m.leadsCharged)}`} to={ap('billing')} label="Open Revenue">
             <b className="fx-huge tp-money"><CountUp value={m.total} format={money} /></b>
             <div className="adm-minibars" role="img" aria-label={m.weeks.map(x => `Week of ${x.wk}: ${money(x.plans + x.leads)}`).join(', ')}>
               {m.weeks.map(x => (

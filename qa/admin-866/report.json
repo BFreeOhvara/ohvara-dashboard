@@ -1,0 +1,972 @@
+{
+ "report": [
+  {
+   "theme": "light",
+   "w": 1440,
+   "name": "admin-setup",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "NewclientstoliveSetup",
+   "subTabs": [],
+   "lanes": [
+    "Invited, 2",
+    "Profile, 1",
+    "Plan & paid, 2",
+    "Calendar & caller ID, 1",
+    "Ready to launch, 2",
+    "Launching (Jordan), 2",
+    "Live this week, 2"
+   ],
+   "cards": 12,
+   "ready": [
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected"
+   ],
+   "goConnect": true,
+   "drawer": null,
+   "boardFits": true,
+   "hidden": 0
+  },
+  {
+   "theme": "light",
+   "w": 1440,
+   "name": "admin-setup-sample",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "NewclientstoliveSetup",
+   "subTabs": [],
+   "lanes": [
+    "Invited, 2",
+    "Profile, 1",
+    "Plan & paid, 2",
+    "Calendar & caller ID, 1",
+    "Ready to launch, 2",
+    "Launching (Jordan), 2",
+    "Live this week, 2"
+   ],
+   "cards": 12,
+   "ready": [
+    "Connected",
+    "In review",
+    "15 of 17 on",
+    "1 of 2 set",
+    "Forwarding",
+    "Live"
+   ],
+   "goConnect": false,
+   "drawer": null,
+   "boardFits": true,
+   "hidden": 0
+  },
+  {
+   "theme": "light",
+   "w": 1440,
+   "name": "admin-setup-drawer",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "NewclientstoliveSetup",
+   "subTabs": [],
+   "lanes": [
+    "Invited, 2",
+    "Profile, 1",
+    "Plan & paid, 2",
+    "Calendar & caller ID, 1",
+    "Ready to launch, 2",
+    "Launching (Jordan), 2",
+    "Live this week, 2"
+   ],
+   "cards": 12,
+   "ready": [
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected"
+   ],
+   "goConnect": true,
+   "drawer": {
+    "done": 15,
+    "total": 17,
+    "pct": "88%"
+   },
+   "boardFits": true,
+   "hidden": 0
+  },
+  {
+   "theme": "light",
+   "w": 1440,
+   "name": "admin-connect",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "PlugitinConnect",
+   "subTabs": [],
+   "lanes": [],
+   "cards": 0,
+   "ready": [],
+   "goConnect": false,
+   "drawer": null,
+   "boardFits": null,
+   "hidden": 0
+  },
+  {
+   "theme": "light",
+   "w": 1440,
+   "name": "admin-revenue",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "In,outandsplitRevenue",
+   "subTabs": [
+    "By week",
+    "Agent billing2",
+    "Payouts2"
+   ],
+   "lanes": [],
+   "cards": 0,
+   "ready": [],
+   "goConnect": false,
+   "drawer": null,
+   "boardFits": null,
+   "hidden": 0
+  },
+  {
+   "theme": "light",
+   "w": 1440,
+   "name": "admin-overview",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "ThebusinessOverview",
+   "subTabs": [],
+   "lanes": [],
+   "cards": 0,
+   "ready": [],
+   "goConnect": false,
+   "drawer": null,
+   "boardFits": null,
+   "hidden": 0
+  },
+  {
+   "theme": "light",
+   "w": 390,
+   "name": "admin-setup",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "NewclientstoliveSetup",
+   "subTabs": [],
+   "lanes": [
+    "Invited, 2",
+    "Profile, 1",
+    "Plan & paid, 2",
+    "Calendar & caller ID, 1",
+    "Ready to launch, 2",
+    "Launching (Jordan), 2",
+    "Live this week, 2"
+   ],
+   "cards": 12,
+   "ready": [
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected"
+   ],
+   "goConnect": true,
+   "drawer": null,
+   "boardFits": false,
+   "hidden": 0
+  },
+  {
+   "theme": "light",
+   "w": 390,
+   "name": "admin-setup-sample",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "NewclientstoliveSetup",
+   "subTabs": [],
+   "lanes": [
+    "Invited, 2",
+    "Profile, 1",
+    "Plan & paid, 2",
+    "Calendar & caller ID, 1",
+    "Ready to launch, 2",
+    "Launching (Jordan), 2",
+    "Live this week, 2"
+   ],
+   "cards": 12,
+   "ready": [
+    "Connected",
+    "In review",
+    "15 of 17 on",
+    "1 of 2 set",
+    "Forwarding",
+    "Live"
+   ],
+   "goConnect": false,
+   "drawer": null,
+   "boardFits": false,
+   "hidden": 0
+  },
+  {
+   "theme": "light",
+   "w": 390,
+   "name": "admin-setup-drawer",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "NewclientstoliveSetup",
+   "subTabs": [],
+   "lanes": [
+    "Invited, 2",
+    "Profile, 1",
+    "Plan & paid, 2",
+    "Calendar & caller ID, 1",
+    "Ready to launch, 2",
+    "Launching (Jordan), 2",
+    "Live this week, 2"
+   ],
+   "cards": 12,
+   "ready": [
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected"
+   ],
+   "goConnect": true,
+   "drawer": {
+    "done": 15,
+    "total": 17,
+    "pct": "88%"
+   },
+   "boardFits": false,
+   "hidden": 0
+  },
+  {
+   "theme": "light",
+   "w": 390,
+   "name": "admin-connect",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "PlugitinConnect",
+   "subTabs": [],
+   "lanes": [],
+   "cards": 0,
+   "ready": [],
+   "goConnect": false,
+   "drawer": null,
+   "boardFits": null,
+   "hidden": 0
+  },
+  {
+   "theme": "light",
+   "w": 390,
+   "name": "admin-revenue",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "In,outandsplitRevenue",
+   "subTabs": [
+    "By week",
+    "Agent billing2",
+    "Payouts2"
+   ],
+   "lanes": [],
+   "cards": 0,
+   "ready": [],
+   "goConnect": false,
+   "drawer": null,
+   "boardFits": null,
+   "hidden": 0
+  },
+  {
+   "theme": "light",
+   "w": 390,
+   "name": "admin-overview",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "ThebusinessOverview",
+   "subTabs": [],
+   "lanes": [],
+   "cards": 0,
+   "ready": [],
+   "goConnect": false,
+   "drawer": null,
+   "boardFits": null,
+   "hidden": 0
+  },
+  {
+   "theme": "dark",
+   "w": 1440,
+   "name": "admin-setup",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "NewclientstoliveSetup",
+   "subTabs": [],
+   "lanes": [
+    "Invited, 2",
+    "Profile, 1",
+    "Plan & paid, 2",
+    "Calendar & caller ID, 1",
+    "Ready to launch, 2",
+    "Launching (Jordan), 2",
+    "Live this week, 2"
+   ],
+   "cards": 12,
+   "ready": [
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected"
+   ],
+   "goConnect": true,
+   "drawer": null,
+   "boardFits": true,
+   "hidden": 0
+  },
+  {
+   "theme": "dark",
+   "w": 1440,
+   "name": "admin-setup-sample",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "NewclientstoliveSetup",
+   "subTabs": [],
+   "lanes": [
+    "Invited, 2",
+    "Profile, 1",
+    "Plan & paid, 2",
+    "Calendar & caller ID, 1",
+    "Ready to launch, 2",
+    "Launching (Jordan), 2",
+    "Live this week, 2"
+   ],
+   "cards": 12,
+   "ready": [
+    "Connected",
+    "In review",
+    "15 of 17 on",
+    "1 of 2 set",
+    "Forwarding",
+    "Live"
+   ],
+   "goConnect": false,
+   "drawer": null,
+   "boardFits": true,
+   "hidden": 0
+  },
+  {
+   "theme": "dark",
+   "w": 1440,
+   "name": "admin-setup-drawer",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "NewclientstoliveSetup",
+   "subTabs": [],
+   "lanes": [
+    "Invited, 2",
+    "Profile, 1",
+    "Plan & paid, 2",
+    "Calendar & caller ID, 1",
+    "Ready to launch, 2",
+    "Launching (Jordan), 2",
+    "Live this week, 2"
+   ],
+   "cards": 12,
+   "ready": [
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected"
+   ],
+   "goConnect": true,
+   "drawer": {
+    "done": 15,
+    "total": 17,
+    "pct": "88%"
+   },
+   "boardFits": true,
+   "hidden": 0
+  },
+  {
+   "theme": "dark",
+   "w": 1440,
+   "name": "admin-connect",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "PlugitinConnect",
+   "subTabs": [],
+   "lanes": [],
+   "cards": 0,
+   "ready": [],
+   "goConnect": false,
+   "drawer": null,
+   "boardFits": null,
+   "hidden": 0
+  },
+  {
+   "theme": "dark",
+   "w": 1440,
+   "name": "admin-revenue",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "In,outandsplitRevenue",
+   "subTabs": [
+    "By week",
+    "Agent billing2",
+    "Payouts2"
+   ],
+   "lanes": [],
+   "cards": 0,
+   "ready": [],
+   "goConnect": false,
+   "drawer": null,
+   "boardFits": null,
+   "hidden": 0
+  },
+  {
+   "theme": "dark",
+   "w": 1440,
+   "name": "admin-overview",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "ThebusinessOverview",
+   "subTabs": [],
+   "lanes": [],
+   "cards": 0,
+   "ready": [],
+   "goConnect": false,
+   "drawer": null,
+   "boardFits": null,
+   "hidden": 0
+  },
+  {
+   "theme": "dark",
+   "w": 390,
+   "name": "admin-setup",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "NewclientstoliveSetup",
+   "subTabs": [],
+   "lanes": [
+    "Invited, 2",
+    "Profile, 1",
+    "Plan & paid, 2",
+    "Calendar & caller ID, 1",
+    "Ready to launch, 2",
+    "Launching (Jordan), 2",
+    "Live this week, 2"
+   ],
+   "cards": 12,
+   "ready": [
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected"
+   ],
+   "goConnect": true,
+   "drawer": null,
+   "boardFits": false,
+   "hidden": 0
+  },
+  {
+   "theme": "dark",
+   "w": 390,
+   "name": "admin-setup-sample",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "NewclientstoliveSetup",
+   "subTabs": [],
+   "lanes": [
+    "Invited, 2",
+    "Profile, 1",
+    "Plan & paid, 2",
+    "Calendar & caller ID, 1",
+    "Ready to launch, 2",
+    "Launching (Jordan), 2",
+    "Live this week, 2"
+   ],
+   "cards": 12,
+   "ready": [
+    "Connected",
+    "In review",
+    "15 of 17 on",
+    "1 of 2 set",
+    "Forwarding",
+    "Live"
+   ],
+   "goConnect": false,
+   "drawer": null,
+   "boardFits": false,
+   "hidden": 0
+  },
+  {
+   "theme": "dark",
+   "w": 390,
+   "name": "admin-setup-drawer",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "NewclientstoliveSetup",
+   "subTabs": [],
+   "lanes": [
+    "Invited, 2",
+    "Profile, 1",
+    "Plan & paid, 2",
+    "Calendar & caller ID, 1",
+    "Ready to launch, 2",
+    "Launching (Jordan), 2",
+    "Live this week, 2"
+   ],
+   "cards": 12,
+   "ready": [
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected",
+    "Not connected"
+   ],
+   "goConnect": true,
+   "drawer": {
+    "done": 15,
+    "total": 17,
+    "pct": "88%"
+   },
+   "boardFits": false,
+   "hidden": 0
+  },
+  {
+   "theme": "dark",
+   "w": 390,
+   "name": "admin-connect",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "PlugitinConnect",
+   "subTabs": [],
+   "lanes": [],
+   "cards": 0,
+   "ready": [],
+   "goConnect": false,
+   "drawer": null,
+   "boardFits": null,
+   "hidden": 0
+  },
+  {
+   "theme": "dark",
+   "w": 390,
+   "name": "admin-revenue",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "In,outandsplitRevenue",
+   "subTabs": [
+    "By week",
+    "Agent billing2",
+    "Payouts2"
+   ],
+   "lanes": [],
+   "cards": 0,
+   "ready": [],
+   "goConnect": false,
+   "drawer": null,
+   "boardFits": null,
+   "hidden": 0
+  },
+  {
+   "theme": "dark",
+   "w": 390,
+   "name": "admin-overview",
+   "overflowX": false,
+   "mainShown": true,
+   "tabs": [
+    "Overview",
+    "Agents",
+    "Setup",
+    "Fulfillment",
+    "Leads",
+    "Clients",
+    "Revenue"
+   ],
+   "railConnect": true,
+   "warnDot": false,
+   "title": "ThebusinessOverview",
+   "subTabs": [],
+   "lanes": [],
+   "cards": 0,
+   "ready": [],
+   "goConnect": false,
+   "drawer": null,
+   "boardFits": null,
+   "hidden": 0
+  }
+ ],
+ "match": [
+  {
+   "name": "Sofia Alvarez",
+   "pct": "0%",
+   "href": "/preview/admin/setup/inv-1",
+   "done": 0,
+   "total": 15,
+   "ok": true
+  },
+  {
+   "name": "Tomas Rivera",
+   "pct": "0%",
+   "href": "/preview/admin/setup/inv-3",
+   "done": 0,
+   "total": 15,
+   "ok": true
+  },
+  {
+   "name": "Nadia Brooks",
+   "pct": "7%",
+   "href": "/preview/admin/setup/ob-nadia",
+   "done": 1,
+   "total": 15,
+   "ok": true
+  },
+  {
+   "name": "Monique Price",
+   "pct": "13%",
+   "href": "/preview/admin/setup/ob-monique",
+   "done": 2,
+   "total": 15,
+   "ok": true
+  },
+  {
+   "name": "Carl Jensen",
+   "pct": "20%",
+   "href": "/preview/admin/setup/ob-carl",
+   "done": 3,
+   "total": 15,
+   "ok": true
+  },
+  {
+   "name": "Owen Fisher",
+   "pct": "35%",
+   "href": "/preview/admin/setup/ob-owen",
+   "done": 6,
+   "total": 17,
+   "ok": true
+  },
+  {
+   "name": "Rachel Nguyen",
+   "pct": "47%",
+   "href": "/preview/admin/setup/ob-rachel",
+   "done": 7,
+   "total": 15,
+   "ok": true
+  },
+  {
+   "name": "Luis Ortega",
+   "pct": "47%",
+   "href": "/preview/admin/setup/ob-luis",
+   "done": 8,
+   "total": 17,
+   "ok": true
+  },
+  {
+   "name": "Hannah Wright",
+   "pct": "67%",
+   "href": "/preview/admin/setup/ob-hannah",
+   "done": 10,
+   "total": 15,
+   "ok": true
+  },
+  {
+   "name": "Derek Shaw",
+   "pct": "88%",
+   "href": "/preview/admin/setup/ob-derek",
+   "done": 15,
+   "total": 17,
+   "ok": true
+  },
+  {
+   "name": "Ivy Morgan",
+   "pct": "100%",
+   "href": "/preview/admin/setup/ob-ivy",
+   "done": 15,
+   "total": 15,
+   "ok": true
+  },
+  {
+   "name": "Paul Novak",
+   "pct": "100%",
+   "href": "/preview/admin/setup/ob-paul",
+   "done": 17,
+   "total": 17,
+   "ok": true
+  }
+ ],
+ "flow": {
+  "liveBefore": true,
+  "liveAfterTick": false,
+  "log": [
+   "Marked Live",
+   "Ticked First test lead run and passed"
+  ],
+  "liveLane": 3,
+  "invited": "Invited, 3"
+ }
+}

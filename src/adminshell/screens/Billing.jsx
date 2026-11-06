@@ -8,7 +8,7 @@ import { Tile, EngineSlot } from '../kit'
 import { ap } from '../paths'
 import { BILL_WORD, BANK_WORD } from '../words'
 
-// P864 — Money (it was Billing & revenue): at the top, for This week / This month / Last month, what came in (what agents
+// P866 — the tab and page read Revenue (Brayden didn't like Money). P864 — Money (it was Billing & revenue): at the top, for This week / This month / Last month, what came in (what agents
 // paid), what it cost (ad spend, VA payouts, card fees, tools), the profit, and the owners' split (Brayden and Jordan,
 // 50/50 by default, a setting with an audit line). Both admins see everything, each other's payouts too. Below it, kept:
 // P849 — Billing & revenue: money in (agents' plans and lead spend, by week, each agent's bill and the failed
@@ -162,7 +162,7 @@ function MoneyTop({ period, setPeriod }) {
   const span = PERIODS.find(x => x[0] === period)
   const margin = p.inTotal ? Math.round((p.profit / p.inTotal) * 100) : 0
   return (
-    <section className="adm-money" aria-label="Money for the period">
+    <section className="adm-money" aria-label="Revenue for the period">
       <div className="adm-money-bar">
         <Seg label="Period" value={period} onChange={setPeriod} options={PERIODS.map(([k, label]) => ({ key: k, label }))} />
         <small className="tp-sub">{span[2]} · sample numbers</small>
@@ -293,7 +293,7 @@ export default function Billing() {
   return (
     <div className="tp-page fx-page adm-billing">
       <MoneyTop period={period} setPeriod={v => put('period', v, 'week')} />
-      <PillTabs label="Money details" className="fx-ptabs adm-pagetabs" itemClass="fx-ptab" value={tab} onChange={t => put('tab', t, 'revenue')}
+      <PillTabs label="Revenue details" className="fx-ptabs adm-pagetabs" itemClass="fx-ptab" value={tab} onChange={t => put('tab', t, 'revenue')}
         items={TABS.map(([k, label]) => ({ key: k, label, count: k === 'agents' && m.failed.length ? m.failed.length : k === 'payouts' && m.listen.length ? m.listen.length : undefined }))} />
       <div className="adm-tabpane" key={tab} role="tabpanel">
         {tab === 'revenue' && <Revenue />}

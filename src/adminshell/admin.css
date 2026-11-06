@@ -360,3 +360,67 @@
    (on the page) and .adm-settled (on <html>, for the drawers and panels): every animation drops and everything shows at
    its resting look. Resting looks are set in plain CSS above (heights, positions), never only in a keyframe. */
 .adm.is-settled, .adm.is-settled *, .adm-settled .fx-layer, .adm-settled .fx-layer * { animation: none !important; }
+
+/* P866 — Setup (a top tab): the system readiness strip, the new-client pipeline in seven columns, the checklist drawer. */
+.adm-setup { display: flex; flex-direction: column; gap: 16px; }
+.adm-sec-h { margin: 0; font-family: var(--font-display); font-size: 17px; font-weight: 600; letter-spacing: -0.01em; color: var(--ov-hi); }
+.adm-setup-tools { display: flex; align-items: center; gap: 12px; }
+.adm-setup-h { flex: 1; min-width: 0; }
+.adm-setup-tools .tp-sub { display: block; margin-top: 2px; font-size: 12.5px; }
+.adm-ready { gap: 12px; }
+.adm-ready .fx-tile-h { flex-wrap: wrap; row-gap: 8px; }
+.adm-ready .fx-tile-h > .tp-grow { min-width: 220px; }
+.adm-ready-empty { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; background: color-mix(in srgb, var(--ov-hi) 4%, transparent); border: 1px dashed var(--ov-line); }
+.adm-ready-empty .adm-empty-ic { flex: none; width: 44px; height: 44px; border-radius: 14px; }
+.adm-ready-empty b { display: block; font-family: var(--font-display); font-size: 16px; font-weight: 600; color: var(--ov-hi); }
+.adm-ready-empty small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--ov-mid); }
+.adm-ready-go { flex: none; gap: 8px; }
+.adm-ready-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.adm-ready-list li { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 12px; border-radius: 14px; font-size: 13px; color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
+.adm-ready-list li > svg { flex: none; opacity: .7; }
+.adm-ready-list li.is-green { background: var(--sh-f-sage); }
+.adm-ready-list li .tp-grow { min-width: 0; }
+.adm-ready-list li b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.adm-ready-list li small { display: block; font-size: 11.5px; color: var(--ov-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.adm-ready-list .tp-chip { flex: none; }
+.adm-ready-back { align-self: flex-start; }
+.adm-board7 { grid-template-columns: repeat(7, minmax(146px, 1fr)); gap: 10px; scrollbar-width: thin; }
+.adm-board7 .fx-lane { min-height: 260px; }
+.adm-board7 .fx-lane-h { align-items: flex-start; line-height: 1.25; }
+.adm-board7 .fx-lane-h > i { flex: none; margin-top: 4px; }
+.adm-board7 .fx-lane-h b { min-width: 0; }
+.adm-scard { gap: 4px; padding: 12px; }
+.adm-scard h3 { margin-top: 0; font-size: 14.5px; line-height: 1.2; }
+.adm-scard-bar { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.adm-scard-bar .fx-meter { flex: 1; }
+.adm-scard-pct { flex: none; font-family: var(--font-display); font-size: 14px; font-weight: 600; }
+.adm-scard-f { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 11px; font-weight: 600; color: var(--ov-mid); }
+.adm-scard-wait { display: flex; align-items: flex-start; gap: 5px; margin-top: 2px; font-size: 11.5px; line-height: 1.35; color: var(--ov-mid); }
+.adm-scard-wait svg { flex: none; margin-top: 1px; }
+.adm-scard-wait.is-warn { color: var(--sh-fi-apricot); font-weight: 600; }
+.adm-pctbig { font-family: var(--font-display); font-size: 30px; font-weight: 600; letter-spacing: -0.02em; }
+.tp .adm-blocker { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 12px; font-size: 13px; font-weight: 500; color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
+.tp .adm-blocker.is-warn { color: var(--sh-fi-apricot); background: var(--sh-f-apricot); }
+.adm-steps { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.adm-steps li { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 10px 6px 12px; border-radius: 12px; font-size: 13px; color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 4%, transparent); }
+.adm-steps li > svg { flex: none; opacity: .6; }
+.adm-steps li small { display: block; font-size: 11px; font-weight: 600; color: var(--sh-fi-sky); }
+.adm-steps li.is-done { background: var(--sh-f-sage); color: var(--sh-fi-sage); }
+.adm-steps li.is-done > svg { opacity: 1; }
+.adm-log { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.adm-log li { display: flex; flex-direction: column; gap: 1px; font-size: 13px; color: var(--ov-hi); }
+.adm-log li small { font-size: 11.5px; color: var(--ov-mid); }
+.adm-ghl { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
+.adm-tosetup { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.adm-warndot { position: absolute; top: 6px; right: 6px; width: 9px; height: 9px; border-radius: 50%; background: var(--sh-fi-apricot); box-shadow: 0 0 0 2px var(--bg-surface); }
+@media (max-width: 1279.98px) {
+  .adm-ready-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 999.98px) {
+  .adm-board7 { grid-template-columns: repeat(7, 78%); gap: 12px; margin: 0 -16px; padding: 0 16px 6px; scroll-snap-type: x proximity; scroll-padding: 0 16px; }
+  .adm-ready-empty { flex-wrap: wrap; }
+  .adm-ready-go { width: 100%; }
+  .adm-ready-list { grid-template-columns: minmax(0, 1fr); }
+  .adm-setup-tools { flex-wrap: wrap; }
+  .adm-setup-tools .tp-primary { width: 100%; justify-content: center; }
+}

@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { SETUP_STEPS, setupOf, stepsFor } from './setup.js'
 
 // P849 — the one door to the Admin side's sample info, like src/template/ful/data.js for the VA side. Screens read only
 // through the hooks below; every read returns { data, isLoading: false, error: null }, the react-query shape, so the
@@ -55,7 +56,37 @@ const seedVas = [
 const seedInvites = [
   { id: 'inv-1', name: 'Sofia Alvarez', role: 'agent', via: 'email', to: 'sofia.alvarez@example.com', sent: 'Tue, Nov 3' },
   { id: 'inv-2', name: 'Rosa Diaz', role: 'fulfillment', via: 'text', to: '(512) 555-0177', sent: 'Wed, Nov 4' },
+  { id: 'inv-3', name: 'Tomas Rivera', role: 'agent', via: 'text', to: '(915) 555-0132', sent: 'Wed, Nov 4' },
 ]
+
+// P866 — Setup: agents who signed with us and aren't live yet (plus the agent invites above, which sit in Invited).
+// `done` lists the SETUP_STEPS keys ticked (src/adminshell/setup.js works out the column, % and blocker from it).
+// lead: 'appointment' or 'live' (a live-calls plan adds Live transfers and a tracking number). Sample until P858.
+const AGENT_STEPS = ['invite', 'profile', 'plan', 'paid', 'calendar', 'callerId', 'alerts', 'transfers']
+const JORDAN_STEPS = ['campaign', 'budget', 'mapped', 'link', 'tracking', 'workflows']
+const mkNew = (id, name, o) => ({ id, name, city: '', state: '', states: [], plan: null, lead: null, spend: 0, done: ['invite'], since: 'Mon, Nov 2', ...o })
+const seedOnboard = [
+  mkNew('ob-nadia', 'Nadia Brooks', { city: 'Dallas', state: 'TX', since: 'Wed, Nov 4' }),
+  mkNew('ob-monique', 'Monique Price', { city: 'Orlando', state: 'FL', states: ['FL'], done: ['invite', 'profile'], since: 'Tue, Nov 3' }),
+  mkNew('ob-carl', 'Carl Jensen', { city: 'Mesa', state: 'AZ', states: ['AZ', 'NM'], plan: 'servicing7', lead: 'appointment', spend: 400, done: ['invite', 'profile', 'plan'], note: 'Card declined on the setup fee', noteOn: 'paid', since: 'Mon, Nov 2' }),
+  mkNew('ob-owen', 'Owen Fisher', { city: 'Raleigh', state: 'NC', states: ['NC', 'SC'], plan: 'servicing16', lead: 'live', spend: 600, done: ['invite', 'profile', 'plan', 'paid', 'calendar', 'alerts'], since: 'Fri, Oct 30' }),
+  mkNew('ob-rachel', 'Rachel Nguyen', { city: 'Houston', state: 'TX', states: ['TX', 'LA'], plan: 'servicing7', lead: 'appointment', spend: 450, done: AGENT_STEPS, since: 'Thu, Oct 29' }),
+  mkNew('ob-luis', 'Luis Ortega', { city: 'El Paso', state: 'TX', states: ['TX', 'NM'], plan: 'servicing16', lead: 'live', spend: 700, done: AGENT_STEPS, since: 'Wed, Oct 28' }),
+  mkNew('ob-hannah', 'Hannah Wright', { city: 'Savannah', state: 'GA', states: ['GA', 'FL'], plan: 'servicing7', lead: 'appointment', spend: 500, done: [...AGENT_STEPS, 'campaign', 'budget', 'mapped'], since: 'Tue, Oct 27' }),
+  mkNew('ob-derek', 'Derek Shaw', { city: 'Tulsa', state: 'OK', states: ['OK', 'KS'], plan: 'servicing16', lead: 'live', spend: 650, done: [...AGENT_STEPS, ...JORDAN_STEPS, 'briefed'], since: 'Mon, Oct 26' }),
+  mkNew('ob-ivy', 'Ivy Morgan', { city: 'Scottsdale', state: 'AZ', states: ['AZ'], plan: 'leads', lead: 'appointment', spend: 300, done: [...AGENT_STEPS, ...JORDAN_STEPS, 'briefed', 'test', 'live'], liveOn: 'Wed, Nov 4', since: 'Fri, Oct 23' }),
+  mkNew('ob-paul', 'Paul Novak', { city: 'Columbus', state: 'OH', states: ['OH', 'IN'], plan: 'servicing7', lead: 'live', spend: 550, done: [...AGENT_STEPS, ...JORDAN_STEPS, 'briefed', 'test', 'live'], liveOn: 'Mon, Nov 2', since: 'Wed, Oct 21' }),
+]
+// Each client's setup history, newest first (the drawer's audit lines).
+const seedSetupLog = {
+  'inv-1': [{ at: 'Tue, Nov 3', who: 'Sam Ellis', what: 'Sent the invite by email' }],
+  'inv-3': [{ at: 'Wed, Nov 4', who: 'Sam Ellis', what: 'Sent the invite by text' }],
+  'ob-carl': [{ at: 'Wed, Nov 4', who: 'Stripe', what: 'Setup fee card declined' }, { at: 'Tue, Nov 3', who: 'Carl Jensen', what: 'Built a Servicing 7 plan' }],
+  'ob-hannah': [{ at: 'Today, 9:20 AM', who: 'Jordan Hale', what: 'Ticked Campaign mapped to the agent' }, { at: 'Today, 9:05 AM', who: 'Jordan Hale', what: 'Ticked Meta campaign created' }],
+  'ob-derek': [{ at: 'Today, 8:40 AM', who: 'Sam Ellis', what: 'Ticked VA desk briefed' }, { at: 'Wed, Nov 4', who: 'Jordan Hale', what: 'Marked launched (Jordan)' }],
+  'ob-ivy': [{ at: 'Wed, Nov 4', who: 'Sam Ellis', what: 'Marked Live' }],
+  'ob-paul': [{ at: 'Mon, Nov 2', who: 'Sam Ellis', what: 'Marked Live' }],
+}
 
 // Leads this week across every agent. kind = appointment (booked onto the agent's calendar) or live (a warm transfer).
 // stage: unassigned (no agent yet) | missed (a transfer nobody picked up) | booked | transferred | sold | not_sold.
@@ -341,6 +372,7 @@ let state = {
   agents: seedAgents, vas: seedVas, invites: seedInvites, leads: seedLeads, clients: seedClients, steps: seedSteps, calls: seedCalls,
   rota: seedRota, dayOff: seedDayOff, cancels: seedCancels, runs: seedRuns, revenue: seedRevenue, threads: seedThreads, feed: seedFeed,
   settings: seedSettings, carriers: seedCarriers, bugs: seedBugs, audit: seedAudit, connect: seedConnect, viewAs: 'admin', setupFees: seedSetupFees, draws: seedDraws,
+  onboard: seedOnboard, setupLog: seedSetupLog,
 }
 const listeners = new Set()
 const set = fn => { state = { ...state, ...fn(state) }; listeners.forEach(l => l()) }
@@ -430,6 +462,12 @@ export function useAdmCarriers() { const s = useStore(); return ok(s.carriers) }
 export function useAdmBugs() { const s = useStore(); return ok(s.bugs) }
 export function useAdmAudit() { const s = useStore(); return ok(s.audit) }
 export function useAdmConnect() { const s = useStore(); return ok(s.connect) }
+// P866 — the Setup pipeline: agent invites (Invited) and every agent not live yet, each with setupOf() worked out.
+export function pipelineOf(s) {
+  const invited = s.invites.filter(i => i.role === 'agent').map(i => ({ id: i.id, name: i.name, invite: i, city: '', state: '', states: [], plan: null, lead: null, spend: 0, done: [], since: i.sent }))
+  return [...invited, ...s.onboard].map(c => ({ ...c, ...setupOf(c), log: s.setupLog[c.id] || [] }))
+}
+export function useAdmSetup() { const s = useStore(); return ok(pipelineOf(s)) }
 export function useAdmViewAs() { const s = useStore(); return ok(s.viewAs) }
 
 // Money: this week's revenue (plans + leads charged), the weeks before, agent bills, failed payments, the VA pay run.
@@ -516,6 +554,8 @@ export function useAdmDay() {
   })
 }
 
+// P866: one audit line on a client's setup history, newest first.
+const setupLogAdd = (s, id, what) => ({ setupLog: { ...s.setupLog, [id]: [{ at: `Today, ${stamp()}`, who: s.viewAs === 'partner' ? PARTNER.name : ME.name, what }, ...(s.setupLog[id] || [])] } })
 const feedAdd = (s, who, text, kind) => ({ feed: [{ id: `f${Date.now()}`, who, text, at: stamp(), kind }, ...s.feed] })
 const patchById = (list, id, patch) => list.map(x => (x.id === id ? { ...x, ...(typeof patch === 'function' ? patch(x) : patch) } : x))
 
@@ -548,8 +588,34 @@ export function useAdmActions() {
         : { vas: s.vas.filter(x => x.id !== id), agents: [...s.agents, { ...seedAgents[0], ...who, role, id, active: false, onDuty: false, spend: 0, plan: 'leads', states: ['TX'], billing: { status: 'current', next: 'Not set up', method: 'None yet', failed: null } }] }
       return { ...out, ...audit(s, 'Changed a role', `${who.name} to ${role === 'agent' ? 'Agent' : 'Fulfillment'}`) }
     }),
-    invite: ({ name, role, via, to }) => set(s => ({ invites: [{ id: `inv-${Date.now()}`, name, role, via, to, sent: `Today, ${stamp()}` }, ...s.invites], ...audit(s, 'Sent an invite', `${name} (${role === 'agent' ? 'agent' : 'Fulfillment'})`) })),
-    resendInvite: id => set(s => ({ invites: patchById(s.invites, id, { sent: `Today, ${stamp()}` }), ...audit(s, 'Resent an invite', s.invites.find(i => i.id === id).name) })),
+    invite: ({ name, role, via, to }) => set(s => {
+      const id = `inv-${Date.now()}`
+      return { invites: [{ id, name, role, via, to, sent: `Today, ${stamp()}` }, ...s.invites], ...audit(s, 'Sent an invite', `${name} (${role === 'agent' ? 'agent' : 'Fulfillment'})`), ...(role === 'agent' ? setupLogAdd(s, id, via === 'link' ? 'Copied an invite link' : `Sent the invite by ${via}`) : {}) }
+    }),
+    resendInvite: id => set(s => ({ invites: patchById(s.invites, id, { sent: `Today, ${stamp()}` }), ...audit(s, 'Resent an invite', s.invites.find(i => i.id === id).name), ...setupLogAdd(s, id, 'Sent the invite again') })),
+    // P866 — Setup. Admins tick Jordan's and Ohvara's steps; the agent's own steps tick from their portal.
+    tickSetup: (id, key, on) => set(s => {
+      const c = s.onboard.find(x => x.id === id)
+      const st = SETUP_STEPS.find(x => x.key === key)
+      if (!c || !st || st.who === 'agent' || key === 'live') return {}
+      const done = on ? [...new Set([...c.done, key])] : c.done.filter(k => k !== key)
+      return { onboard: patchById(s.onboard, id, { done }), ...setupLogAdd(s, id, `${on ? 'Ticked' : 'Unticked'} ${st.label}`), ...audit(s, on ? 'Ticked a setup step' : 'Unticked a setup step', `${c.name}: ${st.label}`) }
+    }),
+    markLaunched: id => set(s => {
+      const c = s.onboard.find(x => x.id === id)
+      if (!c) return {}
+      const jordan = stepsFor(c).filter(x => x.who === 'jordan').map(x => x.key)
+      return { onboard: patchById(s.onboard, id, { done: [...new Set([...c.done, ...jordan])] }), ...setupLogAdd(s, id, 'Marked launched (Jordan)'), ...audit(s, 'Marked a client launched', c.name) }
+    }),
+    markLive: id => set(s => {
+      const c = s.onboard.find(x => x.id === id)
+      if (!c || !setupOf(c).canLive) return {}
+      return { onboard: patchById(s.onboard, id, { done: [...c.done, 'live'], liveOn: dateText(TODAY) }), ...setupLogAdd(s, id, 'Marked Live'), ...audit(s, 'Marked a client live', c.name) }
+    }),
+    resendSetupInvite: id => set(s => {
+      const c = s.onboard.find(x => x.id === id)
+      return c ? { ...setupLogAdd(s, id, 'Sent the invite again'), ...audit(s, 'Resent an invite', c.name) } : {}
+    }),
     cancelInvite: id => set(s => ({ invites: s.invites.filter(i => i.id !== id), ...audit(s, 'Cancelled an invite', s.invites.find(i => i.id === id).name) })),
     // The desk: give a stuck or not-started call to someone free (admin_give_call).
     giveCall: (callId, vaId) => set(s => {

@@ -7,6 +7,7 @@ export const PREVIEW_BASE = '/preview'
 export const ADM = {
   overview: '/admin',
   agents: '/admin/agents',
+  setup: '/admin/setup',
   team: '/admin/fulfillment',
   leads: '/admin/inbounds',
   clients: '/admin/pipeline',
@@ -18,8 +19,8 @@ export const ADM = {
 // Old admin addresses that now land on a page of the shell (Users is a Settings section, Payouts a Billing tab).
 export const ADM_OLD = { users: '/admin/users', payouts: '/admin/payouts', more: '/admin/more' }
 
-// Pages whose records open in a drawer at their own address (/admin/agents/:id ...).
-const RECORD_PAGES = ['agents', 'team', 'leads', 'clients']
+// Pages whose records open in a drawer at their own address (/admin/agents/:id, /admin/setup/:id ...).
+const RECORD_PAGES = ['agents', 'setup', 'team', 'leads', 'clients']
 
 const noSlash = p => (p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p)
 
@@ -79,20 +80,20 @@ export function admRoutes(preview) {
   return out
 }
 
-// The top tabs, in order. Messages, Connect (P864) and Settings live on the rail and the top right, as on the other two sides.
+// The top tabs, in order (P866: Setup is a top tab; Billing reads Revenue). Messages, Connect (P864) and Settings live on the rail and the top right, as on the other two sides.
 // The inbounds page reads "Leads" on screen: the word guard (scripts/check-wording.mjs) bans the word inbound in
 // rendered text anywhere in src. Code names and the /admin/inbounds address keep it.
 export const ADM_TABS = [
-  ['overview', 'Overview'], ['agents', 'Agents'], ['team', 'Fulfillment'], ['leads', 'Leads'], ['clients', 'Clients'], ['billing', 'Money'],
+  ['overview', 'Overview'], ['agents', 'Agents'], ['setup', 'Setup'], ['team', 'Fulfillment'], ['leads', 'Leads'], ['clients', 'Clients'], ['billing', 'Revenue'],
 ]
 // Every page's short name (tabs, the phone bar, search), including the rail-only pages.
 export const ADM_LABELS = { ...Object.fromEntries(ADM_TABS), messages: 'Messages', settings: 'Settings', connect: 'Connect' }
-// What Jordan's partner login sees (sample until a partner role exists: a migration, door item).
-export const PARTNER_PAGES = ['connect', 'leads', 'messages']
+// What Jordan's partner login sees (sample until a partner role exists: a migration, door item). P866: Setup too (his launch steps).
+export const PARTNER_PAGES = ['setup', 'connect', 'leads', 'messages']
 
 const TITLES = {
-  overview: ['The business', 'Overview'], agents: ['Who sells', 'Agents'], team: ['Who serves', 'Fulfillment team'],
-  leads: ['Every agent', 'Leads'], clients: ['Every book', 'Clients'], billing: ['In, out and split', 'Money'],
+  overview: ['The business', 'Overview'], agents: ['Who sells', 'Agents'], setup: ['New clients to live', 'Setup'], team: ['Who serves', 'Fulfillment team'],
+  leads: ['Every agent', 'Leads'], clients: ['Every book', 'Clients'], billing: ['In, out and split', 'Revenue'],
   messages: ['Admin lines', 'Messages'], settings: ['Run the portal', 'Settings'], connect: ['Plug it in', 'Connect'],
 }
 export const admTitleOf = page => TITLES[page] || TITLES.overview

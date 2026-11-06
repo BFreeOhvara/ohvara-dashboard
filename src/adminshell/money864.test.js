@@ -5,26 +5,21 @@ import { moneyFor, admSnapshot, PERIODS, OWNERS } from './data.js'
 import { ADM_TABS, ADM_LABELS, admTitleOf } from './paths.js'
 import { engineState } from './engine.js'
 
-// P864: Connect left the top tabs for the rail; Billing became Money (totals, costs, profit, the owners' split);
+// P864: Connect left the top tabs for the rail; Billing became Money (P866: Revenue) (totals, costs, profit, the owners' split);
 // the clock shows on Overview only; Get the app is on both the agent and VA rails.
 const src = p => readFileSync(new URL(p, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 
-test('Connect is a rail page, not a top tab; Billing reads Money', () => {
+test('Connect is a rail page, not a top tab; Billing reads Revenue (P866)', () => {
   assert.ok(!ADM_TABS.some(([k]) => k === 'connect'))
-  assert.deepEqual(ADM_TABS.find(([k]) => k === 'billing'), ['billing', 'Money'])
+  assert.deepEqual(ADM_TABS.find(([k]) => k === 'billing'), ['billing', 'Revenue'])
   assert.equal(ADM_LABELS.connect, 'Connect')
-  assert.equal(admTitleOf('billing')[1], 'Money')
+  assert.equal(admTitleOf('billing')[1], 'Revenue')
   const frame = src('./AdminFrame.jsx')
   assert.match(frame, /<NavLink to=\{ap\('connect'\)\} className="fx-ri tp-wig" aria-label="Connect"/)
   assert.doesNotMatch(frame, /ADM_TABS\.find\(/) // the phone bar names rail pages through ADM_LABELS
 })
 
-test('Connect has Setup and Connect tabs; Setup is empty until GoHighLevel is connected', () => {
-  const s = src('./screens/Connect.jsx')
-  assert.match(s, /\{ key: 'setup', label: 'Setup' \}, \{ key: 'connect', label: 'Connect' \}/)
-  assert.match(s, /Nothing connected yet/)
-  assert.match(s, /Jordan connects GoHighLevel here/)
-  assert.match(s, /connected \|\| peek \? <SetupView/)
+test('the Engine-slot state: not connected until GoHighLevel is on and synced', () => {
   assert.equal(engineState(null).on, false)
   assert.equal(engineState(null).line, 'Powered by GoHighLevel · not connected yet')
   assert.equal(engineState({ location_id: 'loc123', enabled: false, last_sync_at: '2026-11-06T12:00:00Z' }).on, false)
