@@ -2,8 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Link, NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom'
 import {
   Home, PhoneIncoming, PhoneCall, Users, LifeBuoy, Wallet, Settings, Search, Bell, Sun, Moon, MessageSquare,
-  ChevronRight, LogOut, Ellipsis, CalendarCheck, Clock3, CircleHelp, PhoneOutgoing, Mail, Keyboard, TriangleAlert,
-  ShieldCheck, CalendarPlus, CheckCircle2, Hourglass, CalendarDays, CalendarOff,
+  ChevronRight, LogOut, Ellipsis, CalendarCheck, Clock3, CircleHelp, Mail, Keyboard, TriangleAlert,
+  ShieldCheck, CalendarPlus, CheckCircle2, Hourglass, CalendarDays, CalendarOff, Plus, Phone, AlarmClock, Headset, NotebookPen, Smartphone,
 } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { Drawer, Avatar, Field, PillTabs, useAccount, useNote, initials } from '../kit'
@@ -15,12 +15,13 @@ import { LiveClock } from '../Clock'
 import { OhvaraMark } from '../../components/ui/OhvaraMark'
 import { isSearchKey } from '../../lib/searchKey'
 import { SUPPORT_EMAIL } from '../../components/auth/authUtils'
-import { useFulDay, useFulClients, useFulQueue, useFulFeed, useFulSettings, useFulPay, useFulTasks, useFulActions, useFulAgents, useFulShift, useFulSchedule, useAgentAppts, useVaBooking, AGENTS, NOW_ISO } from './data'
+import { useFulDay, useFulClients, useFulQueue, useFulFeed, useFulSettings, useFulPay, useFulTasks, useFulActions, useFulAgents, useFulShift, useFulSchedule, useAgentAppts, useVaBooking, useFulLive, AGENTS, NOW_ISO } from './data'
 import { SlotPick } from '../SlotPick'
 import { useClientZone } from '../useClientZone'
 import { isoOf } from '../carriers'
 import { agentSlots, clocksBetween, zoneAbbr, DEFAULT_APPT_MIN } from '../../lib/callSlots'
-import LiveCall from './LiveCall'
+import FulPhone from './Phone'
+import { GetApp } from '../TemplateFrame'
 import { DayOffDrawer } from './Shift'
 import { CALL_WORD } from './words'
 import { fp, FUL_TABS, fulPageOf, fulTitleOf } from './paths'
@@ -134,7 +135,7 @@ function Help({ open, onClose }) {
 }
 
 // The avatar menu: this shift and a day off, theme, account pages, sign out. (P846: no Active or Away; VAs work set hours.)
-function AccountMenu({ open, onClose, theme, setTheme, onAsk }) {
+function AccountMenu({ open, onClose, theme, setTheme, onAsk, onApp }) {
   const account = useAccount()
   const note = useNote()
   const { data: shift } = useFulShift()
@@ -157,10 +158,51 @@ function AccountMenu({ open, onClose, theme, setTheme, onAsk }) {
         </Link>
         <button type="button" className="fx-mrow" onClick={() => { onClose(); onAsk() }}><CalendarOff size={17} aria-hidden="true" /><b className="tp-grow">Request a day off</b></button>
         <button type="button" className="fx-mrow" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}<b className="tp-grow">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</b></button>
+        <button type="button" className="fx-mrow" onClick={() => { onClose(); onApp() }}><Smartphone size={17} aria-hidden="true" /><b className="tp-grow">Get the phone app</b></button>
         <i className="fx-mline" />
         {links.map(([k, label, Icon]) => <Link key={k} to={fp(k)} className="fx-mrow" onClick={onClose}><Icon size={17} aria-hidden="true" /><b className="tp-grow">{label}</b><ChevronRight size={15} aria-hidden="true" /></Link>)}
         <i className="fx-mline" />
         <button type="button" className="fx-mrow is-danger" onClick={() => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))}><LogOut size={17} aria-hidden="true" /><b className="tp-grow">Sign out</b></button>
+      </section>
+    </div>
+  )
+}
+
+// P857 — the + menu: the VA's call actions in one place, like the agent shell's Create menu (same look, same spot,
+// fx-cmenu: beside the rail on a desktop, a bottom sheet on a phone). Arrow keys move, Home/End jump, Esc closes and
+// puts focus back on the +. Each item does exactly what its old rail button did.
+function ActionMenu({ open, onClose, at, items, back }) {
+  const ref = useRef(null)
+  useEffect(() => {
+    if (!open) return undefined
+    const list = () => [...(ref.current?.querySelectorAll('[role="menuitem"]') || [])]
+    const t = requestAnimationFrame(() => list()[0]?.focus())
+    const onKey = e => {
+      if (e.key === 'Escape') { e.preventDefault(); onClose(); back.current?.focus(); return }
+      const l = list()
+      if (!l.length) return
+      const i = l.indexOf(document.activeElement)
+      const go = n => { e.preventDefault(); l[(n + l.length) % l.length].focus() }
+      if (e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) go(i + 1)
+      else if (e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey)) go(i - 1)
+      else if (e.key === 'Home') go(0)
+      else if (e.key === 'End') go(l.length - 1)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => { cancelAnimationFrame(t); window.removeEventListener('keydown', onKey) }
+  }, [open, onClose, back])
+  if (!open) return null
+  return (
+    <div className="tp fx-layer fx-menu-layer" role="presentation">
+      <button type="button" className="fx-scrim is-clear tp-bare" aria-label="Close menu" tabIndex={-1} onClick={onClose} />
+      <section ref={ref} className="fx-menu fx-cmenu fs-cmenu" role="menu" aria-label="Calls and more" style={at || undefined}>
+        <p className="fx-cmenu-h">Calls and more</p>
+        {items.map((it, i) => (it === 'line' ? <i key={`l${i}`} className="fx-mline" /> : (
+          <button key={it.key} type="button" role="menuitem" className="fx-mrow" onClick={() => { onClose(); it.run() }}>
+            <it.icon size={17} aria-hidden="true" /><span className="tp-grow"><b>{it.label}</b><small>{it.sub}</small></span>
+            {it.count > 0 && <span className="fx-tb" aria-hidden="true">{it.count}</span>}
+          </button>
+        )))}
       </section>
     </div>
   )
@@ -211,13 +253,56 @@ export default function FulFrame() {
   const { data: clients } = useFulClients()
   const { data: queue } = useFulQueue()
   const { data: tasks } = useFulTasks()
-  const { showLive } = useFulActions()
+  const live = useFulLive()
   const close = useCallback(() => setPanel(null), [])
   const open = which => e => { wig.onClick(e); setPanel(which) }
   const flipTheme = e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }
   const tabCount = { queue: day.queue.callback_due.length, servicing: day.tasks.overdue.length }
+  const left = day.today.filter(k => k.status === 'booked').length
   const callNow = () => { if (day.next) navigate(fp('schedule', day.next.id)); else { navigate(fp('schedule')); note('No more calls today') } }
-  const liveNow = () => { if (day.next) showLive(day.next.id); else note('No call coming in') }
+
+  // P857 — the phone panel opens beside the rail's phone button on a desktop (a bottom sheet on a phone). It stays
+  // mounted, so a call keeps going while the panel is closed; a live call rings in it.
+  const phoneBtn = useRef(null)
+  const [phoneAt, setPhoneAt] = useState(null)
+  const [ringId, setRingId] = useState(null)
+  const [line, setLine] = useState(null) // 'live' | 'ringing' | null, shown on the rail's phone button
+  const placePhone = useCallback(() => {
+    const r = phoneBtn.current?.getBoundingClientRect()
+    setPhoneAt(window.innerWidth >= 1000 && r?.width ? { left: `${Math.round(r.right + 14)}px`, top: `${Math.round(Math.max(12, Math.min(r.top - 220, window.innerHeight - 640)))}px` } : null)
+  }, [])
+  const openPhone = () => { placePhone(); setPanel('phone') }
+  const endRing = useCallback(() => setRingId(null), [])
+  const closePhone = useCallback(() => { setRingId(null); setPanel(null) }, [])
+  const ring = useCallback(id => { setRingId(id); placePhone(); setPanel('phone') }, [placePhone])
+  const liveNow = () => { if (day.next) ring(day.next.id); else note('No call coming in') }
+  // Start call on a call's drawer (the store's live id) opens the phone on that person, ready to call.
+  const [startReq, setStartReq] = useState(null)
+  const startFor = useCallback(id => { setStartReq(r => ({ id, n: (r?.n || 0) + 1 })); placePhone(); setPanel('phone') }, [placePhone])
+
+  // The + menu opens beside the rail button on a desktop (a bottom sheet on a phone), like the agent's.
+  const [menuAt, setMenuAt] = useState(null)
+  const [narrow, setNarrow] = useState(false)
+  const plusFrom = useRef(null)
+  const openCreate = e => {
+    wig.onClick(e)
+    plusFrom.current = e.currentTarget
+    const r = e.currentTarget.getBoundingClientRect()
+    const wide = window.innerWidth >= 1000
+    setNarrow(!wide)
+    setMenuAt(wide ? { left: `${Math.round(r.right + 14)}px`, top: `${Math.round(Math.max(12, Math.min(r.top - 8, window.innerHeight - 400)))}px` } : null)
+    setPanel('create')
+  }
+  const actions = [
+    // On a phone there is no rail, so the phone itself is the first item.
+    ...(narrow ? [{ key: 'phone', icon: Phone, label: 'Phone', sub: 'Dial pad, search, recent calls', run: openPhone }, 'line'] : []),
+    { key: 'next', icon: AlarmClock, label: 'Next call', sub: day.next ? `${day.next.name} at ${day.next.time}` : 'No more calls today', count: left, run: callNow },
+    { key: 'live', icon: Headset, label: 'Live call', sub: 'The call coming in now', run: liveNow },
+    { key: 'log', icon: NotebookPen, label: 'Log a call', sub: 'Save the result on the call', run: () => setPanel('log') },
+    'line',
+    { key: 'book', icon: CalendarPlus, label: 'Book for an agent', sub: 'From the queue, inside their hours', run: () => setPanel('book') },
+    { key: 'dayoff', icon: CalendarOff, label: 'Request a day off', sub: 'Tell the team ahead of time', run: () => setPanel('dayoff') },
+  ]
 
   // Search: clients across every agent, the people in the queue, servicing steps, and the pages.
   const rows = useMemo(() => ({
@@ -250,10 +335,10 @@ export default function FulFrame() {
     try { if (sessionStorage.getItem('ful-live-pop') === '1') return undefined } catch { /* no storage: it pops once per load */ }
     const t = setTimeout(() => {
       try { sessionStorage.setItem('ful-live-pop', '1') } catch { /* private window: it can pop again */ }
-      if (!document.hidden) showLive(nextId)
+      if (!document.hidden) ring(nextId)
     }, 20000)
     return () => clearTimeout(t)
-  }, [nextId, showLive])
+  }, [nextId, ring])
 
   const tops = (
     <>
@@ -287,18 +372,18 @@ export default function FulFrame() {
       <aside className="tp-rail fx-rail" aria-label="Actions">
         <button type="button" className="tp-ri fx-ri tp-wig" aria-label="Search (Ctrl K)" data-tip="Search  Ctrl K" {...wig} onClick={open('search')}><Search size={20} /></button>
         <i className="fx-hair" />
-        <button type="button" className="fx-ri tp-wig" aria-label="Live call" data-tip="Live call" {...wig} onClick={e => { wig.onClick(e); liveNow() }}><PhoneIncoming size={18} /></button>
-        <button type="button" className="fx-ri tp-wig" aria-label="Your next call" data-tip={day.next ? `Next call ${day.next.time}` : 'No more calls today'} {...wig} onClick={e => { wig.onClick(e); callNow() }}><PhoneCall size={18} /></button>
-        <button type="button" className="fx-ri tp-wig" aria-label="Log a call" data-tip="Log a call" {...wig} onClick={open('log')}><PhoneOutgoing size={18} /></button>
-        <button type="button" className="fx-ri tp-wig" aria-label="Book for an agent" data-tip="Book for an agent" {...wig} onClick={open('book')}><CalendarPlus size={18} /></button>
+        {/* P857: one + for the call actions (it was four phone-looking buttons in a row) */}
+        <button type="button" className="fx-ri fx-rplus tp-wig" aria-label="Calls and more" aria-haspopup="menu" aria-expanded={panel === 'create'} data-tip={left ? `Calls and more · ${left} calls left today` : 'Calls and more'} {...wig} onClick={openCreate}><Plus size={20} />{left > 0 && <span className="fx-badge" aria-hidden="true">{left}</span>}</button>
         <i className="fx-hair" />
         <NavLink to={fp('messages')} className="fx-ri tp-wig" aria-label="Messages" data-tip="Messages" {...wig}><MessageSquare size={18} />{day.unread > 0 && <span className="fx-badge">{day.unread}</span>}</NavLink>
         <NavLink to={fp('schedule')} className="fx-ri tp-wig" aria-label="Schedule" data-tip="Schedule" {...wig}><CalendarDays size={18} /></NavLink>
         <NavLink to={fp('servicing')} className="fx-ri tp-wig" aria-label="Servicing" data-tip="Servicing" {...wig}><LifeBuoy size={18} /></NavLink>
         <i className="fx-hair" />
-        <button type="button" className="fx-ri tp-wig" aria-label="Request a day off" data-tip="Request a day off" {...wig} onClick={open('dayoff')}><CalendarOff size={18} /></button>
+        <button type="button" ref={phoneBtn} className={`fx-ri fs-ri-phone tp-wig${line ? ` is-${line}` : ''}`} aria-label={line === 'live' ? 'Phone, on a call' : line === 'ringing' ? 'Phone, a call is coming in' : 'Phone'} aria-haspopup="dialog" aria-expanded={panel === 'phone'} data-tip={line === 'live' ? 'Phone: on a call' : 'Phone'} {...wig} onClick={e => { wig.onClick(e); openPhone() }}><Phone size={18} />{line && <i className="fs-ri-dot" aria-hidden="true" />}</button>
         <i className="fx-hair" />
+        <button type="button" className="fx-ri tp-wig" aria-label="Get the phone app" aria-expanded={panel === 'app'} data-tip="Get the phone app" {...wig} onClick={open('app')}><Smartphone size={18} /></button>
         <button type="button" className="fx-ri tp-wig" aria-label="Help and support" aria-expanded={panel === 'help'} data-tip="Help and support" {...wig} onClick={open('help')}><CircleHelp size={18} /></button>
+        <i className="fx-hair" />
         <NavLink to={fp('settings')} className="fx-ri tp-wig" aria-label="Settings" data-tip="Settings" {...wig}><Settings size={18} /></NavLink>
         <button type="button" className="fx-ri tp-wig" aria-label="Switch theme" data-tip={theme === 'dark' ? 'Light mode' : 'Dark mode'} {...wig} onClick={flipTheme}>{theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
       </aside>
@@ -331,7 +416,7 @@ export default function FulFrame() {
 
       <nav className="tp-bar fx-bar" aria-label="Pages">
         {['overview', 'queue'].map(k => { const I = ICONS[k]; return <Link key={k} to={fp(k)} className={`fx-btab${active === k ? ' is-on' : ''}`}><I size={20} aria-hidden="true" />{k === 'overview' ? 'Overview' : 'Queue'}</Link> })}
-        <button type="button" className="fx-btab is-plus" aria-label="Your next call" onClick={callNow}><span className="fx-bplus"><PhoneCall size={22} aria-hidden="true" /></span>Call</button>
+        <button type="button" className="fx-btab is-plus" aria-label="Calls and more" aria-haspopup="menu" aria-expanded={panel === 'create'} onClick={openCreate}><span className="fx-bplus"><Plus size={24} aria-hidden="true" />{left > 0 && <span className="fx-badge" aria-hidden="true">{left}</span>}</span>Calls</button>
         <Link to={fp('schedule')} className={`fx-btab${active === 'schedule' ? ' is-on' : ''}`}><CalendarDays size={20} aria-hidden="true" />Schedule</Link>
         <button type="button" className="fx-btab" aria-label="More" onClick={open('menu')}><Ellipsis size={20} aria-hidden="true" />More</button>
       </nav>
@@ -342,8 +427,10 @@ export default function FulFrame() {
       <BookForAgent open={panel === 'book'} onClose={close} />
       <Help open={panel === 'help'} onClose={close} />
       <DayOffDrawer open={panel === 'dayoff'} onClose={close} />
-      <LiveCall />
-      <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} onAsk={() => setPanel('dayoff')} />
+      <ActionMenu open={panel === 'create'} onClose={close} at={menuAt} items={actions} back={plusFrom} />
+      <GetApp open={panel === 'app'} onClose={close} />
+      <FulPhone open={panel === 'phone'} onClose={closePhone} at={phoneAt} ringId={ringId} onRingEnd={endRing} onState={setLine} live={live} onLive={startFor} startReq={startReq} />
+      <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} onAsk={() => setPanel('dayoff')} onApp={() => setPanel('app')} />
     </div>
   )
 }

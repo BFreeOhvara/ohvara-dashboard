@@ -200,7 +200,8 @@ function LogCall({ open, onClose }) {
 }
 
 // Get the phone app: the one /app link as a QR, plus the store buttons (live once the store links are set).
-function GetApp({ open, onClose }) {
+// P857: exported so the VA rail uses the same sheet.
+export function GetApp({ open, onClose }) {
   const [cfg, setCfg] = useState(null)
   const [qr, setQr] = useState(null)
   const link = appLink()

@@ -230,3 +230,69 @@
 @media (prefers-reduced-motion: reduce) {
   .fs-cring-arc, .fs-cring::after, .fs-daypulse, .fs-spark-area, .fs-spark-dot, .fs-dayline li, .fs-ov .fx-ncards .fx-ncard { animation: none; transition: none; }
 }
+
+/* P857 — the rail: one + for the call actions, the phone (with a dot while a call rings or is on), Get the app */
+.fx .fs-ri-phone .fs-ri-dot { position: absolute; top: 5px; right: 5px; width: 9px; height: 9px; border-radius: 50%; background: var(--ov-st-cancelled, var(--ov-data-a)); box-shadow: 0 0 0 2px var(--bg-surface); }
+.fx .fs-ri-phone.is-ringing .fs-ri-dot { animation: fs-dot 1.2s ease-in-out infinite; }
+@keyframes fs-dot { 50% { transform: scale(1.35); } }
+.fs .fx-bplus { position: relative; }
+.fs .fx-bplus .fx-badge { top: -6px; right: -8px; }
+.fs-cmenu .fx-mrow .fx-tb { flex: none; }
+
+/* P857 — the in-app phone: a small glass panel beside the rail (a bottom sheet on a phone) */
+.fx-layer.fs-phone-layer { z-index: 92; }
+.fx-menu.fs-phone { position: fixed; right: auto; bottom: auto; top: 96px; left: 92px; width: 340px; max-height: min(640px, calc(100vh - 24px)); padding: 0; border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; transform-origin: top left; animation: fx-pop-in .24s var(--fx-ease) both; }
+.fs-phone-layer.is-leaving { pointer-events: none; }
+.fs-phone-layer.is-leaving .fs-phone { animation: fx-fade-out .18s var(--fx-ease) forwards; }
+.fs-ph-h { display: flex; align-items: center; gap: 10px; padding: 14px 14px 10px 16px; }
+.fs-ph-h b { display: block; font-size: 15px; font-weight: 700; color: var(--ov-hi); }
+.fs-ph-h small { display: block; font-size: 12px; color: var(--ov-mid); }
+.fs-ph-ic { flex: none; width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 8%, transparent); }
+.fs-ph-ic.is-live { color: var(--sh-ci); background: var(--sh-cf-sage); }
+.fs-ph-b { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 14px 16px; display: flex; flex-direction: column; gap: 12px; scrollbar-width: thin; }
+.fs-ph-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: color-mix(in srgb, var(--ov-hi) 6%, transparent); }
+.fs-ph-tab { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; border-radius: 11px; font-size: 13px; font-weight: 600; color: var(--ov-mid); }
+.fs-ph-tab.is-on { color: var(--sh-on-sel, var(--ov-hi)); background: var(--sh-sel, var(--bg-surface)); box-shadow: inset 0 1px 0 var(--sh-sel-edge, transparent); }
+.fs-ph-pad { display: flex; flex-direction: column; gap: 12px; }
+.fs-ph-entry { display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 8px 0 14px; border-radius: 14px; border: 1px solid var(--fx-edge); background: var(--fx-fill); color: var(--ov-mid); }
+.fs-ph-entry input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: none; font-size: 17px; color: var(--ov-hi); }
+.fs-ph-entry:focus-within { border-color: color-mix(in srgb, var(--ov-hi) 30%, transparent); }
+.fs-ph-del { flex: none; width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--ov-mid); }
+.fs-ph-del:hover { color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 8%, transparent); }
+.fs-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.fs-key { display: flex; align-items: center; justify-content: center; padding: 0; height: 50px; border-radius: 16px; font-family: var(--font-display); font-size: 21px; font-weight: 600; color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 6%, transparent); transition: transform .2s var(--fx-spring), background-color .2s; }
+.fs-key:hover { background: color-mix(in srgb, var(--ov-hi) 11%, transparent); }
+.fs-key:active { transform: scale(.94); }
+.fs-pad.is-small .fs-key { height: 40px; font-size: 17px; }
+.fs-ph-dial { justify-content: center; width: 100%; }
+.fs-ph-res, .fs-ph-recent { margin: 0; }
+.fs-ph-recent .fs-st { gap: 4px; }
+.fs-ph-call { display: flex; flex-direction: column; gap: 12px; }
+.fs-ph-back { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; color: var(--ov-mid); }
+.fs-ph-back:hover { color: var(--ov-hi); }
+.fs-ph-who { display: flex; align-items: center; gap: 12px; }
+.fs-ph-who b { display: block; font-family: var(--font-display); font-size: 19px; color: var(--ov-hi); }
+.fs-ph-who small { display: block; font-size: 12.5px; color: var(--ov-mid); }
+.fs-ph-ring .fs-live-top small + small { margin-top: 2px; }
+.tp .fs-ph-tz { color: var(--ov-hi); font-weight: 600; }
+.fs-ph-timer { display: flex; flex-direction: column; align-items: center; margin: 4px 0; font-family: var(--font-mono); font-size: 34px; font-weight: 600; color: var(--ov-hi); }
+.fs-ph-timer span { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--ov-mid); }
+.fs-ph-timer.is-held span { color: var(--sh-ci); }
+.tp .fs-phone .fs-off { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 12.5px; }
+.tp .fs-phone .fs-off svg { flex: none; margin-top: 1px; }
+.fs-ph-tones { min-height: 26px; text-align: center; font-size: 18px; letter-spacing: .12em; color: var(--ov-hi); }
+.fs-ph-ctl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.fs-ctl { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0 8px; border-radius: 16px; font-size: 11.5px; font-weight: 600; color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 6%, transparent); transition: transform .2s var(--fx-spring), background-color .2s; }
+.fs-ctl:hover { background: color-mix(in srgb, var(--ov-hi) 11%, transparent); }
+.fs-ctl[aria-pressed="true"] { color: var(--sh-on-sel, var(--bg-base)); background: var(--sh-sel, var(--ov-hi)); }
+.fs-ctl.is-end { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
+.fs-ctl.is-end:hover { background: color-mix(in srgb, var(--danger) 22%, transparent); }
+.fs-ctl:active { transform: scale(.94); }
+.fs-ph-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.fs-ph-acts > .tp-primary { flex: 1 1 100%; justify-content: center; }
+.fs-ph-acts > .tp-btn { flex: 1 1 0; justify-content: center; }
+.fs-ph-offline { margin: 0; text-align: center; }
+@media (max-width: 999.98px) {
+  .fx-menu.fs-phone { top: auto; left: 10px; right: 10px; bottom: 10px; width: auto; max-height: calc(100vh - 20px); padding-bottom: env(safe-area-inset-bottom, 0px); transform-origin: bottom center; }
+}
+@media (prefers-reduced-motion: reduce) { .fx .fs-ri-phone.is-ringing .fs-ri-dot { animation: none; } }

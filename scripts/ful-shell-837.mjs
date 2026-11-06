@@ -10,6 +10,9 @@
 // Each page x 1920/1440/390 x light/dark: the shell frame is there, the title, tabs (desktop) or bottom bar (phone),
 // no console errors, no sideways scroll. Every non-GET request to the backend is listed (the shell adds none).
 // Only clicks that read: the search palette and the account menu, each closed with Escape.
+// P857: the rail's + menu (keyboard: Enter opens, arrows move, Esc closes back to the +; each item does its old
+// button's job), the in-app phone (search, dial pad, in-call controls, result, recent; a live call rings in it), Get
+// the app, and the rail lists (VA and agent). Its shots always go to qa/ful-857 (1440 + 390, light + dark).
 import process from 'node:process'
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -24,6 +27,8 @@ if (!BASE) { console.error('--base-url is required'); process.exit(2) }
 const PREVIEW = args.includes('--preview')
 const logins = PREVIEW ? {} : JSON.parse(readFileSync(join(homedir(), '.atlas', 'test-logins.json'), 'utf8'))
 const OUT = flag('--out') || 'qa/fulfillment-845'
+const OUT857 = 'qa/ful-857'
+mkdirSync(OUT857, { recursive: true })
 const PRE = PREVIEW ? '/template' : ''
 mkdirSync(OUT, { recursive: true })
 
@@ -264,16 +269,18 @@ async function clickThrough(page, theme, errors) {
     await go('/fulfillment')
     if (!(await page.getByText(/Your shift today\s*8:00 AM to 6:00 PM/).first().isVisible())) throw new Error('Overview has no shift line')
     if (await page.locator('[aria-label="Active or away"], [role="switch"][aria-label="Active"]').count()) throw new Error('an Active/Away switch is still on the page')
-    await page.getByRole('button', { name: 'Live call' }).click()
+    await page.locator('.fx-rail').getByRole('button', { name: 'Calls and more' }).click()
+    await page.getByRole('menuitem', { name: /^Live call/ }).click()
     await page.waitForTimeout(500)
-    if (!(await page.getByText('Calling from the portal is switched off').isVisible())) throw new Error('live call overlay did not open from the rail')
+    if (!(await page.locator('.fs-phone').getByText(/Calling is off right now/).first().isVisible())) throw new Error('live call did not ring in the phone from the + menu')
     if (SHOTS) await page.screenshot({ path: `${OUT}/flow-live-overlay-1440-${theme}.png` })
     await page.getByRole('button', { name: 'Open the call' }).click()
     await page.waitForTimeout(600)
     if (!/schedule\/cl-\d+$/.test(new URL(page.url()).pathname)) throw new Error(`Open the call went to ${new URL(page.url()).pathname}`)
     await page.keyboard.press('Escape')
     await page.waitForTimeout(500)
-    await page.getByRole('button', { name: 'Request a day off' }).first().click()
+    await page.locator('.fx-rail').getByRole('button', { name: 'Calls and more' }).click()
+    await page.getByRole('menuitem', { name: /^Request a day off/ }).click()
     await page.waitForTimeout(400)
     await page.getByRole('button', { name: 'Tell the team' }).click()
     await page.waitForTimeout(500)
@@ -287,8 +294,10 @@ async function clickThrough(page, theme, errors) {
   await step('call cancelled', async () => {
     await go('/fulfillment/schedule/cl-8')
     await page.getByRole('button', { name: 'Start call' }).click()
-    if (!(await page.getByText('Calling from the portal is switched off').isVisible())) throw new Error('call screen did not say calls are off')
-    await page.locator('.tp-sheet .fx-x').click()
+    await page.waitForTimeout(400)
+    if (!(await page.locator('.fs-phone').getByText(/Calling is off right now/).first().isVisible())) throw new Error('Start call did not open the phone saying calls are off')
+    if (!(await page.locator('.fs-phone').getByRole('button', { name: /^Call [A-Z]/ }).count())) throw new Error('Start call did not open the phone on that client')
+    await page.locator('.fs-phone .fx-x').click()
     await page.waitForTimeout(400)
     await page.locator('.fx-rec-f').getByRole('button', { name: 'Cancelled' }).click()
     await page.getByPlaceholder('e.g. GL-301977').fill('GL-777123')
@@ -331,10 +340,136 @@ async function clickThrough(page, theme, errors) {
     if (await page.locator('.fx-prof').getByText(/Away|Active/).count()) throw new Error('profile card still says Active or Away')
     if (SHOTS) await page.screenshot({ path: `${OUT}/flow-shift-1440-${theme}.png` })
   })
+  await step('p857 + menu, phone, get the app', () => railAndPhone(page, theme))
   const errs = errors.filter(e => !/favicon/.test(e))
   if (errs.length) fail(where, `console: ${errs.join(' | ')}`)
-  rows.push({ where, flows: 9 })
+  rows.push({ where, flows: 10 })
   await phoneDay(theme)
+}
+
+// P857: the + menu and the in-app phone at 1440, then both as bottom sheets at 390.
+async function railList(page) { return page.evaluate(() => [...document.querySelector('.fx-rail').children].map(e => (e.tagName === 'I' ? '|' : e.getAttribute('aria-label').replace(/ \(Ctrl K\)/, '')))) }
+async function railAndPhone(page, theme) {
+  const go = async url => { await page.goto(`${BASE}/template${url}`, { waitUntil: 'networkidle' }); await page.waitForTimeout(700) }
+  const phone = page.locator('.fs-phone')
+  await go('/fulfillment')
+  const va = await railList(page)
+  // No phone-looking buttons left beside each other: one + and one Phone.
+  for (const gone of ['Live call', 'Your next call', 'Log a call', 'Book for an agent', 'Request a day off']) if (va.includes(gone)) throw new Error(`${gone} is still on the rail`)
+  if (va.filter(x => x === 'Phone').length !== 1 || !va.includes('Calls and more') || !va.includes('Get the phone app')) throw new Error(`rail reads ${va.join(' ')}`)
+  // Keyboard: Enter opens, focus on the first item, arrows move, Esc closes and focus goes back to the +.
+  const plus = page.locator('.fx-rail').getByRole('button', { name: 'Calls and more' })
+  await plus.focus()
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(250)
+  const f1 = await page.evaluate(() => `${document.activeElement?.getAttribute('role')} ${document.activeElement?.textContent}`)
+  if (!/^menuitem Next call/.test(f1)) throw new Error(`Enter did not focus the first item (${f1})`)
+  await page.keyboard.press('ArrowDown')
+  const f2 = await page.evaluate(() => document.activeElement?.textContent)
+  if (!/^Live call/.test(f2)) throw new Error(`ArrowDown went to ${f2}`)
+  await page.keyboard.press('End')
+  if (!/^Request a day off/.test(await page.evaluate(() => document.activeElement?.textContent))) throw new Error('End did not reach the last item')
+  if (SHOTS) await page.screenshot({ path: `${OUT857}/menu-1440-${theme}.png` })
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(200)
+  if (await page.locator('.fs-cmenu').count()) throw new Error('Esc did not close the menu')
+  if (!(await page.evaluate(() => document.activeElement?.getAttribute('aria-label') === 'Calls and more'))) throw new Error('focus did not go back to the +')
+  await page.keyboard.press(' ')
+  await page.waitForTimeout(250)
+  if (!(await page.locator('.fs-cmenu').isVisible())) throw new Error('Space did not open the menu')
+  await page.keyboard.press('Escape')
+  // Each item does what its old button did.
+  const pick = async name => { await plus.click(); await page.getByRole('menuitem', { name }).click(); await page.waitForTimeout(500) }
+  await pick(/^Next call/)
+  if (!/schedule\/cl-\d+$/.test(new URL(page.url()).pathname)) throw new Error(`Next call went to ${new URL(page.url()).pathname}`)
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(400)
+  await pick(/^Log a call/)
+  if (!(await page.locator('.tp-sheet').getByText('Pick the call. Its result is saved on the call.').isVisible())) throw new Error('Log a call did not open')
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
+  await pick(/^Book for an agent/)
+  if (!(await page.locator('.tp-sheet').getByRole('button', { name: 'Book it' }).count())) throw new Error('Book for an agent did not open')
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
+  // Live call rings in the phone; Answer goes to the call screen.
+  await pick(/^Live call/)
+  if (!(await phone.getByRole('button', { name: 'Answer' }).isVisible())) throw new Error('Live call did not ring in the phone')
+  if (SHOTS) await page.screenshot({ path: `${OUT857}/phone-ring-1440-${theme}.png` })
+  await phone.getByRole('button', { name: 'Answer' }).click()
+  await page.waitForTimeout(1300)
+  const t = await phone.locator('.fs-ph-timer').innerText()
+  if (!/0[01]:0[1-9]/.test(t)) throw new Error(`call timer reads ${t.replace(/\n/g, ' ')}`)
+  if (!/their time/.test(await phone.locator('.fs-ph-tz').innerText())) throw new Error('no client local time on the call')
+  await phone.getByRole('button', { name: 'Mute' }).click()
+  if ((await phone.getByRole('button', { name: 'Unmute' }).getAttribute('aria-pressed')) !== 'true') throw new Error('Mute did not press')
+  await phone.getByRole('button', { name: 'Hold' }).click()
+  if (!(await phone.getByText('On hold').isVisible())) throw new Error('Hold did not hold')
+  await phone.getByRole('button', { name: 'Keypad' }).click()
+  await phone.locator('.fs-pad .fs-key', { hasText: '5' }).click()
+  if ((await phone.locator('.fs-ph-tones').innerText()).trim() !== '5') throw new Error('in-call keypad did not take a key')
+  if (SHOTS) await page.screenshot({ path: `${OUT857}/phone-call-1440-${theme}.png` })
+  // Close the panel mid-call: the rail's phone shows the call; reopening shows it again.
+  await phone.locator('.fx-x').click()
+  await page.waitForTimeout(300)
+  if (!(await page.locator('.fx-rail').getByRole('button', { name: 'Phone, on a call' }).count())) throw new Error('rail phone does not show the call')
+  await page.locator('.fx-rail').getByRole('button', { name: 'Phone, on a call' }).click()
+  await phone.getByRole('button', { name: 'Hang up' }).click()
+  await page.waitForTimeout(300)
+  if (!(await phone.getByText('How did it go?').first().isVisible())) throw new Error('no result step after Hang up')
+  await phone.getByRole('radio', { name: 'No answer' }).click()
+  await phone.getByRole('textbox', { name: /Notes/ }).fill('Rang out, try at 4.')
+  if (SHOTS) await page.screenshot({ path: `${OUT857}/phone-result-1440-${theme}.png` })
+  await phone.getByRole('button', { name: 'Save result' }).click()
+  await page.waitForTimeout(300)
+  if (!(await phone.getByRole('tab', { name: 'Recent', selected: true }).count())) throw new Error('did not land on Recent after saving')
+  // Search a client by name, and dial a number on the pad.
+  await phone.getByRole('tab', { name: 'Keypad' }).click()
+  await phone.getByRole('textbox', { name: /Search a client/ }).fill('gloria')
+  await phone.getByRole('button', { name: /Gloria Santos/ }).click()
+  if (!(await phone.getByRole('button', { name: 'Call Gloria' }).isVisible())) throw new Error('search did not open the client')
+  await phone.getByRole('button', { name: 'Dial pad' }).click()
+  for (const d of '2145550199') await phone.locator('.fs-pad .fs-key', { hasText: d }).first().click()
+  if (!(await phone.getByRole('button', { name: 'Call', exact: true }).isEnabled())) throw new Error('Call stayed off with 10 digits')
+  if (SHOTS) await page.screenshot({ path: `${OUT857}/phone-pad-1440-${theme}.png` })
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
+  if (await phone.count()) throw new Error('Esc did not close the phone')
+  // Get the app: the same sheet as the agent side.
+  await page.locator('.fx-rail').getByRole('button', { name: 'Get the phone app' }).click()
+  if (!(await page.locator('.tp-sheet').getByText('Get the phone app').isVisible())) throw new Error('Get the app did not open')
+  await page.keyboard.press('Escape')
+  // The agent rail, for the ship note.
+  await go('')
+  const agent = await railList(page)
+  rows.push({ where: `rails ${theme}`, va: va.join(' '), agent: agent.join(' ') })
+  // A phone: the bar's raised + opens the same actions as a sheet (with Phone first); the phone is a sheet too.
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: theme })
+  await ctx.addInitScript(th => { try { localStorage.setItem('ohvara-theme', th) } catch { /* private mode */ } }, theme)
+  const p2 = await ctx.newPage()
+  try {
+    await p2.goto(`${BASE}/template/fulfillment`, { waitUntil: 'networkidle' })
+    await p2.waitForTimeout(800)
+    await p2.locator('.fx-bar').getByRole('button', { name: 'Calls and more' }).click()
+    await p2.waitForTimeout(400)
+    const sheet = await p2.evaluate(() => { const r = document.querySelector('.fs-cmenu').getBoundingClientRect(); return { l: r.left, r: document.documentElement.clientWidth - r.right } })
+    // Same geometry as the agent's Create sheet (10px left; its right inset is 25px in a 390 view).
+    if (sheet.l > 12 || sheet.r > 30) throw new Error(`+ menu is not a bottom sheet: ${JSON.stringify(sheet)}`)
+    if (SHOTS) await p2.screenshot({ path: `${OUT857}/menu-390-${theme}.png` })
+    await p2.getByRole('menuitem', { name: /^Phone/ }).click()
+    await p2.waitForTimeout(500)
+    const ph = await p2.evaluate(() => { const r = document.querySelector('.fs-phone').getBoundingClientRect(); return { l: r.left, b: innerHeight - r.bottom, side: document.documentElement.scrollWidth - innerWidth } })
+    if (ph.l > 12 || ph.b > 12 || ph.side > 1) throw new Error(`phone is not a bottom sheet: ${JSON.stringify(ph)}`)
+    if (SHOTS) await p2.screenshot({ path: `${OUT857}/phone-390-${theme}.png` })
+    await p2.keyboard.press('Escape')
+    await p2.locator('.fx-bar').getByRole('button', { name: 'More', exact: true }).click()
+    await p2.getByRole('button', { name: 'Get the phone app' }).click()
+    if (!(await p2.locator('.tp-sheet').getByText('Get the phone app').isVisible())) throw new Error('Get the app missing from the phone menu')
+    await p2.keyboard.press('Escape')
+    if (SHOTS) { await p2.waitForTimeout(400); await p2.screenshot({ path: `${OUT857}/overview-390-${theme}.png` }) }
+  } finally { await ctx.close() }
+  await go('/fulfillment')
+  if (SHOTS) await page.screenshot({ path: `${OUT857}/overview-1440-${theme}.png` })
 }
 
 // P854: on a phone the week is a list; tapping a day opens it full screen with Back to the week.
