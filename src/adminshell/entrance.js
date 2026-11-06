@@ -14,10 +14,10 @@ export function entranceStalled(anims) {
   return anims.some(a => live(a) && !(Number(a.currentTime) >= STALLED_BELOW))
 }
 
-// Starts the watchdog on the app element. Returns a stop function. `settle` runs at most once.
-export function armEntrance(el, { still = false, timers = { set: (f, ms) => setTimeout(f, ms), clear: id => clearTimeout(id) } } = {}) {
+// Starts the watchdog on the app element. rootClass: the class put on <html> (admin 'ad-settled', agent 'fx-settled'). Returns a stop function. `settle` runs at most once.
+export function armEntrance(el, { still = false, rootClass = 'ad-settled', timers = { set: (f, ms) => setTimeout(f, ms), clear: id => clearTimeout(id) } } = {}) {
   // On the app (the page) and on <html> (the drawers and panels, which render outside it).
-  const settle = () => { el.classList.add('is-settled'); el.ownerDocument?.documentElement?.classList.add('ad-settled') }
+  const settle = () => { el.classList.add('is-settled'); el.ownerDocument?.documentElement?.classList.add(rootClass) }
   if (still) { settle(); return () => {} } // reduced motion: everything shows at once
   const check = () => {
     if (typeof el.getAnimations !== 'function') { settle(); return } // cannot tell, so show it

@@ -85,3 +85,16 @@ test('nothing on the Overview hides its content behind a read: it only reads the
   const css = src('./admin.css').replace(/@keyframes[^{]+\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '')
   assert.doesNotMatch(css, /\.ad-(ov|main|tabpane)[^{]*\{[^}]*(opacity:\s*0[;\s}]|visibility:\s*hidden)/)
 })
+
+test('the agent frame arms the same watchdog, with its own <html> class, and flow.css drops every animation once settled', () => {
+  const frame = src('../template/TemplateFrame.jsx')
+  assert.match(frame, /import \{ armEntrance \} from '\.\.\/adminshell\/entrance'/)
+  assert.match(frame, /classList\.add\('is-anim'\); stop = armEntrance\(el, \{ still: still\(\), rootClass: 'fx-settled' \}\)/)
+  assert.match(src('../template/flow.css'), /\.fx\.tp-app\.is-settled, \.fx\.tp-app\.is-settled \*, \.fx-settled \.fx-layer, \.fx-settled \.fx-layer \* \{ animation: none !important; \}/)
+  const r = rig([anim(0)])
+  const html = []
+  r.el.ownerDocument.documentElement.classList.add = c => html.push(c)
+  armEntrance(r.el, { rootClass: 'fx-settled', timers: r.timers })
+  r.fire(SETTLE_MS)
+  assert.deepEqual(html, ['fx-settled'])
+})

@@ -802,6 +802,10 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 /* Visible resting state: entrance motion only runs once the page is really painting (.is-anim, added on the first
    animation frame and dropped when the tab hides). In a background tab everything sits at its final look. */
 .fx.tp-app:not(.is-anim) :is(.fx-main, .fx-head) *, .fx.tp-app:not(.is-anim) :is(.fx-main, .fx-head) { animation: none !important; }
+/* P859: and if motion was allowed but has not really started SETTLE_MS later (a throttled or frozen browser), the frame's
+   watchdog (adminshell/entrance.js) adds .is-settled on the page and .fx-settled on <html> (drawers, panels): every
+   animation drops and the content shows at its resting look. */
+.fx.tp-app.is-settled, .fx.tp-app.is-settled *, .fx-settled .fx-layer, .fx-settled .fx-layer * { animation: none !important; }
 
 /* P835 ----------------------------------------------------------------------------------------------------------
    The plan builder (PlanBuilder.jsx): weekly budget slider, the range it buys, monthly servicing, the plan summary,

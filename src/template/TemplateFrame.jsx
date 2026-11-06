@@ -11,7 +11,8 @@ import {
 } from './data'
 import { Drawer, Avatar, Field, PillTabs, Seg, useAccount, useNote, initials } from './kit'
 import { avatarHue } from './avatarHue'
-import { wig, CountUp, RollTitle, usePageSwap, usd, useExit } from './motion'
+import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit } from './motion'
+import { armEntrance } from '../adminshell/entrance'
 import { paths, tabOf, titleOfLayout, layoutOf, isTemplateAddress } from './paths'
 import Palette from './Palette'
 import { Select } from './Select'
@@ -371,11 +372,15 @@ export default function TemplateFrame() {
   useLayoutEffect(() => {
     const el = appRef.current
     if (!el) return undefined
-    const raf = requestAnimationFrame(() => el.classList.add('is-anim'))
+    let stop = () => {}
+    // P859: it then gets SETTLE_MS to really run; if it has not (a throttled or frozen browser), the page shows at rest
+    // (.is-settled, flow.css). Reduced motion shows at once. The body never waits on an animation.
+    const raf = requestAnimationFrame(() => { el.classList.add('is-anim'); stop = armEntrance(el, { still: still(), rootClass: 'fx-settled' }) })
     const onVis = () => { if (document.hidden) el.classList.remove('is-anim') }
     document.addEventListener('visibilitychange', onVis)
-    return () => { cancelAnimationFrame(raf); document.removeEventListener('visibilitychange', onVis) }
+    return () => { cancelAnimationFrame(raf); stop(); document.removeEventListener('visibilitychange', onVis) }
   }, [layout])
+  useEffect(() => () => document.documentElement.classList.remove('fx-settled'), [])
 
   // Ctrl/⌘K opens search from anywhere.
   useEffect(() => {
