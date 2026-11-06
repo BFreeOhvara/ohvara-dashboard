@@ -42,7 +42,8 @@ export function CountUp({ value, format = n => Math.round(n).toLocaleString('en-
     const a = from.current
     let raf = 0
     const tick = now => {
-      const t = Math.min(1, (now - start) / ms)
+      // P859: a frame stamped before the effect began (a stalled or throttled browser) must not count backwards: clamp to 0..1.
+      const t = Math.max(0, Math.min(1, (now - start) / ms))
       const v = a + (target - a) * ease(t)
       setN(v)
       from.current = v
@@ -50,7 +51,7 @@ export function CountUp({ value, format = n => Math.round(n).toLocaleString('en-
     }
     raf = requestAnimationFrame(tick)
     // A background tab runs no animation frames: land on the real number anyway, so it never sits at 0.
-    const land = setTimeout(() => { from.current = target; setN(target) }, ms + 100)
+    const land = setTimeout(() => { cancelAnimationFrame(raf); from.current = target; setN(target) }, ms + 100) // P859: and stop the frame loop, or its next tick overwrites the landing
     return () => { cancelAnimationFrame(raf); clearTimeout(land) }
   }, [target, ms, reduce])
   return createElement('span', { className, 'aria-label': format(target) }, createElement('span', { 'aria-hidden': 'true' }, format(reduce ? target : n)))

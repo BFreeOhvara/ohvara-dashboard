@@ -8,7 +8,8 @@ import {
 import { useTheme } from '../hooks/useTheme'
 import { Drawer, Avatar, Field, Seg, PillTabs, useAccount, useNote, initials } from '../template/kit'
 import { avatarHue } from '../template/avatarHue'
-import { wig, CountUp, RollTitle, usePageSwap, usd, useExit } from '../template/motion'
+import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit } from '../template/motion'
+import { armEntrance } from './entrance'
 import Palette from '../template/Palette'
 import { OhvaraMark } from '../components/ui/OhvaraMark'
 import { isSearchKey } from '../lib/searchKey'
@@ -239,11 +240,16 @@ export default function AdminFrame({ preview = false }) {
   useLayoutEffect(() => {
     const el = appRef.current
     if (!el) return undefined
-    const raf = requestAnimationFrame(() => el.classList.add('is-anim'))
+    let stop = () => {}
+    // P859: motion starts on the first painted frame, then gets SETTLE_MS to really run; if it has not, the page
+    // shows at rest (.is-settled). Under reduced motion it shows at once. The body never waits on an animation.
+    const raf = requestAnimationFrame(() => { el.classList.add('is-anim'); stop = armEntrance(el, { still: still() }) })
     const onVis = () => { if (document.hidden) el.classList.remove('is-anim') }
     document.addEventListener('visibilitychange', onVis)
-    return () => { cancelAnimationFrame(raf); document.removeEventListener('visibilitychange', onVis) }
+    return () => { cancelAnimationFrame(raf); stop(); document.removeEventListener('visibilitychange', onVis) }
   }, [layout])
+
+  useEffect(() => () => document.documentElement.classList.remove('ad-settled'), [])
 
   useEffect(() => {
     const onKey = e => { if (isSearchKey(e)) { e.preventDefault(); setPanel(p => (p === 'search' ? null : 'search')) } }

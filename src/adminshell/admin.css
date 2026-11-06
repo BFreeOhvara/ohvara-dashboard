@@ -314,3 +314,9 @@
   .ad-tl-dot.is-live { animation: none; }
   .ad-chip, .ad-agent, .ad-day, .ad-x, .ad-tl-dot { transition: none; }
 }
+
+/* P859 — content never waits on motion. If the entrance animations have not really started SETTLE_MS after the first
+   frame (a throttled or GPU-starved browser, a paused timeline) or motion is reduced, entrance.js adds .is-settled
+   (on the page) and .ad-settled (on <html>, for the drawers and panels): every animation drops and everything shows at
+   its resting look. Resting looks are set in plain CSS above (heights, positions), never only in a keyframe. */
+.ad.is-settled, .ad.is-settled *, .ad-settled .fx-layer, .ad-settled .fx-layer * { animation: none !important; }
