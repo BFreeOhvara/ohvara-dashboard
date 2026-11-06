@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { KeyRound, MapPin, Workflow, MessageSquareText, Megaphone, Globe, Plus, Check, CircleDashed, Plug, ShieldCheck, Eye, EyeOff, Info } from 'lucide-react'
 import { useAdmConnect, useAdmActions, useAdmViewAs, GHL_WORKFLOWS, plugged } from '../data'
-import { Chip, Field, Switch, useNote } from '../../template/kit'
+import { Chip, Field, Switch, useNote, useAccount } from '../../template/kit'
+import { GHL_EVENTS } from '../../lib/ghlStatus'
+import { formFromSettings, checkForm, sameForm, testConnection, connectStatus, ghlPlugged } from '../../lib/ghlConnect'
+import { useGhlConnect } from '../../lib/ghlConnectHooks'
 import { usd } from '../../template/motion'
 import { Dropdown, DField, Tile } from '../kit'
 import { AD_WORD, CAMPAIGN_WORD } from '../words'
@@ -14,6 +17,79 @@ import { AD_WORD, CAMPAIGN_WORD } from '../words'
 const money = usd()
 const WAIT = 'Saved. It will connect when the bridge is live (P850).'
 const NONE = { value: '', label: 'No workflow' }
+
+// Live (signed in as an admin): the real settings row, the key sent to the secret store, the bridge's status.
+// Test connection waits until the bridge has run once; it then re-reads the last run (nothing goes to GoHighLevel).
+function GhlLiveTile({ ghl }) {
+  const note = useNote()
+  const { settings: sq, keySaved: kq, save, recheck } = ghl
+  const row = sq.data
+  const loading = sq.isLoading
+  const unavailable = !loading && row === null
+  const base = formFromSettings(row)
+  const [form, setForm] = useState(null)
+  const [key, setKey] = useState('')
+  const [peek, setPeek] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const cur = form ?? base
+  const errors = checkForm(cur)
+  const idsChanged = !sameForm(cur, base)
+  const dirty = idsChanged || !!key.trim()
+  const status = loading ? { label: 'Checking…', tone: 'mute', line: '' } : unavailable ? { label: 'Not connected', tone: 'mute', line: '' } : connectStatus(row)
+  const test = testConnection(row, kq.data)
+  const keySaved = kq.data === true
+  const put = patch => setForm({ ...cur, ...patch })
+  const canSave = dirty && !busy && !unavailable && !loading && (!idsChanged || Object.keys(errors).length === 0) && (idsChanged || !!key.trim())
+  const doSave = async () => {
+    setBusy(true)
+    const typed = key
+    setKey(''); setPeek(false) // the key leaves the form the moment Save is pressed
+    const r = await save({ form: cur, key: typed })
+    setBusy(false)
+    if (r.settings && !r.settings.ok) { note(r.settings.error); if (typed.trim()) note('The key was not sent. Type it again after fixing this.'); return }
+    if (r.key && !r.key.ok) { note(`${r.key.error} The settings were saved.`); setForm(null); return }
+    setForm(null)
+    note(r.key ? 'Saved. The key is stored and will not be shown again.' : 'Saved the GoHighLevel settings')
+  }
+  const doTest = async () => {
+    setBusy(true)
+    const next = await recheck()
+    setBusy(false)
+    if (!next) return note('Could not read the bridge status.')
+    const s = connectStatus(next)
+    note(s.key === 'connected' ? `Connected. ${s.line}.` : `${s.label}. ${s.line}`)
+  }
+  return (
+    <Tile className="ad-con" i={0} title="GoHighLevel" sub={loading ? 'Loading…' : status.line || 'Not set up yet'} aside={<Chip tone={status.tone}>{status.label}</Chip>}>
+      {unavailable && <p className="ad-note">The settings can't be read yet: the bridge's database step is not applied, or this login is not an admin. Saving is off until then.</p>}
+      <div className="tp-field"><span>API key</span>
+        {keySaved && !key && <p className="ad-saved"><ShieldCheck size={14} aria-hidden="true" />A key is saved. It is never shown again. Type a new one to replace it.</p>}
+        <div className="ad-keyrow">
+          <input type={peek ? 'text' : 'password'} autoComplete="off" spellCheck={false} aria-label="API key" placeholder={keySaved ? 'Paste a new key to replace it' : 'Paste the location API key'} value={key} disabled={unavailable || busy} onChange={e => setKey(e.target.value)} />
+          <button type="button" className="fx-ib" aria-label={peek ? 'Hide what you typed' : 'Show what you typed'} disabled={!key} onClick={() => setPeek(x => !x)}>{peek ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+        </div>
+        <small>Write-only: it goes to the secret store and is never shown back.</small>
+      </div>
+      <Field label="Location ID" hint={form && errors.locationId ? errors.locationId : undefined}><input value={cur.locationId} disabled={unavailable || busy} spellCheck={false} onChange={e => put({ locationId: e.target.value })} placeholder="Paste the location ID" /></Field>
+      <div className="ad-wfs" role="group" aria-label="Workflows">
+        {GHL_EVENTS.map(e => (
+          <div key={e.key}>
+            <Field label={e.label}>
+              <input value={cur.workflows[e.key]} disabled={unavailable || busy} spellCheck={false} aria-label={`Workflow ID for ${e.label.toLowerCase()}`} aria-invalid={!!errors[e.key]} onChange={ev => put({ workflows: { ...cur.workflows, [e.key]: ev.target.value } })} placeholder="Workflow ID (optional)" />
+            </Field>
+            {errors[e.key] && <small className="ad-err">{errors[e.key]}</small>}
+          </div>
+        ))}
+      </div>
+      <small className="ad-note" id="ghl-test-note">{test.note}</small>
+      <footer className="fx-form-f">
+        <button type="button" className="tp-btn ov-ghost" disabled={!test.enabled || busy} aria-describedby="ghl-test-note" onClick={doTest}><Plug size={15} />Test connection</button>
+        <button type="button" className="tp-btn ov-ghost" disabled={!dirty || busy} onClick={() => { setKey(''); setPeek(false); setForm(null) }}>Discard</button>
+        <button type="button" className="tp-primary fx-accent" disabled={!canSave} onClick={doSave}><KeyRound size={15} />Save</button>
+      </footer>
+    </Tile>
+  )
+}
 
 function GhlTile() {
   const { data: c } = useAdmConnect()
@@ -129,7 +205,14 @@ function SourcesTile() {
 export default function Connect() {
   const { data: c } = useAdmConnect()
   const { data: viewAs } = useAdmViewAs()
+  const { live } = useAccount() || {}
+  const ghl = useGhlConnect({ enabled: !!live })
   const done = plugged(c)
+  if (live && ghl.settings.data !== undefined) {
+    const [key, loc] = ghlPlugged(ghl.settings.data, ghl.keySaved.data)
+    done[0] = key
+    done[1] = loc
+  }
   const checks = [
     [Workflow, 'GoHighLevel key'], [MapPin, 'GoHighLevel location and workflows'], [MessageSquareText, 'Texting campaign approved'],
     [Megaphone, 'An ad account for each lead type'], [Globe, 'Lead site and forms'],
@@ -138,7 +221,7 @@ export default function Connect() {
     <div className="tp-page fx-page fx-ovl ad-connect">
       <div className="fx-ovl-main">
         <div className="ad-congrid">
-          <GhlTile />
+          {live ? <GhlLiveTile ghl={ghl} /> : <GhlTile />}
           <TextTile />
           <AdsTile />
           <SourcesTile />
@@ -149,8 +232,10 @@ export default function Connect() {
           <header className="fx-tile-h"><span className="tp-grow"><h2>What is plugged in</h2><p>{checks.filter(x => x[2]).length} of {checks.length}</p></span><Plug size={18} aria-hidden="true" /></header>
           <ul className="ad-checks">{checks.map(([Icon, label, done]) => <li key={label} className={done ? 'is-done' : ''}>{done ? <Check size={15} aria-hidden="true" /> : <CircleDashed size={15} aria-hidden="true" />}<span className="tp-grow">{label}</span><Icon size={14} aria-hidden="true" /></li>)}</ul>
         </section>
-        <Tile i={5} title="The bridge" sub="Prompt 850">
-          <p className="tp-mid"><Info size={14} aria-hidden="true" /> Everything here saves now and waits. Nothing talks to GoHighLevel, the ad accounts or the texting service until the bridge is built and switched on.</p>
+        <Tile i={5} title="The bridge" sub={live ? 'GoHighLevel' : 'Prompt 850'}>
+          <p className="tp-mid"><Info size={14} aria-hidden="true" /> {live
+            ? 'The GoHighLevel settings and key save for real. Nothing is sent to GoHighLevel until the bridge is deployed and switched on. Texting, ads and lead sources still save in this page only.'
+            : 'Everything here saves now and waits. Nothing talks to GoHighLevel, the ad accounts or the texting service until the bridge is built and switched on.'}</p>
           <p className="tp-sub">{viewAs === 'partner' ? 'You see Connect, Leads and Messages.' : "Jordan's login sees Connect, Leads and Messages. A partner login needs its own role (a database change)."}</p>
         </Tile>
       </div>
