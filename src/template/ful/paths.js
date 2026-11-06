@@ -11,7 +11,7 @@ const isPreview = () => {
 export const FUL = {
   overview: '/fulfillment',
   queue: '/fulfillment/leads',
-  calls: '/fulfillment/desk',
+  schedule: '/fulfillment/schedule',
   clients: '/fulfillment/pipeline',
   servicing: '/fulfillment/servicing',
   pay: '/fulfillment/pay',
@@ -19,6 +19,8 @@ export const FUL = {
   messages: '/messages',
   settings: '/settings',
 }
+// P846: Calls became Schedule. The old Calls address (and a call's drawer under it) redirects to the Schedule.
+export const OLD_CALLS = '/fulfillment/desk'
 const PREVIEW = { messages: '/fulfillment/messages', settings: '/fulfillment/settings' }
 
 // Messages and Settings at a mount (the router path, no /template prefix).
@@ -32,18 +34,18 @@ export const fp = (key, id) => {
 
 // Routes inside the router (both mounts): [page key, path, takes an id].
 export const FUL_ROUTES = [
-  ['overview', FUL.overview], ['queue', FUL.queue], ['queue', `${FUL.queue}/:id`], ['calls', FUL.calls], ['calls', `${FUL.calls}/:id`],
+  ['overview', FUL.overview], ['queue', FUL.queue], ['queue', `${FUL.queue}/:id`], ['schedule', FUL.schedule], ['schedule', `${FUL.schedule}/:id`],
   ['clients', FUL.clients], ['clients', `${FUL.clients}/:id`], ['servicing', FUL.servicing], ['servicing', `${FUL.servicing}/:id`],
   ['pay', FUL.pay], ['more', FUL.more],
 ]
 
 // The top tabs, in order. Messages and Settings live on the rail and the top right, as on the agent side.
 export const FUL_TABS = [
-  ['overview', 'Overview'], ['queue', 'Queue'], ['calls', 'Calls'], ['clients', 'Clients'], ['servicing', 'Servicing'], ['pay', 'Pay'],
+  ['overview', 'Overview'], ['queue', 'Queue'], ['schedule', 'Schedule'], ['clients', 'Clients'], ['servicing', 'Servicing'], ['pay', 'Pay'],
 ]
 
 const TITLES = {
-  overview: ['Today', 'Overview'], queue: ['Call next', 'Queue'], calls: ['Cancellations', 'Calls'], clients: ['Every agent', 'Clients'],
+  overview: ['Today', 'Overview'], queue: ['Call next', 'Queue'], schedule: ['Your week', 'Schedule'], clients: ['Every agent', 'Clients'],
   servicing: ['Client care', 'Servicing'], pay: ['What you earned', 'Pay'], messages: ['Your agents', 'Messages'], settings: ['Account', 'Settings'],
   more: ['Account', 'More'],
 }
@@ -57,6 +59,7 @@ export function fulPageOf(pathname) {
   const p = noSlash(String(pathname || ''))
   if (p === PREVIEW.messages || p === FUL.messages) return 'messages'
   if (p === PREVIEW.settings || p === FUL.settings) return 'settings'
+  if (p === OLD_CALLS || p.startsWith(`${OLD_CALLS}/`)) return 'schedule'
   const hit = Object.entries(FUL).find(([, base]) => base !== FUL.overview && (p === base || p.startsWith(`${base}/`)))
   if (hit) return hit[0]
   return p === FUL.overview ? 'overview' : null

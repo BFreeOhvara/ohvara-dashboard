@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, Clock, PhoneCall, PhoneIncoming, LifeBuoy, MessageSquare, CalendarClock } from 'lucide-react'
 import { useFulDay, useFulPay, useFulAgents } from '../data'
 import { Avatar } from '../../kit'
+import { ShiftLine, DayOffDrawer } from '../Shift'
 import { CountUp, usd } from '../../motion'
 import { fp } from '../paths'
 import { CALL_WORD, CALL_TONE, KIND } from '../words'
@@ -54,6 +55,7 @@ function QueueCard({ l, i }) {
 }
 
 export default function Overview() {
+  const [ask, setAsk] = useState(false)
   const { data: day } = useFulDay()
   const { data: pay } = useFulPay()
   const { data: agents } = useFulAgents()
@@ -66,8 +68,10 @@ export default function Overview() {
 
   return (
     <div className="tp-page fx-page fx-ovl fs-ov">
+      <ShiftLine className="fs-shift-top" onAsk={() => setAsk(true)} />
+      <DayOffDrawer open={ask} onClose={() => setAsk(false)} />
       <div className="fx-ovl-main">
-        <Tile className="fs-ov-hero" i={0} title="Next call" sub={next ? `Cancellation call for ${next.agent}'s client` : 'No more calls today'} to={fp('calls')} label="Open Calls">
+        <Tile className="fs-ov-hero" i={0} title="Next call" sub={next ? `Cancellation call for ${next.agent}'s client` : 'No more calls today'} to={fp('schedule')} label="Open Schedule">
           {next ? (
             <div className="fs-next">
               <div className="fs-next-l">
@@ -75,14 +79,14 @@ export default function Overview() {
                 <span className="fs-next-at"><CalendarClock size={14} aria-hidden="true" />Starts at {next.time}</span>
                 <span className="fx-next-who"><Avatar name={next.name} tone={CALL_TONE[next.status]} /><span><b>{next.name}</b><small>Closing {next.old_carrier} · new policy {next.carrier}</small></span></span>
                 <div className="tp-row tp-wrap fx-next-acts">
-                  <Link to={fp('calls', next.id)} className="tp-primary sm fx-accent"><PhoneCall size={14} />Open the call</Link>
+                  <Link to={fp('schedule', next.id)} className="tp-primary sm fx-accent"><PhoneCall size={14} />Open the call</Link>
                   <Link to={fp('messages')} className="fx-pillbtn"><MessageSquare size={14} />Message {next.agent.split(' ')[0]}</Link>
                 </div>
               </div>
               <ol className="fs-dayline" aria-label="Today's calls">
                 {day.today.map(k => (
                   <li key={k.id} className={`is-${CALL_TONE[k.status]}${k.id === next.id ? ' is-next' : ''}`}>
-                    <Link to={fp('calls', k.id)}>
+                    <Link to={fp('schedule', k.id)}>
                       <small className="tp-num">{k.time}</small>
                       <span className="tp-grow"><b>{k.name}</b><small>{k.agent}</small></span>
                       <span className="fs-st">{k.id === next.id ? 'Next' : CALL_WORD[k.status]}</span>

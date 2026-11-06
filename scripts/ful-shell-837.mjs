@@ -2,6 +2,7 @@
 // ~/.atlas/test-logins.json ("fulfill"). Also checks the agent shell and the admin pages are unchanged.
 //   node scripts/ful-shell-837.mjs --base-url <url> [--no-shots] [--out qa/fulfillment-845] [--preview]
 // P845: the rebuilt VA pages (sample info). Adds Overview and each record drawer's own URL, and --preview: the same
+// P846: Calls became Schedule (calendar, rota, day off, live-call overlay); checks cover those and the old /desk redirect.
 // pages at /template/fulfillment with no sign-in (Messages and Settings at /fulfillment/messages|settings there),
 // plus a click-through of the VA flows. The agent/admin checks run in the signed-in mode only.
 // Each page x 1920/1440/390 x light/dark: the shell frame is there, the title, tabs (desktop) or bottom bar (phone),
@@ -24,10 +25,10 @@ const OUT = flag('--out') || 'qa/fulfillment-845'
 const PRE = PREVIEW ? '/template' : ''
 mkdirSync(OUT, { recursive: true })
 
-const URLS = [['overview', '/fulfillment'], ['queue', '/fulfillment/leads'], ['calls', '/fulfillment/desk'], ['clients', '/fulfillment/pipeline'],
+const URLS = [['overview', '/fulfillment'], ['queue', '/fulfillment/leads'], ['schedule', '/fulfillment/schedule'], ['clients', '/fulfillment/pipeline'],
   ['servicing', '/fulfillment/servicing'], ['pay', '/fulfillment/pay'],
   ['messages', PREVIEW ? '/fulfillment/messages' : '/messages'], ['settings', PREVIEW ? '/fulfillment/settings' : '/settings'],
-  ['queue-drawer', '/fulfillment/leads/vq-1'], ['call-drawer', '/fulfillment/desk/cl-8'], ['client-drawer', '/fulfillment/pipeline/fc-gloria'], ['servicing-drawer', '/fulfillment/servicing/st-1']]
+  ['queue-drawer', '/fulfillment/leads/vq-1'], ['call-drawer', '/fulfillment/schedule/cl-8'], ['callback-drawer', '/fulfillment/schedule/vq-1'], ['booked-drawer', '/fulfillment/schedule/ap-1'], ['client-drawer', '/fulfillment/pipeline/fc-gloria'], ['servicing-drawer', '/fulfillment/servicing/st-1']]
 const VIEWS = [{ w: 1920, h: 1080 }, { w: 1440, h: 900 }, { w: 390, h: 844 }]
 const failures = []
 const writes = new Set()
@@ -97,7 +98,13 @@ for (const theme of ['light', 'dark']) {
       const errs = errors.filter(e => !/favicon|Failed to load resource: the server responded with a status of 40[34]/.test(e))
       if (errs.length) fail(where, `console: ${errs.join(' | ')}`)
       rows.push({ where, ...m, errors: errs.length })
-      if (SHOTS) await page.screenshot({ path: `${OUT}/${key}-${view.w}-${theme}.png`, fullPage: view.w >= 768 && !key.endsWith('-drawer') })
+      // The Schedule is two screens tall (calendar, then the rota): a full-page shot catches the week tile mid-animation, so it is two viewport shots.
+      if (SHOTS && key === 'schedule') {
+        await page.screenshot({ path: `${OUT}/${key}-${view.w}-${theme}.png` })
+        await page.locator('.fs-rota').scrollIntoViewIfNeeded()
+        await page.waitForTimeout(700)
+        await page.screenshot({ path: `${OUT}/${key}-rota-${view.w}-${theme}.png` })
+      } else if (SHOTS) await page.screenshot({ path: `${OUT}/${key}-${view.w}-${theme}.png`, fullPage: view.w >= 768 && !key.endsWith('-drawer') })
     }
     if (view.w === 1440) {
       await page.goto(`${BASE}${PRE}/fulfillment`, { waitUntil: 'networkidle' })
@@ -135,9 +142,65 @@ async function clickThrough(page, theme, errors) {
     await page.getByRole('button', { name: 'Book it' }).click()
     await page.waitForTimeout(700)
     if (await page.locator('.fx-board').getByText('Shirley Adams').count()) throw new Error('booked lead still on the board')
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(500)
+    // In-app navigation: the sample changes live in memory, so a reload would forget the booking.
+    await page.locator('.fx-top').getByRole('link', { name: 'Schedule' }).click()
+    await page.waitForTimeout(900)
+    if (!(await page.locator('.fx-week a.tp-ev', { hasText: 'Shirley Adams' }).count())) throw new Error('booked appointment not on the Schedule')
+  })
+  await step('schedule: every kind opens, rota, old address redirects', async () => {
+    await go('/fulfillment/desk/cl-8')
+    if (new URL(page.url()).pathname !== '/template/fulfillment/schedule/cl-8') throw new Error(`old Calls drawer address landed on ${new URL(page.url()).pathname}`)
+    await go('/fulfillment/desk')
+    if (new URL(page.url()).pathname !== '/template/fulfillment/schedule') throw new Error('old Calls address did not land on Schedule')
+    const top = await page.locator('.fx-top .fx-tabs').innerText()
+    if (!/Schedule/.test(top) || /Calls/.test(top)) throw new Error(`tabs read: ${top.replace(/\n/g, ' ')}`)
+    // every kind of item is on the calendar, and each opens its drawer at its own address
+    const ev = await page.locator('.fx-week a.tp-ev').count()
+    if (ev < 12) throw new Error(`only ${ev} items on the week`)
+    for (const [ref, text] of [['cl-8', 'Cancellation call'], ['vq-1', 'Queue'], ['ap-1', 'Booked for Dana']]) {
+      await go(`/fulfillment/schedule/${ref}`)
+      if (!(await page.locator('.fx-rec').getByText(text).first().isVisible())) throw new Error(`${ref} drawer missing "${text}"`)
+    }
+    await go('/fulfillment/schedule')
+    await page.locator('.fx-week a.tp-ev', { hasText: 'Angela Moore' }).click()
+    await page.waitForTimeout(500)
+    if (!/schedule\/vq-1$/.test(new URL(page.url()).pathname)) throw new Error('clicking a callback did not open its address')
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(500)
+    await page.getByRole('radio', { name: 'Next week' }).click().catch(async () => { await page.getByRole('tab', { name: 'Next week' }).click() })
+    await page.waitForTimeout(500)
+    if (!(await page.locator('.fs-rota-t').getByText('Leo Grant').isVisible())) throw new Error('rota missing')
+    if ((await page.locator('.fx-week .tp-tgrid-h b').count()) !== 5) throw new Error('week is not 5 days')
+    if (SHOTS) await page.screenshot({ path: `${OUT}/flow-schedule-next-1440-${theme}.png`, fullPage: true })
+  })
+  await step('live call overlay + day off', async () => {
+    await go('/fulfillment')
+    if (!(await page.getByText(/Your shift today\s*8:00 AM to 6:00 PM/).first().isVisible())) throw new Error('Overview has no shift line')
+    if (await page.locator('[aria-label="Active or away"], [role="switch"][aria-label="Active"]').count()) throw new Error('an Active/Away switch is still on the page')
+    await page.getByRole('button', { name: 'Live call' }).click()
+    await page.waitForTimeout(500)
+    if (!(await page.getByText('Calling from the portal is switched off').isVisible())) throw new Error('live call overlay did not open from the rail')
+    if (SHOTS) await page.screenshot({ path: `${OUT}/flow-live-overlay-1440-${theme}.png` })
+    await page.getByRole('button', { name: 'Open the call' }).click()
+    await page.waitForTimeout(600)
+    if (!/schedule\/cl-\d+$/.test(new URL(page.url()).pathname)) throw new Error(`Open the call went to ${new URL(page.url()).pathname}`)
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(500)
+    await page.getByRole('button', { name: 'Request a day off' }).first().click()
+    await page.waitForTimeout(400)
+    await page.getByRole('button', { name: 'Tell the team' }).click()
+    await page.waitForTimeout(500)
+    await page.locator('.fx-top').getByRole('link', { name: 'Schedule' }).click()
+    await page.waitForTimeout(900)
+    if (!(await page.locator('.fs-rota-t').getByText('Off asked').first().isVisible())) throw new Error('day off not on the rota')
+    await page.getByRole('button', { name: 'Take it back' }).click()
+    await page.waitForTimeout(300)
+    if (await page.locator('.fs-rota-t').getByText('Off asked').count()) throw new Error('day off not taken back')
   })
   await step('call cancelled', async () => {
-    await go('/fulfillment/desk/cl-8')
+    await go('/fulfillment/schedule/cl-8')
     await page.getByRole('button', { name: 'Start call' }).click()
     if (!(await page.getByText('Calling from the portal is switched off').isVisible())) throw new Error('call screen did not say calls are off')
     await page.locator('.tp-sheet .fx-x').click()
@@ -171,19 +234,18 @@ async function clickThrough(page, theme, errors) {
     if (!(await page.locator('.tp-conv-b').getByText('On it, calling at 2.').isVisible())) throw new Error('message not shown')
     if (!(await page.getByText('Agent Dana Walker · about Gloria Santos').isVisible())) throw new Error('mirrored header missing')
   })
-  await step('settings tabs + away', async () => {
+  await step('settings tabs + shift (no Active/Away)', async () => {
     await go('/fulfillment/settings')
-    for (const t of ['Availability', 'Pay details', 'Notifications', 'Appearance', 'Profile']) await page.getByRole('tab', { name: t }).click()
-    await page.getByRole('tab', { name: 'Availability' }).click()
-    await page.locator('.fx-form').getByRole('switch', { name: 'Active' }).click()
-    await page.getByRole('button', { name: 'Save changes' }).click()
-    await page.waitForTimeout(300)
-    if (!(await page.locator('.fx-prof').getByText('Fulfillment · Away').isVisible())) throw new Error('Away not on the profile card')
-    if (SHOTS) await page.screenshot({ path: `${OUT}/flow-away-1440-${theme}.png` })
+    for (const t of ['Shift', 'Pay details', 'Notifications', 'Appearance', 'Profile']) await page.getByRole('tab', { name: t }).click()
+    await page.getByRole('tab', { name: 'Shift' }).click()
+    if (!(await page.locator('.fx-form').getByText(/Your shift today\s*8:00 AM to 6:00 PM/).isVisible())) throw new Error('Shift tab has no shift line')
+    if (await page.locator('.fx-form').getByRole('switch', { name: 'Active' }).count()) throw new Error('Active switch still in Settings')
+    if (await page.locator('.fx-prof').getByText(/Away|Active/).count()) throw new Error('profile card still says Active or Away')
+    if (SHOTS) await page.screenshot({ path: `${OUT}/flow-shift-1440-${theme}.png` })
   })
   const errs = errors.filter(e => !/favicon/.test(e))
   if (errs.length) fail(where, `console: ${errs.join(' | ')}`)
-  rows.push({ where, flows: 5 })
+  rows.push({ where, flows: 7 })
 }
 
 // The other portals are unchanged: the agent still gets the agent shell, admin still gets today's pages.

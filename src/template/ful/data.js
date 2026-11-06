@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { CALL_WORD, CALL_TONE } from './words.js'
 
 // P845 — the one door to the Fulfillment (VA) side's sample info, like ../data for the agent side. Screens read only
 // through the hooks below; every read returns { data, isLoading: false, error: null }, the react-query shape, so the
@@ -17,6 +18,25 @@ export const AGENTS = [
   { id: 'ag-priya', name: 'Priya Shah', city: 'Tampa, FL', clients: 0, hours: 'Tue to Sat, 10:00 AM to 7:00 PM', duty: true },
 ]
 export const agentName = id => AGENTS.find(a => a.id === id)?.name || 'Agent'
+
+// P846 — VAs do not switch themselves Active or Away. They work set hours (the carriers' hours, about 8 AM to 6 PM),
+// in a rotation with two or three VAs on shift each day. Sample rota; real shifts and day-off requests are stored
+// with the admin side later (a migration through Brayden's door).
+export const VAS = [
+  { id: 'va-maya', name: ME.name, me: true },
+  { id: 'va-leo', name: 'Leo Grant' },
+  { id: 'va-sasha', name: 'Sasha Ortiz' },
+  { id: 'va-devon', name: 'Devon Hale' },
+]
+export const SHIFT = { start: '8:00 AM', end: '6:00 PM', text: '8:00 AM to 6:00 PM' }
+const ROTA = {
+  2: ['va-maya', 'va-leo', 'va-sasha'], 3: ['va-leo', 'va-sasha', 'va-devon'], 4: ['va-maya', 'va-devon', 'va-sasha'],
+  5: ['va-maya', 'va-leo', 'va-devon'], 6: ['va-maya', 'va-sasha'],
+  9: ['va-maya', 'va-leo', 'va-devon'], 10: ['va-sasha', 'va-devon', 'va-leo'], 11: ['va-maya', 'va-sasha', 'va-devon'],
+  12: ['va-maya', 'va-leo'], 13: ['va-leo', 'va-sasha', 'va-devon'],
+}
+export const WEEKS = [[2, 3, 4, 5, 6], [9, 10, 11, 12, 13]]
+const DOW = { 2: 'Mon', 3: 'Tue', 4: 'Wed', 5: 'Thu', 6: 'Fri', 9: 'Mon', 10: 'Tue', 11: 'Wed', 12: 'Thu', 13: 'Fri' }
 
 // Clients across every agent this VA serves. stage = the agent side's servicing stage (../stages stageLabel).
 const mkClient = (id, first, last, agent, o) => ({
@@ -135,10 +155,18 @@ const seedFeed = [
   { id: 'f5', who: 'Robert Chen', text: 'Cancellation needs a listen', at: 'Wed', kind: 'pay' },
 ]
 
+// Appointments the VA booked for agents (they land on the agent's calendar). day = date in November.
+const mkBooked = (id, name, agent, day, time, o) => ({ id, name, agent_id: agent, day, time, type: 'Policy help', phone: '(555) 555-0100', city: 'Austin', state: 'TX', ...o })
+const seedBooked = [
+  mkBooked('ap-1', 'Rosa Delgado', 'ag-dana', 5, '4:00 PM', { phone: '(512) 555-0138', type: 'Mortgage protection' }),
+  mkBooked('ap-2', 'Ellen Park', 'ag-marcus', 6, '10:30 AM', { phone: '(480) 555-0166', city: 'Phoenix', state: 'AZ' }),
+  mkBooked('ap-3', 'Hector Vega', 'ag-priya', 6, '2:30 PM', { phone: '(813) 555-0152', city: 'Tampa', state: 'FL', type: 'Mortgage protection' }),
+  mkBooked('ap-4', 'June Whitfield', 'ag-dana', 9, '11:30 AM', { phone: '(214) 555-0181', city: 'Dallas' }),
+]
+
 const seedSettings = {
   profile: { name: ME.name, email: ME.email, phone: ME.phone },
-  hours: { days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], start: '9:00 AM', end: '5:00 PM' },
-  away: false,
+  timeZone: 'Central',
   payDetails: { bank: 'Chase', last4: '4821', taxEmail: ME.email, status: 'Payouts on' },
   notifications: [
     { key: 'queue', label: 'New people in the queue', push: true, email: false },
@@ -152,7 +180,7 @@ const seedSettings = {
 
 let state = {
   clients: seedClients, calls: seedCalls, queue: seedQueue, tasks: seedTasks, cancels: seedCancels, payouts: seedPayouts,
-  threads: seedThreads, feed: seedFeed, settings: seedSettings, log: [],
+  threads: seedThreads, feed: seedFeed, settings: seedSettings, log: [], booked: seedBooked, dayOffs: [], live: null,
 }
 const listeners = new Set()
 const set = fn => { state = { ...state, ...fn(state) }; listeners.forEach(l => l()) }
@@ -165,7 +193,7 @@ const clientOf = (s, id) => s.clients.find(c => c.id === id)
 // A call row with its client and agent filled in.
 const callRow = (s, k) => { const c = clientOf(s, k.client_id); return { ...k, name: fullName(c), client: c, agent: agentName(c.agent_id), carrier: c.carrier_name } }
 const taskRow = (s, t) => { const c = clientOf(s, t.client_id); return { ...t, name: fullName(c), client: c, agent: agentName(c.agent_id), carrier: c.carrier_name } }
-const DAY = { 2: 'Mon', 3: 'Tue', 4: 'Wed', 5: 'Thu', 6: 'Fri' }
+const DAY = { 2: 'Mon', 3: 'Tue', 4: 'Wed', 5: 'Thu', 6: 'Fri', 9: 'Mon', 10: 'Tue', 11: 'Wed', 12: 'Thu', 13: 'Fri' }
 export const TODAY = 5
 export const dayName = d => DAY[d] || ''
 export const RATE_PER_CANCEL = RATE
@@ -184,6 +212,61 @@ export function useFulAgents() {
   const s = useStore()
   return ok(AGENTS.map(a => ({ ...a, clients: s.clients.filter(c => c.agent_id === a.id).length })))
 }
+
+// When a time text like 'Today, 4:00 PM', 'Fri, 10:00 AM' or 'Thu, Nov 5, 2:30 PM' lands on the calendar: { day, time }.
+const DAY_OF = { Mon: 2, Tue: 3, Wed: 4, Thu: 5, Fri: 6 }
+export function whenOf(text) {
+  const m = /^(Today|Mon|Tue|Wed|Thu|Fri)(?:, Nov (\d+))?, (\d{1,2}:\d{2} [AP]M)$/.exec(String(text || '').trim())
+  if (!m) return null
+  return { day: m[2] ? Number(m[2]) : m[1] === 'Today' ? TODAY : DAY_OF[m[1]], time: m[3] }
+}
+// '3:30 PM' to minutes after midnight (the Schedule grid and its order).
+export function minutesOf(time) {
+  const [, h, m, ap] = /(\d+):(\d+)\s*(AM|PM)/.exec(time) || [0, 8, 0, 'AM']
+  return (Number(h) % 12 + (ap === 'PM' ? 12 : 0)) * 60 + Number(m)
+}
+
+// The VA's shift and rota: today's shift, who is on with them, the two weeks of the rota, and day-off requests.
+export function useFulShift() {
+  const s = useStore()
+  const off = d => s.dayOffs.some(o => o.day === d)
+  const days = WEEKS.map(w => w.map(d => ({
+    day: d, name: DOW[d], today: d === TODAY, past: d < TODAY,
+    vas: (ROTA[d] || []).map(id => { const v = VAS.find(x => x.id === id); return { ...v, off: v.me && off(d) } }),
+  })))
+  const me = VAS.find(v => v.me)
+  const mine = days.flat().filter(d => d.vas.some(v => v.me))
+  const today = (ROTA[TODAY] || []).map(id => VAS.find(v => v.id === id))
+  return ok({
+    me, shift: SHIFT, days, mine,
+    onToday: today.some(v => v.me), mates: today.filter(v => !v.me),
+    // Days a VA can still ask off: their shift days after today that are not asked yet.
+    askable: mine.filter(d => d.day > TODAY && !off(d.day)),
+    dayOffs: s.dayOffs, thisWeek: mine.filter(d => WEEKS[0].includes(d.day) && !off(d.day)).length,
+  })
+}
+
+// Everything the VA has to do at a time, in one list: cancellation calls, booked callbacks (people from the queue)
+// and appointments they booked for agents. ref = the id in the item's own address (/fulfillment/schedule/<ref>).
+export function useFulSchedule() {
+  const s = useStore()
+  const items = []
+  s.calls.map(k => callRow(s, k)).forEach(k => items.push({
+    ref: k.id, kind: 'call', day: k.day, time: k.time, tone: CALL_TONE[k.status], status: k.status, word: CALL_WORD[k.status],
+    name: k.name, label: `${k.old_carrier} to ${k.carrier}`, sub: `${k.agent}'s client`, done: k.status === 'cancelled' || k.status === 'passed',
+  }))
+  s.queue.filter(l => l.bucket === 'callback_due' && whenOf(l.callback)).forEach(l => {
+    const w = whenOf(l.callback)
+    items.push({ ref: l.id, kind: 'callback', day: w.day, time: w.time, tone: 'warn', status: 'callback', word: 'Callback', name: l.name, label: `${l.type} · call back`, sub: `${l.city}, ${l.state}`, done: false })
+  })
+  s.booked.forEach(b => items.push({
+    ref: b.id, kind: 'booked', day: b.day, time: b.time, tone: 'teal', status: 'booked_for', word: `Booked for ${agentName(b.agent_id).split(' ')[0]}`,
+    name: b.name, label: `${b.type} · with ${agentName(b.agent_id)}`, sub: `${b.city}, ${b.state}`, done: false,
+  }))
+  return ok(items.sort((a, b) => a.day - b.day || minutesOf(a.time) - minutesOf(b.time)))
+}
+export function useFulBooked() { const s = useStore(); return ok(s.booked.map(b => ({ ...b, agent: agentName(b.agent_id) }))) }
+export const useFulLive = () => { const s = useStore(); return s.live }
 
 // This week's pay: each cancel with its call, the totals, by day, and the payouts so far.
 export function useFulPay() {
@@ -211,7 +294,6 @@ export function useFulDay() {
     queue: { callback_due: s.queue.filter(l => l.bucket === 'callback_due'), new: s.queue.filter(l => l.bucket === 'new'), not_reached: s.queue.filter(l => l.bucket === 'not_reached') },
     tasks: { overdue: tasks.filter(t => t.due === 'overdue'), today: tasks.filter(t => t.due === 'today'), later: tasks.filter(t => t.due === 'later'), none: tasks.filter(t => t.due === 'none'), done: tasks.filter(t => t.due === 'done') },
     unread: s.threads.reduce((n, t) => n + t.unread, 0),
-    away: s.settings.away,
   })
 }
 
@@ -228,7 +310,10 @@ export function useFulActions() {
     callback: (id, when) => set(s => ({ queue: s.queue.map(l => (l.id === id ? { ...l, bucket: 'callback_due', callback: when, tries: l.tries + 1, held_until: null } : l)) })),
     bookLead: (id, agentId, when) => set(s => {
       const l = s.queue.find(x => x.id === id)
-      return { queue: s.queue.filter(x => x.id !== id), ...feedAdd(s, l.name, `Booked with ${agentName(agentId)}, ${when}`, 'queue') }
+      const w = whenOf(when)
+      // It lands on the Schedule as an appointment booked for the agent.
+      const booked = w ? [...s.booked, { id: `ap-${Date.now()}`, name: l.name, agent_id: agentId, day: w.day, time: w.time, type: l.type, phone: l.phone, city: l.city, state: l.state }] : s.booked
+      return { queue: s.queue.filter(x => x.id !== id), booked, ...feedAdd(s, l.name, `Booked with ${agentName(agentId)}, ${when}`, 'queue') }
     }),
     closeLead: id => set(s => ({ queue: s.queue.filter(x => x.id !== id) })),
     // Calls
@@ -254,7 +339,12 @@ export function useFulActions() {
     sendMessage: (threadId, text) => set(s => ({ threads: s.threads.map(t => (t.id === threadId ? { ...t, messages: [...t.messages, { id: `m${Date.now()}`, from: 'me', text, at: `Today, ${stamp()}` }] } : t)) })),
     readThread: threadId => set(s => ({ threads: s.threads.map(t => (t.id === threadId ? { ...t, unread: 0 } : t)) })),
     // Settings
-    setAway: away => set(s => ({ settings: { ...s.settings, away } })),
+    // Shift: a day-off request tells the team ahead of time (sample: it shows on the rota and in the bell).
+    requestDayOff: (day, why) => set(s => ({ dayOffs: [...s.dayOffs, { id: `do-${Date.now()}`, day, why }], ...feedAdd(s, ME.name, `Asked for ${DOW[day]}, Nov ${day} off${why ? `: ${why}` : ''}`, 'shift') })),
+    cancelDayOff: day => set(s => ({ dayOffs: s.dayOffs.filter(o => o.day !== day) })),
+    // The live-call screen (an overlay): one call at a time.
+    showLive: id => set(() => ({ live: id })),
+    hideLive: () => set(() => ({ live: null })),
     saveSettings: patch => set(s => ({ settings: { ...s.settings, ...patch } })),
   }
 }

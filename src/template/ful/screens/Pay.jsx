@@ -52,7 +52,7 @@ export default function Pay() {
                   const [word, tone, why] = PAY_WORD[r.status]
                   return (
                     <li key={r.id}>
-                      <Link to={fp('calls', r.call.id)} className="fx-mrow">
+                      <Link to={fp('schedule', r.call.id)} className="fx-mrow">
                         <Avatar name={r.call.name} tone={tone} />
                         <span className="tp-grow"><b>{r.call.name}</b><small>{r.call.old_carrier} · {r.call.confirmation} · {why}</small></span>
                         <Chip tone={tone}>{word}</Chip>

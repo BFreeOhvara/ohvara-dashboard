@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { User, Bell, Clock3, Landmark, SunMoon, Mail, LogOut, Trash2, ChevronRight, KeyRound, ArrowUpRight } from 'lucide-react'
-import { useFulSettings, useFulActions, useFulDay, useFulPay, useFulAgents } from '../data'
+import { useFulSettings, useFulActions, useFulDay, useFulPay, useFulAgents, useFulShift } from '../data'
+import { ShiftLine, DayOffDrawer } from '../Shift'
 import { useThemePref, previewTheme } from '../../../hooks/useTheme'
 import { Drawer, Field, Seg, Switch, Chip, PillTabs, Avatar, useNote, useAccount, initials } from '../../kit'
 import { CountUp, usd } from '../../motion'
@@ -9,12 +10,10 @@ import { avatarHue } from '../../avatarHue'
 import { fp } from '../paths'
 
 // P845 — Settings, the agent's page for a VA: the profile card and the Sign out box on the left, one panel whose
-// stretch tabs switch sections, each a short form with Discard / Save. VA tabs: Profile, Availability (working
-// hours and Active or away), Pay details, Notifications, Appearance. Sign out and delete keep their real code.
-// Saving Away for real needs a VA availability field on the server (a migration): it stays a door item.
-const TABS = [['profile', 'Profile', User], ['hours', 'Availability', Clock3], ['pay', 'Pay details', Landmark], ['alerts', 'Notifications', Bell], ['look', 'Appearance', SunMoon]]
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const TIMES = ['7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM']
+// stretch tabs switch sections, each a short form with Discard / Save. VA tabs: Profile, Shift (P846: set hours and
+// the rota, a Request a day off action, no Active or Away), Pay details, Notifications, Appearance. Sign out and
+// delete keep their real code. Storing shifts and day-off requests for real comes with the admin side (a migration).
+const TABS = [['profile', 'Profile', User], ['hours', 'Shift', Clock3], ['pay', 'Pay details', Landmark], ['alerts', 'Notifications', Bell], ['look', 'Appearance', SunMoon]]
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 
 function FormFoot({ dirty, onDiscard, onSave }) {
@@ -28,25 +27,26 @@ function FormFoot({ dirty, onDiscard, onSave }) {
 const Head = ({ title, sub }) => <header className="fx-form-h"><h2>{title}</h2><p>{sub}</p></header>
 
 // Left: who you are, this week's pay, three numbers, the next call.
-function ProfileCard({ name, email, away, hours }) {
+function ProfileCard({ name, email }) {
+  const { data: shift } = useFulShift()
   const { data: day } = useFulDay()
   const { data: pay } = useFulPay()
   const money = usd()
   const stats = [[day.week.filter(k => k.status === 'cancelled').length, 'Cancelled'], [day.tasks.done.length, 'Steps done'], [day.queue.callback_due.length + day.queue.new.length, 'In queue']]
   return (
     <aside className="fx-tile fx-prof" aria-label="Your profile">
-      <div className={`fx-prof-av av-${avatarHue(name)}`} aria-hidden="true">{initials(name).toUpperCase()}<i className={away ? '' : 'on'} /></div>
+      <div className={`fx-prof-av av-${avatarHue(name)}`} aria-hidden="true">{initials(name).toUpperCase()}<i className={shift.onToday ? 'on' : ''} /></div>
       <h2>{name}</h2>
-      <p>Fulfillment · {away ? 'Away' : 'Active'}</p>
+      <p>Fulfillment · {shift.onToday ? `On shift ${shift.shift.text}` : 'Off today'}</p>
       <span className="fx-prof-mail"><Mail size={13} aria-hidden="true" />{email}</span>
       <div className="fx-usage is-green">
         <div className="tp-row tp-between"><b>This week</b><b className="fx-usage-n tp-money"><CountUp value={pay.earned} format={money} /></b></div>
         <div className="fx-meter" role="img" aria-label="Verified share of this week"><i style={{ '--w': pay.earned ? pay.verified / pay.earned : 0 }} /></div>
-        <small>{money(pay.verified)} verified · paid {pay.payday} · {hours.days.length} days a week</small>
+        <small>{money(pay.verified)} verified · paid {pay.payday} · {shift.thisWeek} shifts this week</small>
       </div>
       <ul className="fx-pstats">{stats.map(([n, label]) => <li key={label}><small>{label}</small><b className="tp-num"><CountUp value={n} /></b></li>)}</ul>
       {day.next && (
-        <Link to={fp('calls', day.next.id)} className="fx-pnext">
+        <Link to={fp('schedule', day.next.id)} className="fx-pnext">
           <i aria-hidden="true" />
           <span className="tp-grow"><small>Next call</small><b>{day.next.name}</b><small>Today · {day.next.time}</small></span>
           <ChevronRight size={16} aria-hidden="true" />
@@ -59,7 +59,8 @@ function ProfileCard({ name, email, away, hours }) {
 export default function Settings() {
   const { data: s } = useFulSettings()
   const { data: agents } = useFulAgents()
-  const { saveSettings, setAway } = useFulActions()
+  const { saveSettings } = useFulActions()
+  const { data: shift } = useFulShift()
   const [saved, saveTheme] = useThemePref()
   const note = useNote()
   const account = useAccount()
@@ -68,7 +69,6 @@ export default function Settings() {
   const name = account.live ? account.name : s.profile.name
 
   const [pDraft, setPDraft] = useState(s.profile)
-  const [hDraft, setHDraft] = useState({ ...s.hours, away: s.away })
   const [payDraft, setPayDraft] = useState(s.payDetails)
   const [alerts, setAlerts] = useState(s.notifications)
   const [look, setLook] = useState(saved)
@@ -80,16 +80,14 @@ export default function Settings() {
   useEffect(() => () => previewTheme(savedRef.current), [])
 
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
-  const hSaved = { ...s.hours, away: s.away }
   const signOut = () => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))
   const DeleteDialog = account.DeleteDialog
   const flip = (key, field, v) => setAlerts(alerts.map(n => (n.key === key ? { ...n, [field]: v } : n)))
-  const toggleDay = d => setHDraft(c => ({ ...c, days: c.days.includes(d) ? c.days.filter(x => x !== d) : DAYS.filter(x => x === d || c.days.includes(x)) }))
 
   return (
     <div className="tp-page fx-set">
       <div className="fx-set-side">
-        <ProfileCard name={name} email={s.profile.email} away={s.away} hours={s.hours} />
+        <ProfileCard name={name} email={s.profile.email} />
         <button type="button" className="fx-tile fx-signout" onClick={signOut}><LogOut size={16} aria-hidden="true" />Sign out</button>
       </div>
 
@@ -117,22 +115,18 @@ export default function Settings() {
           </>}
 
           {tab === 'hours' && <>
-            <Head title="Availability" sub="When you're active, new people and callbacks come to you inside these hours. Away stops them." />
-            <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>{hDraft.away ? 'Away' : 'Active'}</b><p className="tp-sub">{hDraft.away ? 'No new people come to you' : 'New people and callbacks come to you'}</p></div><Switch on={!hDraft.away} label="Active" onChange={v => setHDraft({ ...hDraft, away: !v })} /></div>
-            <div className="tp-field"><span>Working days</span>
-              <div className="fx-days" role="group" aria-label="Working days">{DAYS.map(d => <button key={d} type="button" aria-pressed={hDraft.days.includes(d)} className={`fx-day${hDraft.days.includes(d) ? ' is-on' : ''}`} onClick={() => toggleDay(d)}>{d}</button>)}</div>
+            <Head title="Shift" sub="You work set hours, in a rotation with the other VAs. The Ohvara team sets the rota." />
+            <ShiftLine onAsk={() => setPanel('dayoff')} />
+            <div className="tp-field"><span>Your shifts</span>
+              <ul className="fs-shifts">
+                {shift.mine.map(d => {
+                  const off = shift.dayOffs.some(o => o.day === d.day)
+                  return <li key={d.day} className={d.today ? 'is-today' : ''}><b>{d.name}, Nov {d.day}</b><span className="tp-num">{shift.shift.text}</span><em className={off ? 'is-off' : ''}>{off ? 'Off asked' : d.today ? 'Today' : d.past ? 'Done' : 'Coming up'}</em></li>
+                })}
+              </ul>
+              <small className="tp-sub">Two or three VAs are on each day. The whole rota is on <Link to={fp('schedule')}>Schedule</Link>.</small>
             </div>
-            <div className="fx-form-grid">
-              <Field label="Start"><select value={hDraft.start} onChange={e => setHDraft({ ...hDraft, start: e.target.value })}>{TIMES.map(t => <option key={t}>{t}</option>)}</select></Field>
-              <Field label="End"><select value={hDraft.end} onChange={e => setHDraft({ ...hDraft, end: e.target.value })}>{TIMES.map(t => <option key={t}>{t}</option>)}</select></Field>
-            </div>
-            <div className="fx-form-row"><div className="tp-grow"><b>Time zone</b><p className="tp-sub">Central time. Calls show in the client's time on each call.</p></div><Chip tone="mute">Central</Chip></div>
-            <FormFoot dirty={!same(hDraft, hSaved)} onDiscard={() => setHDraft(hSaved)} onSave={() => {
-              const { away, ...hours } = hDraft
-              saveSettings({ hours })
-              if (away !== s.away) setAway(away)
-              note('Availability saved')
-            }} />
+            <div className="fx-form-row"><div className="tp-grow"><b>Time zone</b><p className="tp-sub">{s.timeZone} time. Calls show in the client's time on each call.</p></div><Chip tone="mute">{s.timeZone}</Chip></div>
           </>}
 
           {tab === 'pay' && <>
@@ -179,6 +173,7 @@ export default function Settings() {
         <Field label="Current password"><input type="password" /></Field>
         <Field label="New password"><input type="password" /></Field>
       </Drawer>
+      <DayOffDrawer open={panel === 'dayoff'} onClose={() => setPanel(null)} />
       {panel === 'delete' && DeleteDialog && <DeleteDialog onClose={() => setPanel(null)} />}
     </div>
   )

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom'
 import {
-  Home, PhoneIncoming, PhoneCall, Users, LifeBuoy, Wallet, Settings, Search, Bell, Sun, Moon, MessageSquare, Radio,
+  Home, PhoneIncoming, PhoneCall, Users, LifeBuoy, Wallet, Settings, Search, Bell, Sun, Moon, MessageSquare,
   ChevronRight, LogOut, Ellipsis, CalendarCheck, Clock3, CircleHelp, PhoneOutgoing, Mail, Keyboard, TriangleAlert,
-  ShieldCheck, CalendarPlus, CheckCircle2, Hourglass,
+  ShieldCheck, CalendarPlus, CheckCircle2, Hourglass, CalendarDays, CalendarOff,
 } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { Drawer, Avatar, Field, PillTabs, useAccount, useNote, initials } from '../kit'
@@ -13,7 +13,9 @@ import Palette from '../Palette'
 import { OhvaraMark } from '../../components/ui/OhvaraMark'
 import { isSearchKey } from '../../lib/searchKey'
 import { SUPPORT_EMAIL } from '../../components/auth/authUtils'
-import { useFulDay, useFulClients, useFulQueue, useFulFeed, useFulSettings, useFulPay, useFulTasks, useFulActions, useFulAgents } from './data'
+import { useFulDay, useFulClients, useFulQueue, useFulFeed, useFulSettings, useFulPay, useFulTasks, useFulActions, useFulAgents, useFulShift, useFulSchedule } from './data'
+import LiveCall from './LiveCall'
+import { DayOffDrawer } from './Shift'
 import { CALL_WORD } from './words'
 import { fp, FUL_TABS, fulPageOf, fulTitleOf } from './paths'
 import '../glass.css'
@@ -27,7 +29,7 @@ import '@fontsource/urbanist/700.css'
 // P845 — the Fulfillment (VA) frame, built from the agent shell (TemplateFrame): glass pill tabs up top, the floating
 // rail of actions, the rolling title with three headline numbers, the photo backdrop, light and dark. Same pieces
 // (kit, motion, Palette, flow.css); VA content. Sample info only (./data), at /template/fulfillment and the real VA URLs.
-const ICONS = { overview: Home, queue: PhoneIncoming, calls: PhoneCall, clients: Users, servicing: LifeBuoy, pay: Wallet }
+const ICONS = { overview: Home, queue: PhoneIncoming, schedule: CalendarDays, clients: Users, servicing: LifeBuoy, pay: Wallet }
 const PAGES = [...FUL_TABS.map(([k, label]) => ({ to: () => fp(k), label })), { to: () => fp('messages'), label: 'Messages' }, { to: () => fp('settings'), label: 'Settings' }]
 const money = usd()
 
@@ -47,7 +49,7 @@ function LogCall({ open, onClose }) {
   const { data: day } = useFulDay()
   const navigate = useNavigate()
   if (!open) return null
-  const pick = id => { onClose(); navigate(fp('calls', id)) }
+  const pick = id => { onClose(); navigate(fp('schedule', id)) }
   return (
     <Drawer open center onClose={onClose} title="Log a call" sub="Pick the call. Its result is saved on the call.">
       <ul className="tp-list">
@@ -119,10 +121,11 @@ function Help({ open, onClose }) {
   )
 }
 
-// The avatar menu: Active or away, theme, account pages, sign out.
-function AccountMenu({ open, onClose, theme, setTheme, away, flipAway }) {
+// The avatar menu: this shift and a day off, theme, account pages, sign out. (P846: no Active or Away; VAs work set hours.)
+function AccountMenu({ open, onClose, theme, setTheme, onAsk }) {
   const account = useAccount()
   const note = useNote()
+  const { data: shift } = useFulShift()
   useEffect(() => {
     if (!open) return undefined
     const onKey = e => { if (e.key === 'Escape') onClose() }
@@ -131,15 +134,16 @@ function AccountMenu({ open, onClose, theme, setTheme, away, flipAway }) {
   }, [open, onClose])
   const [shown, leaving] = useExit(open, 200)
   if (!shown) return null
-  const links = [['pay', 'Pay', Wallet], ['settings', 'Settings', Settings], ['messages', 'Messages', MessageSquare]]
+  const links = [['servicing', 'Servicing', LifeBuoy], ['pay', 'Pay', Wallet], ['settings', 'Settings', Settings], ['messages', 'Messages', MessageSquare]]
   return (
     <div className={`tp fx-layer fx-menu-layer${leaving ? ' is-leaving' : ''}`} role="presentation">
       <button type="button" className="fx-scrim is-clear tp-bare" aria-label="Close menu" tabIndex={-1} onClick={onClose} />
       <section className="fx-menu" role="dialog" aria-label="Your account">
         <header className="fx-menu-h"><span className={`fx-av av-${avatarHue(account.name)}`}>{initials(account.name).toUpperCase()}</span><span className="tp-grow"><b>{account.name}</b><small>Fulfillment</small></span></header>
-        <button type="button" className="fx-mrow" role="switch" aria-checked={!away} onClick={flipAway}>
-          <Radio size={17} aria-hidden="true" /><span className="tp-grow"><b>{away ? 'Away' : 'Active'}</b><small>{away ? 'No new people come to you' : 'New people and callbacks come to you'}</small></span><i className={`fx-sw${away ? '' : ' on'}`} aria-hidden="true" />
-        </button>
+        <Link to={fp('schedule')} className="fx-mrow" onClick={onClose}>
+          <Clock3 size={17} aria-hidden="true" /><span className="tp-grow"><b>{shift.onToday ? `Your shift today ${shift.shift.text}` : 'You are off today'}</b><small>See the Schedule and who is on</small></span><ChevronRight size={15} aria-hidden="true" />
+        </Link>
+        <button type="button" className="fx-mrow" onClick={() => { onClose(); onAsk() }}><CalendarOff size={17} aria-hidden="true" /><b className="tp-grow">Request a day off</b></button>
         <button type="button" className="fx-mrow" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}<b className="tp-grow">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</b></button>
         <i className="fx-mline" />
         {links.map(([k, label, Icon]) => <Link key={k} to={fp(k)} className="fx-mrow" onClick={onClose}><Icon size={17} aria-hidden="true" /><b className="tp-grow">{label}</b><ChevronRight size={15} aria-hidden="true" /></Link>)}
@@ -157,6 +161,8 @@ function useHeadStats(page) {
   const { data: clients } = useFulClients()
   const { data: agents } = useFulAgents()
   const { data: settings } = useFulSettings()
+  const { data: shift } = useFulShift()
+  const { data: sched } = useFulSchedule()
   const S = (icon, n, label, extra = {}) => ({ icon, n, label, ...extra })
   const todayLeft = day.today.filter(k => k.status === 'booked').length
   const doneToday = day.today.length - todayLeft
@@ -167,11 +173,11 @@ function useHeadStats(page) {
   return {
     overview: [S(PhoneCall, day.today.length, 'calls today', { chip: [`${doneToday} done`, 'up'] }), S(PhoneIncoming, inQueue, 'in your queue', { chip: cb ? [`${cb} callbacks due`, 'warn'] : null }), S(Wallet, pay.earned, 'earned this week', { fmt: money })],
     queue: [S(Clock3, cb, 'callbacks due', { chip: cb ? ['Call first', 'warn'] : null }), S(PhoneIncoming, day.queue.new.length, 'new today'), S(Hourglass, day.queue.not_reached.length, 'not reached yet')],
-    calls: [S(PhoneCall, todayLeft, 'left today', { chip: day.next ? [`next ${day.next.time}`, 'blue'] : null }), S(CalendarCheck, day.week.length, 'this week'), S(CheckCircle2, weekCancelled, 'cancelled this week', { chip: ['Confirmed', 'up'] })],
+    schedule: [S(PhoneCall, todayLeft, 'calls left today', { chip: day.next ? [`next ${day.next.time}`, 'blue'] : null }), S(CalendarCheck, sched.filter(i => i.day <= 6).length, 'on your schedule this week'), S(CheckCircle2, weekCancelled, 'cancelled this week', { chip: ['Confirmed', 'up'] })],
     clients: [S(Users, clients.length, 'clients'), S(ShieldCheck, agents.length, 'agents you serve'), S(TriangleAlert, att, 'need attention', { chip: att ? ['See who', 'warn'] : null })],
     servicing: [S(TriangleAlert, day.tasks.overdue.length, 'overdue', { chip: day.tasks.overdue.length ? ['Do first', 'warn'] : null }), S(LifeBuoy, day.tasks.today.length, 'due today'), S(CheckCircle2, day.tasks.done.length, 'done this week')],
     pay: [S(Wallet, pay.earned, 'earned this week', { fmt: money, chip: [`${money(pay.lastWeek)} last week`, 'blue'] }), S(CheckCircle2, pay.verified, 'verified', { fmt: money }), S(CalendarCheck, pay.rows.length, 'cancellations this week')],
-    settings: [S(CalendarCheck, settings.hours.days.length, 'working days'), S(Users, agents.length, 'agents you serve'), S(Bell, settings.notifications.filter(n => n.push).length, 'alerts switched on')],
+    settings: [S(CalendarCheck, shift.thisWeek, 'shifts this week'), S(Users, agents.length, 'agents you serve'), S(Bell, settings.notifications.filter(n => n.push).length, 'alerts switched on')],
   }[page] || []
 }
 
@@ -192,14 +198,13 @@ export default function FulFrame() {
   const { data: clients } = useFulClients()
   const { data: queue } = useFulQueue()
   const { data: tasks } = useFulTasks()
-  const { setAway } = useFulActions()
-  const away = day.away
+  const { showLive } = useFulActions()
   const close = useCallback(() => setPanel(null), [])
   const open = which => e => { wig.onClick(e); setPanel(which) }
   const flipTheme = e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }
-  const flipAway = e => { wig.onClick(e); setAway(!away); note(away ? 'Active. New people and callbacks come to you' : 'Away. No new people come to you') }
   const tabCount = { queue: day.queue.callback_due.length, servicing: day.tasks.overdue.length }
-  const callNow = () => { if (day.next) navigate(fp('calls', day.next.id)); else { navigate(fp('calls')); note('No more calls today') } }
+  const callNow = () => { if (day.next) navigate(fp('schedule', day.next.id)); else { navigate(fp('schedule')); note('No more calls today') } }
+  const liveNow = () => { if (day.next) showLive(day.next.id); else note('No call coming in') }
 
   // Search: clients across every agent, the people in the queue, servicing steps, and the pages.
   const rows = useMemo(() => ({
@@ -223,6 +228,19 @@ export default function FulFrame() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  // Sample: a call "comes in" about 20 seconds after you land, once per visit, so the live-call screen can be seen.
+  // Automated browsers skip it (they use the rail button), so a test click is never covered.
+  const nextId = day.next?.id
+  useEffect(() => {
+    if (!nextId || navigator.webdriver) return undefined
+    try { if (sessionStorage.getItem('ful-live-pop') === '1') return undefined } catch { /* no storage: it pops once per load */ }
+    const t = setTimeout(() => {
+      try { sessionStorage.setItem('ful-live-pop', '1') } catch { /* private window: it can pop again */ }
+      if (!document.hidden) showLive(nextId)
+    }, 20000)
+    return () => clearTimeout(t)
+  }, [nextId, showLive])
 
   const tops = (
     <>
@@ -256,14 +274,16 @@ export default function FulFrame() {
       <aside className="tp-rail fx-rail" aria-label="Actions">
         <button type="button" className="tp-ri fx-ri tp-wig" aria-label="Search (Ctrl K)" data-tip="Search  Ctrl K" {...wig} onClick={open('search')}><Search size={20} /></button>
         <i className="fx-hair" />
+        <button type="button" className="fx-ri tp-wig" aria-label="Live call" data-tip="Live call" {...wig} onClick={e => { wig.onClick(e); liveNow() }}><PhoneIncoming size={18} /></button>
         <button type="button" className="fx-ri tp-wig" aria-label="Your next call" data-tip={day.next ? `Next call ${day.next.time}` : 'No more calls today'} {...wig} onClick={e => { wig.onClick(e); callNow() }}><PhoneCall size={18} /></button>
         <button type="button" className="fx-ri tp-wig" aria-label="Log a call" data-tip="Log a call" {...wig} onClick={open('log')}><PhoneOutgoing size={18} /></button>
         <button type="button" className="fx-ri tp-wig" aria-label="Book for an agent" data-tip="Book for an agent" {...wig} onClick={open('book')}><CalendarPlus size={18} /></button>
         <i className="fx-hair" />
         <NavLink to={fp('messages')} className="fx-ri tp-wig" aria-label="Messages" data-tip="Messages" {...wig}><MessageSquare size={18} />{day.unread > 0 && <span className="fx-badge">{day.unread}</span>}</NavLink>
+        <NavLink to={fp('schedule')} className="fx-ri tp-wig" aria-label="Schedule" data-tip="Schedule" {...wig}><CalendarDays size={18} /></NavLink>
         <NavLink to={fp('servicing')} className="fx-ri tp-wig" aria-label="Servicing" data-tip="Servicing" {...wig}><LifeBuoy size={18} /></NavLink>
         <i className="fx-hair" />
-        <button type="button" role="switch" aria-checked={!away} className={`fx-ri fx-duty tp-wig${away ? '' : ' on'}`} aria-label="Active or away" data-tip={away ? 'Away: no new people' : 'Active: people come to you'} {...wig} onClick={flipAway}><Radio size={18} /><i aria-hidden="true" /></button>
+        <button type="button" className="fx-ri tp-wig" aria-label="Request a day off" data-tip="Request a day off" {...wig} onClick={open('dayoff')}><CalendarOff size={18} /></button>
         <i className="fx-hair" />
         <button type="button" className="fx-ri tp-wig" aria-label="Help and support" aria-expanded={panel === 'help'} data-tip="Help and support" {...wig} onClick={open('help')}><CircleHelp size={18} /></button>
         <NavLink to={fp('settings')} className="fx-ri tp-wig" aria-label="Settings" data-tip="Settings" {...wig}><Settings size={18} /></NavLink>
@@ -297,7 +317,7 @@ export default function FulFrame() {
       <nav className="tp-bar fx-bar" aria-label="Pages">
         {['overview', 'queue'].map(k => { const I = ICONS[k]; return <Link key={k} to={fp(k)} className={`fx-btab${active === k ? ' is-on' : ''}`}><I size={20} aria-hidden="true" />{k === 'overview' ? 'Overview' : 'Queue'}</Link> })}
         <button type="button" className="fx-btab is-plus" aria-label="Your next call" onClick={callNow}><span className="fx-bplus"><PhoneCall size={22} aria-hidden="true" /></span>Call</button>
-        <Link to={fp('servicing')} className={`fx-btab${active === 'servicing' ? ' is-on' : ''}`}><LifeBuoy size={20} aria-hidden="true" />Servicing</Link>
+        <Link to={fp('schedule')} className={`fx-btab${active === 'schedule' ? ' is-on' : ''}`}><CalendarDays size={20} aria-hidden="true" />Schedule</Link>
         <button type="button" className="fx-btab" aria-label="More" onClick={open('menu')}><Ellipsis size={20} aria-hidden="true" />More</button>
       </nav>
 
@@ -306,7 +326,9 @@ export default function FulFrame() {
       <LogCall open={panel === 'log'} onClose={close} />
       <BookForAgent open={panel === 'book'} onClose={close} />
       <Help open={panel === 'help'} onClose={close} />
-      <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} away={away} flipAway={flipAway} />
+      <DayOffDrawer open={panel === 'dayoff'} onClose={close} />
+      <LiveCall />
+      <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} onAsk={() => setPanel('dayoff')} />
     </div>
   )
 }

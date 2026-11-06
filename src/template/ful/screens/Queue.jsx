@@ -44,7 +44,7 @@ function useLeft(until) {
 
 const CALLBACKS = ['Today, 4:00 PM', 'Today, 6:00 PM', 'Fri, 10:00 AM', 'Fri, 2:00 PM']
 
-function LeadDrawer({ id, onClose }) {
+export function LeadDrawer({ id, onClose }) {
   const { data: queue } = useFulQueue()
   const { holdLead, releaseLead, setChecklist, notReached, callback, closeLead } = useFulActions()
   const note = useNote()
