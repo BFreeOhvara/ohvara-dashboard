@@ -108,6 +108,10 @@ const seed = {
   settings: {
     profile: { name: 'Dana Whitfield', email: 'dana.whitfield@example.com', phone: '(214) 555-0100', plan: 'Weekly budget and servicing' },
     hours: { start: '9:00 AM', end: '6:00 PM', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] },
+    // P847: the Overview clock's zone (profiles.timezone values) and the optional caller ID: when fulfillment calls a
+    // client, the call shows the agent's number. status: not_set | pending | confirmed. Sample only: no call or text goes out.
+    timeZone: 'America/Chicago',
+    callerId: { status: 'not_set', number: '' },
     notifications: [
       { key: 'lead', label: 'New lead', push: true, email: true },
       { key: 'appt', label: 'Appointment reminders', push: true, email: false },
@@ -225,5 +229,13 @@ export function useSampleActions() {
     setPaused: paused => set(s => ({ ...s, billing: { ...s.billing, paused } })),
     bookCall: ({ ref, kind, who, day, date, time, label }) => set(s => ({ ...s, appointments: [...s.appointments, { id: `ap${s.appointments.length + 1}-${time.length}`, day, date, time, who, label, kind, ref }], activity: log(s, who, `${label} booked for ${day}, Nov ${date}, ${time}.`, kind === 'lead' ? 'lead' : 'client') })),
     setBudget: (weekly, mode) => set(s => ({ ...s, billing: { ...s.billing, budget: { weekly, mode } } })),
+    saveSettings: patch => set(s => ({ ...s, settings: { ...s.settings, ...patch } })),
+    // P847: a cancellation or service call for fulfillment, booked while the agent is on the phone with the client.
+    // b = { who, kind: 'cancellation' | 'service', mode: 'exact' | 'window' | 'none', day, date, time, window, va }
+    bookFulfillmentCall: b => set(s => {
+      const what = b.kind === 'cancellation' ? 'Cancellation call' : 'Service call'
+      const when = b.mode === 'exact' ? `${b.day}, Nov ${b.date}, ${b.time} with ${b.va}` : b.mode === 'window' ? `best time ${b.window.toLowerCase()}` : 'the team sets the time'
+      return { ...s, activity: log(s, b.who, `${what} booked: ${when}.`, 'client') }
+    }),
   }), [])
 }

@@ -5,6 +5,8 @@ import { useFulQueue, useFulActions } from '../data'
 import { Avatar, Chip, Drawer, Empty, Field, PillTabs, Seg, useNote } from '../../kit'
 import { RecordDrawer, Block } from '../../Record'
 import { BookForAgent } from '../FulFrame'
+import { Select } from '../../Select'
+import { CARRIER_NAMES } from '../../carriers'
 import { fp } from '../paths'
 import { BUCKETS, QUESTION_TYPES, URGENCIES, checklistDone } from '../words'
 
@@ -88,8 +90,8 @@ export function LeadDrawer({ id, onClose }) {
       <Block title="Before you book" sub="Four answers the agent needs" aside={<span className="fx-count">{done}/4</span>}>
         <div className="fx-meter" role="img" aria-label={`${done} of 4 answered`}><i style={{ '--w': done / 4 }} /></div>
         <div className="fx-form-grid">
-          <Field label="Question type"><select value={c.question_type} disabled={!held} onChange={e => put('question_type', e.target.value)}><option value="">Pick one</option>{QUESTION_TYPES.map(q => <option key={q}>{q}</option>)}</select></Field>
-          <Field label="Their carrier"><input value={c.carrier} disabled={!held} placeholder="Who covers them now" onChange={e => put('carrier', e.target.value)} /></Field>
+          <Field label="Question type"><Select label="Question type" value={c.question_type} disabled={!held} onChange={v => put('question_type', v)} options={QUESTION_TYPES} /></Field>
+          <Field label="Their carrier"><Select label="Their carrier" value={c.carrier} disabled={!held} placeholder="Who covers them now" onChange={v => put('carrier', v)} options={CARRIER_NAMES} search allowCustom /></Field>
           <Field label="State"><input value={c.state} disabled={!held} maxLength={2} placeholder={l.state} onChange={e => put('state', e.target.value.toUpperCase())} /></Field>
         </div>
         <div className="tp-field"><span>How soon</span>

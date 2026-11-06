@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Hand, LifeBuoy, CalendarClock, Send, X, Check, Undo2, TriangleAlert, MessageSquare } from 'lucide-react'
 import { Avatar, Field, useNote } from '../../template/kit'
+import { Select, DayTimeSelect } from '../../template/Select'
 import { useVaServicingDesk } from '../../hooks/useVaServicing'
 import { kindLabel, toneOf, dueText, outcomesOf, outcomeLabel, SEND_REASONS, GROUPS, heldTask, servicingError, STATUS_LABEL } from '../../lib/vaServicing'
 import { timeText } from '../../lib/fulfillmentDay'
@@ -75,14 +76,14 @@ function Desk({ t, d, desk, onDone }) {
 
       {mode === 'send' && (
         <div className="fs-sub">
-          <Field label="Why it goes to the agent"><select value={reason} onChange={e => setReason(e.target.value)}>{SEND_REASONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Field>
+          <Field label="Why it goes to the agent"><Select label="Why it goes to the agent" value={reason} onChange={setReason} options={SEND_REASONS.map(([v, l]) => ({ value: v, label: l }))} /></Field>
           <Field label="The question" hint="The agent sees this. Up to 1000 characters."><textarea className="tp-input fx-ta" rows={3} maxLength={1000} value={text} onChange={e => setText(e.target.value)} placeholder="What does the client want to know?" /></Field>
           <div className="tp-row tp-wrap"><button type="button" className="tp-primary sm fx-accent" disabled={busy || !text.trim()} onClick={() => run(desk.send, { task: t.task_id, reason, question: text.trim() }, `Sent to ${t.agent_name || 'the agent'}. It leaves your desk.`)}><Send size={14} />Send to the agent</button><button type="button" className="tp-btn ov-ghost sm" onClick={() => setMode(null)}>Back</button></div>
         </div>
       )}
       {mode === 'schedule' && (
         <div className="fs-sub">
-          <Field label="New time" hint="Your time. It must be in the future."><input type="datetime-local" className="tp-input" value={at} onChange={e => setAt(e.target.value)} /></Field>
+          <div className="tp-field"><span>New time</span><DayTimeSelect label="New time" value={at} onChange={setAt} /><small>Your time. It must be in the future.</small></div>
           <div className="tp-row tp-wrap"><button type="button" className="tp-primary sm fx-accent" disabled={busy || !at} onClick={() => run(desk.schedule, { task: t.task_id, at: new Date(at).toISOString() }, 'New time saved')}><CalendarClock size={14} />Save the time</button><button type="button" className="tp-btn ov-ghost sm" onClick={() => setMode(null)}>Back</button></div>
         </div>
       )}

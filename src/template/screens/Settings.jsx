@@ -4,6 +4,9 @@ import { User, Bell, Radio, CreditCard, SunMoon, Mail, LogOut, Trash2, ChevronRi
 import { useSampleSettings, useSampleActions, useSampleBilling, useSampleClients, useSampleLeads, useSampleOverview } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
 import { Drawer, Field, Seg, Switch, Chip, PillTabs, useNote, useAccount, initials } from '../kit'
+import { Select } from '../Select'
+import { TimeZoneSelect } from '../Clock'
+import { CallerIdCard } from '../CallerId'
 import { CountUp, usd } from '../motion'
 import { paths } from '../paths'
 import { PLAN, planRange, rangeText } from '../../lib/planPricing'
@@ -67,7 +70,7 @@ function ProfileCard({ profile, duty }) {
 export default function Settings() {
   const { data: s } = useSampleSettings()
   const { data: billing } = useSampleBilling()
-  const { setNotification, setDuty } = useSampleActions()
+  const { setNotification, setDuty, saveSettings } = useSampleActions()
   const [saved, saveTheme] = useThemePref()
   const note = useNote()
   const account = useAccount()
@@ -77,6 +80,7 @@ export default function Settings() {
   // Saved values and the drafts the forms edit
   const [profile, setProfile] = useState(s.profile)
   const [pDraft, setPDraft] = useState(s.profile)
+  const [tz, setTz] = useState(s.timeZone)
   const [alerts, setAlerts] = useState(s.notifications)
   const [hours, setHours] = useState(s.hours)
   const [cDraft, setCDraft] = useState({ duty: s.duty, ...s.hours })
@@ -119,13 +123,14 @@ export default function Settings() {
               <Field label="Email"><input type="email" value={pDraft.email} onChange={e => setPDraft({ ...pDraft, email: e.target.value })} /></Field>
               <Field label="Phone"><input value={pDraft.phone} onChange={e => setPDraft({ ...pDraft, phone: e.target.value })} /></Field>
               <Field label="Plan" hint="Change your budget on the Billing page"><input value={pDraft.plan} readOnly /></Field>
+              <Field label="Time zone" hint="The clock on your Overview uses it"><TimeZoneSelect value={tz} onChange={setTz} /></Field>
             </div>
             <div className="fx-form-row">
               <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('password')}><KeyRound size={15} />Change password</button>
               <span className="tp-grow" />
               <button type="button" className="tp-btn ov-ghost tp-danger" onClick={() => (DeleteDialog ? setPanel('delete') : note('Delete my account works once you sign in for real'))}><Trash2 size={15} />Delete my account</button>
             </div>
-            <FormFoot dirty={!same(pDraft, profile)} onDiscard={() => setPDraft(profile)} onSave={() => { setProfile(pDraft); note('Profile saved') }} />
+            <FormFoot dirty={!same(pDraft, profile) || tz !== s.timeZone} onDiscard={() => { setPDraft(profile); setTz(s.timeZone) }} onSave={() => { setProfile(pDraft); if (tz !== s.timeZone) saveSettings({ timeZone: tz }); note('Profile saved') }} />
           </>}
 
           {tab === 'alerts' && <>
@@ -152,9 +157,11 @@ export default function Settings() {
               <div className="fx-days" role="group" aria-label="Working days">{DAYS.map(d => <button key={d} type="button" aria-pressed={cDraft.days.includes(d)} className={`fx-day${cDraft.days.includes(d) ? ' is-on' : ''}`} onClick={() => toggleDay(d)}>{d}</button>)}</div>
             </div>
             <div className="fx-form-grid">
-              <Field label="Start"><select value={cDraft.start} onChange={e => setCDraft({ ...cDraft, start: e.target.value })}>{TIMES.map(t => <option key={t}>{t}</option>)}</select></Field>
-              <Field label="End"><select value={cDraft.end} onChange={e => setCDraft({ ...cDraft, end: e.target.value })}>{TIMES.map(t => <option key={t}>{t}</option>)}</select></Field>
+              <Field label="Start"><Select label="Start" value={cDraft.start} onChange={v => setCDraft({ ...cDraft, start: v })} options={TIMES} /></Field>
+              <Field label="End"><Select label="End" value={cDraft.end} onChange={v => setCDraft({ ...cDraft, end: v })} options={TIMES} /></Field>
             </div>
+            {/* P847: optional caller ID (saves on its own: each step is its own action) */}
+            <CallerIdCard value={s.callerId} defaultPhone={profile.phone} onSave={callerId => saveSettings({ callerId })} />
             <div className="fx-form-row"><div className="tp-grow"><b>A number of your own for texts</b><p className="tp-sub">Coming later</p></div><Chip tone="mute">Not available yet</Chip></div>
             <FormFoot dirty={!same(cDraft, callsSaved)} onDiscard={() => setCDraft(callsSaved)} onSave={() => {
               if (cDraft.duty !== s.duty) setDuty(cDraft.duty)

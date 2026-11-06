@@ -38,6 +38,20 @@ const ROTA = {
 export const WEEKS = [[2, 3, 4, 5, 6], [9, 10, 11, 12, 13]]
 const DOW = { 2: 'Mon', 3: 'Tue', 4: 'Wed', 5: 'Thu', 6: 'Fri', 9: 'Mon', 10: 'Tue', 11: 'Wed', 12: 'Thu', 13: 'Fri' }
 
+// P847 — auto-assign for a call an agent books at an exact time (the sample of fulfillment_pick_rep with the shift
+// key on): the VAs on shift that day, minus anyone already on a call at that minute, the lightest day first, rota order
+// on a tie. Nobody on shift (a weekend) falls back to the whole team, like the live pick, so nothing sits unassigned.
+const SAMPLE_LOAD = { 'va-leo': 4, 'va-sasha': 5, 'va-devon': 3 }
+export function pickVa(day, time, calls = [], extra = []) {
+  const on = ROTA[day] || VAS.map(v => v.id)
+  const busy = id => [...calls, ...extra].some(k => k.day === day && k.time === time && (k.va_id || 'va-maya') === id)
+  const load = id => (id === 'va-maya' ? calls.filter(k => k.day === day).length : SAMPLE_LOAD[id] || 0) + extra.filter(k => k.day === day && k.va_id === id).length
+  const free = on.filter(id => !busy(id))
+  const pick = (free.length ? free : on).slice().sort((a, b) => load(a) - load(b) || on.indexOf(a) - on.indexOf(b))[0]
+  return VAS.find(v => v.id === pick)
+}
+export const rotaOf = day => (ROTA[day] || []).map(id => VAS.find(v => v.id === id))
+
 // Clients across every agent this VA serves. stage = the agent side's servicing stage (../stages stageLabel).
 const mkClient = (id, first, last, agent, o) => ({
   id, client_first_name: first, client_last_name: last, agent_id: agent, client_phone: '(555) 555-0100', city: 'Austin', state: 'TX',
@@ -166,7 +180,7 @@ const seedBooked = [
 
 const seedSettings = {
   profile: { name: ME.name, email: ME.email, phone: ME.phone },
-  timeZone: 'Central',
+  timeZone: 'America/Chicago', // P847: an IANA zone (profiles.timezone), picked in Settings; the Overview clock reads it
   payDetails: { bank: 'Chase', last4: '4821', taxEmail: ME.email, status: 'Payouts on' },
   notifications: [
     { key: 'queue', label: 'New people in the queue', push: true, email: false },
@@ -181,6 +195,7 @@ const seedSettings = {
 let state = {
   clients: seedClients, calls: seedCalls, queue: seedQueue, tasks: seedTasks, cancels: seedCancels, payouts: seedPayouts,
   threads: seedThreads, feed: seedFeed, settings: seedSettings, log: [], booked: seedBooked, dayOffs: [], live: null,
+  others: [], // P847: calls agents booked that went to another VA on shift (kept so the auto-assign sees them)
 }
 const listeners = new Set()
 const set = fn => { state = { ...state, ...fn(state) }; listeners.forEach(l => l()) }
@@ -275,6 +290,8 @@ export function useFulSchedule() {
   }))
   return ok(items.sort((a, b) => a.day - b.day || minutesOf(a.time) - minutesOf(b.time)))
 }
+// P847: who an agent's exact-time booking would go to right now (the same pick agentBooksCall makes).
+export function useVaFor(day, time) { const s = useStore(); return time ? pickVa(day, time, s.calls, s.others) : null }
 export function useFulBooked() { const s = useStore(); return ok(s.booked.map(b => ({ ...b, agent: agentName(b.agent_id) }))) }
 export const useFulLive = () => { const s = useStore(); return s.live }
 
@@ -357,4 +374,27 @@ export function useFulActions() {
     hideLive: () => set(() => ({ live: null })),
     saveSettings: patch => set(s => ({ settings: { ...s.settings, ...patch } })),
   }
+}
+
+// P847 — an agent books a cancellation or service call while on the phone with the client (sample: the agent shell
+// calls this). Exact time: the call goes to the VA picked above, so when that's Maya it lands on her Schedule
+// (cancellation) or her Servicing board (service). A best-time window goes to the team's bell to be called inside it.
+// Returns the VA it went to (or null for a window).
+export function agentBooksCall({ who, state = 'TX', oldCarrier = 'Globe Life', kind, mode, day, time, window: win, agent = 'ag-dana' }) {
+  const [first, ...rest] = String(who || 'Client').split(' ')
+  let va = null
+  set(s => {
+    const id = `fc-${Date.now()}`
+    const client = mkClient(id, first, rest.join(' ') || '', agent, { state, stage: 'setting_up', next_step: kind === 'cancellation' ? 'Cancellation call' : 'Service call' })
+    if (mode !== 'exact') {
+      return { ...feedAdd(s, agentName(agent), `Asked for a ${kind === 'cancellation' ? 'cancellation' : 'service'} call with ${who}, best time ${String(win).toLowerCase()}`, 'servicing') }
+    }
+    va = pickVa(day, time, s.calls, s.others)
+    if (!va.me) return { others: [...s.others, { day, time, va_id: va.id }] }
+    const out = { clients: [...s.clients, client], ...feedAdd(s, agentName(agent), `Booked ${who} for ${dayName(day)} ${time}`, kind === 'cancellation' ? 'call' : 'servicing') }
+    if (kind === 'cancellation') out.calls = [...s.calls, mkCall(`cl-${Date.now()}`, id, day, time, { old_carrier: oldCarrier, va_id: va.id })]
+    else out.tasks = [...s.tasks, mkTask(`st-${Date.now()}`, 'review_call', id, { due: day === TODAY ? 'today' : 'later', due_text: `${dayName(day)}, Nov ${day}, ${time}`, status: 'scheduled', note: 'Booked by the agent with the client on the phone.' })]
+    return out
+  })
+  return va
 }

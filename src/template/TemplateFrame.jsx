@@ -9,11 +9,17 @@ import { useTheme } from '../hooks/useTheme'
 import {
   useSampleActivity, useSampleClients, useSampleLeads, useSampleThreads, useSampleBilling, useSampleAppointments, useSampleSettings, useSampleActions,
 } from './data'
-import { Drawer, Avatar, Field, PillTabs, useAccount, useNote, initials } from './kit'
+import { Drawer, Avatar, Field, PillTabs, Seg, useAccount, useNote, initials } from './kit'
 import { avatarHue } from './avatarHue'
 import { wig, CountUp, RollTitle, usePageSwap, usd, useExit } from './motion'
 import { paths, tabOf, titleOfLayout, layoutOf, isTemplateAddress } from './paths'
 import Palette from './Palette'
+import { Select } from './Select'
+import { CallTime } from './CallTime'
+import { EMPTY_CALL_TIME, callTimeReady } from './callTimeModel'
+import { CARRIER_NAMES, BOOK_DAYS, sampleSlots } from './carriers'
+import { agentBooksCall } from './ful/data'
+import { LiveClock } from './Clock'
 import { OhvaraMark } from '../components/ui/OhvaraMark'
 import { isSearchKey } from '../lib/searchKey'
 import { appLink, loadAppConfig } from '../lib/appConfig'
@@ -52,37 +58,68 @@ function BellDrawer({ open, onClose }) {
   )
 }
 
-// Book a call: pick who, the day and the time. Lands on the calendar (sample only).
+// Book a call. P847: three kinds. An appointment or check-in goes on the agent's own calendar (as before). A
+// cancellation call or a service call is fulfillment's: while the agent has the client on the phone they can book an
+// exact time (it lands on the on-shift VA's Schedule), give the best time to reach them, or leave it to the team.
 const DAYS = [['Mon', 2], ['Tue', 3], ['Wed', 4], ['Thu', 5], ['Fri', 6]]
 const TIMES = ['9:30 AM', '11:00 AM', '1:00 PM', '2:30 PM', '4:00 PM', '5:30 PM']
+const CALL_KINDS = [{ key: 'appt', label: 'Appointment' }, { key: 'cancellation', label: 'Cancellation call' }, { key: 'service', label: 'Service call' }]
+const SERVICE_WHAT = ['Change address', 'Update phone', 'Change beneficiary', 'Change billing date', 'Payment change', 'Policy question', 'Other']
 function BookCall({ open, onClose }) {
   const { data: clients } = useSampleClients()
   const { data: leads } = useSampleLeads()
-  const { bookCall } = useSampleActions()
+  const { bookCall, bookFulfillmentCall } = useSampleActions()
   const note = useNote()
   const people = useMemo(() => [
-    ...clients.map(c => ({ ref: c.id, kind: 'client', who: `${c.client_first_name} ${c.client_last_name}`, label: 'Check-in call' })),
-    ...leads.filter(l => !['sold', 'not_interested'].includes(l.stage)).map(l => ({ ref: l.id, kind: 'lead', who: `${l.first_name} ${l.last_name}`, label: 'Appointment' })),
+    ...clients.map(c => ({ ref: c.id, kind: 'client', who: `${c.client_first_name} ${c.client_last_name}`, label: 'Check-in call', state: c.state, carrier: c.carrier_name })),
+    ...leads.filter(l => !['sold', 'not_interested'].includes(l.stage)).map(l => ({ ref: l.id, kind: 'lead', who: `${l.first_name} ${l.last_name}`, label: 'Appointment', state: l.state })),
   ], [clients, leads])
+  const [kind, setKind] = useState('appt')
   const [ref, setRef] = useState('')
   const [date, setDate] = useState(3)
   const [time, setTime] = useState(TIMES[1])
+  const [oldCarrier, setOldCarrier] = useState('Globe Life')
+  const [what, setWhat] = useState(SERVICE_WHAT[0])
+  const [ct, setCt] = useState(EMPTY_CALL_TIME)
   if (!open) return null
-  const who = people.find(p => p.ref === ref) || people[0]
+  const forFul = kind !== 'appt'
+  const list = forFul ? people.filter(p => p.kind === 'client' || p.ref === ref) : people
+  const who = list.find(p => p.ref === ref) || (forFul && ref ? { ref, kind: 'client', who: ref, state: 'TX' } : list[0])
+  const slots = sampleSlots(ct.day, who.state, kind === 'cancellation' ? oldCarrier : null)
+  const ready = !forFul || (callTimeReady(ct, slots) && (kind !== 'cancellation' || oldCarrier.trim()))
   const save = () => {
-    const day = DAYS.find(d => d[1] === date)[0]
-    bookCall({ ...who, day, date, time })
-    note(`${who.label} with ${who.who} booked for ${day} at ${time}`)
+    if (!forFul) {
+      const day = DAYS.find(d => d[1] === date)[0]
+      bookCall({ ...who, day, date, time })
+      note(`${who.label} with ${who.who} booked for ${day} at ${time}`)
+    } else {
+      const va = agentBooksCall({ who: who.who, state: who.state, oldCarrier, kind, mode: ct.mode, day: ct.day, time: ct.time, window: ct.window })
+      const day = BOOK_DAYS.find(d => d[1] === ct.day)?.[0]
+      bookFulfillmentCall({ who: who.who, kind, mode: ct.mode, day, date: ct.day, time: ct.time, window: ct.window, va: va?.name })
+      const label = kind === 'cancellation' ? 'Cancellation call' : 'Service call'
+      note(ct.mode === 'exact' ? `${label} with ${who.who} booked for ${day} at ${ct.time}. ${va.name} has it` : ct.mode === 'window' ? `${label} with ${who.who} sent. Best time: ${ct.window.toLowerCase()}` : `${label} with ${who.who} sent. The team sets the time`)
+    }
+    setCt(EMPTY_CALL_TIME)
     onClose()
   }
+  const sub = forFul ? 'Fulfillment makes this call. Times are the client’s time.' : 'It goes on your calendar. Times are your time.'
   return (
-    <Drawer open center onClose={onClose} title="Book a call" sub="It goes on your calendar. Times are your time."
-      footer={<><button type="button" className="tp-primary fx-accent" onClick={save}><CalendarCheck size={16} />Book it</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
-      <Field label="Who"><select value={who.ref} onChange={e => setRef(e.target.value)}>{people.map(p => <option key={p.ref} value={p.ref}>{p.who} · {p.kind === 'lead' ? 'Lead' : 'Client'}</option>)}</select></Field>
-      <div className="tp-field"><span>Day</span>
-        <PillTabs role="radiogroup" label="Day" className="fx-chips" itemClass="fx-chip" value={date} onChange={setDate} items={DAYS.map(([d, n]) => ({ key: n, label: <><small>{d}</small><b>{n}</b></> }))} />
+    <Drawer open center onClose={onClose} title="Book a call" sub={sub}
+      footer={<><button type="button" className="tp-primary fx-accent" disabled={!ready} onClick={save}><CalendarCheck size={16} />{forFul && ct.mode !== 'exact' ? 'Send to fulfillment' : 'Book it'}</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
+      <div className="tp-field"><span>What call</span>
+        <Seg label="What call" role="radiogroup" className="fx-callkinds" value={kind} onChange={k => { setKind(k); setRef('') }} options={CALL_KINDS} />
       </div>
-      <Field label="Time"><select value={time} onChange={e => setTime(e.target.value)}>{TIMES.map(t => <option key={t}>{t}</option>)}</select></Field>
+      <Field label="Who"><Select label="Who" value={who.ref} onChange={setRef} search={forFul || undefined} allowCustom={forFul}
+        options={list.map(p => ({ value: p.ref, label: p.who, sub: p.kind === 'lead' ? 'Lead' : 'Client' }))} /></Field>
+      {!forFul && <>
+        <div className="tp-field"><span>Day</span>
+          <PillTabs role="radiogroup" label="Day" className="fx-chips" itemClass="fx-chip" value={date} onChange={setDate} items={DAYS.map(([d, n]) => ({ key: n, label: <><small>{d}</small><b>{n}</b></> }))} />
+        </div>
+        <Field label="Time"><Select label="Time" value={time} onChange={setTime} options={TIMES} /></Field>
+      </>}
+      {kind === 'cancellation' && <Field label="Carrier they're leaving" hint="Its open hours set the times. Pick one or type it."><Select label="Carrier they're leaving" value={oldCarrier} onChange={setOldCarrier} options={CARRIER_NAMES} search allowCustom /></Field>}
+      {kind === 'service' && <Field label="What it's about"><Select label="What it's about" value={what} onChange={setWhat} options={SERVICE_WHAT} /></Field>}
+      {forFul && <CallTime kind={kind} value={ct} onChange={setCt} state={who.state} oldCarrier={oldCarrier} />}
     </Drawer>
   )
 }
@@ -110,7 +147,7 @@ function AddNote({ open, onClose }) {
   return (
     <Drawer open center onClose={onClose} title="Add a note to a client" sub="Only you and the team see it."
       footer={<><button type="button" className="tp-primary fx-accent" disabled={!text.trim()} onClick={save}><StickyNote size={16} />Save note</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
-      <Field label="Client"><select value={c?.id} onChange={e => setRef(e.target.value)}>{clients.map(x => <option key={x.id} value={x.id}>{x.client_first_name} {x.client_last_name}</option>)}</select></Field>
+      <Field label="Client"><Select label="Client" value={c?.id} onChange={setRef} options={clients.map(x => ({ value: x.id, label: `${x.client_first_name} ${x.client_last_name}` }))} /></Field>
       <Field label="Note"><textarea className="tp-input fx-ta" rows={4} placeholder="What should the team know?" value={text} onChange={e => setText(e.target.value)} /></Field>
     </Drawer>
   )
@@ -138,7 +175,7 @@ function LogCall({ open, onClose }) {
   return (
     <Drawer open center onClose={onClose} title="Log a call" sub="A call you made outside Ohvara."
       footer={<><button type="button" className="tp-primary fx-accent" onClick={save}><PhoneOutgoing size={16} />Log it</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
-      <Field label="Who"><select value={who.ref} onChange={e => setRef(e.target.value)}>{people.map(p => <option key={p.ref} value={p.ref}>{p.who} · {p.kind === 'lead' ? 'Lead' : 'Client'}</option>)}</select></Field>
+      <Field label="Who"><Select label="Who" value={who.ref} onChange={setRef} options={people.map(p => ({ value: p.ref, label: p.who, sub: p.kind === 'lead' ? 'Lead' : 'Client' }))} /></Field>
       <div className="tp-field"><span>How it went</span>
         <PillTabs role="radiogroup" label="How it went" className="fx-chips" itemClass="fx-chip" value={result} onChange={setResult} items={RESULTS.map(r => ({ key: r, label: <b>{r}</b> }))} />
       </div>
@@ -394,6 +431,8 @@ export default function TemplateFrame() {
               ))}
             </ul>
           )}
+          {/* P847: the live clock, right side of the Overview header, in the zone from Settings */}
+          {layout === 'overview' && <LiveClock tz={settings.timeZone} />}
         </div>
 
         <main className={`tp-main fx-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>

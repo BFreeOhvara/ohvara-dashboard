@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Drawer, Field, useNote } from './kit'
+import { Select } from './Select'
 import { useSampleActions } from './data'
 import { paths } from './paths'
 
@@ -27,8 +28,8 @@ export function OutcomeDrawer({ lead, kind, onClose }) {
       footer={<><button type="button" className="tp-primary fx-accent" onClick={save}>{kind === 'sold' ? 'Mark sold' : 'Save'}</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
       {kind === 'sold' && <p className="tp-mid">Nice work. After you save, submit the sale for servicing and the team takes it from there.</p>}
       {kind === 'sold' && <Link to={paths.submit()} className="tp-link" onClick={onClose}>Submit for servicing</Link>}
-      {kind === 'follow_up' && <Field label="Follow up on" hint="Pick a day to call back."><select value={when} onChange={e => setWhen(e.target.value)}>{['Fri, Nov 6', 'Mon, Nov 9', 'Tue, Nov 10', 'Wed, Nov 11'].map(d => <option key={d}>{d}</option>)}</select></Field>}
-      {kind === 'not_interested' && <Field label="Reason"><select value={why} onChange={e => setWhy(e.target.value)}>{['Not interested right now', 'Already covered', 'Cannot afford it', 'Wrong number'].map(d => <option key={d}>{d}</option>)}</select></Field>}
+      {kind === 'follow_up' && <Field label="Follow up on" hint="Pick a day to call back."><Select label="Follow up on" value={when} onChange={setWhen} options={['Fri, Nov 6', 'Mon, Nov 9', 'Tue, Nov 10', 'Wed, Nov 11']} /></Field>}
+      {kind === 'not_interested' && <Field label="Reason"><Select label="Reason" value={why} onChange={setWhy} options={['Not interested right now', 'Already covered', 'Cannot afford it', 'Wrong number']} /></Field>}
     </Drawer>
   )
 }

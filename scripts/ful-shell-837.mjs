@@ -133,8 +133,13 @@ async function clickThrough(page, theme, errors) {
   await step('queue take + book', async () => {
     await go('/fulfillment/leads/vq-3')
     await page.getByRole('button', { name: 'Take it' }).click()
-    await page.locator('.fx-rec select').first().selectOption('Coverage question')
-    await page.locator('.fx-rec input').first().fill('Globe Life')
+    // P847: built-in dropdowns (no native select): pick from the list; the carrier list has a search box
+    await page.getByRole('button', { name: /^Question type:/ }).click()
+    await page.getByRole('option', { name: 'Coverage question' }).click()
+    await page.getByRole('button', { name: /^Their carrier:/ }).click()
+    await page.getByRole('combobox', { name: /Search Their carrier/ }).fill('globe')
+    await page.keyboard.press('Enter')
+    if (!(await page.getByRole('button', { name: 'Their carrier: Globe Life' }).count())) throw new Error('carrier search did not pick Globe Life')
     await page.getByRole('radio', { name: 'This week' }).click()
     if (!(await page.getByRole('button', { name: 'Book an agent' }).isEnabled())) throw new Error('Book stayed off after 4 answers')
     await page.getByRole('button', { name: 'Book an agent' }).click()
@@ -232,7 +237,10 @@ async function clickThrough(page, theme, errors) {
     await page.getByPlaceholder(/^Message Dana about Gloria/).fill('On it, calling at 2.')
     await page.getByRole('button', { name: 'Send' }).click()
     if (!(await page.locator('.tp-conv-b').getByText('On it, calling at 2.').isVisible())) throw new Error('message not shown')
-    if (!(await page.getByText('Agent Dana Walker · about Gloria Santos').isVisible())) throw new Error('mirrored header missing')
+    // P847: client first, the agent under it
+    if (!(await page.locator('.tp-conv-h b').getByText('Gloria Santos', { exact: true }).isVisible())) throw new Error('client title missing')
+    if (!(await page.locator('.tp-conv-h').getByText('Agent: Dana Walker').isVisible())) throw new Error('agent subtext missing')
+    if (await page.getByText(/· about /).count()) throw new Error('old "about" title still shown')
   })
   await step('settings tabs + shift (no Active/Away)', async () => {
     await go('/fulfillment/settings')

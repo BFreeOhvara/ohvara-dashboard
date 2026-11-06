@@ -10,6 +10,8 @@ import { Drawer, Avatar, Field, PillTabs, useAccount, useNote, initials } from '
 import { avatarHue } from '../avatarHue'
 import { wig, CountUp, RollTitle, usePageSwap, usd, useExit } from '../motion'
 import Palette from '../Palette'
+import { Select } from '../Select'
+import { LiveClock } from '../Clock'
 import { OhvaraMark } from '../../components/ui/OhvaraMark'
 import { isSearchKey } from '../../lib/searchKey'
 import { SUPPORT_EMAIL } from '../../components/auth/authUtils'
@@ -93,7 +95,7 @@ export function BookForAgent({ open, onClose, leadId = null }) {
   return (
     <Drawer open center onClose={onClose} title="Book for an agent" sub="It goes on the agent's calendar inside their hours."
       footer={<><button type="button" className="tp-primary fx-accent" onClick={save}><CalendarCheck size={16} />Book it</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
-      {!leadId && <Field label="Who"><select value={who.id} onChange={e => setRef(e.target.value)}>{queue.map(l => <option key={l.id} value={l.id}>{l.name} · {l.city}, {l.state}</option>)}</select></Field>}
+      {!leadId && <Field label="Who"><Select label="Who" value={who.id} onChange={setRef} options={queue.map(l => ({ value: l.id, label: l.name, sub: `${l.city}, ${l.state}` }))} /></Field>}
       <div className="tp-field"><span>Agent</span>
         <PillTabs role="radiogroup" label="Agent" className="fx-chips" itemClass="fx-chip fs-agent" value={agent} onChange={setAgent}
           items={agents.map(a => ({ key: a.id, label: <><Avatar name={a.name} /><b>{a.name.split(' ')[0]}</b></> }))} />
@@ -102,7 +104,7 @@ export function BookForAgent({ open, onClose, leadId = null }) {
       <div className="tp-field"><span>Day</span>
         <PillTabs role="radiogroup" label="Day" className="fx-chips" itemClass="fx-chip" value={date} onChange={setDate} items={BOOK_DAYS.map(([d, n]) => ({ key: n, label: <><small>{d}</small><b>{n}</b></> }))} />
       </div>
-      <Field label="Time (the agent's time)"><select value={time} onChange={e => setTime(e.target.value)}>{BOOK_TIMES.map(t => <option key={t}>{t}</option>)}</select></Field>
+      <Field label="Time (the agent's time)"><Select label="Time (the agent's time)" value={time} onChange={setTime} options={BOOK_TIMES} /></Field>
     </Drawer>
   )
 }
@@ -194,6 +196,7 @@ export default function FulFrame() {
   const layout = page.key
   const title = fulTitleOf(layout)
   const stats = useHeadStats(layout)
+  const { data: { timeZone: fulTz } } = useFulSettings()
   const { data: day } = useFulDay()
   const { data: clients } = useFulClients()
   const { data: queue } = useFulQueue()
@@ -306,6 +309,8 @@ export default function FulFrame() {
               ))}
             </ul>
           )}
+          {/* P847: the live clock, right side of the Overview header, in the zone from Settings */}
+          {layout === 'overview' && <LiveClock tz={fulTz} />}
         </div>
 
         <main className={`tp-main fx-main fs-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>

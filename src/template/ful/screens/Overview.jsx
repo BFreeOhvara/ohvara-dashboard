@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, Clock, PhoneCall, PhoneIncoming, LifeBuoy, MessageSquare, CalendarClock } from 'lucide-react'
-import { useFulDay, useFulPay, useFulAgents } from '../data'
+import { useFulDay, useFulPay, useFulAgents, minutesOf } from '../data'
 import { Avatar } from '../../kit'
 import { ShiftLine, DayOffDrawer } from '../Shift'
 import { CountUp, usd } from '../../motion'
@@ -40,6 +40,47 @@ function useCountdown(at) {
   return { big: `${m}:${String(s % 60).padStart(2, '0')}`, unit: 'min', s }
 }
 
+// P847 — movement that fits a VA's day. The next call's ring empties as the call gets closer (the last hour, one
+// tick a second); the day ring fills as today's calls get done; a calls-per-hour line draws in. Reduced motion: still.
+const R = 44
+const LEN = 2 * Math.PI * R
+function CountRing({ s, children }) {
+  const left = Math.min(1, (s ?? 0) / 3600)
+  return (
+    <span className="fs-cring">
+      <svg className="fs-cring-svg" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r={R} className="fs-cring-track" />
+        <circle cx="50" cy="50" r={R} className="fs-cring-arc" transform="rotate(-90 50 50)" style={{ strokeDasharray: LEN, strokeDashoffset: LEN * (1 - left) }} /></svg>
+      {children}
+    </span>
+  )
+}
+function DayRing({ done, of }) {
+  const r = 22
+  const len = 2 * Math.PI * r
+  const pct = of ? done / of : 0
+  return (
+    <span className="fx-ring fs-dring" role="img" aria-label={`${done} of ${of} calls done today`}>
+      <svg viewBox="0 0 56 56"><circle cx="28" cy="28" r={r} className="fx-ring-track" /><circle cx="28" cy="28" r={r} className="fx-ring-arc" transform="rotate(-90 28 28)" style={{ strokeDasharray: len, '--len': len, '--to': len * (1 - pct) }} /></svg>
+      <span className="fx-ring-mid"><b className="tp-num"><CountUp value={done} /></b></span>
+    </span>
+  )
+}
+const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+function HourSpark({ calls }) {
+  const n = HOURS.map(h => calls.filter(k => Math.floor(minutesOf(k.time) / 60) === h).length)
+  const top = Math.max(2, ...n)
+  const x = i => 4 + i * (192 / (HOURS.length - 1))
+  const y = v => 44 - (v / top) * 36
+  const line = n.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ')
+  return (
+    <svg className="fs-spark" viewBox="0 0 200 52" role="img" aria-label={`Calls per hour today: ${HOURS.map((h, i) => `${h % 12 || 12}${h < 12 ? 'am' : 'pm'} ${n[i]}`).join(', ')}`}>
+      <path d={`${line} L${x(HOURS.length - 1)} 48 L${x(0)} 48 Z`} className="fs-spark-area" />
+      <path d={line} pathLength="1" className="fx-line-draw fs-spark-line" />
+      {n.map((v, i) => v > 0 && <circle key={HOURS[i]} cx={x(i)} cy={y(v)} r="3" className="fs-spark-dot" style={{ '--i': i }} />)}
+    </svg>
+  )
+}
+
 function QueueCard({ l, i }) {
   const due = l.bucket === 'callback_due'
   const tone = due ? 'warn' : 'blue'
@@ -75,7 +116,10 @@ export default function Overview() {
           {next ? (
             <div className="fs-next">
               <div className="fs-next-l">
-                <b className="fx-huge fs-count" aria-live="off">{cd?.big}<small>{cd?.unit}</small></b>
+                <div className="fs-count-row">
+                  <CountRing s={cd?.s}><PhoneCall size={20} aria-hidden="true" /></CountRing>
+                  <b className="fx-huge fs-count" aria-live="off">{cd?.big}<small>{cd?.unit}</small></b>
+                </div>
                 <span className="fs-next-at"><CalendarClock size={14} aria-hidden="true" />Starts at {next.time}</span>
                 <span className="fx-next-who"><Avatar name={next.name} tone={CALL_TONE[next.status]} /><span><b>{next.name}</b><small>Closing {next.old_carrier} · new policy {next.carrier}</small></span></span>
                 <div className="tp-row tp-wrap fx-next-acts">
@@ -83,9 +127,15 @@ export default function Overview() {
                   <Link to={fp('messages')} className="fx-pillbtn"><MessageSquare size={14} />Message {next.agent.split(' ')[0]}</Link>
                 </div>
               </div>
+              <div className="fs-day-r">
+              <div className="fs-daypulse">
+                <DayRing done={day.done.length} of={day.today.length} />
+                <span className="tp-grow"><b>{day.done.length} of {day.today.length} done today</b><small>Calls per hour</small></span>
+                <HourSpark calls={day.today} />
+              </div>
               <ol className="fs-dayline" aria-label="Today's calls">
-                {day.today.map(k => (
-                  <li key={k.id} className={`is-${CALL_TONE[k.status]}${k.id === next.id ? ' is-next' : ''}`}>
+                {day.today.map((k, i) => (
+                  <li key={k.id} style={{ '--i': i }} className={`is-${CALL_TONE[k.status]}${k.id === next.id ? ' is-next' : ''}`}>
                     <Link to={fp('schedule', k.id)}>
                       <small className="tp-num">{k.time}</small>
                       <span className="tp-grow"><b>{k.name}</b><small>{k.agent}</small></span>
@@ -94,6 +144,7 @@ export default function Overview() {
                   </li>
                 ))}
               </ol>
+              </div>
             </div>
           ) : <p className="fx-calm"><Check size={16} aria-hidden="true" />Every call today is done. Tomorrow has {day.tomorrow.length}.</p>}
         </Tile>

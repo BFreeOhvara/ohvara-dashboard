@@ -1,0 +1,40 @@
+/* P847 — the call-time step (CallTime.jsx) and the caller ID card (CallerId.jsx). Ohvara tokens only. */
+.fx-calltime { container-type: inline-size; display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 18px; border: 1px solid var(--ov-line); background: color-mix(in srgb, var(--ov-hi) 3%, transparent); }
+.fx-calltime-h b { display: block; font-size: 14px; font-weight: 600; color: var(--ov-hi); }
+.fx-calltime-h small { display: block; font-size: 12px; color: var(--ov-mid); }
+.fx-calltime-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.fx-ctmode { display: flex; align-items: flex-start; gap: 9px; min-height: 64px; padding: 11px 12px; border-radius: 14px; border: 1px solid var(--ov-line); background: var(--tp-input); color: var(--ov-mid); text-align: left;
+  transition: transform .25s cubic-bezier(0.34, 1.32, 0.64, 1), border-color .2s, background-color .2s; }
+.fx-ctmode svg { flex: none; margin-top: 1px; }
+.fx-ctmode b { display: block; font-size: 13px; font-weight: 600; line-height: 1.25; color: var(--ov-hi); }
+.fx-ctmode small { display: block; margin-top: 2px; font-size: 11.5px; color: var(--ov-mute); }
+.fx-ctmode:hover:not(:disabled) { transform: translateY(-2px); }
+.fx-ctmode:disabled { cursor: default; opacity: 1; }
+.fx-ctmode:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.fx-ctmode.is-on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--tp-input)); color: var(--accent); }
+.fx-calltime-b { display: flex; flex-direction: column; gap: 12px; animation: fx-ct-in .4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.fx-calltime-va { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--ov-faint); color: var(--ov-mid); }
+.fx-calltime-va b { display: block; font-size: 13px; font-weight: 600; color: var(--ov-hi); }
+.fx-calltime-va small { display: block; font-size: 12px; color: var(--ov-mid); }
+.fx-calltime-va.is-set { border-style: solid; border-color: color-mix(in srgb, var(--ov-st-cancelled) 55%, transparent); background: color-mix(in srgb, var(--ov-st-cancelled) 10%, transparent); color: var(--ov-st-cancelled); }
+@keyframes fx-ct-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.fx-callerid { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 18px; border: 1px solid var(--sh-edge); background: color-mix(in srgb, var(--ov-hi) 3%, transparent); }
+.fx-callerid-h { display: flex; align-items: flex-start; gap: 12px; }
+.fx-callerid-h b { display: block; font-size: 14px; font-weight: 600; color: var(--ov-hi); }
+.fx-callerid-h small { display: block; font-size: 12.5px; color: var(--ov-mid); }
+.fx-callerid-ic { flex: none; width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--ov-data-a); background: var(--ov-data-a-tint); }
+.fx-callerid-b { display: flex; flex-direction: column; gap: 10px; animation: fx-ct-in .4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.fx-callerid-code { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--ov-warn-tint); color: var(--ov-hi); }
+.fx-callerid-code small { font-size: 12.5px; color: var(--ov-mid); }
+.fx-callerid-code b { font-family: var(--font-mono, 'JetBrains Mono', monospace); font-size: 26px; letter-spacing: .12em; }
+.fx-callerid .tp-pending { margin: 0; }
+
+/* Narrow (a drawer, a phone): the three choices stack as rows */
+@container (max-width: 520px) {
+  .fx-calltime-modes { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .fx-ctmode { min-height: 50px; align-items: center; padding: 9px 12px; }
+  .fx-ctmode span { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; }
+  .fx-ctmode small { margin-top: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .fx-calltime-b, .fx-callerid-b { animation: none; } .fx-ctmode { transition: none; } }

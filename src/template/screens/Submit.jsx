@@ -4,6 +4,7 @@ import { Check, ChevronLeft, ChevronRight, Pencil, User, ShieldCheck, ClipboardC
 import { useSampleActions } from '../data'
 import { Field, Pending, Seg, useNote, initials } from '../kit'
 import { paths } from '../paths'
+import { Select } from '../Select'
 
 // P843: Submit a policy, built out in the shell design. Three clear steps (the client, the policy, review) with a
 // live summary beside them. The submit logic and the data it writes are unchanged from before: the same form
@@ -126,9 +127,8 @@ export default function Submit() {
             <p className="tp-sub">What you sold and who it is with.</p>
             <div className="fx-sub-field"><b>Product</b><Seg label="Product" value={f.product} onChange={v => setF({ ...f, product: v })} options={PRODUCTS.map(x => ({ key: x, label: x }))} /></div>
             <div className="fx-form-grid">
-              <Field label="Carrier" hint="Pick one or type the carrier's name."><input className={bad('carrier') ? 'tp-danger' : ''} value={f.carrier} onChange={set('carrier')} list="tp-carriers" placeholder="Start typing a carrier" autoComplete="off" /></Field>
+              <Field label="Carrier" hint="Pick one or type the carrier's name."><Select label="Carrier" invalid={bad('carrier')} value={f.carrier} onChange={v => setF({ ...f, carrier: v })} options={CARRIERS} placeholder="Pick or type a carrier" search allowCustom /></Field>
             </div>
-            <datalist id="tp-carriers">{CARRIERS.map(c => <option key={c} value={c} />)}</datalist>
             <div className="fx-sub-quick" aria-label="Carriers">{CARRIERS.map(c => <button key={c} type="button" className={`fx-filter${f.carrier === c ? ' is-on' : ''}`} aria-pressed={f.carrier === c} onClick={() => setF({ ...f, carrier: c })}>{c}</button>)}</div>
             <Pending>Texting consent wording pending</Pending>
           </>}

@@ -5,8 +5,8 @@ import { useFulThreads, useFulActions } from '../data'
 import { Avatar, Empty } from '../../kit'
 import { fp } from '../paths'
 
-// P845 — Messages, the agent's page mirrored: the VA and an agent, one thread per client ("Agent Dana Walker · about
-// Gloria Santos"). The client never sees these. Same panes: the list and the conversation scroll on their own and the
+// P845 — Messages, the agent's page mirrored: the VA and an agent, one thread per client. P847: the client comes first
+// (the thread is titled "Gloria Santos"; "Agent: Dana Walker" sits under it). The client never sees these. Same panes: the list and the conversation scroll on their own and the
 // box to write in stays at the bottom. Sample only.
 export default function Messages() {
   const { data: threads } = useFulThreads()
@@ -27,7 +27,7 @@ export default function Messages() {
         <div className="tp-threads-b">
           {list.map(x => (
             <button key={x.id} type="button" className={`tp-thread${x.id === sel ? ' on' : ''}`} onClick={() => pick(x.id)}>
-              <Avatar name={x.agent} /><span className="tp-grow"><b>{x.agent} · about {x.name}</b><small>{x.messages[x.messages.length - 1].text}</small></span>
+              <Avatar name={x.name} /><span className="tp-grow"><b>{x.name}</b><small className="ful-thread-agent">Agent: {x.agent}</small><small>{x.messages[x.messages.length - 1].text}</small></span>
               {x.unread > 0 && <span className="tp-tb is-msg">{x.unread}</span>}
             </button>
           ))}
@@ -35,7 +35,7 @@ export default function Messages() {
         </div>
       </div>
       <div className="tp-conv">
-        <div className="tp-conv-h"><Avatar name={t.agent} /><span className="tp-grow"><b>Agent {t.agent} · about {t.name}</b><small>Between you and the agent. The client doesn't see this.</small></span><Link to={fp('clients', t.client_id)} className="tp-link">Open client<ArrowUpRight size={14} /></Link></div>
+        <div className="tp-conv-h"><Avatar name={t.name} /><span className="tp-grow"><b>{t.name}</b><small className="ful-thread-agent">Agent: {t.agent}</small><small>Between you and the agent. The client doesn't see this.</small></span><Link to={fp('clients', t.client_id)} className="tp-link">Open client<ArrowUpRight size={14} /></Link></div>
         <div className="tp-conv-b">
           {t.messages.map(m => <div key={m.id} className={`tp-bub${m.from === 'me' ? ' me' : ''}`}>{m.text}<small>{m.from === 'me' ? 'You' : t.agent} · {m.at}</small></div>)}
         </div>

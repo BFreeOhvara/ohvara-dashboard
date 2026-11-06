@@ -7,6 +7,8 @@ import { dateLabel } from '../../../lib/vaShifts'
 import { useThemePref, previewTheme } from '../../../hooks/useTheme'
 import { Drawer, Field, Seg, Switch, Chip, PillTabs, Avatar, useNote, useAccount, initials } from '../../kit'
 import { CountUp, usd } from '../../motion'
+import { TimeZoneSelect } from '../../Clock'
+import { timezoneLabel } from '../../../lib/timezones'
 import { avatarHue } from '../../avatarHue'
 import { fp } from '../paths'
 
@@ -70,6 +72,7 @@ export default function Settings() {
   const name = account.live ? account.name : s.profile.name
 
   const [pDraft, setPDraft] = useState(s.profile)
+  const [tz, setTz] = useState(s.timeZone)
   const [payDraft, setPayDraft] = useState(s.payDetails)
   const [alerts, setAlerts] = useState(s.notifications)
   const [look, setLook] = useState(saved)
@@ -103,6 +106,7 @@ export default function Settings() {
               <Field label="Email"><input type="email" value={pDraft.email} onChange={e => setPDraft({ ...pDraft, email: e.target.value })} /></Field>
               <Field label="Phone"><input value={pDraft.phone} onChange={e => setPDraft({ ...pDraft, phone: e.target.value })} /></Field>
               <Field label="Role" hint="Set by the Ohvara team"><input value="Fulfillment" readOnly /></Field>
+              <Field label="Time zone" hint="The clock on your Overview uses it"><TimeZoneSelect value={tz} onChange={setTz} /></Field>
             </div>
             <div className="tp-field"><span>Agents you serve</span>
               <ul className="fs-agents is-tight">{agents.map(a => <li key={a.id}><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.clients} clients · {a.city}</small></span></li>)}</ul>
@@ -112,7 +116,7 @@ export default function Settings() {
               <span className="tp-grow" />
               <button type="button" className="tp-btn ov-ghost tp-danger" onClick={() => (DeleteDialog ? setPanel('delete') : note('Delete my account works once you sign in for real'))}><Trash2 size={15} />Delete my account</button>
             </div>
-            <FormFoot dirty={!same(pDraft, s.profile)} onDiscard={() => setPDraft(s.profile)} onSave={() => { saveSettings({ profile: pDraft }); note('Profile saved') }} />
+            <FormFoot dirty={!same(pDraft, s.profile) || tz !== s.timeZone} onDiscard={() => { setPDraft(s.profile); setTz(s.timeZone) }} onSave={() => { saveSettings({ profile: pDraft, timeZone: tz }); note('Profile saved') }} />
           </>}
 
           {tab === 'hours' && <>
@@ -130,7 +134,7 @@ export default function Settings() {
               </ul>
               <small className="tp-sub">Two or three VAs are on each day. The whole rota is on <Link to={fp('schedule')}>Schedule</Link>.</small>
             </div>
-            <div className="fx-form-row"><div className="tp-grow"><b>Time zone</b><p className="tp-sub">{s.timeZone} time. Calls show in the client's time on each call.</p></div><Chip tone="mute">{s.timeZone}</Chip></div>
+            <div className="fx-form-row"><div className="tp-grow"><b>Time zone</b><p className="tp-sub">{timezoneLabel(s.timeZone)} time. Calls show in the client's time on each call. Change it under Profile.</p></div><Chip tone="mute">{timezoneLabel(s.timeZone)}</Chip></div>
           </>}
 
           {tab === 'pay' && <>
