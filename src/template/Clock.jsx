@@ -4,16 +4,18 @@ import { Select } from './Select'
 import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE, timezoneAbbr } from '../lib/timezones'
 import { useTick, clockParts } from './clockTime'
 
-// P847 — the live clock on every portal's Overview header (right side, under Messages and the bell) and the time zone
-// pick in Settings. The zone list is the existing one (lib/timezones SELECTABLE_TIMEZONES, the profiles.timezone values);
-// the clock reads the real time in the chosen zone, so it is live even on the sample pages.
+// P847 + P860 — the live clock, one line on the page-title row of every page in all three portals (right side, level with
+// the title): "Thursday, Nov 5 · 10:57:29 PM". No zone chip: the zone comes from Settings (profiles.timezone) and the time
+// shown is in that zone. Ticks each second, tabular numbers so the line never jitters. It reads the real time, so it is live
+// even on the sample pages.
 export function LiveClock({ tz = DEFAULT_TIMEZONE }) {
   const now = useTick(1000)
   const c = clockParts(now, tz)
   return (
-    <div className="fx-clock" role="timer" aria-live="off" aria-label={`${c.hm} ${c.ampm}, ${c.date}, ${c.zone} time`}>
-      <b className="fx-clock-t tp-num" aria-hidden="true">{c.hm}<i className="fx-clock-s" key={c.s}>{c.s}</i><em>{c.ampm}</em></b>
-      <span className="fx-clock-d" aria-hidden="true">{c.date}<i>·</i>{c.zone}</span>
+    <div className="fx-clock" role="timer" aria-live="off" aria-label={`${c.date}, ${c.hm}:${c.s} ${c.ampm}, ${c.zone} time`}>
+      <span className="fx-clock-d" aria-hidden="true">{c.date}</span>
+      <i className="fx-clock-dot" aria-hidden="true">·</i>
+      <b className="fx-clock-t tp-num" aria-hidden="true">{c.hm}:{c.s} {c.ampm}</b>
     </div>
   )
 }

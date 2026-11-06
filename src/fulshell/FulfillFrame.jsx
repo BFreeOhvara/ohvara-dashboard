@@ -10,7 +10,8 @@ import { useStretchPill } from '../hooks/useStretchPill'
 import { useNotificationFeed, useMarkRead } from '../hooks/useNotifications'
 import { usePortalPhone } from '../contexts/portalPhone'
 import { Drawer, Avatar, useAccount, useNote, initials } from '../template/kit'
-import { wig, CountUp, RollTitle, usePageSwap, usd, useExit } from '../template/motion'
+import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit } from '../template/motion'
+import { armEntrance } from '../adminshell/entrance'
 import Palette from '../template/Palette'
 import { OhvaraMark } from '../components/ui/OhvaraMark'
 import { isSearchKey } from '../lib/searchKey'
@@ -19,6 +20,7 @@ import { SUPPORT_EMAIL } from '../components/auth/authUtils'
 import { timeText } from '../lib/fulfillmentDay'
 import { displayName } from '../lib/vaQueue'
 import { FUL, FUL_TABS, fulPageOf, fulTitleOf } from './paths'
+import { LiveClock } from '../template/Clock'
 import { useFulData } from './useFulData'
 import '../template/glass.css'
 import '../template/flow.css'
@@ -228,11 +230,15 @@ export default function FulfillFrame() {
   useLayoutEffect(() => {
     const el = appRef.current
     if (!el) return undefined
-    const raf = requestAnimationFrame(() => el.classList.add('is-anim'))
+    let stop = () => {}
+    // P859/P860: it then gets SETTLE_MS to really run; if it has not (a throttled or frozen browser), the page shows at rest
+    // (.is-settled, flow.css). Reduced motion shows at once. The body never waits on an animation.
+    const raf = requestAnimationFrame(() => { el.classList.add('is-anim'); stop = armEntrance(el, { still: still(), rootClass: 'fx-settled' }) })
     const onVis = () => { if (document.hidden) el.classList.remove('is-anim') }
     document.addEventListener('visibilitychange', onVis)
-    return () => { cancelAnimationFrame(raf); document.removeEventListener('visibilitychange', onVis) }
+    return () => { cancelAnimationFrame(raf); stop(); document.removeEventListener('visibilitychange', onVis) }
   }, [layout])
+  useEffect(() => () => document.documentElement.classList.remove('fx-settled'), [])
 
   useEffect(() => {
     const onKey = e => { if (isSearchKey(e)) { e.preventDefault(); setPanel(p => (p === 'search' ? null : 'search')) } }
@@ -300,6 +306,8 @@ export default function FulfillFrame() {
               ))}
             </ul>
           )}
+          {/* P860: the live clock, one line, right side of every page's title row, in the zone from the VA's profile */}
+          <LiveClock tz={d.tz} />
         </div>
 
         <main className={`tp-main fx-main fs-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>

@@ -8,7 +8,8 @@ import {
 import { useTheme } from '../../hooks/useTheme'
 import { Drawer, Avatar, Field, PillTabs, useAccount, useNote, initials } from '../kit'
 import { avatarHue } from '../avatarHue'
-import { wig, CountUp, RollTitle, usePageSwap, usd, useExit } from '../motion'
+import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit } from '../motion'
+import { armEntrance } from '../../adminshell/entrance'
 import Palette from '../Palette'
 import { Select } from '../Select'
 import { LiveClock } from '../Clock'
@@ -315,11 +316,15 @@ export default function FulFrame() {
   useLayoutEffect(() => {
     const el = appRef.current
     if (!el) return undefined
-    const raf = requestAnimationFrame(() => el.classList.add('is-anim'))
+    let stop = () => {}
+    // P859/P860: it then gets SETTLE_MS to really run; if it has not (a throttled or frozen browser), the page shows at rest
+    // (.is-settled, flow.css). Reduced motion shows at once. The body never waits on an animation.
+    const raf = requestAnimationFrame(() => { el.classList.add('is-anim'); stop = armEntrance(el, { still: still(), rootClass: 'fx-settled' }) })
     const onVis = () => { if (document.hidden) el.classList.remove('is-anim') }
     document.addEventListener('visibilitychange', onVis)
-    return () => { cancelAnimationFrame(raf); document.removeEventListener('visibilitychange', onVis) }
+    return () => { cancelAnimationFrame(raf); stop(); document.removeEventListener('visibilitychange', onVis) }
   }, [layout])
+  useEffect(() => () => document.documentElement.classList.remove('fx-settled'), [])
 
   useEffect(() => {
     const onKey = e => { if (isSearchKey(e)) { e.preventDefault(); setPanel(p => (p === 'search' ? null : 'search')) } }
@@ -404,8 +409,8 @@ export default function FulFrame() {
               ))}
             </ul>
           )}
-          {/* P847: the live clock, right side of the Overview header, in the zone from Settings */}
-          {layout === 'overview' && <LiveClock tz={fulTz} />}
+          {/* P847 + P860: the live clock, one line, right side of every page's title row, in the zone from Settings */}
+          {layout !== 'messages' && <LiveClock tz={fulTz} />}
         </div>
 
         <main className={`tp-main fx-main fs-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>

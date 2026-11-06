@@ -451,8 +451,8 @@ export default function TemplateFrame() {
               ))}
             </ul>
           )}
-          {/* P847: the live clock, right side of the Overview header, in the zone from Settings */}
-          {layout === 'overview' && <LiveClock tz={settings.timeZone} />}
+          {/* P847 + P860: the live clock, one line, right side of every page's title row, in the zone from Settings */}
+          {layout !== 'messages' && <LiveClock tz={settings.timeZone} />}
         </div>
 
         <main className={`tp-main fx-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>

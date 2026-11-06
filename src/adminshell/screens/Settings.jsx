@@ -221,7 +221,7 @@ function Prefs() {
       <Head title="Preferences" sub="Theme, your time zone, and what also comes to your phone or email." />
       <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Theme</b><p className="tp-sub">{THEME_NAME[look]}</p></div><Seg label="Theme" value={look} onChange={pickLook} options={[{ key: 'light', label: 'Light' }, { key: 'dark', label: 'Dark' }, { key: 'system', label: 'System' }]} /></div>
       {look !== saved && <div className="fx-form-row"><span className="tp-grow" /><button type="button" className="tp-btn ov-ghost" onClick={() => pickLook(saved)}>Discard</button><button type="button" className="tp-primary fx-accent" onClick={() => { saveTheme(look); note(`${THEME_NAME[look]} theme saved`) }}>Save theme</button></div>}
-      <DField label="Time zone" hint="The clock at the top and every time on the admin side."><Dropdown label="Time zone" value={s.tz} onChange={tz => { setTz(tz); note('Time zone saved') }} options={ZONES.map(([v, l, x]) => ({ value: v, label: `${l} time`, sub: x }))} /></DField>
+      <DField label="Time zone" hint="The clock beside the page title and every time on the admin side."><Dropdown label="Time zone" value={s.tz} onChange={tz => { setTz(tz); note('Time zone saved') }} options={ZONES.map(([v, l, x]) => ({ value: v, label: `${l} time`, sub: x }))} /></DField>
       <div className="fx-alerts">
         <div className="fx-alerts-h"><span className="tp-grow" /><span>Push</span><span>Email</span></div>
         <ul className="tp-list">{alerts.map(x => (

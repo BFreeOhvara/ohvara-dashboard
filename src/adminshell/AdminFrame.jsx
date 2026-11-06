@@ -18,7 +18,7 @@ import {
   useAdmDay, useAdmAgents, useAdmVas, useAdmLeads, useAdmClients, useAdmFeed, useAdmSettings, useAdmMoney, useAdmActions, useAdmViewAs,
   useAdmInvites, useAdmConnect, PARTNER, plugged,
 } from './data'
-import { LiveClock } from './kit'
+import { LiveClock } from '../template/Clock'
 import { ap, ADM_TABS, PARTNER_PAGES, admPageOf, admTitleOf } from './paths'
 import { STAGE_WORD } from './words'
 import '../template/glass.css'
@@ -213,7 +213,7 @@ export default function AdminFrame({ preview = false }) {
   const { data: clients } = useAdmClients()
   const { data: settings } = useAdmSettings()
   const { data: viewAs } = useAdmViewAs()
-  const { setTz, setViewAs } = useAdmActions()
+  const { setViewAs } = useAdmActions()
   const partner = viewAs === 'partner'
   const close = useCallback(() => setPanel(null), [])
   const open = which => e => { wig.onClick(e); setPanel(which) }
@@ -285,7 +285,6 @@ export default function AdminFrame({ preview = false }) {
         <PillTabs as="nav" label="Pages" className="tp-tabs fx-tabs ad-tabs" itemClass="tp-tab fx-tab" value={tabs.some(([k]) => k === active) ? active : null} persistKey="adm-tabs"
           items={tabs.map(([k, label]) => ({ key: k, to: ap(k), label, extra: !partner && tabCount[k] > 0 ? <span className="fx-tb">{tabCount[k]}</span> : null }))} />
         <div className="fx-tr">
-          <LiveClock tz={settings.tz} onTz={tz => { setTz(tz); note('Time zone changed') }} />
           {tops}
           <button type="button" className={`tp-me fx-me tp-wig av-${avatarHue(me)}`} aria-label={`Your account, ${me}`} aria-expanded={panel === 'menu'} {...wig} onClick={open('menu')}>{initials(me).toUpperCase()}</button>
         </div>
@@ -324,6 +323,8 @@ export default function AdminFrame({ preview = false }) {
               ))}
             </ul>
           )}
+          {/* P860: the live clock, one line, right side of every page's title row (it left the top bar) */}
+          {layout !== 'messages' && <LiveClock tz={settings.tz} />}
         </div>
 
         <main className={`tp-main fx-main ad-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>

@@ -1,9 +1,8 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Check, ChevronDown, Clock } from 'lucide-react'
+import { ArrowUpRight, Check, ChevronDown } from 'lucide-react'
 import { useExit } from '../template/motion'
-import { ZONES } from './words'
 
 // P849 — the Admin side's own small pieces, beside the shared kit (src/template/kit.jsx, imported, never edited).
 
@@ -118,31 +117,3 @@ export function DField({ label, hint, children }) {
   return <div className="tp-field"><span>{label}</span>{children}{hint && <small>{hint}</small>}</div>
 }
 
-// The live clock: the time in the chosen zone, ticking each second, and a dropdown to change the zone.
-function useNow() {
-  const [now, setNow] = useState(() => new Date())
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(t)
-  }, [])
-  return now
-}
-export function LiveClock({ tz, onTz }) {
-  const now = useNow()
-  let time
-  let date
-  try {
-    time = now.toLocaleTimeString('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', second: '2-digit' })
-    date = now.toLocaleDateString('en-US', { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric' })
-  } catch {
-    time = now.toLocaleTimeString('en-US')
-    date = now.toLocaleDateString('en-US')
-  }
-  return (
-    <div className="ad-clock" role="group" aria-label="Clock">
-      <Clock size={15} aria-hidden="true" />
-      <span className="ad-clock-t"><b className="tp-num" aria-live="off">{time}</b><small>{date}</small></span>
-      <Dropdown className="ad-clock-z" label="Time zone" value={tz} onChange={onTz} options={ZONES.map(([v, l, s]) => ({ value: v, label: s, sub: `${l} time` }))} />
-    </div>
-  )
-}
