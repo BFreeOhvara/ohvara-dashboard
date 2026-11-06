@@ -1,6 +1,6 @@
 import { Component } from 'react'
 import { AlertTriangle } from 'lucide-react'
-import { isChunkError, reloadOnceFor, failedUrl } from '../../lib/chunkReload'
+import { isChunkError, reloadOnceFor, reloadFresh } from '../../lib/chunkReload'
 
 // Prompt 746 — a page that throws while rendering used to unmount the whole
 // React tree (no boundary anywhere): a completely blank screen. Two of these
@@ -16,7 +16,7 @@ export function CrashCard() {
         <h2 className="ov-crash-title">This page ran into a problem.</h2>
         <p className="ov-crash-text">Reload to try again.</p>
         <div className="ov-crash-actions">
-          <button type="button" className="ov-primary" onClick={() => window.location.reload()}>Reload</button>
+          <button type="button" className="ov-primary" onClick={reloadFresh}>Reload</button>
           {/* "/" is RoleRedirect: it lands each role on its own Overview. */}
           <a className="ov-ghost" href="/">Go to Overview</a>
         </div>
@@ -37,7 +37,7 @@ export class ErrorBoundary extends Component {
     // A lazy route/component whose chunk is gone (a tab opened before a
     // deploy): reload once to pick up the new build; a second failure shows
     // the fallback.
-    if (isChunkError(error)) reloadOnceFor(failedUrl(error))
+    if (isChunkError(error)) reloadOnceFor()
   }
 
   componentDidUpdate(prev) {

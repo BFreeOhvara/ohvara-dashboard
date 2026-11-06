@@ -2328,6 +2328,10 @@ a.ov-hpill:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; 
   border-radius: 999px; font-size: 14.5px; font-weight: 600; text-decoration: none; cursor: pointer;
 }
 .ov-crash-actions .ov-ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* P861 — the crash panel is the page's last resort, so it never waits on anything: no entrance animation, no motion
+   gate (the shells' .is-anim / .is-settled / .fx-* rules), no inherited fade. Always painted, always clickable. */
+.ov-crash, .ov-crash * { animation: none !important; transition: none !important; }
+.ov-crash { opacity: 1 !important; visibility: visible !important; transform: none !important; position: relative; z-index: 1; }
 
 /* ── Prompt 748 — My calls ─────────────────────────────────────
    /fulfillment/desk: one day at a time. A day header (.ov-hero) with a day

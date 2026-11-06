@@ -1,5 +1,5 @@
 import { Component, createElement as h } from 'react'
-import { isChunkError, reloadOnceFor, failedUrl } from '../lib/chunkReload.js'
+import { isChunkError, reloadOnceFor, reloadFresh } from '../lib/chunkReload.js'
 
 // P855 — a page of the admin shell that throws while rendering shows this panel, never a white screen. Two ways out:
 // Reload, and "Open the classic admin" (today's admin pages, ?classic=1). Plain createElement (no JSX) so a node test
@@ -12,7 +12,7 @@ export function AdminCrash() {
       h('h2', { className: 'ov-crash-title' }, 'This page ran into a problem.'),
       h('p', { className: 'ov-crash-text' }, 'Reload to try again, or open the classic admin pages.'),
       h('div', { className: 'ov-crash-actions' },
-        h('button', { type: 'button', className: 'ov-primary', onClick: () => window.location.reload() }, 'Reload'),
+        h('button', { type: 'button', className: 'ov-primary', onClick: reloadFresh }, 'Reload'),
         h('a', { className: 'ov-ghost', href: CLASSIC_HREF }, 'Open the classic admin'))))
 }
 
@@ -26,8 +26,9 @@ export class AdminBoundary extends Component {
 
   componentDidCatch(error) {
     console.error(`[admin shell crash] ${window.location.pathname}: ${error?.message || error}`)
-    // A tab opened before a deploy asks for a chunk that is gone: reload once to pick up the new build.
-    if (isChunkError(error)) reloadOnceFor(failedUrl(error))
+    // A tab opened before a deploy asks for a chunk that is gone: reload once per build (cache-busted) to pick up the new
+    // build; if that was already tried the panel stays up (P861).
+    if (isChunkError(error)) reloadOnceFor()
   }
 
   componentDidUpdate(prev) {

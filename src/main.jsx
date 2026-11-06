@@ -16,7 +16,7 @@ import './index.css'
 // Side-effect import — applies the saved theme before first paint (Prompt 669).
 import './hooks/useTheme'
 import App from './App.jsx'
-import { reloadOnceFor } from './lib/chunkReload'
+import { reloadOnceFor, stripBust } from './lib/chunkReload'
 import { isNativeApp } from './lib/native'
 import { bootNative } from './lib/nativeBoot'
 
@@ -28,9 +28,10 @@ if (isNativeApp()) bootNative()
 // tab opened before a deploy asks for a hash that is gone). Reload once to
 // pick up the new build; if that was already tried, let the error through to
 // the boundary.
+// Prompt 861: once per build version, with a cache-busting query (lib/chunkReload.js); the query comes back out here.
+stripBust()
 window.addEventListener('vite:preloadError', e => {
-  const url = e.payload?.message?.match(/https?:\/\/\S+/)?.[0]
-  if (reloadOnceFor(url)) e.preventDefault()
+  if (reloadOnceFor()) e.preventDefault()
 })
 
 createRoot(document.getElementById('root')).render(
