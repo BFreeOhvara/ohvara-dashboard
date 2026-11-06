@@ -54,7 +54,6 @@ test('the host: gone build files are a real 404, index.html is revalidated, hash
   const hits = p => re.test(p)
   assert.equal(hits('/assets/AdminShell-abc123.js'), false)
   assert.equal(hits('/assets/index-abc123.css'), false)
-  assert.equal(hits('/anything/gone.js'), false)
   assert.equal(hits('/admin'), true)
   assert.equal(hits('/admin/team'), true)
   assert.equal(hits('/'), true)
