@@ -227,11 +227,21 @@ export function minutesOf(time) {
 }
 
 // The VA's shift and rota: today's shift, who is on with them, the two weeks of the rota, and day-off requests.
+// P851 Phase 2: the real rota (src/hooks/useVaShifts, plugged in by ./Shift so this file stays network-free for the
+// node tests) wins once migration 231 is applied and a VA is signed in; until then this sample. live = real.
+let useRealShift = () => null
+export const plugRealShift = hook => { useRealShift = hook }
+const novDate = d => `2026-11-${String(d).padStart(2, '0')}`
 export function useFulShift() {
+  const sample = useSampleShift()
+  const real = useRealShift()
+  return real ? ok(real) : sample
+}
+function useSampleShift() {
   const s = useStore()
   const off = d => s.dayOffs.some(o => o.day === d)
   const days = WEEKS.map(w => w.map(d => ({
-    day: d, name: DOW[d], today: d === TODAY, past: d < TODAY,
+    date: novDate(d), day: d, name: DOW[d], today: d === TODAY, past: d < TODAY,
     vas: (ROTA[d] || []).map(id => { const v = VAS.find(x => x.id === id); return { ...v, off: v.me && off(d) } }),
   })))
   const me = VAS.find(v => v.me)
@@ -242,7 +252,7 @@ export function useFulShift() {
     onToday: today.some(v => v.me), mates: today.filter(v => !v.me),
     // Days a VA can still ask off: their shift days after today that are not asked yet.
     askable: mine.filter(d => d.day > TODAY && !off(d.day)),
-    dayOffs: s.dayOffs, thisWeek: mine.filter(d => WEEKS[0].includes(d.day) && !off(d.day)).length,
+    dayOffs: s.dayOffs.map(o => ({ ...o, date: novDate(o.day), status: 'pending' })), live: false, thisWeek: mine.filter(d => WEEKS[0].includes(d.day) && !off(d.day)).length,
   })
 }
 

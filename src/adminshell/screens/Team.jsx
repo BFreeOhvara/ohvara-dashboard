@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Hand, MessageSquare, CalendarOff, Check, X, GripVertical, Plus, TriangleAlert, Landmark, ArrowUpRight, Phone, ShieldOff, ShieldCheck, Clock3, Headset } from 'lucide-react'
-import { useAdmVas, useAdmDesk, useAdmRota, useAdmActions, useAdmMoney, WEEK, NEXT_WEEK, TODAY, SHIFT_MIN, SHIFT_MAX, dayName, dateText } from '../data'
+import { useAdmVas, useAdmDesk, useAdmRota, useAdmActions, useAdmMoney, WEEK, TODAY, SHIFT_MIN, SHIFT_MAX, dayName, dateText } from '../data'
+import { useAdmShifts } from '../../hooks/useVaShiftsAdmin'
 import { Avatar, Chip, Drawer, PillTabs, Seg, useNote } from '../../template/kit'
 import { RecordDrawer, Block } from '../../template/Record'
 import { CountUp, usd } from '../../template/motion'
@@ -115,15 +116,16 @@ function Desk({ openCall }) {
   )
 }
 
+// P851 Phase 2: real shifts once 231 is applied (useAdmShifts), P849's sample rota until then.
 function Rota() {
-  const { data } = useAdmRota()
-  const { data: vas } = useAdmVas()
-  const { addShift, removeShift, moveShift } = useAdmActions()
+  const data = useAdmShifts()
+  const { team: vas, addShift, removeShift, moveShift, dayName, dateText, today: TODAY } = data
   const note = useNote()
   const [week, setWeek] = useState('this')
   const [picked, setPicked] = useState(null)
   const [over, setOver] = useState(null)
-  const days = week === 'this' ? WEEK : NEXT_WEEK
+  const days = data.weeks[week === 'this' ? 0 : 1]
+  const run = (p, done) => p.then(() => note(done), e => note(e?.message || 'That did not save. Try again.'))
   const nameOf = id => vas.find(v => v.id === id)?.name || ''
   const offOn = d => data.dayOff.filter(x => x.date === d && x.status === 'approved')
   const place = (date, vaId, from) => {
@@ -131,8 +133,7 @@ function Rota() {
     if (day.includes(vaId)) { note(`${nameOf(vaId).split(' ')[0]} is already on ${dateText(date)}`); return }
     if (day.length >= SHIFT_MAX) { note(`Three is the most on one day. Take someone off ${dayName(date)} first.`); return }
     if (offOn(date).some(x => x.va_id === vaId)) { note(`${nameOf(vaId).split(' ')[0]} has ${dateText(date)} off`); return }
-    if (from) moveShift(from, date, vaId); else addShift(date, vaId)
-    note(`${nameOf(vaId).split(' ')[0]} on shift ${dateText(date)}`)
+    run(from ? moveShift(from, date, vaId) : addShift(date, vaId), `${nameOf(vaId).split(' ')[0]} on shift ${dateText(date)}`)
     setPicked(null)
   }
   const drop = date => e => {
@@ -145,7 +146,7 @@ function Rota() {
     <section className="fx-tile ad-rota" style={{ '--i': 0 }} aria-label="Rota">
       <header className="fx-tile-h">
         <span className="tp-grow"><h2>Weekly rota</h2><p>{SHIFT_MIN} or {SHIFT_MAX} on shift every day. Drag someone onto a day, or tap them and then a day.</p></span>
-        <Seg label="Week" value={week} onChange={setWeek} options={[{ key: 'this', label: 'Nov 2 to 8' }, { key: 'next', label: 'Nov 9 to 15' }]} />
+        <Seg label="Week" value={week} onChange={setWeek} options={[{ key: 'this', label: data.weekLabels[0] }, { key: 'next', label: data.weekLabels[1] }]} />
       </header>
       <div className="ad-rota-pool" role="group" aria-label="The team">
         {vas.map(v => (
@@ -163,12 +164,12 @@ function Rota() {
           return (
             <div key={d} className={`ad-day${d === TODAY ? ' is-today' : ''}${d < TODAY ? ' is-past' : ''}${over === d ? ' is-over' : ''}${bad ? ' is-short' : ''}`} style={{ '--i': i }}
               onDragOver={e => { e.preventDefault(); setOver(d) }} onDragLeave={() => setOver(o => (o === d ? null : o))} onDrop={drop(d)}>
-              <header><b>{dayName(d)}</b><small>Nov {d}</small><span className={`ad-count${bad ? ' is-bad' : ''}`}>{on.length}/{SHIFT_MAX}</span></header>
+              <header><b>{dayName(d)}</b><small>{data.short(d)}</small><span className={`ad-count${bad ? ' is-bad' : ''}`}>{on.length}/{SHIFT_MAX}</span></header>
               <ul>
                 {on.map(id => (
                   <li key={id} draggable onDragStart={drag(id, d)} className="ad-shiftchip">
                     <Avatar name={nameOf(id)} /><b>{nameOf(id).split(' ')[0]}</b>
-                    <button type="button" className="ad-x" aria-label={`Take ${nameOf(id)} off ${dateText(d)}`} onClick={() => { removeShift(d, id); note(`${nameOf(id).split(' ')[0]} off ${dateText(d)}`) }}><X size={13} /></button>
+                    <button type="button" className="ad-x" aria-label={`Take ${nameOf(id)} off ${dateText(d)}`} onClick={() => run(removeShift(d, id), `${nameOf(id).split(' ')[0]} off ${dateText(d)}`)}><X size={13} /></button>
                   </li>
                 ))}
                 {offOn(d).map(x => <li key={x.id} className="ad-offchip"><CalendarOff size={12} aria-hidden="true" />{x.va.split(' ')[0]} off</li>)}
@@ -183,9 +184,10 @@ function Rota() {
 }
 
 function Requests() {
-  const { data } = useAdmRota()
-  const { decideDayOff } = useAdmActions()
+  const data = useAdmShifts()
+  const { decideDayOff, dateText } = data
   const note = useNote()
+  const run = (p, done) => p.then(() => note(done), e => note(e?.message || 'That did not save. Try again.'))
   const pending = data.dayOff.filter(d => d.status === 'pending')
   const done = data.dayOff.filter(d => d.status !== 'pending')
   return (
@@ -199,13 +201,13 @@ function Requests() {
               <Avatar name={r.va} />
               <span className="tp-grow"><b>{r.va} · {dateText(r.date)}</b><small>{r.reason} · asked {r.asked}</small>
                 {onShift && left < SHIFT_MIN && <small className="ad-warn-t"><TriangleAlert size={12} aria-hidden="true" />Leaves {left} on shift. Add someone on the rota.</small>}</span>
-              <button type="button" className="tp-primary sm fx-accent" onClick={() => { decideDayOff(r.id, true); note(`${r.va.split(' ')[0]} has ${dateText(r.date)} off`) }}><Check size={14} />Approve</button>
-              <button type="button" className="tp-btn sm ov-ghost" onClick={() => { decideDayOff(r.id, false); note('Request declined') }}>Decline</button>
+              <button type="button" className="tp-primary sm fx-accent" onClick={() => run(decideDayOff(r.id, true), `${r.va.split(' ')[0]} has ${dateText(r.date)} off`)}><Check size={14} />Approve</button>
+              <button type="button" className="tp-btn sm ov-ghost" onClick={() => run(decideDayOff(r.id, false), 'Request declined')}>Decline</button>
             </li>
           )
         })}{pending.length === 0 && <li className="fx-calm"><Check size={16} aria-hidden="true" />All answered.</li>}</ul>
       </Tile>
-      <Tile i={1} title="Answered" sub="This month">
+      <Tile i={1} title="Answered" sub={data.answeredSub}>
         <ul className="tp-list">{done.map(r => <li key={r.id} className="fx-mrow"><Avatar name={r.va} /><span className="tp-grow"><b>{r.va}</b><small>{dateText(r.date)} · {r.reason}</small></span><Chip tone={r.status === 'approved' ? 'green' : 'mute'}>{r.status === 'approved' ? 'Approved' : 'Declined'}</Chip></li>)}</ul>
       </Tile>
     </div>
@@ -294,7 +296,7 @@ export default function Team() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [sp, setSp] = useSearchParams()
-  const { data: rota } = useAdmRota()
+  const rota = useAdmShifts()
   const tab = TABS.some(t => t[0] === sp.get('tab')) ? sp.get('tab') : 'today'
   const call = sp.get('call')
   const pending = rota.dayOff.filter(d => d.status === 'pending').length

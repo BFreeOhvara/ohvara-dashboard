@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 import {
   isShiftsMissing, SHIFTS_NOT_READY, companyDay, addDays, weekStart, dayName, shiftText,
   readShiftsToday, readShiftWeek, requestDayOff, cancelDayOff, decideDayOff, saveShift, removeShift,
-  readDayOffRequests, toShiftView,
+  readDayOffRequests, toShiftView, monthDay, dateLabel, rangeText, toAdminRota, toDayOffRows,
 } from './vaShifts.js'
 
 const MISSING = { code: 'PGRST202', message: 'Could not find the function public.va_shift_week' }
@@ -148,4 +148,50 @@ test('migration 231: flag defaults off, notifications are bell-only', () => {
   assert.match(sql, /va_shift_assign_live boolean not null default false/)
   assert.match(sql, /'va_day_off_requested', '\{admin\}',[^\n]*false, null, true, false/)
   assert.match(sql, /'va_day_off_decided',\s+'\{fulfillment\}',[^\n]*false, null, true, false/)
+})
+
+// ── Phase 2: labels and the admin rota ─────────────────────────────────────
+
+test('date labels name the real month, not always Nov', () => {
+  assert.equal(monthDay('2026-11-05'), 'Nov 5')
+  assert.equal(dateLabel('2026-12-01'), 'Tue, Dec 1')
+  assert.equal(rangeText('2026-11-02', '2026-11-08'), 'Nov 2 to 8')
+  assert.equal(rangeText('2026-11-30', '2026-12-06'), 'Nov 30 to Dec 6')
+})
+
+test('toAdminRota keys days by date, two whole weeks, approved days off left out', () => {
+  const at = (d, h) => `${d}T${h}:00:00-06:00`
+  const rows = [
+    { shift_date: '2026-11-02', va_id: 'a', full_name: 'Ann', starts_at: at('2026-11-02', '08'), ends_at: at('2026-11-02', '18'), off_status: null },
+    { shift_date: '2026-11-02', va_id: 'b', full_name: 'Bo', starts_at: at('2026-11-02', '08'), ends_at: at('2026-11-02', '18'), off_status: 'pending' },
+    { shift_date: '2026-11-03', va_id: 'a', full_name: 'Ann', starts_at: at('2026-11-03', '08'), ends_at: at('2026-11-03', '18'), off_status: 'approved' },
+  ]
+  const r = toAdminRota(rows, { today: '2026-11-05' })
+  assert.equal(r.weeks.length, 2)
+  assert.deepEqual(r.weeks[0], ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-07', '2026-11-08'])
+  assert.equal(r.weeks[1][6], '2026-11-15')
+  assert.deepEqual(r.rota['2026-11-02'], ['a', 'b'])
+  assert.equal(r.rota['2026-11-03'], undefined)
+})
+
+test('toDayOffRows gives the Day off tab its shape', () => {
+  const [r] = toDayOffRows([{ id: 'x', va_id: 'a', off_date: '2026-11-12', reason: null, status: 'pending', created_at: '2026-11-05T15:00:00Z', va: { full_name: 'Ann Lee' } }])
+  assert.deepEqual(r, { id: 'x', va_id: 'a', date: '2026-11-12', reason: 'No reason given', status: 'pending', va: 'Ann Lee', asked: 'Thu, Nov 5' })
+  assert.deepEqual(toDayOffRows(null), [])
+})
+
+test('toShiftView carries each shift own hours', () => {
+  const v = toShiftView([{ shift_date: '2026-11-05', va_id: 'me', full_name: 'Me', is_me: true, starts_at: '2026-11-05T15:00:00Z', ends_at: '2026-11-05T22:00:00Z', tz: 'America/Chicago' }], { today: '2026-11-05' })
+  assert.equal(v.mine[0].vas[0].text, '9:00 AM to 4:00 PM')
+  assert.equal(v.shift.text, '9:00 AM to 4:00 PM')
+})
+
+test('the VA and admin pages read through the Phase 2 adapters', () => {
+  const shell = src('../hooks/useVaShiftsShell.js')
+  assert.match(shell, /plugRealShift\(/)
+  assert.match(src('../template/ful/Shift.jsx'), /useVaShiftsShell/)
+  assert.match(src('../template/ful/screens/Schedule.jsx'), /useDayOffActions/)
+  assert.match(src('../adminshell/screens/Team.jsx'), /useAdmShifts\(\)/)
+  // The sample data file stays free of the network so node tests can import it.
+  assert.doesNotMatch(src('../template/ful/data.js'), /from ['"][^'"]*(hooks|supabase)/)
 })

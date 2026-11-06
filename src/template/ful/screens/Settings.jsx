@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { User, Bell, Clock3, Landmark, SunMoon, Mail, LogOut, Trash2, ChevronRight, KeyRound, ArrowUpRight } from 'lucide-react'
 import { useFulSettings, useFulActions, useFulDay, useFulPay, useFulAgents, useFulShift } from '../data'
 import { ShiftLine, DayOffDrawer } from '../Shift'
+import { dateLabel } from '../../../lib/vaShifts'
 import { useThemePref, previewTheme } from '../../../hooks/useTheme'
 import { Drawer, Field, Seg, Switch, Chip, PillTabs, Avatar, useNote, useAccount, initials } from '../../kit'
 import { CountUp, usd } from '../../motion'
@@ -120,8 +121,11 @@ export default function Settings() {
             <div className="tp-field"><span>Your shifts</span>
               <ul className="fs-shifts">
                 {shift.mine.map(d => {
-                  const off = shift.dayOffs.some(o => o.day === d.day)
-                  return <li key={d.day} className={d.today ? 'is-today' : ''}><b>{d.name}, Nov {d.day}</b><span className="tp-num">{shift.shift.text}</span><em className={off ? 'is-off' : ''}>{off ? 'Off asked' : d.today ? 'Today' : d.past ? 'Done' : 'Coming up'}</em></li>
+                  // P851 Phase 2: real hours and day-off answers once 231 is applied; the sample until then.
+                  const ask = shift.dayOffs.find(o => o.date === d.date)
+                  const off = !!ask && ask.status !== 'declined'
+                  const word = ask?.status === 'approved' ? 'Day off' : off ? 'Off asked' : d.today ? 'Today' : d.past ? 'Done' : 'Coming up'
+                  return <li key={d.date} className={d.today ? 'is-today' : ''}><b>{dateLabel(d.date)}</b><span className="tp-num">{d.vas.find(v => v.me)?.text || shift.shift.text}</span><em className={off ? 'is-off' : ''}>{word}</em></li>
                 })}
               </ul>
               <small className="tp-sub">Two or three VAs are on each day. The whole rota is on <Link to={fp('schedule')}>Schedule</Link>.</small>

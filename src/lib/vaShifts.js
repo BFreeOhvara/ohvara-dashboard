@@ -52,6 +52,13 @@ export function clockText(iso, tz = COMPANY_TZ) {
 export const shiftText = (startsAt, endsAt, tz = COMPANY_TZ) =>
   `${clockText(startsAt, tz)} to ${clockText(endsAt, tz)}`
 
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+// "Nov 12" and "Thu, Nov 12" for a YYYY-MM-DD day (Phase 2: the pages used to say "Nov" for every date).
+export const monthDay = day => `${MON[Number(day.slice(5, 7)) - 1]} ${Number(day.slice(8))}`
+export const dateLabel = day => `${dayName(day)}, ${monthDay(day)}`
+// "Nov 2 to 8", or "Nov 30 to Dec 6" across a month.
+export const rangeText = (a, b) => a.slice(0, 7) === b.slice(0, 7) ? `${monthDay(a)} to ${Number(b.slice(8))}` : `${monthDay(a)} to ${monthDay(b)}`
+
 // ── reads ───────────────────────────────────────────────────────────────────
 
 // Rows from va_shifts_today, or null while 231 isn't applied.
@@ -163,6 +170,7 @@ export function toShiftView(rows, { today, from, weeks = 2, meId = null } = {}) 
           off: r.off_status === 'approved' || (isMe(r) && r.off_status === 'pending'),
           offStatus: r.off_status || null,
           startsAt: r.starts_at, endsAt: r.ends_at, tz: r.tz || COMPANY_TZ,
+          text: shiftText(r.starts_at, r.ends_at, r.tz || COMPANY_TZ),
         })),
       })
     }
@@ -190,4 +198,37 @@ export function toShiftView(rows, { today, from, weeks = 2, meId = null } = {}) 
     dayOffs,
     thisWeek: mine.filter(d => firstWeek.has(d.date) && !d.vas.find(v => v.me).off).length,
   }
+}
+
+// ── the admin rota (Phase 2) ────────────────────────────────────────────────
+
+// Every active VA, for the rota builder's pool (profiles directory columns, as useFulfillmentReps reads them).
+export async function readVaTeam(db) {
+  const { data, error } = await db.from('profiles').select('id, full_name, is_active')
+    .eq('role', 'fulfillment').eq('is_active', true).order('full_name')
+  if (error) throw error
+  return (data || []).map(p => ({ id: p.id, name: p.full_name || 'VA' }))
+}
+
+// The admin rota builder's shape, from va_shift_week rows over whole weeks:
+//   { today, weeks: [[date x7] per week], rota: { date: [va_id…] } }
+// A VA on an approved day off is left out of that day (the page shows them as off instead), so the count is who works.
+export function toAdminRota(rows, { today, from, weeks = 2 } = {}) {
+  const start = from || weekStart(today)
+  const rota = {}
+  for (const r of rows || []) {
+    if (r.off_status === 'approved') continue
+    ;(rota[r.shift_date] ||= []).push(r.va_id)
+  }
+  const list = Array.from({ length: weeks }, (_, w) => Array.from({ length: 7 }, (_, i) => addDays(start, w * 7 + i)))
+  return { today, weeks: list, rota }
+}
+
+// Day-off requests in the admin Day off tab's shape.
+export function toDayOffRows(requests) {
+  return (requests || []).map(r => ({
+    id: r.id, va_id: r.va_id, date: r.off_date, reason: r.reason || 'No reason given', status: r.status,
+    va: r.va?.full_name || 'A VA',
+    asked: r.created_at ? dateLabel(companyDay(new Date(r.created_at))) : '',
+  }))
 }

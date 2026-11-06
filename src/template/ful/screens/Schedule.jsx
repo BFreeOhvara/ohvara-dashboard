@@ -7,6 +7,8 @@ import { RecordDrawer, Block } from '../../Record'
 import { CountUp } from '../../motion'
 import { LeadDrawer } from './Queue'
 import { DayOffDrawer } from '../Shift'
+import { useDayOffActions } from '../../../hooks/useVaShiftsShell'
+import { companyDay, dateLabel, rangeText } from '../../../lib/vaShifts'
 import { fp } from '../paths'
 import { CALL_WORD, CALL_TONE } from '../words'
 
@@ -145,22 +147,26 @@ function BookedDrawer({ id, onClose }) {
 }
 
 // The week's rota: who is on which day (two or three VAs a day), mine marked, with the day-off requests.
+// P851 Phase 2: the real rota once 231 is applied (live), the sample until then.
 function Rota({ week, onAsk }) {
   const { data: s } = useFulShift()
-  const { cancelDayOff } = useFulActions()
+  const { cancel } = useDayOffActions()
   const note = useNote()
-  const days = s.days[week]
+  const days = s.days[week] || []
   const people = [s.me, ...Array.from(new Map(days.flatMap(d => d.vas).filter(v => !v.me).map(v => [v.id, v])).values())]
-  const mine = s.dayOffs.filter(o => days.some(d => d.day === o.day))
+  const mine = s.dayOffs.filter(o => days.some(d => d.date === o.date))
+  const label = s.live && days.length ? `${WEEK_LABEL[week]}, ${rangeText(days[0].date, days.at(-1).date)}` : WEEK_LABEL[week]
+  const todayIso = s.live ? companyDay() : s.days.flat().find(d => d.today)?.date || ''
+  const takeBack = o => cancel(o).then(() => note(`Took back your day off on ${dateLabel(o.date)}`), e => note(e?.message || 'That did not save. Try again.'))
   return (
     <section className="fx-tile fs-rota" style={{ '--i': 2 }} aria-label="Who is on shift">
       <header className="fx-tile-h">
-        <span className="tp-grow"><h2>Who's on shift</h2><p>{WEEK_LABEL[week]} · two or three VAs a day · {s.shift.text}</p></span>
+        <span className="tp-grow"><h2>Who's on shift</h2><p>{label} · two or three VAs a day · {s.shift.text}</p></span>
         <button type="button" className="tp-btn ov-ghost" onClick={onAsk}><CalendarOff size={15} />Request a day off</button>
       </header>
       <div className="fs-rota-sc">
         <table className="fs-rota-t">
-          <caption className="tp-sr">The shift rota for {WEEK_LABEL[week].toLowerCase()}</caption>
+          <caption className="tp-sr">The shift rota for {label.toLowerCase()}</caption>
           <thead><tr><th scope="col"><span className="tp-sr">VA</span></th>{days.map(d => <th key={d.day} scope="col" className={d.today ? 'is-today' : ''}>{d.name} <b>{d.day}</b></th>)}</tr></thead>
           <tbody>
             {people.map(v => (
@@ -168,7 +174,7 @@ function Rota({ week, onAsk }) {
                 <th scope="row"><Avatar name={v.name} /><span>{v.me ? 'You' : v.name}</span></th>
                 {days.map(d => {
                   const on = d.vas.find(x => x.id === v.id)
-                  return <td key={d.day} className={d.today ? 'is-today' : ''}>{on ? <span className={`fs-pill${on.off ? ' is-off' : ''}`}>{on.off ? 'Off asked' : 'On'}</span> : <span className="fs-none" aria-label="Not on">·</span>}</td>
+                  return <td key={d.day} className={d.today ? 'is-today' : ''}>{on ? <span className={`fs-pill${on.off ? ' is-off' : ''}`}>{on.off ? (on.offStatus === 'approved' ? 'Off' : 'Off asked') : 'On'}</span> : <span className="fs-none" aria-label="Not on">·</span>}</td>
                 })}
               </tr>
             ))}
@@ -178,8 +184,8 @@ function Rota({ week, onAsk }) {
       {mine.length > 0 && (
         <ul className="fs-offs" aria-label="Your day-off requests">
           {mine.map(o => (
-            <li key={o.id}><CalendarOff size={14} aria-hidden="true" /><span className="tp-grow">You asked off {dayName(o.day)}, Nov {o.day}{o.why ? ` · ${o.why}` : ''}. The team knows.</span>
-              <button type="button" className="fx-pillbtn" onClick={() => { cancelDayOff(o.day); note(`Took back your day off on ${dayName(o.day)}, Nov ${o.day}`) }}><Undo2 size={13} />Take it back</button></li>
+            <li key={o.id}><CalendarOff size={14} aria-hidden="true" /><span className="tp-grow">{o.status === 'approved' ? 'You have' : 'You asked'} {dateLabel(o.date)} off{o.why ? ` · ${o.why}` : ''}. {o.status === 'declined' ? 'The team said no, so you are on.' : o.status === 'approved' ? 'Approved.' : 'The team knows.'}</span>
+              {o.date > todayIso && <button type="button" className="fx-pillbtn" onClick={() => takeBack(o)}><Undo2 size={13} />Take it back</button>}</li>
           ))}
         </ul>
       )}
