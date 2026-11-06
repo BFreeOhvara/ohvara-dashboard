@@ -15,7 +15,11 @@ import { LiveClock } from '../Clock'
 import { OhvaraMark } from '../../components/ui/OhvaraMark'
 import { isSearchKey } from '../../lib/searchKey'
 import { SUPPORT_EMAIL } from '../../components/auth/authUtils'
-import { useFulDay, useFulClients, useFulQueue, useFulFeed, useFulSettings, useFulPay, useFulTasks, useFulActions, useFulAgents, useFulShift, useFulSchedule } from './data'
+import { useFulDay, useFulClients, useFulQueue, useFulFeed, useFulSettings, useFulPay, useFulTasks, useFulActions, useFulAgents, useFulShift, useFulSchedule, useAgentAppts, useVaBooking, AGENTS, NOW_ISO } from './data'
+import { SlotPick } from '../SlotPick'
+import { useClientZone } from '../useClientZone'
+import { isoOf } from '../carriers'
+import { agentSlots, clocksBetween, zoneAbbr, DEFAULT_APPT_MIN } from '../../lib/callSlots'
 import LiveCall from './LiveCall'
 import { DayOffDrawer } from './Shift'
 import { CALL_WORD } from './words'
@@ -69,42 +73,48 @@ function LogCall({ open, onClose }) {
 }
 
 // Book for an agent: someone from the queue, the agent, a day and a time. Lands on the agent's calendar (sample only).
+// P854: the time is the person's (their zone from state + city, or picked), inside the agent's hours on the agent's
+// clock, and never within the agent's appointment length + buffer of another appointment (lib/callSlots agentSlots).
 const BOOK_DAYS = [['Thu', 5], ['Fri', 6], ['Mon', 9], ['Tue', 10]]
-const BOOK_TIMES = ['10:00 AM', '11:30 AM', '1:00 PM', '2:30 PM', '4:00 PM', '5:30 PM']
+const APPT_CLOCKS = clocksBetween(8 * 60, 20 * 60) // the person's 8 AM to 8 PM; the agent's hours filter it
 export function BookForAgent({ open, onClose, leadId = null }) {
   const { data: queue } = useFulQueue()
   const { data: agents } = useFulAgents()
   const { bookLead } = useFulActions()
+  const book = useVaBooking()
   const note = useNote()
   const [ref, setRef] = useState(leadId || '')
   const [agent, setAgent] = useState(agents[0].id)
   const [date, setDate] = useState(5)
-  const [time, setTime] = useState(BOOK_TIMES[3])
-  if (!open) return null
+  const [time, setTime] = useState('')
   const who = queue.find(l => l.id === (leadId || ref)) || queue[0]
+  const ag = AGENTS.find(x => x.id === agent)
+  const zone = useClientZone(who?.checklist?.state || who?.state, who?.city)
+  const appts = useAgentAppts(agent)
+  const slots = agentSlots({ date: isoOf(date), clocks: APPT_CLOCKS, clientTz: zone.tz, appts, length: ag.appt?.length, buffer: ag.appt?.buffer, hours: { tz: ag.tz, open: ag.open, close: ag.close, days: ag.days } })
+  const pick = slots.find(x => x.clock === time && x.open && x.iso >= NOW_ISO)
+  if (!open) return null
   if (!who) {
     return <Drawer open center onClose={onClose} title="Book for an agent" sub="The queue is empty."><p className="fx-calm">No one is waiting to be booked.</p></Drawer>
   }
+  const gap = (ag.appt?.length || DEFAULT_APPT_MIN) + (ag.appt?.buffer || 0)
   const save = () => {
-    const when = `${BOOK_DAYS.find(d => d[1] === date)[0]}, Nov ${date}, ${time}`
-    const a = agents.find(x => x.id === agent)
-    bookLead(who.id, agent, when)
-    note(`${who.name} booked with ${a.name}, ${when}`)
+    const when = `${BOOK_DAYS.find(d => d[1] === date)[0]}, Nov ${date}, ${time} ${zoneAbbr(zone.tz, pick.iso)} (their time)`
+    bookLead(who.id, agent, when, pick.iso, zone.tz)
+    note(`${who.name} booked with ${ag.name}, ${when}`)
     onClose()
   }
   return (
     <Drawer open center onClose={onClose} title="Book for an agent" sub="It goes on the agent's calendar inside their hours."
-      footer={<><button type="button" className="tp-primary fx-accent" onClick={save}><CalendarCheck size={16} />Book it</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
+      footer={<><button type="button" className="tp-primary fx-accent" disabled={!pick} onClick={save}><CalendarCheck size={16} />Book it</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
       {!leadId && <Field label="Who"><Select label="Who" value={who.id} onChange={setRef} options={queue.map(l => ({ value: l.id, label: l.name, sub: `${l.city}, ${l.state}` }))} /></Field>}
       <div className="tp-field"><span>Agent</span>
-        <PillTabs role="radiogroup" label="Agent" className="fx-chips" itemClass="fx-chip fs-agent" value={agent} onChange={setAgent}
+        <PillTabs role="radiogroup" label="Agent" className="fx-chips" itemClass="fx-chip fs-agent" value={agent} onChange={a => { setAgent(a); setTime('') }}
           items={agents.map(a => ({ key: a.id, label: <><Avatar name={a.name} /><b>{a.name.split(' ')[0]}</b></> }))} />
-        <small className="tp-sub">{agents.find(a => a.id === agent).hours}</small>
+        <small className="tp-sub">{ag.hours}, {zoneAbbr(ag.tz)}</small>
       </div>
-      <div className="tp-field"><span>Day</span>
-        <PillTabs role="radiogroup" label="Day" className="fx-chips" itemClass="fx-chip" value={date} onChange={setDate} items={BOOK_DAYS.map(([d, n]) => ({ key: n, label: <><small>{d}</small><b>{n}</b></> }))} />
-      </div>
-      <Field label="Time (the agent's time)"><Select label="Time (the agent's time)" value={time} onChange={setTime} options={BOOK_TIMES} /></Field>
+      <SlotPick days={BOOK_DAYS} day={date} onDay={setDate} slots={slots} value={time} onPick={setTime} zone={zone} place={`${who.city}, ${who.checklist?.state || who.state}`} viewerTz={book.viewerTz}
+        notBefore={NOW_ISO} hint={`Inside ${ag.name.split(' ')[0]}’s hours. Greyed-out times are within ${gap} minutes of another appointment.`} />
     </Drawer>
   )
 }

@@ -16,9 +16,13 @@ import { paths, tabOf, titleOfLayout, layoutOf, isTemplateAddress } from './path
 import Palette from './Palette'
 import { Select } from './Select'
 import { CallTime } from './CallTime'
-import { EMPTY_CALL_TIME, callTimeReady } from './callTimeModel'
-import { CARRIER_NAMES, BOOK_DAYS, sampleSlots } from './carriers'
+import { EMPTY_CALL_TIME, callTimeReady, callTimeText } from './callTimeModel'
+import { CARRIER_NAMES, BOOK_DAYS, isoOf } from './carriers'
 import { agentBooksCall } from './ful/data'
+import { SlotPick } from './SlotPick'
+import { useClientZone } from './useClientZone'
+import { AGENT_TZ } from './data'
+import { agentSlots, clocksBetween, timeLines } from '../lib/callSlots'
 import { LiveClock } from './Clock'
 import { OhvaraMark } from '../components/ui/OhvaraMark'
 import { isSearchKey } from '../lib/searchKey'
@@ -61,48 +65,60 @@ function BellDrawer({ open, onClose }) {
 // Book a call. P847: three kinds. An appointment or check-in goes on the agent's own calendar (as before). A
 // cancellation call or a service call is fulfillment's: while the agent has the client on the phone they can book an
 // exact time (it lands on the on-shift VA's Schedule), give the best time to reach them, or leave it to the team.
+// P854: every time is picked on the client's clock (SlotPick). An appointment can't overlap another one on the
+// agent's calendar (lib/callSlots agentSlots: the agent's length + buffer, 30 minutes when there's no setting).
 const DAYS = [['Mon', 2], ['Tue', 3], ['Wed', 4], ['Thu', 5], ['Fri', 6]]
-const TIMES = ['9:30 AM', '11:00 AM', '1:00 PM', '2:30 PM', '4:00 PM', '5:30 PM']
+const APPT_CLOCKS = clocksBetween(8 * 60, 20 * 60) // the client's 8 AM to 8 PM; the agent's hours filter it
+const AGENT_HOURS = { open: 9 * 60, close: 18 * 60, days: [1, 2, 3, 4, 5] } // "Working hours 9:00 AM to 6:00 PM"
 const CALL_KINDS = [{ key: 'appt', label: 'Appointment' }, { key: 'cancellation', label: 'Cancellation call' }, { key: 'service', label: 'Service call' }]
 const SERVICE_WHAT = ['Change address', 'Update phone', 'Change beneficiary', 'Change billing date', 'Payment change', 'Policy question', 'Other']
 function BookCall({ open, onClose }) {
   const { data: clients } = useSampleClients()
   const { data: leads } = useSampleLeads()
+  const { data: events } = useSampleAppointments()
+  const { data: settings } = useSampleSettings()
   const { bookCall, bookFulfillmentCall } = useSampleActions()
   const note = useNote()
   const people = useMemo(() => [
-    ...clients.map(c => ({ ref: c.id, kind: 'client', who: `${c.client_first_name} ${c.client_last_name}`, label: 'Check-in call', state: c.state, carrier: c.carrier_name })),
-    ...leads.filter(l => !['sold', 'not_interested'].includes(l.stage)).map(l => ({ ref: l.id, kind: 'lead', who: `${l.first_name} ${l.last_name}`, label: 'Appointment', state: l.state })),
+    ...clients.map(c => ({ ref: c.id, kind: 'client', who: `${c.client_first_name} ${c.client_last_name}`, label: 'Check-in call', state: c.state, city: c.city, carrier: c.carrier_name })),
+    ...leads.filter(l => !['sold', 'not_interested'].includes(l.stage)).map(l => ({ ref: l.id, kind: 'lead', who: `${l.first_name} ${l.last_name}`, label: 'Appointment', state: l.state, city: l.city })),
   ], [clients, leads])
   const [kind, setKind] = useState('appt')
   const [ref, setRef] = useState('')
   const [date, setDate] = useState(3)
-  const [time, setTime] = useState(TIMES[1])
+  const [time, setTime] = useState('')
   const [oldCarrier, setOldCarrier] = useState('Globe Life')
   const [what, setWhat] = useState(SERVICE_WHAT[0])
   const [ct, setCt] = useState(EMPTY_CALL_TIME)
-  if (!open) return null
   const forFul = kind !== 'appt'
   const list = forFul ? people.filter(p => p.kind === 'client' || p.ref === ref) : people
-  const who = list.find(p => p.ref === ref) || (forFul && ref ? { ref, kind: 'client', who: ref, state: 'TX' } : list[0])
-  const slots = sampleSlots(ct.day, who.state, kind === 'cancellation' ? oldCarrier : null)
-  const ready = !forFul || (callTimeReady(ct, slots) && (kind !== 'cancellation' || oldCarrier.trim()))
+  // A name typed in (not on the list) has no city or state yet: the booker picks the zone.
+  const who = list.find(p => p.ref === ref) || (forFul && ref ? { ref, kind: 'client', who: ref, state: '', city: '' } : list[0])
+  const myTz = settings.timeZone || AGENT_TZ
+  const zone = useClientZone(who?.state, who?.city)
+  const place = who?.city ? `${who.city}, ${who.state}` : who?.state || ''
+  const slots = agentSlots({ date: isoOf(date), clocks: APPT_CLOCKS, clientTz: zone.tz, appts: events, hours: { tz: myTz, ...AGENT_HOURS } })
+  const pick = slots.find(s => s.clock === time && s.open)
+  if (!open) return null
+  const ready = forFul ? callTimeReady(ct) && (kind !== 'cancellation' || oldCarrier.trim()) : !!pick
   const save = () => {
     if (!forFul) {
       const day = DAYS.find(d => d[1] === date)[0]
-      bookCall({ ...who, day, date, time })
-      note(`${who.label} with ${who.who} booked for ${day} at ${time}`)
+      const clientText = timeLines(pick.iso, zone.tz, null, place).client
+      bookCall({ ...who, iso: pick.iso, tz: zone.tz, clientText })
+      note(`${who.label} with ${who.who} booked for ${day} at ${time}, the client's time`)
     } else {
-      const va = agentBooksCall({ who: who.who, state: who.state, oldCarrier, kind, mode: ct.mode, day: ct.day, time: ct.time, window: ct.window })
+      const va = agentBooksCall({ who: who.who, state: who.state, city: who.city, oldCarrier, kind, mode: ct.mode, day: ct.day, time: ct.time, iso: ct.iso, tz: ct.tz, vaId: ct.vaId, window: ct.window })
       const day = BOOK_DAYS.find(d => d[1] === ct.day)?.[0]
       bookFulfillmentCall({ who: who.who, kind, mode: ct.mode, day, date: ct.day, time: ct.time, window: ct.window, va: va?.name })
       const label = kind === 'cancellation' ? 'Cancellation call' : 'Service call'
-      note(ct.mode === 'exact' ? `${label} with ${who.who} booked for ${day} at ${ct.time}. ${va.name} has it` : ct.mode === 'window' ? `${label} with ${who.who} sent. Best time: ${ct.window.toLowerCase()}` : `${label} with ${who.who} sent. The team sets the time`)
+      note(ct.mode === 'exact' ? `${label} with ${who.who} booked for ${callTimeText(ct)}. ${va.name} has it` : ct.mode === 'window' ? `${label} with ${who.who} sent. Best time: ${ct.window.toLowerCase()}` : `${label} with ${who.who} sent. The team sets the time`)
     }
     setCt(EMPTY_CALL_TIME)
+    setTime('')
     onClose()
   }
-  const sub = forFul ? 'Fulfillment makes this call. Times are the client’s time.' : 'It goes on your calendar. Times are your time.'
+  const sub = forFul ? 'Fulfillment makes this call. Times are the client’s time.' : 'It goes on your calendar. Times are the client’s time.'
   return (
     <Drawer open center onClose={onClose} title="Book a call" sub={sub}
       footer={<><button type="button" className="tp-primary fx-accent" disabled={!ready} onClick={save}><CalendarCheck size={16} />{forFul && ct.mode !== 'exact' ? 'Send to fulfillment' : 'Book it'}</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
@@ -111,15 +127,13 @@ function BookCall({ open, onClose }) {
       </div>
       <Field label="Who"><Select label="Who" value={who.ref} onChange={setRef} search={forFul || undefined} allowCustom={forFul}
         options={list.map(p => ({ value: p.ref, label: p.who, sub: p.kind === 'lead' ? 'Lead' : 'Client' }))} /></Field>
-      {!forFul && <>
-        <div className="tp-field"><span>Day</span>
-          <PillTabs role="radiogroup" label="Day" className="fx-chips" itemClass="fx-chip" value={date} onChange={setDate} items={DAYS.map(([d, n]) => ({ key: n, label: <><small>{d}</small><b>{n}</b></> }))} />
-        </div>
-        <Field label="Time"><Select label="Time" value={time} onChange={setTime} options={TIMES} /></Field>
-      </>}
+      {!forFul && (
+        <SlotPick days={DAYS} day={date} onDay={setDate} slots={slots} value={time} onPick={setTime} zone={zone} place={place} viewerTz={myTz}
+          hint="Inside your hours, 9:00 AM to 6:00 PM. Greyed-out times are within 30 minutes of another appointment." />
+      )}
       {kind === 'cancellation' && <Field label="Carrier they're leaving" hint="Its open hours set the times. Pick one or type it."><Select label="Carrier they're leaving" value={oldCarrier} onChange={setOldCarrier} options={CARRIER_NAMES} search allowCustom /></Field>}
       {kind === 'service' && <Field label="What it's about"><Select label="What it's about" value={what} onChange={setWhat} options={SERVICE_WHAT} /></Field>}
-      {forFul && <CallTime kind={kind} value={ct} onChange={setCt} state={who.state} oldCarrier={oldCarrier} />}
+      {forFul && <CallTime kind={kind} value={ct} onChange={setCt} state={who.state} city={who.city} oldCarrier={oldCarrier} viewerTz={myTz} />}
     </Drawer>
   )
 }

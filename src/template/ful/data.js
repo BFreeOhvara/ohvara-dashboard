@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { CALL_WORD, CALL_TONE } from './words.js'
+import { instantOf, clockOf, dateOf, zoneOf, freeVa, blockTime } from '../../lib/callSlots.js'
 
 // P845 — the one door to the Fulfillment (VA) side's sample info, like ../data for the agent side. Screens read only
 // through the hooks below; every read returns { data, isLoading: false, error: null }, the react-query shape, so the
@@ -12,21 +13,25 @@ const MIN = 60e3
 
 export const ME = { name: 'Maya Brooks', email: 'maya.brooks@example.com', phone: '(512) 555-0161', role: 'Fulfillment' }
 
+// P854: tz = the agent's own zone; open/close = their hours on that clock (minutes); days = the weekdays they work
+// (0 = Sun); appt = appointment length + buffer in minutes (null = the 30-minute default).
 export const AGENTS = [
-  { id: 'ag-dana', name: 'Dana Walker', city: 'Austin, TX', clients: 0, hours: 'Mon to Fri, 9:00 AM to 6:00 PM', duty: true },
-  { id: 'ag-marcus', name: 'Marcus Reed', city: 'Phoenix, AZ', clients: 0, hours: 'Mon to Sat, 8:00 AM to 5:00 PM', duty: false },
-  { id: 'ag-priya', name: 'Priya Shah', city: 'Tampa, FL', clients: 0, hours: 'Tue to Sat, 10:00 AM to 7:00 PM', duty: true },
+  { id: 'ag-dana', name: 'Dana Walker', city: 'Austin, TX', clients: 0, hours: 'Mon to Fri, 9:00 AM to 6:00 PM', duty: true, tz: 'America/Chicago', open: 540, close: 1080, days: [1, 2, 3, 4, 5], appt: null },
+  { id: 'ag-marcus', name: 'Marcus Reed', city: 'Phoenix, AZ', clients: 0, hours: 'Mon to Sat, 8:00 AM to 5:00 PM', duty: false, tz: 'America/Phoenix', open: 480, close: 1020, days: [1, 2, 3, 4, 5, 6], appt: { length: 45, buffer: 15 } },
+  { id: 'ag-priya', name: 'Priya Shah', city: 'Tampa, FL', clients: 0, hours: 'Tue to Sat, 10:00 AM to 7:00 PM', duty: true, tz: 'America/New_York', open: 600, close: 1140, days: [2, 3, 4, 5, 6], appt: null },
 ]
 export const agentName = id => AGENTS.find(a => a.id === id)?.name || 'Agent'
 
 // P846 — VAs do not switch themselves Active or Away. They work set hours (the carriers' hours, about 8 AM to 6 PM),
 // in a rotation with two or three VAs on shift each day. Sample rota; real shifts and day-off requests are stored
 // with the admin side later (a migration through Brayden's door).
+// P854: tz = the VA's own zone; the shift (8 AM to 6 PM) is on that clock. Maya's follows her Settings zone.
+export const VA_TZ = 'America/Chicago'
 export const VAS = [
-  { id: 'va-maya', name: ME.name, me: true },
-  { id: 'va-leo', name: 'Leo Grant' },
-  { id: 'va-sasha', name: 'Sasha Ortiz' },
-  { id: 'va-devon', name: 'Devon Hale' },
+  { id: 'va-maya', name: ME.name, me: true, tz: VA_TZ },
+  { id: 'va-leo', name: 'Leo Grant', tz: VA_TZ },
+  { id: 'va-sasha', name: 'Sasha Ortiz', tz: VA_TZ },
+  { id: 'va-devon', name: 'Devon Hale', tz: VA_TZ },
 ]
 export const SHIFT = { start: '8:00 AM', end: '6:00 PM', text: '8:00 AM to 6:00 PM' }
 const ROTA = {
@@ -39,16 +44,33 @@ export const WEEKS = [[2, 3, 4, 5, 6], [9, 10, 11, 12, 13]]
 const DOW = { 2: 'Mon', 3: 'Tue', 4: 'Wed', 5: 'Thu', 6: 'Fri', 9: 'Mon', 10: 'Tue', 11: 'Wed', 12: 'Thu', 13: 'Fri' }
 
 // P847 — auto-assign for a call an agent books at an exact time (the sample of fulfillment_pick_rep with the shift
-// key on): the VAs on shift that day, minus anyone already on a call at that minute, the lightest day first, rota order
-// on a tie. Nobody on shift (a weekend) falls back to the whole team, like the live pick, so nothing sits unassigned.
+// key on). P854: the rule lives in lib/callSlots (freeVa): the VAs on shift then and not off, minus anyone with a
+// call starting under 30 minutes away, the usual VA first, else the lightest day, rota order on a tie.
+const novDate = d => `2026-11-${String(d).padStart(2, '0')}`
+export const atVa = (day, time) => instantOf(novDate(day), time, VA_TZ) // a sample day + team-clock time as an instant
+const dayNumOf = (iso, tz) => Number(dateOf(iso, tz).slice(8))
+const placed = (iso, tz) => ({ day: dayNumOf(iso, tz), time: clockOf(iso, tz) })
 const SAMPLE_LOAD = { 'va-leo': 4, 'va-sasha': 5, 'va-devon': 3 }
+// The rota at an instant (by the day on the team's clock), each VA with their zone and whether they're off.
+export function teamOn(iso, offDays = [], meTz = VA_TZ) {
+  const d = dayNumOf(iso, VA_TZ)
+  return (ROTA[d] || []).map(id => { const v = VAS.find(x => x.id === id); return { ...v, tz: v.me ? meTz : v.tz, off: !!v.me && offDays.includes(d) } })
+}
+// Every call start a VA has: Maya's calls (not passed on) and the ones that went to other VAs.
+export const busyOf = (calls = [], extra = []) => [
+  ...calls.filter(k => k.status !== 'passed').map(k => ({ id: k.id, va_id: k.va_id || 'va-maya', iso: k.iso || atVa(k.day, k.time) })),
+  ...extra.map(k => ({ ...k, iso: k.iso || atVa(k.day, k.time) })),
+]
+export const loadOf = busy => (id, iso) => { const d = dateOf(iso, VA_TZ); return (SAMPLE_LOAD[id] || 0) + busy.filter(k => k.va_id === id && dateOf(k.iso, VA_TZ) === d).length }
 export function pickVa(day, time, calls = [], extra = []) {
+  const iso = atVa(day, time)
+  const busy = busyOf(calls, extra)
+  const load = loadOf(busy)
+  const hit = freeVa({ iso, team: teamOn(iso), calls: busy, load })
+  if (hit) return VAS.find(v => v.id === hit.id)
+  // Nobody on shift (a weekend): the whole team, like the live pick, so nothing sits unassigned.
   const on = ROTA[day] || VAS.map(v => v.id)
-  const busy = id => [...calls, ...extra].some(k => k.day === day && k.time === time && (k.va_id || 'va-maya') === id)
-  const load = id => (id === 'va-maya' ? calls.filter(k => k.day === day).length : SAMPLE_LOAD[id] || 0) + extra.filter(k => k.day === day && k.va_id === id).length
-  const free = on.filter(id => !busy(id))
-  const pick = (free.length ? free : on).slice().sort((a, b) => load(a) - load(b) || on.indexOf(a) - on.indexOf(b))[0]
-  return VAS.find(v => v.id === pick)
+  return VAS.find(v => v.id === on.slice().sort((a, b) => load(a, iso) - load(b, iso) || on.indexOf(a) - on.indexOf(b))[0])
 }
 export const rotaOf = day => (ROTA[day] || []).map(id => VAS.find(v => v.id === id))
 
@@ -76,7 +98,8 @@ const seedClients = [
 // Cancellation calls: the VA calls the old carrier with the client to close the old policy once the new one is in
 // force. status: booked (still to call), cancelled (done, confirmation number), no_answer, passed (given back).
 // day = date in November; today is 5. The next call counts down from page load so the tile is alive.
-const mkCall = (id, client, day, time, o) => ({ id, client_id: client, day, time, status: 'booked', old_carrier: 'Globe Life', confirmation: '', notes: '', at: null, ...o })
+// P854: iso = the one stored instant (seeds: the day and time on the team's clock); tz = the client's zone (callRow).
+const mkCall = (id, client, day, time, o) => { const k = { id, client_id: client, day, time, status: 'booked', old_carrier: 'Globe Life', confirmation: '', notes: '', at: null, ...o }; return { ...k, iso: k.iso || atVa(k.day, k.time) } }
 const seedCalls = [
   mkCall('cl-1', 'fc-irene', 2, '10:00 AM', { status: 'cancelled', old_carrier: 'Colonial Penn', confirmation: 'CP-88231' }),
   mkCall('cl-2', 'fc-nadia', 2, '1:30 PM', { status: 'cancelled', old_carrier: 'AARP / New York Life', confirmation: 'NYL-55120' }),
@@ -170,7 +193,7 @@ const seedFeed = [
 ]
 
 // Appointments the VA booked for agents (they land on the agent's calendar). day = date in November.
-const mkBooked = (id, name, agent, day, time, o) => ({ id, name, agent_id: agent, day, time, type: 'Policy help', phone: '(555) 555-0100', city: 'Austin', state: 'TX', ...o })
+const mkBooked = (id, name, agent, day, time, o) => { const b = { id, name, agent_id: agent, day, time, type: 'Policy help', phone: '(555) 555-0100', city: 'Austin', state: 'TX', ...o }; return { ...b, iso: b.iso || atVa(b.day, b.time), tz: b.tz || zoneOf(b.state, b.city) } }
 const seedBooked = [
   mkBooked('ap-1', 'Rosa Delgado', 'ag-dana', 5, '4:00 PM', { phone: '(512) 555-0138', type: 'Mortgage protection' }),
   mkBooked('ap-2', 'Ellen Park', 'ag-marcus', 6, '10:30 AM', { phone: '(480) 555-0166', city: 'Phoenix', state: 'AZ' }),
@@ -195,7 +218,13 @@ const seedSettings = {
 let state = {
   clients: seedClients, calls: seedCalls, queue: seedQueue, tasks: seedTasks, cancels: seedCancels, payouts: seedPayouts,
   threads: seedThreads, feed: seedFeed, settings: seedSettings, log: [], booked: seedBooked, dayOffs: [], live: null,
-  others: [], // P847: calls agents booked that went to another VA on shift (kept so the auto-assign sees them)
+  // P847: calls that went to another VA on shift (kept so the auto-assign sees them). P854: a few seeded so the
+  // 30-minute rule has something to bump into: on Thu 5 and Fri 6 everyone on shift is busy at some times.
+  others: [
+    { id: 'ot-1', va_id: 'va-leo', iso: atVa(5, '2:00 PM') }, { id: 'ot-2', va_id: 'va-devon', iso: atVa(5, '2:00 PM') },
+    { id: 'ot-3', va_id: 'va-leo', iso: atVa(5, '4:30 PM') },
+    { id: 'ot-4', va_id: 'va-sasha', iso: atVa(6, '10:00 AM') }, { id: 'ot-5', va_id: 'va-sasha', iso: atVa(6, '1:15 PM') },
+  ],
 }
 const listeners = new Set()
 const set = fn => { state = { ...state, ...fn(state) }; listeners.forEach(l => l()) }
@@ -206,10 +235,18 @@ const ok = data => ({ data, isLoading: false, error: null })
 const fullName = c => `${c.client_first_name} ${c.client_last_name}`
 const clientOf = (s, id) => s.clients.find(c => c.id === id)
 // A call row with its client and agent filled in.
-const callRow = (s, k) => { const c = clientOf(s, k.client_id); return { ...k, name: fullName(c), client: c, agent: agentName(c.agent_id), carrier: c.carrier_name } }
+// P854: day and time are where the call sits on the viewer's clock (Settings zone); tz is the client's; when shows both.
+const viewTz = s => s.settings.timeZone || VA_TZ
+const callRow = (s, k) => {
+  const c = clientOf(s, k.client_id)
+  const tz = k.tz || zoneOf(c.state, c.city)
+  return { ...k, ...placed(k.iso, viewTz(s)), tz, when: blockTime(k.iso, viewTz(s), tz), name: fullName(c), client: c, agent: agentName(c.agent_id), carrier: c.carrier_name }
+}
 const taskRow = (s, t) => { const c = clientOf(s, t.client_id); return { ...t, name: fullName(c), client: c, agent: agentName(c.agent_id), carrier: c.carrier_name } }
 const DAY = { 2: 'Mon', 3: 'Tue', 4: 'Wed', 5: 'Thu', 6: 'Fri', 9: 'Mon', 10: 'Tue', 11: 'Wed', 12: 'Thu', 13: 'Fri' }
 export const TODAY = 5
+// P854: the sample clock (1:32 PM on the team's clock): nothing can be booked before the next half hour.
+export const NOW_ISO = atVa(TODAY, '2:00 PM')
 export const dayName = d => DAY[d] || ''
 export const RATE_PER_CANCEL = RATE
 
@@ -246,7 +283,6 @@ export function minutesOf(time) {
 // node tests) wins once migration 231 is applied and a VA is signed in; until then this sample. live = real.
 let useRealShift = () => null
 export const plugRealShift = hook => { useRealShift = hook }
-const novDate = d => `2026-11-${String(d).padStart(2, '0')}`
 export function useFulShift() {
   const sample = useSampleShift()
   const real = useRealShift()
@@ -276,23 +312,35 @@ function useSampleShift() {
 export function useFulSchedule() {
   const s = useStore()
   const items = []
+  const vt = viewTz(s)
   s.calls.map(k => callRow(s, k)).forEach(k => items.push({
-    ref: k.id, kind: 'call', day: k.day, time: k.time, tone: CALL_TONE[k.status], status: k.status, word: CALL_WORD[k.status],
+    ref: k.id, kind: 'call', day: k.day, time: k.time, iso: k.iso, tz: k.tz, when: k.when, tone: CALL_TONE[k.status], status: k.status, word: CALL_WORD[k.status],
     name: k.name, label: `${k.old_carrier} to ${k.carrier}`, sub: `${k.agent}'s client`, done: k.status === 'cancelled' || k.status === 'passed',
   }))
-  s.queue.filter(l => l.bucket === 'callback_due' && whenOf(l.callback)).forEach(l => {
+  s.queue.filter(l => l.bucket === 'callback_due' && (l.cb_iso || whenOf(l.callback)) && (l.va_id || 'va-maya') === 'va-maya').forEach(l => {
     const w = whenOf(l.callback)
-    items.push({ ref: l.id, kind: 'callback', day: w.day, time: w.time, tone: 'warn', status: 'callback', word: 'Callback', name: l.name, label: `${l.type} · call back`, sub: `${l.city}, ${l.state}`, done: false })
+    const iso = l.cb_iso || atVa(w.day, w.time)
+    const tz = l.cb_tz || zoneOf(l.state, l.city)
+    items.push({ ref: l.id, kind: 'callback', ...placed(iso, vt), iso, tz, when: blockTime(iso, vt, tz), tone: 'warn', status: 'callback', word: 'Callback', name: l.name, label: `${l.type} · call back`, sub: `${l.city}, ${l.state}`, done: false })
   })
   s.booked.forEach(b => items.push({
-    ref: b.id, kind: 'booked', day: b.day, time: b.time, tone: 'teal', status: 'booked_for', word: `Booked for ${agentName(b.agent_id).split(' ')[0]}`,
+    ref: b.id, kind: 'booked', ...placed(b.iso, vt), iso: b.iso, tz: b.tz, when: blockTime(b.iso, vt, b.tz), tone: 'teal', status: 'booked_for', word: `Booked for ${agentName(b.agent_id).split(' ')[0]}`,
     name: b.name, label: `${b.type} · with ${agentName(b.agent_id)}`, sub: `${b.city}, ${b.state}`, done: false,
   }))
   return ok(items.sort((a, b) => a.day - b.day || minutesOf(a.time) - minutesOf(b.time)))
 }
 // P847: who an agent's exact-time booking would go to right now (the same pick agentBooksCall makes).
 export function useVaFor(day, time) { const s = useStore(); return time ? pickVa(day, time, s.calls, s.others) : null }
-export function useFulBooked() { const s = useStore(); return ok(s.booked.map(b => ({ ...b, agent: agentName(b.agent_id) }))) }
+// P854: what a VA-call picker needs for lib/callSlots vaSlots: the rota at an instant (with days off), every VA's
+// call starts (calls, the ones passed to others, callbacks), the load order, the viewer's zone and who "me" is.
+export function bookingTeam(s) {
+  const busy = busyOf(s.calls, [...s.others, ...s.queue.filter(l => l.cb_iso).map(l => ({ id: l.id, va_id: l.va_id || 'va-maya', iso: l.cb_iso }))])
+  return { team: iso => teamOn(iso, s.dayOffs.map(o => o.day), viewTz(s)), calls: busy, load: loadOf(busy), viewerTz: viewTz(s), me: 'va-maya' }
+}
+export function useVaBooking() { const s = useStore(); return bookingTeam(s) }
+// P854: an agent's appointments for lib/callSlots agentSlots: the ones the team booked on their calendar.
+export function useAgentAppts(agentId) { const s = useStore(); return s.booked.filter(b => b.agent_id === agentId).map(b => ({ id: b.id, iso: b.iso })) }
+export function useFulBooked() { const s = useStore(); const vt = viewTz(s); return ok(s.booked.map(b => ({ ...b, ...placed(b.iso, vt), when: blockTime(b.iso, vt, b.tz), agent: agentName(b.agent_id) }))) }
 export const useFulLive = () => { const s = useStore(); return s.live }
 
 // This week's pay: each cancel with its call, the totals, by day, and the payouts so far.
@@ -334,12 +382,14 @@ export function useFulActions() {
     releaseLead: id => set(s => ({ queue: s.queue.map(l => (l.id === id ? { ...l, held_until: null } : l)) })),
     setChecklist: (id, checklist) => set(s => ({ queue: s.queue.map(l => (l.id === id ? { ...l, checklist } : l)) })),
     notReached: id => set(s => ({ queue: s.queue.map(l => (l.id === id ? { ...l, bucket: 'not_reached', tries: l.tries + 1, held_until: null, came: l.came } : l)) })),
-    callback: (id, when) => set(s => ({ queue: s.queue.map(l => (l.id === id ? { ...l, bucket: 'callback_due', callback: when, tries: l.tries + 1, held_until: null } : l)) })),
-    bookLead: (id, agentId, when) => set(s => {
+    // P854: iso + tz = the picked instant and the client's zone; vaId = who the 30-minute rule gave it to.
+    callback: (id, when, iso = null, tz = null, vaId = 'va-maya') => set(s => ({ queue: s.queue.map(l => (l.id === id ? { ...l, bucket: 'callback_due', callback: when, cb_iso: iso, cb_tz: tz, va_id: vaId, tries: l.tries + 1, held_until: null } : l)) })),
+    bookLead: (id, agentId, when, iso = null, tz = null) => set(s => {
       const l = s.queue.find(x => x.id === id)
       const w = whenOf(when)
+      const at = iso || (w ? atVa(w.day, w.time) : null)
       // It lands on the Schedule as an appointment booked for the agent.
-      const booked = w ? [...s.booked, { id: `ap-${Date.now()}`, name: l.name, agent_id: agentId, day: w.day, time: w.time, type: l.type, phone: l.phone, city: l.city, state: l.state }] : s.booked
+      const booked = at ? [...s.booked, { id: `ap-${Date.now()}`, name: l.name, agent_id: agentId, ...placed(at, VA_TZ), iso: at, tz: tz || zoneOf(l.state, l.city), type: l.type, phone: l.phone, city: l.city, state: l.state }] : s.booked
       return { queue: s.queue.filter(x => x.id !== id), booked, ...feedAdd(s, l.name, `Booked with ${agentName(agentId)}, ${when}`, 'queue') }
     }),
     closeLead: id => set(s => ({ queue: s.queue.filter(x => x.id !== id) })),
@@ -347,11 +397,18 @@ export function useFulActions() {
     markCall: (id, status, extra = {}) => set(s => {
       const k = s.calls.find(x => x.id === id)
       const out = { calls: s.calls.map(x => (x.id === id ? { ...x, status, ...extra } : x)) }
+      // P854: Pass on hands it to a VA the 30-minute rule says is free then (extra.passed_to).
+      if (status === 'passed' && extra.passed_to) out.others = [...s.others, { id: `${id}-p`, va_id: extra.passed_to, iso: k.iso }]
       if (status === 'cancelled') out.cancels = [...s.cancels, { id: `pc-${Date.now()}`, call: id, day: k.day, status: 'checking' }]
       return out
     }),
     saveCallNotes: (id, notes) => set(s => ({ calls: s.calls.map(x => (x.id === id ? { ...x, notes } : x)) })),
-    moveCall: (id, day, time) => set(s => ({ calls: s.calls.map(x => (x.id === id ? { ...x, day, time, status: 'booked', at: null } : x)) })),
+    // P854: Move to an instant. When the 30-minute rule gave it to another VA, it leaves this Schedule (passed to them).
+    moveCall: (id, iso, vaId = 'va-maya') => set(s => {
+      const mine = vaId === 'va-maya'
+      const calls = s.calls.map(x => (x.id === id ? { ...x, ...placed(iso, VA_TZ), iso, at: null, status: mine ? 'booked' : 'passed', passed_to: mine ? null : vaId } : x))
+      return mine ? { calls } : { calls, others: [...s.others, { id: `${id}-m`, va_id: vaId, iso }] }
+    }),
     // Servicing
     startTask: id => set(s => ({ tasks: s.tasks.map(t => (t.id === id ? { ...t, held: true, status: 'in_progress' } : { ...t, held: false })) })),
     putBack: id => set(s => ({ tasks: s.tasks.map(t => (t.id === id ? { ...t, held: false, status: t.status === 'in_progress' ? 'requested' : t.status } : t)) })),
@@ -380,20 +437,25 @@ export function useFulActions() {
 // calls this). Exact time: the call goes to the VA picked above, so when that's Maya it lands on her Schedule
 // (cancellation) or her Servicing board (service). A best-time window goes to the team's bell to be called inside it.
 // Returns the VA it went to (or null for a window).
-export function agentBooksCall({ who, state = 'TX', oldCarrier = 'Globe Life', kind, mode, day, time, window: win, agent = 'ag-dana' }) {
+export function agentBooksCall({ who, state = 'TX', city = '', oldCarrier = 'Globe Life', kind, mode, day, time, iso = null, tz = null, vaId = null, window: win, agent = 'ag-dana' }) {
   const [first, ...rest] = String(who || 'Client').split(' ')
   let va = null
   set(s => {
     const id = `fc-${Date.now()}`
-    const client = mkClient(id, first, rest.join(' ') || '', agent, { state, stage: 'setting_up', next_step: kind === 'cancellation' ? 'Cancellation call' : 'Service call' })
+    const client = mkClient(id, first, rest.join(' ') || '', agent, { state, city, stage: 'setting_up', next_step: kind === 'cancellation' ? 'Cancellation call' : 'Service call' })
     if (mode !== 'exact') {
       return { ...feedAdd(s, agentName(agent), `Asked for a ${kind === 'cancellation' ? 'cancellation' : 'service'} call with ${who}, best time ${String(win).toLowerCase()}`, 'servicing') }
     }
-    va = pickVa(day, time, s.calls, s.others)
-    if (!va.me) return { others: [...s.others, { day, time, va_id: va.id }] }
+    // P854: the instant the picker made on the client's clock, and the VA it showed (the 30-minute rule's pick).
+    const at = iso || atVa(day, time)
+    const t = bookingTeam(s)
+    const fit = vaId || freeVa({ iso: at, team: t.team, calls: t.calls, load: t.load })?.id
+    va = fit ? VAS.find(v => v.id === fit) : pickVa(day, time, s.calls, s.others)
+    if (!va.me) return { others: [...s.others, { id: `ot-${Date.now()}`, va_id: va.id, iso: at }] }
     const out = { clients: [...s.clients, client], ...feedAdd(s, agentName(agent), `Booked ${who} for ${dayName(day)} ${time}`, kind === 'cancellation' ? 'call' : 'servicing') }
-    if (kind === 'cancellation') out.calls = [...s.calls, mkCall(`cl-${Date.now()}`, id, day, time, { old_carrier: oldCarrier, va_id: va.id })]
-    else out.tasks = [...s.tasks, mkTask(`st-${Date.now()}`, 'review_call', id, { due: day === TODAY ? 'today' : 'later', due_text: `${dayName(day)}, Nov ${day}, ${time}`, status: 'scheduled', note: 'Booked by the agent with the client on the phone.' })]
+    const p = placed(at, VA_TZ)
+    if (kind === 'cancellation') out.calls = [...s.calls, mkCall(`cl-${Date.now()}`, id, p.day, p.time, { iso: at, tz, old_carrier: oldCarrier, va_id: va.id })]
+    else out.tasks = [...s.tasks, mkTask(`st-${Date.now()}`, 'review_call', id, { due: p.day === TODAY ? 'today' : 'later', due_text: `${dayName(p.day)}, Nov ${p.day}, ${p.time}`, status: 'scheduled', note: 'Booked by the agent with the client on the phone.' })]
     return out
   })
   return va

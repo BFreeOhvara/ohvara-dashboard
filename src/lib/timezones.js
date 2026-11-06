@@ -206,9 +206,10 @@ const resolved = new Map()
 // state looks the city up on Open-Meteo's free geocoder (3 s timeout); any
 // failure falls back to the state's usual zone, then DEFAULT_TIMEZONE.
 // Cached per city|state for the session. `fetchImpl` is for tests.
-export async function resolveClientTimezone(city, stateCode, { signal, fetchImpl } = {}) {
+// P854: strict = no fallback; a miss or a failure is null, so the booker picks the zone (lib/callSlots findZone).
+export async function resolveClientTimezone(city, stateCode, { signal, fetchImpl, strict = false } = {}) {
   const code = String(stateCode || '').trim().toUpperCase()
-  const fallback = inferTimezoneFromState(code)
+  const fallback = strict ? null : inferTimezoneFromState(code)
   if (!code || !needsCityLookup(code)) return fallback
   const name = String(city || '').trim()
   if (!name) return fallback
@@ -226,7 +227,8 @@ export async function resolveClientTimezone(city, stateCode, { signal, fetchImpl
     const body = await res.json()
     const hit = (body?.results || []).find(r => r.country_code === 'US' && r.admin1 === STATE_NAME[code] && r.timezone)
     const tz = hit?.timezone || fallback
-    resolved.set(key, tz)
+    if (hit?.timezone) resolved.set(key, tz)
+    else if (!strict) resolved.set(key, tz)
     return tz
   } catch {
     return fallback

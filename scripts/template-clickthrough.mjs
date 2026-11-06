@@ -175,6 +175,52 @@ for (const view of VIEWS) {
 }
 console.log(`Clicked ${clicked} buttons.`)
 
+// Pass 4 (P854): the agent Calendar works like the VA Schedule (click a day, ?day=, Back, Esc, no Week/Day), and a
+// Taken slot in Book a call can't be picked.
+{
+  const where = '1440 dark P854 calendar'
+  const { ctx, page } = await freshPage(VIEWS[0], 'dark', null)
+  const day = () => new URL(page.url()).searchParams.get('day')
+  try {
+    await open(page, 'calendar')
+    if (await page.locator('.fx-tools [aria-label="View"]').count()) fail(where, 'the Week/Day toggle is still there')
+    if (await page.locator('.fx-daybox').count()) fail(where, 'a day box shows on the plain week')
+    await page.locator('.fx-week .tp-tgrid-h b[role="button"]', { hasText: 'Thu' }).click()
+    await page.waitForTimeout(450)
+    if (day() !== '2026-11-05' || !(await page.locator('.fx-daybox').isVisible())) fail(where, `clicking Thu: day=${day()}`)
+    if ((await page.locator('.fx-week .tp-tcol').count()) !== 1) fail(where, 'the grid did not narrow to the day')
+    await page.screenshot({ path: join(OUT, '1440-dark-p854-calendar-day.png') })
+    await page.goBack()
+    await page.waitForTimeout(450)
+    if (await page.locator('.fx-daybox').count()) fail(where, 'Back did not close the box')
+    await page.locator('.fx-daystrip button', { hasText: 'Wed' }).click()
+    await page.waitForTimeout(450)
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(450)
+    if (await page.locator('.fx-daybox').count() || day()) fail(where, 'Esc did not close the box')
+    await page.goto(`${url('calendar')}?day=2026-11-06`, { waitUntil: 'load' })
+    await page.waitForSelector('.fx-daybox', { timeout: 8000 }).catch(() => fail(where, 'a ?day= link did not open the day'))
+    // Book a call, Appointment: Gloria Santos (Miami, ET) on Tue 3. Denise is at 11:00 AM CT, so 12:00 PM ET is taken.
+    await open(page, 'calendar')
+    await page.getByRole('button', { name: 'Book a call' }).first().click()
+    await page.waitForTimeout(400)
+    if ((await page.locator('.tp-sheet').getByRole('radio', { name: /Tue\s*3/ }).getAttribute('aria-checked')) !== 'true') fail(where, 'Book a call did not start on Tue 3')
+    await page.locator('.tp-sheet').getByRole('button', { name: /^Time \(the client's time\):/ }).click()
+    await page.waitForTimeout(300)
+    const taken = page.getByRole('option', { name: /^12:00 PM\s*Taken/ })
+    if ((await taken.getAttribute('aria-disabled')) !== 'true') fail(where, '12:00 PM ET is not greyed out')
+    await taken.click({ force: true })
+    await page.waitForTimeout(200)
+    if (!(await page.locator('.fx-sellist').isVisible())) fail(where, 'picking a taken slot closed the list')
+    await page.screenshot({ path: join(OUT, '1440-dark-p854-bookcall-taken.png') })
+    await page.getByRole('option', { name: /^1:00 PM/ }).click()
+    const line = await page.locator('.tp-sheet .fx-tzline').innerText()
+    if (!/1:00 PM ET, client's time \(Miami, FL\)/.test(line) || !/That's 12:00 PM CT for you/.test(line)) fail(where, `time line reads "${line.replace(/\n/g, ' / ')}"`)
+    rows.push({ where, outside: '-', errors: '-', scroll: '-', text: '-', result: failures.some(f => f.startsWith(where)) ? 'FAIL' : 'ok' })
+  } catch (e) { fail(where, String(e.message).split('\n')[0]) }
+  await ctx.close()
+}
+
 await browser.close()
 if (server) await server.close()
 

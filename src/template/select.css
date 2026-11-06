@@ -41,6 +41,10 @@
 .fx-selopt.is-on { color: var(--accent); }
 .fx-selopt.is-on b { color: var(--accent); }
 .fx-selopt.is-custom b { font-style: italic; }
+/* P854: a slot that can't be picked (Taken): greyed, struck through, no hover. */
+.fx-selopt.is-disabled { cursor: not-allowed; opacity: .55; }
+.fx-selopt.is-disabled b { color: var(--ov-mute); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--ov-mute) 60%, transparent); }
+.fx-selopt.is-disabled.is-active { background: none; }
 .fx-selnone { padding: 12px 10px; font-size: 13px; color: var(--ov-mute); }
 .fx-selmenu-h { margin: 6px 10px 10px; font-size: 13px; font-weight: 600; color: var(--ov-mid); }
 

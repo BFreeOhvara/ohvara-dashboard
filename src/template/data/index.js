@@ -1,4 +1,5 @@
 import { useSyncExternalStore, useMemo } from 'react'
+import { instantOf, clockOf, dateOf, zoneOf } from '../../lib/callSlots.js'
 
 // The one door to sample info for the clickable template. Screens read only through the named functions below.
 // Every read returns { data, isLoading: false, error: null }, the shape react-query hooks give, and record fields
@@ -84,10 +85,18 @@ const seedAppointments = [
   { id: 'ap2', day: 'Tue', date: 3, time: '11:00 AM', who: 'Denise Walker', label: 'Appointment', kind: 'lead', ref: 'sample-lead-5' },
   { id: 'ap3', day: 'Wed', date: 4, time: '1:00 PM', who: 'Renee Ortiz', label: 'Appointment', kind: 'lead', ref: 'sample-lead-4' },
   { id: 'ap4', day: 'Thu', date: 5, time: '3:00 PM', who: 'Dana Example', label: 'Appointment', kind: 'lead', ref: 'sample-lead-1' },
-  { id: 'ap5', day: 'Thu', date: 5, time: '3:00 PM', who: 'Robert Chen', label: 'Review call', kind: 'client', ref: 'sample-client-3' },
+  { id: 'ap5', day: 'Thu', date: 5, time: '4:00 PM', who: 'Robert Chen', label: 'Review call', kind: 'client', ref: 'sample-client-3' },
   { id: 'ap6', day: 'Fri', date: 6, time: '2:00 PM', who: 'Luis Ortega', label: 'Check-in call', kind: 'client', ref: 'sample-client-2' },
   { id: 'ap7', day: 'Fri', date: 6, time: '4:15 PM', who: 'Gloria Santos', label: 'Review call', kind: 'client', ref: 'sample-client-1' },
 ]
+// P854: each appointment is one instant (iso, seeds: the day and time on the agent's clock) plus the client's zone (tz).
+// No two overlap (lib/callSlots agentFree): ap5 moved off ap4's 3:00 PM. date/day/time stay on the agent's clock.
+export const AGENT_TZ = 'America/Chicago'
+const novDay = d => `2026-11-${String(d).padStart(2, '0')}`
+const DOW_OF = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+export const onAgentClock = (iso, tz = AGENT_TZ) => { const date = dateOf(iso, tz); return { date: Number(date.slice(8)), day: DOW_OF[new Date(`${date}T12:00:00Z`).getUTCDay()], time: clockOf(iso, tz) } }
+const personOf = ref => [...seedLeads, ...seedClients].find(x => x.id === ref)
+seedAppointments.forEach(a => { const p = personOf(a.ref); a.iso = instantOf(novDay(a.date), a.time, AGENT_TZ); a.tz = p ? zoneOf(p.state, p.city) : null })
 
 // P844: sample agents of different ages, so every range of the chart shows. Pick one with ?agent=new | first | empty in
 // the address (default: an established agent, 14 weeks in). The sample clock is Monday, Nov 2. Real data swaps in here.
@@ -227,7 +236,11 @@ export function useSampleActions() {
     submitRequest: form => set(s => ({ ...s, activity: log(s, form.name || 'Client', `Service request sent: ${form.kind}.`, 'client') })),
     setNotification: (key, field, on) => set(s => ({ ...s, settings: { ...s.settings, notifications: s.settings.notifications.map(n => (n.key === key ? { ...n, [field]: on } : n)) } })),
     setPaused: paused => set(s => ({ ...s, billing: { ...s.billing, paused } })),
-    bookCall: ({ ref, kind, who, day, date, time, label }) => set(s => ({ ...s, appointments: [...s.appointments, { id: `ap${s.appointments.length + 1}-${time.length}`, day, date, time, who, label, kind, ref }], activity: log(s, who, `${label} booked for ${day}, Nov ${date}, ${time}.`, kind === 'lead' ? 'lead' : 'client') })),
+    // P854: iso = the instant picked on the client's clock, tz = the client's zone; day/date/time land on the agent's clock.
+    bookCall: ({ ref, kind, who, iso, tz, label, clientText }) => set(s => {
+      const { day, date, time } = onAgentClock(iso, s.settings.timeZone || AGENT_TZ)
+      return { ...s, appointments: [...s.appointments, { id: `ap${s.appointments.length + 1}-${Date.now()}`, day, date, time, iso, tz, who, label, kind, ref }], activity: log(s, who, `${label} booked for ${day}, Nov ${date}, ${time}${clientText ? ` (${clientText})` : ''}.`, kind === 'lead' ? 'lead' : 'client') }
+    }),
     setBudget: (weekly, mode) => set(s => ({ ...s, billing: { ...s.billing, budget: { weekly, mode } } })),
     saveSettings: patch => set(s => ({ ...s, settings: { ...s.settings, ...patch } })),
     // P847: a cancellation or service call for fulfillment, booked while the agent is on the phone with the client.

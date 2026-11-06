@@ -1,5 +1,5 @@
 import { carrierDaySlots } from '../lib/scheduling'
-import { inferTimezoneFromState, timezoneAbbr } from '../lib/timezones'
+import { timezoneAbbr } from '../lib/timezones'
 
 // P847 — sample carriers for both shells' carrier dropdowns, in the real `carriers` row shape (lib/carriers.js:
 // hours per weekday in the carrier's own zone). The booking step runs the real slot rule on them (carrierDaySlots:
@@ -32,13 +32,15 @@ export const carrierByName = name => SAMPLE_CARRIERS.find(c => c.name.toLowerCas
 export const BOOK_DAYS = [['Thu', 5], ['Fri', 6], ['Mon', 9], ['Tue', 10], ['Wed', 11]]
 export const isoOf = day => `2026-11-${String(day).padStart(2, '0')}`
 
-// Bookable call times on a day for a client in `state` leaving `carrier` (null when the carrier isn't known yet:
-// then the team's own 8 AM to 6 PM shift stands in, like the live fallback hours).
+// Bookable call times on a day on the clock of the client's zone `tz` (P854: the zone, not just the state, so split
+// states and a picked zone come out right) leaving `carrier` (null when the carrier isn't known yet: then 8 AM to
+// 6 PM on the client's clock stands in, like the live fallback hours; the VA shift is checked on top, lib/callSlots).
 const SHIFT_SLOTS = ['8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM', '5:00 PM']
-export function sampleSlots(day, state, carrierName) {
+export function sampleSlots(day, tz, carrierName) {
+  if (!tz) return []
   const c = carrierByName(carrierName)
   if (!c) return SHIFT_SLOTS
-  return carrierDaySlots(isoOf(day), inferTimezoneFromState(state || 'TX'), c)
+  return carrierDaySlots(isoOf(day), tz, c)
 }
 export const hoursLine = carrierName => {
   const c = carrierByName(carrierName)

@@ -1,0 +1,75 @@
+/* P854 — a week calendar with a day you click open (DayBox.jsx: the VA Schedule and the agent Calendar), and the
+   client-time booking picker (SlotPick.jsx). Tokens only. */
+
+/* Day headers and empty column space open the day. */
+.fx-week .tp-tgrid-h b[role="button"] { cursor: pointer; border-radius: 10px; transition: background-color .2s var(--fx-ease); }
+.fx-week .tp-tgrid-h b[role="button"]:hover { background: color-mix(in srgb, var(--ov-hi) 6%, transparent); }
+.fx-week .tp-tgrid-h b[role="button"]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.fx-week .tp-tgrid-h b.is-on { background: color-mix(in srgb, var(--ov-data-a) 12%, transparent); }
+.fx-week .tp-tgrid-h b.is-on > span { color: var(--ov-data-a); }
+.fx-week.is-week .tp-tcol { cursor: pointer; transition: background-color .2s var(--fx-ease); }
+.fx-week.is-week .tp-tcol:hover { background-color: color-mix(in srgb, var(--ov-hi) 4%, transparent); }
+.fx-week.is-week .tp-tcol.today:hover { background-color: color-mix(in srgb, var(--ov-data-a) 9%, transparent); }
+.fx-week.is-day .tp-ev { min-height: 44px; }
+
+/* The week strip: chips, the open day lit. */
+.fx-daystrip { flex-wrap: wrap; }
+.fx-daystrip .fx-chip { position: relative; }
+
+/* The day box slides in from the right (280 ms ease-out) and back out. */
+.fx-tile.fx-daybox { animation: fx-daybox-in .28s cubic-bezier(.2, .8, .2, 1) both; }
+.fx-tile.fx-daybox.is-leaving { animation: fx-daybox-out .28s cubic-bezier(.4, 0, 1, 1) both; pointer-events: none; }
+@keyframes fx-daybox-in { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+@keyframes fx-daybox-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(40px); } }
+.fx-daybox > .fx-tile-h { align-items: flex-start; gap: 10px; }
+.fx-daybox-x { flex: none; }
+.fx-daybox-back { display: none; }
+.fx-weeklist { display: none; }
+
+/* 1000 to 1280: the day and its box stay side by side. */
+@media (min-width: 1000px) and (max-width: 1279.98px) {
+  .fx-grid > .fx-week.is-day { grid-column: span 7; }
+  .fx-grid > .fx-daybox { grid-column: span 5; }
+}
+
+/* Phone and tablet: the week is a list; a day opens full screen (a bottom sheet) with Back to the week. */
+@media (max-width: 999.98px) {
+  .fx-tools .fx-daystrip { display: none; }
+  .fx-weeklist { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 0 0 12px; padding: 0; list-style: none; }
+  .fx-wl-row { width: 100%; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--fx-edge, var(--ov-line)); background: var(--fx-fill, var(--bg-surface)); color: var(--ov-mid); text-align: left; font-size: 13px; }
+  .fx-wl-row:active { transform: scale(.98); }
+  .fx-wl-row.is-today { border-color: color-mix(in srgb, var(--ov-data-a) 45%, transparent); }
+  .fx-wl-row .tp-grow { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fx-wl-d { display: flex; flex-direction: column; align-items: center; min-width: 38px; line-height: 1.1; }
+  .fx-wl-d small { font-size: 11px; color: var(--ov-mute); }
+  .fx-wl-d b { font-family: var(--font-display); font-size: 20px; color: var(--ov-hi); }
+  .fx-wl-row.is-today .fx-wl-d b { color: var(--ov-data-a); }
+  .fx-wl-n { font-size: 16px; color: var(--ov-hi); }
+
+  /* The page wrapper is its own stacking layer (z 1) under the sticky phone top bar (z 30): lift it while a day is
+     open, and hold the page still behind the full-screen day. */
+  .tp-app > :has(.fx-tile.fx-daybox) { position: relative; z-index: 75; }
+  html:has(.fx-tile.fx-daybox) { overflow: hidden; scrollbar-gutter: auto; }
+  .fx-tile.fx-daybox { position: fixed; inset: 0; z-index: 70; margin: 0; border-radius: 0; overflow-y: auto; overscroll-behavior: contain; padding: calc(14px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom)); background: var(--bg-base); animation-name: fx-daybox-up; }
+  /* Solid page colour, not the glass tile fill (that rule is .fx .fx-tile.fx-tile:not(.is-fill)). */
+  .fx .fx-tile.fx-tile.fx-daybox { background: var(--ov-page); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; border: 0; }
+  .fx-tile.fx-daybox.is-leaving { animation-name: fx-daybox-down; }
+  .fx-tile.fx-daybox:hover { transform: none; }
+  .fx-daybox > .fx-tile-h { flex-wrap: wrap; }
+  .fx-daybox > .fx-tile-h .tp-grow { flex-basis: 100%; order: 2; }
+  .fx-daybox-back { display: inline-flex; order: 1; }
+  .fx-daybox-x { display: none; }
+  @keyframes fx-daybox-up { from { transform: translateY(100%); } to { transform: none; } }
+  @keyframes fx-daybox-down { from { transform: none; } to { transform: translateY(100%); } }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-tile.fx-daybox, .fx-tile.fx-daybox.is-leaving { animation: none; }
+}
+
+/* The booking picker: the client's time, then the booker's own clock under it. */
+.fx-slotpick { display: grid; gap: 12px; }
+.fx-tzline { display: flex; flex-direction: column; gap: 2px; }
+.fx-tzline b { color: var(--ov-hi); font-weight: 600; }
+.fx-tzline span { color: var(--ov-mid); }
+.fx-tzwait { display: flex; align-items: center; gap: 6px; }

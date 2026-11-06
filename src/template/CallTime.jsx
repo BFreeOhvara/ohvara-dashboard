@@ -1,33 +1,43 @@
-import { useMemo } from 'react'
-import { CalendarClock, Clock3, Sparkles, UserCheck } from 'lucide-react'
-import { PillTabs } from './kit'
+import { useEffect, useMemo } from 'react'
+import { CalendarClock, Clock3, Sparkles } from 'lucide-react'
 import './calls.css'
 import { WINDOWS } from './callTimeModel'
 import { Select } from './Select'
-import { BOOK_DAYS, sampleSlots, hoursLine } from './carriers'
-import { useVaFor, rotaOf } from './ful/data'
+import { SlotPick } from './SlotPick'
+import { useClientZone } from './useClientZone'
+import { BOOK_DAYS, isoOf, sampleSlots, hoursLine } from './carriers'
+import { useVaBooking, NOW_ISO } from './ful/data'
+import { vaSlots } from '../lib/callSlots'
 
 // P847 — when fulfillment calls, picked while the agent is still on the phone with the client. Both optional:
 //   Book a time with them: an exact day and time (the carrier-hours slot rule for a cancellation call). It lands on
 //     the Schedule of the VA on shift then (the auto-assign, shown by name).
 //   Best time to reach them: a window; the VA on shift calls inside it.
 //   Let the team set it: neither, fulfillment reaches out.
-// value = { mode: 'none' | 'exact' | 'window', day, time, window }
+// value = { mode: 'none' | 'exact' | 'window', day, time, window, iso, tz, vaId }
+// P854: the time is the client's (zone from state + city, or picked); a slot is open only when a VA on shift then is
+// free under the 30-minute rule (lib/callSlots); iso + tz + vaId are what gets stored.
 const MODES = [
   { key: 'exact', label: 'Book a time with them', sub: 'Pick it together now', icon: CalendarClock },
   { key: 'window', label: 'Best time to reach them', sub: 'A window, e.g. mornings', icon: Clock3 },
   { key: 'none', label: 'Let the team set it', sub: 'Fulfillment reaches out', icon: Sparkles },
 ]
 
-export function CallTime({ kind = 'cancellation', value, onChange, state, oldCarrier }) {
+export function CallTime({ kind = 'cancellation', value, onChange, state, city = '', oldCarrier, viewerTz }) {
   const v = value
   const carrier = kind === 'cancellation' ? oldCarrier : null
-  const slots = useMemo(() => sampleSlots(v.day, state, carrier), [v.day, state, carrier])
-  const ok = v.time && slots.includes(v.time)
-  const va = useVaFor(v.day, v.mode === 'exact' && ok ? v.time : null)
-  const rota = rotaOf(v.day)
+  const zone = useClientZone(state, city)
+  const book = useVaBooking()
+  const clocks = useMemo(() => (zone.tz ? sampleSlots(v.day, zone.tz, carrier) : []), [v.day, zone.tz, carrier])
+  const slots = vaSlots({ date: isoOf(v.day), clocks, clientTz: zone.tz, team: book.team, calls: book.calls, load: book.load })
+  const pick = slots.find(s => s.clock === v.time && s.open && s.iso >= NOW_ISO)
+  // A picked time that stopped fitting (another zone picked, the slot got taken) is dropped, not kept stale.
+  const stale = v.mode === 'exact' && !!v.time && (!pick || pick.iso !== v.iso || pick.va?.id !== v.vaId)
+  useEffect(() => { if (stale) onChange({ ...v, time: '', iso: null, vaId: null, tz: zone.tz }) })
   const put = patch => onChange({ ...v, ...patch })
+  const setTime = t => { const s = slots.find(x => x.clock === t); put({ time: t, iso: s?.iso || null, tz: zone.tz, vaId: s?.va?.id || null }) }
   const what = kind === 'cancellation' ? 'cancellation call' : 'service call'
+  const place = city ? `${city}, ${state}` : state || ''
   return (
     <div className="fx-calltime">
       <div className="fx-calltime-h"><b>When should fulfillment call?</b><small>Optional. Ask while you have them on the phone.</small></div>
@@ -41,20 +51,9 @@ export function CallTime({ kind = 'cancellation', value, onChange, state, oldCar
 
       {v.mode === 'exact' && (
         <div className="fx-calltime-b" key="exact">
-          <div className="tp-field"><span>Day</span>
-            <PillTabs role="radiogroup" label="Day" className="fx-chips" itemClass="fx-chip" value={v.day} onChange={d => put({ day: d, time: '' })}
-              items={BOOK_DAYS.map(([d, n]) => ({ key: n, label: <><small>{d}</small><b>{n}</b></> }))} />
-          </div>
-          <div className="tp-field"><span>Time (the client's time)</span>
-            <Select label="Time (the client's time)" placeholder={slots.length ? 'Pick a time' : 'No open times that day'} disabled={!slots.length} value={ok ? v.time : ''} onChange={t => put({ time: t })} options={slots} />
-            <small>{kind === 'cancellation' ? hoursLine(carrier) : 'Inside the team’s hours, 8:00 AM to 6:00 PM.'}</small>
-          </div>
-          <p className={`fx-calltime-va${va ? ' is-set' : ''}`} aria-live="polite">
-            <UserCheck size={16} aria-hidden="true" />
-            {va
-              ? <span><b>Goes to {va.name}</b><small>On shift then. It lands on {va.name.split(' ')[0]}{'’'}s Schedule.</small></span>
-              : <span><b>{rota.length ? `On shift: ${rota.map(x => x.name.split(' ')[0]).join(', ')}` : 'Nobody is on shift that day'}</b><small>Pick a time and we give it to whoever is free then.</small></span>}
-          </p>
+          <SlotPick days={BOOK_DAYS} day={v.day} onDay={d => put({ day: d, time: '', iso: null, vaId: null })} slots={slots} value={v.time} onPick={setTime}
+            zone={zone} place={place} viewerTz={viewerTz} notBefore={NOW_ISO} showVa
+            hint={kind === 'cancellation' ? hoursLine(carrier) : 'Inside the team’s hours, 8:00 AM to 6:00 PM.'} />
         </div>
       )}
       {v.mode === 'window' && (

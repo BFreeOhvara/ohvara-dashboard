@@ -9,11 +9,12 @@ import { dayOptions, timeOptions } from './selectOptions'
 // date/time picker: a glass menu under the field on a desktop, a bottom sheet on a phone, the shell's spring motion.
 // Keyboard: Up/Down/Home/End move, Enter or Space picks, Escape closes, typing jumps (or filters when there's a search
 // box). Screen readers get a listbox with options and the active one announced (aria-activedescendant).
-//   options: strings, or [{ value, label, sub? }]
+//   options: strings, or [{ value, label, sub?, disabled? }] (P854: a disabled option shows greyed out, e.g. a Taken
+//   slot, and can't be picked)
 //   search: a search box at the top (on for long lists by default, over 8 options)
 //   allowCustom: a combobox: whatever is typed can be used as the value ("Use 'Acme Life'"), e.g. a carrier not listed
 const PHONE = 640
-const norm = o => (typeof o === 'object' && o !== null ? { value: o.value, label: o.label ?? String(o.value), sub: o.sub } : { value: o, label: String(o) })
+const norm = o => (typeof o === 'object' && o !== null ? { value: o.value, label: o.label ?? String(o.value), sub: o.sub, disabled: !!o.disabled } : { value: o, label: String(o) })
 
 export function Select({ value, onChange, options, label, placeholder = 'Pick one', search, allowCustom = false, disabled = false, className = '', invalid = false, id }) {
   const list = useMemo(() => options.map(norm), [options])
@@ -55,12 +56,12 @@ export function Select({ value, onChange, options, label, placeholder = 'Pick on
     if (disabled) return
     const i = list.findIndex(o => o.value === value)
     setQ('')
-    setActive(i < 0 ? 0 : i)
+    setActive(i < 0 ? Math.max(0, list.findIndex(o => !o.disabled)) : i)
     place()
     setOpen(true)
   }
   const close = useCallback((refocus = true) => { setOpen(false); if (refocus) btn.current?.focus() }, [])
-  const choose = o => { if (!o) return; onChange(o.value); close() }
+  const choose = o => { if (!o || o.disabled) return; onChange(o.value); close() }
 
   // Focus the search box (or the list) once it opens; keep the menu under the field when the page moves.
   useLayoutEffect(() => {
@@ -123,8 +124,8 @@ export function Select({ value, onChange, options, label, placeholder = 'Pick on
               {rows.map((o, i) => {
                 const on = !o.custom && o.value === value
                 return (
-                  <li key={`${o.custom ? 'c-' : ''}${o.value}`} id={optId(i)} data-i={i} role="option" aria-selected={on}
-                    className={`fx-selopt${i === active ? ' is-active' : ''}${on ? ' is-on' : ''}${o.custom ? ' is-custom' : ''}`}
+                  <li key={`${o.custom ? 'c-' : ''}${o.value}`} id={optId(i)} data-i={i} role="option" aria-selected={on} aria-disabled={o.disabled || undefined}
+                    className={`fx-selopt${i === active ? ' is-active' : ''}${on ? ' is-on' : ''}${o.custom ? ' is-custom' : ''}${o.disabled ? ' is-disabled' : ''}`}
                     style={{ '--i': Math.min(i, 8) }} onMouseMove={() => i !== active && setActive(i)} onClick={() => choose(o)}>
                     <span className="tp-grow"><b>{o.label}</b>{o.sub && <small>{o.sub}</small>}</span>
                     {on && <Check size={15} aria-hidden="true" />}

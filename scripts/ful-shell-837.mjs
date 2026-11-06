@@ -3,6 +3,8 @@
 //   node scripts/ful-shell-837.mjs --base-url <url> [--no-shots] [--out qa/fulfillment-845] [--preview]
 // P845: the rebuilt VA pages (sample info). Adds Overview and each record drawer's own URL, and --preview: the same
 // P846: Calls became Schedule (calendar, rota, day off, live-call overlay); checks cover those and the old /desk redirect.
+// P854: no Week/Day toggle; a clicked day opens its box (?day=, Back, Esc, X); client-time pickers; a Taken slot can't
+// be picked; Pass on needs a free VA; a phone opens the day full screen.
 // pages at /template/fulfillment with no sign-in (Messages and Settings at /fulfillment/messages|settings there),
 // plus a click-through of the VA flows. The agent/admin checks run in the signed-in mode only.
 // Each page x 1920/1440/390 x light/dark: the shell frame is there, the title, tabs (desktop) or bottom bar (phone),
@@ -143,6 +145,9 @@ async function clickThrough(page, theme, errors) {
     await page.getByRole('radio', { name: 'This week' }).click()
     if (!(await page.getByRole('button', { name: 'Book an agent' }).isEnabled())) throw new Error('Book stayed off after 4 answers')
     await page.getByRole('button', { name: 'Book an agent' }).click()
+    // P854: the time is the person's (Jacksonville, ET) inside Dana's hours; the first open slot.
+    await page.getByRole('button', { name: /^Time \(the client's time\):/ }).click()
+    await page.locator('.fx-selopt:not(.is-disabled)').first().click()
     if (SHOTS) await page.screenshot({ path: `${OUT}/flow-book-1440-${theme}.png` })
     await page.getByRole('button', { name: 'Book it' }).click()
     await page.waitForTimeout(700)
@@ -179,6 +184,81 @@ async function clickThrough(page, theme, errors) {
     if (!(await page.locator('.fs-rota-t').getByText('Leo Grant').isVisible())) throw new Error('rota missing')
     if ((await page.locator('.fx-week .tp-tgrid-h b').count()) !== 5) throw new Error('week is not 5 days')
     if (SHOTS) await page.screenshot({ path: `${OUT}/flow-schedule-next-1440-${theme}.png`, fullPage: true })
+  })
+  // P854: the week with a day you click open, client-time pickers, the 30-minute rule.
+  await step('P854 day box: click a day, URL, Back, Esc, no Week/Day', async () => {
+    await go('/fulfillment/schedule')
+    if (await page.locator('.fx-tools [aria-label="View"]').count()) throw new Error('the Week/Day toggle is still there')
+    if (await page.locator('.fx-daybox').count()) throw new Error('a day box shows on the plain week')
+    const full = await page.evaluate(() => { const g = document.querySelector('.fx-grid').getBoundingClientRect().width; const w = document.querySelector('.fx-week').getBoundingClientRect().width; return w / g })
+    if (full < 0.98) throw new Error(`week grid is ${Math.round(full * 100)}% wide, not full width`)
+    await page.locator('.fx-week .tp-tgrid-h b[role="button"]', { hasText: 'Tue' }).click()
+    await page.waitForTimeout(450)
+    if (new URL(page.url()).searchParams.get('day') !== '2026-11-03') throw new Error(`URL day is ${new URL(page.url()).searchParams.get('day')}`)
+    if (!(await page.locator('.fx-daybox').isVisible())) throw new Error('clicking Tue did not open its box')
+    if ((await page.locator('.fx-week .tp-tcol').count()) !== 1) throw new Error('the grid did not narrow to the day')
+    if ((await page.locator('.fx-daystrip [aria-pressed="true"]').innerText()).replace(/\s/g, '') !== 'Tue3') throw new Error('the strip does not light Tue')
+    if (SHOTS) await page.screenshot({ path: `${OUT}/p854-day-1440-${theme}.png` })
+    await page.locator('.fx-daystrip button', { hasText: 'Wed' }).click()
+    await page.waitForTimeout(450)
+    if (new URL(page.url()).searchParams.get('day') !== '2026-11-04' || !(await page.locator('.fx-daybox h2', { hasText: 'Wed, Nov 4' }).isVisible())) throw new Error('another day did not swap the box')
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(500)
+    if (await page.locator('.fx-daybox').count()) throw new Error('Esc did not close the box')
+    if (new URL(page.url()).searchParams.get('day')) throw new Error('Esc left the day in the URL')
+    await page.locator('.fx-week .tp-tcol[data-day="3"]').click({ position: { x: 6, y: 6 } })
+    await page.waitForTimeout(450)
+    if (new URL(page.url()).searchParams.get('day') !== '2026-11-03') throw new Error('empty column space did not open the day')
+    await page.goBack()
+    await page.waitForTimeout(500)
+    if (await page.locator('.fx-daybox').count()) throw new Error('Back did not close the box')
+    await page.locator('.fx-daystrip button', { hasText: 'Thu' }).click()
+    await page.waitForTimeout(450)
+    await page.locator('.fx-daystrip button', { hasText: 'Thu' }).click()
+    await page.waitForTimeout(500)
+    if (await page.locator('.fx-daybox').count()) throw new Error('the same day again did not close the box')
+    await go('/fulfillment/schedule?day=2026-11-10')
+    if (!(await page.locator('.fx-daybox h2', { hasText: 'Tue, Nov 10' }).isVisible())) throw new Error('a link with ?day= did not reopen the day')
+    await page.locator('.fx-daybox .fx-daybox-x').click()
+    await page.waitForTimeout(500)
+    if (await page.locator('.fx-daybox').count()) throw new Error('the X did not close the box')
+    // A block still opens its drawer, and closing it comes back to the open day.
+    await go('/fulfillment/schedule?day=2026-11-05')
+    await page.locator('.fx-week a.tp-ev', { hasText: 'Gloria Santos' }).click()
+    await page.waitForTimeout(500)
+    if (!/schedule\/cl-8$/.test(new URL(page.url()).pathname)) throw new Error('a block did not open its drawer')
+    const when = await page.locator('.fx-rec .fx-when').first().innerText()
+    if (!/2:00 PM · client 3:00 PM ET/.test(when)) throw new Error(`drawer time reads "${when}", not both clocks`)
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(500)
+    if (new URL(page.url()).searchParams.get('day') !== '2026-11-05' || !(await page.locator('.fx-daybox').isVisible())) throw new Error('closing the drawer lost the open day')
+  })
+  await step('P854 taken slot: greyed out, cannot be picked; Pass on to a free VA', async () => {
+    await go('/fulfillment/schedule/cl-8')
+    await page.locator('.fx-rec-f').getByRole('button', { name: 'Move' }).click()
+    await page.waitForTimeout(400)
+    // The day starts on Fri 6 (the next working day after the call).
+    if ((await page.locator('.tp-sheet').getByRole('radio', { name: /Fri\s*6/ }).getAttribute('aria-checked')) !== 'true') throw new Error('Move did not start on Fri 6')
+    await page.locator('.tp-sheet').getByRole('button', { name: /^New time \(the client's time\):/ }).click()
+    await page.waitForTimeout(300)
+    // Fri 6: Maya and Sasha are on; both have a call at 10:00 AM CT, so 11:00 AM ET is taken.
+    const taken = page.getByRole('option', { name: /^11:00 AM\s*Taken/ })
+    if ((await taken.getAttribute('aria-disabled')) !== 'true') throw new Error('11:00 AM ET is not greyed out')
+    await taken.click({ force: true })
+    await page.waitForTimeout(200)
+    if (!(await page.locator('.fx-sellist').isVisible())) throw new Error('picking a taken slot closed the list')
+    if (SHOTS) await page.screenshot({ path: `${OUT}/p854-taken-1440-${theme}.png` })
+    await page.getByRole('option', { name: /^12:00 PM/ }).click()
+    await page.waitForTimeout(200)
+    const line = await page.locator('.tp-sheet .fx-tzline').innerText()
+    if (!/12:00 PM ET, client's time \(Miami, FL\)/.test(line) || !/That's 11:00 AM CT for you/.test(line)) throw new Error(`time line reads "${line.replace(/\n/g, ' / ')}"`)
+    if (!(await page.locator('.tp-sheet').getByRole('button', { name: 'Move it' }).isEnabled())) throw new Error('Move it stayed off on an open slot')
+    await go('/fulfillment/schedule/cl-8')
+    await page.locator('.fx-rec-f').getByRole('button', { name: 'Pass on' }).click()
+    await page.waitForTimeout(300)
+    // Thu 5 2:00 PM: Leo and Devon both have a 2:00 PM call, so nobody else is free.
+    if (await page.locator('.tp-sheet').getByRole('button', { name: 'Pass it on' }).isEnabled()) throw new Error('Pass on allowed with nobody free')
+    await page.keyboard.press('Escape')
   })
   await step('live call overlay + day off', async () => {
     await go('/fulfillment')
@@ -253,7 +333,30 @@ async function clickThrough(page, theme, errors) {
   })
   const errs = errors.filter(e => !/favicon/.test(e))
   if (errs.length) fail(where, `console: ${errs.join(' | ')}`)
-  rows.push({ where, flows: 7 })
+  rows.push({ where, flows: 9 })
+  await phoneDay(theme)
+}
+
+// P854: on a phone the week is a list; tapping a day opens it full screen with Back to the week.
+async function phoneDay(theme) {
+  const where = `phone day ${theme}`
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: theme })
+  await ctx.addInitScript(t => { try { localStorage.setItem('ohvara-theme', t) } catch { /* private mode */ } }, theme)
+  const page = await ctx.newPage()
+  try {
+    await page.goto(`${BASE}/template/fulfillment/schedule`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(700)
+    await page.locator('.fx-weeklist button', { hasText: 'Thu' }).click()
+    await page.waitForTimeout(500)
+    const m = await page.evaluate(() => { const r = document.querySelector('.fx-daybox')?.getBoundingClientRect(); return r ? { w: r.width, h: r.height, pos: getComputedStyle(document.querySelector('.fx-daybox')).position } : null })
+    if (!m || m.pos !== 'fixed' || m.w < 389 || m.h < 840) fail(where, `the day is not full screen: ${JSON.stringify(m)}`)
+    if (SHOTS) await page.screenshot({ path: `${OUT}/p854-day-390-${theme}.png` })
+    await page.getByRole('button', { name: 'Back to the week' }).click()
+    await page.waitForTimeout(500)
+    if (await page.locator('.fx-daybox').count()) fail(where, 'Back to the week did not close it')
+    if (SHOTS) await page.screenshot({ path: `${OUT}/p854-week-390-${theme}.png` })
+  } catch (e) { fail(where, e.message.split('\n')[0]) }
+  await ctx.close()
 }
 
 // The other portals are unchanged: the agent still gets the agent shell, admin still gets today's pages.

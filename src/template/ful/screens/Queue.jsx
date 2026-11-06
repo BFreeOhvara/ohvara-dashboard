@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Search, Phone, Clock, PhoneIncoming, Hourglass, MapPin, CalendarCheck, CalendarClock, Hand, Undo2, PhoneMissed, Check } from 'lucide-react'
-import { useFulQueue, useFulActions } from '../data'
+import { useFulQueue, useFulActions, useVaBooking, NOW_ISO, TODAY, dayName } from '../data'
 import { Avatar, Chip, Drawer, Empty, Field, PillTabs, Seg, useNote } from '../../kit'
+import { SlotPick } from '../../SlotPick'
+import { useClientZone } from '../../useClientZone'
+import { BOOK_DAYS, isoOf } from '../../carriers'
+import { vaSlots, clocksBetween, zoneAbbr } from '../../../lib/callSlots'
 import { RecordDrawer, Block } from '../../Record'
 import { BookForAgent } from '../FulFrame'
 import { Select } from '../../Select'
@@ -44,7 +48,9 @@ function useLeft(until) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
 
-const CALLBACKS = ['Today, 4:00 PM', 'Today, 6:00 PM', 'Fri, 10:00 AM', 'Fri, 2:00 PM']
+// P854: a callback is picked on the person's clock (8 AM to 8 PM there), inside a VA shift, and never under 30 minutes
+// from another call of whoever takes it (lib/callSlots vaSlots; you first).
+const CB_CLOCKS = clocksBetween(8 * 60, 20 * 60)
 
 export function LeadDrawer({ id, onClose }) {
   const { data: queue } = useFulQueue()
@@ -52,7 +58,12 @@ export function LeadDrawer({ id, onClose }) {
   const note = useNote()
   const l = queue.find(x => x.id === id)
   const [panel, setPanel] = useState(null)
-  const [cbAt, setCbAt] = useState(CALLBACKS[0])
+  const [cbDay, setCbDay] = useState(TODAY)
+  const [cbTime, setCbTime] = useState('')
+  const book = useVaBooking()
+  const zone = useClientZone(l?.checklist?.state || l?.state, l?.city)
+  const cbSlots = vaSlots({ date: isoOf(cbDay), clocks: CB_CLOCKS, clientTz: zone.tz, team: book.team, calls: book.calls, load: book.load, prefer: book.me, exceptId: l?.id })
+  const cbPick = cbSlots.find(x => x.clock === cbTime && x.open && x.iso >= NOW_ISO)
   const left = useLeft(l?.held_until)
   if (!l) return <RecordDrawer label="Not in the queue" kicker="Queue" onClose={onClose} hero={<h2>Already handled</h2>}><p className="fx-calm"><Check size={16} aria-hidden="true" />This person was booked or closed out.</p></RecordDrawer>
   const tone = toneOf(l.bucket)
@@ -106,8 +117,14 @@ export function LeadDrawer({ id, onClose }) {
 
       <BookForAgent open={panel === 'book'} leadId={l.id} onClose={() => { setPanel(null); if (!queue.some(x => x.id === l.id)) onClose() }} />
       <Drawer open={panel === 'callback'} center onClose={() => setPanel(null)} title="Call back" sub={`${l.name} · their time`}
-        footer={<button type="button" className="tp-primary fx-accent" onClick={() => { callback(l.id, cbAt); note(`Callback set for ${cbAt}`); setPanel(null); onClose() }}><CalendarClock size={16} />Set callback</button>}>
-        <Seg label="When" value={cbAt} onChange={setCbAt} options={CALLBACKS.map(t => ({ key: t, label: t.replace('Today, ', '') }))} className="fs-wrap" />
+        footer={<button type="button" className="tp-primary fx-accent" disabled={!cbPick} onClick={() => {
+          const when = `${cbDay === TODAY ? 'Today' : `${dayName(cbDay)}, Nov ${cbDay}`}, ${cbTime} ${zoneAbbr(zone.tz, cbPick.iso)}`
+          callback(l.id, when, cbPick.iso, zone.tz, cbPick.va.id)
+          note(`Callback set for ${when}${cbPick.va.id === book.me ? '' : `. ${cbPick.va.name} has it`}`)
+          setPanel(null); onClose()
+        }}><CalendarClock size={16} />Set callback</button>}>
+        <SlotPick days={BOOK_DAYS} day={cbDay} onDay={setCbDay} slots={cbSlots} value={cbTime} onPick={setCbTime} zone={zone} place={`${l.city}, ${c.state}`}
+          viewerTz={book.viewerTz} mine={book.me} notBefore={NOW_ISO} showVa label="Call back at" />
       </Drawer>
       <Drawer open={panel === 'close'} center onClose={() => setPanel(null)} title="Not interested?" sub={l.name}
         footer={<><button type="button" className="tp-primary fx-accent" onClick={() => { closeLead(l.id); note(`${l.name} closed out`); onClose() }}>Close them out</button><button type="button" className="tp-btn ov-ghost" onClick={() => setPanel(null)}>Keep</button></>}>

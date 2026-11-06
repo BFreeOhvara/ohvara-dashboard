@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Check } from 'lucide-react'
-import { useSampleClients, useSampleActions } from '../data'
+import { useSampleClients, useSampleActions, useSampleSettings } from '../data'
 import { Avatar, Field, useNote } from '../kit'
 import { paths } from '../paths'
 import { stageLabel } from '../stages'
 import { CallTime } from '../CallTime'
 import { EMPTY_CALL_TIME, callTimeReady, callTimeText } from '../callTimeModel'
-import { sampleSlots, BOOK_DAYS } from '../carriers'
+import { BOOK_DAYS } from '../carriers'
 import { agentBooksCall } from '../ful/data'
 
 const KINDS = ['Change address', 'Update phone', 'Change beneficiary', 'Change billing date', 'Reinstate policy', 'Cancel policy', 'Policy question', 'Other']
@@ -15,6 +15,7 @@ const KINDS = ['Change address', 'Update phone', 'Change beneficiary', 'Change b
 export default function RequestService() {
   const { data: clients } = useSampleClients()
   const { submitRequest, bookFulfillmentCall } = useSampleActions()
+  const { data: settings } = useSampleSettings()
   const note = useNote()
   const [q, setQ] = useState('')
   const [pick, setPick] = useState(null)
@@ -26,12 +27,12 @@ export default function RequestService() {
   const [sent, setSent] = useState(false)
   const rows = clients.filter(c => `${c.client_first_name} ${c.client_last_name}`.toLowerCase().includes(q.trim().toLowerCase()))
   const callKind = kind === 'Cancel policy' ? 'cancellation' : 'service'
-  const ready = callTimeReady(ct, sampleSlots(ct.day, pick?.state, callKind === 'cancellation' ? pick?.carrier_name : null))
+  const ready = callTimeReady(ct)
   const send = () => {
     const who = `${pick.client_first_name} ${pick.client_last_name}`
     submitRequest({ name: who, kind })
     if (ct.mode !== 'none') {
-      const va = agentBooksCall({ who, state: pick.state, oldCarrier: pick.carrier_name, kind: callKind, mode: ct.mode, day: ct.day, time: ct.time, window: ct.window })
+      const va = agentBooksCall({ who, state: pick.state, city: pick.city, oldCarrier: pick.carrier_name, kind: callKind, mode: ct.mode, day: ct.day, time: ct.time, iso: ct.iso, tz: ct.tz, vaId: ct.vaId, window: ct.window })
       bookFulfillmentCall({ who, kind: callKind, mode: ct.mode, day: BOOK_DAYS.find(d => d[1] === ct.day)?.[0], date: ct.day, time: ct.time, window: ct.window, va: va?.name })
       setSentVa(va)
     }
@@ -60,7 +61,7 @@ export default function RequestService() {
           <div><h2 className="tp-h2">A change on the policy</h2></div>
           <div className="tp-row tp-wrap" role="group" aria-label="Kind of request">{KINDS.map(k => <button key={k} type="button" className={`tp-btn ov-ghost${kind === k ? ' tp-on' : ''}`} aria-pressed={kind === k} onClick={() => setKind(k)} style={kind === k ? { borderColor: 'var(--ov-data-a)', background: 'var(--ov-data-a-tint)' } : undefined}>{k}</button>)}</div>
           <Field label="Note for the team"><textarea value={text} onChange={e => setText(e.target.value)} placeholder="What needs doing" /></Field>
-          <CallTime kind={callKind} value={ct} onChange={setCt} state={pick?.state} oldCarrier={pick?.carrier_name} />
+          <CallTime kind={callKind} value={ct} onChange={setCt} state={pick?.state} city={pick?.city} oldCarrier={pick?.carrier_name} viewerTz={settings.timeZone} />
         </section>
         <div className="ov-card tp-card tp-stack">
           <h2 className="tp-h2">Request summary</h2>
