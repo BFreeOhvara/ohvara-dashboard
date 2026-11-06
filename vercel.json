@@ -13,7 +13,7 @@
       "destination": "/join.html"
     },
     {
-      "source": "/((?!assets/|.*\\.(?:js|mjs|css|map|json|txt|xml|webmanifest|png|jpe?g|webp|gif|svg|ico|woff2?|ttf|zip)$).*)",
+      "source": "/((?!assets/).*)",
       "destination": "/index.html"
     }
   ],
