@@ -1,15 +1,18 @@
-/* P847 + P860 — the live clock: one line on the page-title row, right side, level with the title's last line. No zone chip. */
-.fx .fx-head .fx-clock { margin-left: auto; align-self: flex-end; display: flex; align-items: baseline; gap: 10px; padding-bottom: 5px; white-space: nowrap; font-family: var(--font-display); font-size: 21px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.1; font-variant-numeric: tabular-nums; animation: fx-up .5s var(--fx-ease) .12s both; }
+/* P847 + P860 + P864 — the live clock: one line on the Overview title row, right side, level with the title's last line. No zone chip.
+   The date, the dot and AM/PM are 22px; the time digits are 1.7x that (about 37px), all on one baseline, tabular so nothing jitters. */
+.fx .fx-head .fx-clock { --clk: 22px; margin-left: auto; align-self: flex-end; display: flex; align-items: baseline; gap: 10px; padding-bottom: 3px; white-space: nowrap; font-family: var(--font-display); font-size: var(--clk); font-weight: 500; letter-spacing: -0.01em; line-height: 1.1; font-variant-numeric: tabular-nums; animation: fx-up .5s var(--fx-ease) .12s both; }
 .fx-clock-d { color: var(--ov-mid); }
 .fx-clock-dot { font-style: normal; color: var(--ov-mute); }
-.fx-clock-t { font-weight: 500; color: var(--ov-hi); font-variant-numeric: tabular-nums; }
+.fx-clock-tm { display: inline-flex; align-items: baseline; gap: .3em; color: var(--ov-hi); }
+.fx-clock-t { font-size: 1.7em; font-weight: 500; line-height: 1; letter-spacing: -0.02em; color: var(--ov-hi); font-variant-numeric: tabular-nums; }
+.fx-clock-ap { color: var(--ov-hi); }
 /* Not enough room beside the title and the numbers (under 1440): it sits on its own line right under them, left-aligned, never wrapping mid-date. */
 @media (max-width: 1439.98px) {
   .fx .fx-head .fx-clock { order: 2; flex: 0 0 100%; margin: -6px 0 0; padding: 0; justify-content: flex-start; }
 }
-/* Phone: directly under the title, above the three numbers. */
+/* Phone: directly under the title, above the three numbers, still one line. */
 @media (max-width: 999.98px) {
-  .fx .fx-head .fx-clock { order: 1; font-size: 18px; margin-top: -8px; }
+  .fx .fx-head .fx-clock { --clk: 18px; order: 1; gap: 8px; margin-top: -8px; }
   .fx .fx-head .fx-kpis { order: 2; }
 }
 @media (prefers-reduced-motion: reduce) { .fx .fx-head .fx-clock { animation: none; } }

@@ -1,0 +1,1094 @@
+[
+ {
+  "theme": "light",
+  "w": 1440,
+  "name": "admin-overview",
+  "clock": {
+   "text": "Friday, Nov 6·3:04:44PM",
+   "h": 40,
+   "w": 293,
+   "right": 1393,
+   "date": 22,
+   "time": 37.4,
+   "ap": 22,
+   "base": [
+    149,
+    149,
+    149
+   ]
+  },
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "ThebusinessOverview"
+ },
+ {
+  "theme": "light",
+  "w": 1440,
+  "name": "admin-money",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [
+   2911,
+   1608,
+   1303
+  ],
+  "owners": [
+   652,
+   651
+  ],
+  "empty": false,
+  "title": "In,outandsplitMoney"
+ },
+ {
+  "theme": "light",
+  "w": 1440,
+  "name": "admin-money-last",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [
+   18831,
+   8377,
+   10454
+  ],
+  "owners": [
+   5227,
+   5227
+  ],
+  "empty": false,
+  "title": "In,outandsplitMoney"
+ },
+ {
+  "theme": "light",
+  "w": 1440,
+  "name": "admin-connect",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "PlugitinConnect"
+ },
+ {
+  "theme": "light",
+  "w": 1440,
+  "name": "admin-setup-empty",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [],
+  "owners": [],
+  "empty": true,
+  "title": "PlugitinConnect"
+ },
+ {
+  "theme": "light",
+  "w": 1440,
+  "name": "admin-agents",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "WhosellsAgents"
+ },
+ {
+  "theme": "light",
+  "w": 1440,
+  "name": "agent-overview",
+  "clock": {
+   "text": "Friday, Nov 6·3:05:02PM",
+   "h": 40,
+   "w": 295,
+   "right": 1393,
+   "date": 22,
+   "time": 37.4,
+   "ap": 22,
+   "base": [
+    149,
+    149,
+    149
+   ]
+  },
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Leads",
+   "Clients",
+   "Calendar",
+   "Activity",
+   "Billing"
+  ],
+  "railConnect": false,
+  "railApp": true,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "TodayOverview"
+ },
+ {
+  "theme": "light",
+  "w": 1440,
+  "name": "agent-leads",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Leads",
+   "Clients",
+   "Calendar",
+   "Activity",
+   "Billing"
+  ],
+  "railConnect": false,
+  "railApp": true,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "YourLeads"
+ },
+ {
+  "theme": "light",
+  "w": 1440,
+  "name": "va-overview",
+  "clock": {
+   "text": "Friday, Nov 6·3:05:07PM",
+   "h": 40,
+   "w": 295,
+   "right": 1393,
+   "date": 22,
+   "time": 37.4,
+   "ap": 22,
+   "base": [
+    149,
+    149,
+    149
+   ]
+  },
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Queue",
+   "Schedule",
+   "Clients",
+   "Servicing",
+   "Pay"
+  ],
+  "railConnect": false,
+  "railApp": true,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "TodayOverview"
+ },
+ {
+  "theme": "light",
+  "w": 1440,
+  "name": "va-queue",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Queue",
+   "Schedule",
+   "Clients",
+   "Servicing",
+   "Pay"
+  ],
+  "railConnect": false,
+  "railApp": true,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "CallnextQueue"
+ },
+ {
+  "theme": "light",
+  "w": 390,
+  "name": "admin-overview",
+  "clock": {
+   "text": "Friday, Nov 6·3:05:13PM",
+   "h": 31,
+   "w": 343,
+   "right": 359,
+   "date": 18,
+   "time": 30.6,
+   "ap": 18,
+   "base": [
+    255,
+    256,
+    255
+   ]
+  },
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "ThebusinessOverview"
+ },
+ {
+  "theme": "light",
+  "w": 390,
+  "name": "admin-money",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [
+   2911,
+   1608,
+   1303
+  ],
+  "owners": [
+   652,
+   651
+  ],
+  "empty": false,
+  "title": "In,outandsplitMoney"
+ },
+ {
+  "theme": "light",
+  "w": 390,
+  "name": "admin-money-last",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [
+   18831,
+   8377,
+   10454
+  ],
+  "owners": [
+   5227,
+   5227
+  ],
+  "empty": false,
+  "title": "In,outandsplitMoney"
+ },
+ {
+  "theme": "light",
+  "w": 390,
+  "name": "admin-connect",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "PlugitinConnect"
+ },
+ {
+  "theme": "light",
+  "w": 390,
+  "name": "admin-setup-empty",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [],
+  "owners": [],
+  "empty": true,
+  "title": "PlugitinConnect"
+ },
+ {
+  "theme": "light",
+  "w": 390,
+  "name": "admin-agents",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "WhosellsAgents"
+ },
+ {
+  "theme": "light",
+  "w": 390,
+  "name": "agent-overview",
+  "clock": {
+   "text": "Friday, Nov 6·3:05:30PM",
+   "h": 31,
+   "w": 343,
+   "right": 359,
+   "date": 18,
+   "time": 30.6,
+   "ap": 18,
+   "base": [
+    255,
+    256,
+    255
+   ]
+  },
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Leads",
+   "Clients",
+   "Calendar",
+   "Activity",
+   "Billing"
+  ],
+  "railConnect": false,
+  "railApp": true,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "TodayOverview"
+ },
+ {
+  "theme": "light",
+  "w": 390,
+  "name": "agent-leads",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Leads",
+   "Clients",
+   "Calendar",
+   "Activity",
+   "Billing"
+  ],
+  "railConnect": false,
+  "railApp": true,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "YourLeads"
+ },
+ {
+  "theme": "light",
+  "w": 390,
+  "name": "va-overview",
+  "clock": {
+   "text": "Friday, Nov 6·3:05:36PM",
+   "h": 31,
+   "w": 343,
+   "right": 359,
+   "date": 18,
+   "time": 30.6,
+   "ap": 18,
+   "base": [
+    255,
+    256,
+    255
+   ]
+  },
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Queue",
+   "Schedule",
+   "Clients",
+   "Servicing",
+   "Pay"
+  ],
+  "railConnect": false,
+  "railApp": true,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "TodayOverview"
+ },
+ {
+  "theme": "light",
+  "w": 390,
+  "name": "va-queue",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Queue",
+   "Schedule",
+   "Clients",
+   "Servicing",
+   "Pay"
+  ],
+  "railConnect": false,
+  "railApp": true,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "CallnextQueue"
+ },
+ {
+  "theme": "dark",
+  "w": 1440,
+  "name": "admin-overview",
+  "clock": {
+   "text": "Friday, Nov 6·3:05:41PM",
+   "h": 40,
+   "w": 283,
+   "right": 1393,
+   "date": 22,
+   "time": 37.4,
+   "ap": 22,
+   "base": [
+    149,
+    149,
+    149
+   ]
+  },
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "ThebusinessOverview"
+ },
+ {
+  "theme": "dark",
+  "w": 1440,
+  "name": "admin-money",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [
+   2911,
+   1608,
+   1303
+  ],
+  "owners": [
+   652,
+   651
+  ],
+  "empty": false,
+  "title": "In,outandsplitMoney"
+ },
+ {
+  "theme": "dark",
+  "w": 1440,
+  "name": "admin-money-last",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [
+   18831,
+   8377,
+   10454
+  ],
+  "owners": [
+   5227,
+   5227
+  ],
+  "empty": false,
+  "title": "In,outandsplitMoney"
+ },
+ {
+  "theme": "dark",
+  "w": 1440,
+  "name": "admin-connect",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "PlugitinConnect"
+ },
+ {
+  "theme": "dark",
+  "w": 1440,
+  "name": "admin-setup-empty",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [],
+  "owners": [],
+  "empty": true,
+  "title": "PlugitinConnect"
+ },
+ {
+  "theme": "dark",
+  "w": 1440,
+  "name": "admin-agents",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "WhosellsAgents"
+ },
+ {
+  "theme": "dark",
+  "w": 1440,
+  "name": "agent-overview",
+  "clock": {
+   "text": "Friday, Nov 6·3:05:59PM",
+   "h": 40,
+   "w": 293,
+   "right": 1393,
+   "date": 22,
+   "time": 37.4,
+   "ap": 22,
+   "base": [
+    149,
+    149,
+    149
+   ]
+  },
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Leads",
+   "Clients",
+   "Calendar",
+   "Activity",
+   "Billing"
+  ],
+  "railConnect": false,
+  "railApp": true,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "TodayOverview"
+ },
+ {
+  "theme": "dark",
+  "w": 1440,
+  "name": "agent-leads",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Leads",
+   "Clients",
+   "Calendar",
+   "Activity",
+   "Billing"
+  ],
+  "railConnect": false,
+  "railApp": true,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "YourLeads"
+ },
+ {
+  "theme": "dark",
+  "w": 1440,
+  "name": "va-overview",
+  "clock": {
+   "text": "Friday, Nov 6·3:06:04PM",
+   "h": 40,
+   "w": 294,
+   "right": 1393,
+   "date": 22,
+   "time": 37.4,
+   "ap": 22,
+   "base": [
+    149,
+    149,
+    149
+   ]
+  },
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Queue",
+   "Schedule",
+   "Clients",
+   "Servicing",
+   "Pay"
+  ],
+  "railConnect": false,
+  "railApp": true,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "TodayOverview"
+ },
+ {
+  "theme": "dark",
+  "w": 1440,
+  "name": "va-queue",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Queue",
+   "Schedule",
+   "Clients",
+   "Servicing",
+   "Pay"
+  ],
+  "railConnect": false,
+  "railApp": true,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "CallnextQueue"
+ },
+ {
+  "theme": "dark",
+  "w": 390,
+  "name": "admin-overview",
+  "clock": {
+   "text": "Friday, Nov 6·3:06:10PM",
+   "h": 31,
+   "w": 343,
+   "right": 359,
+   "date": 18,
+   "time": 30.6,
+   "ap": 18,
+   "base": [
+    255,
+    256,
+    255
+   ]
+  },
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "ThebusinessOverview"
+ },
+ {
+  "theme": "dark",
+  "w": 390,
+  "name": "admin-money",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [
+   2911,
+   1608,
+   1303
+  ],
+  "owners": [
+   652,
+   651
+  ],
+  "empty": false,
+  "title": "In,outandsplitMoney"
+ },
+ {
+  "theme": "dark",
+  "w": 390,
+  "name": "admin-money-last",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [
+   18831,
+   8377,
+   10454
+  ],
+  "owners": [
+   5227,
+   5227
+  ],
+  "empty": false,
+  "title": "In,outandsplitMoney"
+ },
+ {
+  "theme": "dark",
+  "w": 390,
+  "name": "admin-connect",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "PlugitinConnect"
+ },
+ {
+  "theme": "dark",
+  "w": 390,
+  "name": "admin-setup-empty",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [],
+  "owners": [],
+  "empty": true,
+  "title": "PlugitinConnect"
+ },
+ {
+  "theme": "dark",
+  "w": 390,
+  "name": "admin-agents",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Agents",
+   "Fulfillment",
+   "Leads",
+   "Clients",
+   "Money"
+  ],
+  "railConnect": true,
+  "railApp": false,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "WhosellsAgents"
+ },
+ {
+  "theme": "dark",
+  "w": 390,
+  "name": "agent-overview",
+  "clock": {
+   "text": "Friday, Nov 6·3:06:27PM",
+   "h": 31,
+   "w": 343,
+   "right": 359,
+   "date": 18,
+   "time": 30.6,
+   "ap": 18,
+   "base": [
+    255,
+    256,
+    255
+   ]
+  },
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Leads",
+   "Clients",
+   "Calendar",
+   "Activity",
+   "Billing"
+  ],
+  "railConnect": false,
+  "railApp": true,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "TodayOverview"
+ },
+ {
+  "theme": "dark",
+  "w": 390,
+  "name": "agent-leads",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Leads",
+   "Clients",
+   "Calendar",
+   "Activity",
+   "Billing"
+  ],
+  "railConnect": false,
+  "railApp": true,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "YourLeads"
+ },
+ {
+  "theme": "dark",
+  "w": 390,
+  "name": "va-overview",
+  "clock": {
+   "text": "Friday, Nov 6·3:06:33PM",
+   "h": 31,
+   "w": 343,
+   "right": 359,
+   "date": 18,
+   "time": 30.6,
+   "ap": 18,
+   "base": [
+    255,
+    256,
+    255
+   ]
+  },
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Queue",
+   "Schedule",
+   "Clients",
+   "Servicing",
+   "Pay"
+  ],
+  "railConnect": false,
+  "railApp": true,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "TodayOverview"
+ },
+ {
+  "theme": "dark",
+  "w": 390,
+  "name": "va-queue",
+  "clock": null,
+  "overflowX": false,
+  "mainShown": true,
+  "tabs": [
+   "Overview",
+   "Queue",
+   "Schedule",
+   "Clients",
+   "Servicing",
+   "Pay"
+  ],
+  "railConnect": false,
+  "railApp": true,
+  "money": [],
+  "owners": [],
+  "empty": false,
+  "title": "CallnextQueue"
+ }
+]

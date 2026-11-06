@@ -185,6 +185,31 @@ const seedRevenue = [
   { wk: 'Oct 19', plans: 1891, leads: 2960 }, { wk: 'Oct 26', plans: 1891, leads: 3105 },
 ]
 
+// P864 — Money: the owners who split the profit, their draws, and what each period cost besides VA pay (sample).
+// Brought in = what agents paid (lead budgets charged, servicing plans, setup fees). VA payouts count when the run is paid.
+export const OWNERS = [{ id: 'ow-brayden', name: 'Brayden' }, { id: 'ow-jordan', name: 'Jordan' }]
+export const SETUP_FEE = 297
+const seedSetupFees = [
+  { id: 'su-1', agent: 'Elena Torres', paid: 'Mon, Oct 12', period: 'last' },
+  { id: 'su-2', agent: 'Ben Carter', paid: 'Mon, Oct 19', period: 'last' },
+]
+// Owner draws: paid out of a month's profit. October was paid in two draws; November is not paid yet.
+const seedDraws = [
+  { id: 'dr-1', owner: 'ow-brayden', paid: 'Mon, Nov 2', amount: 2500, period: 'last' },
+  { id: 'dr-2', owner: 'ow-jordan', paid: 'Mon, Nov 2', amount: 2500, period: 'last' },
+  { id: 'dr-3', owner: 'ow-brayden', paid: 'Fri, Oct 16', amount: 2000, period: 'last' },
+  { id: 'dr-4', owner: 'ow-jordan', paid: 'Fri, Oct 16', amount: 2000, period: 'last' },
+]
+// The rest of each period's costs. Ad spend this week is read from Connect's ad accounts; Nov 1 (a Sunday) adds a little.
+// Tools (texting, phone lines, software) bill on the 1st, so they land in a month and not in this week.
+const PERIOD_COSTS = {
+  week: { adsExtra: 0, tools: 0 },
+  month: { adsExtra: 140, tools: 412 },
+  last: { ads: 6140, tools: 412 },
+}
+export const PERIODS = [['week', 'This week', 'Mon, Nov 2 to today'], ['month', 'This month', 'Nov 1 to today'], ['last', 'Last month', 'October']]
+export const CARD_FEE = 0.03
+
 const seedThreads = [
   { id: 'th-dana', who: 'ag-dana', unread: 1, messages: [
     { id: 'm1', from: 'them', text: 'Can I take more live transfers next week? I have Tuesday and Thursday open.', at: 'Today, 10:02 AM' },
@@ -234,6 +259,7 @@ const seedSettings = {
   switches: { sms_live: false, voice_live: false, recording_live: false, invite_sms_live: false, payouts_live: false, billing_enforced: false, submit_live: true, carrier_lookup_live: false, signup_open: false },
   payRules: { perCancel: 18, weeklyMin: 0, holdCap: 40 },
   payoutsPaused: false,
+  split: { brayden: 50, changed: null },
   liveRoom: 'https://meet.example.com/ohvara-room',
   notifications: [
     { key: 'lead', label: 'A lead comes in with no agent', push: true, email: false },
@@ -285,16 +311,44 @@ const seedConnect = {
   },
 }
 
+// P864 — Connect > Setup (sample until P858): the playbook's workflows (A1 to E3, GHL Build Spec) and the tracking numbers.
+export const PLAYBOOK = [
+  { code: 'A1', name: 'New lead: instant text', on: true, last: 'Today, 9:42 AM' },
+  { code: 'A2', name: 'Not reached: check-in texts', on: true, last: 'Today, 9:15 AM' },
+  { code: 'A3', name: 'Booked: confirmation and reminders', on: true, last: 'Today, 10:03 AM' },
+  { code: 'A4', name: 'Rescheduled: new reminders', on: true, last: 'Wed, 4:20 PM' },
+  { code: 'A5', name: 'No-show: rebook texts', on: true, last: 'Wed, 2:05 PM' },
+  { code: 'B1', name: 'Tracking number call: forward to the VA desk', on: true, last: 'Today, 10:11 AM' },
+  { code: 'B2', name: 'Missed call: text back', on: true, last: 'Today, 8:57 AM' },
+  { code: 'B3', name: 'Booked after a call: reminders', on: true, last: 'Today, 9:30 AM' },
+  { code: 'C1', name: 'Cancellation call: confirmation and reminders', on: true, last: 'Wed, 11:40 AM' },
+  { code: 'C2', name: 'Cancellation call missed: rebook text', on: true, last: 'Tue, 3:12 PM' },
+  { code: 'D1', name: 'Policy issued: packet texts', on: true, last: 'Wed, 1:18 PM' },
+  { code: 'D2', name: 'Review call: reminders', on: true, last: 'Mon, 10:00 AM' },
+  { code: 'D3', name: 'Payment missed: reminder text', on: false, last: '' },
+  { code: 'D4', name: 'Annual review: booking text', on: false, last: '' },
+  { code: 'E1', name: 'Agent alert: new lead', on: true, last: 'Today, 9:42 AM' },
+  { code: 'E2', name: 'Agent alert: booked', on: true, last: 'Today, 10:03 AM' },
+  { code: 'E3', name: 'Agent alert: no-show or missed transfer', on: true, last: 'Wed, 2:05 PM' },
+]
+export const TRACKING = [
+  { id: 'tn-1', number: '(512) 555-0142', label: 'Mortgage protection campaigns', to: 'the VA desk', calls: 23 },
+  { id: 'tn-2', number: '(512) 555-0177', label: 'Final expense campaigns', to: 'the VA desk', calls: 9 },
+  { id: 'tn-3', number: '(512) 555-0188', label: 'Landing page', to: 'the VA desk', calls: 4 },
+]
+
 let state = {
   agents: seedAgents, vas: seedVas, invites: seedInvites, leads: seedLeads, clients: seedClients, steps: seedSteps, calls: seedCalls,
   rota: seedRota, dayOff: seedDayOff, cancels: seedCancels, runs: seedRuns, revenue: seedRevenue, threads: seedThreads, feed: seedFeed,
-  settings: seedSettings, carriers: seedCarriers, bugs: seedBugs, audit: seedAudit, connect: seedConnect, viewAs: 'admin',
+  settings: seedSettings, carriers: seedCarriers, bugs: seedBugs, audit: seedAudit, connect: seedConnect, viewAs: 'admin', setupFees: seedSetupFees, draws: seedDraws,
 }
 const listeners = new Set()
 const set = fn => { state = { ...state, ...fn(state) }; listeners.forEach(l => l()) }
 const subscribe = fn => { listeners.add(fn); return () => listeners.delete(fn) }
 const useStore = () => useSyncExternalStore(subscribe, () => state)
 const ok = data => ({ data, isLoading: false, error: null })
+// The sample store as it is now (tests read Money's numbers from it without React).
+export const admSnapshot = () => state
 
 const nameOf = (s, id) => s.agents.find(a => a.id === id)?.name || s.vas.find(v => v.id === id)?.name || (id === PARTNER.id ? PARTNER.name : '')
 export const RATE = () => state.settings.payRules.perCancel
@@ -400,6 +454,46 @@ export function useAdmMoney() {
   })
 }
 
+// P864 — Money for one period ('week' | 'month' | 'last'): brought in, costs, profit and the owners' split. Every number
+// comes from the same sample as the rest of admin (agents' plans, leads charged, Connect's ad spend, past pay runs).
+export function moneyFor(s, period) {
+  const weekPlans = s.agents.filter(a => !a.comped && a.billing.status !== 'past_due').reduce((t, a) => t + PLANS[a.plan].price, 0)
+  const weekLeads = s.leads.filter(l => l.agent_id).reduce((t, l) => t + LEAD_PRICE[l.kind], 0)
+  const oct = s.revenue.filter(w => w.wk.startsWith('Oct'))
+  const cur = period === 'last' ? 'last' : 'now'
+  const setup = s.setupFees.filter(f => (f.period === 'last') === (cur === 'last')).reduce(t => t + SETUP_FEE, 0)
+  const budgets = cur === 'last' ? oct.reduce((t, w) => t + w.leads, 0) : weekLeads
+  const servicing = cur === 'last' ? oct.reduce((t, w) => t + w.plans, 0) : weekPlans
+  const inTotal = budgets + servicing + setup
+  const weekAds = s.connect.ads.reduce((t, a) => t + a.spent, 0)
+  const pc = PERIOD_COSTS[period]
+  const ads = period === 'last' ? pc.ads : weekAds + pc.adsExtra
+  // Pay runs paid inside the period: Mon, Nov 2 for this week and month; Oct 12, 19 and 26 for October.
+  const runs = s.runs.filter(r => (cur === 'last' ? r.paid.includes('Oct') : r.paid.includes('Nov')))
+  const vaPay = runs.reduce((t, r) => t + r.amount, 0)
+  const fees = Math.round(inTotal * CARD_FEE)
+  const tools = pc.tools
+  const costTotal = ads + vaPay + fees + tools
+  const profit = inTotal - costTotal
+  const bp = s.settings.split.brayden
+  const split = OWNERS.map((o, i) => {
+    const pct = i === 0 ? bp : 100 - bp
+    const amount = i === 0 ? Math.round((profit * pct) / 100) : profit - Math.round((profit * bp) / 100)
+    const draws = s.draws.filter(d => d.owner === o.id && (d.period === 'last') === (cur === 'last'))
+    const paid = draws.reduce((t, d) => t + d.amount, 0)
+    return { ...o, pct, amount, paid, owed: Math.max(0, amount - paid) }
+  })
+  return {
+    period, budgets, servicing, setup, setupCount: setup / SETUP_FEE, inTotal,
+    ads, vaPay, runs, fees, tools, costTotal, profit, split, splitChanged: s.settings.split.changed,
+  }
+}
+export function useAdmPeriod(period = 'week') { const s = useStore(); return ok(moneyFor(s, period)) }
+export function useAdmDraws() {
+  const s = useStore()
+  return ok(OWNERS.map(o => ({ ...o, draws: s.draws.filter(d => d.owner === o.id), total: s.draws.filter(d => d.owner === o.id).reduce((t, d) => t + d.amount, 0) })))
+}
+
 // The page heads and the Overview read this: the business today in one place.
 export function useAdmDay() {
   const s = useStore()
@@ -488,6 +582,11 @@ export function useAdmActions() {
     decideCancel: (id, pay, note) => set(s => {
       const c = s.cancels.find(x => x.id === id)
       return { cancels: pay ? patchById(s.cancels, id, { status: 'verified', note }) : s.cancels.filter(x => x.id !== id), ...audit(s, pay ? 'Marked a cancellation paid' : "Didn't pay a cancellation", `${c.client}, ${c.carrier}${note ? ` (${note})` : ''}`) }
+    }),
+    // P864: the owners' profit split (Brayden's share; Jordan gets the rest). Written to the audit log.
+    setSplit: brayden => set(s => {
+      const b = Math.max(0, Math.min(100, Math.round(brayden)))
+      return { settings: { ...s.settings, split: { brayden: b, changed: { who: ME.name, at: `Today, ${stamp()}` } } }, ...audit(s, 'Changed the profit split', `Brayden ${b}% · Jordan ${100 - b}%`) }
     }),
     setPaused: on => set(s => ({ settings: { ...s.settings, payoutsPaused: on }, ...audit(s, on ? 'Paused payouts' : 'Resumed payouts', 'Monday pay run') })),
     // Settings

@@ -79,18 +79,20 @@ export function admRoutes(preview) {
   return out
 }
 
-// The top tabs, in order. Messages and Settings live on the rail and the top right, as on the other two sides.
+// The top tabs, in order. Messages, Connect (P864) and Settings live on the rail and the top right, as on the other two sides.
 // The inbounds page reads "Leads" on screen: the word guard (scripts/check-wording.mjs) bans the word inbound in
 // rendered text anywhere in src. Code names and the /admin/inbounds address keep it.
 export const ADM_TABS = [
-  ['overview', 'Overview'], ['agents', 'Agents'], ['team', 'Fulfillment'], ['leads', 'Leads'], ['clients', 'Clients'], ['billing', 'Billing'], ['connect', 'Connect'],
+  ['overview', 'Overview'], ['agents', 'Agents'], ['team', 'Fulfillment'], ['leads', 'Leads'], ['clients', 'Clients'], ['billing', 'Money'],
 ]
+// Every page's short name (tabs, the phone bar, search), including the rail-only pages.
+export const ADM_LABELS = { ...Object.fromEntries(ADM_TABS), messages: 'Messages', settings: 'Settings', connect: 'Connect' }
 // What Jordan's partner login sees (sample until a partner role exists: a migration, door item).
 export const PARTNER_PAGES = ['connect', 'leads', 'messages']
 
 const TITLES = {
   overview: ['The business', 'Overview'], agents: ['Who sells', 'Agents'], team: ['Who serves', 'Fulfillment team'],
-  leads: ['Every agent', 'Leads'], clients: ['Every book', 'Clients'], billing: ['Money in and out', 'Billing & revenue'],
+  leads: ['Every agent', 'Leads'], clients: ['Every book', 'Clients'], billing: ['In, out and split', 'Money'],
   messages: ['Admin lines', 'Messages'], settings: ['Run the portal', 'Settings'], connect: ['Plug it in', 'Connect'],
 }
 export const admTitleOf = page => TITLES[page] || TITLES.overview

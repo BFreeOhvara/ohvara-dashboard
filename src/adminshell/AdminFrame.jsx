@@ -16,10 +16,10 @@ import { isSearchKey } from '../lib/searchKey'
 import { SUPPORT_EMAIL } from '../components/auth/authUtils'
 import {
   useAdmDay, useAdmAgents, useAdmVas, useAdmLeads, useAdmClients, useAdmFeed, useAdmSettings, useAdmMoney, useAdmActions, useAdmViewAs,
-  useAdmInvites, useAdmConnect, PARTNER, plugged,
+  useAdmInvites, useAdmConnect, useAdmPeriod, PARTNER, plugged,
 } from './data'
 import { LiveClock } from '../template/Clock'
-import { ap, ADM_TABS, PARTNER_PAGES, admPageOf, admTitleOf } from './paths'
+import { ap, ADM_TABS, ADM_LABELS, PARTNER_PAGES, admPageOf, admTitleOf } from './paths'
 import { STAGE_WORD } from './words'
 import '../template/glass.css'
 import '../template/flow.css'
@@ -146,7 +146,7 @@ function AccountMenu({ open, onClose, theme, setTheme, partner, flipPartner, pre
   const name = partner ? PARTNER.name : account.name
   const links = partner
     ? [['connect', 'Connect', Plug], ['messages', 'Messages', MessageSquare]]
-    : [['settings', 'Settings', Settings], ['messages', 'Messages', MessageSquare], ['billing', 'Billing & revenue', Landmark]]
+    : [['settings', 'Settings', Settings], ['messages', 'Messages', MessageSquare], ['billing', 'Money', Landmark]]
   return (
     <div className={`tp fx-layer fx-menu-layer${leaving ? ' is-leaving' : ''}`} role="presentation">
       <button type="button" className="fx-scrim is-clear tp-bare" aria-label="Close menu" tabIndex={-1} onClick={onClose} />
@@ -177,6 +177,7 @@ function useHeadStats(page) {
   const { data: m } = useAdmMoney()
   const { data: invites } = useAdmInvites()
   const { data: connect } = useAdmConnect()
+  const { data: wk } = useAdmPeriod('week')
   const S = (icon, n, label, extra = {}) => ({ icon, n, label, ...extra })
   const route = day.unassigned.length + day.missed.length
   const att = clients.filter(c => c.stage === 'needs_attention').length
@@ -187,7 +188,7 @@ function useHeadStats(page) {
     team: [S(Headset, day.onShift.length, 'on shift today'), S(CalendarOff, day.requests.length, 'day-off requests', { chip: day.requests.length ? ['To answer', 'warn'] : null }), S(Wallet, vas.reduce((t, v) => t + v.week.verified + v.week.checking, 0), 'VA pay this week', { fmt: money })],
     leads: [S(PhoneIncoming, day.week.in, 'leads this week'), S(Shuffle, route, 'need routing', { chip: route ? ['Route now', 'warn'] : null }), S(CheckCircle2, day.week.sold, 'sold this week')],
     clients: [S(BookUser, clients.length, 'clients'), S(TriangleAlert, att, 'need attention', { chip: att ? ['See who', 'warn'] : null }), S(CalendarDays, clients.reduce((n, c) => n + c.steps.length, 0), 'servicing steps open')],
-    billing: [S(CircleDollarSign, m.total, 'revenue this week', { fmt: money }), S(TriangleAlert, m.failed.length, 'failed payments', { chip: m.failed.length ? ['Follow up', 'warn'] : null }), S(Wallet, m.runTotal, `pays ${m.payday.replace('Mon, ', '')}`, { fmt: money })],
+    billing: [S(CircleDollarSign, wk.inTotal, 'brought in this week', { fmt: money }), S(Wallet, wk.profit, 'profit this week', { fmt: money, chip: [`${wk.split[0].pct}/${wk.split[1].pct} split`, 'blue'] }), S(TriangleAlert, m.failed.length, 'failed payments', { chip: m.failed.length ? ['Follow up', 'warn'] : null })],
     connect: [S(Link2, linked, 'of 5 plugged in'), S(PhoneForwarded, connect.ads.length, 'ad accounts'), S(Plug, connect.sources.forms.filter(f => f.on).length, 'forms on')],
     settings: [S(Users, agents.length + vas.length, 'people with a login'), S(Radio, 0, 'live switches on', { chip: ['Sample', 'blue'] }), S(Bug, day.openBugs, 'open bug reports')],
   }[page] || []
@@ -234,7 +235,7 @@ export default function AdminFrame({ preview = false }) {
     ],
     leads: leads.map(l => ({ id: `l-${l.id}`, name: l.name, sub: `${STAGE_WORD[l.stage]} · ${l.agent || 'no agent'}`, hay: `${l.name} ${l.phone} ${l.city} ${l.agent || ''}`, go: () => ap('leads', l.id) })),
   }), [clients, agents, vas, leads])
-  const pages = [...tabs.map(([k, label]) => ({ to: () => ap(k), label })), { to: () => ap('messages'), label: 'Messages' }, ...(partner ? [] : [{ to: () => ap('settings'), label: 'Settings' }])]
+  const pages = [...tabs.map(([k, label]) => ({ to: () => ap(k), label })), { to: () => ap('messages'), label: 'Messages' }, { to: () => ap('connect'), label: 'Connect' }, ...(partner ? [] : [{ to: () => ap('settings'), label: 'Settings' }])]
 
   const appRef = useRef(null)
   useLayoutEffect(() => {
@@ -323,8 +324,8 @@ export default function AdminFrame({ preview = false }) {
               ))}
             </ul>
           )}
-          {/* P860: the live clock, one line, right side of every page's title row (it left the top bar) */}
-          {layout !== 'messages' && <LiveClock tz={settings.tz} />}
+          {/* P860 + P864: the live clock, one line on the title row, on Overview only */}
+          {layout === 'overview' && <LiveClock tz={settings.tz} />}
         </div>
 
         <main className={`tp-main fx-main adm-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>
@@ -334,7 +335,7 @@ export default function AdminFrame({ preview = false }) {
       </div>
 
       <nav className="tp-bar fx-bar" aria-label="Pages">
-        {(partner ? ['connect', 'leads'] : ['overview', 'leads']).map(k => { const I = ICONS[k]; return <Link key={k} to={ap(k)} className={`fx-btab${active === k ? ' is-on' : ''}`}><I size={20} aria-hidden="true" />{ADM_TABS.find(t => t[0] === k)[1]}</Link> })}
+        {(partner ? ['connect', 'leads'] : ['overview', 'leads']).map(k => { const I = ICONS[k]; return <Link key={k} to={ap(k)} className={`fx-btab${active === k ? ' is-on' : ''}`}><I size={20} aria-hidden="true" />{ADM_LABELS[k]}</Link> })}
         {partner
           ? <Link to={ap('messages')} className={`fx-btab${active === 'messages' ? ' is-on' : ''}`}><MessageSquare size={20} aria-hidden="true" />Messages</Link>
           : <button type="button" className="fx-btab is-plus" aria-label="Add someone" onClick={() => setPanel('add')}><span className="fx-bplus"><Plus size={22} aria-hidden="true" /></span>Add</button>}

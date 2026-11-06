@@ -409,8 +409,8 @@ export default function FulFrame() {
               ))}
             </ul>
           )}
-          {/* P847 + P860: the live clock, one line, right side of every page's title row, in the zone from Settings */}
-          {layout !== 'messages' && <LiveClock tz={fulTz} />}
+          {/* P847 + P860 + P864: the live clock, one line on the title row, Overview only, in the zone from Settings */}
+          {layout === 'overview' && <LiveClock tz={fulTz} />}
         </div>
 
         <main className={`tp-main fx-main fs-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>

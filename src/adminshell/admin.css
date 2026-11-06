@@ -298,8 +298,59 @@
   .adm-audit li > small:first-child { width: auto; }
   .adm-tl-axis span:nth-child(even) { display: none; }
 }
+/* P864 — Money: the period switch, the three totals (Brought in, Costs, Profit), the waterfall and the owners' split. */
+.adm-money { display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
+.adm-money-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.adm-money-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
+.adm-total .fx-huge { display: block; margin: 2px 0 12px; }
+.adm-total.is-profit .fx-huge { color: var(--sh-fi-sage); }
+.adm-total.is-profit.is-loss .fx-huge { color: var(--ov-bad); }
+.adm-total .adm-sum li > .tp-grow { min-width: 0; }
+.adm-total .adm-sum b { font-size: 15px; }
+.adm-fall { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; height: 190px; padding-top: 4px; }
+.adm-fall > span { position: relative; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; height: 100%; }
+.adm-fall i { position: absolute; left: 0; right: 0; bottom: calc(24px + var(--b) * 142px); height: calc(var(--h) * 142px); min-height: 3px; border-radius: 10px; background: var(--ov-data-a); animation: fx-up .5s var(--fx-ease) both; animation-delay: calc(var(--i) * 70ms); }
+.adm-fall-cost i { background: color-mix(in srgb, var(--ov-warn) 55%, transparent); }
+.adm-fall-profit i { background: var(--sh-fi-sage); }
+.adm-fall i b { position: absolute; font-style: normal; left: 50%; bottom: calc(100% + 4px); transform: translateX(-50%); font-size: 12px; font-weight: 600; color: var(--ov-hi); white-space: nowrap; }
+.adm-fall small { font-size: 12px; color: var(--ov-mid); text-align: center; }
+.adm-split .adm-owners { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.adm-owner { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
+.adm-owner .tp-grow { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.adm-owner .tp-grow > b { font-size: 14px; color: var(--ov-hi); }
+.adm-owner .tp-grow > small { font-size: 12px; color: var(--ov-mid); }
+.adm-owner .fx-meter { margin-top: 4px; }
+.adm-owner-n { font-family: var(--font-display); font-size: 22px; color: var(--ov-hi); }
+.adm-split-edit { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 16px; margin-bottom: 12px; padding: 12px 14px; border-radius: 16px; background: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
+.adm-split-edit .tp-field { width: 170px; }
+.adm-split-edit .fx-form-f { margin-left: auto; }
+.adm-audit-line { display: flex; align-items: center; gap: 6px; margin: 10px 0 0; font-size: 12px; color: var(--ov-mid); }
+.adm-owner-sum { margin-top: 10px; }
+/* The Engine-slot pill: on any piece GoHighLevel powers. Muted until connected, sage once it is. */
+.adm-engine { display: inline-flex; align-items: center; gap: 6px; width: fit-content; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 11px; font-weight: 600; color: var(--sh-fi-stone); background: var(--sh-f-stone); white-space: nowrap; }
+.adm-engine i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .7; }
+.adm-engine.is-on { color: var(--sh-fi-sage); background: var(--sh-f-sage); }
+.adm-engine-sm { display: flex; max-width: 100%; margin-top: 4px; height: auto; min-height: 20px; padding: 3px 9px; font-size: 10.5px; line-height: 1.3; white-space: normal; }
+/* Connect > Setup */
+.adm-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 48px 24px; text-align: center; }
+.adm-empty h2 { margin: 6px 0 0; font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--ov-hi); }
+.adm-empty .tp-sub { max-width: 520px; margin: 0; }
+.adm-empty-ic { display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 18px; color: var(--sh-fi-sky); background: var(--sh-f-sky); }
+.adm-empty-go { justify-content: center; margin-top: 6px; }
+.adm-code { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 26px; border-radius: 9px; font-size: 12px; color: var(--sh-fi-sky); background: var(--sh-f-sky); }
+.adm-wfl .fx-mrow small { display: block; }
+@media (max-width: 1279.98px) {
+  .adm-money-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .adm-money-grid .is-profit { grid-column: 1 / -1; }
+}
+@media (max-width: 767px) {
+  .adm-money-grid, .adm-split .adm-owners { grid-template-columns: minmax(0, 1fr); }
+  .adm-fall { height: 160px; }
+  .adm-fall i { bottom: calc(24px + var(--b) * 112px); height: calc(var(--h) * 112px); }
+  .adm-split-edit .fx-form-f { margin-left: 0; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .adm-dd-pop, .adm-dd-pop.is-leaving, .adm-daybars i, .adm-minibars i, .adm-revbars i, .adm-funnel li, .adm-tr, .adm-tl-row, .adm-day, .adm-shiftchip, .adm-place, .adm-audit li, .adm-tabpane { animation: none; }
+  .adm-dd-pop, .adm-dd-pop.is-leaving, .adm-daybars i, .adm-minibars i, .adm-revbars i, .adm-funnel li, .adm-tr, .adm-tl-row, .adm-day, .adm-shiftchip, .adm-place, .adm-audit li, .adm-tabpane, .adm-fall i { animation: none; }
   .adm-tl-dot.is-live { animation: none; }
   .adm-chip, .adm-agent, .adm-day, .adm-x, .adm-tl-dot { transition: none; }
 }

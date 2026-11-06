@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, ChevronDown } from 'lucide-react'
 import { useExit } from '../template/motion'
+import { engineState } from './engine'
 
 // P849 — the Admin side's own small pieces, beside the shared kit (src/template/kit.jsx, imported, never edited).
 
@@ -117,3 +118,10 @@ export function DField({ label, hint, children }) {
   return <div className="tp-field"><span>{label}</span>{children}{hint && <small>{hint}</small>}</div>
 }
 
+
+// P864 — the Engine-slot pill (rule at the top of the CC queue): on any admin or VA piece GoHighLevel powers. Its
+// state comes from engineState (./engine.js, read through src/lib/ghlStatus.js). Never on an agent screen.
+export function EngineSlot({ settings = null, deployed, className = '' }) {
+  const { on, line } = engineState(settings, deployed)
+  return <span className={`adm-engine${on ? ' is-on' : ''} ${className}`.trim()}><i aria-hidden="true" />{line}</span>
+}

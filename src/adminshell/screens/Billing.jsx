@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Play, Pause, CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Ban, Wallet, Megaphone } from 'lucide-react'
-import { useAdmMoney, useAdmAgents, useAdmActions, PLANS } from '../data'
-import { Avatar, Chip, PillTabs, SampleTag, Switch, useNote } from '../../template/kit'
+import { Play, Pause, CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Ban, Wallet, Megaphone, Headset, Receipt, Wrench, BadgeDollarSign, PiggyBank, Pencil, History } from 'lucide-react'
+import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, PLANS, PERIODS, SETUP_FEE, CARD_FEE } from '../data'
+import { Avatar, Chip, PillTabs, SampleTag, Seg, Switch, useNote } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
-import { Tile } from '../kit'
+import { Tile, EngineSlot } from '../kit'
 import { ap } from '../paths'
 import { BILL_WORD, BANK_WORD } from '../words'
 
+// P864 — Money (it was Billing & revenue): at the top, for This week / This month / Last month, what came in (what agents
+// paid), what it cost (ad spend, VA payouts, card fees, tools), the profit, and the owners' split (Brayden and Jordan,
+// 50/50 by default, a setting with an audit line). Both admins see everything, each other's payouts too. Below it, kept:
 // P849 — Billing & revenue: money in (agents' plans and lead spend, by week, each agent's bill and the failed
 // payments) and money out (the Monday VA pay run, cancellations that need a listen with Pay it / Don't pay as
 // fulfillment_decide_cancel does today, past runs, the Stripe balance and the pause switch). Sample amounts and prices.
@@ -95,6 +98,103 @@ function Revenue() {
   )
 }
 
+// A dollar line in a breakdown list.
+const Line = ({ icon: Icon, label, sub, n, extra, neg }) => (
+  <li><Icon size={14} aria-hidden="true" /><span className="tp-grow">{label}{sub && <small>{sub}</small>}{extra}</span><b className="tp-money">{neg && n > 0 ? '−' : ''}{money(n)}</b></li>
+)
+
+// Brought in → Costs → Profit as a small waterfall: costs float from the profit up to what came in.
+function Waterfall({ p }) {
+  const top = Math.max(p.inTotal, 1)
+  const pos = Math.max(0, p.profit)
+  const cols = [
+    { k: 'in', label: 'Brought in', n: p.inTotal, b: 0, h: p.inTotal / top },
+    { k: 'cost', label: 'Costs', n: p.costTotal, b: pos / top, h: p.costTotal / top, neg: true },
+    { k: 'profit', label: 'Profit', n: p.profit, b: 0, h: pos / top },
+  ]
+  return (
+    <div className="adm-fall" role="img" aria-label={`Brought in ${money(p.inTotal)}, costs ${money(p.costTotal)}, profit ${money(p.profit)}`}>
+      {cols.map((c, i) => (
+        <span key={c.k} className={`adm-fall-${c.k}`} style={{ '--i': i }}>
+          <i style={{ '--b': c.b, '--h': Math.max(c.h, 0.004) }}><b className="tp-money">{c.neg ? '−' : ''}{money(c.n)}</b></i>
+          <small>{c.label}</small>
+        </span>
+      ))}
+    </div>
+  )
+}
+
+// The owners' split: each one's share of the period's profit, paid out so far and still owed. The split is a setting.
+function Split({ p }) {
+  const { setSplit } = useAdmActions()
+  const note = useNote()
+  const [edit, setEdit] = useState(false)
+  const [b, setB] = useState(p.split[0].pct)
+  const valid = Number.isFinite(b) && b >= 0 && b <= 100
+  const save = () => { setSplit(b); setEdit(false); note(`Split saved: Brayden ${b}% · Jordan ${100 - b}%`) }
+  const sum = p.split.reduce((t, o) => t + o.amount, 0)
+  return (
+    <Tile className="adm-split" i={3} title="Profit split" sub={`${p.split.map(o => `${o.name} ${o.pct}%`).join(' · ')} · adds up to ${money(sum)}`}
+      aside={!edit && <button type="button" className="fx-pillbtn" onClick={() => { setB(p.split[0].pct); setEdit(true) }}><Pencil size={13} />Change split</button>}>
+      {edit && (
+        <div className="adm-split-edit">
+          <label className="tp-field"><span>Brayden's share (%)</span><input className="tp-num" inputMode="numeric" value={Number.isFinite(b) ? b : ''} aria-invalid={!valid} onChange={e => setB(e.target.value === '' ? NaN : Number(e.target.value.replace(/[^0-9]/g, '')))} /></label>
+          <p className="tp-sub">Jordan gets the rest: <b className="tp-num">{valid ? 100 - b : '–'}%</b></p>
+          <footer className="fx-form-f"><button type="button" className="tp-btn ov-ghost" onClick={() => setEdit(false)}>Cancel</button><button type="button" className="tp-primary fx-accent" disabled={!valid || b === p.split[0].pct} onClick={save}>Save split</button></footer>
+        </div>
+      )}
+      <ul className="tp-list adm-owners">{p.split.map(o => (
+        <li key={o.id} className="adm-owner">
+          <Avatar name={o.name} />
+          <span className="tp-grow"><b>{o.name} · {o.pct}%</b><small>{money(o.paid)} paid out · {money(o.owed)} owed</small>
+            <span className="fx-meter" role="img" aria-label={`${money(o.paid)} of ${money(Math.max(0, o.amount))} paid`}><i style={{ '--w': o.amount > 0 ? Math.min(1, o.paid / o.amount) : 0 }} /></span>
+          </span>
+          <b className="tp-money adm-owner-n">{money(o.amount)}</b>
+        </li>
+      ))}</ul>
+      <p className="adm-audit-line"><History size={13} aria-hidden="true" />{p.splitChanged ? `Changed by ${p.splitChanged.who}, ${p.splitChanged.at}. In the audit log.` : '50/50 since the start. Any change goes in the audit log.'}</p>
+    </Tile>
+  )
+}
+
+function MoneyTop({ period, setPeriod }) {
+  const { data: p } = useAdmPeriod(period)
+  const span = PERIODS.find(x => x[0] === period)
+  const margin = p.inTotal ? Math.round((p.profit / p.inTotal) * 100) : 0
+  return (
+    <section className="adm-money" aria-label="Money for the period">
+      <div className="adm-money-bar">
+        <Seg label="Period" value={period} onChange={setPeriod} options={PERIODS.map(([k, label]) => ({ key: k, label }))} />
+        <small className="tp-sub">{span[2]} · sample numbers</small>
+      </div>
+      <div className="adm-money-grid">
+        <Tile className="adm-total is-in" i={0} title="Brought in" sub="Everything agents paid">
+          <b className="fx-huge tp-money"><CountUp value={p.inTotal} format={money} /></b>
+          <ul className="adm-sum">
+            <Line icon={Megaphone} label="Lead budgets" sub="Leads charged to agents" n={p.budgets} />
+            <Line icon={BadgeDollarSign} label="Servicing plans" sub="Weekly plan fees" n={p.servicing} />
+            <Line icon={Receipt} label="Setup fees" sub={p.setupCount ? `${p.setupCount} new ${p.setupCount === 1 ? 'agent' : 'agents'} · ${money(SETUP_FEE)} each` : 'No new agents'} n={p.setup} />
+          </ul>
+        </Tile>
+        <Tile className="adm-total is-cost" i={1} title="Costs" sub="What it took to run">
+          <b className="fx-huge tp-money"><CountUp value={p.costTotal} format={money} /></b>
+          <ul className="adm-sum">
+            <Line icon={Megaphone} label="Ad spend" extra={<EngineSlot className="adm-engine-sm" />} n={p.ads} neg />
+            <Line icon={Headset} label="VA payouts" sub={p.runs.length ? `${p.runs.length} pay ${p.runs.length === 1 ? 'run' : 'runs'} paid` : 'No run paid yet'} n={p.vaPay} neg />
+            <Line icon={CreditCard} label="Card fees" sub={`About ${Math.round(CARD_FEE * 100)}% of what came in`} n={p.fees} neg />
+            <Line icon={Wrench} label="Tools" sub={p.tools ? 'Texting, phone lines, software' : 'Billed on the 1st'} n={p.tools} neg />
+          </ul>
+        </Tile>
+        <Tile className={`adm-total is-profit${p.profit < 0 ? ' is-loss' : ''}`} i={2} title="Profit" sub={`Brought in minus costs · ${margin}% kept`}>
+          <b className="fx-huge tp-money"><CountUp value={p.profit} format={money} /></b>
+          <Waterfall p={p} />
+        </Tile>
+      </div>
+      <Split p={p} key={p.split[0].pct} />
+    </section>
+  )
+}
+
 function AgentBills() {
   const { data: agents } = useAdmAgents()
   const { data: m } = useAdmMoney()
@@ -130,6 +230,19 @@ function AgentBills() {
   )
 }
 
+// Brayden and Jordan as payees: every draw, newest first. Both admins see both.
+function OwnerPayouts() {
+  const { data: owners } = useAdmDraws()
+  return (
+    <Tile i={4} title="Owner payouts" sub="Brayden and Jordan, from the profit split">
+      <ul className="tp-list adm-rows">{owners.flatMap(o => o.draws.map(d => ({ ...d, name: o.name }))).map(d => (
+        <li key={d.id} className="fx-mrow"><Avatar name={d.name} /><span className="tp-grow"><b>{d.name}</b><small>Paid {d.paid} · October profit</small></span><Chip tone="green">Paid</Chip><b className="tp-money">{money(d.amount)}</b></li>
+      ))}</ul>
+      <ul className="adm-sum adm-owner-sum">{owners.map(o => <li key={o.id}><PiggyBank size={14} aria-hidden="true" /><span className="tp-grow">{o.name}<small>Paid out since the start</small></span><b className="tp-money">{money(o.total)}</b></li>)}</ul>
+    </Tile>
+  )
+}
+
 function Payouts() {
   const { data: m } = useAdmMoney()
   const { setPaused } = useAdmActions()
@@ -147,6 +260,7 @@ function Payouts() {
         <Tile i={3} title="Past pay runs" sub={`${money(m.runs.reduce((t, r) => t + r.amount, 0))} paid since the first run`}>
           <ul className="tp-list adm-rows">{m.runs.map(r => <li key={r.id} className="fx-mrow"><CircleCheck size={17} aria-hidden="true" className="adm-ok" /><span className="tp-grow"><b>{r.week}</b><small>{r.people} people · paid {r.paid}</small></span><Chip tone="green">Paid</Chip><b className="tp-money">{money(r.amount)}</b></li>)}</ul>
         </Tile>
+        <OwnerPayouts />
       </div>
       <div className="fx-ovl-side adm-side">
         <Tile className="is-fill is-green" i={0} title="Next pay run" sub={`${m.payday}, ${m.paused ? 'paused' : 'automatically'}`}>
@@ -167,15 +281,19 @@ function Payouts() {
   )
 }
 
-const TABS = [['revenue', 'Revenue'], ['agents', 'Agent billing'], ['payouts', 'VA payouts']]
+const TABS = [['revenue', 'By week'], ['agents', 'Agent billing'], ['payouts', 'Payouts']]
 export default function Billing() {
   const [sp, setSp] = useSearchParams()
   const { data: m } = useAdmMoney()
   const raw = sp.get('tab')
   const tab = TABS.some(t => t[0] === raw) ? raw : 'revenue'
+  const rawP = sp.get('period')
+  const period = PERIODS.some(x => x[0] === rawP) ? rawP : 'week'
+  const put = (k, v, dflt) => { const next = new URLSearchParams(sp); if (v === dflt) next.delete(k); else next.set(k, v); setSp(next, { replace: true }) }
   return (
     <div className="tp-page fx-page adm-billing">
-      <PillTabs label="Billing and revenue" className="fx-ptabs adm-pagetabs" itemClass="fx-ptab" value={tab} onChange={t => setSp(t === 'revenue' ? {} : { tab: t }, { replace: true })}
+      <MoneyTop period={period} setPeriod={v => put('period', v, 'week')} />
+      <PillTabs label="Money details" className="fx-ptabs adm-pagetabs" itemClass="fx-ptab" value={tab} onChange={t => put('tab', t, 'revenue')}
         items={TABS.map(([k, label]) => ({ key: k, label, count: k === 'agents' && m.failed.length ? m.failed.length : k === 'payouts' && m.listen.length ? m.listen.length : undefined }))} />
       <div className="adm-tabpane" key={tab} role="tabpanel">
         {tab === 'revenue' && <Revenue />}

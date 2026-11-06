@@ -307,7 +307,7 @@ export default function FulfillFrame() {
             </ul>
           )}
           {/* P860: the live clock, one line, right side of every page's title row, in the zone from the VA's profile */}
-          <LiveClock tz={d.tz} />
+          {layout === 'today' && <LiveClock tz={d.tz} />}
         </div>
 
         <main className={`tp-main fx-main fs-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>
