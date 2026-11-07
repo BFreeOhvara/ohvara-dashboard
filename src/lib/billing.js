@@ -15,7 +15,8 @@ import { supabase } from './supabase'
 // clients the agent already booked either way; the client shouldn't pay for
 // the agent's card bouncing.
 
-export const GRACE_HOURS = 48
+// P884 (Q4): the membership gets 3 days of grace; lead spend stops at once (see p884_billing_engine.sql).
+export const GRACE_HOURS = 72
 
 export const BILLING_STATUS = {
   none:     { label: 'Not subscribed', tone: 'muted' },

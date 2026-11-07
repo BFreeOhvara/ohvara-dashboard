@@ -28,6 +28,7 @@ function fakeAdmin(profile: any, spend: any[] = []) {
     agent_inbound_spend_log: [],
   }
   const writes: { table: string; op: string; row: any }[] = []
+  const rpcs: { name: string; args: any }[] = []
   const from = (table: string) => {
     const filters: [string, unknown][] = []
     const rows = () => db[table].filter(r => filters.every(([k, v]) => r[k] === v))
@@ -53,8 +54,8 @@ function fakeAdmin(profile: any, spend: any[] = []) {
     return q
   }
   return {
-    db, writes,
-    client: { from, auth: { getUser: async () => ({ data: { user: { id: AGENT, email: 'a@example.com' } } }) } } as any,
+    db, writes, rpcs,
+    client: { from, rpc: async (name: string, args: any) => { rpcs.push({ name, args }); return { error: null } }, auth: { getUser: async () => ({ data: { user: { id: AGENT, email: 'a@example.com' } } }) } } as any,
   }
 }
 
@@ -492,6 +493,22 @@ test('sync: profile writes never touch billing_tier, and the period comes from t
   assert.ok(patch)
   assert.ok(!('billing_tier' in patch.row))
   assert.equal(patch.row.billing_current_period_end, new Date(1794000000 * 1000).toISOString())
+})
+
+test('sync (P884): a renewed period rolls the waiting tier; the same period does not', async () => {
+  const a = fakeAdmin(agent({ billing_current_period_end: new Date(1793000000 * 1000).toISOString() }))
+  await call(a, fakeStripe({ 'GET subscriptions': () => ({ data: [sub([SERVICING])] }) }), { action: 'status' })
+  assert.equal(a.rpcs.length, 0)
+  await call(a, fakeStripe({ 'GET subscriptions': () => ({ data: [sub([SERVICING], { current_period_end: 1795000000 })] }) }), { action: 'status' })
+  assert.deepEqual(a.rpcs, [{ name: 'billing_period_rolled', args: { p_agent: AGENT } }])
+})
+
+test('sync (P884): a failed renewal starts 3 days of grace', async () => {
+  const a = fakeAdmin(agent())
+  await call(a, fakeStripe({ 'GET subscriptions': () => ({ data: [sub([SERVICING], { status: 'past_due' })] }) }), { action: 'status' })
+  const [patch] = a.writes.filter(w => w.table === 'profiles')
+  assert.equal(patch.row.billing_status, 'past_due')
+  assert.equal(Date.parse(patch.row.billing_grace_until) - NOW, 72 * 3600e3)
 })
 
 // ── checkout + portal ───────────────────────────────────────────────────────

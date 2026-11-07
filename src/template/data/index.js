@@ -180,7 +180,6 @@ const seed = {
       { key: 'weekly', label: 'Your week, every Monday', push: true, email: true },
     ],
   },
-  // Prompt 835: a weekly budget (slider), monthly servicing, a one-time setup fee. Prices live in lib/planPricing.
   // cancellations: the old cancellation plan, shown only for an agent already on one (this sample agent is not).
   // P878: the pilot (lead spend only, prepaid weekly) or a paid plan (membership by daily spend + lead spend). Every
   // price is a draft (spendPlan.js). bought = what each lead type bought this week and this month.
