@@ -18,6 +18,14 @@
 //            caller is left, the whole conference is completed.
 //
 // help-transfer reuses helpConferenceName, helpConference, HelpCall and Store.
+//
+// P882 — ring the next free VA, never everyone. With the routing store on (Store.route), a caller is put on
+// call_queue (route_inbound) and waits in the conference on hold music; the queue offers the call to ONE VA
+// (longest idle, 15 s, then the next) in their portal, and the VA's browser joins through fulfillment-voice
+// ({ line_id }). Nobody takes it in 2 minutes → the sweep posts ?cron timeout here and the caller becomes a
+// callback. After 6 PM Central (Q15/16) the caller hears the after-hours greeting and a VA calls back at 8 AM.
+// The VA's leg dropping on a live caller starts the 60 s rescue (caller on hold music). va_join / va_leg stay
+// for calls rung the old way.
 
 import { readTwilioRequest, xmlEsc, type Twilio } from '../_shared/twilio.ts'
 export { twilioSignature } from '../_shared/twilio.ts'
@@ -63,6 +71,22 @@ export interface Store {
   // log_missed_transfer (211): one inbound_events 'missed' row per help call.
   logMissedTransfer(callSid: string): Promise<void>
 }
+
+// P882 — the routing half (optional: without it the old ring-every-VA path runs, as the 179 tests expect).
+export interface RouteStore {
+  deskOpen(): Promise<boolean>
+  afterHoursText(): Promise<string | null>
+  routeInbound(callSid: string, caller: string): Promise<{ queue_id: string | null }>
+  afterHoursCall(callSid: string, caller: string): Promise<void>
+  inboundGone(callSid: string): Promise<void>
+  // The VA's leg on a caller's line left without End: starts the rescue. The line id, or null.
+  vaLeftLine(callSid: string, vaLegSid: string): Promise<boolean>
+  isCron(secret: string): Promise<boolean>
+}
+
+// The plain default after-hours greeting. Client-facing wording: Brayden sets recovery_config.after_hours_text
+// before voice_live goes on (Q15/16: greeting + a text with a link to pick a callback time, sent by the engine).
+export const AFTER_HOURS = 'Thanks for calling. Our team is away for the night. We will call you back after 8 AM Central.'
 
 // trackingNumber: HELP_TRACKING_NUMBER (read-only config), the VA legs' From.
 export type Env = { authToken: string | null; publicUrl: string; trackingNumber?: string | null }
@@ -112,11 +136,35 @@ async function cancelLegs(twilio: Twilio, sids: string[]) {
   }))
 }
 
-async function inbound(store: Store, twilio: Twilio | null, env: Env, form: Record<string, string>) {
+// P882: a caller rings ONE VA through the queue (route_inbound); after hours they hear the greeting.
+async function inboundRouted(store: Store, route: RouteStore, env: Env, form: Record<string, string>) {
+  const callSid = form.CallSid || ''
+  const caller = toE164(form.From || '')
+  const base = { call_sid: callSid, caller_number: caller || null, tracking_number: form.To || null }
+  if (!(await route.deskOpen())) {
+    if (await store.insertHelpCall({ ...base, status: 'ended', end_reason: 'after_hours', ended_at: now() })) {
+      await route.afterHoursCall(callSid, caller)
+    }
+    return twiml(`<Say>${xmlEsc((await route.afterHoursText()) || AFTER_HOURS)}</Say><Hangup/>`)
+  }
+  if (!(await store.insertHelpCall({ ...base, status: 'ringing', ringing_va_call_sids: [] }))) {
+    const had = await store.helpCall(callSid)   // a retried webhook: queue once
+    return twiml(had?.status === 'ringing' ? helpConference(env.publicUrl, callSid, { startOnEnter: false, endOnExit: true }) : '<Hangup/>')
+  }
+  const q = await route.routeInbound(callSid, caller)
+  if (!q.queue_id) {
+    await store.updateHelpCall(callSid, { status: 'ended', end_reason: 'not_queued', ended_at: now() }, ['ringing'])
+    return twiml(sorry())
+  }
+  return twiml(helpConference(env.publicUrl, callSid, { startOnEnter: false, endOnExit: true }))
+}
+
+async function inbound(store: Store, twilio: Twilio | null, env: Env, form: Record<string, string>, route?: RouteStore) {
   // Off: hang up before any store or REST call.
   if (!(await store.voiceLive())) return twiml('<Hangup/>')
   const callSid = form.CallSid || ''
   if (!SID.test(callSid)) return twiml('<Hangup/>')
+  if (route) return inboundRouted(store, route, env, form)
   const caller = toE164(form.From || '')
   const base = { call_sid: callSid, caller_number: caller || null, tracking_number: form.To || null }
 
@@ -307,7 +355,7 @@ async function agentLeg(store: Store, twilio: Twilio | null, callSid: string, fo
 //                while the VA is on changes nothing.
 // A repeated or late callback, or one for a row already ended, is a no-op.
 // While still ringing (no VA joined yet) conference-end handles the caller.
-async function participantLeave(store: Store, twilio: Twilio | null, callSid: string, form: Record<string, string>) {
+async function participantLeave(store: Store, twilio: Twilio | null, callSid: string, form: Record<string, string>, route?: RouteStore) {
   const row = await store.helpCall(callSid)
   if (!row || row.status === 'ended' || row.status === 'ringing') return
   const leg = form.CallSid || ''
@@ -323,15 +371,34 @@ async function participantLeave(store: Store, twilio: Twilio | null, callSid: st
   const isVa = leg === row.va_call_sid
   const isAgent = leg === row.agent_call_sid || form.ParticipantLabel === 'agent'
   if (!isVa && !isAgent) return
+  // P882: the VA's leg dropped while the caller is still with us (not a transfer): hold music, 60 s to rejoin.
+  if (isVa && route && row.status === 'live' && await route.vaLeftLine(callSid, leg)) {
+    const conf = form.ConferenceSid || row.conference_sid
+    if (twilio && conf) {
+      const res = await twilio('POST', `/Conferences/${conf}/Participants/${row.call_sid}.json`, { Hold: 'true' }).catch(() => null)
+      if (!res || res.status >= 400) console.error('rescue hold (caller) failed:', res?.status)
+    }
+    return
+  }
   if (twilio) await endIfAlone(store, twilio, row, form.ConferenceSid || row.conference_sid, [leg])
 }
 
-async function conf(store: Store, twilio: Twilio | null, callSid: string, form: Record<string, string>) {
+// P882: the VA (back, or the next one) joined a caller's line: the caller comes off hold.
+async function participantJoin(store: Store, twilio: Twilio | null, callSid: string, form: Record<string, string>) {
+  if (!twilio || !form.ConferenceSid || !form.CallSid || form.CallSid === callSid) return
+  const row = await store.helpCall(callSid)
+  if (!row || row.status !== 'live' || row.va_call_sid !== form.CallSid) return
+  await twilio('POST', `/Conferences/${form.ConferenceSid}/Participants/${row.call_sid}.json`, { Hold: 'false' }).catch(() => null)
+}
+
+async function conf(store: Store, twilio: Twilio | null, callSid: string, form: Record<string, string>, route?: RouteStore) {
   const e = form.StatusCallbackEvent
   if (e === 'conference-start') {
     if (form.ConferenceSid) await store.updateHelpCall(callSid, { conference_sid: form.ConferenceSid })
+  } else if (e === 'participant-join') {
+    if (route) await participantJoin(store, twilio, callSid, form)
   } else if (e === 'participant-leave') {
-    await participantLeave(store, twilio, callSid, form)
+    await participantLeave(store, twilio, callSid, form, route)
   } else if (e === 'conference-end') {
     const row = await store.helpCall(callSid)
     if (!row || row.status === 'ended') return twiml()
@@ -340,21 +407,42 @@ async function conf(store: Store, twilio: Twilio | null, callSid: string, form: 
       status: 'ended', ended_at: now(), end_reason: row.end_reason || 'conference_end',
       ...(row.outcome == null && wasLive ? { outcome: 'dropped' as const } : null),
     })
-    // The caller left before a VA answered: stop the VA phones ringing.
+    // The caller left before a VA answered: stop the VA phones ringing (and take them off the queue).
     if (row.status === 'ringing' && twilio) await cancelLegs(twilio, row.ringing_va_call_sids ?? [])
+    if (row.status === 'ringing' && route) await route.inboundGone(callSid)
   }
   return twiml()
 }
 
-export async function handle(req: Request, store: Store, twilio: Twilio | null, env: Env): Promise<Response> {
+// P882: the sweep (route_tick → fulfillment_cron_post) ends a caller nobody took in 2 minutes; the callback is
+// already queued. Authorized by the x-ohvara-cron secret, not a Twilio signature.
+async function cronTimeout(store: Store, twilio: Twilio | null, callSid: string) {
+  if (!SID.test(callSid)) return Response.json({ error: 'call required' }, { status: 400 })
+  const ended = await store.updateHelpCall(callSid, { status: 'ended', end_reason: 'no_va_in_time', ended_at: now() }, ['ringing'])
+  if (ended && twilio) {
+    const res = await twilio('POST', `/Calls/${callSid}.json`, { Twiml: `<Response>${sorry()}</Response>` }).catch(() => null)
+    if (!res || res.status >= 400) console.error('timeout end caller failed:', res?.status, res?.data?.message)
+  }
+  return Response.json({ ok: true, ended: !!ended })
+}
+
+export async function handle(req: Request, store: Store, twilio: Twilio | null, env: Env, route?: RouteStore): Promise<Response> {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
+  const cron = req.headers.get('x-ohvara-cron')
+  if (cron) {
+    if (!route || !(await route.isCron(cron))) return new Response('Not allowed', { status: 403 })
+    let body: any = {}
+    try { body = await req.json() } catch { /* empty */ }
+    if (body?.cron !== 'timeout') return Response.json({ error: 'Unknown job' }, { status: 400 })
+    return cronTimeout(store, twilio, String(body.call ?? ''))
+  }
   if (!env.authToken) return new Response('Not configured', { status: 503 })
 
   const { form, query: q, ok } = await readTwilioRequest(req, env.authToken, env.publicUrl)
   if (!ok) return new Response('Bad signature', { status: 403 })
 
   const event = q.get('event')
-  if (!event) return inbound(store, twilio, env, form)
+  if (!event) return inbound(store, twilio, env, form, route)
 
   const callSid = q.get('call') || ''
   if (!SID.test(callSid)) return twiml(event === 'va_join' ? '<Hangup/>' : '')
@@ -362,6 +450,6 @@ export async function handle(req: Request, store: Store, twilio: Twilio | null, 
   if (event === 'va_join') return vaJoin(store, twilio, env, callSid, q.get('va') || '', form.CallSid || '')
   if (event === 'va_leg') return vaLeg(store, twilio, callSid, form)
   if (event === 'agent_leg') return agentLeg(store, twilio, callSid, form, q.get('amd') === '1')
-  if (event === 'conf') return conf(store, twilio, callSid, form)
+  if (event === 'conf') return conf(store, twilio, callSid, form, route)
   return twiml()
 }

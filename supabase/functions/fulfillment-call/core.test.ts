@@ -274,35 +274,21 @@ test('callbacks: leg status, hold/unhold, conference end, keypad TwiML', async (
   assert.equal(legStatus('answered'), 'live')
 })
 
-test('recording on (P764): the conference records from the start, a row per rep leg, callback to cancel-check', async () => {
+test('Q51 no recording at launch (P882): even with recording_live on, nothing records and no row is made', async () => {
   const w = voiceWorld({ recording: true })
   const env = { authToken: TOKEN, publicUrl: VURL, checkUrl: 'https://x.supabase.co/functions/v1/fulfillment-cancel-check' }
   const xml = await (await voice(await signed('', { From: `client:${REP}`, policy_id: POL, CallSid: 'CArep' }), w.store, env)).text()
-  assert.match(xml, /record="record-from-start"/)
-  assert.match(xml, /recordingStatusCallback="https:\/\/x\.supabase\.co\/functions\/v1\/fulfillment-cancel-check\?event=rec&amp;policy=44444444-4444-4444-8444-444444444444&amp;call=CArep"/)
-  assert.match(xml, /recordingStatusCallbackEvent="in-progress completed absent"/)
-  assert.deepEqual(w.recs, [{ call_sid: 'CArep', policy_id: POL, rep_id: REP }])
-  // Off: no record attribute, no row.
-  const off = voiceWorld()
-  const plain = await (await voice(await signed('', { From: `client:${REP}`, policy_id: POL, CallSid: 'CArep' }), off.store, env)).text()
-  assert.doesNotMatch(plain, /record/i)
-  assert.equal(off.recs.length, 0)
+  assert.doesNotMatch(xml, /record/i)
+  assert.equal(w.recs.length, 0)
 })
 
-test('recording notice (P764): once per outside leg when it answers; never while recording is off', async () => {
+test('Q51 no recording notice (P882): an answered leg never gets the notice, switch on or off', async () => {
   const calls: any[] = []
   const twilio = async (method: string, path: string, params?: any) => { calls.push([method, path, params]); return { status: 200, data: {} } }
-  const w = voiceWorld({ recording: true })
   const env = { authToken: TOKEN, publicUrl: VURL, twilio: twilio as any }
   const q = `?event=leg&policy=${POL}&party=client`
-  await voice(await signed(q, { CallSid: 'CAc', CallStatus: 'ringing' }), w.store, env)
-  await voice(await signed(q, { CallSid: 'CAc', CallStatus: 'in-progress' }), w.store, env)
-  await voice(await signed(q, { CallSid: 'CAc', CallStatus: 'in-progress' }), w.store, env)
-  assert.deepEqual(calls, [['POST', '/Conferences/CFconf/Participants/CAc.json', { AnnounceUrl: `${VURL}?event=notice`, AnnounceMethod: 'POST' }]])
-  const say = await (await voice(await signed('?event=notice', {}), w.store, env)).text()
-  assert.match(say, /<Say>This call may be recorded &amp; kept\.<\/Say>/)
-  const off = voiceWorld()
-  calls.length = 0
-  await voice(await signed(q, { CallSid: 'CAd', CallStatus: 'in-progress' }), off.store, env)
+  for (const w of [voiceWorld({ recording: true }), voiceWorld()]) {
+    await voice(await signed(q, { CallSid: 'CAc', CallStatus: 'in-progress' }), w.store, env)
+  }
   assert.equal(calls.length, 0)
 })

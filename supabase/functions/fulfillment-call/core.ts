@@ -17,6 +17,9 @@
 //   end_all       end the conference
 // Who: the assigned rep or an admin, on a cancellation that isn't done, and
 // only while recovery_config.voice_live is on. No recording.
+// P882: every other call type (leads, callbacks, call-ins, servicing, carriers) goes through lines.ts ({ line_id }).
+
+import { actLine, endLine, Refused as LineRefused, type LineStore } from './lines.ts'
 
 export type Leg = {
   call_sid: string
@@ -216,18 +219,36 @@ export async function act(store: Store, twilio: Twilio, env: Env, userId: string
   return { ok: true }
 }
 
-export async function handle(req: Request, store: Store, twilio: Twilio, env: Env): Promise<Response> {
+// P882: the line path (any call type, lines.ts) and the sweep's cron path ride on the same function.
+export type Lines = { store: LineStore; isCron(secret: string): Promise<boolean> }
+
+export async function handle(req: Request, store: Store, twilio: Twilio, env: Env, lines?: Lines): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
+  const cron = req.headers.get('x-ohvara-cron')
+  let body: any = {}
+  if (cron) {
+    try { body = await req.json() } catch { /* empty body */ }
+    if (!lines || !(await lines.isCron(cron))) return json({ error: 'Not allowed' }, 403)
+    if (body?.cron !== 'end_line') return json({ error: 'Unknown job' }, 400)
+    try { return json(await endLine(lines.store, twilio, String(body.line_id ?? ''))) } catch (e) {
+      if (e instanceof LineRefused) return json({ error: e.message, code: e.code }, e.status)
+      console.error('fulfillment-call end_line', e)
+      return json({ error: 'end_line failed' }, 500)
+    }
+  }
   const jwt = (req.headers.get('Authorization') || '').replace(/^Bearer /, '')
   const userId = jwt ? await store.userFromJwt(jwt) : null
   if (!userId) return json({ error: 'Not signed in' }, 401)
-  let body: any = {}
   try { body = await req.json() } catch { /* empty body */ }
   try {
+    if (lines && (body?.line_id || body?.action === 'open_line')) {
+      return json(await actLine(lines.store, twilio, env, userId, body))
+    }
     return json(await act(store, twilio, env, userId, body))
   } catch (e) {
     if (e instanceof Refused) return json({ error: e.message, code: e.code }, e.status)
+    if (e instanceof LineRefused) return json({ error: e.message, code: e.code, ...(e.extra || {}) }, e.status)
     console.error('fulfillment-call', e)
     return json({ error: 'Something went wrong placing that call.' }, 500)
   }

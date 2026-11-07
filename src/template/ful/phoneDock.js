@@ -11,7 +11,7 @@
 //   ringId  the call ringing in now, or null
 //   missed  [{ id, seen }] rings nobody answered (timed out or Not now); unseen ones badge the rail icon
 
-export const RING_MS = 30000 // a sample ring gives up after 30 seconds and counts as missed
+export const RING_MS = 15000 // P882: a ring gives up after 15 seconds and counts as a missed ring (routing then tries the next VA)
 
 export const initialDock = { open: false, line: null, since: null, ringId: null, missed: [] }
 

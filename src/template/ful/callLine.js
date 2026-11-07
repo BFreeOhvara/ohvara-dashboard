@@ -1,5 +1,5 @@
 // P876 — the VA's call, as plain data: who is on the line, hold (with a held-time counter), mute, speaker, the
-// keypad's tones, the recording notice, notes, Add caller / Merge / Drop, and the live transfer (Check agent → push
+// keypad's tones, notes, Add caller / Merge / Drop, and the live transfer (Check agent → push
 // Sent → Seen → Yes / No / No answer, then a cold transfer that bounces back to the VA if the agent doesn't pick up).
 // Phone.jsx draws it; nothing here touches React, so it runs under node --test. Sample timings; the backend (P852)
 // swaps the timers for real call events.
@@ -17,7 +17,8 @@ export function newCall(who, now = Date.now()) {
     who, start: now, end: null, outcome: null,
     muted: false, speaker: false, pad: false, tones: '',
     held: false, heldSince: null, heldMs: 0,
-    rec: true, notes: who.notes || '',
+    notes: who.notes || '', dnc: false, help: null, vm: false, handoff: null,
+    lineId: who.lineId || null, callSid: who.callSid || null,
     parties: [{ id: who.key, name: who.name, role: who.role || 'client', number: who.number, state: 'line' }],
     xfer: null,
   }
@@ -37,7 +38,6 @@ export function callReducer(c, a) {
     case 'pad': return { ...c, pad: !c.pad }
     case 'tone': return { ...c, tones: (c.tones + a.key).slice(-24) }
     case 'hold': return hold(c, !c.held, now)
-    case 'rec': return { ...c, rec: !c.rec }
     case 'notes': return { ...c, notes: a.text }
     // Add caller: they ring on a separate line; the people already on the call wait on hold meanwhile.
     case 'add': {
@@ -61,6 +61,16 @@ export function callReducer(c, a) {
       return gone.state !== 'line' && !parties.some(p => p.state !== 'line') && c.held ? hold(next, false, now) : next
     }
     case 'end': return end(c, now, a.outcome)
+    // P882: one-tap Do not call (the person stays on the line to hear goodbye; every queued call and text stops).
+    case 'dnc': return { ...c, dnc: true }
+    // P882: Need help pings both admins; they can listen, whisper or join.
+    case 'help': return { ...c, help: now }
+    // P882: leave the voicemail message on that line and drop it (the last one on the line ends the call).
+    case 'voicemail': return callReducer({ ...c, vm: true }, { type: 'drop', id: a.id, now })
+    // P882: a carrier hold with no client is handed to the next free VA; this VA leaves the call.
+    case 'handoff': return holdOnlyCarrier(c) ? end({ ...c, handoff: { at: now, path: a.path || '', notes: a.notes || '' } }, now, 'handed_off') : c
+    // P882: the real line's ids, once the server has them.
+    case 'line': return { ...c, lineId: a.lineId ?? c.lineId, callSid: a.callSid ?? c.callSid }
     // Live transfer (blueprint "Live transfer", decided Nov 7).
     case 'check': return { ...c, xfer: { agent: a.agent, step: 'sent', at: now } }
     case 'xfer': return c.xfer ? { ...c, xfer: { ...c.xfer, step: a.step, at: now } } : c
@@ -143,3 +153,49 @@ export const REACH_WORDS = {
   notifications_off: 'Not reachable for live calls: notifications are off',
   booking_only: 'Not reachable for live calls: booking only',
 }
+
+// P882 — a carrier hold with nobody else: on hold, and everyone left on the call is a carrier (the client dropped).
+export const holdOnlyCarrier = c => !!c && !c.end && c.held && c.parties.length > 0 && c.parties.every(p => p.role === 'carrier')
+
+// P882 — routing. A ring (an offer) lasts 15 seconds; Not now or no answer counts as a missed ring, and two in a row
+// set the VA to Away and tell the admins. The ring says what kind of call it is.
+export const RING_SECS = 15
+export const RING_KIND = { call_in: 'Calling in', new_lead: 'New lead', callback: 'Callback', hold_handoff: 'Hold hand-off', rescue: 'Dropped call' }
+export const ringLeft = (at, now = Date.now()) => Math.max(0, Math.ceil((RING_SECS * 1000 - (now - at)) / 1000))
+
+// Wrap-up: the outcome is required before the VA is Available again. 60 seconds, +60 s at a time (each one counted);
+// past 3 minutes the admins are told.
+export const WRAP_MS = 60000
+export const WRAP_STUCK_MS = 180000
+export const MISSED_TO_AWAY = 2
+
+// The VA's routing status. status: 'available' | 'ringing' | 'on_call' | 'wrap' | 'away' | 'offline' | 'on_hold_carrier'
+export const initialPresence = { status: 'available', missedRow: 0, wrapAt: null, wrapExtra: 0, paused: null }
+export function presenceReducer(p, a) {
+  const now = a.now ?? Date.now()
+  switch (a.type) {
+    case 'set': return ['available', 'away'].includes(a.status) && !['wrap', 'on_call', 'ringing'].includes(p.status) ? { ...p, status: a.status, missedRow: a.status === 'available' ? 0 : p.missedRow } : p
+    case 'ring': return p.status === 'available' || p.status === 'on_hold_carrier' ? { ...p, status: 'ringing' } : p
+    case 'answer': return { ...p, status: 'on_call', missedRow: 0 }
+    case 'missed': {
+      const missedRow = p.missedRow + 1
+      return { ...p, missedRow, status: missedRow >= MISSED_TO_AWAY ? 'away' : p.status === 'ringing' ? 'available' : p.status }
+    }
+    case 'wrap': return p.status === 'wrap' ? p : { ...p, status: 'wrap', wrapAt: now, wrapExtra: 0 }
+    case 'more': return p.status === 'wrap' ? { ...p, wrapExtra: p.wrapExtra + 1 } : p
+    // Done needs an outcome; without one nothing changes.
+    case 'done': return p.status === 'wrap' && String(a.outcome || '').trim() ? { ...p, status: 'available', wrapAt: null, wrapExtra: 0 } : p
+    case 'pause': return { ...p, paused: a.task || null }
+    case 'resume': return { ...p, paused: null }
+    // The server's presence (va_beat) wins on a real line.
+    case 'server': {
+      const s = a.presence || {}
+      return { ...p, status: s.status || p.status, missedRow: s.missed_rings ?? p.missedRow, wrapAt: s.wrap_started_at ? Date.parse(s.wrap_started_at) - (a.skew || 0) : null, wrapExtra: s.wrap_extra ?? 0, paused: s.paused_task ?? p.paused }
+    }
+    default: return p
+  }
+}
+// ms left of the wrap-up (negative once it runs over), and whether the admins have been told.
+export const wrapLeft = (p, now = Date.now()) => (p.wrapAt == null ? null : p.wrapAt + WRAP_MS * (1 + p.wrapExtra) - now)
+export const wrapStuck = (p, now = Date.now()) => p.wrapAt != null && now - p.wrapAt >= WRAP_STUCK_MS
+export const PRESENCE_WORDS = { available: 'Available', ringing: 'Ringing', on_call: 'On a call', wrap: 'Wrapping up', away: 'Away', offline: 'Offline', on_hold_carrier: 'On a carrier hold' }

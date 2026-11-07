@@ -351,9 +351,6 @@
 .fs-cs-timer { display: flex; flex-direction: column; align-items: center; margin: 8px 0 0; font-family: var(--font-mono); font-size: 36px; font-weight: 600; color: var(--ov-hi); }
 .fs-cs-timer span { font-family: var(--font-ui); font-size: 12.5px; font-weight: 600; letter-spacing: normal; word-spacing: normal; color: var(--ov-mid); }
 .fs-cs-timer.is-held span { color: var(--sh-ci); background: var(--sh-cf-apricot, var(--sh-cf-sage)); padding: 2px 10px; border-radius: 999px; }
-.fs-cs-recpill { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; margin-bottom: 6px; border-radius: 999px; font-size: 11.5px; font-weight: 700; color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
-.fs-cs-notice { display: flex; align-items: flex-start; gap: 6px; margin: 0; font-size: 12px; color: var(--ov-mid); }
-.fs-cs-notice svg { flex: none; margin-top: 1px; color: var(--danger); }
 .fs-cs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 6px; }
 .fs-rbw { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .fs-rbw small { font-size: 11.5px; font-weight: 600; color: var(--ov-mid); text-align: center; }
@@ -362,7 +359,6 @@
 .fs-rb:active:not(:disabled) { transform: scale(.92); }
 .fs-rb:disabled { opacity: .38; cursor: not-allowed; }
 .fs-rb.is-on, .fs-rb[aria-pressed="true"] { color: var(--sh-on-sel, var(--bg-base)); background: var(--sh-sel, var(--ov-hi)); }
-.fs-rb.is-rec.is-on { color: var(--tp-white); background: var(--danger); }
 .fs-rb.is-merge { color: var(--sh-on-accent); background: var(--accent); }
 .fs-rb.is-go { color: var(--tp-white); background: var(--success); }
 .fs-rb.is-go:hover { background: var(--success); filter: brightness(.92); }
@@ -467,3 +463,41 @@
   .fs .fs-sched > .fx-tools { row-gap: 4px; }
   .fs .fs-sched > .fs-legend { row-gap: 4px; margin: -4px 0 0; }
 }
+
+/* P882 — routing, wrap-up, pre-dial and the call screen's extra buttons (no recording at launch, Q51). */
+.fs-cs-count { min-width: 30px; height: 20px; padding: 0 7px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 11.5px; color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 9%, transparent); }
+.tp .fs-cs-ringrule { margin: 0; text-align: center; font-size: 12px; }
+.fs-cs-band { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 10px 12px; border-radius: 14px; background: var(--ov-warn-tint); color: var(--ov-hi); }
+.fs-cs-band > svg { flex: none; margin-top: 2px; color: var(--ov-warn); }
+.fs-cs-band b { display: block; font-size: 13px; }
+.fs-cs-band small { display: block; font-size: 12px; color: var(--ov-mid); }
+.fs-cs-band.is-help { background: var(--ov-data-a-tint); }
+.fs-cs-band.is-help > svg { color: var(--ov-hi); }
+.fs-cs-more { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.fs-cs-more > .tp-primary { flex: 1 1 100%; justify-content: center; }
+.fs-cs-more .fx-pillbtn { gap: 6px; }
+.fs-cs-dnc:not(:disabled) { color: var(--danger); }
+.fs-cs-dnc:disabled { opacity: .55; }
+.tp .fs-cs-dncgo { flex: 1 1 100%; justify-content: center; color: var(--tp-white); background: var(--danger); }
+.fs-cs-wrap { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--ov-hi) 5%, transparent); border: 1px solid var(--fx-edge, transparent); color: var(--ov-hi); }
+.fs-cs-wrap > svg { flex: none; color: var(--ov-mid); }
+.fs-cs-wrap b { display: block; font-size: 13px; }
+.fs-cs-wrap small { display: block; font-size: 12px; color: var(--ov-mid); }
+.fs-cs-wrap.is-over { background: var(--ov-warn-tint); }
+.fs-cs-wrap.is-over > svg { color: var(--ov-warn); }
+.fs-cs-wrap .fx-pillbtn { flex: none; gap: 4px; }
+.fs-ph-pres { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 7%, transparent); white-space: nowrap; }
+.fs-ph-pres:hover:not(:disabled) { background: color-mix(in srgb, var(--ov-hi) 12%, transparent); }
+.fs-ph-pres:disabled { cursor: default; }
+.fs-ph-pres i { width: 8px; height: 8px; border-radius: 50%; background: var(--ov-mid); }
+.fs-ph-pres:is(.is-available) i { background: var(--success); }
+.fs-ph-pres:is(.is-ringing, .is-on_call) i { background: var(--sh-ci); }
+.fs-ph-pres:is(.is-away, .is-wrap, .is-on_hold_carrier) i { background: var(--ov-warn); }
+.fs-ph-pres.is-offline i { background: var(--danger); }
+.fs-ph-row.is-blocked .fx-mrow b { color: var(--ov-mid); }
+.tp .fs-ph-block { display: flex; align-items: flex-start; gap: 4px; margin-top: 2px; font-size: 12px; font-weight: 600; color: var(--ov-warn); }
+.fs-ph-block svg { flex: none; margin-top: 2px; }
+.fs-ph-back.is-task { align-self: stretch; gap: 10px; padding: 10px 12px; border-radius: 14px; text-align: left; color: var(--ov-hi); background: var(--ov-data-a-tint); }
+.fs-ph-back.is-task b { display: block; font-size: 13px; }
+.fs-ph-back.is-task small { display: block; font-size: 12px; font-weight: 500; color: var(--ov-mid); }
+.fs-ph-back.is-task svg { flex: none; }
