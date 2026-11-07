@@ -49,7 +49,7 @@ export default function Signup() {
             <Seg role="radiogroup" label="Are you a licensed life insurance agent?" value={licensed} onChange={v => { setLicensed(v); setStep('details') }} options={[{ key: 'yes', label: 'Yes' }, { key: 'no', label: 'Not yet' }]} />
           </div>
           {licensed === 'no' && (
-            <div className="su-stop" role="status"><b>Ohvara is for licensed agents</b><p className="tp-sub">You need an active life insurance licence before you can sign up. Once you have one, come back and it takes about 15 minutes to get set up.</p></div>
+            <div className="wz-stop" role="status"><b>Ohvara is for licensed agents</b><p className="tp-sub">You need an active life insurance licence before you can sign up. Once you have one, come back and it takes about 15 minutes to get set up.</p></div>
           )}
           {licensed === 'yes' && step === 'details' && (
             <form className="tp-stack" onSubmit={submit} noValidate>
@@ -68,8 +68,8 @@ export default function Signup() {
           {licensed === 'yes' && step === 'verify' && (
             <form className="tp-stack" onSubmit={verify} noValidate>
               <p className="tp-sub">We sent a 6-digit code to each. Enter both to go on.</p>
-              <div className="su-code"><Field label={`Code sent to ${f.email}`}><input value={codes.email} inputMode="numeric" maxLength={6} autoComplete="one-time-code" onChange={e => setCodes({ ...codes, email: e.target.value.replace(/\D/g, '') })} /></Field><MailCheck size={18} aria-hidden="true" /></div>
-              <div className="su-code"><Field label={`Code texted to ${formatPhone(f.phone)}`}><input value={codes.phone} inputMode="numeric" maxLength={6} autoComplete="one-time-code" onChange={e => setCodes({ ...codes, phone: e.target.value.replace(/\D/g, '') })} /></Field><MessageSquareText size={18} aria-hidden="true" /></div>
+              <div className="wz-code"><Field label={`Code sent to ${f.email}`}><input value={codes.email} inputMode="numeric" maxLength={6} autoComplete="one-time-code" onChange={e => setCodes({ ...codes, email: e.target.value.replace(/\D/g, '') })} /></Field><MailCheck size={18} aria-hidden="true" /></div>
+              <div className="wz-code"><Field label={`Code texted to ${formatPhone(f.phone)}`}><input value={codes.phone} inputMode="numeric" maxLength={6} autoComplete="one-time-code" onChange={e => setCodes({ ...codes, phone: e.target.value.replace(/\D/g, '') })} /></Field><MessageSquareText size={18} aria-hidden="true" /></div>
               <button type="submit" className="tp-primary fx-accent" disabled={!okCode(codes.email) || !okCode(codes.phone)}>Verify and start setup</button>
               <p className="tp-sub"><button type="button" className="tp-link" onClick={() => note('Sample: new codes were not really sent')}>Send new codes</button> · <button type="button" className="tp-link" onClick={() => setStep('details')}>Change email or mobile</button></p>
             </form>

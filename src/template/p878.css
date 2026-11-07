@@ -85,31 +85,31 @@
 .rs-slow { margin: 0; padding: 12px 14px; border-radius: 16px; font-size: 13.5px; color: var(--ov-hi); background: var(--ov-stub); }
 
 /* ── Setup and sign-up ──────────────────────────────────────────────────────────────────────────────────────── */
-.su { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 20px; align-items: start; }
-@media (max-width: 860px) { .su { grid-template-columns: minmax(0, 1fr); } }
-.su-steps { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
-.su-steps button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 14px; border: 0; background: transparent; color: var(--ov-mid); font-size: 14px; font-weight: 600; text-align: left; cursor: pointer; }
-.su-steps button.is-on { color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 8%, transparent); }
-.su-steps button.is-done { color: var(--ov-hi); }
-.su-steps i { display: inline-grid; place-items: center; width: 24px; height: 24px; flex: none; border-radius: 50%; border: 1.5px solid currentColor; font-style: normal; font-size: 12px; }
-.su-steps .is-done i { border-color: transparent; background: var(--ov-up, var(--ov-data-a)); color: var(--bg-surface); }
-@media (max-width: 860px) { .su-steps { flex-direction: row; overflow-x: auto; } .su-steps button { white-space: nowrap; } .su-steps button span { display: none; } .su-steps button.is-on span { display: inline; } }
-.su-body { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.su-video { position: relative; aspect-ratio: 16 / 9; border-radius: 18px; overflow: hidden; background: color-mix(in srgb, var(--ov-hi) 10%, var(--bg-surface)); display: grid; place-items: center; }
-.su-video button { display: inline-flex; align-items: center; gap: 8px; }
-.su-video .su-cap { position: absolute; left: 12px; right: 12px; bottom: 34px; text-align: center; font-size: 13px; font-weight: 600; color: var(--ov-hi); }
-.su-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: color-mix(in srgb, var(--ov-hi) 14%, transparent); }
-.su-bar i { display: block; height: 100%; width: calc(var(--w) * 100%); background: var(--ov-data-a); transition: width .4s linear; }
-.su-states { display: flex; flex-wrap: wrap; gap: 6px; }
-.su-state { padding: 6px 10px; border-radius: 999px; border: 1px solid var(--ov-line); background: transparent; color: var(--ov-mid); font-size: 13px; font-weight: 600; cursor: pointer; }
-.su-state.is-on { color: var(--ov-hi); border-color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 8%, transparent); }
-.su-state:disabled { opacity: .45; cursor: not-allowed; }
-.su-attest { display: grid; gap: 6px; }
-.su-code { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
-.su-code input { max-width: 160px; letter-spacing: .3em; font-variant-numeric: tabular-nums; }
-.su-saved { font-size: 12.5px; color: var(--ov-mid); }
-.su-stop { padding: 16px; border-radius: 18px; background: var(--ov-stub); }
-.su-stop b { display: block; font-size: 16px; color: var(--ov-hi); }
+.wz { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .wz { grid-template-columns: minmax(0, 1fr); } }
+.wz-steps { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.wz-steps button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 14px; border: 0; background: transparent; color: var(--ov-mid); font-size: 14px; font-weight: 600; text-align: left; cursor: pointer; }
+.wz-steps button.is-on { color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 8%, transparent); }
+.wz-steps button.is-done { color: var(--ov-hi); }
+.wz-steps i { display: inline-grid; place-items: center; width: 24px; height: 24px; flex: none; border-radius: 50%; border: 1.5px solid currentColor; font-style: normal; font-size: 12px; }
+.wz-steps .is-done i { border-color: transparent; background: var(--ov-up, var(--ov-data-a)); color: var(--bg-surface); }
+@media (max-width: 860px) { .wz-steps { flex-direction: row; overflow-x: auto; } .wz-steps button { white-space: nowrap; } .wz-steps button span { display: none; } .wz-steps button.is-on span { display: inline; } }
+.wz-body { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.wz-video { position: relative; aspect-ratio: 16 / 9; border-radius: 18px; overflow: hidden; background: color-mix(in srgb, var(--ov-hi) 10%, var(--bg-surface)); display: grid; place-items: center; }
+.wz-video button { display: inline-flex; align-items: center; gap: 8px; }
+.wz-video .wz-cap { position: absolute; left: 12px; right: 12px; bottom: 34px; text-align: center; font-size: 13px; font-weight: 600; color: var(--ov-hi); }
+.wz-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: color-mix(in srgb, var(--ov-hi) 14%, transparent); }
+.wz-bar i { display: block; height: 100%; width: calc(var(--w) * 100%); background: var(--ov-data-a); transition: width .4s linear; }
+.wz-states { display: flex; flex-wrap: wrap; gap: 6px; }
+.wz-state { padding: 6px 10px; border-radius: 999px; border: 1px solid var(--ov-line); background: transparent; color: var(--ov-mid); font-size: 13px; font-weight: 600; cursor: pointer; }
+.wz-state.is-on { color: var(--ov-hi); border-color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 8%, transparent); }
+.wz-state:disabled { opacity: .45; cursor: not-allowed; }
+.wz-attest { display: grid; gap: 6px; }
+.wz-code { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.wz-code input { max-width: 160px; letter-spacing: .3em; font-variant-numeric: tabular-nums; }
+.wz-saved { font-size: 12.5px; color: var(--ov-mid); }
+.wz-stop { padding: 16px; border-radius: 18px; background: var(--ov-stub); }
+.wz-stop b { display: block; font-size: 16px; color: var(--ov-hi); }
 
 /* ── Deedstone pages (what a lead sees) ─────────────────────────────────────────────────────────────────────── */
 .dd { min-height: 100vh; padding: 24px 16px 48px; background: var(--ov-page, var(--bg-surface)); color: var(--ov-hi); }
@@ -153,4 +153,4 @@
 .rs-sl button svg { transition: transform .2s var(--fx-ease); color: var(--ov-mid); }
 .rs-sl button[aria-expanded="true"] svg { transform: rotate(180deg); }
 .rs-sl p { margin: 0 0 10px; font-size: 13.5px; color: var(--ov-mid); }
-.su-off { opacity: .5; pointer-events: none; }
+.wz-off { opacity: .5; pointer-events: none; }

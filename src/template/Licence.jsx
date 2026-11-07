@@ -30,14 +30,14 @@ export function LicenceForm({ value, onChange }) {
         <input value={value.npn} inputMode="numeric" maxLength={10} onChange={e => onChange({ ...value, npn: e.target.value.replace(/\D/g, '') })} placeholder="8 to 10 digits" />
       </Field>
       <div className="tp-field"><span>States you{'’'}re licensed in</span>
-        <div className="su-states" role="group" aria-label="States you're licensed in">
-          {US_STATES.map(s => <button key={s.code} type="button" title={NOT_TAKING.includes(s.code) ? 'Not taking agents in this state yet' : s.name} disabled={NOT_TAKING.includes(s.code)} aria-pressed={value.states.includes(s.code)} className={`su-state${value.states.includes(s.code) ? ' is-on' : ''}`} onClick={() => pick(s.code)}>{s.code}</button>)}
+        <div className="wz-states" role="group" aria-label="States you're licensed in">
+          {US_STATES.map(s => <button key={s.code} type="button" title={NOT_TAKING.includes(s.code) ? 'Not taking agents in this state yet' : s.name} disabled={NOT_TAKING.includes(s.code)} aria-pressed={value.states.includes(s.code)} className={`wz-state${value.states.includes(s.code) ? ' is-on' : ''}`} onClick={() => pick(s.code)}>{s.code}</button>)}
         </div>
         <small>We{'’'}re not taking agents in New York yet.</small>
       </div>
       {value.states.length > 0 && (
         <div className="tp-field"><span>Can you write mortgage protection in each?</span>
-          <div className="su-attest">
+          <div className="wz-attest">
             {value.states.map(code => (
               <label key={code} className="tp-check"><input type="checkbox" checked={!!value.attested[code]} onChange={e => attest(code, e.target.checked)} />
                 <span>{US_STATES.find(s => s.code === code)?.name}: yes, I can write mortgage protection here{value.attested[code] ? ` · confirmed ${value.attested[code]}` : ''}</span></label>
