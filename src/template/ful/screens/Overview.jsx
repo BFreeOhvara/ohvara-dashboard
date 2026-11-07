@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, Clock, PhoneCall, PhoneIncoming, LifeBuoy, MessageSquare, CalendarClock } from 'lucide-react'
 import { useFulDay, useFulPay, useFulAgents, minutesOf } from '../data'
 import { Avatar } from '../../kit'
-import { ShiftLine, DayOffDrawer } from '../Shift'
 import { CountUp, usd } from '../../motion'
 import { fp } from '../paths'
 import { CALL_WORD, CALL_TONE, KIND } from '../words'
@@ -97,7 +96,6 @@ function QueueCard({ l, i }) {
 }
 
 export default function Overview() {
-  const [ask, setAsk] = useState(false)
   const { data: day } = useFulDay()
   const { data: pay } = useFulPay()
   const { data: agents } = useFulAgents()
@@ -110,9 +108,7 @@ export default function Overview() {
 
   return (
     <div className="tp-page fx-page fx-ovl fs-ov">
-      <ShiftLine className="fs-shift-top" onAsk={() => setAsk(true)} />
       <TrainingNudge />
-      <DayOffDrawer open={ask} onClose={() => setAsk(false)} />
       <div className="fx-ovl-main">
         <Tile className="fs-ov-hero" i={0} title="Next call" sub={next ? `Cancellation call for ${next.agent}'s client` : 'No more calls today'} to={fp('schedule')} label="Open Schedule">
           {next ? (

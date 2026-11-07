@@ -82,7 +82,7 @@ test('PillTabs renders the count as its own badge element (fx-pt-n)', () => {
 })
 
 for (const [where, wrap] of [['on the page', ''], ['on a coloured tile', 'fx-tile is-fill'], ['on a stage card', 'fx-card']]) {
-  test(`a selected tab's count badge keeps the neutral count look (${where})`, () => {
+  test(`P876: a tab's count has no block behind it, selected or not (${where})`, () => {
     const on = badges(tabs('off'), wrap)
     const off = badges(tabs('today'), wrap)
     assert.equal(on.length, 2)
@@ -91,7 +91,8 @@ for (const [where, wrap] of [['on the page', ''], ['on a coloured tile', 'fx-til
       for (const prop of ['color', 'background']) {
         const w = winner(b, prop)
         assert.ok(w, `some rule sets the badge ${prop}`)
-        assert.match(w.value, /var\(--sh-count(-ink)?\)/, `selected badge ${prop} comes from the count tokens, not "${w.value}" (${w.sel})`)
+        // P876 (Brayden, Nov 7): no block at all, a bare number in the tab's own ink.
+        assert.equal(w.value, prop === 'background' ? 'transparent' : 'inherit', `selected badge ${prop} is "${w.value}" (${w.sel})`)
         assert.doesNotMatch(w.value, /--sh-on-accent|--sh-acc\b|--sh-on-sel|--sh-sel\b|--sh-on-color/, 'no selected-tab colour')
         assert.equal(w.value, winner(off[k], prop).value, 'the same as the badge on an unselected tab')
       }

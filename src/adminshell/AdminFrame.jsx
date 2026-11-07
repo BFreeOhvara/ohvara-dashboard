@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
 import { Drawer, Avatar, Field, Seg, PillTabs, useAccount, useNote, initials } from '../template/kit'
+import { ReportBug } from '../template/ReportBug'
 import { avatarHue } from '../template/avatarHue'
 import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit } from '../template/motion'
 import { armEntrance } from './entrance'
@@ -120,12 +121,14 @@ function GiveCall({ open, onClose }) {
   )
 }
 
-function Help({ open, onClose }) {
+function Help({ open, onClose, onBug }) {
   if (!open) return null
   return (
     <Drawer open center onClose={onClose} title="Help and support" sub="Where things live on the admin side.">
       <ul className="tp-list">
-        <li><Link to={`${ap('settings')}?tab=bugs`} className="fx-mrow" onClick={onClose}><Bug size={17} aria-hidden="true" /><span className="tp-grow"><b>Bug reports</b><small>What agents and VAs sent from their account menu</small></span><ChevronRight size={15} aria-hidden="true" /></Link></li>
+        {/* P876: Report a bug, the same pop-up in all three portals (ReportBug) */}
+        <li><button type="button" className="fx-mrow" onClick={() => { onClose(); onBug() }}><Bug size={17} aria-hidden="true" /><span className="tp-grow"><b>Report a bug</b><small>Something broken in the admin side</small></span><ChevronRight size={15} aria-hidden="true" /></button></li>
+        <li><Link to={`${ap('settings')}?tab=bugs`} className="fx-mrow" onClick={onClose}><Bug size={17} aria-hidden="true" /><span className="tp-grow"><b>Bug reports</b><small>What agents, VAs and admins sent from Help and support</small></span><ChevronRight size={15} aria-hidden="true" /></Link></li>
         <li><Link to={`${ap('settings')}?tab=audit`} className="fx-mrow" onClick={onClose}><History size={17} aria-hidden="true" /><span className="tp-grow"><b>Audit log</b><small>Every admin action, newest first</small></span><ChevronRight size={15} aria-hidden="true" /></Link></li>
         <li><a href={`mailto:${SUPPORT_EMAIL}`} className="fx-mrow"><Mail size={17} aria-hidden="true" /><span className="tp-grow"><b>Support mailbox</b><small>{SUPPORT_EMAIL}</small></span><ChevronRight size={15} aria-hidden="true" /></a></li>
         <li className="fx-mrow"><Keyboard size={17} aria-hidden="true" /><span className="tp-grow"><b>Search anything</b><small>Press Ctrl K (Cmd K on a Mac)</small></span></li>
@@ -332,7 +335,8 @@ export default function AdminFrame({ preview = false }) {
       <AddSomeone open={panel === 'add'} onClose={close} />
       <RouteLead open={panel === 'route'} onClose={close} />
       <GiveCall open={panel === 'give'} onClose={close} />
-      <Help open={panel === 'help'} onClose={close} />
+      <Help open={panel === 'help'} onClose={close} onBug={() => setPanel('bug')} />
+      <ReportBug open={panel === 'bug'} onClose={close} role="Admin" />
       <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} preview={preview} />
       <MoreBelow page={layout} />
     </div>

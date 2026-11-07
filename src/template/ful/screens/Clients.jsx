@@ -39,13 +39,17 @@ function ClientDrawer({ id, onClose }) {
   const { data: calls } = useFulCalls()
   const { data: tasks } = useFulTasks()
   const { data: threads } = useFulThreads()
-  const { sendMessage } = useFulActions()
+  const { sendMessage, showLive } = useFulActions()
   const note = useNote()
   const [msg, setMsg] = useState('')
   const c = clients.find(x => x.id === id) || clients[0]
   const [tone, label] = stageLabel[c.stage]
   const myCalls = calls.filter(k => k.client_id === c.id)
   const myTasks = tasks.filter(t => t.client_id === c.id)
+  // P876: VAs don't dial a client on their own. A call starts from what they were given: an open call or servicing step.
+  const openCall = myCalls.find(k => k.status === 'booked' || k.status === 'no_answer')
+  const openTask = myTasks.find(t => t.due !== 'done')
+  const callable = openCall ? `For the call at ${openCall.time}` : openTask ? `For the ${(KIND[openTask.kind] || 'servicing').toLowerCase()} step` : null
   const thread = threads.find(t => t.client_id === c.id)
   const send = () => { sendMessage(thread.id, msg.trim()); setMsg(''); note(`Sent to ${c.agent}`) }
   return (
@@ -57,7 +61,7 @@ function ClientDrawer({ id, onClose }) {
         <div className="fx-hero-bot"><span><Money v={c.monthly_premium} size="fx-hero-big" /><small> / month · sample</small></span><Avatar name={c.name} tone={tone} /></div>
       </>}
       actions={<>
-        <button type="button" className="tp-primary fx-accent" onClick={() => note(`Dial ${c.client_phone} from your phone`)}><Phone size={16} />Call</button>
+        {callable && <button type="button" className="tp-primary fx-accent" title={callable} onClick={() => showLive({ kind: 'client', id: c.id })}><Phone size={16} />Call</button>}
         <span className="tp-grow" />
         <Link to={fp('messages')} className="tp-btn ov-ghost"><MessageSquare size={14} />Messages</Link>
       </>}>

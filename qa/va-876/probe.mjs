@@ -1,0 +1,10 @@
+import { chromium } from 'playwright'
+const [url, sel, out, w = '1440', theme = 'dark'] = process.argv.slice(2)
+const b = await chromium.launch()
+const p = await b.newPage({ viewport: { width: +w, height: 900 }, colorScheme: theme })
+await p.route(/supabase\.co|\/functions\/v1\//, r => r.abort('failed'))
+await p.goto(url, { waitUntil: 'load' }); await p.waitForTimeout(2500)
+const el = sel === 'page' ? p : p.locator(sel).first()
+await el.screenshot({ path: out })
+console.log(await p.evaluate(() => [...document.querySelectorAll('.fx-pt-n, .fx-tb, .fx-badge')].map(e => `${e.className}|${e.textContent}|${getComputedStyle(e).backgroundColor}`).join('\n')))
+await b.close()

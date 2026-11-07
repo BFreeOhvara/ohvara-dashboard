@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation, useOutlet } from 'react-router-dom'
 import {
   Home, PhoneIncoming, CalendarDays, Users, History, CreditCard, Settings, Search, Bell, Plus, Sun, Moon, MessageSquare,
   PhoneCall, LifeBuoy, Radio, ChevronRight, LogOut, ShieldCheck, Ellipsis, FileUp, TriangleAlert, Wallet, CalendarCheck, Clock3,
-  Smartphone, CircleHelp, StickyNote, PhoneOutgoing, Mail, Keyboard,
+  Smartphone, CircleHelp, StickyNote, PhoneOutgoing, Mail, Keyboard, Bug,
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
 import {
@@ -12,6 +12,7 @@ import {
 import { NeedRows, FyiList } from './NeedsNow'
 import { useNeedAction } from './needAction'
 import { Drawer, Avatar, Field, PillTabs, Seg, useAccount, useNote, initials } from './kit'
+import { ReportBug } from './ReportBug'
 import { avatarHue } from './avatarHue'
 import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit } from './motion'
 import { armEntrance } from '../adminshell/entrance'
@@ -246,11 +247,13 @@ export function GetApp({ open, onClose }) {
 }
 
 // Help and support: where to ask, and the one shortcut worth knowing.
-function Help({ open, onClose }) {
+function Help({ open, onClose, onBug }) {
   if (!open) return null
   return (
     <Drawer open center onClose={onClose} title="Help and support" sub="Ask the team anything about a client or your account.">
       <ul className="tp-list">
+        {/* P876: Report a bug, the same pop-up in all three portals (ReportBug) */}
+        <li><button type="button" className="fx-mrow" onClick={() => { onClose(); onBug() }}><Bug size={17} aria-hidden="true" /><span className="tp-grow"><b>Report a bug</b><small>Something broken or not working right</small></span><ChevronRight size={15} aria-hidden="true" /></button></li>
         <li><Link to={paths.messages()} className="fx-mrow" onClick={onClose}><MessageSquare size={17} aria-hidden="true" /><span className="tp-grow"><b>Message the team</b><small>Fastest for anything about a client</small></span><ChevronRight size={15} aria-hidden="true" /></Link></li>
         <li><Link to={paths.requestService()} className="fx-mrow" onClick={onClose}><LifeBuoy size={17} aria-hidden="true" /><span className="tp-grow"><b>Request a service</b><small>Changes, cancellations, documents</small></span><ChevronRight size={15} aria-hidden="true" /></Link></li>
         <li><a href={`mailto:${SUPPORT_EMAIL}`} className="fx-mrow"><Mail size={17} aria-hidden="true" /><span className="tp-grow"><b>Email support</b><small>{SUPPORT_EMAIL}</small></span><ChevronRight size={15} aria-hidden="true" /></a></li>
@@ -493,7 +496,8 @@ export default function TemplateFrame() {
       <AddNote open={panel === 'note'} onClose={close} />
       <LogCall open={panel === 'log'} onClose={close} />
       <GetApp open={panel === 'app'} onClose={close} />
-      <Help open={panel === 'help'} onClose={close} />
+      <Help open={panel === 'help'} onClose={close} onBug={() => setPanel('bug')} />
+      <ReportBug open={panel === 'bug'} onClose={close} role="Agent" />
       <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} duty={duty} setDuty={setDuty} />
       <MoreBelow page={layout} />
     </div>

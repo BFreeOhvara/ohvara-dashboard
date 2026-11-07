@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Search, CalendarClock, MapPin, Hand, Undo2, Send, CircleCheck, LifeBuoy, Check, MessageSquare } from 'lucide-react'
+import { Search, CalendarClock, MapPin, Hand, Undo2, Send, CircleCheck, LifeBuoy, Check, MessageSquare, Phone } from 'lucide-react'
 import { useFulTasks, useFulActions } from '../data'
 import { Avatar, Chip, Drawer, Empty, PillTabs, Seg, useNote } from '../../kit'
 import { RecordDrawer, Block, Stepper } from '../../Record'
@@ -31,7 +31,7 @@ const WHEN = ['Today, 4:30 PM', 'Fri, 10:00 AM', 'Fri, 2:00 PM', 'Mon, 11:00 AM'
 
 function TaskDrawer({ id, onClose }) {
   const { data: tasks } = useFulTasks()
-  const { startTask, putBack, finishTask, scheduleTask, sendToAgent } = useFulActions()
+  const { startTask, putBack, finishTask, scheduleTask, sendToAgent, showLive } = useFulActions()
   const note = useNote()
   const t = tasks.find(x => x.id === id)
   const [panel, setPanel] = useState(null)
@@ -51,7 +51,9 @@ function TaskDrawer({ id, onClose }) {
       </>}
       stepper={<Stepper label="Where this step is" steps={STEPS} current={t.status} onPick={k => (k === 'in_progress' ? (startTask(t.id), note('Started')) : k === 'scheduled' ? setPanel('schedule') : k === 'done' ? setPanel('done') : null)} />}
       actions={done ? <Link to={fp('clients', t.client_id)} className="tp-btn ov-ghost">Open client</Link> : t.held ? <>
-        <button type="button" className="tp-primary fx-accent" onClick={() => setPanel('done')}><CircleCheck size={16} />Record the result</button>
+        {/* P876: a servicing step is a task the system gave the VA; its Call button starts the call on the phone. */}
+        <button type="button" className="tp-primary fx-accent" onClick={() => showLive({ kind: 'task', id: t.id })}><Phone size={16} />Call</button>
+        <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('done')}><CircleCheck size={16} />Record the result</button>
         <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('send')}><Send size={15} />Send to agent</button>
         <span className="tp-grow" />
         <button type="button" className="tp-btn ov-ghost" onClick={() => { putBack(t.id); note('Put back') }}><Undo2 size={15} />Put back</button>

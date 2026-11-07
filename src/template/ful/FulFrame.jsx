@@ -4,7 +4,7 @@ import {
   Home, PhoneIncoming, PhoneCall, Users, LifeBuoy, Wallet, Settings, Search, Bell, Sun, Moon, MessageSquare,
   ChevronRight, LogOut, Ellipsis, CalendarCheck, Clock3, CircleHelp, Mail, Keyboard, TriangleAlert,
   ShieldCheck, CalendarPlus, CheckCircle2, Hourglass, CalendarDays, CalendarOff, Plus, Phone, AlarmClock, Headset, NotebookPen, Smartphone,
-  GraduationCap, Trophy,
+  GraduationCap, Trophy, Bug,
 } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { Drawer, Avatar, Field, PillTabs, useAccount, useNote, initials } from '../kit'
@@ -23,10 +23,12 @@ import { useClientZone } from '../useClientZone'
 import { isoOf } from '../carriers'
 import { agentSlots, clocksBetween, zoneAbbr, DEFAULT_APPT_MIN } from '../../lib/callSlots'
 import FulPhone from './Phone'
-import { dockReducer, dockBadge, dockView, initialDock, RING_MS } from './phoneDock'
+import { dockReducer, dockBadge, railState, initialDock, RING_MS } from './phoneDock'
+import { clock } from '../../lib/portalPhone'
 import { HelpDot } from '../../fulshell/training/HelpDot'
 import { useTraining } from '../../fulshell/training/store'
 import { GetApp } from '../TemplateFrame'
+import { ReportBug } from '../ReportBug'
 import { DayOffDrawer } from './Shift'
 import { CALL_WORD } from './words'
 import { fp, FUL_TABS, fulPageOf, fulTitleOf } from './paths'
@@ -126,11 +128,13 @@ export function BookForAgent({ open, onClose, leadId = null }) {
   )
 }
 
-function Help({ open, onClose }) {
+function Help({ open, onClose, onBug }) {
   if (!open) return null
   return (
     <Drawer open center onClose={onClose} title="Help and support" sub="Ask an agent about a client, or the Ohvara team about anything else.">
       <ul className="tp-list">
+        {/* P876: Report a bug, the same pop-up in all three portals (ReportBug) */}
+        <li><button type="button" className="fx-mrow" onClick={() => { onClose(); onBug() }}><Bug size={17} aria-hidden="true" /><span className="tp-grow"><b>Report a bug</b><small>Something broken or not working right</small></span><ChevronRight size={15} aria-hidden="true" /></button></li>
         <li><Link to={fp('messages')} className="fx-mrow" onClick={onClose}><MessageSquare size={17} aria-hidden="true" /><span className="tp-grow"><b>Message an agent</b><small>About one of their clients</small></span><ChevronRight size={15} aria-hidden="true" /></Link></li>
         <li><a href={`mailto:${SUPPORT_EMAIL}`} className="fx-mrow"><Mail size={17} aria-hidden="true" /><span className="tp-grow"><b>Email support</b><small>{SUPPORT_EMAIL}</small></span><ChevronRight size={15} aria-hidden="true" /></a></li>
         <li className="fx-mrow"><ShieldCheck size={17} aria-hidden="true" /><span className="tp-grow"><b>Coverage or advice questions</b><small>Those go to the client's agent. Use Send to agent on the step.</small></span></li>
@@ -214,6 +218,13 @@ function ActionMenu({ open, onClose, at, items, back }) {
   )
 }
 
+// P876 — the live call's timer on the rail's phone icon (and the top bar's on a phone), so a call slid away is never lost.
+function RailTimer({ since }) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t) }, [])
+  return <span className="fs-ri-time tp-num" aria-hidden="true">{since ? clock(Math.max(0, now - since) / 1000) : '0:00'}</span>
+}
+
 // Three headline numbers beside the title: what a VA checks first on that page.
 function useHeadStats(page) {
   const { data: day } = useFulDay()
@@ -272,46 +283,59 @@ export default function FulFrame() {
   const left = day.today.filter(k => k.status === 'booked').length
   const callNow = () => { if (day.next) navigate(fp('schedule', day.next.id)); else { navigate(fp('schedule')); note('No more calls today') } }
 
-  // P872 — the phone is a pop-up docked at the bottom right (a bottom sheet on a phone), with its own open state beside
-  // the frame's panels (./phoneDock). It stays mounted, so a call keeps going while it is hidden; X hides it to a round
-  // button, or to a pill with the caller and timer during a call. A ring opens it by itself. Opening any other panel
-  // hides it, so it never sits over a menu or a drawer's buttons; the page column makes room for it (ful.css).
+  // P876 — the phone is a call screen that slides in over the page from the right (./Phone), with its own open state
+  // beside the frame's panels (./phoneDock). It stays mounted, so a call keeps going while it is slid away. It opens only
+  // from the rail's phone icon (the top bar's on a phone), which rings for an incoming call and shows a green pulse and
+  // the timer while a call is live. A ring slides it in by itself. Opening any other panel slides it away, so it never
+  // sits over a menu or a drawer's buttons. It never changes the page's layout (no margins, ful.css).
   const [dock, dockDo] = useReducer(dockReducer, initialDock)
   const openPhone = useCallback(() => { setPanel(null); dockDo({ type: 'open' }) }, [])
+  const togglePhone = useCallback(() => { setPanel(null); dockDo({ type: 'toggle' }) }, [])
   const closePhone = useCallback(() => dockDo({ type: 'close' }), [])
   const ring = useCallback(id => { setPanel(null); dockDo({ type: 'ring', id }) }, [])
   const onAnswer = useCallback(() => dockDo({ type: 'answer' }), [])
   const onDecline = useCallback(() => dockDo({ type: 'miss', declined: true }), [])
-  const onLine = useCallback(l => dockDo({ type: 'line', line: l }), [])
-  const line = dock.ringId ? 'ringing' : dock.line === 'live' ? 'live' : null // the rail's phone dot
+  const onLine = useCallback((l, since) => dockDo({ type: 'line', line: l, since }), [])
+  const line = railState(dock) // the rail icon: 'ringing' | 'live' | 'after' | null
+  const badge = dockBadge(dock)
   useEffect(() => { if (panel) dockDo({ type: 'close' }) }, [panel])
-  // A ring nobody answers gives up after RING_MS and shows as a missed call on the round button.
+  // A ring nobody answers gives up after RING_MS and shows as a missed call on the rail icon.
   useEffect(() => {
     if (!dock.ringId) return undefined
     const t = setTimeout(() => dockDo({ type: 'miss' }), RING_MS)
     return () => clearTimeout(t)
   }, [dock.ringId])
   const liveNow = () => { if (day.next) ring(day.next.id); else note('No call coming in') }
-  // Start call on a call's drawer (the store's live id) opens the phone on that person, ready to call.
+  // A Call button (a call's drawer, a lead, a servicing step) sets the store's live request: the phone slides in and
+  // the call starts on that person. A request is a call id, or { kind: 'lead' | 'task' | 'client', id }.
   const [startReq, setStartReq] = useState(null)
-  const startFor = useCallback(id => { setStartReq(r => ({ id, n: (r?.n || 0) + 1 })); openPhone() }, [openPhone])
+  const startFor = useCallback(req => { setStartReq(r => ({ req, n: (r?.n || 0) + 1 })); openPhone() }, [openPhone])
+  const [bookFor, setBookFor] = useState(null)
+  const onBook = useCallback(leadId => { setBookFor(leadId); setPanel('book') }, [])
+  const phoneLabel = line === 'live' ? `Phone, on a call, ${dock.open ? 'showing' : 'slid away'}` : line === 'ringing' ? 'Phone, a call is coming in' : line === 'after' ? 'Phone, save the result of the call' : badge ? `Phone, ${badge.label}` : 'Phone'
+  const phoneIcon = cls => (
+    <button type="button" className={`${cls} tp-wig${line ? ` is-${line}` : ''}`} aria-label={phoneLabel} aria-haspopup="dialog" aria-expanded={dock.open}
+      data-tip={line === 'live' ? 'Phone: on a call' : line === 'ringing' ? 'Phone: a call is coming in' : 'Phone'} {...wig} onClick={e => { wig.onClick(e); togglePhone() }}>
+      <Phone size={18} />
+      {line === 'live' && <RailTimer since={dock.since} />}
+      {line === 'ringing' && <i className="fs-ri-dot" aria-hidden="true" />}
+      {line === 'after' && <i className="fs-ri-dot is-after" aria-hidden="true" />}
+      {!line && badge && <span className="fx-badge is-missed" aria-hidden="true">{badge.n}</span>}
+    </button>
+  )
 
   // The + menu opens beside the rail button on a desktop (a bottom sheet on a phone), like the agent's.
   const [menuAt, setMenuAt] = useState(null)
-  const [narrow, setNarrow] = useState(false)
   const plusFrom = useRef(null)
   const openCreate = e => {
     wig.onClick(e)
     plusFrom.current = e.currentTarget
     const r = e.currentTarget.getBoundingClientRect()
     const wide = window.innerWidth >= 1000
-    setNarrow(!wide)
     setMenuAt(wide ? { left: `${Math.round(r.right + 14)}px`, top: `${Math.round(Math.max(12, Math.min(r.top - 8, window.innerHeight - 400)))}px` } : null)
     setPanel('create')
   }
   const actions = [
-    // On a phone there is no rail, so the phone itself is the first item.
-    ...(narrow ? [{ key: 'phone', icon: Phone, label: 'Phone', sub: 'Dial pad, search, recent calls', run: openPhone }, 'line'] : []),
     { key: 'next', icon: AlarmClock, label: 'Next call', sub: day.next ? `${day.next.name} at ${day.next.time}` : 'No more calls today', count: left, run: callNow },
     { key: 'live', icon: Headset, label: 'Live call', sub: 'The call coming in now', run: liveNow },
     { key: 'log', icon: NotebookPen, label: 'Log a call', sub: 'Save the result on the call', run: () => setPanel('log') },
@@ -368,12 +392,13 @@ export default function FulFrame() {
   )
 
   return (
-    <div className={`tp tp-app fx fs is-${layout} has-dock-${dockView(dock)}`} ref={appRef}>
+    <div className={`tp tp-app fx fs is-${layout}`} ref={appRef}>
       <div className="tp-sky" aria-hidden="true"><i /><i /><i /></div>
 
       <header className="tp-phone-top fx-ptop">
         <Link to={fp('overview')} className="fx-brand" aria-label="Ohvara home"><OhvaraMark height={28} back="var(--ov-mark-back)" front="var(--ov-mark-front)" className="fx-mark" /></Link>
         <span className="tp-grow" />
+        {phoneIcon('fx-ib fs-top-phone')}
         {tops}
         <button type="button" className={`fx-me tp-wig av-${avatarHue(account.name)}`} aria-label="Menu" {...wig} onClick={open('menu')}>{initials(account.name).toUpperCase()}</button>
       </header>
@@ -399,7 +424,7 @@ export default function FulFrame() {
         <NavLink to={fp('schedule')} className="fx-ri tp-wig" aria-label="Schedule" data-tip="Schedule" {...wig}><CalendarDays size={18} /></NavLink>
         <NavLink to={fp('servicing')} className="fx-ri tp-wig" aria-label="Servicing" data-tip="Servicing" {...wig}><LifeBuoy size={18} /></NavLink>
         <i className="fx-hair" />
-        <button type="button" className={`fx-ri fs-ri-phone tp-wig${line ? ` is-${line}` : ''}`} aria-label={line === 'live' ? 'Phone, on a call' : line === 'ringing' ? 'Phone, a call is coming in' : 'Phone'} aria-haspopup="dialog" aria-expanded={dock.open} data-tip={line === 'live' ? 'Phone: on a call' : 'Phone'} {...wig} onClick={e => { wig.onClick(e); openPhone() }}><Phone size={18} />{line && <i className="fs-ri-dot" aria-hidden="true" />}</button>
+        {phoneIcon('fx-ri fs-ri-phone')}
         <i className="fx-hair" />
         <button type="button" className="fx-ri tp-wig" aria-label="Get the phone app" aria-expanded={panel === 'app'} data-tip="Get the phone app" {...wig} onClick={open('app')}><Smartphone size={18} /></button>
         <button type="button" className="fx-ri tp-wig" aria-label="Help and support" aria-expanded={panel === 'help'} data-tip="Help and support" {...wig} onClick={open('help')}><CircleHelp size={18} /></button>
@@ -445,13 +470,14 @@ export default function FulFrame() {
       {panel === 'search' && <Palette onClose={close} pages={PAGES} rows={rows} placeholder="Search clients, the queue, servicing, pages" />}
       <BellDrawer open={panel === 'bell'} onClose={close} />
       <LogCall open={panel === 'log'} onClose={close} />
-      <BookForAgent open={panel === 'book'} onClose={close} />
-      <Help open={panel === 'help'} onClose={close} />
+      <BookForAgent open={panel === 'book'} onClose={() => { close(); setBookFor(null) }} leadId={bookFor} key={bookFor || 'any'} />
+      <Help open={panel === 'help'} onClose={close} onBug={() => setPanel('bug')} />
+      <ReportBug open={panel === 'bug'} onClose={close} role="Fulfillment" />
       <DayOffDrawer open={panel === 'dayoff'} onClose={close} />
       <ActionMenu open={panel === 'create'} onClose={close} at={menuAt} items={actions} back={plusFrom} />
       <GetApp open={panel === 'app'} onClose={close} />
-      <FulPhone open={dock.open} onOpen={openPhone} onClose={closePhone} ringId={dock.ringId} onAnswer={onAnswer} onDecline={onDecline} onLine={onLine}
-        missed={dock.missed} badge={dockBadge(dock)} live={live} onLive={startFor} startReq={startReq} />
+      <FulPhone open={dock.open} onClose={closePhone} ringId={dock.ringId} onAnswer={onAnswer} onDecline={onDecline} onLine={onLine}
+        missed={dock.missed} live={live} onLive={startFor} startReq={startReq} onBook={onBook} />
       <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} onAsk={() => setPanel('dayoff')} onApp={() => setPanel('app')} />
       <MoreBelow page={layout} />
     </div>

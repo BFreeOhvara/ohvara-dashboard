@@ -56,7 +56,7 @@ const CB_CLOCKS = clocksBetween(8 * 60, 20 * 60)
 
 export function LeadDrawer({ id, onClose }) {
   const { data: queue } = useFulQueue()
-  const { holdLead, releaseLead, setChecklist, notReached, callback, closeLead } = useFulActions()
+  const { holdLead, releaseLead, setChecklist, notReached, callback, closeLead, showLive } = useFulActions()
   const note = useNote()
   const l = queue.find(x => x.id === id)
   const [panel, setPanel] = useState(null)
@@ -84,7 +84,9 @@ export function LeadDrawer({ id, onClose }) {
         <div className="fx-hero-bot"><b className="fx-hero-big tp-num">{l.phone}</b><Avatar name={l.name} tone={tone} /></div>
       </>}
       actions={held ? <>
-        <button type="button" className="tp-primary fx-accent" disabled={done < 4} title={done < 4 ? 'Answer the four questions first' : undefined} onClick={() => setPanel('book')}><CalendarCheck size={16} />Book an agent</button>
+        {/* P876: VAs don't dial. This lead is a task the system gave them, so it has a Call button (the phone slides in). */}
+        <button type="button" className="tp-primary fx-accent" onClick={() => showLive({ kind: 'lead', id: l.id })}><Phone size={16} />Call</button>
+        <button type="button" className="tp-btn ov-ghost" disabled={done < 4} title={done < 4 ? 'Answer the four questions first' : undefined} onClick={() => setPanel('book')}><CalendarCheck size={16} />Book an agent</button>
         <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('callback')}><CalendarClock size={15} />Call back</button>
         <button type="button" className="tp-btn ov-ghost" onClick={() => { notReached(l.id); note(`${l.name} marked not reached`); onClose() }}><PhoneMissed size={15} />Not reached</button>
         <span className="tp-grow" />

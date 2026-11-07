@@ -1,0 +1,14 @@
+/* P876 — the Report a bug pop-up (ReportBug.jsx), the same in all three portals. */
+.fx-bug-thanks { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 16px; color: var(--ov-hi); }
+.fx-bug-thanks svg { color: var(--success); }
+.fx-bug-pick { align-self: flex-start; cursor: pointer; }
+.fx-bug-pick:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fx-bug-file { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--ov-hi); }
+.fx-bug-file b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px; }
+.tp .fx-bug-err { margin: 0; font-size: 12.5px; color: var(--danger); }
+.adm-bug-ctx { display: block; font-size: 11.5px; color: var(--ov-mid); overflow-wrap: anywhere; }
+.adm-bugs .fx-mrow .tp-grow { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 999.98px) {
+  .adm-bugs .fx-mrow { flex-wrap: wrap; row-gap: 8px; }
+  .adm-bugs .fx-mrow .tp-grow { flex: 1 1 calc(100% - 56px); }
+}
