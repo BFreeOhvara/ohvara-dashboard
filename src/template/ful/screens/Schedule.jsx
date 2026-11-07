@@ -17,6 +17,7 @@ import { useDayOffActions } from '../../../hooks/useVaShiftsShell'
 import { companyDay, dateLabel, rangeText } from '../../../lib/vaShifts'
 import { fp } from '../paths'
 import { CALL_WORD, CALL_TONE } from '../words'
+import { HelpDot } from '../../../fulshell/training/HelpDot'
 
 // P846 — Schedule (it was Calls): the VA's week as the same calendar the agent has, with everything they have to do
 // at a time on it: cancellation calls, booked callbacks (people from the Queue) and the appointments they booked for
@@ -82,7 +83,7 @@ export function CallDrawer({ id, onClose }) {
   const first = k.name.split(' ')[0]
   const open = k.status === 'booked' || k.status === 'no_answer'
   return (
-    <RecordDrawer label={`Call with ${k.name}`} kicker={`Cancellation call · ${dayName(k.day)}, Nov ${k.day}`} tone={tone} onClose={onClose}
+    <RecordDrawer label={`Call with ${k.name}`} kicker={<>Cancellation call · {dayName(k.day)}, Nov {k.day} <HelpDot lesson="schedule" inline /></>} tone={tone} onClose={onClose}
       hero={<>
         <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{k.day === TODAY ? 'Today' : `${dayName(k.day)}, Nov ${k.day}`} · {k.when}</span><Chip tone={tone}>{CALL_WORD[k.status]}</Chip></div>
         <h2>{k.name}</h2>
@@ -266,6 +267,7 @@ export default function Schedule() {
         <WeekStrip days={days} day={view} today={TODAY} onOpen={open} has={d => ofDay(d).length > 0} name={dayName} />
         <span className="tp-grow" />
         <Seg label="Show" value={show} onChange={setShow} options={[{ key: 'all', label: 'All', count: counts.all }, { key: 'todo', label: 'To do', count: counts.todo }, { key: 'done', label: 'Done', count: counts.done }]} />
+        <HelpDot lesson="schedule" />
       </div>
       <ul className="fs-legend" aria-label="Colours">
         {Object.entries(CALL_WORD).map(([s, w]) => <li key={s} className={`is-${CALL_TONE[s]}`}><i aria-hidden="true" />{w}</li>)}

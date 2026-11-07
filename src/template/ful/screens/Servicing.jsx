@@ -6,6 +6,7 @@ import { Avatar, Chip, Drawer, Empty, PillTabs, Seg, useNote } from '../../kit'
 import { RecordDrawer, Block, Stepper } from '../../Record'
 import { fp } from '../paths'
 import { KIND, kindTone, outcomesOf, outcomeLabel, SEND_REASONS, TASK_GROUPS } from '../words'
+import { HelpDot } from '../../../fulshell/training/HelpDot'
 
 // P845 — Servicing: the steps agents asked for (packet checks, payment and beneficiary changes, review calls, lapse
 // saves). A board like the Queue: overdue, due today, coming up, no date; each card takes its kind's colour (lib/
@@ -41,7 +42,7 @@ function TaskDrawer({ id, onClose }) {
   const tone = kindTone(t.kind)
   const done = t.status === 'done'
   return (
-    <RecordDrawer label={`${KIND[t.kind]} for ${t.name}`} kicker={`Servicing · asked by ${t.agent}`} tone={tone} onClose={onClose}
+    <RecordDrawer label={`${KIND[t.kind]} for ${t.name}`} kicker={<>Servicing · asked by {t.agent} <HelpDot lesson={t.kind} inline /></>} tone={tone} onClose={onClose}
       hero={<>
         <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{t.due_text}</span><Chip tone={tone}>{KIND[t.kind]}</Chip></div>
         <h2>{t.name}</h2>
@@ -105,6 +106,7 @@ export default function Servicing() {
       <div className="fx-tools">
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a step" placeholder="Find by client, step or agent" value={q} onChange={e => setQ(e.target.value)} /></label>
         <PillTabs label="Kind" className="fx-filters" itemClass="fx-filter" value={kind} onChange={setKind} items={kinds.map(k => ({ ...k, className: k.key === 'all' ? '' : `is-tone is-${k.key}` }))} />
+        <HelpDot lesson="servicing" />
       </div>
 
       <div className="fx-board fs-board4" role="region" aria-label="Servicing by when it is due">

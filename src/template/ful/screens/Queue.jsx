@@ -14,6 +14,7 @@ import { CarrierSelect } from '../../CarrierSelect'
 import { StateSelect } from '../../StateSelect'
 import { fp } from '../paths'
 import { BUCKETS, QUESTION_TYPES, URGENCIES, checklistDone } from '../words'
+import { HelpDot } from '../../../fulshell/training/HelpDot'
 
 // P845 — the Queue, built like the agent's Leads board: one lane per bucket (callbacks due first, then new, then not
 // reached), cards filled with the lane colour. A card opens the person in a drawer at its own URL. In the drawer the
@@ -75,7 +76,7 @@ export function LeadDrawer({ id, onClose }) {
   const put = (k, v) => setChecklist(l.id, { ...c, [k]: v })
   const bucket = BUCKETS.find(b => b.key === l.bucket)
   return (
-    <RecordDrawer label={l.name} kicker={`Queue · came in ${l.came}`} tone={tone} onClose={onClose}
+    <RecordDrawer label={l.name} kicker={<>Queue · came in {l.came} <HelpDot lesson="lead" inline /></>} tone={tone} onClose={onClose}
       hero={<>
         <div className="fx-hero-top"><span className="fx-when"><Clock size={13} aria-hidden="true" />{l.bucket === 'callback_due' ? `Call back ${l.callback}` : `Came in ${l.came}`}</span><Chip tone={tone}>{bucket.label}</Chip></div>
         <h2>{l.name}</h2>
@@ -149,6 +150,7 @@ export default function Queue() {
       <div className="fx-tools">
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find someone" placeholder="Find by name, city or phone" value={q} onChange={e => setQ(e.target.value)} /></label>
         <Seg label="Looking for" value={type} onChange={setType} options={[{ key: 'all', label: 'All', count: queue.length }, { key: 'Policy help', label: 'Policy help', count: queue.filter(l => l.type === 'Policy help').length }, { key: 'Mortgage protection', label: 'Mortgage protection', count: queue.filter(l => l.type === 'Mortgage protection').length }]} />
+        <HelpDot lesson="queue" />
       </div>
 
       <div className="fx-board fs-board3" role="region" aria-label="Queue by bucket">

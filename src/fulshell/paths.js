@@ -11,6 +11,7 @@ export const FUL = {
   servicing: '/fulfillment/servicing',
   pay: '/fulfillment/pay',
   more: '/fulfillment/more',
+  training: '/fulfillment/training', // P872
   messages: '/messages',
   settings: '/settings',
 }
@@ -19,7 +20,7 @@ const noSlash = p => (p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p)
 const PATHS = Object.values(FUL)
 
 // P845 (P846 adds schedule): one record's drawer has its own address under Queue, Calls, Clients and Servicing.
-const RECORD = /^\/fulfillment\/(leads|desk|schedule|pipeline|servicing)\/[^/]+$/
+const RECORD = /^\/fulfillment\/(leads|desk|schedule|pipeline|servicing|training)\/[^/]+$/
 export function isFulShellPath(pathname) {
   const p = noSlash(String(pathname || ''))
   return PATHS.includes(p) || RECORD.test(p)

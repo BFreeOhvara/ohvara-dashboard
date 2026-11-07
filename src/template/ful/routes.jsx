@@ -8,12 +8,13 @@ import Servicing from './screens/Servicing'
 import Pay from './screens/Pay'
 import Messages from './screens/Messages'
 import Settings from './screens/Settings'
+import Training from '../../fulshell/training/Training'
 import { FUL, FUL_ROUTES, OLD_CALLS, mountPath } from './paths'
 
 // P845 — the VA pages as <Route> elements, for both mounts: TemplateApp (preview, /template/fulfillment) and
 // src/fulshell/FulfillShell (the real VA URLs). Put them inside a <Route element={<FulFrame />}>. `wrap` lets the
 // real mount add its error boundary and the confirm-email banner around each page.
-const SCREENS = { overview: Overview, queue: Queue, schedule: Schedule, clients: Clients, servicing: Servicing, pay: Pay }
+const SCREENS = { overview: Overview, queue: Queue, schedule: Schedule, clients: Clients, servicing: Servicing, pay: Pay, training: Training }
 
 export function fulRoutes({ preview, wrap = el => el }) {
   const pages = FUL_ROUTES.filter(([key]) => key !== 'more').map(([key, path]) => {

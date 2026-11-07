@@ -16,6 +16,7 @@ export const FUL = {
   servicing: '/fulfillment/servicing',
   pay: '/fulfillment/pay',
   more: '/fulfillment/more',
+  training: '/fulfillment/training', // P872: the rail's Training (one lesson per job)
   messages: '/messages',
   settings: '/settings',
 }
@@ -36,7 +37,7 @@ export const fp = (key, id) => {
 export const FUL_ROUTES = [
   ['overview', FUL.overview], ['queue', FUL.queue], ['queue', `${FUL.queue}/:id`], ['schedule', FUL.schedule], ['schedule', `${FUL.schedule}/:id`],
   ['clients', FUL.clients], ['clients', `${FUL.clients}/:id`], ['servicing', FUL.servicing], ['servicing', `${FUL.servicing}/:id`],
-  ['pay', FUL.pay], ['more', FUL.more],
+  ['pay', FUL.pay], ['more', FUL.more], ['training', FUL.training], ['training', `${FUL.training}/:id`],
 ]
 
 // The top tabs, in order. Messages and Settings live on the rail and the top right, as on the agent side.
@@ -47,7 +48,7 @@ export const FUL_TABS = [
 const TITLES = {
   overview: ['Today', 'Overview'], queue: ['Call next', 'Queue'], schedule: ['Your week', 'Schedule'], clients: ['Every agent', 'Clients'],
   servicing: ['Client care', 'Servicing'], pay: ['What you earned', 'Pay'], messages: ['Your agents', 'Messages'], settings: ['Account', 'Settings'],
-  more: ['Account', 'More'],
+  more: ['Account', 'More'], training: ['Know the job', 'Training'],
 }
 export const fulTitleOf = page => TITLES[page] || TITLES.overview
 

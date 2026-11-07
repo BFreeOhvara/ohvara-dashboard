@@ -12,7 +12,12 @@ import { PAD } from '../../components/fulfillment/phoneIcons'
 import LiveCall, { SERVICE_LINE } from './LiveCall'
 import { CALL_WORD } from './words'
 import { fp } from './paths'
+import { HelpDot } from '../../fulshell/training/HelpDot'
 
+// P872 — docked at the bottom right like a chat widget (a bottom sheet on a phone), not beside the rail. The X hides
+// the panel to a round phone button (badged for a ring or missed calls); during a call it only minimises to a pill with
+// the caller and the timer, and never hangs up (that stays the red button). It does not block the page: no scrim.
+// The frame owns open / ringing / missed (./phoneDock); this file owns the call.
 // P857 — the VA's in-app phone, back from the old portal (PortalPhone + MyCalls + CallDrawer, before P845) in the
 // shell's glass style. One panel beside the rail (a bottom sheet on a phone): dial pad and client search, recent
 // calls with their outcomes, the in-call screen (mute, hold, keypad, hang up, a timer, the client's name and their
@@ -51,7 +56,7 @@ const fromCall = k => ({
   sub: `${k.agent}'s client · closing ${k.old_carrier}`, callId: OPEN.includes(k.status) ? k.id : null, carrier: k.old_carrier, notes: k.notes || '',
 })
 
-export default function FulPhone({ open, onClose, at, ringId, onRingEnd, onState, live, onLive, startReq }) {
+export default function FulPhone({ open, onOpen, onClose, ringId, onAnswer, onDecline, onLine, missed = [], badge = null, live, onLive, startReq }) {
   const { data: calls } = useFulCalls()
   const { data: clients } = useFulClients()
   const { markCall, hideLive } = useFulActions()
@@ -64,6 +69,7 @@ export default function FulPhone({ open, onClose, at, ringId, onRingEnd, onState
   const [log, setLog] = useState([])         // calls dialed by number this visit (no call record of their own)
   const [shown, leaving] = useExit(open, 200)
   const box = useRef(null)
+  const dockBtn = useRef(null)
   const now = useNow(call && !call.end ? 1000 : 60000)
 
   const targetOf = c => {
@@ -84,12 +90,15 @@ export default function FulPhone({ open, onClose, at, ringId, onRingEnd, onState
   }
 
   const view = ring ? 'ring' : call ? (call.end ? 'result' : 'call') : who ? 'ready' : `pad-${tab}`
-  const lineState = view === 'call' ? 'live' : view === 'ring' ? 'ringing' : null
-  useEffect(() => { onState?.(lineState) }, [lineState, onState])
+  const lineState = view === 'call' ? 'live' : view === 'result' ? 'after' : null
+  useEffect(() => { onLine?.(lineState) }, [lineState, onLine])
 
+  // Hide the panel and hand focus to the round button / pill, so the keyboard does not get lost. Never hangs up.
+  const hide = () => { onClose(); requestAnimationFrame(() => dockBtn.current?.focus()) }
+  // Esc minimises only while you are in the phone: it is not modal, so Esc elsewhere belongs to the page.
   useEffect(() => {
     if (!open) return undefined
-    const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); onClose() } }
+    const onKey = e => { if (e.key === 'Escape' && box.current?.contains(document.activeElement)) { e.stopPropagation(); onClose(); requestAnimationFrame(() => dockBtn.current?.focus()) } }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
   }, [open, onClose])
@@ -109,10 +118,9 @@ export default function FulPhone({ open, onClose, at, ringId, onRingEnd, onState
   }, [q, isNumber, clients])
   const recent = useMemo(() => [
     ...log,
+    ...missed.map(m => calls.find(k => k.id === m.id)).filter(Boolean).map((k, i) => ({ id: `m-${k.id}-${i}`, name: k.name, number: k.client.client_phone, outcome: 'Missed', tone: 'no_answer', when: 'Today, just now', k })),
     ...calls.filter(k => !OPEN.includes(k.status) || k.status === 'no_answer').sort((a, b) => b.day - a.day).map(k => ({ id: k.id, name: k.name, number: k.client.client_phone, outcome: CALL_WORD[k.status], tone: k.status, when: k.day === 5 ? `Today, ${k.time}` : `Nov ${k.day}, ${k.time}`, k })),
-  ], [log, calls])
-
-  if (!shown) return null
+  ], [log, calls, missed])
 
   const press = key => setEntry(e => (/[a-z]/i.test(e) ? key : e + key))
   const dialTarget = () => {
@@ -121,9 +129,9 @@ export default function FulPhone({ open, onClose, at, ringId, onRingEnd, onState
   }
   const canDial = isNumber && digits(q).length >= 10
   const start = target => { setCall({ who: target, start: Date.now(), muted: false, held: false, pad: false, tones: '', end: null }); setWho(null); setEntry('') }
-  const answer = () => { const t = fromCall(ring); onRingEnd(); start(t) }
-  const later = () => { onRingEnd(); onClose() }
-  const openCall = () => { const id = ring.id; onRingEnd(); onClose(); navigate(fp('schedule', id)) }
+  const answer = () => { const t = fromCall(ring); onAnswer(); start(t) }
+  const later = () => onDecline()
+  const openCall = () => { const id = ring.id; onAnswer(); onClose(); navigate(fp('schedule', id)) }
   const hangUp = () => setCall(c => ({ ...c, end: Date.now() }))
   const finish = () => { setCall(null); setTab('recent') }
   const took = call ? clock(((call.end || now) - call.start) / 1000) : ''
@@ -209,19 +217,42 @@ export default function FulPhone({ open, onClose, at, ringId, onRingEnd, onState
     )
   }
 
-  const status = ring ? 'A call is coming in' : call && !call.end ? `On a call · ${took}` : call ? 'How did it go?' : CALLING_ON ? 'Ready' : 'Calling is off right now'
-  // Portaled to <body> like the old PortalPhone and the record drawers, so it sits above an open drawer.
+  const onCall = !!(call && !call.end)
+  const status = ring ? 'A call is coming in' : onCall ? `On a call · ${took}` : call ? 'How did it go?' : CALLING_ON ? 'Ready' : 'Calling is off right now'
+  const lesson = ring ? 'answer' : call ? 'logging' : 'dialer'
+
+  // Closed: the pill while a call is on (or its result is not saved yet), else the round button with its badge.
+  const dock = open ? null : call ? (
+    <button ref={dockBtn} type="button" className={`fs-dock fs-dock-pill${onCall ? ' is-live' : ''}`} onClick={onOpen}
+      aria-label={onCall ? `Back to the call with ${call.who.name}, ${took}` : `Save the result of the call with ${call.who.name}`}>
+      <span className="fs-dock-dot" aria-hidden="true"><PhoneIc size={14} /></span>
+      <span className="fs-dock-t"><b>{call.who.name}</b><small className="tp-num">{onCall ? (call.held ? `On hold · ${took}` : took) : 'Call ended · save the result'}</small></span>
+    </button>
+  ) : (
+    <button ref={dockBtn} type="button" className={`fs-dock fs-dock-btn${badge ? ` is-${badge.kind}` : ''}`} onClick={onOpen}
+      aria-label={badge ? `Phone, ${badge.label}` : 'Phone'} title="Phone">
+      <PhoneIc size={20} aria-hidden="true" />
+      {badge && <span className="fx-badge" aria-hidden="true">{badge.n}</span>}
+    </button>
+  )
+
+  // Portaled to <body> like the old PortalPhone and the record drawers. No scrim: the page stays usable around it.
   return createPortal(
-    <div className={`tp fx-layer fs-phone-layer${leaving ? ' is-leaving' : ''}`} role="presentation">
-      <button type="button" className="fx-scrim is-clear tp-bare" aria-label="Close the phone" tabIndex={-1} onClick={onClose} />
-      <section ref={box} className="fx-menu fs-phone" role="dialog" aria-label="Phone" style={at || undefined}>
-        <header className="fs-ph-h">
-          <span className={`fs-ph-ic${ring || (call && !call.end) ? ' is-live' : ''}`} aria-hidden="true"><PhoneIc size={16} /></span>
-          <span className="tp-grow"><b>Phone</b><small>{status}</small></span>
-          <button type="button" className="fx-x" aria-label="Close the phone" onClick={onClose}><X size={16} /></button>
-        </header>
-        <div className="fs-ph-b">{body}</div>
-      </section>
+    <div className={`tp fx-layer fs-dock-layer${leaving ? ' is-leaving' : ''}`}>
+      {shown && (
+        <section ref={box} className="fx-menu fs-phone" role="dialog" aria-label="Phone">
+          <header className="fs-ph-h">
+            <span className={`fs-ph-ic${ring || onCall ? ' is-live' : ''}`} aria-hidden="true"><PhoneIc size={16} /></span>
+            <span className="tp-grow"><b>Phone</b><small>{status}</small></span>
+            <HelpDot lesson={lesson} />
+            <button type="button" className="fx-x" aria-label={call ? 'Minimise the phone. The call keeps going' : 'Close the phone'} title={call ? 'Minimise (does not hang up)' : 'Close'} onClick={hide}>
+              <X size={16} />
+            </button>
+          </header>
+          <div className="fs-ph-b">{body}</div>
+        </section>
+      )}
+      {dock}
     </div>,
     document.body,
   )
