@@ -432,6 +432,20 @@ test('monthly texts stop at MONTHLY_MAX', async () => {
   assert.equal(f.of('not_reached_monthly').filter(r => r.state === 'scheduled').length, 0)
 })
 
+test('check-ins land near day 30, 60 and 90, then stop (P848)', async () => {
+  assert.equal(MONTHLY_MAX, 3)
+  const f = make({ live: true, templates: CLEAN })
+  await f.plan()
+  const start = f.s.now.getTime()
+  const days: number[] = []
+  for (let seq = 1; seq <= MONTHLY_MAX; seq++) {
+    f.s.now = f.at('not_reached_monthly', seq)
+    days.push(Math.round((f.s.now.getTime() - start) / (24 * HOUR)))
+    await f.tick()
+  }
+  days.forEach((d, i) => assert.ok(Math.abs(d - 30 * (i + 1)) <= 2, `check-in ${i + 1} on day ${d}`))
+})
+
 test('quiet hours: planned and moved into the window, never sent outside it', async () => {
   const late = new Date('2026-10-28T22:30:00-05:00')   // 10:30 PM in Chicago
   assert.equal(nextAllowed(late, 'IL')?.toISOString(), iso(new Date('2026-10-29T08:00:00-05:00')))

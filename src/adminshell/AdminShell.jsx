@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import '../template/template.css'
 import { NoteProvider, AccountProvider } from '../template/kit'
@@ -8,6 +8,7 @@ import AdminFrame from './AdminFrame'
 import { admRouteEls } from './routes'
 import { ap } from './paths'
 import { ME } from './data'
+import { useDataMode } from '../hooks/useDataMode'
 
 // P849 — the Admin portal: the rebuilt admin pages (src/adminshell) on sample info, the same as the agent and VA
 // shells until the backend step. Two mounts: the real admin URLs (ShellSwap passes the real name, the real sign-out
@@ -34,10 +35,13 @@ export default function AdminShell({ account, preview = false }) {
     document.head.appendChild(tag)
     return () => tag.remove()
   }, [preview])
+  // P848: the admin's own "View: Sample / Real" (the real admin pages are wired by P858; this only records the choice).
+  const { mode, canPreview, setView, show } = useDataMode()
+  const live = useMemo(() => (account ? { ...account, view: { mode, canPreview, setView, show } } : account), [account, mode, canPreview, setView, show])
   // P855: the outer boundary catches a throw in the frame itself (a page's own boundary keeps the tabs alive).
   return (
     <AdminBoundary>
-      <AccountProvider value={preview ? SAMPLE : account}>
+      <AccountProvider value={preview ? SAMPLE : live}>
         <NoteProvider>
           <Routes>
             <Route element={<AdminFrame preview={preview} />}>{admRouteEls({ preview, wrap: el => <Page preview={preview}>{el}</Page> })}</Route>

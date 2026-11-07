@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
 import { Drawer, Avatar, Field, Seg, PillTabs, useAccount, useNote, initials } from '../template/kit'
+import ViewToggle from '../template/ViewToggle'
 import { ReportBug } from '../template/ReportBug'
 import { avatarHue } from '../template/avatarHue'
 import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit } from '../template/motion'
@@ -157,6 +158,7 @@ function AccountMenu({ open, onClose, theme, setTheme, preview }) {
       <section className="fx-menu" role="dialog" aria-label="Your account">
         <header className="fx-menu-h"><span className={`fx-av av-${avatarHue(name)}`}>{initials(name).toUpperCase()}</span><span className="tp-grow"><b>{name}</b><small>Admin · owner</small></span></header>
         <button type="button" className="fx-mrow" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}<b className="tp-grow">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</b></button>
+        <ViewToggle />
         <i className="fx-mline" />
         {links.map(([k, label, Icon]) => <Link key={k} to={ap(k)} className="fx-mrow" onClick={onClose}><Icon size={17} aria-hidden="true" /><b className="tp-grow">{label}</b><ChevronRight size={15} aria-hidden="true" /></Link>)}
         {!preview && (

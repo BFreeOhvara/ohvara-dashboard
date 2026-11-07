@@ -11,7 +11,7 @@ import '../leads873.css'
 import '../p878.css'
 import { paths } from '../paths'
 import { PhoneInput } from '../PhoneInput'
-import { verifiedStates } from '../licenceModel'
+import { asPick } from '../licenceModel'
 import { StateSelect } from '../StateSelect'
 import { CarrierSelect } from '../CarrierSelect'
 import { BookTime } from '../CallTime'
@@ -119,7 +119,7 @@ export default function Submit() {
   const query = f.linked || !typed ? '' : typed === 'phone' ? f.phone : f.name
   const matches = query ? matchPeople(query, leads, clients, 6, chipWords) : []
   // P881: the states with a verified active life licence (not just the ones picked for leads).
-  const licensed = settings.licence ? verifiedStates(settings.licence) : null
+  const licensed = settings.licence ? asPick(settings.licence).states : null // P848: the states the agent picked
   const opts = { policy: true, licensed }
   const stateName = code => US_STATES.find(x => x.code === code)?.name || code
   const setSpouse = patch => setF(x => ({ ...x, spouse: { ...x.spouse, ...patch } }))

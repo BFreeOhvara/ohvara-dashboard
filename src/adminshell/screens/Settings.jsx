@@ -18,6 +18,7 @@ import TrainingAdmin from './TrainingAdmin'
 import { BUG_STATUS } from '../../template/bugReport'
 import '../../template/reportbug.css'
 import { Compliance } from './Compliance879'
+import SampleSwitch from '../SampleSwitch'
 
 // P849 — admin Settings on the agent page's shape: the profile card and Sign out on the left, one panel whose stretch
 // tabs switch sections. Sections: Profile, People & access (everyone with a login, as Users does today), Switches,
@@ -108,6 +109,7 @@ function Switches({ live }) {
   return (
     <>
       <Head title="Switches" sub="Company-wide on and off. Each says what it does." />
+      <SampleSwitch live={live} />
       <p className="adm-warn">Sample only: flipping these changes nothing real.{live && <> The real switches are on the <a href="/settings" className="tp-link">current Settings page</a> until the backend step.</>}</p>
       {groups.map(g => (
         <div key={g} className="adm-swgroup">

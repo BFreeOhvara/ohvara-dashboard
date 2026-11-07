@@ -1,4 +1,4 @@
-import { STAGES, needsOutcome, confirmedByText, agentCallTask, SAMPLE_NOW } from './leadLifecycle.js'
+import { STAGES, needsOutcome, confirmedByText, agentCallTask, clockNow } from './leadLifecycle.js'
 
 // P878 — what an agent sees of a lead (How Ohvara Works, "What each role sees of a lead"). Five statuses, Closed under a
 // filter with its reason. Never call attempts, the text sequence or where a lead came from. The VA and admin portals
@@ -20,7 +20,7 @@ const CLOSED_STAGES = ['not_interested', 'unreachable', 'opted_out']
 
 // Which of the five (or Closed) a lead is in for its agent. servicing: the agent's plan includes servicing, so a sale
 // isn't done until it's submitted ("Finish servicing details").
-export function agentStatusOf(l, { now = SAMPLE_NOW, servicing = true } = {}) {
+export function agentStatusOf(l, { now = clockNow(), servicing = true } = {}) {
   if (CLOSED_STAGES.includes(l.stage) || l.reason === 'Wrong number') return 'closed'
   if (needsOutcome(l, now) || agentCallTask(l)) return 'needs_you'
   if (l.stage === 'sold') return servicing && !l.submitted ? 'needs_you' : 'sold'
@@ -35,7 +35,7 @@ export function agentChip(l, opts) {
   const s = agentStatus(key)
   if (key === 'closed') return [s.tone, closedReason(l)]
   if (key === 'needs_you') {
-    if (needsOutcome(l, opts?.now || SAMPLE_NOW)) return [s.tone, 'Needs you: mark the outcome']
+    if (needsOutcome(l, opts?.now || clockNow())) return [s.tone, 'Needs you: mark the outcome']
     if (agentCallTask(l)) return [s.tone, 'Needs you: call them back']
     return [s.tone, 'Needs you: finish servicing details']
   }

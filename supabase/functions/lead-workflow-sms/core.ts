@@ -1,7 +1,7 @@
 // The rules for the Booked Appointments texts to a mortgage_protection lead:
 //   not reached   welcome text now, then day 0 (+4 h), day 1, day 3, day 7,
-//                 then monthly (+30 days, up to MONTHLY_MAX); a reply, a
-//                 booking or an opt-out stops them
+//                 then check-ins at day 30, 60 and 90 (MONTHLY_MAX = 3, P848)
+//                 and nothing after; a reply, a booking or an opt-out stops them
 //   booked        confirmation now, a reminder the day before and 1 hour before
 //   no-show       a rebook text right away, for the first NO_SHOW_MAX no-shows
 // Every step is ONE row in inbound_events (180): planned as 'scheduled', then
@@ -78,7 +78,7 @@ const MIN = 60e3
 const HOUR = 60 * MIN
 const DAY = 24 * HOUR
 export const MONTHLY_GAP_MS = 30 * DAY
-export const MONTHLY_MAX = 12
+export const MONTHLY_MAX = 3 // day 30, 60, 90, then stop (Brayden, P848)
 export const NO_SHOW_MAX = 2
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const E164 = /^\+[1-9][0-9]{7,14}$/
@@ -89,8 +89,8 @@ export const STEPS: Record<Step, StepInfo> = {
   not_reached_d0: { kind: 'text_sent', label: 'Follow-up text, same day', summary: 'Asks for a good time to talk.' },
   not_reached_d1: { kind: 'text_sent', label: 'Follow-up text, day 1', summary: 'Asks when a quick call works.' },
   not_reached_d3: { kind: 'text_sent', label: 'Follow-up text, day 3', summary: 'Asks for a day and time that works.' },
-  not_reached_d7: { kind: 'text_sent', label: 'Follow-up text, day 7', summary: 'One more check-in before the monthly texts.' },
-  not_reached_monthly: { kind: 'text_sent', label: 'Monthly check-in text', summary: 'Checks in once a month until they are reached.' },
+  not_reached_d7: { kind: 'text_sent', label: 'Follow-up text, day 7', summary: 'One more check-in before the day 30, 60 and 90 texts.' },
+  not_reached_monthly: { kind: 'text_sent', label: 'Check-in text', summary: 'Checks in at day 30, 60 and 90, then stops.' },
   confirm: { kind: 'reminder', label: 'Confirmation text', summary: 'Confirms the appointment time, with a reschedule link.' },
   reminder_day_before: { kind: 'reminder', label: 'Reminder text', summary: 'The day before the appointment, with a reschedule link.' },
   reminder_1h: { kind: 'reminder', label: 'Reminder text, 1 hour before', summary: 'An hour before the appointment, with a reschedule link.' },

@@ -3,24 +3,21 @@ import '../leads873.css'
 import { Link } from 'react-router-dom'
 import { Phone, MapPin, ChevronRight, Clock, ClipboardCheck, CalendarX2, Settings2, Ban } from 'lucide-react'
 import { CountUp } from '../motion'
-import { useSampleAppointments, useSampleLeads, useSampleClients, useSampleSettings, useSampleActions, useSampleBlocks, AGENT_TZ, onAgentClock } from '../data'
+import { useSampleAppointments, useSampleLeads, useSampleClients, useSampleSettings, useSampleActions, useSampleBlocks, useWeek, AGENT_TZ, onAgentClock } from '../data'
 import { Drawer, Empty, Chip, Field, useNote } from '../kit'
 import { Select } from '../Select'
 import { HoursEditor, CalendarConnect, ClashList } from '../Hours'
 import { clashes } from '../hoursModel'
 import { leadText } from '../leadTexts'
 import '../p878.css'
-import { needsOutcome, SAMPLE_NOW } from '../leadLifecycle'
+import { needsOutcome, clockNow } from '../leadLifecycle'
 import { stageChip } from '../LeadOutcome'
 import { paths } from '../paths'
 import { DayBox, WeekStrip, WeekList } from '../DayBox'
 import { useOpenDay, useStickyDay } from '../useOpenDay'
 import { blockTime, clockOf, zoneAbbr } from '../../lib/callSlots'
 
-const DAYS = [['Mon', 2], ['Tue', 3], ['Wed', 4], ['Thu', 5], ['Fri', 6]]
-const NUMS = DAYS.map(([, n]) => n)
-const nameOf = n => DAYS.find(([, d]) => d === n)?.[0] || ''
-const TODAY = 2
+// P848: the week shown comes from data useWeek (the sample week of Nov 2, or the real current week).
 const START = 9 // the grid runs 9:00 AM to 6:00 PM, your working hours
 const HOURS = Array.from({ length: 9 }, (_, i) => START + i)
 const label12 = h => `${((h + 11) % 12) + 1} ${h < 12 ? 'AM' : 'PM'}`
@@ -52,6 +49,7 @@ function HoursDrawer({ open, onClose, settings, appts }) {
 
 // Block a whole day off: anything booked that day is listed to Keep or Move.
 function BlockDrawer({ open, onClose, appts, blocked }) {
+  const { days: DAYS, monOf } = useWeek()
   const { blockDay, unblockDay } = useSampleActions()
   const note = useNote()
   const [day, setDay] = useState('Fri')
@@ -64,7 +62,7 @@ function BlockDrawer({ open, onClose, appts, blocked }) {
         ? <button type="button" className="tp-primary fx-accent" onClick={() => { unblockDay(day); note(`${day} open again`); onClose() }}>Open {day} again</button>
         : <button type="button" className="tp-primary fx-accent" onClick={() => { blockDay(day, hit.filter(a => choice[a.id] === 'move').map(a => a.id)); note(`${day} blocked`); onClose() }}><Ban size={15} />Block {day}</button>}
         <button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
-      <Field label="Day"><Select label="Day" value={day} onChange={v => { setDay(v); setChoice({}) }} options={DAYS.map(([d, n]) => ({ value: d, label: `${d}, Nov ${n}${blocked.includes(d) ? ' · blocked' : ''}` }))} /></Field>
+      <Field label="Day"><Select label="Day" value={day} onChange={v => { setDay(v); setChoice({}) }} options={DAYS.map(([d, n]) => ({ value: d, label: `${d}, ${monOf(n)} ${n}${blocked.includes(d) ? ' · blocked' : ''}` }))} /></Field>
       {!isBlocked && <ClashList items={hit} choice={choice} onChoice={setChoice} title={`Booked on ${day}`} />}
       {!isBlocked && hit.length === 0 && <p className="tp-sub">Nothing booked that day.</p>}
     </Drawer>
@@ -73,11 +71,12 @@ function BlockDrawer({ open, onClose, appts, blocked }) {
 
 // "Can't make it" on a lead's appointment (N-C-36): an automatic apology and a one-tap rebook link go out.
 function CantMakeIt({ appt, lead, onClose }) {
+  const { monOf } = useWeek()
   const { cantMakeIt } = useSampleActions()
   const note = useNote()
   if (!appt || !lead) return null
   return (
-    <Drawer open onClose={onClose} title="Can't make it?" sub={`${appt.who} · ${appt.day}, Nov ${appt.date}, ${appt.time}`}
+    <Drawer open onClose={onClose} title="Can't make it?" sub={`${appt.who} · ${appt.day}, ${monOf(appt.date)} ${appt.date}, ${appt.time}`}
       footer={<><button type="button" className="tp-primary fx-accent" onClick={() => { cantMakeIt(appt.id); note(`${lead.first_name} got your apology and a link to pick a new time`); onClose() }}><CalendarX2 size={15} />Send and free the time</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Keep it</button></>}>
       <p className="tp-sub">{lead.first_name} gets this text right away. If they don{'’'}t pick a new time, our team calls them.</p>
       <div className="tp-chat"><div className="tp-bub me">{leadText('cant_make_it', { lead: lead.first_name, appt: `${appt.day} at ${appt.time}` })}<small>Deedstone · draft wording · sends when your leads go live</small></div></div>
@@ -95,6 +94,7 @@ function minutesIn(time) {
 // screen. Each appointment is placed by its instant on your clock (Settings zone), with the client's time beside it
 // when theirs differs.
 export default function Calendar() {
+  const { days: DAYS, nums: NUMS, nameOf, today: TODAY, time: NOW_TIME, monOf, isoOf } = useWeek()
   const { data: raw } = useSampleAppointments()
   const { data: leads } = useSampleLeads()
   const { data: clients } = useSampleClients()
@@ -106,14 +106,14 @@ export default function Calendar() {
   const [cant, setCant] = useState(null)
   const tz = settings.timeZone || AGENT_TZ
   const events = raw.map(e => (e.iso ? { ...e, ...onAgentClock(e.iso, tz), when: blockTime(e.iso, tz, e.tz) } : { ...e, when: e.time }))
-  const { day, open: openDay, close } = useOpenDay(NUMS, { esc: !open })
+  const { day, open: openDay, close } = useOpenDay(NUMS, { esc: !open, isoOf })
   const { view, leaving } = useStickyDay(day)
   const ref = open && (open.kind === 'lead' ? leads.find(l => l.id === open.ref) : clients.find(c => c.id === open.ref))
   const phone = ref && (ref.phone || ref.client_phone)
   const place = ref && `${ref.city}, ${ref.state}`
   // P873: a lead's appointment card shows where the lead is now, and asks how it went once it has ended.
   const leadRef = open?.kind === 'lead' ? ref : null
-  const ask = leadRef && needsOutcome(leadRef, SAMPLE_NOW)
+  const ask = leadRef && needsOutcome(leadRef, clockNow())
   const shown = view != null ? DAYS.filter(([, d]) => d === view) : DAYS
   const ofDay = d => events.filter(e => e.date === d).sort((a, b) => minutesIn(a.time) - minutesIn(b.time))
   const list = view != null ? ofDay(view) : []
@@ -140,7 +140,7 @@ export default function Calendar() {
       <WeekList days={NUMS} today={TODAY} onOpen={openDay} name={nameOf} itemsOf={ofDay} line={e => `${e.time} ${e.who}`} />
 
       <div className="fx-grid" data-fold data-fold-fit="360">
-        <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week`} style={{ '--i': 0, '--days': shown.length }} aria-label={view != null ? `${nameOf(view)}, Nov ${view}` : 'This week'}>
+        <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week`} style={{ '--i': 0, '--days': shown.length }} aria-label={view != null ? `${nameOf(view)}, ${monOf(view)} ${view}` : 'This week'}>
           <div className="tp-tgrid-h"><span />{shown.map(([d, n]) => (
             <b key={d} role="button" tabIndex={0} aria-pressed={n === view} title={n === view ? 'Back to the week' : `Open ${d} ${n}`} className={`${n === TODAY ? 'today' : ''}${n === view ? ' is-on' : ''}`} onClick={() => openDay(n)} onKeyDown={headKey(n)}>
               {d} <span>{n}</span>{n === TODAY && <small>Today</small>}
@@ -151,14 +151,14 @@ export default function Calendar() {
             {shown.map(([d, n]) => (
               <div key={d} className={`tp-tcol${n === TODAY ? ' today' : ''}${blocked.includes(d) ? ' is-blocked' : ''}`} data-day={n} title={blocked.includes(d) ? `${d} is blocked` : undefined} onClick={e => { if (view == null && e.target === e.currentTarget) openDay(n) }}>
                 {ofDay(n).map((e, i, all) => { const same = all.filter(x => x.time === e.time); return <Ev key={e.id} e={e} lane={[same.indexOf(e), same.length]} /> })}
-                {n === TODAY && <i className="tp-now" style={{ top: `${(minutesIn('2:14 PM') / (HOURS.length * 60)) * 100}%` }} aria-hidden="true" />}
+                {n === TODAY && <i className="tp-now" style={{ top: `${(minutesIn(NOW_TIME) / (HOURS.length * 60)) * 100}%` }} aria-hidden="true" />}
               </div>
             ))}
           </div>
         </section>
 
         {view != null && (
-          <DayBox title={`${nameOf(view)}, Nov ${view}`} sub={list.length ? `${list.length} on your calendar` : 'Nothing booked'} leaving={leaving} onClose={close}>
+          <DayBox title={`${nameOf(view)}, ${monOf(view)} ${view}`} sub={list.length ? `${list.length} on your calendar` : 'Nothing booked'} leaving={leaving} onClose={close}>
             <b className="tp-num fx-huge2"><CountUp value={list.length} /><small> {list.length === 1 ? 'call' : 'calls'}</small></b>
             <ul className="fx-rows">
               {list.map(e => <li key={e.id}><button type="button" className={`fx-row is-${e.kind === 'lead' ? 'blue' : 'teal'}`} onClick={() => setOpen(e)}><span className="fx-row-ic"><Clock size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{e.who}</b><small>{e.when} · {e.label}</small></span><ChevronRight size={16} aria-hidden="true" /></button></li>)}
@@ -172,7 +172,7 @@ export default function Calendar() {
         )}
       </div>
 
-      <Drawer open={!!open} onClose={() => setOpen(null)} title={open?.who || ''} sub={open && `${open.day}, Nov ${open.date}, ${open.time} your time${open.iso && open.tz && clockOf(open.iso, open.tz) !== open.time ? ` · ${clockOf(open.iso, open.tz)} ${zoneAbbr(open.tz, open.iso)} for them` : ''}`}
+      <Drawer open={!!open} onClose={() => setOpen(null)} title={open?.who || ''} sub={open && `${open.day}, ${monOf(open.date)} ${open.date}, ${open.time} your time${open.iso && open.tz && clockOf(open.iso, open.tz) !== open.time ? ` · ${clockOf(open.iso, open.tz)} ${zoneAbbr(open.tz, open.iso)} for them` : ''}`}
         footer={<><Link to={open?.kind === 'lead' ? paths.lead(open.ref) : paths.client(open?.ref)} className="tp-primary fx-accent" onClick={() => setOpen(null)}>{open?.kind === 'lead' ? 'Open lead' : 'Open client'}</Link>
           {open?.kind === 'lead'
             ? <button type="button" className="tp-btn ov-ghost" onClick={() => { setCant(open); setOpen(null) }}><CalendarX2 size={14} />Can{'’'}t make it</button>
