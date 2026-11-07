@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Hand, MessageSquare, CalendarOff, Check, X, Plus, ChevronRight, TriangleAlert, Landmark, ArrowUpRight, Phone, ShieldOff, ShieldCheck, Clock3, Headset } from 'lucide-react'
-import { useAdmVas, useAdmDesk, useAdmRota, useAdmActions, useAdmMoney, WEEK, NEXT_WEEK, TODAY, SHIFT_MIN, SHIFT_MAX, dayName } from '../data'
+import { Hand, MessageSquare, CalendarOff, Check, X, Plus, ChevronRight, TriangleAlert, Phone, ShieldOff, ShieldCheck, Clock3, Headset } from 'lucide-react'
+import { useAdmVas, useAdmDesk, useAdmRota, useAdmActions, WEEK, NEXT_WEEK, TODAY, SHIFT_MIN, SHIFT_MAX, dayName } from '../data'
 import { useAdmShifts } from '../../hooks/useVaShiftsAdmin'
 import { Avatar, Chip, Drawer, Empty, PillTabs, Seg, useNote } from '../../template/kit'
 import { DayBox, WeekStrip, WeekList } from '../../template/DayBox'
 import { useOpenDay, useStickyDay } from '../../template/useOpenDay'
 import { GRID_END, GRID_ROWS, GRID_START, lanes, minutesOf, rotaCell, shiftSpan, theirTime, vaHue, weekCalls } from '../calendar'
 import { RecordDrawer, Block } from '../../template/Record'
-import { CountUp, usd } from '../../template/motion'
+import { usd } from '../../template/motion'
 import { Dropdown, DField, Tile } from '../kit'
 import { ap } from '../paths'
-import { CALL_WORD, CALL_TONE, BANK_WORD, PAY_WORD } from '../words'
+import { CALL_WORD, CALL_TONE, BANK_WORD } from '../words'
+import { LiveDesk, SwapsAndOpen, HoursPay, Quality, Records, Holidays } from './Team879'
 
 // P849 — the Fulfillment team: today's desk (every VA's calls on one timeline, the calls past their time and Give to,
 // as admin_give_call does today), the weekly rota builder (two or three on shift every day; drag a VA onto a day, drag
@@ -325,30 +326,6 @@ function Requests() {
   )
 }
 
-function Pay() {
-  const { data: vas } = useAdmVas()
-  const { data: m } = useAdmMoney()
-  const total = vas.reduce((t, v) => t + v.week.verified + v.week.checking, 0)
-  return (
-    <div className="adm-two">
-      <Tile i={0} title="This week's pay" sub={`Nov 2 to 8 · ${money(m.rate)} a confirmed cancellation · paid ${m.payday}`} to={`${ap('billing')}?tab=payouts`} label="Open payouts">
-        <b className="fx-huge tp-money"><CountUp value={total} format={money} /></b>
-        <ul className="tp-list adm-rows">{vas.map(v => {
-          const [bw, bt] = BANK_WORD[v.bank]
-          return (
-            <li key={v.id} className="fx-mrow"><Avatar name={v.name} /><span className="tp-grow"><b>{v.name}</b><small>{v.week.cancels} cancellations{v.week.listen ? ` · ${v.week.listen} ${PAY_WORD.needs_listen[0].toLowerCase()}` : ''}</small></span><Chip tone={bt}>{bw}</Chip><b className="tp-money">{money(v.week.verified + v.week.checking)}</b></li>
-          )
-        })}</ul>
-      </Tile>
-      <Tile className="is-fill is-green" i={1} title="Next pay run" sub={`${m.payday}, ${m.paused ? 'paused' : 'automatic'}`}>
-        <b className="fx-huge tp-money"><CountUp value={m.runTotal} format={money} /></b>
-        <small>Verified so far, to people with a bank. Checking joins once confirmed.</small>
-        <Link to={`${ap('billing')}?tab=payouts`} className="fx-pillbtn fx-self"><Landmark size={14} />Payouts<ArrowUpRight size={14} /></Link>
-      </Tile>
-    </div>
-  )
-}
-
 function VaDrawer({ id, onClose }) {
   const { data: vas } = useAdmVas()
   const { data: desk } = useAdmDesk()
@@ -402,7 +379,10 @@ function VaDrawer({ id, onClose }) {
   )
 }
 
-const TABS = [['today', 'Today'], ['rota', 'Rota'], ['requests', 'Day off'], ['pay', 'Pay']]
+// P879: Live desk, Quality and Records join; Day off is Time off (swaps and open shifts too); Pay is hourly from clock
+// in/out (Q76); the per-cancellation Pay tile is gone (Billing › Payouts and Settings › Pay rules still say per
+// cancellation until 858 rewires pay).
+const TABS = [['today', 'Today'], ['desk', 'Live desk'], ['rota', 'Rota'], ['requests', 'Time off'], ['pay', 'Hours & pay'], ['quality', 'Quality'], ['records', 'Records']]
 export default function Team() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -418,9 +398,12 @@ export default function Team() {
         items={TABS.map(([k, label]) => ({ key: k, label, count: k === 'requests' && pending ? pending : undefined }))} />
       <div className="adm-tabpane" key={tab} role="tabpanel">
         {tab === 'today' && <TeamCalendar openCall={c => setSp(p => { const n = new URLSearchParams(p); n.set('call', c); return n }, { replace: true })} />}
-        {tab === 'rota' && <Rota />}
-        {tab === 'requests' && <Requests />}
-        {tab === 'pay' && <Pay />}
+        {tab === 'desk' && <LiveDesk />}
+        {tab === 'rota' && <><Rota /><Holidays /></>}
+        {tab === 'requests' && <><Requests /><SwapsAndOpen /></>}
+        {tab === 'pay' && <HoursPay />}
+        {tab === 'quality' && <Quality />}
+        {tab === 'records' && <Records />}
       </div>
       {call && <CallDrawer id={call} onClose={() => setSp(p => { const n = new URLSearchParams(p); n.delete('call'); return n }, { replace: true })} />}
       {id && <VaDrawer id={id} onClose={() => navigate(ap('team'))} />}

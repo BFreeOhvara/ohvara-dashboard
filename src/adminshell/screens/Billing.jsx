@@ -7,6 +7,7 @@ import { CountUp, usd } from '../../template/motion'
 import { Tile, EngineSlot } from '../kit'
 import { ap } from '../paths'
 import { BILL_WORD, BANK_WORD } from '../words'
+import { PilotResults } from './Pilot879'
 
 // P866 — the tab and page read Revenue (Brayden didn't like Money). P864 — Money (it was Billing & revenue): at the top, for This week / This month / Last month, what came in (what agents
 // paid), what it cost (ad spend, VA payouts, card fees, tools), the profit, and the owners' split (Brayden and Jordan,
@@ -283,7 +284,7 @@ function Payouts() {
   )
 }
 
-const TABS = [['revenue', 'By week'], ['agents', 'Agent billing'], ['payouts', 'Payouts']]
+const TABS = [['revenue', 'By week'], ['pilot', 'Pilot results'], ['agents', 'Agent billing'], ['payouts', 'Payouts']]
 export default function Billing() {
   const [sp, setSp] = useSearchParams()
   const { data: m } = useAdmMoney()
@@ -299,6 +300,7 @@ export default function Billing() {
         items={TABS.map(([k, label]) => ({ key: k, label, count: k === 'agents' && m.failed.length ? m.failed.length : k === 'payouts' && m.listen.length ? m.listen.length : undefined }))} />
       <div className="adm-tabpane" key={tab} role="tabpanel">
         {tab === 'revenue' && <Revenue />}
+        {tab === 'pilot' && <PilotResults />}
         {tab === 'agents' && <AgentBills />}
         {tab === 'payouts' && <Payouts />}
       </div>

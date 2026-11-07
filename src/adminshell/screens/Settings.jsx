@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   User, Users, ToggleRight, Wallet, History, Bug, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
-  ShieldOff, Image as ImageIcon, Check, Lock, GraduationCap,
+  ShieldOff, Image as ImageIcon, Check, Lock, GraduationCap, Scale,
 } from 'lucide-react'
 import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAudit, useAdmBugs, useAdmDay, SWITCHES, ME } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
@@ -17,13 +17,14 @@ import { ZONES } from '../words'
 import TrainingAdmin from './TrainingAdmin'
 import { BUG_STATUS } from '../../template/bugReport'
 import '../../template/reportbug.css'
+import { Compliance } from './Compliance879'
 
 // P849 — admin Settings on the agent page's shape: the profile card and Sign out on the left, one panel whose stretch
 // tabs switch sections. Sections: Profile, People & access (everyone with a login, as Users does today), Switches,
 // Pay rules, Audit log (append-only, every admin action), Bug reports, Preferences. Sample only: the
 // real switches stay on today's /settings page until the backend step, and this page says so.
 const TABS = [['profile', 'Profile', User], ['people', 'People & access', Users], ['switches', 'Switches', ToggleRight], ['pay', 'Pay rules', Wallet],
-  ['training', 'Training', GraduationCap], ['audit', 'Audit log', History], ['bugs', 'Bug reports', Bug], ['prefs', 'Preferences', SlidersHorizontal]]
+  ['training', 'Training', GraduationCap], ['audit', 'Audit log', History], ['bugs', 'Bug reports', Bug], ['compliance', 'Compliance', Scale], ['prefs', 'Preferences', SlidersHorizontal]]
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 
 function FormFoot({ dirty, onDiscard, onSave, label = 'Save changes' }) {
@@ -255,6 +256,7 @@ export default function Settings() {
           {tab === 'training' && <TrainingAdmin />}
           {tab === 'audit' && <Audit />}
           {tab === 'bugs' && <Bugs />}
+          {tab === 'compliance' && <Compliance />}
           {tab === 'prefs' && <Prefs />}
         </div>
       </section>

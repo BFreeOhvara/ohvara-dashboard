@@ -8,6 +8,7 @@ import { usd } from '../../template/motion'
 import { Dropdown, DField } from '../kit'
 import { ap } from '../paths'
 import { BILL_WORD, STAGE_WORD, stageTone } from '../words'
+import { PilotBlock, CampaignBlock } from './Pilot879'
 
 // P849 — Agents: every agent, their plan and weekly lead budget, whether they take live transfers, this week's results
 // and billing. A row opens the agent in a drawer at its own address (/admin/agents/:id) with every admin control the
@@ -61,6 +62,8 @@ function AgentDrawer({ id, onClose }) {
         {a.billing.failed && <p className="adm-warn">{a.billing.failed.what} {money(a.billing.failed.amount)} failed {a.billing.failed.when}: {a.billing.failed.why}.</p>}
         <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Comped</b><p className="tp-sub">Comped agents use the portal without a plan charge.</p></div><Switch on={a.comped} label="Comped" onChange={v => { setComped(a.id, v); note(v ? 'Account comped' : 'Comp ended') }} /></div>
       </Block>
+      <PilotBlock key={`p-${a.id}`} agent={a} />
+      <CampaignBlock agent={a} />
       <Block title="This week"><Funnel w={a.week} /></Block>
       <Block title="Access">
         <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Servicing</b><p className="tp-sub">{a.servicing ? 'Leads and Servicing' : 'Leads only'}</p></div><Switch on={a.servicing} label="Servicing" onChange={v => { setServicing(a.id, v); note(v ? 'Servicing on' : 'Servicing off: leads only') }} /></div>

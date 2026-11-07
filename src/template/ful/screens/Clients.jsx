@@ -7,6 +7,7 @@ import { RecordDrawer, Block } from '../../Record'
 import { stageLabel } from '../../stages'
 import { fp } from '../paths'
 import { CALL_WORD, CALL_TONE, KIND, kindTone } from '../words'
+import { VerifyCaller } from '../Clock879'
 
 // P845 — Clients: the agent's Clients grid and drawer, adapted for a VA: every client across the agents this VA
 // serves, each card naming its agent, a filter per agent beside the status filter. The drawer shows the policy, the
@@ -71,6 +72,8 @@ function ClientDrawer({ id, onClose }) {
           <p className="tp-mid">{c.agent} asked for help. It is on Servicing as {c.next_step.toLowerCase()}.</p>
         </section>
       )}
+      {/* P879 (N-E-61): check the caller before any policy detail. */}
+      <VerifyCaller key={c.id} client={c} />
       <Block title="Policy">
         <dl className="fx-facts">{[['Carrier', c.carrier_name], ['Product', c.product_name], ['Policy', c.policy_number], ['Phone', c.client_phone], ['Agent', c.agent]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
         {c.note && <p className="tp-sub">{c.note}</p>}

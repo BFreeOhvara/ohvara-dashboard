@@ -15,6 +15,8 @@ import { StateSelect } from '../../StateSelect'
 import { fp } from '../paths'
 import { BUCKETS, QUESTION_TYPES, URGENCIES, checklistDone } from '../words'
 import { HelpDot } from '../../../fulshell/training/HelpDot'
+import { flagsOf } from '../p879'
+import { LeadFlags, HowWeGotYou, CheckAgent, Script, Outcome, BestNumberNotes, Recuse, CallTasksStrip } from '../LeadDesk879'
 
 // P845 — the Queue, built like the agent's Leads board: one lane per bucket (callbacks due first, then new, then not
 // reached), cards filled with the lane colour. A card opens the person in a drawer at its own URL. In the drawer the
@@ -85,17 +87,21 @@ export function LeadDrawer({ id, onClose }) {
       </>}
       actions={held ? <>
         {/* P876: VAs don't dial. This lead is a task the system gave them, so it has a Call button (the phone slides in). */}
-        <button type="button" className="tp-primary fx-accent" onClick={() => showLive({ kind: 'lead', id: l.id })}><Phone size={16} />Call</button>
+        {/* P879 (N-B-42): an opted-out lead gets no outbound call; they called in, so the VA is already talking to them. */}
+        {!flagsOf(l).optedOut && <button type="button" className="tp-primary fx-accent" onClick={() => showLive({ kind: 'lead', id: l.id })}><Phone size={16} />Call</button>}
         <button type="button" className="tp-btn ov-ghost" disabled={done < 4} title={done < 4 ? 'Answer the four questions first' : undefined} onClick={() => setPanel('book')}><CalendarCheck size={16} />Book an agent</button>
         <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('callback')}><CalendarClock size={15} />Call back</button>
         <button type="button" className="tp-btn ov-ghost" onClick={() => { notReached(l.id); note(`${l.name} marked not reached`); onClose() }}><PhoneMissed size={15} />Not reached</button>
         <span className="tp-grow" />
+        <Recuse l={l} onDone={() => { releaseLead(l.id); onClose() }} />
         <button type="button" className="tp-btn ov-ghost" onClick={() => { releaseLead(l.id); note('Put back in the queue') }}><Undo2 size={15} />Put back</button>
       </> : <>
         <button type="button" className="tp-primary fx-accent" onClick={() => { holdLead(l.id); note(`${l.name} is yours for 15 minutes`) }}><Hand size={16} />Take it</button>
         <span className="tp-grow" />
         <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('close')}>Not interested</button>
       </>}>
+      {/* P879: banners for opted-out or closed leads, and the verbal consent line for call-ins. */}
+      <LeadFlags l={l} />
       {held && (
         <section className="fx-blk fs-hold">
           <header><h3><Phone size={16} aria-hidden="true" />Yours for {left}</h3></header>
@@ -114,6 +120,12 @@ export function LeadDrawer({ id, onClose }) {
         </div>
         {!held && <p className="tp-sub">Take them first to answer.</p>}
       </Block>
+      {/* P879: from a reached lead straight to Check agent or Book; the script; the outcome; notes for the agent. */}
+      <CheckAgent l={l} held={held} onBook={() => setPanel('book')} />
+      <Script l={l} />
+      <Outcome l={l} held={held} onDone={o => { if (o === 'do_not_call') { closeLead(l.id); onClose() } }} />
+      <BestNumberNotes l={l} held={held} />
+      <HowWeGotYou l={l} />
       <Block title="What we know">
         <dl className="fx-facts">{[['Phone', l.phone], ['Came in', l.came], ['Tries', String(l.tries)], ['Looking for', l.type]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
         {l.note && <p className="tp-sub">{l.note}</p>}
@@ -155,6 +167,7 @@ export default function Queue() {
         <HelpDot lesson="queue" />
       </div>
 
+      <CallTasksStrip />
       <div className="fx-board fs-board3" role="region" aria-label="Queue by bucket">
         {BUCKETS.map((b, li) => {
           const rows = shown.filter(l => l.bucket === b.key)
