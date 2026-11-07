@@ -54,7 +54,7 @@ test('P879 Check agent steps: Sent, Seen, then the answer or No answer at 30 s',
 })
 
 test('P879 outcomes: the full list; age rule; someone else can only set a callback', () => {
-  for (const k of ['wrong_number', 'do_not_call', 'not_eligible', 'someone_else', 'voicemail']) assert.ok(OUTCOMES.some(o => o[0] === k))
+  for (const k of ['wrong_number', 'do_not_call', 'not_eligible', 'someone_else', 'voicemail', 'upset_legal']) assert.ok(OUTCOMES.some(o => o[0] === k))
   assert.equal(ageRule('17').close, 'not_eligible')
   assert.equal(ageRule('52').ok, true)
   assert.equal(ageRule('').ok, null)

@@ -5,7 +5,7 @@ import { Select } from '../Select'
 import { Block } from '../Record'
 import {
   flagsOf, sourceOf, CONSENT_LINE, agentForState, agentCheck, checkStep, CHECK_WORD, OUTCOMES, WRAP_REMIND_S, ageRule, SOMEONE_ELSE,
-  SCRIPTS, BOUNDARY, COVERAGE_CUE, requiredLeft, VOICEMAIL, bestNumberCheck, NOTE_CHIPS, myCallTasks, mmss,
+  SCRIPTS, BOUNDARY, COVERAGE_CUE, requiredLeft, VOICEMAIL, ALERTS_ADMIN, bestNumberCheck, NOTE_CHIPS, myCallTasks, mmss,
 } from './p879'
 import './p879.css'
 
@@ -134,7 +134,7 @@ export function Outcome({ l, held, onDone }) {
   const a = ageRule(age)
   const save = o => {
     setPick(o); setSaved(true)
-    note(o === 'do_not_call' ? `${l.name} is on the do-not-call list for every agent` : o === 'voicemail' ? 'Voicemail left. It counts as a try.' : `Saved: ${OUTCOMES.find(x => x[0] === o)[1]}. You're Available again.`)
+    note(o === 'do_not_call' ? `${l.name} is on the do-not-call list for every agent` : o === 'voicemail' ? 'Voicemail left. It counts as a try.' : ALERTS_ADMIN.includes(o) ? 'Saved. The admins have been alerted with the timeline.' : `Saved: ${OUTCOMES.find(x => x[0] === o)[1]}. You're Available again.`)
     onDone?.(o)
   }
   return (

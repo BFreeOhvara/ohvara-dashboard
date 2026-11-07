@@ -107,8 +107,10 @@ export function checkStep(ms, answer = null) {
 // N-B-28, N-B-47, N-B-48: every outcome; one must be saved before Available; a reminder at 60 s of wrap-up.
 export const OUTCOMES = [
   ['booked', 'Booked'], ['transferred', 'Live transfer'], ['callback', 'Callback set'], ['no_answer', 'No answer'], ['voicemail', 'Left a voicemail'],
-  ['someone_else', 'Spoke to someone else'], ['not_interested', 'Not interested'], ['wrong_number', 'Wrong number'], ['do_not_call', 'Do not call'], ['not_eligible', 'Not eligible'],
+  ['someone_else', 'Spoke to someone else'], ['not_interested', 'Not interested'], ['wrong_number', 'Wrong number'], ['do_not_call', 'Do not call'], ['not_eligible', 'Not eligible'], ['upset_legal', 'Upset or legal threat'],
 ]
+// N-B-50: an upset or legal outcome alerts the admins with the lead's timeline (no recording at launch, Q51).
+export const ALERTS_ADMIN = ['upset_legal']
 export const WRAP_REMIND_S = 60
 export const AGE_LIMIT = 80 // the agents' oldest age (Brayden's rule; sample)
 export function ageRule(age) {
