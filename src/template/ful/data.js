@@ -81,6 +81,20 @@ const mkClient = (id, first, last, agent, o) => ({
   carrier_name: 'Mutual of Omaha', product_name: 'Term Life 20', policy_number: 'MO-4471023', monthly_premium: 64.5, stage: 'protected',
   next_step: '', submitted: 'Oct 21', attention: null, note: '', calls: [], ...o,
 })
+// P885 — the missed-payment desk (sample). intake: forwarded carrier emails the system couldn't match to one policy
+// (why: no_policy | several_policies | unclear). portalChecks: this week's carrier portal checks (Q38: look only).
+const seedIntake = [
+  { id: 'pe-2', agent_id: 'ag-dana', subject: 'Fwd: Returned EFT', from: 'Pinecrest Billing <billing@pinecrest.example>', at: 'Wed, Nov 4, 4:12 PM', why: 'no_policy', guess: 'Ortiz',
+    excerpt: 'Returned EFT notice\nContract # PA-0092211\nPolicyholder: R. Ortiz\nDraft date: 11/01/2026\nAmount: $58.20' },
+  { id: 'pe-5', agent_id: 'ag-marcus', subject: 'FW: Lapse pending', from: 'Americo Service <service@americo.example>', at: 'Thu, Nov 5, 8:02 AM', why: 'several_policies', guess: 'Nguyen',
+    excerpt: 'Lapse Pending Notice\nInsured: Nguyen\nPremium due 10/28/2026 was not received. The policy is in its grace period.' },
+]
+const seedPortalChecks = [
+  { id: 'pc-1', agent_id: 'ag-dana', carrier: 'Harborline Life', policies: 5, due_text: 'Today by 5:00 PM' },
+  { id: 'pc-2', agent_id: 'ag-dana', carrier: 'Mutual of Omaha', policies: 3, due_text: 'Today by 5:00 PM' },
+  { id: 'pc-3', agent_id: 'ag-priya', carrier: 'Americo', policies: 2, due_text: 'Today by 5:00 PM' },
+]
+
 const seedClients = [
   mkClient('fc-gloria', 'Gloria', 'Santos', 'ag-dana', { client_phone: '(305) 555-0156', city: 'Miami', state: 'FL', stage: 'setting_up', next_step: 'Cancellation call today 2:00 PM', carrier_name: 'Americo', product_name: 'Mortgage Protection 25', policy_number: 'AM-2209184', monthly_premium: 88.4, note: 'Replacing an older Globe policy. Wants the old one closed the day the new one starts.' }),
   mkClient('fc-robert', 'Robert', 'Chen', 'ag-marcus', { client_phone: '(480) 555-0142', city: 'Phoenix', state: 'AZ', stage: 'protected', carrier_name: 'Foresters', product_name: 'Strong Foundation', policy_number: 'FF-7712406', monthly_premium: 52.1 }),
@@ -94,6 +108,8 @@ const seedClients = [
   mkClient('fc-tom', 'Tom', 'Fischer', 'ag-dana', { client_phone: '(512) 555-0122', city: 'Round Rock', state: 'TX', stage: 'requests', next_step: 'Address change', carrier_name: 'Foresters', policy_number: 'FF-7712633', monthly_premium: 44.2 }),
   mkClient('fc-nadia', 'Nadia', 'Khan', 'ag-marcus', { client_phone: '(480) 555-0177', city: 'Tempe', state: 'AZ', stage: 'protected', carrier_name: 'Transamerica', policy_number: 'TA-5531102', monthly_premium: 82.9 }),
   mkClient('fc-paul', 'Paul', 'Rivera', 'ag-priya', { client_phone: '(813) 555-0165', city: 'Brandon', state: 'FL', stage: 'setting_up', next_step: 'Cancellation call Fri 10:00 AM', carrier_name: 'Mutual of Omaha', policy_number: 'MO-4471399', monthly_premium: 55.5 }),
+  // P885: a year-one client whose Nov 3 draft was returned (found from Dana's forwarded carrier email).
+  mkClient('fc-ann', 'Ann', 'Lee', 'ag-dana', { client_phone: '(512) 555-0164', city: 'Round Rock', state: 'TX', stage: 'needs_attention', attention: 'Payment missed Nov 3', next_step: 'Save call today', carrier_name: 'Harborline Life', policy_number: 'HL-4410917', monthly_premium: 64.1, submitted: 'Jul 6' }),
 ]
 
 // Cancellation calls: the VA calls the old carrier with the client to close the old policy once the new one is in
@@ -147,6 +163,9 @@ const seedTasks = [
   mkTask('st-8', 'annual_review', 'fc-nadia', { due: 'none', due_text: 'No date yet' }),
   mkTask('st-9', 'packet_check', 'fc-robert', { due: 'done', due_text: 'Done Tue', status: 'done', outcome: 'delivered' }),
   mkTask('st-10', 'lapse_save', 'fc-irene', { due: 'done', due_text: 'Done Mon', status: 'done', outcome: 'saved' }),
+  // P885: opened by a Payment missed event, due by the end of the next business day.
+  mkTask('st-11', 'lapse_save', 'fc-ann', { due: 'today', due_text: 'Today by 5:00 PM', note: 'Payment missed: due Nov 3 (from Dana’s forwarded carrier email). Call Ann; any change in the carrier portal goes to Dana.',
+    missed: { due: 'Nov 3', how: 'Forwarded carrier email', grace: 'about Dec 4', chargeback: true, month: 4, of: 12, repeat: false } }),
 ]
 
 // Pay: a flat amount per cancellation the carrier confirms (sample amount). status = verified | checking | needs_listen.
@@ -219,6 +238,7 @@ const seedSettings = {
 let state = {
   clients: seedClients, calls: seedCalls, queue: seedQueue, tasks: seedTasks, cancels: seedCancels, payouts: seedPayouts,
   threads: seedThreads, feed: seedFeed, settings: seedSettings, log: [], booked: seedBooked, dayOffs: [], live: null,
+  intake: seedIntake, portalChecks: seedPortalChecks,
   // P847: calls that went to another VA on shift (kept so the auto-assign sees them). P854: a few seeded so the
   // 30-minute rule has something to bump into: on Thu 5 and Fri 6 everyone on shift is busy at some times.
   others: [
@@ -258,6 +278,14 @@ export function useFulTasks() { const s = useStore(); return ok(s.tasks.map(t =>
 export function useFulThreads() {
   const s = useStore()
   return ok(s.threads.map(t => { const c = clientOf(s, t.client_id); return { ...t, name: fullName(c), agent: agentName(t.agent_id) } }))
+}
+// P885: the missed-payment desk (va_missed_payment_desk).
+export function useFulMissedDesk() {
+  const s = useStore()
+  return ok({
+    emails: s.intake.map(e => ({ ...e, agent: agentName(e.agent_id), clients: s.clients.filter(c => c.agent_id === e.agent_id) })),
+    checks: s.portalChecks.map(c => ({ ...c, agent: agentName(c.agent_id), clients: s.clients.filter(k => k.agent_id === c.agent_id) })),
+  })
 }
 export function useFulFeed() { const s = useStore(); return ok(s.feed) }
 export function useFulSettings() { const s = useStore(); return ok(s.settings) }
@@ -373,6 +401,14 @@ export function useFulDay() {
   })
 }
 
+// Like payment_missed_record: an open lapse save on that client is reused, never doubled.
+const missedTask = (s, c, how) => (s.tasks.some(t => t.client_id === c.id && t.kind === 'lapse_save' && t.due !== 'done')
+  ? feedAdd(s, agentName(c.agent_id), `${fullName(c)}: same missed payment, joined the open save call`, 'servicing') : {
+  tasks: [...s.tasks, mkTask(`st-${Date.now()}-${c.id}`, 'lapse_save', c.id, { due: 'today', due_text: 'Today by 5:00 PM',
+    note: `Payment missed (${how.toLowerCase()}). Call ${c.client_first_name}; any change in the carrier portal goes to ${agentName(c.agent_id).split(' ')[0]}.`,
+    missed: { due: 'Nov 3', how, grace: 'about Dec 4', chargeback: true, month: 4, of: 12, repeat: false } })],
+  ...feedAdd(s, agentName(c.agent_id), `Told about ${fullName(c)}'s missed payment. Save call opened`, 'servicing'),
+})
 const stamp = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 const feedAdd = (s, who, text, kind) => ({ feed: [{ id: `f${Date.now()}`, who, text, at: stamp(), kind }, ...s.feed] })
 
@@ -419,6 +455,22 @@ export function useFulActions() {
       const t = s.tasks.find(x => x.id === id)
       const c = clientOf(s, t.client_id)
       return { tasks: s.tasks.filter(x => x.id !== id), ...feedAdd(s, agentName(c.agent_id), `Sent back: ${reason} for ${fullName(c)}`, 'servicing') }
+    }),
+    // P885 (sample): a matched email or a miss found in a portal opens a save call for today; the agent is told.
+    matchIntake: (id, clientId) => set(s => {
+      const c = clientOf(s, clientId)
+      return { intake: s.intake.filter(e => e.id !== id), ...missedTask(s, c, 'Forwarded carrier email') }
+    }),
+    dismissIntake: id => set(s => ({ intake: s.intake.filter(e => e.id !== id) })),
+    finishPortalCheck: (id, result, clientIds = [], action = '') => set(s => {
+      const k = s.portalChecks.find(x => x.id === id)
+      let out = { portalChecks: s.portalChecks.filter(x => x.id !== id) }
+      for (const cid of clientIds) {
+        const c = clientOf({ ...s, ...out }, cid)
+        out = { ...out, ...missedTask({ ...s, ...out }, c, `Found in the ${k.carrier} portal`) }
+      }
+      if (action.trim()) out = { ...out, ...feedAdd({ ...s, ...out }, agentName(k.agent_id), `Sent: ${action.trim()}`, 'servicing') }
+      return out
     }),
     // Messages
     sendMessage: (threadId, text) => set(s => ({ threads: s.threads.map(t => (t.id === threadId ? { ...t, messages: [...t.messages, { id: `m${Date.now()}`, from: 'me', text, at: `Today, ${stamp()}` }] } : t)) })),

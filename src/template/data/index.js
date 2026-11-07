@@ -92,6 +92,20 @@ const seedClients = [
   mkClient('sample-client-4', people.denise, { policy_number: 'SAMPLE-1004', carrier_name: 'Harborline Life', stage: 'setting_up', next_step: 'Packet check Fri, Nov 6' }),
   mkClient('sample-client-5', people.renee, { policy_number: 'SAMPLE-1005', carrier_name: 'Pinecrest Assurance', stage: 'requests', status: 'request_open', note: 'A change on the policy is open', next_step: 'Address change in progress' }),
   mkClient('sample-client-6', people.carla, { policy_number: 'SAMPLE-1006', stage: 'protected', status: 'effective', monthly_premium: 74.25, annual_premium: 891, next_step: null }),
+  // P885: a missed payment in year one. The agent was warned at the first miss (Q42); the save call is the team's.
+  mkClient('sample-client-7', { first: 'Ann', last: 'Lee', phone: '(512) 555-0164', city: 'Round Rock', state: 'TX' }, {
+    policy_number: 'SAMPLE-1007', carrier_name: 'Harborline Life', stage: 'needs_attention', status: 'needs_attention', monthly_premium: 64.1, annual_premium: 769.2,
+    note: 'The payment due Nov 3 didn’t go through. The team is calling Ann to save it.', next_step: 'Save call by Tue 5 PM', submitted: 'Mon, Jul 6',
+    missed: { due: 'Nov 3', how: 'from your forwarded carrier email', grace: 'about Dec 4', saveBy: 'Tue 5 PM Central', chargeback: true, month: 4, of: 12, repeat: false,
+      progress: 'Save call opened, not reached yet', done: false, portalAction: 'The draft was returned. If Ann gives a new card, update it in the portal (the team can’t change it).' },
+    steps: [
+      { label: 'Sale submitted', at: 'Mon, Jul 6', done: true },
+      { label: 'Packet check', at: 'Thu, Jul 9', done: true },
+      { label: 'Review call', at: 'Thu, Jul 16', done: true },
+      { label: 'Payment watch, month 4 of 12', at: 'Missed Nov 3', done: false },
+    ],
+    calls: [{ at: 'Thu, Jul 16, 11:20 AM', result: 'Answered', by: 'Fulfillment' }],
+  }),
 ]
 
 const seedThreads = [
@@ -107,6 +121,7 @@ const seedThreads = [
 ]
 
 const seedActivity = [
+  { id: 'a0', at: 'Today, 9:40 AM', kind: 'client', who: 'Ann Lee', text: 'Chargeback risk: the Harborline payment due Nov 3 didn’t go through. Save call opened, due Tue 5 PM.' },
   { id: 'a1', at: 'Today, 2:06 PM', kind: 'text', who: 'Gloria Santos', text: 'The team texted Gloria to confirm her number.' },
   { id: 'a2', at: 'Today, 1:05 PM', kind: 'client', who: 'Renee Ortiz', text: 'Address change request sent to the carrier.' },
   { id: 'a3', at: 'Today, 11:30 AM', kind: 'lead', who: 'Dana Example', text: 'New lead assigned to you. Appointment booked for Thu, Nov 5.' },
@@ -172,11 +187,22 @@ const seed = {
     // client, the call shows the agent's number. status: not_set | pending | confirmed. Sample only: no call or text goes out.
     timeZone: 'America/Chicago',
     callerId: { status: 'not_set', number: '' },
+    // P885: the forwarding address for carrier missed-payment emails, and what happened to the last few.
+    paymentIntake: {
+      address: 'pay+k7m2q9xd4a@in.ohvara.com',
+      recent: [
+        { id: 'pe-1', subject: 'Fwd: Lapse pending notice', at: 'Today, 9:38 AM', client: 'Ann Lee', status: 'matched' },
+        { id: 'pe-2', subject: 'Fwd: Returned EFT', at: 'Wed, Nov 4', client: null, status: 'unmatched' },
+        { id: 'pe-3', subject: 'Fwd: Payment received, thank you', at: 'Mon, Nov 2', client: 'Luis Ortega', status: 'paid_notice' },
+      ],
+    },
     notifications: [
       { key: 'lead', label: 'New lead', push: true, email: true },
       { key: 'appt', label: 'Appointment reminders', push: true, email: false },
       { key: 'msg', label: 'Messages from the team', push: true, email: true },
       { key: 'client', label: 'Client needs you', push: true, email: true },
+      { key: 'payment_missed', label: 'A client missed a payment (chargeback risk)', push: true, email: true },
+      { key: 'portal_action_needed', label: 'Something to do in a carrier portal', push: true, email: true },
       { key: 'weekly', label: 'Your week, every Monday', push: true, email: true },
     ],
   },
@@ -393,6 +419,8 @@ export function useSampleActions() {
     // P873: a sale picked from one of the agent's leads (form.linked) moves that lead to Sold and makes it a client.
     submitSale: form => set(s => ({ ...s, submitted: s.submitted + 1, sales: [...(s.sales || []), form], leads: form.linked?.kind === 'lead' ? s.leads.map(l => (l.id === form.linked.id ? soldToClient(l) : l)) : s.leads, activity: log(s, form.name || 'New client', form.booking ? `Sale submitted for servicing. Call booked for ${form.booking.time} (their time)${form.booking.va ? ` with ${form.booking.va}` : ''}.` : 'Sale submitted for servicing.', 'client') })),
     submitRequest: form => set(s => ({ ...s, activity: log(s, form.name || 'Client', `Service request sent: ${form.kind}.`, 'client') })),
+    // P885 (sample): a new forwarding address; the old one stops (rotate_my_payment_intake_address).
+    rotateIntake: () => set(s => ({ ...s, settings: { ...s.settings, paymentIntake: { ...s.settings.paymentIntake, address: `pay+${Math.random().toString(36).slice(2, 12).padEnd(10, '0')}@in.ohvara.com` } } })),
     setNotification: (key, field, on) => set(s => ({ ...s, settings: { ...s.settings, notifications: s.settings.notifications.map(n => (n.key === key ? { ...n, [field]: on } : n)) } })),
 
     // P854: iso = the instant picked on the client's clock, tz = the client's zone; day/date/time land on the agent's clock.
