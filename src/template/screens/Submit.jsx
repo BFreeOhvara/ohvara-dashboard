@@ -1,8 +1,10 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Check, ChevronLeft, ChevronRight, Pencil, User, ShieldCheck, ClipboardCheck, PhoneCall, Wrench, Activity as ActivityIcon, Clock3, CalendarClock } from 'lucide-react'
-import { useSampleActions, useSampleSettings } from '../data'
-import { Field, Pending, Seg, useNote, initials } from '../kit'
+import { useSampleActions, useSampleSettings, useSampleLeads, useSampleClients } from '../data'
+import { Field, Pending, Seg, Chip, useNote, initials } from '../kit'
+import { matchPeople, fillFromMatch, stageChipOf } from '../leadLifecycle'
+import '../leads873.css'
 import { paths } from '../paths'
 import { PhoneInput } from '../PhoneInput'
 import { StateSelect } from '../StateSelect'
@@ -66,16 +68,60 @@ function Review({ f, onEdit }) {
   )
 }
 
+// P873 — Submit knows your leads: what the agent types in the name or phone shows their own leads and clients.
+// Picking one fills the form and links the sale to that lead (it moves to Sold and becomes a client). No match means
+// a new client: a lead they got somewhere else.
+function Suggestions({ matches, active, onPick, query }) {
+  if (!query) return null
+  return (
+    <div className="lc-sugg" role="listbox" id="submit-matches" aria-label="Your leads and clients">
+      {matches.length ? <>
+        <span className="lc-sugg-h">From your leads and clients</span>
+        {matches.map((m, i) => (
+          <button key={`${m.kind}-${m.id}`} type="button" role="option" id={`submit-match-${i}`} aria-selected={i === active} className={i === active ? 'is-on' : ''}
+            onMouseDown={e => e.preventDefault()} onClick={() => onPick(m)}>
+            <span className={`tp-av av-sky`} aria-hidden="true">{initials(m.name).toUpperCase()}</span>
+            <span><b>{m.name}</b><small>{m.phone} · {m.state || 'No state'}</small></span>
+            <Chip tone={m.kind === 'client' ? 'green' : 'blue'}>{m.kind === 'client' ? 'Client' : m.stage}</Chip>
+          </button>
+        ))}
+      </> : <p className="lc-sugg-none">No match in your leads or clients. They{'’'}ll be a new client.</p>}
+    </div>
+  )
+}
+
 export default function Submit() {
   const { submitSale } = useSampleActions()
   const { data: settings } = useSampleSettings()
   const note = useNote()
   const [step, setStep] = useState(0)
-  const [f, setF] = useState(EMPTY)
+  const { data: leads } = useSampleLeads()
+  const { data: clients } = useSampleClients()
+  const [params, setParams] = useSearchParams()
+  // Opened from a sold lead (paths.submit(leadId)): the form starts filled in from that lead.
+  const [f, setF] = useState(() => {
+    const l = leads.find(x => x.id === params.get('lead'))
+    return l ? { ...EMPTY, ...fillFromMatch({ kind: 'lead', id: l.id, name: `${l.first_name} ${l.last_name}`, phone: l.phone, city: l.city, state: l.state, stage: stageChipOf(l) }) } : EMPTY
+  })
+  useEffect(() => { if (params.get('lead')) setParams({}, { replace: true }) }, [params, setParams])
   const [tried, setTried] = useState(false)
   const [checked, setChecked] = useState([])
   const [done, setDone] = useState(null)
+  const [typed, setTyped] = useState(null) // 'name' | 'phone': the field the matches follow
+  const [active, setActive] = useState(0)
   const set = k => e => setF({ ...f, [k]: e.target.value })
+  const query = f.linked || !typed ? '' : typed === 'phone' ? f.phone : f.name
+  const matches = query ? matchPeople(query, leads, clients) : []
+  const shownQuery = matches.length || (typed === 'phone' ? f.phone.length >= 3 : f.name.trim().length >= 2) ? query : ''
+  const pickMatch = m => { setF(x => ({ ...x, ...fillFromMatch(m) })); setTyped(null); setActive(0) }
+  const onMatchKey = e => {
+    if (!matches.length) { if (e.key === 'Escape') setTyped(null); return }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActive(a => (a + 1) % matches.length) }
+    if (e.key === 'ArrowUp') { e.preventDefault(); setActive(a => (a - 1 + matches.length) % matches.length) }
+    if (e.key === 'Enter') { e.preventDefault(); pickMatch(matches[Math.min(active, matches.length - 1)]) }
+    if (e.key === 'Escape') setTyped(null)
+  }
+  const combo = shownQuery ? { role: 'combobox', 'aria-expanded': true, 'aria-controls': 'submit-matches', 'aria-autocomplete': 'list', 'aria-activedescendant': matches.length ? `submit-match-${Math.min(active, matches.length - 1)}` : undefined } : { 'aria-expanded': false }
   const missing = missingFields(f)
   const bad = k => (tried || checked.includes(STEPS.findIndex(s => s.needs.includes(k)))) && missing.includes(k)
   const stepOk = i => STEPS[i].needs.every(k => !missing.includes(k))
@@ -88,6 +134,7 @@ export default function Submit() {
     if (missing.length) { setStep(STEPS.findIndex(s => s.needs.some(k => missing.includes(k)))); return }
     const sale = buildSubmission(f)
     if (!sale) return
+    sale.linked = f.linked || null
     if (sale.booking) {
       const va = agentBooksCall({ who: sale.name, state: sale.state || '', city: sale.city || '', kind: 'service', mode: 'exact', day: sale.booking.day, time: sale.booking.time, iso: sale.booking.iso, tz: sale.booking.tz, vaId: sale.booking.vaId })
       sale.booking.va = va?.name || null
@@ -96,7 +143,7 @@ export default function Submit() {
     setDone({ name: sale.name, call: sale.booking ? reachText(f) : null })
     note('Sale submitted for servicing')
   }
-  const restart = () => { setDone(null); setF(EMPTY); setTried(false); setChecked([]); setStep(0) }
+  const restart = () => { setDone(null); setF(EMPTY); setTried(false); setChecked([]); setStep(0); setTyped(null) }
 
   if (done) {
     return (
@@ -129,8 +176,12 @@ export default function Submit() {
           {S.key === 'client' && <>
             <p className="tp-sub">Name and number are needed. The rest helps the team reach them.</p>
             <div className="fx-form-grid">
-              <Field label="Full name"><input className={bad('name') ? 'tp-danger' : ''} value={f.name} onChange={set('name')} placeholder="First and last name" autoComplete="off" /></Field>
-              <Field label="Phone"><PhoneInput invalid={bad('phone')} value={f.phone} onChange={d => setF({ ...f, phone: d })} /></Field>
+              <Field label="Full name" hint="Type a name or number to find your lead."><input className={bad('name') ? 'tp-danger' : ''} value={f.name} onChange={e => { setF({ ...f, name: e.target.value, linked: null }); setTyped('name'); setActive(0) }} onKeyDown={onMatchKey} onBlur={() => setTyped(null)} placeholder="First and last name" autoComplete="off" {...(typed === 'name' ? combo : {})} /></Field>
+              <Field label="Phone"><PhoneInput invalid={bad('phone')} value={f.phone} onChange={d => { setF({ ...f, phone: d, linked: null }); setTyped('phone'); setActive(0) }} onKeyDown={onMatchKey} onBlur={() => setTyped(null)} {...(typed === 'phone' ? combo : {})} /></Field>
+            </div>
+            <Suggestions matches={matches} active={Math.min(active, Math.max(matches.length - 1, 0))} onPick={pickMatch} query={shownQuery} />
+            {f.linked && <p className="lc-linked"><Check size={15} aria-hidden="true" /><span>{f.linked.kind === 'lead' ? `Your lead · ${f.linked.stage}. Submitting makes them a client.` : 'Your client. This adds a policy to their record.'}</span><button type="button" onClick={() => setF({ ...f, linked: null })}>Not them</button></p>}
+            <div className="fx-form-grid">
               <Field label="Email, optional"><input value={f.email} onChange={set('email')} placeholder="name@example.com" inputMode="email" autoComplete="off" /></Field>
               <Field label="City"><input value={f.city} onChange={set('city')} autoComplete="off" /></Field>
               <Field label="State"><StateSelect value={f.state} onChange={v => setF({ ...f, state: v })} /></Field>

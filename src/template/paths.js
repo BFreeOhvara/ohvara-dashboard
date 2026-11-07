@@ -19,7 +19,8 @@ export const paths = {
     return (isTemplateAddress() ? '/clients' : '/agent/clients') + q
   },
   client: id => (isTemplateAddress() ? `/clients/${id}` : `/agent/clients/${id}`),
-  submit: both('/submit', '/agent/submit'),
+  // P873: submit(leadId) opens Submit filled in from that lead.
+  submit: leadId => (isTemplateAddress() ? '/submit' : '/agent/submit') + (leadId ? `?lead=${leadId}` : ''),
   requestService: both('/request-service', '/agent/request-service'),
   messages: () => '/messages',
   activity: both('/activity', '/agent/activity'),

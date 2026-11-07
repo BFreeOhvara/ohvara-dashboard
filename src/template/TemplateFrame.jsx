@@ -7,8 +7,10 @@ import {
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
 import {
-  useSampleActivity, useSampleClients, useSampleLeads, useSampleThreads, useSampleBilling, useSampleAppointments, useSampleSettings, useSampleActions,
+  useSampleActivity, useSampleClients, useSampleLeads, useSampleThreads, useSampleBilling, useSampleAppointments, useSampleSettings, useSampleActions, useSampleNeeds,
 } from './data'
+import { NeedRows, FyiList } from './NeedsNow'
+import { useNeedAction } from './needAction'
 import { Drawer, Avatar, Field, PillTabs, Seg, useAccount, useNote, initials } from './kit'
 import { avatarHue } from './avatarHue'
 import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit } from './motion'
@@ -53,15 +55,25 @@ const TABS = [
   { to: paths.billing, key: 'billing', label: 'Billing', icon: CreditCard },
 ]
 const PAGES = [...TABS, { to: paths.messages, label: 'Messages' }, { to: paths.submit, label: 'Submit a policy' }, { to: paths.requestService, label: 'Request a service' }, { to: paths.settings, label: 'Settings' }, { to: paths.more, label: 'More' }]
-const NEEDS = ['ringing', 'missed', 'no_show']
 
+// P873: the bell leads with Needs you now (each with its one action), then the quiet FYI list, then the latest activity.
 function BellDrawer({ open, onClose }) {
   const { data: items } = useSampleActivity()
+  const { data: needs } = useSampleNeeds()
+  const act = useNeedAction(onClose)
   return (
-    <Drawer open={open} onClose={onClose} title="Notifications" sub="What happened lately" footer={<Link to={paths.activity()} className="tp-btn ov-ghost" onClick={onClose}>See all activity</Link>}>
-      <ul className="tp-list">
-        {items.slice(0, 5).map(a => <li key={a.id} className="tp-li"><Avatar name={a.who} /><span className="tp-grow"><b>{a.who}</b><small>{a.text}</small></span><small>{a.at}</small></li>)}
-      </ul>
+    <Drawer open={open} onClose={onClose} title="Notifications" sub={needs.now.length ? `${needs.now.length} need you now` : 'Nothing needs you right now'} footer={<Link to={paths.activity()} className="tp-btn ov-ghost" onClick={onClose}>See all activity</Link>}>
+      <section className="lc-bell" aria-label="Needs you now">
+        <h3 className="lc-h">Needs you now</h3>
+        {needs.now.length ? <NeedRows items={needs.now} onAct={act} /> : <p className="tp-sub">You are all caught up. New calls, replies and outcomes to mark show here first.</p>}
+      </section>
+      <FyiList items={needs.fyi} onPick={onClose} />
+      <section className="lc-bell" aria-label="Lately">
+        <h3 className="lc-h">Lately</h3>
+        {items.length ? <ul className="tp-list">
+          {items.slice(0, 4).map(a => <li key={a.id} className="tp-li"><Avatar name={a.who} /><span className="tp-grow"><b>{a.who}</b><small>{a.text}</small></span><small>{a.at}</small></li>)}
+        </ul> : <p className="tp-sub">Nothing has happened yet.</p>}
+      </section>
     </Drawer>
   )
 }
@@ -319,7 +331,8 @@ function useHeadStats(page) {
   const weekly = billing.budget.weekly
   const wk = planRange(weekly, billing.budget.mode).week
   const booked = S0 => S0(CalendarCheck, billing.booked, 'booked this week', { chip: [`range ${rangeText(wk)}`, 'blue'] })
-  const needs = leads.filter(l => NEEDS.includes(l.stage)).length
+  const { data: nowList } = useSampleNeeds()
+  const needs = nowList.now.filter(n => n.kind === 'lead').length
   const by = st => clients.filter(c => c.stage === st).length
   const money = usd()
   const S = (icon, n, label, extra = {}) => ({ icon, n, label, ...extra })
@@ -350,12 +363,13 @@ export default function TemplateFrame() {
   const layout = page.key
   const title = titleOfLayout(layout)
   const { data: threads } = useSampleThreads()
-  const { data: leads } = useSampleLeads()
   const { data: settings } = useSampleSettings()
   const { setDuty } = useSampleActions()
   const stats = useHeadStats(layout)
   const unread = threads.reduce((n, t) => n + t.unread, 0)
-  const needs = leads.filter(l => NEEDS.includes(l.stage)).length
+  const { data: needList } = useSampleNeeds()
+  const needs = needList.now.filter(n => n.kind === 'lead').length
+  const bell = needList.now.length
   const close = useCallback(() => setPanel(null), [])
   const open = which => e => { wig.onClick(e); setPanel(which) }
   const flipTheme = e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }
@@ -401,7 +415,7 @@ export default function TemplateFrame() {
         <Link to={paths.home()} className="fx-brand" aria-label="Ohvara home"><OhvaraMark height={28} back="var(--ov-mark-back)" front="var(--ov-mark-front)" className="fx-mark" /></Link>
         <span className="tp-grow" />
         <Link to={paths.messages()} className="fx-ib tp-wig" aria-label="Messages" {...wig}><MessageSquare size={18} />{unread > 0 && <span className="fx-badge">{unread}</span>}</Link>
-        <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} /><span className="fx-badge">3</span></button>
+        <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} />{bell > 0 && <span className="fx-badge">{bell}</span>}</button>
         <button type="button" className={`fx-me tp-wig av-${avatarHue(account.name)}`} aria-label="Menu" {...wig} onClick={open('menu')}>{initials(account.name).toUpperCase()}</button>
       </header>
 
@@ -413,7 +427,7 @@ export default function TemplateFrame() {
           items={TABS.map(t => ({ key: t.key, to: t.to(), label: t.label, extra: t.key === 'leads' && needs > 0 ? <span className="fx-tb">{needs}</span> : null }))} />
         <div className="fx-tr">
           <Link to={paths.messages()} className="fx-ib tp-wig" aria-label="Messages" {...wig}><MessageSquare size={18} />{unread > 0 && <span className="fx-badge">{unread}</span>}</Link>
-          <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} /><span className="fx-badge">3</span></button>
+          <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} />{bell > 0 && <span className="fx-badge">{bell}</span>}</button>
           <button type="button" className={`tp-me fx-me tp-wig av-${avatarHue(account.name)}`} aria-label={`Your account, ${account.name}`} aria-expanded={panel === 'menu'} {...wig} onClick={open('menu')}>{initials(account.name).toUpperCase()}</button>
         </div>
       </header>

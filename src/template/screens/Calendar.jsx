@@ -1,9 +1,12 @@
 import { useState } from 'react'
+import '../leads873.css'
 import { Link } from 'react-router-dom'
-import { Phone, MapPin, ChevronRight, Clock } from 'lucide-react'
+import { Phone, MapPin, ChevronRight, Clock, ClipboardCheck } from 'lucide-react'
 import { CountUp } from '../motion'
 import { useSampleAppointments, useSampleLeads, useSampleClients, useSampleSettings, AGENT_TZ, onAgentClock } from '../data'
-import { Drawer, Empty, useNote } from '../kit'
+import { Drawer, Empty, Chip, useNote } from '../kit'
+import { needsOutcome, SAMPLE_NOW } from '../leadLifecycle'
+import { stageChip } from '../LeadOutcome'
 import { paths } from '../paths'
 import { DayBox, WeekStrip, WeekList } from '../DayBox'
 import { useOpenDay, useStickyDay } from '../useOpenDay'
@@ -40,6 +43,9 @@ export default function Calendar() {
   const ref = open && (open.kind === 'lead' ? leads.find(l => l.id === open.ref) : clients.find(c => c.id === open.ref))
   const phone = ref && (ref.phone || ref.client_phone)
   const place = ref && `${ref.city}, ${ref.state}`
+  // P873: a lead's appointment card shows where the lead is now, and asks how it went once it has ended.
+  const leadRef = open?.kind === 'lead' ? ref : null
+  const ask = leadRef && needsOutcome(leadRef, SAMPLE_NOW)
   const shown = view != null ? DAYS.filter(([, d]) => d === view) : DAYS
   const ofDay = d => events.filter(e => e.date === d).sort((a, b) => minutesIn(a.time) - minutesIn(b.time))
   const list = view != null ? ofDay(view) : []
@@ -100,6 +106,8 @@ export default function Calendar() {
           <button type="button" className="tp-btn ov-ghost" onClick={() => { note('Asked the team to cancel. They will tell the client'); setOpen(null) }}>Ask the team to cancel</button></>}>
         {open && <>
           <p className="tp-mid">{open.label}</p>
+          {leadRef && <p className="tp-row"><Chip tone={stageChip(leadRef.stage, leadRef)[0]}>{stageChip(leadRef.stage, leadRef)[1]}</Chip></p>}
+          {ask && <Link to={`${paths.lead(leadRef.id)}?outcome=1`} className="lc-nudge" onClick={() => setOpen(null)}><ClipboardCheck size={16} aria-hidden="true" /><span className="tp-grow"><b>How did it go?</b><small>The appointment ended. Mark the outcome</small></span><span className="lc-nudge-go">Mark outcome</span></Link>}
           <p className="tp-row"><Phone size={16} />{phone}</p>
           <p className="tp-row"><MapPin size={16} />Lives in {place}</p>
           <p className="tp-sub">The team makes the change and tells the client. You see it here.</p>

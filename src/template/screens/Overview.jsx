@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Check, Clock, CalendarDays, Phone, PhoneIncoming, TriangleAlert } from 'lucide-react'
+import { ArrowUpRight, Check, Clock, CalendarDays, Phone } from 'lucide-react'
 import { planRange, rangeText } from '../../lib/planPricing'
-import { useSampleOverview, useSampleClients, useSampleBilling, useSampleLeads, useSampleAppointments } from '../data'
+import { useSampleOverview, useSampleClients, useSampleBilling, useSampleLeads, useSampleAppointments, useSampleNeeds } from '../data'
 import { Avatar, Empty } from '../kit'
 import { CountUp } from '../motion'
-import { stageChip } from '../LeadOutcome'
+import { NeedCard, FyiList } from '../NeedsNow'
+import { useNeedAction } from '../needAction'
 import { laneOf, LANES, stageLabel } from '../stages'
 import { paths } from '../paths'
 
@@ -88,18 +89,6 @@ function Ring({ value, of }) {
   )
 }
 
-function NeedCard({ r, i }) {
-  return (
-    <article className={`fx-card fx-ncard is-${r.tone}`} style={{ '--i': i }}>
-      <Link to={r.to} className="fx-cover" aria-label={`Open ${r.name}`} />
-      <span className="fx-ncard-k"><r.Icon size={13} aria-hidden="true" />{r.kind}</span>
-      <h3>{r.name}</h3>
-      <p>{r.what}</p>
-      <div className="fx-ncard-bot"><span className="fx-when">{r.when}</span><Avatar name={r.name} tone={r.tone} /></div>
-    </article>
-  )
-}
-
 // The working week, Mon to Fri, one column per day with its calls; today is marked.
 function WeekStrip({ appts, today }) {
   const days = [...new Map(appts.map(a => [a.date, a.day])).entries()].sort((a, b) => a[0] - b[0])
@@ -128,7 +117,7 @@ function LeadMix({ leads }) {
         {rows.filter(r => r.n).map(r => <i key={r.key} className={`is-${r.tone}`} style={{ flexGrow: r.n / total }} />)}
       </div>
       <ul className="fx-mix-key">
-        {rows.map(r => <li key={r.key} className={`is-${r.tone}`}><Link to={paths.leads()}><i aria-hidden="true" /><span>{r.label}</span><b className="tp-num">{r.n}</b></Link></li>)}
+        {rows.map(r => <li key={r.key} className={`is-${r.tone}`}><Link to={`${paths.leads()}?lane=${r.key}`}><i aria-hidden="true" /><span>{r.label}</span><b className="tp-num">{r.n}</b></Link></li>)}
       </ul>
     </>
   )
@@ -151,10 +140,9 @@ export default function Overview() {
   const chart = o.bookedChart
   const prev = chart.prev
   const status = bill.booked < wk.low ? ['Below range so far', 'mute'] : bill.booked > wk.high ? ['Above range', 'up'] : ['In range', 'up']
-  const needs = [
-    ...o.newLeads.filter(l => l.stage !== 'booked').map(l => ({ id: l.id, to: paths.lead(l.id), name: l.name, what: stageChip(l.stage)[1], tone: laneOf(l.stage).tone, Icon: PhoneIncoming, kind: l.kind === 'live_call' ? 'Live call' : 'Lead', when: l.stage === 'ringing' ? 'Now' : 'Today' })),
-    ...o.attention.map(c => ({ id: c.id, to: paths.client(c.id), name: `${c.client_first_name} ${c.client_last_name}`, what: c.attention, tone: 'warn', Icon: TriangleAlert, kind: 'Client', when: 'Today' })),
-  ]
+  // P873: Needs you now, the six lifecycle triggers in order, each with its action; FYI apart and quiet.
+  const { data: needs } = useSampleNeeds()
+  const act = useNeedAction()
 
   return (
     <div className="tp-page fx-page fx-ovl">
@@ -204,15 +192,16 @@ export default function Overview() {
       </div>
 
       <div className="fx-ovl-side">
-        <section className="fx-tile is-deep fx-ovl-needs" style={{ '--i': 4 }} aria-label="Needs you">
+        <section className="fx-tile is-deep fx-ovl-needs" style={{ '--i': 4 }} aria-label="Needs you now">
           <div className="fx-ovl-needs-in">
             <header className="fx-tile-h">
-              <span className="tp-grow"><h2>Needs you</h2><p>{needs.length ? `${needs.length} waiting on you` : 'All caught up'}</p></span>
+              <span className="tp-grow"><h2>Needs you now</h2><p>{needs.now.length ? `${needs.now.length} waiting on you, most urgent first` : 'All caught up'}</p></span>
               <Link to={paths.leads()} className="fx-open" aria-label="Open Leads"><ArrowUpRight size={16} /></Link>
             </header>
-            {needs.length > 0
-              ? <div className="fx-ncards">{needs.map((r, i) => <NeedCard key={r.id} r={r} i={i} />)}</div>
-              : <p className="fx-calm"><Check size={16} aria-hidden="true" />No one is waiting on you.</p>}
+            {needs.now.length > 0
+              ? <div className="fx-ncards">{needs.now.map((r, i) => <NeedCard key={r.id} item={r} i={i} onAct={act} />)}</div>
+              : <p className="fx-calm"><Check size={16} aria-hidden="true" />No one is waiting on you. Live calls, replies and outcomes to mark show here first.</p>}
+            <FyiList items={needs.fyi} />
           </div>
         </section>
 

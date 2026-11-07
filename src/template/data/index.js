@@ -1,5 +1,6 @@
 import { useSyncExternalStore, useMemo } from 'react'
 import { instantOf, clockOf, dateOf, zoneOf } from '../../lib/callSlots.js'
+import { seedEvents, applyMove, addReply, whenLabel, needsYouNow, forYourInfo, STAGES, SAMPLE_NOW } from '../leadLifecycle.js'
 
 // The one door to sample info for the clickable template. Screens read only through the named functions below.
 // Every read returns { data, isLoading: false, error: null }, the shape react-query hooks give, and record fields
@@ -15,22 +16,49 @@ const people = {
   carla: { first: 'Carla', last: 'Jones', phone: '(404) 555-0133', city: 'Atlanta', state: 'GA' },
   renee: { first: 'Renee', last: 'Ortiz', phone: '(303) 555-0127', city: 'Denver', state: 'CO' },
   dana: { first: 'Dana', last: 'Example', phone: '(512) 555-0148', city: 'Austin', state: 'TX' },
+  owen: { first: 'Owen', last: 'Price', phone: '(602) 555-0193', city: 'Mesa', state: 'AZ' },
+  ellen: { first: 'Ellen', last: 'Park', phone: '(919) 555-0164', city: 'Raleigh', state: 'NC' },
+  tanya: { first: 'Tanya', last: 'Bell', phone: '(615) 555-0137', city: 'Nashville', state: 'TN' },
+  paul: { first: 'Paul', last: 'Kim', phone: '(206) 555-0182', city: 'Seattle', state: 'WA' },
+  grace: { first: 'Grace', last: 'Liu', phone: '(916) 555-0145', city: 'Sacramento', state: 'CA' },
+  victor: { first: 'Victor', last: 'Hale', phone: '(317) 555-0129', city: 'Indianapolis', state: 'IN' },
+  joan: { first: 'Joan', last: 'Miles', phone: '(502) 555-0176', city: 'Louisville', state: 'KY' },
+  sam: { first: 'Sam', last: 'Rivera', phone: '(210) 555-0158', city: 'San Antonio', state: 'TX' },
 }
 
-const mkLead = (id, p, o) => ({
-  id, first_name: p.first, last_name: p.last, phone: p.phone, state: p.state, city: p.city,
-  age_band: '45 to 54', mortgage_balance_band: '$200,000 to $300,000', homeowner: true, smoker: false,
-  best_time: 'Evenings', status: 'assigned', outcome: null, kind: 'appointment', appt: null, note: '', created: 'Tue, Oct 27', assigned_at: 'Tue, Oct 27, 6:12 PM',
-  ...o,
-})
+// P873: every lead sits somewhere on its path (leadLifecycle.js STAGES) on the sample clock, Mon, Nov 2, 2:14 PM.
+// came / apptAt / followAt are times on the agent's clock; the timeline (events) is built from them, shaped like
+// the lead-events rows of migration 180, and every move adds to it.
+const mkLead = (id, p, o) => {
+  const l = {
+    id, first_name: p.first, last_name: p.last, phone: p.phone, state: p.state, city: p.city,
+    age_band: '45 to 54', mortgage_balance_band: '$200,000 to $300,000', homeowner: true, smoker: false,
+    best_time: 'Evenings', status: 'assigned', outcome: null, kind: 'appointment', appt: null, apptAt: null, note: '', reply: null, fresh: false,
+    ...o,
+  }
+  l.dbStage = STAGES[l.stage].db
+  if (l.apptAt) l.appt = whenLabel(l.apptAt)
+  l.created = whenLabel(l.came).replace(/, \d+:\d+ [AP]M$/, '')
+  l.assigned_at = whenLabel(l.came)
+  l.events = seedEvents(l)
+  return l
+}
 
 const seedLeads = [
-  mkLead('sample-lead-1', people.dana, { stage: 'booked', appt: 'Thu, Nov 5, 3:00 PM', age_band: '45 to 54', note: 'Wants coverage until the mortgage is paid off. Two kids, 9 and 12.' }),
-  mkLead('sample-lead-2', people.carla, { stage: 'missed', kind: 'live_call', state: 'GA', best_time: 'Mornings', appt: null }),
-  mkLead('sample-lead-3', people.harold, { stage: 'ringing', kind: 'live_call', age_band: '55 to 64', appt: null }),
-  mkLead('sample-lead-4', people.renee, { stage: 'no_show', appt: 'Wed, Nov 4, 1:00 PM' }),
-  mkLead('sample-lead-5', people.denise, { stage: 'sold', status: 'closed', outcome: 'sold', appt: 'Tue, Nov 3, 11:00 AM' }),
-  mkLead('sample-lead-6', people.robert, { stage: 'follow_up', status: 'contacted', outcome: 'follow_up', appt: null, follow: 'Fri, Nov 6' }),
+  mkLead('sample-lead-1', people.dana, { stage: 'booked', fresh: true, came: '2026-11-02T10:52', apptAt: '2026-11-05T15:00', note: 'Wants coverage until the mortgage is paid off. Two kids, 9 and 12.' }),
+  mkLead('sample-lead-2', people.carla, { stage: 'missed', kind: 'live_call', came: '2026-11-02T09:08', best_time: 'Mornings' }),
+  mkLead('sample-lead-3', people.harold, { stage: 'ringing', kind: 'live_call', came: '2026-11-02T14:11', age_band: '55 to 64' }),
+  mkLead('sample-lead-4', people.renee, { stage: 'no_show', came: '2026-10-29T17:40', apptAt: '2026-11-02T11:00' }),
+  mkLead('sample-lead-5', people.denise, { stage: 'sold', status: 'closed', outcome: 'sold', submitted: true, came: '2026-10-24T16:05', apptAt: '2026-10-27T11:00' }),
+  mkLead('sample-lead-6', people.robert, { stage: 'follow_up', status: 'contacted', outcome: 'follow_up', came: '2026-10-27T18:12', apptAt: '2026-10-30T15:00', follow: 'Mon, Nov 2', followAt: '2026-11-02T16:00' }),
+  mkLead('sample-lead-7', people.owen, { stage: 'booked', came: '2026-10-30T12:20', apptAt: '2026-11-02T14:00', age_band: '35 to 44' }),
+  mkLead('sample-lead-8', people.ellen, { stage: 'booked', came: '2026-10-31T09:15', apptAt: '2026-11-02T13:00', firstReply: 'Monday at 1 is good' }),
+  mkLead('sample-lead-9', people.tanya, { stage: 'calling', tries: 2, came: '2026-11-01T10:30', reply: { text: 'Can you call after 6? I am at work until then.', at: '2026-11-02T13:52', seen: false } }),
+  mkLead('sample-lead-10', people.paul, { stage: 'new', came: '2026-11-02T14:10', mortgage_balance_band: '$300,000 to $400,000' }),
+  mkLead('sample-lead-11', people.grace, { stage: 'calling', tries: 3, came: '2026-10-29T08:40' }),
+  mkLead('sample-lead-12', people.victor, { stage: 'unreachable', status: 'bad', came: '2026-07-28T19:05' }),
+  mkLead('sample-lead-13', people.joan, { stage: 'opted_out', status: 'bad', came: '2026-10-28T11:00' }),
+  mkLead('sample-lead-14', people.sam, { stage: 'not_interested', status: 'bad', outcome: 'not_interested', reason: 'Already covered', came: '2026-10-26T15:30', apptAt: '2026-10-29T10:00' }),
 ]
 
 const mkClient = (id, p, o) => ({
@@ -74,7 +102,7 @@ const seedActivity = [
   { id: 'a2', at: 'Today, 1:05 PM', kind: 'client', who: 'Renee Ortiz', text: 'Address change request sent to the carrier.' },
   { id: 'a3', at: 'Today, 11:30 AM', kind: 'lead', who: 'Dana Example', text: 'New lead assigned to you. Appointment booked for Thu, Nov 5.' },
   { id: 'a4', at: 'Today, 9:12 AM', kind: 'call', who: 'Carla Jones', text: 'Missed live call. The team booked the next open slot within the hour.' },
-  { id: 'a5', at: 'Yesterday, 4:40 PM', kind: 'moved', who: 'Robert Chen', text: 'Moved to Follow up for Fri, Nov 6.' },
+  { id: 'a5', at: 'Fri, Oct 30', kind: 'moved', who: 'Robert Chen', text: 'Moved to Follow up for Mon, Nov 2.' },
   { id: 'a6', at: 'Yesterday, 11:02 AM', kind: 'client', who: 'Luis Ortega', text: 'Policy is now protected.' },
   { id: 'a7', at: 'Fri, Oct 30', kind: 'call', who: 'Gloria Santos', text: 'Fulfillment called. No answer, second try.' },
   { id: 'a8', at: 'Fri, Oct 30', kind: 'lead', who: 'Denise Walker', text: 'Sold. Ready to submit for servicing.' },
@@ -82,8 +110,9 @@ const seedActivity = [
 
 const seedAppointments = [
   { id: 'ap1', day: 'Mon', date: 2, time: '3:30 PM', who: 'Gloria Santos', label: 'Confirm number, call her', kind: 'client', ref: 'sample-client-1' },
-  { id: 'ap2', day: 'Tue', date: 3, time: '11:00 AM', who: 'Denise Walker', label: 'Appointment', kind: 'lead', ref: 'sample-lead-5' },
-  { id: 'ap3', day: 'Wed', date: 4, time: '1:00 PM', who: 'Renee Ortiz', label: 'Appointment', kind: 'lead', ref: 'sample-lead-4' },
+  { id: 'ap2', day: 'Mon', date: 2, time: '1:00 PM', who: 'Ellen Park', label: 'Appointment', kind: 'lead', ref: 'sample-lead-8' },
+  { id: 'ap3', day: 'Mon', date: 2, time: '11:00 AM', who: 'Renee Ortiz', label: 'Appointment', kind: 'lead', ref: 'sample-lead-4' },
+  { id: 'ap8', day: 'Mon', date: 2, time: '2:00 PM', who: 'Owen Price', label: 'Appointment', kind: 'lead', ref: 'sample-lead-7' },
   { id: 'ap4', day: 'Thu', date: 5, time: '3:00 PM', who: 'Dana Example', label: 'Appointment', kind: 'lead', ref: 'sample-lead-1' },
   { id: 'ap5', day: 'Thu', date: 5, time: '4:00 PM', who: 'Robert Chen', label: 'Review call', kind: 'client', ref: 'sample-client-3' },
   { id: 'ap6', day: 'Fri', date: 6, time: '2:00 PM', who: 'Luis Ortega', label: 'Check-in call', kind: 'client', ref: 'sample-client-2' },
@@ -155,6 +184,8 @@ export function useSampleThreads() { const s = useStore(); return ok(s.threads) 
 export function useSampleActivity() { const s = useStore(); return ok(s.activity) }
 export function useSampleBilling() { const s = useStore(); return ok({ ...s.billing, submitted: s.submitted }) }
 export function useSampleSettings() { const s = useStore(); return ok({ ...s.settings, duty: s.duty }) }
+// P873: Needs you now (the six triggers, most urgent first) and the quiet FYI list, for the Overview and the bell.
+export function useSampleNeeds() { const s = useStore(); return ok(useMemo(() => ({ now: needsYouNow(s, SAMPLE_NOW), fyi: forYourInfo(s) }), [s])) }
 export function useSampleSignup() {
   return useMemo(() => ok({
     covers: ['Booked appointments or live calls, your pick', 'A team that follows up with every client', 'Updates in your bell and by text'],
@@ -213,15 +244,20 @@ export function useSampleOverview() {
 }
 
 const stamp = 'Today, 2:14 PM'
+const soldToClient = l => {
+  const sold = l.stage === 'sold' ? l : applyMove(l, 'sold', {}, SAMPLE_NOW)
+  return { ...sold, submitted: true, events: [...sold.events, { id: `${l.id}-c${sold.events.length + 1}`, kind: 'became_client', at: SAMPLE_NOW, label: 'Submitted for servicing. Now a client', state: 'done', by: 'You', role: 'you' }] }
+}
 const log = (s, who, text, kind) => [{ id: `a${s.activity.length + 1}-${text.length}`, at: stamp, kind, who, text }, ...s.activity]
 
 export function useSampleActions() {
   return useMemo(() => ({
     moveLead: (id, stage, extra = {}) => set(s => {
       const lead = s.leads.find(l => l.id === id)
-      const status = stage === 'sold' ? 'closed' : stage === 'not_interested' ? 'bad' : stage === 'follow_up' ? 'contacted' : lead.status
-      return { ...s, leads: s.leads.map(l => (l.id === id ? { ...l, stage, status, outcome: stage, ...extra } : l)), activity: log(s, `${lead.first_name} ${lead.last_name}`, `Moved to ${stage.replace('_', ' ')}.`, 'moved') }
+      return { ...s, leads: s.leads.map(l => (l.id === id ? applyMove(l, stage, extra, SAMPLE_NOW) : l)), activity: log(s, `${lead.first_name} ${lead.last_name}`, `Moved to ${STAGES[stage].label}.`, 'moved') }
     }),
+    // P873: the agent's text back to a lead. Saved on the timeline; it sends once texting is switched on.
+    replyLead: (id, text) => set(s => ({ ...s, leads: s.leads.map(l => (l.id === id ? addReply(l, text, SAMPLE_NOW) : l)) })),
     addLeadNote: (id, text) => set(s => ({ ...s, leads: s.leads.map(l => (l.id === id ? { ...l, note: l.note ? `${l.note}\n${text}` : text } : l)) })),
     setDuty: on => set(s => ({ ...s, duty: on })),
     doneTask: id => set(s => ({ ...s, tasks: { ...s.tasks, [id]: true } })),
@@ -233,7 +269,8 @@ export function useSampleActions() {
     sendMessage: (threadId, text) => set(s => ({ ...s, threads: s.threads.map(t => (t.id === threadId ? { ...t, unread: 0, messages: [...t.messages, { id: `m${t.messages.length + 10}-${text.length}`, from: 'me', text, at: stamp }] } : t)) })),
     readThread: threadId => set(s => ({ ...s, threads: s.threads.map(t => (t.id === threadId ? { ...t, unread: 0 } : t)) })),
     // P868: form is lib submitModel buildSubmission (phone in E.164; booking = the call booked with it, or null).
-    submitSale: form => set(s => ({ ...s, submitted: s.submitted + 1, sales: [...(s.sales || []), form], activity: log(s, form.name || 'New client', form.booking ? `Sale submitted for servicing. Call booked for ${form.booking.time} (their time)${form.booking.va ? ` with ${form.booking.va}` : ''}.` : 'Sale submitted for servicing.', 'client') })),
+    // P873: a sale picked from one of the agent's leads (form.linked) moves that lead to Sold and makes it a client.
+    submitSale: form => set(s => ({ ...s, submitted: s.submitted + 1, sales: [...(s.sales || []), form], leads: form.linked?.kind === 'lead' ? s.leads.map(l => (l.id === form.linked.id ? soldToClient(l) : l)) : s.leads, activity: log(s, form.name || 'New client', form.booking ? `Sale submitted for servicing. Call booked for ${form.booking.time} (their time)${form.booking.va ? ` with ${form.booking.va}` : ''}.` : 'Sale submitted for servicing.', 'client') })),
     submitRequest: form => set(s => ({ ...s, activity: log(s, form.name || 'Client', `Service request sent: ${form.kind}.`, 'client') })),
     setNotification: (key, field, on) => set(s => ({ ...s, settings: { ...s.settings, notifications: s.settings.notifications.map(n => (n.key === key ? { ...n, [field]: on } : n)) } })),
     setPaused: paused => set(s => ({ ...s, billing: { ...s.billing, paused } })),

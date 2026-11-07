@@ -1,0 +1,82 @@
+/* P873 — the lead path: stage tabs, the 7-lane board, the lead timeline, Needs you now (Overview + bell), the
+   outcome prompt and Submit's lead suggestions. Tokens only (DESIGN.md); tones come from flow.css (--c). */
+
+/* Stage tabs: one row, scrolls sideways when it doesn't fit. */
+.fx .lc-stages { display: flex; grid-auto-columns: auto; align-self: stretch; overflow-x: auto; scrollbar-width: none; border-radius: 999px; background: var(--fx-fill); border-color: var(--fx-edge); flex: none; }
+.fx .lc-stages::-webkit-scrollbar { display: none; }
+.fx .lc-stages > * { flex: none; min-height: 32px; border-radius: 999px; font-size: 12.5px; padding: 0 12px; }
+
+/* The board: seven lanes, the lead's path left to right. One lane picked → it takes the width, cards in a grid. */
+.fx .lc-board { grid-template-columns: repeat(7, minmax(172px, 1fr)); }
+.fx .lc-board.is-one { grid-template-columns: minmax(0, 1fr); }
+.fx .lc-board.is-one .fx-lane-b { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); align-content: start; }
+@media (max-width: 999.98px) {
+  .fx .lc-board { grid-template-columns: repeat(7, 82%); }
+  .fx .lc-board.is-one { grid-template-columns: minmax(0, 1fr); margin: 0; padding: 0; }
+}
+
+/* Timeline rows. Done rows fill their dot; what comes next is faint, with a Scheduled / Next tag. */
+.lc-tl li > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.lc-ev-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lc-ev-h b { font-size: 14px; }
+.lc-ev-by { font-size: 12px; color: var(--ov-mute); }
+.lc-tl li.is-later b { color: var(--ov-mid); }
+.lc-sched { display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 999px; font-size: 10.5px; font-weight: 700; color: var(--ov-mid); border: 1px dashed var(--ov-line); }
+.lc-bub { max-width: 92%; margin-top: 6px; align-self: flex-start; }
+.lc-bub.me { align-self: flex-start; }
+.lc-tl li.is-later .lc-bub { opacity: .78; }
+
+/* The agent's text back. */
+.lc-reply { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.lc-reply-f { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.lc-reply-f small { color: var(--ov-mute); font-size: 12px; }
+
+/* "How did it go?" on the lead, and closed leads. */
+.lc-nudge { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-radius: 16px; text-align: left; color: var(--ov-hi); background: color-mix(in srgb, var(--nt-purple) 14%, var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--nt-purple) 30%, transparent); cursor: pointer; }
+.lc-nudge b { display: block; font-size: 14px; }
+.lc-nudge small { display: block; font-size: 12.5px; color: var(--ov-mid); }
+.lc-nudge-go { font-size: 13px; font-weight: 700; white-space: nowrap; }
+.lc-closed { margin: 0; padding: 10px 14px; border-radius: 14px; font-size: 13px; color: var(--ov-mid); background: var(--ov-stub); }
+
+/* Outcome prompt questions. */
+.lc-q { display: flex; flex-direction: column; gap: 8px; }
+.lc-q b { font-size: 14px; }
+
+/* Needs you now: the Overview cards keep the action button above the cover link; FYI is a quiet list. */
+.lc-ncard .fx-ncard-bot { gap: 10px; }
+.lc-ncard .fx-ncard-bot .fx-when { font-size: 14px; }
+.lc-fyi { flex: none; display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid var(--ov-line); }
+.lc-fyi h3 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; font-weight: 600; color: var(--ov-mute); }
+.lc-fyi ul { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.lc-fyi a { display: flex; flex-wrap: wrap; gap: 0 6px; padding: 5px 6px; border-radius: 10px; font-size: 12.5px; color: var(--ov-mid); }
+.lc-fyi a:hover { background: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
+.lc-fyi a b { color: var(--ov-hi); font-weight: 600; }
+.lc-bell { display: flex; flex-direction: column; gap: 6px; }
+.lc-bell + .lc-fyi, .lc-fyi + .lc-bell { margin-top: 8px; }
+.lc-h { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--ov-mute); }
+.lc-row small { display: inline-flex; align-items: center; gap: 4px; }
+.lc-row .tp-primary { flex: none; }
+
+/* Submit: the agent's leads and clients that match what was typed. */
+.lc-sugg { margin: -4px 0 4px; padding: 6px; list-style: none; border-radius: 16px; border: 1px solid var(--ov-line); background: var(--bg-surface); box-shadow: var(--fx-shadow); display: flex; flex-direction: column; gap: 2px; }
+.lc-sugg-h { padding: 4px 8px; font-size: 11.5px; font-weight: 600; color: var(--ov-mute); }
+.lc-sugg button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; border-radius: 12px; text-align: left; color: var(--ov-hi); }
+.lc-sugg button:hover, .lc-sugg button.is-on { background: var(--ov-data-a-tint); }
+.lc-sugg button > span { display: flex; flex-direction: column; min-width: 0; }
+.lc-sugg button small { font-size: 12px; color: var(--ov-mid); }
+.lc-sugg .tp-chip { margin-left: auto; flex: none; }
+.lc-sugg-none { padding: 8px; font-size: 12.5px; color: var(--ov-mid); }
+.lc-linked { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-radius: 14px; font-size: 13px; color: var(--ov-hi); background: var(--ov-data-a-tint); }
+.lc-linked button { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--ov-mid); text-decoration: underline; }
+
+/* Narrow lanes: the stage tag drops under the card type instead of sitting on it. */
+.fx .lc-board .fx-lcard-top { flex-wrap: wrap; justify-content: flex-start; row-gap: 6px; }
+.fx .lc-board .fx-lcard-top .fx-tag { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+/* Needs-you cards: the time on one line, the action under it at full width (no wrapping, so the card always
+   grows to fit it). */
+.fx .lc-ncard .fx-ncard-bot { flex-direction: column; align-items: stretch; gap: 8px; }
+.fx .lc-ncard .fx-ncard-bot .fx-when { white-space: nowrap; }
+.fx .lc-ncard .fx-ncard-bot button { justify-content: center; width: 100%; }
+/* The grid sizes its rows to the cards (minmax(…, auto) rows here kept the floor height and let the action spill). */
+.fx .fx-ovl-needs .fx-ncards { grid-auto-rows: max-content; }
+.fx .fx-ovl-needs .lc-ncard { min-height: 140px; }
