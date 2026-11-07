@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, Clock, CalendarDays, Phone } from 'lucide-react'
-import { planRange, rangeText } from '../../lib/planPricing'
+import { rangeWords } from '../spendPlan'
+import { countByStatus } from '../agentView'
 import { useSampleOverview, useSampleClients, useSampleBilling, useSampleLeads, useSampleAppointments, useSampleNeeds } from '../data'
 import { Avatar, Empty } from '../kit'
 import { CountUp } from '../motion'
@@ -55,7 +56,7 @@ function BookedChart({ chart, lo, hi }) {
   return (
     <div className={`fx-chart fx-wchart${days ? ' is-days' : ''}`}>
       <div className="fx-wchart-y" aria-hidden="true">{ticks.map(v => <span key={v} style={{ top: `${(y(v) / H) * 100}%` }}>{v}</span>)}</div>
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`Booked per ${days ? 'day' : 'week'}: ${points.filter(p => !p[2]).map(([w, v]) => `${w} ${v}`).join(', ')}.${days ? '' : ` Budget range ${lo} to ${hi}.`}`}>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`Booked per ${days ? 'day' : 'week'}: ${points.filter(p => !p[2]).map(([w, v]) => `${w} ${v}`).join(', ')}.${days ? '' : ` Expected at your spend ${lo} to ${hi}.`}`}>
         {days ? (
           <g>{points.map(([d, v, later], i) => {
             const h = Math.max(v ? (v / top) * (H - 12) : 0, 3)
@@ -107,9 +108,10 @@ function WeekStrip({ appts, today }) {
   )
 }
 
-// Every lead in one bar, split by lane, with a count per lane.
+// Every open lead in one bar, split by the agent's five statuses (P878), with a count per status.
 function LeadMix({ leads }) {
-  const rows = LANES.map(l => ({ ...l, n: leads.filter(x => l.stages.includes(x.stage)).length }))
+  const by = countByStatus(leads)
+  const rows = LANES.map(l => ({ ...l, n: by[l.key] }))
   const total = rows.reduce((t, r) => t + r.n, 0) || 1
   return (
     <>
@@ -129,10 +131,10 @@ export default function Overview() {
   const { data: bill } = useSampleBilling()
   const { data: leads } = useSampleLeads()
   const { data: appts } = useSampleAppointments()
-  const wk = planRange(bill.budget.weekly, bill.budget.mode).week
+  const wk = bill.expected.appts.booked
   const next = o.nextAppt
   // P843: the person's avatar takes their current stage colour (a client's stage, or a lead's lane).
-  const toneOfAppt = a => (a.kind === 'client' ? stageLabel[clients.find(c => c.id === a.ref)?.stage]?.[0] : laneOf(leads.find(l => l.id === a.ref)?.stage).tone)
+  const toneOfAppt = a => (a.kind === 'client' ? stageLabel[clients.find(c => c.id === a.ref)?.stage]?.[0] : laneOf(leads.find(l => l.id === a.ref)).tone)
   const later = o.todayAppts.filter(a => a.id !== next?.id)
   const soon = o.upNext.filter(a => a.date > o.todayAppts[0]?.date).slice(0, 2)
   const nBy = k => clients.filter(c => c.stage === k).length
@@ -148,7 +150,7 @@ export default function Overview() {
     <div className="tp-page fx-page fx-ovl">
       <div className="fx-ovl-main">
         {/* P867: the hero fills the window (data-fold) so the Your book / Next up / Lead mix row peeks a third */}
-        <Tile className="fx-ovl-hero" i={0} data-fold data-fold-next=".fx-ovl-book" title="Booked this week" sub={`Your weekly budget books ${rangeText(wk)}`} to={paths.calendar()} label="Open Calendar">
+        <Tile className="fx-ovl-hero" i={0} data-fold data-fold-next=".fx-ovl-book" title="Booked this week" sub={`Your lead spend books about ${rangeWords(wk)} a week`} to={paths.calendar()} label="Open Calendar">
           {/* P843: the number is the hero; the range already sits in the subtitle, so the side line only says what it is */}
           <div className="fx-chart-head fx-bk-head">
             <b className="tp-num fx-bk-num"><CountUp value={bill.booked} /></b>
@@ -156,7 +158,7 @@ export default function Overview() {
           </div>
           <div className="fx-key">
             <span><i className="is-line" />{chart.mode === 'days' ? 'Booked per day' : 'Booked per week'}</span>
-            {chart.mode === 'weeks' && <span><i className="is-dash" />Budget range</span>}
+            {chart.mode === 'weeks' && <span><i className="is-dash" />Expected at your spend</span>}
             <span className="fx-key-range">{chart.range}</span>
           </div>
           {chart.empty
@@ -200,12 +202,12 @@ export default function Overview() {
             </header>
             {needs.now.length > 0
               ? <div className="fx-ncards">{needs.now.map((r, i) => <NeedCard key={r.id} item={r} i={i} onAct={act} />)}</div>
-              : <p className="fx-calm"><Check size={16} aria-hidden="true" />No one is waiting on you. Live calls, replies and outcomes to mark show here first.</p>}
+              : <p className="fx-calm"><Check size={16} aria-hidden="true" />No one is waiting on you. Live calls, people to call back and outcomes to mark show here first.</p>}
             <FyiList items={needs.fyi} />
           </div>
         </section>
 
-        <Tile className="fx-ovl-mix" i={5} title="Lead mix" sub={`${leads.length} leads by stage`} to={paths.leads()} label="Open Leads">
+        <Tile className="fx-ovl-mix" i={5} title="Lead mix" sub={`${leads.length - countByStatus(leads).closed} open leads by status`} to={paths.leads()} label="Open Leads">
           <LeadMix leads={leads} />
         </Tile>
       </div>

@@ -1,11 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import {
-  STAGES, STAGE_KEYS, LEAD_LANES, TRIGGERS, SAMPLE_NOW, addMin, seedEvents, applyMove, addReply, needsYouNow, forYourInfo,
+  STAGES, STAGE_KEYS, LEAD_LANES, TRIGGERS, SAMPLE_NOW, addMin, seedEvents, applyMove, replyIntent, replyRows, agentCallTask, closeCallTask, needsYouNow, forYourInfo,
   needsOutcome, matchPeople, fillFromMatch, stageChipOf, atLabel,
 } from './template/leadLifecycle.js'
-import { LEAD_TEXTS } from './template/leadTexts.js'
+import { LEAD_TEXTS, leadText } from './template/leadTexts.js'
 
 // P873 — the lead path: stage moves, Needs-you-now order, Submit's lead match, the text drafts, and the agent words.
 const mk = (id, first, stage, o = {}) => {
@@ -40,7 +40,10 @@ test('stage moves set the stage, the db fields and add a timeline row by the age
   const ns = applyMove(l, 'no_show')
   assert.equal(ns.dbStage, 'booked')
   assert.deepEqual(ns.events.slice(-3).map(e => [e.kind, e.state]), [['no_show', 'done'], ['text_sent', 'scheduled'], ['va_call', 'scheduled']])
-  assert.equal(ns.events.at(-2).text, LEAD_TEXTS.no_show_rebook.replace('[Lead first name]', 'Ellen'))
+  // P878: the one-tap rebook link waits out the Undo, then sends.
+  assert.equal(ns.events.at(-2).step, 'no_show_link')
+  assert.equal(ns.events.at(-2).text, leadText('no_show_link', { lead: 'Ellen' }))
+  assert.match(ns.events.at(-2).text, /deedstone\.com\/r\//)
   // Agents can't put a lead into the team's own steps.
   assert.throws(() => applyMove(l, 'calling'))
   assert.throws(() => applyMove(l, 'opted_out'))
@@ -60,18 +63,50 @@ test('the seeded timeline is in time order, done before now and scheduled after'
   assert.equal(o.events.filter(e => e.kind === 'text_sent').at(-1).step, 'stop_confirm')
 })
 
-test('a reply from the agent is saved on the timeline and clears the Reply trigger', () => {
-  const l = mk('e', 'Tanya', 'calling', { tries: 2, reply: { text: 'After 6?', at: '2026-11-02T13:52', seen: false } })
-  assert.equal(needsYouNow({ leads: [l] })[0].trigger, 'reply')
-  const r = addReply(l, 'I will call you at 6:15.')
-  assert.equal(r.events.at(-1).by, 'You')
-  assert.equal(needsYouNow({ leads: [r] }).length, 0)
+test('P878: nobody replies by hand: replies are answered automatically, with a call task when a person is needed', () => {
+  assert.equal(replyIntent('STOP'), 'stop')
+  assert.equal(replyIntent('Yes see you then'), 'confirm')
+  assert.equal(replyIntent('I cant make it, can we do another time'), 'reschedule')
+  assert.equal(replyIntent('Does it cover my mortgage?'), 'call')
+  assert.equal(replyIntent('hmm'), 'unclear')
+  // Before booking: a holding reply and a call task for the team. Nothing needs the agent.
+  const early = mk('e', 'Tanya', 'calling', { tries: 2 })
+  const er = replyRows(early, 'After 6?', '2026-11-02T13:52')
+  assert.deepEqual(er.map(r => r.kind), ['text_received', 'text_sent', 'call_task'])
+  assert.equal(er[1].step, 'holding_reply')
+  assert.equal(er[2].task, 'team')
+  assert.equal(needsYouNow({ leads: [{ ...early, reply: { text: 'After 6?', at: '2026-11-02T13:52' } }] }).length, 0)
+  // After hours the holding reply says when.
+  assert.equal(replyRows(early, 'Call me', '2026-11-02T21:10')[1].step, 'holding_reply_after_hours')
+  // Booked: a confirm is answered and marked; a question becomes a call task for the agent.
+  const booked = mk('b', 'Ray', 'booked', { apptAt: '2026-11-04T15:00' })
+  assert.deepEqual(replyRows(booked, 'Yes', '2026-11-02T13:00').map(r => r.kind), ['text_received', 'text_sent', 'confirmed'])
+  const asked = { ...booked, reply: { text: 'Does it cover my mortgage?', at: '2026-11-02T13:40' } }
+  assert.equal(replyRows(booked, asked.reply.text, asked.reply.at).at(-1).task, 'you')
+  assert.equal(agentCallTask(asked), true)
+  assert.equal(needsYouNow({ leads: [asked] })[0].trigger, 'call')
+  // Calling back closes the task.
+  const called = closeCallTask(asked)
+  assert.equal(agentCallTask(called), false)
+  assert.equal(called.events.at(-1).by, 'You')
+  // Stop opts them out.
+  assert.equal(replyRows(booked, 'STOP', '2026-11-02T13:00').at(-1).label, 'Opted out. All calls and texts stopped')
 })
 
-test('Needs you now: the six triggers, most urgent first, each with its action', () => {
+test('P878: changing an outcome already marked stays on the record', () => {
+  const l = mk('a', 'Ann', 'booked', { apptAt: '2026-11-02T11:00' })
+  const sold = applyMove(l, 'sold')
+  assert.equal(sold.events.at(-1).audit, undefined)
+  const back = applyMove(sold, 'follow_up', { follow: 'Mon, Nov 9' })
+  assert.equal(back.events.at(-1).audit, true)
+  assert.match(back.events.at(-1).label, /^Changed from Sold to Follow up Mon, Nov 9$/)
+})
+
+test('Needs you now: the triggers, most urgent first, each with its action', () => {
   const leads = [
     mk('f', 'Follow', 'follow_up', { follow: 'Mon, Nov 2' }),
-    mk('r', 'Reply', 'calling', { reply: { text: 'Call me', at: '2026-11-02T13:50', seen: false } }),
+    mk('r', 'Reply', 'booked', { apptAt: '2026-11-04T15:00', reply: { text: 'Call me', at: '2026-11-02T13:50' } }),
+    mk('d', 'Done', 'sold', { submitted: false }),
     mk('o', 'Ended', 'booked', { apptAt: '2026-11-02T13:00' }),
     mk('s', 'Starting', 'booked', { apptAt: '2026-11-02T14:00' }),
     mk('l', 'Live', 'ringing', { kind: 'live_call' }),
@@ -80,12 +115,17 @@ test('Needs you now: the six triggers, most urgent first, each with its action',
     mk('x', 'Later', 'booked', { apptAt: '2026-11-05T15:00', fresh: true }),
   ]
   const clients = [{ id: 'c1', client_first_name: 'Gloria', client_last_name: 'Santos', client_phone: '(305) 555-0156', stage: 'needs_attention', attention: 'Confirm the number' }]
-  const now = needsYouNow({ leads, clients })
-  assert.deepEqual(now.map(n => n.trigger), ['live', 'starting', 'outcome', 'reply', 'follow', 'servicing'])
+  const billingNeeds = [{ key: 'low', title: 'Lead spend running out', name: 'About 1 day left', what: 'Top up', when: 'Today' }]
+  const now = needsYouNow({ leads, clients, billingNeeds })
+  assert.deepEqual(now.map(n => n.trigger), ['live', 'starting', 'outcome', 'call', 'finish', 'follow', 'servicing', 'billing'])
   assert.deepEqual(now.map(n => n.action), TRIGGERS.map(t => t.action))
-  assert.deepEqual(TRIGGERS.map(t => t.action), ['Answer', 'Join call', 'Mark outcome', 'Reply', 'Call back', 'Open'])
+  assert.deepEqual(TRIGGERS.map(t => t.action), ['Answer', 'Join call', 'Mark outcome', 'Call', 'Finish', 'Call back', 'Open', 'Open billing'])
+  assert.equal(TRIGGERS.some(t => t.action === 'Reply'), false)
+  // Servicing off (leads only): no Finish.
+  assert.equal(needsYouNow({ leads, servicing: false }).some(n => n.trigger === 'finish'), false)
   // FYI: the team is on it.
   assert.deepEqual(forYourInfo({ leads }).map(f => f.title), ['Missed transfer', 'No-show', 'New booking'])
+  assert.deepEqual(forYourInfo({ leads: [mk('q', 'Q', 'rebooking')] }).map(f => f.title), ['Rebooking'])
 })
 
 test('an appointment needs you 15 minutes before; once 30 minutes have passed it needs an outcome', () => {
@@ -124,12 +164,17 @@ test('lead texts are the workflow drafts word for word, with Deedstone as the se
   }
 })
 
-test('the lead path never says GoHighLevel, Meta, Google or ads to an agent', () => {
-  const files = ['leadLifecycle.js', 'leadTexts.js', 'LeadOutcome.jsx', 'NeedsNow.jsx', 'needAction.js', 'screens/Leads.jsx', 'screens/Overview.jsx', 'screens/Submit.jsx', 'screens/Calendar.jsx', 'data/index.js']
-  const bad = /GoHighLevel|\bGHL\b|\bMeta\b|Google|Facebook|\bads?\b/i
+test('the agent portal never says GoHighLevel, Meta, Google (bar Google Calendar), ads or budget to an agent', () => {
+  // P878: every agent-side file (the VA screens in ful/ have their own rules).
+  const files = readdirSync('src/template', { recursive: true }).map(f => f.replace(/\\/g, '/'))
+    .filter(f => /\.jsx?$/.test(f) && !f.startsWith('ful/') && !f.endsWith('.test.js'))
+  assert.ok(files.includes('client/Deedstone.jsx') && files.includes('Results.jsx') && files.includes('screens/Welcome.jsx'))
+  // Brand names are matched with their capital (an HTML <meta> tag is not Meta); the rest in any case.
+  const brands = /GoHighLevel|\bGHL\b|\bMeta\b|Google(?! Calendar)|Facebook/
+  const words = /\bads?\b|\bbudget\b|within 5 minutes/i
   for (const f of files) {
     const src = readFileSync(`src/template/${f}`, 'utf8').split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l)).map(l => l.replace(/\s\/\/ .*$/, '')).join('\n')
     const strings = src.match(/'[^'\n]*'|"[^"\n]*"|`[^`]*`|>[^<>{}\n]+</g) || []
-    for (const s of strings) assert.doesNotMatch(s, bad, `${f}: ${s}`)
+    for (const s of strings) { assert.doesNotMatch(s, brands, `${f}: ${s}`); assert.doesNotMatch(s, words, `${f}: ${s}`) }
   }
 })

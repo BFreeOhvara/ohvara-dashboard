@@ -1,73 +1,212 @@
 import { useState } from 'react'
-import { Layers, CreditCard, Check } from 'lucide-react'
-import { PLAN, modeOf, planRange, rangeText } from '../../lib/planPricing'
-import { useSampleBilling, useSampleActions } from '../data'
-import { Chip, Money, SampleTag, useNote } from '../kit'
+import { Link } from 'react-router-dom'
+import { Layers, CreditCard, Check, PauseCircle, PlayCircle, LogOut, Phone, PlusCircle, CalendarClock } from 'lucide-react'
+import { useSampleBilling, useSampleActions, useSampleSettings, useSampleAppointments } from '../data'
+import { Chip, Drawer, Field, Money, SampleTag, Seg, Pending, useNote } from '../kit'
+import { Select } from '../Select'
 import { CountUp, usd } from '../motion'
-import { BudgetSlider, ServicingLine, PlanSummary, BookedMeter } from '../PlanBuilder'
+import { SpendSliders, SpendSummary, BookedMeter } from '../PlanBuilder'
+import { LEAD_TYPES, bought, vaCost, tierOf, dailyTotal, rangeWords, spendOk, openSlotsPerWeek } from '../spendPlan'
+import { TalkDrawer } from '../Talk'
+import { paths } from '../paths'
+import '../p878.css'
 
-// Sample-only: no payment or sign-in code. Prompt 835 billing model: a weekly budget the agent sets with a
-// slider (it buys a range of booked appointments or live calls), policy servicing billed monthly, a one-time
-// setup fee. Every price comes from lib/planPricing and is a draft.
+// P878 — Billing, from the hole check (N-G-02, N-G-09, N-H-28, N-A-23, N-A-30, N-I-03, N-I-05). Sample only: nothing is
+// charged, every price is a draft. Two ways to be billed:
+//   Pilot: only lead spend, prepaid each week (unspent money rolls over; leads stop when it runs out). No membership,
+//          setup or fee lines. Shows exactly what each lead type bought. An optional team-time line (admin switches it).
+//   Paid:  a membership tiered by total daily spend + the lead spend. The tier shows live as the sliders move and
+//          changes from the next bill.
+// Preview the paid plan with ?plan=paid, a low balance with ?billing=low, a failed card with ?billing=failed.
+const money = usd()
+const pct = v => (v == null ? '–' : `${Math.round(v * 100)}%`)
+const cost = v => (v == null ? '–' : money(Math.round(v)))
+
+function BoughtTable({ rows }) {
+  const [a, l] = rows.map(bought)
+  const lines = [
+    ['Spent', money(a.spent), money(l.spent)],
+    ['Leads', a.leads, l.calls],
+    ['Reached', a.reached, l.reached],
+    ['Booked / offered to you', a.booked, l.offered],
+    ['Showed / you picked up', a.showed, l.delivered],
+    ['Sold', a.sold, l.sold],
+    ['Cost per booked appointment', cost(a.perBooked), '–'],
+    ['Cost per live call you took', '–', cost(l.perDelivered)],
+    ['Show rate / pickup rate', pct(a.showRate), pct(l.pickup)],
+    ['Cost per sale', cost(a.perSale), cost(l.perSale)],
+  ]
+  return (
+    <div className="sp-table" role="table" aria-label="What your spend bought">
+      <div role="row" className="sp-tr is-h"><span role="columnheader" /><span role="columnheader">Appointments</span><span role="columnheader">Live calls</span></div>
+      {lines.map(([k, x, y]) => <div role="row" key={k} className="sp-tr"><span role="rowheader">{k}</span><b role="cell" className="tp-num">{x}</b><b role="cell" className="tp-num">{y}</b></div>)}
+    </div>
+  )
+}
+
+// Pause (N-A-30, N-I-03): dates or until resumed; what stops and what keeps going; the billing effect; a reminder 2
+// days before it ends; it resumes by itself.
+const PAUSE_DAYS = ['Mon, Nov 9', 'Mon, Nov 16', 'Mon, Nov 23', 'Mon, Nov 30']
+function PauseDrawer({ open, onClose, b, appts }) {
+  const { pause } = useSampleActions()
+  const note = useNote()
+  const [mode, setMode] = useState('dates')
+  const [until, setUntil] = useState(PAUSE_DAYS[1])
+  const inPause = appts.filter(a => a.kind === 'lead' && a.date >= 3)
+  const save = () => { pause({ from: 'Tue, Nov 3', until: mode === 'dates' ? until : null }); note(mode === 'dates' ? `Paused until ${until}. New leads stop tomorrow` : 'Paused until you resume. New leads stop tomorrow'); onClose() }
+  return (
+    <Drawer open={open} onClose={onClose} title="Pause new leads" sub="Starts tomorrow, Tue, Nov 3 at 12:00 AM your time"
+      footer={<><button type="button" className="tp-primary fx-accent" onClick={save}><PauseCircle size={15} />Pause</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Keep going</button></>}>
+      <div className="lc-q"><b>For how long?</b><Seg role="radiogroup" label="For how long?" value={mode} onChange={setMode} options={[{ key: 'dates', label: 'Until a date' }, { key: 'open', label: 'Until I resume' }]} /></div>
+      {mode === 'dates' && <Field label="Resume on" hint="It turns back on by itself that morning. We remind you 2 days before."><Select label="Resume on" value={until} onChange={setUntil} options={PAUSE_DAYS} /></Field>}
+      <div className="sp-effects">
+        <div><h3>Stops</h3><ul><li>New leads of both types</li><li>Live calls ringing you</li>{b.plan === 'pilot' && <li>Your lead spend: none is used while you{'’'}re paused</li>}</ul></div>
+        <div><h3>Keeps going</h3><ul><li>Appointments already booked ({inPause.length}). Keep them, or move them from Calendar</li><li>Leads the team is already reaching</li><li>Servicing for every client</li></ul></div>
+      </div>
+      {inPause.length > 0 && <ul className="fx-rows">{inPause.map(a => <li key={a.id} className="fx-row is-flat"><span className="fx-row-ic"><CalendarClock size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{a.who}</b><small>{a.day}, Nov {a.date}, {a.time}</small></span><Chip tone="blue">Still on</Chip></li>)}</ul>}
+      {b.plan === 'pilot'
+        ? <p className="tp-sub">Your prepaid balance ({money(b.walletNow.left)}) waits for you and rolls into the week you come back.</p>
+        : <Pending>Membership while paused: pricing not final</Pending>}
+    </Drawer>
+  )
+}
+
+// Cancel (N-I-05): why, an option that fits the reason, when it takes effect, the final bill, what happens, confirm.
+const REASONS = ['It costs too much', 'Not enough appointments', 'Not closing enough', 'Taking a break', 'Leaving insurance', 'Something else']
+function CancelDrawer({ open, onClose, b, onPause, onTalk }) {
+  const { cancelPlan, setSpend, setProducts } = useSampleActions()
+  const note = useNote()
+  const [why, setWhy] = useState('')
+  const [sure, setSure] = useState(false)
+  const offer = {
+    'It costs too much': ['Lower your daily spend', () => { setSpend({ appts: 25, live: 0 }); note('Lead spend lowered to $25 a day. Starts tomorrow'); onClose() }],
+    'Not enough appointments': ['Talk to someone first', () => { onClose(); onTalk() }],
+    'Not closing enough': ['Talk to someone first', () => { onClose(); onTalk() }],
+    'Taking a break': ['Pause instead', () => { onClose(); onPause() }],
+    'Leaving insurance': null,
+    'Something else': ['Talk to someone first', () => { onClose(); onTalk() }],
+  }[why]
+  const svcOnly = why === 'It costs too much' && b.products !== 'servicing'
+  const done = () => { cancelPlan({ why, on: 'Sun, Nov 8' }); note('Cancelled. A confirmation email is on its way'); onClose() }
+  return (
+    <Drawer open={open} onClose={onClose} title="Cancel your plan" sub="We’re sorry to see you go"
+      footer={<><button type="button" className="tp-btn ov-ghost tp-danger" disabled={!why || !sure} onClick={done}>Cancel my plan</button><button type="button" className="tp-primary fx-accent" onClick={onClose}>Keep my account</button></>}>
+      <Field label="Why are you leaving?"><Select label="Why are you leaving?" placeholder="Pick a reason" value={why} onChange={v => { setWhy(v); setSure(false) }} options={REASONS} /></Field>
+      {offer && <button type="button" className="lc-nudge" onClick={offer[1]}><span className="tp-grow"><b>{offer[0]}</b><small>Most agents who pick this stay.</small></span><span className="lc-nudge-go">Try it</span></button>}
+      {svcOnly && <button type="button" className="lc-nudge" onClick={() => { setProducts('servicing'); note('Switched to servicing only. Leads stop on Sun, Nov 8'); onClose() }}><span className="tp-grow"><b>Keep servicing only</b><small>Your clients stay looked after. No new leads.</small></span><span className="lc-nudge-go">Switch</span></button>}
+      {why && <>
+        <div className="sp-effects">
+          <div><h3>When</h3><ul><li>Ends Sun, Nov 8, the end of this week</li><li>New leads stop then; booked appointments stay on your calendar</li></ul></div>
+          <div><h3>After that</h3><ul><li>The team stops servicing your clients</li><li>Your portal stays open for 30 days to download your book</li></ul></div>
+        </div>
+        <div className="pb-row"><span>Final bill</span><b className="tp-money">{b.plan === 'pilot' ? 'Nothing more: you prepaid this week' : 'This month, as usual'}</b></div>
+        {b.plan === 'pilot' && <Pending>Unspent prepaid lead spend at cancel: policy not final</Pending>}
+        <label className="tp-check"><input type="checkbox" checked={sure} onChange={e => setSure(e.target.checked)} /><span>I understand my leads and servicing stop on Sun, Nov 8.</span></label>
+        <p className="tp-sub">We email you a confirmation. You can come back any time.</p>
+      </>}
+    </Drawer>
+  )
+}
+
 export default function Billing() {
   const { data: b } = useSampleBilling()
-  const { setBudget, setPaused } = useSampleActions()
+  const { data: settings } = useSampleSettings()
+  const { data: appts } = useSampleAppointments()
+  const { setSpend, resume, keepPlan, topUp, fixCard } = useSampleActions()
   const note = useNote()
-  const [weekly, setWeekly] = useState(b.budget.weekly)
-  const [mode, setMode] = useState(b.budget.mode)
-  const dirty = weekly !== b.budget.weekly || mode !== b.budget.mode
-  const r = planRange(b.budget.weekly, b.budget.mode)
-  const m = modeOf(b.budget.mode)
+  const [spend, setDraft] = useState(b.spend)
+  const [range, setRange] = useState('week')
+  const [panel, setPanel] = useState(null)
+  const dirty = spend.appts !== b.spend.appts || spend.live !== b.spend.live
+  const pilot = b.plan === 'pilot'
+  const w = b.walletNow
+  const wk = b.expected.appts.booked
+  const va = pilot ? vaCost(b.va) : 0
+  const tierNow = tierOf(dailyTotal(b.spend))
+  const tierNew = tierOf(dailyTotal(spend))
+  const open = openSlotsPerWeek(settings.week)
+  const running = !b.paused && !b.cancel && !b.payment.failed && !(pilot && w.out)
+  const save = () => {
+    if (!spendOk(b.plan, spend)) return
+    setSpend(spend)
+    note(`Lead spend set to ${money(dailyTotal(spend))} a day. Starts tomorrow at 12:00 AM. Sample only, nothing was charged`)
+  }
   return (
     <div className="tp-page fx-page fx-grid">
-      {/* P867: the plan + booked row fills the window (data-fold) so the next tile below peeks a third. History sits
-          above the plan builder (on a phone, above Booked this week) so the fold cuts a tile, not a gap. */}
-      <section className="fx-tile is-fill is-blue fx-s7 pb-plan" style={{ '--i': 0 }} aria-label="Your plan" data-fold>
-        <header className="fx-tile-h"><span className="tp-grow"><h2>Your plan</h2><p>Next weekly charge {b.next_charge} · servicing {b.servicing.next}</p></span><SampleTag /></header>
-        <div className="tp-row tp-wrap pb-hero"><b className="tp-money fx-huge"><CountUp value={b.budget.weekly} format={usd()} /></b><span>a week</span></div>
-        <div className="fx-split">
-          <span><i className="is-blue" />Weekly budget<b><Money v={b.budget.weekly} cents={false} /></b></span>
-          <span><i className="is-teal" />Servicing a month<b><Money v={PLAN.servicingMonthly} cents={false} /></b></span>
-          <span><Check size={13} aria-hidden="true" />Setup paid {b.setup.at}</span>
-        </div>
-      </section>
-
-      <section className="fx-tile fx-s5 pb-booked" style={{ '--i': 1 }} aria-label="Booked this week">
-        <header className="fx-tile-h"><span className="tp-grow"><h2>Booked this week</h2><p>{m.label} · resets Monday</p></span><Chip tone={b.paused ? 'mute' : 'green'}>{b.paused ? 'Paused' : 'Running'}</Chip></header>
-        <div className="tp-row tp-wrap"><b className="tp-num fx-huge2"><CountUp value={b.booked} /></b><span className="tp-sub">booked so far</span></div>
-        <BookedMeter booked={b.booked} weekly={b.budget.weekly} mode={b.budget.mode} />
-        <p className="pb-note">Range {rangeText(r.week)} a week · {rangeText(r.month)} a month</p>
-      </section>
-
-      <section className="fx-tile fx-s12 pb-hist" style={{ '--i': 2 }} aria-label="History">
-        <header className="fx-tile-h"><span className="tp-grow"><h2>History</h2><p>Sample amounts. Pricing is not final.</p></span><button type="button" className="tp-btn ov-ghost" onClick={() => note('Payment method changes are not open yet')}><CreditCard size={14} />Payment method</button></header>
-        <ul className="fx-rows fx-hist">{b.history.map(h => <li key={h.id} className="fx-row is-flat"><span className="fx-row-ic"><Layers size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{h.label}</b><small>{h.at}</small></span><Money v={h.amount} /></li>)}</ul>
-      </section>
-
-      <section className="fx-tile fx-s12 pb-tile" style={{ '--i': 3 }} aria-label="Build your plan">
-        <header className="fx-tile-h"><span className="tp-grow"><h2>Build your plan</h2><p>Your budget runs the ads and our team books them for you. Servicing is billed monthly.</p></span></header>
-        <div className="pb-grid">
-          <div className="pb-steps">
-            <p className="pb-step">Step 1 · Weekly budget</p>
-            <BudgetSlider weekly={weekly} mode={mode} onWeekly={setWeekly} onMode={setMode} id="bill-budget" />
-            <p className="pb-step">Step 2 · Policy servicing (monthly)</p>
-            <ServicingLine />
-          </div>
-          <PlanSummary weekly={weekly} mode={mode} setupDone={b.setup.paid}>
-            <p className="pb-note">{dirty ? `Your new budget starts with the charge on ${b.next_charge}.` : 'Change your budget any week. It starts with the next Monday charge.'}</p>
-            <button type="button" className="tp-primary fx-accent" disabled={!dirty} onClick={() => { setBudget(weekly, mode); note(`Budget set to ${usd()(weekly)} a week. Sample only, nothing was charged`) }}>Save budget</button>
-            <button type="button" className="tp-btn ov-ghost" onClick={() => { setPaused(!b.paused); note(b.paused ? 'Ads resumed' : 'Ads paused. Servicing keeps going') }}>{b.paused ? 'Resume ads' : 'Pause ads'}</button>
-          </PlanSummary>
-        </div>
-      </section>
-
-      {b.cancellations && (
-        <section className="fx-tile fx-s12 pb-cancel" style={{ '--i': 4 }} aria-label="Cancellation plan">
-          <header className="fx-tile-h"><span className="tp-grow"><h2>Cancellation plan</h2><p>You are on this plan from before. It keeps going as it is.</p></span><Chip tone="blue">Current</Chip></header>
-          <div className="tp-row tp-wrap"><b className="tp-money fx-huge2"><Money v={b.cancellations.weekly} cents={false} /></b><span className="tp-sub">a week · {b.cancellations.label}</span></div>
+      {b.payment.failed && (
+        <section className="fx-tile fx-s12 sp-alert" style={{ '--i': 0 }} role="alert">
+          <span className="tp-grow"><b>Your card didn{'’'}t go through</b><small>New leads are stopped until it does. Servicing keeps going for 3 days.</small></span>
+          <button type="button" className="tp-primary fx-accent" onClick={() => { fixCard(); note('Card updated. Leads start again. Sample only') }}><CreditCard size={15} />Update card</button>
         </section>
       )}
 
+      <section className="fx-tile is-fill is-blue fx-s7 pb-plan" style={{ '--i': 0 }} aria-label={pilot ? 'Your pilot' : 'Your plan'} data-fold>
+        <header className="fx-tile-h"><span className="tp-grow"><h2>{pilot ? 'Pilot · lead spend only' : `Membership · ${tierNow.label}`}</h2><p>{pilot ? `Prepaid each week · tops up ${w.next}` : `Next bill ${b.nextBill}`}</p></span><SampleTag /></header>
+        {pilot ? <>
+          <div className="tp-row tp-wrap pb-hero"><b className="tp-money fx-huge"><CountUp value={w.left} format={money} /></b><span>left this week</span></div>
+          <div className="fx-split">
+            <span><i className="is-blue" />Loaded<b><Money v={w.loaded} cents={false} /></b></span>
+            <span><i className="is-teal" />Rolled over<b><Money v={w.rolled} cents={false} /></b></span>
+            <span><i className="is-blue" />Spent<b><Money v={w.spent} cents={false} /></b></span>
+          </div>
+          <p className="sp-plain">{w.out ? `Your balance ran out. New leads wait until ${w.next}, or top up now.` : `About ${w.daysLeft} days of leads left at ${money(dailyTotal(b.spend))} a day. Unspent money rolls into next week.`}</p>
+          {(w.low || w.out) && <button type="button" className="tp-primary fx-accent fx-self" onClick={() => { topUp(dailyTotal(b.spend) * 3); note('Topped up 3 days. Sample only, nothing was charged') }}><PlusCircle size={15} />Top up 3 days</button>}
+        </> : <>
+          <div className="tp-row tp-wrap pb-hero"><b className="tp-money fx-huge">{tierNow.monthly == null ? 'Custom' : <CountUp value={tierNow.monthly} format={money} />}</b><span>a month, plus your lead spend</span></div>
+          <div className="fx-split">
+            <span><i className="is-blue" />Lead spend<b>{money(dailyTotal(b.spend))} a day</b></span>
+            <span><i className="is-teal" />Tier<b>{tierNow.label}</b></span>
+            <span><Check size={13} aria-hidden="true" />Covers the team, servicing, portal and app</span>
+          </div>
+        </>}
+      </section>
+
+      <section className="fx-tile fx-s5 pb-booked" style={{ '--i': 1 }} aria-label="Booked this week">
+        <header className="fx-tile-h"><span className="tp-grow"><h2>Booked this week</h2><p>Resets Monday</p></span><Chip tone={running ? 'green' : 'mute'}>{b.cancel ? 'Ending Nov 8' : b.paused ? 'Paused' : running ? 'Leads running' : 'Leads stopped'}</Chip></header>
+        <div className="tp-row tp-wrap"><b className="tp-num fx-huge2"><CountUp value={b.booked} /></b><span className="tp-sub">booked so far</span></div>
+        <BookedMeter booked={b.booked} range={wk} />
+        <p className="pb-note">About {rangeWords(wk)} a week at your spend · {rangeWords(b.expected.live.delivered)} live calls</p>
+        {b.paused && <div className="sp-paused"><b>Paused {b.paused.until ? `until ${b.paused.until}` : 'until you resume'}</b><small>{b.paused.until ? 'It resumes by itself. We remind you 2 days before.' : 'New leads start the day after you resume.'}</small>
+          <span className="tp-row tp-wrap">{b.paused.until && <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('pause')}>Extend</button>}<button type="button" className="tp-primary fx-accent" onClick={() => { resume(); note('Resumed. New leads start tomorrow') }}><PlayCircle size={15} />Resume now</button></span></div>}
+        {b.cancel && <div className="sp-paused"><b>Your plan ends {b.cancel.on}</b><small>Changed your mind? Nothing stops until then.</small><button type="button" className="tp-primary fx-accent fx-self" onClick={() => { keepPlan(); note('Welcome back. Nothing changes') }}>Keep my account</button></div>}
+      </section>
+
+      <section className="fx-tile fx-s12 pb-tile" style={{ '--i': 2 }} aria-label="Your daily lead spend">
+        <header className="fx-tile-h"><span className="tp-grow"><h2>Your daily lead spend</h2><p>{pilot ? 'Set any amount on each type. You pay only this, prepaid each week.' : 'Set it per type. Your membership tier follows your total.'}</p></span></header>
+        <div className="pb-grid">
+          <SpendSliders spend={spend} onSpend={setDraft} plan={b.plan} id="bill" openSlots={open} />
+          <SpendSummary spend={spend} plan={b.plan} products={b.products} vaAmount={va}>
+            {!pilot && tierNew.key !== tierNow.key && <p className="pb-note">That moves you to {tierNew.label}. The new tier applies from your next bill, {b.nextBill}.</p>}
+            <p className="pb-note">{dirty ? 'Your new spend starts tomorrow, Tue, Nov 3 at 12:00 AM your time.' : b.pending ? b.pending.starts : 'Change it any day. A change starts at midnight.'}</p>
+            <button type="button" className="tp-primary fx-accent" disabled={!dirty || !spendOk(b.plan, spend)} onClick={save}>Save lead spend</button>
+          </SpendSummary>
+        </div>
+      </section>
+
+      <section className="fx-tile fx-s8 sp-bought" style={{ '--i': 3 }} aria-label="What your spend bought">
+        <header className="fx-tile-h"><span className="tp-grow"><h2>What your spend bought</h2><p>Each lead type, side by side</p></span><Seg label="Range" value={range} onChange={setRange} options={[{ key: 'week', label: 'This week' }, { key: 'month', label: 'This month' }]} /></header>
+        <BoughtTable rows={b.bought[range]} />
+        {pilot && b.va.on && <p className="sp-plain">Team time on your leads and clients this week: {b.va.hours} hours at {money(b.va.rate)} an hour, at cost: <b className="tp-money">{money(va)}</b></p>}
+      </section>
+
+      <section className="fx-tile fx-s4 sp-acts" style={{ '--i': 4 }} aria-label="Your plan">
+        <header className="fx-tile-h"><span className="tp-grow"><h2>Your plan</h2><p>{LEAD_TYPES.map(t => `${t.short} ${money(b.spend[t.key])}`).join(' · ')} a day</p></span></header>
+        <ul className="tp-list">
+          <li><button type="button" className="fx-mrow" onClick={() => setPanel('pause')} disabled={!!b.cancel}><PauseCircle size={17} aria-hidden="true" /><span className="tp-grow"><b>{b.paused ? 'Change the pause' : 'Pause new leads'}</b><small>Holidays, a full calendar, a break</small></span></button></li>
+          <li><button type="button" className="fx-mrow" onClick={() => setPanel('talk')}><Phone size={17} aria-hidden="true" /><span className="tp-grow"><b>Talk to someone</b><small>About your spend, your plan, anything</small></span></button></li>
+          <li><button type="button" className="fx-mrow" onClick={() => note('Payment method changes are not open yet')}><CreditCard size={17} aria-hidden="true" /><span className="tp-grow"><b>Payment method</b><small>{b.payment.card}</small></span></button></li>
+          <li><button type="button" className="fx-mrow" onClick={() => setPanel('cancel')} disabled={!!b.cancel}><LogOut size={17} aria-hidden="true" /><span className="tp-grow"><b>Cancel your plan</b><small>Or pause instead</small></span></button></li>
+        </ul>
+      </section>
+
+      <section className="fx-tile fx-s12 pb-hist" style={{ '--i': 5 }} aria-label="History">
+        <header className="fx-tile-h"><span className="tp-grow"><h2>History</h2><p>Sample amounts. Pricing is not final.</p></span><Link to={paths.activity()} className="tp-btn ov-ghost">See your results</Link></header>
+        <ul className="fx-rows fx-hist">{b.history.map(h => <li key={h.id} className="fx-row is-flat"><span className="fx-row-ic"><Layers size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{h.label}</b><small>{h.at}</small></span><Money v={h.amount} /></li>)}</ul>
+      </section>
+
+      <PauseDrawer open={panel === 'pause'} onClose={() => setPanel(null)} b={b} appts={appts} />
+      <CancelDrawer open={panel === 'cancel'} onClose={() => setPanel(null)} b={b} onPause={() => setPanel('pause')} onTalk={() => setPanel('talk')} />
+      <TalkDrawer open={panel === 'talk'} onClose={() => setPanel(null)} topic="My plan or billing" />
     </div>
   )
 }

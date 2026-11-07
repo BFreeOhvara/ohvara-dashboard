@@ -21,13 +21,36 @@ export const LEAD_TEXTS = {
   stop_confirm: "Deedstone: You're opted out and won't get more texts. Reply START to opt back in.",
 }
 
-// Fill the brackets for a preview. The reschedule link shows as a short sample link.
+// P878 — new automatic texts the front end shows as previews. DRAFT wording: not in the workflow drafts yet and not
+// approved (client-facing wording is Brayden's call); GoHighLevel sends them once Jordan wires the workflow.
+export const DRAFT_TEXTS = {
+  // No-show: the moment the agent marks it (after the short Undo), a one-tap rebook link. Replaces no_show_rebook.
+  no_show_link: "Hi [Lead first name], sorry we missed you today. Pick a new time with [Agent first name] here, it takes one tap: [Rebook link]",
+  // The agent can't make a booked appointment: an apology and the same rebook link.
+  cant_make_it: "Hi [Lead first name], [Agent first name] can't make your call on [Appointment time] and is sorry for the change. Pick a new time here: [Rebook link]",
+  // Follow up: the agent sends a link so the client books on the agent's calendar.
+  booking_link: 'Hi [Lead first name], [Agent first name] here from Deedstone. Pick a time that suits you for our next call: [Booking link]',
+  // The automatic replier: anything that needs a person gets a holding reply and a call task.
+  holding_reply: "Thanks [Lead first name]! Someone will call you shortly.",
+  holding_reply_after_hours: "Thanks [Lead first name]! We're closed for the night. Someone will call you after 8 AM tomorrow.",
+  confirm_reply: "Thanks [Lead first name], you're confirmed for [Appointment time].",
+  reschedule_reply: 'No problem, [Lead first name]. Pick a new time here: [Rebook link]',
+  // After hours: a form lead books straight onto the calendar; a caller picks a callback time.
+  after_hours_form: "Hi [Lead first name], thanks for asking about mortgage protection. We're closed for the night. Book a time with a licensed agent here: [Booking link]",
+  after_hours_call: "Hi [Lead first name], sorry we missed your call. Pick a time and we'll call you back: [Callback link]",
+}
+
+// Fill the brackets for a preview. Links show as short sample links.
 export function leadText(step, { lead, agent = 'Dana', appt = 'your appointment time' } = {}) {
-  const body = LEAD_TEXTS[step]
+  const body = LEAD_TEXTS[step] || DRAFT_TEXTS[step]
   if (!body) return ''
   return body
     .split('[Lead first name]').join(lead || 'there')
     .split('[Agent first name]').join(agent)
     .split('[Appointment time]').join(appt)
     .split('[Reschedule link]').join('deedstone.com/r/sample')
+    .split('[Rebook link]').join('deedstone.com/r/sample')
+    .split('[Booking link]').join('deedstone.com/b/sample')
+    .split('[Callback link]').join('deedstone.com/c/sample')
 }
+export const isDraftText = step => !LEAD_TEXTS[step] && !!DRAFT_TEXTS[step]
