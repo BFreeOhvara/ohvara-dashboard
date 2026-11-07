@@ -10,7 +10,7 @@
 //
 // Bump TRAINING_VERSION when a lesson's check changes, so a VA's old pass is shown as "updated, take the check again".
 
-export const TRAINING_VERSION = '2026-11-06.1'
+export const TRAINING_VERSION = '2026-11-07.1' // P877: inbound, transfer and carrier checks follow the portal
 export const PASS_MARK = 0.8 // 4 of 5, 4 of 4, 3 of 3: a check passes at 80% or better
 
 const say = (text, o = {}) => ({ who: 'You', text, ...o })
@@ -124,8 +124,8 @@ export const LESSONS = [
     why: 'Agents see your notes on their client\'s timeline, your pay comes from logged cancellations, and nobody can follow up on a call that was never logged.',
     steps: [
       'After every call, the phone asks How did it go? Pick the result before you dial anyone else.',
-      'For a cancellation call: Cancelled needs the carrier\'s confirmation number. No answer needs a short note.',
-      'For a lead: pick the outcome on the lead (booked, callback, not reached, not interested, close them out).',
+      'For a cancellation call: Cancelled needs the carrier\'s confirmation number. No answer can carry a short note.',
+      'For a lead: the call result is Reached them, No answer or Left a voicemail. Then set the lead\'s outcome on the lead (booked, live transfer, callback, not interested, close them out).',
       'Write notes an agent can act on: what they asked, what you agreed, what happens next. Facts, not opinions.',
       'Missed something? Use Log a call in the + menu to add the result to one of today\'s calls.',
       'Calls dialed from your own phone while portal calling is off still get logged here: the call screen keeps the time and your notes.',
@@ -148,14 +148,14 @@ export const LESSONS = [
     minutes: 6,
     why: 'The first ten seconds decide whether a caller trusts us. A clear, warm greeting keeps them on the line.',
     steps: [
-      'A call rings in the phone at the bottom right. It opens by itself. Answer within three rings.',
+      'A call rings in the phone on the left rail. It slides open by itself. Answer within three rings.',
       'Greet with the Deedstone greeting and your first name.',
-      'If recording is switched on, the notice plays by itself. Don\'t skip it.',
+      'Say the recording notice first. The phone shows it at the top of the call.',
       'Find out what they need: a new quote request, a question about their policy, or a booked call.',
       'New lead: go through the checklist (question type, carrier, state, how soon) and book or transfer them.',
-      'Policy question: open their client card, then transfer to their agent if they are on, or book the next open time.',
+      'Policy question: press Add caller, pick their agent, then Merge, so the agent takes it with you on the line (a warm hand-off).',
       'Log the result straight after (see Logging every call).',
-      'If you close the phone during a call, it only minimises. Hang up is always the red button.',
+      'Sliding the phone away never ends a call: it tucks into the left rail with a green timer. Hang up is always the red button.',
     ],
     script: {
       title: 'The greeting',
@@ -163,7 +163,7 @@ export const LESSONS = [
         say('Thanks for calling Deedstone, this is [your first name]. How can I help you today?', { approve: true }),
         hear('I filled out a form about life insurance.'),
         say('Perfect, thanks for reaching out. I\'ll get you set up with a licensed agent. Can I grab a few quick details first?', { approve: true }),
-        { who: 'Note', text: 'Recording notice, if recording is on (plays by itself): "This call may be recorded."', approve: true },
+        { who: 'Note', text: 'Recording notice: say it first, before anything else. The exact words come from Brayden.', approve: true },
       ],
     },
     dos: ['Smile, slow down, say your name', 'Use their first name once you have it', 'Write the checklist answers as you go'],
@@ -171,8 +171,8 @@ export const LESSONS = [
     portal: { shot: 'phone-ring', clicks: [{ spot: 'answer', text: 'Answer. The call keeps its time and notes here' }, { spot: 'opencall', text: 'Open the call, to see the full record' }] },
     check: [
       ok('How do you answer a call that comes in?', ['"Hello?"', '"Thanks for calling Deedstone, this is [name]. How can I help you today?"', '"Ohvara insurance, go ahead"', '"Who is this?"'], 1, 'Deedstone, your first name, and an open question.'),
-      ok('You press the X on the phone during a call. What happens?', ['The call ends', 'The phone minimises to a pill. The call keeps going', 'The caller is put on hold', 'The call moves to another VA'], 1, 'X never hangs up. The red button does.'),
-      ok('The caller has a question about their existing policy. Next step?', ['Answer it yourself', 'Open their client card, then transfer to their agent or book the next open time', 'Tell them to call the carrier', 'Take a message and forget it'], 1, 'Route it to their agent: live if they are on, else the next open time.'),
+      ok('You slide the phone away during a call. What happens?', ['The call ends', 'The call keeps going. The phone tucks into the left rail with a green timer', 'The caller is put on hold', 'The call moves to another VA'], 1, 'Sliding it away never hangs up. The red button does.'),
+      ok('The caller has a question about their existing policy. Next step?', ['Answer it yourself', 'Add caller, pick their agent, then Merge: a warm hand-off', 'Tell them to call the carrier', 'Take a message and forget it'], 1, 'Policy questions are the agent\'s. Bring them onto the call.'),
       ok('What are the four checklist items for a new lead?', ['Name, age, weight, income', 'Question type, carrier, state, how soon', 'Email, address, bank, SSN', 'Budget, health, job, family'], 1, 'Question type, carrier, state, how soon.'),
     ],
   },
@@ -256,24 +256,24 @@ export const LESSONS = [
       'Finish the checklist first: question type, carrier, state, how soon.',
       'Tell the caller you\'re connecting them, and ask them to stay on the line.',
       'Transfer to the lead\'s agent if they are on. The agent\'s portal rings and shows Needs you now.',
-      'Introduce the caller to the agent in one line (name, state, what they want), then drop off.',
+      'It is a cold transfer: the agent\'s alert already shows the lead\'s name, age, state and need, so you don\'t introduce them.',
       'If the agent doesn\'t pick up, or nobody is on, book the first open time within the hour and tell the caller.',
-      'Log it: Transferred, or Booked if it fell back to a booking.',
+      'Log the call result, then the lead\'s outcome: Live transfer, or Booked if it fell back to a booking.',
     ],
     script: {
       title: 'Handing over',
       lines: [
         say('I\'m going to connect you with [agent first name], a licensed agent, right now. Please stay on the line, it\'ll just be a moment.', { approve: true }),
-        tip('To the agent: "Hi [agent], I have [name] from [state], they want [what]. They\'re on the line now."'),
+        tip('The agent\'s alert shows the lead\'s name, age, state and need. You don\'t introduce them.'),
         say('[Agent] is a bit tied up, so I\'ve booked you with them at [time] your time. You\'ll get a text to confirm.', { approve: true }),
       ],
     },
-    dos: ['Checklist first', 'One-line handover to the agent', 'Fall back to a booking within the hour'],
+    dos: ['Checklist first', 'Check the agent is on before you transfer', 'Fall back to a booking within the hour'],
     donts: ['Don\'t leave a caller in silence', 'Don\'t transfer someone who asked us to stop', 'Don\'t promise the agent will call "right back" unless it\'s booked'],
     portal: { shot: 'lead', clicks: [{ spot: 'book', text: 'No agent picks up? Book an agent, first open time within the hour' }, { spot: 'callback', text: 'They\'d rather talk later: Call back' }] },
     check: [
       ok('The agent doesn\'t pick up the transfer. You:', ['Hang up', 'Book the first open time within the hour', 'Tell the caller to call back later', 'Keep ringing for ten minutes'], 1, 'Fall back to a booking within the hour.'),
-      ok('What do you tell the agent when they pick up?', ['Nothing, just connect', 'Name, state and what they want, in one line', 'The price you discussed', 'The lead source'], 1, 'One-line handover. Never prices or lead sources.'),
+      ok('What does the agent see when you transfer?', ['Nothing', 'The lead\'s name, age, state and need, on their alert', 'The price you discussed', 'The lead source'], 1, 'It is a cold transfer: the alert carries it. Never prices or lead sources.'),
       ok('Before you transfer, you:', ['Finish the checklist', 'Quote a price', 'Ask for their bank details', 'Text the agent'], 0, 'Checklist first.'),
     ],
   },
@@ -286,8 +286,8 @@ export const LESSONS = [
     why: 'A callback is a promise. Calling late, or in the wrong time zone, breaks trust.',
     steps: [
       'On the lead, press Call back, pick a time on the lead\'s clock, then Set callback.',
-      'Callbacks keep 30 minutes from your other calls, so you are never double-booked.',
-      'When it comes due, it jumps to the top of the Queue under Callback due. Call it first.',
+      'A time within 30 minutes of your own calls goes to another VA, so nobody is double-booked. Times are greyed out only when every VA is busy.',
+      'It shows in the Queue under Callback due. When it is due, call it first.',
       'Reached: carry on as a normal call. Not reached: log Not reached, and set a new callback if they asked for one.',
     ],
     script: {
@@ -364,15 +364,15 @@ export const LESSONS = [
     title: 'Carrier calls inside carrier hours',
     job: 'Closing a client\'s old policy with the carrier, on a three-way call, while the carrier is open.',
     minutes: 6,
-    why: 'This is the job you are paid for: each verified cancellation is your pay. And a carrier that is closed means a wasted call.',
+    why: 'Closing the old policy properly protects the client and the agent. And a carrier that is closed means a wasted call.',
     steps: [
       'Cancellation calls are on your Schedule. Open the call to see the client, the old carrier and the new one.',
       'Carriers are only called while they are open. The portal only offers times inside the carrier\'s hours.',
-      'Some carriers show "Hours not verified": the portal uses a typical window. If they turn out to be closed, note it and tell the team.',
-      'Press Start call. Ring the client first, then the carrier, so the policy owner is on the line.',
+      'If we don\'t have a carrier\'s hours yet, the portal says so and keeps times inside usual carrier hours. If they turn out to be closed, note it and tell the team.',
+      'Press Start call to reach the client first, then Add caller to bring in the carrier, so the policy owner is on the line.',
       'Have the client confirm they want the old policy cancelled. You never suggest it.',
       'Get the carrier\'s confirmation number and copy it exactly.',
-      'Mark Cancelled with the confirmation number (it shows on Pay as checking until verified). No luck: No answer with a note.',
+      'Mark Cancelled with the confirmation number. The team checks it against the call. No luck: No answer with a note.',
     ],
     script: {
       title: 'On the three-way call',
@@ -388,7 +388,7 @@ export const LESSONS = [
     check: [
       ok('Who needs to be on a cancellation call?', ['Just the carrier', 'The policy owner and the carrier', 'The agent and the carrier', 'Only you'], 1, 'The owner must be on the line.'),
       ok('What must you have before marking Cancelled?', ['The client\'s email', 'The carrier\'s confirmation number', 'The agent\'s OK by text', 'A new premium'], 1, 'The confirmation number.'),
-      ok('A carrier shows "Hours not verified". You:', ['Never call it', 'Call in the typical window, and tell the team if they\'re closed', 'Call at 7 AM', 'Ask the client to call'], 1, 'Use the typical window and report what you find.'),
+      ok('We don\'t have a carrier\'s hours yet. You:', ['Never call it', 'Call inside usual carrier hours, and tell the team if they\'re closed', 'Call at 7 AM', 'Ask the client to call'], 1, 'Use usual carrier hours and report what you find.'),
       ok('The client sounds unsure about cancelling. You:', ['Push them to cancel', 'Stop, and pass it to their agent', 'Cancel anyway', 'Hang up'], 1, 'Never push. Unsure means it goes back to the agent.'),
     ],
   },
@@ -402,7 +402,7 @@ export const LESSONS = [
     steps: [
       'A packet check is due about three days after the policy\'s effective date. It shows on Servicing.',
       'Press Start on the step, then call the client: has the packet arrived, by mail or email?',
-      'Arrived: record the result. Not arrived: call the carrier (inside their hours) and ask them to resend it, then tell the client when to expect it.',
+      'Arrived: record Delivered. Not arrived: ask the carrier (inside their hours) to resend it, tell the client when to expect it, write that in the notes and record Not delivered.',
       'A "did your packet arrive?" text also goes out at day 7 by itself. If they reply that it hasn\'t, it comes back to you.',
       'Questions about what the policy covers go to the agent: Send to agent.',
     ],
@@ -460,9 +460,9 @@ export const LESSONS = [
     why: 'Small changes done right stop big problems later, like a claim paid to the wrong person.',
     steps: [
       'The agent or client asks for a change. It shows as a step on Servicing.',
-      'Press Start, then schedule a call with the client inside carrier hours.',
-      'On the call: confirm who they are, then call the carrier with them to make the change.',
-      'Record the result from the list (done, carrier needs a form, client not reached, and so on).',
+      'Schedule the call first (Schedule it), inside carrier hours, then press Start when it\'s time.',
+      'Open their client record and confirm who they are (Check the caller first), then call the carrier with them to make the change.',
+      'Record the result: Done, or Couldn\'t finish with a note saying why.',
       'Anything that changes cover, or any advice ("who should my beneficiary be?"), goes to the agent: Send to agent.',
     ],
     script: {

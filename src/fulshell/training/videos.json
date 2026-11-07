@@ -1,84 +1,6 @@
 {
  "base": "/training-video/",
  "lessons": {
-  "never": {
-   "kind": "explainer",
-   "title": "What never to say",
-   "duration": 173.8,
-   "src": "never.mp4",
-   "poster": "never-poster.jpg",
-   "captions": "never.captions.json",
-   "vtt": "never.vtt",
-   "chapters": [
-    {
-     "t": 0.4,
-     "label": "What never to say"
-    },
-    {
-     "t": 13.8,
-     "label": "Why: you are not the agent"
-    },
-    {
-     "t": 24.8,
-     "label": "Rule 1: Never quote a price"
-    },
-    {
-     "t": 36.9,
-     "label": "Rule 2: Never promise anything"
-    },
-    {
-     "t": 47.3,
-     "label": "Rule 3: Never give advice"
-    },
-    {
-     "t": 57.2,
-     "label": "Rule 4: Never tell anyone to drop a policy"
-    },
-    {
-     "t": 64.8,
-     "label": "Leads and clients hear one name"
-    },
-    {
-     "t": 73.7,
-     "label": "Agents never hear"
-    },
-    {
-     "t": 87.2,
-     "label": "When itâ€™s the agentâ€™s question"
-    },
-    {
-     "t": 95.4,
-     "label": "A lead asks about price"
-    },
-    {
-     "t": 109.9,
-     "label": "A client asks for advice"
-    },
-    {
-     "t": 121.4,
-     "label": "The exact wording is a draft"
-    },
-    {
-     "t": 129.8,
-     "label": "Send to agent"
-    },
-    {
-     "t": 138.6,
-     "label": "The one phrase to remember"
-    },
-    {
-     "t": 147.5,
-     "label": "Recap"
-    },
-    {
-     "t": 165.4,
-     "label": "Now take the check"
-    }
-   ],
-   "helpAt": {},
-   "sizeBytes": 8422120,
-   "builtAt": "2026-11-07T19:43:45.278Z"
-  },
   "booking": {
    "kind": "walkthrough",
    "title": "Booking an appointment",
@@ -176,8 +98,1228 @@
    "helpAt": {
     "booking": 54.9
    },
-   "sizeBytes": 6736870,
-   "builtAt": "2026-11-07T19:50:11.075Z"
+   "sizeBytes": 6778716,
+   "builtAt": "2026-11-07T22:30:30.657Z"
+  },
+  "callbacks": {
+   "kind": "walkthrough",
+   "title": "Callbacks",
+   "duration": 122.5,
+   "src": "callbacks.mp4",
+   "poster": "callbacks-poster.jpg",
+   "captions": "callbacks.captions.json",
+   "vtt": "callbacks.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "Callbacks"
+    },
+    {
+     "t": 9.4,
+     "label": "Open the lead"
+    },
+    {
+     "t": 18.1,
+     "label": "Call back"
+    },
+    {
+     "t": 20.8,
+     "label": "His clock"
+    },
+    {
+     "t": 31.3,
+     "label": "The 30-minute gap"
+    },
+    {
+     "t": 48.1,
+     "label": "Set callback"
+    },
+    {
+     "t": 57.4,
+     "label": "Callback due"
+    },
+    {
+     "t": 66.3,
+     "label": "On your phone too"
+    },
+    {
+     "t": 72.8,
+     "label": "Calling back"
+    },
+    {
+     "t": 84,
+     "label": "Not reached?"
+    },
+    {
+     "t": 96.8,
+     "label": "Recap"
+    },
+    {
+     "t": 112.5,
+     "label": "Now try it"
+    }
+   ],
+   "helpAt": {
+    "callback": 18.1
+   },
+   "sizeBytes": 5418839,
+   "builtAt": "2026-11-07T22:00:03.697Z"
+  },
+  "carrier": {
+   "kind": "walkthrough",
+   "title": "Carrier calls inside carrier hours",
+   "duration": 212.4,
+   "src": "carrier.mp4",
+   "poster": "carrier-poster.jpg",
+   "captions": "carrier.captions.json",
+   "vtt": "carrier.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "Carrier calls inside carrier hours"
+    },
+    {
+     "t": 11.7,
+     "label": "Your Schedule"
+    },
+    {
+     "t": 17.5,
+     "label": "Open the call"
+    },
+    {
+     "t": 24.5,
+     "label": "Client and carriers"
+    },
+    {
+     "t": 37,
+     "label": "Carrier hours"
+    },
+    {
+     "t": 42.4,
+     "label": "Globe Life's hours"
+    },
+    {
+     "t": 55.5,
+     "label": "Hours not verified"
+    },
+    {
+     "t": 66.2,
+     "label": "Use the usual window"
+    },
+    {
+     "t": 77.6,
+     "label": "Back to Gloria"
+    },
+    {
+     "t": 82.7,
+     "label": "Start call"
+    },
+    {
+     "t": 96.6,
+     "label": "Add the carrier"
+    },
+    {
+     "t": 110.2,
+     "label": "She confirms"
+    },
+    {
+     "t": 125.7,
+     "label": "Never suggest it"
+    },
+    {
+     "t": 134.5,
+     "label": "Tell the carrier"
+    },
+    {
+     "t": 144.9,
+     "label": "Confirmation number"
+    },
+    {
+     "t": 160.9,
+     "label": "End the call"
+    },
+    {
+     "t": 165.1,
+     "label": "Cancelled or No answer"
+    },
+    {
+     "t": 171.5,
+     "label": "Mark Cancelled"
+    },
+    {
+     "t": 179.1,
+     "label": "Done and checked"
+    },
+    {
+     "t": 189.9,
+     "label": "Recap"
+    },
+    {
+     "t": 203.5,
+     "label": "Now take the check"
+    }
+   ],
+   "helpAt": {
+    "schedule": 11.7,
+    "carrier_call": 96.6
+   },
+   "sizeBytes": 8070566,
+   "builtAt": "2026-11-07T21:50:22.057Z"
+  },
+  "changes": {
+   "kind": "walkthrough",
+   "title": "Servicing: policy changes",
+   "duration": 182.6,
+   "src": "changes.mp4",
+   "poster": "changes-poster.jpg",
+   "captions": "changes.captions.json",
+   "vtt": "changes.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "Servicing: policy changes"
+    },
+    {
+     "t": 12.8,
+     "label": "Change steps"
+    },
+    {
+     "t": 25.3,
+     "label": "Open the change"
+    },
+    {
+     "t": 34.4,
+     "label": "Schedule the call"
+    },
+    {
+     "t": 39.6,
+     "label": "Inside carrier hours"
+    },
+    {
+     "t": 49,
+     "label": "Start"
+    },
+    {
+     "t": 54.9,
+     "label": "Open his record"
+    },
+    {
+     "t": 62.9,
+     "label": "Call Tom"
+    },
+    {
+     "t": 71.8,
+     "label": "Is now a good time?"
+    },
+    {
+     "t": 82.4,
+     "label": "Confirm it's him"
+    },
+    {
+     "t": 91.2,
+     "label": "Carrier on the line"
+    },
+    {
+     "t": 98.5,
+     "label": "Make the change"
+    },
+    {
+     "t": 106.5,
+     "label": "End the call"
+    },
+    {
+     "t": 109.1,
+     "label": "Note the call"
+    },
+    {
+     "t": 114,
+     "label": "Back to the step"
+    },
+    {
+     "t": 122.2,
+     "label": "Record the result"
+    },
+    {
+     "t": 131.4,
+     "label": "Advice? Send to agent"
+    },
+    {
+     "t": 149.7,
+     "label": "Annual reviews"
+    },
+    {
+     "t": 159.9,
+     "label": "Recap"
+    },
+    {
+     "t": 173.8,
+     "label": "Now try it"
+    }
+   ],
+   "helpAt": {
+    "draft_date_change": 12.8,
+    "address_change": 25.3,
+    "beneficiary_change": 131.4,
+    "annual_review": 149.7
+   },
+   "sizeBytes": 7990776,
+   "builtAt": "2026-11-07T22:06:07.168Z"
+  },
+  "checkins": {
+   "kind": "explainer",
+   "title": "Check-in texts at day 30, 60 and 90",
+   "duration": 149.7,
+   "src": "checkins.mp4",
+   "poster": "checkins-poster.jpg",
+   "captions": "checkins.captions.json",
+   "vtt": "checkins.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "Check-in texts at day 30, 60 and 90"
+    },
+    {
+     "t": 9.9,
+     "label": "Day 30, 60 and 90"
+    },
+    {
+     "t": 20.9,
+     "label": "They go out by themselves"
+    },
+    {
+     "t": 26.8,
+     "label": "When they reply"
+    },
+    {
+     "t": 37.8,
+     "label": "Back in the Queue"
+    },
+    {
+     "t": 45,
+     "label": "A lead replies to the day-60 check-in"
+    },
+    {
+     "t": 59.9,
+     "label": "Treat it like a new lead"
+    },
+    {
+     "t": 69.8,
+     "label": "Why five minutes"
+    },
+    {
+     "t": 82.1,
+     "label": "If they reply STOP"
+    },
+    {
+     "t": 91.2,
+     "label": "No reply after day 90"
+    },
+    {
+     "t": 99.7,
+     "label": "Do’s and don’ts"
+    },
+    {
+     "t": 112.8,
+     "label": "Recap"
+    },
+    {
+     "t": 137.7,
+     "label": "Now try it"
+    }
+   ],
+   "helpAt": {},
+   "sizeBytes": 7050031,
+   "builtAt": "2026-11-07T22:03:03.109Z"
+  },
+  "desk": {
+   "kind": "explainer",
+   "title": "The desk and your shifts",
+   "duration": 156,
+   "src": "desk.mp4",
+   "poster": "desk-poster.jpg",
+   "captions": "desk.captions.json",
+   "vtt": "desk.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "The desk and your shifts"
+    },
+    {
+     "t": 14.6,
+     "label": "When you work"
+    },
+    {
+     "t": 25.9,
+     "label": "Who else is on"
+    },
+    {
+     "t": 36.8,
+     "label": "Check the Schedule"
+    },
+    {
+     "t": 46.9,
+     "label": "No clock-in"
+    },
+    {
+     "t": 56.2,
+     "label": "Request a day off"
+    },
+    {
+     "t": 73.7,
+     "label": "Day-off limits"
+    },
+    {
+     "t": 86,
+     "label": "Example: you can’t work Friday"
+    },
+    {
+     "t": 98.5,
+     "label": "Stepping away"
+    },
+    {
+     "t": 107.4,
+     "label": "Three good habits"
+    },
+    {
+     "t": 119.1,
+     "label": "Recap"
+    },
+    {
+     "t": 145.5,
+     "label": "Now try it"
+    }
+   ],
+   "helpAt": {
+    "dayoff": 56.2
+   },
+   "sizeBytes": 7376528,
+   "builtAt": "2026-11-07T21:29:35.316Z"
+  },
+  "escalate": {
+   "kind": "explainer",
+   "title": "When to escalate, and to whom",
+   "duration": 174.2,
+   "src": "escalate.mp4",
+   "poster": "escalate-poster.jpg",
+   "captions": "escalate.captions.json",
+   "vtt": "escalate.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "When to escalate, and to whom"
+    },
+    {
+     "t": 11,
+     "label": "Who to bring in"
+    },
+    {
+     "t": 17,
+     "label": "Coverage questions: the agent"
+    },
+    {
+     "t": 29.1,
+     "label": "A client asks about cover"
+    },
+    {
+     "t": 39.7,
+     "label": "Agents talk in Messages"
+    },
+    {
+     "t": 46.1,
+     "label": "You and agents talk in Messages"
+    },
+    {
+     "t": 54.6,
+     "label": "Everything else: the team"
+    },
+    {
+     "t": 69.6,
+     "label": "An upset caller"
+    },
+    {
+     "t": 87.7,
+     "label": "The exact wording is a draft"
+    },
+    {
+     "t": 96.1,
+     "label": "Stay calm"
+    },
+    {
+     "t": 104.6,
+     "label": "Threats and legal claims"
+    },
+    {
+     "t": 116.1,
+     "label": "A caller threatens a complaint"
+    },
+    {
+     "t": 126.9,
+     "label": "Needs a listen"
+    },
+    {
+     "t": 134.9,
+     "label": "Recap"
+    },
+    {
+     "t": 165.9,
+     "label": "Now take the check"
+    }
+   ],
+   "helpAt": {
+    "conversion": 17,
+    "claim_help": 11
+   },
+   "sizeBytes": 8242126,
+   "builtAt": "2026-11-07T22:17:44.593Z"
+  },
+  "inbound": {
+   "kind": "walkthrough",
+   "title": "Answering a call that comes in",
+   "duration": 165,
+   "src": "inbound.mp4",
+   "poster": "inbound-poster.jpg",
+   "captions": "inbound.captions.json",
+   "vtt": "inbound.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "Answering a call that comes in"
+    },
+    {
+     "t": 8,
+     "label": "Your phone"
+    },
+    {
+     "t": 16.1,
+     "label": "A call comes in"
+    },
+    {
+     "t": 23.8,
+     "label": "Answer"
+    },
+    {
+     "t": 36.1,
+     "label": "Calling is off for now"
+    },
+    {
+     "t": 46,
+     "label": "The greeting"
+    },
+    {
+     "t": 58.7,
+     "label": "Recording notice"
+    },
+    {
+     "t": 69.7,
+     "label": "What they need"
+    },
+    {
+     "t": 82.2,
+     "label": "Her record"
+    },
+    {
+     "t": 91.8,
+     "label": "Ask before a hold"
+    },
+    {
+     "t": 102.4,
+     "label": "Add her agent"
+    },
+    {
+     "t": 110,
+     "label": "Merge"
+    },
+    {
+     "t": 115.8,
+     "label": "Sliding away never hangs up"
+    },
+    {
+     "t": 126.3,
+     "label": "Hang up: the red button"
+    },
+    {
+     "t": 134.7,
+     "label": "Recap"
+    },
+    {
+     "t": 156.1,
+     "label": "Now take the check"
+    }
+   ],
+   "helpAt": {
+    "answer": 23.8
+   },
+   "sizeBytes": 7470965,
+   "builtAt": "2026-11-07T21:36:31.179Z"
+  },
+  "logging": {
+   "kind": "walkthrough",
+   "title": "Logging every call",
+   "duration": 150.4,
+   "src": "logging.mp4",
+   "poster": "logging-poster.jpg",
+   "captions": "logging.captions.json",
+   "vtt": "logging.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "Logging every call"
+    },
+    {
+     "t": 14,
+     "label": "The phone"
+    },
+    {
+     "t": 22.7,
+     "label": "Start the call"
+    },
+    {
+     "t": 38.3,
+     "label": "Notes as you go"
+    },
+    {
+     "t": 44.1,
+     "label": "How did it go?"
+    },
+    {
+     "t": 51.2,
+     "label": "Cancelled needs a number"
+    },
+    {
+     "t": 67.7,
+     "label": "Notes an agent can act on"
+    },
+    {
+     "t": 80.8,
+     "label": "Save result"
+    },
+    {
+     "t": 86.7,
+     "label": "A lead: the outcome"
+    },
+    {
+     "t": 93.5,
+     "label": "Pick what happened"
+    },
+    {
+     "t": 107.6,
+     "label": "Missed one? Log a call"
+    },
+    {
+     "t": 115.2,
+     "label": "Pick the call"
+    },
+    {
+     "t": 125.4,
+     "label": "Recap"
+    },
+    {
+     "t": 141.3,
+     "label": "Now try it"
+    }
+   ],
+   "helpAt": {
+    "dialer": 14,
+    "logging": 44.1
+   },
+   "sizeBytes": 6419690,
+   "builtAt": "2026-11-07T21:45:07.550Z"
+  },
+  "never": {
+   "kind": "explainer",
+   "title": "What never to say",
+   "duration": 173.8,
+   "src": "never.mp4",
+   "poster": "never-poster.jpg",
+   "captions": "never.captions.json",
+   "vtt": "never.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "What never to say"
+    },
+    {
+     "t": 13.8,
+     "label": "Why: you are not the agent"
+    },
+    {
+     "t": 24.8,
+     "label": "Rule 1: Never quote a price"
+    },
+    {
+     "t": 36.9,
+     "label": "Rule 2: Never promise anything"
+    },
+    {
+     "t": 47.3,
+     "label": "Rule 3: Never give advice"
+    },
+    {
+     "t": 57.2,
+     "label": "Rule 4: Never tell anyone to drop a policy"
+    },
+    {
+     "t": 64.8,
+     "label": "Leads and clients hear one name"
+    },
+    {
+     "t": 73.7,
+     "label": "Agents never hear"
+    },
+    {
+     "t": 87.2,
+     "label": "When it’s the agent’s question"
+    },
+    {
+     "t": 95.4,
+     "label": "A lead asks about price"
+    },
+    {
+     "t": 109.9,
+     "label": "A client asks for advice"
+    },
+    {
+     "t": 121.4,
+     "label": "The exact wording is a draft"
+    },
+    {
+     "t": 129.8,
+     "label": "Send to agent"
+    },
+    {
+     "t": 138.6,
+     "label": "The one phrase to remember"
+    },
+    {
+     "t": 147.5,
+     "label": "Recap"
+    },
+    {
+     "t": 165.4,
+     "label": "Now take the check"
+    }
+   ],
+   "helpAt": {},
+   "sizeBytes": 8434248,
+   "builtAt": "2026-11-07T22:25:29.677Z"
+  },
+  "optout": {
+   "kind": "explainer",
+   "title": "Opt-outs and do-not-call",
+   "duration": 169.4,
+   "src": "optout.mp4",
+   "poster": "optout-poster.jpg",
+   "captions": "optout.captions.json",
+   "vtt": "optout.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "Opt-outs and do-not-call"
+    },
+    {
+     "t": 15.3,
+     "label": "Stop, in any words"
+    },
+    {
+     "t": 26.5,
+     "label": "On a call"
+    },
+    {
+     "t": 35.3,
+     "label": "A lead asks you to stop"
+    },
+    {
+     "t": 47,
+     "label": "The exact wording is a draft"
+    },
+    {
+     "t": 55.4,
+     "label": "Rule 1: Never try to change their mind"
+    },
+    {
+     "t": 65.5,
+     "label": "Close them out"
+    },
+    {
+     "t": 86.2,
+     "label": "Tell the team"
+    },
+    {
+     "t": 99.2,
+     "label": "When they text STOP"
+    },
+    {
+     "t": 112.1,
+     "label": "Rule 2: Never opt anyone back in"
+    },
+    {
+     "t": 128.1,
+     "label": "Quiet hours"
+    },
+    {
+     "t": 138,
+     "label": "Recap"
+    },
+    {
+     "t": 160.6,
+     "label": "Now take the check"
+    }
+   ],
+   "helpAt": {
+    "closeout": 65.5
+   },
+   "sizeBytes": 8036958,
+   "builtAt": "2026-11-07T21:42:10.641Z"
+  },
+  "packets": {
+   "kind": "walkthrough",
+   "title": "Servicing: sending packets",
+   "duration": 167.2,
+   "src": "packets.mp4",
+   "poster": "packets-poster.jpg",
+   "captions": "packets.captions.json",
+   "vtt": "packets.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "Servicing: sending packets"
+    },
+    {
+     "t": 13,
+     "label": "Servicing lanes"
+    },
+    {
+     "t": 22.4,
+     "label": "Open the packet check"
+    },
+    {
+     "t": 31.6,
+     "label": "What the agent asked"
+    },
+    {
+     "t": 41.4,
+     "label": "Start"
+    },
+    {
+     "t": 49.8,
+     "label": "Call Renee"
+    },
+    {
+     "t": 57.8,
+     "label": "Mail and email"
+    },
+    {
+     "t": 70.4,
+     "label": "Carrier resends it"
+    },
+    {
+     "t": 80,
+     "label": "When to expect it"
+    },
+    {
+     "t": 90,
+     "label": "End the call"
+    },
+    {
+     "t": 92.7,
+     "label": "Note what happens next"
+    },
+    {
+     "t": 97.9,
+     "label": "Coverage? Send to agent"
+    },
+    {
+     "t": 113.7,
+     "label": "Record the result"
+    },
+    {
+     "t": 122.9,
+     "label": "The day 7 text"
+    },
+    {
+     "t": 133.5,
+     "label": "Review calls"
+    },
+    {
+     "t": 144.2,
+     "label": "Recap"
+    },
+    {
+     "t": 159.2,
+     "label": "Now try it"
+    }
+   ],
+   "helpAt": {
+    "servicing": 13,
+    "packet_check": 31.6,
+    "review_call": 133.5
+   },
+   "sizeBytes": 8297418,
+   "builtAt": "2026-11-07T21:39:29.296Z"
+  },
+  "payments": {
+   "kind": "walkthrough",
+   "title": "Servicing: failed payments",
+   "duration": 162.1,
+   "src": "payments.mp4",
+   "poster": "payments-poster.jpg",
+   "captions": "payments.captions.json",
+   "vtt": "payments.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "Servicing: failed payments"
+    },
+    {
+     "t": 10.8,
+     "label": "The payment step"
+    },
+    {
+     "t": 18.1,
+     "label": "Needs attention"
+    },
+    {
+     "t": 27.2,
+     "label": "Open the step"
+    },
+    {
+     "t": 31.8,
+     "label": "One business day"
+    },
+    {
+     "t": 40,
+     "label": "Start and call"
+    },
+    {
+     "t": 48.8,
+     "label": "Stay calm"
+    },
+    {
+     "t": 67.4,
+     "label": "His choices"
+    },
+    {
+     "t": 75.1,
+     "label": "Carrier on the line"
+    },
+    {
+     "t": 86.4,
+     "label": "Never the numbers"
+    },
+    {
+     "t": 97,
+     "label": "End the call"
+    },
+    {
+     "t": 99.7,
+     "label": "Note what changed"
+    },
+    {
+     "t": 105.5,
+     "label": "Wants to stop?"
+    },
+    {
+     "t": 119.8,
+     "label": "Record the result"
+    },
+    {
+     "t": 125.4,
+     "label": "Chargeback watch"
+    },
+    {
+     "t": 139.3,
+     "label": "Recap"
+    },
+    {
+     "t": 153.7,
+     "label": "Now try it"
+    }
+   ],
+   "helpAt": {
+    "payment_change": 10.8,
+    "chargeback_watch": 125.4
+   },
+   "sizeBytes": 8145878,
+   "builtAt": "2026-11-07T21:58:48.184Z"
+  },
+  "reminders": {
+   "kind": "explainer",
+   "title": "Reminders, no-shows and rebooks",
+   "duration": 152.7,
+   "src": "reminders.mp4",
+   "poster": "reminders-poster.jpg",
+   "captions": "reminders.captions.json",
+   "vtt": "reminders.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "Reminders, no-shows and rebooks"
+    },
+    {
+     "t": 11.6,
+     "label": "Reminder texts"
+    },
+    {
+     "t": 24.1,
+     "label": "No-shows come to you"
+    },
+    {
+     "t": 32.2,
+     "label": "Rebook within the hour"
+    },
+    {
+     "t": 43.8,
+     "label": "Rebooking a no-show"
+    },
+    {
+     "t": 70.9,
+     "label": "The exact wording is a draft"
+    },
+    {
+     "t": 79.3,
+     "label": "Keep it warm"
+    },
+    {
+     "t": 90.2,
+     "label": "Reached, or not"
+    },
+    {
+     "t": 101.9,
+     "label": "Our missed cancellation calls"
+    },
+    {
+     "t": 112.4,
+     "label": "Your week on the Schedule"
+    },
+    {
+     "t": 119.4,
+     "label": "Recap"
+    },
+    {
+     "t": 138.1,
+     "label": "Now try it"
+    }
+   ],
+   "helpAt": {},
+   "sizeBytes": 7075049,
+   "builtAt": "2026-11-07T21:53:28.805Z"
+  },
+  "saves": {
+   "kind": "explainer",
+   "title": "Servicing: cancellation saves",
+   "duration": 150.4,
+   "src": "saves.mp4",
+   "poster": "saves-poster.jpg",
+   "captions": "saves.captions.json",
+   "vtt": "saves.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "Cancellation saves"
+    },
+    {
+     "t": 12.8,
+     "label": "Saves on Servicing"
+    },
+    {
+     "t": 21.9,
+     "label": "Listen first"
+    },
+    {
+     "t": 31.3,
+     "label": "Opening a save call"
+    },
+    {
+     "t": 45.5,
+     "label": "The exact wording is a draft"
+    },
+    {
+     "t": 53.8,
+     "label": "Fix it, or book the agent"
+    },
+    {
+     "t": 69.8,
+     "label": "A payment problem"
+    },
+    {
+     "t": 81.2,
+     "label": "A client says it’s too expensive"
+    },
+    {
+     "t": 95,
+     "label": "Never pressure"
+    },
+    {
+     "t": 104.7,
+     "label": "They still want to cancel"
+    },
+    {
+     "t": 117.1,
+     "label": "Recap"
+    },
+    {
+     "t": 138.8,
+     "label": "Now try it"
+    }
+   ],
+   "helpAt": {
+    "lapse_save": 12.8
+   },
+   "sizeBytes": 7071712,
+   "builtAt": "2026-11-07T22:10:33.509Z"
+  },
+  "speed": {
+   "kind": "walkthrough",
+   "title": "Speed to lead",
+   "duration": 151.6,
+   "src": "speed.mp4",
+   "poster": "speed-poster.jpg",
+   "captions": "speed.captions.json",
+   "vtt": "speed.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "Speed to lead"
+    },
+    {
+     "t": 7.2,
+     "label": "Callbacks due first"
+    },
+    {
+     "t": 16,
+     "label": "Inside five minutes"
+    },
+    {
+     "t": 25.1,
+     "label": "Open the lead"
+    },
+    {
+     "t": 31.3,
+     "label": "Take it"
+    },
+    {
+     "t": 40.6,
+     "label": "Call her"
+    },
+    {
+     "t": 52.2,
+     "label": "Say who you are"
+    },
+    {
+     "t": 65.4,
+     "label": "Four answers"
+    },
+    {
+     "t": 73.2,
+     "label": "Question type"
+    },
+    {
+     "t": 77.5,
+     "label": "Carrier, state, how soon"
+    },
+    {
+     "t": 89.2,
+     "label": "Book or transfer"
+    },
+    {
+     "t": 98.7,
+     "label": "No answer: Not reached"
+    },
+    {
+     "t": 108.7,
+     "label": "End the call"
+    },
+    {
+     "t": 116.5,
+     "label": "Can't finish? Put back"
+    },
+    {
+     "t": 124.5,
+     "label": "Recap"
+    },
+    {
+     "t": 140.8,
+     "label": "Now try it"
+    }
+   ],
+   "helpAt": {
+    "queue": 7.2,
+    "lead": 31.3
+   },
+   "sizeBytes": 6848630,
+   "builtAt": "2026-11-07T21:26:33.431Z"
+  },
+  "transfer": {
+   "kind": "walkthrough",
+   "title": "Live transfers to the agent",
+   "duration": 150.4,
+   "src": "transfer.mp4",
+   "poster": "transfer-poster.jpg",
+   "captions": "transfer.captions.json",
+   "vtt": "transfer.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "Live transfers to the agent"
+    },
+    {
+     "t": 8.9,
+     "label": "Open and take it"
+    },
+    {
+     "t": 15.3,
+     "label": "Checklist first"
+    },
+    {
+     "t": 25.1,
+     "label": "Call her"
+    },
+    {
+     "t": 35.1,
+     "label": "Tell her first"
+    },
+    {
+     "t": 47.4,
+     "label": "Transfer"
+    },
+    {
+     "t": 58.4,
+     "label": "Pick her agent"
+    },
+    {
+     "t": 69.8,
+     "label": "Check agent"
+    },
+    {
+     "t": 76.1,
+     "label": "Transfer now"
+    },
+    {
+     "t": 86,
+     "label": "Log it"
+    },
+    {
+     "t": 93.2,
+     "label": "No agent? Book within the hour"
+    },
+    {
+     "t": 111.7,
+     "label": "Never"
+    },
+    {
+     "t": 122.6,
+     "label": "Recap"
+    },
+    {
+     "t": 140.7,
+     "label": "Now take the check"
+    }
+   ],
+   "helpAt": {
+    "transfer": 58.4
+   },
+   "sizeBytes": 6159144,
+   "builtAt": "2026-11-07T21:52:22.033Z"
   }
  }
 }

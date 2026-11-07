@@ -34,7 +34,7 @@
    "t": 2.4,
    "cc": "Booking an appointment.",
    "ccInside": true,
-   "videoW": 788,
+   "videoW": 823,
    "overflow": false,
    "chapters": 21,
    "rate": 1.5,
@@ -46,7 +46,7 @@
    "t": 3.6,
    "cc": "break the law, or lose us an agent.",
    "ccInside": true,
-   "videoW": 788,
+   "videoW": 823,
    "overflow": false,
    "chapters": 16,
    "rate": 1.5,
@@ -58,7 +58,7 @@
    "label": "Starts at 0:55",
    "t": 54.9
   },
-  "homeVideoRows": 2,
+  "homeVideoRows": 17,
   "pageErrors": []
  }
 }
