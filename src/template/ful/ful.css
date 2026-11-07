@@ -390,7 +390,10 @@
 .fs-cs-xfer header span { font-family: var(--font-mono); font-size: 13px; color: var(--ov-mid); }
 .fs-cs-xfer p { margin: 0; font-size: 13px; }
 .fs-cs-xfer:is(.is-yes, .is-done) { border-color: color-mix(in srgb, var(--success) 55%, transparent); }
-.fs-cs-xfer:is(.is-no, .is-noanswer, .is-fail, .is-bounced) { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+.fs-cs-xfer:is(.is-yes, .is-lateyes) { border-color: color-mix(in srgb, var(--success) 55%, transparent); }
+.fs-cs-xfer:is(.is-no, .is-noanswer, .is-fail, .is-bounced, .is-withdrew, .is-busy, .is-unreachable) { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+/* P880: why an agent can't be checked (no app, notifications off, push test not passed). */
+.fs-cs-why { margin: 0; font-size: 13px; color: var(--ov-mid); }
 .fs-cs-steps { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .fs-cs-steps li { flex: 1; height: 26px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; color: var(--ov-mid); background: color-mix(in srgb, var(--ov-hi) 7%, transparent); }
 .fs-cs-steps li.is-done { color: var(--tp-white); background: var(--success); }

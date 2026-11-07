@@ -12,7 +12,8 @@ import { clockOf, zoneAbbr } from '../../lib/callSlots'
 import { clock } from '../../lib/portalPhone'
 import { PAD } from '../../components/fulfillment/phoneIcons'
 import { CARRIER_CATALOG } from '../../lib/carriers/catalog'
-import { newCall, callReducer, lineCount, heldFor, XFER_WORDS, xferOpen, CHECK_MS, BOUNCE_MS } from './callLine'
+import { newCall, callReducer, lineCount, heldFor, XFER_WORDS, xferOpen, CHECK_MS, BOUNCE_MS, XFER_BOOK, XFER_GO, xferFromCheck, xferRefused, SAMPLE_REACH, REACH_WORDS } from './callLine'
+import { useRealXfer } from '../../hooks/useLiveTransfer'
 import { CALL_WORD, KIND } from './words'
 import { fp } from './paths'
 import { HelpDot } from '../../fulshell/training/HelpDot'
@@ -144,8 +145,15 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
   }, [ringing])
   const xs = call?.xfer?.step
   const xAgent = AGENTS.find(a => a.id === call?.xfer?.agent)
+  // P880: on a real call (help-voice's CallSid on it) the transfer card follows the server's check instead.
+  const real = useRealXfer(call)
+  const realRow = real?.row, realSkew = real?.skew, realRefused = real?.refused
   useEffect(() => {
-    if (!xs || !xAgent) return undefined
+    if (realRow) act({ type: 'xferServer', xfer: xferFromCheck(realRow, realSkew) })
+    else if (realRefused) act({ type: 'xferServer', xfer: xferRefused(realRefused, null) })
+  }, [realRow, realSkew, realRefused])
+  useEffect(() => {
+    if (!xs || !xAgent || call?.xfer?.live) return undefined
     const later = (ms, a) => { const t = setTimeout(() => act(a), ms); return () => clearTimeout(t) }
     if (xs === 'sent') return later(1200, { type: 'xfer', step: 'seen' })
     // Sample answers: an agent who takes transfers says Yes, a booking-only agent says Not now.
@@ -225,12 +233,15 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
         {call.rec && <p className="fs-cs-notice"><CircleDot size={13} aria-hidden="true" />{RECORD_NOTICE || 'Say the recording notice first. (The exact words are coming from Brayden.)'}</p>}
         {!CALLING_ON && <p className="fx-calm fs-off"><PhoneOff size={16} aria-hidden="true" /><span>Calling is off right now. Dial <b className="tp-num">{p.number}</b> from your phone. This keeps the time, the line and your notes.</span></p>}
         {(people > 2 || waiting || pending) && <LineList call={call} onDrop={id => act({ type: 'drop', id })} onMerge={() => act({ type: 'merge' })} />}
-        {call.xfer && <XferCard x={call.xfer} agent={xAgent} now={now} onTransfer={() => act({ type: 'transfer' })} onBook={() => { onBook?.(p.kind === 'lead' ? p.id : null); act({ type: 'xferClear' }) }} onClear={() => act({ type: 'xferClear' })} />}
+        {call.xfer && <XferCard x={call.xfer} agent={xAgent} now={now}
+          onTransfer={() => (real ? real.transfer().catch(e => note(e.message)) : act({ type: 'transfer' }))}
+          onBook={() => { onBook?.(p.kind === 'lead' ? p.id : null); if (real) { real.book().catch(() => {}); real.clear() } act({ type: 'xferClear' }) }}
+          onClear={() => { real?.clear(); act({ type: 'xferClear' }) }} />}
         {call.pad && <div className="fs-ph-tones tp-num" aria-label="Keys pressed">{call.tones || ' '}</div>}
         {call.pad && <div className="fs-pad is-small" aria-label="Keypad for tones">{PAD.map(d => <button key={d} type="button" className="fs-key" onClick={() => act({ type: 'tone', key: d })}>{d}</button>)}</div>}
         {sheet === 'notes' && <Field label="Notes" hint="Saved with the call"><textarea className="tp-input fx-ta" rows={3} placeholder="What happened on the call" value={call.notes} onChange={e => act({ type: 'notes', text: e.target.value })} /></Field>}
         {sheet === 'add' && <AddCaller who={p} on={call.parties} onPick={party => { act({ type: 'add', party }); setSheet(null) }} onClose={() => setSheet(null)} />}
-        {sheet === 'xfer' && <PickAgent who={p} onCheck={agent => { act({ type: 'check', agent }); setSheet(null) }} onClose={() => setSheet(null)} />}
+        {sheet === 'xfer' && <PickAgent who={p} real={!!real} onCheck={agent => { if (real) real.check().catch(e => note(e.message)); else act({ type: 'check', agent }); setSheet(null) }} onClose={() => setSheet(null)} />}
         <div className="fs-cs-grid">
           {btn('mute', call.muted ? 'Unmute' : 'Mute', call.muted ? MicOff : Mic, call.muted, () => act({ type: 'mute' }), { first: true })}
           {btn('pad', 'Keypad', Grid3x3, call.pad, () => act({ type: 'pad' }), { title: 'Tones for carrier menus' })}
@@ -385,15 +396,23 @@ function AddCaller({ who, on, onPick, onClose }) {
 }
 
 // Transfer: pick the agent, then Check agent sends the push (blueprint "Live transfer").
-function PickAgent({ who, onCheck, onClose }) {
-  const [agent, setAgent] = useState((AGENTS.find(a => a.duty) || AGENTS[0]).id)
+// P880: an agent who can't get live calls (no app, notifications off, push test not passed, booking only) can't be
+// checked; the reason shows. On a real call the server checks the lead's own agent (the one the ad link routed to).
+function PickAgent({ who, real, onCheck, onClose }) {
+  const can = a => a.duty && !SAMPLE_REACH[a.id]
+  const [agent, setAgent] = useState((AGENTS.find(can) || AGENTS[0]).id)
+  const why = a => (SAMPLE_REACH[a.id] ? REACH_WORDS[SAMPLE_REACH[a.id]] : a.duty ? 'Takes transfers' : REACH_WORDS.booking_only)
+  const picked = AGENTS.find(a => a.id === agent)
   return (
     <section className="fs-cs-sheet" aria-label="Live transfer">
       <header className="fs-cs-sh"><b>Live transfer</b><button type="button" className="fx-x" aria-label="Close" onClick={onClose}><X size={15} /></button></header>
-      <p className="tp-sub">The agent gets a push on the Ohvara phone app with {who.name.split(' ')[0]}'s name, state and need, and answers Yes or No.</p>
-      <PillTabs role="radiogroup" label="Agent" className="fx-chips" itemClass="fx-chip" value={agent} onChange={setAgent}
-        items={AGENTS.map(a => ({ key: a.id, label: <><b>{a.name.split(' ')[0]}</b><small>{a.duty ? 'Takes transfers' : 'Booking only'}</small></> }))} />
-      <button type="button" className="tp-primary fx-accent" data-first onClick={() => onCheck(agent)}><PhoneForwarded size={16} />Check agent</button>
+      <p className="tp-sub">The agent gets a push on the Ohvara phone app with {who.name.split(' ')[0]}'s name, age, state and need, and answers Yes or No.</p>
+      {real ? <p className="tp-sub">This goes to {who.agent ? who.agent.split(' ')[0] : 'their agent'}.</p> : (
+        <PillTabs role="radiogroup" label="Agent" className="fx-chips" itemClass="fx-chip" value={agent} onChange={setAgent}
+          items={AGENTS.map(a => ({ key: a.id, label: <><b>{a.name.split(' ')[0]}</b><small>{can(a) ? 'Takes transfers' : 'Not reachable'}</small></> }))} />
+      )}
+      {!real && picked && !can(picked) && <p className="fs-cs-why" role="note">{why(picked)}. Book them on {picked.name.split(' ')[0]}’s calendar.</p>}
+      <button type="button" className="tp-primary fx-accent" data-first disabled={!real && !can(picked)} onClick={() => onCheck(agent)}><PhoneForwarded size={16} />Check agent</button>
     </section>
   )
 }
@@ -402,18 +421,20 @@ function XferCard({ x, agent, now, onTransfer, onBook, onClear }) {
   const first = agent?.name.split(' ')[0] || 'The agent'
   const left = x.step === 'ringing' ? Math.max(0, Math.ceil((BOUNCE_MS - (now - x.at)) / 1000)) : x.step === 'sent' || x.step === 'seen' ? Math.max(0, Math.ceil((CHECK_MS - (now - x.at)) / 1000)) : null
   const steps = ['sent', 'seen', 'yes']
-  const at = steps.indexOf(x.step === 'ringing' || x.step === 'bounced' ? 'yes' : x.step)
-  const book = ['no', 'noanswer', 'fail', 'bounced'].includes(x.step)
+  const at = steps.indexOf(['ringing', 'bounced', 'lateyes', 'withdrew'].includes(x.step) ? 'yes' : x.step)
+  const book = XFER_BOOK.includes(x.step)
+  const go = XFER_GO.includes(x.step)
   return (
     <section className={`fs-cs-xfer is-${x.step}`} aria-live="polite" aria-label="Live transfer">
       <header><b>Live transfer to {first}</b>{left != null && <span className="tp-num">{left}s</span>}</header>
       {at >= 0 && <ol className="fs-cs-steps">{['Sent', 'Seen', 'Yes'].map((l, i) => <li key={l} className={i <= at ? 'is-done' : ''}>{l}</li>)}</ol>}
       <p>{XFER_WORDS[x.step]}</p>
       <div className="fs-ph-acts">
-        {x.step === 'yes' && <button type="button" className="tp-primary fx-accent" data-first onClick={onTransfer}><PhoneForwarded size={16} />Transfer now</button>}
-        {x.step === 'yes' && <small className="tp-sub">Say “connecting you with your licensed agent”, then transfer. You drop off.</small>}
+        {go && <button type="button" className="tp-primary fx-accent" data-first onClick={onTransfer}><PhoneForwarded size={16} />Transfer now</button>}
+        {go && <small className="tp-sub">Say “connecting you with your licensed agent”, then transfer. They hear hold music while {first}’s phone rings; you drop off when {first} picks up.</small>}
+        {x.step === 'ringing' && <small className="tp-sub">Stay on. If {first} doesn’t pick up in about 20 seconds, the lead comes back to you.</small>}
         {book && <button type="button" className="tp-primary fx-accent" onClick={onBook}>Book them with {first}</button>}
-        {book && <button type="button" className="tp-btn ov-ghost" onClick={onClear}>Close</button>}
+        {(book || ['cancelled', 'booked'].includes(x.step)) && <button type="button" className="tp-btn ov-ghost" onClick={onClear}>Close</button>}
       </div>
     </section>
   )

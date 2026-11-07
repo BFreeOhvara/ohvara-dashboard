@@ -227,26 +227,32 @@ test('the ring cap is not a miss: nothing is sent when it runs out', async () =>
   assert.equal(t.ringing, false)
   assert.deepEqual(db.calls, [])
   t.w.stop()
+  // P880: the alert's 30 s comes from the server (transfer_checks.expires_at via agentView); its own timers only
+  // redraw the countdown and close a finished alert, and never answer for the agent.
   const alert = src('../components/agent/TransferAlert.jsx')
-  assert.doesNotMatch(alert, /setTimeout|setInterval/, 'the alert has no timer of its own')
+  assert.doesNotMatch(alert, /(setTimeout|setInterval)[^\n]*send\(/)
+  assert.match(alert, /agentView\(row, skew, now\)/)
   assert.doesNotMatch(src('./transferAlert.js'), /(setTimeout|setInterval)[^\n]*(cantTake|agent_missed)/)
 })
 
-test('the alert offers Accept and Can’t take it, wired to their functions', () => {
+test('P880: the alert offers Yes / No (help-transfer answer) and, after Yes, Can’t take it after all (withdraw)', () => {
   const alert = src('../components/agent/TransferAlert.jsx')
-  assert.match(alert, />Accept</)
-  assert.match(alert, /Can&rsquo;t take it/)
-  assert.ok(alert.includes('answer(r => acceptTransfer(supabase, r), row)'))
-  assert.ok(alert.includes('answer(r => cantTakeTransfer(supabase, r), row)'))
-  assert.doesNotMatch(alert, /Dismiss/)
+  assert.match(alert, />Yes, I&rsquo;ll take it</)
+  assert.match(alert, />No</)
+  assert.ok(alert.includes("send(row.id, 'yes')"))
+  assert.ok(alert.includes("send(row.id, 'no')"))
+  assert.ok(alert.includes("callTransfer(supabase, 'answer', { check_id: check, answer })"))
+  assert.match(alert, /Can&rsquo;t take it after all/)
+  assert.ok(alert.includes("callTransfer(supabase, 'withdraw', { check_id: row.id })"))
+  assert.doesNotMatch(alert, /my_incoming_transfer|acceptTransfer|transferWatch/, 'the 4 s poll is gone')
 })
 
 test('alert is portaled to body', () => {
   const alert = src('../components/agent/TransferAlert.jsx')
   assert.match(alert, /import \{ createPortal \} from 'react-dom'/)
   assert.match(alert, /return createPortal\([\s\S]*,\s*document\.body,?\s*\)/)
-  assert.match(alert, /if \(!on \|\| !row\) return null/, 'renders nothing while inactive')
-  assert.match(alert, /We&rsquo;re calling your phone now\. Pick up\./)
+  assert.match(alert, /if \(!id \|\| !row \|\| !v\) return null/, 'renders nothing without a check')
+  assert.match(alert, /filter: `agent_id=eq\.\$\{me\}`/, 'realtime, only my checks')
   assert.doesNotMatch(alert, /#[0-9a-fA-F]{3,8}\b/, 'tokens only')
   // Mounted for every agent, once per layout path: DashboardLayout's desktop branch and PhoneShell
   // (DashboardLayout returns PhoneShell on a phone). Gated on the agent role only; the v2 shell no longer mounts it.
@@ -325,6 +331,6 @@ test('live-transfer-call: Accept sends the acknowledgement alone and no browser 
   assert.equal(closes, 1)
   // help_calls.status is written by the Deno functions only (service role), never by anything under src/.
   const alert = src('../components/agent/TransferAlert.jsx')
-  assert.doesNotMatch(alert, /help_calls|transferred|connected/)
+  assert.doesNotMatch(alert, /help_calls|\.from\(|\.update\(/, 'P880: the alert writes nothing itself; help-transfer does')
   assert.doesNotMatch(src('./transferAlert.js'), /\.rpc\('(?!my_incoming_transfer|agent_accept_transfer|agent_missed_transfer)/)
 })

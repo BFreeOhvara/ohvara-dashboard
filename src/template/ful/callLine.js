@@ -65,8 +65,13 @@ export function callReducer(c, a) {
     case 'check': return { ...c, xfer: { agent: a.agent, step: 'sent', at: now } }
     case 'xfer': return c.xfer ? { ...c, xfer: { ...c.xfer, step: a.step, at: now } } : c
     case 'xferClear': return { ...c, xfer: null }
+    // P880: the real check's state from the server (help-transfer / transfer_checks), replacing the sample timers.
+    case 'xferServer': return { ...c, xfer: a.xfer }
+    // P880 sample: the agent took back their Yes; or a late Yes arrived while the lead is still on the line.
+    case 'withdrew': return c.xfer && ['yes', 'ringing', 'lateyes'].includes(c.xfer.step) ? { ...c, xfer: { ...c.xfer, step: 'withdrew', at: now } } : c
+    case 'lateYes': return c.xfer && ['no', 'noanswer'].includes(c.xfer.step) ? { ...c, xfer: { ...c.xfer, step: 'lateyes', at: now } } : c
     // Yes → a straight (cold) transfer to the agent's phone; the VA drops off once the agent picks up.
-    case 'transfer': return c.xfer?.step === 'yes' ? { ...c, xfer: { ...c.xfer, step: 'ringing', at: now } } : c
+    case 'transfer': return ['yes', 'lateyes'].includes(c.xfer?.step) ? { ...c, xfer: { ...c.xfer, step: 'ringing', at: now } } : c
     case 'picked': return c.xfer?.step === 'ringing' ? end({ ...c, xfer: { ...c.xfer, step: 'done', at: now } }, now, 'transferred') : c
     case 'bounce': return c.xfer?.step === 'ringing' ? { ...c, xfer: { ...c.xfer, step: 'bounced', at: now } } : c
     default: return c
@@ -94,5 +99,47 @@ export const XFER_WORDS = {
   ringing: 'Ringing the agent. You drop off when they pick up',
   done: 'Transferred',
   bounced: 'The agent didn’t pick up. The call came back to you. Book them',
+  // P880
+  lateyes: 'The agent said Yes late. They’re still free: transfer now',
+  withdrew: 'The agent withdrew. Book them on the agent’s calendar',
+  cancelled: 'Check cancelled. The lead is back in your queue as a callback',
+  booked: 'Booked on the agent’s calendar',
+  busy: 'Agent being checked by another VA. Book them',
+  unreachable: 'Not reachable for live calls. Book them on the agent’s calendar',
 }
 export const xferOpen = x => !!x && ['sent', 'seen', 'ringing'].includes(x.step)
+// The steps that leave the VA booking the lead, and the ones that offer Transfer now.
+export const XFER_BOOK = ['no', 'noanswer', 'fail', 'bounced', 'withdrew', 'busy', 'unreachable']
+export const XFER_GO = ['yes', 'lateyes']
+
+// P880 — transfer_checks.status (help-transfer) → the card's step. The timer comes from the row (expires_at for the
+// 30 s answer, ring_started_at + 20 s for the ring), corrected by the server's clock so a reload or a slow phone
+// clock never shows the wrong seconds.
+const STEP = {
+  sent: 'sent', seen: 'seen', yes: 'yes', late_yes: 'lateyes', no: 'no', no_answer: 'noanswer', failed: 'fail',
+  withdrawn: 'withdrew', cancelled: 'cancelled', ringing: 'ringing', connected: 'done', bounced: 'bounced', booked: 'booked',
+}
+export function xferFromCheck(row, skewMs = 0, now = Date.now()) {
+  if (!row) return null
+  const t = now + skewMs
+  let status = row.status
+  if ((status === 'sent' || status === 'seen') && row.expires_at && Date.parse(row.expires_at) <= t) status = 'no_answer'
+  const step = STEP[status] || 'fail'
+  // The card counts down from `at` + CHECK_MS / BOUNCE_MS: give it the server's start, on this device's clock.
+  const start = step === 'ringing' ? row.ring_started_at : row.sent_at || row.created_at
+  return { agent: row.agent_id, step, at: start ? Date.parse(start) - skewMs : now, checkId: row.id, bookedFor: row.booked_for || null, live: true }
+}
+// The server's answer to Check agent when no check was made (agent busy, not reachable, no agent).
+export function xferRefused(code, agent, now = Date.now()) {
+  const step = code === 'agent_busy' ? 'busy' : code === 'not_reachable' ? 'unreachable' : 'fail'
+  return { agent, step, at: now, live: true }
+}
+
+// Sample reach (the real one is transfer_reach): who can't get live calls right now, and why.
+export const SAMPLE_REACH = { 'ag-marcus': 'not_tested' }
+export const REACH_WORDS = {
+  not_tested: 'Not reachable for live calls: hasn’t passed the push test',
+  no_device: 'Not reachable for live calls: no phone with the app',
+  notifications_off: 'Not reachable for live calls: notifications are off',
+  booking_only: 'Not reachable for live calls: booking only',
+}

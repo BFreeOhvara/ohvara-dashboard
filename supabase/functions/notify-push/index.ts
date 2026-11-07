@@ -9,7 +9,8 @@
 //   APNS_PRODUCTION    'true' for App Store / TestFlight builds (default true)
 //   FCM_SERVICE_ACCOUNT the Firebase service account JSON (Project settings → Service accounts)
 import { createClient } from 'npm:@supabase/supabase-js'
-import { apnsSender, fcmSender, handle, type Senders, type Store } from './core.ts'
+import { handle, type Store } from './core.ts'
+import { sendersFromEnv } from './senders.ts'
 
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
@@ -28,22 +29,5 @@ const store: Store = {
   },
 }
 
-function senders(): Senders {
-  const out: Senders = {}
-  const p8 = Deno.env.get('APNS_KEY_P8'), keyId = Deno.env.get('APNS_KEY_ID'), teamId = Deno.env.get('APNS_TEAM_ID')
-  if (p8 && keyId && teamId) {
-    out.ios = apnsSender({
-      keyP8: p8, keyId, teamId,
-      bundleId: Deno.env.get('APNS_BUNDLE_ID') || 'com.ohvara.portal',
-      production: (Deno.env.get('APNS_PRODUCTION') ?? 'true') !== 'false',
-    })
-  }
-  const sa = Deno.env.get('FCM_SERVICE_ACCOUNT')
-  if (sa) {
-    try { out.android = fcmSender(JSON.parse(sa)) } catch { console.error('[notify-push] FCM_SERVICE_ACCOUNT is not valid JSON') }
-  }
-  return out
-}
-
-const configured = senders()
+const configured = sendersFromEnv()
 Deno.serve(req => handle(req, store, configured))
