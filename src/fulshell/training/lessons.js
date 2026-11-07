@@ -117,13 +117,13 @@ export const LESSONS = [
   },
   {
     id: 'logging',
-    tryIt: { path: ['schedule'], do: 'Open the + menu, choose Log a call, pick one of today\'s calls, choose how it went and press Save result.', button: 'Save result' },
+    tryIt: { path: ['schedule'], do: 'Open the + menu, choose Log a call, pick one of today\'s calls, choose how it went and press Save · Available.', button: 'Save · Available' },
     title: 'Logging every call',
     job: 'Every call gets a result and a note, straight after it ends.',
     minutes: 4,
     why: 'Agents see your notes on their client\'s timeline, your pay comes from logged cancellations, and nobody can follow up on a call that was never logged.',
     steps: [
-      'After every call, the phone asks How did it go? Pick the result before you dial anyone else.',
+      'After every call, the phone asks How did it go? Pick the result and press Save · Available before anything else. A wrap-up timer counts down, and you are free for the next call once it is saved.',
       'For a cancellation call: Cancelled needs the carrier\'s confirmation number. No answer can carry a short note.',
       'For a lead: the call result is Reached them, No answer or Left a voicemail. Then set the lead\'s outcome on the lead (booked, live transfer, callback, not interested, close them out).',
       'Write notes an agent can act on: what they asked, what you agreed, what happens next. Facts, not opinions.',
@@ -150,7 +150,6 @@ export const LESSONS = [
     steps: [
       'A call rings in the phone on the left rail. It slides open by itself. Answer within three rings.',
       'Greet with the Deedstone greeting and your first name.',
-      'Say the recording notice first. The phone shows it at the top of the call.',
       'Find out what they need: a new quote request, a question about their policy, or a booked call.',
       'New lead: go through the checklist (question type, carrier, state, how soon) and book or transfer them.',
       'Policy question: press Add caller, pick their agent, then Merge, so the agent takes it with you on the line (a warm hand-off).',
@@ -163,7 +162,6 @@ export const LESSONS = [
         say('Thanks for calling Deedstone, this is [your first name]. How can I help you today?', { approve: true }),
         hear('I filled out a form about life insurance.'),
         say('Perfect, thanks for reaching out. I\'ll get you set up with a licensed agent. Can I grab a few quick details first?', { approve: true }),
-        { who: 'Note', text: 'Recording notice: say it first, before anything else. The exact words come from Brayden.', approve: true },
       ],
     },
     dos: ['Smile, slow down, say your name', 'Use their first name once you have it', 'Write the checklist answers as you go'],
