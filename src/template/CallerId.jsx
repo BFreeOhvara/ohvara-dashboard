@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { PhoneCall, RotateCcw, ShieldCheck } from 'lucide-react'
 import { Chip, Switch, useNote } from './kit'
 import './calls.css'
+import { PhoneInput } from './PhoneInput'
+import { formatPhone, toE164 } from './phoneMask'
 
 // P847 — optional agent caller ID, in Settings. When fulfillment calls the agent's client, the call shows the agent's
 // number, so the client sees who it is (they often have it saved, like "John Insurance"). It keeps the live system's
@@ -17,7 +19,7 @@ export function CallerIdCard({ value, onSave, defaultPhone }) {
   const [tone, word] = STATUS[v.status] || STATUS.not_set
   const digits = phone.replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '')
   const okPhone = digits.length === 10
-  const start = () => { onSave({ status: 'pending', number: phone.trim(), code: '482 913', on: true }); note('Sample: in the live portal your phone would ring now') }
+  const start = () => { onSave({ status: 'pending', number: formatPhone(phone), e164: toE164(phone), code: '482 913', on: true }); note('Sample: in the live portal your phone would ring now') }
   return (
     <section className="fx-callerid" aria-label="Caller ID">
       <header className="fx-callerid-h">
@@ -28,7 +30,7 @@ export function CallerIdCard({ value, onSave, defaultPhone }) {
 
       {v.status === 'not_set' && (
         <div className="fx-callerid-b">
-          <label className="tp-field"><span>Your phone number</span><input value={phone} inputMode="tel" autoComplete="off" onChange={e => setPhone(e.target.value)} placeholder="(555) 555-0100" /></label>
+          <label className="tp-field"><span>Your phone number</span><PhoneInput value={phone} onChange={d => setPhone(d)} /></label>
           <button type="button" className="tp-primary fx-accent fx-self" disabled={!okPhone} onClick={start}><ShieldCheck size={15} aria-hidden="true" />Confirm this number</button>
           <small className="tp-sub">We call this number once with a 6-digit code. Clients keep seeing Ohvara{'’'}s number until it{'’'}s confirmed.</small>
         </div>

@@ -23,7 +23,10 @@ const MODES = [
   { key: 'none', label: 'Let the team set it', sub: 'Fulfillment reaches out', icon: Sparkles },
 ]
 
-export function CallTime({ kind = 'cancellation', value, onChange, state, city = '', oldCarrier, viewerTz }) {
+// P868 — the exact-time picker on its own (CallTime's "Book a time with them", and Submit a policy's "Book a call").
+// value = { day, time, iso, tz, vaId }. kind 'cancellation' books inside the old carrier's open hours; anything else
+// inside the team's hours (8 AM to 6 PM). A VA on shift must be free under the 30-minute rule (no double-booking).
+export function BookTime({ kind = 'cancellation', value, onChange, state, city = '', oldCarrier, viewerTz }) {
   const v = value
   const carrier = kind === 'cancellation' ? oldCarrier : null
   const zone = useClientZone(state, city)
@@ -32,12 +35,22 @@ export function CallTime({ kind = 'cancellation', value, onChange, state, city =
   const slots = vaSlots({ date: isoOf(v.day), clocks, clientTz: zone.tz, team: book.team, calls: book.calls, load: book.load })
   const pick = slots.find(s => s.clock === v.time && s.open && s.iso >= NOW_ISO)
   // A picked time that stopped fitting (another zone picked, the slot got taken) is dropped, not kept stale.
-  const stale = v.mode === 'exact' && !!v.time && (!pick || pick.iso !== v.iso || pick.va?.id !== v.vaId)
+  const stale = !!v.time && (!pick || pick.iso !== v.iso || pick.va?.id !== v.vaId)
   useEffect(() => { if (stale) onChange({ ...v, time: '', iso: null, vaId: null, tz: zone.tz }) })
   const put = patch => onChange({ ...v, ...patch })
   const setTime = t => { const s = slots.find(x => x.clock === t); put({ time: t, iso: s?.iso || null, tz: zone.tz, vaId: s?.va?.id || null }) }
-  const what = kind === 'cancellation' ? 'cancellation call' : 'service call'
   const place = city ? `${city}, ${state}` : state || ''
+  return (
+    <SlotPick days={BOOK_DAYS} day={v.day} onDay={d => put({ day: d, time: '', iso: null, vaId: null })} slots={slots} value={v.time} onPick={setTime}
+      zone={zone} place={place} viewerTz={viewerTz} notBefore={NOW_ISO} showVa
+      hint={kind === 'cancellation' ? hoursLine(carrier) : 'Inside the team’s hours, 8:00 AM to 6:00 PM.'} />
+  )
+}
+
+export function CallTime({ kind = 'cancellation', value, onChange, state, city = '', oldCarrier, viewerTz }) {
+  const v = value
+  const put = patch => onChange({ ...v, ...patch })
+  const what = kind === 'cancellation' ? 'cancellation call' : 'service call'
   return (
     <div className="fx-calltime">
       <div className="fx-calltime-h"><b>When should fulfillment call?</b><small>Optional. Ask while you have them on the phone.</small></div>
@@ -51,9 +64,7 @@ export function CallTime({ kind = 'cancellation', value, onChange, state, city =
 
       {v.mode === 'exact' && (
         <div className="fx-calltime-b" key="exact">
-          <SlotPick days={BOOK_DAYS} day={v.day} onDay={d => put({ day: d, time: '', iso: null, vaId: null })} slots={slots} value={v.time} onPick={setTime}
-            zone={zone} place={place} viewerTz={viewerTz} notBefore={NOW_ISO} showVa
-            hint={kind === 'cancellation' ? hoursLine(carrier) : 'Inside the team’s hours, 8:00 AM to 6:00 PM.'} />
+          <BookTime kind={kind} value={v} onChange={onChange} state={state} city={city} oldCarrier={oldCarrier} viewerTz={viewerTz} />
         </div>
       )}
       {v.mode === 'window' && (

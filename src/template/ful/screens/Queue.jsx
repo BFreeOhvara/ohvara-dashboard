@@ -10,7 +10,8 @@ import { vaSlots, clocksBetween, zoneAbbr } from '../../../lib/callSlots'
 import { RecordDrawer, Block } from '../../Record'
 import { BookForAgent } from '../FulFrame'
 import { Select } from '../../Select'
-import { CARRIER_NAMES } from '../../carriers'
+import { CarrierSelect } from '../../CarrierSelect'
+import { StateSelect } from '../../StateSelect'
 import { fp } from '../paths'
 import { BUCKETS, QUESTION_TYPES, URGENCIES, checklistDone } from '../words'
 
@@ -102,8 +103,8 @@ export function LeadDrawer({ id, onClose }) {
         <div className="fx-meter" role="img" aria-label={`${done} of 4 answered`}><i style={{ '--w': done / 4 }} /></div>
         <div className="fx-form-grid">
           <Field label="Question type"><Select label="Question type" value={c.question_type} disabled={!held} onChange={v => put('question_type', v)} options={QUESTION_TYPES} /></Field>
-          <Field label="Their carrier"><Select label="Their carrier" value={c.carrier} disabled={!held} placeholder="Who covers them now" onChange={v => put('carrier', v)} options={CARRIER_NAMES} search allowCustom /></Field>
-          <Field label="State"><input value={c.state} disabled={!held} maxLength={2} placeholder={l.state} onChange={e => put('state', e.target.value.toUpperCase())} /></Field>
+          <Field label="Their carrier"><CarrierSelect label="Their carrier" value={c.carrier} disabled={!held} placeholder="Who covers them now" onChange={v => put('carrier', v)} by="va" /></Field>
+          <Field label="State"><StateSelect value={c.state} disabled={!held} placeholder={l.state || 'Pick a state'} onChange={v => put('state', v)} /></Field>
         </div>
         <div className="tp-field"><span>How soon</span>
           <PillTabs role="radiogroup" label="How soon" className="fx-chips fs-wrap" itemClass="fx-chip" value={c.urgency} onChange={v => held && put('urgency', v)} items={URGENCIES.map(u => ({ key: u, label: <b>{u}</b> }))} />

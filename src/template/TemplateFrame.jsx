@@ -18,7 +18,8 @@ import Palette from './Palette'
 import { Select } from './Select'
 import { CallTime } from './CallTime'
 import { EMPTY_CALL_TIME, callTimeReady, callTimeText } from './callTimeModel'
-import { CARRIER_NAMES, BOOK_DAYS, isoOf } from './carriers'
+import { BOOK_DAYS, isoOf } from './carriers'
+import { CarrierSelect } from './CarrierSelect'
 import { agentBooksCall } from './ful/data'
 import { SlotPick } from './SlotPick'
 import { useClientZone } from './useClientZone'
@@ -134,7 +135,7 @@ function BookCall({ open, onClose }) {
         <SlotPick days={DAYS} day={date} onDay={setDate} slots={slots} value={time} onPick={setTime} zone={zone} place={place} viewerTz={myTz}
           hint="Inside your hours, 9:00 AM to 6:00 PM. Greyed-out times are within 30 minutes of another appointment." />
       )}
-      {kind === 'cancellation' && <Field label="Carrier they're leaving" hint="Its open hours set the times. Pick one or type it."><Select label="Carrier they're leaving" value={oldCarrier} onChange={setOldCarrier} options={CARRIER_NAMES} search allowCustom /></Field>}
+      {kind === 'cancellation' && <Field label="Carrier they're leaving" hint="Its open hours set the times. Pick one or type it."><CarrierSelect label="Carrier they're leaving" value={oldCarrier} onChange={setOldCarrier} by="agent" /></Field>}
       {kind === 'service' && <Field label="What it's about"><Select label="What it's about" value={what} onChange={setWhat} options={SERVICE_WHAT} /></Field>}
       {forFul && <CallTime kind={kind} value={ct} onChange={setCt} state={who.state} city={who.city} oldCarrier={oldCarrier} viewerTz={myTz} />}
     </Drawer>

@@ -1,27 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
-  User, Users, ToggleRight, Wallet, Building2, History, Bug, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
+  User, Users, ToggleRight, Wallet, History, Bug, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
   ShieldOff, Image as ImageIcon, Check, Lock,
 } from 'lucide-react'
-import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmCarriers, useAdmAudit, useAdmBugs, useAdmDay, SWITCHES, ME } from '../data'
+import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAudit, useAdmBugs, useAdmDay, SWITCHES, ME } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
-import { Drawer, Field, Seg, Switch, Chip, PillTabs, Avatar, Empty, useNote, useAccount, initials } from '../../template/kit'
+import { Field, Seg, Switch, Chip, PillTabs, Avatar, Empty, useNote, useAccount, initials } from '../../template/kit'
 import { CountUp } from '../../template/motion'
 import { avatarHue } from '../../template/avatarHue'
 import { Dropdown, DField } from '../kit'
 import { AddSomeone } from '../AdminFrame'
 import { ap } from '../paths'
+import { PhoneInput } from '../../template/PhoneInput'
 import { ZONES } from '../words'
 
 // P849 — admin Settings on the agent page's shape: the profile card and Sign out on the left, one panel whose stretch
 // tabs switch sections. Sections: Profile, People & access (everyone with a login, as Users does today), Switches,
-// Pay rules, Carriers (hours), Audit log (append-only, every admin action), Bug reports, Preferences. Sample only: the
+// Pay rules, Audit log (append-only, every admin action), Bug reports, Preferences. Sample only: the
 // real switches stay on today's /settings page until the backend step, and this page says so.
 const TABS = [['profile', 'Profile', User], ['people', 'People & access', Users], ['switches', 'Switches', ToggleRight], ['pay', 'Pay rules', Wallet],
-  ['carriers', 'Carriers', Building2], ['audit', 'Audit log', History], ['bugs', 'Bug reports', Bug], ['prefs', 'Preferences', SlidersHorizontal]]
+  ['audit', 'Audit log', History], ['bugs', 'Bug reports', Bug], ['prefs', 'Preferences', SlidersHorizontal]]
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
-const CARRIER_WORD = { verified: ['Verified', 'green'], review: ['Needs review', 'warn'], none: ['No hours yet', 'mute'] }
 
 function FormFoot({ dirty, onDiscard, onSave, label = 'Save changes' }) {
   return (
@@ -137,42 +137,6 @@ function PayRules() {
   )
 }
 
-function Carriers() {
-  const { data: carriers } = useAdmCarriers()
-  const { saveCarrier } = useAdmActions()
-  const note = useNote()
-  const [show, setShow] = useState('review')
-  const [q, setQ] = useState('')
-  const [edit, setEdit] = useState(null)
-  const n = q.trim().toLowerCase()
-  const list = carriers.filter(c => (show === 'all' || c.status === show) && (!n || c.name.toLowerCase().includes(n)))
-  const cur = carriers.find(c => c.id === edit?.id)
-  return (
-    <>
-      <Head title="Carriers" sub="Service phone and hours VAs call during. A lookup fills these; an admin marks them verified." />
-      <div className="fx-form-row"><label className="fx-find adm-find-sm"><Search size={15} aria-hidden="true" /><input aria-label="Find a carrier" placeholder="Find a carrier" value={q} onChange={e => setQ(e.target.value)} /></label></div>
-      <Seg label="Show" value={show} onChange={setShow} options={[{ key: 'all', label: 'All', count: carriers.length }, ...Object.entries(CARRIER_WORD).map(([k, [w]]) => ({ key: k, label: w, count: carriers.filter(c => c.status === k).length }))]} />
-      <ul className="tp-list">{list.map(c => {
-        const [w, t] = CARRIER_WORD[c.status]
-        return (
-          <li key={c.id} className="fx-mrow"><Building2 size={17} aria-hidden="true" /><span className="tp-grow"><b>{c.name}</b><small>{c.phone} · {c.hours || 'No hours yet'}</small></span><Chip tone={t}>{w}</Chip>
-            <button type="button" className="fx-pillbtn" onClick={() => note(`Looked up ${c.name} again (sample)`)}>Look up</button>
-            <button type="button" className="fx-pillbtn" onClick={() => setEdit({ id: c.id, phone: c.phone, hours: c.hours, tz: 'America/Chicago' })}>Edit hours</button>
-          </li>
-        )
-      })}{list.length === 0 && <li><Empty title="None" sub="No carrier in this group." /></li>}</ul>
-      <Drawer open={!!edit} onClose={() => setEdit(null)} title={cur ? `${cur.name} hours` : 'Hours'} sub="Saved as verified"
-        footer={<button type="button" className="tp-primary fx-accent" disabled={!edit?.hours?.trim()} onClick={() => { saveCarrier(edit.id, { phone: edit.phone, hours: edit.hours, status: 'verified' }); note('Saved as verified'); setEdit(null) }}><Check size={16} />Save as verified</button>}>
-        {edit && <>
-          <Field label="Service phone"><input value={edit.phone} onChange={e => setEdit({ ...edit, phone: e.target.value })} /></Field>
-          <DField label="Time zone"><Dropdown label="Time zone" value={edit.tz} onChange={tz => setEdit({ ...edit, tz })} options={ZONES.map(([v, l]) => ({ value: v, label: `${l} time` }))} /></DField>
-          <Field label="Hours" hint="For example: Mon to Fri, 8:00 AM to 6:00 PM ET"><input value={edit.hours} onChange={e => setEdit({ ...edit, hours: e.target.value })} /></Field>
-        </>}
-      </Drawer>
-    </>
-  )
-}
-
 function Audit() {
   const { data: rows } = useAdmAudit()
   const [q, setQ] = useState('')
@@ -264,7 +228,7 @@ export default function Settings() {
             <div className="fx-form-grid">
               <Field label="Full name"><input value={p.name} onChange={e => setP({ ...p, name: e.target.value })} /></Field>
               <Field label="Email"><input type="email" value={p.email} onChange={e => setP({ ...p, email: e.target.value })} /></Field>
-              <Field label="Phone"><input value={p.phone} onChange={e => setP({ ...p, phone: e.target.value })} /></Field>
+              <Field label="Phone"><PhoneInput value={p.phone} onChange={(d, e164, shown) => setP({ ...p, phone: shown })} /></Field>
               <Field label="Role" hint="Admins are set outside the portal"><input value="Admin · owner" readOnly /></Field>
             </div>
             <Field label="Live Room link" hint="The one shared meeting room for the company"><input value={s.liveRoom} onChange={e => saveSettings({ liveRoom: e.target.value })} /></Field>
@@ -274,7 +238,6 @@ export default function Settings() {
           {tab === 'people' && <People />}
           {tab === 'switches' && <Switches live={account.live} />}
           {tab === 'pay' && <PayRules />}
-          {tab === 'carriers' && <Carriers />}
           {tab === 'audit' && <Audit />}
           {tab === 'bugs' && <Bugs />}
           {tab === 'prefs' && <Prefs />}

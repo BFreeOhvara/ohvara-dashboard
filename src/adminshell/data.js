@@ -296,14 +296,6 @@ const seedSettings = {
     { key: 'bug', label: 'A bug report comes in', push: false, email: true },
   ],
 }
-const seedCarriers = [
-  { id: 'cr-1', name: 'Globe Life', phone: '(800) 742-6787', hours: 'Mon to Fri, 7:00 AM to 7:00 PM CT', status: 'verified' },
-  { id: 'cr-2', name: 'Colonial Penn', phone: '(800) 523-9100', hours: 'Mon to Fri, 8:00 AM to 8:00 PM ET', status: 'verified' },
-  { id: 'cr-3', name: 'AARP / New York Life', phone: '(800) 607-6763', hours: 'Mon to Fri, 8:00 AM to 6:00 PM ET', status: 'review' },
-  { id: 'cr-4', name: 'Gerber Life', phone: '(800) 704-2180', hours: 'Mon to Fri, 8:00 AM to 8:00 PM ET', status: 'verified' },
-  { id: 'cr-5', name: 'Lincoln Heritage', phone: '(800) 433-8181', hours: '', status: 'none' },
-  { id: 'cr-6', name: 'Mutual of Omaha', phone: '(800) 775-6000', hours: 'Mon to Fri, 7:00 AM to 6:00 PM CT', status: 'review' },
-]
 const seedBugs = [
   { id: 'bg-1', who: 'Dana Walker', text: 'Calendar shows my 9:00 AM twice on Monday.', at: 'Wed, 5:12 PM', shot: true, resolved: false },
   { id: 'bg-2', who: 'Omar Haddad', text: 'The bank form closed before I could finish.', at: 'Tue, 7:40 PM', shot: false, resolved: false },
@@ -366,7 +358,7 @@ export const TRACKING = [
 let state = {
   agents: seedAgents, vas: seedVas, invites: seedInvites, leads: seedLeads, clients: seedClients, steps: seedSteps, calls: seedCalls,
   rota: seedRota, dayOff: seedDayOff, cancels: seedCancels, runs: seedRuns, revenue: seedRevenue, threads: seedThreads, feed: seedFeed,
-  settings: seedSettings, carriers: seedCarriers, bugs: seedBugs, audit: seedAudit, connect: seedConnect, setupFees: seedSetupFees, draws: seedDraws,
+  settings: seedSettings, bugs: seedBugs, audit: seedAudit, connect: seedConnect, setupFees: seedSetupFees, draws: seedDraws,
   onboard: seedOnboard, setupLog: seedSetupLog,
 }
 const listeners = new Set()
@@ -453,7 +445,6 @@ export function useAdmThreads() {
 }
 export function useAdmFeed() { const s = useStore(); return ok(s.feed) }
 export function useAdmSettings() { const s = useStore(); return ok(s.settings) }
-export function useAdmCarriers() { const s = useStore(); return ok(s.carriers) }
 export function useAdmBugs() { const s = useStore(); return ok(s.bugs) }
 export function useAdmAudit() { const s = useStore(); return ok(s.audit) }
 export function useAdmConnect() { const s = useStore(); return ok(s.connect) }
@@ -654,7 +645,6 @@ export function useAdmActions() {
     savePayRules: payRules => set(s => ({ settings: { ...s.settings, payRules }, ...audit(s, 'Changed pay rules', `$${payRules.perCancel} a cancellation, cap ${payRules.holdCap}`) })),
     saveSettings: patch => set(s => ({ settings: { ...s.settings, ...patch } })),
     setTz: tz => set(s => ({ settings: { ...s.settings, tz } })),
-    saveCarrier: (id, patch) => set(s => ({ carriers: patchById(s.carriers, id, patch), ...audit(s, 'Saved carrier hours', s.carriers.find(c => c.id === id).name) })),
     resolveBug: id => set(s => ({ bugs: patchById(s.bugs, id, { resolved: true }), ...audit(s, 'Resolved a bug report', s.bugs.find(b => b.id === id).who) })),
     // Messages
     sendMessage: (threadId, text, from = 'me') => set(s => ({ threads: patchById(s.threads, threadId, t => ({ messages: [...t.messages, { id: `m${Date.now()}`, from, text, at: `Today, ${stamp()}` }] })) })),

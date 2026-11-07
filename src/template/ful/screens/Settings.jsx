@@ -11,6 +11,7 @@ import { TimeZoneSelect } from '../../Clock'
 import { timezoneLabel } from '../../../lib/timezones'
 import { avatarHue } from '../../avatarHue'
 import { fp } from '../paths'
+import { PhoneInput } from '../../PhoneInput'
 
 // P845 — Settings, the agent's page for a VA: the profile card and the Sign out box on the left, one panel whose
 // stretch tabs switch sections, each a short form with Discard / Save. VA tabs: Profile, Shift (P846: set hours and
@@ -104,7 +105,7 @@ export default function Settings() {
             <div className="fx-form-grid">
               <Field label="Full name"><input value={pDraft.name} onChange={e => setPDraft({ ...pDraft, name: e.target.value })} /></Field>
               <Field label="Email"><input type="email" value={pDraft.email} onChange={e => setPDraft({ ...pDraft, email: e.target.value })} /></Field>
-              <Field label="Phone"><input value={pDraft.phone} onChange={e => setPDraft({ ...pDraft, phone: e.target.value })} /></Field>
+              <Field label="Phone"><PhoneInput value={pDraft.phone} onChange={(d, e164, shown) => setPDraft({ ...pDraft, phone: shown })} /></Field>
               <Field label="Role" hint="Set by the Ohvara team"><input value="Fulfillment" readOnly /></Field>
               <Field label="Time zone" hint="The clock on your Overview uses it"><TimeZoneSelect value={tz} onChange={setTz} /></Field>
             </div>

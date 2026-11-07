@@ -1,5 +1,5 @@
-import { zonedTimeToUtcIso, zonedDateStr } from './timezones'
-import { minLabel, toMin } from './carriers'
+import { zonedTimeToUtcIso, zonedDateStr } from './timezones.js'
+import { minLabel, toMin } from './carriers.js'
 
 // Shared date+slot booking helpers. The agent's Book a call flow (Prompt 665)
 // books against a fixed set of slots rather than a freeform time, since

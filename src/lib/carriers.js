@@ -6,7 +6,7 @@
 //   hours_tz: IANA zone (US only)
 //   hours_status: verified | ai | fallback | pending | null
 
-import { zonedDateStr, zonedTimeToUtcIso } from './timezones'
+import { zonedDateStr, zonedTimeToUtcIso } from './timezones.js'
 
 export const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 const DAY_LABEL = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' }

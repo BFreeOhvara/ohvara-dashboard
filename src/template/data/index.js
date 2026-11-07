@@ -232,7 +232,8 @@ export function useSampleActions() {
     }),
     sendMessage: (threadId, text) => set(s => ({ ...s, threads: s.threads.map(t => (t.id === threadId ? { ...t, unread: 0, messages: [...t.messages, { id: `m${t.messages.length + 10}-${text.length}`, from: 'me', text, at: stamp }] } : t)) })),
     readThread: threadId => set(s => ({ ...s, threads: s.threads.map(t => (t.id === threadId ? { ...t, unread: 0 } : t)) })),
-    submitSale: form => set(s => ({ ...s, submitted: s.submitted + 1, activity: log(s, form.name || 'New client', 'Sale submitted for servicing.', 'client') })),
+    // P868: form is lib submitModel buildSubmission (phone in E.164; booking = the call booked with it, or null).
+    submitSale: form => set(s => ({ ...s, submitted: s.submitted + 1, sales: [...(s.sales || []), form], activity: log(s, form.name || 'New client', form.booking ? `Sale submitted for servicing. Call booked for ${form.booking.time} (their time)${form.booking.va ? ` with ${form.booking.va}` : ''}.` : 'Sale submitted for servicing.', 'client') })),
     submitRequest: form => set(s => ({ ...s, activity: log(s, form.name || 'Client', `Service request sent: ${form.kind}.`, 'client') })),
     setNotification: (key, field, on) => set(s => ({ ...s, settings: { ...s.settings, notifications: s.settings.notifications.map(n => (n.key === key ? { ...n, [field]: on } : n)) } })),
     setPaused: paused => set(s => ({ ...s, billing: { ...s.billing, paused } })),

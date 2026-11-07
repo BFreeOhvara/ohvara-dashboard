@@ -3,7 +3,7 @@ import './select.css'
 import { createPortal } from 'react-dom'
 import { Check, ChevronDown, Search } from 'lucide-react'
 import { useExit } from './motion'
-import { dayOptions, timeOptions } from './selectOptions'
+import { dayOptions, timeOptions, typeAheadIndex } from './selectOptions'
 
 // P847 — the one dropdown for both shells (agent and fulfillment). Replaces every native <select>, <datalist> and
 // date/time picker: a glass menu under the field on a desktop, a bottom sheet on a phone, the shell's spring motion.
@@ -13,10 +13,14 @@ import { dayOptions, timeOptions } from './selectOptions'
 //   slot, and can't be picked)
 //   search: a search box at the top (on for long lists by default, over 8 options)
 //   allowCustom: a combobox: whatever is typed can be used as the value ("Use 'Acme Life'"), e.g. a carrier not listed
+//   filter: (typed, options) => the options to show, in order (P868: the carrier list matches names, aliases and parents);
+//   an option with exact: true is what was typed, so no "Use …" row
+//   P868: with no search box, a letter on the closed field opens it on the first match; the same letter again moves on
+//   to the next ("T" Tennessee, "T" Texas), like a native select.
 const PHONE = 640
 const norm = o => (typeof o === 'object' && o !== null ? { value: o.value, label: o.label ?? String(o.value), sub: o.sub, disabled: !!o.disabled } : { value: o, label: String(o) })
 
-export function Select({ value, onChange, options, label, placeholder = 'Pick one', search, allowCustom = false, disabled = false, className = '', invalid = false, id }) {
+export function Select({ value, onChange, options, label, placeholder = 'Pick one', search, allowCustom = false, disabled = false, className = '', invalid = false, id, filter }) {
   const list = useMemo(() => options.map(norm), [options])
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
@@ -33,10 +37,10 @@ export function Select({ value, onChange, options, label, placeholder = 'Pick on
 
   const n = q.trim().toLowerCase()
   const rows = useMemo(() => {
-    const hit = n ? list.filter(o => `${o.label} ${o.sub || ''}`.toLowerCase().includes(n)) : list
-    if (allowCustom && n && !list.some(o => o.label.toLowerCase() === n)) return [...hit, { value: q.trim(), label: `Use "${q.trim()}"`, custom: true }]
+    const hit = !n ? list : filter ? filter(q.trim(), list) : list.filter(o => `${o.label} ${o.sub || ''}`.toLowerCase().includes(n))
+    if (allowCustom && n && !list.some(o => o.label.toLowerCase() === n) && !hit.some(o => o.exact)) return [...hit, { value: q.trim(), label: `Use "${q.trim()}"`, custom: true }]
     return hit
-  }, [list, n, q, allowCustom])
+  }, [list, n, q, allowCustom, filter])
   const active = Math.min(activeRaw, Math.max(0, rows.length - 1))
   const current = list.find(o => o.value === value)
   const shownText = current ? current.label : (allowCustom && value ? String(value) : '')
@@ -52,9 +56,10 @@ export function Select({ value, onChange, options, label, placeholder = 'Pick on
     setAt({ left: Math.round(Math.max(8, Math.min(r.left, window.innerWidth - Math.max(r.width, 240) - 8))), width: Math.round(Math.max(r.width, 240)), ...(up ? { bottom: Math.round(window.innerHeight - r.top + 6), maxHeight: Math.round(Math.min(340, r.top - 12)) } : { top: Math.round(r.bottom + 6), maxHeight: Math.round(Math.min(340, Math.max(180, below))) }), up })
   }, [rows.length, showSearch])
 
-  const openIt = () => {
+  const openIt = jumpTo => {
     if (disabled) return
-    const i = list.findIndex(o => o.value === value)
+    const j = jumpTo != null ? jumpTo : -1
+    const i = j >= 0 ? j : list.findIndex(o => o.value === value)
     setQ('')
     setActive(i < 0 ? Math.max(0, list.findIndex(o => !o.disabled)) : i)
     place()
@@ -87,15 +92,26 @@ export function Select({ value, onChange, options, label, placeholder = 'Pick on
     else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close() }
     else if (e.key === 'Tab') close(false)
     else if (!showSearch && e.key.length === 1 && !e.ctrlKey && !e.altKey) {
-      // Type-ahead: jump to the first option starting with what was typed in the last half second.
-      const now = Date.now()
-      typed.current = { text: (now - typed.current.t < 500 ? typed.current.text : '') + e.key.toLowerCase(), t: now }
-      const i = rows.findIndex(o => o.label.toLowerCase().startsWith(typed.current.text))
+      const i = typeJump(e.key, active)
       if (i >= 0) setActive(i)
     }
   }
+  // Type-ahead: the first option starting with what was typed in the last half second; the same letter again (or
+  // held) steps to the next option starting with it.
+  const typeJump = (key, from) => {
+    const now = Date.now()
+    const text = (now - typed.current.t < 500 ? typed.current.text : '') + key.toLowerCase()
+    typed.current = { text, t: now }
+    return typeAheadIndex(rows, text, from)
+  }
   const onBtnKey = e => {
     if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) { e.preventDefault(); openIt() }
+    else if (!showSearch && e.key.length === 1 && /\S/.test(e.key) && !e.ctrlKey && !e.altKey) {
+      e.preventDefault()
+      const cur = list.findIndex(o => o.value === value)
+      const i = typeJump(e.key, cur)
+      openIt(i >= 0 ? i : undefined)
+    }
   }
 
   const phone = !at

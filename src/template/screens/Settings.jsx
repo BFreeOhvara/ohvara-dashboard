@@ -7,6 +7,7 @@ import { Drawer, Field, Seg, Switch, Chip, PillTabs, useNote, useAccount, initia
 import { Select } from '../Select'
 import { TimeZoneSelect } from '../Clock'
 import { CallerIdCard } from '../CallerId'
+import { PhoneInput } from '../PhoneInput'
 import { CountUp, usd } from '../motion'
 import { paths } from '../paths'
 import { PLAN, planRange, rangeText } from '../../lib/planPricing'
@@ -121,7 +122,7 @@ export default function Settings() {
             <div className="fx-form-grid">
               <Field label="Full name"><input value={pDraft.name} onChange={e => setPDraft({ ...pDraft, name: e.target.value })} /></Field>
               <Field label="Email"><input type="email" value={pDraft.email} onChange={e => setPDraft({ ...pDraft, email: e.target.value })} /></Field>
-              <Field label="Phone"><input value={pDraft.phone} onChange={e => setPDraft({ ...pDraft, phone: e.target.value })} /></Field>
+              <Field label="Phone"><PhoneInput value={pDraft.phone} onChange={(d, e164, shown) => setPDraft({ ...pDraft, phone: shown })} /></Field>
               <Field label="Plan" hint="Change your budget on the Billing page"><input value={pDraft.plan} readOnly /></Field>
               <Field label="Time zone" hint="The clock on your Overview uses it"><TimeZoneSelect value={tz} onChange={setTz} /></Field>
             </div>
