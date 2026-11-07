@@ -11,7 +11,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(58);
+select plan(60);
 
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 select '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authenticated', 'p885_' || u.n || '@example.invalid',
@@ -122,6 +122,8 @@ select throws_ok($$ insert into public.payment_missed_events (policy_id, agent_i
                  '42501', null, 'no direct writes to the events');
 select throws_ok($$ select public.va_payment_intake_match((select id from public.payment_intake_emails where message_id = 'm-4'), 'b8850000-0000-4000-8000-000000000003') $$,
                  '42501', null, 'an agent can''t match emails');
+select throws_ok($$ select public.va_payment_intake_dismiss((select id from public.payment_intake_emails where message_id = 'm-5')) $$, '42501', null, 'an agent can''t set an email aside');
+select throws_ok($$ select public.va_missed_payment_desk() $$, '42501', null, 'an agent can''t open the VA desk');
 
 -- ── The VA matches by hand ──
 select pg_temp.as_user('a8850000-0000-4000-8000-0000000000f1');
