@@ -1,4 +1,5 @@
-/* P885 — missed payments: the agent's forwarding address, the missed-payment block on a client, the VA desk. */
+/* P885 — missed payments: the agent's forwarding address and the missed-payment block on a client. (P888 took the
+   VA desk off: a miss is an ordinary call task on the VA's schedule.) */
 .pi-card { display: grid; gap: 12px; margin-top: 16px; padding: 16px; border-radius: 16px; border: 1px solid var(--ov-line); }
 .pi-h { display: flex; gap: 10px; align-items: flex-start; }
 .pi-h > svg { flex: none; margin-top: 3px; color: var(--ov-mid); }
@@ -17,22 +18,3 @@
 .pi-now { display: inline-flex; gap: 6px; align-items: center; }
 .pi-act { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--ov-warn-tint); color: var(--ov-hi); font-size: 13px; }
 .pi-act > svg { flex: none; margin-top: 2px; color: var(--ov-warn); }
-
-/* VA desk (Servicing): forwarded emails to match, carrier portal checks. */
-.mp-desk { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 16px; }
-.mp-desk .fx-tile { min-width: 0; }
-.mp-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.mp-row { display: flex; gap: 10px; align-items: center; min-width: 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--ov-line); }
-.mp-row > span { min-width: 0; }
-.mp-row b { display: block; font-size: 13.5px; color: var(--ov-hi); overflow-wrap: anywhere; }
-.mp-row small { display: block; font-size: 12px; color: var(--ov-mid); overflow-wrap: anywhere; }
-.mp-row .tp-btn { flex: none; }
-.mp-rule { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 4px; font-size: 13px; color: var(--ov-mid); }
-.mp-rule > svg { flex: none; margin-top: 2px; color: var(--ov-warn); }
-.mp-excerpt { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--ov-stub); color: var(--ov-mid); font-size: 12.5px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow: auto; }
-.mp-picks { display: grid; gap: 6px; }
-.mp-pick { display: flex; gap: 10px; align-items: center; padding: 9px 12px; border-radius: 12px; border: 1px solid var(--ov-line); cursor: pointer; font-size: 13.5px; color: var(--ov-hi); }
-.mp-pick.is-on { border-color: var(--ov-hi); }
-.mp-pick small { color: var(--ov-mid); }
-.mp-pick input { accent-color: var(--ov-hi); }
-.mp-ta { min-height: 72px; }

@@ -1,0 +1,93 @@
+/* P886 — documents on a policy (VA + agent drawers) and the /sign page. Template tokens inside the shells; the public
+   /sign page uses the app's global tokens like /r/<token> (RescheduleLink). */
+.dc-top { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.dc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.dc-doc { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--ov-line); border-radius: 14px; min-width: 0; }
+.dc-doc-h { display: flex; gap: 10px; align-items: flex-start; min-width: 0; }
+.dc-doc-h b, .dc-send b { display: block; color: var(--ov-hi); font-size: 14px; overflow-wrap: anywhere; }
+.dc-doc-h small, .dc-send small { display: block; color: var(--ov-mid); font-size: 12.5px; overflow-wrap: anywhere; }
+.dc-doc-h .tp-chip, .dc-send .tp-chip { flex: none; }
+.dc-signed { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; color: var(--ov-hi); }
+.dc-signed li { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.dc-signed small { color: var(--ov-mid); }
+.dc-signed svg { flex: none; align-self: center; color: var(--ov-mid); }
+.dc-signed .is-ok { color: var(--ov-good, var(--ov-hi)); }
+.dc-signed .is-bad { color: var(--ov-warn); }
+.dc-sends { list-style: none; margin: 0; padding: 8px 0 0; border-top: 1px dashed var(--ov-line); display: grid; gap: 8px; }
+.dc-send { display: flex; gap: 10px; align-items: flex-start; min-width: 0; }
+.dc-why { display: inline-flex !important; gap: 5px; align-items: center; color: var(--ov-warn) !important; font-size: 12.5px; }
+.dc-acts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.dc-acts:empty { display: none; }
+.dc-dl { justify-self: start; }
+
+.dc-rule { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 10px; padding: 10px 12px; border-radius: 12px; background: var(--ov-stub); color: var(--ov-hi); font-size: 13px; line-height: 1.45; }
+.dc-rule > svg { flex: none; margin-top: 2px; color: var(--ov-mid); }
+.dc-rule.is-ok > svg { color: var(--ov-good, var(--ov-mid)); }
+.dc-err { display: flex; gap: 6px; align-items: flex-start; margin: 8px 0 0; color: var(--ov-warn); font-size: 13px; }
+.dc-err > svg { flex: none; margin-top: 2px; }
+.dc-check { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 13px; color: var(--ov-hi); }
+.dc-engine { display: inline-flex; gap: 6px; align-items: center; margin-bottom: 10px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--ov-line); font-size: 12px; color: var(--ov-mid); }
+.dc-engine i { width: 7px; height: 7px; border-radius: 50%; background: var(--ov-mute, var(--ov-mid)); }
+.dc-picks { display: grid; gap: 6px; }
+.dc-pick { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--ov-line); cursor: pointer; min-width: 0; }
+.dc-pick.is-on { border-color: var(--ov-hi); }
+.dc-pick input { margin-top: 3px; flex: none; }
+.dc-pick b { display: block; font-size: 14px; color: var(--ov-hi); }
+.dc-pick small { display: block; font-size: 12.5px; color: var(--ov-mid); }
+.dc-signers { display: grid; gap: 4px; margin-top: 12px; }
+.dc-pre { display: grid; gap: 2px; margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--ov-stub); font-size: 13px; color: var(--ov-mid); }
+.dc-pre b { color: var(--ov-hi); }
+.dc-links { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
+.dc-links li { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--ov-line); }
+.dc-links b { display: block; color: var(--ov-hi); font-size: 14px; }
+.dc-links small { display: block; color: var(--ov-mid); font-size: 12.5px; }
+.dc-ask { display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--ov-warn-tint); }
+.dc-ask p { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-size: 13px; color: var(--ov-hi); }
+.dc-ask p > svg { flex: none; margin-top: 2px; color: var(--ov-warn); }
+/* P888: a task's step list. The gate and the papers are steps in it, not boxes of their own. Same look as .tp-tl,
+   but direct-child rules only, so the papers' own lists inside a step keep their look. */
+.fs-steps { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; }
+.fs-steps > li { position: relative; display: flex; gap: 12px; padding: 0 0 16px 4px; min-width: 0; }
+.fs-steps > li::before { content: ''; position: absolute; left: 9px; top: 18px; bottom: 0; width: 2px; background: var(--ov-line); }
+.fs-steps > li:last-child { padding-bottom: 0; }
+.fs-steps > li:last-child::before { display: none; }
+.fs-steps > li > i { width: 12px; height: 12px; margin-top: 4px; border-radius: 50%; flex: none; background: var(--ov-faint); position: relative; }
+.fs-steps > li.done > i { background: var(--ov-data-b); }
+.fs-steps > li.now > i { background: var(--ov-data-a); box-shadow: 0 0 0 4px var(--ov-data-a-tint); }
+.fs-steps > li > div { flex: 1; min-width: 0; }
+.fs-steps > li > div > b { display: block; font-size: 14px; color: var(--ov-hi); }
+.fs-steps > li > div > span { display: block; font-size: 12.5px; color: var(--ov-mute); line-height: 1.45; }
+.fs-steps .dc-bare, .fs-steps .dc-gate-facts, .fs-steps .fs-outs { margin-top: 8px; }
+.fs-steps .dc-bare .dc-top { margin-bottom: 8px; }
+.fs-say { margin: 8px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--ov-stub); color: var(--ov-hi); font-size: 13.5px; line-height: 1.5; }
+.dc-gate .fx-facts dd .tp-btn { margin-top: 2px; }
+
+/* /sign/<token> */
+.sg-page { min-height: 100vh; min-height: 100dvh; display: flex; justify-content: center; align-items: flex-start; padding: 32px 16px; background: var(--bg-base); box-sizing: border-box; }
+.sg-card { width: 100%; max-width: 560px; padding: 24px; border-radius: 20px; background: var(--bg-surface); border: var(--border-w, 1px) solid var(--border); box-sizing: border-box; }
+.sg-card h1 { margin: 0 0 6px; font-size: 22px; font-weight: 600; color: var(--text-primary); }
+.sg-brand { display: flex; gap: 6px; align-items: center; margin: 0 0 16px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.sg-lead { margin: 0 0 16px; font-size: 15px; line-height: 1.5; color: var(--text-secondary); }
+.sg-lead b { color: var(--text-primary); }
+.sg-note { margin: 0 0 12px; font-size: 13px; line-height: 1.45; color: var(--text-muted); }
+.sg-pdf { display: block; width: 100%; height: 60vh; min-height: 360px; margin: 0 0 16px; border-radius: 12px; border: var(--border-w, 1px) solid var(--border); background: var(--bg-inset); }
+.sg-facts { margin: 0 0 16px; padding: 12px 14px; border-radius: 12px; border: var(--border-w, 1px) solid var(--border); display: grid; gap: 8px; }
+.sg-facts div { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.sg-facts dt { color: var(--text-muted); }
+.sg-facts dd { margin: 0; color: var(--text-primary); text-align: right; overflow-wrap: anywhere; }
+.sg-facts .sg-note { margin: 4px 0 0; }
+.sg-field { display: grid; gap: 6px; margin: 0 0 14px; font-size: 13px; color: var(--text-secondary); }
+.sg-field input { height: 46px; padding: 0 14px; border-radius: 12px; border: var(--border-w, 1px) solid var(--border); background: var(--bg-inset); color: var(--text-primary); font-size: 16px; }
+.sg-agree { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 16px; font-size: 13.5px; line-height: 1.5; color: var(--text-secondary); }
+.sg-agree input { flex: none; width: 20px; height: 20px; margin-top: 1px; }
+.sg-btn { display: inline-flex; gap: 8px; justify-content: center; align-items: center; width: 100%; height: 48px; border: none; border-radius: 999px; background: var(--accent); color: var(--text-primary); font-size: 16px; font-weight: 600; cursor: pointer; }
+.sg-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sg-link { display: block; margin: 14px auto 0; padding: 8px; border: none; background: none; color: var(--text-muted); font-size: 14px; text-decoration: underline; cursor: pointer; }
+.sg-decline { margin-top: 14px; }
+.sg-err { margin: 0 0 12px; color: var(--danger); font-size: 14px; }
+.sg-file { position: relative; display: flex; gap: 10px; align-items: center; margin: 0 0 16px; padding: 18px; border-radius: 14px; border: var(--border-w, 1px) dashed var(--border); color: var(--text-primary); font-size: 15px; cursor: pointer; overflow-wrap: anywhere; }
+.sg-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.sg-plain { text-align: center; padding: 12px 0; }
+.sg-ok { color: var(--success); margin-bottom: 8px; }
+.sg-center { display: flex; justify-content: center; padding: 24px; color: var(--accent); }
+@media (max-width: 420px) { .sg-card { padding: 18px; } .sg-page { padding: 16px; } }

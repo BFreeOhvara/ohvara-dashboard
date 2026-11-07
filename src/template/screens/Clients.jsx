@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Search, Plus, Phone, MessageSquare, TriangleAlert, CalendarClock, MapPin } from 'lucide-react'
-import { useSampleClients, useSampleClient, useSampleThreads, useSampleActions } from '../data'
+import { Search, Plus, Phone, MessageSquare, TriangleAlert, CalendarClock, MapPin, Users } from 'lucide-react'
+import { useDataSource, useSampleClients, useSampleClient, useSampleThreads, useSampleActions } from '../data'
 import { Avatar, Chip, Drawer, Money, SampleTag, Empty, PillTabs, useNote } from '../kit'
 import { RecordDrawer, Stepper, Block } from '../Record'
 import { stageLabel, CLIENT_STEPS } from '../stages'
 import { paths } from '../paths'
 import { MissedPaymentBlock } from '../PaymentIntake'
+import { AgentDocsBlock } from '../docs886/Docs886'
+import { FirstRun } from '../DataState'
 
 // How far along servicing is, for the meter on each card.
 const doneShare = c => c.steps.filter(s => s.done).length / c.steps.length
@@ -86,6 +88,7 @@ function ClientDrawer({ id, onClose }) {
       <Block title="Calls so far" aside={<span className="fx-count">{c.calls.length}</span>}>
         <ul className="tp-list">{c.calls.map(k => <li key={k.at} className="tp-li"><span className="tp-grow"><b>{k.result}</b><small>{k.at} · {k.by}</small></span></li>)}</ul>
       </Block>
+      <AgentDocsBlock who={name} />
       <Block title="Message Fulfillment" sub="The team on this client">
         <ul className="tp-list">{thread.messages.slice(-2).map(m => <li key={m.id} className="tp-li fx-msg"><span className="tp-grow"><b>{m.from === 'me' ? 'You' : 'Fulfillment'}</b><small>{m.text}</small></span></li>)}</ul>
         <textarea className="tp-input fx-ta" aria-label="Message the team" placeholder="Write a message" value={msg} onChange={e => setMsg(e.target.value)} />
@@ -109,6 +112,7 @@ export default function Clients() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { data: clients } = useSampleClients()
+  const source = useDataSource()
   const [params, setParams] = useSearchParams()
   const [q, setQ] = useState('')
   const stage = params.get('stage') || 'all'
@@ -129,10 +133,11 @@ export default function Clients() {
 
       <div className="fx-cgrid" aria-label="Clients">
         {rows.map((c, i) => <ClientCard key={c.id} c={c} i={i} />)}
-        {rows.length === 0 && <section className="fx-tile"><Empty title="No clients match" sub="Check the spelling, or show every status." /></section>}
+        {rows.length === 0 && clients.length > 0 && <section className="fx-tile"><Empty title="No clients match" sub="Check the spelling, or show every status." /></section>}
+        {clients.length === 0 && <FirstRun icon={Users} title="Your clients show here" sub="Submit a sale and it shows here with every servicing step: packet check, review call, and the old policy cancelled. The team keeps each one on the books."><Link to={paths.submit()} className="tp-primary fx-accent"><Plus size={16} />Submit your first policy</Link></FirstRun>}
       </div>
 
-      {id && <ClientDrawer id={id} onClose={() => navigate(paths.clients(stage === 'all' ? undefined : stage))} />}
+      {id && (source === 'sample' || clients.some(c => c.id === id)) && <ClientDrawer id={id} onClose={() => navigate(paths.clients(stage === 'all' ? undefined : stage))} />}
     </div>
   )
 }

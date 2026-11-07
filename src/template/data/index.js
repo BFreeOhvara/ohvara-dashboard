@@ -1,8 +1,7 @@
-import { useSyncExternalStore, useMemo } from 'react'
+import { useSyncExternalStore, useMemo, createContext, useContext, createElement } from 'react'
 import { instantOf, clockOf, dateOf, zoneOf } from '../../lib/callSlots.js'
 import { seedEvents, applyMove, closeCallTask, whenLabel, needsYouNow, forYourInfo, addMin, STAGES, SAMPLE_NOW } from '../leadLifecycle.js'
 import { leadText, SENDER } from '../leadTexts.js'
-import { SAMPLE_REGISTRY } from '../licenceModel.js'
 import { wallet as walletOf, expected, startsText } from '../spendPlan.js'
 
 // The one door to sample info for the clickable template. Screens read only through the named functions below.
@@ -180,9 +179,8 @@ const seed = {
     // P878: hours per weekday on the agent's confirmed zone; the calendar link (busy times both ways); the licence.
     week: DEFAULT_WEEK, zoneConfirmed: true,
     calendarSync: { provider: null, status: 'not_connected' },
-    // P881: checked against the (sample) national registry. Only active life states can be picked; FL expires within
-    // 30 days (reminder), IL lapsed on the daily re-check (dropped, both sides told), OH has no life line, NY not taken.
-    licence: { npn: '19283746', status: 'verified', name: 'DANA M WHITFIELD', checkedAt: 'Nov 7, 6:00 AM (daily check)', licences: SAMPLE_REGISTRY['19283746'], states: ['TX', 'FL', 'AZ', 'GA'], attested: { TX: 'Oct 12, 9:14 AM', FL: 'Oct 12, 9:14 AM', AZ: 'Oct 12, 9:14 AM', GA: 'Oct 12, 9:14 AM' }, review: null },
+    // P848: the states the agent picked (3 to 10, never NY) and the one tick, logged with its time and the states.
+    licence: { states: ['AZ', 'FL', 'GA', 'TX'], licensed: { at: 'Oct 12, 9:14 AM', states: ['AZ', 'FL', 'GA', 'TX'] } },
     // P847: the Overview clock's zone (profiles.timezone values) and the optional caller ID: when fulfillment calls a
     // client, the call shows the agent's number. status: not_set | pending | confirmed. Sample only: no call or text goes out.
     timeZone: 'America/Chicago',
@@ -245,14 +243,14 @@ const useStore = () => useSyncExternalStore(subscribe, () => state)
 const ok = data => ({ data, isLoading: false, error: null })
 const fullName = c => `${c.client_first_name} ${c.client_last_name}`
 
-export function useSampleLeads() { const s = useStore(); return ok(s.leads) }
-export function useSampleLead(id) { const s = useStore(); return ok(s.leads.find(l => l.id === id) || s.leads[0]) }
-export function useSampleClients() { const s = useStore(); return ok(s.clients) }
-export function useSampleClient(id) { const s = useStore(); return ok(s.clients.find(c => c.id === id) || s.clients[0]) }
-export function useSampleAppointments() { const s = useStore(); return ok(s.appointments) }
-export function useSampleThreads() { const s = useStore(); return ok(s.threads) }
-export function useSampleActivity() { const s = useStore(); return ok(s.activity) }
-export function useSampleBilling() { const s = useStore(); return ok(useMemo(() => billingView(s.billing, s.submitted), [s.billing, s.submitted])) }
+function useLeadsSample() { const s = useStore(); return ok(s.leads) }
+function useLeadSample(id) { const s = useStore(); return ok(s.leads.find(l => l.id === id) || s.leads[0]) }
+function useClientsSample() { const s = useStore(); return ok(s.clients) }
+function useClientSample(id) { const s = useStore(); return ok(s.clients.find(c => c.id === id) || s.clients[0]) }
+function useAppointmentsSample() { const s = useStore(); return ok(s.appointments) }
+function useThreadsSample() { const s = useStore(); return ok(s.threads) }
+function useActivitySample() { const s = useStore(); return ok(s.activity) }
+function useBillingSample() { const s = useStore(); return ok(useMemo(() => billingView(s.billing, s.submitted), [s.billing, s.submitted])) }
 // P878: the billing record plus what's worked out from it (the prepaid balance, the week's expected range).
 function billingView(b, submitted) {
   const w = walletOf(b.wallet, b.spend)
@@ -266,14 +264,14 @@ function billingNeeds(b) {
   if (b.plan === 'pilot' && !b.paused && w.low) out.push({ key: 'low', title: 'Lead spend running out', name: w.out ? 'Your leads have stopped' : `About ${w.daysLeft} day${w.daysLeft === 1 ? '' : 's'} left`, what: `Top up now or new leads stop until ${b.wallet.next}.`, when: 'Today' })
   return out
 }
-export function useSampleTalks() { const s = useStore(); return ok(s.talks) }
-export function useSampleFeedback() { const s = useStore(); return ok(s.feedback) }
-export function useSampleBlocks() { const s = useStore(); return ok(s.blocks) }
-export function useSampleSetup() { const s = useStore(); return ok(s.setup) }
-export function useSampleSettings() { const s = useStore(); return ok({ ...s.settings, duty: s.duty }) }
+function useTalksSample() { const s = useStore(); return ok(s.talks) }
+function useFeedbackSample() { const s = useStore(); return ok(s.feedback) }
+function useBlocksSample() { const s = useStore(); return ok(s.blocks) }
+function useSetupSample() { const s = useStore(); return ok(s.setup) }
+function useSettingsSample() { const s = useStore(); return ok({ ...s.settings, duty: s.duty }) }
 // P873: Needs you now (the six triggers, most urgent first) and the quiet FYI list, for the Overview and the bell.
-export function useSampleNeeds() { const s = useStore(); return ok(useMemo(() => ({ now: needsYouNow({ ...s, billingNeeds: billingNeeds(s.billing), servicing: s.billing.products !== 'leads' }, SAMPLE_NOW), fyi: forYourInfo(s) }), [s])) }
-export function useSampleSignup() {
+function useNeedsSample() { const s = useStore(); return ok(useMemo(() => ({ now: needsYouNow({ ...s, billingNeeds: billingNeeds(s.billing), servicing: s.billing.products !== 'leads' }, SAMPLE_NOW), fyi: forYourInfo(s) }), [s])) }
+function useSignupSample() {
   return useMemo(() => ok({
     covers: ['Booked appointments and live calls, at a daily spend you set', 'A team that calls every lead right away and books them on your calendar', 'Servicing that keeps your policies on the books', 'Your own portal and phone app'],
   }), [])
@@ -299,7 +297,7 @@ function bookedChart(thisWeek) {
   return { mode: 'weeks', range: a.days < 56 ? 'Since you joined' : 'Last 8 weeks', empty: false, prev: a.weeks.length ? a.weeks[a.weeks.length - 1][1] : null, points: weeks }
 }
 
-export function useSampleOverview() {
+function useOverviewSample() {
   const s = useStore()
   const open = Object.values(s.tasks).filter(v => !v).length
   const by = st => s.clients.filter(c => c.stage === st).length
@@ -330,6 +328,17 @@ export function useSampleOverview() {
   })
 }
 
+// P848: the week the Calendar and Overview draw (Mon to Fri): the sample week of Nov 2, or the real current week.
+// days: [weekday, day of month, month]; today: today's day of month (null if outside the week); time: now on the clock.
+const SAMPLE_WEEK = { days: [['Mon', 2, 'Nov'], ['Tue', 3, 'Nov'], ['Wed', 4, 'Nov'], ['Thu', 5, 'Nov'], ['Fri', 6, 'Nov']], today: 2, time: '2:14 PM', year: 2026, month: 11 }
+export const weekTools = w => ({
+  ...w, nums: w.days.map(d => d[1]),
+  nameOf: n => w.days.find(d => d[1] === n)?.[0] || '',
+  monOf: n => w.days.find(d => d[1] === n)?.[2] || '',
+  isoOf: n => { const d = w.days.find(x => x[1] === n); return d ? d[3] || `${w.year}-${String(w.month).padStart(2, '0')}-${String(n).padStart(2, '0')}` : null },
+})
+function useWeekSample() { return SAMPLE_WEEK }
+
 const stamp = 'Today, 2:14 PM'
 const soldToClient = l => {
   const sold = l.stage === 'sold' ? l : applyMove(l, 'sold', {}, SAMPLE_NOW)
@@ -337,7 +346,7 @@ const soldToClient = l => {
 }
 const log = (s, who, text, kind) => [{ id: `a${s.activity.length + 1}-${text.length}`, at: stamp, kind, who, text }, ...s.activity]
 
-export function useSampleActions() {
+function useActionsSample() {
   return useMemo(() => ({
     moveLead: (id, stage, extra = {}) => set(s => {
       const lead = s.leads.find(l => l.id === id)
@@ -439,3 +448,55 @@ export function useSampleActions() {
     }),
   }), [])
 }
+
+// P848 — the switch between sample and real. Screens keep calling useSample*; inside the agent portal, when the
+// viewer's data mode is real (lib/dataMode.js), DataProvider hands them the real ones (hooks/agentRealData.js).
+// The provider is keyed on the mode by its caller, so a page never swaps hooks mid-mount.
+const SAMPLE_STATUS = { loading: false, error: null, retry: () => {} }
+const SAMPLE = {
+  source: 'sample', now: SAMPLE_NOW, useWeek: useWeekSample, useStatus: () => SAMPLE_STATUS,
+  useLeads: useLeadsSample,
+  useLead: useLeadSample,
+  useClients: useClientsSample,
+  useClient: useClientSample,
+  useAppointments: useAppointmentsSample,
+  useThreads: useThreadsSample,
+  useActivity: useActivitySample,
+  useBilling: useBillingSample,
+  useTalks: useTalksSample,
+  useFeedback: useFeedbackSample,
+  useBlocks: useBlocksSample,
+  useSetup: useSetupSample,
+  useSettings: useSettingsSample,
+  useNeeds: useNeedsSample,
+  useSignup: useSignupSample,
+  useOverview: useOverviewSample,
+  useActions: useActionsSample,
+}
+const ImplCtx = createContext(SAMPLE)
+// Loading and error for the page as a whole: never for sample data.
+export const useDataStatus = () => useImpl().useStatus()
+export function DataProvider({ impl, children }) { return createElement(ImplCtx.Provider, { value: impl || SAMPLE }, children) }
+const useImpl = () => useContext(ImplCtx)
+// 'sample' or 'real': screens use it only to pick the right empty-state words.
+export const useDataSource = () => useImpl().source
+export function useWeek() { const w = useImpl().useWeek(); return useMemo(() => weekTools(w), [w]) }
+// The clock the lifecycle rules read: the sample clock (Mon, Nov 2, 2:14 PM) or the agent's real wall clock.
+export const useNow = () => { const i = useImpl(); return i.useNow ? i.useNow() : i.now }
+export function useSampleLeads(...a) { return useImpl().useLeads(...a) }
+export function useSampleLead(...a) { return useImpl().useLead(...a) }
+export function useSampleClients(...a) { return useImpl().useClients(...a) }
+export function useSampleClient(...a) { return useImpl().useClient(...a) }
+export function useSampleAppointments(...a) { return useImpl().useAppointments(...a) }
+export function useSampleThreads(...a) { return useImpl().useThreads(...a) }
+export function useSampleActivity(...a) { return useImpl().useActivity(...a) }
+export function useSampleBilling(...a) { return useImpl().useBilling(...a) }
+export function useSampleTalks(...a) { return useImpl().useTalks(...a) }
+export function useSampleFeedback(...a) { return useImpl().useFeedback(...a) }
+export function useSampleBlocks(...a) { return useImpl().useBlocks(...a) }
+export function useSampleSetup(...a) { return useImpl().useSetup(...a) }
+export function useSampleSettings(...a) { return useImpl().useSettings(...a) }
+export function useSampleNeeds(...a) { return useImpl().useNeeds(...a) }
+export function useSampleSignup(...a) { return useImpl().useSignup(...a) }
+export function useSampleOverview(...a) { return useImpl().useOverview(...a) }
+export function useSampleActions(...a) { return useImpl().useActions(...a) }

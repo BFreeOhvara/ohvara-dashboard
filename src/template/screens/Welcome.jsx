@@ -6,7 +6,7 @@ import { Field, Pending, Seg, Switch, useNote } from '../kit'
 import { Select } from '../Select'
 import { paths } from '../paths'
 import { LicenceForm } from '../Licence'
-import { licenceReady, licenceCanGoOn, EMPTY_LICENCE } from '../licenceModel'
+import { pickReady, asPick, EMPTY_PICK } from '../licenceModel'
 import { HoursEditor, CalendarConnect } from '../Hours'
 import { SpendSliders, SpendSummary } from '../PlanBuilder'
 import { TalkDrawer } from '../Talk'
@@ -80,7 +80,7 @@ export default function Welcome() {
   const [talk, setTalk] = useState(false)
   const [s, setS] = useState(() => saved || load() || {
     step: 'video', watched: 0, captions: true, lowData: false,
-    licence: EMPTY_LICENCE,
+    licence: EMPTY_PICK,
     products: 'both', calendar: { provider: null }, tz: settings.timeZone || 'America/Chicago', tzOk: false,
     week: DEFAULT_WEEK, spend: { appts: 40, live: 20 }, push: null, terms: false,
   })
@@ -93,8 +93,8 @@ export default function Welcome() {
   const roomy = s.spend.appts === 0 || openSlots >= slotsNeeded(s.spend)
   const STEPS = [
     { key: 'video', label: 'Watch the intro', done: s.watched >= VIDEO_SECONDS },
-    // P881 (N-H-09/10): a manual check pending or no life licence yet lets setup carry on (ok); leads wait for done.
-    { key: 'licence', label: 'Your licence', done: licenceReady(s.licence), ok: licenceCanGoOn(s.licence) },
+    // P848: pick 3 to 10 states and tick the box; no review wait (the NIPR gate is off for launch).
+    { key: 'licence', label: 'Your licence', done: pickReady(asPick(s.licence)) },
     { key: 'products', label: 'What you want', done: true },
     { key: 'calendar', label: 'Calendar and hours', done: s.tzOk && openSlots > 0 },
     ...(servicingOnly ? [] : [{ key: 'spend', label: 'Lead spend', done: spendOk(plan, s.spend) && dailyTotal(s.spend) > 0 && roomy }]),
@@ -106,7 +106,6 @@ export default function Welcome() {
   const go = key => { const n = { ...s, step: key }; setS(n); saveSetup(n) }
   const passed = x => x.ok ?? x.done
   const allDone = STEPS.every(passed)
-  const licenceWaits = !licenceReady(s.licence)
 
   return (
     <div className="tp tp-solo">
@@ -123,8 +122,8 @@ export default function Welcome() {
           <div className="wz-body">
             {cur.key === 'video' && <VideoStep s={s} up={stable} />}
             {cur.key === 'licence' && <>
-              <header className="fx-form-h"><h2>Your licence</h2><p>Leads only come from states you{'’'}re licensed in.</p></header>
-              <LicenceForm value={s.licence} onChange={v => stable(x => ({ ...x, licence: v }))} accountName={settings.profile?.name} />
+              <header className="fx-form-h"><h2>Your licence</h2><p>Leads only come from the states you pick.</p></header>
+              <LicenceForm value={s.licence} onChange={v => stable(x => ({ ...x, licence: v }))} />
             </>}
             {cur.key === 'products' && <>
               <header className="fx-form-h"><h2>What do you want from us?</h2><p>You can change this later in Billing.</p></header>
@@ -157,7 +156,7 @@ export default function Welcome() {
                 ? <button type="button" className="tp-primary fx-accent" disabled={!passed(cur)} onClick={() => go(STEPS[at + 1].key)}>Next</button>
                 : <Link to={paths.home()} className={`tp-primary fx-accent${allDone ? '' : ' wz-off'}`} aria-disabled={!allDone} onClick={e => { if (!allDone) e.preventDefault() }}>Open my portal</Link>}
             </footer>
-            <p className="wz-saved">Your progress is saved. {allDone ? (licenceWaits ? 'All set: your portal opens now. Leads start once your licence is verified.' : 'All set: your portal opens now, no approval needed.') : `${STEPS.filter(x => x.done).length} of ${STEPS.length} done.`} <button type="button" className="tp-link" onClick={() => setTalk(true)}><MessageCircleQuestion size={13} /> Talk to someone</button></p>
+            <p className="wz-saved">Your progress is saved. {allDone ? 'All set: your portal opens now, no approval needed.' : `${STEPS.filter(x => x.done).length} of ${STEPS.length} done.`} <button type="button" className="tp-link" onClick={() => setTalk(true)}><MessageCircleQuestion size={13} /> Talk to someone</button></p>
           </div>
         </section>
         <p className="tp-sub" style={{ textAlign: 'center' }}><Link to={paths.signup()} className="tp-link">Back to sign-up</Link></p>

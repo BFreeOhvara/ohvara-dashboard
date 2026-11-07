@@ -1,22 +1,25 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, ArrowUpRight } from 'lucide-react'
+import { Search, ArrowUpRight, MessageSquare } from 'lucide-react'
 import { useSampleThreads, useSampleActions } from '../data'
 import { Avatar, Empty } from '../kit'
 import { paths } from '../paths'
+import { FirstRun } from '../DataState'
 
 // Messages between the agent and Ohvara fulfillment, one thread per client (the client never sees them). On a desktop the page holds still: the thread list and the
 // conversation each scroll inside their own pane, and the box to write in stays put at the bottom.
 export default function Messages() {
   const { data: threads } = useSampleThreads()
   const { sendMessage, readThread } = useSampleActions()
-  const [sel, setSel] = useState(threads[0].id)
+  const [sel, setSel] = useState(threads[0]?.id)
   const [text, setText] = useState('')
   const [q, setQ] = useState('')
   const t = threads.find(x => x.id === sel)
   const list = threads.filter(x => x.name.toLowerCase().includes(q.trim().toLowerCase()))
   const pick = id => { setSel(id); readThread(id) }
   const send = e => { e.preventDefault(); if (!text.trim()) return; sendMessage(t.id, text.trim()); setText('') }
+  // P848: nothing yet (a new agent): what shows here and how the first thread starts.
+  if (!t) return <div className="tp-page fx-page"><FirstRun icon={MessageSquare} title="Messages with the team show here" sub="One thread per client. When the team needs you on a client, they write here, and you can write to them from any client's page."><Link to={paths.clients()} className="tp-primary fx-accent">Go to your clients</Link></FirstRun></div>
   return (
     // P867: on a phone the card is sized to the window too (data-fold-fit), so the page holds still there as well
     <section className="ov-card tp-msgs" aria-label="Messages" data-fold data-fold-fit="440" data-fold-phone>
@@ -25,7 +28,7 @@ export default function Messages() {
         <div className="tp-threads-b">
           {list.map(x => (
             <button key={x.id} type="button" className={`tp-thread${x.id === sel ? ' on' : ''}`} onClick={() => pick(x.id)}>
-              <Avatar name={x.name} /><span className="tp-grow"><b>About {x.name}</b><small>{x.messages[x.messages.length - 1].text}</small></span>
+              <Avatar name={x.name} /><span className="tp-grow"><b>About {x.name}</b><small>{x.messages[x.messages.length - 1]?.text || 'No messages yet'}</small></span>
               {x.unread > 0 && <span className="tp-tb is-msg">{x.unread}</span>}
             </button>
           ))}

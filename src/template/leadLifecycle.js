@@ -8,6 +8,11 @@ import { phoneDigits, formatPhone } from './phoneMask.js'
 // ── The sample clock ───────────────────────────────────────────────────────────────────────────────────────────
 // Times are "wall clock" strings, 'YYYY-MM-DDTHH:MM' on the agent's clock. The sample clock is Mon, Nov 2, 2:14 PM.
 export const SAMPLE_NOW = '2026-11-02T14:14'
+// P848: the clock every rule below reads by default. The sample clock, unless the real agent portal installs the
+// agent's own wall clock (hooks/agentRealData.js), so the same rules run on real leads at the real time.
+let clock = null
+export const setClock = fn => { clock = fn || null }
+export const clockNow = () => (clock ? clock() : SAMPLE_NOW)
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const toD = s => { const [d, t = '00:00'] = s.split('T'); const [y, m, dd] = d.split('-').map(Number); const [h, mi] = t.split(':').map(Number); return new Date(Date.UTC(y, m - 1, dd, h, mi)) }
@@ -18,7 +23,7 @@ export const dayLabel = s => { const D = toD(s); return `${DOW[D.getUTCDay()]}, 
 export const timeLabel = s => { const D = toD(s); const h = D.getUTCHours(); return `${h % 12 || 12}:${String(D.getUTCMinutes()).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}` }
 export const whenLabel = s => `${dayLabel(s)}, ${timeLabel(s)}`
 // "Today, 1:52 PM", "Yesterday, …", "Tomorrow, …", or the day and date.
-export function atLabel(s, now = SAMPLE_NOW) {
+export function atLabel(s, now = clockNow()) {
   const days = Math.round((toD(s.slice(0, 10)) - toD(now.slice(0, 10))) / 86400000)
   const word = { 0: 'Today', [-1]: 'Yesterday', 1: 'Tomorrow' }[days]
   return `${word || dayLabel(s)}, ${timeLabel(s)}`
@@ -69,7 +74,7 @@ export const TEAM = 'Maya, Fulfillment'
 const fullName = l => `${l.first_name} ${l.last_name}`
 const apptWords = s => `${dayLabel(s)} at ${timeLabel(s)}`
 
-export function seedEvents(l, now = SAMPLE_NOW) {
+export function seedEvents(l, now = clockNow()) {
   const ev = []
   const add = (kind, at, label, o = {}) => ev.push({ id: `${l.id}-e${ev.length + 1}`, kind, at, label, state: at > now ? 'scheduled' : 'done', ...o })
   const text = (step, at, o = {}) => add('text_sent', at, 'Text', { step, text: leadText(step, { lead: l.first_name, appt: l.apptAt ? apptWords(l.apptAt) : undefined }), by: SENDER, role: 'auto', ...o })
@@ -163,7 +168,7 @@ const MOVE_ROWS = {
 }
 export const AGENT_MOVES = Object.keys(MOVE_ROWS)
 
-export function applyMove(lead, stage, extra = {}, now = SAMPLE_NOW) {
+export function applyMove(lead, stage, extra = {}, now = clockNow()) {
   if (!AGENT_MOVES.includes(stage)) throw new Error(`An agent cannot move a lead to ${stage}`)
   const s = STAGES[stage]
   const [kind, word] = MOVE_ROWS[stage]
@@ -222,7 +227,7 @@ export const agentCallTask = l => !!l.reply && !l.reply.called && BOOKED_STAGES.
 export const confirmedByText = l => !!l.reply && l.stage === 'booked' && replyIntent(l.reply.text) === 'confirm'
 
 // The agent called back about a call task: the task closes and the call is on the timeline.
-export function closeCallTask(lead, now = SAMPLE_NOW) {
+export function closeCallTask(lead, now = clockNow()) {
   const row = { id: `${lead.id}-k${(lead.events || []).length + 1}`, kind: 'call', at: now, label: 'You called them back', state: 'done', by: 'You', role: 'you' }
   return { ...lead, reply: lead.reply ? { ...lead.reply, called: true } : null, events: [...(lead.events || []), row] }
 }
@@ -246,10 +251,10 @@ const T = Object.fromEntries(TRIGGERS.map(t => [t.key, t]))
 export const JOIN_BEFORE = 15 // minutes before an appointment it starts to need you
 export const APPT_LENGTH = 30
 
-export const needsOutcome = (l, now = SAMPLE_NOW) => l.stage === 'showed' || (l.stage === 'booked' && !!l.apptAt && minutesFrom(l.apptAt, now) >= APPT_LENGTH)
+export const needsOutcome = (l, now = clockNow()) => l.stage === 'showed' || (l.stage === 'booked' && !!l.apptAt && minutesFrom(l.apptAt, now) >= APPT_LENGTH)
 const starting = (l, now) => l.stage === 'booked' && !!l.apptAt && minutesFrom(now, l.apptAt) <= JOIN_BEFORE && minutesFrom(l.apptAt, now) < APPT_LENGTH
 
-export function needsYouNow({ leads = [], clients = [], billingNeeds = [], servicing = true }, now = SAMPLE_NOW) {
+export function needsYouNow({ leads = [], clients = [], billingNeeds = [], servicing = true }, now = clockNow()) {
   const out = []
   const push = (t, l, what, when) => out.push({ id: `${t.key}-${l.id}`, trigger: t.key, rank: t.rank, title: t.title, action: t.action, ref: l.id, kind: 'lead', name: fullName(l), phone: l.phone, what, when })
   leads.filter(l => l.stage === 'ringing').forEach(l => push(T.live, l, `${l.city}, ${l.state} · on the line with the team`, 'Now'))

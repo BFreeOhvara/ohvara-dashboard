@@ -93,13 +93,14 @@ function Ring({ value, of }) {
 // The working week, Mon to Fri, one column per day with its calls; today is marked.
 function WeekStrip({ appts, today }) {
   const days = [...new Map(appts.map(a => [a.date, a.day])).entries()].sort((a, b) => a[0] - b[0])
+  const monOf = d => appts.find(a => a.date === d)?.mon || 'Nov' // P848: real appointments carry their month
   return (
     <ol className="fx-wk" aria-label="Calls this week">
       {days.map(([date, day]) => {
         const list = appts.filter(a => a.date === date)
         return (
           <li key={date} className={date === today ? 'is-today' : date < today ? 'is-past' : ''}>
-            <span className="fx-wk-d"><b>{day}</b><small>Nov {date}</small><i className="tp-num">{list.length}</i></span>
+            <span className="fx-wk-d"><b>{day}</b><small>{monOf(date)} {date}</small><i className="tp-num">{list.length}</i></span>
             {list.map(a => <Link key={a.id} to={apptTo(a)} className={`fx-wk-ev is-${a.kind === 'client' ? 'teal' : 'blue'}`}><small>{a.time}</small><b>{a.who.split(' ')[0]}</b></Link>)}
           </li>
         )

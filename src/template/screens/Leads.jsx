@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { PhoneIncoming, CalendarDays, Phone, Search, Wallet, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, Archive, PhoneForwarded } from 'lucide-react'
-import { useSampleLeads, useSampleLead, useSampleBilling, useSampleActions, useSampleSettings } from '../data'
+import { PhoneIncoming, CalendarDays, Phone, Search, Wallet, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, Archive, PhoneForwarded, Inbox } from 'lucide-react'
+import { useDataSource, useSampleLeads, useSampleLead, useSampleBilling, useSampleActions, useSampleSettings } from '../data'
 import { Avatar, Chip, Seg, Drawer, Empty, Pending, Switch, useNote } from '../kit'
 import { stageChip, OutcomeDrawer, OutcomePrompt, NoShowUndo } from '../LeadOutcome'
 import { RecordDrawer, Stepper, Block } from '../Record'
 import { SpendSliders } from '../PlanBuilder'
 import { LANES, CLOSED_LANE, LEAD_STEPS, laneOf } from '../stages'
-import { needsOutcome, agentCallTask, confirmedByText, atLabel, SAMPLE_NOW } from '../leadLifecycle'
+import { needsOutcome, agentCallTask, confirmedByText, atLabel, clockNow } from '../leadLifecycle'
 import { agentStatusOf, agentEvents, closedReason } from '../agentView'
 import { dailyTotal, openSlotsPerWeek, spendOk } from '../spendPlan'
 import { usd } from '../motion'
 import { FeedbackDrawer } from '../Talk'
 import { paths } from '../paths'
+import { FirstRun } from '../DataState'
 import '../leads873.css'
 import '../p878.css'
 
@@ -31,7 +32,7 @@ const shortWhen = l => {
 }
 const whenOf = l => (l.stage === 'ringing' ? 'Ringing now' : l.stage === 'follow_up' && l.follow ? `Call back ${l.follow}` : l.appt || `Came in ${l.assigned_at}`)
 const tagOf = l => {
-  if (needsOutcome(l, SAMPLE_NOW)) return ['violet', 'Mark outcome']
+  if (needsOutcome(l, clockNow())) return ['violet', 'Mark outcome']
   if (agentCallTask(l)) return ['warn', 'Call them back']
   if (l.stage === 'sold' && !l.submitted) return ['warn', 'Finish details']
   if (confirmedByText(l)) return ['blue', 'Confirmed']
@@ -70,7 +71,7 @@ function Row({ e, lead, last }) {
       <i />
       <div>
         <span className="lc-ev-h"><b>{e.label}</b>{later && <span className="lc-sched">{e.kind === 'text_sent' ? 'Scheduled' : 'Next'}</span>}</span>
-        <span className="lc-ev-by">{e.by} · {atLabel(e.at, SAMPLE_NOW)}</span>
+        <span className="lc-ev-by">{e.by} · {atLabel(e.at, clockNow())}</span>
         {isText && <div className={`tp-bub lc-bub${theirs ? '' : ' me'}`}>{e.text}{!theirs && <small>Automatic · preview, sends when your leads go live</small>}{theirs && <small>From {lead.first_name}</small>}</div>}
         {e.kind === 'call_task' && <span className={`lc-task is-${e.task === 'you' ? 'you' : 'team'}`}>{e.task === 'you' ? 'For you' : 'For our team'}</span>}
         {e.audit && <span className="lc-task is-audit">Kept on the record</span>}
@@ -121,7 +122,7 @@ function LeadDrawer({ id, onClose }) {
       </>}>
       <NoShowUndo lead={lead} />
       {task && <button type="button" className="lc-nudge" onClick={call}><PhoneForwarded size={16} aria-hidden="true" /><span className="tp-grow"><b>{lead.first_name} asked you to call</b><small>{'“'}{lead.reply.text}{'”'} We told them someone calls shortly.</small></span><span className="lc-nudge-go">Call</span></button>}
-      {needsOutcome(lead, SAMPLE_NOW) && <button type="button" className="lc-nudge" onClick={() => setPrompt(true)}><ClipboardCheck size={16} aria-hidden="true" /><span className="tp-grow"><b>How did it go?</b><small>{lead.stage === 'showed' ? 'You talked. Mark the outcome' : `The appointment at ${lead.appt} ended`}</small></span><span className="lc-nudge-go">Mark outcome</span></button>}
+      {needsOutcome(lead, clockNow()) && <button type="button" className="lc-nudge" onClick={() => setPrompt(true)}><ClipboardCheck size={16} aria-hidden="true" /><span className="tp-grow"><b>How did it go?</b><small>{lead.stage === 'showed' ? 'You talked. Mark the outcome' : `The appointment at ${lead.appt} ended`}</small></span><span className="lc-nudge-go">Mark outcome</span></button>}
       {lead.stage === 'sold' && !lead.submitted && <Link to={paths.submit(lead.id)} className="fx-nudge">Finish the servicing details. The team takes it from there.</Link>}
       {closed && <p className="lc-closed"><b>{closedReason(lead)}.</b> {lead.stage === 'opted_out' ? 'All calls and texts stopped.' : 'No more calls or texts.'} A reply from them brings them back as a new lead.</p>}
       {lane.key === 'on_it' && lead.stage !== 'ringing' && <p className="lc-closed">Our team is on it. Nothing for you to do yet: you hear from us when they{'’'}re booked or on the line.</p>}
@@ -153,6 +154,7 @@ export default function Leads() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { data: leads } = useSampleLeads()
+  const source = useDataSource()
   const { data: billing } = useSampleBilling()
   const { moveLead } = useSampleActions()
   const note = useNote()
@@ -187,6 +189,7 @@ export default function Leads() {
       <Seg label="Status" className="lc-stages" value={laneKey} onChange={setLane} options={[{ key: 'all', label: showClosed ? 'All' : 'All open', count: shown.filter(x => ALL.some(l => inLane(l, x))).length }, ...ALL.map(l => ({ key: l.key, label: l.label, count: shown.filter(x => inLane(l, x)).length }))]} />
       <p className="lc-explain">{(ALL.find(l => l.key === laneKey) || { explain: 'Five statuses, left to right. Our team works every lead until it’s booked or on the line with you.' }).explain}</p>
 
+      {leads.length === 0 && <FirstRun icon={Inbox} title="Your leads show here" sub="Each lead lands here the moment it comes in. Our team calls it right away, books it on your calendar or rings you live, and you see every step." />}
       <div className={`fx-board lc-board${lanes.length === 1 ? ' is-one' : ''}`} role="region" aria-label="Leads by stage">
         {lanes.map((lane, li) => {
           const rows = shown.filter(l => inLane(lane, l))
@@ -202,7 +205,7 @@ export default function Leads() {
         })}
       </div>
 
-      {id && <LeadDrawer id={id} onClose={() => navigate(paths.leads())} />}
+      {id && (source === 'sample' || leads.some(l => l.id === id)) && <LeadDrawer id={id} onClose={() => navigate(paths.leads())} />}
       <SpendDrawer open={spend} onClose={() => setSpend(false)} />
     </div>
   )

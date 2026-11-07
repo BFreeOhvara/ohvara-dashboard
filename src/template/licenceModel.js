@@ -100,3 +100,20 @@ export function sampleLookup(npn, accountName) {
   const licences = SAMPLE_REGISTRY[npn] || [lic('TX', '2028-03-31'), lic('FL', '2027-06-30'), lic('GA', '2027-05-31'), lic('OK', '2026-11-30'), lic('NY', '2028-01-31')]
   return { status: 'verified', name: (accountName || '').toUpperCase(), licences }
 }
+
+// ── P848: Licence states for launch (Brayden, Nov 7 16:04; replaces the NIPR gate) ─────────────────────────────────
+// The agent picks from the full state list (never New York), at least `min` and at most `max` (admin settings; these
+// are the defaults until the admin screen holds them), and ticks one box: licensed for life insurance in every state
+// picked. The tick is logged with its time and the states; changing the states clears it. Leads start at once: no
+// review wait, no upload. The NIPR check above (P881) stays built but off (licence_settings.gate_on = false).
+export const LICENCE_LIMITS = { min: 3, max: 10 }
+export const EMPTY_PICK = { states: [], licensed: null }
+const sameSet = (a = [], b = []) => a.length === b.length && [...a].sort().join() === [...b].sort().join()
+// Any older licence value (P881's registry shape, or a saved setup) as the picked-states shape.
+export const asPick = v => ({ states: (v?.states || []).filter(s => !NOT_TAKING.includes(s)), licensed: v?.licensed && sameSet(v.licensed.states, v.states) ? v.licensed : null })
+export const pickCount = (v, lim = LICENCE_LIMITS) => {
+  const n = (v?.states || []).length
+  return n < lim.min ? 'few' : n > lim.max ? 'many' : 'ok'
+}
+export const pickReady = (v, lim = LICENCE_LIMITS) => pickCount(v, lim) === 'ok' && !(v.states || []).some(s => NOT_TAKING.includes(s)) && !!v.licensed && sameSet(v.licensed.states, v.states)
+export const LICENSED_WORDS = 'I’m licensed for life insurance in every state I picked'

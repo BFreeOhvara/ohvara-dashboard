@@ -20,6 +20,7 @@ import ProtectLanding from './pages/public/ProtectLanding'
 import ConfirmEmail from './pages/ConfirmEmail'
 import ResetPassword from './pages/ResetPassword'
 import RescheduleLink from './pages/RescheduleLink'
+import SignLink from './pages/SignLink'
 import Settings from './pages/Settings'
 import Messages from './pages/Messages'
 
@@ -142,6 +143,8 @@ export default function App() {
             <Route path="/reset-password" element={<ResetPassword />} />
             {/* Prompt 696 — client-facing reschedule link from the missed-call text; no login */}
             <Route path="/r/:token" element={<RescheduleLink />} />
+            {/* P886 — private e-sign / upload link (doc-sign function); /sign/sample plays it on sample data. */}
+            <Route path="/sign/:token" element={<SignLink />} />
             <Route path="/" element={<RoleRedirect />} />
 
             {/* Settings — shared across every role (Prompt 226) */}

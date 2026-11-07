@@ -7,13 +7,15 @@ import {
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
 import {
-  useSampleActivity, useSampleClients, useSampleLeads, useSampleThreads, useSampleBilling, useSampleAppointments, useSampleSettings, useSampleActions, useSampleNeeds,
+  useSampleActivity, useSampleClients, useSampleLeads, useSampleThreads, useSampleBilling, useSampleAppointments, useSampleSettings, useSampleActions, useSampleNeeds, useDataStatus, useDataSource,
 } from './data'
 import { NeedRows, FyiList } from './NeedsNow'
 import { useNeedAction } from './needAction'
 import { Drawer, Avatar, Field, PillTabs, Seg, useAccount, useNote, initials } from './kit'
 import { ReportBug } from './ReportBug'
 import { avatarHue } from './avatarHue'
+import ViewToggle from './ViewToggle'
+import { DataLoading, DataError } from './DataState'
 import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit } from './motion'
 import { armEntrance } from '../adminshell/entrance'
 import { paths, tabOf, titleOfLayout, layoutOf, isTemplateAddress } from './paths'
@@ -317,6 +319,7 @@ function AccountMenu({ open, onClose, theme, setTheme, duty, setDuty }) {
           <Radio size={17} aria-hidden="true" /><span className="tp-grow"><b>Active for live calls</b><small>{duty ? 'Calls ring your phone' : 'Off. We book callers instead'}</small></span><i className={`fx-sw${duty ? ' on' : ''}`} aria-hidden="true" />
         </button>
         <button type="button" className="fx-mrow" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}<b className="tp-grow">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</b></button>
+        <ViewToggle />
         <i className="fx-mline" />
         {links.map(([to, label, Icon]) => <Link key={label} to={to()} className="fx-mrow" onClick={onClose}><Icon size={17} aria-hidden="true" /><b className="tp-grow">{label}</b><ChevronRight size={15} aria-hidden="true" /></Link>)}
         <i className="fx-mline" />
@@ -375,6 +378,8 @@ export default function TemplateFrame() {
   const { data: settings } = useSampleSettings()
   const { setDuty } = useSampleActions()
   const stats = useHeadStats(layout)
+  const status = useDataStatus()
+  const source = useDataSource()
   const unread = threads.reduce((n, t) => n + t.unread, 0)
   const { data: needList } = useSampleNeeds()
   const needs = needList.now.filter(n => n.kind === 'lead').length
@@ -482,8 +487,8 @@ export default function TemplateFrame() {
         </div>
 
         <main className={`tp-main fx-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>
-          {page.el}
-          <p className="tp-foot">Sample info. Changes reset when you reload.</p>
+          {status.error ? <DataError onRetry={status.retry} /> : status.loading ? <DataLoading /> : page.el}
+          {source === 'sample' && <p className="tp-foot">Sample info. Changes reset when you reload.</p>}
         </main>
       </div>
 

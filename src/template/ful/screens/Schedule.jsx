@@ -19,6 +19,8 @@ import { fp } from '../paths'
 import { CALL_WORD, CALL_TONE } from '../words'
 import { HelpDot } from '../../../fulshell/training/HelpDot'
 import { SwapsHolidays } from '../Clock879'
+import { DocsBlock, GateStep } from '../Docs886'
+import { useGate } from '../../docs886/data'
 
 // P846 — Schedule (it was Calls): the VA's week as the same calendar the agent has, with everything they have to do
 // at a time on it: cancellation calls, booked callbacks (people from the Queue) and the appointments they booked for
@@ -83,6 +85,8 @@ export function CallDrawer({ id, onClose }) {
   const tone = CALL_TONE[k.status]
   const first = k.name.split(' ')[0]
   const open = k.status === 'booked' || k.status === 'no_answer'
+  // P886: the old policy goes only after the new one is issued and its first payment clears.
+  const gate = useGate(k.name)
   return (
     <RecordDrawer label={`Call with ${k.name}`} kicker={<>Cancellation call · {dayName(k.day)}, Nov {k.day} <HelpDot lesson="schedule" inline /></>} tone={tone} onClose={onClose}
       hero={<>
@@ -92,8 +96,8 @@ export function CallDrawer({ id, onClose }) {
         <div className="fx-hero-bot"><span className="fs-swap is-hero"><span><small>Closing</small><b>{k.old_carrier}</b></span><ArrowRight size={16} aria-hidden="true" /><span><small>Keeping</small><b>{k.carrier}</b></span></span><Avatar name={k.name} tone={tone} /></div>
       </>}
       actions={open ? <>
-        <button type="button" className="tp-primary fx-accent" onClick={() => showLive(k.id)}><Phone size={16} />Start call</button>
-        <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('cancelled')}><CircleCheck size={15} />Cancelled</button>
+        <button type="button" className="tp-primary fx-accent" disabled={!gate.open} title={gate.open ? undefined : 'Waits for the new policy to be issued and its first payment to clear'} onClick={() => showLive(k.id)}><Phone size={16} />Start call</button>
+        <button type="button" className="tp-btn ov-ghost" disabled={!gate.open} onClick={() => setPanel('cancelled')}><CircleCheck size={15} />Cancelled</button>
         <button type="button" className="tp-btn ov-ghost" onClick={() => { markCall(k.id, 'no_answer', { notes: notes || 'No answer.' }); note(`No answer logged for ${first}`) }}><PhoneMissed size={15} />No answer</button>
         <span className="tp-grow" />
         <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('move')}><CalendarClock size={15} />Move</button>
@@ -106,9 +110,12 @@ export function CallDrawer({ id, onClose }) {
       {k.status === 'cancelled' && (
         <section className="fx-blk fs-done"><header><h3><CircleCheck size={16} aria-hidden="true" />Old policy cancelled</h3></header><p className="tp-mid">Confirmation {k.confirmation}. It counts toward this week's pay once it is checked.</p></section>
       )}
+      {/* P888: the replacement gate and the cancellation papers are steps on this call, not boxes of their own. */}
       <Block title="On this call">
-        <ol className="tp-tl fx-tl">
-          {[['Confirm it is them', 'Name, date of birth, last four of the old policy'], [`Call ${k.old_carrier} together`, 'Ask to cancel the old policy, end date today'], ['Get the confirmation number', 'Type it in when you mark Cancelled'], ['Questions about coverage', `Those go to ${k.agent}, not on this call`]].map(([a, b], i) => <li key={a} className={k.status === 'cancelled' ? 'done' : i === 0 && open ? 'now' : ''}><i /><div><b>{a}</b><span>{b}</span></div></li>)}
+        <ol className="fs-steps">
+          {k.status !== 'cancelled' && <GateStep who={k.name} />}
+          {[['Confirm it is them', 'Name, date of birth, last four of the old policy'], [`Call ${k.old_carrier} together`, 'Ask to cancel the old policy, end date today'], ['Get the confirmation number', 'Type it in when you mark Cancelled'], ['Questions about coverage', `Those go to ${k.agent}, not on this call`]].map(([a, b], i) => <li key={a} className={k.status === 'cancelled' ? 'done' : i === 0 && open && gate.open ? 'now' : ''}><i /><div><b>{a}</b><span>{b}</span></div></li>)}
+          <li className={k.status === 'cancelled' ? 'done' : ''}><i /><div><b>Cancellation papers</b><span>If {k.old_carrier} wants a signed form or a letter.</span><DocsBlock bare who={k.name} carrier={k.old_carrier} kinds={['cancellation_request']} /></div></li>
         </ol>
       </Block>
       <Block title="Client">
