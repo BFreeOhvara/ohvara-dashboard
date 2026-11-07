@@ -1,0 +1,64 @@
+{
+ "390": {
+  "booking": {
+   "ready": 4,
+   "dur": 164,
+   "t": 2.4,
+   "cc": "Booking an appointment.",
+   "ccInside": true,
+   "videoW": 312,
+   "overflow": false,
+   "chapters": 21,
+   "rate": 1.5,
+   "ccOff": true
+  },
+  "never": {
+   "ready": 4,
+   "dur": 174,
+   "t": 3.6,
+   "cc": "break the law, or lose us an agent.",
+   "ccInside": true,
+   "videoW": 312,
+   "overflow": false,
+   "chapters": 16,
+   "rate": 1.5,
+   "ccOff": true
+  },
+  "resumeLabel": null,
+  "pageErrors": []
+ },
+ "1440": {
+  "booking": {
+   "ready": 4,
+   "dur": 164,
+   "t": 2.4,
+   "cc": "Booking an appointment.",
+   "ccInside": true,
+   "videoW": 788,
+   "overflow": false,
+   "chapters": 21,
+   "rate": 1.5,
+   "ccOff": true
+  },
+  "never": {
+   "ready": 4,
+   "dur": 174,
+   "t": 3.6,
+   "cc": "break the law, or lose us an agent.",
+   "ccInside": true,
+   "videoW": 788,
+   "overflow": false,
+   "chapters": 16,
+   "rate": 1.5,
+   "ccOff": true
+  },
+  "resumeLabel": null,
+  "help": {
+   "url": "/template/fulfillment/training/booking?from=help&t=54.9",
+   "label": "Starts at 0:55",
+   "t": 54.9
+  },
+  "homeVideoRows": 2,
+  "pageErrors": []
+ }
+}

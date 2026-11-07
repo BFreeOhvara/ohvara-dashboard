@@ -1,0 +1,183 @@
+{
+ "base": "/training-video/",
+ "lessons": {
+  "never": {
+   "kind": "explainer",
+   "title": "What never to say",
+   "duration": 173.8,
+   "src": "never.mp4",
+   "poster": "never-poster.jpg",
+   "captions": "never.captions.json",
+   "vtt": "never.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "What never to say"
+    },
+    {
+     "t": 13.8,
+     "label": "Why: you are not the agent"
+    },
+    {
+     "t": 24.8,
+     "label": "Rule 1: Never quote a price"
+    },
+    {
+     "t": 36.9,
+     "label": "Rule 2: Never promise anything"
+    },
+    {
+     "t": 47.3,
+     "label": "Rule 3: Never give advice"
+    },
+    {
+     "t": 57.2,
+     "label": "Rule 4: Never tell anyone to drop a policy"
+    },
+    {
+     "t": 64.8,
+     "label": "Leads and clients hear one name"
+    },
+    {
+     "t": 73.7,
+     "label": "Agents never hear"
+    },
+    {
+     "t": 87.2,
+     "label": "When itâ€™s the agentâ€™s question"
+    },
+    {
+     "t": 95.4,
+     "label": "A lead asks about price"
+    },
+    {
+     "t": 109.9,
+     "label": "A client asks for advice"
+    },
+    {
+     "t": 121.4,
+     "label": "The exact wording is a draft"
+    },
+    {
+     "t": 129.8,
+     "label": "Send to agent"
+    },
+    {
+     "t": 138.6,
+     "label": "The one phrase to remember"
+    },
+    {
+     "t": 147.5,
+     "label": "Recap"
+    },
+    {
+     "t": 165.4,
+     "label": "Now take the check"
+    }
+   ],
+   "helpAt": {},
+   "sizeBytes": 8422120,
+   "builtAt": "2026-11-07T19:43:45.278Z"
+  },
+  "booking": {
+   "kind": "walkthrough",
+   "title": "Booking an appointment",
+   "duration": 164.4,
+   "src": "booking.mp4",
+   "poster": "booking-poster.jpg",
+   "captions": "booking.captions.json",
+   "vtt": "booking.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "Booking an appointment"
+    },
+    {
+     "t": 9.8,
+     "label": "Open the lead"
+    },
+    {
+     "t": 17.8,
+     "label": "Take it"
+    },
+    {
+     "t": 24.2,
+     "label": "Four answers first"
+    },
+    {
+     "t": 31.5,
+     "label": "Question type"
+    },
+    {
+     "t": 35.9,
+     "label": "Her carrier"
+    },
+    {
+     "t": 42.7,
+     "label": "State and how soon"
+    },
+    {
+     "t": 50.3,
+     "label": "Book an agent"
+    },
+    {
+     "t": 54.9,
+     "label": "Pick the agent"
+    },
+    {
+     "t": 65.5,
+     "label": "Pick the day"
+    },
+    {
+     "t": 69.9,
+     "label": "Her time zone"
+    },
+    {
+     "t": 77.4,
+     "label": "Greyed out = taken"
+    },
+    {
+     "t": 85.2,
+     "label": "Offer two times"
+    },
+    {
+     "t": 95.3,
+     "label": "Pick the time"
+    },
+    {
+     "t": 98.4,
+     "label": "Never guess"
+    },
+    {
+     "t": 113,
+     "label": "Book it"
+    },
+    {
+     "t": 115.6,
+     "label": "Read it back"
+    },
+    {
+     "t": 126.6,
+     "label": "Close the lead"
+    },
+    {
+     "t": 135.1,
+     "label": "On your Schedule"
+    },
+    {
+     "t": 142.7,
+     "label": "Recap"
+    },
+    {
+     "t": 155.6,
+     "label": "Now take the check"
+    }
+   ],
+   "helpAt": {
+    "booking": 54.9
+   },
+   "sizeBytes": 6736870,
+   "builtAt": "2026-11-07T19:50:11.075Z"
+  }
+ }
+}

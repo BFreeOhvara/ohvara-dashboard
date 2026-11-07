@@ -28,3 +28,6 @@ supabase/.temp/
 *.sw?
 
 .vercel
+
+# P877: training videos are built in ohvara-reels/training-video and hosted outside the repo
+public/training-video/

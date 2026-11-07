@@ -152,3 +152,38 @@
   .adm-tr-lessons .fx-mrow { flex-wrap: wrap; }
   .adm-tr-lessons .tp-grow { flex-basis: calc(100% - 40px); }
 }
+
+/* P877 — the lesson video (./VideoPlayer.jsx): video on top, captions drawn over it, a bar for kind, watched, speed and
+   captions, then the chapters. Shell tokens only. */
+.fx-tile.tr-video { gap: 12px; }
+.tr-vid { position: relative; border-radius: 14px; overflow: hidden; background: #000; aspect-ratio: 16 / 9; border: 1px solid var(--fx-edge, var(--ov-line)); }
+.tr-vid video { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; }
+.tr-cc { position: absolute; left: 50%; bottom: 13%; transform: translateX(-50%); width: max-content; max-width: 88%; margin: 0; padding: 6px 14px; border-radius: 10px; text-align: center;
+  background: rgb(0 0 0 / .72); color: #fff; font-family: var(--font-display); font-weight: 600; font-size: clamp(13px, 2.3cqw, 26px); line-height: 1.3; pointer-events: none; text-wrap: balance; }
+.tr-vid { container-type: inline-size; }
+@container (max-width: 560px) { .tr-cc { bottom: 40%; font-size: 13px; padding: 4px 10px; } }
+.tr-cc span { opacity: .78; transition: opacity .12s, color .12s; }
+.tr-cc span.is-said { opacity: 1; }
+.tr-cc span.is-now { opacity: 1; color: var(--accent); }
+.tr-vid-resume { position: absolute; left: 12px; top: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: #fff; background: rgb(0 0 0 / .62); pointer-events: none; }
+.tr-vbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; }
+.tr-vkind { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ov-mid); }
+.tr-vpct { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ov-mid); }
+.tr-vpct .tr-bar { width: 72px; margin: 0; }
+.tr-speed { display: inline-flex; gap: 4px; }
+.tr-speed .fx-pillbtn, .tr-ccbtn { min-height: 30px; padding: 0 10px; font-size: 12.5px; }
+.tr-speed .fx-pillbtn.is-on, .tr-ccbtn.is-on { color: var(--sh-ci, var(--ov-hi)); background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
+.tr-ccbtn { display: inline-flex; align-items: center; gap: 6px; }
+.tr-chap summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ov-mid); padding: 4px 2px; }
+.tr-chap summary:hover { color: var(--ov-hi); }
+.tr-chap ol { list-style: none; margin: 6px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 2px 8px; }
+.tr-chap .fx-mrow { width: 100%; gap: 10px; font-size: 13px; color: var(--ov-hi); text-align: left; }
+.tr-chap .tp-num { color: var(--ov-mid); font-size: 12px; min-width: 34px; }
+.tr-video.is-missing p { display: flex; align-items: center; gap: 8px; }
+.tr-hasvid { color: var(--ov-mid); }
+.tr-hasvid.is-seen { color: var(--accent); }
+@media (max-width: 560px) {
+  .tr-vbar { gap: 8px; }
+  .tr-vkind { width: 100%; }
+  .tr-chap ol { grid-template-columns: 1fr; }
+}

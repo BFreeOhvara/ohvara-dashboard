@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   GraduationCap, Lock, CircleCheck, ChevronRight, Search, ArrowLeft, ArrowRight, Check, X, MessageSquareQuote, ListOrdered,
-  ThumbsUp, Ban, MousePointerClick, RotateCcw, Trophy, TriangleAlert, Clock3, Sparkles,
+  ThumbsUp, Ban, MousePointerClick, RotateCcw, Trophy, TriangleAlert, Clock3, Sparkles, PlayCircle,
 } from 'lucide-react'
 import { useAccount } from '../../template/kit'
 import { fp } from '../../template/ful/paths'
@@ -10,6 +10,9 @@ import { lessonNo, searchLessons } from './model.js'
 import { PASS_MARK } from './lessons.js'
 import { useLessons, useTraining } from './store.js'
 import SHOTS from './shots.json'
+import VideoPlayer from './VideoPlayer.jsx'
+import { hasVideo, videoFor, fmtTime } from './videoModel.js'
+import { useWatchedMap } from './videoStore.js'
 import './training.css'
 
 // P872 — Training, for VAs: one lesson per job (./lessons.js). Home: "Finish your training" with progress and the path
@@ -52,8 +55,9 @@ export function TrainingNudge() {
   )
 }
 
-function Home({ lessons, t }) {
+function Home({ lessons, t, who }) {
   const [q, setQ] = useState('')
+  const seen = useWatchedMap(who)
   const hits = useMemo(() => searchLessons(q, lessons), [q, lessons])
   const byId = Object.fromEntries(t.states.map(s => [s.id, s]))
   const next = lessons.find(l => l.id === t.sum.next)
@@ -84,7 +88,9 @@ function Home({ lessons, t }) {
                   {s.assigned && <i className="fx-delta is-warn">Assigned</i>}
                   {s.stale && <i className="fx-delta is-blue">Updated</i>}
                   {s.score && <small className="tp-num tr-score">{s.score.correct}/{s.score.total}</small>}
-                  <small className="tr-min"><Clock3 size={12} aria-hidden="true" />{l.minutes} min</small>
+                  {hasVideo(l.id)
+                    ? <small className={`tr-min tr-hasvid${seen[l.id]?.watched ? ' is-seen' : ''}`} title={seen[l.id]?.watched ? 'Video watched' : 'Has a video'}><PlayCircle size={12} aria-hidden="true" />{fmtTime(videoFor(l.id).duration)}</small>
+                    : <small className="tr-min"><Clock3 size={12} aria-hidden="true" />{l.minutes} min</small>}
                   {!locked && <ChevronRight size={15} aria-hidden="true" />}
                 </>
               )
@@ -210,7 +216,7 @@ function Quiz({ lesson, onSubmit, onBack, last }) {
   )
 }
 
-function Lesson({ lesson, lessons, t }) {
+function Lesson({ lesson, lessons, t, who }) {
   const navigate = useNavigate()
   const [sp] = useSearchParams()
   const [mode, setMode] = useState('read')
@@ -219,6 +225,7 @@ function Lesson({ lesson, lessons, t }) {
   const locked = st.state === 'locked'
   const blocker = locked ? lessons[t.states.findIndex(s => s.state === 'next')] : null
   const fromHelp = sp.get('from') === 'help'
+  const startAt = Number.isFinite(Number(sp.get('t'))) && sp.get('t') !== null ? Number(sp.get('t')) : null
   const done = back => {
     setMode('read')
     if (back) {
@@ -242,6 +249,7 @@ function Lesson({ lesson, lessons, t }) {
           <Quiz lesson={lesson} last={i === lessons.length - 1} onSubmit={answers => t.submit(lesson.id, answers)} onBack={done} />
         ) : (
           <>
+            <VideoPlayer lessonId={lesson.id} who={who} start={startAt} />
             <section className="fx-tile tr-intro" style={{ '--i': 0 }} aria-label={lesson.title}>
               <h2>{lesson.title}</h2>
               <p className="tr-job">{lesson.job}</p>
@@ -250,7 +258,7 @@ function Lesson({ lesson, lessons, t }) {
             </section>
 
             <section className="fx-tile tr-steps" style={{ '--i': 1 }} aria-label="Steps">
-              <header className="fx-tile-h"><span className="tp-grow"><h2>Step by step</h2></span><ListOrdered size={16} aria-hidden="true" /></header>
+              <header className="fx-tile-h"><span className="tp-grow"><h2>Step by step</h2>{hasVideo(lesson.id) && <p>The same steps as the video, to look back at</p>}</span><ListOrdered size={16} aria-hidden="true" /></header>
               <ol className="tr-ol">{lesson.steps.map((s, k) => <li key={s}><b className="tr-cn">{k + 1}</b><span>{s}</span></li>)}</ol>
             </section>
 
@@ -315,6 +323,7 @@ function Lesson({ lesson, lessons, t }) {
 
 export default function Training() {
   const { id } = useParams()
+  const [sp] = useSearchParams()
   const account = useAccount()
   const t = useTraining(account.name)
   const lessons = useLessons()
@@ -322,5 +331,5 @@ export default function Training() {
   if (id && !lesson) {
     return <div className="tp-page fx-page"><section className="fx-tile"><p className="fx-calm">That lesson isn’t here. <Link to={fp('training')}>See all lessons</Link></p></section></div>
   }
-  return lesson ? <Lesson key={lesson.id} lesson={lesson} lessons={lessons} t={t} /> : <Home lessons={lessons} t={t} />
+  return lesson ? <Lesson key={`${lesson.id}-${sp.get('t') || ''}`} lesson={lesson} lessons={lessons} t={t} who={account.name} /> : <Home lessons={lessons} t={t} who={account.name} />
 }
